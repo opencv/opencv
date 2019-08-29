@@ -62,7 +62,14 @@ bool tryToSubstitute(ade::Graph& main,
     // 3. match pattern ins/outs to substitute ins/outs
     auto match2 = matchPatternToSubstitute(*patternG, main,
         GModel::Graph(*patternG).metadata().get<Protocol>(), p);
-    GAPI_Assert(match2.partialOk());  // this should never happen in theory
+
+    // in theory, we should always be able to find a match here. if not, we're in half-completed
+    // state where some transformations are already applied - what can we do to handle the situation
+    // better?
+    const auto is_enough_for_substitution = [] (const SubgraphMatch& m) {
+        return !m.inputDataNodes.empty() && !m.outputDataNodes.empty();
+    };
+    GAPI_Assert(is_enough_for_substitution(match2));
 
     // 4. make substitution
     performSubstitution(gm, match1, match2);

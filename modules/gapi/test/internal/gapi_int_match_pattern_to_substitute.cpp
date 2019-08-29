@@ -48,6 +48,10 @@ void initGModel(ade::Graph& gr,
     std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
     gm.metadata().set(p);
 }
+
+bool partialOk(const cv::gimpl::SubgraphMatch& m) {
+    return !m.inputDataNodes.empty() && !m.outputDataNodes.empty();
+}
 }  // anonymous namespace
 }  // namespace matching_test
 
@@ -115,7 +119,7 @@ TEST_F(PatternMatchingMatchPatternToSubstitute, OneInputOneOutputMatchFound)
         pgm.metadata().get<cv::gimpl::Protocol>(), sgm.metadata().get<cv::gimpl::Protocol>());
 
     // check the result
-    EXPECT_TRUE(match.partialOk());
+    EXPECT_TRUE(matching_test::partialOk(match));
     EXPECT_FALSE(match.ok());
 
     verifyNodes({p_in}, {s_in}, match.inputDataNodes);
@@ -158,7 +162,7 @@ TEST_F(PatternMatchingMatchPatternToSubstitute, ManyInputsOneOutputMatchFound)
         pgm.metadata().get<cv::gimpl::Protocol>(), sgm.metadata().get<cv::gimpl::Protocol>());
 
     // check the result
-    EXPECT_TRUE(match.partialOk());
+    EXPECT_TRUE(matching_test::partialOk(match));
     EXPECT_FALSE(match.ok());
 
     verifyNodes(p_ins, s_ins, match.inputDataNodes);
@@ -203,7 +207,7 @@ TEST_F(PatternMatchingMatchPatternToSubstitute, OneInputManyOutputsMatchFound)
         pgm.metadata().get<cv::gimpl::Protocol>(), sgm.metadata().get<cv::gimpl::Protocol>());
 
     // check the result
-    EXPECT_TRUE(match.partialOk());
+    EXPECT_TRUE(matching_test::partialOk(match));
     EXPECT_FALSE(match.ok());
 
     verifyNodes({p_in}, {s_in}, match.inputDataNodes);
@@ -254,7 +258,7 @@ TEST_F(PatternMatchingMatchPatternToSubstitute,
         pgm.metadata().get<cv::gimpl::Protocol>(), sgm.metadata().get<cv::gimpl::Protocol>());
 
     // check the result
-    EXPECT_TRUE(match.partialOk());
+    EXPECT_TRUE(matching_test::partialOk(match));
     EXPECT_FALSE(match.ok());
 
     verifyNodes(p_ins, s_ins, match.inputDataNodes);
@@ -305,7 +309,7 @@ TEST_F(PatternMatchingMatchPatternToSubstitute,
         pgm.metadata().get<cv::gimpl::Protocol>(), sgm.metadata().get<cv::gimpl::Protocol>());
 
     // check the result
-    EXPECT_TRUE(match.partialOk());
+    EXPECT_TRUE(matching_test::partialOk(match));
     EXPECT_FALSE(match.ok());
 
     verifyNodes(p_ins, s_ins, match.inputDataNodes);
@@ -361,7 +365,7 @@ TEST_F(PatternMatchingMatchPatternToSubstitute, ManyInputsManyOutputsWithAllGTyp
         pgm.metadata().get<cv::gimpl::Protocol>(), sgm.metadata().get<cv::gimpl::Protocol>());
 
     // check the result
-    EXPECT_TRUE(match.partialOk());
+    EXPECT_TRUE(matching_test::partialOk(match));
     EXPECT_FALSE(match.ok());
 
     verifyNodes(p_ins, s_ins, match.inputDataNodes);

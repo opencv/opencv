@@ -37,7 +37,7 @@ bool compareDataNodes(const Metadata& firstMeta,
         return false;
     }
 
-    // FIXME: is it enough to only check shape && storage?
+    // NB: it seems enough for now to only check shape && storage
     return true;
 }
 
