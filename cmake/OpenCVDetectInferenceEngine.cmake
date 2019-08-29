@@ -89,76 +89,46 @@ function(download_ie)
   # This is a minor patch to IE's cmake files.
   ie_patch("cmake/dependencies.cmake" "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR")
   ie_patch("src/inference_engine/CMakeLists.txt" "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR")
-  ie_patch("src/inference_engine/CMakeLists.txt" "PRIVATE \${INTEL_ITT_LIBS})" "PRIVATE \${INTEL_ITT_LIBS} PUBLIC pugixml)")
+  ie_patch("CMakeLists.txt" "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR")
+
   ie_patch("CMakeLists.txt" "add_subdirectory(tests)" "")  # Disable tests
   ie_patch("CMakeLists.txt" "add_subdirectory(samples)" "")  # Disable samples
-  # Remove redundant CMake version check
-  ie_patch("CMakeLists.txt" "cmake_minimum_required(VERSION 3.8 FATAL_ERROR)" "")
+  ie_patch("CMakeLists.txt" "add_subdirectory(tools)" "")  # Disable tools
   # Enable extensions library
   ie_patch("src/CMakeLists.txt" "add_subdirectory(extension EXCLUDE_FROM_ALL)" "add_subdirectory(extension)")
-  # Fix for MKL-DNN
-  ie_patch("thirdparty/mkl-dnn/src/cpu/jit_uni_bin_conv_kernel.cpp"
-           "int kw_padding[ur_w]" "int* kw_padding = new int[ur_w]")
-  ie_patch("thirdparty/mkl-dnn/src/cpu/jit_uni_bin_conv_kernel.cpp"
-           "        int eltwise_inj_idx"
-           "        delete[] kw_padding; int eltwise_inj_idx")
+  # Redirect plugins.xml output
+  ie_patch("cmake/plugins/plugins.cmake" "IE_CONFIG_OUTPUT_FILE=\${config_output_file}" "IE_CONFIG_OUTPUT_FILE=${LIBRARY_OUTPUT_PATH}/plugins.xml")
 
-  ie_patch("thirdparty/mkl-dnn/src/cpu/jit_uni_planar_convolution.cpp"
-           "int od_indexes[jcp.od]" "int* od_indexes = new int[jcp.od]")
-  ie_patch("thirdparty/mkl-dnn/src/cpu/jit_uni_planar_convolution.cpp"
-           "    parallel(0, ker);" "    parallel(0, ker); delete[] od_indexes;")
-  ie_patch("src/mkldnn_plugin/mkldnn_node.cpp"
-           "MKLDNNMemory memory(engine)" "MKLDNNMemory memory{engine}")
+  function(download_from_github name version md5 org)
+    string(TOUPPER ${name} upName)
+    set(src_dir "${ie_src_dir}/${ie_subdir}/inference-engine/thirdparty/${name}")
+    set(filename "v${version}.zip")
+    set(subdir "${name}-${version}")
+    ocv_download(FILENAME ${filename}
+                 HASH ${md5}
+                 URL
+                   "${OPENCV_${upName}_URL}"
+                   "$ENV{OPENCV_${upName}_URL}"
+                   "https://github.com/${org}/${name}/archive/"
+                 DESTINATION_DIR ${src_dir}
+                 ID ${upName}
+                 STATUS res
+    UNPACK RELATIVE_URL)
 
-  # Fix misleading indentation error during compilation (newer MKL-DNN fixed that bug)
-  ie_patch("thirdparty/mkl-dnn/src/cpu/nchw_pooling.cpp"
-           "if (d[0] < s)
-                            d[0] = s;
-                            set_ws(mb, c, od, oh, ow, kd*KH*KW + kh*KW + kw);"
-           "if (d[0] < s) {
-                            d[0] = s;
-                            set_ws(mb, c, od, oh, ow, kd*KH*KW + kh*KW + kw);}")
-  ie_patch("thirdparty/mkl-dnn/src/cpu/ref_pooling.cpp"
-           "if (d[0] < s)
-                        d[0] = s;
-                        set_ws(mb, oc, 1, oh, ow, kh*KW + kw);"
-           "if (d[0] < s) {
-                        d[0] = s;
-                        set_ws(mb, oc, 1, oh, ow, kh*KW + kw);}")
-  ie_patch("thirdparty/mkl-dnn/src/cpu/ref_pooling.cpp"
-           "if (d[0] < s)
-                            d[0] = s;
-                            set_ws(mb, oc, od, oh, ow, kd * KH * KW + kh * KW + kw);"
-           "if (d[0] < s) {
-                            d[0] = s;
-                            set_ws(mb, oc, od, oh, ow, kd * KH * KW + kh * KW + kw);}")
+    if (NOT res)
+        return()
+    endif()
 
-  # Download ADE
-  set(ade_src_dir "${ie_src_dir}/${ie_subdir}/inference-engine/thirdparty/ade")
-  set(ade_filename "v0.1.1d.zip")
-  set(ade_subdir "ade-0.1.1d")
-  set(ade_md5 "37479d90e3a5d47f132f512b22cbe206")
-  ocv_download(FILENAME ${ade_filename}
-               HASH ${ade_md5}
-               URL
-                 "${OPENCV_ADE_URL}"
-                 "$ENV{OPENCV_ADE_URL}"
-                 "https://github.com/opencv/ade/archive/"
-               DESTINATION_DIR ${ade_src_dir}
-               ID ADE
-               STATUS res
-  UNPACK RELATIVE_URL)
+    # Move folder excluding subfolder name
+    if(EXISTS "${src_dir}/${subdir}")
+      file(RENAME "${src_dir}/${subdir}" "${src_dir}_tmp")
+      file(REMOVE_RECURSE "${src_dir}")
+      file(RENAME "${src_dir}_tmp" "${src_dir}")
+    endif()
+  endfunction()
 
-  if (NOT res)
-      return()
-  endif()
-
-  # Move ade folder excluding subfolder name
-  if(EXISTS "${ade_src_dir}/${ade_subdir}")
-    file(RENAME "${ade_src_dir}/${ade_subdir}" "${ade_src_dir}_tmp")
-    file(REMOVE_RECURSE "${ade_src_dir}")
-    file(RENAME "${ade_src_dir}_tmp" "${ade_src_dir}")
-  endif()
+  download_from_github(ade "0.1.1d" "37479d90e3a5d47f132f512b22cbe206" "opencv")
+  download_from_github(ngraph "0.22.0" "1ad1e35c1746c67264c9ee525f5893c0" "NervanaSystems")
 
   set(ENABLE_GNA OFF)
   set(ENABLE_PROFILING_ITT OFF)
@@ -195,9 +165,12 @@ function(download_ie)
   if (TARGET clDNNPlugin)
     set_target_properties(clDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
   endif()
+  if (TARGET myriadPlugin)
+    set_target_properties(myriadPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
+  endif()
 
   set(INF_ENGINE_TARGET inference_engine_s PARENT_SCOPE)
-  set(INF_ENGINE_RELEASE "2019010001" PARENT_SCOPE)
+  set(INF_ENGINE_RELEASE "2019020000" PARENT_SCOPE)
 
   # if(WITH_TBB)
   #   # message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
