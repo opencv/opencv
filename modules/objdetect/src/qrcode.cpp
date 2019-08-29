@@ -52,12 +52,11 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
     CV_TRACE_FUNCTION();
     CV_Assert(!src.empty());
     const double min_side = std::min(src.size().width, src.size().height);
-
     if (min_side < 512.0)
     {
         resize_direction = -1;
         coeff_expansion = 512.0 / min_side;
-        const int width  = cvRound(src.size().width * coeff_expansion);
+        const int width  = cvRound(src.size().width  * coeff_expansion);
         const int height = cvRound(src.size().height * coeff_expansion);
         Size new_size(width, height);
         resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
@@ -66,12 +65,11 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
     {
         resize_direction = 1;
         coeff_expansion = min_side / 512.0;
-        const int width  = cvRound(src.size().width / coeff_expansion);
+        const int width  = cvRound(src.size().width  / coeff_expansion);
         const int height = cvRound(src.size().height / coeff_expansion);
         Size new_size(width, height);
         resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
     }
-
     else
     {
         resize_direction = 0;
@@ -117,7 +115,7 @@ vector<Vec3d> QRDetect::searchHorizontalLines()
             }
         }
         pixels_position.push_back(width_bin_barcode - 1);
-        
+
         for (size_t i = 2; i < pixels_position.size() - 4; i+=2)
         {
             test_lines[0] = static_cast<double>(pixels_position[i - 1] - pixels_position[i - 2]);
@@ -155,7 +153,6 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
     CV_TRACE_FUNCTION();
     vector<Vec3d> result;
     vector<Point2f> point2f_result;
-
     uint8_t next_pixel;
     vector<double> test_lines;
 
@@ -228,7 +225,6 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
       }
       if (result.size() > 2)
       {
-
         for (size_t i = 0; i < result.size(); i++)
         {
             point2f_result.push_back(
@@ -246,9 +242,7 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
         if (compactness == 0) { continue; }
         if (compactness > 0) { break; }
       }
-
     }
-
     return point2f_result;
 }
 
@@ -453,7 +447,6 @@ bool QRDetect::computeTransformationPoints()
         }
     }
 
-
     double pentagon_diag_norm = -1;
     Point2f down_left_edge_point, up_right_edge_point, up_left_edge_point;
     for (size_t i = 0; i < new_non_zero_elem[1].size(); i++)
@@ -527,14 +520,12 @@ bool QRDetect::computeTransformationPoints()
     vector<Point2f> quadrilateral = getQuadrilateral(transformation_points);
     transformation_points = quadrilateral;
 
-    float width = bin_barcode.size().width;
-    float height = bin_barcode.size().height;
+    float width = cvRound(bin_barcode.size().width);
+    float height = cvRound(bin_barcode.size().height);
     for (size_t i = 0; i < transformation_points.size(); i++)
     {
       if ((transformation_points[i].x > width) || (transformation_points[i].y > height)) { return false; }
     }
-
-
     return true;
 }
 
@@ -898,22 +889,21 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 {
     CV_TRACE_FUNCTION();
     vector<Point2f> bbox = points;
-    float coeff_expansion;
-    const float min_side = std::min(src.size().width, src.size().height);
+    double coeff_expansion;
+    const int min_side = std::min(src.size().width, src.size().height);
 
-    if (min_side > 1024.0)
+    if (min_side > 1024)
     {
-        coeff_expansion = min_side / 1024.0;
+        coeff_expansion = min_side / 1024;
         const int width  = cvRound(src.size().width / coeff_expansion);
         const int height = cvRound(src.size().height / coeff_expansion);
         Size new_size(width, height);
         resize(src, original, new_size, 0, 0, INTER_LINEAR);
             for (size_t i = 0; i < bbox.size(); i++)
             {
-                bbox[i] /= coeff_expansion;
+                bbox[i] /= static_cast<float>(coeff_expansion);
             }
     }
-
     else
     {
         original = src.clone();
