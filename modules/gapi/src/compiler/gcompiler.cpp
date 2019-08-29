@@ -102,7 +102,6 @@ namespace
         }
         return result;
     }
-
 } // anonymous namespace
 
 
@@ -133,6 +132,12 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
 
     m_e.addPassStage("init");
     m_e.addPass("init", "check_cycles",  ade::passes::CheckCycles());
+    m_e.addPass("init", "check_transformations",
+        std::bind(passes::checkTransformations, _1, std::cref(m_all_kernels),
+            std::ref(m_all_patterns)));  // Note: populating patterns here
+    m_e.addPass("init", "apply_transformations",
+                std::bind(passes::applyTransformations, _1, std::cref(m_all_kernels),
+                    std::cref(m_all_patterns)));  // Note: and re-using patterns here
     m_e.addPass("init", "expand_kernels",
                 std::bind(passes::expandKernels, _1,
                           m_all_kernels)); // NB: package is copied

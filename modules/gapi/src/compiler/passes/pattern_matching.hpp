@@ -26,6 +26,8 @@ namespace gimpl {
         using S =  std::unordered_set< ade::NodeHandle
                                      , ade::HandleHasher<ade::Node>
                                      >;
+        // FIXME: inputDataNodes && outputDataNodes can be a part of a special struct (e.g.
+        //        SubgraphMatch::Base?)
         M inputDataNodes;
         M startOpNodes;
         M finishOpNodes;
@@ -36,12 +38,14 @@ namespace gimpl {
 
         std::list<ade::NodeHandle> internalLayers;
 
-        // FIXME: switch to operator bool() instead
         bool ok() const {
             return    !inputDataNodes.empty() && !startOpNodes.empty()
                    && !finishOpNodes.empty() && !outputDataNodes.empty()
                    && !inputTestDataNodes.empty() && !outputTestDataNodes.empty();
+        }
 
+        bool partialOk() const {
+            return !inputDataNodes.empty() && !outputDataNodes.empty();
         }
 
        S nodes() const {
@@ -92,6 +96,15 @@ namespace gimpl {
 
     GAPI_EXPORTS SubgraphMatch findMatches(const cv::gimpl::GModel::Graph& patternGraph,
                                            const cv::gimpl::GModel::Graph& compGraph);
+
+    GAPI_EXPORTS SubgraphMatch matchPatternToSubstitute(const cv::gimpl::GModel::Graph& pattern,
+                                                        const cv::gimpl::GModel::Graph& substitute,
+                                                        const cv::gimpl::Protocol& patternP,
+                                                        const cv::gimpl::Protocol& substituteP);
+
+    GAPI_EXPORTS void performSubstitution(cv::gimpl::GModel::Graph& graph,
+                                          const cv::gimpl::SubgraphMatch& patternToGraph,
+                                          const cv::gimpl::SubgraphMatch& patternToSubstitute);
 
 } //namespace gimpl
 } //namespace cv
