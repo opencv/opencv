@@ -508,8 +508,20 @@ ocv_cmake_hook(POST_OPTIONS)
 #  Build & install layouts
 # ----------------------------------------------------------------------------
 
+if(OPENCV_TEST_DATA_PATH)
+  get_filename_component(OPENCV_TEST_DATA_PATH ${OPENCV_TEST_DATA_PATH} ABSOLUTE)
+endif()
+
 # Save libs and executables in the same place
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications")
+
+if(ANDROID)
+  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
+else()
+  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib")
+  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib")
+endif()
 
 if(ANDROID)
   if(ANDROID_ABI MATCHES "NEON")
@@ -518,134 +530,6 @@ if(ANDROID)
   if(ANDROID_ABI MATCHES "VFPV3")
     set(ENABLE_VFPV3 ON)
   endif()
-endif()
-
-if(ANDROID OR WIN32)
-  ocv_update(OPENCV_DOC_INSTALL_PATH doc)
-else()
-  ocv_update(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
-endif()
-
-if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
-  if(DEFINED OpenCV_RUNTIME AND DEFINED OpenCV_ARCH)
-    ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "${OpenCV_ARCH}/${OpenCV_RUNTIME}/")
-  else()
-    message(STATUS "Can't detect runtime and/or arch")
-    ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "")
-  endif()
-elseif(ANDROID)
-  ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "sdk/native/")
-else()
-  ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "")
-endif()
-
-if(ANDROID)
-  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples/${ANDROID_NDK_ABI_NAME}")
-else()
-  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples")
-endif()
-
-if(ANDROID)
-  ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin/${ANDROID_NDK_ABI_NAME}")
-else()
-  ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin")
-endif()
-
-if(NOT OPENCV_TEST_INSTALL_PATH)
-  ocv_update(OPENCV_TEST_INSTALL_PATH "${OPENCV_BIN_INSTALL_PATH}")
-endif()
-
-if (OPENCV_TEST_DATA_PATH)
-  get_filename_component(OPENCV_TEST_DATA_PATH ${OPENCV_TEST_DATA_PATH} ABSOLUTE)
-endif()
-
-if(ANDROID)
-  ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "sdk/etc/testdata")
-elseif(WIN32)
-  ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "testdata")
-else()
-  ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "share/OpenCV/testdata")
-endif()
-
-if(ANDROID)
-  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(OPENCV_LIB_INSTALL_PATH     sdk/native/libs/${ANDROID_NDK_ABI_NAME})
-  ocv_update(OPENCV_LIB_ARCHIVE_INSTALL_PATH sdk/native/staticlibs/${ANDROID_NDK_ABI_NAME})
-  ocv_update(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
-  ocv_update(OPENCV_CONFIG_INSTALL_PATH  sdk/native/jni)
-  ocv_update(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
-  ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH samples/native)
-  ocv_update(OPENCV_OTHER_INSTALL_PATH   sdk/etc)
-  ocv_update(OPENCV_LICENSES_INSTALL_PATH "${OPENCV_OTHER_INSTALL_PATH}/licenses")
-else()
-  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib")
-  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
-
-  if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
-    if(OpenCV_STATIC)
-      ocv_update(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
-    else()
-      ocv_update(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}lib${LIB_SUFFIX}")
-    endif()
-    ocv_update(OPENCV_3P_LIB_INSTALL_PATH  "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
-    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH    samples)
-    ocv_update(OPENCV_JAR_INSTALL_PATH java)
-    ocv_update(OPENCV_OTHER_INSTALL_PATH   etc)
-    ocv_update(OPENCV_CONFIG_INSTALL_PATH  ".")
-    ocv_update(OPENCV_LICENSES_INSTALL_PATH "${OPENCV_OTHER_INSTALL_PATH}/licenses")
-  else()
-    include(GNUInstallDirs)
-    ocv_update(OPENCV_LIB_INSTALL_PATH     ${CMAKE_INSTALL_LIBDIR})
-    ocv_update(OPENCV_3P_LIB_INSTALL_PATH  share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH})
-    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH    share/OpenCV/samples)
-    ocv_update(OPENCV_JAR_INSTALL_PATH share/OpenCV/java)
-    ocv_update(OPENCV_OTHER_INSTALL_PATH   share/OpenCV)
-    ocv_update(OPENCV_LICENSES_INSTALL_PATH      "${CMAKE_INSTALL_DATAROOTDIR}/licenses/opencv3")
-
-    if(NOT DEFINED OPENCV_CONFIG_INSTALL_PATH)
-      math(EXPR SIZEOF_VOID_P_BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
-      if(LIB_SUFFIX AND NOT SIZEOF_VOID_P_BITS EQUAL LIB_SUFFIX)
-        ocv_update(OPENCV_CONFIG_INSTALL_PATH ${CMAKE_INSTALL_LIBDIR}/cmake/opencv)
-      else()
-        ocv_update(OPENCV_CONFIG_INSTALL_PATH share/OpenCV)
-      endif()
-    endif()
-  endif()
-  ocv_update(OPENCV_INCLUDE_INSTALL_PATH "include")
-  #ocv_update(OPENCV_PYTHON_INSTALL_PATH  "python")  # no default value, see https://github.com/opencv/opencv/issues/13202
-endif()
-
-ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-if(INSTALL_TO_MANGLED_PATHS)
-  set(OPENCV_INCLUDE_INSTALL_PATH ${OPENCV_INCLUDE_INSTALL_PATH}/opencv-${OPENCV_VERSION})
-  foreach(v
-      OPENCV_3P_LIB_INSTALL_PATH
-      OPENCV_SAMPLES_SRC_INSTALL_PATH
-      OPENCV_CONFIG_INSTALL_PATH
-      OPENCV_DOC_INSTALL_PATH
-      OPENCV_JAR_INSTALL_PATH
-      OPENCV_TEST_DATA_INSTALL_PATH
-      OPENCV_OTHER_INSTALL_PATH
-    )
-    string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" ${v} "${${v}}")
-    string(REPLACE "opencv" "opencv-${OPENCV_VERSION}" ${v} "${${v}}")
-  endforeach()
-endif()
-
-if(ANDROID)
-  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_LIB_INSTALL_PATH}")
-elseif(INSTALL_CREATE_DISTRIB)
-  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH}")
-else()
-  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_JAR_INSTALL_PATH}")
-endif()
-ocv_update(OPENCV_JNI_BIN_INSTALL_PATH "${OPENCV_JNI_INSTALL_PATH}")
-
-if(NOT OPENCV_LIB_ARCHIVE_INSTALL_PATH)
-  set(OPENCV_LIB_ARCHIVE_INSTALL_PATH ${OPENCV_LIB_INSTALL_PATH})
 endif()
 
 if(WIN32)
@@ -665,6 +549,8 @@ endif()
 if((INSTALL_CREATE_DISTRIB AND BUILD_SHARED_LIBS AND NOT DEFINED BUILD_opencv_world) OR APPLE_FRAMEWORK)
   set(BUILD_opencv_world ON CACHE INTERNAL "")
 endif()
+
+include(cmake/OpenCVInstallLayout.cmake)
 
 # ----------------------------------------------------------------------------
 #  Path for build/platform -specific headers
