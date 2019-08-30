@@ -180,6 +180,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #elif defined(HAVE_COCOA)
             return cvGetPropTopmost_COCOA(name);
         #else
+            CV_LOG_WARNING(NULL, "Property WND_PROP_TOPMOST is not supported on current GUI backend");
             return -1;
         #endif
     break;
