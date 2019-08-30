@@ -2441,63 +2441,46 @@ TEST(Calib3d_Triangulate, accuracy)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-class CV_RecoverPoseTest : public cvtest::BaseTest
-{
-public:
-    CV_RecoverPoseTest();
-    ~CV_RecoverPoseTest();
-    void clear();
-protected:
-    virtual void run(int);
-};
-
-CV_RecoverPoseTest::CV_RecoverPoseTest()
-{
-}
-
-CV_RecoverPoseTest::~CV_RecoverPoseTest()
-{
-    clear();
-}
-
-void CV_RecoverPoseTest::clear()
-{
-    cvtest::BaseTest::clear();
-}
-
-void CV_RecoverPoseTest::run(int)
+TEST(CV_RecoverPoseTest, regression_15341)
 {
     // initialize test data
     const int invalid_point_count = 2;
-    const vector<Point2f> _points1{ Point2f(1537.7f, 166.8f),
-                                    Point2f(1599.1f, 179.6f),
-                                    Point2f(1288.0f, 207.5f),
-                                    Point2f(1507.1f, 193.2f),
-                                    Point2f(1742.7f, 210.0f),
-                                    Point2f(1041.6f, 271.7f),
-                                    Point2f(1591.8f, 247.2f),
-                                    Point2f(1524.0f, 261.3f),
-                                    Point2f(1330.3f, 285.0f),
-                                    Point2f(1403.1f, 284.0f),
-                                    Point2f(1506.6f, 342.9f),
-                                    Point2f(1502.8f, 347.3f),
-                                    Point2f(1344.9f, 364.9f),
-                                    Point2f(0.0f, 0.0f) }; // last point is initial invalid
+    const float _points1_[] = {
+        1537.7f, 166.8f,
+        1599.1f, 179.6f,
+        1288.0f, 207.5f,
+        1507.1f, 193.2f,
+        1742.7f, 210.0f,
+        1041.6f, 271.7f,
+        1591.8f, 247.2f,
+        1524.0f, 261.3f,
+        1330.3f, 285.0f,
+        1403.1f, 284.0f,
+        1506.6f, 342.9f,
+        1502.8f, 347.3f,
+        1344.9f, 364.9f,
+        0.0f, 0.0f  // last point is initial invalid
+    };
 
-    const vector<Point2f> _points2{ Point2f(1533.4f, 532.9f),
-                                    Point2f(1596.6f, 552.4f),
-                                    Point2f(1277.0f, 556.4f),
-                                    Point2f(1502.1f, 557.6f),
-                                    Point2f(1744.4f, 601.3f),
-                                    Point2f(1023.0f, 612.6f),
-                                    Point2f(1589.2f, 621.6f),
-                                    Point2f(1519.4f, 629.0f),
-                                    Point2f(1320.3f, 637.3f),
-                                    Point2f(1395.2f, 642.2f),
-                                    Point2f(1501.5f, 710.3f),
-                                    Point2f(1497.6f, 714.2f),
-                                    Point2f(1335.1f, 719.61f),
-                                    Point2f(1000.0f, 1000.0f) }; // last point is initial invalid
+    const float _points2_[] = {
+        1533.4f, 532.9f,
+        1596.6f, 552.4f,
+        1277.0f, 556.4f,
+        1502.1f, 557.6f,
+        1744.4f, 601.3f,
+        1023.0f, 612.6f,
+        1589.2f, 621.6f,
+        1519.4f, 629.0f,
+        1320.3f, 637.3f,
+        1395.2f, 642.2f,
+        1501.5f, 710.3f,
+        1497.6f, 714.2f,
+        1335.1f, 719.61f,
+        1000.0f, 1000.0f  // last point is initial invalid
+    };
+
+    vector<Point2f> _points1; Mat(14, 1, CV_32FC2, (void*)_points1_).copyTo(_points1);
+    vector<Point2f> _points2; Mat(14, 1, CV_32FC2, (void*)_points2_).copyTo(_points2);
 
     const int point_count = (int) _points1.size();
     CV_Assert(point_count == (int) _points2.size());
@@ -2520,21 +2503,10 @@ void CV_RecoverPoseTest::run(int)
             // Estimation of fundamental matrix using the RANSAC algorithm
             Mat E, R, t;
             E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
-            if(mask[13] != 0)
-            {
-                // point 13 should provoke an outlier
-                ts->printf(cvtest::TS::LOG, "Detecting outliers in function findEssentialMat failed, testcase %d\n", testcase);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
+            EXPECT_EQ(0, (int)mask[13]) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
             points2[12] = Point2f(0.0f, 0.0f); // provoke another outlier detection for recover Pose
             Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
-            if (mask[12] != 0)
-            {
-                ts->printf(cvtest::TS::LOG, "Detecting outliers in function failed, testcase %d\n", testcase);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
+            EXPECT_EQ(0, (int)mask[12]) << "Detecting outliers in function failed, testcase " << testcase;
         }
         else // testcase with mat input data
         {
@@ -2555,32 +2527,14 @@ void CV_RecoverPoseTest::run(int)
             // Estimation of fundamental matrix using the RANSAC algorithm
             Mat E, R, t;
             E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
-            if (mask.at<unsigned char>(13) != 0)
-            {
-                // point 13 should provoke an outlier
-                ts->printf(cvtest::TS::LOG, "Detecting outliers in function findEssentialMat failed, testcase %d\n", testcase);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
+            EXPECT_EQ(0, (int)mask.at<unsigned char>(13)) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
             points2.at<Point2f>(12) = Point2f(0.0f, 0.0f); // provoke an outlier detection
             Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
-            if (mask.at<unsigned char>(12) != 0)
-            {
-                ts->printf(cvtest::TS::LOG, "Detecting outliers in function failed, testcase %d\n", testcase);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
+            EXPECT_EQ(0, (int)mask.at<unsigned char>(12)) << "Detecting outliers in function failed, testcase " << testcase;
         }
-        if (Inliers != point_count - invalid_point_count)
-        {
-            ts->printf(cvtest::TS::LOG, "Number of inliers %d differs from expected number of inliers %d, testcase %d\n",
-                Inliers, point_count - invalid_point_count, testcase);
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-            return;
-        }
+        EXPECT_EQ(Inliers, point_count - invalid_point_count) <<
+            "Number of inliers differs from expected number of inliers, testcase " << testcase;
     }
 }
-
-TEST(CV_RecoverPoseTest, regression) { CV_RecoverPoseTest test; test.safe_run(); }
 
 }} // namespace
