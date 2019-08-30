@@ -804,11 +804,14 @@ template<typename R> struct TheTest
         all1s;
         all1s.ui = (uint_type)-1;
         LaneType mask_one = all1s.l;
+        dataB[R::nlanes - 1] = mask_one;
+        R l = dataB;
         dataB[1] = mask_one;
         dataB[R::nlanes / 2] = mask_one;
-        dataB[R::nlanes - 1] = mask_one;
         dataC *= (LaneType)-1;
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
+        dataC[R::nlanes - 1] = 0;
+        R nl = dataC;
 
         EXPECT_EQ(2, v_signmask(a));
 #if CV_SIMD_WIDTH <= 32
@@ -818,11 +821,12 @@ template<typename R> struct TheTest
         EXPECT_EQ(false, v_check_all(a));
         EXPECT_EQ(false, v_check_all(b));
         EXPECT_EQ(true, v_check_all(c));
+        EXPECT_EQ(false, v_check_all(nl));
 
         EXPECT_EQ(true, v_check_any(a));
         EXPECT_EQ(true, v_check_any(b));
         EXPECT_EQ(true, v_check_any(c));
-
+        EXPECT_EQ(true, v_check_any(l));
         R f = v_select(b, d, e);
         Data<R> resF = f;
         for (int i = 0; i < R::nlanes; ++i)
