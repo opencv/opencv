@@ -112,19 +112,23 @@ Module = {
 cv = require('./opencv.js')
 @endcode
 
-Using OpenCV.js browser utilities in Node.js with [node-canvas](https://www.npmjs.com/package/canvas)
+Using [jsdom](https://www.npmjs.com/package/canvas) and [node-canvas](https://www.npmjs.com/package/canvas) to support OpenCV.js browser utilities in Node.js.
 -----------------------------
 
-In the rest of the examples, functions like `cv.imread()`, `cv.imshow()` are used to read and write images using the DOM. This tutorial shows how to support them in Node.js by using [node-canvas](https://www.npmjs.com/package/canvas).
+As you might already seen, the rest of the examples use functions like `cv.imread()`, `cv.imshow()` to load and save images. Unfortunately as mentioned they won't work on Node.js since there is no HTML DOM.
+
+In this section, you will learn how to use [jsdom](https://www.npmjs.com/package/canvas) and [node-canvas](https://www.npmjs.com/package/canvas)  to emulate the HTML DOM on Node.js so those functions work. 
+
+This could be particularly useful for writing tests, since the same code that runs in the browser also runs in Node.js. Since these technologies doesn't require a browser or any particular visual environment, are perfectly suitable to support common Continuos Integration Environments like [travis-ci](https://travis-ci.org) or [azure](https://dev.azure.com).
 
 @code{.js}
 const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
-const { JSDOM } = require("jsdom");
+const { JSDOM } = require('jsdom');
 const { writeFileSync } = require('fs');
 
 // This is our program. This time we use JavaScript async / await and promises to handle asynchronicity.
 (async () => {
-  // before loading opencv.js we emulate HTML DOM by defining some global variables. See below.
+  // before loading opencv.js we define global variables to emulate the DOM see the function declaration below.
   installDOM();
   await loadOpenCV();
   const image = await loadImage('../../assets/lenna.jpg');
@@ -154,6 +158,8 @@ function loadOpenCV() {
 }
 
 function installDOM() {
+  // Using JSDOM and node-canvas we define some global variables to emulate HTML DOM in Node.js
+  // here we declare just the minimal variables assumed 
   const dom = new JSDOM();
   global.document = dom.window.document;
   global.Image = Image;
