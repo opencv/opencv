@@ -393,7 +393,7 @@ static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
 #if CV_SIMD
     typedef bin_loader<OP, T1, Tvec> ldr;
     enum {wide_step = Tvec::nlanes};
-    #if !CV_NEON && CV_SIMD_WIDTH == 16
+    #if !CV_NEON && !CV_MSA && CV_SIMD_WIDTH == 16
         enum {wide_step_l = wide_step * 2};
     #else
         enum {wide_step_l = wide_step};
@@ -409,13 +409,13 @@ static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
         int x = 0;
 
     #if CV_SIMD
-        #if !CV_NEON
+        #if !CV_NEON && !CV_MSA
         if (is_aligned(src1, src2, dst))
         {
             for (; x <= width - wide_step_l; x += wide_step_l)
             {
                 ldr::la(src1 + x, src2 + x, dst + x);
-                #if !CV_NEON && CV_SIMD_WIDTH == 16
+                #if !CV_NEON && !CV_MSA && CV_SIMD_WIDTH == 16
                 ldr::la(src1 + x + wide_step, src2 + x + wide_step, dst + x + wide_step);
                 #endif
             }
@@ -425,7 +425,7 @@ static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
             for (; x <= width - wide_step_l; x += wide_step_l)
             {
                 ldr::l(src1 + x, src2 + x, dst + x);
-                #if !CV_NEON && CV_SIMD_WIDTH == 16
+                #if !CV_NEON && !CV_MSA && CV_SIMD_WIDTH == 16
                 ldr::l(src1 + x + wide_step, src2 + x + wide_step, dst + x + wide_step);
                 #endif
             }
