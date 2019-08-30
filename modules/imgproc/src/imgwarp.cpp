@@ -2965,6 +2965,12 @@ public:
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, width);
         bh0 = std::min(BLOCK_SZ*BLOCK_SZ/bw0, height);
 
+        #if CV_TRY_SSE4_1
+        Ptr<opt_SSE4_1::WarpPerspectiveLine_SSE4> pwarp_impl_sse4;
+        if(CV_CPU_HAS_SUPPORT_SSE4_1)
+            pwarp_impl_sse4 = opt_SSE4_1::WarpPerspectiveLine_SSE4::getImpl(M);
+        #endif
+
         for( y = range.start; y < range.end; y += bh0 )
         {
             for( x = 0; x < width; x += bw0 )
@@ -2985,8 +2991,8 @@ public:
                     if( interpolation == INTER_NEAREST )
                     {
                         #if CV_TRY_SSE4_1
-                        if(CV_CPU_HAS_SUPPORT_SSE4_1)
-                            WarpPerspectiveLine_ProcessNN_SSE41(M, xy, X0, Y0, W0, bw);
+                        if (pwarp_impl_sse4)
+                            pwarp_impl_sse4->processNN(M, xy, X0, Y0, W0, bw);
                         else
                         #endif
                         #if CV_SIMD128_64F
@@ -3011,8 +3017,8 @@ public:
                         short* alpha = A + y1*bw;
 
                         #if CV_TRY_SSE4_1
-                        if(CV_CPU_HAS_SUPPORT_SSE4_1)
-                            WarpPerspectiveLine_Process_SSE41(M, xy, alpha, X0, Y0, W0, bw);
+                        if (pwarp_impl_sse4)
+                            pwarp_impl_sse4->process(M, xy, alpha, X0, Y0, W0, bw);
                         else
                         #endif
                         #if CV_SIMD128_64F
