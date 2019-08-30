@@ -109,10 +109,56 @@ async function onRuntimeInitialized(){
 Module = {
   onRuntimeInitialized
 };
-cv = require('../static/opencv.js')
-@code{.js}
+cv = require('./opencv.js')
+@endcode
 
 Using OpenCV.js browser utilities in Node.js with [node-canvas](https://www.npmjs.com/package/canvas)
 -----------------------------
 
-TODO
+In the rest of the examples, functions like `cv.imread()`, `cv.imshow()` are used to read and write images using the DOM. This tutorial shows how to support them in Node.js by using [node-canvas](https://www.npmjs.com/package/canvas).
+
+@code{.js}
+const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
+const { JSDOM } = require("jsdom");
+const { writeFileSync } = require('fs');
+
+// This is our program. This time we use JavaScript async / await and promises to handle asynchronicity.
+(async () => {
+  // before loading opencv.js we emulate HTML DOM by defining some global variables. See below.
+  installDOM();
+  await loadOpenCV();
+  const image = await loadImage('../../assets/lenna.jpg');
+  const src = cv.imread(image);
+
+  const dst = new cv.Mat();
+  let M = cv.Mat.ones(5, 5, cv.CV_8U);
+  let anchor = new cv.Point(-1, -1);
+  cv.dilate(src, dst, M, anchor, 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+
+  const canvas = createCanvas(300, 300);
+  cv.imshow(canvas, dst);
+  writeFileSync('tmp1.png', canvas.toBuffer('image/png'));
+  src.delete();
+  dst.delete();
+})();
+
+// Load opencv.js just like like before using promises. Also we define globals to emulate the 
+// HTML DOM which to support opencv.js utilities like cv.imread() and cv.imshow()
+function loadOpenCV() {
+  return new Promise(resolve => {
+    global.Module = {
+      onRuntimeInitialized: resolve
+    };
+    global.cv = require('./opencv.js')
+  });
+}
+
+function installDOM() {
+  const dom = new JSDOM();
+  global.document = dom.window.document;
+  global.Image = Image;
+  global.HTMLCanvasElement = Canvas;
+  global.ImageData = ImageData;
+  global.HTMLImageElement = Image;
+}
+@endcode
