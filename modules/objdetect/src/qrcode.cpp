@@ -115,7 +115,6 @@ vector<Vec3d> QRDetect::searchHorizontalLines()
             }
         }
         pixels_position.push_back(width_bin_barcode - 1);
-
         for (size_t i = 2; i < pixels_position.size() - 4; i+=2)
         {
             test_lines[0] = static_cast<double>(pixels_position[i - 1] - pixels_position[i - 2]);
@@ -235,7 +234,6 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
             vector<Point2f> centers;
             Mat labels;
             double compactness;
-
             compactness = kmeans(point2f_result, 3, labels,
                  TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
                  3, KMEANS_PP_CENTERS, centers);
@@ -415,7 +413,6 @@ bool QRDetect::computeTransformationPoints()
             next_pixel = bin_barcode.ptr<uint8_t>(cvRound(localization_points[i].y))[index + 1];
             if (next_pixel == future_pixel)
             {
-
                 future_pixel = 255 - future_pixel;
                 count_test_lines++;
                 if (count_test_lines == 2)
@@ -528,7 +525,6 @@ bool QRDetect::computeTransformationPoints()
     }
     return true;
 }
-
 
 Point2f QRDetect::intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 {
@@ -890,7 +886,6 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
     vector<Point2f> bbox = points;
     double coeff_expansion;
     const int min_side = std::min(src.size().width, src.size().height);
-
     if (min_side > 1024)
     {
         coeff_expansion = min_side / 1024;
@@ -907,14 +902,12 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
     {
         original = src.clone();
     }
-
     intermediate = Mat::zeros(original.size(), CV_8UC1);
     original_points = bbox;
     version = 0;
     version_size = 0;
     test_perspective_size = 251;
     result_info = "";
-
 }
 
 bool QRDecode::updatePerspective()
