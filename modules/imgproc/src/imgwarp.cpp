@@ -2686,7 +2686,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
 
 namespace cv
 {
-#if !CV_TRY_SSE4_1 && CV_SIMD128_64F
+#if CV_SIMD128_64F
 void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0, double Y0, double W0, int bw)
 {
     const v_float64x2 v_M0 = v_setall_f64(M[0]);
@@ -2985,8 +2985,11 @@ public:
                     if( interpolation == INTER_NEAREST )
                     {
                         #if CV_TRY_SSE4_1
-                        WarpPerspectiveLine_ProcessNN_SSE41(M, xy, X0, Y0, W0, bw);
-                        #elif CV_SIMD128_64F
+                        if(CV_CPU_HAS_SUPPORT_SSE4_1)
+                            WarpPerspectiveLine_ProcessNN_SSE41(M, xy, X0, Y0, W0, bw);
+                        else
+                        #endif
+                        #if CV_SIMD128_64F
                         WarpPerspectiveLine_ProcessNN_CV_SIMD(M, xy, X0, Y0, W0, bw);
                         #else
                         for( int x1 = 0; x1 < bw; x1++ )
@@ -3008,8 +3011,11 @@ public:
                         short* alpha = A + y1*bw;
 
                         #if CV_TRY_SSE4_1
-                        WarpPerspectiveLine_Process_SSE41(M, xy, alpha, X0, Y0, W0, bw);
-                        #elif CV_SIMD128_64F
+                        if(CV_CPU_HAS_SUPPORT_SSE4_1)
+                            WarpPerspectiveLine_Process_SSE41(M, xy, alpha, X0, Y0, W0, bw);
+                        else
+                        #endif
+                        #if CV_SIMD128_64F
                         WarpPerspectiveLine_Process_CV_SIMD(M, xy, alpha, X0, Y0, W0, bw);
                         #else
                         for( int x1 = 0; x1 < bw; x1++ )
