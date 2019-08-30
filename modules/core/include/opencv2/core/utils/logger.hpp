@@ -11,14 +11,12 @@
 
 #include "logger.defines.hpp"
 
-//! @addtogroup core_logging
-// This section describes OpenCV logging utilities.
-//
-//! @{
-
 namespace cv {
 namespace utils {
 namespace logging {
+
+//! @addtogroup core_logging
+//! @{
 
 //! Supported logging levels and their semantic
 enum LogLevel {
@@ -79,9 +77,8 @@ CV_EXPORTS void writeLogMessage(LogLevel logLevel, const char* message);
 #define CV_LOG_VERBOSE(tag, v, ...) for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_VERBOSE) break; std::stringstream ss; ss << "[VERB" << v << ":" << cv::utils::getThreadID() << "] " << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_VERBOSE, ss.str().c_str()); break; }
 #endif
 
+//! @}
 
 }}} // namespace
-
-//! @}
 
 #endif // OPENCV_LOGGER_HPP
