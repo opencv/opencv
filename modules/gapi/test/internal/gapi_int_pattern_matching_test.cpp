@@ -9,10 +9,6 @@
 
 #include <stdexcept>
 
-#include <opencv2/gapi/gtransform.hpp>
-#include <opencv2/gapi/cpu/core.hpp>
-#include <opencv2/gapi/cpu/imgproc.hpp>
-
 #include "compiler/gmodel.hpp"
 #include "compiler/gmodel_priv.hpp"
 
