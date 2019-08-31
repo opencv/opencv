@@ -2493,7 +2493,36 @@ double dotProd_16s(const short* src1, const short* src2, int len)
 
 double dotProd_32s(const int* src1, const int* src2, int len)
 {
+#if CV_SIMD128_64F
+    double r = 0.0;
+    int i = 0;
+    int lenAligned = len & -v_int32x4::nlanes;
+    v_float64x2 a(0.0, 0.0);
+    v_float64x2 b(0.0, 0.0);
+
+    for( i = 0; i < lenAligned; i += v_int32x4::nlanes )
+        {
+        v_int32x4 s1 = v_load(src1);
+        v_int32x4 s2 = v_load(src2);
+
+#if CV_VSX
+        // Do 32x32->64 multiplies, convert/round to double, accumulate
+        // Potentially less precise than FMA, but 1.5x faster than fma below.
+        a += v_cvt_f64(v_int64(vec_mule(s1.val, s2.val)));
+        b += v_cvt_f64(v_int64(vec_mulo(s1.val, s2.val)));
+#else
+        a = v_fma(v_cvt_f64(s1), v_cvt_f64(s2), a);
+        b = v_fma(v_cvt_f64_high(s1), v_cvt_f64_high(s2), b);
+#endif
+        src1 += v_int32x4::nlanes;
+        src2 += v_int32x4::nlanes;
+        }
+    a += b;
+    r = v_reduce_sum(a);
+    return r + dotProd_(src1, src2, len - i);
+#else
     return dotProd_(src1, src2, len);
+#endif
 }
 
 double dotProd_32f(const float* src1, const float* src2, int len)
