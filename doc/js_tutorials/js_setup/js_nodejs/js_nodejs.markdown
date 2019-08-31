@@ -1,4 +1,4 @@
-Using OpenCV.js In Node.js{#tutorial_js_node}
+Using OpenCV.js In Node.js{#tutorial_js_nodejs}
 ===============================
 
 @tableofcontents
@@ -10,14 +10,16 @@ In this tutorial, you will learn:
 
 -   Use OpenCV.js in a [Node.js](https://nodejs.org) application. 
 -   Load images with [jimp](https://www.npmjs.com/package/jimp) in order to use them with OpenCV.js.
--   Use [node-canvas](https://www.npmjs.com/package/canvas) to support OpenCV.js utilities like `cv.imread()`, `cv.imshow()`, etc.
--   Introduce [emscripten](https://emscripten.org/) APIs, like [Module](https://emscripten.org/docs/api_reference/module.html) and [File System](https://emscripten.org/docs/api_reference/Filesystem-API.html) on which OpenCV.js is based.
--   Node.js basics. Although this tutorial assumes the user knows JavaScript, experience with Node.js is not required.
+-   Using [jsdom](https://www.npmjs.com/package/canvas) and [node-canvas](https://www.npmjs.com/package/canvas) to support `cv.imread()`, `cv.imshow()`
+-   The basics of [emscripten](https://emscripten.org/) APIs, like [Module](https://emscripten.org/docs/api_reference/module.html) and [File System](https://emscripten.org/docs/api_reference/Filesystem-API.html) on which OpenCV.js is based.
+-   Learn Node.js basics. Although this tutorial assumes the user knows JavaScript, experience with Node.js is not required.
 
-@note More than a recommendation this tutorial should be considered as Besides giving instructions to run OpenCV.js in Node.s, the objective of this tutorial is also to introduce [emscripten](https://emscripten.org/) APIs, like [Module](https://emscripten.org/docs/api_reference/module.html) and [File System](https://emscripten.org/docs/api_reference/Filesystem-API.html).
+@note Besides giving instructions to run OpenCV.js in Node.js, another objective of this tutorial is to introduce users to the basics of [emscripten](https://emscripten.org/) APIs, like [Module](https://emscripten.org/docs/api_reference/module.html) and [File System](https://emscripten.org/docs/api_reference/Filesystem-API.html) and also Node.js.
 
 Minimal example
 -----------------------------
+
+Create a file `example1.js` with the following content: 
 
 @code{.js}
 // Define a global variable 'Module' with a method 'onRuntimeInitialized':
@@ -47,9 +49,9 @@ node example1.js
 What just happened?
 ----
 
- * **In the first statement**: By defining a global variable named 'Module', emscripten will call `Module.onRuntimeInitialized()` when the library is ready to use. Our program is in that method and uses the global variable `cv` just like in the browser.
+ * **In the first statement**:, by defining a global variable named 'Module', emscripten will call `Module.onRuntimeInitialized()` when the library is ready to use. Our program is in that method and uses the global variable `cv` just like in the browser.
  
- * **cv = require('./opencv.js')**: In this statement, we require the file `opencv.js` and assign the return value to the global variable `cv`. This will load the library and as said previously emscripten will call `Module.onRuntimeInitialized()` when its ready.
+ * The statement **`cv = require('./opencv.js')`** requires the file `opencv.js` and assign the return value to the global variable `cv`. `require()` which is a Node.js API, is used to load modules and files. In this case we load the file `opencv.js` form the current folder, and, as said previously emscripten will call `Module.onRuntimeInitialized()` when its ready.
 
  * See [emscripten Module API](https://emscripten.org/docs/api_reference/module.html) for more details.
 
@@ -72,7 +74,8 @@ npm init -y
 npm install jimp
 @endcode
 
-**The example**
+The example
+----
 
 @code{.js}
 const Jimp = require('jimp');
@@ -80,7 +83,7 @@ const Jimp = require('jimp');
 async function onRuntimeInitialized(){
 
   // load local image file with jimp. It supports jpg, png, bmp, tiff and gif:
-  var jimpSrc = await Jimp.read('test/assets/lenna.jpg');
+  var jimpSrc = await Jimp.read('./lenna.jpg');
 
   // `jimpImage.bitmap` property has the decoded ImageData that we can use to create a cv:Mat
   var src = cv.matFromImageData(jimpSrc.bitmap);
@@ -112,14 +115,42 @@ Module = {
 cv = require('./opencv.js')
 @endcode
 
-Using [jsdom](https://www.npmjs.com/package/canvas) and [node-canvas](https://www.npmjs.com/package/canvas) to support OpenCV.js browser utilities in Node.js.
+Execute it
+----
+
+-   Save the file as `exampleNodeJimp.js`.
+-   Make sure a sample image `lenna.jpg` exists in the current directory.
+
+The following command should generate the file `output.png`:
+
+@code{.bash}
+node exampleNodeJimp.js
+@endcode
+
+
+Using [jsdom](https://www.npmjs.com/package/canvas) and [node-canvas](https://www.npmjs.com/package/canvas) to support `cv.imread()`, `cv.imshow()`
 -----------------------------
 
-As you might already seen, the rest of the examples use functions like `cv.imread()`, `cv.imshow()` to load and save images. Unfortunately as mentioned they won't work on Node.js since there is no HTML DOM.
+As you might already seen, the rest of the examples use functions like `cv.imread()`, `cv.imshow()` to read and write images. Unfortunately as mentioned they won't work on Node.js since there is no HTML DOM.
 
 In this section, you will learn how to use [jsdom](https://www.npmjs.com/package/canvas) and [node-canvas](https://www.npmjs.com/package/canvas)  to emulate the HTML DOM on Node.js so those functions work. 
 
-This could be particularly useful for writing tests, since the same code that runs in the browser also runs in Node.js. Since these technologies doesn't require a browser or any particular visual environment, are perfectly suitable to support common Continuos Integration Environments like [travis-ci](https://travis-ci.org) or [azure](https://dev.azure.com).
+@This could be particularly useful for writing tests, since the same code that runs in the browser also runs in Node.js. Since these technologies doesn't require a browser or any particular visual environment, are perfectly suitable to support common Continuos Integration Environments like [travis-ci](https://travis-ci.org) or [azure](https://dev.azure.com).
+
+Project setup
+----
+
+As before, we create a Node.js project and install the dependencies we need:
+
+@code{.bash}
+mkdir project2
+cd project2
+npm init -y
+npm install canvas jsdom
+@endcode
+
+The example
+----
 
 @code{.js}
 const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
@@ -128,26 +159,30 @@ const { writeFileSync } = require('fs');
 
 // This is our program. This time we use JavaScript async / await and promises to handle asynchronicity.
 (async () => {
-  // before loading opencv.js we define global variables to emulate the DOM see the function declaration below.
-  installDOM();
-  await loadOpenCV();
-  const image = await loadImage('../../assets/lenna.jpg');
-  const src = cv.imread(image);
 
+  // before loading opencv.js we emulate a minimal HTML DOM. See the function declaration below.
+  installDOM();
+
+  await loadOpenCV();
+  
+  // using node-canvas, we an image file to an object compatible with HTML DOM Image and therefore with cv.imread()
+  const image = await loadImage('./lenna.jpg');
+
+  const src = cv.imread(image);
   const dst = new cv.Mat();
-  let M = cv.Mat.ones(5, 5, cv.CV_8U);
-  let anchor = new cv.Point(-1, -1);
+  const M = cv.Mat.ones(5, 5, cv.CV_8U);
+  const anchor = new cv.Point(-1, -1);
   cv.dilate(src, dst, M, anchor, 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
 
+  // we create an object compatible HTMLCanvasElement
   const canvas = createCanvas(300, 300);
   cv.imshow(canvas, dst);
-  writeFileSync('tmp1.png', canvas.toBuffer('image/png'));
+  writeFileSync('output.jpg', canvas.toBuffer('image/jpeg'));
   src.delete();
   dst.delete();
 })();
 
-// Load opencv.js just like like before using promises. Also we define globals to emulate the 
-// HTML DOM which to support opencv.js utilities like cv.imread() and cv.imshow()
+// Load opencv.js just like before but using Promise instead of callbacks:
 function loadOpenCV() {
   return new Promise(resolve => {
     global.Module = {
@@ -157,14 +192,29 @@ function loadOpenCV() {
   });
 }
 
+// Using jsdom and node-canvas we define some global variables to emulate HTML DOM.
+// Although a complete emulation can be archived, here we only define those globals used 
+// by cv.imread() and cv.imshow(). 
 function installDOM() {
-  // Using JSDOM and node-canvas we define some global variables to emulate HTML DOM in Node.js
-  // here we declare just the minimal variables assumed 
   const dom = new JSDOM();
   global.document = dom.window.document;
+  
+  // The rest enables DOM image and canvas and is provided by node-canvas
   global.Image = Image;
   global.HTMLCanvasElement = Canvas;
   global.ImageData = ImageData;
   global.HTMLImageElement = Image;
 }
+@endcode
+
+Execute it
+----
+
+-   Save the file as `exampleNodeCanvas.js`.
+-   Make sure a sample image `lenna.jpg` exists in the current directory.
+
+The following command should generate the file `output.jpg`:
+
+@code{.bash}
+node exampleNodeCanvas.js
 @endcode
