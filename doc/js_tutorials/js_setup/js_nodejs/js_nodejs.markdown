@@ -1,8 +1,6 @@
 Using OpenCV.js In Node.js{#tutorial_js_nodejs}
 ===============================
 
-@tableofcontents
-
 Goals
 -----
 
