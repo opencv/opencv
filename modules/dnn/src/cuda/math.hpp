@@ -55,6 +55,21 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ float log1p(float val) { return log1pf(val); }
 
     template <class T> __device__ T log1pexp(T val);
+    template <> inline __device__ __half log1pexp(__half val) {
+        if (val <= __half(-4.0))
+            return exp(val);
+        else if (val <= __half(8.0))
+            return log1p(exp(val));
+        else if (val <= __half(8.7))
+            return val + exp(-val);
+        else
+            return val;
+    }
+    template <> inline __device__ __half2 log1pexp(__half2 val) {
+        val.x = log1pexp(val.x);
+        val.y = log1pexp(val.y);
+        return val;
+    }
     template <> inline __device__ float log1pexp(float val) {
         if (val <= -20)
             return expf(val);
@@ -75,7 +90,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
         else
             return val;
     }
-    template <> inline __device__ __half log1pexp(__half val) { return log1pexp<float>(val); }
 
     template <class T> __device__ T tanh(T val);
     template <> inline __device__ __half tanh(__half val) { return tanhf(val); }
