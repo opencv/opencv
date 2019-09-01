@@ -30,13 +30,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             if (!weights.empty())
             {
                 weightsTensor = csl::makeTensorHeader<T>(weights);
-                csl::copyMatToTensor<T>(weightsTensor, weights, stream);
+                csl::copyMatToTensor<T>(weights, weightsTensor, stream);
             }
 
             if (!bias.empty())
             {
                 biasTensor = csl::makeTensorHeader<T>(bias);
-                csl::copyMatToTensor<T>(biasTensor, bias, stream);
+                csl::copyMatToTensor<T>(bias, biasTensor, stream);
             }
         }
 

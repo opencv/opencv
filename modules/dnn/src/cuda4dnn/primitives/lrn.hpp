@@ -15,9 +15,9 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
-    enum class lrn_type {
-        across_channels,
-        within_channel
+    enum class LRNType {
+        ACROSS_CHANNELS,
+        WITHIN_CHANNEL
     };
 
     template <class T>
@@ -25,18 +25,18 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        LRNOp(csl::cudnn::Handle handle, lrn_type type_, std::size_t local_size, T alpha, T beta, T bias, std::size_t largestInputSize)
+        LRNOp(csl::cudnn::Handle handle, LRNType type_, std::size_t local_size, T alpha, T beta, T bias, std::size_t largestInputSize)
             : scratch_mem_in_bytes { 0 }
         {
-            typename csl::LRN<T>::lrn_type type{};
+            typename csl::LRN<T>::LRNType type{};
             switch (type_) {
-            case lrn_type::across_channels: type = csl::LRN<T>::lrn_type::across_channels; break;
-            case lrn_type::within_channel: type = csl::LRN<T>::lrn_type::within_channel; break;
+            case LRNType::ACROSS_CHANNELS: type = csl::LRN<T>::LRNType::ACROSS_CHANNELS; break;
+            case LRNType::WITHIN_CHANNEL: type = csl::LRN<T>::LRNType::WITHIN_CHANNEL; break;
             }
             lrn = csl::LRN<T>(std::move(handle), local_size, alpha, beta, bias, type);
 
             csl::WorkspaceBuilder builder;
-            if (type_ == lrn_type::within_channel) {
+            if (type_ == LRNType::WITHIN_CHANNEL) {
                 /* this is not a bug; we require two of these */
                 builder.require<T>(largestInputSize);
                 builder.require<T>(largestInputSize);

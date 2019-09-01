@@ -15,9 +15,9 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
-    enum class interpolation_type {
-        nearest_neighbour,
-        bilinear
+    enum class InterpolationType {
+        NEAREST_NEIGHBOUR,
+        BILINEAR
     };
 
     template <class T>
@@ -25,7 +25,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        ResizeOp(csl::Stream stream_, interpolation_type type_, float scaleHeight_, float scaleWidth_)
+        ResizeOp(csl::Stream stream_, InterpolationType type_, float scaleHeight_, float scaleWidth_)
             : stream(std::move(stream_)), type{ type_ }, scaleHeight{ scaleHeight_ }, scaleWidth{ scaleWidth_ }
         {
         }
@@ -43,15 +43,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            if (type == interpolation_type::nearest_neighbour)
+            if (type == InterpolationType::NEAREST_NEIGHBOUR)
                 kernels::resize_nn<T>(stream, output, input);
-            else if (type == interpolation_type::bilinear)
+            else if (type == InterpolationType::BILINEAR)
                 kernels::resize_bilinear<T>(stream, output, input, scaleHeight, scaleWidth);
         }
 
     private:
         csl::Stream stream;
-        interpolation_type type;
+        InterpolationType type;
         float scaleHeight, scaleWidth; /* for bilinear interpolation */
     };
 

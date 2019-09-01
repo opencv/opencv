@@ -1327,17 +1327,17 @@ public:
 
         if (padMode.empty())
         {
-            config.padMode = ConvolutionConfiguration::padding_mode::manual;
+            config.padMode = ConvolutionConfiguration::PaddingMode::MANUAL;
             config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
             config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
         }
         else if (padMode == "VALID")
         {
-            config.padMode = ConvolutionConfiguration::padding_mode::valid;
+            config.padMode = ConvolutionConfiguration::PaddingMode::VALID;
         }
         else if (padMode == "SAME")
         {
-            config.padMode = ConvolutionConfiguration::padding_mode::same;
+            config.padMode = ConvolutionConfiguration::PaddingMode::SAME;
         }
         else
         {
@@ -2016,17 +2016,17 @@ public:
 
         if (padMode.empty())
         {
-            config.padMode = TransposeConvolutionConfiguration::padding_mode::manual;
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::MANUAL;
             config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
             config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
         }
         else if (padMode == "VALID")
         {
-            config.padMode = TransposeConvolutionConfiguration::padding_mode::valid;
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::VALID;
         }
         else if (padMode == "SAME")
         {
-            config.padMode = TransposeConvolutionConfiguration::padding_mode::same;
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::SAME;
         }
         else
         {

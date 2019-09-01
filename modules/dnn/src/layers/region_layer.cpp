@@ -373,17 +373,17 @@ public:
             width_norm = input_shape[3];
         }
 
-        cuda4dnn::squash_method squash;
+        cuda4dnn::SquashMethod squash_method;
         if(useLogistic)
-            squash = cuda4dnn::squash_method::sigmoid;
+            squash_method = cuda4dnn::SquashMethod::SIGMOID;
         else if (useSoftmax)
-            squash = cuda4dnn::squash_method::softmax;
+            squash_method = cuda4dnn::SquashMethod::SOFTMAX;
 
         /* exactly one must be true */
         CV_Assert((useLogistic || useSoftmax) && !(useLogistic && useSoftmax));
 
         cuda4dnn::RegionConfiguration<float> config;
-        config.squash = squash;
+        config.squash_method = squash_method;
         config.classes = classes;
         config.boxes_per_cell = anchors;
 

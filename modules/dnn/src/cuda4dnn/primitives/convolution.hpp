@@ -28,14 +28,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         std::vector<std::size_t> kernel_size;
         std::vector<std::size_t> dilations, strides;
 
-        enum class padding_mode {
-            manual, /* uses explicit padding values provided in `pads_begin` and `pads_end` */
-            valid, /* no padding is added */
-            same /* TensorFlow logic is used for same padding */
+        enum class PaddingMode {
+            MANUAL, /* uses explicit padding values provided in `pads_begin` and `pads_end` */
+            VALID, /* no padding is added */
+            SAME /* TensorFlow logic is used for same padding */
         };
 
         /* explicit paddings are used if and only if padMode is set to manual */
-        padding_mode padMode;
+        PaddingMode padMode;
         std::vector<std::size_t> pads_begin, pads_end;
 
         /* full shape inclusive of channel and batch axis */
@@ -81,12 +81,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             CV_Assert(input_feature_maps % groups == 0);
 
             filtersTensor = csl::makeTensorHeader<T>(filters);
-            csl::copyMatToTensor<T>(filtersTensor, filters, stream);
+            csl::copyMatToTensor<T>(filters, filtersTensor, stream);
 
             if (!bias.empty())
             {
                 biasTensor = csl::makeTensorHeader<T>(bias);
-                csl::copyMatToTensor<T>(biasTensor, bias, stream);
+                csl::copyMatToTensor<T>(bias, biasTensor, stream);
             }
 
             /* left and right are misleading as the padding is applicable for any number of dimensions
@@ -98,7 +98,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
              */
             std::vector<std::size_t> common_padding(rank, 0);
             std::vector<std::size_t> padding_left(rank, 0), padding_right(rank, 0);
-            if (config.padMode == ConvolutionConfiguration::padding_mode::manual)
+            if (config.padMode == ConvolutionConfiguration::PaddingMode::MANUAL)
             {
                 const auto& pads_begin = config.pads_begin;
                 const auto& pads_end = config.pads_end;
@@ -113,11 +113,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     padding_right[i] = pads_end[i - 2] - common_padding[i];
                 }
             }
-            else if (config.padMode == ConvolutionConfiguration::padding_mode::valid)
+            else if (config.padMode == ConvolutionConfiguration::PaddingMode::VALID)
             {
                 /* nothing to do as the paddings are already preset to zero */
             }
-            else if (config.padMode == ConvolutionConfiguration::padding_mode::same)
+            else if (config.padMode == ConvolutionConfiguration::PaddingMode::SAME)
             {
                 /* TensorFlow Logic:
                  * total_padding[i] = (o[i] - 1) * s[i] + effective_k[i] - i[i]

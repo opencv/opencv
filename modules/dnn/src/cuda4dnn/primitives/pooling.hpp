@@ -22,25 +22,25 @@
 namespace cv { namespace dnn { namespace cuda4dnn {
 
     struct PoolingConfiguration {
-        enum class pooling_mode {
-            max,
-            average_included, /* include padding while calculating average */
-            average_excluded /* exclude padding while calculating average */
+        enum class PoolingMode {
+            MAX,
+            AVERAGE_INCLUDE_PADDING, /* include padding while calculating average */
+            AVERAGE_EXCLUDE_PADDING /* exclude padding while calculating average */
         };
 
-        pooling_mode poolMode;
+        PoolingMode poolMode;
 
         /* the size of the following vectors must be equal to the window size */
         std::vector<std::size_t> window_size;
         std::vector<std::size_t> strides;
 
-        enum class padding_mode {
-            manual, /* uses explicit padding values provided in `pads_begin` and `pads_end` */
-            valid, /* no padding is added */
-            same /* TensorFlow logic is used for same padding */
+        enum class PaddingMode {
+            MANUAL, /* uses explicit padding values provided in `pads_begin` and `pads_end` */
+            VALID, /* no padding is added */
+            SAME /* TensorFlow logic is used for same padding */
         };
 
-        padding_mode padMode;
+        PaddingMode padMode;
 
         /* explicit paddings are used if and only if padMode is set to manual */
         std::vector<std::size_t> pads_begin, pads_end;
@@ -50,12 +50,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
          *
          * rounding mode decides what is used as `func`
          */
-        enum class rounding_mode {
-            ceil, /* uses ceil */
-            floor
+        enum class RoundingMode {
+            CEIL, /* uses ceil */
+            FLOOR
         };
 
-        rounding_mode roundMode;
+        RoundingMode roundMode;
 
         /* full shape inclusive of channel and batch axis */
         std::vector<std::size_t> input_shape;
@@ -94,7 +94,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
              */
             std::vector<std::size_t> common_padding(rank, 0);
             std::vector<std::size_t> padding_left(rank, 0), padding_right(rank, 0);
-            if (config.padMode == PoolingConfiguration::padding_mode::manual)
+            if (config.padMode == PoolingConfiguration::PaddingMode::MANUAL)
             {
                 const auto& pads_begin = config.pads_begin;
                 const auto& pads_end = config.pads_end;
@@ -107,7 +107,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                  * the correct output size without having to deal with fancy fractional sizes
                  */
                 auto pads_end_modified = pads_end;
-                if (config.roundMode == PoolingConfiguration::rounding_mode::ceil)
+                if (config.roundMode == PoolingConfiguration::RoundingMode::CEIL)
                 {
                     for (int i = 0; i < window_size.size(); i++) {
                         auto rem = (input_shape[i + 2] + pads_begin[i] + pads_end[i] - window_size[i]) % strides[i];
@@ -123,11 +123,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     padding_right[i] = pads_end_modified[i - 2] - common_padding[i];
                 }
             }
-            else if (config.padMode == PoolingConfiguration::padding_mode::valid)
+            else if (config.padMode == PoolingConfiguration::PaddingMode::VALID)
             {
                 /* nothing to do as the paddings are already preset to zero */
             }
-            else if (config.padMode == PoolingConfiguration::padding_mode::same)
+            else if (config.padMode == PoolingConfiguration::PaddingMode::SAME)
             {
                 /* TensorFlow Logic:
                  * total_padding[i] = (o[i] - 1) * s[i] + effective_k[i] - i[i]
@@ -207,17 +207,17 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             params.padding.assign(std::begin(common_padding) + 2, std::end(common_padding));
             params.stride = strides;
 
-            if (config.poolMode == PoolingConfiguration::pooling_mode::max)
+            if (config.poolMode == PoolingConfiguration::PoolingMode::MAX)
             {
-                params.type = csl::Pooling<T>::pooling_type::max;
+                params.type = csl::Pooling<T>::PoolingType::MAX;
             }
-            else if (config.poolMode == PoolingConfiguration::pooling_mode::average_included)
+            else if (config.poolMode == PoolingConfiguration::PoolingMode::AVERAGE_INCLUDE_PADDING)
             {
-                params.type = csl::Pooling<T>::pooling_type::average_include_padding;
+                params.type = csl::Pooling<T>::PoolingType::AVERAGE_INCLUDE_PADDING;
             }
-            else if (config.poolMode == PoolingConfiguration::pooling_mode::average_excluded)
+            else if (config.poolMode == PoolingConfiguration::PoolingMode::AVERAGE_EXCLUDE_PADDING)
             {
-                params.type = csl::Pooling<T>::pooling_type::average_exclude_padding;
+                params.type = csl::Pooling<T>::PoolingType::AVERAGE_EXCLUDE_PADDING;
             }
 
             pooler = csl::Pooling<T>(cudnnHandle, params);

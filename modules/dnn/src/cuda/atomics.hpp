@@ -24,7 +24,7 @@ inline __device__ void atomicAdd(__half* address, __half val) {
 
         old = (size_t)address & 2 ? (old & 0xffff) | (hsum.x << 16) : (old & 0xffff0000) | hsum.x;
         old = atomicCAS(address_as_ui, assumed, old);
-} while (assumed != old);
+    } while (assumed != old);
 }
 #endif
 

@@ -31,7 +31,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
         template <class T, std::size_t Order,
-           typename std::enable_if<Order == 2 || Order == 3, bool>::type = true> /* Order has been hardcoded; see code */
+        typename std::enable_if<Order == 2 || Order == 3, bool>::type = true> /* Order has been hardcoded; see code */
         __global__ void max_pooling_with_indices(
             span<T> output, span<T> indices, view<T> input, size_type channels,
             array<size_type, Order> out_spatial_dims, array<size_type, Order> in_spatial_dims,

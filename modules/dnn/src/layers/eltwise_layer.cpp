@@ -390,13 +390,13 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        eltwise_op op_ = [this] {
+        auto op_ = [this] {
             switch (op) {
-            case MAX: return eltwise_op::max;
-            case SUM: return eltwise_op::sum;
-            case PROD: return eltwise_op::product;
+            case MAX: return cuda4dnn::EltwiseOpType::MAX;
+            case SUM: return cuda4dnn::EltwiseOpType::SUM;
+            case PROD: return cuda4dnn::EltwiseOpType::PRODUCT;
             }
-            return eltwise_op::sum;
+            return cuda4dnn::EltwiseOpType::SUM;
         }();
 
         return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, coeffs);

@@ -24,13 +24,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         std::vector<std::size_t> window_size;
         std::vector<std::size_t> strides;
 
-        enum class padding_mode {
-            manual, /* uses explicit padding values provided in `pads_begin` and `pads_end` */
-            valid, /* no padding is added */
-            same /* TensorFlow logic is used for same padding */
+        enum class PaddingMode {
+            MANUAL, /* uses explicit padding values provided in `pads_begin` and `pads_end` */
+            VALID, /* no padding is added */
+            SAME /* TensorFlow logic is used for same padding */
         };
 
-        padding_mode padMode;
+        PaddingMode padMode;
 
         /* explicit paddings are used if and only if padMode is set to manual */
         std::vector<std::size_t> pads_begin;
@@ -59,18 +59,18 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 CV_Error(Error::StsNotImplemented, "Only 2D/3D max-pooling are supported.");
 
             padding_left.resize(pooling_order);
-            if (config.padMode == MaxPoolingConfiguration::padding_mode::manual)
+            if (config.padMode == MaxPoolingConfiguration::PaddingMode::MANUAL)
             {
                 const auto& pads_begin = config.pads_begin;
                 CV_Assert(pooling_order == pads_begin.size());
 
                 padding_left.assign(std::begin(pads_begin), std::end(pads_begin));
             }
-            else if (config.padMode == MaxPoolingConfiguration::padding_mode::valid)
+            else if (config.padMode == MaxPoolingConfiguration::PaddingMode::VALID)
             {
                 /* nothing to do as the paddings are already preset to zero */
             }
-            else if (config.padMode == MaxPoolingConfiguration::padding_mode::same)
+            else if (config.padMode == MaxPoolingConfiguration::PaddingMode::SAME)
             {
                 /* TensorFlow Logic:
                  * total_padding[i] = (o[i] - 1) * s[i] + effective_k[i] - i[i]

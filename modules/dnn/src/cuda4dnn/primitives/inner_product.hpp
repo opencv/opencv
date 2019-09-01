@@ -32,12 +32,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         {
             weightsTensor = csl::makeTensorHeader<T>(weights);
             CV_Assert(get_effective_rank(weightsTensor) == 2);
-            csl::copyMatToTensor<T>(weightsTensor, weights, stream);
+            csl::copyMatToTensor<T>(weights, weightsTensor, stream);
 
             if (!bias.empty())
             {
                 biasTensor = csl::makeTensorHeader<T>(bias);
-                csl::copyMatToTensor<T>(biasTensor, bias, stream);
+                csl::copyMatToTensor<T>(bias, biasTensor, stream);
                 CV_Assert(weightsTensor.get_axis_size(-2) == biasTensor.size());
             }
         }

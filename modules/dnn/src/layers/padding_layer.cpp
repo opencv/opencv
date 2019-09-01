@@ -177,11 +177,11 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        padding_type ptype;
+        cuda4dnn::PaddingType ptype;
         if (paddingType == "constant")
-            ptype = padding_type::constant;
+            ptype = PaddingType::CONSTANT;
         else if (paddingType == "reflect")
-            ptype = padding_type::reflection101;
+            ptype = PaddingType::REFLECTION101;
         else
             CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
 

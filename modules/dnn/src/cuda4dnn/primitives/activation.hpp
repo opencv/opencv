@@ -88,7 +88,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         {
             CV_Assert(!slope.empty());
             slopeTensor = csl::makeTensorHeader<T>(slope);
-            csl::copyMatToTensor<T>(slopeTensor, slope, stream);
+            csl::copyMatToTensor<T>(slope, slopeTensor, stream);
         }
 
         void forward(

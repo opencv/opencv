@@ -23,9 +23,9 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
-    enum class squash_method {
-        softmax,
-        sigmoid
+    enum class SquashMethod {
+        SOFTMAX,
+        SIGMOID
     };
 
     template <class T>
@@ -50,7 +50,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
          */
 
         /* method for reducing class scores to probabilities */
-        squash_method squash;
+        SquashMethod squash_method;
 
         std::size_t classes, boxes_per_cell;
 
@@ -73,7 +73,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             : stream(std::move(stream_))
         {
             biasTensor = csl::makeTensorHeader<T>(bias);
-            csl::copyMatToTensor<T>(biasTensor, bias, stream);
+            csl::copyMatToTensor<T>(bias, biasTensor, stream);
 
             classes = config.classes;
             boxes_per_cell = config.boxes_per_cell;
@@ -81,7 +81,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             width_norm = config.width_norm;
             height_norm = config.height_norm;
 
-            squash_type = config.squash;
+            squash_type = config.squash_method;
 
             object_prob_cutoff = config.object_prob_cutoff;
             class_prob_cutoff = config.class_prob_cutoff;
@@ -110,9 +110,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto cell_box_size = classes + 4 + 1;
 
             /* we squash class scores into probabilities using softmax or sigmoid */
-            if (squash_type == squash_method::softmax)
+            if (squash_type == SquashMethod::SOFTMAX)
                 kernels::softmax_strided<T>(stream, output, input, classes, cell_box_size, 5);
-            else if (squash_type == squash_method::sigmoid)
+            else if (squash_type == SquashMethod::SIGMOID)
                 kernels::sigmoid_strided<T>(stream, output, input, classes, cell_box_size, 5);
 
             kernels::region_finalize<T>(stream, output, input, biasTensor, object_prob_cutoff, class_prob_cutoff,
@@ -170,7 +170,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Tensor<T> biasTensor;
         std::size_t classes, boxes_per_cell;
         std::size_t width_norm, height_norm;
-        squash_method squash_type;
+        SquashMethod squash_type;
 
         T object_prob_cutoff, class_prob_cutoff;
         T nms_iou_threshold;

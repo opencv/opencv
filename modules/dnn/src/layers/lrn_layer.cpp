@@ -325,11 +325,11 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        cuda4dnn::lrn_type type_;
+        cuda4dnn::LRNType type_;
         if (type == CHANNEL_NRM)
-            type_ = cuda4dnn::lrn_type::across_channels;
+            type_ = cuda4dnn::LRNType::ACROSS_CHANNELS;
         else if (type == SPATIAL_NRM)
-            type_ = cuda4dnn::lrn_type::within_channel;
+            type_ = cuda4dnn::LRNType::WITHIN_CHANNEL;
         else
             CV_Error(Error::StsNotImplemented, "Unknown normalization region");
 

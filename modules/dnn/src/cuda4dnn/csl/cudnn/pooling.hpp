@@ -24,11 +24,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
     class PoolingDescriptor {
     public:
-        enum class pooling_type {
-            max,
-            max_deterministic,
-            average_exclude_padding,
-            average_include_padding
+        enum class PoolingType {
+            MAX,
+            MAX_DETERMINISTIC,
+            AVERAGE_EXCLUDE_PADDING,
+            AVERAGE_INCLUDE_PADDING
         };
 
         PoolingDescriptor() noexcept : descriptor{ nullptr } { }
@@ -43,7 +43,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             const SequenceContainer& window_size,
             const SequenceContainer& padding,
             const SequenceContainer& stride,
-            pooling_type type)
+            PoolingType type)
         {
             constructor(window_size, padding, stride, type);
         }
@@ -70,20 +70,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             const SequenceContainer& window_size,
             const SequenceContainer& padding,
             const SequenceContainer& stride,
-            pooling_type type)
+            PoolingType type)
         {
             CV_Assert(window_size.size() == padding.size());
             CV_Assert(window_size.size() == stride.size());
 
-            auto get_pooling_type = [] (pooling_type type) {
+            auto get_pooling_type = [] (PoolingType type) {
                 switch (type) {
-                case pooling_type::max:
+                case PoolingType::MAX:
                     return CUDNN_POOLING_MAX;
-                case pooling_type::max_deterministic:
+                case PoolingType::MAX_DETERMINISTIC:
                     return CUDNN_POOLING_MAX_DETERMINISTIC;
-                case pooling_type::average_exclude_padding:
+                case PoolingType::AVERAGE_EXCLUDE_PADDING:
                     return CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-                case pooling_type::average_include_padding:
+                case PoolingType::AVERAGE_INCLUDE_PADDING:
                     return CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
                 }
                 CV_Error(Error::StsBadArg, "unknown pooling type");

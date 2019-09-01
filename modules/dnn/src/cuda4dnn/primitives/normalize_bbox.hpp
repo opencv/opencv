@@ -69,7 +69,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 else
                 {
                     weightsTensor = csl::makeTensorHeader<T>(weights);
-                    csl::copyMatToTensor<T>(weightsTensor, weights, stream);
+                    csl::copyMatToTensor<T>(weights, weightsTensor, stream);
                 }
             }
 

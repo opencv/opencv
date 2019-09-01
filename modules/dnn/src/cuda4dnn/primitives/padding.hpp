@@ -23,9 +23,9 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
-    enum class padding_type {
-        constant,
-        reflection101
+    enum class PaddingType {
+        CONSTANT,
+        REFLECTION101
     };
 
     template <class T>
@@ -34,7 +34,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
         /* `ranges` is indexed by axis and contains the range in the output where the input is copied to */
-        PaddingOp(csl::Stream stream_, padding_type type_, T value_, std::vector<cv::Range> ranges)
+        PaddingOp(csl::Stream stream_, PaddingType type_, T value_, std::vector<cv::Range> ranges)
             : stream(std::move(stream_)),  type{ type_ }, value{ value_ }, dstRanges(std::move(ranges))
         {
         }
@@ -70,7 +70,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     CV_Assert(input.get_axis_size(i) == dstRanges[i].size());
             }
 
-            if (type == padding_type::constant)
+            if (type == PaddingType::CONSTANT)
             {
                 kernels::fill<T>(stream, output, value);
 
@@ -84,7 +84,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
                 kernels::concat_with_offsets<T>(stream, output, input, offsets);
             }
-            else if (type == padding_type::reflection101)
+            else if (type == PaddingType::REFLECTION101)
             {
                 std::vector<std::pair<std::size_t, std::size_t>> ranges(effective_rank);
                 for (int i = 0; i < effective_rank; i++)
@@ -102,7 +102,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     private:
         csl::Stream stream;
-        padding_type type;
+        PaddingType type;
         T value;
 
         std::vector<cv::Range> dstRanges;

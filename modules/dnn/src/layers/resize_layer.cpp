@@ -182,11 +182,11 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        interpolation_type itype;
+        cuda4dnn::InterpolationType itype;
         if (interpolation == "nearest")
-            itype = interpolation_type::nearest_neighbour;
+            itype = InterpolationType::NEAREST_NEIGHBOUR;
         else if (interpolation == "bilinear")
-            itype = interpolation_type::bilinear;
+            itype = InterpolationType::BILINEAR;
         else
             CV_Error(Error::StsNotImplemented, "Requested interpolation mode is not available in resize layer.");
 

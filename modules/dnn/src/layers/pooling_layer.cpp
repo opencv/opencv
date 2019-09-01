@@ -319,16 +319,16 @@ public:
 
             if (padMode.empty())
             {
-                config.padMode = MaxPoolingConfiguration::padding_mode::manual;
+                config.padMode = MaxPoolingConfiguration::PaddingMode::MANUAL;
                 config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
             }
             else if (padMode == "VALID")
             {
-                config.padMode = MaxPoolingConfiguration::padding_mode::valid;
+                config.padMode = MaxPoolingConfiguration::PaddingMode::VALID;
             }
             else if (padMode == "SAME")
             {
-                config.padMode = MaxPoolingConfiguration::padding_mode::same;
+                config.padMode = MaxPoolingConfiguration::PaddingMode::SAME;
             }
             else
             {
@@ -343,15 +343,15 @@ public:
         PoolingConfiguration config;
         if (type == MAX)
         {
-            config.poolMode = PoolingConfiguration::pooling_mode::max;
+            config.poolMode = PoolingConfiguration::PoolingMode::MAX;
         }
         else if (type == AVE && !avePoolPaddedArea)
         {
-            config.poolMode = PoolingConfiguration::pooling_mode::average_excluded;
+            config.poolMode = PoolingConfiguration::PoolingMode::AVERAGE_EXCLUDE_PADDING;
         }
         else if (type == AVE && avePoolPaddedArea)
         {
-            config.poolMode = PoolingConfiguration::pooling_mode::average_included;
+            config.poolMode = PoolingConfiguration::PoolingMode::AVERAGE_INCLUDE_PADDING;
         }
         else
         {
@@ -363,17 +363,17 @@ public:
 
         if (padMode.empty())
         {
-            config.padMode = PoolingConfiguration::padding_mode::manual;
+            config.padMode = PoolingConfiguration::PaddingMode::MANUAL;
             config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
             config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
         }
         else if (padMode == "VALID")
         {
-            config.padMode = PoolingConfiguration::padding_mode::valid;
+            config.padMode = PoolingConfiguration::PaddingMode::VALID;
         }
         else if (padMode == "SAME")
         {
-            config.padMode = PoolingConfiguration::padding_mode::same;
+            config.padMode = PoolingConfiguration::PaddingMode::SAME;
         }
         else
         {
@@ -381,9 +381,9 @@ public:
         }
 
         if (ceilMode)
-            config.roundMode = PoolingConfiguration::rounding_mode::ceil;
+            config.roundMode = PoolingConfiguration::RoundingMode::CEIL;
         else
-            config.roundMode = PoolingConfiguration::rounding_mode::floor;
+            config.roundMode = PoolingConfiguration::RoundingMode::FLOOR;
 
         config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 

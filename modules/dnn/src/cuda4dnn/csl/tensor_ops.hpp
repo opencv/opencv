@@ -284,7 +284,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         using PoolingDescriptor = cudnn::PoolingDescriptor;
 
     public:
-        using pooling_type = PoolingDescriptor::pooling_type;
+        using PoolingType = PoolingDescriptor::PoolingType;
 
         struct params_type {
             std::vector<std::size_t> input_shape;
@@ -294,7 +294,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             std::vector<std::size_t> padding;
             std::vector<std::size_t> stride;
 
-            pooling_type type;
+            PoolingType type;
         };
 
         Pooling() = default;
@@ -335,12 +335,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         using TensorDescriptor = cudnn::TensorDescriptor<T>;
 
     public:
-        using lrn_type = LRNDescriptor::lrn_type;
+        using LRNType = LRNDescriptor::LRNType;
 
         LRN() = default;
         LRN(const LRN&) = delete;
         LRN(LRN&&) = default;
-        LRN(cudnn::Handle handle, std::size_t local_size, T alpha, T beta, T k, lrn_type type) {
+        LRN(cudnn::Handle handle, std::size_t local_size, T alpha, T beta, T k, LRNType type) {
             cudnnHandle = std::move(handle);
             lrnDesc = LRNDescriptor(local_size, alpha, beta, k, type);
         }

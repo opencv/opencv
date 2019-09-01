@@ -26,7 +26,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             : stream(std::move(stream_))
         {
             constTensor = csl::makeTensorHeader<T>(data);
-            csl::copyMatToTensor<T>(constTensor, data, stream);
+            csl::copyMatToTensor<T>(data, constTensor, stream);
         }
 
         void forward(

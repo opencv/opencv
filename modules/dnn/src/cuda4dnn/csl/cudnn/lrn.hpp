@@ -20,9 +20,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
     class LRNDescriptor {
     public:
-        enum class lrn_type {
-            across_channels,
-            within_channel
+        enum class LRNType {
+            ACROSS_CHANNELS,
+            WITHIN_CHANNEL
         };
 
         LRNDescriptor() noexcept : descriptor{ nullptr } { }
@@ -32,7 +32,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             other.descriptor = nullptr;
         }
 
-        LRNDescriptor(std::size_t local_size, double alpha, double beta, double k, lrn_type type_)
+        LRNDescriptor(std::size_t local_size, double alpha, double beta, double k, LRNType type_)
         {
             constructor(local_size, alpha, beta, k, type_);
         }
@@ -53,10 +53,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         };
 
         cudnnLRNDescriptor_t get() const noexcept { return descriptor; }
-        lrn_type get_type() const noexcept { return type; }
+        LRNType get_type() const noexcept { return type; }
 
     private:
-        void constructor(std::size_t local_size, double alpha, double beta, double k, lrn_type type_) {
+        void constructor(std::size_t local_size, double alpha, double beta, double k, LRNType type_) {
             type = type_;
 
             CUDA4DNN_CHECK_CUDNN(cudnnCreateLRNDescriptor(&descriptor));
@@ -78,7 +78,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         }
 
         cudnnLRNDescriptor_t descriptor;
-        lrn_type type;
+        LRNType type;
     };
 
     template <class T>
@@ -92,7 +92,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         DevicePtr<T> outputPtr,
         WorkspaceInstance workspace)
     {
-        if (lrnDesc.get_type() == LRNDescriptor::lrn_type::across_channels) {
+        if (lrnDesc.get_type() == LRNDescriptor::LRNType::ACROSS_CHANNELS) {
             CUDA4DNN_CHECK_CUDNN(
                 cudnnLRNCrossChannelForward(
                     handle.get(),
@@ -101,7 +101,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                     &beta, outputDesc.get(), outputPtr.get()
                 )
             );
-        } else if (lrnDesc.get_type() == LRNDescriptor::lrn_type::within_channel) {
+        } else if (lrnDesc.get_type() == LRNDescriptor::LRNType::WITHIN_CHANNEL) {
             std::size_t size;
             CUDA4DNN_CHECK_CUDNN(cudnnGetTensorSizeInBytes(inputDesc.get(), &size));
 
@@ -134,7 +134,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     {
         /* we specalize for fp16 as the scaling factors must be provided as `float` */
         float alpha_ = alpha, beta_ = beta;
-        if (lrnDesc.get_type() == LRNDescriptor::lrn_type::across_channels) {
+        if (lrnDesc.get_type() == LRNDescriptor::LRNType::ACROSS_CHANNELS) {
             CUDA4DNN_CHECK_CUDNN(
                 cudnnLRNCrossChannelForward(
                     handle.get(),
@@ -143,7 +143,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                     &beta_, outputDesc.get(), outputPtr.get()
                 )
             );
-        } else if (lrnDesc.get_type() == LRNDescriptor::lrn_type::within_channel) {
+        } else if (lrnDesc.get_type() == LRNDescriptor::LRNType::WITHIN_CHANNEL) {
             std::size_t size;
             CUDA4DNN_CHECK_CUDNN(cudnnGetTensorSizeInBytes(inputDesc.get(), &size));
 
