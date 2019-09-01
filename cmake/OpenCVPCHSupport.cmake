@@ -305,15 +305,26 @@ fi
 ${_command} '-D$<JOIN:$<TARGET_PROPERTY:${_targetName},COMPILE_DEFINITIONS>,' '-D>'
 ")
     GET_FILENAME_COMPONENT(_outdir ${_output} PATH)
-    ADD_CUSTOM_COMMAND(
-      OUTPUT "${_output}"
-      COMMAND ${CMAKE_COMMAND} -E make_directory "${_outdir}"
-      COMMAND chmod +x "${_pch_generate_file_cmd}"
-      COMMAND "${_pch_generate_file_cmd}"
-      DEPENDS "${_input}" "${_pch_generate_file_cmd}"
-      DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
-      DEPENDS ${_targetName}_pch_dephelp
+    IF(WIN32)
+      ADD_CUSTOM_COMMAND(
+        OUTPUT "${_output}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${_outdir}"
+        COMMAND "${_pch_generate_file_cmd}"
+        DEPENDS "${_input}" "${_pch_generate_file_cmd}"
+        DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
+        DEPENDS ${_targetName}_pch_dephelp
       )
+    ELSE()
+      ADD_CUSTOM_COMMAND(
+        OUTPUT "${_output}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${_outdir}"
+        COMMAND chmod +x "${_pch_generate_file_cmd}"
+        COMMAND "${_pch_generate_file_cmd}"
+        DEPENDS "${_input}" "${_pch_generate_file_cmd}"
+        DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
+        DEPENDS ${_targetName}_pch_dephelp
+        )
+    ENDIF()
 
     ADD_PRECOMPILED_HEADER_TO_TARGET(${_targetName} ${_input}  ${_output} ${_dowarn})
 
