@@ -1229,6 +1229,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
     {
     case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
     case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
+    case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
     default: util::throw_error(std::logic_error("Unsupported GShape type"));
     }
 }
@@ -1254,7 +1255,8 @@ void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const 
 void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_arg)
 {
     GAPI_Assert(op_arg.kind != cv::detail::ArgKind::GMAT
-           && op_arg.kind != cv::detail::ArgKind::GSCALAR);
+           && op_arg.kind != cv::detail::ArgKind::GSCALAR
+           && op_arg.kind != cv::detail::ArgKind::GARRAY);
 
     if (op_arg.kind == cv::detail::ArgKind::GOBJREF)
     {
@@ -1262,6 +1264,10 @@ void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_a
         if (ref.shape == GShape::GSCALAR)
         {
             in_arg = GArg(m_res.slot<cv::gapi::own::Scalar>()[ref.id]);
+        }
+        else if (ref.shape == GShape::GARRAY)
+        {
+            in_arg = GArg(m_res.slot<cv::detail::VectorRef>()[ref.id]);
         }
     }
 }

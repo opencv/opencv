@@ -154,6 +154,15 @@ template<> struct fluid_get_in<cv::GScalar>
     }
 #endif // !defined(GAPI_STANDALONE)
 };
+
+template<typename U> struct fluid_get_in<cv::GArray<U>>
+{
+    static const std::vector<U>& get(const cv::GArgs &in_args, int idx)
+    {
+        return in_args.at(idx).unsafe_get<cv::detail::VectorRef>().rref<U>();
+    }
+};
+
 template<class T> struct fluid_get_in
 {
     static const T& get(const cv::GArgs &in_args, int idx)
@@ -250,6 +259,7 @@ template<typename Impl, typename... Ins, typename... Outs, bool UseScratch>
 struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch>
 {
     static_assert(all_satisfy<is_gmat_type, Outs...>::value, "return type must be GMat");
+    static_assert(contains<GMat, Ins...>::value, "input must contain at least one GMat");
 
     // Execution dispatcher ////////////////////////////////////////////////////
     template<int... IIs, int... OIs>
