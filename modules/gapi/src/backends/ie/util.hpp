@@ -7,6 +7,8 @@
 #ifndef OPENCV_GAPI_INFER_IE_UTIL_HPP
 #define OPENCV_GAPI_INFER_IE_UTIL_HPP
 
+#ifdef HAVE_INF_ENGINE
+
 // NOTE: This file is not included by default in infer/ie.hpp
 // and won't be. infer/ie.hpp doesn't depend on IE headers itself.
 // This file does -- so needs to be included separately by those who care.
@@ -27,5 +29,7 @@ GAPI_EXPORTS cv::Mat to_ocv(InferenceEngine::Blob::Ptr blob);
 GAPI_EXPORTS InferenceEngine::Blob::Ptr to_ie(cv::Mat &blob);
 
 }}}}
+
+#endif //HAVE_INF_ENGINE
 
 #endif // OPENCV_GAPI_INFER_IE_UTIL_HPP

@@ -29,7 +29,6 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/fluid/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/ie/*.hpp"
     )
 
 set(gapi_srcs
