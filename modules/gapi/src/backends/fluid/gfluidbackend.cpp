@@ -802,20 +802,13 @@ cv::gimpl::FluidGraphInputData cv::gimpl::fluidExtractInputDataFromGraph(const a
 cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                       &g,
                                               const cv::gimpl::FluidGraphInputData   &traverse_res,
                                               const std::vector<cv::gapi::own::Rect> &outputRois)
-    : m_g(g), m_gm(m_g)
+    : m_g(g), m_gm(m_g),
+      m_num_int_buffers (traverse_res.m_mat_count),
+      m_scratch_users   (traverse_res.m_scratch_users),
+      m_id_map          (traverse_res.m_id_map),
+      m_all_gmat_ids    (traverse_res.m_all_gmat_ids)
 {
     GConstFluidModel fg(m_g);
-
-    auto tie_traverse_res = [&traverse_res](){
-        auto& r = traverse_res;
-        return std::tie(r.m_scratch_users, r.m_id_map, r.m_all_gmat_ids, r.m_mat_count);
-    };
-
-    auto tie_this   =  [this](){
-        return std::tie(m_scratch_users, m_id_map, m_all_gmat_ids, m_num_int_buffers);
-    };
-
-    tie_this() = tie_traverse_res();
 
     auto create_fluid_agent = [&g](agent_data_t const& agent_data) -> std::unique_ptr<FluidAgent> {
         std::unique_ptr<FluidAgent> agent_ptr;
