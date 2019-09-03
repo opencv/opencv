@@ -157,7 +157,7 @@
 #  define CV_MSA 1
 #endif
 
-#if defined(EMSCRIPTEN)
+#ifdef __EMSCRIPTEN__
 #  define CV_WASM_SIMD 1
 #  include <wasm_simd128.h>
 #endif

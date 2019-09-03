@@ -2521,15 +2521,15 @@ OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_float32x4, v_max, wasm_f32x4_max)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_float64x2, v_min, wasm_f64x2_min)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_float64x2, v_max, wasm_f64x2_max)
 #else
-#define OPENCV_HAL_IMPL_WASM_MINMAX_64f_FUNC(func, intrin) \
+#define OPENCV_HAL_IMPL_WASM_MINMAX_64f_FUNC(func) \
 inline v_float64x2 func(const v_float64x2& a, const v_float64x2& b) \
 { \
     fallback::v_float64x2 a_(a), b_(b); \
     return fallback::func(a_, b_); \
 }
 
-OPENCV_HAL_IMPL_WASM_MINMAX_64f_FUNC(v_min, std::min)
-OPENCV_HAL_IMPL_WASM_MINMAX_64f_FUNC(v_max, std::max)
+OPENCV_HAL_IMPL_WASM_MINMAX_64f_FUNC(v_min)
+OPENCV_HAL_IMPL_WASM_MINMAX_64f_FUNC(v_max)
 #endif
 
 #define OPENCV_HAL_IMPL_WASM_MINMAX_S_INIT_FUNC(_Tpvec, suffix) \
@@ -4005,18 +4005,13 @@ inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
 
 inline v_float32x4 v_load_expand(const float16_t* ptr)
 {
-    const int N = 4;
-    float buf[N];
-    for( int i = 0; i < N; i++ ) buf[i] = (float)ptr[i];
-    return v_load(buf);
+    return fallback::v_load_expand(ptr);
 }
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
-    const int N = 4;
-    float buf[N];
-    v_store(buf, v);
-    for( int i = 0; i < N; i++ ) ptr[i] = float16_t(buf[i]);
+    fallback::v_float32x4 v_(v);
+    fallback::v_pack_store(ptr, v_);
 }
 
 inline void v_cleanup() {}
