@@ -6,19 +6,19 @@
 namespace opencv_test {
 
 enum PerfSqMatDepth{
-    CV_32S32S = 0,
-    CV_32S32F,
-    CV_32S64F,
-    CV_32F32F,
-    CV_32F64F,
-    CV_64F64F};
+    SZ_32S32S = 0,
+    SZ_32S32F,
+    SZ_32S64F,
+    SZ_32F32F,
+    SZ_32F64F,
+    SZ_64F64F};
 
-CV_ENUM(SqSizes, CV_32S32S, CV_32S32F, CV_32S64F, CV_32F32F, CV_32F64F, CV_64F64F);
+CV_ENUM(IntegralOutputDepths, SZ_32S32S, SZ_32S32F, SZ_32S64F, SZ_32F32F, SZ_32F64F, SZ_64F64F);
 
 typedef tuple<Size, MatType, MatDepth> Size_MatType_OutMatDepth_t;
 typedef perf::TestBaseWithParam<Size_MatType_OutMatDepth_t> Size_MatType_OutMatDepth;
 
-typedef tuple<Size, MatType, SqSizes> Size_MatType_OutMatDepthArray_t;
+typedef tuple<Size, MatType, IntegralOutputDepths> Size_MatType_OutMatDepthArray_t;
 typedef perf::TestBaseWithParam<Size_MatType_OutMatDepthArray_t> Size_MatType_OutMatDepthArray;
 
 PERF_TEST_P(Size_MatType_OutMatDepth, integral,
@@ -73,7 +73,7 @@ PERF_TEST_P(Size_MatType_OutMatDepthArray, DISABLED_integral_sqsum_full,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
                 testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
-                testing::Values(0,1,2,3,4,5)
+                testing::Values(SZ_32S32S,SZ_32S32F,SZ_32S64F,SZ_32F32F,SZ_32F64F,SZ_64F64F)
                 )
             )
 {
@@ -92,8 +92,8 @@ PERF_TEST_P(Size_MatType_OutMatDepthArray, DISABLED_integral_sqsum_full,
 
     TEST_CYCLE() integral(src, sum, sqsum, sdepth, sqdepth);
 
-    SANITY_CHECK(sum, 1e-6);
-    SANITY_CHECK(sqsum, 1e-6);
+    SANITY_CHECK_NOTHING();
+    SANITY_CHECK_NOTHING();
 
 }
 
