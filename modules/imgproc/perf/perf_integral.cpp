@@ -43,9 +43,33 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral,
     SANITY_CHECK(sum, 1e-6);
 }
 
+PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,
+                testing::Combine(
+                    testing::Values(TYPICAL_MAT_SIZES),
+                    testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
+                    testing::Values(CV_32S, CV_32F, CV_64F)
+                    )
+        )
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    int sdepth = get<2>(GetParam());
+
+    Mat src(sz, matType);
+    Mat sum(sz, sdepth);
+    Mat sqsum(sz, sdepth);
+
+    declare.in(src, WARMUP_RNG).out(sum, sqsum);
+    declare.time(100);
+
+    TEST_CYCLE() integral(src, sum, sqsum, sdepth);
+
+    SANITY_CHECK(sum, 1e-6);
+    SANITY_CHECK(sqsum, 1e-6);
+}
 
 int vals[6][2] = {{CV_32S, CV_32S}, {CV_32S, CV_32F}, {CV_32S, CV_64F}, {CV_32F, CV_32F}, {CV_32F, CV_64F}, {CV_64F, CV_64F}};
-PERF_TEST_P(Size_MatType_OutMatDepthArray, integral_sqsum,
+PERF_TEST_P(Size_MatType_OutMatDepthArray, DISABLED_integral_sqsum_full,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
                 testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
