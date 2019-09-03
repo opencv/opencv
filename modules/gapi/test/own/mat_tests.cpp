@@ -227,11 +227,11 @@ TEST(OwnMatConversion, WithND)
     {
         data[i] = static_cast<uint8_t>(i);
     }
-    cv::Mat cvMat(dims, CV_32S, data.data());
+    cv::Mat cvMat(dims, CV_8U, data.data());
     auto ownMat = to_own(cvMat);
     auto cvMatFromOwn = cv::gapi::own::to_ocv(ownMat);
 
-    EXPECT_EQ(0, cv::countNonZero(cvMat != cvMatFromOwn))
+    EXPECT_EQ(0, cv::norm(cvMat, cvMatFromOwn, NORM_INF))
         << cvMat << std::endl
         << (cvMat != cvMatFromOwn);
 }
