@@ -16,6 +16,7 @@
 
 #include <ade/util/algorithm.hpp>
 #include <ade/util/chain_range.hpp>
+#include <ade/util/iota_range.hpp>
 #include <ade/util/range.hpp>
 #include <ade/util/zip_range.hpp>
 
@@ -96,12 +97,31 @@ namespace
             const auto parallel_out_rois = cv::gimpl::getCompileArg<cv::GFluidParallelOutputRois>(args);
             const auto gpfor             = cv::gimpl::getCompileArg<cv::GFluidParallelFor>(args);
 
-            auto serial_for = [](std::size_t count, std::function<void(std::size_t)> f){
-                for (std::size_t i  = 0; i < count; ++i){
+#if !defined(GAPI_STANDALONE)
+            auto default_pfor = [](std::size_t count, std::function<void(std::size_t)> f){
+                struct Body : cv::ParallelLoopBody {
+                    decltype(f) func;
+                    Body( decltype(f) && _f) : func(_f){}
+                    virtual void operator() (const cv::Range& r) const CV_OVERRIDE
+                    {
+                        for (std::size_t i : ade::util::iota(r.start, r.end))
+                        {
+                            func(i);
+                        }
+                    }
+                };
+                cv::parallel_for_(cv::Range{0,static_cast<int>(count)}, Body{std::move(f)});
+            };
+#else
+            auto default_pfor = [](std::size_t count, std::function<void(std::size_t)> f){
+                for (auto i : ade::util::iota(count)){
                     f(i);
                 }
             };
-            auto pfor  = gpfor.has_value() ? gpfor.value().parallel_for : serial_for;
+#endif
+
+            auto pfor  = gpfor.has_value() ? gpfor.value().parallel_for : default_pfor;
+
             return parallel_out_rois.has_value() ?
                        EPtr{new cv::gimpl::GParallelFluidExecutable (graph, graph_data, std::move(parallel_out_rois.value().parallel_rois), pfor)}
                      : EPtr{new cv::gimpl::GFluidExecutable         (graph, graph_data, std::move(rois.rois))}
