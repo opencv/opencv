@@ -1112,7 +1112,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs, Combine(
 class UnsupportedLayer : public Layer
 {
 public:
-    UnsupportedLayer(const LayerParams &params) {}
+    UnsupportedLayer(const LayerParams &params) : Layer(params) {}
 
     static Ptr<Layer> create(const LayerParams& params)
     {

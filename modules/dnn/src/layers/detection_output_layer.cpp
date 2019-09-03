@@ -927,7 +927,7 @@ public:
         ieLayer.setShareLocation(_shareLocation);
         ieLayer.setBackgroudLabelId(_backgroundLabelId);
         ieLayer.setNMSThreshold(_nmsThreshold);
-        ieLayer.setTopK(_topK);
+        ieLayer.setTopK(_topK > 0 ? _topK : _keepTopK);
         ieLayer.setKeepTopK(_keepTopK);
         ieLayer.setConfidenceThreshold(_confidenceThreshold);
         ieLayer.setVariantEncodedInTarget(_varianceEncodedInTarget);
