@@ -41,6 +41,53 @@ TEST(DISABLED_videoio_camera, basic)
     capture.release();
 }
 
+TEST(DISABLED_videoio_camera, msmfGetPropertyRange) {
+	VideoCapture capture(0,CAP_MSMF);
+	ASSERT_TRUE(capture.isOpened());
+	double val, min, max, defaultVal;
+
+
+	bool getSuccess= capture.get(CAP_PROP_EXPOSURE,val,min,max,defaultVal);
+	ASSERT_TRUE(getSuccess);
+	ASSERT_TRUE(min < max);
+	ASSERT_TRUE(val >= min && val <= max);
+	ASSERT_TRUE(defaultVal >= min && defaultVal <= max);
+
+
+	getSuccess = capture.get(CAP_PROP_BRIGHTNESS, val, min, max, defaultVal);
+	ASSERT_TRUE(getSuccess);
+	ASSERT_TRUE(min < max);
+	ASSERT_TRUE(val >= min && val <= max);
+	ASSERT_TRUE(defaultVal >= min && defaultVal <= max);
+
+	capture.release();
+	
+}
+
+
+TEST(DISABLED_videoio_camera, dshowGetPropertyRange) {
+	VideoCapture capture(0, CAP_DSHOW);
+	ASSERT_TRUE(capture.isOpened());
+	double val, min, max, defaultVal;
+
+
+	bool getSuccess = capture.get(CAP_PROP_EXPOSURE, val, min, max, defaultVal);
+	ASSERT_TRUE(getSuccess);
+	ASSERT_TRUE(min < max);
+	ASSERT_TRUE(val >= min && val <= max);
+	ASSERT_TRUE(defaultVal >= min && defaultVal <= max);
+
+
+	getSuccess = capture.get(CAP_PROP_BRIGHTNESS, val, min, max, defaultVal);
+	ASSERT_TRUE(getSuccess);
+	ASSERT_TRUE(min < max);
+	ASSERT_TRUE(val >= min && val <= max);
+	ASSERT_TRUE(defaultVal >= min && defaultVal <= max);
+
+	capture.release();
+
+}
+
 TEST(DISABLED_videoio_camera, v4l_read_mjpg)
 {
     VideoCapture capture(CAP_V4L2);

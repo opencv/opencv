@@ -318,6 +318,19 @@ double VideoCapture::get(int propId) const
     return !icap.empty() ? icap->getProperty(propId) : 0;
 }
 
+bool VideoCapture::get(int propId, double & val, double &min, double &max, double &defaultVal) const
+{
+	if (propId == CAP_PROP_BACKEND) {
+		val = get(propId);
+		min = max = defaultVal = -1;
+		return true;
+	}
+	if (!icap.empty()) {
+		return icap->getProperty(propId, val, min, max, defaultVal);
+	}
+	return false;
+}
+
 
 //=================================================================================================
 

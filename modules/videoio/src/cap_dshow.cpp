@@ -3336,28 +3336,48 @@ VideoCapture_DShow::~VideoCapture_DShow()
 
 double VideoCapture_DShow::getProperty(int propIdx) const
 {
+	double val, min, max, defaultVal;
+	if (getProperty(propIdx, val, min, max, defaultVal)) {
+		return val;
+	}
+	return 0;
+}
+
+bool VideoCapture_DShow::getProperty(int propIdx, double & val, double &min, double &max, double &defaultVal) const
+{
 
     long min_value, max_value, stepping_delta, current_value, flags, defaultValue;
-
+	min = max = defaultVal = -1;
     switch (propIdx)
     {
     // image format properties
     case CV_CAP_PROP_FRAME_WIDTH:
-        return g_VI.getWidth(m_index);
+        val = g_VI.getWidth(m_index);
+		return true;
     case CV_CAP_PROP_FRAME_HEIGHT:
-        return g_VI.getHeight(m_index);
+        val = g_VI.getHeight(m_index);
+		return true;
     case CV_CAP_PROP_FOURCC:
-        return g_VI.getFourcc(m_index);
+        val = g_VI.getFourcc(m_index);
+		return true;
     case CV_CAP_PROP_FPS:
-        return g_VI.getFPS(m_index);
+        val = g_VI.getFPS(m_index);
+		return true;
     case CV_CAP_PROP_CONVERT_RGB:
-        return g_VI.getConvertRGB(m_index);
+        val = g_VI.getConvertRGB(m_index);
+		return true;
     case CAP_PROP_CHANNEL:
-        return g_VI.getChannel(m_index);
+        val = g_VI.getChannel(m_index);
+		return true;
     case CV_CAP_PROP_AUTOFOCUS:
       // Flags indicate whether or not autofocus is enabled
-      if (g_VI.getVideoSettingCamera(m_index, CameraControl_Focus, min_value, max_value, stepping_delta, current_value, flags, defaultValue))
-        return (double)flags;
+		if (g_VI.getVideoSettingCamera(m_index, CameraControl_Focus, min_value, max_value, stepping_delta, current_value, flags, defaultValue)) {
+			val = (double)flags;
+			min = min_value;
+			max = max_value;
+			defaultVal = defaultValue;
+			return true;
+		}
       break;
 
     // video filter properties
@@ -3371,8 +3391,13 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
     case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
-        if (g_VI.getVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
-            return (double)current_value;
+		if (g_VI.getVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue)) {
+            val = (double)current_value;
+			min = min_value;
+			max = max_value;
+			defaultVal = defaultValue;
+			return true;
+		}
         break;
 
     // camera properties
@@ -3383,16 +3408,22 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CV_CAP_PROP_EXPOSURE:
     case CV_CAP_PROP_IRIS:
     case CV_CAP_PROP_FOCUS:
-        if (g_VI.getVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
-            return (double)current_value;
+		if (g_VI.getVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue)) {
+			val = (double)current_value;
+			min = min_value;
+			max = max_value;
+			defaultVal = defaultValue;
+			return true;
+		}            
         break;
     case CV_CAP_PROP_SETTINGS:
-        return g_VI.property_window_count(m_index);
+        val = g_VI.property_window_count(m_index);
+		return true;
     default:
         break;
     }
     // unknown parameter or value not available
-    return -1;
+    return false;
 }
 bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 {
