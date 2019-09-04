@@ -204,8 +204,8 @@ For details please refer to the download log file:
 ${OPENCV_DOWNLOAD_LOG}
 ")
       # write helper scripts for failed downloads
-      file(APPEND "${OPENCV_DOWNLOAD_WITH_CURL}" "curl --output \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
-      file(APPEND "${OPENCV_DOWNLOAD_WITH_WGET}" "wget -O \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
+      file(APPEND "${OPENCV_DOWNLOAD_WITH_CURL}" "curl --create-dirs --output \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
+      file(APPEND "${OPENCV_DOWNLOAD_WITH_WGET}" "mkdir -p $(dirname ${CACHE_CANDIDATE}) && wget -O \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
       return()
     endif()
 
