@@ -1293,21 +1293,6 @@ TEST_P(NormalizeTest, Test)
     }
 }
 
-TEST_P(CopyTest, Test)
-{
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in;
-    cv::GComputation c(in, cv::gapi::copy(in));
-    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
-
-    // OpenCV code /////////////////////////////////////////////////////////////
-    // (no copy, check identity with the source mat ref)
-    out_mat_ocv = in_mat1;
-
-    // Comarison ///////////////////////////////////////////////////////////////
-    EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-}
-
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 TEST_P(BackendOutputAllocationTest, EmptyOutput)

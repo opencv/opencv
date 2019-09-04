@@ -390,13 +390,6 @@ INSTANTIATE_TEST_CASE_P(ConcatVertTestGPU, ConcatVertTest,
                                 Values(-1),
                                 Values(CORE_GPU)));
 
-INSTANTIATE_TEST_CASE_P(CopyTestGPU, CopyTest,
-                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(32, 32),
-                                       cv::Size(640, 480)),
-                                Values(-1),
-                                Values(CORE_GPU)));
-
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestGPU, BackendOutputAllocationTest,

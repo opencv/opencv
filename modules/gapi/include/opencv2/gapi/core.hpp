@@ -436,6 +436,7 @@ namespace core {
         }
     };
 
+    // TODO: eliminate the need in this kernel (streaming)
     G_TYPED_KERNEL(GCrop, <GMat(GMat, Rect)>, "org.opencv.core.transform.crop") {
         static GMatDesc outMeta(GMatDesc in, Rect rc) {
             return in.withSize(Size(rc.width, rc.height));
@@ -482,13 +483,6 @@ namespace core {
         static GMatDesc outMeta(GMatDesc in, double, double, int, int ddepth) {
             // unlike opencv doesn't have a mask as a parameter
             return (ddepth < 0 ? in : in.withDepth(ddepth));
-        }
-    };
-
-    // TODO: eliminate the need in this kernel (streaming)
-    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.copy") {
-        static GMatDesc outMeta(GMatDesc in) {
-            return in;
         }
     };
 }
@@ -1512,11 +1506,11 @@ Output matrix must be of the same depth as input one, size is specified by given
 */
 GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
 
-/** @brief Copies a 2D matrix.
+/** @brief Copies a matrix.
 
-The function copies the matrix.
-
-Output matrix must be of the same size and depth as input one.
+Copies an input array. Works as a regular Mat::clone but happens in-graph.
+Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
+in the streaming mode). Will be deprecated and removed in the future.
 
 @note Function textual ID is "org.opencv.core.transform.copy"
 
@@ -1660,19 +1654,6 @@ number of channels as src and the depth =ddepth.
 GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
                             int norm_type, int ddepth = -1);
 //! @} gapi_transform
-
-/** @brief Makes a copy of an input array.
-
-Copies an input array. Works as a regular Mat::clone but happens in-graph.
-Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
-in the streaming mode). Will be deprecated and removed in the future.
-
-@note Function textual ID is "org.opencv.core.copy"
-
-@param src input array (of any valid type).
-@sa Mat::clone
-*/
-GAPI_EXPORTS GMat copy(const GMat& src);
 
 } //namespace gapi
 } //namespace cv

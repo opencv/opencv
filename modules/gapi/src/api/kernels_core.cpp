@@ -371,9 +371,5 @@ GMat normalize(const GMat& _src, double a, double b,
     return core::GNormalize::on(_src, a, b, norm_type, ddepth);
 }
 
-GMat copy(const cv::GMat &src) {
-    return core::GCopy::on(src);
-}
-
 } //namespace gapi
 } //namespace cv
