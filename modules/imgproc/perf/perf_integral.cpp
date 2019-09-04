@@ -6,14 +6,16 @@
 namespace opencv_test {
 
 enum PerfSqMatDepth{
-    SZ_32S32S = 0,
-    SZ_32S32F,
-    SZ_32S64F,
-    SZ_32F32F,
-    SZ_32F64F,
-    SZ_64F64F};
+    DEPTH_32S_32S = 0,
+    DEPTH_32S_32F,
+    DEPTH_32S_64F,
+    DEPTH_32F_32F,
+    DEPTH_32F_64F,
+    DEPTH_64F_64F};
 
-CV_ENUM(IntegralOutputDepths, SZ_32S32S, SZ_32S32F, SZ_32S64F, SZ_32F32F, SZ_32F64F, SZ_64F64F);
+CV_ENUM(IntegralOutputDepths, DEPTH_32S_32S, DEPTH_32S_32F, DEPTH_32S_64F, DEPTH_32F_32F, DEPTH_32F_64F, DEPTH_64F_64F);
+
+static int extraOutputDepths[6][2] = {{CV_32S, CV_32S}, {CV_32S, CV_32F}, {CV_32S, CV_64F}, {CV_32F, CV_32F}, {CV_32F, CV_64F}, {CV_64F, CV_64F}};
 
 typedef tuple<Size, MatType, MatDepth> Size_MatType_OutMatDepth_t;
 typedef perf::TestBaseWithParam<Size_MatType_OutMatDepth_t> Size_MatType_OutMatDepth;
@@ -44,12 +46,12 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral,
 }
 
 PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,
-                testing::Combine(
-                    testing::Values(TYPICAL_MAT_SIZES),
-                    testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
-                    testing::Values(CV_32S, CV_32F, CV_64F)
-                    )
-        )
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
+                testing::Values(CV_32S, CV_32F, CV_64F)
+                )
+            )
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());
@@ -68,20 +70,19 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,
     SANITY_CHECK(sqsum, 1e-6);
 }
 
-int vals[6][2] = {{CV_32S, CV_32S}, {CV_32S, CV_32F}, {CV_32S, CV_64F}, {CV_32F, CV_32F}, {CV_32F, CV_64F}, {CV_64F, CV_64F}};
 PERF_TEST_P(Size_MatType_OutMatDepthArray, DISABLED_integral_sqsum_full,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
                 testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
-                testing::Values(SZ_32S32S,SZ_32S32F,SZ_32S64F,SZ_32F32F,SZ_32F64F,SZ_64F64F)
+                testing::Values(DEPTH_32S_32S, DEPTH_32S_32F, DEPTH_32S_64F, DEPTH_32F_32F, DEPTH_32F_64F, DEPTH_64F_64F)
                 )
             )
 {
     Size sz = get<0>(GetParam());
     int matType = get<1>(GetParam());
-    int *sizes = (int *)vals[get<2>(GetParam())];
-    int sdepth = sizes[0];
-    int sqdepth = sizes[1];
+    int *outputDepths = (int *)extraOutputDepths[get<2>(GetParam())];
+    int sdepth = outputDepths[0];
+    int sqdepth = outputDepths[1];
 
     Mat src(sz, matType);
     Mat sum(sz, sdepth);
@@ -93,8 +94,6 @@ PERF_TEST_P(Size_MatType_OutMatDepthArray, DISABLED_integral_sqsum_full,
     TEST_CYCLE() integral(src, sum, sqsum, sdepth, sqdepth);
 
     SANITY_CHECK_NOTHING();
-    SANITY_CHECK_NOTHING();
-
 }
 
 PERF_TEST_P( Size_MatType_OutMatDepth, integral_sqsum_tilted,
