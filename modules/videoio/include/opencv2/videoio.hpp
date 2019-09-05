@@ -781,7 +781,7 @@ public:
 	@return true if success, false if querying a property that is not supported by the backend
 	used by the VideoCapture instance.
 
-	@note not all Property has a range and/or default value, if not , will set to min/max/defaultVal to -1,
+	@note not all Property has a range and/or default value, if not , will set min/max/defaultVal to -1,
 	see get(int propId) for more information
 	*/
 

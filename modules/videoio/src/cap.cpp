@@ -318,7 +318,7 @@ double VideoCapture::get(int propId) const
     return !icap.empty() ? icap->getProperty(propId) : 0;
 }
 
-bool VideoCapture::get(int propId, double & val, double &min, double &max, double &defaultVal) const
+bool VideoCapture::get(int propId, double &val, double &min, double &max, double &defaultVal) const
 {
 	if (propId == CAP_PROP_BACKEND) {
 		val = get(propId);

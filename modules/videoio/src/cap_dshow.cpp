@@ -3343,7 +3343,7 @@ double VideoCapture_DShow::getProperty(int propIdx) const
 	return 0;
 }
 
-bool VideoCapture_DShow::getProperty(int propIdx, double & val, double &min, double &max, double &defaultVal) const
+bool VideoCapture_DShow::getProperty(int propIdx, double &val, double &min, double &max, double &defaultVal) const
 {
 
     long min_value, max_value, stepping_delta, current_value, flags, defaultValue;
