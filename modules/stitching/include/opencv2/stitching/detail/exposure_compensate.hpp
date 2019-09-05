@@ -63,7 +63,7 @@ public:
     ExposureCompensator(): updateGain(true) {}
     virtual ~ExposureCompensator() {}
 
-    enum { NO, GAIN, GAIN_BLOCKS, CHANNELS, CHANNELS_BLOCKS };
+   // enum { NO, GAIN, GAIN_BLOCKS, CHANNELS, CHANNELS_BLOCKS };
     CV_WRAP static Ptr<ExposureCompensator> createDefault(int type);
 
     /**

@@ -59,7 +59,7 @@ class CV_EXPORTS_W SeamFinder
 {
 public:
     CV_WRAP  virtual ~SeamFinder() {}
-    enum { NO, VORONOI_SEAM, DP_SEAM };
+   // enum { NO, VORONOI_SEAM, DP_SEAM };
     /** @brief Estimates seams.
 
     @param src Source images
