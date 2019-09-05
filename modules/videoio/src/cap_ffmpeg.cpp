@@ -85,7 +85,7 @@ public:
     {
         return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture, true)!=0 : false;
     }
-    virtual bool readRaw(unsigned char** data, size_t* size) CV_OVERRIDE
+    virtual bool readRaw(uchar** data, size_t* size) CV_OVERRIDE
     {
         if (!ffmpegCapture ||
             !icvReadRaw_FFMPEG_p(ffmpegCapture, data, size))
@@ -317,7 +317,7 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 }
 
 static
-CvResult CV_API_CALL cv_capture_read_raw(CvPluginCapture handle, unsigned char** data, size_t* size)
+CvResult CV_API_CALL cv_capture_read_raw(CvPluginCapture handle, uchar** data, size_t* size)
 {
     if (!handle)
         return CV_ERROR_FAIL;

@@ -849,7 +849,7 @@ class CV_EXPORTS_W VideoContainer
 public:
     /** @brief Default constructor
      */
-    CV_WRAP VideoContainer();
+    VideoContainer();
 
     /** @overload
     @brief  Opens a video file or an IP video stream for raw video capturing with API Preference
@@ -860,7 +860,13 @@ public:
       Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
       documentation of source stream to know the right URL.
     */
-    CV_WRAP VideoContainer(const String& filename, int apiPreference = CAP_ANY);
+    VideoContainer(const String& filename, int apiPreference = CAP_ANY);
+
+    /** @brief Default destructor
+
+    The method first calls VideoContainer::release to close the already opened file or IP video stream.
+    */
+    virtual ~VideoContainer();
 
     /** @brief  Opens a video file or an IP video stream for raw video capturing.
 
@@ -871,14 +877,14 @@ public:
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
+    virtual bool open(const String& filename, int apiPreference = CAP_ANY);
 
     /** @brief Returns true if raw video capturing has been initialized already.
 
     If the previous call to VideoContainer constructor or VideoContainer::open() succeeded, the method returns
     true.
      */
-    CV_WRAP virtual bool isOpened() const;
+    virtual bool isOpened() const;
 
     /** @brief Closes video file or IP video stream.
 
@@ -887,7 +893,7 @@ public:
 
     The C function also deallocates memory and clears \*capture pointer.
      */
-    CV_WRAP virtual void release();
+    virtual void release();
 
     /** @brief Reads and returns the next encoded section of the raw bitstream.
 
@@ -901,7 +907,7 @@ public:
 
     @sa read()
      */
-    CV_WRAP virtual bool read(unsigned char** data, size_t* size);
+    virtual bool read(uchar** data, size_t* size);
 
     /** @brief Returns the specified VideoContainer property
 
@@ -920,16 +926,16 @@ public:
     driver and API Backend
 
     */
-    CV_WRAP virtual double get(int propId) const;
+    virtual double get(int propId) const;
 
     /** Switches exceptions mode
      *
      * methods raise exceptions if not successful instead of returning an error code
      */
-    CV_WRAP void setExceptionMode(bool enable) { throwOnFail = enable; }
+    void setExceptionMode(bool enable) { throwOnFail = enable; }
 
     /// query if exception mode is active
-    CV_WRAP bool getExceptionMode() { return throwOnFail; }
+    bool getExceptionMode() { return throwOnFail; }
 protected:
     Ptr<IVideoCapture> icap;
     bool throwOnFail;

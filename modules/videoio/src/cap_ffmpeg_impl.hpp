@@ -484,7 +484,7 @@ struct CvCapture_FFMPEG
     double getProperty(int) const;
     bool setProperty(int, double);
     bool setRaw(bool); // could we just use setProperty
-    bool readRaw(unsigned char** data, size_t* size);
+    bool readRaw(uchar** data, size_t* size);
     bool grabFrame(const bool decode = true);
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
 
@@ -1243,7 +1243,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     return true;
 }
 
-bool CvCapture_FFMPEG::readRaw(unsigned char** data, size_t* size)
+bool CvCapture_FFMPEG::readRaw(uchar** data, size_t* size)
 {
     if (!raw_init || !grabFrame(false))
         return false;
@@ -2589,7 +2589,7 @@ int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int*
     return capture->retrieveFrame(0, data, step, width, height, cn);
 }
 
-bool cvReadRaw_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, size_t* size)
+bool cvReadRaw_FFMPEG(CvCapture_FFMPEG* capture, uchar** data, size_t* size)
 {
     return capture->readRaw(data, size);
 }

@@ -346,6 +346,12 @@ VideoContainer::VideoContainer(const String& filename, int apiPreference) : thro
     open(filename, apiPreference);
 }
 
+VideoContainer::~VideoContainer()
+{
+    CV_TRACE_FUNCTION();
+    icap.release();
+}
+
 bool VideoContainer::open(const String& filename, int apiPreference)
 {
     CV_TRACE_FUNCTION();
@@ -366,7 +372,7 @@ void VideoContainer::release()
     icap.release();
 }
 
-bool VideoContainer::read(unsigned char** data, size_t* size)
+bool VideoContainer::read(uchar** data, size_t* size)
 {
     CV_INSTRUMENT_REGION();
     bool ret = !icap.empty() ? icap->readRaw(data, size) : false;
