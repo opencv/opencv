@@ -122,7 +122,7 @@ endif()
 #  Part 3/3: ${BIN_DIR}/win-install/OpenCVConfig.cmake  -> For use within binary installers/packages
 # --------------------------------------------------------------------------------------------
 if(WIN32)
-  if(CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
+  if(CMAKE_HOST_SYSTEM_NAME MATCHES Windows AND NOT OPENCV_SKIP_CMAKE_ROOT_CONFIG)
     ocv_gen_config("${CMAKE_BINARY_DIR}/win-install" "${OPENCV_LIB_INSTALL_PATH}" "OpenCVConfig.root-WIN32.cmake.in")
   else()
     ocv_gen_config("${CMAKE_BINARY_DIR}/win-install" "" "")
