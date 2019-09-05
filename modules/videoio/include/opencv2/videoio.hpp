@@ -859,6 +859,9 @@ public:
     - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
       Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
       documentation of source stream to know the right URL.
+    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
+    @sa The list of supported API backends cv::VideoCaptureAPIs
     */
     VideoContainer(const String& filename, int apiPreference = CAP_ANY);
 
@@ -872,7 +875,7 @@ public:
 
     @overload
 
-    Parameters are same as the constructor VideoContainer(const String& filename)
+    Parameters are same as the constructor VideoContainer(const String& filename, int apiPreference)
     @return `true` if the file has been successfully opened
 
     The method first calls VideoCapture::release to close the already opened file or camera.

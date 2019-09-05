@@ -53,6 +53,8 @@ static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPEN
 
 void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCapture(&obj); }
 void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
+double getProp(int propId, Ptr<IVideoCapture> icap);
+bool openBackend(const String& filename, int apiPreference, bool throwOnFail, Ptr<IVideoCapture>& icap, bool rawCap = false);
 
 double getProp(int propId, Ptr<IVideoCapture> icap)
 {
@@ -68,7 +70,7 @@ double getProp(int propId, Ptr<IVideoCapture> icap)
     return !icap.empty() ? icap->getProperty(propId) : 0;
 }
 
-bool openBackend(const String& filename, int apiPreference, bool throwOnFail, Ptr<IVideoCapture> &icap, bool rawCap = false)
+bool openBackend(const String& filename, int apiPreference, bool throwOnFail, Ptr<IVideoCapture> &icap, bool rawCap)
 {
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
     for (size_t i = 0; i < backends.size(); i++)
