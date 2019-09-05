@@ -69,7 +69,6 @@ TEST(DISABLED_videoio_camera, msmfGetPropertyRange) {
     ASSERT_TRUE(defaultVal >= min && defaultVal <= max);
 
     capture.release();
-    
 }
 
 
@@ -101,7 +100,6 @@ TEST(DISABLED_videoio_camera, dshowGetPropertyRange) {
     ASSERT_TRUE(defaultVal >= min && defaultVal <= max);
 
     capture.release();
-
 }
 
 TEST(DISABLED_videoio_camera, v4l_read_mjpg)

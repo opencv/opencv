@@ -25,7 +25,7 @@ public:
     virtual ~VideoCapture_DShow();
 
     virtual double getProperty(int propIdx) const CV_OVERRIDE;
-	virtual bool getProperty(int propIdx, double &val, double &min, double &max, double &defaultVal) const CV_OVERRIDE;
+    virtual bool getProperty(int propIdx, double &val, double &min, double &max, double &defaultVal) const CV_OVERRIDE;
     virtual bool setProperty(int propIdx, double propVal) CV_OVERRIDE;
 
     virtual bool grabFrame() CV_OVERRIDE;

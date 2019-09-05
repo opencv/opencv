@@ -1486,7 +1486,7 @@ bool CvCapture_MSMF::getProperty(int property_id, double & val, double &min, dou
         case CV_CAP_PROP_POS_AVI_RATIO:
             if (duration != 0){
                 val= (double)sampleTime / duration;
-                return true;            
+                return true;
             }
             else
                 break;

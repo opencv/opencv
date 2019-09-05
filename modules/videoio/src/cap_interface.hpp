@@ -44,7 +44,7 @@ public:
     virtual ~IVideoCapture() {}
     virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return false; }
-	virtual bool getProperty(int, double &, double &, double &, double &)const { return false; }
+    virtual bool getProperty(int, double &, double &, double &, double &)const { return false; }
     virtual bool grabFrame() = 0;
     virtual bool retrieveFrame(int, OutputArray) = 0;
     virtual bool isOpened() const = 0;
