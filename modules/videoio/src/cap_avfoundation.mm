@@ -854,17 +854,12 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     // Capture in a pixel format that can be converted efficiently to the output mode.
     OSType pixelFormat;
     if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
-        // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's CV_YUV2BGR_YV12)
-        // kCVPixelFormatType_32ABGR is reportedly faster on OS X, but OpenCV doesn't have a CV_ABGR2BGR conversion.
-        // kCVPixelFormatType_24RGB is significanly slower than kCVPixelFormatType_32BGRA.
         pixelFormat = kCVPixelFormatType_32BGRA;
         mFormat = CV_8UC3;
     } else if (mMode == CV_CAP_MODE_GRAY) {
-        // For CV_CAP_MODE_GRAY, read frames as 420v (faster than 420f or 422 -- at least for H.264 files)
         pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
         mFormat = CV_8UC1;
     } else if (mMode == CV_CAP_MODE_YUYV) {
-        // For CV_CAP_MODE_YUYV, read frames directly as 422.
         pixelFormat = kCVPixelFormatType_422YpCbCr8;
         mFormat = CV_8UC2;
     } else {
@@ -956,7 +951,6 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         return 0;
     }
     
-    // Output image parameters.
     int outChannels;
     if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
         outChannels = 3;
@@ -978,7 +972,6 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         mOutImagedata = reinterpret_cast<uint8_t*>(malloc(currSize));
     }
     
-    // Build the header for the output image.
     if (mOutImage == NULL) {
         mOutImage = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, outChannels);
     }
@@ -990,8 +983,6 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     mOutImage->imageData = reinterpret_cast<char *>(mOutImagedata);
     mOutImage->imageSize = int(currSize);
     
-    // Device image parameters and conversion code.
-    // (Not all of these conversions are used in production, but they were all tested to find the fastest options.)
     int deviceChannels;
     int cvtCode;
     
@@ -1047,8 +1038,6 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         }
     } else if ( pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange ||   // 420v
                pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ) {   // 420f
-        // cvCvtColor(CV_YUV2GRAY_420) is expecting a single buffer with both the Y plane and the CrCb planes.
-        // So, lie about the height of the buffer.  cvCvtColor(CV_YUV2GRAY_420) will only read the first 2/3 of it.
         height = height * 3 / 2;
         deviceChannels = 1;
         
@@ -1073,7 +1062,6 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         return 0;
     }
     
-    // Build the header for the device image.
     if (mDeviceImage == NULL) {
         mDeviceImage = cvCreateImageHeader(cvSize(int(width),int(height)), IPL_DEPTH_8U, deviceChannels);
     }
@@ -1085,14 +1073,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
     mDeviceImage->imageSize = int(rowBytes*height);
     
-    // Convert the device image into the output image.
     if (cvtCode == -1) {
-        // Copy.
         cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
     } else {
         cvCvtColor(mDeviceImage, mOutImage, cvtCode);
     }
-    
     
     CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
     
@@ -1176,7 +1161,7 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
                         retval = setupReadingAt(mFrameTimestamp);
                         break;
                     default:
-                        fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mode);
+                        fprintf(stderr, "VIDEOIO ERROR: AVF iOS: Unsupported mode: %d\n", mode);
                         retval=false;
                         break;
                 }
