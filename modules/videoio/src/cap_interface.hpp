@@ -46,8 +46,8 @@ public:
     virtual bool setProperty(int, double) { return false; }
     virtual bool grabFrame() = 0;
     virtual bool retrieveFrame(int, OutputArray) = 0;
-    virtual bool grabEncodedFrame() { return false; }
-    virtual bool retrieveEncodedFrame(cv::OutputArray) { return false; }
+    virtual bool setRaw(bool) { return false; }
+    virtual bool readRaw(unsigned char** data, size_t* size) { return false; }
     virtual bool isOpened() const = 0;
     virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
 };

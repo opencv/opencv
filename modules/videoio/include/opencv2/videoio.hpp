@@ -174,14 +174,14 @@ enum VideoCaptureProperties {
        CAP_PROP_CHANNEL       =43, //!< Video input or Channel Number (only for those cameras that support)
        CAP_PROP_AUTO_WB       =44, //!< enable/ disable auto white-balance
        CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
-       CAP_PROP_INT_CODEC     =46, //!< mapping of internal plugin to opencv recognized codec
-       CAP_PROP_INT_PX_FORMAT =47, //!< mapping of internal plugin to opencv recognized pixel format
+       CAP_PROP_INT_CODEC     =46, //!< mapping of internal capture codec to opencv RawCodec
+       CAP_PROP_INT_PX_FORMAT =47, //!< mapping of internal capture pixel format to opencv RawPixelFormat
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
      };
 
-/** @brief %VideoCapture raw codecs
+/** @brief %VideoContainer raw codecs
 */
 enum RawCodec
 {
@@ -204,6 +204,8 @@ enum RawCodec
     VideoCodec_UYVY = (('U' << 24) | ('Y' << 16) | ('V' << 8) | ('Y'))    // UYVY (4:2:2)
 };
 
+/** @brief %VideoContainer raw pixel formats
+*/
 enum RawPixelFormat
 {
     VideoChromaFormat_Monochrome = 0,
@@ -623,20 +625,68 @@ enum { CAP_PROP_IMAGES_BASE = 18000,
 
 class IVideoCapture;
 
-class CV_EXPORTS_W VideoSourceBase
-{
-protected:
-    CV_WRAP VideoSourceBase();
+/** @brief Class for video capturing from video files, image sequences or cameras.
 
-    CV_WRAP VideoSourceBase(const String& filename, int apiPreference = CAP_ANY);
+The class provides C++ API for capturing video from cameras or for reading video files and image sequences.
+
+Here is how the class can be used:
+@include samples/cpp/videocapture_basic.cpp
+
+@note In @ref videoio_c "C API" the black-box structure `CvCapture` is used instead of %VideoCapture.
+@note
+-   (C++) A basic sample on using the %VideoCapture interface can be found at
+    `OPENCV_SOURCE_CODE/samples/cpp/videocapture_starter.cpp`
+-   (Python) A basic sample on using the %VideoCapture interface can be found at
+    `OPENCV_SOURCE_CODE/samples/python/video.py`
+-   (Python) A multi threaded video processing sample can be found at
+    `OPENCV_SOURCE_CODE/samples/python/video_threaded.py`
+-   (Python) %VideoCapture sample showcasing some features of the Video4Linux2 backend
+    `OPENCV_SOURCE_CODE/samples/python/video_v4l2.py`
+ */
+class CV_EXPORTS_W VideoCapture
+{
 public:
+    /** @brief Default constructor
+    @note In @ref videoio_c "C API", when you finished working with video, release CvCapture structure with
+    cvReleaseCapture(), or use Ptr\<CvCapture\> that calls cvReleaseCapture() automatically in the
+    destructor.
+     */
+    CV_WRAP VideoCapture();
+
+    /** @overload
+    @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference
+
+    @param filename it can be:
+    - name of video file (eg. `video.avi`)
+    - or image sequence (eg. `img_%02d.jpg`, which will read samples like `img_00.jpg, img_01.jpg, img_02.jpg, ...`)
+    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
+      Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
+      documentation of source stream to know the right URL.
+    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
+    @sa The list of supported API backends cv::VideoCaptureAPIs
+    */
+    CV_WRAP VideoCapture(const String& filename, int apiPreference = CAP_ANY);
+
+    /** @overload
+    @brief  Opens a camera for video capturing
+
+    @param index id of the video capturing device to open. To open default camera using default backend just pass 0.
+    (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
+    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
+
+    @sa The list of supported API backends cv::VideoCaptureAPIs
+    */
+    CV_WRAP VideoCapture(int index, int apiPreference = CAP_ANY);
+
     /** @brief Default destructor
 
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
-    virtual ~VideoSourceBase();
+    virtual ~VideoCapture();
 
-    /** @brief  Opens a video file or an IP video stream for video capturing.
+    /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing.
 
     @overload
 
@@ -646,6 +696,17 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
     CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
+
+    /** @brief  Opens a camera for video capturing
+
+    @overload
+
+    Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
+    @return `true` if the camera has been successfully opened.
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+    */
+    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
 
     /** @brief Returns true if video capturing has been initialized already.
 
@@ -663,7 +724,7 @@ public:
      */
     CV_WRAP virtual void release();
 
-    /** @brief Grabs and decodes the next frame from video file or capturing device.
+    /** @brief Grabs the next frame from video file or capturing device.
 
     @return `true` (non-zero) in the case of success.
 
@@ -684,6 +745,34 @@ public:
      */
     CV_WRAP virtual bool grab();
 
+    /** @brief Decodes and returns the grabbed video frame.
+
+    @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
+    @param flag it could be a frame index or a driver specific flag
+    @return `false` if no frames has been grabbed
+
+    The method decodes and returns the just grabbed frame. If no frames has been grabbed
+    (camera has been disconnected, or there are no more frames in video file), the method returns false
+    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @sa read()
+
+    @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
+    capturing structure. It is not allowed to modify or release the image! You can copy the frame using
+    cvCloneImage and then do whatever you want with the copy.
+     */
+    CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
+
+    /** @brief Stream operator to read the next video frame.
+    @sa read()
+    */
+    virtual VideoCapture& operator >> (CV_OUT Mat& image);
+
+    /** @overload
+    @sa read()
+    */
+    virtual VideoCapture& operator >> (CV_OUT UMat& image);
+
     /** @brief Grabs, decodes and returns the next video frame.
 
     @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
@@ -697,18 +786,8 @@ public:
     @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
     cvCloneImage and then do whatever you want with the copy.
-    */
-    CV_WRAP virtual bool read(OutputArray image) = 0;
-
-    /** @brief Stream operator to read the next video frame.
-    @sa read()
-    */
-    virtual VideoSourceBase& operator >> (CV_OUT Mat& image);
-
-    /** @overload
-    @sa read()
-    */
-    virtual VideoSourceBase& operator >> (CV_OUT UMat& image);
+     */
+    CV_WRAP virtual bool read(OutputArray image);
 
     /** @brief Sets a property in the VideoCapture.
 
@@ -760,124 +839,12 @@ protected:
     bool throwOnFail;
 };
 
-/** @brief Class for video capturing from video files, image sequences or cameras.
-
-The class provides C++ API for capturing video from video capturing devices, ip cameras or for reading video files and image sequences.
-
-Here is how the class can be used:
-@include samples/cpp/videocapture_basic.cpp
-
-@note In @ref videoio_c "C API" the black-box structure `CvCapture` is used instead of %VideoCapture.
-@note
--   (C++) A basic sample on using the %VideoCapture interface can be found at
-    `OPENCV_SOURCE_CODE/samples/cpp/videocapture_starter.cpp`
--   (Python) A basic sample on using the %VideoCapture interface can be found at
-    `OPENCV_SOURCE_CODE/samples/python/video.py`
--   (Python) A multi threaded video processing sample can be found at
-    `OPENCV_SOURCE_CODE/samples/python/video_threaded.py`
--   (Python) %VideoCapture sample showcasing some features of the Video4Linux2 backend
-    `OPENCV_SOURCE_CODE/samples/python/video_v4l2.py`
- */
-class CV_EXPORTS_W VideoCapture : public VideoSourceBase
-{
-public:
-    /** @brief Default constructor
-    @note In @ref videoio_c "C API", when you finished working with video, release CvCapture structure with
-    cvReleaseCapture(), or use Ptr\<CvCapture\> that calls cvReleaseCapture() automatically in the
-    destructor.
-     */
-    CV_WRAP VideoCapture();
-
-    /** @overload
-    @brief  Opens a video file, capturing device or an IP video stream for video capturing with API Preference
-
-    @param filename it can be:
-    - name of video file (eg. `video.avi`)
-    - or image sequence (eg. `img_%02d.jpg`, which will read samples like `img_00.jpg, img_01.jpg, img_02.jpg, ...`)
-    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
-      Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
-      documentation of source stream to know the right URL.
-    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
-    @sa The list of supported API backends cv::VideoCaptureAPIs
-    */
-    CV_WRAP VideoCapture(const String& filename, int apiPreference = CAP_ANY);
-
-    /** @overload
-    @brief  Opens a camera for video capturing
-
-    @param index id of the video capturing device to open. To open default camera using default backend just pass 0.
-    (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
-    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
-
-    @sa The list of supported API backends cv::VideoCaptureAPIs
-    */
-    CV_WRAP VideoCapture(int index, int apiPreference = CAP_ANY);
-
-    /** @brief  Opens a video file, capturing device or an IP video stream for video capturing.
-
-    @overload
-
-    Parameters are same as the constructor VideoCapture(const String& filename, int apiPreference = CAP_ANY)
-    @return `true` if the file has been successfully opened
-
-    The method first calls VideoCapture::release to close the already opened file or camera.
-     */
-    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY) CV_OVERRIDE;
-
-    /** @brief  Opens a camera for video capturing
-
-    @overload
-
-    Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
-    @return `true` if the camera has been successfully opened.
-
-    The method first calls VideoCapture::release to close the already opened file or camera.
-    */
-    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
-
-    /** @brief Grabs, decodes and returns the next video frame.
-
-    @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
-    @return `false` if no frames has been grabbed
-
-    The method/function combines VideoCapture::grab() and VideoCapture::retrieve() in one call. This is the
-    most convenient method for reading video files or capturing data from decode and returns the just
-    grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more
-    frames in video file), the method returns false and the function returns empty image (with %cv::Mat, test it with Mat::empty()).
-
-    @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
-    capturing structure. It is not allowed to modify or release the image! You can copy the frame using
-    cvCloneImage and then do whatever you want with the copy.
- */
-    CV_WRAP virtual bool read(OutputArray image);
-
-    /** @brief Returns the last grabbed video frame.
-
-    @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
-    @param flag it could be a frame index or a driver specific flag
-    @return `false` if no frames has been grabbed
-
-    The method decodes and returns the just grabbed frame. If no frames has been grabbed
-    (camera has been disconnected, or there are no more frames in video file), the method returns false
-    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
-
-    @sa read()
-
-    @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
-    capturing structure. It is not allowed to modify or release the image! You can copy the frame using
-    cvCloneImage and then do whatever you want with the copy.
-     */
-    CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
-};
-
 /** @brief Class for raw video capturing from video files or ip cameras.
 
 The class provides C++ API for capturing raw encoded video bitstreams from ip cameras or video files.
 
  */
-class CV_EXPORTS_W VideoContainer : public VideoSourceBase
+class CV_EXPORTS_W VideoContainer
 {
 public:
     /** @brief Default constructor
@@ -893,56 +860,79 @@ public:
       Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
       documentation of source stream to know the right URL.
     */
-    CV_WRAP VideoContainer(const String& filename);
+    CV_WRAP VideoContainer(const String& filename, int apiPreference = CAP_ANY);
 
     /** @brief  Opens a video file or an IP video stream for raw video capturing.
 
     @overload
 
-    Parameters are same as the constructor VideoCapture(const String& filename)
+    Parameters are same as the constructor VideoContainer(const String& filename)
     @return `true` if the file has been successfully opened
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    CV_WRAP virtual bool open(const String& filename);
+    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
 
-    /** @brief Grabs the next frame from video file or capturing device without decoding.
+    /** @brief Returns true if raw video capturing has been initialized already.
 
-    @return `true` (non-zero) in the case of success.
-
-    The method/function grabs the next frame from video file or camera and returns true (non-zero) in
-    the case of success.
-
-    The primary use of the function is to grab a frame so that it can then be retrieved by calling
-    retrieve.
+    If the previous call to VideoContainer constructor or VideoContainer::open() succeeded, the method returns
+    true.
      */
-    CV_WRAP virtual bool grab() CV_OVERRIDE;
+    CV_WRAP virtual bool isOpened() const;
 
-    /** @brief  Returns the encoded grabbed video frame.
+    /** @brief Closes video file or IP video stream.
 
-    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
-    @return `false` if no frames has been grabbed
+    The method is automatically called by subsequent VideoContainer::open and by VideoContainer
+    destructor.
 
-    The method returns the raw bitstream for the next video frame. If no frames is present
-    (camera has been disconnected, or there are no more frames in video file), the method returns false
-    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
-
-    @sa retrieve()
+    The C function also deallocates memory and clears \*capture pointer.
      */
-    CV_WRAP virtual bool retrieve(OutputArray image);
+    CV_WRAP virtual void release();
 
-    /** @brief Grabs and returns the next encoded video frame.
+    /** @brief Reads and returns the next encoded section of the raw bitstream.
 
-    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
-    @return `false` if no frames has been grabbed
+    @param [out] data pointer buffer containing size bytes of the encoded video bitstream. If no data has been read size == 0.
+    @param [out] size in bytes of the encoded video bitstream.
+    @return `false` if no data has been read
 
-    The method returns the raw bitstream for the next video frame. If no frames is present
-    (camera has been disconnected, or there are no more frames in video file), the method returns false
-    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+    The method returns the the next encoded section of the raw bitstream.  If no data is present
+    (ip camera has been disconnected, or there are no more frames in video file), the method returns false
+    with size == 0.
 
     @sa read()
      */
-    CV_WRAP virtual bool read(OutputArray image);
+    CV_WRAP virtual bool read(unsigned char** data, size_t* size);
+
+    /** @brief Returns the specified VideoContainer property
+
+    @param propId Property identifier from cv::VideoCaptureProperties (eg. cv::CAP_PROP_POS_MSEC, cv::CAP_PROP_POS_FRAMES, ...)
+    or one from @ref videoio_flags_others
+    @return Value for the specified property. Value 0 is returned when querying a property that is
+    not supported by the backend used by the VideoContainer instance.
+
+    @note Reading / writing properties involves many layers. Some unexpected result might happens
+    along this chain.
+    @code{.txt}
+    VideoContainer -> API Backend -> Operating System -> Device Driver -> Device Hardware
+    @endcode
+    The returned value might be different from what really used by the device or it could be encoded
+    using device dependent rules (eg. steps or percentage). Effective behaviour depends from device
+    driver and API Backend
+
+    */
+    CV_WRAP virtual double get(int propId) const;
+
+    /** Switches exceptions mode
+     *
+     * methods raise exceptions if not successful instead of returning an error code
+     */
+    CV_WRAP void setExceptionMode(bool enable) { throwOnFail = enable; }
+
+    /// query if exception mode is active
+    CV_WRAP bool getExceptionMode() { return throwOnFail; }
+protected:
+    Ptr<IVideoCapture> icap;
+    bool throwOnFail;
 };
 
 class IVideoWriter;

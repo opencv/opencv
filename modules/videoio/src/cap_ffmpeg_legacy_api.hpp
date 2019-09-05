@@ -28,10 +28,11 @@ OPENCV_FFMPEG_API struct CvCapture_FFMPEG* cvCreateFileCapture_FFMPEG(const char
 OPENCV_FFMPEG_API int cvSetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap,
                                                   int prop, double value);
 OPENCV_FFMPEG_API double cvGetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap, int prop);
-OPENCV_FFMPEG_API int cvGrabFrame_FFMPEG(struct CvCapture_FFMPEG* cap);
+OPENCV_FFMPEG_API bool cvSetRaw_FFMPEG(CvCapture_FFMPEG* capture, const bool readRaw);
+OPENCV_FFMPEG_API bool cvReadRaw_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, size_t* size);
+OPENCV_FFMPEG_API int cvGrabFrame_FFMPEG(struct CvCapture_FFMPEG* cap, const bool decode = true);
 OPENCV_FFMPEG_API int cvRetrieveFrame_FFMPEG(struct CvCapture_FFMPEG* capture, unsigned char** data,
                                              int* step, int* width, int* height, int* cn);
-OPENCV_FFMPEG_API bool cvRetrieveEncodedFrame_FFMPEG(struct CvCapture_FFMPEG* capture, unsigned char** data, int* size);
 OPENCV_FFMPEG_API void cvReleaseCapture_FFMPEG(struct CvCapture_FFMPEG** cap);
 
 OPENCV_FFMPEG_API struct CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG(const char* filename,

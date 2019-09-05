@@ -53,6 +53,8 @@
 #define icvReleaseCapture_FFMPEG_p cvReleaseCapture_FFMPEG
 #define icvGrabFrame_FFMPEG_p cvGrabFrame_FFMPEG
 #define icvRetrieveFrame_FFMPEG_p cvRetrieveFrame_FFMPEG
+#define icvSetRaw_FFMPEG_p cvSetRaw_FFMPEG
+#define icvReadRaw_FFMPEG_p cvReadRaw_FFMPEG
 #define icvRetrieveEncodedFrame_FFMPEG_p cvRetrieveEncodedFrame_FFMPEG
 #define icvSetCaptureProperty_FFMPEG_p cvSetCaptureProperty_FFMPEG
 #define icvGetCaptureProperty_FFMPEG_p cvGetCaptureProperty_FFMPEG
@@ -83,6 +85,20 @@ public:
     {
         return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture, true)!=0 : false;
     }
+    virtual bool readRaw(unsigned char** data, size_t* size) CV_OVERRIDE
+    {
+        if (!ffmpegCapture ||
+            !icvReadRaw_FFMPEG_p(ffmpegCapture, data, size))
+            return false;
+        return true;
+    }
+    virtual bool setRaw(bool readRaw) CV_OVERRIDE
+    {
+        if (!ffmpegCapture ||
+            !icvSetRaw_FFMPEG_p(ffmpegCapture, readRaw))
+            return false;
+        return true;
+    }
     virtual bool retrieveFrame(int, cv::OutputArray frame) CV_OVERRIDE
     {
         unsigned char* data = 0;
@@ -92,20 +108,6 @@ public:
            !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
             return false;
         cv::Mat(height, width, CV_MAKETYPE(CV_8U, cn), data, step).copyTo(frame);
-        return true;
-    }
-    virtual bool grabEncodedFrame() CV_OVERRIDE
-    {
-        return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture, false) != 0 : false;
-    }
-    virtual bool retrieveEncodedFrame(cv::OutputArray frame) CV_OVERRIDE
-    {
-        unsigned char* data = 0;
-        int size = 0;
-        if (!ffmpegCapture ||
-            !icvRetrieveEncodedFrame_FFMPEG_p(ffmpegCapture, &data, &size))
-            return false;
-        cv::Mat(1, size, CV_MAKETYPE(CV_8U, 1), data, size).copyTo(frame);
         return true;
     }
     virtual bool open( const cv::String& filename )
@@ -315,18 +317,30 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 }
 
 static
-CvResult CV_API_CALL cv_capture_retrieve_raw(CvPluginCapture handle, int stream_idx, cv_videoio_retrieve_raw_cb_t callback, void* userdata)
+CvResult CV_API_CALL cv_capture_read_raw(CvPluginCapture handle, unsigned char** data, size_t* size)
 {
     if (!handle)
         return CV_ERROR_FAIL;
     try
     {
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
-        Mat img;
-        // TODO: avoid unnecessary copying
-        if (instance->retrieveFrameRaw(stream_idx, img))
-            return callback(img.data, img.step, userdata);
+        return instance->readRaw(data, size) ? CV_ERROR_OK : CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
         return CV_ERROR_FAIL;
+    }
+}
+
+static
+CvResult CV_API_CALL cv_capture_set_raw(CvPluginCapture handle, bool readRaw)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
+        return instance->setRaw(readRaw) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch (...)
     {
@@ -416,7 +430,8 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
     /* 10*/cv_writer_get_prop,
     /* 11*/cv_writer_set_prop,
     /* 12*/cv_writer_write,
-    /* 13*/cv_capture_retrieve_raw
+    /* 13*/cv_capture_read_raw
+    /* 14*/cv_capture_set_raw
 };
 
 } // namespace

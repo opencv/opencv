@@ -483,9 +483,10 @@ struct CvCapture_FFMPEG
 
     double getProperty(int) const;
     bool setProperty(int, double);
+    bool setRaw(bool); // could we just use setProperty
+    bool readRaw(unsigned char** data, size_t* size);
     bool grabFrame(const bool decode = true);
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
-    bool retrieveEncodedFrame(unsigned char** data, int* size);
 
     void init();
 
@@ -1007,6 +1008,68 @@ exit_func:
     return valid;
 }
 
+bool CvCapture_FFMPEG::setRaw(const bool _readRaw)
+{
+    if (!raw_init && _readRaw) {
+        AVCodecID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
+        mp4_H264 = eVideoCodec == AV_CODEC_ID_H264 && (
+            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
+            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
+            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
+            );
+        mp4_Hevc = eVideoCodec == AV_CODEC_ID_HEVC && (
+            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
+            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
+            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
+            );
+        if (mp4_H264) {
+            const AVBitStreamFilter* bsf = av_bsf_get_by_name("h264_mp4toannexb");
+            if (!bsf) {
+                CV_WARN("No such bitstream filter h264_mp4toannexb");
+                return false;
+            }
+            int err = av_bsf_alloc(bsf, &bsfc);
+            if (err < 0)
+            {
+                CV_WARN("Error allocating context for bitstream buffer");
+                return false;
+            }
+            avcodec_parameters_copy(bsfc->par_in, ic->streams[video_stream]->codecpar);
+            err = av_bsf_init(bsfc);
+            if (err < 0)
+            {
+                CV_WARN("Error initializing bitstream buffer");
+                return false;
+            }
+        }
+        if (mp4_Hevc) {
+            const AVBitStreamFilter* bsf = av_bsf_get_by_name("hevc_mp4toannexb");
+            if (!bsf) {
+                CV_WARN("No such bitstream filter hevc_mp4toannexb");
+                return false;
+            }
+            int err = av_bsf_alloc(bsf, &bsfc);
+            if (err < 0)
+            {
+                CV_WARN("Error allocating context for bitstream buffer");
+                return false;
+            }
+            avcodec_parameters_copy(bsfc->par_in, ic->streams[video_stream]->codecpar);
+            err = av_bsf_init(bsfc);
+            if (err < 0)
+            {
+                CV_WARN("Error initializing bitstream buffer");
+                return false;
+            }
+        }
+        raw_init = true;
+    }
+
+    if (!_readRaw)
+        raw_init = false;
+
+    return true;
+}
 
 bool CvCapture_FFMPEG::grabFrame(const bool decode)
 {
@@ -1180,64 +1243,10 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     return true;
 }
 
-bool CvCapture_FFMPEG::retrieveEncodedFrame(unsigned char** data, int* size)
+bool CvCapture_FFMPEG::readRaw(unsigned char** data, size_t* size)
 {
-    if (!ic || !video_st)  return false;
-
-    if (!raw_init) {
-        AVCodecID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
-        mp4_H264 = eVideoCodec == AV_CODEC_ID_H264 && (
-            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
-            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
-            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
-            );
-        mp4_Hevc = eVideoCodec == AV_CODEC_ID_HEVC && (
-            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
-            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
-            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
-            );
-        if (mp4_H264) {
-            const AVBitStreamFilter* bsf = av_bsf_get_by_name("h264_mp4toannexb");
-            if (!bsf) {
-                CV_WARN("No such bitstream filter h264_mp4toannexb");
-                return false;
-            }
-            int err = av_bsf_alloc(bsf, &bsfc);
-            if (err < 0)
-            {
-                CV_WARN("Error allocating context for bitstream buffer");
-                return false;
-            }
-            avcodec_parameters_copy(bsfc->par_in, ic->streams[video_stream]->codecpar);
-            err = av_bsf_init(bsfc);
-            if (err < 0)
-            {
-                CV_WARN("Error initializing bitstream buffer");
-                return false;
-            }
-        }
-        if (mp4_Hevc) {
-            const AVBitStreamFilter* bsf = av_bsf_get_by_name("hevc_mp4toannexb");
-            if (!bsf) {
-                CV_WARN("No such bitstream filter hevc_mp4toannexb");
-                return false;
-            }
-            int err = av_bsf_alloc(bsf, &bsfc);
-            if (err < 0)
-            {
-                CV_WARN("Error allocating context for bitstream buffer");
-                return false;
-            }
-            avcodec_parameters_copy(bsfc->par_in, ic->streams[video_stream]->codecpar);
-            err = av_bsf_init(bsfc);
-            if (err < 0)
-            {
-                CV_WARN("Error initializing bitstream buffer");
-                return false;
-            }
-        }
-        raw_init = true;
-    }
+    if (!raw_init || !grabFrame(false))
+        return false;
 
     if (mp4_H264 || mp4_Hevc) {
         if (packet_filtered.data) {
@@ -2580,9 +2589,14 @@ int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int*
     return capture->retrieveFrame(0, data, step, width, height, cn);
 }
 
-bool cvRetrieveEncodedFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* size)
+bool cvReadRaw_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, size_t* size)
 {
-    return capture->retrieveEncodedFrame(data, size);
+    return capture->readRaw(data, size);
+}
+
+bool cvSetRaw_FFMPEG(CvCapture_FFMPEG* capture, const bool readRaw)
+{
+    return capture->setRaw(readRaw);
 }
 
 CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int fourcc, double fps,

@@ -18,6 +18,7 @@ public:
     virtual ~IBackend() {}
     virtual Ptr<IVideoCapture> createCapture(int camera) const = 0;
     virtual Ptr<IVideoCapture> createCapture(const std::string &filename) const = 0;
+    virtual Ptr<IVideoCapture> createRawCapture(const std::string& filename) const = 0;
     virtual Ptr<IVideoWriter>  createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const = 0;
 };
 

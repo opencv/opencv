@@ -34,6 +34,12 @@ public:
             return fn_createCaptureFile_(filename);
         return Ptr<IVideoCapture>();
     }
+    Ptr<IVideoCapture> createRawCapture(const std::string& filename) const CV_OVERRIDE
+    {
+        auto cap = createCapture(filename);
+        if (cap && cap->setRaw(true)) return cap;
+        return Ptr<IVideoCapture>();
+    }
     Ptr<IVideoWriter> createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const CV_OVERRIDE
     {
         if (fn_createWriter_)

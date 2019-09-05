@@ -54,28 +54,22 @@ static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPEN
 void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCapture(&obj); }
 void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
 
-
-VideoSourceBase::VideoSourceBase() : throwOnFail(false)
-{}
-
-VideoSourceBase::VideoSourceBase(const String& filename, int apiPreference) : throwOnFail(false)
+double getProp(int propId, Ptr<IVideoCapture> icap)
 {
-    CV_TRACE_FUNCTION();
-    open(filename, apiPreference);
+    if (propId == CAP_PROP_BACKEND)
+    {
+        int api = 0;
+        if (icap)
+            api = icap->isOpened() ? icap->getCaptureDomain() : 0;
+        if (api <= 0)
+            return -1.0;
+        return (double)api;
+    }
+    return !icap.empty() ? icap->getProperty(propId) : 0;
 }
 
-VideoSourceBase::~VideoSourceBase()
+bool openBackend(const String& filename, int apiPreference, bool throwOnFail, Ptr<IVideoCapture> &icap, bool rawCap = false)
 {
-    CV_TRACE_FUNCTION();
-    icap.release();
-}
-
-bool VideoSourceBase::open(const String& filename, int apiPreference)
-{
-    CV_TRACE_FUNCTION();
-
-    if (isOpened()) release();
-
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -90,187 +84,11 @@ bool VideoSourceBase::open(const String& filename, int apiPreference)
             {
                 try
                 {
-                    icap = backend->createCapture(filename);
-                    if (!icap.empty())
-                    {
-                        if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
-                            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): created, isOpened=%d",
-                                                            info.name, icap->isOpened()));
-                        if (icap->isOpened())
-                            return true;
-                        icap.release();
-                    }
+                    if(rawCap)
+                        icap = backend->createRawCapture(filename);
                     else
-                    {
-                        if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
-                            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): can't create capture", info.name));
-                    }
-                } catch(const cv::Exception& e) {
-                    if(throwOnFail && apiPreference != CAP_ANY) throw;
-                    CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", info.name, e.what()));
-                } catch (const std::exception& e) {
-                    if(throwOnFail && apiPreference != CAP_ANY) throw;
-                    CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", info.name, e.what()));
-                } catch(...) {
-                    if(throwOnFail && apiPreference != CAP_ANY) throw;
-                    CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", info.name));
-                }
-            }
-            else
-            {
-                if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
-                    CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is not available (plugin is missing, or can't be loaded due dependencies or it is not compatible)", info.name));
-            }
-        }
-    }
+                        icap = backend->createCapture(filename);
 
-    if (throwOnFail)
-        CV_Error_(Error::StsError, ("could not open '%s'", filename.c_str()));
-
-    return false;
-}
-
-bool VideoSourceBase::isOpened() const
-{
-    return !icap.empty() ? icap->isOpened() : false;
-}
-
-String VideoSourceBase::getBackendName() const
-{
-    int api = 0;
-    if (icap)
-        api = icap->isOpened() ? icap->getCaptureDomain() : 0;
-    CV_Assert(api != 0);
-    return cv::videoio_registry::getBackendName((VideoCaptureAPIs)api);
-}
-
-void VideoSourceBase::release()
-{
-    CV_TRACE_FUNCTION();
-    icap.release();
-}
-
-bool VideoSourceBase::grab()
-{
-    CV_INSTRUMENT_REGION();
-    bool ret = !icap.empty() ? icap->grabFrame() : false;
-    if (!ret && throwOnFail)
-        CV_Error(Error::StsError, "");
-    return ret;
-}
-
-VideoSourceBase& VideoSourceBase::operator >> (Mat& image)
-{
-#ifdef WINRT_VIDEO
-    // FIXIT grab/retrieve methods() should work too
-    if (grab())
-    {
-        if (retrieve(image))
-        {
-            std::lock_guard<std::mutex> lock(VideoioBridge::getInstance().inputBufferMutex);
-            VideoioBridge& bridge = VideoioBridge::getInstance();
-
-            // double buffering
-            bridge.swapInputBuffers();
-            auto p = bridge.frontInputPtr;
-
-            bridge.bIsFrameNew = false;
-
-            // needed here because setting Mat 'image' is not allowed by OutputArray in read()
-            Mat m(bridge.getHeight(), bridge.getWidth(), CV_8UC3, p);
-            image = m;
-        }
-    }
-#else
-    read(image);
-#endif
-    return *this;
-}
-
-VideoSourceBase& VideoSourceBase::operator >> (UMat& image)
-{
-    CV_INSTRUMENT_REGION();
-
-    read(image);
-    return *this;
-}
-
-bool VideoSourceBase::set(int propId, double value)
-{
-    CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
-    bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
-    if (!ret && throwOnFail)
-        CV_Error_(Error::StsError, ("could not set prop %d = %f", propId, value));
-    return ret;
-}
-
-double VideoSourceBase::get(int propId) const
-{
-    if (propId == CAP_PROP_BACKEND)
-    {
-        int api = 0;
-        if (icap)
-            api = icap->isOpened() ? icap->getCaptureDomain() : 0;
-        if (api <= 0)
-            return -1.0;
-        return (double)api;
-    }
-    return !icap.empty() ? icap->getProperty(propId) : 0;
-}
-
-
-//=================================================================================================
-
-VideoCapture::VideoCapture() : VideoSourceBase()
-{}
-
-VideoCapture::VideoCapture(const String& filename, int apiPreference) : VideoSourceBase(filename, apiPreference)
-{}
-
-VideoCapture::VideoCapture(int index, int apiPreference) : VideoSourceBase()
-{
-    CV_TRACE_FUNCTION();
-    open(index, apiPreference);
-}
-
-bool VideoCapture::VideoCapture::open(const String& filename, int apiPreference)
-{
-    CV_TRACE_FUNCTION();
-    return VideoSourceBase::open(filename, apiPreference);
-}
-
-bool VideoCapture::open(int cameraNum, int apiPreference)
-{
-    CV_TRACE_FUNCTION();
-
-    if (isOpened()) release();
-
-    if (apiPreference == CAP_ANY)
-    {
-        // interpret preferred interface (0 = autodetect)
-        int backendID = (cameraNum / 100) * 100;
-        if (backendID)
-        {
-            cameraNum %= 100;
-            apiPreference = backendID;
-        }
-    }
-
-    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
-    for (size_t i = 0; i < backends.size(); i++)
-    {
-        const VideoBackendInfo& info = backends[i];
-        if (apiPreference == CAP_ANY || apiPreference == info.id)
-        {
-            if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
-                CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying capture cameraNum=%d ...", info.name, cameraNum));
-            CV_Assert(!info.backendFactory.empty());
-            const Ptr<IBackend> backend = info.backendFactory->getBackend();
-            if (!backend.empty())
-            {
-                try
-                {
-                    icap = backend->createCapture(cameraNum);
                     if (!icap.empty())
                     {
                         if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
@@ -308,9 +126,139 @@ bool VideoCapture::open(int cameraNum, int apiPreference)
     }
 
     if (throwOnFail)
+        CV_Error_(Error::StsError, ("could not open '%s'", filename.c_str()));
+
+    return false;
+}
+
+VideoCapture::VideoCapture() : throwOnFail(false)
+{}
+
+VideoCapture::VideoCapture(const String& filename, int apiPreference) : throwOnFail(false)
+{
+    CV_TRACE_FUNCTION();
+    open(filename, apiPreference);
+}
+
+VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
+{
+    CV_TRACE_FUNCTION();
+    open(index, apiPreference);
+}
+
+VideoCapture::~VideoCapture()
+{
+    CV_TRACE_FUNCTION();
+    icap.release();
+}
+
+bool VideoCapture::open(const String& filename, int apiPreference)
+{
+    CV_TRACE_FUNCTION();
+
+    if (isOpened()) release();
+
+    return openBackend(filename, apiPreference, throwOnFail, icap);
+}
+
+bool  VideoCapture::open(int cameraNum, int apiPreference)
+{
+    CV_TRACE_FUNCTION();
+
+    if (isOpened()) release();
+
+    if (apiPreference == CAP_ANY)
+    {
+        // interpret preferred interface (0 = autodetect)
+        int backendID = (cameraNum / 100) * 100;
+        if (backendID)
+        {
+            cameraNum %= 100;
+            apiPreference = backendID;
+        }
+    }
+
+    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (apiPreference == CAP_ANY || apiPreference == info.id)
+        {
+            if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
+                CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying capture cameraNum=%d ...", info.name, cameraNum));
+            CV_Assert(!info.backendFactory.empty());
+            const Ptr<IBackend> backend = info.backendFactory->getBackend();
+            if (!backend.empty())
+            {
+                try
+                {
+                    icap = backend->createCapture(cameraNum);
+                    if (!icap.empty())
+                    {
+                        if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
+                            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): created, isOpened=%d",
+                                                            info.name, icap->isOpened()));
+                        if (icap->isOpened())
+                            return true;
+                        icap.release();
+                    }
+                    else
+                    {
+                        if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
+                            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): can't create capture", info.name));
+                    }
+                } catch(const cv::Exception& e) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
+                    CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", info.name, e.what()));
+                } catch (const std::exception& e) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
+                    CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", info.name, e.what()));
+                } catch(...) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
+                    CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", info.name));
+                }
+            }
+            else
+            {
+                if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
+                    CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is not available (plugin is missing, or can't be loaded due dependencies or it is not compatible)", info.name));
+            }
+        }
+    }
+
+    if(throwOnFail)
         CV_Error_(Error::StsError, ("could not open camera %d", cameraNum));
 
     return false;
+}
+
+bool VideoCapture::isOpened() const
+{
+    return !icap.empty() ? icap->isOpened() : false;
+}
+
+String VideoCapture::getBackendName() const
+{
+    int api = 0;
+    if (icap)
+        api = icap->isOpened() ? icap->getCaptureDomain() : 0;
+    CV_Assert(api != 0);
+    return cv::videoio_registry::getBackendName((VideoCaptureAPIs)api);
+}
+
+void VideoCapture::release()
+{
+    CV_TRACE_FUNCTION();
+    icap.release();
+}
+
+bool VideoCapture::grab()
+{
+    CV_INSTRUMENT_REGION();
+    bool ret = !icap.empty() ? icap->grabFrame() : false;
+    if (!ret && throwOnFail)
+        CV_Error(Error::StsError, "");
+    return ret;
 }
 
 bool VideoCapture::retrieve(OutputArray image, int channel)
@@ -329,56 +277,107 @@ bool VideoCapture::read(OutputArray image)
 {
     CV_INSTRUMENT_REGION();
 
-    if (grab())
+    if(grab())
         retrieve(image);
     else
         image.release();
     return !image.empty();
+}
+
+VideoCapture& VideoCapture::operator >> (Mat& image)
+{
+#ifdef WINRT_VIDEO
+    // FIXIT grab/retrieve methods() should work too
+    if (grab())
+    {
+        if (retrieve(image))
+        {
+            std::lock_guard<std::mutex> lock(VideoioBridge::getInstance().inputBufferMutex);
+            VideoioBridge& bridge = VideoioBridge::getInstance();
+
+            // double buffering
+            bridge.swapInputBuffers();
+            auto p = bridge.frontInputPtr;
+
+            bridge.bIsFrameNew = false;
+
+            // needed here because setting Mat 'image' is not allowed by OutputArray in read()
+            Mat m(bridge.getHeight(), bridge.getWidth(), CV_8UC3, p);
+            image = m;
+        }
+    }
+#else
+    read(image);
+#endif
+    return *this;
+}
+
+VideoCapture& VideoCapture::operator >> (UMat& image)
+{
+    CV_INSTRUMENT_REGION();
+
+    read(image);
+    return *this;
+}
+
+bool VideoCapture::set(int propId, double value)
+{
+    CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
+    bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
+    if (!ret && throwOnFail)
+        CV_Error_(Error::StsError, ("could not set prop %d = %f", propId, value));
+    return ret;
+}
+
+double VideoCapture::get(int propId) const
+{
+    return getProp(propId, icap);
 }
 
 
 //=================================================================================================
 
-VideoContainer::VideoContainer() : VideoSourceBase()
+VideoContainer::VideoContainer() : throwOnFail(false)
 {}
 
-VideoContainer::VideoContainer(const String& filename) : VideoSourceBase(filename, CAP_FFMPEG)
+VideoContainer::VideoContainer(const String& filename, int apiPreference) : throwOnFail(false)
 {
+    CV_TRACE_FUNCTION();
+    open(filename, apiPreference);
 }
 
-bool VideoContainer::open(const String& filename)
+bool VideoContainer::open(const String& filename, int apiPreference)
 {
-    return VideoSourceBase::open(filename, CAP_FFMPEG);
+    CV_TRACE_FUNCTION();
+
+    if (isOpened()) release();
+
+    return openBackend(filename, apiPreference, throwOnFail, icap, true);
 }
 
-bool VideoContainer::grab()
+bool VideoContainer::isOpened() const
+{
+    return !icap.empty() ? icap->isOpened() : false;
+}
+
+void VideoContainer::release()
+{
+    CV_TRACE_FUNCTION();
+    icap.release();
+}
+
+bool VideoContainer::read(unsigned char** data, size_t* size)
 {
     CV_INSTRUMENT_REGION();
-    bool ret = !icap.empty() ? icap->grabEncodedFrame() : false;
+    bool ret = !icap.empty() ? icap->readRaw(data, size) : false;
     if (!ret && throwOnFail)
         CV_Error(Error::StsError, "");
     return ret;
 }
 
-bool VideoContainer::retrieve(OutputArray image)
+double VideoContainer::get(int propId) const
 {
-    CV_INSTRUMENT_REGION();
-
-    bool ret = false;
-    if (!icap.empty())
-        ret = icap->retrieveEncodedFrame(image);
-    return ret;
-}
-
-bool VideoContainer::read(OutputArray image)
-{
-    CV_INSTRUMENT_REGION();
-
-    if (grab())
-        retrieve(image);
-    else
-        image.release();
-    return !image.empty();
+    return getProp(propId, icap);
 }
 
 
