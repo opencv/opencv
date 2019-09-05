@@ -228,14 +228,6 @@ namespace detail
         }
 
     public:
-        const BasicVectorRef* inspect() const {
-            return  m_ref.get();
-        }
-
-        void mov(VectorRef &v) {
-            m_ref->mov(*v.m_ref);
-        }
-
         VectorRef() = default;
         template<typename T> explicit VectorRef(const std::vector<T>& vec) : m_ref(new VectorRefT<T>(vec)) {}
         template<typename T> explicit VectorRef(std::vector<T>& vec)       : m_ref(new VectorRefT<T>(vec)) {}
@@ -259,6 +251,11 @@ namespace detail
         {
             check<T>();
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
+        }
+
+        void mov(VectorRef &v)
+        {
+            m_ref->mov(*v.m_ref);
         }
 
         cv::GArrayDesc descr_of() const
@@ -297,9 +294,7 @@ public:
     explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
         : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
 
-    detail::GArrayU strip() const {
-        return m_ref;
-    }
+    detail::GArrayU strip() const { return m_ref; }
 
 private:
     // Host type (or Flat type) - the type this GArray is actually
