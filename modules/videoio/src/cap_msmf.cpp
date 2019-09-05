@@ -701,7 +701,7 @@ public:
     virtual bool open(const cv::String&);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
-	virtual bool getProperty(int property_id, double & val, double &min, double &max, double &default_val) const CV_OVERRIDE;
+    virtual bool getProperty(int property_id, double & val, double &min, double &max, double &default_val) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual bool retrieveFrame(int, cv::OutputArray) CV_OVERRIDE;
@@ -1375,65 +1375,65 @@ bool CvCapture_MSMF::setTime(double time, bool rough)
 
 
 static VideoProcAmpProperty getAmpPropFromCvCapProp(int property_id) {
-	switch (property_id)
-	{
-	case CV_CAP_PROP_BRIGHTNESS:
-		return VideoProcAmpProperty::VideoProcAmp_Brightness;
-	case CV_CAP_PROP_CONTRAST:
-		return VideoProcAmpProperty::VideoProcAmp_Contrast;
-	case CV_CAP_PROP_SATURATION:
-		return VideoProcAmpProperty::VideoProcAmp_Saturation;
-	case CV_CAP_PROP_HUE:
-		return VideoProcAmpProperty::VideoProcAmp_Hue;
-	case CV_CAP_PROP_GAIN:
-		return VideoProcAmpProperty::VideoProcAmp_Gain;
-	case CV_CAP_PROP_SHARPNESS:
-		return VideoProcAmpProperty::VideoProcAmp_Sharpness;
-	case CV_CAP_PROP_GAMMA:
-		return VideoProcAmpProperty::VideoProcAmp_Gamma;
-	case CV_CAP_PROP_BACKLIGHT:
-		return VideoProcAmpProperty::VideoProcAmp_BacklightCompensation;
-	case CV_CAP_PROP_MONOCHROME:
-		return VideoProcAmpProperty::VideoProcAmp_ColorEnable;
-	case CV_CAP_PROP_TEMPERATURE:
-		return VideoProcAmpProperty::VideoProcAmp_WhiteBalance;
-	default:
-		return (VideoProcAmpProperty)-1;//should never got here
-	}
+    switch (property_id)
+    {
+    case CV_CAP_PROP_BRIGHTNESS:
+        return VideoProcAmpProperty::VideoProcAmp_Brightness;
+    case CV_CAP_PROP_CONTRAST:
+        return VideoProcAmpProperty::VideoProcAmp_Contrast;
+    case CV_CAP_PROP_SATURATION:
+        return VideoProcAmpProperty::VideoProcAmp_Saturation;
+    case CV_CAP_PROP_HUE:
+        return VideoProcAmpProperty::VideoProcAmp_Hue;
+    case CV_CAP_PROP_GAIN:
+        return VideoProcAmpProperty::VideoProcAmp_Gain;
+    case CV_CAP_PROP_SHARPNESS:
+        return VideoProcAmpProperty::VideoProcAmp_Sharpness;
+    case CV_CAP_PROP_GAMMA:
+        return VideoProcAmpProperty::VideoProcAmp_Gamma;
+    case CV_CAP_PROP_BACKLIGHT:
+        return VideoProcAmpProperty::VideoProcAmp_BacklightCompensation;
+    case CV_CAP_PROP_MONOCHROME:
+        return VideoProcAmpProperty::VideoProcAmp_ColorEnable;
+    case CV_CAP_PROP_TEMPERATURE:
+        return VideoProcAmpProperty::VideoProcAmp_WhiteBalance;
+    default:
+        return (VideoProcAmpProperty)-1;//should never got here
+    }
 }
 
 
 static CameraControlProperty getControlPropFromCvCapProp(int property_id) {
-	switch (property_id)
-	{
-	case CV_CAP_PROP_PAN:
-		return CameraControlProperty::CameraControl_Pan;
-	case CV_CAP_PROP_TILT:
-		return CameraControlProperty::CameraControl_Tilt;
-	case CV_CAP_PROP_ROLL:
-		return CameraControlProperty::CameraControl_Roll;
-	case CV_CAP_PROP_IRIS:
-		return CameraControlProperty::CameraControl_Iris;
-	case CV_CAP_PROP_EXPOSURE:
-	case CV_CAP_PROP_AUTO_EXPOSURE:
-		return CameraControlProperty::CameraControl_Exposure;
-	case CV_CAP_PROP_ZOOM:
-		return CameraControlProperty::CameraControl_Zoom;
-	case CV_CAP_PROP_FOCUS:
-	case CV_CAP_PROP_AUTOFOCUS:
-		return CameraControlProperty::CameraControl_Focus;
-	default:
-		return (CameraControlProperty)-1;//should never got here
+    switch (property_id)
+    {
+    case CV_CAP_PROP_PAN:
+        return CameraControlProperty::CameraControl_Pan;
+    case CV_CAP_PROP_TILT:
+        return CameraControlProperty::CameraControl_Tilt;
+    case CV_CAP_PROP_ROLL:
+        return CameraControlProperty::CameraControl_Roll;
+    case CV_CAP_PROP_IRIS:
+        return CameraControlProperty::CameraControl_Iris;
+    case CV_CAP_PROP_EXPOSURE:
+    case CV_CAP_PROP_AUTO_EXPOSURE:
+        return CameraControlProperty::CameraControl_Exposure;
+    case CV_CAP_PROP_ZOOM:
+        return CameraControlProperty::CameraControl_Zoom;
+    case CV_CAP_PROP_FOCUS:
+    case CV_CAP_PROP_AUTOFOCUS:
+        return CameraControlProperty::CameraControl_Focus;
+    default:
+        return (CameraControlProperty)-1;//should never got here
 }
 }
 
 double CvCapture_MSMF::getProperty(int property_id) const
 {
-	double val, min, max, defaultVal;
-	if (getProperty(property_id, val, min, max, defaultVal)) {
-		return val;
-	}
-	return 0;
+    double val, min, max, defaultVal;
+    if (getProperty(property_id, val, min, max, defaultVal)) {
+        return val;
+    }
+    return 0;
 
 }
 
@@ -1441,135 +1441,133 @@ bool CvCapture_MSMF::getProperty(int property_id, double & val, double &min, dou
 {
     IAMVideoProcAmp *pProcAmp = NULL;
     IAMCameraControl *pProcControl = NULL;
-	min = max = default_val = -1;
+    min = max = default_val = -1;
     // image format properties
     if (isOpen)
         switch (property_id)
         {
         case CV_CAP_PROP_MODE:
                 val = captureMode;
-				return true;
+                return true;
         case CV_CAP_PROP_CONVERT_RGB:
                 val= convertFormat ? 1 : 0;
-				return true;
+                return true;
         case CV_CAP_PROP_SAR_NUM:
                 val= aspectN;
-				return true;
+                return true;
         case CV_CAP_PROP_SAR_DEN:
                 val= aspectD;
-				return true;
+                return true;
         case CV_CAP_PROP_FRAME_WIDTH:
             val= captureFormat.width;
-			return true;
+            return true;
         case CV_CAP_PROP_FRAME_HEIGHT:
             val= captureFormat.height;
-			return true;
+            return true;
         case CV_CAP_PROP_FOURCC:
             val= nativeFormat.MF_MT_SUBTYPE.Data1;
-			return true;
+            return true;
         case CV_CAP_PROP_FPS:
             val= getFramerate(nativeFormat);
-			return true;
+            return true;
         case CV_CAP_PROP_FRAME_COUNT:
             if (duration != 0){
                 val= floor(((double)duration / 1e7)*getFramerate(nativeFormat) + 0.5);
-				return true;
-			}
+                return true;
+            }
             else
                 break;
         case CV_CAP_PROP_POS_FRAMES:
             val = floor(((double)sampleTime / 1e7)*getFramerate(nativeFormat) + 0.5);
-			return true;
+            return true;
         case CV_CAP_PROP_POS_MSEC:
             val= (double)sampleTime / 1e4;
-			return true;
+            return true;
         case CV_CAP_PROP_POS_AVI_RATIO:
             if (duration != 0){
                 val= (double)sampleTime / duration;
-				return true;			
-			}
+                return true;            
+            }
             else
                 break;
         case CV_CAP_PROP_BRIGHTNESS:
-		case CV_CAP_PROP_CONTRAST:
-		case CV_CAP_PROP_SATURATION:
-		case CV_CAP_PROP_HUE:
-		case CV_CAP_PROP_GAIN:
-		case CV_CAP_PROP_SHARPNESS:
-		case CV_CAP_PROP_GAMMA:
-		case CV_CAP_PROP_BACKLIGHT:
-		case CV_CAP_PROP_MONOCHROME:
-		case CV_CAP_PROP_TEMPERATURE:
-		{
-			VideoProcAmpProperty propertyAmp = getAmpPropFromCvCapProp(property_id);
-			if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-			{
-				long paramVal, paramFlag;
-				HRESULT hr = pProcAmp->Get(propertyAmp, &paramVal, &paramFlag);
-				if (SUCCEEDED(hr)) val = paramVal;
-				long minVal, maxVal, stepVal, defaultVal;
-				HRESULT hrRange = pProcAmp->GetRange(propertyAmp, &minVal, &maxVal, &stepVal, &defaultVal, &paramFlag);//Unable to get the property, trying to return default value
-				if (FAILED(hr) && SUCCEEDED(hrRange)) {
-					val = defaultVal;
-				}
-				pProcAmp->Release();
-				if (SUCCEEDED(hrRange)) {
-					min = minVal;
-					max = maxVal;
-					default_val = defaultVal;
-				}
-				if (SUCCEEDED(hr) || SUCCEEDED(hrRange)) {
-					return true;
-				}
-			}
-			break;
-		}	         
-       
- 
+        case CV_CAP_PROP_CONTRAST:
+        case CV_CAP_PROP_SATURATION:
+        case CV_CAP_PROP_HUE:
+        case CV_CAP_PROP_GAIN:
+        case CV_CAP_PROP_SHARPNESS:
+        case CV_CAP_PROP_GAMMA:
+        case CV_CAP_PROP_BACKLIGHT:
+        case CV_CAP_PROP_MONOCHROME:
+        case CV_CAP_PROP_TEMPERATURE:
+        {
+            VideoProcAmpProperty propertyAmp = getAmpPropFromCvCapProp(property_id);
+            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
+            {
+                long paramVal, paramFlag;
+                HRESULT hr = pProcAmp->Get(propertyAmp, &paramVal, &paramFlag);
+                if (SUCCEEDED(hr)) val = paramVal;
+                long minVal, maxVal, stepVal, defaultVal;
+                HRESULT hrRange = pProcAmp->GetRange(propertyAmp, &minVal, &maxVal, &stepVal, &defaultVal, &paramFlag);//Unable to get the property, trying to return default value
+                if (FAILED(hr) && SUCCEEDED(hrRange)) {
+                    val = defaultVal;
+                }
+                pProcAmp->Release();
+                if (SUCCEEDED(hrRange)) {
+                    min = minVal;
+                    max = maxVal;
+                    default_val = defaultVal;
+                }
+                if (SUCCEEDED(hr) || SUCCEEDED(hrRange)) {
+                    return true;
+                }
+            }
+            break;
+        }
+
         case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
         case CV_CAP_PROP_WHITE_BALANCE_RED_V:
             break;
 
 
         case CV_CAP_PROP_PAN:
-		case CV_CAP_PROP_TILT:
-		case CV_CAP_PROP_ROLL:
-		case CV_CAP_PROP_IRIS:
-		case CV_CAP_PROP_EXPOSURE:
-		case CV_CAP_PROP_AUTO_EXPOSURE:
-		case CV_CAP_PROP_ZOOM:
-		case CV_CAP_PROP_FOCUS:
-		case CV_CAP_PROP_AUTOFOCUS:
-		{
-			CameraControlProperty propertyControl = getControlPropFromCvCapProp(property_id);
-			if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-			{
-				long paramVal, paramFlag;
-				HRESULT hr = pProcControl->Get(propertyControl, &paramVal, &paramFlag);
-				if (SUCCEEDED(hr)) val = paramVal;
-				long minVal, maxVal, stepVal, defaultVal;
-				HRESULT hrRange = pProcControl->GetRange(propertyControl, &minVal, &maxVal, &stepVal, &defaultVal, &paramFlag);//Unable to get the property, trying to return default value
-				if (FAILED(hr) && SUCCEEDED(hrRange)) {
-					val = defaultVal;
-				}
-				pProcControl->Release();
-				if (SUCCEEDED(hrRange)) {
-					min = minVal;
-					max = maxVal;
-					default_val = defaultVal;
-				}
-				if (SUCCEEDED(hr) || SUCCEEDED(hrRange)) {
-					if (property_id == CV_CAP_PROP_AUTO_EXPOSURE || property_id == CV_CAP_PROP_AUTOFOCUS) {
-						val = paramFlag == VideoProcAmp_Flags_Auto;
-					}
-					return true;
+        case CV_CAP_PROP_TILT:
+        case CV_CAP_PROP_ROLL:
+        case CV_CAP_PROP_IRIS:
+        case CV_CAP_PROP_EXPOSURE:
+        case CV_CAP_PROP_AUTO_EXPOSURE:
+        case CV_CAP_PROP_ZOOM:
+        case CV_CAP_PROP_FOCUS:
+        case CV_CAP_PROP_AUTOFOCUS:
+        {
+            CameraControlProperty propertyControl = getControlPropFromCvCapProp(property_id);
+            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
+            {
+                long paramVal, paramFlag;
+                HRESULT hr = pProcControl->Get(propertyControl, &paramVal, &paramFlag);
+                if (SUCCEEDED(hr)) val = paramVal;
+                long minVal, maxVal, stepVal, defaultVal;
+                HRESULT hrRange = pProcControl->GetRange(propertyControl, &minVal, &maxVal, &stepVal, &defaultVal, &paramFlag);//Unable to get the property, trying to return default value
+                if (FAILED(hr) && SUCCEEDED(hrRange)) {
+                    val = defaultVal;
+                }
+                pProcControl->Release();
+                if (SUCCEEDED(hrRange)) {
+                    min = minVal;
+                    max = maxVal;
+                    default_val = defaultVal;
+                }
+                if (SUCCEEDED(hr) || SUCCEEDED(hrRange)) {
+                    if (property_id == CV_CAP_PROP_AUTO_EXPOSURE || property_id == CV_CAP_PROP_AUTOFOCUS) {
+                        val = paramFlag == VideoProcAmp_Flags_Auto;
+                    }
+                    return true;
 
-				}
-			}
-			break;
-		}
-			
-   
+                }
+            }
+            break;
+        }
+
         case CV_CAP_PROP_RECTIFICATION:
         case CV_CAP_PROP_TRIGGER:
         case CV_CAP_PROP_TRIGGER_DELAY:

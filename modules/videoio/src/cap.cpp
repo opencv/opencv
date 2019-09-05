@@ -320,18 +320,18 @@ double VideoCapture::get(int propId) const
 
 bool VideoCapture::get(int propId, OutputArray vals) const
 {
-	int sizes = 4;
-	vals.create(1, &sizes, CV_64FC1);
-	double * p = (double *)vals.getMat().data;
-	if (propId == CAP_PROP_BACKEND) {		
-		p[0] = get(propId);
-		p[1] = p[2] = p[3] = -1;
-		return true;
-	}
-	if (!icap.empty()) {		
-		return icap->getProperty(propId, p[0], p[1], p[2], p[3]);
-	}
-	return false;
+    int sizes = 4;
+    vals.create(1, &sizes, CV_64FC1);
+    double * p = (double *)vals.getMat().data;
+    if (propId == CAP_PROP_BACKEND) {
+        p[0] = get(propId);
+        p[1] = p[2] = p[3] = -1;
+        return true;
+    }
+    if (!icap.empty()) {
+        return icap->getProperty(propId, p[0], p[1], p[2], p[3]);
+    }
+    return false;
 }
 
 
