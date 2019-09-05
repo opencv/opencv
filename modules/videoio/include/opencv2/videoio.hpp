@@ -778,6 +778,7 @@ public:
 
     /** @brief like get(int propId) but returns property range and default as well as value
 
+    @param propId is cv::VideoCaptureProperties same as get(int propId)
     @param vals will contains 4 double element in order of value, min, max, default
     @return true if success, false if querying a property that is not supported by the backend
     used by the VideoCapture instance.
