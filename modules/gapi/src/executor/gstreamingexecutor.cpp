@@ -1,5 +1,4 @@
 // This file is part of OpenCV project.
-
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
@@ -124,7 +123,7 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         case T::index_of<cv::Scalar*>():
             *cv::util::get<cv::Scalar*>(out_obj) = std::move(cv::util::get<cv::Scalar>(res_obj));
             break;
-#endif // GAPI_STANDALONE
+#endif // !GAPI_STANDALONE
         case T::index_of<own::Mat*>():
             *cv::util::get<own::Mat*>(out_obj) = std::move(cv::util::get<own::Mat>(res_obj));
             break;
@@ -320,6 +319,11 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
     }
 }
 
+// The idea of collecotThread is easy.  If there're multiple outptus
+// in the graph, we need to pull an object from every associated query
+// and then put the resulting vector into one single query.  While it
+// looks redundant, it simplifies dramatically the way how try_pull()
+// is implemented - we need to check one queue instead of may.
 void collectorThread(std::vector<Q*> in_queues,
                      Q&              out_queue)
 {

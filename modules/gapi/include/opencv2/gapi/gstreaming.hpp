@@ -17,6 +17,38 @@
 
 namespace cv {
 
+/**
+ * \addtogroup gapi_main_classes
+ * @{
+ */
+/**
+ * @brief Represents a computation (graph) compiled for streaming.
+ *
+ * This class represents a product of graph compilation (calling
+ * cv::GComputation::compileStreaming()). Objects of this class
+ * actually do stream processing, and the whole pipeline execution
+ * complexity is incapsulated into objects of this class. Execution
+ * model has two levels: at the very top, the execution of a
+ * heterogeneous graph is aggressively pipelined; at the very bottom
+ * the execution of every internal block is determined by its
+ * associated backend. Backends are selected based on kernel packages
+ * passed via compilation arguments ( see @ref gapi_compile_args,
+ * GNetworkPackage, GKernelPackage for details).
+ *
+ * GStreamingCompiled objects have a "player" semantics -- there are
+ * methods like start() and stop(). GStreamingCompiled has a full
+ * control over a videostream and so is stateful. You need to specify the
+ * input stream data using setSource() and then call start() to
+ * actually start processing. After that, use pull() or try_pull() to
+ * obtain next processed data frame from the graph in a blocking or
+ * non-blocking way, respectively.
+ *
+ * Currently a single GStreamingCompiled can process only one video
+ * streat at time. Produce multiple GStreamingCompiled objects to run the
+ * same graph on multiple video streams.
+ *
+ * @sa GCompiled
+ */
 class GAPI_EXPORTS GStreamingCompiled
 {
 public:
@@ -24,27 +56,112 @@ public:
     GStreamingCompiled();
 
     // FIXME: More overloads?
+    /**
+     * @brief Specify the input data to GStreamingCompiled for
+     * processing, a generic version.
+     *
+     * Use gin() to create an input parameter vector.
+     *
+     * Input vectors must have the same number of elements as defined
+     * in the cv::GComputation protocol (at the moment of its
+     * construction). Shapes of elements also must conform to protocol
+     * (e.g. cv::Mat needs to be passed where cv::GMat has been
+     * declared as input, and so on). Run-time exception is generated
+     * on type mismatch.
+     *
+     * In contrast with regular GCompiled, user can also pass an
+     * object of type GVideoCapture for a GMat parameter of the parent
+     * GComputation.  The compiled pipeline will start fetching data
+     * from that GVideoCapture and feeding it into the
+     * pipeline. Pipeline stops when a GVideoCapture marks end of the
+     * stream (or when stop() is called).
+     *
+     * Passing a regular Mat for a GMat parameter makes it "infinite"
+     * source -- pipeline may run forever feeding with this Mat until
+     * stopped explicitly.
+     *
+     * Currently only a single GVideoCapture is supported as input. If
+     * the parent GComputation is declared with multiple input GMat's,
+     * one of those can be specified as GVideoCapture but all others
+     * must be regular Mat objects.
+     *
+     * Throws if pipeline is already running. Use stop() and then
+     * setSource() to run the graph on a new video stream.
+     *
+     * @param ins vector of inputs to process.
+     * @sa gin
+     */
     void setSource(GRunArgs &&ins);
+
+    /**
+     * @brief Specify an input video stream for a single-input
+     * computation pipeline.
+     *
+     * Throws if pipeline is already running. Use stop() and then
+     * setSource() to run the graph on a new video stream.
+     *
+     * @overload
+     * @param c GVideoCapture representing the input video stream.
+     */
     void setSource(const gapi::GVideoCapture &c);
 
+    /**
+     * @brief Start the pipeline execution.
+     *
+     * Use pull()/try_pull() to obtain data. Throws an exception if
+     * a video source was not specified.
+     */
     void start();
 
     /**
+     * @brief Get the next processed frame from the pipeline.
+     *
+     * Use gout() to create an output parameter vector.
+     *
+     * Output vectors must have the same number of elements as defined
+     * in the cv::GComputation protocol (at the moment of its
+     * construction). Shapes of elements also must conform to protocol
+     * (e.g. cv::Mat needs to be passed where cv::GMat has been
+     * declared as output, and so on). Run-time exception is generated
+     * on type mismatch.
+     *
+     * This method writes new data into objects passed via output
+     * vector.  If there is no data ready yet, this method blocks. Use
+     * try_pull() if you need a non-blocking version.
+     *
+     * @param outs vector of output parameters to obtain.
      * @return true if next result has been obtained,
      *    false marks end of the stream.
      */
     bool pull(cv::GRunArgsP &&outs);
 
     /**
-     * @return true if data has been obtained, and
-     *    false if it was not. Note: false here doesn't
-     *    mark the end of the stream.
+     * @brief Try to get the next processed frame from the pipeline.
+     *
+     * Use gout() to create an output parameter vector.
+     *
+     * This method writes new data into objects passed via output
+     * vector.  If there is no data ready yet, the output vector
+     * remains unchanged and false is returned.
+     *
+     * @return true if data has been obtained, and false if it was
+     *    not. Note: false here doesn't mark the end of the stream.
      */
     bool try_pull(cv::GRunArgsP &&outs);
 
+    /**
+     * @brief Stop (abort) processing the pipeline.
+     *
+     * Note - it is not pause but a complete stop. Calling start()
+     * will cause G-API to start processing the stream from the early beginning.
+     *
+     * Throws if the pipeline is not running.
+     */
     void stop();
 
     /**
+     * @brief Test if the pipeline is running.
+     *
      * @return true if the current stream is not over yet.
      */
     bool running() const;

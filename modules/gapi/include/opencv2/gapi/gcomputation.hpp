@@ -399,9 +399,42 @@ public:
     // FIXME: Document properly in the Doxygen format
     // Video-oriented pipeline compilation:
     // 1. A generic version
+    /**
+     * @brief Compile the computation for streaming mode.
+     *
+     * This method triggers compilation process and produces a new
+     * GStreamingCompiled object which then can process video stream
+     * data of the given format. Passing a stream in a different
+     * format to the compiled computation will generate a run-time
+     * exception.
+     *
+     * @param in_metas vector of input metadata configuration. Grab
+     * metadata from real data objects (like cv::Mat or cv::Scalar)
+     * using cv::descr_of(), or create it on your own.  @param args
+     * compilation arguments for this compilation process. Compilation
+     * arguments directly affect what kind of executable object would
+     * be produced, e.g. which kernels (and thus, devices) would be
+     * used to execute computation.
+     *
+     * @return GStreamingCompiled, a streaming-oriented executable
+     * computation compiled specifically for the given input
+     * parameters.
+     *
+     * @sa @ref gapi_compile_args
+     */
     GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
 
     // 2. Direct metadata version
+    /**
+     * @overload
+     *
+     * Takes a variadic parameter pack with metadata
+     * descriptors for which a compiled object needs to be produced.
+     *
+     * @return GStreamingCompiled, a streaming-oriented executable
+     * computation compiled specifically for the given input
+     * parameters.
+     */
     template<typename... Ts>
     auto compileStreaming(const Ts&... metas) ->
         typename std::enable_if<detail::are_meta_descrs<Ts...>::value, GStreamingCompiled>::type
@@ -410,6 +443,18 @@ public:
     }
 
     // 2. Direct metadata + compile arguments version
+    /**
+     * @overload
+     *
+     * Takes a  variadic parameter pack with metadata
+     * descriptors for which a compiled object needs to be produced,
+     * followed by GCompileArgs object representing compilation
+     * arguments for this process.
+     *
+     * @return GStreamingCompiled, a streaming-oriented executable
+     * computation compiled specifically for the given input
+     * parameters.
+     */
     template<typename... Ts>
     auto compileStreaming(const Ts&... meta_and_compile_args) ->
         typename std::enable_if<detail::are_meta_descrs_but_last<Ts...>::value

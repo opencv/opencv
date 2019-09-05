@@ -1,8 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-
-
+//
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GISLANDMODEL_HPP
@@ -115,7 +115,7 @@ public:
     virtual ~GIslandExecutable() = default;
 };
 
-// GIslandExecutable - a backend-specific thing which feeds data into
+// GIslandEmitter - a backend-specific thing which feeds data into
 // the pipeline. This one is just an interface, implementations are executor-defined.
 class GIslandEmitter
 {
