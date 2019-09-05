@@ -777,7 +777,8 @@ public:
     CV_WRAP virtual double get(int propId) const;
 
 	/** @brief like get(int propId) but returns property range and default as well as value
-
+	
+	@param vals will contains 4 double element in order of value, min, max, default
 	@return true if success, false if querying a property that is not supported by the backend
 	used by the VideoCapture instance.
 
@@ -785,7 +786,7 @@ public:
 	see get(int propId) for more information
 	*/
 
-	CV_WRAP virtual bool get(int propId, double &val, double &min, double &max, double &defaultVal) const;
+	CV_WRAP virtual bool get(int propId, OutputArray vals) const;
 
     /** @brief Returns used backend API name
 
