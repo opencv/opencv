@@ -12,14 +12,12 @@
 #include "logger.defines.hpp"
 #include "logtag.hpp"
 
-//! @addtogroup core_logging
-// This section describes OpenCV logging utilities.
-//
-//! @{
-
 namespace cv {
 namespace utils {
 namespace logging {
+
+//! @addtogroup core_logging
+//! @{
 
 /** Set global logging level
 @return previous logging level
@@ -148,8 +146,8 @@ struct LogTagAuto
 # define CV_LOG_VERBOSE(tag, v, ...)
 #endif
 
-}}} // namespace
-
 //! @}
+
+}}} // namespace
 
 #endif // OPENCV_LOGGER_HPP

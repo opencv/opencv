@@ -8,13 +8,12 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help( char** argv )
 {
     cout << "\nCool inpainging demo. Inpainting repairs damage to images by floodfilling the damage \n"
             << "with surrounding image areas.\n"
             "Using OpenCV version %s\n" << CV_VERSION << "\n"
-    "Usage:\n"
-        "./inpaint [image_name -- Default fruits.jpg]\n" << endl;
+            "Usage:\n" << argv[0] <<" [image_name -- Default fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
         "\tESC - quit the program\n"
@@ -48,7 +47,7 @@ static void onMouse( int event, int x, int y, int flags, void* )
 int main( int argc, char** argv )
 {
     cv::CommandLineParser parser(argc, argv, "{@image|fruits.jpg|}");
-    help();
+    help(argv);
 
     string filename = samples::findFile(parser.get<string>("@image"));
     Mat img0 = imread(filename, IMREAD_COLOR);

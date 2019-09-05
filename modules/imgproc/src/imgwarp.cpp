@@ -2686,6 +2686,258 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
 
 namespace cv
 {
+#if CV_SIMD128_64F
+void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0, double Y0, double W0, int bw)
+{
+    const v_float64x2 v_M0 = v_setall_f64(M[0]);
+    const v_float64x2 v_M3 = v_setall_f64(M[3]);
+    const v_float64x2 v_M6 = v_setall_f64(M[6]);
+    const v_float64x2 v_intmax = v_setall_f64((double)INT_MAX);
+    const v_float64x2 v_intmin = v_setall_f64((double)INT_MIN);
+    const v_float64x2 v_2 = v_setall_f64(2.0);
+    const v_float64x2 v_zero = v_setzero_f64();
+    const v_float64x2 v_1 = v_setall_f64(1.0);
+
+    int x1 = 0;
+    v_float64x2 v_X0d = v_setall_f64(X0);
+    v_float64x2 v_Y0d = v_setall_f64(Y0);
+    v_float64x2 v_W0 = v_setall_f64(W0);
+    v_float64x2 v_x1(0.0, 1.0);
+
+    for (; x1 <= bw - 16; x1 += 16)
+    {
+        // 0-3
+        v_int32x4 v_X0, v_Y0;
+        {
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_X0 = v_round(v_fX0, v_fX1);
+            v_Y0 = v_round(v_fY0, v_fY1);
+        }
+
+        // 4-7
+        v_int32x4 v_X1, v_Y1;
+        {
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_X1 = v_round(v_fX0, v_fX1);
+            v_Y1 = v_round(v_fY0, v_fY1);
+        }
+
+        // 8-11
+        v_int32x4 v_X2, v_Y2;
+        {
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_X2 = v_round(v_fX0, v_fX1);
+            v_Y2 = v_round(v_fY0, v_fY1);
+        }
+
+        // 12-15
+        v_int32x4 v_X3, v_Y3;
+        {
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_1 / v_W, v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_X3 = v_round(v_fX0, v_fX1);
+            v_Y3 = v_round(v_fY0, v_fY1);
+        }
+
+        // convert to 16s
+        v_X0 = v_reinterpret_as_s32(v_pack(v_X0, v_X1));
+        v_X1 = v_reinterpret_as_s32(v_pack(v_X2, v_X3));
+        v_Y0 = v_reinterpret_as_s32(v_pack(v_Y0, v_Y1));
+        v_Y1 = v_reinterpret_as_s32(v_pack(v_Y2, v_Y3));
+
+        v_store_interleave(xy + x1 * 2, (v_reinterpret_as_s16)(v_X0), (v_reinterpret_as_s16)(v_Y0));
+        v_store_interleave(xy + x1 * 2 + 16, (v_reinterpret_as_s16)(v_X1), (v_reinterpret_as_s16)(v_Y1));
+    }
+
+    for( ; x1 < bw; x1++ )
+    {
+        double W = W0 + M[6]*x1;
+        W = W ? 1./W : 0;
+        double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
+        double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
+        int X = saturate_cast<int>(fX);
+        int Y = saturate_cast<int>(fY);
+
+        xy[x1*2] = saturate_cast<short>(X);
+        xy[x1*2+1] = saturate_cast<short>(Y);
+    }
+}
+
+void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw)
+{
+    const v_float64x2 v_M0 = v_setall_f64(M[0]);
+    const v_float64x2 v_M3 = v_setall_f64(M[3]);
+    const v_float64x2 v_M6 = v_setall_f64(M[6]);
+    const v_float64x2 v_intmax = v_setall_f64((double)INT_MAX);
+    const v_float64x2 v_intmin = v_setall_f64((double)INT_MIN);
+    const v_float64x2 v_2 = v_setall_f64(2.0);
+    const v_float64x2 v_zero = v_setzero_f64();
+    const v_float64x2 v_its = v_setall_f64((double)INTER_TAB_SIZE);
+    const v_int32x4 v_itsi1 = v_setall_s32(INTER_TAB_SIZE - 1);
+
+    int x1 = 0;
+
+    v_float64x2 v_X0d = v_setall_f64(X0);
+    v_float64x2 v_Y0d = v_setall_f64(Y0);
+    v_float64x2 v_W0 = v_setall_f64(W0);
+    v_float64x2 v_x1(0.0, 1.0);
+
+    for (; x1 <= bw - 16; x1 += 16)
+    {
+        // 0-3
+        v_int32x4 v_X0, v_Y0;
+        {
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_X0 = v_round(v_fX0, v_fX1);
+            v_Y0 = v_round(v_fY0, v_fY1);
+        }
+
+        // 4-7
+        v_int32x4 v_X1, v_Y1;
+        {
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_X1 = v_round(v_fX0, v_fX1);
+            v_Y1 = v_round(v_fY0, v_fY1);
+        }
+
+        // 8-11
+        v_int32x4 v_X2, v_Y2;
+        {
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_X2 = v_round(v_fX0, v_fX1);
+            v_Y2 = v_round(v_fY0, v_fY1);
+        }
+
+        // 12-15
+        v_int32x4 v_X3, v_Y3;
+        {
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_W = v_muladd(v_M6, v_x1, v_W0);
+            v_W = v_select(v_W != v_zero, v_its / v_W, v_zero);
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M0, v_x1, v_X0d) * v_W));
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
+            v_x1 += v_2;
+
+            v_X3 = v_round(v_fX0, v_fX1);
+            v_Y3 = v_round(v_fY0, v_fY1);
+        }
+
+        // store alpha
+        v_int32x4 v_alpha0 = ((v_Y0 & v_itsi1) << INTER_BITS) + (v_X0 & v_itsi1);
+        v_int32x4 v_alpha1 = ((v_Y1 & v_itsi1) << INTER_BITS) + (v_X1 & v_itsi1);
+        v_store((alpha + x1), v_pack(v_alpha0, v_alpha1));
+
+        v_alpha0 = ((v_Y2 & v_itsi1) << INTER_BITS) + (v_X2 & v_itsi1);
+        v_alpha1 = ((v_Y3 & v_itsi1) << INTER_BITS) + (v_X3 & v_itsi1);
+        v_store((alpha + x1 + 8), v_pack(v_alpha0, v_alpha1));
+
+        // convert to 16s
+        v_X0 = v_reinterpret_as_s32(v_pack(v_X0 >> INTER_BITS, v_X1 >> INTER_BITS));
+        v_X1 = v_reinterpret_as_s32(v_pack(v_X2 >> INTER_BITS, v_X3 >> INTER_BITS));
+        v_Y0 = v_reinterpret_as_s32(v_pack(v_Y0 >> INTER_BITS, v_Y1 >> INTER_BITS));
+        v_Y1 = v_reinterpret_as_s32(v_pack(v_Y2 >> INTER_BITS, v_Y3 >> INTER_BITS));
+
+        v_store_interleave(xy + x1 * 2, (v_reinterpret_as_s16)(v_X0), (v_reinterpret_as_s16)(v_Y0));
+        v_store_interleave(xy + x1 * 2 + 16, (v_reinterpret_as_s16)(v_X1), (v_reinterpret_as_s16)(v_Y1));
+    }
+
+    for( ; x1 < bw; x1++ )
+    {
+        double W = W0 + M[6]*x1;
+        W = W ? INTER_TAB_SIZE/W : 0;
+        double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
+        double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
+        int X = saturate_cast<int>(fX);
+        int Y = saturate_cast<int>(fY);
+
+        xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
+        xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
+        alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
+                            (X & (INTER_TAB_SIZE-1)));
+    }
+}
+#endif
 
 class WarpPerspectiveInvoker :
     public ParallelLoopBody
@@ -2707,7 +2959,7 @@ public:
     {
         const int BLOCK_SZ = 32;
         short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
-        int x, y, x1, y1, width = dst.cols, height = dst.rows;
+        int x, y, y1, width = dst.cols, height = dst.rows;
 
         int bh0 = std::min(BLOCK_SZ/2, height);
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, width);
@@ -2738,14 +2990,15 @@ public:
 
                     if( interpolation == INTER_NEAREST )
                     {
-                        x1 = 0;
-
                         #if CV_TRY_SSE4_1
                         if (pwarp_impl_sse4)
                             pwarp_impl_sse4->processNN(M, xy, X0, Y0, W0, bw);
                         else
                         #endif
-                        for( ; x1 < bw; x1++ )
+                        #if CV_SIMD128_64F
+                        WarpPerspectiveLine_ProcessNN_CV_SIMD(M, xy, X0, Y0, W0, bw);
+                        #else
+                        for( int x1 = 0; x1 < bw; x1++ )
                         {
                             double W = W0 + M[6]*x1;
                             W = W ? 1./W : 0;
@@ -2757,18 +3010,21 @@ public:
                             xy[x1*2] = saturate_cast<short>(X);
                             xy[x1*2+1] = saturate_cast<short>(Y);
                         }
+                        #endif
                     }
                     else
                     {
                         short* alpha = A + y1*bw;
-                        x1 = 0;
 
                         #if CV_TRY_SSE4_1
                         if (pwarp_impl_sse4)
                             pwarp_impl_sse4->process(M, xy, alpha, X0, Y0, W0, bw);
                         else
                         #endif
-                        for( ; x1 < bw; x1++ )
+                        #if CV_SIMD128_64F
+                        WarpPerspectiveLine_Process_CV_SIMD(M, xy, alpha, X0, Y0, W0, bw);
+                        #else
+                        for( int x1 = 0; x1 < bw; x1++ )
                         {
                             double W = W0 + M[6]*x1;
                             W = W ? INTER_TAB_SIZE/W : 0;
@@ -2782,6 +3038,7 @@ public:
                             alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
                                                 (X & (INTER_TAB_SIZE-1)));
                         }
+                        #endif
                     }
                 }
 

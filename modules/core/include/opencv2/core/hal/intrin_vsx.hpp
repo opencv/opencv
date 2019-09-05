@@ -1039,6 +1039,15 @@ inline v_float64x2 v_cvt_f64(const v_float32x4& a)
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 { return v_float64x2(vec_cvfo(vec_mergel(a.val, a.val))); }
 
+// The altivec intrinsic is missing for this 2.06 insn
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+vec_double2 out;
+
+__asm__ ("xvcvsxddp %x0,%x1" : "=wa"(out) : "wa"(a.val));
+return v_float64x2(out);
+}
+
 ////////////// Lookup table access ////////////////////
 
 inline v_int8x16 v_lut(const schar* tab, const int* idx)
