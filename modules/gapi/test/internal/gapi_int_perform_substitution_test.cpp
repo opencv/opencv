@@ -564,10 +564,10 @@ TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteOneTransform)
         return cv::GComputation(cv::GIn(in), cv::GOut(out));
     }();
 
-    cv::gimpl::GCompiler compiler(c, cv::descr_of(cv::gin(input)),
-        cv::compile_args(cv::gapi::kernels<EndlessLoopTransform1>()));
-
-    EXPECT_THROW(compiler.compile(), std::exception);  //  should throw here
+    EXPECT_THROW(
+        cv::gimpl::GCompiler compiler(c, cv::descr_of(cv::gin(input)),
+            cv::compile_args(cv::gapi::kernels<EndlessLoopTransform1>())),
+        std::exception);
 }
 
 TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransforms)
@@ -582,11 +582,11 @@ TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransfo
         return cv::GComputation(cv::GIn(in), cv::GOut(out));
     }();
 
-    cv::gimpl::GCompiler compiler(c, cv::descr_of(cv::gin(input)),
-        cv::compile_args(
-            cv::gapi::kernels<EndlessLoopTransformChain2, EndlessLoopTransformChain1>()));
-
-    EXPECT_THROW(compiler.compile(), std::exception);  //  should throw here
+    EXPECT_THROW(
+        cv::gimpl::GCompiler compiler(c, cv::descr_of(cv::gin(input)),
+            cv::compile_args(
+                cv::gapi::kernels<EndlessLoopTransformChain2, EndlessLoopTransformChain1>())),
+        std::exception);
 }
 
 

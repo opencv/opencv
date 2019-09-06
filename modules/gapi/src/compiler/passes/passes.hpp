@@ -59,9 +59,6 @@ void resolveKernels(ade::passes::PassContext   &ctx,
 void fuseIslands(ade::passes::PassContext &ctx);
 void syncIslandTags(ade::passes::PassContext &ctx);
 
-void checkTransformations(ade::passes::PassContext &ctx,
-                          const gapi::GKernelPackage &pkg,
-                          std::vector<std::unique_ptr<ade::Graph>> &generatedPatterns);
 void applyTransformations(ade::passes::PassContext &ctx,
                           const gapi::GKernelPackage &pkg,
                           const std::vector<std::unique_ptr<ade::Graph>> &preGeneratedPatterns);

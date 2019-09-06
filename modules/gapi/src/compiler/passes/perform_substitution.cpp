@@ -6,12 +6,20 @@
 
 #include "pattern_matching.hpp"
 
+#include "ade/util/zip_range.hpp"
+
 namespace cv { namespace gimpl {
 namespace {
 using Graph = GModel::Graph;
 
-template<typename Container, typename Callable>
-void erase(Graph& g, const Container& c, Callable getNh)
+template<typename Iterator>
+ade::NodeHandle getNh(Iterator it) { return *it; }
+
+template<>
+ade::NodeHandle getNh(SubgraphMatch::M::const_iterator it) { return it->second; }
+
+template<typename Container>
+void erase(Graph& g, const Container& c)
 {
     for (auto first = c.begin(); first != c.end(); ++first) {
         ade::NodeHandle node = getNh(first);
@@ -21,25 +29,34 @@ void erase(Graph& g, const Container& c, Callable getNh)
 }
 }  // anonymous namespace
 
-void performSubstitution(Graph& graph,
-                         const SubgraphMatch& patternToGraph,
-                         const SubgraphMatch& patternToSubstitute)
+void performSubstitution(GModel::Graph& graph,
+                         const Protocol& patternP,
+                         const Protocol& substituteP,
+                         const SubgraphMatch& patternToGraphMatch)
 {
-    // substitute input nodes
-    for (const auto& inputNodePair : patternToGraph.inputDataNodes) {
+    // 1. substitute input nodes
+    const auto& patternIns = patternP.in_nhs;
+    const auto& substituteIns = substituteP.in_nhs;
+
+    for (auto it : ade::util::zip(ade::util::toRange(patternIns),
+                                  ade::util::toRange(substituteIns))) {
         // Note: we don't replace input DATA nodes here, only redirect their output edges
-        const auto& patternDataNode = inputNodePair.first;
-        const auto& graphDataNode = inputNodePair.second;
-        const auto& substituteDataNode = patternToSubstitute.inputDataNodes.at(patternDataNode);
+        const auto& patternDataNode = std::get<0>(it);
+        const auto& substituteDataNode = std::get<1>(it);
+        const auto& graphDataNode = patternToGraphMatch.inputDataNodes.at(patternDataNode);
         GModel::redirectReaders(graph, substituteDataNode, graphDataNode);
     }
 
-    // substitute output nodes
-    for (const auto& outputNodePair : patternToGraph.outputDataNodes) {
+    // 2. substitute output nodes
+    const auto& patternOuts = patternP.out_nhs;
+    const auto& substituteOuts = substituteP.out_nhs;
+
+    for (auto it : ade::util::zip(ade::util::toRange(patternOuts),
+                                  ade::util::toRange(substituteOuts))) {
         // Note: we don't replace output DATA nodes here, only redirect their input edges
-        const auto& patternDataNode = outputNodePair.first;
-        const auto& graphDataNode = outputNodePair.second;
-        const auto& substituteDataNode = patternToSubstitute.outputDataNodes.at(patternDataNode);
+        const auto& patternDataNode = std::get<0>(it);
+        const auto& substituteDataNode = std::get<1>(it);
+        const auto& graphDataNode = patternToGraphMatch.outputDataNodes.at(patternDataNode);
         // delete existing edges (otherwise we cannot redirect)
         for (auto e : graphDataNode->inEdges()) {
             graph.erase(e);
@@ -47,24 +64,21 @@ void performSubstitution(Graph& graph,
         GModel::redirectWriter(graph, substituteDataNode, graphDataNode);
     }
 
-    // erase redundant nodes
-    const auto get_from_node = [] (std::list<ade::NodeHandle>::const_iterator it) { return *it; };
-    const auto get_from_pair = [] (SubgraphMatch::M::const_iterator it) { return it->second; };
-
+    // 3. erase redundant nodes:
     // erase input data nodes of __substitute__
-    erase(graph, patternToSubstitute.inputDataNodes, get_from_pair);
+    erase(graph, substituteIns);
 
     // erase old start OP nodes of __main graph__
-    erase(graph, patternToGraph.startOpNodes, get_from_pair);
+    erase(graph, patternToGraphMatch.startOpNodes);
 
     // erase old internal nodes of __main graph__
-    erase(graph, patternToGraph.internalLayers, get_from_node);
+    erase(graph, patternToGraphMatch.internalLayers);
 
     // erase old finish OP nodes of __main graph__
-    erase(graph, patternToGraph.finishOpNodes, get_from_pair);
+    erase(graph, patternToGraphMatch.finishOpNodes);
 
     // erase output data nodes of __substitute__
-    erase(graph, patternToSubstitute.outputDataNodes, get_from_pair);
+    erase(graph, substituteOuts);
 }
 
 }  // namespace gimpl

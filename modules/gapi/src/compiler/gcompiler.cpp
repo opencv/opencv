@@ -29,6 +29,7 @@
 #include "compiler/gcompiler.hpp"
 #include "compiler/gcompiled_priv.hpp"
 #include "compiler/passes/passes.hpp"
+#include "compiler/passes/pattern_matching.hpp"
 
 #include "executor/gexecutor.hpp"
 #include "backends/common/gbackend.hpp"
@@ -102,6 +103,73 @@ namespace
         }
         return result;
     }
+
+    // Creates ADE graph from input/output proto args
+    std::unique_ptr<ade::Graph> makeGraph(const cv::GProtoArgs &ins, const cv::GProtoArgs &outs) {
+        std::unique_ptr<ade::Graph> pG(new ade::Graph);
+        ade::Graph& g = *pG;
+
+        cv::gimpl::GModel::Graph gm(g);
+        cv::gimpl::GModel::init(gm);
+        cv::gimpl::GModelBuilder builder(g);
+        auto proto_slots = builder.put(ins, outs);
+
+        // Store Computation's protocol in metadata
+        cv::gimpl::Protocol p;
+        std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
+        gm.metadata().set(p);
+
+        return pG;
+    }
+
+    void checkTransformations(const cv::gapi::GKernelPackage& pkg,
+                              std::vector<std::unique_ptr<ade::Graph>>& patterns) {
+        const auto& transforms = pkg.get_transformations();
+        const auto size = transforms.size();
+        if (0u == size) return;
+        GAPI_Assert(0u == patterns.size() || size == patterns.size());
+        patterns.resize(size);
+        std::vector<std::unique_ptr<ade::Graph>> substitutes(size);
+
+        // 1. pre-generate all required graphs
+        for (auto it : ade::util::zip(ade::util::toRange(transforms),
+                                    ade::util::toRange(patterns),
+                                    ade::util::toRange(substitutes))) {
+            const auto& t = std::get<0>(it);
+            auto& p = std::get<1>(it);
+            auto& s = std::get<2>(it);
+
+            auto pattern_comp = t.pattern();
+            // NB: these patterns are re-used in apply_transformation pass
+            p = makeGraph(pattern_comp.priv().m_ins, pattern_comp.priv().m_outs);
+
+            auto substitute_comp = t.substitute();
+            s = makeGraph(substitute_comp.priv().m_ins, substitute_comp.priv().m_outs);
+        }
+
+        // FIXME: verify other types of endless loops - are there any other, though?
+
+        const auto empty = [] (const cv::gimpl::SubgraphMatch& m) {
+            return m.inputDataNodes.empty() && m.startOpNodes.empty()
+                && m.finishOpNodes.empty() && m.outputDataNodes.empty()
+                && m.inputTestDataNodes.empty() && m.outputTestDataNodes.empty();
+        };
+        // 2. verify there are no patterns in substitutes
+        for (size_t i = 0; i < size; ++i) {
+            auto& p = patterns[i];
+            for (size_t j = i; j < size; ++j) {
+                auto& s = substitutes[j];
+
+                auto matchInSubstitute = cv::gimpl::findMatches(*p, *s);
+                if (!empty(matchInSubstitute)) {
+                    std::stringstream ss;
+                    ss << "Error: pattern (from transformation #" << i << ") detected inside "
+                          "substitute (from transformation #" << j << ")";
+                    throw std::runtime_error(ss.str());
+                }
+            }
+        }
+    }
 } // anonymous namespace
 
 
@@ -128,13 +196,13 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     // NN backends (present here via network package) always add their
     // inference kernels via auxiliary...()
 
+    // NB: patters are initialized in the following function!
+    checkTransformations(m_all_kernels, m_all_patterns);
+
     auto dump_path       = getGraphDumpDirectory(m_args);
 
     m_e.addPassStage("init");
     m_e.addPass("init", "check_cycles",  ade::passes::CheckCycles());
-    m_e.addPass("init", "check_transformations",
-        std::bind(passes::checkTransformations, _1, std::cref(m_all_kernels),
-            std::ref(m_all_patterns)));  // Note: populating patterns here
     m_e.addPass("init", "apply_transformations",
                 std::bind(passes::applyTransformations, _1, std::cref(m_all_kernels),
                     std::cref(m_all_patterns)));  // Note: and re-using patterns here
@@ -260,23 +328,7 @@ cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
 {
     validateInputMeta();
     validateOutProtoArgs();
-
-    // Generate ADE graph from expression-based computation
-    std::unique_ptr<ade::Graph> pG(new ade::Graph);
-    ade::Graph& g = *pG;
-
-    GModel::Graph gm(g);
-    cv::gimpl::GModel::init(gm);
-    cv::gimpl::GModelBuilder builder(g);
-    auto proto_slots = builder.put(m_c.priv().m_ins, m_c.priv().m_outs);
-    GAPI_LOG_INFO(NULL, "Generated graph: " << g.nodes().size() << " nodes" << std::endl);
-
-    // Store Computation's protocol in metadata
-    Protocol p;
-    std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
-    gm.metadata().set(p);
-
-    return pG;
+    return makeGraph(m_c.priv().m_ins, m_c.priv().m_outs);
 }
 
 void cv::gimpl::GCompiler::runPasses(ade::Graph &g)

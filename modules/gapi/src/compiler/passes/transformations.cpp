@@ -21,33 +21,55 @@
 namespace cv { namespace gimpl { namespace passes {
 namespace
 {
-// Generates ADE graph from expression-based computation
-std::unique_ptr<ade::Graph> makeGraph(const cv::GComputation& c)
+using Graph = GModel::Graph;
+using Metadata = typename Graph::CMetadataT;
+
+// Checks pairs of {pattern node, substitute node} and asserts if there are any incompatibilities
+void checkDataNodes(const Graph& pattern,
+                    const Graph& substitute,
+                    const std::vector<ade::NodeHandle>& patternNodes,
+                    std::vector<ade::NodeHandle> substituteNodes)
 {
-    std::unique_ptr<ade::Graph> pG(new ade::Graph);
-    ade::Graph& g = *pG;
-
-    cv::gimpl::GModel::Graph gm(g);
-    cv::gimpl::GModel::init(gm);
-    cv::gimpl::GModelBuilder builder(g);
-    auto proto_slots = builder.put(c.priv().m_ins, c.priv().m_outs);
-
-    // Store Computation's protocol in metadata
-    cv::gimpl::Protocol p;
-    std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
-    gm.metadata().set(p);
-
-    return pG;
+    for (auto it : ade::util::zip(patternNodes, substituteNodes)) {
+        auto pNodeMeta = pattern.metadata(std::get<0>(it));
+        auto sNodeMeta = substitute.metadata(std::get<1>(it));
+        GAPI_Assert(pNodeMeta.get<NodeType>().t == NodeType::DATA);
+        GAPI_Assert(pNodeMeta.get<NodeType>().t == sNodeMeta.get<NodeType>().t);
+        GAPI_Assert(pNodeMeta.get<Data>().shape == sNodeMeta.get<Data>().shape);
+    }
 }
 
+// Checks compatibility of pattern and substitute graphs based on in/out nodes
+void checkCompatibility(const Graph& pattern,
+                        const Graph& substitute,
+                        const Protocol& patternP,
+                        const Protocol& substituteP)
+{
+    const auto& patternDataInputs = patternP.in_nhs;
+    const auto& patternDataOutputs = patternP.out_nhs;
+
+    const auto& substituteDataInputs = substituteP.in_nhs;
+    const auto& substituteDataOutputs = substituteP.out_nhs;
+
+    // number of data nodes must be the same
+    GAPI_Assert(patternDataInputs.size() == substituteDataInputs.size());
+    GAPI_Assert(patternDataOutputs.size() == substituteDataOutputs.size());
+
+    // for each pattern input node, verify a corresponding substitute input node
+    checkDataNodes(pattern, substitute, patternDataInputs, substituteDataInputs);
+
+    // for each pattern output node, verify a corresponding substitute output node
+    checkDataNodes(pattern, substitute, patternDataOutputs, substituteDataOutputs);
+}
+
+// Tries to substitute __single__ pattern with substitute in the given graph
 bool tryToSubstitute(ade::Graph& main,
                      const std::unique_ptr<ade::Graph>& patternG,
                      const cv::GComputation& substitute)
 {
     GModel::Graph gm(main);
 
-    // Note: if there are multiple matches, p must be applied several times (outside-scope work)
-    // 1. fina pattern in graph
+    // 1. find a pattern in main graph
     auto match1 = findMatches(*patternG, gm);
     if (!match1.ok()) {
         return false;
@@ -56,73 +78,24 @@ bool tryToSubstitute(ade::Graph& main,
     // 2. build substitute graph inside the main graph
     cv::gimpl::GModelBuilder builder(main);
     const auto& proto_slots = builder.put(substitute.priv().m_ins, substitute.priv().m_outs);
-    Protocol p;
-    std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
+    Protocol substituteP;
+    std::tie(substituteP.inputs, substituteP.outputs, substituteP.in_nhs, substituteP.out_nhs) =
+        proto_slots;
 
-    // 3. match pattern ins/outs to substitute ins/outs
-    auto match2 = matchPatternToSubstitute(*patternG, main,
-        GModel::Graph(*patternG).metadata().get<Protocol>(), p);
+    const Protocol& patternP = GModel::Graph(*patternG).metadata().get<Protocol>();
 
-    // in theory, we should always be able to find a match here. if not, we're in half-completed
-    // state where some transformations are already applied - what can we do to handle the situation
-    // better?
-    const auto is_enough_for_substitution = [] (const SubgraphMatch& m) {
-        return !m.inputDataNodes.empty() && !m.outputDataNodes.empty();
-    };
-    GAPI_Assert(is_enough_for_substitution(match2));
+    // 3. check that pattern and substitute are compatible
+    // FIXME: in theory, we should always have compatible pattern/substitute. if not, we're in
+    // half-completed state where some transformations are already applied - what can we do to
+    // handle the situation better?  -- use transactional API as in fuse_islands pass?
+    checkCompatibility(*patternG, gm, patternP, substituteP);
 
     // 4. make substitution
-    performSubstitution(gm, match1, match2);
+    performSubstitution(gm, patternP, substituteP, match1);
+
     return true;
 }
 }  // anonymous namespace
-
-void checkTransformations(ade::passes::PassContext&,  // FIXME: context is unused here
-                          const gapi::GKernelPackage& pkg,
-                          std::vector<std::unique_ptr<ade::Graph>>& patterns)
-{
-    const auto& transforms = pkg.get_transformations();
-    const auto size = transforms.size();
-    if (0u == size) return;
-    GAPI_Assert(0u == patterns.size() || size == patterns.size());
-    patterns.resize(size);
-    std::vector<std::unique_ptr<ade::Graph>> substitutes(size);
-
-    // 1. pre-generate all required graphs
-    for (auto it : ade::util::zip(ade::util::toRange(transforms),
-                                  ade::util::toRange(patterns),
-                                  ade::util::toRange(substitutes))) {
-        const auto& t = std::get<0>(it);
-        auto& p = std::get<1>(it);
-        auto& s = std::get<2>(it);
-
-        p = makeGraph(t.pattern());  // NB: these patterns are re-used in apply_transformation pass
-        s = makeGraph(t.substitute());
-    }
-
-    // FIXME: verify other types of endless loops - are there any other, though?
-
-    const auto empty = [] (const SubgraphMatch& m) {
-        return m.inputDataNodes.empty() && m.startOpNodes.empty()
-            && m.finishOpNodes.empty() && m.outputDataNodes.empty()
-            && m.inputTestDataNodes.empty() && m.outputTestDataNodes.empty();
-    };
-    // 2. verify there are no patterns in substitutes
-    for (size_t i = 0; i < size; ++i) {
-        auto& p = patterns[i];
-        for (size_t j = i; j < size; ++j) {
-            auto& s = substitutes[j];
-
-            auto matchInSubstitute = findMatches(*p, *s);
-            if (!empty(matchInSubstitute)) {
-                std::stringstream ss;
-                ss << "Error: pattern (from transformation #" << i << ") detected inside substitute"
-                      " (from transformation #" << j << ")";
-                throw std::runtime_error(ss.str());
-            }
-        }
-    }
-}
 
 void applyTransformations(ade::passes::PassContext& ctx,
                           const gapi::GKernelPackage& pkg,
@@ -130,7 +103,7 @@ void applyTransformations(ade::passes::PassContext& ctx,
 {
     const auto& transforms = pkg.get_transformations();
     const auto size = transforms.size();
-    if (0 == size) return;
+    if (0u == size) return;
     // Note: patterns are already generated at this point
     GAPI_Assert(patterns.size() == transforms.size());
 
@@ -145,12 +118,15 @@ void applyTransformations(ade::passes::PassContext& ctx,
         for (auto it : ade::util::zip(ade::util::toRange(transforms), ade::util::toRange(patterns)))
         {
             const auto& t = std::get<0>(it);
-            auto& p = std::get<1>(it);  // Note: using pre-created graphs
-            GAPI_Assert(nullptr != p);
+            auto& substituteP = std::get<1>(it);  // Note: using pre-created graphs
+            GAPI_Assert(nullptr != substituteP);
 
             // if at least one transformation happend, it is possible that other transformations
             // will be applied in the next "round"
-            canTransform |= tryToSubstitute(ctx.graph, p, t.substitute());
+            canTransform = tryToSubstitute(ctx.graph, substituteP, t.substitute());
+            if (canTransform) {
+                break;
+            }
         }
     }
 }
