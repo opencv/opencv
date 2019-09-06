@@ -117,14 +117,41 @@ So, make sure [docker](https://www.docker.com/) is installed in your system and 
 @code{.bash}
 git clone https://github.com/opencv/opencv.git
 cd opencv
-docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
+docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:latest" python ./platforms/js/build_js.py build
 @endcode
 
 In Windows use the following PowerShell command:
 
 @code{.bash}
-docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
+docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:latest" python ./platforms/js/build_js.py build
 @endcode
 
-@note
-The example uses latest version of [trzeci/emscripten](https://hub.docker.com/r/trzeci/emscripten) docker container. At this time, the latest version works fine and is `trzeci/emscripten:sdk-tag-1.38.32-64bit`
+@warning
+The example uses latest version of emscripten. If the build fails you should try a version that is known to work fine which is `1.38.32` using the following command:
+
+@code{.bash}
+docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:sdk-tag-1.38.32-64bit" python ./platforms/js/build_js.py build
+@endcode
+
+### Building the documentation with Docker
+
+To build the documentation `doxygen` needs to be installed. Create a file named `Dockerfile` with the following content:
+
+```
+FROM trzeci/emscripten:sdk-tag-1.38.32-64bit
+
+RUN apt-get update -y
+RUN apt-get install -y doxygen
+```
+
+Then we build the docker image and name it `opencv-js-doc` with the following command (that needs to be run only once):
+
+@code{.bash}
+docker build . -t opencv-js-doc
+@endcode
+
+Now run the build command again, this time using the new image and passing `--build_doc`:
+
+@code{.bash}
+docker run --rm --workdir /code -v "$PWD":/code "opencv-js-doc" python ./platforms/js/build_js.py build --build_doc
+@endcode
