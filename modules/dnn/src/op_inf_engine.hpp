@@ -137,12 +137,17 @@ class InfEngineBackendNode : public BackendNode
 public:
     InfEngineBackendNode(const InferenceEngine::Builder::Layer& layer);
 
+    InfEngineBackendNode(Ptr<Layer>& layer, std::vector<Mat*>& inputs,
+                         std::vector<Mat>& outputs, std::vector<Mat>& internals);
+
     void connect(std::vector<Ptr<BackendWrapper> >& inputs,
                  std::vector<Ptr<BackendWrapper> >& outputs);
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
     InferenceEngine::Builder::Layer layer;
     Ptr<InfEngineBackendNet> net;
+    // CPU fallback in case of unsupported Inference Engine layer.
+    Ptr<dnn::Layer> cvLayer;
 };
 
 class InfEngineBackendWrapper : public BackendWrapper
@@ -172,6 +177,9 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<s
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
 
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
+
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats);
 
 // Convert Inference Engine blob with FP32 precision to FP16 precision.
 // Allocates memory for a new blob.

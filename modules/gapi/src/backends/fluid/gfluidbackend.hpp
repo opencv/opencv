@@ -128,7 +128,7 @@ class GFluidExecutable final: public GIslandExecutable
 
     std::vector<FluidAgent*> m_script;
 
-    using Magazine = detail::magazine<cv::gapi::own::Scalar>;
+    using Magazine = detail::magazine<cv::gapi::own::Scalar, cv::detail::VectorRef>;
     Magazine m_res;
 
     std::size_t m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)

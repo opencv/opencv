@@ -15,6 +15,9 @@
 
 #include "inference_engine.hpp"
 
+#include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
+#include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+
 namespace cv {
 namespace gapi {
 namespace ie {
@@ -27,5 +30,6 @@ GAPI_EXPORTS InferenceEngine::Blob::Ptr to_ie(cv::Mat &blob);
 
 }}}}
 
-#endif // HAVE_INF_ENGINE
+#endif //HAVE_INF_ENGINE
+
 #endif // OPENCV_GAPI_INFER_IE_UTIL_HPP

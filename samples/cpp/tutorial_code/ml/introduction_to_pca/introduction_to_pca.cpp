@@ -96,11 +96,11 @@ int main(int argc, char** argv)
 {
     //! [pre-process]
     // Load image
-    CommandLineParser parser(argc, argv, "{@input | ../data/pca_test1.jpg | input image}");
+    CommandLineParser parser(argc, argv, "{@input | pca_test1.jpg | input image}");
     parser.about( "This program demonstrates how to use OpenCV PCA to extract the orientation of an object.\n" );
     parser.printMessage();
 
-    Mat src = imread(parser.get<String>("@input"));
+    Mat src = imread( samples::findFile( parser.get<String>("@input") ) );
 
     // Check if image is loaded successfully
     if(src.empty())
@@ -142,5 +142,5 @@ int main(int argc, char** argv)
     imshow("output", src);
 
     waitKey();
-    return 0;
+    return EXIT_SUCCESS;
 }
