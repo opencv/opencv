@@ -5,6 +5,7 @@
 #ifndef OPENCV_CORE_HAL_MSA_MACROS_H
 #define OPENCV_CORE_HAL_MSA_MACROS_H
 
+#ifdef __mips_msa
 #include "msa.h"
 #include <stdint.h>
 
@@ -1555,4 +1556,5 @@ msa_qdmulhq_n_s16(v8i16 a, int16_t b)
 } // extern "C"
 #endif
 
+#endif /*__mips_msa*/
 #endif /* OPENCV_CORE_MSA_MACROS_H */

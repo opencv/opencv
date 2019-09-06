@@ -1,3 +1,15 @@
+# ----------------------------------------------------------------------------------------------
+#  MIPS ToolChanin can be downloaded from https://www.mips.com/develop/tools/codescape-mips-sdk/ .
+#  Toolchains with 'mti' in the name (and install directory) are for MIPS R2-R5 instruction sets.
+#  Toolchains with 'img' in the name are for MIPS R6 instruction sets.
+#  It is recommended to use cmake-gui application for build scripts configuration and generation:
+#  1. Run cmake-gui
+#  2. Specifiy toolchain file for cross-compiling, mips32r5el-gnu.toolchian.cmake or mips64r6el-gnu.toolchain.cmake
+#     can be selected.
+#  3. Configure and Generate makefiles.
+#  4. make -j4 & make install
+# ----------------------------------------------------------------------------------------------
+
 if(COMMAND toolchain_save_config)
   return() # prevent recursive call
 endif()
@@ -45,7 +57,7 @@ if(NOT DEFINED CMAKE_CXX_FLAGS)
 
     set(CMAKE_CXX_FLAGS           "${CMAKE_CXX_FLAGS} -fdata-sections  -Wa,--noexecstack -fsigned-char -Wno-psabi")
     set(CMAKE_C_FLAGS             "${CMAKE_C_FLAGS} -fdata-sections  -Wa,--noexecstack -fsigned-char -Wno-psabi")
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "mips64*")
+  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "mips64r6el")
     set(CMAKE_C_FLAGS             "-O3 -march=i6500 -EL -mmsa -mabi=64 -mhard-float -mfp64 -mnan=2008" CACHE INTERNAL "")
     set(CMAKE_SHARED_LINKER_FLAGS "" CACHE INTERNAL "")
     set(CMAKE_CXX_FLAGS           "-O3 -march=i6500 -EL -mmsa -mabi=64 -mhard-float -mfp64 -mnan=2008" CACHE INTERNAL "")
