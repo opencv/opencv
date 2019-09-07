@@ -26,8 +26,6 @@ namespace gimpl {
         using S =  std::unordered_set< ade::NodeHandle
                                      , ade::HandleHasher<ade::Node>
                                      >;
-        // FIXME: inputDataNodes && outputDataNodes can be a part of a special struct (e.g.
-        //        SubgraphMatch::Base?)
         M inputDataNodes;
         M startOpNodes;
         M finishOpNodes;
@@ -38,6 +36,7 @@ namespace gimpl {
 
         std::list<ade::NodeHandle> internalLayers;
 
+        // FIXME: switch to operator bool() instead
         bool ok() const {
             return    !inputDataNodes.empty() && !startOpNodes.empty()
                    && !finishOpNodes.empty() && !outputDataNodes.empty()
