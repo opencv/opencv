@@ -118,12 +118,17 @@ void applyTransformations(ade::passes::PassContext& ctx,
         for (auto it : ade::util::zip(ade::util::toRange(transforms), ade::util::toRange(patterns)))
         {
             const auto& t = std::get<0>(it);
-            auto& substituteP = std::get<1>(it);  // Note: using pre-created graphs
-            GAPI_Assert(nullptr != substituteP);
+            auto& pattern = std::get<1>(it);  // Note: using pre-created graphs
+            GAPI_Assert(nullptr != pattern);
 
-            // if at least one transformation happend, it is possible that other transformations
-            // will be applied in the next "round"
-            canTransform = tryToSubstitute(ctx.graph, substituteP, t.substitute());
+            // if transformation is successful (pattern found and substituted), it is possible that
+            // other transformations will also be successful, so set canTransform to the returned
+            // value from tryToSubstitute
+            canTransform = tryToSubstitute(ctx.graph, pattern, t.substitute());
+
+            // Note: apply the __same__ substitution as many times as possible and only after go to
+            //       the next one. BUT it can happen that after applying some substitution, some
+            //       _previous_ patterns will also be found and these will be applied first
             if (canTransform) {
                 break;
             }
