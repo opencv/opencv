@@ -57,7 +57,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
         resize_direction = -1;
         coeff_expansion = 512.0 / min_side;
         const int width  = cvRound(src.size().width  * coeff_expansion);
-        const int height = cvRound(src.size().height * coeff_expansion);
+        const int height = cvRound(src.size().height  * coeff_expansion);
         Size new_size(width, height);
         resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
     }
@@ -66,7 +66,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
         resize_direction = 1;
         coeff_expansion = min_side / 512.0;
         const int width  = cvRound(src.size().width  / coeff_expansion);
-        const int height = cvRound(src.size().height / coeff_expansion);
+        const int height = cvRound(src.size().height  / coeff_expansion);
         Size new_size(width, height);
         resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
     }
@@ -76,6 +76,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
         coeff_expansion = 1.0;
         barcode = src;
     }
+
     eps_vertical   = eps_vertical_;
     eps_horizontal = eps_horizontal_;
     adaptiveThreshold(barcode, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
@@ -155,6 +156,7 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
     vector<Point2f> point2f_result;
     uint8_t next_pixel;
     vector<double> test_lines;
+
 
     for (int coeff_epsilon = 1; coeff_epsilon < 10; coeff_epsilon++)
     {
