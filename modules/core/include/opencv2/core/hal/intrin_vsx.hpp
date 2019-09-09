@@ -38,6 +38,8 @@ struct v_uint8x16
     {}
     uchar get0() const
     { return vec_extract(val, 0); }
+    uchar get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_int8x16
@@ -58,6 +60,8 @@ struct v_int8x16
     {}
     schar get0() const
     { return vec_extract(val, 0); }
+    schar get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_uint16x8
@@ -77,6 +81,8 @@ struct v_uint16x8
     {}
     ushort get0() const
     { return vec_extract(val, 0); }
+    ushort get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_int16x8
@@ -96,6 +102,8 @@ struct v_int16x8
     {}
     short get0() const
     { return vec_extract(val, 0); }
+    short get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_uint32x4
@@ -114,6 +122,8 @@ struct v_uint32x4
     {}
     uint get0() const
     { return vec_extract(val, 0); }
+    uint get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_int32x4
@@ -132,6 +142,8 @@ struct v_int32x4
     {}
     int get0() const
     { return vec_extract(val, 0); }
+    int get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_float32x4
@@ -150,6 +162,8 @@ struct v_float32x4
     {}
     float get0() const
     { return vec_extract(val, 0); }
+    float get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_uint64x2
@@ -168,6 +182,8 @@ struct v_uint64x2
     {}
     uint64 get0() const
     { return vec_extract(val, 0); }
+    uint64 get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_int64x2
@@ -186,6 +202,8 @@ struct v_int64x2
     {}
     int64 get0() const
     { return vec_extract(val, 0); }
+    int64 get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 struct v_float64x2
@@ -204,6 +222,8 @@ struct v_float64x2
     {}
     double get0() const
     { return vec_extract(val, 0); }
+    double get(const int& i) const
+    { return vec_extract(val, i); }
 };
 
 //////////////// Load and store operations ///////////////
