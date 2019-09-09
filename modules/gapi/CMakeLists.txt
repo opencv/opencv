@@ -2,6 +2,7 @@
 # (Restructure directories, add common pass, etc)
 if (NOT DEFINED OPENCV_INITIAL_PASS)
     cmake_minimum_required(VERSION 3.3)
+    project(gapi_standalone)
     include("cmake/standalone.cmake")
     return()
 endif()
