@@ -507,10 +507,10 @@ struct CvCapture_FFMPEG
     AVCodec         * avcodec;
     int               video_stream;
     AVStream        * video_st;
-#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
-    AVBitStreamFilterContext * bsfc;
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
+    AVBSFContext* bsfc;
  #else
-    AVBSFContext    * bsfc;
+    AVBitStreamFilterContext* bsfc;
 #endif
     AVFrame         * picture;
     AVFrame           rgb_picture;
@@ -627,11 +627,13 @@ void CvCapture_FFMPEG::close()
 #endif
 
     // free last packet if exist
-    if (packet.data) {
+    if (packet.data)
+    {
         _opencv_ffmpeg_av_packet_unref (&packet);
         packet.data = NULL;
     }
-    if (packet_filtered.data) {
+    if (packet_filtered.data)
+    {
         _opencv_ffmpeg_av_packet_unref(&packet_filtered);
         packet_filtered.data = NULL;
     }
@@ -641,11 +643,12 @@ void CvCapture_FFMPEG::close()
        av_dict_free(&dict);
 #endif
 
-    if (bsfc) {
-#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
-        av_bitstream_filter_close(bsfc);
-#else
+    if (bsfc)
+    {
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
         av_bsf_free(&bsfc);
+#else
+        av_bitstream_filter_close(bsfc);
 #endif
     }
 
@@ -1018,50 +1021,33 @@ exit_func:
 
 bool CvCapture_FFMPEG::setRaw(const bool _readRaw)
 {
-    if (!raw_init && _readRaw) {
+    if (!raw_init && _readRaw)
+    {
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
         AVCodecID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
-        mp4_H264 = eVideoCodec == AV_CODEC_ID_H264 && (
-            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
-            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
-            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
-            );
-        mp4_Hevc = eVideoCodec == AV_CODEC_ID_HEVC && (
-            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
-            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
-            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
-            );
-        if (mp4_H264) {
-#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
-            bsfc = av_bitstream_filter_init("h264_mp4toannexb");
+#elif LIBAVFORMAT_BUILD > 4628
+        AVCodecID eVideoCodec = video_st->codec->codec_id;
 #else
-            const AVBitStreamFilter* bsf = av_bsf_get_by_name("h264_mp4toannexb");
-            if (!bsf) {
-                CV_WARN("No such bitstream filter h264_mp4toannexb");
-                return false;
-            }
-            int err = av_bsf_alloc(bsf, &bsfc);
-
-            if (err < 0)
-            {
-                CV_WARN("Error allocating context for bitstream buffer");
-                return false;
-            }
-            avcodec_parameters_copy(bsfc->par_in, ic->streams[video_stream]->codecpar);
-            err = av_bsf_init(bsfc);
-            if (err < 0)
-            {
-                CV_WARN("Error initializing bitstream buffer");
-                return false;
-            }
+        AVCodecID eVideoCodec = video_st->codec.codec_id;
 #endif
-        }
-        if (mp4_Hevc) {
-#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
-            bsfc = av_bitstream_filter_init("hevc_mp4toannexb");
-#else
-            const AVBitStreamFilter* bsf = av_bsf_get_by_name("hevc_mp4toannexb");
+        mp4_H264 = eVideoCodec == CV_CODEC(CODEC_ID_H264) && (
+            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
+            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
+            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
+            );
+        mp4_Hevc = eVideoCodec == CV_CODEC(CODEC_ID_HEVC) && (
+            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
+            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
+            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
+            );
+
+        if(mp4_H264 || mp4_Hevc)
+        {
+            std::string filterName = mp4_H264 ? "h264_mp4toannexb" : "hevc_mp4toannexb";
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
+            const AVBitStreamFilter * bsf = av_bsf_get_by_name(filterName.c_str());
             if (!bsf) {
-                CV_WARN("No such bitstream filter hevc_mp4toannexb");
+                CV_WARN("No such bitstream filter " + filterName);
                 return false;
             }
             int err = av_bsf_alloc(bsf, &bsfc);
@@ -1078,6 +1064,8 @@ bool CvCapture_FFMPEG::setRaw(const bool _readRaw)
                 CV_WARN("Error initializing bitstream buffer");
                 return false;
             }
+#else
+            bsfc = av_bitstream_filter_init(fiter.c_str());
 #endif
         }
         raw_init = true;
@@ -1266,25 +1254,14 @@ bool CvCapture_FFMPEG::readRaw(uchar** data, size_t* size)
     if (!raw_init || !grabFrame(false))
         return false;
 
-    if (mp4_H264 || mp4_Hevc) {
-        if (packet_filtered.data) {
+    if (mp4_H264 || mp4_Hevc)
+    {
+        if (packet_filtered.data)
+        {
             av_packet_unref(&packet_filtered);
         }
 
-#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
-#if LIBAVFORMAT_BUILD > 4628
-        AVCodecContext* ctx = ic->streams[video_stream]->codec;
-#else
-        AVCodecContext* ctx = &ic->streams[video_stream]->codec;
-#endif
-        int err = av_bitstream_filter_filter(bsfc, ctx, NULL, &packet_filtered.data,
-            &packet_filtered.size, packet.data, packet.size,  packet_filtered.flags & AV_PKT_FLAG_KEY);
-        if (err < 0)
-        {
-            CV_WARN("Packet filtering failed");
-            return false;
-        }
-#else
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
         int err = av_bsf_send_packet(bsfc, &packet);
         if (err < 0)
         {
@@ -1297,11 +1274,25 @@ bool CvCapture_FFMPEG::readRaw(uchar** data, size_t* size)
             CV_WARN("Filtered packet retrieve failed");
             return false;
         }
+#else
+#if LIBAVFORMAT_BUILD > 4628
+        AVCodecContext * ctx = ic->streams[video_stream]->codec;
+#else
+        AVCodecContext* ctx = &ic->streams[video_stream]->codec;
+#endif
+        int err = av_bitstream_filter_filter(bsfc, ctx, NULL, &packet_filtered.data,
+            &packet_filtered.size, packet.data, packet.size, packet_filtered.flags & AV_PKT_FLAG_KEY);
+        if (err < 0)
+        {
+            CV_WARN("Packet filtering failed");
+            return false;
+        }
 #endif
         *data = packet_filtered.data;
         *size = packet_filtered.size;
     }
-    else {
+    else
+    {
         *data = packet.data;
         *size = packet.size;
     }
