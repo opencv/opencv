@@ -582,7 +582,6 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
     try
     {
         AutoLock lock(getInitializationMutex());
-        InferenceEngine::Core& ie = getCore();
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
         auto& sharedPlugins = getSharedPlugins();
         auto pluginIt = sharedPlugins.find(device_name);
@@ -591,6 +590,8 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
             enginePtr = pluginIt->second;
         }
         else
+#else
+        InferenceEngine::Core& ie = getCore();
 #endif
         {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
