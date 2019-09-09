@@ -28,7 +28,7 @@ using Metadata = typename Graph::CMetadataT;
 void checkDataNodes(const Graph& pattern,
                     const Graph& substitute,
                     const std::vector<ade::NodeHandle>& patternNodes,
-                    std::vector<ade::NodeHandle> substituteNodes)
+                    const std::vector<ade::NodeHandle>& substituteNodes)
 {
     for (auto it : ade::util::zip(patternNodes, substituteNodes)) {
         auto pNodeMeta = pattern.metadata(std::get<0>(it));
@@ -86,8 +86,8 @@ bool tryToSubstitute(ade::Graph& main,
 
     // 3. check that pattern and substitute are compatible
     // FIXME: in theory, we should always have compatible pattern/substitute. if not, we're in
-    // half-completed state where some transformations are already applied - what can we do to
-    // handle the situation better?  -- use transactional API as in fuse_islands pass?
+    //        half-completed state where some transformations are already applied - what can we do
+    //        to handle the situation better?  -- use transactional API as in fuse_islands pass?
     checkCompatibility(*patternG, gm, patternP, substituteP);
 
     // 4. make substitution

@@ -122,31 +122,43 @@ namespace
         return pG;
     }
 
-    void checkTransformations(const cv::gapi::GKernelPackage& pkg,
-                              std::vector<std::unique_ptr<ade::Graph>>& patterns) {
+    using adeGraphs = std::vector<std::unique_ptr<ade::Graph>>;
+
+    // Creates ADE graphs (patterns and substitutes) from pkg's transformations
+    void makeTransformationGraphs(const cv::gapi::GKernelPackage& pkg,
+                                  adeGraphs& patterns,
+                                  adeGraphs& substitutes) {
         const auto& transforms = pkg.get_transformations();
         const auto size = transforms.size();
         if (0u == size) return;
-        GAPI_Assert(0u == patterns.size() || size == patterns.size());
-        patterns.resize(size);
-        std::vector<std::unique_ptr<ade::Graph>> substitutes(size);
 
-        // 1. pre-generate all required graphs
+        // pre-generate all required graphs
+        patterns.resize(size);
+        substitutes.resize(size);
         for (auto it : ade::util::zip(ade::util::toRange(transforms),
-                                    ade::util::toRange(patterns),
-                                    ade::util::toRange(substitutes))) {
+                                      ade::util::toRange(patterns),
+                                      ade::util::toRange(substitutes))) {
             const auto& t = std::get<0>(it);
             auto& p = std::get<1>(it);
             auto& s = std::get<2>(it);
 
             auto pattern_comp = t.pattern();
-            // NB: these patterns are re-used in apply_transformation pass
             p = makeGraph(pattern_comp.priv().m_ins, pattern_comp.priv().m_outs);
 
             auto substitute_comp = t.substitute();
             s = makeGraph(substitute_comp.priv().m_ins, substitute_comp.priv().m_outs);
         }
+    }
 
+    void checkTransformations(const cv::gapi::GKernelPackage& pkg,
+                              const adeGraphs& patterns,
+                              const adeGraphs& substitutes) {
+        const auto& transforms = pkg.get_transformations();
+        const auto size = transforms.size();
+        if (0u == size) return;
+
+        GAPI_Assert(size == patterns.size());
+        GAPI_Assert(size == substitutes.size());
         // FIXME: verify other types of endless loops - are there any other, though?
 
         const auto empty = [] (const cv::gimpl::SubgraphMatch& m) {
@@ -154,17 +166,19 @@ namespace
                 && m.finishOpNodes.empty() && m.outputDataNodes.empty()
                 && m.inputTestDataNodes.empty() && m.outputTestDataNodes.empty();
         };
-        // 2. verify there are no patterns in substitutes
+        // verify there are no patterns in substitutes
         for (size_t i = 0; i < size; ++i) {
             auto& p = patterns[i];
-            for (size_t j = i; j < size; ++j) {
+            for (size_t j = 0; j < size; ++j) {
                 auto& s = substitutes[j];
 
                 auto matchInSubstitute = cv::gimpl::findMatches(*p, *s);
                 if (!empty(matchInSubstitute)) {
                     std::stringstream ss;
-                    ss << "Error: pattern (from transformation #" << i << ") detected inside "
-                          "substitute (from transformation #" << j << ")";
+                    ss << "Error: pattern (from transformation with description: '"
+                       << transforms[i].description
+                       << "') detected inside substitute (from transformation with desription: '"
+                       << transforms[j].description << "')";
                     throw std::runtime_error(ss.str());
                 }
             }
@@ -196,8 +210,18 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     // NN backends (present here via network package) always add their
     // inference kernels via auxiliary...()
 
-    // NB: patters are initialized in the following function!
-    checkTransformations(m_all_kernels, m_all_patterns);
+    // sanity check transformations
+    {
+        adeGraphs patterns, substitutes;
+        // FIXME: returning vectors of unique_ptrs from makeTransformationGraphs results in
+        //        compile error (at least) on GCC 9 with usage of copy-ctor of std::unique_ptr, so
+        //        using initialization by lvalue reference instead
+        makeTransformationGraphs(m_all_kernels, patterns, substitutes);
+        checkTransformations(m_all_kernels, patterns, substitutes);
+
+        // NB: saving generated patterns to m_all_patterns to be used later in passes
+        m_all_patterns = std::move(patterns);
+    }
 
     auto dump_path       = getGraphDumpDirectory(m_args);
 

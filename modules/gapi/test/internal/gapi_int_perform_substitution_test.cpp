@@ -551,6 +551,20 @@ GAPI_TRANSFORM(EndlessLoopTransformChain2, <cv::GMat(cv::GMat)>, "Custom Resize 
         return cv::gapi::resize(in, cv::Size(100, 100));
     }
 };
+GAPI_TRANSFORM(EndlessLoopTransformChain3, <cv::GMat(cv::GMat)>, "Custom Resize -> Any Op")
+{
+    static cv::GMat pattern(const cv::GMat& in)
+    {
+        return MyInterleavedResize::on(in, cv::Size(100, 100), cv::INTER_AREA);
+    }
+
+    static cv::GMat substitute(const cv::GMat& in)
+    {
+        cv::GMat a, b, c;
+        std::tie(a, b, c) = cv::gapi::split3(in);
+        return cv::gapi::merge3(a, b, c);
+    }
+};
 
 TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteOneTransform)
 {
@@ -566,12 +580,12 @@ TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteOneTransform)
     }();
 
     EXPECT_THROW(
-        cv::gimpl::GCompiler compiler(c, cv::descr_of(cv::gin(input)),
+        cv::gimpl::GCompiler(c, cv::descr_of(cv::gin(input)),
             cv::compile_args(cv::gapi::kernels<EndlessLoopTransform1>())),
         std::exception);
 }
 
-TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransforms)
+TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransformsCrossCase)
 {
     cv::Size in_sz(640, 480);
     cv::Mat input(in_sz, CV_8UC3);
@@ -584,9 +598,47 @@ TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransfo
     }();
 
     EXPECT_THROW(
-        cv::gimpl::GCompiler compiler(c, cv::descr_of(cv::gin(input)),
+        cv::gimpl::GCompiler(c, cv::descr_of(cv::gin(input)),
+            cv::compile_args(
+                cv::gapi::kernels<EndlessLoopTransformChain1, EndlessLoopTransformChain2>())),
+        std::exception);
+}
+
+TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransformsCrossCase2)
+{
+    cv::Size in_sz(640, 480);
+    cv::Mat input(in_sz, CV_8UC3);
+    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(100));
+
+    auto c = [] () {
+        GMat in;
+        GMat out = cv::gapi::resize(in, cv::Size(100, 100));
+        return cv::GComputation(cv::GIn(in), cv::GOut(out));
+    }();
+
+    EXPECT_THROW(
+        cv::gimpl::GCompiler(c, cv::descr_of(cv::gin(input)),
             cv::compile_args(
                 cv::gapi::kernels<EndlessLoopTransformChain2, EndlessLoopTransformChain1>())),
+        std::exception);
+}
+
+TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransformsSecondInFirst)
+{
+    cv::Size in_sz(640, 480);
+    cv::Mat input(in_sz, CV_8UC3);
+    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(100));
+
+    auto c = [] () {
+        GMat in;
+        GMat out = cv::gapi::resize(in, cv::Size(100, 100));
+        return cv::GComputation(cv::GIn(in), cv::GOut(out));
+    }();
+
+    EXPECT_THROW(
+        cv::gimpl::GCompiler(c, cv::descr_of(cv::gin(input)),
+            cv::compile_args(
+                cv::gapi::kernels<EndlessLoopTransformChain1, EndlessLoopTransformChain3>())),
         std::exception);
 }
 
