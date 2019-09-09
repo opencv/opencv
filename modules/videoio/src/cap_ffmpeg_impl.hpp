@@ -1065,7 +1065,7 @@ bool CvCapture_FFMPEG::setRaw(const bool _readRaw)
                 return false;
             }
 #else
-            bsfc = av_bitstream_filter_init(fiter.c_str());
+            bsfc = av_bitstream_filter_init(filterName.c_str());
 #endif
         }
         raw_init = true;
