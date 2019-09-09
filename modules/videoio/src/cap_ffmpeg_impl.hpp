@@ -507,7 +507,11 @@ struct CvCapture_FFMPEG
     AVCodec         * avcodec;
     int               video_stream;
     AVStream        * video_st;
-    AVBSFContext    * bsfc = 0;
+#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
+    AVBitStreamFilterContext * bsfc;
+ #else
+    AVBSFContext    * bsfc;
+#endif
     AVFrame         * picture;
     AVFrame           rgb_picture;
     int64_t           picture_pts;
@@ -638,7 +642,11 @@ void CvCapture_FFMPEG::close()
 #endif
 
     if (bsfc) {
+#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
+        av_bitstream_filter_close(bsfc);
+#else
         av_bsf_free(&bsfc);
+#endif
     }
 
     init();
@@ -1023,12 +1031,16 @@ bool CvCapture_FFMPEG::setRaw(const bool _readRaw)
             || !strcmp(ic->iformat->long_name, "Matroska / WebM")
             );
         if (mp4_H264) {
+#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
+            bsfc = av_bitstream_filter_init("h264_mp4toannexb");
+#else
             const AVBitStreamFilter* bsf = av_bsf_get_by_name("h264_mp4toannexb");
             if (!bsf) {
                 CV_WARN("No such bitstream filter h264_mp4toannexb");
                 return false;
             }
             int err = av_bsf_alloc(bsf, &bsfc);
+
             if (err < 0)
             {
                 CV_WARN("Error allocating context for bitstream buffer");
@@ -1041,14 +1053,19 @@ bool CvCapture_FFMPEG::setRaw(const bool _readRaw)
                 CV_WARN("Error initializing bitstream buffer");
                 return false;
             }
+#endif
         }
         if (mp4_Hevc) {
+#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
+            bsfc = av_bitstream_filter_init("hevc_mp4toannexb");
+#else
             const AVBitStreamFilter* bsf = av_bsf_get_by_name("hevc_mp4toannexb");
             if (!bsf) {
                 CV_WARN("No such bitstream filter hevc_mp4toannexb");
                 return false;
             }
             int err = av_bsf_alloc(bsf, &bsfc);
+
             if (err < 0)
             {
                 CV_WARN("Error allocating context for bitstream buffer");
@@ -1061,6 +1078,7 @@ bool CvCapture_FFMPEG::setRaw(const bool _readRaw)
                 CV_WARN("Error initializing bitstream buffer");
                 return false;
             }
+#endif
         }
         raw_init = true;
     }
@@ -1252,6 +1270,21 @@ bool CvCapture_FFMPEG::readRaw(uchar** data, size_t* size)
         if (packet_filtered.data) {
             av_packet_unref(&packet_filtered);
         }
+
+#if LIBAVFORMAT_BUILD <= CALC_FFMPEG_VERSION(58, 20, 100)
+#if LIBAVFORMAT_BUILD > 4628
+        AVCodecContext* ctx = ic->streams[video_stream]->codec;
+#else
+        AVCodecContext* ctx = &ic->streams[video_stream]->codec;
+#endif
+        int err = av_bitstream_filter_filter(bsfc, ctx, NULL, &packet_filtered.data,
+            &packet_filtered.size, packet.data, packet.size,  packet_filtered.flags & AV_PKT_FLAG_KEY);
+        if (err < 0)
+        {
+            CV_WARN("Packet filtering failed");
+            return false;
+        }
+#else
         int err = av_bsf_send_packet(bsfc, &packet);
         if (err < 0)
         {
@@ -1264,6 +1297,7 @@ bool CvCapture_FFMPEG::readRaw(uchar** data, size_t* size)
             CV_WARN("Filtered packet retrieve failed");
             return false;
         }
+#endif
         *data = packet_filtered.data;
         *size = packet_filtered.size;
     }
