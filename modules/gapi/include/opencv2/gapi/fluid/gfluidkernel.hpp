@@ -106,7 +106,10 @@ struct GFluidParallelOutputRois
 
 struct GFluidParallelFor
 {
-    std::function<void(std::size_t, std::function<void(std::size_t)>)> parallel_for;
+    //this function accepts:
+    // - size of the "parallel" range as the first argument
+    // - and a function to be called on the range items, designated by item index
+    std::function<void(std::size_t size, std::function<void(std::size_t index)>)> parallel_for;
 };
 
 namespace detail
