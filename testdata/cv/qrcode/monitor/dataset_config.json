@@ -1,0 +1,16 @@
+{
+    "monitor_images": [
+        { "image_name": "monitor_1.png", "x": [ 847, 1241, 1234, 843 ],
+            "y": [ 230, 237, 629, 628 ], "info": "I love OpenCV" },
+        { "image_name": "monitor_2.png", "x": [ 581, 1496, 1485, 585 ],
+            "y": [ 65, 75, 978, 978 ],
+            "info": "https://en.wikipedia.org/wiki/QR_code" },
+        { "image_name": "monitor_3.png", "x": [ 537, 1387, 1376, 533 ],
+            "y": [ 113, 111, 967, 950 ],
+            "info": "https://github.com/opencv/opencv" },
+        { "image_name": "monitor_4.png", "x": [ 583, 1328, 1340, 583 ],
+            "y": [ 149, 153, 900, 906 ], "info": "8747978964557465080" },
+        { "image_name": "monitor_5.png", "x": [ 639, 1469, 1461, 639 ],
+            "y": [ 137, 148, 970, 976 ], "info": "qr code detection" }
+    ]
+}
