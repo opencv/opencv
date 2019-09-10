@@ -154,11 +154,16 @@ class dnn_test(NewOpenCVTests):
         normAssertDetections(self, refClassIds, refConfidences, refBoxes,
                              classIds, confidences, boxes,confThreshold, scoreDiff, iouDiff)
 
-        for box in boxes:
+        self.assertTrue(isinstance(classIds, list))
+        self.assertTrue(isinstance(confidences, list))
+        self.assertTrue(isinstance(boxes, list))
+        for classId, score, box in zip(classIds, confidences, boxes):
             cv.rectangle(frame, box, (0, 255, 0))
             cv.rectangle(frame, np.array(box), (0, 255, 0))
             cv.rectangle(frame, tuple(box), (0, 255, 0))
             cv.rectangle(frame, list(box), (0, 255, 0))
+            self.assertTrue(isinstance(classId, int))
+            self.assertTrue(isinstance(score, float))
 
 
     def test_classification_model(self):

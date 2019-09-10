@@ -903,6 +903,19 @@ PyObject* pyopencv_from(const Point3f& p)
     return Py_BuildValue("(ddd)", p.x, p.y, p.z);
 }
 
+static bool pyopencv_to(PyObject* obj, Vec6f& v, ArgInfo info)
+{
+    CV_UNUSED(info);
+    if (!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "ffffff", &v[0], &v[1], &v[2], &v[3], &v[5], &v[6]) > 0;
+}
+template<>
+bool pyopencv_to(PyObject* obj, Vec6f& v, const char* name)
+{
+    return pyopencv_to(obj, v, ArgInfo(name, 0));
+}
+
 static bool pyopencv_to(PyObject* obj, Vec4d& v, ArgInfo info)
 {
     CV_UNUSED(info);
@@ -1021,6 +1034,12 @@ bool pyopencv_to(PyObject* obj, Vec2i& v, const char* name)
 }
 
 template<>
+PyObject* pyopencv_from(const Vec6f& v)
+{
+    return Py_BuildValue("(ffffff)", v[0], v[1], v[2], v[3], v[4], v[5]);
+}
+
+template<>
 PyObject* pyopencv_from(const Vec4d& v)
 {
     return Py_BuildValue("(dddd)", v[0], v[1], v[2], v[3]);
@@ -1084,6 +1103,26 @@ template<>
 PyObject* pyopencv_from(const Point3d& p)
 {
     return Py_BuildValue("(ddd)", p.x, p.y, p.z);
+}
+
+template<typename _Tp>
+PyObject* pyopencv_from(const std::vector<_Tp>& value)
+{
+    int i, n = (int)value.size();
+    PyObject* seq = PyList_New(n);
+    for( i = 0; i < n; i++ )
+    {
+        PyObject* item = pyopencv_from(value[i]);
+        if(!item)
+            break;
+        PyList_SetItem(seq, i, item);
+    }
+    if( i < n )
+    {
+        Py_DECREF(seq);
+        return 0;
+    }
+    return seq;
 }
 
 template<typename _Tp> struct pyopencvVecConverter
@@ -1191,12 +1230,7 @@ template<typename _Tp> struct pyopencvVecConverter
 
     static PyObject* from(const std::vector<_Tp>& value)
     {
-        if(value.empty())
-            return PyTuple_New(0);
-        int type = traits::Type<_Tp>::value;
-        int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
-        Mat src((int)value.size(), channels, depth, (uchar*)&value[0]);
-        return pyopencv_from(src);
+        return pyopencv_from(value);
     }
 };
 
@@ -1204,12 +1238,6 @@ template<typename _Tp>
 bool pyopencv_to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo info)
 {
     return pyopencvVecConverter<_Tp>::to(obj, value, info);
-}
-
-template<typename _Tp>
-PyObject* pyopencv_from(const std::vector<_Tp>& value)
-{
-    return pyopencvVecConverter<_Tp>::from(value);
 }
 
 template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<_Tp>& value, const ArgInfo info)
@@ -1231,21 +1259,7 @@ template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj,
 
 template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const std::vector<_Tp>& value)
 {
-    int i, n = (int)value.size();
-    PyObject* seq = PyList_New(n);
-    for( i = 0; i < n; i++ )
-    {
-        PyObject* item = pyopencv_from(value[i]);
-        if(!item)
-            break;
-        PyList_SetItem(seq, i, item);
-    }
-    if( i < n )
-    {
-        Py_DECREF(seq);
-        return 0;
-    }
-    return seq;
+    return pyopencv_from(value);
 }
 
 template<>
