@@ -156,9 +156,9 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
     // ...or Stop command, this also happens.
     Cmd cmd;
     in_queue.pop(cmd);
-    GAPI_Assert(   cmd.index() == cmd.index_of<Start>()
-                || cmd.index() == cmd.index_of<Stop>());
-    if (cmd.index() == cmd.index_of<Stop>()) {
+    GAPI_Assert(   cv::util::holds_alternative<Start>(cmd)
+                || cv::util::holds_alternative<Stop>(cmd));
+    if (cv::util::holds_alternative<Stop>(cmd)) {
         for (auto &&oq : out_queues) oq->push(cmd);
         return;
     }
@@ -168,7 +168,7 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
         Cmd cancel;
         if (in_queue.try_pop(cancel)) {
             // if we just popped a cancellation command...
-            GAPI_Assert(cancel.index() == cancel.index_of<Stop>());
+            GAPI_Assert(cv::util::holds_alternative<Stop>(cancel));
             // Broadcast it to the readers and quit.
             for (auto &&oq : out_queues) oq->push(cancel);
             return;
@@ -235,7 +235,7 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
             else
             {
                 q->pop(cmd);
-                if (cmd.index() == cmd.index_of<Stop>()) {
+                if (cv::util::holds_alternative<Stop>(cmd)) {
                     // Broadcast STOP down to the pipeline.
                     for (auto &&out_qq : out_queues)
                     {
@@ -354,7 +354,7 @@ void collectorThread(std::vector<Q*> in_queues,
         {
             Cmd cmd;
             ade::util::value(it)->pop(cmd);
-            if (cmd.index() == cmd.index_of<Stop>()) {
+            if (cv::util::holds_alternative<Stop>(cmd)) {
                 stops++;
             } else {
                 // FIXME: MOVE_PROBLEM
@@ -430,7 +430,8 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                         in_constants.push_back(const_cast<const cv::GRunArg&>(gm.metadata(orig_data_nh).get<ConstValue>().arg));
                     } else in_constants.push_back(cv::GRunArg{});
                     if (orig_data_info.shape == GShape::GARRAY) {
-                        GAPI_Assert(orig_data_info.ctor.index() != orig_data_info.ctor.index_of<cv::util::monostate>());
+                        // FIXME: GArray lost host constructor problem
+                        GAPI_Assert(!cv::util::holds_alternative<cv::util::monostate>(orig_data_info.ctor));
                     }
                     vec.emplace_back(RcDesc{ orig_data_info.rc
                                            , orig_data_info.shape
@@ -442,7 +443,8 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                     const auto &orig_data_info
                         = gm.metadata(orig_data_nh).get<Data>();
                     if (orig_data_info.shape == GShape::GARRAY) {
-                        GAPI_Assert(orig_data_info.ctor.index() != orig_data_info.ctor.index_of<cv::util::monostate>());
+                        // FIXME: GArray lost host constructor problem
+                        GAPI_Assert(!cv::util::holds_alternative<cv::util::monostate>(orig_data_info.ctor));
                     }
                     vec.emplace_back(RcDesc{ orig_data_info.rc
                                            , orig_data_info.shape
@@ -624,14 +626,14 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
 
     Cmd cmd;
     m_out_queue.pop(cmd);
-    if (cmd.index() == cmd.index_of<Stop>())
+    if (cv::util::holds_alternative<Stop>(cmd))
     {
         for (auto &t : m_threads) t.join();
         state = State::STOPPED;
         return false;
     }
 
-    GAPI_Assert(cmd.index() == cmd.index_of<cv::GRunArgs>());
+    GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(cmd));
     cv::GRunArgs &this_result = cv::util::get<cv::GRunArgs>(cmd);
     sync_data(this_result, outs);
     return true;
@@ -648,7 +650,7 @@ bool cv::gimpl::GStreamingExecutor::try_pull(cv::GRunArgsP &&outs)
     if (!m_out_queue.try_pop(cmd)) {
         return false;
     }
-    if (cmd.index() == cmd.index_of<Stop>())
+    if (cv::util::holds_alternative<Stop>(cmd))
     {
         // FIXME: Unify with pull()
         for (auto &t : m_threads) t.join();
@@ -656,7 +658,7 @@ bool cv::gimpl::GStreamingExecutor::try_pull(cv::GRunArgsP &&outs)
         return false;
     }
 
-    GAPI_Assert(cmd.index() == cmd.index_of<cv::GRunArgs>());
+    GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(cmd));
     cv::GRunArgs &this_result = cv::util::get<cv::GRunArgs>(cmd);
     sync_data(this_result, outs);
     return true;
@@ -678,10 +680,10 @@ void cv::gimpl::GStreamingExecutor::stop()
 
     // Pull messages from the final queue to ensure completion
     Cmd cmd;
-    while (cmd.index() != cmd.index_of<Stop>()) {
+    while (!cv::util::holds_alternative<Stop>(cmd)) {
         m_out_queue.pop(cmd);
     }
-    GAPI_Assert(cmd.index() == cmd.index_of<Stop>());
+    GAPI_Assert(cv::util::holds_alternative<Stop>(cmd));
 
     for (auto &t : m_threads) {
         t.join();

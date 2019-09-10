@@ -190,9 +190,15 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
     EXPECT_FALSE(ccomp.running());
 }
 
-TEST_P(GAPI_Streaming, Cucumber_Regression)
+TEST_P(GAPI_Streaming, Regression_CompileTimeScalar)
 {
-    // FIXME: Document what this test tests
+    // There was a bug with compile-time GScalars.  Compile-time
+    // GScalars generate their own DATA nodes at GModel/GIslandModel
+    // level, resulting in an extra link at the GIslandModel level, so
+    // GStreamingExecutor automatically assigned an input queue to
+    // such edges. Since there were no in-graph producer for that
+    // data, no data were pushed to such queue what lead to a
+    // deadlock.
 
     cv::GMat in;
     cv::GMat tmp = cv::gapi::copy(in);
