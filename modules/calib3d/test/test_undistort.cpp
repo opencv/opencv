@@ -1114,6 +1114,44 @@ TEST(Calib3d_UndistortPoints, outputShape)
     }
 }
 
+TEST(Imgproc_undistort, regression_15286)
+{
+    double kmat_data[9] = { 3217, 0, 1592, 0, 3217, 1201, 0, 0, 1 };
+    Mat kmat(3, 3, CV_64F, kmat_data);
+    double dist_coeff_data[5] = { 0.04, -0.4, -0.01, 0.04, 0.7 };
+    Mat dist_coeffs(5, 1, CV_64F, dist_coeff_data);
+
+    Mat img = Mat::zeros(512, 512, CV_8UC1);
+    img.at<uchar>(128, 128) = 255;
+    img.at<uchar>(128, 384) = 255;
+    img.at<uchar>(384, 384) = 255;
+    img.at<uchar>(384, 128) = 255;
+
+    Mat ref = Mat::zeros(512, 512, CV_8UC1);
+    ref.at<uchar>(Point(24, 98)) = 78;
+    ref.at<uchar>(Point(24, 99)) = 114;
+    ref.at<uchar>(Point(25, 98)) = 36;
+    ref.at<uchar>(Point(25, 99)) = 60;
+    ref.at<uchar>(Point(27, 361)) = 6;
+    ref.at<uchar>(Point(28, 361)) = 188;
+    ref.at<uchar>(Point(28, 362)) = 49;
+    ref.at<uchar>(Point(29, 361)) = 44;
+    ref.at<uchar>(Point(29, 362)) = 16;
+    ref.at<uchar>(Point(317, 366)) = 134;
+    ref.at<uchar>(Point(317, 367)) = 78;
+    ref.at<uchar>(Point(318, 366)) = 40;
+    ref.at<uchar>(Point(318, 367)) = 29;
+    ref.at<uchar>(Point(310, 104)) = 106;
+    ref.at<uchar>(Point(310, 105)) = 30;
+    ref.at<uchar>(Point(311, 104)) = 112;
+    ref.at<uchar>(Point(311, 105)) = 38;
+
+    Mat img_undist;
+    undistort(img, img_undist, kmat, dist_coeffs);
+
+    ASSERT_EQ(0.0, cvtest::norm(img_undist, ref, cv::NORM_INF));
+}
+
 TEST(Calib3d_initUndistortRectifyMap, regression_14467)
 {
     Size size_w_h(512 + 3, 512);
