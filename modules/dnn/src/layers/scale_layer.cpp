@@ -207,12 +207,13 @@ public:
         }
         else
         {
-            auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                    {numChannels});
+            auto weights = InferenceEngine::make_shared_blob<float>({
+                               InferenceEngine::Precision::FP32, {(size_t)numChannels},
+                               InferenceEngine::Layout::C
+                           });
             weights->allocate();
-
-            std::vector<float> ones(numChannels, 1);
-            weights->set(ones);
+            float* buf = weights->buffer().as<float*>();
+            std::fill(buf, buf + numChannels, 1);
             addConstantData("weights", weights, l);
         }
         if (hasBias)

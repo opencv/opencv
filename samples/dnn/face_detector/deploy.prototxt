@@ -1785,5 +1785,6 @@ layer {
     code_type: CENTER_SIZE
     keep_top_k: 200
     confidence_threshold: 0.01
+    clip: 1
   }
 }

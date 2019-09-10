@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_DIST_H_
 #define OPENCV_FLANN_DIST_H_
 
+//! @cond IGNORED
+
 #include <cmath>
 #include <cstdlib>
 #include <string.h>
@@ -441,7 +443,7 @@ struct Hamming
             result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
             result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
         }
-#elif __GNUC__
+#elif defined(__GNUC__)
         {
             //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
             typedef unsigned long long pop_t;
@@ -900,5 +902,7 @@ typename Distance::ResultType ensureSimpleDistance( typename Distance::ResultTyp
 }
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_DIST_H_

@@ -5,7 +5,7 @@
 #
 # Detect parameters:
 # 1. Native cmake IE package:
-#    - enironment variable InferenceEngine_DIR is set to location of cmake module
+#    - environment variable InferenceEngine_DIR is set to location of cmake module
 # 2. Custom location:
 #    - INF_ENGINE_INCLUDE_DIRS - headers search location
 #    - INF_ENGINE_LIB_DIRS     - library search location
@@ -52,7 +52,7 @@ endfunction()
 
 find_package(InferenceEngine QUIET)
 if(InferenceEngine_FOUND)
-  set(INF_ENGINE_TARGET IE::inference_engine)
+  set(INF_ENGINE_TARGET ${InferenceEngine_LIBRARIES})
   set(INF_ENGINE_VERSION "${InferenceEngine_VERSION}" CACHE STRING "")
   message(STATUS "Detected InferenceEngine: cmake package")
 endif()

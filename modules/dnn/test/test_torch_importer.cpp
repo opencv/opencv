@@ -262,7 +262,7 @@ class Test_Torch_nets : public DNNTestLayer {};
 
 TEST_P(Test_Torch_nets, OpenFace_accuracy)
 {
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 #endif
@@ -287,8 +287,8 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
 
     // Reference output values are in range [-0.17212, 0.263492]
     // on Myriad problem layer: l4_Pooling - does not use pads_begin
-    float l1 = (target == DNN_TARGET_OPENCL_FP16) ? 4e-4 : 1e-5;
-    float lInf = (target == DNN_TARGET_OPENCL_FP16) ? 1.5e-3 : 1e-3;
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2e-3 : 1e-5;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5e-3 : 1e-3;
     Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
     normAssert(out, outRef, "", l1, lInf);
 }

@@ -83,6 +83,8 @@ public:
     {
         if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
         VideoCapture cap;
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
@@ -168,6 +170,8 @@ public:
     {
         if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())

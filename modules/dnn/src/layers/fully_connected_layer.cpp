@@ -449,7 +449,7 @@ public:
 
         InferenceEngine::Builder::Layer l = ieLayer;
         addConstantData("weights", wrapToInfEngineBlob(blobs[0], {(size_t)blobs[0].size[0], (size_t)blobs[0].size[1], 1, 1}, InferenceEngine::Layout::OIHW), l);
-        if (blobs.size() > 1)
+        if (bias)
             addConstantData("biases", wrapToInfEngineBlob(blobs[1], {(size_t)outNum}, InferenceEngine::Layout::C), l);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(l));

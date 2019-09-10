@@ -72,7 +72,7 @@ CV_EXPORTS
 cudaStream_t nppStSetActiveCUDAstream(cudaStream_t cudaStream);
 
 
-/*@}*/
+/** @} */
 
 
 /** \defgroup nppi NPPST Image Processing
@@ -787,7 +787,7 @@ NCVStatus nppiStSqrIntegral_8u64u_C1R_host(Ncv8u *h_src, Ncv32u srcStep,
                                            Ncv64u *h_dst, Ncv32u dstStep, NcvSize32u roiSize);
 
 
-/*@}*/
+/** @} */
 
 
 /** \defgroup npps NPPST Signal Processing
@@ -899,8 +899,8 @@ NCVStatus nppsStCompact_32f_host(Ncv32f *h_src, Ncv32u srcLen,
                                  Ncv32f *h_dst, Ncv32u *dstLen, Ncv32f elemRemove);
 
 
-/*@}*/
+/** @} */
 
-//! @}
+//! @} cudalegacy
 
 #endif // _npp_staging_hpp_

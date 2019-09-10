@@ -40,7 +40,7 @@
 #endif
 
 //#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
-//there is no way to suppress warnigns from IE only at this moment, so we are forced to suppress warnings globally
+//there is no way to suppress warnings from IE only at this moment, so we are forced to suppress warnings globally
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
@@ -92,18 +92,22 @@ public:
     void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                  bool isAsync);
 
-    void initPlugin(InferenceEngine::ICNNNetwork& net);
+    void initPlugin(InferenceEngine::CNNNetwork& net);
 
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
 private:
     InferenceEngine::Builder::Network netBuilder;
 
-    InferenceEngine::InferenceEnginePluginPtr enginePtr;
-    InferenceEngine::InferencePlugin plugin;
     InferenceEngine::ExecutableNetwork netExec;
     InferenceEngine::BlobMap allBlobs;
-    InferenceEngine::TargetDevice targetDevice;
+    std::string device_name;
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    InferenceEngine::InferencePlugin plugin;
+#else
+    bool isInit = false;
+#endif
 
     struct InfEngineReqWrapper
     {
@@ -133,12 +137,17 @@ class InfEngineBackendNode : public BackendNode
 public:
     InfEngineBackendNode(const InferenceEngine::Builder::Layer& layer);
 
+    InfEngineBackendNode(Ptr<Layer>& layer, std::vector<Mat*>& inputs,
+                         std::vector<Mat>& outputs, std::vector<Mat>& internals);
+
     void connect(std::vector<Ptr<BackendWrapper> >& inputs,
                  std::vector<Ptr<BackendWrapper> >& outputs);
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
     InferenceEngine::Builder::Layer layer;
     Ptr<InfEngineBackendNet> net;
+    // CPU fallback in case of unsupported Inference Engine layer.
+    Ptr<dnn::Layer> cvLayer;
 };
 
 class InfEngineBackendWrapper : public BackendWrapper
@@ -168,6 +177,9 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<s
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
 
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
+
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats);
 
 // Convert Inference Engine blob with FP32 precision to FP16 precision.
 // Allocates memory for a new blob.

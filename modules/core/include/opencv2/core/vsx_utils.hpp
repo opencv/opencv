@@ -363,10 +363,12 @@ VSX_FINLINE(Tvec) vec_popcntu(const Tvec2& a)  \
 VSX_IMPL_POPCNTU(vec_uchar16, vec_char16, vec_uchar16_c);
 VSX_IMPL_POPCNTU(vec_ushort8, vec_short8, vec_ushort8_c);
 VSX_IMPL_POPCNTU(vec_uint4,   vec_int4,   vec_uint4_c);
+VSX_IMPL_POPCNTU(vec_udword2, vec_dword2, vec_udword2_c);
 // redirect unsigned types
 VSX_REDIRECT_1RG(vec_uchar16, vec_uchar16, vec_popcntu, vec_popcnt)
 VSX_REDIRECT_1RG(vec_ushort8, vec_ushort8, vec_popcntu, vec_popcnt)
 VSX_REDIRECT_1RG(vec_uint4,   vec_uint4,   vec_popcntu, vec_popcnt)
+VSX_REDIRECT_1RG(vec_udword2, vec_udword2, vec_popcntu, vec_popcnt)
 
 // converts between single and double precision
 VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvfo, __builtin_vsx_xvcvdpsp)

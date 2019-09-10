@@ -713,21 +713,23 @@ struct DataLayer : public Layer
         CV_Assert(numChannels <= 4);
 
         // Scale
-        auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                {numChannels});
+        InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, {numChannels},
+                                       InferenceEngine::Layout::C);
+        auto weights = InferenceEngine::make_shared_blob<float>(td);
         weights->allocate();
-        weights->set(std::vector<float>(numChannels, scaleFactors[0]));
+
+        float* weight_buf = weights->buffer().as<float*>();
+        std::fill(weight_buf, weight_buf + numChannels, scaleFactors[0]);
 
         // Mean subtraction
-        auto biases = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                               {numChannels});
+        auto biases = InferenceEngine::make_shared_blob<float>(td);
         biases->allocate();
-        std::vector<float> biasesVec(numChannels);
+        float* bias_buf = biases->buffer().as<float*>();
+
         for (int i = 0; i < numChannels; ++i)
         {
-            biasesVec[i] = -means[0][i] * scaleFactors[0];
+            bias_buf[i] = -means[0][i] * scaleFactors[0];
         }
-        biases->set(biasesVec);
 
         InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
         addConstantData("weights", weights, ieLayer);
@@ -1473,7 +1475,11 @@ struct Net::Impl
                 for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                 {
                     InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
                     dataPtr->name = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
+#else
+                    dataPtr->setName(netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i]);
+#endif
                 }
             }
             else
@@ -1481,7 +1487,11 @@ struct Net::Impl
                 for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                 {
                     InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
                     dataPtr->name = ld.name;
+#else
+                    dataPtr->setName(ld.name);
+#endif
                 }
             }
         }
@@ -1502,7 +1512,11 @@ struct Net::Impl
                     for (int i = 0; i < ld.inputBlobsWrappers.size(); ++i)
                     {
                         InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.inputBlobsWrappers[i]);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
                         dataPtr->name = netInputLayer->outNames[i];
+#else
+                        dataPtr->setName(netInputLayer->outNames[i]);
+#endif
                     }
                 }
                 else
@@ -1510,7 +1524,11 @@ struct Net::Impl
                     for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                     {
                         InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
                         dataPtr->name = ld.name;
+#else
+                        dataPtr->setName(ld.name);
+#endif
                     }
                 }
                 ieNode->net->addBlobs(ld.inputBlobsWrappers);
@@ -1538,11 +1556,37 @@ struct Net::Impl
             Ptr<Layer> layer = ld.layerInstance;
             if (!fused && !layer->supportBackend(preferableBackend))
             {
-                addInfEngineNetOutputs(ld);
-                net = Ptr<InfEngineBackendNet>();
-                netBlobsWrappers.clear();  // Is not used for R5 release but we don't wrap it to #ifdef.
-                layer->preferableTarget = DNN_TARGET_CPU;
-                continue;
+                bool customizable = ld.id != 0 && ld.outputBlobs.size() == 1;
+                // TODO: there is a bug in Myriad plugin with custom layers shape infer.
+                if (preferableTarget == DNN_TARGET_MYRIAD)
+                {
+                    for (int i = 0; customizable && i < ld.inputBlobs.size(); ++i)
+                    {
+                        customizable = ld.inputBlobs[i]->size[0] == 1;
+                    }
+                }
+
+                // TODO: fix these workarounds
+                if (preferableTarget == DNN_TARGET_MYRIAD ||
+                    preferableTarget == DNN_TARGET_OPENCL ||
+                    preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    customizable &= ld.type != "Concat";
+
+                if (preferableTarget == DNN_TARGET_OPENCL ||
+                    preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    customizable &= ld.type != "Power";
+
+                if (preferableTarget == DNN_TARGET_OPENCL)
+                    customizable &= ld.type != "Eltwise";
+
+                if (!customizable)
+                {
+                    addInfEngineNetOutputs(ld);
+                    net = Ptr<InfEngineBackendNet>();
+                    netBlobsWrappers.clear();  // Is not used for R5 release but we don't wrap it to #ifdef.
+                    layer->preferableTarget = DNN_TARGET_CPU;
+                    continue;
+                }
             }
             ld.skip = true;  // Initially skip all Inference Engine supported layers.
 
@@ -1581,7 +1625,13 @@ struct Net::Impl
 
             if (!fused)
             {
-                node = layer->initInfEngine(ld.inputBlobsWrappers);
+                if (layer->supportBackend(preferableBackend))
+                    node = layer->initInfEngine(ld.inputBlobsWrappers);
+                else
+                {
+                    node = Ptr<BackendNode>(new InfEngineBackendNode(
+                        ld.layerInstance, ld.inputBlobs, ld.outputBlobs, ld.internals));
+                }
             }
             else if (node.empty())
                 continue;

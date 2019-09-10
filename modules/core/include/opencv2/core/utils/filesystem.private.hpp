@@ -49,8 +49,8 @@ public:
     void lock(); //< acquire exclusive (writer) lock
     void unlock(); //< release exclusive (writer) lock
 
-    void lock_shared(); //< acquire sharable (reader) lock
-    void unlock_shared(); //< release sharable (reader) lock
+    void lock_shared(); //< acquire shareable (reader) lock
+    void unlock_shared(); //< release shareable (reader) lock
 
     struct Impl;
 protected:

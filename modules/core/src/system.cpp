@@ -554,7 +554,9 @@ struct HWFeatures
         have[CV_CPU_FP16] = true;
     #endif
     #endif
-
+    #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
+        have[CV_CPU_NEON] = true;
+    #endif
     // there's no need to check VSX availability in runtime since it's always available on ppc64le CPUs
     have[CV_CPU_VSX] = (CV_VSX);
     // TODO: Check VSX3 availability in runtime for other platforms
