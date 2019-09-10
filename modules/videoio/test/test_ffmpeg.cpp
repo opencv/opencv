@@ -100,10 +100,10 @@ TEST(videoio_ffmpeg, raw)
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
     const vector<string> fileNamesCont = { "video/big_buck_bunny_h264.mp4" , "video/big_buck_bunny_h265.mp4" };
-    const vector<string> fileNamesRaw = { "video/big_buck_bunny.h264", "video/big_buck_bunny_anex.h265" };
+    const vector<string> fileNamesRaw = { "video/big_buck_bunny.h264", "video/big_buck_bunny.h265" };
     const vector<string> fileNamesRawOut = { tempfile(".h264"), tempfile(".h265") };
 
-    for (int i = 0; i < fileNamesCont.size(); i++)
+    for (size_t i = 0; i < fileNamesCont.size(); i++)
     {
         // Verify reads from container and raw are identical
         {
@@ -113,26 +113,24 @@ TEST(videoio_ffmpeg, raw)
             ASSERT_TRUE(raw.isOpened());
             std::ofstream file(fileNamesRawOut[i], ios::out | ios::trunc | std::ios::binary);
             unsigned char* dataGs = 0, *data = 0;
-            size_t sizeGs = 0, size = 0, startByte = 0, sizeMod = 0;
+            size_t sizeGs = 0, size = 0, startByte = 0, sizeCmp = 0;
             bool modifiedStartCode = false;
             while (cont.read(&dataGs, &sizeGs))
             {
                 raw.read(&data, &size);
 
                 // h265 raw uses start code 0x00 0x00 0x01, hevc_mp4toannexb from mp4 uses 0x00 0x00 0x00 0x01
+                sizeCmp = sizeGs;
                 if (modifiedStartCode)
                 {
                     startByte = 1;
-                    sizeMod = sizeGs - 1;
+                    sizeCmp -= 1;
                 }
 
                 if (!modifiedStartCode && sizeGs == size - 1)
-                {
-                    sizeMod = sizeGs;
                     modifiedStartCode = true;
-                }
 
-                ASSERT_EQ(0, std::memcmp(&dataGs[startByte], data, sizeMod));
+                ASSERT_EQ(0, std::memcmp(&dataGs[startByte], data, sizeCmp));
                 file.write(reinterpret_cast<char*>(dataGs), sizeGs);
             }
         }
