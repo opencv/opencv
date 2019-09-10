@@ -21,17 +21,30 @@
 
 namespace cv { namespace gimpl { namespace passes {
 
+/**
+ * This pass extends a GIslandModel with streaming-oriented
+ * information.
+ *
+ * Every input data object (according to the protocol) is connected to
+ * a new "Emitter" node which becomes its _consumer_.
+ *
+ * Every output data object (again, according to the protocol) is
+ * connected to a new "Sink" node which becomes its _consumer_.
+ *
+ * These extra nodes are required to streamline the queues
+ * initialization by the GStreamingExecutable and its derivatives.
+ */
 void addStreaming(ade::passes::PassContext &ctx)
 {
-    GModel::Graph gr(ctx.graph);
-    if (!gr.metadata().contains<Streaming>()) {
+    GModel::Graph gm(ctx.graph);
+    if (!gm.metadata().contains<Streaming>()) {
         return;
     }
 
     // Note: This pass is working on a GIslandModel.
     // FIXME: May be introduce a new variant of GIslandModel to
     // deal with streams?
-    auto igr = gr.metadata().get<IslandModel>().model;
+    auto igr = gm.metadata().get<IslandModel>().model;
     GIslandModel::Graph igm(*igr);
 
     // First collect all data slots & their respective original
@@ -51,7 +64,7 @@ void addStreaming(ade::passes::PassContext &ctx)
 
     // Now walk through the list of input slots and connect those
     // to a Streaming source.
-    const auto proto = gr.metadata().get<Protocol>();
+    const auto proto = gm.metadata().get<Protocol>();
     for (auto &&it : ade::util::indexed(proto.in_nhs)) {
         const auto in_idx = ade::util::index(it);
         const auto in_nh  = ade::util::value(it);

@@ -359,13 +359,13 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
     : m_orig_graph(std::move(g_model))
     , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
                      .get<IslandModel>().model)
-    , m_gm(*m_orig_graph)
     , m_gim(*m_island_graph)
 {
+    GModel::Graph gm(*m_orig_graph);
     // NB: Right now GIslandModel is acyclic, and all the below code assumes that.
     // NB: This naive execution code is taken from GExecutor nearly "as-is"
 
-    const auto proto = m_gm.metadata().get<Protocol>();
+    const auto proto = gm.metadata().get<Protocol>();
     m_emitters      .resize(proto.in_nhs.size());
     m_emitter_queues.resize(proto.in_nhs.size());
     m_sinks         .resize(proto.out_nhs.size());
@@ -404,11 +404,11 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                     const auto orig_data_nh
                         = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
                     const auto &orig_data_info
-                        = m_gm.metadata(orig_data_nh).get<Data>();
+                        = gm.metadata(orig_data_nh).get<Data>();
                     if (orig_data_info.storage == Data::Storage::CONST_VAL) {
                         const_ins.insert(slot_nh);
                         // FIXME: Variant move issue
-                        in_constants.push_back(const_cast<const cv::GRunArg&>(m_gm.metadata(orig_data_nh).get<ConstValue>().arg));
+                        in_constants.push_back(const_cast<const cv::GRunArg&>(gm.metadata(orig_data_nh).get<ConstValue>().arg));
                     } else in_constants.push_back(cv::GRunArg{});
                     if (orig_data_info.shape == GShape::GARRAY) {
                         GAPI_Assert(orig_data_info.ctor.index() != orig_data_info.ctor.index_of<cv::util::monostate>());
@@ -421,7 +421,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                     const auto orig_data_nh
                         = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
                     const auto &orig_data_info
-                        = m_gm.metadata(orig_data_nh).get<Data>();
+                        = gm.metadata(orig_data_nh).get<Data>();
                     if (orig_data_info.shape == GShape::GARRAY) {
                         GAPI_Assert(orig_data_info.ctor.index() != orig_data_info.ctor.index_of<cv::util::monostate>());
                     }

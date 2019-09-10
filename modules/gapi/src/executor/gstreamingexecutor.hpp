@@ -57,7 +57,6 @@ protected:
     std::unique_ptr<ade::Graph> m_orig_graph;
     std::shared_ptr<ade::Graph> m_island_graph;
 
-    cv::gimpl::GModel::Graph       m_gm;  // FIXME: make const?
     cv::gimpl::GIslandModel::Graph m_gim; // FIXME: make const?
 
     // FIXME: Naive executor details are here for now
