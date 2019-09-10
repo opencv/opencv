@@ -28,8 +28,6 @@ class GAPI_EXPORTS GStreamingCompiled::Priv
     GMetaArgs  m_outMetas; // inferred by compiler
     std::unique_ptr<cv::gimpl::GStreamingExecutor> m_exec;
 
-    void checkArgs(const cv::gimpl::GRuntimeArgs &args) const;
-
 public:
     void setup(const GMetaArgs &metaArgs,
                const GMetaArgs &outMetas,

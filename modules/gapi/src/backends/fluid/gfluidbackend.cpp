@@ -1238,52 +1238,11 @@ void cv::gimpl::GFluidExecutable::reshape(ade::Graph &g, const GCompileArgs &arg
 // FIXME: Document what it does
 void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const GRunArg &arg)
 {
-    using T = GRunArg;
     switch (rc.shape)
     {
-    case GShape::GMAT:
-    {
-        // FIXME: This ad-hoc cv/own conversion is absolutely terrible and should
-        // be avoided. This backend is purely OpenCV-independent and it should remain.
-        // These changes have been introduced to quickly pair Fluid with Streaming mode.
-        // Maybe Streaming mode needs to be refactored to work with own:: data structures
-        // by default instead.
-        auto &bref = m_buffers[m_id_map.at(rc.id)].priv();
-        switch (arg.index()) {
-        case T::index_of<cv::gapi::own::Mat>():
-            bref.bindTo(util::get<cv::gapi::own::Mat>(arg), true);
-            break;
-#if !defined(GAPI_STANDALONE)
-        case T::index_of<cv::Mat>():
-            bref.bindTo(cv::to_own(util::get<cv::Mat>(arg)), true);
-            break;
-#endif // GAPI_STANDALONE
-        default: GAPI_Assert(false);
-        }
-    } break;
-
-    case GShape::GSCALAR:
-    {
-        // FIXME: See above.
-        auto &sref = m_res.slot<cv::gapi::own::Scalar>()[rc.id];
-        switch (arg.index()) {
-        case T::index_of<cv::gapi::own::Scalar>():
-            sref = util::get<cv::gapi::own::Scalar>(arg);
-            break;
-#if !defined(GAPI_STANDALONE)
-        case T::index_of<cv::Scalar>():
-            sref = cv::to_own(util::get<cv::Scalar>(arg));
-            break;
-#endif // GAPI_STANDALONE
-        default: GAPI_Assert(false);
-        }
-    } break;
-
-    case GShape::GARRAY:
-        m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg);
-        break;
-
-    default: util::throw_error(std::logic_error("Unsupported GShape type"));
+    case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
+    case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
+    case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
     }
 }
 

@@ -32,14 +32,6 @@ bool cv::GStreamingCompiled::Priv::isEmpty() const
     return !m_exec;
 }
 
-// void cv::GStreamingCompiled::Priv::run(cv::gimpl::GRuntimeArgs &&args)
-// {
-//     // Strip away types since ADE knows nothing about that
-//     // args will be taken by specific GBackendExecutables
-//     checkArgs(args);
-//     m_exec->run(std::move(args));
-// }
-
 const cv::GMetaArgs& cv::GStreamingCompiled::Priv::metas() const
 {
     return m_metas;
@@ -50,22 +42,18 @@ const cv::GMetaArgs& cv::GStreamingCompiled::Priv::outMetas() const
     return m_outMetas;
 }
 
-void cv::GStreamingCompiled::Priv::checkArgs(const cv::gimpl::GRuntimeArgs &args) const
-{
-    // FIXME: This method mostly duplicates GCompiled!
-    if (!can_describe(m_metas, args.inObjs))
-    {
-        util::throw_error(std::logic_error("This object was compiled "
-                                           "for different metadata!"));
-        // FIXME: Add details on what is actually wrong
-    }
-}
-
 // FIXME: What is the reason in having Priv here if Priv actually dispatches
 // everything to the underlying executable?? May be this executable may become
 // the G*Compiled's priv?
 void cv::GStreamingCompiled::Priv::setSource(cv::GRunArgs &&args)
 {
+    if (!can_describe(m_metas, args))
+    {
+        util::throw_error(std::logic_error("This object was compiled "
+                                           "for different metadata!"));
+        // FIXME: Add details on what is actually wrong
+    }
+
     GAPI_Assert(m_exec != nullptr);
     m_exec->setSource(std::move(args));
 }

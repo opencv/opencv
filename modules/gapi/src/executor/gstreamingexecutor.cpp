@@ -40,7 +40,11 @@ class VideoEmitter final: public cv::gimpl::GIslandEmitter {
         if (nextFrame.empty()) {
             return false;
         }
-        arg = std::move(nextFrame);
+        // Some VideoCapture backends may still own the memory
+        // wrapped by cv::Mat we get from read() so the most
+        // robust way to allow multi-threaded pipelining is to copy
+        // that data.
+        arg = nextFrame.clone();
         return true;
     }
 public:
@@ -241,7 +245,22 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
                 }
                 // FIXME: MOVE PROBLEM
                 const cv::GRunArg &in_arg = cv::util::get<cv::GRunArg>(cmd);
-                isl_inputs[id].second = in_arg;
+                // Make Islands operate on own:: data types (i.e. in the same
+                // environment as GExecutor provides)
+                // This way several backends (e.g. Fluid) remain OpenCV-independent.
+                switch (in_arg.index()) {
+#if !defined(GAPI_STANDALONE)
+                case cv::GRunArg::index_of<cv::Mat>():
+                    isl_inputs[id].second = cv::to_own(cv::util::get<cv::Mat>(in_arg));
+                    break;
+                case cv::GRunArg::index_of<cv::Scalar>():
+                    isl_inputs[id].second = cv::to_own(cv::util::get<cv::Scalar>(in_arg));
+                    break;
+#endif // !GAPI_STANDALONE
+                default:
+                    isl_inputs[id].second = in_arg;
+                    break;
+                }
             }
         }
 
