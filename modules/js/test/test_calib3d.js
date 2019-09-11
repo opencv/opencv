@@ -68,15 +68,15 @@ QUnit.test('Rodrigues', function(assert) {
 
 QUnit.test('estimateAffine2D', function(assert) {
    const inputs = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    1, 1, 
-    80, 0, 
-    0, 80, 
+    1, 1,
+    80, 0,
+    0, 80,
     80, 80
   ]);
   const outputs = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    21, 51, 
-    70, 77, 
-    40, 40, 
+    21, 51,
+    70, 77,
+    40, 40,
     10, 70
   ]);
   const M = cv.estimateAffine2D(inputs, outputs);
@@ -87,5 +87,5 @@ QUnit.test('estimateAffine2D', function(assert) {
     165,  35,  53,  64,  99,  56,  27,  66,  14, 254,
     212,  63, 103, 102, 102, 102, 102, 102, 182, 191,
     195, 252, 174,  22,  55,  97,  73,  64
-  ]);  
+  ]);
 });
