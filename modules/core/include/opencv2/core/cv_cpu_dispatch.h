@@ -152,7 +152,7 @@
 #  define CV_VSX3 1
 #endif
 
-#ifdef __mips_msa
+#ifdef CV_CPU_COMPILE_MSA
 #  include "hal/msa_macros.h"
 #  define CV_MSA 1
 #endif

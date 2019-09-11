@@ -310,6 +310,8 @@ enum CpuFeatures {
 
     CPU_NEON            = 100,
 
+    CPU_MSA             = 150,
+
     CPU_VSX             = 200,
     CPU_VSX3            = 201,
 
@@ -320,8 +322,6 @@ enum CpuFeatures {
     CPU_AVX512_CNL      = 260, //!< Cannon Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI
     CPU_AVX512_CEL      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI
     CPU_AVX512_ICL      = 262, //!< Ice Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI/VBMI2/BITALG/VPOPCNTDQ
-
-    CPU_MSA             = 300,
 
     CPU_MAX_FEATURE     = 512  // see CV_HARDWARE_MAX_FEATURE
 };
