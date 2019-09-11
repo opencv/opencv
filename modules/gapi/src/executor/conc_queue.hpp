@@ -51,6 +51,9 @@ public:
     bool try_pop(T &t);
 
     void set_capacity(std::size_t capacity);
+
+    // Not thread-safe - as in TBB
+    void clear();
 };
 
 // Internal: do shared pop things assuming the lock is already there
@@ -111,6 +114,14 @@ void concurrent_bounded_queue<T>::set_capacity(std::size_t capacity) {
     GAPI_Assert(m_capacity == 0u);
     GAPI_Assert(capacity != 0u);
     m_capacity = capacity;
+}
+
+// Clear the queue. Similar to the TBB version, this method is not
+// thread-safe.
+template<typename T>
+void concurrent_bounded_queue<T>::clear()
+{
+    m_data = std::queue<T>{};
 }
 
 }}} // namespace cv::gapi::own

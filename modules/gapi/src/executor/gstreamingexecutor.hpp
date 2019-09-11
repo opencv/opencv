@@ -35,7 +35,8 @@ struct Start {};
 struct Stop {};
 
 using Cmd = cv::util::variant
-    < Start        // Tells emitters to start working. Not broadcasted to workers.
+    < cv::util::monostate
+    , Start        // Tells emitters to start working. Not broadcasted to workers.
     , Stop         // Tells emitters to stop working. Broadcasted to workers.
     , cv::GRunArg  // Workers data payload to process.
     , cv::GRunArgs // Full results vector
@@ -46,11 +47,30 @@ using Q = QueueClass<Cmd>;
 // FIXME: Currently all GExecutor comments apply also
 // to this one. Please document it separately in the future.
 
-class GStreamingExecutor
+class GStreamingExecutor final
 {
 protected:
+    // GStreamingExecutor is a state machine described as follows
+    //
+    //              setSource() called
+    //   STOPPED:  - - - - - - - - - ->READY:
+    //   --------                      ------
+    //   Initial state                 Input data specified
+    //   No threads running            Threads are created and IDLE
+    //   ^                             (Currently our emitter threads
+    //   :                             are bounded to input data)
+    //   : stop() called               No processing happending
+    //   : OR                          :
+    //   : end-of-stream reached       :  start() called
+    //   : during pull()/try_pull()    V
+    //   :                             RUNNING:
+    //   :                             --------
+    //   :                             Actual pipeline execution
+    //    - - - - - - - - - - - - - -  Threads are running
+    //
     enum class State {
         STOPPED,
+        READY,
         RUNNING,
     } state = State::STOPPED;
 
@@ -86,13 +106,18 @@ protected:
     std::vector<ade::NodeHandle> m_emitters;
     std::vector<ade::NodeHandle> m_sinks;
 
+    cv::util::optional<cv::GRunArgs> m_last_source;
     std::vector<std::thread> m_threads;
     std::vector<stream::Q>   m_emitter_queues;
     std::vector<stream::Q*>  m_sink_queues;
+    std::unordered_set<stream::Q*> m_internal_queues;
     stream::Q m_out_queue;
+
+    void wait_shutdown();
 
 public:
     explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model);
+    ~GStreamingExecutor();
     void setSource(GRunArgs &&args);
     void start();
     bool pull(cv::GRunArgsP &&outs);

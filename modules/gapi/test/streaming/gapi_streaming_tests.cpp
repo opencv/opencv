@@ -208,7 +208,7 @@ TEST_P(GAPI_Streaming, Regression_CompileTimeScalar)
     cv::GComputation c(cv::GIn(in), cv::GOut(tmp, tmp + 1));
 
     auto ccomp = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,512}},
-                                        cv::compile_args(cv::gapi::use_only{GetParam()}));
+                                    cv::compile_args(cv::gapi::use_only{GetParam()}));
 
     cv::Mat in_mat = cv::imread(findDataFile("cv/edgefilter/kodim23.png"));
     cv::Mat out_mat1, out_mat2;
@@ -223,10 +223,122 @@ TEST_P(GAPI_Streaming, Regression_CompileTimeScalar)
     ccomp.stop();
 }
 
+TEST_P(GAPI_Streaming, TestStartRestart)
+{
+    cv::GMat in;
+    auto res = cv::gapi::resize(in, cv::Size{300,200});
+    auto out = cv::gapi::Canny(res, 95, 220);
+    cv::GComputation c(cv::GIn(in), cv::GOut(cv::gapi::copy(in), out));
+
+    auto ccomp = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
+                                    cv::compile_args(cv::gapi::use_only{GetParam()}));
+    EXPECT_TRUE(ccomp);
+    EXPECT_FALSE(ccomp.running());
+
+    // Run 1
+    std::size_t num_frames1 = 0u;
+    ccomp.setSource(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")});
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    cv::Mat out1, out2;
+    while (ccomp.pull(cv::gout(out1, out2))) num_frames1++;
+
+    EXPECT_FALSE(ccomp.running());
+
+    // Run 2
+    std::size_t num_frames2 = 0u;
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+    while (ccomp.pull(cv::gout(out1, out2))) num_frames2++;
+
+    EXPECT_FALSE(ccomp.running());
+
+    EXPECT_LT(0u, num_frames1);
+    EXPECT_LT(0u, num_frames2);
+    EXPECT_EQ(num_frames1, num_frames2);
+}
+
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
                         Values(  OCV_KERNELS()
                              //, OCL_KERNELS()       -- known issues with OpenCL backend, commented out
                                , OCV_FLUID_KERNELS()
                              //, OCL_FLUID_KERNELS() -- known issues with OpenCL backend, commented out
                                  ));
+
+struct GAPI_Streaming_Unit: public ::testing::Test {
+    cv::GStreamingCompiled sc;
+    cv::Mat m;
+
+    GAPI_Streaming_Unit()
+        : m(cv::Mat::ones(224,224,CV_8UC3))
+    {
+        initTestDataPath();
+
+        cv::GMat a, b;
+        cv::GMat c = a + b*2;
+        sc = cv::GComputation(cv::GIn(a, b), cv::GOut(c))
+            .compileStreaming(cv::GMatDesc{CV_8U,3,{224,224}},
+                              cv::GMatDesc{CV_8U,3,{224,224}});
+    }
+};
+
+TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
+{
+    EXPECT_NO_THROW(sc.setSource(cv::gin(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")}, m)));
+    EXPECT_NO_THROW(sc.setSource(cv::gin(m, cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")})));
+    EXPECT_ANY_THROW(sc.setSource(cv::gin(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")},
+                                          cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")})));
+}
+
+TEST_F(GAPI_Streaming_Unit, TestStartWithoutSetSource)
+{
+    EXPECT_ANY_THROW(sc.start());
+}
+
+TEST_F(GAPI_Streaming_Unit, TestStopWithoutStart1)
+{
+    // It is ok!
+    EXPECT_NO_THROW(sc.stop());
+}
+
+TEST_F(GAPI_Streaming_Unit, TestStopWithoutStart2)
+{
+    // It should be ok as well
+    sc.setSource(cv::gin(m, m));
+    EXPECT_NO_THROW(sc.stop());
+}
+
+TEST_F(GAPI_Streaming_Unit, StopStartStop)
+{
+    cv::Mat out;
+    EXPECT_NO_THROW(sc.stop());
+    EXPECT_NO_THROW(sc.setSource(cv::gin(m, m)));
+    EXPECT_NO_THROW(sc.start());
+
+    std::size_t i = 0u;
+    while (i++ < 10u) sc.pull(cv::gout(out));
+
+    EXPECT_NO_THROW(sc.stop());
+}
+
+TEST_F(GAPI_Streaming_Unit, ImplicitStop)
+{
+    EXPECT_NO_THROW(sc.setSource(cv::gin(m, m)));
+    EXPECT_NO_THROW(sc.start());
+    // No explicit stop here - pipeline stops successfully at the test exit
+}
+
+TEST_F(GAPI_Streaming_Unit, StartStopStress)
+{
+    // Runs 100 times with no deadlock - assumed stable (robust) enough
+    sc.setSource(cv::gin(m, m));
+    for (int i = 0; i < 100; i++) {
+        sc.stop();
+        sc.start();
+        cv::Mat out;
+        for (int j = 0; j < 5; j++) EXPECT_TRUE(sc.pull(cv::gout(out)));
+    }
+}
+
 } // namespace opencv_test

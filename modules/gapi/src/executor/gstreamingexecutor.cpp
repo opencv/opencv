@@ -230,16 +230,31 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
             {
                 // NULL queue means a graph-constant value
                 // (like a value-initialized scalar)
+                // FIXME: Variant move problem
                 isl_inputs[id].second = const_cast<const cv::GRunArg&>(in_constants[id]);
             }
             else
             {
                 q->pop(cmd);
-                if (cv::util::holds_alternative<Stop>(cmd)) {
-                    // Broadcast STOP down to the pipeline.
+                if (cv::util::holds_alternative<Stop>(cmd))
+                {
+                    // FIXME: This logic must be unified with what collectorThread is doing!
+                    // Just got a stop sign. Reiterate through all queues
+                    // and rewind data to every Stop sign per queue
+                    for (auto &&qit : ade::util::indexed(in_queues))
+                    {
+                        auto id2 = ade::util::index(qit);
+                        auto &q2 = ade::util::value(qit);
+                        if (id == id2) continue;
+
+                        Cmd cmd2;
+                        while (q2 && !cv::util::holds_alternative<Stop>(cmd2))
+                            q2->pop(cmd2);
+                    }
+                    // Broadcast Stop down to the pipeline and quit
                     for (auto &&out_qq : out_queues)
                     {
-                        for (auto &&out_q : out_qq) out_q->push(cmd);
+                        for (auto &&out_q : out_qq) out_q->push(Cmd{Stop{}});
                     }
                     return;
                 }
@@ -263,7 +278,6 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
                 }
             }
         }
-
         // Once the vector is obtained, prepare data for island execution
         // Note - we first allocate output vector via GRunArg!
         // Then it is converted to a GRunArgP.
@@ -310,7 +324,7 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
                 {
                     cv::detail::VectorRef newVec;
                     cv::util::get<cv::detail::ConstructVec>(r.ctor)(newVec);
-                    out_data[id]= cv::GRunArg(std::move(newVec));
+                    out_data[id] = cv::GRunArg(std::move(newVec));
                     // VectorRef is implicitly shared so no pointer is taken here
                     const auto &rr = cv::util::get<cv::detail::VectorRef>(out_data[id]); // FIXME: that variant MOVE problem again
                     isl_outputs[id] = { r, cv::GRunArgP(rr) };
@@ -349,25 +363,30 @@ void collectorThread(std::vector<Q*> in_queues,
     while (true)
     {
         cv::GRunArgs this_result(in_queues.size());
-        std::size_t stops = 0u;
         for (auto &&it : ade::util::indexed(in_queues))
         {
             Cmd cmd;
             ade::util::value(it)->pop(cmd);
-            if (cv::util::holds_alternative<Stop>(cmd)) {
-                stops++;
-            } else {
+            if (cv::util::holds_alternative<Stop>(cmd))
+            {
+                // FIXME: Unify this code with island thread
+                for (auto &&qit : ade::util::indexed(in_queues))
+                {
+                    if (ade::util::index(qit) == ade::util::index(it)) continue;
+                    Cmd cmd2;
+                    while (!cv::util::holds_alternative<Stop>(cmd2))
+                        ade::util::value(qit)->pop(cmd2);
+                }
+                out_queue.push(Cmd{Stop{}});
+                return;
+            }
+            else
+            {
                 // FIXME: MOVE_PROBLEM
                 const cv::GRunArg &in_arg = cv::util::get<cv::GRunArg>(cmd);
                 this_result[ade::util::index(it)] = in_arg;
                 // FIXME: Check for other message types.
             }
-        }
-        if (stops > 0)
-        {
-            GAPI_Assert(stops == in_queues.size());
-            out_queue.push(Cmd{Stop{}});
-            return;
         }
         out_queue.push(Cmd{this_result});
     }
@@ -428,7 +447,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                         const_ins.insert(slot_nh);
                         // FIXME: Variant move issue
                         in_constants.push_back(const_cast<const cv::GRunArg&>(gm.metadata(orig_data_nh).get<ConstValue>().arg));
-                    } else in_constants.push_back(cv::GRunArg{});
+                    } else in_constants.push_back(cv::GRunArg{}); // FIXME: Make it in some smarter way pls
                     if (orig_data_info.shape == GShape::GARRAY) {
                         // FIXME: GArray lost host constructor problem
                         GAPI_Assert(!cv::util::holds_alternative<cv::util::monostate>(orig_data_info.ctor));
@@ -469,6 +488,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                     // ...only if the data is not compile-const
                     if (const_ins.count(eh->srcNode()) == 0) {
                         qgr.metadata(eh).set(DataQueue(queue_capacity));
+                        m_internal_queues.insert(&qgr.metadata(eh).get<DataQueue>().q);
                     }
                 }
             }
@@ -508,6 +528,12 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
         } // switch(kind)
     } // for(gim nodes)
     m_out_queue.set_capacity(queue_capacity);
+}
+
+cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
+{
+    if (state == State::READY || state == State::RUNNING)
+        stop();
 }
 
 void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
@@ -554,7 +580,10 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     // First create threads for all the emitters.
     // FIXME: One way to avoid this may be including an Emitter object as a part of
     // START message. Why not?
-    GAPI_Assert(m_threads.empty()); // FIXME: NOW WE CAN RUN ONLY ONCE!!!
+    if (state == State::READY) {
+        stop();
+    }
+
     for (auto it : ade::util::indexed(m_emitters))
     {
         const auto id = ade::util::index(it); // = index in GComputation's protocol
@@ -602,12 +631,30 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     m_threads.emplace_back(collectorThread,
                            m_sink_queues,
                            std::ref(m_out_queue));
+    state = State::READY;
+    m_last_source = cv::util::make_optional(std::move(ins));
 }
 
 void cv::gimpl::GStreamingExecutor::start()
 {
-    // FIXME: start/stop/pause/etc logic
-    GAPI_Assert(state == State::STOPPED);
+    // FIXME: start/stop/pause?/etc logic
+    if (state == State::STOPPED)
+    {
+        if (m_last_source)
+        {
+            // STOPPED state usually means calling start() right after EOS.
+            // Anyway, our threads are terminated and in the current design we need to
+            // restart those automatically with our last-known-input.
+            setSource(std::move(*m_last_source));
+        }
+        else
+        {
+            // Of course, if there were no stream processed (and set via setSource)
+            // it is an error.
+            util::throw_error(std::logic_error("start() requires setSource() called first"));
+        }
+    }
+    GAPI_Assert(state == State::READY);
 
     // Currently just trigger our emitters to work
     state = State::RUNNING;
@@ -615,6 +662,27 @@ void cv::gimpl::GStreamingExecutor::start()
     {
         q.push(stream::Cmd{stream::Start{}});
     }
+}
+
+void cv::gimpl::GStreamingExecutor::wait_shutdown()
+{
+    // This utility is used by pull/try_pull/stop() to uniformly
+    // shutdown the worker threads.
+    // FIXME: Of course it can be designed much better
+    for (auto &t : m_threads) t.join();
+    m_threads.clear();
+
+    // Clear all queues
+    // FIXME: Since the current model assumes every thread
+    // reads the remnants of its input queues in their entirety
+    // once a Stop is received, every queue should be empty
+    // at this point so this clear() should be replaced with assert
+    for (auto &q : m_emitter_queues) q.clear();
+    for (auto &q : m_sink_queues) q->clear();
+    for (auto &q : m_internal_queues) q->clear();
+    m_out_queue.clear();
+
+    state = State::STOPPED;
 }
 
 bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
@@ -628,8 +696,7 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
     m_out_queue.pop(cmd);
     if (cv::util::holds_alternative<Stop>(cmd))
     {
-        for (auto &t : m_threads) t.join();
-        state = State::STOPPED;
+        wait_shutdown();
         return false;
     }
 
@@ -652,9 +719,7 @@ bool cv::gimpl::GStreamingExecutor::try_pull(cv::GRunArgsP &&outs)
     }
     if (cv::util::holds_alternative<Stop>(cmd))
     {
-        // FIXME: Unify with pull()
-        for (auto &t : m_threads) t.join();
-        state = State::STOPPED;
+        wait_shutdown();
         return false;
     }
 
@@ -680,19 +745,12 @@ void cv::gimpl::GStreamingExecutor::stop()
 
     // Pull messages from the final queue to ensure completion
     Cmd cmd;
-    while (!cv::util::holds_alternative<Stop>(cmd)) {
+    while (!cv::util::holds_alternative<Stop>(cmd))
+    {
         m_out_queue.pop(cmd);
     }
     GAPI_Assert(cv::util::holds_alternative<Stop>(cmd));
-
-    for (auto &t : m_threads) {
-        t.join();
-    }
-    m_threads.clear();
-    // FIXME: Auto-stop on object destruction?
-    // There still must be a graceful shutdown!!!
-
-    state = State::STOPPED;
+    wait_shutdown();
 }
 
 bool cv::gimpl::GStreamingExecutor::running() const
