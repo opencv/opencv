@@ -171,7 +171,7 @@ Different type conversions and casts:
 
 ### Matrix operations
 
-In these operations vectors represent matrix rows/columns: @ref v_dotprod, @ref v_matmul, @ref v_transpose4x4
+In these operations vectors represent matrix rows/columns: @ref v_dotprod, @ref v_dotprod_expand, @ref v_matmul, @ref v_transpose4x4
 
 ### Usability
 
@@ -195,7 +195,8 @@ Regular integers:
 |mul_expand         | x | x | x | x | x |   |
 |compare            | x | x | x | x | x | x |
 |shift              |   |   | x | x | x | x |
-|dotprod            |   |   |   | x |   |   |
+|dotprod            |   |   |   | x |   | x |
+|dotprod_expand     | x | x | x | x |   | x |
 |logical            | x | x | x | x | x | x |
 |min, max           | x | x | x | x | x | x |
 |absdiff            | x | x | x | x | x | x |
@@ -222,6 +223,7 @@ Big integers:
 |logical            | x | x |
 |extract            | x | x |
 |rotate (lanes)     | x | x |
+|cvt_flt64          |   | x |
 
 Floating point:
 
@@ -853,22 +855,29 @@ inline v_reg<_Tp, n> v_muladd(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
 /** @brief Dot product of elements
 
 Multiply values in two registers and sum adjacent result pairs.
+
+@cond Doxygen_Suppress
+@param ignore_order - if it's true the intrinsic may perform unorder sum between result pairs in some platforms,
+this behavior can be used if the sum among all lanes is only matters and also it should be yielding better performance on the affected platforms.
+@endcond
+
 Scheme:
 @code
   {A1 A2 ...} // 16-bit
 x {B1 B2 ...} // 16-bit
 -------------
 {A1B1+A2B2 ...} // 32-bit
+
 @endcode
-Implemented only for 16-bit signed source type (v_int16x8).
 */
 template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
-    v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+    v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b, bool ignore_order = false)
 {
     typedef typename V_TypeTraits<_Tp>::w_type w_type;
     v_reg<w_type, n/2> c;
     for( int i = 0; i < (n/2); i++ )
         c.s[i] = (w_type)a.s[i*2]*b.s[i*2] + (w_type)a.s[i*2+1]*b.s[i*2+1];
+    CV_UNUSED(ignore_order);
     return c;
 }
 
@@ -881,17 +890,71 @@ Scheme:
 x {B1 B2 ...} // 16-bit
 -------------
   {A1B1+A2B2+C1 ...} // 32-bit
-
 @endcode
-Implemented only for 16-bit signed source type (v_int16x8).
 */
 template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
-    v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b, const v_reg<typename V_TypeTraits<_Tp>::w_type, n / 2>& c)
+    v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+              const v_reg<typename V_TypeTraits<_Tp>::w_type, n / 2>& c, bool ignore_order = false)
 {
     typedef typename V_TypeTraits<_Tp>::w_type w_type;
     v_reg<w_type, n/2> s;
     for( int i = 0; i < (n/2); i++ )
         s.s[i] = (w_type)a.s[i*2]*b.s[i*2] + (w_type)a.s[i*2+1]*b.s[i*2+1] + c.s[i];
+    CV_UNUSED(ignore_order);
+    return s;
+}
+
+/** @brief Dot product of elements and expand
+
+Multiply values in two registers and expand the sum of adjacent result pairs.
+
+@cond Doxygen_Suppress
+@param ignore_order - if it's true the intrinsic may perform unorder sum between result pairs in some platforms,
+this behavior can be used if the sum among all lanes is only matters and also it should be yielding better performance on the affected platforms.
+@endcond
+
+Scheme:
+@code
+  {A1 A2 A3 A4 ...} // 8-bit
+x {B1 B2 B3 B4 ...} // 8-bit
+-------------
+  {A1B1+A2B2+A3B3+A4B4 ...} // 32-bit
+
+@endcode
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+    v_dotprod_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b, bool ignore_order = false)
+{
+    typedef typename V_TypeTraits<_Tp>::q_type q_type;
+    v_reg<q_type, n/4> s;
+    for( int i = 0; i < (n/4); i++ )
+        s.s[i] = (q_type)a.s[i*4    ]*b.s[i*4    ] + (q_type)a.s[i*4 + 1]*b.s[i*4 + 1] +
+                 (q_type)a.s[i*4 + 2]*b.s[i*4 + 2] + (q_type)a.s[i*4 + 3]*b.s[i*4 + 3];
+    CV_UNUSED(ignore_order);
+    return s;
+}
+
+/** @brief Dot product of elements
+
+Same as cv::v_dotprod_expand, but add a third element to the sum of adjacent pairs.
+Scheme:
+@code
+  {A1 A2 A3 A4 ...} // 8-bit
+x {B1 B2 B3 B4 ...} // 8-bit
+-------------
+  {A1B1+A2B2+A3B3+A4B4+C1 ...} // 32-bit
+@endcode
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+    v_dotprod_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                     const v_reg<typename V_TypeTraits<_Tp>::q_type, n / 4>& c, bool ignore_order = false)
+{
+    typedef typename V_TypeTraits<_Tp>::q_type q_type;
+    v_reg<q_type, n/4> s;
+    for( int i = 0; i < (n/4); i++ )
+        s.s[i] = (q_type)a.s[i*4    ]*b.s[i*4    ] + (q_type)a.s[i*4 + 1]*b.s[i*4 + 1] +
+                 (q_type)a.s[i*4 + 2]*b.s[i*4 + 2] + (q_type)a.s[i*4 + 3]*b.s[i*4 + 3] + c.s[i];
+    CV_UNUSED(ignore_order);
     return s;
 }
 
@@ -1803,6 +1866,17 @@ template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<int, n*2>& a)
 
 Supported input type is cv::v_float32x4. */
 template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<float, n*2>& a)
+{
+    v_reg<double, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = (double)a.s[i];
+    return c;
+}
+
+/** @brief Convert to double
+
+Supported input type is cv::v_int64x2. */
+template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<int64, n>& a)
 {
     v_reg<double, n> c;
     for( int i = 0; i < n; i++ )

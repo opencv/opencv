@@ -461,15 +461,107 @@ inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
                                     msa_mulq_u32(msa_paddlq_u16(a_hi), msa_paddlq_u16(b_hi)), 16));
 }
 
-inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
+///////// Dotprod ////////////
+
+// 16 >> 32
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const bool ignore_order = false)
 {
+    CV_UNUSED(ignore_order);
     return v_int32x4(msa_dotp_s_w(a.val, b.val));
 }
 
-inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b,
+                           const v_int32x4& c, const bool ignore_order = false)
 {
+    CV_UNUSED(ignore_order);
     return v_int32x4(msa_dpadd_s_w(c.val , a.val, b.val));
 }
+
+// 32 >> 64
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const bool ignore_order = false)
+{
+    CV_UNUSED(ignore_order);
+    return v_int64x2(msa_dotp_s_d(a.val, b.val));
+}
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b,
+                           const v_int64x2& c, const bool ignore_order = false)
+{
+    CV_UNUSED(ignore_order);
+    return v_int64x2(msa_dpadd_s_d(c.val , a.val, b.val));
+}
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const bool ignore_order = false)
+{
+    CV_UNUSED(ignore_order);
+    v8u16 even_a = msa_shrq_n_u16(msa_shlq_n_u16(MSA_TPV_REINTERPRET(v8u16, a.val), 8), 8);
+    v8u16 odd_a  = msa_shrq_n_u16(MSA_TPV_REINTERPRET(v8u16, a.val), 8);
+    v8u16 even_b = msa_shrq_n_u16(msa_shlq_n_u16(MSA_TPV_REINTERPRET(v8u16, b.val), 8), 8);
+    v8u16 odd_b  = msa_shrq_n_u16(MSA_TPV_REINTERPRET(v8u16, b.val), 8);
+    v4u32 prod   = msa_dotp_u_w(even_a, even_b);
+    return v_uint32x4(msa_dpadd_u_w(prod, odd_a, odd_b));
+}
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
+                                   const v_uint32x4& c, const bool ignore_order = false)
+{
+    CV_UNUSED(ignore_order);
+    v8u16 even_a = msa_shrq_n_u16(msa_shlq_n_u16(MSA_TPV_REINTERPRET(v8u16, a.val), 8), 8);
+    v8u16 odd_a  = msa_shrq_n_u16(MSA_TPV_REINTERPRET(v8u16, a.val), 8);
+    v8u16 even_b = msa_shrq_n_u16(msa_shlq_n_u16(MSA_TPV_REINTERPRET(v8u16, b.val), 8), 8);
+    v8u16 odd_b  = msa_shrq_n_u16(MSA_TPV_REINTERPRET(v8u16, b.val), 8);
+    v4u32 prod   = msa_dpadd_u_w(c.val, even_a, even_b);
+    return v_uint32x4(msa_dpadd_u_w(prod, odd_a, odd_b));
+}
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const bool ignore_order = false)
+{
+    CV_UNUSED(ignore_order);
+    v8i16 prod = msa_dotp_s_h(a.val, b.val);
+    return v_int32x4(msa_hadd_s32(prod, prod));
+}
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
+                                  const v_int32x4& c, const bool ignore_order = false)
+{ return v_dotprod_expand(a, b, ignore_order) + c; }
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const bool ignore_order = false)
+{
+    CV_UNUSED(ignore_order);
+    v4u32 even_a = msa_shrq_n_u32(msa_shlq_n_u32(MSA_TPV_REINTERPRET(v4u32, a.val), 16), 16);
+    v4u32 odd_a  = msa_shrq_n_u32(MSA_TPV_REINTERPRET(v4u32, a.val), 16);
+    v4u32 even_b = msa_shrq_n_u32(msa_shlq_n_u32(MSA_TPV_REINTERPRET(v4u32, b.val), 16), 16);
+    v4u32 odd_b  = msa_shrq_n_u32(MSA_TPV_REINTERPRET(v4u32, b.val), 16);
+    v2u64 prod   = msa_dotp_u_d(even_a, even_b);
+    return v_uint64x2(msa_dpadd_u_d(prod, odd_a, odd_b));
+}
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b,
+                                   const v_uint64x2& c, const bool ignore_order = false)
+{
+    CV_UNUSED(ignore_order);
+    v4u32 even_a = msa_shrq_n_u32(msa_shlq_n_u32(MSA_TPV_REINTERPRET(v4u32, a.val), 16), 16);
+    v4u32 odd_a  = msa_shrq_n_u32(MSA_TPV_REINTERPRET(v4u32, a.val), 16);
+    v4u32 even_b = msa_shrq_n_u32(msa_shlq_n_u32(MSA_TPV_REINTERPRET(v4u32, b.val), 16), 16);
+    v4u32 odd_b  = msa_shrq_n_u32(MSA_TPV_REINTERPRET(v4u32, b.val), 16);
+    v2u64 prod   = msa_dpadd_u_d(c.val, even_a, even_b);
+    return v_uint64x2(msa_dpadd_u_d(prod, odd_a, odd_b));
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const bool ignore_order = false)
+{
+    CV_UNUSED(ignore_order);
+    v4i32 prod = msa_dotp_s_w(a.val, b.val);
+    return v_int64x2(msa_hadd_s64(prod, prod));
+}
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b,
+                                  const v_int64x2& c, const bool ignore_order = false)
+{ return v_dotprod_expand(a, b, ignore_order) + c; }
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const bool ignore_order = false)
+{ return v_cvt_f64(v_dotprod(a, b, ignore_order)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
+                                    const v_float64x2& c, const bool ignore_order = false)
+{ return v_dotprod_expand(a, b, ignore_order) + c; }
 
 #define OPENCV_HAL_IMPL_MSA_LOGIC_OP(_Tpvec, _Tpv, suffix) \
 OPENCV_HAL_IMPL_MSA_BIN_OP(&, _Tpvec, msa_andq_##suffix)   \
@@ -1309,6 +1401,11 @@ inline v_float64x2 v_cvt_f64(const v_float32x4& a)
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 {
     return v_float64x2(msa_cvtfhq_f64_f32(a.val));
+}
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+    return v_float64x2(msa_cvtfintq_f64_s64(a.val));
 }
 
 ////////////// Lookup table access ////////////////////
