@@ -108,7 +108,7 @@ firefox http://localhost:8080/tests.html
 @endcode
 
 @note 
-This snippet and the followings requires [Node.js](https://nodejs.org) to be installed.
+This snippet and the following require [Node.js](https://nodejs.org) to be installed.
 
 ### Headless with Puppeteer
 
@@ -121,7 +121,7 @@ node run_puppeteer.js
 @endcode
 
 @note 
-Checkout `node run_puppeteer --help` for more options useful to debugging and reporting.
+Checkout `node run_puppeteer --help` for more options to debug and reporting.
 
 @note
 The command `npm install` only needs to be executed once, since installs the tools dependencies; after that they are ready to use. 

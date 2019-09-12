@@ -1,35 +1,33 @@
-const puppeteer= require('puppeteer')
+const puppeteer = require('puppeteer')
 const colors = require("ansi-colors")
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
-const {inspect} = require('util')
 
 main(require('minimist')(process.argv.slice(2)));
 
-async function main(o={}) {
-o = Object.assign({} ,{  
-  buildFolder: __dirname,
-  port: 8080,
-  debug: true,
-  noHeadless: false,
-  serverPrefix: `http://localhost`,
-  noExit: false,
-  help: false,
-  noTryCatch: false,
-  maxBlockDuration: 30000}, o)
-  if(o.noExit){
-o.maxBlockDuration = 999999999
+async function main(o = {}) {
+  o = Object.assign({}, {
+    buildFolder: __dirname,
+    port: 8080,
+    debug: false,
+    noHeadless: false,
+    serverPrefix: `http://localhost`,
+    noExit: false,
+    screenshot: false,
+    help: false,
+    noTryCatch: false,
+    maxBlockDuration: 30000
+  }, o)
+  if (o.noExit) {
+    o.maxBlockDuration = 999999999
   }
-
-o.debug && console.log('Current Options', o);
-
+  o.debug && console.log('Current Options', o);
   if (o.help) {
     printHelpAndExit();
   }
   const serverAddress = `${o.serverPrefix}:${o.port}`
   const url = `${serverAddress}/tests.html${o.noTryCatch ? '?notrycatch=1' : ''}`;
-  // const folder = path.resolve(`${o.buildFolder}`);
   if (!fs.existsSync(o.buildFolder)) {
     console.error(`Expected folder "${o.buildFolder} to exists. Aborting`);
   }
@@ -38,36 +36,12 @@ o.debug && console.log('Current Options', o);
   o.debug && debug(`Browser launching ${!o.noHeadless ? 'headless' : 'not headless'}`);
   const browser = await puppeteer.launch({ headless: !o.noHeadless });
   const page = await browser.newPage();
-  // page.on('º')
-  // page.browserContext().browser().on('')
-  // await page.evaluate(() => {
-  //   window.addEventListener('error', (message, file, lineNumber, columnNumber, code, error) => {
-  //     // debugger
-  //     console.error(message, file, lineNumber, columnNumber, code, error && error.stack, Object.keys(error));
-      
-  //     // console.log.apply(message)
-  //   })
-  // });
-  // page.on('error', e => {
-  //   // debugger
-  //   // e && error('DOM Error: '+e+', '+e.name+', '+e.message+', '+e.stack);
-  //   // e && error('DOM Error: '+e+', '+e.name+', '+e.message+', '+e.stack);
-  // });
-  // page.on('pageerror', function (e) {
-  //     // console.log('error, arguments', e)
-
-  //   // e && error('Page Error: '+e+', '+e.name+', '+e.message+', '+e.stack);
-  // });
   page.on('console', e => {
     if (e.type() === 'error') {
-      // debugger
-      console.log('error: ',e.location(), e.text().split('\n').map(l=>l.replace(serverAddress, o.buildFolder)).join('\n'))
-        // console.log([e.text(), e.location() ? JSON.stringify(e.location()):'', (e.args()||[]).map(e => inspect(e))].join(', '));
+      console.log('error: ', e.location(), e.text().split('\n').map(l => l.replace(serverAddress, o.buildFolder)).join('\n'))
     }
     else if (o.debug) {
-       o.debug && console.log('log: ',e.location(), e.text())
-
-  // console.log([e.text(), e.location() ? JSON.stringify(e.location()):'', (e.args()||[]).map(e => inspect(e))].join(', '));
+      o.debug && console.log('log: ', e.location(), e.text())
     }
   });
   o.debug && debug(`Opening page address ${url}`);
@@ -101,6 +75,7 @@ ${colors.redBright(`=== Summary ===\n${text}`)}
       await new Promise(r => setTimeout(r, 5000));
     }
   }
+  o.screenshot && await page.screenshot({ path: 'screenshot.png' });
   await server && server.close();
   await browser.close();
   process.exit(testFailed ? 1 : 0);
@@ -120,7 +95,7 @@ ${colors.redBright(`=== Summary ===\n${text}`)}
   }
   async function fail(s) {
     await failReport();
-    await page.screenshot({ path: 'example.png' });
+    o.screenshot && await page.screenshot({ path: 'screenshot.png' });
     process.stdout.write(colors.grey(s + `
  * Screenshot taken: ${o.buildFolder}/tmp_screenshot.png\n`));
     process.exit(1);
@@ -138,30 +113,32 @@ function printHelpAndExit() {
   console.log(`
 Usage: 
 
-  # Install it globally (only needed once):
-  ${colors.blueBright(`npm install --global opencv/platforms/js/test-runner`)}
-
-  # Build opencv with the tests tests:
+  # First, remember to build opencv.s with tests enabled: 
   ${colors.blueBright(`python ./platforms/js/build_js.py build_js --build_test`)}
 
-  # Run the tests
-  ${colors.blueBright(`opencvjs-run-test --buildFolder build_js --port 8081 --debug`)}
-  
-# Options
- * port?: number
- * buildFolder?: string
- * debug?: boolean
- * headless?: boolean
- * keepServer?: boolean
- * help?: boolean
-
-Note: for running the tool locally, you just install it without passing --global and running from 
-its folder:
-
-  ${colors.blueBright(`cd $HOME/opencv/platforms/js/test-runner`)}
+  # Install the tool locally (needed only once) and run it
+  ${colors.blueBright(`cd build/bin`)}
   ${colors.blueBright(`npm install`)}
-  ${colors.blueBright(`node bin/opencvjs-run-test $HOME/opencv/build_js`)}
+  ${colors.blueBright(`node run_puppeteer`)}
+  
+By default will run a headless browser silently printing a small report in the terminal. 
+But it could used to debug the tests in the browser, take screenshots, global tool or 
+targeting external servers exposing the tests. 
 
+TIP: you could install the tool globally (npm install --global build/bin) to execute it from any local folder.
+
+# Options
+
+ * port?: number. Default 8080
+ * buildFolder?: string. Default __dirname (this folder)
+ * debug?: boolean. Default false
+ * noHeadless?: boolean. Default false
+ * serverPrefix?: string . Default http://localhost
+ * help?: boolean
+ * screenshot?: boolean
+ * noExit?: boolean default false. If true it will keep running the server - together with noHeadless you can debug in the browser.
+ * noTryCatch?: boolean will disable Qunit tryCatch - so exceptions are dump to stdout rather than in the browser.
+ * maxBlockDuration: QUnit timeout . if noExist then is infinity.
   `);
   process.exit(0);
 }
@@ -183,7 +160,6 @@ async function staticServer(basePath, port, onFound, onNotFound) {
       resolve(server);
     });
   });
-
   function resolveUrl(url = '') {
     var i = url.indexOf('?');
     if (i != -1) {

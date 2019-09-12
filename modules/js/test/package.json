@@ -1,7 +1,7 @@
 {
   "name": "opencv_js_tests",
   "description": "Tests for opencv js bindings",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "dependencies" : {
     "minimist": "^1.2.0",
     "node-qunit" : "latest",    
