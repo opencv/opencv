@@ -56,6 +56,7 @@ protected:
     Videoio_Test_Base() {}
     virtual ~Videoio_Test_Base() {}
     virtual void writeVideo() {}
+    virtual void checkFileSize(long long /*fileSize*/) {}
     virtual void checkFrameContent(Mat &, int) {}
     virtual void checkFrameCount(int &) {}
     void checkFrameRead(int idx, VideoCapture & cap)
@@ -87,6 +88,7 @@ public:
         if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
             throw SkipTestException("Unstable MSMF test");
         writeVideo();
+        checkFileSize(getFileSize());
         VideoCapture cap;
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
@@ -152,6 +154,15 @@ public:
                 checkFrameSeek(cvtest::TS::ptr()->get_rng().uniform(0, n_frames), cap);
             }
         }
+    }
+private:
+    long long getFileSize() {
+        std::ifstream fin(video_file, std::ios_base::binary);
+        if (fin.fail()) {
+            return -1;
+        }
+        fin.seekg(0, std::ios_base::end);
+        return fin.tellg();
     }
 };
 
@@ -568,5 +579,70 @@ static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API_nocrash()
 }
 
 INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bad_fourcc, testing::ValuesIn(generate_Ext_Fourcc_API_nocrash()));
+
+
+struct Videoio_Writer_bitrate_param {
+    cv::Size size;
+    const char* ext;
+    const char* fourcc;
+    double bitrate;
+    VideoCaptureAPIs api;
+};
+
+inline static std::ostream &operator<<(std::ostream &out, const Videoio_Writer_bitrate_param &p) {
+    out << "(" << p.size << ", ." << p.ext << ", FOURCC(" << p.fourcc << "), " << (p.bitrate/1000) << "kbps, " << p.api << ")";
+    return out;
+}
+
+class Videoio_Writer_bitrate : public Videoio_Test_Base, public testing::TestWithParam<Videoio_Writer_bitrate_param> {
+protected:
+    Videoio_Writer_bitrate_param param;
+    int frame_count;
+    double fps;
+public:
+    Videoio_Writer_bitrate() {
+        param = GetParam();
+        ext = param.ext;
+        apiPref = param.api;
+        video_file = cv::tempfile((std::string(param.fourcc) + "." + ext).c_str());
+        frame_count = 100;
+        fps = 25.;
+    }
+    virtual void writeVideo() CV_OVERRIDE {
+        Mat img(param.size, CV_8UC3);
+        cv::VideoWriterPropertyList properties{ {cv::VIDEOWRITER_PROP_BITRATE, param.bitrate} };
+        int ifourcc = fourccFromString(param.fourcc);
+        VideoWriter writer;
+        EXPECT_NO_THROW(writer.open(video_file, param.api, ifourcc, fps, param.size, true, properties));
+        ASSERT_TRUE(writer.isOpened());
+        EXPECT_EQ(param.bitrate, writer.get(cv::VIDEOWRITER_PROP_BITRATE));
+        for (int i = 0; i < frame_count; ++i)
+        {
+            generateFrame(i, frame_count, img);
+            EXPECT_NO_THROW(writer << img);
+        }
+        EXPECT_NO_THROW(writer.release());
+    }
+    virtual void checkFileSize(long long fileSize) CV_OVERRIDE {
+        double expectedSize = param.bitrate * frame_count / fps / 8;  // 8 to convert bits to bytes
+        ASSERT_GT(fileSize, expectedSize * 0.65);  // Allow -35%, +10%
+        ASSERT_LT(fileSize, expectedSize * 1.1);
+    }
+    void TearDown() {
+        remove(video_file.c_str());
+    }
+};
+
+TEST_P(Videoio_Writer_bitrate, correct_file_size) {
+    doTest();
+}
+
+static Videoio_Writer_bitrate_param bitrate_params[] = {
+#ifdef HAVE_MSMF
+    {{640,480}, "mov", "H264", 7680000., CAP_MSMF},  // 1 bit/pixel
+    {{640,480}, "mov", "H264", 1536000., CAP_MSMF}   // 0.2 bits/pixel
+#endif
+};
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bitrate, testing::ValuesIn(bitrate_params));
 
 } // namespace

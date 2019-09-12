@@ -1947,11 +1947,12 @@ public:
     CvVideoWriter_MSMF();
     virtual ~CvVideoWriter_MSMF();
     virtual bool open(const cv::String& filename, int fourcc,
-                      double fps, cv::Size frameSize, bool isColor);
+                      double fps, cv::Size frameSize, bool isColor,
+                      const cv::VideoWriterPropertyList& properties);
     virtual void close();
     virtual void write(cv::InputArray);
 
-    virtual double getProperty(int) const { return 0; }
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double) { return false; }
     virtual bool isOpened() const { return initiated; }
 
@@ -2052,7 +2053,8 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
 }
 
 bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
-                               double _fps, cv::Size _frameSize, bool /*isColor*/ )
+                               double _fps, cv::Size _frameSize, bool /*isColor*/,
+                               const cv::VideoWriterPropertyList& properties)
 {
     if (initiated)
         close();
@@ -2062,6 +2064,18 @@ bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
     bitRate = (UINT32)fps*videoWidth*videoHeight; // 1-bit per pixel
     encodingFormat = FourCC2GUID(fourcc);
     inputFormat = MFVideoFormat_RGB32;
+
+    for (size_t i = 0; i < properties.size(); i++) {
+        const cv::VideoWriterPropertyValue& property = properties[i];
+        switch (property.property) {
+        case cv::VIDEOWRITER_PROP_BITRATE:
+            if (property.value > 0 && property.value <= std::numeric_limits<UINT32>::max())
+                bitRate = (UINT32)property.value;
+            break;
+        default:
+            break;
+        }
+    }
 
     _ComPtr<IMFMediaType>  mediaTypeOut;
     _ComPtr<IMFMediaType>  mediaTypeIn;
@@ -2159,13 +2173,31 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
     }
 }
 
+double CvVideoWriter_MSMF::getProperty(int property) const {
+    switch (property) {
+    case cv::VIDEOWRITER_PROP_BITRATE:
+        return bitRate;
+    default:
+        return 0.;
+    }
+}
+
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,
                                                         double fps, const cv::Size &frameSize, bool isColor )
+{
+    VideoWriterPropertyList emptyProperties;
+    return cv::cvCreateVideoWriterWithProperties_MSMF(filename, fourcc, fps, frameSize, isColor, emptyProperties);
+}
+
+cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriterWithProperties_MSMF(
+    const std::string& filename, int fourcc,
+    double fps, const cv::Size &frameSize, bool isColor,
+    const cv::VideoWriterPropertyList& properties)
 {
     cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
     if (writer)
     {
-        writer->open(filename, fourcc, fps, frameSize, isColor);
+        writer->open(filename, fourcc, fps, frameSize, isColor, properties);
         if (writer->isOpened())
             return writer;
     }

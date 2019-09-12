@@ -175,6 +175,7 @@ Ptr<IVideoCapture> create_WRT_capture(int device);
 Ptr<IVideoCapture> cvCreateCapture_MSMF(int index);
 Ptr<IVideoCapture> cvCreateCapture_MSMF(const std::string& filename);
 Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const std::string& filename, int fourcc, double fps, const Size &frameSize, bool is_color);
+Ptr<IVideoWriter> cvCreateVideoWriterWithProperties_MSMF(const std::string& filename, int fourcc, double fps, const Size &frameSize, bool is_color, const cv::VideoWriterPropertyList& properties);
 
 Ptr<IVideoCapture> create_DShow_capture(int index);
 
