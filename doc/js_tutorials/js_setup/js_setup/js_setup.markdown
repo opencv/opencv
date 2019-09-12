@@ -91,21 +91,51 @@ Building OpenCV.js from Source
     python ./platforms/js/build_js.py build_js --build_test
     @endcode
 
-    To run tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
+Running OpenCV.js Tests
+---------------------------------------
 
-    Navigate the web browser to `http://localhost:8080/tests.html`, which runs the unit tests automatically.
+Remember to launch the build command passing `--build_test` as mentioned previously. This will generate test source code ready to run together with `opencv.js` file in `build/bin` 
 
-    You can also run tests using Node.js.
+### Manually in your browser
 
-    For example:
-    @code{.sh}
-    cd bin
-    npm install
-    node tests.js
-    @endcode
+To run tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
 
-    @note
-    It requires `node` installed in your development environment.
+Navigate the web browser to `http://localhost:8080/tests.html`, which runs the unit tests automatically. Command example: 
+
+@code{.sh}
+npx http-server build/bin
+firefox http://localhost:8080/tests.html
+@endcode
+
+@note 
+This snippet and the followings requires [Node.js](https://nodejs.org) to be installed.
+
+### Headless with Puppeteer
+
+Alternatively tests can run with [GoogleChrome/puppeteer](https://github.com/GoogleChrome/puppeteer#readme) which is a version of Google Chrome that runs in the terminal (useful for Continuos integration like travis CI, etc)
+
+@code{.sh}
+cd build/bin
+npm install
+node run_puppeteer.js
+@endcode
+
+@note 
+Checkout `node run_puppeteer --help` for more options useful to debugging and reporting.
+
+@note
+The command `npm install` only needs to be executed once, since installs the tools dependencies; after that they are ready to use. 
+
+
+### Using Node.js.
+
+For example:
+
+@code{.sh}
+cd build/bin
+npm install
+node tests.js
+@endcode
 
 Building OpenCV.js with Docker
 ---------------------------------------
