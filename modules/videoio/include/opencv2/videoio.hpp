@@ -188,6 +188,17 @@ enum VideoWriterProperties {
   VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
 };
 
+/** @brief Key/value structure for %VideoWriterProperties
+*/
+struct VideoWriterPropertyValue {
+    VideoWriterProperties property;
+    double value;
+};
+
+/** @brief List of key/value pairs for %VideoWriterProperties
+*/
+typedef ::std::vector<VideoWriterPropertyValue> VideoWriterPropertyList;
+
 //! @} videoio_flags_base
 
 //! @addtogroup videoio_flags_others
@@ -853,6 +864,13 @@ public:
     CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
 
+    /** @overload
+    The `properties` parameter allows to specify properties on initialization.  Some API backends
+    do not allow properties to be set after initialization.
+     */
+    CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
+        Size frameSize, bool isColor, const VideoWriterPropertyList& properties);
+
     /** @brief Default destructor
 
     The method first calls VideoWriter::release to close the already opened file.
@@ -874,6 +892,18 @@ public:
      */
     CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
+
+    /** @overload
+    The `properties` allows setting properties on initialization.  Some API backends do not allow
+    setting properties after initialization.
+     */
+    CV_WRAP bool open(const String& filename, int fourcc, double fps,
+                      Size frameSize, bool isColor, const VideoWriterPropertyList& properties);
+
+    /** @overload
+     */
+    CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
+                      Size frameSize, bool isColor, const VideoWriterPropertyList& properties);
 
     /** @brief Returns true if video writer has been successfully initialized.
     */

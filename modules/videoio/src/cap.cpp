@@ -337,6 +337,11 @@ VideoWriter::VideoWriter(const String& filename, int apiPreference, int _fourcc,
     open(filename, apiPreference, _fourcc, fps, frameSize, isColor);
 }
 
+VideoWriter::VideoWriter(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor, const VideoWriterPropertyList& properties)
+{
+    open(filename, apiPreference, _fourcc, fps, frameSize, isColor, properties);
+}
+
 void VideoWriter::release()
 {
     iwriter.release();
@@ -353,6 +358,17 @@ bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size fra
 }
 
 bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
+{
+    VideoWriterPropertyList emptyProperties;
+    return open(filename, apiPreference, _fourcc, fps, frameSize, isColor, emptyProperties);
+}
+
+bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor, const VideoWriterPropertyList& properties)
+{
+    return open(filename, CAP_ANY, _fourcc, fps, frameSize, isColor, properties);
+}
+
+bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor, const VideoWriterPropertyList& properties)
 {
     CV_INSTRUMENT_REGION();
 
@@ -373,7 +389,7 @@ bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, d
             {
                 try
                 {
-                    iwriter = backend->createWriter(filename, _fourcc, fps, frameSize, isColor);
+                    iwriter = backend->createWriter(filename, _fourcc, fps, frameSize, isColor, properties);
                     if (!iwriter.empty())
                     {
                         if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG)

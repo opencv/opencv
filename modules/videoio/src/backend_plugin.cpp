@@ -228,6 +228,7 @@ public:
     Ptr<IVideoCapture> createCapture(int camera) const CV_OVERRIDE;
     Ptr<IVideoCapture> createCapture(const std::string &filename) const CV_OVERRIDE;
     Ptr<IVideoWriter>  createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const CV_OVERRIDE;
+    Ptr<IVideoWriter>  createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor, const VideoWriterPropertyList& properties) const CV_OVERRIDE;
 };
 
 class PluginBackendFactory : public IBackendFactory
@@ -580,6 +581,12 @@ Ptr<IVideoWriter> PluginBackend::createWriter(const std::string &filename, int f
         CV_LOG_DEBUG(NULL, "Video I/O: can't open writer: " << filename);
     }
     return Ptr<IVideoWriter>();
+}
+
+Ptr<IVideoWriter> PluginBackend::createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor, const VideoWriterPropertyList& /*properties*/) const
+{
+    // TODO: Allow plugins to retrieve initial property list
+    return createWriter(filename, fourcc, fps, sz, isColor);
 }
 
 }  // namespace
