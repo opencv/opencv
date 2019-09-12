@@ -124,6 +124,33 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
 
 #define VSX_IMPL_2VRG(rt, rg, opc, fnm) VSX_IMPL_2VRG_F(rt, rg, #opc" %0,%1,%2", fnm)
 
+#if __GNUG__ < 8
+
+    // Support for int4 -> dword2 expanding multiply was added in GCC 8.
+    #ifdef vec_mule
+        #undef vec_mule
+    #endif
+    #ifdef vec_mulo
+        #undef vec_mulo
+    #endif
+
+    VSX_REDIRECT_2RG(vec_ushort8,  vec_uchar16,  vec_mule, __builtin_vec_mule)
+    VSX_REDIRECT_2RG(vec_short8,  vec_char16,  vec_mule, __builtin_vec_mule)
+    VSX_REDIRECT_2RG(vec_int4,  vec_short8,  vec_mule, __builtin_vec_mule)
+    VSX_REDIRECT_2RG(vec_uint4,  vec_ushort8,  vec_mule, __builtin_vec_mule)
+    VSX_REDIRECT_2RG(vec_ushort8,  vec_uchar16,  vec_mulo, __builtin_vec_mulo)
+    VSX_REDIRECT_2RG(vec_short8,  vec_char16,  vec_mulo, __builtin_vec_mulo)
+    VSX_REDIRECT_2RG(vec_int4,  vec_short8,  vec_mulo, __builtin_vec_mulo)
+    VSX_REDIRECT_2RG(vec_uint4,  vec_ushort8,  vec_mulo, __builtin_vec_mulo)
+
+    // dword2 support arrived in ISA 2.07 and GCC 8+
+    VSX_IMPL_2VRG(vec_dword2,  vec_int4,  vmulesw, vec_mule)
+    VSX_IMPL_2VRG(vec_udword2, vec_uint4, vmuleuw, vec_mule)
+    VSX_IMPL_2VRG(vec_dword2,  vec_int4,  vmulosw, vec_mulo)
+    VSX_IMPL_2VRG(vec_udword2, vec_uint4, vmulouw, vec_mulo)
+
+#endif
+
 #if __GNUG__ < 7
 // up to GCC 6 vec_mul only supports precisions and llong
 #   ifdef vec_mul
