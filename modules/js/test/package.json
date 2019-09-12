@@ -3,7 +3,9 @@
   "description": "Tests for opencv js bindings",
   "version": "1.0.0",
   "dependencies" : {
-    "node-qunit" : "latest"
+    "minimist": "^1.2.0",
+    "node-qunit" : "latest",    
+    "puppeteer": "^1.19.0"
   },
   "devDependencies": {
     "eslint" : "latest",
