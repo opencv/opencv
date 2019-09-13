@@ -339,10 +339,28 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         }
         else if (status != AVAuthorizationStatusAuthorized)
         {
-            fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
-            // TODO: doesn't work via ssh
-            [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
-            // we do not wait for completion
+            if (!cv::utils::getConfigurationParameterBool("OPENCV_AVFOUNDATION_SKIP_AUTH", false))
+            {
+                fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
+                [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
+                if ([NSThread isMainThread])
+                {
+                    // we run the main loop for 0.1 sec to show the message
+                    [[NSRunLoop mainRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+                }
+                else
+                {
+                    fprintf(stderr, "OpenCV: can not spin main run loop from other thread, set "
+                                    "OPENCV_AVFOUNDATION_SKIP_AUTH=1 to disable authorization request "
+                                    "and perform it in your application.\n");
+                }
+            }
+            else
+            {
+                fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), set "
+                                "OPENCV_AVFOUNDATION_SKIP_AUTH=0 to enable authorization request or "
+                                "perform it in your application.\n", status);
+            }
             [localpool drain];
             return 0;
         }
