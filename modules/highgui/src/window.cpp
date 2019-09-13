@@ -83,12 +83,12 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     break;
 
     case cv::WND_PROP_TOPMOST:
-        #if defined(HAVE_WIN32UI)
+        #if defined (HAVE_QT)
+            // nothing
+        #elif defined(HAVE_WIN32UI)
             cvSetPropTopmost_W32(name, (prop_value != 0 ? true : false));
         #elif defined(HAVE_COCOA)
             cvSetPropTopmost_COCOA(name, (prop_value != 0 ? true : false));
-        #else
-            CV_LOG_WARNING(NULL, "Property WND_PROP_TOPMOST is not supported on current GUI backend");
         #endif
     break;
 
@@ -171,12 +171,13 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     break;
 
     case cv::WND_PROP_TOPMOST:
-        #if defined(HAVE_WIN32UI)
+        #if defined (HAVE_QT)
+            return -1;
+        #elif defined(HAVE_WIN32UI)
             return cvGetPropTopmost_W32(name);
         #elif defined(HAVE_COCOA)
             return cvGetPropTopmost_COCOA(name);
         #else
-            CV_LOG_WARNING(NULL, "Property WND_PROP_TOPMOST is not supported on current GUI backend");
             return -1;
         #endif
     break;
