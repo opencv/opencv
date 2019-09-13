@@ -334,6 +334,8 @@ static const std::chrono::milliseconds async_timeout(500);
 typedef testing::TestWithParam<tuple<std::string, Target> > Test_Darknet_nets_async;
 TEST_P(Test_Darknet_nets_async, Accuracy)
 {
+    if (INF_ENGINE_VER_MAJOR_LT(2019020000))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     std::string prefix = get<0>(GetParam());
