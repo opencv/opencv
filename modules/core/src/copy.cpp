@@ -94,14 +94,30 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
         {
             v_uint8 v_zero = vx_setzero_u8();
 
-            for( ; x <= size.width - v_uint8::nlanes; x += v_uint8::nlanes )
+            for( ; x <= size.width - v_uint8::nlanes * 2; x += v_uint8::nlanes * 2)
             {
                 v_uint8 v_src   = vx_load(src  + x),
                         v_dst   = vx_load(dst  + x),
                         v_nmask = vx_load(mask + x) == v_zero;
 
+                v_uint8 v_src2   = vx_load(src  + x + v_uint8::nlanes),
+                        v_dst2   = vx_load(dst  + x + v_uint8::nlanes),
+                        v_nmask2 = vx_load(mask + x + v_uint8::nlanes) == v_zero;
+
+                v_dst = v_select(v_nmask, v_dst, v_src);
+                v_dst2 = v_select(v_nmask2, v_dst2, v_src2);
+                v_store(dst + x, v_dst);
+                v_store(dst + x + v_uint8::nlanes, v_dst2);
+            }
+
+            if( x <= size.width - v_uint8::nlanes)
+            {
+                v_uint8 v_src   = vx_load(src  + x),
+                        v_dst   = vx_load(dst  + x),
+                        v_nmask = vx_load(mask + x) == v_zero;
                 v_dst = v_select(v_nmask, v_dst, v_src);
                 v_store(dst + x, v_dst);
+                x += v_uint8::nlanes;
             }
         }
         vx_cleanup();
@@ -148,6 +164,130 @@ copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mst
                 dst[x] = src[x];
     }
 }
+
+#if CV_SIMD_PERMUTE >= 1
+template<> void
+copyMask_<Vec3b>(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, uchar* dst, size_t dstep, Size size)
+{
+    // Hopefully the compiler figures out, and stores the permute as a table.
+    uint8_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) permv[v_uint8::nlanes * 3];
+    for(int x = 0; x < v_uint8::nlanes * 3; x += 3)
+        permv[x] = permv[x + 1] = permv[x + 2] = x / 3;
+
+    for( ; size.height--; mask += mstep, src += sstep, dst += dstep )
+    {
+        int x = 0;
+        int mx = 0;
+        {
+            v_uint8 v_zero = vx_setzero_u8();
+            int stride = v_uint8::nlanes * 3;
+            int len0 = ((size.width * 3) / stride) * stride;
+
+            v_uint8 p0 = vx_load(permv + v_uint8::nlanes * 0);
+            v_uint8 p1 = vx_load(permv + v_uint8::nlanes * 1);
+            v_uint8 p2 = vx_load(permv + v_uint8::nlanes * 2);
+
+            for( ; x < len0; x += stride, mx += v_uint8::nlanes )
+            {
+
+                v_uint8 m8v = vx_load(mask + mx) == v_zero;
+                v_uint8 src0 = vx_load(src + x);
+                v_uint8 src1 = vx_load(src + x + v_uint8::nlanes);
+                v_uint8 src2 = vx_load(src + x + v_uint8::nlanes * 2);
+                v_uint8 dst0 = vx_load(dst + x);
+                v_uint8 dst1 = vx_load(dst + x + v_uint8::nlanes);
+                v_uint8 dst2 = vx_load(dst + x + v_uint8::nlanes * 2);
+
+                // Use a permute to "expand" a value of 0 or -1.
+                v_uint8 m24v0 = v_permute(p0, m8v);
+                v_uint8 m24v1 = v_permute(p1, m8v);
+                v_uint8 m24v2 = v_permute(p2, m8v);
+
+                dst0 = v_select(m24v0, dst0, src0);
+                dst1 = v_select(m24v1, dst1, src1);
+                dst2 = v_select(m24v2, dst2, src2);
+                vx_store(dst + x, dst0);
+                vx_store(dst + x + v_uint8::nlanes, dst1);
+                vx_store(dst + x + v_uint8::nlanes*2, dst2);
+            }
+        }
+        vx_cleanup();
+
+        for( ; x < (size.width * 3); x += 3, mx += 1 )
+            if( mask[mx] )
+            {
+                dst[x + 0] = src[x + 0];
+                dst[x + 1] = src[x + 1];
+                dst[x + 2] = src[x + 2];
+            }
+    }
+}
+#endif
+
+#if CV_SIMD128
+template<> void
+copyMask_<Vec4i>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const uint32_t *src = (const uint32_t*) _src;
+        uint32_t *dst = (uint32_t*) _dst;
+        int x = 0;
+        int mx = 0;
+        int stride = v_uint32x4::nlanes * 4; // 4x unroll
+        int len0 = (size.width * 4) & -stride; // Stride always 2^n here.
+
+        // Use vector for 32x4 transfers. This isn't always guaranteed in the generic version.
+        for( ; x < len0; x += stride, mx += v_uint32x4::nlanes )
+            {
+            if( mask[mx + 0] )
+                v_store(dst + x + 0, v_load(src + x + 0));
+            if( mask[mx + 1] )
+                v_store(dst + x + 4, v_load(src + x + 4));
+            if( mask[mx + 2] )
+                v_store(dst + x + 8, v_load(src + x + 8));
+            if( mask[mx + 3] )
+                v_store(dst + x + 12, v_load(src + x + 12));
+            }
+
+        for( ; x < (size.width * 4); x += 4, mx += 1 )
+            if( mask[mx] )
+                v_store(dst + x, v_load(src+x));
+
+        v_cleanup();
+    }
+}
+
+template<> void
+copyMask_<int>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const int32_t *src = (const int32_t*) _src;
+        int32_t *dst = (int32_t*) _dst;
+        int x = 0;
+        int mx = 0;
+        int stride = v_int32x4::nlanes; // 4x unroll
+        int len0 = size.width & -stride; // Stride always 2^n here.
+        v_uint32x4 vzero = v_setzero_u32();
+
+        for( ; x < len0; x += stride, mx += v_uint32x4::nlanes )
+            {
+            v_uint32x4 vmask = v_load_expand_q(mask + mx) == vzero;
+            v_int32x4 vsrc = v_load(src + x);
+            v_int32x4 vdst = v_load(dst + x);
+
+            v_store(dst + x, v_select(v_reinterpret_as_s32(vmask), vdst, vsrc));
+            }
+
+        for( ; x < size.width; x++, mx++ )
+            if( mask[mx] )
+                dst[x] = src[x];
+
+        v_cleanup();
+    }
+}
+#endif
 
 static void
 copyMaskGeneric(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size, void* _esz)
