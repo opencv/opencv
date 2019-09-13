@@ -230,7 +230,7 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 int width  = right  - left + 1;
                 int height = bottom - top + 1;
 
-                if (width * height <= 1)
+                if (width <= 2 || height <= 2)
                 {
                     left   = data[j + 3] * frameWidth;
                     top    = data[j + 4] * frameHeight;
