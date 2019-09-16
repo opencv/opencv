@@ -2390,45 +2390,6 @@ double dotProd_8u(const uchar* src1, const uchar* src2, int len)
             i += blockSize;
         }
     }
-#elif CV_MSA
-    int len0 = len & -8, blockSize0 = (1 << 15), blockSize;
-    v4u32 v_zero = msa_dupq_n_u32(0u);
-    CV_DECL_ALIGNED(16) uint buf[4];
-
-    while( i < len0 )
-    {
-        blockSize = std::min(len0 - i, blockSize0);
-        v4u32 v_sum = v_zero;
-
-        int j = 0;
-        for( ; j <= blockSize - 16; j += 16 )
-        {
-            v16u8 v_src1 = msa_ld1q_u8(src1 + j), v_src2 = msa_ld1q_u8(src2 + j);
-
-            v8u16 v_src10 = msa_movl_u8(msa_get_low_u8(v_src1)), v_src20 = msa_movl_u8(msa_get_low_u8(v_src2));
-            v_sum = msa_mlal_u16(v_sum, msa_get_low_u16(v_src10), msa_get_low_u16(v_src20));
-            v_sum = msa_mlal_u16(v_sum, msa_get_high_u16(v_src10), msa_get_high_u16(v_src20));
-
-            v_src10 = msa_movl_u8(msa_get_high_u8(v_src1));
-            v_src20 = msa_movl_u8(msa_get_high_u8(v_src2));
-            v_sum = msa_mlal_u16(v_sum, msa_get_low_u16(v_src10), msa_get_low_u16(v_src20));
-            v_sum = msa_mlal_u16(v_sum, msa_get_high_u16(v_src10), msa_get_high_u16(v_src20));
-        }
-
-        for( ; j <= blockSize - 8; j += 8 )
-        {
-            v8u16 v_src1 = msa_movl_u8(msa_ld1_u8(src1 + j)), v_src2 = msa_movl_u8(msa_ld1_u8(src2 + j));
-            v_sum = msa_mlal_u16(v_sum, msa_get_low_u16(v_src1), msa_get_low_u16(v_src2));
-            v_sum = msa_mlal_u16(v_sum, msa_get_high_u16(v_src1), msa_get_high_u16(v_src2));
-        }
-
-        msa_st1q_u32(buf, v_sum);
-        r += buf[0] + buf[1] + buf[2] + buf[3];
-
-        src1 += blockSize;
-        src2 += blockSize;
-        i += blockSize;
-    }
 #endif
     return r + dotProd_(src1, src2, len - i);
 }

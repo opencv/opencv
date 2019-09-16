@@ -15,6 +15,9 @@ namespace cv
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD128 1
+
+//MSA implements 128-bit wide vector registers shared with the 64-bit wide floating-point unit registers.
+//MSA and FPU can not be both present, unless the FPU has 64-bit floating-point registers.
 #define CV_SIMD128_64F 1
 
 struct v_uint8x16
@@ -225,7 +228,8 @@ inline v_uint32x4 v_reinterpret_as_u32(const v_##_Tpv& v) { return v_uint32x4(MS
 inline v_int32x4 v_reinterpret_as_s32(const v_##_Tpv& v) { return v_int32x4(MSA_TPV_REINTERPRET(v4i32, v.val)); } \
 inline v_uint64x2 v_reinterpret_as_u64(const v_##_Tpv& v) { return v_uint64x2(MSA_TPV_REINTERPRET(v2u64, v.val)); } \
 inline v_int64x2 v_reinterpret_as_s64(const v_##_Tpv& v) { return v_int64x2(MSA_TPV_REINTERPRET(v2i64, v.val)); } \
-inline v_float32x4 v_reinterpret_as_f32(const v_##_Tpv& v) { return v_float32x4(MSA_TPV_REINTERPRET(v4f32, v.val)); }
+inline v_float32x4 v_reinterpret_as_f32(const v_##_Tpv& v) { return v_float32x4(MSA_TPV_REINTERPRET(v4f32, v.val)); } \
+inline v_float64x2 v_reinterpret_as_f64(const v_##_Tpv& v) { return v_float64x2(MSA_TPV_REINTERPRET(v2f64, v.val)); }
 
 OPENCV_HAL_IMPL_MSA_INIT(uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_MSA_INIT(int8x16, schar, s8)
@@ -236,21 +240,7 @@ OPENCV_HAL_IMPL_MSA_INIT(int32x4, int, s32)
 OPENCV_HAL_IMPL_MSA_INIT(uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_MSA_INIT(int64x2, int64, s64)
 OPENCV_HAL_IMPL_MSA_INIT(float32x4, float, f32)
-#if CV_SIMD128_64F
-#define OPENCV_HAL_IMPL_MSA_INIT_64(_Tpv) \
-inline v_float64x2 v_reinterpret_as_f64(const v_##_Tpv& v) { return v_float64x2(MSA_TPV_REINTERPRET(v2f64, v.val)); }
 OPENCV_HAL_IMPL_MSA_INIT(float64x2, double, f64)
-OPENCV_HAL_IMPL_MSA_INIT_64(uint8x16)
-OPENCV_HAL_IMPL_MSA_INIT_64(int8x16)
-OPENCV_HAL_IMPL_MSA_INIT_64(uint16x8)
-OPENCV_HAL_IMPL_MSA_INIT_64(int16x8)
-OPENCV_HAL_IMPL_MSA_INIT_64(uint32x4)
-OPENCV_HAL_IMPL_MSA_INIT_64(int32x4)
-OPENCV_HAL_IMPL_MSA_INIT_64(uint64x2)
-OPENCV_HAL_IMPL_MSA_INIT_64(int64x2)
-OPENCV_HAL_IMPL_MSA_INIT_64(float32x4)
-OPENCV_HAL_IMPL_MSA_INIT_64(float64x2)
-#endif
 
 #define OPENCV_HAL_IMPL_MSA_PACK(_Tpvec, _Tpwvec, pack, mov, rshr) \
 inline _Tpvec v_##pack(const _Tpwvec& a, const _Tpwvec& b) \
@@ -371,29 +361,11 @@ OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_int64x2, msa_addq_s64)
 OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_int64x2, msa_subq_s64)
 OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_uint64x2, msa_addq_u64)
 OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_uint64x2, msa_subq_u64)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_BIN_OP(/, v_float32x4, msa_divq_f32)
 OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_float64x2, msa_addq_f64)
 OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_float64x2, msa_subq_f64)
 OPENCV_HAL_IMPL_MSA_BIN_OP(*, v_float64x2, msa_mulq_f64)
 OPENCV_HAL_IMPL_MSA_BIN_OP(/, v_float64x2, msa_divq_f64)
-#else
-inline v_float32x4 operator / (const v_float32x4& a, const v_float32x4& b)
-{
-    v4f32_t reciprocal = msa_recpeq_f32(b.val);
-    reciprocal = msa_mulq_f32(msa_recpsq_f32(b.val, reciprocal), reciprocal);
-    reciprocal = msa_mulq_f32(msa_recpsq_f32(b.val, reciprocal), reciprocal);
-    return v_float32x4(msa_mulq_f32(a.val, reciprocal));
-}
-inline v_float32x4& operator /= (v_float32x4& a, const v_float32x4& b)
-{
-    v4f32_t reciprocal = msa_recpeq_f32(b.val);
-    reciprocal = msa_mulq_f32(msa_recpsq_f32(b.val, reciprocal), reciprocal);
-    reciprocal = msa_mulq_f32(msa_recpsq_f32(b.val, reciprocal), reciprocal);
-    a.val = msa_mulq_f32(a.val, reciprocal);
-    return a;
-}
-#endif
 
 // saturating multiply 8-bit, 16-bit
 #define OPENCV_HAL_IMPL_MSA_MUL_SAT(_Tpvec, _Tpwvec)         \
@@ -556,15 +528,12 @@ inline _Tpvec func(const _Tpvec& a) \
 }
 
 OPENCV_HAL_IMPL_MSA_BASIC_FUNC(v_float32x4, v_abs, msa_absq_f32)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_BASIC_FUNC(v_float64x2, v_abs, msa_absq_f64)
 OPENCV_HAL_IMPL_MSA_BASIC_FUNC(v_float32x4, v_sqrt, msa_sqrtq_f32)
 OPENCV_HAL_IMPL_MSA_BASIC_FUNC(v_float32x4, v_invsqrt, msa_rsqrtq_f32)
 OPENCV_HAL_IMPL_MSA_BASIC_FUNC(v_float64x2, v_sqrt, msa_sqrtq_f64)
 OPENCV_HAL_IMPL_MSA_BASIC_FUNC(v_float64x2, v_invsqrt, msa_rsqrtq_f64)
-#endif
 
-#if CV_SIMD128_64F
 #define OPENCV_HAL_IMPL_MSA_DBL_BIT_OP(bin_op, intrin) \
 inline v_float64x2 operator bin_op (const v_float64x2& a, const v_float64x2& b) \
 { \
@@ -584,7 +553,6 @@ inline v_float64x2 operator ~ (const v_float64x2& a)
 {
     return v_float64x2(MSA_TPV_REINTERPRET(v2f64, msa_mvnq_s32(MSA_TPV_REINTERPRET(v4i32, a.val))));
 }
-#endif
 
 // TODO: exp, log, sin, cos
 
@@ -608,10 +576,8 @@ OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_int32x4, v_min, msa_minq_s32)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_int32x4, v_max, msa_maxq_s32)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_float32x4, v_min, msa_minq_f32)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_float32x4, v_max, msa_maxq_f32)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_float64x2, v_min, msa_minq_f64)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_float64x2, v_max, msa_maxq_f64)
-#endif
 
 #define OPENCV_HAL_IMPL_MSA_INT_CMP_OP(_Tpvec, _Tpv, suffix, not_suffix) \
 inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
@@ -634,18 +600,14 @@ OPENCV_HAL_IMPL_MSA_INT_CMP_OP(v_int16x8, v8i16, s16, u16)
 OPENCV_HAL_IMPL_MSA_INT_CMP_OP(v_uint32x4, v4u32, u32, u32)
 OPENCV_HAL_IMPL_MSA_INT_CMP_OP(v_int32x4, v4i32, s32, u32)
 OPENCV_HAL_IMPL_MSA_INT_CMP_OP(v_float32x4, v4f32, f32, u32)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_INT_CMP_OP(v_uint64x2, v2u64, u64, u64)
 OPENCV_HAL_IMPL_MSA_INT_CMP_OP(v_int64x2, v2i64, s64, u64)
 OPENCV_HAL_IMPL_MSA_INT_CMP_OP(v_float64x2, v2f64, f64, u64)
-#endif
 
 inline v_float32x4 v_not_nan(const v_float32x4& a)
 { return v_float32x4(MSA_TPV_REINTERPRET(v4f32, msa_ceqq_f32(a.val, a.val))); }
-#if CV_SIMD128_64F
 inline v_float64x2 v_not_nan(const v_float64x2& a)
 { return v_float64x2(MSA_TPV_REINTERPRET(v2f64, msa_ceqq_f64(a.val, a.val))); }
-#endif
 
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_uint8x16, v_add_wrap, msa_addq_u8)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_int8x16, v_add_wrap, msa_addq_s8)
@@ -664,9 +626,7 @@ OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_uint8x16, v_absdiff, msa_abdq_u8)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_uint16x8, v_absdiff, msa_abdq_u16)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_uint32x4, v_absdiff, msa_abdq_u32)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_float32x4, v_absdiff, msa_abdq_f32)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_float64x2, v_absdiff, msa_abdq_f64)
-#endif
 
 /** Saturating absolute difference **/
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_int8x16, v_absdiffs, msa_qabdq_s8)
@@ -714,7 +674,6 @@ inline v_int32x4 v_muladd(const v_int32x4& a, const v_int32x4& b, const v_int32x
     return v_fma(a, b, c);
 }
 
-#if CV_SIMD128_64F
 inline v_float64x2 v_magnitude(const v_float64x2& a, const v_float64x2& b)
 {
     v_float64x2 x(msa_mlaq_f64(msa_mulq_f64(a.val, a.val), b.val, b.val));
@@ -735,7 +694,6 @@ inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_
 {
     return v_fma(a, b, c);
 }
-#endif
 
 // trade efficiency for convenience
 #define OPENCV_HAL_IMPL_MSA_SHIFT_OP(_Tpvec, suffix, _Tps, ssuffix) \
@@ -796,9 +754,7 @@ OPENCV_HAL_IMPL_MSA_ROTATE_OP(v_int32x4, v4i32, v4i32, s32)
 OPENCV_HAL_IMPL_MSA_ROTATE_OP(v_float32x4, v4f32, v4i32, s32)
 OPENCV_HAL_IMPL_MSA_ROTATE_OP(v_uint64x2, v2u64, v2i64, s64)
 OPENCV_HAL_IMPL_MSA_ROTATE_OP(v_int64x2, v2i64, v2i64, s64)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_ROTATE_OP(v_float64x2, v2f64, v2i64, s64)
-#endif
 
 #define OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(_Tpvec, _Tp, suffix) \
 inline _Tpvec v_load(const _Tp* ptr) \
@@ -1162,18 +1118,6 @@ OPENCV_HAL_IMPL_MSA_EXPAND(v_int16x8, v_int32x4, short, s16, s16, v8i16, v8i16)
 OPENCV_HAL_IMPL_MSA_EXPAND(v_uint32x4, v_uint64x2, uint, u32, s32, v4u32, v4i32)
 OPENCV_HAL_IMPL_MSA_EXPAND(v_int32x4, v_int64x2, int, s32, s32, v4i32, v4i32)
 
-#if 0
-#define OPENCV_HAL_IMPL_MSA_EXPAND_Q(_Tpwvec, _Tp, suffix, suffixw, ssuffixw, _Tpv, _Tpvs) \
-inline _Tpwvec v_load_expand_q(const _Tp* ptr) \
-{ \
-    _Tpv v = msa_movl_##suffix(msa_create_##suffix(*(unsigned*)ptr)); \
-    _Tpv v_lo = MSA_TPV_REINTERPRET(_Tpv, msa_ilvrq_##ssuffixw(MSA_TPV_REINTERPRET(_Tpvs, v), msa_dupq_n_##ssuffixw(0))); \
-    return _Tpwvec(msa_paddlq_##suffixw(v_lo)); \
-}
-
-OPENCV_HAL_IMPL_MSA_EXPAND_Q(v_uint32x4, uchar, u8, u16, s16, v8u16, v8i16)
-OPENCV_HAL_IMPL_MSA_EXPAND_Q(v_int32x4, schar, s8, s16, s16, v8i16, v8i16)
-#else
 inline v_uint32x4 v_load_expand_q(const uchar* ptr)
 {
     return v_uint32x4((v4u32){ptr[0], ptr[1], ptr[2], ptr[3]});
@@ -1183,7 +1127,6 @@ inline v_int32x4 v_load_expand_q(const schar* ptr)
 {
     return v_int32x4((v4i32){ptr[0], ptr[1], ptr[2], ptr[3]});
 }
-#endif
 
 /* v_zip, v_combine_low, v_combine_high, v_recombine */
 #define OPENCV_HAL_IMPL_MSA_UNPACKS(_Tpvec, _Tpv, _Tpvs, ssuffix) \
