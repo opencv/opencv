@@ -136,6 +136,12 @@ TEST(videoio_ffmpeg, raw)
                 if (std::memcmp(&dataGs[startByte], data, sizeCmp) != 0) {
                     cout << "Failed after reading : " << contBytes << " Bytes from " << findDataFile(fileNamesCont[i]) << endl;
                     cout << "std::memcmp(&dataGs[" << startByte << "], data, " << sizeCmp << ")" << endl;
+                    cout << "Size container: " << sizeGs << endl;
+                    cout << "Size raw: " << size << endl;
+                    cout << "Container[3] " << (int)dataGs[3] << endl;
+                    cout << "Raw[3]       " <<  (int)data[3] << endl;
+                    cout << "Container[" << sizeGs << "]"  << (int)dataGs[sizeGs] << endl;
+                    cout << "Raw[" << sizeGs << "]"  << (int)data[sizeGs] << endl;
                 }
                 ASSERT_EQ(0, std::memcmp(&dataGs[startByte], data, sizeCmp));
                 file.write(reinterpret_cast<char*>(dataGs), sizeGs);
