@@ -33,6 +33,7 @@ namespace opencv_test
 // Accuracy integration tests (GComputation-level)
 
 namespace {
+// FIXME: replace listener with something better (e.g. check graph via GModel?)
 // custom "listener" to check what kernels are called within the test
 struct KernelListener { std::map<std::string, size_t> counts; };
 KernelListener& getListener() {
@@ -137,20 +138,6 @@ GAPI_TRANSFORM(NV12Transform, <cv::GMat(cv::GMat, cv::GMat)>, "test.nv12_transfo
 {
     static cv::GMat pattern(const cv::GMat& y, const cv::GMat& uv)
     {
-        GMat out = MyNV12toBGR::on(y, uv);
-        return out;
-    }
-
-    static cv::GMat substitute(const cv::GMat& y, const cv::GMat& uv)
-    {
-        GMat out = cv::gapi::NV12toBGR(y, uv);
-        return out;
-    }
-};
-GAPI_TRANSFORM(NV12TransformReversed, <cv::GMat(cv::GMat, cv::GMat)>, "test.nv12_transform_rev")
-{
-    static cv::GMat pattern(const cv::GMat& y, const cv::GMat& uv)
-    {
         GMat out = cv::gapi::NV12toBGR(y, uv);
         return out;
     }
@@ -161,7 +148,7 @@ GAPI_TRANSFORM(NV12TransformReversed, <cv::GMat(cv::GMat, cv::GMat)>, "test.nv12
         return out;
     }
 };
-GAPI_TRANSFORM(ResizeTransform, <cv::GMat(cv::GMat)>, "test.resize_transform")
+GAPI_TRANSFORM(ResizeTransform, <cv::GMat(cv::GMat)>, "3 x Resize -> Interleaved Resize")
 {
     static cv::GMat pattern(const cv::GMat& in)
     {
@@ -170,6 +157,18 @@ GAPI_TRANSFORM(ResizeTransform, <cv::GMat(cv::GMat)>, "test.resize_transform")
         const auto resize = std::bind(&cv::gapi::resize, std::placeholders::_1,
             cv::Size(100, 100), 0, 0, cv::INTER_AREA);
         return cv::gapi::merge3(resize(b), resize(g), resize(r));
+    }
+
+    static cv::GMat substitute(const cv::GMat& in)
+    {
+        return MyInterleavedResize::on(in, cv::Size(100, 100), cv::INTER_AREA);
+    }
+};
+GAPI_TRANSFORM(ResizeTransformToCustom, <cv::GMat(cv::GMat)>, "Resize -> Custom Resize")
+{
+    static cv::GMat pattern(const cv::GMat& in)
+    {
+        return cv::gapi::resize(in, cv::Size(100, 100), 0, 0, cv::INTER_AREA);
     }
 
     static cv::GMat substitute(const cv::GMat& in)
@@ -248,7 +247,7 @@ GAPI_TRANSFORM(Merge4Split4Transform, <GMat4(GMat, GMat, GMat, GMat)>,
 // --------------------------------------------------------------------------------------
 // Integration tests
 
-TEST(PatternMatchingIntegrationBasic, OneResizeTransformationApplied)
+TEST(PatternMatchingIntegrationBasic, OneTransformationApplied)
 {
     cv::Size in_sz(640, 480);
     cv::Mat input(in_sz, CV_8UC3);
@@ -292,23 +291,67 @@ TEST(PatternMatchingIntegrationBasic, OneResizeTransformationApplied)
     ASSERT_EQ(1u, listener.counts.at(MyInterleavedResize::id()));
 }
 
+TEST(PatternMatchingIntegrationBasic, SameTransformationAppliedSeveralTimes)
+{
+    cv::Size in_sz(640, 480);
+    cv::Mat input(in_sz, CV_8UC3);
+    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(100));
+    cv::Mat orig_graph_output, transformed_graph_output;
+
+    auto orig_args = cv::compile_args();
+    auto transform_args = cv::compile_args(
+        cv::gapi::kernels<MyInterleavedResizeImpl, ResizeTransformToCustom>());
+
+    auto& listener = getListener();
+    listener.counts.clear();  // clear counters before testing
+
+    const auto make_computation = [] () {
+        GMat in;
+        GMat b, g, r;
+        std::tie(b, g, r) = cv::gapi::split3(in);
+        const auto resize = std::bind(&cv::gapi::resize, std::placeholders::_1,
+            cv::Size(100, 100), 0, 0, cv::INTER_AREA);
+        GMat out = cv::gapi::merge3(resize(b), resize(g), resize(r));
+        return cv::GComputation(cv::GIn(in), cv::GOut(out));
+    };
+
+    {
+        // Run original graph
+        auto mainC = make_computation();
+        mainC.apply(cv::gin(input), cv::gout(orig_graph_output), std::move(orig_args));
+    }
+
+    // Generate transformed graph (passing transformations via compile args)
+    auto mainC = make_computation();  // get new copy with new Priv
+    mainC.apply(cv::gin(input), cv::gout(transformed_graph_output), std::move(transform_args));
+
+    // Compare
+    ASSERT_TRUE(AbsExact()(orig_graph_output, transformed_graph_output));
+
+    // Custom verification via listener
+    ASSERT_EQ(1u, listener.counts.size());
+    // called in transformed graph:
+    ASSERT_NE(listener.counts.cend(), listener.counts.find(MyInterleavedResize::id()));
+    ASSERT_EQ(3u, listener.counts.at(MyInterleavedResize::id()));
+}
+
 TEST(PatternMatchingIntegrationBasic, OneNV12toBGRTransformationApplied)
 {
     cv::Size in_sz(640, 480);
     cv::Mat y(in_sz, CV_8UC1), uv(cv::Size(in_sz.width / 2, in_sz.height / 2), CV_8UC2);
     cv::randu(y, cv::Scalar::all(0), cv::Scalar::all(100));
-    cv::randu(y, cv::Scalar::all(100), cv::Scalar::all(200));
+    cv::randu(uv, cv::Scalar::all(100), cv::Scalar::all(200));
     cv::Mat orig_graph_output, transformed_graph_output;
 
-    auto orig_args = cv::compile_args(cv::gapi::kernels<MyNV12toBGRImpl>());
-    auto transform_args = cv::compile_args(cv::gapi::kernels<NV12Transform>());
+    auto orig_args = cv::compile_args();
+    auto transform_args = cv::compile_args(cv::gapi::kernels<MyNV12toBGRImpl, NV12Transform>());
 
     auto& listener = getListener();
     listener.counts.clear();  // clear counters before testing
 
     const auto make_computation = [] () {
         GMat in1, in2;
-        GMat bgr = MyNV12toBGR::on(in1, in2);
+        GMat bgr = cv::gapi::NV12toBGR(in1, in2);
         GMat out = cv::gapi::resize(bgr, cv::Size(100, 100));
         return cv::GComputation(cv::GIn(in1, in2), cv::GOut(out));
     };
@@ -328,7 +371,7 @@ TEST(PatternMatchingIntegrationBasic, OneNV12toBGRTransformationApplied)
 
     // Custom verification via listener
     ASSERT_EQ(1u, listener.counts.size());
-    // called in original graph:
+    // called in transformed graph:
     ASSERT_NE(listener.counts.cend(), listener.counts.find(MyNV12toBGR::id()));
     ASSERT_EQ(1u, listener.counts.at(MyNV12toBGR::id()));
 }
@@ -338,13 +381,13 @@ TEST(PatternMatchingIntegrationBasic, TwoTransformationsApplied)
     cv::Size in_sz(640, 480);
     cv::Mat y(in_sz, CV_8UC1), uv(cv::Size(in_sz.width / 2, in_sz.height / 2), CV_8UC2);
     cv::randu(y, cv::Scalar::all(0), cv::Scalar::all(100));
-    cv::randu(y, cv::Scalar::all(100), cv::Scalar::all(200));
+    cv::randu(uv, cv::Scalar::all(100), cv::Scalar::all(200));
     cv::Mat orig_graph_output, transformed_graph_output;
 
     auto orig_args = cv::compile_args();
     auto transform_args = cv::compile_args(
         cv::gapi::kernels<MyNV12toBGRImpl, MyInterleavedResizeImpl, ResizeTransform,
-            NV12TransformReversed>());  // compile args with transformations
+            NV12Transform>());  // compile args with transformations
 
     auto& listener = getListener();
     listener.counts.clear();  // clear counters before testing
@@ -358,9 +401,7 @@ TEST(PatternMatchingIntegrationBasic, TwoTransformationsApplied)
             cv::Size(100, 100), 0, 0, cv::INTER_AREA);
         GMat tmp1 = cv::gapi::resize(bgr, cv::Size(90, 90));
         GMat tmp2 = cv::gapi::bitwise_not(cv::gapi::merge3(resize(b), resize(g), resize(r)));
-        GMat out = cv::gapi::add(
-            cv::gapi::resize(cv::gapi::addC(tmp1, GScalar(10.0)), cv::Size(100, 100)),
-            tmp2);
+        GMat out = cv::gapi::resize(tmp1 + GScalar(10.0), cv::Size(100, 100)) + tmp2;
         return cv::GComputation(cv::GIn(in1, in2), cv::GOut(out));
     };
 
@@ -400,7 +441,7 @@ struct PatternMatchingIntegrationE2E : testing::Test
         cv::Size in_sz(640, 480);
         cv::Mat y(in_sz, CV_8UC1), uv(cv::Size(in_sz.width / 2, in_sz.height / 2), CV_8UC2);
         cv::randu(y, cv::Scalar::all(0), cv::Scalar::all(100));
-        cv::randu(y, cv::Scalar::all(100), cv::Scalar::all(200));
+        cv::randu(uv, cv::Scalar::all(100), cv::Scalar::all(200));
         cv::Mat orig_graph_output, transformed_graph_output;
 
         auto& listener = getListener();
@@ -463,7 +504,7 @@ struct PatternMatchingIntegrationUnusedNodes : testing::Test
         cv::Size in_sz(640, 480);
         cv::Mat y(in_sz, CV_8UC1), uv(cv::Size(in_sz.width / 2, in_sz.height / 2), CV_8UC2);
         cv::randu(y, cv::Scalar::all(0), cv::Scalar::all(100));
-        cv::randu(y, cv::Scalar::all(100), cv::Scalar::all(200));
+        cv::randu(uv, cv::Scalar::all(100), cv::Scalar::all(200));
 
         cv::Mat orig_graph_output, transformed_graph_output;
 
@@ -508,9 +549,66 @@ TEST_F(PatternMatchingIntegrationUnusedNodes, TransformWithOutputUnusedNodeAppli
 }
 
 // --------------------------------------------------------------------------------------
-// Bad arg integration tests (GCompiler-level)
+// Bad arg integration tests (GCompiler-level) - General
 
-GAPI_TRANSFORM(EndlessLoopTransform1, <cv::GMat(cv::GMat)>, "pattern in substitute")
+struct PatternMatchingIntegrationBadArgTests : testing::Test
+{
+    cv::GComputation makeComputation() {
+        GMat in;
+        GMat a, b, c, d;
+        std::tie(a, b, c, d) = MySplit4::on(in);  // using custom Split4 to check if it's called
+        GMat out = cv::gapi::merge3(a + b, cv::gapi::bitwise_not(c), d * cv::GScalar(2.0));
+        return cv::GComputation(cv::GIn(in), cv::GOut(out));
+    }
+
+    void runTest(cv::GCompileArgs&& transform_args) {
+        cv::Size in_sz(640, 480);
+        cv::Mat input(in_sz, CV_8UC4);
+        cv::randu(input, cv::Scalar::all(70), cv::Scalar::all(140));
+
+        cv::Mat output;
+
+        // Generate transformed graph (passing transformations via compile args)
+        auto mainC = makeComputation();  // get new copy with new Priv
+        ASSERT_NO_THROW(mainC.apply(cv::gin(input), cv::gout(output), std::move(transform_args)));
+    }
+};
+
+TEST_F(PatternMatchingIntegrationBadArgTests, NoTransformations)
+{
+    auto transform_args = cv::compile_args(cv::gapi::kernels<MySplit4Impl>());
+
+    auto& listener = getListener();
+    listener.counts.clear();  // clear counters before testing
+
+    runTest(std::move(transform_args));
+
+    // Custom verification via listener
+    ASSERT_EQ(1u, listener.counts.size());
+    ASSERT_NE(listener.counts.cend(), listener.counts.find(MySplit4::id()));
+    ASSERT_EQ(1u, listener.counts.at(MySplit4::id()));
+}
+
+TEST_F(PatternMatchingIntegrationBadArgTests, WrongTransformation)
+{
+    // Here Split4Transform::pattern is "looking for" cv::gapi::split4 but it's not used
+    auto transform_args = cv::compile_args(cv::gapi::kernels<MySplit4Impl, Split4Transform>());
+
+    auto& listener = getListener();
+    listener.counts.clear();  // clear counters before testing
+
+    runTest(std::move(transform_args));
+
+    // Custom verification via listener
+    ASSERT_EQ(1u, listener.counts.size());
+    ASSERT_NE(listener.counts.cend(), listener.counts.find(MySplit4::id()));
+    ASSERT_EQ(1u, listener.counts.at(MySplit4::id()));
+}
+
+// --------------------------------------------------------------------------------------
+// Bad arg integration tests (GCompiler-level) - Endless Loops
+
+GAPI_TRANSFORM(EndlessLoopTransform, <cv::GMat(cv::GMat)>, "pattern in substitute")
 {
     static cv::GMat pattern(const cv::GMat& in)
     {
@@ -527,46 +625,8 @@ GAPI_TRANSFORM(EndlessLoopTransform1, <cv::GMat(cv::GMat)>, "pattern in substitu
         return out;
     }
 };
-GAPI_TRANSFORM(EndlessLoopTransformChain1, <cv::GMat(cv::GMat)>, "Resize -> Custom Resize")
-{
-    static cv::GMat pattern(const cv::GMat& in)
-    {
-        return cv::gapi::resize(in, cv::Size(100, 100));
-    }
 
-    static cv::GMat substitute(const cv::GMat& in)
-    {
-        return MyInterleavedResize::on(in, cv::Size(100, 100), cv::INTER_AREA);
-    }
-};
-GAPI_TRANSFORM(EndlessLoopTransformChain2, <cv::GMat(cv::GMat)>, "Custom Resize -> Resize")
-{
-    static cv::GMat pattern(const cv::GMat& in)
-    {
-        return MyInterleavedResize::on(in, cv::Size(100, 100), cv::INTER_AREA);
-    }
-
-    static cv::GMat substitute(const cv::GMat& in)
-    {
-        return cv::gapi::resize(in, cv::Size(100, 100));
-    }
-};
-GAPI_TRANSFORM(EndlessLoopTransformChain3, <cv::GMat(cv::GMat)>, "Custom Resize -> Any Op")
-{
-    static cv::GMat pattern(const cv::GMat& in)
-    {
-        return MyInterleavedResize::on(in, cv::Size(100, 100), cv::INTER_AREA);
-    }
-
-    static cv::GMat substitute(const cv::GMat& in)
-    {
-        cv::GMat a, b, c;
-        std::tie(a, b, c) = cv::gapi::split3(in);
-        return cv::gapi::merge3(a, b, c);
-    }
-};
-
-TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteOneTransform)
+TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteInOneTransform)
 {
     cv::Size in_sz(640, 480);
     cv::Mat input(in_sz, CV_8UC3);
@@ -581,64 +641,7 @@ TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteOneTransform)
 
     EXPECT_THROW(
         cv::gimpl::GCompiler(c, cv::descr_of(cv::gin(input)),
-            cv::compile_args(cv::gapi::kernels<EndlessLoopTransform1>())),
-        std::exception);
-}
-
-TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransformsCrossCase)
-{
-    cv::Size in_sz(640, 480);
-    cv::Mat input(in_sz, CV_8UC3);
-    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(100));
-
-    auto c = [] () {
-        GMat in;
-        GMat out = cv::gapi::resize(in, cv::Size(100, 100));
-        return cv::GComputation(cv::GIn(in), cv::GOut(out));
-    }();
-
-    EXPECT_THROW(
-        cv::gimpl::GCompiler(c, cv::descr_of(cv::gin(input)),
-            cv::compile_args(
-                cv::gapi::kernels<EndlessLoopTransformChain1, EndlessLoopTransformChain2>())),
-        std::exception);
-}
-
-TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransformsCrossCase2)
-{
-    cv::Size in_sz(640, 480);
-    cv::Mat input(in_sz, CV_8UC3);
-    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(100));
-
-    auto c = [] () {
-        GMat in;
-        GMat out = cv::gapi::resize(in, cv::Size(100, 100));
-        return cv::GComputation(cv::GIn(in), cv::GOut(out));
-    }();
-
-    EXPECT_THROW(
-        cv::gimpl::GCompiler(c, cv::descr_of(cv::gin(input)),
-            cv::compile_args(
-                cv::gapi::kernels<EndlessLoopTransformChain2, EndlessLoopTransformChain1>())),
-        std::exception);
-}
-
-TEST(PatternMatchingIntegrationEndlessLoops, PatternInSubstituteDifferentTransformsSecondInFirst)
-{
-    cv::Size in_sz(640, 480);
-    cv::Mat input(in_sz, CV_8UC3);
-    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(100));
-
-    auto c = [] () {
-        GMat in;
-        GMat out = cv::gapi::resize(in, cv::Size(100, 100));
-        return cv::GComputation(cv::GIn(in), cv::GOut(out));
-    }();
-
-    EXPECT_THROW(
-        cv::gimpl::GCompiler(c, cv::descr_of(cv::gin(input)),
-            cv::compile_args(
-                cv::gapi::kernels<EndlessLoopTransformChain1, EndlessLoopTransformChain3>())),
+            cv::compile_args(cv::gapi::kernels<EndlessLoopTransform>())),
         std::exception);
 }
 

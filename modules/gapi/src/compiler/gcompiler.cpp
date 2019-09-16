@@ -159,28 +159,26 @@ namespace
 
         GAPI_Assert(size == patterns.size());
         GAPI_Assert(size == substitutes.size());
-        // FIXME: verify other types of endless loops - are there any other, though?
 
         const auto empty = [] (const cv::gimpl::SubgraphMatch& m) {
             return m.inputDataNodes.empty() && m.startOpNodes.empty()
                 && m.finishOpNodes.empty() && m.outputDataNodes.empty()
                 && m.inputTestDataNodes.empty() && m.outputTestDataNodes.empty();
         };
-        // verify there are no patterns in substitutes
-        for (size_t i = 0; i < size; ++i) {
-            auto& p = patterns[i];
-            for (size_t j = 0; j < size; ++j) {
-                auto& s = substitutes[j];
 
-                auto matchInSubstitute = cv::gimpl::findMatches(*p, *s);
-                if (!empty(matchInSubstitute)) {
-                    std::stringstream ss;
-                    ss << "Error: pattern (from transformation with description: '"
-                       << transforms[i].description
-                       << "') detected inside substitute (from transformation with desription: '"
-                       << transforms[j].description << "')";
-                    throw std::runtime_error(ss.str());
-                }
+        // FIXME: verify other types of endless loops. now, only checking if pattern exists in
+        //        substitute within __the same__ transformation
+        for (size_t i = 0; i < size; ++i) {
+            const auto& p = patterns[i];
+            const auto& s = substitutes[i];
+
+            auto matchInSubstitute = cv::gimpl::findMatches(*p, *s);
+            if (!empty(matchInSubstitute)) {
+                std::stringstream ss;
+                ss << "Error: (in transformation with description: '"
+                    << transforms[i].description
+                    << "') pattern is detected inside substitute";
+                throw std::runtime_error(ss.str());
             }
         }
     }
