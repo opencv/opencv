@@ -40,10 +40,10 @@ protected:
     bool testBypassRoute(vector<Point2f> hull, int start, int finish);
     inline double getCosVectors(Point2f a, Point2f b, Point2f c);
 
-    Mat barcode, bin_barcode, straight_barcode;
+    Mat barcode, bin_barcode, resized_barcode, resized_bin_barcode, straight_barcode;
     vector<Point2f> localization_points, transformation_points;
     double eps_vertical, eps_horizontal, coeff_expansion;
-    int resize_direction;
+    enum resize_direction { zooming, shrinking, unchanged } purpose;
 };
 
 
@@ -51,10 +51,11 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!src.empty());
+    barcode = src.clone();
     const double min_side = std::min(src.size().width, src.size().height);
     if (min_side < 512.0)
     {
-        resize_direction = -1;
+        purpose = zooming;
         coeff_expansion = 512.0 / min_side;
         const int width  = cvRound(src.size().width  * coeff_expansion);
         const int height = cvRound(src.size().height  * coeff_expansion);
@@ -63,23 +64,22 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
     }
     else if (min_side > 512.0)
     {
-        resize_direction = 1;
         coeff_expansion = min_side / 512.0;
         const int width  = cvRound(src.size().width  / coeff_expansion);
         const int height = cvRound(src.size().height  / coeff_expansion);
         Size new_size(width, height);
-        resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
+        resize(src, resized_barcode, new_size, 0, 0, INTER_AREA);
     }
     else
     {
-        resize_direction = 0;
+        purpose = unchanged;
         coeff_expansion = 1.0;
-        barcode = src;
     }
 
     eps_vertical   = eps_vertical_;
     eps_horizontal = eps_horizontal_;
     adaptiveThreshold(barcode, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
+    adaptiveThreshold(resized_barcode, resized_bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
 
 }
 
@@ -344,9 +344,9 @@ bool QRDetect::localization()
     CV_TRACE_FUNCTION();
     Point2f begin, end;
     vector<Vec3d> list_lines_x = searchHorizontalLines();
-    if( list_lines_x.empty() ) { return false; }
+    if( list_lines_x.empty() ) { return false;}
     vector<Point2f> list_lines_y = separateVerticalLines(list_lines_x);
-    if( list_lines_y.size() < 3 ) { return false; }
+    if( list_lines_y.empty() ) { return false; }
 
     vector<Point2f> centers;
     Mat labels;
@@ -355,9 +355,47 @@ bool QRDetect::localization()
            3, KMEANS_PP_CENTERS, localization_points);
 
     fixationPoints(localization_points);
+
+    bool suare_flag = false, local_points_flag = false;
+    double triangle_sides[3];
+    triangle_sides[0] = norm(localization_points[0] - localization_points[1]);
+    triangle_sides[1] = norm(localization_points[1] - localization_points[2]);
+    triangle_sides[2] = norm(localization_points[2] - localization_points[0]);
+
+    double triangle_perim = (triangle_sides[0] + triangle_sides[1] + triangle_sides[2]) / 2;
+
+    double square_area = sqrt((triangle_perim * (triangle_perim - triangle_sides[0])
+                                              * (triangle_perim - triangle_sides[1])
+                                              * (triangle_perim - triangle_sides[2]))) * 2;
+    double img_square_area = bin_barcode.cols * bin_barcode.rows;
+
+    if (square_area > (img_square_area * 0.2))
+    {
+        suare_flag = true;
+    }
+    if (localization_points.size() != 3)
+    {
+        local_points_flag = true;
+    }
+    if ( suare_flag || local_points_flag)
+    {
+        localization_points.clear();
+        purpose = shrinking;
+        bin_barcode = resized_bin_barcode.clone();
+        list_lines_x = searchHorizontalLines();
+        if( list_lines_x.empty() ) { return false;}
+        list_lines_y = separateVerticalLines(list_lines_x);
+        if( list_lines_y.empty() ) { return false; }
+
+        kmeans(list_lines_y, 3, labels,
+               TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
+               3, KMEANS_PP_CENTERS, localization_points);
+
+        fixationPoints(localization_points);
+    }
     if (localization_points.size() != 3) { return false; }
 
-    if (resize_direction == 1)
+    if (purpose == shrinking)
     {
         const int width  = cvRound(bin_barcode.size().width  * coeff_expansion);
         const int height = cvRound(bin_barcode.size().height * coeff_expansion);
@@ -370,7 +408,7 @@ bool QRDetect::localization()
             localization_points[i] *= coeff_expansion;
         }
     }
-    else if (resize_direction == -1)
+    else if (purpose == zooming)
     {
         const int width  = cvRound(bin_barcode.size().width  / coeff_expansion);
         const int height = cvRound(bin_barcode.size().height / coeff_expansion);
@@ -888,13 +926,13 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
     vector<Point2f> bbox = points;
     double coeff_expansion;
     const int min_side = std::min(src.size().width, src.size().height);
-    if (min_side > 1024)
+    if (min_side > 512)
     {
-        coeff_expansion = min_side / 1024;
+        coeff_expansion = min_side / 512;
         const int width  = cvRound(src.size().width  / coeff_expansion);
         const int height = cvRound(src.size().height / coeff_expansion);
         Size new_size(width, height);
-        resize(src, original, new_size, 0, 0, INTER_LINEAR);
+        resize(src, original, new_size, 0, 0, INTER_AREA);
             for (size_t i = 0; i < bbox.size(); i++)
             {
                 bbox[i] /= static_cast<float>(coeff_expansion);
