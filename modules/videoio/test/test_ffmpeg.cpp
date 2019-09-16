@@ -107,6 +107,7 @@ TEST(videoio_ffmpeg, raw)
     {
         // Verify reads from container and raw are identical
         {
+            cout << "Testing: " << findDataFile(fileNamesCont[i]) << ", " << findDataFile(fileNamesRaw[i]) << endl;
             VideoContainer cont(findDataFile(fileNamesCont[i]), CAP_FFMPEG);
             ASSERT_TRUE(cont.isOpened());
             VideoContainer raw(findDataFile(fileNamesRaw[i]), CAP_FFMPEG);
@@ -115,8 +116,10 @@ TEST(videoio_ffmpeg, raw)
             unsigned char* dataGs = 0, *data = 0;
             size_t sizeGs = 0, size = 0, startByte = 0, sizeCmp = 0;
             bool modifiedStartCode = false;
+            size_t contBytes = 0;
             while (cont.read(&dataGs, &sizeGs))
             {
+                contBytes += sizeGs;
                 raw.read(&data, &size);
 
                 // h265 raw uses start code 0x00 0x00 0x01, hevc_mp4toannexb from mp4 uses 0x00 0x00 0x00 0x01
@@ -130,6 +133,10 @@ TEST(videoio_ffmpeg, raw)
                 if (!modifiedStartCode && sizeGs == size - 1)
                     modifiedStartCode = true;
 
+                if (std::memcmp(&dataGs[startByte], data, sizeCmp) != 0) {
+                    cout << "Failed after reading : " << contBytes << " Bytes from " << findDataFile(fileNamesCont[i]) << endl;
+                    cout << "std::memcmp(&dataGs[" << startByte << "], data, " << sizeCmp << ")" << endl;
+                }
                 ASSERT_EQ(0, std::memcmp(&dataGs[startByte], data, sizeCmp));
                 file.write(reinterpret_cast<char*>(dataGs), sizeGs);
             }
