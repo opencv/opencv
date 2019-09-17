@@ -108,7 +108,6 @@ void applyTransformations(ade::passes::PassContext& ctx,
     GAPI_Assert(patterns.size() == transforms.size());
 
     // transform as long as it is possible
-    // Note: check_transformations pass must handle endless loops and such
     bool canTransform = true;
     while (canTransform)
     {

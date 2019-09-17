@@ -166,8 +166,8 @@ namespace
                 && m.inputTestDataNodes.empty() && m.outputTestDataNodes.empty();
         };
 
-        // FIXME: verify other types of endless loops. now, only checking if pattern exists in
-        //        substitute within __the same__ transformation
+        // **FIXME**: verify other types of endless loops. now, only checking if pattern exists in
+        //            substitute within __the same__ transformation
         for (size_t i = 0; i < size; ++i) {
             const auto& p = patterns[i];
             const auto& s = substitutes[i];
