@@ -32,7 +32,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA());
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -43,12 +45,6 @@ public:
         CV_Assert(inputs.empty());
         outputs.assign(1, shape(blobs[0]));
         return false;
-    }
-
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_OPENCV ||
-              (backendId == DNN_BACKEND_CUDA && haveCUDA());
     }
 
 #ifdef HAVE_OPENCL
