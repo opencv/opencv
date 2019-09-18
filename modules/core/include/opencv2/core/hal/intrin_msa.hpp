@@ -795,9 +795,7 @@ OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(v_int32x4, int, s32)
 OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(v_uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(v_float32x4, float, f32)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(v_float64x2, double, f64)
-#endif
 
 #define OPENCV_HAL_IMPL_MSA_REDUCE_OP_8U(func, cfunc) \
 inline unsigned short v_reduce_##func(const v_uint16x8& a) \
@@ -860,12 +858,10 @@ inline uint64 v_reduce_sum(const v_uint64x2& a)
 { return (uint64)(msa_getq_lane_u64(a.val, 0) + msa_getq_lane_u64(a.val, 1)); }
 inline int64 v_reduce_sum(const v_int64x2& a)
 { return (int64)(msa_getq_lane_s64(a.val, 0) + msa_getq_lane_s64(a.val, 1)); }
-#if CV_SIMD128_64F
 inline double v_reduce_sum(const v_float64x2& a)
 {
     return msa_getq_lane_f64(a.val, 0) + msa_getq_lane_f64(a.val, 1);
 }
-#endif
 
 /* v_reduce_sum4, v_reduce_sad */
 inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
@@ -1001,10 +997,8 @@ inline int v_signmask(const v_uint64x2& a)
 }
 inline int v_signmask(const v_int64x2& a)
 { return v_signmask(v_reinterpret_as_u64(a)); }
-#if CV_SIMD128_64F
 inline int v_signmask(const v_float64x2& a)
 { return v_signmask(v_reinterpret_as_u64(a)); }
-#endif
 
 inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(a)); }
@@ -1015,9 +1009,7 @@ inline int v_scan_forward(const v_uint32x4& a) { return trailingZeros32(v_signma
 inline int v_scan_forward(const v_float32x4& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_int64x2& a) { return trailingZeros32(v_signmask(a)); }
 inline int v_scan_forward(const v_uint64x2& a) { return trailingZeros32(v_signmask(a)); }
-#if CV_SIMD128_64F
 inline int v_scan_forward(const v_float64x2& a) { return trailingZeros32(v_signmask(a)); }
-#endif
 
 #define OPENCV_HAL_IMPL_MSA_CHECK_ALLANY(_Tpvec, _Tpvec2, suffix, shift) \
 inline bool v_check_all(const v_##_Tpvec& a) \
@@ -1036,9 +1028,7 @@ inline bool v_check_any(const v_##_Tpvec& a) \
 OPENCV_HAL_IMPL_MSA_CHECK_ALLANY(uint8x16, v16u8, u8, 7)
 OPENCV_HAL_IMPL_MSA_CHECK_ALLANY(uint16x8, v8u16, u16, 15)
 OPENCV_HAL_IMPL_MSA_CHECK_ALLANY(uint32x4, v4u32, u32, 31)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_CHECK_ALLANY(uint64x2, v2u64, u64, 63)
-#endif
 
 inline bool v_check_all(const v_int8x16& a)
 { return v_check_all(v_reinterpret_as_u8(a)); }
@@ -1058,7 +1048,6 @@ inline bool v_check_any(const v_int32x4& a)
 inline bool v_check_any(const v_float32x4& a)
 { return v_check_any(v_reinterpret_as_u32(a)); }
 
-#if CV_SIMD128_64F
 inline bool v_check_all(const v_int64x2& a)
 { return v_check_all(v_reinterpret_as_u64(a)); }
 inline bool v_check_all(const v_float64x2& a)
@@ -1067,7 +1056,6 @@ inline bool v_check_any(const v_int64x2& a)
 { return v_check_any(v_reinterpret_as_u64(a)); }
 inline bool v_check_any(const v_float64x2& a)
 { return v_check_any(v_reinterpret_as_u64(a)); }
-#endif
 
 /* v_select */
 #define OPENCV_HAL_IMPL_MSA_SELECT(_Tpvec, _Tpv, _Tpvu) \
@@ -1084,9 +1072,7 @@ OPENCV_HAL_IMPL_MSA_SELECT(v_int16x8, v8i16, v16u8)
 OPENCV_HAL_IMPL_MSA_SELECT(v_uint32x4, v4u32, v16u8)
 OPENCV_HAL_IMPL_MSA_SELECT(v_int32x4, v4i32, v16u8)
 OPENCV_HAL_IMPL_MSA_SELECT(v_float32x4, v4f32, v16u8)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_SELECT(v_float64x2, v2f64, v16u8)
-#endif
 
 #define OPENCV_HAL_IMPL_MSA_EXPAND(_Tpvec, _Tpwvec, _Tp, suffix, ssuffix, _Tpv, _Tpvs) \
 inline void v_expand(const _Tpvec& a, _Tpwvec& b0, _Tpwvec& b1) \
@@ -1156,9 +1142,7 @@ OPENCV_HAL_IMPL_MSA_UNPACKS(v_int16x8, v8i16, v8i16, s16)
 OPENCV_HAL_IMPL_MSA_UNPACKS(v_uint32x4, v4u32, v4i32, s32)
 OPENCV_HAL_IMPL_MSA_UNPACKS(v_int32x4, v4i32, v4i32, s32)
 OPENCV_HAL_IMPL_MSA_UNPACKS(v_float32x4, v4f32, v4i32, s32)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_UNPACKS(v_float64x2, v2f64, v2i64, s64)
-#endif
 
 /* v_extract */
 #define OPENCV_HAL_IMPL_MSA_EXTRACT(_Tpvec, _Tpv, _Tpvs, suffix) \
@@ -1177,9 +1161,7 @@ OPENCV_HAL_IMPL_MSA_EXTRACT(v_int32x4, v4i32, v4i32, s32)
 OPENCV_HAL_IMPL_MSA_EXTRACT(v_uint64x2, v2u64, v2i64, s64)
 OPENCV_HAL_IMPL_MSA_EXTRACT(v_int64x2, v2i64, v2i64, s64)
 OPENCV_HAL_IMPL_MSA_EXTRACT(v_float32x4, v4f32, v4i32, s32)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_EXTRACT(v_float64x2, v2f64, v2i64, s64)
-#endif
 
 /* v_round, v_floor, v_ceil, v_trunc */
 inline v_int32x4 v_round(const v_float32x4& a)
@@ -1204,7 +1186,6 @@ inline v_int32x4 v_trunc(const v_float32x4& a)
     return v_int32x4(msa_cvttruncq_s32_f32(a.val));
 }
 
-#if CV_SIMD128_64F
 inline v_int32x4 v_round(const v_float64x2& a)
 {
     return v_int32x4(msa_pack_s64(msa_cvttintq_s64_f64(a.val), msa_dupq_n_s64(0)));
@@ -1231,7 +1212,6 @@ inline v_int32x4 v_trunc(const v_float64x2& a)
 {
     return v_int32x4(msa_pack_s64(msa_cvttruncq_s64_f64(a.val), msa_dupq_n_s64(0)));
 }
-#endif
 
 #define OPENCV_HAL_IMPL_MSA_TRANSPOSE4x4(_Tpvec, _Tpv, _Tpvs, ssuffix) \
 inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1, \
@@ -1293,9 +1273,7 @@ OPENCV_HAL_IMPL_MSA_INTERLEAVED(int32x4, int, s32)
 OPENCV_HAL_IMPL_MSA_INTERLEAVED(float32x4, float, f32)
 OPENCV_HAL_IMPL_MSA_INTERLEAVED(uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_MSA_INTERLEAVED(int64x2, int64, s64)
-#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_MSA_INTERLEAVED(float64x2, double, f64)
-#endif
 
 /* v_cvt_f32, v_cvt_f64, v_cvt_f64_high */
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
@@ -1303,7 +1281,6 @@ inline v_float32x4 v_cvt_f32(const v_int32x4& a)
     return v_float32x4(msa_cvtfintq_f32_s32(a.val));
 }
 
-#if CV_SIMD128_64F
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
 {
     return v_float32x4(msa_cvtfq_f32_f64(a.val, msa_dupq_n_f64(0.0f)));
@@ -1333,7 +1310,6 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 {
     return v_float64x2(msa_cvtfhq_f64_f32(a.val));
 }
-#endif
 
 ////////////// Lookup table access ////////////////////
 inline v_int8x16 v_lut(const schar* tab, const int* idx)
@@ -1567,6 +1543,7 @@ inline v_int16x8 v_interleave_pairs(const v_int16x8& vec)
 }
 
 inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+
 inline v_int16x8 v_interleave_quads(const v_int16x8& vec)
 {
     v_int16x8 c = v_int16x8(__builtin_msa_vshf_h((v8i16)((v2i64){0x0005000100040000, 0x0007000300060002}), msa_dupq_n_s16(0), vec.val));
@@ -1593,6 +1570,7 @@ inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
     v_int8x16 c = v_int8x16(__builtin_msa_vshf_b((v16i8)((v2i64){0x0908060504020100, 0x131211100E0D0C0A}), msa_dupq_n_s8(0), vec.val));
     return c;
 }
+
 inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
@@ -1602,12 +1580,10 @@ inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
 }
 
 inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
-
 inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
 
-#if CV_SIMD128_64F
 inline v_float64x2 v_lut(const double* tab, const int* idx)
 {
     double CV_DECL_ALIGNED(32) elems[2] =
@@ -1641,7 +1617,6 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
     x = v_float64x2(MSA_TPV_REINTERPRET(v2f64, msa_ilvevq_s64(MSA_TPV_REINTERPRET(v2i64, xy1), MSA_TPV_REINTERPRET(v2i64, xy0))));
     y = v_float64x2(MSA_TPV_REINTERPRET(v2f64, msa_ilvodq_s64(MSA_TPV_REINTERPRET(v2i64, xy1), MSA_TPV_REINTERPRET(v2i64, xy0))));
 }
-#endif
 
 ////// FP16 suport ///////
 #if CV_FP16
