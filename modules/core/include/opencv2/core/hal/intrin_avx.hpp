@@ -1241,6 +1241,11 @@ inline int v_signmask(const v_int32x8& a)
 inline int v_signmask(const v_uint32x8& a)
 { return v_signmask(v_reinterpret_as_f32(a)); }
 
+inline int v_signmask(const v_int64x4& a)
+{ return v_signmask(v_reinterpret_as_f64(a)); }
+inline int v_signmask(const v_uint64x4& a)
+{ return v_signmask(v_reinterpret_as_f64(a)); }
+
 inline int v_scan_forward(const v_int8x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
 inline int v_scan_forward(const v_uint8x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
 inline int v_scan_forward(const v_int16x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 2; }
@@ -1253,40 +1258,23 @@ inline int v_scan_forward(const v_uint64x4& a) { return trailingZeros32(v_signma
 inline int v_scan_forward(const v_float64x4& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 8; }
 
 /** Checks **/
-#define OPENCV_HAL_IMPL_AVX_CHECK(_Tpvec, and_op, allmask)  \
-    inline bool v_check_all(const _Tpvec& a)                \
-    {                                                       \
-        int mask = v_signmask(v_reinterpret_as_s8(a));      \
-        return and_op(mask, allmask) == allmask;            \
-    }                                                       \
-    inline bool v_check_any(const _Tpvec& a)                \
-    {                                                       \
-        int mask = v_signmask(v_reinterpret_as_s8(a));      \
-        return and_op(mask, allmask) != 0;                  \
-    }
+#define OPENCV_HAL_IMPL_AVX_CHECK(_Tpvec, allmask) \
+    inline bool v_check_all(const _Tpvec& a) { return v_signmask(a) == allmask; } \
+    inline bool v_check_any(const _Tpvec& a) { return v_signmask(a) != 0; }
+OPENCV_HAL_IMPL_AVX_CHECK(v_uint8x32, -1)
+OPENCV_HAL_IMPL_AVX_CHECK(v_int8x32, -1)
+OPENCV_HAL_IMPL_AVX_CHECK(v_uint32x8, 255)
+OPENCV_HAL_IMPL_AVX_CHECK(v_int32x8, 255)
+OPENCV_HAL_IMPL_AVX_CHECK(v_uint64x4, 15)
+OPENCV_HAL_IMPL_AVX_CHECK(v_int64x4, 15)
+OPENCV_HAL_IMPL_AVX_CHECK(v_float32x8, 255)
+OPENCV_HAL_IMPL_AVX_CHECK(v_float64x4, 15)
 
-OPENCV_HAL_IMPL_AVX_CHECK(v_uint8x32,  OPENCV_HAL_1ST, -1)
-OPENCV_HAL_IMPL_AVX_CHECK(v_int8x32,   OPENCV_HAL_1ST, -1)
-OPENCV_HAL_IMPL_AVX_CHECK(v_uint16x16, OPENCV_HAL_AND, (int)0xaaaaaaaa)
-OPENCV_HAL_IMPL_AVX_CHECK(v_int16x16,  OPENCV_HAL_AND, (int)0xaaaaaaaa)
-OPENCV_HAL_IMPL_AVX_CHECK(v_uint32x8,  OPENCV_HAL_AND, (int)0x88888888)
-OPENCV_HAL_IMPL_AVX_CHECK(v_int32x8,   OPENCV_HAL_AND, (int)0x88888888)
-
-#define OPENCV_HAL_IMPL_AVX_CHECK_FLT(_Tpvec, allmask) \
-    inline bool v_check_all(const _Tpvec& a)           \
-    {                                                  \
-        int mask = v_signmask(a);                      \
-        return mask == allmask;                        \
-    }                                                  \
-    inline bool v_check_any(const _Tpvec& a)           \
-    {                                                  \
-        int mask = v_signmask(a);                      \
-        return mask != 0;                              \
-    }
-
-OPENCV_HAL_IMPL_AVX_CHECK_FLT(v_float32x8, 255)
-OPENCV_HAL_IMPL_AVX_CHECK_FLT(v_float64x4, 15)
-
+#define OPENCV_HAL_IMPL_AVX_CHECK_SHORT(_Tpvec)  \
+    inline bool v_check_all(const _Tpvec& a) { return (v_signmask(v_reinterpret_as_s8(a)) & 0xaaaaaaaa) == 0xaaaaaaaa; } \
+    inline bool v_check_any(const _Tpvec& a) { return (v_signmask(v_reinterpret_as_s8(a)) & 0xaaaaaaaa) != 0; }
+OPENCV_HAL_IMPL_AVX_CHECK_SHORT(v_uint16x16)
+OPENCV_HAL_IMPL_AVX_CHECK_SHORT(v_int16x16)
 
 ////////// Other math /////////
 

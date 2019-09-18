@@ -1139,9 +1139,17 @@ inline bool v_check_any(const v_##_Tpvec& a) \
 OPENCV_HAL_IMPL_NEON_CHECK_ALLANY(uint8x16, u8, 7)
 OPENCV_HAL_IMPL_NEON_CHECK_ALLANY(uint16x8, u16, 15)
 OPENCV_HAL_IMPL_NEON_CHECK_ALLANY(uint32x4, u32, 31)
-#if CV_SIMD128_64F
-OPENCV_HAL_IMPL_NEON_CHECK_ALLANY(uint64x2, u64, 63)
-#endif
+
+inline bool v_check_all(const v_uint64x2& a)
+{
+    uint64x2_t v0 = vshrq_n_u64(a.val, 63);
+    return (vgetq_lane_u64(v0, 0) & vgetq_lane_u64(v0, 1)) == 1;
+}
+inline bool v_check_any(const v_uint64x2& a)
+{
+    uint64x2_t v0 = vshrq_n_u64(a.val, 63);
+    return (vgetq_lane_u64(v0, 0) | vgetq_lane_u64(v0, 1)) != 0;
+}
 
 inline bool v_check_all(const v_int8x16& a)
 { return v_check_all(v_reinterpret_as_u8(a)); }
@@ -1161,13 +1169,13 @@ inline bool v_check_any(const v_int32x4& a)
 inline bool v_check_any(const v_float32x4& a)
 { return v_check_any(v_reinterpret_as_u32(a)); }
 
-#if CV_SIMD128_64F
 inline bool v_check_all(const v_int64x2& a)
-{ return v_check_all(v_reinterpret_as_u64(a)); }
-inline bool v_check_all(const v_float64x2& a)
 { return v_check_all(v_reinterpret_as_u64(a)); }
 inline bool v_check_any(const v_int64x2& a)
 { return v_check_any(v_reinterpret_as_u64(a)); }
+#if CV_SIMD128_64F
+inline bool v_check_all(const v_float64x2& a)
+{ return v_check_all(v_reinterpret_as_u64(a)); }
 inline bool v_check_any(const v_float64x2& a)
 { return v_check_any(v_reinterpret_as_u64(a)); }
 #endif
