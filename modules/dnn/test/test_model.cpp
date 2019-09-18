@@ -221,6 +221,28 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
 
+TEST_P(Test_Model, Detection_normalized)
+{
+    std::string img_path = _tf("grace_hopper_227.png");
+    std::vector<int> refClassIds = {15};
+    std::vector<float> refConfidences = {0.999222f};
+    std::vector<Rect2d> refBoxes = {Rect2d(0, 4, 227, 222)};
+
+    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel");
+    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+
+    Scalar mean = Scalar(127.5, 127.5, 127.5);
+    double scale = 1.0 / 127.5;
+    Size size{300, 300};
+
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5e-3 : 1e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : 1e-5;
+    float confThreshold = FLT_MIN;
+    double nmsThreshold = 0.0;
+    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
+                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
+}
+
 TEST_P(Test_Model, Segmentation)
 {
     std::string inp = _tf("dog416.png");
