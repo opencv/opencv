@@ -899,6 +899,8 @@ inline bool v_check_all(const v_uint16x8& a)
 { return v_check_all(v_reinterpret_as_s16(a)); }
 inline bool v_check_all(const v_uint32x4& a)
 { return v_check_all(v_reinterpret_as_s32(a)); }
+inline bool v_check_all(const v_uint64x2& a)
+{ return v_check_all(v_reinterpret_as_s64(a)); }
 inline bool v_check_all(const v_float32x4& a)
 { return v_check_all(v_reinterpret_as_s32(a)); }
 inline bool v_check_all(const v_float64x2& a)
@@ -913,6 +915,8 @@ inline bool v_check_any(const v_uint16x8& a)
 { return v_check_any(v_reinterpret_as_s16(a)); }
 inline bool v_check_any(const v_uint32x4& a)
 { return v_check_any(v_reinterpret_as_s32(a)); }
+inline bool v_check_any(const v_uint64x2& a)
+{ return v_check_any(v_reinterpret_as_s64(a)); }
 inline bool v_check_any(const v_float32x4& a)
 { return v_check_any(v_reinterpret_as_s32(a)); }
 inline bool v_check_any(const v_float64x2& a)
