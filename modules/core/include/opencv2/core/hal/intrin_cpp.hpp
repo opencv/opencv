@@ -1978,7 +1978,8 @@ OPENCV_HAL_IMPL_C_INIT_ZERO(v_int64x2, int64, s64)
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_C_INIT_VAL(_Tpvec, _Tp, suffix) \
-inline _Tpvec v_setall_##suffix(_Tp val) { return _Tpvec::all(val); }
+inline _Tpvec v_setall_##suffix(_Tp val) { return _Tpvec::all(val); } \
+inline _Tpvec v_setall(_Tp val) { return _Tpvec::all(val); }
 
 //! @name Init with value
 //! @{

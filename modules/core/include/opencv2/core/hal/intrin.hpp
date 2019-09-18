@@ -268,6 +268,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
     inline vtyp vx_setall_##short_typ(typ v) { return prefix##_setall_##short_typ(v); } \
+    inline vtyp vx_setall(typ v) { return prefix##_setall_##short_typ(v); } \
     inline vtyp vx_setzero_##short_typ() { return prefix##_setzero_##short_typ(); } \
     inline vtyp vx_##loadsfx(const typ* ptr) { return prefix##_##loadsfx(ptr); } \
     inline vtyp vx_##loadsfx##_aligned(const typ* ptr) { return prefix##_##loadsfx##_aligned(ptr); } \

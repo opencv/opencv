@@ -384,6 +384,8 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float64x4, double, pd, __m128d)
     { return _Tpvec(_mm256_setzero_si256()); }                                   \
     inline _Tpvec v256_setall_##suffix(_Tp v)                                    \
     { return _Tpvec(_mm256_set1_##ssuffix((ctype_s)v)); }                        \
+    inline _Tpvec v256_setall(_Tp v)                                             \
+    { return _Tpvec(_mm256_set1_##ssuffix((ctype_s)v)); }                        \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x32,  suffix, OPENCV_HAL_NOP)        \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x32,   suffix, OPENCV_HAL_NOP)        \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x16, suffix, OPENCV_HAL_NOP)        \
@@ -408,6 +410,8 @@ OPENCV_HAL_IMPL_AVX_INIT(v_int64x4,   int64,    s64, epi64x, int64)
     inline _Tpvec v256_setzero_##suffix()                                \
     { return _Tpvec(_mm256_setzero_##zsuffix()); }                       \
     inline _Tpvec v256_setall_##suffix(_Tp v)                            \
+    { return _Tpvec(_mm256_set1_##zsuffix(v)); }                         \
+    inline _Tpvec v256_setall(_Tp v)                                     \
     { return _Tpvec(_mm256_set1_##zsuffix(v)); }                         \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x32,  suffix, cast)          \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x32,   suffix, cast)          \

@@ -217,6 +217,7 @@ struct v_float64x2
 #define OPENCV_HAL_IMPL_VSX_INITVEC(_Tpvec, _Tp, suffix, cast)                        \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(); }                               \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(vec_splats((_Tp)v));}          \
+inline _Tpvec v_setall(_Tp v) { return _Tpvec(vec_splats((_Tp)v));}                   \
 template<typename _Tpvec0> inline _Tpvec v_reinterpret_as_##suffix(const _Tpvec0 &a)  \
 { return _Tpvec((cast)a.val); }
 
