@@ -99,60 +99,27 @@ TEST(videoio_ffmpeg, raw)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
-    const vector<string> fileNamesCont = { "video/big_buck_bunny_h264.mp4" , "video/big_buck_bunny_h265.mp4" };
-    const vector<string> fileNamesRaw = { "video/big_buck_bunny.h264", "video/big_buck_bunny.h265" };
-    const vector<string> fileNamesRawOut = { tempfile(".h264"), tempfile(".h265") };
+    const vector<string> fileNames = { "video/big_buck_bunny.h264", "video/big_buck_bunny.h265" };
+    const vector<string> fileNamesOut = { tempfile(".h264"), tempfile(".h265") };
 
-    for (size_t i = 0; i < fileNamesCont.size(); i++)
+    for (size_t i = 0; i < fileNames.size(); i++)
     {
-        // Verify reads from container and raw are identical
+        // Write encoded video read using VideoContainer to tmp file
         {
-            cout << "Testing: " << findDataFile(fileNamesCont[i]) << ", " << findDataFile(fileNamesRaw[i]) << endl;
-            VideoContainer cont(findDataFile(fileNamesCont[i]), CAP_FFMPEG);
-            ASSERT_TRUE(cont.isOpened());
-            VideoContainer raw(findDataFile(fileNamesRaw[i]), CAP_FFMPEG);
+            VideoContainer raw(findDataFile(fileNames[i]), CAP_FFMPEG);
             ASSERT_TRUE(raw.isOpened());
-            std::ofstream file(fileNamesRawOut[i], ios::out | ios::trunc | std::ios::binary);
-            unsigned char* dataGs = 0, *data = 0;
-            size_t sizeGs = 0, size = 0, startByte = 0, sizeCmp = 0;
-            bool modifiedStartCode = false;
-            size_t contBytes = 0;
-            while (cont.read(&dataGs, &sizeGs))
-            {
-                contBytes += sizeGs;
-                raw.read(&data, &size);
-
-                // h265 raw uses start code 0x00 0x00 0x01, hevc_mp4toannexb from mp4 uses 0x00 0x00 0x00 0x01
-                sizeCmp = sizeGs;
-                if (modifiedStartCode)
-                {
-                    startByte = 1;
-                    sizeCmp -= 1;
-                }
-
-                if (!modifiedStartCode && sizeGs == size - 1)
-                    modifiedStartCode = true;
-
-                if (std::memcmp(&dataGs[startByte], data, sizeCmp) != 0) {
-                    cout << "Failed after reading : " << contBytes << " Bytes from " << findDataFile(fileNamesCont[i]) << endl;
-                    cout << "std::memcmp(&dataGs[" << startByte << "], data, " << sizeCmp << ")" << endl;
-                    cout << "Size container: " << sizeGs << endl;
-                    cout << "Size raw: " << size << endl;
-                    cout << "Container[3] " << (int)dataGs[3] << endl;
-                    cout << "Raw[3]       " <<  (int)data[3] << endl;
-                    cout << "Container[" << sizeGs << "]"  << (int)dataGs[sizeGs] << endl;
-                    cout << "Raw[" << sizeGs << "]"  << (int)data[sizeGs] << endl;
-                }
-                ASSERT_EQ(0, std::memcmp(&dataGs[startByte], data, sizeCmp));
-                file.write(reinterpret_cast<char*>(dataGs), sizeGs);
-            }
+            std::ofstream file(fileNamesOut[i], ios::out | ios::trunc | std::ios::binary);
+            unsigned char* data = 0;
+            size_t size = 0;
+            while (raw.read(&data, &size))
+                file.write(reinterpret_cast<char*>(data), size);
         }
 
-        // Validate above reads from raw file are equal to raw file
+        // Check decoded frames read from original media are equal to frames decoded from tmp file
         {
-            VideoCapture capReference(findDataFile(fileNamesRaw[i]), CAP_FFMPEG);
+            VideoCapture capReference(findDataFile(fileNames[i]), CAP_FFMPEG);
             ASSERT_TRUE(capReference.isOpened());
-            VideoCapture capActual(fileNamesRawOut[i].c_str(), CAP_FFMPEG);
+            VideoCapture capActual(fileNamesOut[i].c_str(), CAP_FFMPEG);
             ASSERT_TRUE(capActual.isOpened());
             Mat reference, actual;
             while (capReference.read(reference))
