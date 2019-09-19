@@ -205,6 +205,41 @@ int normL1_(const uchar* a, const uchar* b, int n)
     return d;
 }
 
+int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result, int len, int cn)
+{
+    int i = 0;
+    int res = *_result;
+    int l = len*cn;
+
+    if(!mask)
+    {
+#if CV_SIMD
+        for(; i <= l - v_uint16::nlanes; i += v_uint16::nlanes )
+        {
+            v_int16 srca = v_reinterpret_as_s16(vx_load_expand(a + i));
+            v_int16 srcb = v_reinterpret_as_s16(vx_load_expand(b + i));
+
+            res = std::max(res, (int)v_reduce_max(v_abs(srca - srcb)));
+        }
+#endif
+        for(; i < l; i++)
+        {
+            res = std::max(res, (int)std::abs(a[i] - b[i]));
+        }
+    } else {
+        for(; i < len; i++, a += cn, b += cn)
+        {
+            if( mask[i] )
+            {
+                for(int j = 0; j < cn; j++ )
+                    res = std::max(res, (int)std::abs(a[j] - b[j]));
+            }
+        }
+    }
+    *_result = res;
+    return 0;
+}
+
 }} //cv::hal
 
 //==================================================================================================
@@ -356,7 +391,18 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     CV_DEF_NORM_FUNC(L1, suffix, type, l1type) \
     CV_DEF_NORM_FUNC(L2, suffix, type, l2type)
 
-CV_DEF_NORM_ALL(8u, uchar, int, int, int)
+static int normDiffInf_8u(const uchar* src1, const uchar* src2, const uchar* mask, int* r, int len, int cn)
+{
+    return hal::normDiffInf_(src1, src2, mask, r, len, cn);
+}
+static int normInf_8u(const uchar* src, const uchar* mask, int* r, int len, int cn)
+{
+    return normInf_(src, mask, r, len, cn);
+}
+CV_DEF_NORM_FUNC(L1, 8u, uchar, int)
+CV_DEF_NORM_FUNC(L2, 8u, uchar, int)
+
+//CV_DEF_NORM_ALL(8u, uchar, int, int, int)
 CV_DEF_NORM_ALL(8s, schar, int, int, int)
 CV_DEF_NORM_ALL(16u, ushort, int, int, double)
 CV_DEF_NORM_ALL(16s, short, int, int, double)
