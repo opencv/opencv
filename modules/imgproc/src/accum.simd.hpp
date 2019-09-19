@@ -2632,10 +2632,14 @@ void accW_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn
     } else {
         const v_float32 v_zero = vx_setall_f32((float)0);
         int size = len * cn;
-        for (; x <= size - cVectorWidth; x += cVectorWidth)
+        int y = -cVectorWidth;
+        int cc = 0;
+        for (; x <= size - cVectorWidth; x += cVectorWidth, cc = (cc+1) % cn)
         {
+            if( cc == 0 ) y += cVectorWidth;
+
             v_uint8 v_src = vx_load(src + x);
-            v_uint8 v_mask = vx_load(mask + x);
+            v_uint8 v_mask = vx_load(mask + y);
 
             v_uint16 v_m0, v_m1;
             v_expand(v_mask, v_m0, v_m1);
@@ -2649,21 +2653,10 @@ void accW_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn
             v_mf10 = v_cvt_f32(v_reinterpret_as_s32(v_m10));
             v_mf11 = v_cvt_f32(v_reinterpret_as_s32(v_m11));
 
-            v_float32 d = v_mf00 == v_zero;
-            v_float32 b = v_mf00 | d;
-            v_mf00 = v_mf00 / b;
-
-            d = v_mf01 == v_zero;
-            b = v_mf01 | d;
-            v_mf01 = v_mf01 / b;
-
-            d = v_mf10 == v_zero;
-            b = v_mf10 | d;
-            v_mf10 = v_mf10 / b;
-
-            d = v_mf11 == v_zero;
-            b = v_mf11 | d;
-            v_mf11 = v_mf11 / b;
+            v_float32 d0 = v_mf00 == v_zero;
+            v_float32 d1 = v_mf01 == v_zero;
+            v_float32 d2 = v_mf10 == v_zero;
+            v_float32 d3 = v_mf11 == v_zero;
 
             v_uint16 v_src0, v_src1;
             v_expand(v_src, v_src0, v_src1);
@@ -2677,10 +2670,10 @@ void accW_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn
             v_float32 v_dst10 = vx_load(dst + x + step * 2);
             v_float32 v_dst11 = vx_load(dst + x + step * 3);
 
-            v_dst00 = v_fma(v_dst00, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_src00)) * v_alpha)*v_mf00;
-            v_dst01 = v_fma(v_dst01, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_src01)) * v_alpha)*v_mf01;
-            v_dst10 = v_fma(v_dst10, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_src10)) * v_alpha)*v_mf10;
-            v_dst11 = v_fma(v_dst11, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_src11)) * v_alpha)*v_mf11;
+            v_dst00 = v_fma(v_fma(v_dst00, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_src00)) * v_alpha), d0, (~d0)*v_mf00);
+            v_dst01 = v_fma(v_fma(v_dst01, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_src01)) * v_alpha), d1, (~d1)*v_mf01);
+            v_dst10 = v_fma(v_fma(v_dst10, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_src10)) * v_alpha), d2, (~d2)*v_mf10);
+            v_dst11 = v_fma(v_fma(v_dst11, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_src11)) * v_alpha), d3, (~d3)*v_mf11);
 
             v_store(dst + x, v_dst00);
             v_store(dst + x + step, v_dst01);
@@ -2718,9 +2711,8 @@ void accW_simd_(const ushort* src, float* dst, const uchar* mask, int len, int c
             v_store(dst + x, v_dst0);
             v_store(dst + x + step, v_dst1);
         }
-    } else {
+    } else if (cn == 1){
         const v_float32 v_zero = vx_setall_f32((float)0);
-
         int size = len * cn;
         for (; x <= size - cVectorWidth; x += cVectorWidth)
         {
@@ -2734,21 +2726,16 @@ void accW_simd_(const ushort* src, float* dst, const uchar* mask, int len, int c
             v_mf0 = v_cvt_f32(v_reinterpret_as_s32(v_m0));
             v_mf1 = v_cvt_f32(v_reinterpret_as_s32(v_m1));
 
-            v_float32 d = v_mf0 == v_zero;
-            v_float32 b = v_mf0 | d;
-            v_mf0 = v_mf0 / b;
-
-            d = v_mf1 == v_zero;
-            b = v_mf1 | d;
-            v_mf1 = v_mf1 / b;
+            v_float32 d0 = v_mf0 == v_zero;
+            v_float32 d1 = v_mf1 == v_zero;
 
             v_uint32 v_int0, v_int1;
             v_expand(v_src, v_int0, v_int1);
 
             v_float32 v_dst0 = vx_load(dst + x);
             v_float32 v_dst1 = vx_load(dst + x + step);
-            v_dst0 = v_fma(v_dst0, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_int0)) * v_alpha)*v_mf0;
-            v_dst1 = v_fma(v_dst1, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_int1)) * v_alpha)*v_mf1;
+            v_dst0 = v_fma(v_fma(v_dst0, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_int0)) * v_alpha), d0, (~d0)*v_dst0);
+            v_dst1 = v_fma(v_fma(v_dst1, v_beta, v_cvt_f32(v_reinterpret_as_s32(v_int1)) * v_alpha), d1, (~d1)*v_dst1);
 
             v_store(dst + x, v_dst0);
             v_store(dst + x + step, v_dst1);
