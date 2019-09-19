@@ -46,6 +46,7 @@
 #undef CV_LOG_STRIP_LEVEL
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include <opencv2/core/utils/logger.hpp>
+#include <opencv2/core/utils/configuration.private.hpp>
 
 #define CV__ALLOCATOR_STATS_LOG(...) CV_LOG_VERBOSE(NULL, 0, "alloc.cpp: " << __VA_ARGS__)
 #include "opencv2/core/utils/allocator_stats.impl.hpp"
@@ -81,6 +82,10 @@ cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics()
     return allocator_stats;
 }
 
+#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
+static const bool useMemalign = cv::utils::getConfigurationParameterBool("OPENCV_ENABLE_MEMALIGN", false);
+#endif
+
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
 static inline
 void* fastMalloc_(size_t size)
@@ -89,25 +94,30 @@ void* fastMalloc(size_t size)
 #endif
 {
 #ifdef HAVE_POSIX_MEMALIGN
-    void* ptr = NULL;
-    if(posix_memalign(&ptr, CV_MALLOC_ALIGN, size))
-        ptr = NULL;
-    if(!ptr)
-        return OutOfMemoryError(size);
-    return ptr;
+    if (useMemalign)
+    {
+        void* ptr = NULL;
+        if(posix_memalign(&ptr, CV_MALLOC_ALIGN, size))
+            ptr = NULL;
+        if(!ptr)
+            return OutOfMemoryError(size);
+        return ptr;
+    }
 #elif defined HAVE_MEMALIGN
-    void* ptr = memalign(CV_MALLOC_ALIGN, size);
-    if(!ptr)
-        return OutOfMemoryError(size);
-    return ptr;
-#else
+    if (useMemalign)
+    {
+        void* ptr = memalign(CV_MALLOC_ALIGN, size);
+        if(!ptr)
+            return OutOfMemoryError(size);
+        return ptr;
+    }
+#endif
     uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
     if(!udata)
         return OutOfMemoryError(size);
     uchar** adata = alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
     adata[-1] = udata;
     return adata;
-#endif
 }
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
@@ -118,8 +128,12 @@ void fastFree(void* ptr)
 #endif
 {
 #if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
-    free(ptr);
-#else
+    if (useMemalign)
+    {
+        free(ptr);
+        return;
+    }
+#endif
     if(ptr)
     {
         uchar* udata = ((uchar**)ptr)[-1];
@@ -127,7 +141,6 @@ void fastFree(void* ptr)
                ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN));
         free(udata);
     }
-#endif
 }
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
