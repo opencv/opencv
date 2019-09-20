@@ -79,6 +79,30 @@ PERF_TEST_P(Size_MatType_NormType, norm2,
     SANITY_CHECK(n, 1e-5, ERROR_RELATIVE);
 }
 
+PERF_TEST_P(Size_MatType_NormType, DISABLED_norm2_extra,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_8UC4, CV_32FC1),
+                testing::Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2, (int)(NORM_RELATIVE+NORM_INF), (int)(NORM_RELATIVE+NORM_L1), (int)(NORM_RELATIVE+NORM_L2))
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    int normType = get<2>(GetParam());
+
+    Mat src1(sz, matType);
+    Mat src2(sz, matType);
+    double n;
+
+    declare.in(src1, src2, WARMUP_RNG);
+
+    TEST_CYCLE() n = cv::norm(src1, src2, normType);
+
+    SANITY_CHECK_NOTHING();
+}
+
+
 PERF_TEST_P(Size_MatType_NormType, norm2_mask,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
@@ -101,6 +125,30 @@ PERF_TEST_P(Size_MatType_NormType, norm2_mask,
     TEST_CYCLE() n = cv::norm(src1, src2, normType, mask);
 
     SANITY_CHECK(n, 1e-5, ERROR_RELATIVE);
+}
+
+PERF_TEST_P(Size_MatType_NormType, DISABLED_norm2_mask_extra,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_8UC4, CV_32FC1),
+                testing::Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2, (int)(NORM_RELATIVE|NORM_INF), (int)(NORM_RELATIVE|NORM_L1), (int)(NORM_RELATIVE|NORM_L2))
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    int normType = get<2>(GetParam());
+
+    Mat src1(sz, matType);
+    Mat src2(sz, matType);
+    Mat mask = Mat::ones(sz, CV_8U);
+    double n;
+
+    declare.in(src1, src2, WARMUP_RNG).in(mask);
+
+    TEST_CYCLE() n = cv::norm(src1, src2, normType, mask);
+
+    SANITY_CHECK_NOTHING();
 }
 
 namespace {
