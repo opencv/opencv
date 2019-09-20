@@ -2476,6 +2476,45 @@ double dotProd_8s(const schar* src1, const schar* src2, int len)
             i += blockSize;
         }
     }
+#elif CV_MSA
+    int len0 = len & -8, blockSize0 = (1 << 14), blockSize;
+    v4i32 v_zero = msa_dupq_n_s32(0);
+    CV_DECL_ALIGNED(16) int buf[4];
+
+    while( i < len0 )
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        v4i32 v_sum = v_zero;
+
+        int j = 0;
+        for( ; j <= blockSize - 16; j += 16 )
+        {
+            v16i8 v_src1 = msa_ld1q_s8(src1 + j), v_src2 = msa_ld1q_s8(src2 + j);
+
+            v8i16 v_src10 = msa_movl_s8(msa_get_low_s8(v_src1)), v_src20 = msa_movl_s8(msa_get_low_s8(v_src2));
+            v_sum = msa_mlal_s16(v_sum, msa_get_low_s16(v_src10), msa_get_low_s16(v_src20));
+            v_sum = msa_mlal_s16(v_sum, msa_get_high_s16(v_src10), msa_get_high_s16(v_src20));
+
+            v_src10 = msa_movl_s8(msa_get_high_s8(v_src1));
+            v_src20 = msa_movl_s8(msa_get_high_s8(v_src2));
+            v_sum = msa_mlal_s16(v_sum, msa_get_low_s16(v_src10), msa_get_low_s16(v_src20));
+            v_sum = msa_mlal_s16(v_sum, msa_get_high_s16(v_src10), msa_get_high_s16(v_src20));
+        }
+
+        for( ; j <= blockSize - 8; j += 8 )
+        {
+            v8i16 v_src1 = msa_movl_s8(msa_ld1_s8(src1 + j)), v_src2 = msa_movl_s8(msa_ld1_s8(src2 + j));
+            v_sum = msa_mlal_s16(v_sum, msa_get_low_s16(v_src1), msa_get_low_s16(v_src2));
+            v_sum = msa_mlal_s16(v_sum, msa_get_high_s16(v_src1), msa_get_high_s16(v_src2));
+        }
+
+        msa_st1q_s32(buf, v_sum);
+        r += buf[0] + buf[1] + buf[2] + buf[3];
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
 #endif
 
     return r + dotProd_(src1, src2, len - i);
