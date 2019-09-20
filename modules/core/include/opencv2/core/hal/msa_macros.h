@@ -1208,8 +1208,6 @@ msa_mlaq_f64(v2f64 __a, v2f64 __b, v2f64 __c)
 #define msa_addl_u16(a, b)    ((v4u32)__builtin_msa_addv_w((v4i32)V4U16_2_V4I32(a), (v4i32)V4U16_2_V4I32(b)))
 #define msa_addl_s16(a, b)    (__builtin_msa_addv_w((v4i32)V4I16_2_V4I32(a), (v4i32)V4I16_2_V4I32(b)))
 #define msa_subl_s16(a, b)    (__builtin_msa_subv_w((v4i32)V4I16_2_V4I32(a), (v4i32)V4I16_2_V4I32(b)))
-#define msa_mlal_u16(a, b, c) ((v4u32)__builtin_msa_maddv_w((v4i32)V4U16_2_V4I32(b), (v4i32)V4U16_2_V4I32(c), (v4i32)(a)))
-#define msa_mlal_s16(a, b, c) (__builtin_msa_maddv_w((v4i32)V4I16_2_V4I32(b), (v4i32)V4I16_2_V4I32(c), (v4i32)(a)))
 #define msa_recpeq_f32        __builtin_msa_frcp_w
 #define msa_recpsq_f32(a, b)  (__builtin_msa_fsub_w(msa_dupq_n_f32(2.0f), __builtin_msa_fmul_w(a, b)))
 
