@@ -227,12 +227,38 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
             res = std::max(res, (int)std::abs(a[i] - b[i]));
         }
     } else {
-        for(; i < len; i++, a += cn, b += cn)
+        if( cn == 1 )
         {
-            if( mask[i] )
+            const v_int16 zero = vx_setall_s16((short)0);
+#if CV_SIMD
+            for(; i <= len - v_uint16::nlanes; i+= v_uint16::nlanes)
             {
-                for(int j = 0; j < cn; j++ )
-                    res = std::max(res, (int)std::abs(a[j] - b[j]));
+                v_int16 m = v_reinterpret_as_s16(vx_load_expand(mask + i));
+                v_int16 d = m != zero;
+
+                v_int16 srca = v_reinterpret_as_s16(vx_load_expand(a + i));
+                v_int16 srcb = v_reinterpret_as_s16(vx_load_expand(b + i));
+
+                v_int16 r = (srca - srcb)*d;
+                res = std::max(res, (int)v_reduce_max(v_abs(r)));
+
+            }
+#endif
+            for(; i < l; i++)
+            {
+                if( mask[i] )
+                {
+                    res = std::max(res, (int)std::abs(a[i] - b[i]));
+                }
+            }
+        } else {
+            for(; i < len; i++, a += cn, b += cn )
+            {
+                if( mask[i] )
+                {
+                    for(int j = 0; j < cn; j++ )
+                        res = std::max(res, (int)std::abs(a[j] - b[j]));
+                }
             }
         }
     }
