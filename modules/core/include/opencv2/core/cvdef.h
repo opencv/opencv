@@ -258,6 +258,8 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 #define CV_CPU_NEON             100
 
+#define CV_CPU_MSA              150
+
 #define CV_CPU_VSX              200
 #define CV_CPU_VSX3             201
 
@@ -307,6 +309,8 @@ enum CpuFeatures {
     CPU_AVX_5124FMAPS   = 27,
 
     CPU_NEON            = 100,
+
+    CPU_MSA             = 150,
 
     CPU_VSX             = 200,
     CPU_VSX3            = 201,
