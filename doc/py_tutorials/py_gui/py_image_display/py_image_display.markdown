@@ -4,7 +4,7 @@ Getting Started with Images {#tutorial_py_image_display}
 Goals
 -----
 
--   Here, you will learn how to read an image, how to display it and how to save it back
+-   Here, you will learn how to read an image, how to display it, and how to save it back
 -   You will learn these functions : **cv.imread()**, **cv.imshow()** , **cv.imwrite()**
 -   Optionally, you will learn how to display images with Matplotlib
 
@@ -30,7 +30,7 @@ See the code below:
 import numpy as np
 import cv2 as cv
 
-# Load an color image in grayscale
+# Load a color image in grayscale
 img = cv.imread('messi5.jpg',0)
 @endcode
 
@@ -43,7 +43,7 @@ Even if the image path is wrong, it won't throw any error, but `print img` will 
 Use the function **cv.imshow()** to display an image in a window. The window automatically fits to
 the image size.
 
-First argument is a window name which is a string. second argument is our image. You can create as
+First argument is a window name which is a string. Second argument is our image. You can create as
 many windows as you wish, but with different window names.
 @code{.py}
 cv.imshow('image',img)
@@ -66,11 +66,11 @@ MUST use it to actually display the image.
 specific window, use the function **cv.destroyWindow()** where you pass the exact window name as
 the argument.
 
-@note There is a special case where you can already create a window and load image to it later. In
-that case, you can specify whether window is resizable or not. It is done with the function
-**cv.namedWindow()**. By default, the flag is cv.WINDOW_AUTOSIZE. But if you specify flag to be
-cv.WINDOW_NORMAL, you can resize window. It will be helpful when image is too large in dimension
-and adding track bar to windows.
+@note There is a special case where you can create an empty window and load an image to it later. In
+that case, you can specify whether the window is resizable or not. It is done with the function
+**cv.namedWindow()**. By default, the flag is cv.WINDOW_AUTOSIZE. But if you specify the flag to be
+cv.WINDOW_NORMAL, you can resize window. It will be helpful when an image is too large in dimension
+and when adding track bars to windows.
 
 See the code below:
 @code{.py}
@@ -91,8 +91,8 @@ This will save the image in PNG format in the working directory.
 
 ### Sum it up
 
-Below program loads an image in grayscale, displays it, save the image if you press 's' and exit, or
-simply exit without saving if you press ESC key.
+Below program loads an image in grayscale, displays it, saves the image if you press 's' and exit, or
+simply exits without saving if you press ESC key.
 @code{.py}
 import numpy as np
 import cv2 as cv
@@ -117,7 +117,7 @@ Using Matplotlib
 
 Matplotlib is a plotting library for Python which gives you wide variety of plotting methods. You
 will see them in coming articles. Here, you will learn how to display image with Matplotlib. You can
-zoom images, save it etc using Matplotlib.
+zoom images, save them, etc, using Matplotlib.
 @code{.py}
 import numpy as np
 import cv2 as cv
