@@ -1519,7 +1519,7 @@ if(FLAKE8_FOUND AND FLAKE8_EXECUTABLE)
 endif()
 
 # ========================== java ==========================
-if(BUILD_JAVA OR BUILD_opencv_java)
+if(BUILD_JAVA)
   status("")
   status("  Java:"            BUILD_FAT_JAVA_LIB  THEN "export all functions"                                      ELSE "")
   status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"                    ELSE NO)
