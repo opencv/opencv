@@ -86,6 +86,7 @@ CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
 CV_EXPORTS float normL1_(const float* a, const float* b, int n);
 CV_EXPORTS float normL2Sqr_(const float* a, const float* b, int n);
 CV_EXPORTS int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result, int len, int cn);
+CV_EXPORTS int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result, int len, int cn);
 
 CV_EXPORTS void exp32f(const float* src, float* dst, int n);
 CV_EXPORTS void exp64f(const double* src, double* dst, int n);
