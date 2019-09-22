@@ -45,18 +45,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     /** @brief noncopyable cuDNN smart handle
      *
      * UniqueHandle is a smart non-sharable wrapper for cuDNN handle which ensures that the handle
-     * is destroyed after use. The handle can be associated with a CUDA stream by specifying the
-     * stream during construction. By default, the handle is associated with the default stream.
+     * is destroyed after use.
      */
     class UniqueHandle {
     public:
+        /** creates a cuDNN handle which executes in the default stream
+         *
+         * Exception Guarantee: Basic
+         */
         UniqueHandle() { CUDA4DNN_CHECK_CUDNN(cudnnCreate(&handle)); }
+
         UniqueHandle(UniqueHandle&) = delete;
         UniqueHandle(UniqueHandle&& other) noexcept
             : stream(std::move(other.stream)), handle{ other.handle } {
             other.handle = nullptr;
         }
 
+        /** creates a cuDNN handle and associates it with the stream specified
+         *
+         * Exception Guarantee: Basic
+         */
         UniqueHandle(Stream strm) : stream(std::move(strm)) {
             CUDA4DNN_CHECK_CUDNN(cudnnCreate(&handle));
             try {
@@ -94,17 +102,25 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     /** @brief sharable cuDNN smart handle
      *
      * Handle is a smart sharable wrapper for cuDNN handle which ensures that the handle
-     * is destroyed after all references to the handle are destroyed. The handle can be
-     * associated with a CUDA stream by specifying the stream during construction. By default,
-     * the handle is associated with the default stream.
+     * is destroyed after all references to the handle are destroyed.
      *
      * @note Moving a Handle object to another invalidates the former
      */
     class Handle {
     public:
+        /** creates a cuDNN handle which executes in the default stream
+         *
+         * Exception Guarantee: Basic
+         */
         Handle() : handle(std::make_shared<UniqueHandle>()) { }
+
         Handle(const Handle&) = default;
         Handle(Handle&&) = default;
+
+        /** creates a cuDNN handle and associates it with the stream specified
+         *
+         * Exception Guarantee: Basic
+         */
         Handle(Stream strm) : handle(std::make_shared<UniqueHandle>(std::move(strm))) { }
 
         Handle& operator=(const Handle&) = default;
@@ -122,7 +138,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         std::shared_ptr<UniqueHandle> handle;
     };
 
-    /** creates a cuDNN tensor descriptor for a given shape */
+    /** describe a tensor
+     *
+     * @tparam  T   type of elements in the tensor
+     */
     template <class T>
     class TensorDescriptor {
     public:
@@ -133,19 +152,28 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             other.descriptor = nullptr;
         }
 
-        /** constructs a tensor descriptor from the axis lengths provided in \p shape */
+        /** constructs a tensor descriptor from the axis lengths provided in \p shape
+         *
+         * Exception Guarantee: Basic
+         */
         template <class SequenceContainer, typename = decltype(std::begin(std::declval<SequenceContainer>()))>
         TensorDescriptor(const SequenceContainer& shape) {
             constructor(shape.begin(), shape.end());
         }
 
-        /** constructs a tensor descriptor from the axis lengths provided in [begin, end) */
+        /** constructs a tensor descriptor from the axis lengths provided in [begin, end)
+         *
+         * Exception Guarantee: Basic
+         */
         template <class ForwardItr, typename = typename std::enable_if<!std::is_integral<ForwardItr>::value, void>::type> // TODO is_iterator
         TensorDescriptor(ForwardItr begin, ForwardItr end) {
             constructor(begin, end);
         }
 
-        /** constructs a tensor descriptor from the axis lengths provided as arguments */
+        /** constructs a tensor descriptor from the axis lengths provided as arguments
+         *
+         * Exception Guarantee: Basic
+         */
         template <class ...Sizes>
         TensorDescriptor(Sizes ...sizes) {
             static_assert(sizeof...(Sizes) <= CUDNN_DIM_MAX, "required rank exceeds maximum supported rank");
@@ -177,7 +205,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
             CUDA4DNN_CHECK_CUDNN(cudnnCreateTensorDescriptor(&descriptor));
             try {
-                /* cuDNN documentation suggests using the 4d tensor API whenever possible
+                /* cuDNN documentation recommends using the 4d tensor API whenever possible
                  * hence, we create a 4d tensor descriptors for 3d tensor
                  */
                 const auto rank = std::distance(start, end);
@@ -246,50 +274,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         cudnnTensorDescriptor_t descriptor;
     };
-
-    /** @brief element-wise addition with broadcasting
-     *
-     * \f$ C = \alpha A + \beta C \f$
-     *
-     * @tparam          T           matrix element type (must be `half` or `float`)
-     *
-     * @param           handle      valid cuDNN handle
-     * @param           alpha       scale factor for A
-     * @param           aDesc       tensor descriptor for A
-     * @param[in]       A           pointer to tensor in device memory
-     * @param           beta        scale factor for C
-     * @param           cDesc       tensor descriptor for C
-     * @param[in]       C           pointer to tensor in device memory
-     *
-     * Exception Guarantee: Basic
-     */
-    template <class T>
-    typename std::enable_if<std::is_same<T, half>::value || std::is_same<T, float>::value, void>
-    ::type add(const Handle& handle,
-        T alpha, const TensorDescriptor<T>& aDesc, DevicePtr<const T> A,
-        T beta, const TensorDescriptor<T>& cDesc, DevicePtr<T> C)
-    {
-        CUDA4DNN_CHECK_CUDNN(
-            cudnnAddTensor(handle.get(),
-                &alpha, aDesc.get(), A.get(),
-                &beta, cDesc.get(), C.get()
-            )
-        );
-    }
-
-    template <> inline
-    void add(const Handle& handle,
-        half alpha_, const TensorDescriptor<half>& aDesc, DevicePtr<const half> A,
-        half beta_, const TensorDescriptor<half>& cDesc, DevicePtr<half> C)
-    {
-        float alpha = alpha_, beta = beta_;
-        CUDA4DNN_CHECK_CUDNN(
-            cudnnAddTensor(handle.get(),
-                &alpha, aDesc.get(), A.get(),
-                &beta, cDesc.get(), C.get()
-            )
-        );
-    }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */
 

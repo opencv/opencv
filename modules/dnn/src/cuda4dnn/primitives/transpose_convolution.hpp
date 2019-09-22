@@ -182,7 +182,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             params.padding.assign(std::begin(common_padding) + 2, std::end(common_padding));
             params.stride = strides;
-            params.dialation = dilations;
+            params.dilation = dilations;
             params.groups = config.groups;
 
             convoluter = csl::TransposeConvolution<T>(cudnnHandle, params);

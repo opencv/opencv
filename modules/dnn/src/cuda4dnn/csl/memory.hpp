@@ -84,7 +84,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * deallocates any previously allocated memory and allocates device memory
          * for \p count number of elements
          *
-         * @note might optimize to avoid unnecessary reallocation
+         * @note no reallocation if the previously allocated memory has no owners and the requested memory size fits in it
+         * @note use move constructor to guarantee a deallocation of the previously allocated memory
          *
          * Exception Guarantee: Strong
          */
@@ -255,7 +256,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             other.ptr = nullptr;
         }
 
-        /**
+        /** page-locks \p size_in_bytes bytes of memory starting from \p ptr_
+         *
          * Pre-conditons:
          * - host memory should be unregistered
          */

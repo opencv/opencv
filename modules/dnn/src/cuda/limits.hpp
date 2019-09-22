@@ -29,6 +29,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
         __device__ static float lowest() { return -FLT_MAX; }
     };
 
-}}}}} /*  cv::dnn::cuda4dnn::csl::device */
+}}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_LIMITS_HPP */

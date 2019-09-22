@@ -26,6 +26,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace cxx_utils {
     template <class T>
     using is_forward_iterator = typename detail::is_iterator_helper<T, std::forward_iterator_tag>;
 
-}}}} /* cv::dnn::cuda4dnn::csl::cxx_utils */
+}}}} /* namespace cv::dnn::cuda4dnn::csl::cxx_utils */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CXX_UTILS_IS_ITERATOR_HPP */

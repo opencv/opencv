@@ -24,8 +24,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     namespace raw {
         template <class T>
         __global__ void resize_nn(
-            span<T> output, size_type out_height, size_type out_width,
-            view<T> input, size_type in_height, size_type in_width)
+            Span<T> output, size_type out_height, size_type out_width,
+            View<T> input, size_type in_height, size_type in_width)
         {
             auto in_image_size = in_height * in_width;
             auto out_image_size = out_height * out_width;
@@ -54,8 +54,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
         template <class T>
         __global__ void resize_bilinear(
-            span<T> output, size_type out_height, size_type out_width,
-            view<T> input, size_type in_height, size_type in_width,
+            Span<T> output, size_type out_height, size_type out_width,
+            View<T> input, size_type in_height, size_type in_width,
             float o2i_fy, float o2i_fx)
         {
             auto in_image_size = in_height * in_width;
@@ -130,4 +130,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void resize_bilinear<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, float, float);
     template void resize_bilinear<float>(const Stream&, TensorSpan<float>, TensorView<float>, float, float);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

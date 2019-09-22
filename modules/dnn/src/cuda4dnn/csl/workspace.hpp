@@ -67,26 +67,30 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     class WorkspaceInstance {
     public:
 
+        /** returns a device pointer to the workspace memory */
         template <class T = void>
         DevicePtr<T> get() const noexcept {
             return static_cast<DevicePtr<T>>(ptr);
         }
 
+        /** returnss the size of the workspace memory in bytes */
         std::size_t size_in_bytes() const noexcept {
             return size_in_bytes_;
         }
 
+        /** creates a Span<T> of \p count elements from the workspace memory */
         template <class T>
-        span<T> get_span(std::size_t count = 0) const {
+        Span<T> get_span(std::size_t count = 0) const {
             if (count == 0)
                 count = size_in_bytes_ / sizeof(T);
 
             if (count * sizeof(T) > size_in_bytes_)
                 CV_Error(Error::StsNoMem, "memory not sufficient");
 
-            return span<T>(static_cast<DevicePtr<T>>(ptr), count);
+            return Span<T>(static_cast<DevicePtr<T>>(ptr), count);
         }
 
+        /** creates a TensorSpan<T> of the given shape from the workspace memory */
         template <class T, class ForwardItr>
         TensorSpan<T> get_tensor_span(ForwardItr shape_begin, ForwardItr shape_end) const {
             using ItrValueType = typename std::iterator_traits<ForwardItr>::value_type;
@@ -116,11 +120,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             CV_Assert(bytes_remaining % 256 == 0);
         }
 
+        /** allocates a Span<T> of \p count elements from the workspace memory */
         template <class T>
-        span<T> get_span(std::size_t count = 0) {
+        Span<T> get_span(std::size_t count = 0) {
             return accquire<T>(count);
         }
 
+        /** allocates a TensorSpan<T> of the given shape from the workspace memory */
         template <class T, class ForwardItr>
         TensorSpan<T> get_tensor_span(ForwardItr start, ForwardItr end) {
             using ItrValueType = typename std::iterator_traits<ForwardItr>::value_type;
@@ -128,6 +134,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return TensorSpan<T>(accquire<T>(required_size).data(), start, end);
         }
 
+        /** allocates a WorkspaceInstance of size \p bytes from the workspace memory */
         WorkspaceInstance get_instance(std::size_t bytes = 0) {
             auto span = accquire(bytes);
             return WorkspaceInstance(DevicePtr<void>(span.data()), span.size());
@@ -135,7 +142,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     private:
         template <class T = std::int8_t>
-        span<T> accquire(std::size_t count = 0) {
+        Span<T> accquire(std::size_t count = 0) {
             auto ptr = current;
 
             if (count == 0)
@@ -147,13 +154,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
             bytes_remaining -= blocks256 * 256;
             current = static_cast<DevicePtr<std::int8_t>>(current) + blocks256 * 256;
-            return span<T>(static_cast<DevicePtr<T>>(ptr), count);
+            return Span<T>(static_cast<DevicePtr<T>>(ptr), count);
         }
 
         DevicePtr<void> current;
         std::size_t bytes_remaining;
     };
 
-}}}} /* cv::dnn::cuda4dnn::csl */
+}}}} /* namespace cv::dnn::cuda4dnn::csl */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_WORKSPACE_HPP */

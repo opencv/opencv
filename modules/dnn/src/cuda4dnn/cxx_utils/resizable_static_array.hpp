@@ -105,6 +105,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace cxx_utils {
         container_type arr;
     };
 
-}}}} /* cv::dnn::cuda4dnn::csl::cxx_utils */
+}}}} /* namespace cv::dnn::cuda4dnn::csl::cxx_utils */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CXX_UTILS_RESIZABLE_STATIC_ARRAY_HPP */

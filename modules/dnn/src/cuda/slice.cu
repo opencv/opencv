@@ -29,8 +29,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     namespace raw {
         template <class T, std::size_t Rank>
         __global__ void slice(
-            span<T> output, array<size_type, Rank> out_strides,
-            view<T> input, array<size_type, Rank> in_strides, array<index_type, Rank> in_offset)
+            Span<T> output, array<size_type, Rank> out_strides,
+            View<T> input, array<size_type, Rank> in_strides, array<index_type, Rank> in_offset)
         {
             for (auto i : grid_stride_range(output.size())) {
                 index_type out_index = i / out_strides[0];
@@ -50,8 +50,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T, std::size_t Rank> static
     void launch_slice(
         const Stream& stream,
-        span<T> output, const std::vector<std::size_t>& outStride,
-        view<T> input, const std::vector<std::size_t>& inStride, const std::vector<std::size_t>& inOffset)
+        Span<T> output, const std::vector<std::size_t>& outStride,
+        View<T> input, const std::vector<std::size_t>& inStride, const std::vector<std::size_t>& inOffset)
     {
         CV_Assert(outStride.size() == Rank);
         CV_Assert(inStride.size() == Rank);
@@ -166,4 +166,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void slice(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
     template void slice(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

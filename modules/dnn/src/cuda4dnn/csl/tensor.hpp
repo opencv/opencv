@@ -387,8 +387,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             shape.insert(std::begin(shape) + axis, 1);
         }
 
-        operator span<T>() noexcept { return span<T>(data.get(), size()); }
-        operator view<T>() const noexcept { return view<T>(data.get(), size()); }
+        operator Span<T>() noexcept { return Span<T>(data.get(), size()); }
+        operator View<T>() const noexcept { return View<T>(data.get(), size()); }
 
         friend void swap(Tensor& lhs, Tensor& rhs) noexcept {
             using std::swap;
@@ -734,8 +734,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return subspan(offset, std::begin(new_sizes), std::end(new_sizes));
         }
 
-        operator span<T>() noexcept { return span<T>(ptr, size()); }
-        operator view<T>() const noexcept { return view<T>(ptr, size()); }
+        operator Span<T>() noexcept { return Span<T>(ptr, size()); }
+        operator View<T>() const noexcept { return View<T>(ptr, size()); }
 
         friend void swap(TensorSpan& lhs, TensorSpan& rhs) noexcept {
             using std::swap;
@@ -1082,7 +1082,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return subview(offset, std::begin(new_sizes), std::end(new_sizes));
         }
 
-        operator view<T>() const noexcept { return view<T>(ptr, size()); }
+        operator View<T>() const noexcept { return View<T>(ptr, size()); }
 
         friend void swap(TensorView& lhs, TensorView& rhs) noexcept {
             using std::swap;

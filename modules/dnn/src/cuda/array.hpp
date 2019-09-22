@@ -40,13 +40,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
         __host__ __device__ const_iterator cbegin() const noexcept { return ptr; }
         __host__ __device__ const_iterator cend() const noexcept { return ptr + N; }
 
-        __host__ __device__ iterator rbegin() noexcept { return ptr + N; }
-        __host__ __device__ iterator rend() noexcept { return ptr; }
-        __host__ __device__ const_iterator rbegin() const noexcept { return ptr + N; }
-        __host__ __device__ const_iterator rend() const noexcept { return ptr; }
+        __host__ __device__ reverse_iterator rbegin() noexcept { return ptr + N; }
+        __host__ __device__ reverse_iterator rend() noexcept { return ptr; }
+        __host__ __device__ const_reverse_iterator rbegin() const noexcept { return ptr + N; }
+        __host__ __device__ const_reverse_iterator rend() const noexcept { return ptr; }
 
-        __host__ __device__ const_iterator crbegin() const noexcept { return ptr + N; }
-        __host__ __device__ const_iterator crend() const noexcept { return ptr; }
+        __host__ __device__ const_reverse_iterator crbegin() const noexcept { return ptr + N; }
+        __host__ __device__ const_reverse_iterator crend() const noexcept { return ptr; }
 
         template <class InputItr>
         __host__ void assign(InputItr first, InputItr last) {
@@ -68,6 +68,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
         T ptr[N];
     };
 
-}}}}} /*  cv::dnn::cuda4dnn::csl::device */
+}}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_ARRAY_HPP */

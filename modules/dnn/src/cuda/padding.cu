@@ -30,8 +30,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     namespace raw {
         template <class T, std::size_t Rank>
         __global__ void copy_with_reflection101(
-            span<T> output, array<size_type, Rank> out_strides, array<index_type, Rank> start, array<index_type, Rank> end,
-            view<T> input, array<size_type, Rank> in_strides)
+            Span<T> output, array<size_type, Rank> out_strides, array<index_type, Rank> start, array<index_type, Rank> end,
+            View<T> input, array<size_type, Rank> in_strides)
         {
             for (auto i : grid_stride_range(output.size())) {
                 /* compute output axis indices corresponding to element 'i' */
@@ -69,8 +69,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T, std::size_t Rank> static
     void launch_copy_with_reflection101(
         const Stream& stream,
-        span<T> output, const std::vector<std::size_t>& outStride,
-        view<T> input, const std::vector<std::size_t>& inStride,
+        Span<T> output, const std::vector<std::size_t>& outStride,
+        View<T> input, const std::vector<std::size_t>& inStride,
         const std::vector<std::pair<std::size_t, std::size_t>>& ranges)
     {
         CV_Assert(outStride.size() == Rank);
@@ -196,4 +196,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void copy_with_reflection101(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::pair<std::size_t, std::size_t>> ranges);
     template void copy_with_reflection101(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::pair<std::size_t, std::size_t>> ranges);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace namespace cv::dnn::cuda4dnn::kernels */

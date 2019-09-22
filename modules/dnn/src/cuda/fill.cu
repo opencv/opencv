@@ -19,7 +19,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
         template <class T, std::size_t N>
-        __global__ void fill_vec(span<T> output, T value) {
+        __global__ void fill_vec(Span<T> output, T value) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -33,7 +33,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     }
 
     template <class T, std::size_t N>
-    void launch_vectorized_fill(const Stream& stream, span<T> output, T value) {
+    void launch_vectorized_fill(const Stream& stream, Span<T> output, T value) {
         CV_Assert(is_fully_aligned<T>(output, N));
 
         auto kernel = raw::fill_vec<T, N>;
@@ -42,7 +42,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     }
 
     template <class T>
-    void fill(const Stream& stream, span<T> output, T value) {
+    void fill(const Stream& stream, Span<T> output, T value) {
         if (is_fully_aligned<T>(output, 4)) {
             launch_vectorized_fill<T, 4>(stream, output, value);
         } else if (is_fully_aligned<T>(output, 2)) {
@@ -52,7 +52,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
-    template void fill(const Stream&, span<__half>, __half);
-    template void fill(const Stream&, span<float>, float);
+    template void fill(const Stream&, Span<__half>, __half);
+    template void fill(const Stream&, Span<float>, float);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

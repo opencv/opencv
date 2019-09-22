@@ -16,6 +16,11 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cudnn {
 
+    /** describes a tensor transform operation
+     *
+     * Supported transformations:
+     * - add or remove asymmetric padding
+     */
     class TensorTransformDescriptor {
     public:
         TensorTransformDescriptor() noexcept : descriptor{ nullptr } { }
@@ -25,6 +30,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             other.descriptor = nullptr;
         }
 
+        /** constructs a convolution descriptor
+         *
+         * Pre-conditions:
+         * - \p padding_left and \p padding_right must have the same size
+         *
+         * The length of the containers is interpreted as the rank of the tensors which will be given.
+         *
+         * @note \p padding_left and \p padding_right may have negative values to remove padding
+         *
+         * Exception Guarantee: Basic
+         */
         template <class SequenceContainer, typename = decltype(std::begin(std::declval<SequenceContainer>()))>
         TensorTransformDescriptor(
             const SequenceContainer& padding_left,
@@ -35,7 +51,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         ~TensorTransformDescriptor() noexcept {
             if (descriptor != nullptr) {
-                /* cudnnDestroyTensorTransformDescriptor will not fail */
+                /* cudnnDestroyTensorTransformDescriptor will not fail for a valid descriptor */
                 CUDA4DNN_CHECK_CUDNN(cudnnDestroyTensorTransformDescriptor(descriptor));
             }
         }
@@ -71,7 +87,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                     )
                 );
             } catch (...) {
-                /* cudnnDestroyTensorTransformDescriptor will not fail */
+                /* cudnnDestroyTensorTransformDescriptor will not fail for a valid descriptor */
                 CUDA4DNN_CHECK_CUDNN(cudnnDestroyTensorTransformDescriptor(descriptor));
                 throw;
             }

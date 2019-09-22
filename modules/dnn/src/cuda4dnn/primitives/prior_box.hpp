@@ -104,10 +104,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             /* we had stored all the parameters in a single tensor; now we create appropriate views
              * for each of the parameter arrays from the single tensor
              */
-            auto boxWidths  = csl::view<float>(paramsTensor.get(), box_size);
-            auto boxHeights = csl::view<float>(paramsTensor.get() + box_size, box_size);
-            auto offsetsX   = csl::view<float>(paramsTensor.get() + 2 * box_size, offset_size);
-            auto offsetsY   = csl::view<float>(paramsTensor.get() + 2 * box_size + offset_size, offset_size);
+            auto boxWidths  = csl::View<float>(paramsTensor.get(), box_size);
+            auto boxHeights = csl::View<float>(paramsTensor.get() + box_size, box_size);
+            auto offsetsX   = csl::View<float>(paramsTensor.get() + 2 * box_size, offset_size);
+            auto offsetsY   = csl::View<float>(paramsTensor.get() + 2 * box_size + offset_size, offset_size);
 
             kernels::generate_prior_boxes<T>(stream, output,
                 boxWidths, boxHeights, offsetsX, offsetsY, stepX, stepY,

@@ -6,6 +6,7 @@
 #define OPENCV_DNN_SRC_CUDA_ATOMICS_HPP
 
 #include <cuda_runtime.h>
+#include <cuda_fp16.h>
 
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 700
 #else

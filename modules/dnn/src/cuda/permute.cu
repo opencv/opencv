@@ -29,8 +29,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         template <class T, std::size_t Rank>
         __global__ void permute(
             array<index_type, Rank> axis_order,
-            span<T> output, array<size_type, Rank> outStrides,
-            view<T> input, array<size_type, Rank> inStrides)
+            Span<T> output, array<size_type, Rank> outStrides,
+            View<T> input, array<size_type, Rank> inStrides)
         {
             for (auto i : grid_stride_range(input.size())) {
                 index_type oldPosition = 0;
@@ -52,8 +52,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void launch_permute_kernel(
         const Stream& stream,
         const std::vector<std::size_t>& order,
-        span<T> output, const std::vector<std::size_t>& outStride,
-        view<T> input, const std::vector<std::size_t>& inStride)
+        Span<T> output, const std::vector<std::size_t>& outStride,
+        View<T> input, const std::vector<std::size_t>& inStride)
     {
         CV_Assert(order.size() == Rank);
         CV_Assert(outStride.size() == Rank);
@@ -140,4 +140,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void permute(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
     template void permute(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

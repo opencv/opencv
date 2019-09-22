@@ -13,13 +13,13 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
-    /** @brief provides non-owning mutable view for device arrays
+    /** @brief provides non-owning mutable access for device arrays
      *
-     *  const span<T>/span<T> provides mutable access to the elements unless T is const qualified
-     *  const span<T> makes the span immutable but not the elements
+     *  const Span<T>/Span<T> provides mutable access to the elements unless T is const qualified
+     *  const Span<T> makes the span immutable but not the elements
      */
     template <class T>
-    class span {
+    class Span {
         static_assert(std::is_standard_layout<T>::value, "T must satisfy StandardLayoutType");
 
     public:
@@ -35,9 +35,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         using iterator = pointer;
         using const_iterator = const_pointer;
 
-        span() noexcept : ptr{ nullptr }, sz{ 0 } { }
-        CUDA4DNN_HOST_DEVICE span(pointer first, pointer last) noexcept : ptr{ first }, sz{ last - first } { }
-        CUDA4DNN_HOST_DEVICE span(pointer first, size_type count) noexcept : ptr{ first }, sz{ count } { }
+        Span() noexcept : ptr{ nullptr }, sz{ 0 } { }
+        CUDA4DNN_HOST_DEVICE Span(pointer first, pointer last) noexcept : ptr{ first }, sz{ last - first } { }
+        CUDA4DNN_HOST_DEVICE Span(pointer first, size_type count) noexcept : ptr{ first }, sz{ count } { }
 
         CUDA4DNN_HOST_DEVICE size_type size() const noexcept { return sz; }
         CUDA4DNN_HOST_DEVICE bool empty() const noexcept { return size() == 0; }
@@ -47,7 +47,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         template<class U = T, class V = typename std::add_const<U>::type,
             typename std::enable_if<!std::is_const<U>::value, bool>::type = true>
-            CUDA4DNN_HOST_DEVICE operator span<V>() const noexcept { return span<V>{ptr, sz}; }
+            CUDA4DNN_HOST_DEVICE operator Span<V>() const noexcept { return Span<V>{ptr, sz}; }
 
     private:
         pointer ptr;
@@ -56,17 +56,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     /** @brief provides non-owning immutable view for device arrays */
     template <class T>
-    using view = span<const T>;
+    using View = Span<const T>;
 
     /** returns true if the address of a span/view is aligned to \p alignment number of elements (not bytes) */
     template <class T>
-    bool is_address_aligned(view<T> v, std::size_t alignment) {
+    bool is_address_aligned(View<T> v, std::size_t alignment) {
         return is_aligned(v.data(), alignment * sizeof(T));
     }
 
     /** returns true if the size of a span/view is a multiple of \p alignment */
     template <class T>
-    bool is_size_aligned(view<T> v, std::size_t alignment) {
+    bool is_size_aligned(View<T> v, std::size_t alignment) {
         return v.size() % alignment == 0;
     }
 
@@ -74,7 +74,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      * \p alignment refers to the number of elements (not bytes)
      */
     template <class T>
-    bool is_fully_aligned(view<T> v, std::size_t alignment) {
+    bool is_fully_aligned(View<T> v, std::size_t alignment) {
         return is_address_aligned(v, alignment) && is_size_aligned(v, alignment);
     }
 

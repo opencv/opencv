@@ -29,7 +29,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
         template <class T>
-        __global__ void reduce_sum_abs(span<T> output, view<T> input, size_type outer_stride, size_type mid_stride) {
+        __global__ void reduce_sum_abs(Span<T> output, View<T> input, size_type outer_stride, size_type mid_stride) {
             for (auto idx : grid_stride_range(input.size())) {
                 const index_type outer_idx = idx / outer_stride;
                 const index_type inner_idx = idx % mid_stride;
@@ -40,13 +40,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T>
-        __global__ void reciprocal(span<T> output, T epsilon) {
+        __global__ void reciprocal(Span<T> output, T epsilon) {
             for (auto idx : grid_stride_range(output.size()))
                 output[idx] = T(1) / (output[idx] + epsilon);
         }
 
         template <class T>
-        __global__ void reduce_sum_squared(span<T> output, view<T> input, size_type outer_stride, size_type mid_stride) {
+        __global__ void reduce_sum_squared(Span<T> output, View<T> input, size_type outer_stride, size_type mid_stride) {
            for (auto idx : grid_stride_range(input.size())) {
                 const index_type outer_idx = idx / outer_stride;
                 const index_type inner_idx = idx % mid_stride;
@@ -57,7 +57,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T>
-        __global__ void rsqrt(span<T> output, T epsilon) {
+        __global__ void rsqrt(Span<T> output, T epsilon) {
             for (auto idx : grid_stride_range(output.size())) {
                 using device::sqrt;
                 output[idx] = T(1) / sqrt(output[idx] + epsilon);
@@ -65,8 +65,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T>
-        __global__ void apply_norm(span<T> output, view<T> input, size_type outer_stride, size_type mid_stride, view<T> sums)
-        {
+        __global__ void apply_norm(Span<T> output, View<T> input, size_type outer_stride, size_type mid_stride, View<T> sums) {
             for (auto idx : grid_stride_range(output.size())) {
                 const index_type outer_idx = idx / outer_stride;
                 const index_type inner_idx = idx % mid_stride;
@@ -80,16 +79,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T>
     void normalize(
         const Stream& stream,
-        span<T> output,
-        view<T> input, std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, std::size_t norm, T epsilon,
-        span<T> workspace)
+        Span<T> output,
+        View<T> input, std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, std::size_t norm, T epsilon,
+        Span<T> workspace)
     {
         CV_Assert(output.size() == input.size());
         CV_Assert(output.size() == outer_size * mid_size * inner_size);
         CV_Assert(norm == 1 || norm == 2);
         CV_Assert(workspace.size() >= outer_size * inner_size);
 
-        auto sums = span<T>(workspace.data(), outer_size * inner_size);
+        auto sums = Span<T>(workspace.data(), outer_size * inner_size);
 
         fill<T>(stream, sums, 0.0);
 
@@ -116,7 +115,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         launch_kernel(scale_kernel, policy, output, input, mid_size * inner_size, inner_size, sums);
     }
 
-    template void normalize(const Stream&, span<__half>, view<__half>, std::size_t, std::size_t, std::size_t, std::size_t, __half, span<__half>);
-    template void normalize(const Stream&, span<float>, view<float>, std::size_t, std::size_t, std::size_t, std::size_t, float, span<float>);
+    template void normalize(const Stream&, Span<__half>, View<__half>, std::size_t, std::size_t, std::size_t, std::size_t, __half, Span<__half>);
+    template void normalize(const Stream&, Span<float>, View<float>, std::size_t, std::size_t, std::size_t, std::size_t, float, Span<float>);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

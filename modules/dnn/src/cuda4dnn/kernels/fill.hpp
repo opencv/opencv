@@ -11,7 +11,7 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T>
-    void fill(const csl::Stream& stream, csl::span<T> output, T value);
+    void fill(const csl::Stream& stream, csl::Span<T> output, T value);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 

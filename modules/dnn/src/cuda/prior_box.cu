@@ -25,8 +25,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     namespace raw {
         template <class T, bool Normalize>
         __global__ void prior_box(
-            span<T> output,
-            view<float> boxWidth, view<float> boxHeight, view<float> offsetX, view<float> offsetY, float stepX, float stepY,
+            Span<T> output,
+            View<float> boxWidth, View<float> boxHeight, View<float> offsetX, View<float> offsetY, float stepX, float stepY,
             size_type layerWidth, size_type layerHeight,
             size_type imageWidth, size_type imageHeight)
         {
@@ -72,7 +72,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T>
-        __global__ void prior_box_clip(span<T> output) {
+        __global__ void prior_box_clip(Span<T> output) {
             for (auto i : grid_stride_range(output.size())) {
                 using device::clamp;
                 output[i] = clamp<T>(output[i], 0.0, 1.0);
@@ -80,7 +80,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T>
-        __global__ void prior_box_set_variance1(span<T> output, float variance) {
+        __global__ void prior_box_set_variance1(Span<T> output, float variance) {
             using vector_type = get_vector_type_t<T, 4>;
             auto output_vPtr = vector_type::get_pointer(output.data());
             for (auto i : grid_stride_range(output.size() / 4)) {
@@ -92,7 +92,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T>
-        __global__ void prior_box_set_variance4(span<T> output, array<float, 4> variance) {
+        __global__ void prior_box_set_variance4(Span<T> output, array<float, 4> variance) {
             using vector_type = get_vector_type_t<T, 4>;
             auto output_vPtr = vector_type::get_pointer(output.data());
             for (auto i : grid_stride_range(output.size() / 4)) {
@@ -107,7 +107,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T, bool Normalize> static
     void launch_prior_box_kernel(
         const Stream& stream,
-        span<T> output, view<float> boxWidth, view<float> boxHeight, view<float> offsetX, view<float> offsetY, float stepX, float stepY,
+        Span<T> output, View<float> boxWidth, View<float> boxHeight, View<float> offsetX, View<float> offsetY, float stepX, float stepY,
         std::size_t layerWidth, std::size_t layerHeight, std::size_t imageWidth, std::size_t imageHeight)
     {
         auto num_points = layerWidth * layerHeight;
@@ -121,8 +121,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T>
     void generate_prior_boxes(
         const Stream& stream,
-        span<T> output,
-        view<float> boxWidth, view<float> boxHeight, view<float> offsetX, view<float> offsetY, float stepX, float stepY,
+        Span<T> output,
+        View<float> boxWidth, View<float> boxHeight, View<float> offsetX, View<float> offsetY, float stepX, float stepY,
         std::vector<float> variance,
         std::size_t numPriors,
         std::size_t layerWidth, std::size_t layerHeight,
@@ -145,13 +145,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(channel_size * 2 == output.size());
 
         if (clip) {
-            auto output_span_c1 = span<T>(output.data(), channel_size);
+            auto output_span_c1 = Span<T>(output.data(), channel_size);
             auto kernel = raw::prior_box_clip<T>;
             auto policy = make_policy(kernel, output_span_c1.size(), 0, stream);
             launch_kernel(kernel, policy, output_span_c1);
         }
 
-        auto output_span_c2 = span<T>(output.data() + channel_size, channel_size);
+        auto output_span_c2 = Span<T>(output.data() + channel_size, channel_size);
         if (variance.size() == 1) {
             auto kernel = raw::prior_box_set_variance1<T>;
             auto policy = make_policy(kernel, output_span_c2.size() / 4, 0, stream);
@@ -165,10 +165,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
-    template void generate_prior_boxes(const Stream&, span<__half>, view<float>, view<float>, view<float>, view<float>, float, float,
+    template void generate_prior_boxes(const Stream&, Span<__half>, View<float>, View<float>, View<float>, View<float>, float, float,
         std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
 
-    template void generate_prior_boxes(const Stream&, span<float>, view<float>, view<float>, view<float>, view<float>, float, float,
+    template void generate_prior_boxes(const Stream&, Span<float>, View<float>, View<float>, View<float>, View<float>, float, float,
         std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

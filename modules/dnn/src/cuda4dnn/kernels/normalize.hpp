@@ -15,9 +15,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T>
     void normalize(
         const csl::Stream& stream,
-        csl::span<T> output, csl::view<T> input,
+        csl::Span<T> output, csl::View<T> input,
         std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, std::size_t norm, T epsilon,
-        csl::span<T> workspace);
+        csl::Span<T> workspace);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 

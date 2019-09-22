@@ -76,6 +76,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         kernel <<<policy.grid, policy.block, policy.sharedMem, policy.stream>>> (std::forward<Args>(args)...);
     }
 
-}}}} /* cv::dnn::cuda4dnn::csl */
+}}}} /* namespace cv::dnn::cuda4dnn::csl */
 
 #endif /* OPENCV_DNN_SRC_CUDA_EXECUTION_HPP */

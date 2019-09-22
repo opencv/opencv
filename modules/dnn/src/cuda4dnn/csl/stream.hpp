@@ -113,6 +113,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         std::shared_ptr<UniqueStream> stream;
     };
 
-}}}} /* cv::dnn::cuda4dnn::csl */
+}}}} /* namespace cv::dnn::cuda4dnn::csl */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_STREAM_HPP */

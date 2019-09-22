@@ -9,14 +9,6 @@
 
 //#define CUDA4DNN_ENABLE_NVTX
 
-#if defined CUDA4DNN_ENABLE_NVTX && defined NDEBUG
-#ifdef _MSC_VER
-#pragma message("WARNING: NVTX enabled in release build")
-#else
-#warning "NVTX enabled in release build"
-#endif
-#endif
-
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace nvtx {
 
     void mark(const char* str) {
@@ -62,6 +54,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace nv
         bool active;
     };
 
-}}}}} /* cv::dnn::cuda4dnn::csl */
+}}}}} /* namespace cv::dnn::cuda4dnn::csl */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_NVTX_HPP */

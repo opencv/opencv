@@ -14,13 +14,12 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
-    /** @brief sharable smart CUDA stream
+    /** @brief sharable CUDA event
      *
-     * Stream is a smart sharable wrapper for CUDA stream handle which ensures that
-     * the handle is destroyed after use. Unless explicitly specified by a constructor argument,
-     * the stream object represents the default stream.
+     * Event is a smart sharable wrapper for CUDA event handle which ensures that
+     * the handle is destroyed after use.
      *
-     * @note Moving a Stream object to another invalidates the former
+     * @note Moving an Event object to another invalidates the former
      */
     class Event {
     public:
@@ -59,7 +58,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return *this;
         }
 
-        /** mark a point in a stream */
+        /** mark a point in \p stream */
         void record(const Stream& stream) {
             CUDA4DNN_CHECK_CUDA(cudaEventRecord(event, stream.get()));
         }
@@ -97,6 +96,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         return temp;
     }
 
-}}}} /* cv::dnn::cuda4dnn::csl */
+}}}} /* namespace cv::dnn::cuda4dnn::csl */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_EVENT_HPP */

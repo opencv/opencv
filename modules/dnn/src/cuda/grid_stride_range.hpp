@@ -44,8 +44,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
         public:
             __device__ iterator(index_type pos_) : pos(pos_) {}
 
-            /* these iterators return the index when dereferenced; this allows us to use
-             * loop through the indices using a range based for loop
+            /* these iterators return the index when dereferenced; this allows us to loop
+             * through the indices using a range based for loop
              */
             __device__ index_type operator*() const { return pos; }
 
@@ -87,6 +87,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     using grid_stride_range_z = grid_stride_range_generic<2>;
     using grid_stride_range = grid_stride_range_x;
 
-}}}}} /* cv::dnn::cuda4dnn::csl::device */
+}}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_GRID_STRIDE_RANGE_HPP */

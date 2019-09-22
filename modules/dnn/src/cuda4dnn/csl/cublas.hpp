@@ -225,6 +225,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
     }
 
-}}}}} /* cv::dnn::cuda4dnn::csl::cublas */
+}}}}} /* namespace cv::dnn::cuda4dnn::csl::cublas */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_CUBLAS_HPP */

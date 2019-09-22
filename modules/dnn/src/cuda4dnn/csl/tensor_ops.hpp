@@ -160,7 +160,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
             std::vector<std::size_t> padding;
             std::vector<std::size_t> stride;
-            std::vector<std::size_t> dialation;
+            std::vector<std::size_t> dilation;
 
             std::size_t groups;
         };
@@ -173,7 +173,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
             inputTensorDesc = TensorDescriptor(params.input_shape);
             filterDesc = FilterDescriptor(params.filter_shape);
-            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dialation, params.groups);
+            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups);
 
             std::vector<int> output_dims;
             getConvolutionForwardOutputDim(convDesc, filterDesc, inputTensorDesc, output_dims);
@@ -223,7 +223,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
             std::vector<std::size_t> padding;
             std::vector<std::size_t> stride;
-            std::vector<std::size_t> dialation;
+            std::vector<std::size_t> dilation;
 
             std::size_t groups;
         };
@@ -235,7 +235,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             cudnnHandle = std::move(handle);
 
             filterDesc = FilterDescriptor(params.filter_shape);
-            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dialation, params.groups);
+            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups);
 
             /* input_shape is the output shape for convolution
              * output_shape is the input shape for convolution

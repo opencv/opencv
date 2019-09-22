@@ -38,6 +38,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             other.descriptor = nullptr;
         }
 
+        /** constructs a pooling descriptor
+         *
+         * Pre-conditions:
+         * - \p window_size, \p padding and \p stride must have the same size
+         *
+         * The length of the containers is interpreted as the order of the pooling operation.
+         *
+         * Exception Guarantee: Basic
+         */
         template <class SequenceContainer, typename = decltype(std::begin(std::declval<SequenceContainer>()))>
         PoolingDescriptor(
             const SequenceContainer& window_size,
@@ -50,7 +59,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         ~PoolingDescriptor() noexcept {
             if (descriptor != nullptr) {
-                /* cudnnDestroyPoolingDescriptor will not fail */
+                /* cudnnDestroyPoolingDescriptor will not fail for a valid descriptor */
                 CUDA4DNN_CHECK_CUDNN(cudnnDestroyPoolingDescriptor(descriptor));
             }
         }
@@ -115,7 +124,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                     );
                 }
             } catch (...) {
-                /* cudnnDestroyPoolingDescriptor will not fail */
+                /* cudnnDestroyPoolingDescriptor will not fail for a valid descriptor */
                 CUDA4DNN_CHECK_CUDNN(cudnnDestroyPoolingDescriptor(descriptor));
                 throw;
             }
@@ -124,6 +133,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnPoolingDescriptor_t descriptor;
     };
 
+    /** gives the shape of the output tensor after pooling
+     *
+     * @note it's not required to enforce the this shape in the output tensor; slightly different shapes will work
+     *
+     * Exception Guarantee: Basic
+     */
     template <class T> inline
     void getPoolingForwardOutputDim(
         const PoolingDescriptor& poolingDesc,
@@ -153,6 +168,23 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
     }
 
+    /** @brief performs pooling operation
+     *
+     * dstValue = alpha * result + beta * priorDstValue
+     *
+     * @tparam          T           pooling element type (must be `half` or `float`)
+     *
+     * @param           handle      valid cuDNN Handle
+     * @param           poolingDesc pooling description
+     * @param           inputDesc   tensor descriptor describing the input
+     * @param[in]       inputPtr    pointer to input tensor in device memory
+     * @param           alpha       result scale factor
+     * @param           beta        previous value scale factor
+     * @param           outputDesc  tensor descriptor describing the output
+     * @param[out]      outputPtr   pointer to output tensor in device memory
+     *
+     * Exception Guarantee: Basic
+     */
     template <class T>
     void pool(
         const Handle& handle,
@@ -163,6 +195,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         const TensorDescriptor<T>& outputDesc,
         DevicePtr<T> outputPtr)
     {
+        CV_Assert(handle);
+
         CUDA4DNN_CHECK_CUDNN(
             cudnnPoolingForward(
                 handle.get(),
@@ -183,6 +217,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         const TensorDescriptor<half>& outputDesc,
         DevicePtr<half> outputPtr)
     {
+        CV_Assert(handle);
+
         /* we specalize for fp16 as the scaling factors must be provided as `float` */
         float alpha_ = alpha, beta_ = beta;
         CUDA4DNN_CHECK_CUDNN(

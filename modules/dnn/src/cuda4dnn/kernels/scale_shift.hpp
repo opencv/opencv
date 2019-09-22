@@ -31,7 +31,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         csl::TensorView<T> weights);
 
     template <class T>
-    void scale1_with_bias1(const csl::Stream& stream, csl::span<T> output, csl::view<T> input, T alpha, T beta);
+    void scale1_with_bias1(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T alpha, T beta);
 
     template <class T>
     void scaleN_with_biasN(

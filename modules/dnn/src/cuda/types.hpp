@@ -22,6 +22,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     using index_type = std::int32_t;
 #endif
 
-}}}}} /*  cv::dnn::cuda4dnn::csl::device */
+}}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_TYPES_HPP */

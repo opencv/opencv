@@ -22,7 +22,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
         template <class T, std::size_t N>
-        __global__ void eltwise_max_2_vec(span<T> output, view<T> x, view<T> y) {
+        __global__ void eltwise_max_2_vec(Span<T> output, View<T> x, View<T> y) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -44,7 +44,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void eltwise_sum_2_vec(span<T> output, view<T> x, view<T> y) {
+        __global__ void eltwise_sum_2_vec(Span<T> output, View<T> x, View<T> y) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -64,7 +64,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void eltwise_sum_coeff_2_vec(span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
+        __global__ void eltwise_sum_coeff_2_vec(Span<T> output, T coeff_x, View<T> x, T coeff_y, View<T> y) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -84,7 +84,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void eltwise_prod_2_vec(span<T> output, view<T> x, view<T> y) {
+        __global__ void eltwise_prod_2_vec(Span<T> output, View<T> x, View<T> y) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -105,7 +105,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     }
 
     template <class T, std::size_t N>
-    void launch_vectorized_eltwise_max_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+    void launch_vectorized_eltwise_max_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(x, N));
         CV_Assert(is_fully_aligned<T>(y, N));
@@ -116,7 +116,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     }
 
     template <class T>
-    void eltwise_max_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+    void eltwise_max_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
         CV_Assert(x.size() == y.size());
         CV_Assert(x.size() == output.size());
 
@@ -129,11 +129,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
-    template void eltwise_max_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
-    template void eltwise_max_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
+    template void eltwise_max_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
+    template void eltwise_max_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
 
     template <class T, std::size_t N>
-    void launch_vectorized_eltwise_sum_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+    void launch_vectorized_eltwise_sum_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(x, N));
         CV_Assert(is_fully_aligned<T>(y, N));
@@ -144,7 +144,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     }
 
     template <class T>
-    void eltwise_sum_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+    void eltwise_sum_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
         CV_Assert(x.size() == y.size());
         CV_Assert(x.size() == output.size());
 
@@ -157,11 +157,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
-    template void eltwise_sum_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
-    template void eltwise_sum_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
+    template void eltwise_sum_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
+    template void eltwise_sum_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
 
     template <class T, std::size_t N>
-    void launch_vectorized_eltwise_sum_coeff_2(const Stream& stream, span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
+    void launch_vectorized_eltwise_sum_coeff_2(const Stream& stream, Span<T> output, T coeff_x, View<T> x, T coeff_y, View<T> y) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(x, N));
         CV_Assert(is_fully_aligned<T>(y, N));
@@ -172,7 +172,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     }
 
     template <class T>
-    void eltwise_sum_coeff_2(const Stream& stream, span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
+    void eltwise_sum_coeff_2(const Stream& stream, Span<T> output, T coeff_x, View<T> x, T coeff_y, View<T> y) {
         CV_Assert(x.size() == y.size());
         CV_Assert(x.size() == output.size());
 
@@ -190,11 +190,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
-    template void eltwise_sum_coeff_2(const Stream&, span<__half>, __half, view<__half>, __half, view<__half>);
-    template void eltwise_sum_coeff_2(const Stream&, span<float>, float, view<float>, float, view<float>);
+    template void eltwise_sum_coeff_2(const Stream&, Span<__half>, __half, View<__half>, __half, View<__half>);
+    template void eltwise_sum_coeff_2(const Stream&, Span<float>, float, View<float>, float, View<float>);
 
     template <class T, std::size_t N>
-    void launch_vectorized_eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+    void launch_vectorized_eltwise_prod_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(x, N));
         CV_Assert(is_fully_aligned<T>(y, N));
@@ -205,7 +205,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     }
 
     template <class T>
-    void eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+    void eltwise_prod_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
         CV_Assert(x.size() == y.size());
         CV_Assert(x.size() == output.size());
 
@@ -218,7 +218,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
-    template void eltwise_prod_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
-    template void eltwise_prod_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
+    template void eltwise_prod_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
+    template void eltwise_prod_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

@@ -33,7 +33,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         template <class T, std::size_t Order,
         typename std::enable_if<Order == 2 || Order == 3, bool>::type = true> /* Order has been hardcoded; see code */
         __global__ void max_pooling_with_indices(
-            span<T> output, span<T> indices, view<T> input, size_type channels,
+            Span<T> output, Span<T> indices, View<T> input, size_type channels,
             array<size_type, Order> out_spatial_dims, array<size_type, Order> in_spatial_dims,
             array<size_type, Order> window_size, array<size_type, Order> strides, array<size_type, Order> padding_left)
         {
@@ -117,7 +117,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
         template <class T, std::size_t Order>
         __global__ void max_unpooling(
-            span<T> output, view<T> input, view<T> indices, size_type channels,
+            Span<T> output, View<T> input, View<T> indices, size_type channels,
             array<size_type, Order> out_spatial_dims, array<size_type, Order> in_spatial_dims,
             array<size_type, Order> window_size, array<size_type, Order> strides, array<size_type, Order> padding_left)
         {
@@ -157,7 +157,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T, std::size_t Order> static
     void launch_max_pooling_kernel(
         const Stream& stream,
-        span<T> output, span<T> indices, view<T> input, std::size_t channels,
+        Span<T> output, Span<T> indices, View<T> input, std::size_t channels,
         const std::vector<std::size_t>& out_spatial_dims, const std::vector<std::size_t>& in_spatial_dims,
         const std::vector<std::size_t>& window_size,
         const std::vector<std::size_t>& strides, const std::vector<std::size_t>& padding_left)
@@ -231,7 +231,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T, std::size_t Order> static
     void launch_max_unpooling_kernel(
         const Stream& stream,
-        span<T> output, view<T> input, view<T> indices, std::size_t channels,
+        Span<T> output, View<T> input, View<T> indices, std::size_t channels,
         const std::vector<std::size_t>& out_spatial_dims, const std::vector<std::size_t>& in_spatial_dims,
         const std::vector<std::size_t>& window_size,
         const std::vector<std::size_t>& strides, const std::vector<std::size_t>& padding_left)
@@ -304,4 +304,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

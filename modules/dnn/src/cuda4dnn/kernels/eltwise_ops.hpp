@@ -13,16 +13,16 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T>
-    void eltwise_max_2(const csl::Stream& stream, csl::span<T> output, csl::view<T> x, csl::view<T> y);
+    void eltwise_max_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
 
     template <class T>
-    void eltwise_sum_2(const csl::Stream& stream, csl::span<T> output, csl::view<T> x, csl::view<T> y);
+    void eltwise_sum_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
 
     template <class T>
-    void eltwise_sum_coeff_2(const csl::Stream& stream, csl::span<T> output, T coeff_x, csl::view<T> x, T coeff_y, csl::view<T> y);
+    void eltwise_sum_coeff_2(const csl::Stream& stream, csl::Span<T> output, T coeff_x, csl::View<T> x, T coeff_y, csl::View<T> y);
 
     template <class T>
-    void eltwise_prod_2(const csl::Stream& stream, csl::span<T> output, csl::view<T> x, csl::view<T> y);
+    void eltwise_prod_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 

@@ -15,8 +15,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T>
     void generate_prior_boxes(
         const csl::Stream& stream,
-        csl::span<T> output,
-        csl::view<float> boxWidth, csl::view<float> boxHeight, csl::view<float> offsetX, csl::view<float> offsetY, float stepX, float stepY,
+        csl::Span<T> output,
+        csl::View<float> boxWidth, csl::View<float> boxHeight, csl::View<float> offsetX, csl::View<float> offsetY, float stepX, float stepY,
         std::vector<float> variance,
         std::size_t numPriors,
         std::size_t layerWidth, std::size_t layerHeight,

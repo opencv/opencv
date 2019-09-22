@@ -27,8 +27,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     namespace raw {
         template <class T, std::size_t N>
         __global__ void concat_vec(
-            span<T> output, size_type output_axis_size, index_type output_axis_offset,
-            view<T> input, size_type input_axis_size, size_type concat_size)
+            Span<T> output, size_type output_axis_size, index_type output_axis_offset,
+            View<T> input, size_type input_axis_size, size_type concat_size)
         {
             using vector_type = get_vector_type_t<T, N>;
 
@@ -57,8 +57,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
         template <class T, std::size_t Rank>
         __global__ void concat_with_offsets(
-            span<T> output, array<size_type, Rank> out_strides, array<index_type, Rank> out_offset,
-            view<T> input, array<size_type, Rank> in_strides)
+            Span<T> output, array<size_type, Rank> out_strides, array<index_type, Rank> out_offset,
+            View<T> input, array<size_type, Rank> in_strides)
         {
             for (auto i : grid_stride_range(input.size())) {
                 index_type in_index = i / in_strides[0];
@@ -77,8 +77,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T, std::size_t N> static
     void launch_vectorized_concat(const Stream& stream,
-        span<T> output, size_type output_axis_size, index_type output_axis_offset,
-        view<T> input, size_type input_axis_size, size_type concat_size)
+        Span<T> output, size_type output_axis_size, index_type output_axis_offset,
+        View<T> input, size_type input_axis_size, size_type concat_size)
     {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
@@ -138,8 +138,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T, std::size_t Rank> static
     void launch_concat_with_offsets(
         const Stream& stream,
-        span<T> output, const std::vector<std::size_t>& outStride, const std::vector<std::size_t>& outOffset,
-        view<T> input, const std::vector<std::size_t>& inStride)
+        Span<T> output, const std::vector<std::size_t>& outStride, const std::vector<std::size_t>& outOffset,
+        View<T> input, const std::vector<std::size_t>& inStride)
     {
         CV_Assert(outStride.size() == Rank);
         CV_Assert(outOffset.size() == Rank);
@@ -256,4 +256,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void concat_with_offsets(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
     template void concat_with_offsets(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */

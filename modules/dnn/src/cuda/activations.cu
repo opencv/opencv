@@ -27,7 +27,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
 
     namespace raw {
         template <class T, std::size_t N>
-        __global__ void abs_vec(span<T> output, view<T> input) {
+        __global__ void abs_vec(Span<T> output, View<T> input) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -45,7 +45,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void tanh_vec(span<T> output, view<T> input) {
+        __global__ void tanh_vec(Span<T> output, View<T> input) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -63,7 +63,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void sigmoid_vec(span<T> output, view<T> input) {
+        __global__ void sigmoid_vec(Span<T> output, View<T> input) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -81,7 +81,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void bnll_vec(span<T> output, view<T> input) {
+        __global__ void bnll_vec(Span<T> output, View<T> input) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -99,7 +99,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void elu_vec(span<T> output, view<T> input) {
+        __global__ void elu_vec(Span<T> output, View<T> input) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -117,7 +117,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void relu_vec(span<T> output, view<T> input, T slope) {
+        __global__ void relu_vec(Span<T> output, View<T> input, T slope) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -133,7 +133,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void clipped_relu_vec(span<T> output, view<T> input, T floor, T ceiling) {
+        __global__ void clipped_relu_vec(Span<T> output, View<T> input, T floor, T ceiling) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -151,7 +151,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void axiswise_relu_vec(span<T> output, view<T> input, size_type inner_size, view<T> slope) {
+        __global__ void axiswise_relu_vec(Span<T> output, View<T> input, size_type inner_size, View<T> slope) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -170,7 +170,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
-        __global__ void power_vec(span<T> output, view<T> input, T exp, T scale, T shift) {
+        __global__ void power_vec(Span<T> output, View<T> input, T exp, T scale, T shift) {
             using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
@@ -189,7 +189,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T, std::size_t N>
-    void launch_vectorized_abs(const Stream& stream, span<T> output, view<T> input) {
+    void launch_vectorized_abs(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
 
@@ -199,7 +199,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void abs(const Stream& stream, span<T> output, view<T> input) {
+    void abs(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(input.size() == output.size());
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
@@ -211,11 +211,11 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void abs<__half>(const Stream& stream, span<__half> output, view<__half> input);
-    template void abs<float>(const Stream& stream, span<float> output, view<float> input);
+    template void abs<__half>(const Stream& stream, Span<__half> output, View<__half> input);
+    template void abs<float>(const Stream& stream, Span<float> output, View<float> input);
 
     template <class T, std::size_t N>
-    void launch_vectorized_tanh(const Stream& stream, span<T> output, view<T> input) {
+    void launch_vectorized_tanh(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
 
@@ -225,7 +225,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void tanh(const Stream& stream, span<T> output, view<T> input) {
+    void tanh(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(input.size() == output.size());
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
@@ -237,11 +237,11 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void tanh<__half>(const Stream&, span<__half>, view<__half>);
-    template void tanh<float>(const Stream&, span<float>, view<float>);
+    template void tanh<__half>(const Stream&, Span<__half>, View<__half>);
+    template void tanh<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
-    void launch_vectorized_sigmoid(const Stream& stream, span<T> output, view<T> input) {
+    void launch_vectorized_sigmoid(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
 
@@ -251,7 +251,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void sigmoid(const Stream& stream, span<T> output, view<T> input) {
+    void sigmoid(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(input.size() == output.size());
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
@@ -263,11 +263,11 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void sigmoid<__half>(const Stream&, span<__half>, view<__half>);
-    template void sigmoid<float>(const Stream&, span<float>, view<float>);
+    template void sigmoid<__half>(const Stream&, Span<__half>, View<__half>);
+    template void sigmoid<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
-    void launch_vectorized_bnll(const Stream& stream, span<T> output, view<T> input) {
+    void launch_vectorized_bnll(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
 
@@ -277,7 +277,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void bnll(const Stream& stream, span<T> output, view<T> input) {
+    void bnll(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(input.size() == output.size());
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
@@ -289,11 +289,11 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void bnll<__half>(const Stream&, span<__half>, view<__half>);
-    template void bnll<float>(const Stream&, span<float>, view<float>);
+    template void bnll<__half>(const Stream&, Span<__half>, View<__half>);
+    template void bnll<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
-    void launch_vectorized_elu(const Stream& stream, span<T> output, view<T> input) {
+    void launch_vectorized_elu(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
 
@@ -303,7 +303,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void elu(const Stream& stream, span<T> output, view<T> input) {
+    void elu(const Stream& stream, Span<T> output, View<T> input) {
         CV_Assert(input.size() == output.size());
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
@@ -315,11 +315,11 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void elu<__half>(const Stream&, span<__half>, view<__half>);
-    template void elu<float>(const Stream&, span<float>, view<float>);
+    template void elu<__half>(const Stream&, Span<__half>, View<__half>);
+    template void elu<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
-    void launch_vectorized_relu(const Stream& stream, span<T> output, view<T> input, T slope) {
+    void launch_vectorized_relu(const Stream& stream, Span<T> output, View<T> input, T slope) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
 
@@ -329,7 +329,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void relu(const Stream& stream, span<T> output, view<T> input, T slope) {
+    void relu(const Stream& stream, Span<T> output, View<T> input, T slope) {
         CV_Assert(input.size() == output.size());
 
         if(is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
@@ -341,11 +341,11 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void relu<__half>(const Stream&, span<__half>, view<__half>, __half);
-    template void relu<float>(const Stream&, span<float>, view<float>, float);
+    template void relu<__half>(const Stream&, Span<__half>, View<__half>, __half);
+    template void relu<float>(const Stream&, Span<float>, View<float>, float);
 
     template <class T, std::size_t N>
-    void launch_vectorized_clipped_relu(const Stream& stream, span<T> output, view<T> input, T floor, T ceiling) {
+    void launch_vectorized_clipped_relu(const Stream& stream, Span<T> output, View<T> input, T floor, T ceiling) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
 
@@ -355,7 +355,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void clipped_relu(const Stream& stream, span<T> output, view<T> input, T floor, T ceiling) {
+    void clipped_relu(const Stream& stream, Span<T> output, View<T> input, T floor, T ceiling) {
         CV_Assert(input.size() == output.size());
         CV_Assert(static_cast<double>(floor) <= static_cast<double>(ceiling));
 
@@ -368,11 +368,11 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void clipped_relu<__half>(const Stream&, span<__half>, view<__half>, __half, __half);
-    template void clipped_relu<float>(const Stream&, span<float>, view<float>, float, float);
+    template void clipped_relu<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
+    template void clipped_relu<float>(const Stream&, Span<float>, View<float>, float, float);
 
     template <class T, std::size_t N>
-    void launch_vectorized_axiswise_relu(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> slope) {
+    void launch_vectorized_axiswise_relu(const Stream& stream, Span<T> output, View<T> input, std::size_t inner_size, View<T> slope) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
         CV_Assert(inner_size % N == 0);
@@ -383,7 +383,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void axiswise_relu(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> slope) {
+    void axiswise_relu(const Stream& stream, Span<T> output, View<T> input, std::size_t inner_size, View<T> slope) {
         CV_Assert(input.size() == output.size());
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4) && inner_size % 4 == 0) {
@@ -395,11 +395,11 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void axiswise_relu<__half>(const Stream&, span<__half>, view<__half>, std::size_t, view<__half>);
-    template void axiswise_relu<float>(const Stream&, span<float>, view<float>, std::size_t, view<float>);
+    template void axiswise_relu<__half>(const Stream&, Span<__half>, View<__half>, std::size_t, View<__half>);
+    template void axiswise_relu<float>(const Stream&, Span<float>, View<float>, std::size_t, View<float>);
 
     template <class T, std::size_t N>
-    void launch_vectorized_power(const Stream& stream, span<T> output, view<T> input, T exp, T scale, T shift) {
+    void launch_vectorized_power(const Stream& stream, Span<T> output, View<T> input, T exp, T scale, T shift) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
 
@@ -409,7 +409,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     }
 
     template <class T>
-    void power(const Stream& stream, span<T> output, view<T> input, T exp, T scale, T shift) {
+    void power(const Stream& stream, Span<T> output, View<T> input, T exp, T scale, T shift) {
         CV_Assert(input.size() == output.size());
 
         if (static_cast<float>(exp) == 1.0f) {
@@ -426,7 +426,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
-    template void power<__half>(const Stream&, span<__half>, view<__half>, __half, __half, __half);
-    template void power<float>(const Stream&, span<float>, view<float>, float, float, float);
+    template void power<__half>(const Stream&, Span<__half>, View<__half>, __half, __half, __half);
+    template void power<float>(const Stream&, Span<float>, View<float>, float, float, float);
 
-}}}} /* cv::dnn::cuda4dnn::kernels */
+}}}} /* namespace cv::dnn::cuda4dnn::kernels */
