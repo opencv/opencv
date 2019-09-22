@@ -329,3 +329,11 @@ struct VZeroUpperGuard {
 #ifndef CV_VSX3
 #  define CV_VSX3 0
 #endif
+
+#ifndef CV_MSA
+#  define CV_MSA 0
+#endif
+
+#ifndef CV_WASM_SIMD
+#  define CV_WASM_SIMD 0
+#endif
