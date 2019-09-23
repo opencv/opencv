@@ -157,6 +157,11 @@
 #  define CV_MSA 1
 #endif
 
+#if defined(EMSCRIPTEN)
+#  define CV_WASM_SIMD 1
+#  include <wasm_simd128.h>
+#endif
+
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
 
 #if defined CV_CPU_COMPILE_AVX && !defined CV_CPU_BASELINE_COMPILE_AVX
@@ -323,8 +328,4 @@ struct VZeroUpperGuard {
 
 #ifndef CV_VSX3
 #  define CV_VSX3 0
-#endif
-
-#ifndef CV_MSA
-#  define CV_MSA 0
 #endif

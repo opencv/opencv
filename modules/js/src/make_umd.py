@@ -87,8 +87,14 @@ def make_umd(opencvjs, cvjs):
     // only CommonJS-like environments that support module.exports,
     // like Node.
     module.exports = factory();
-  } else {
+  } else if (typeof window === 'object') {
     // Browser globals
+    root.cv = factory();
+  } else if (typeof importScripts === 'function') {
+    // Web worker
+    root.cv = factory;
+  } else {
+    // Other shells, e.g. d8
     root.cv = factory();
   }
 }(this, function () {
