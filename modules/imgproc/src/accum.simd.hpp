@@ -2653,10 +2653,10 @@ void accW_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn
             v_mf10 = v_cvt_f32(v_reinterpret_as_s32(v_m10));
             v_mf11 = v_cvt_f32(v_reinterpret_as_s32(v_m11));
 
-            v_float32 d0 = v_mf00 == v_zero;
-            v_float32 d1 = v_mf01 == v_zero;
-            v_float32 d2 = v_mf10 == v_zero;
-            v_float32 d3 = v_mf11 == v_zero;
+            v_float32 d0 = v_mf00 != v_zero;
+            v_float32 d1 = v_mf01 != v_zero;
+            v_float32 d2 = v_mf10 != v_zero;
+            v_float32 d3 = v_mf11 != v_zero;
 
             v_uint16 v_src0, v_src1;
             v_expand(v_src, v_src0, v_src1);
@@ -2726,8 +2726,8 @@ void accW_simd_(const ushort* src, float* dst, const uchar* mask, int len, int c
             v_mf0 = v_cvt_f32(v_reinterpret_as_s32(v_m0));
             v_mf1 = v_cvt_f32(v_reinterpret_as_s32(v_m1));
 
-            v_float32 d0 = v_mf0 == v_zero;
-            v_float32 d1 = v_mf1 == v_zero;
+            v_float32 d0 = v_mf0 != v_zero;
+            v_float32 d1 = v_mf1 != v_zero;
 
             v_uint32 v_int0, v_int1;
             v_expand(v_src, v_int0, v_int1);
