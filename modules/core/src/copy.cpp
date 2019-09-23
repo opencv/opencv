@@ -576,9 +576,7 @@ CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_1( const uchar* ptr )
     static const __m128i perm = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
     return v_uint8x16(_mm_shuffle_epi8(_mm_loadu_si128((__m128i*)(ptr)), perm));
 #elif CV_VSX
-    static const vec_uchar16 perm = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
-    vec_uchar16 vec = vsx_ld(0, ptr);
-    return v_uint8x16(vec_perm(vec, vec, perm));
+    return v_uint8x16(vec_uchar16_c(vec_revb(vsx_ld(0, (const unsigned __int128 *)ptr))));
 #elif CV_NEON
     uint8x16_t vec = vrev64q_u8(vld1q_u8(ptr));
     return v_uint8x16(vextq_u8(vec, vec, 8));
