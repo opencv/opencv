@@ -226,7 +226,10 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
                                 Values(CORE_FLUID),
                                 Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV,
                                        cv::THRESH_TRUNC,
-                                       cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)));
+                                       cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV),
+                                Values(cv::Scalar(0, 0, 0, 0),
+                                       cv::Scalar(100, 100, 100, 100),
+                                       cv::Scalar(255, 255, 255, 255))));
 
 INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
