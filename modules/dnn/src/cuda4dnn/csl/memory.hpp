@@ -57,7 +57,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             wrapped.reset(ptr, [](element_type* ptr) {
                 if (ptr != nullptr) {
                     /* contract violation for std::shared_ptr if cudaFree throws */
-                    CUDA4DNN_CHECK_CUDA(cudaFree(ptr));
+                    try {
+                        CUDA4DNN_CHECK_CUDA(cudaFree(ptr));
+                    } catch (const CUDAException& ex) {
+                        std::ostringstream os;
+                        os << "Device memory deallocation failed in deleter.\n";
+                        os << ex.what();
+                        os << "Exception will be ignored.\n";
+                        CV_LOG_WARNING(0, os.str().c_str());
+                    }
                 }
             });
             /* std::shared_ptr<T>::reset invokves the deleter if an exception occurs; hence, we don't

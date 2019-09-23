@@ -106,23 +106,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         /** @brief performs element-wise addition with broadcasting
          *
          * Pre-conditions:
-         * - \p A and \p C must be compatible tensors
-         *
-         * Exception Gaurantee: Basic
-         */
-        template <class T> inline
-        void add(const cudnn::Handle& handle, T beta, TensorSpan<T> C, T alpha, TensorView<T> A) {
-            CV_Assert(is_shape_compatible(A, C));
-
-            using cudnn::TensorDescriptor;
-            auto aDesc = TensorDescriptor<T>(A.shape());
-            auto cDesc = TensorDescriptor<T>(C.shape());
-            cudnn::add(handle, alpha, aDesc, A.get(), beta, cDesc, C.get());
-        }
-
-        /** @brief performs element-wise addition with broadcasting
-         *
-         * Pre-conditions:
          * - \p A and \p result must be compatible tensors
          *
          * Exception Gaurantee: Basic
