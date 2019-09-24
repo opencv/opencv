@@ -682,7 +682,6 @@ TEST_P(IntegralTest, AccuracyTest)
 TEST_P(ThresholdTest, AccuracyTestBinary)
 {
     cv::Scalar thr = initScalarRandU(50);
-    cv::Scalar maxval = initScalarRandU(50) + cv::Scalar(50, 50, 50, 50);
     cv::Scalar out_scalar;
 
     // G-API code //////////////////////////////////////////////////////////////

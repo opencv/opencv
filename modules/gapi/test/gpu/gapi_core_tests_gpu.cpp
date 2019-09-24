@@ -234,7 +234,10 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestGPU, ThresholdTest,
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC,
-                                    cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)));
+                                       cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV),
+                                Values(cv::Scalar(0, 0, 0, 0),
+                                       cv::Scalar(100, 100, 100, 100),
+                                       cv::Scalar(255, 255, 255, 255))));
 
 INSTANTIATE_TEST_CASE_P(ThresholdTestGPU, ThresholdOTTest,
                         Combine(Values(CV_8UC1),
