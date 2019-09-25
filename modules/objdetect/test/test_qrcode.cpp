@@ -16,10 +16,10 @@ std::string qrcode_images_name[] = {
 };
 
 std::string qrcode_images_close[] = {
-  "close_1.jpg", "close_2.jpg", "close_3.jpg", "close_4.jpg", "close_5.jpg"
+  "close_1.png", "close_2.png", "close_3.png", "close_4.png", "close_5.png"
 };
 std::string qrcode_images_monitor[] = {
-  "monitor_1.jpg", "monitor_2.jpg", "monitor_3.jpg", "monitor_4.jpg", "monitor_5.jpg"
+  "monitor_1.png", "monitor_2.png", "monitor_3.png", "monitor_4.png", "monitor_5.png"
 };
 // #define UPDATE_QRCODE_TEST_DATA
 #ifdef  UPDATE_QRCODE_TEST_DATA
@@ -70,12 +70,18 @@ TEST(Objdetect_QRCode_Close, generate_test_data)
         file_config << "{:" << "image_name" << qrcode_images_close[i];
         std::string image_path = findDataFile(root + qrcode_images_close[i]);
         std::vector<Point> corners;
-        Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
+        Mat src = imread(image_path, IMREAD_GRAYSCALE), barcode, straight_barcode;
         std::string decoded_info;
         ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-        EXPECT_TRUE(detectQRCode(src, corners));
+        const double min_side = std::min(src.size().width, src.size().height);
+        double coeff_expansion = 1024.0 / min_side;
+        const int width  = cvRound(src.size().width  * coeff_expansion);
+        const int height = cvRound(src.size().height  * coeff_expansion);
+        Size new_size(width, height);
+        resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
+        EXPECT_TRUE(detectQRCode(barcode, corners));
 #ifdef HAVE_QUIRC
-        EXPECT_TRUE(decodeQRCode(src, corners, decoded_info, straight_barcode));
+        EXPECT_TRUE(decodeQRCode(barcode, corners, decoded_info, straight_barcode));
 #endif
         file_config << "x" << "[:";
         for (size_t j = 0; j < corners.size(); j++) { file_config << corners[j].x; }
@@ -102,12 +108,18 @@ TEST(Objdetect_QRCode_Monitor, generate_test_data)
         file_config << "{:" << "image_name" << qrcode_images_monitor[i];
         std::string image_path = findDataFile(root + qrcode_images_monitor[i]);
         std::vector<Point> corners;
-        Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
+        Mat src = imread(image_path, IMREAD_GRAYSCALE), barcode, straight_barcode;
         std::string decoded_info;
         ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-        EXPECT_TRUE(detectQRCode(src, corners));
+        const double min_side = std::min(src.size().width, src.size().height);
+        double coeff_expansion = 1024.0 / min_side;
+        const int width  = cvRound(src.size().width  * coeff_expansion);
+        const int height = cvRound(src.size().height  * coeff_expansion);
+        Size new_size(width, height);
+        resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
+        EXPECT_TRUE(detectQRCode(barcode, corners));
 #ifdef HAVE_QUIRC
-        EXPECT_TRUE(decodeQRCode(src, corners, decoded_info, straight_barcode));
+        EXPECT_TRUE(decodeQRCode(barcode, corners, decoded_info, straight_barcode));
 #endif
         file_config << "x" << "[:";
         for (size_t j = 0; j < corners.size(); j++) { file_config << corners[j].x; }
@@ -192,14 +204,19 @@ TEST_P(Objdetect_QRCode_Close, regression)
     const int pixels_error = 3;
 
     std::string image_path = findDataFile(root + name_current_image);
-    Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
+    Mat src = imread(image_path, IMREAD_GRAYSCALE), barcode, straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-
+    const double min_side = std::min(src.size().width, src.size().height);
+    double coeff_expansion = 1024.0 / min_side;
+    const int width  = cvRound(src.size().width  * coeff_expansion);
+    const int height = cvRound(src.size().height  * coeff_expansion);
+    Size new_size(width, height);
+    resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
     std::vector<Point> corners;
     std::string decoded_info;
     QRCodeDetector qrcode;
 #ifdef HAVE_QUIRC
-    decoded_info = qrcode.detectAndDecode(src, corners, straight_barcode);
+    decoded_info = qrcode.detectAndDecode(barcode, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
 #else
@@ -252,14 +269,19 @@ TEST_P(Objdetect_QRCode_Monitor, regression)
     const int pixels_error = 3;
 
     std::string image_path = findDataFile(root + name_current_image);
-    Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
+    Mat src = imread(image_path, IMREAD_GRAYSCALE), barcode, straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-
+    const double min_side = std::min(src.size().width, src.size().height);
+    double coeff_expansion = 1024.0 / min_side;
+    const int width  = cvRound(src.size().width  * coeff_expansion);
+    const int height = cvRound(src.size().height  * coeff_expansion);
+    Size new_size(width, height);
+    resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
     std::vector<Point> corners;
     std::string decoded_info;
     QRCodeDetector qrcode;
 #ifdef HAVE_QUIRC
-    decoded_info = qrcode.detectAndDecode(src, corners, straight_barcode);
+    decoded_info = qrcode.detectAndDecode(barcode, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
 #else

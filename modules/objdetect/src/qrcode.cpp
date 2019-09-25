@@ -64,6 +64,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
     }
     else if (min_side > 512.0)
     {
+        purpose = SHRINKING;
         coeff_expansion = min_side / 512.0;
         const int width  = cvRound(src.size().width  / coeff_expansion);
         const int height = cvRound(src.size().height  / coeff_expansion);
@@ -355,7 +356,6 @@ bool QRDetect::localization()
            3, KMEANS_PP_CENTERS, localization_points);
 
     fixationPoints(localization_points);
-    for (size_t i = 0; i < localization_points.size(); i++) std::cout << localization_points[i] << '\n';
 
     bool suare_flag = false, local_points_flag = false;
     double triangle_sides[3];
@@ -378,10 +378,9 @@ bool QRDetect::localization()
     {
         local_points_flag = true;
     }
-    if ( suare_flag || local_points_flag)
+    if ((suare_flag || local_points_flag) && purpose == SHRINKING)
     {
         localization_points.clear();
-        purpose = SHRINKING;
         bin_barcode = resized_bin_barcode.clone();
         list_lines_x = searchHorizontalLines();
         if( list_lines_x.empty() ) { return false;}
@@ -393,11 +392,8 @@ bool QRDetect::localization()
                3, KMEANS_PP_CENTERS, localization_points);
 
         fixationPoints(localization_points);
-    }
-    if (localization_points.size() != 3) { return false; }
+        if (localization_points.size() != 3) { return false; }
 
-    if (purpose == SHRINKING)
-    {
         const int width  = cvRound(bin_barcode.size().width  * coeff_expansion);
         const int height = cvRound(bin_barcode.size().height * coeff_expansion);
         Size new_size(width, height);
@@ -409,7 +405,7 @@ bool QRDetect::localization()
             localization_points[i] *= coeff_expansion;
         }
     }
-    else if (purpose == ZOOMING)
+    if (purpose == ZOOMING)
     {
         const int width  = cvRound(bin_barcode.size().width  / coeff_expansion);
         const int height = cvRound(bin_barcode.size().height / coeff_expansion);
