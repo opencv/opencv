@@ -2453,22 +2453,11 @@ struct Net::Impl
         inOutShapes[id].supportInPlace =
                 layers[id].getLayerInstance()->getMemoryShapes(is, requiredOutputs, os, ints);
 
-        for (int i = 0; i < inOutShapes[id].in.size(); i++) {
-            int inp_size = std::accumulate(inOutShapes[id].in[i].begin(), inOutShapes[id].in[i].end(),
-                                           1, std::multiplies<size_t>());
-            CV_Assert(inp_size > 0);
-        }
-        for (int i = 0; i < inOutShapes[id].internal.size(); i++) {
-            int internal_size = std::accumulate(inOutShapes[id].internal[i].begin(),
-                                                inOutShapes[id].internal[i].end(),
-                                                1, std::multiplies<size_t>());
-            CV_Assert(internal_size > 0);
-        }
-        for (int i = 0; i < inOutShapes[id].out.size(); i++) {
-            int out_size = std::accumulate(inOutShapes[id].out[i].begin(), inOutShapes[id].out[i].end(),
-                                           1, std::multiplies<size_t>());
-            CV_Assert(out_size > 0);
-        }
+        for (int i = 0; i < ints.size(); i++)
+            CV_Assert(total(ints[i]) > 0);
+
+        for (int i = 0; i < os.size(); i++)
+            CV_Assert(total(os[i]) > 0);
     }
 
     void getLayersShapes(const ShapesVec& netInputShapes,
