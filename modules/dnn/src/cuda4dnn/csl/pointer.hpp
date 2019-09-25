@@ -61,9 +61,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         CUDA4DNN_DEVICE reference operator*() const noexcept { return *get(); }
         CUDA4DNN_DEVICE pointer operator->() const noexcept { return get(); }
 
-        template<class U = T, class V = typename std::add_const<U>::type,
-            typename std::enable_if<!std::is_const<U>::value, bool>::type = true>
-        CUDA4DNN_HOST_DEVICE operator DevicePtr<V>() const noexcept { return DevicePtr<V>{ptr}; }
+        template<class U = T, typename std::enable_if<!std::is_const<U>::value, bool>::type = true>
+        CUDA4DNN_HOST_DEVICE operator DevicePtr<typename std::add_const<U>::type>() const noexcept {
+            return DevicePtr<typename std::add_const<U>::type>{ptr};
+        }
 
         CUDA4DNN_HOST_DEVICE explicit operator bool() const noexcept { return ptr; }
 

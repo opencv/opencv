@@ -19,8 +19,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace nv
 
     class Range {
     public:
-        Range() noexcept : active { false } { }
-        Range(const char* str) : active { false } {
+        Range() noexcept {
+#ifdef CUDA4DNN_ENABLE_NVTX
+            active = false;
+#endif
+        }
+        Range(const char* str) {
+#ifdef CUDA4DNN_ENABLE_NVTX
+            active = false;
+#endif
             start(str);
         }
 
@@ -49,9 +56,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace nv
     private:
 #ifdef CUDA4DNN_ENABLE_NVTX
         nvtxRangeId_t id;
-#endif
-
         bool active;
+#endif
     };
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl */
