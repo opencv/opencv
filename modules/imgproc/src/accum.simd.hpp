@@ -2629,7 +2629,8 @@ void accW_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn
             v_store(dst + x + step * 2, v_dst10);
             v_store(dst + x + step * 3, v_dst11);
         }
-    } else {
+    } else if ( cn == 1 ){
+        //#include <stdio.h>
         const v_float32 v_zero = vx_setall_f32((float)0);
         int size = len * cn;
         int y = -cVectorWidth;
@@ -2657,6 +2658,8 @@ void accW_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn
             v_float32 d1 = v_mf01 != v_zero;
             v_float32 d2 = v_mf10 != v_zero;
             v_float32 d3 = v_mf11 != v_zero;
+
+            //for(int i = 0; i < v_uint)
 
             v_uint16 v_src0, v_src1;
             v_expand(v_src, v_src0, v_src1);
