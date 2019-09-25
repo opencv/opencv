@@ -39,10 +39,7 @@ except ValueError:
 # new_image = cv.convertScaleAbs(image, alpha=alpha, beta=beta)
 # but we wanted to show you how to access the pixels :)
 ## [basic-linear-transform-operation]
-for y in range(image.shape[0]):
-    for x in range(image.shape[1]):
-        for c in range(image.shape[2]):
-            new_image[y,x,c] = np.clip(alpha*image[y,x,c] + beta, 0, 255)
+new_image = np.uint8(np.clip(alpha*image + beta, 0, 255))
 ## [basic-linear-transform-operation]
 
 ## [basic-linear-transform-display]
