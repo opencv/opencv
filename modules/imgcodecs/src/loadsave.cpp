@@ -664,6 +664,8 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     for (size_t page = 0; page < img_vec.size(); page++)
     {
         Mat image = img_vec[page];
+        CV_Assert(!image.empty());
+
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
 
         Mat temp;
@@ -710,6 +712,9 @@ bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
+
+    CV_Assert(!_img.empty());
+
     std::vector<Mat> img_vec;
     if (_img.isMatVector() || _img.isUMatVector())
         _img.getMatVector(img_vec);
@@ -870,6 +875,7 @@ bool imencode( const String& ext, InputArray _image,
     CV_TRACE_FUNCTION();
 
     Mat image = _image.getMat();
+    CV_Assert(!image.empty());
 
     int channels = image.channels();
     CV_Assert( channels == 1 || channels == 3 || channels == 4 );
