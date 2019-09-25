@@ -695,6 +695,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #endif
 
 #define CV_CXX_MOVE_SEMANTICS 1
+#define CV_CXX_MOVE(x) std::move(x)
 #define CV_CXX_STD_ARRAY 1
 #include <array>
 #ifndef CV_OVERRIDE

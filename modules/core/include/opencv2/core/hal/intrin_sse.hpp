@@ -1591,31 +1591,25 @@ inline v_uint32x4 v_popcount(const v_int32x4& a)
 inline v_uint64x2 v_popcount(const v_int64x2& a)
 { return v_popcount(v_reinterpret_as_u64(a)); }
 
-#define OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(_Tpvec, suffix, pack_op, and_op, signmask, allmask) \
-inline int v_signmask(const _Tpvec& a) \
-{ \
-    return and_op(_mm_movemask_##suffix(pack_op(a.val)), signmask); \
-} \
-inline bool v_check_all(const _Tpvec& a) \
-{ return and_op(_mm_movemask_##suffix(a.val), allmask) == allmask; } \
-inline bool v_check_any(const _Tpvec& a) \
-{ return and_op(_mm_movemask_##suffix(a.val), allmask) != 0; }
+#define OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(_Tpvec, suffix, cast_op, allmask) \
+inline int v_signmask(const _Tpvec& a)   { return _mm_movemask_##suffix(cast_op(a.val)); } \
+inline bool v_check_all(const _Tpvec& a) { return _mm_movemask_##suffix(cast_op(a.val)) == allmask; } \
+inline bool v_check_any(const _Tpvec& a) { return _mm_movemask_##suffix(cast_op(a.val)) != 0; }
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_uint8x16, epi8, OPENCV_HAL_NOP, 65535)
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_int8x16, epi8, OPENCV_HAL_NOP, 65535)
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_uint32x4, ps, _mm_castsi128_ps, 15)
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_int32x4, ps, _mm_castsi128_ps, 15)
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_uint64x2, pd, _mm_castsi128_pd, 3)
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_int64x2, pd, _mm_castsi128_pd, 3)
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_float32x4, ps, OPENCV_HAL_NOP, 15)
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_float64x2, pd, OPENCV_HAL_NOP, 3)
 
-#define OPENCV_HAL_PACKS(a) _mm_packs_epi16(a, a)
-inline __m128i v_packq_epi32(__m128i a)
-{
-    __m128i b = _mm_packs_epi32(a, a);
-    return _mm_packs_epi16(b, b);
-}
-
-OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_uint8x16, epi8, OPENCV_HAL_NOP, OPENCV_HAL_1ST, 65535, 65535)
-OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_int8x16, epi8, OPENCV_HAL_NOP, OPENCV_HAL_1ST, 65535, 65535)
-OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_uint16x8, epi8, OPENCV_HAL_PACKS, OPENCV_HAL_AND, 255, (int)0xaaaa)
-OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_int16x8, epi8, OPENCV_HAL_PACKS, OPENCV_HAL_AND, 255, (int)0xaaaa)
-OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_uint32x4, epi8, v_packq_epi32, OPENCV_HAL_AND, 15, (int)0x8888)
-OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_int32x4, epi8, v_packq_epi32, OPENCV_HAL_AND, 15, (int)0x8888)
-OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_float32x4, ps, OPENCV_HAL_NOP, OPENCV_HAL_1ST, 15, 15)
-OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_float64x2, pd, OPENCV_HAL_NOP, OPENCV_HAL_1ST, 3, 3)
+#define OPENCV_HAL_IMPL_SSE_CHECK_SIGNS_SHORT(_Tpvec) \
+inline int v_signmask(const _Tpvec& a) { return _mm_movemask_epi8(_mm_packs_epi16(a.val, a.val)) & 255; } \
+inline bool v_check_all(const _Tpvec& a) { return (_mm_movemask_epi8(a.val) & 0xaaaa) == 0xaaaa; } \
+inline bool v_check_any(const _Tpvec& a) { return (_mm_movemask_epi8(a.val) & 0xaaaa) != 0; }
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS_SHORT(v_uint16x8)
+OPENCV_HAL_IMPL_SSE_CHECK_SIGNS_SHORT(v_int16x8)
 
 inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
 inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }

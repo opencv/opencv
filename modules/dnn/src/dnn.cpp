@@ -2540,6 +2540,12 @@ struct Net::Impl
         int requiredOutputs = layers[id].requiredOutputs.size();
         inOutShapes[id].supportInPlace =
                 layers[id].getLayerInstance()->getMemoryShapes(is, requiredOutputs, os, ints);
+
+        for (int i = 0; i < ints.size(); i++)
+            CV_Assert(total(ints[i]) > 0);
+
+        for (int i = 0; i < os.size(); i++)
+            CV_Assert(total(os[i]) > 0);
     }
 
     void getLayersShapes(const ShapesVec& netInputShapes,
