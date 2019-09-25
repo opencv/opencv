@@ -1481,10 +1481,114 @@ typedef VResizeNoVec VResizeLanczos4Vec_32f;
 
 #endif
 
+
+/*
+    Note, x86 shows reduced performance here. This function is included in
+    IPP by default. For now, disable it on these targets until a more
+    exhaustive performance analysis can be done.
+*/
+#if CV_SIMD128 && !CV_SSE
+
+/*
+    Deinterleave two vectors into the same sized type.
+
+    A1 B1 A2 B2 .... A4 B4
+    and return expanded int32x4 of the form:
+    A1 ... A4
+    B1 ... B4
+*/
+template<typename T, typename VT>
+void inline v_load_expand_deinterlace(const T *ptr, VT &out_even, VT &out_odd)
+{
+    v_load_deinterleave(ptr, out_even, out_odd);
+}
+
+/*
+    Similar to above, but we must expand to the larger type and deinterleave the
+    expanded values.
+*/
+template<>
+void inline v_load_expand_deinterlace(const short *ptr, v_int32x4 &out_even, v_int32x4 &out_odd)
+{
+    out_even = v_reinterpret_as_s32(v_load(ptr));
+    out_odd = out_even >> 16;
+    out_even = (out_even << 16) >> 16;
+}
+
+template<typename ST, typename DT, typename AT, typename DVT>
+struct HResizeLinearVec_X4
+{
+    int operator()(const uchar** _src, uchar** _dst, int count, const int* xofs,
+        const uchar* _alpha, int, int, int cn, int, int xmax) const
+    {
+        const ST **src = (const ST**)_src;
+        const AT *alpha = (const AT*)_alpha;
+        DT **dst = (DT**)_dst;
+        const int nlanes = 4;
+        const int len0 = xmax & -nlanes;
+        int dx = 0, k = 0;
+
+        for( ; k <= (count - 2); k+=2 )
+        {
+            const ST *S0 = src[k];
+            DT *D0 = dst[k];
+            const ST *S1 = src[k+1];
+            DT *D1 = dst[k+1];
+
+            for( dx = 0; dx < len0; dx += nlanes )
+            {
+                int sx0 = xofs[dx+0];
+                int sx1 = xofs[dx+1];
+                int sx2 = xofs[dx+2];
+                int sx3 = xofs[dx+3];
+                DVT a_even;
+                DVT a_odd;
+
+                v_load_expand_deinterlace(&alpha[dx*2], a_even, a_odd);
+                DVT s0(S0[sx0], S0[sx1], S0[sx2], S0[sx3]);
+                DVT s1(S0[sx0+cn], S0[sx1+cn], S0[sx2+cn], S0[sx3+cn]);
+                DVT s0_u(S1[sx0], S1[sx1], S1[sx2], S1[sx3]);
+                DVT s1_u(S1[sx0+cn], S1[sx1+cn], S1[sx2+cn], S1[sx3+cn]);
+                v_store(&D1[dx], s0_u * a_even + s1_u * a_odd);
+                v_store(&D0[dx], s0 * a_even + s1 * a_odd);
+            }
+        }
+        for( ; k < count; k++ )
+        {
+            const ST *S = src[k];
+            DT *D = dst[k];
+            for( dx = 0; dx < len0; dx += nlanes )
+            {
+                int sx0 = xofs[dx+0];
+                int sx1 = xofs[dx+1];
+                int sx2 = xofs[dx+2];
+                int sx3 = xofs[dx+3];
+                DVT a_even;
+                DVT a_odd;
+
+                v_load_expand_deinterlace(&alpha[dx*2], a_even, a_odd);
+                DVT s0(S[sx0], S[sx1], S[sx2], S[sx3]);
+                DVT s1(S[sx0+cn], S[sx1+cn], S[sx2+cn], S[sx3+cn]);
+                v_store(&D[dx], s0 * a_even + s1 * a_odd);
+            }
+        }
+        return dx;
+    }
+};
+typedef HResizeLinearVec_X4<float,float,float,v_float32x4> HResizeLinearVec_32f;
+typedef HResizeLinearVec_X4<ushort,float,float,v_float32x4> HResizeLinearVec_16u32f;
+typedef HResizeLinearVec_X4<short,float,float,v_float32x4> HResizeLinearVec_16s32f;
+typedef HResizeLinearVec_X4<uchar,int,short,v_int32x4> HResizeLinearVec_8u32s;
+
+#else
+
 typedef HResizeNoVec HResizeLinearVec_8u32s;
 typedef HResizeNoVec HResizeLinearVec_16u32f;
 typedef HResizeNoVec HResizeLinearVec_16s32f;
 typedef HResizeNoVec HResizeLinearVec_32f;
+
+#endif
+
 typedef HResizeNoVec HResizeLinearVec_64f;
 
 
