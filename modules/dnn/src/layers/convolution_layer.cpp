@@ -944,15 +944,15 @@ public:
                                     v_float32x4 r0 = v_load_aligned(rptr), r1 = v_load_aligned(rptr + vsz_a),
                                                 r2 = v_load_aligned(rptr + vsz_a*2), r3 = v_load_aligned(rptr + vsz_a*3);
 
-                                    vs00 += w0*r0;
-                                    vs01 += w0*r1;
-                                    vs02 += w0*r2;
-                                    vs03 += w0*r3;
+                                    vs00 = v_fma(w0, r0, vs00);
+                                    vs01 = v_fma(w0, r1, vs01);
+                                    vs02 = v_fma(w0, r2, vs02);
+                                    vs03 = v_fma(w0, r3, vs03);
 
-                                    vs10 += w1*r0;
-                                    vs11 += w1*r1;
-                                    vs12 += w1*r2;
-                                    vs13 += w1*r3;
+                                    vs10 = v_fma(w1, r0, vs10);
+                                    vs11 = v_fma(w1, r1, vs11);
+                                    vs12 = v_fma(w1, r2, vs12);
+                                    vs13 = v_fma(w1, r3, vs13);
                                 }
                                 s0 += v_reduce_sum4(vs00, vs01, vs02, vs03);
                                 s1 += v_reduce_sum4(vs10, vs11, vs12, vs13);

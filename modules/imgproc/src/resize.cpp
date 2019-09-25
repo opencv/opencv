@@ -2100,6 +2100,249 @@ private:
     int step;
 };
 
+#elif CV_MSA
+
+class ResizeAreaFastVec_SIMD_8u
+{
+public:
+    ResizeAreaFastVec_SIMD_8u(int _cn, int _step)
+        : cn(_cn), step(_step)
+    {
+    }
+
+    int operator() (const uchar* S, uchar* D, int w) const
+    {
+        int dx = 0;
+        const uchar* S0 = S, * S1 = S0 + step;
+
+        v8u16 v_2 = msa_dupq_n_u16(2);
+
+        if( cn == 1 )
+        {
+            for( ; dx <= w - 16; dx += 16, S0 += 32, S1 += 32, D += 16 )
+            {
+                v16u8 v_row[2], row0_lo0, row0_hi0, row1_lo0, row1_hi0, row0_lo1, row0_hi1, row1_lo1, row1_hi1;
+
+                msa_ld2q_u8(S0, &v_row[0], &v_row[1]);
+                ILVRL_B2_UB(v_row[0], msa_dupq_n_u8(0), row0_lo0, row0_hi0);
+                ILVRL_B2_UB(v_row[1], msa_dupq_n_u8(0), row1_lo0, row1_hi0);
+                msa_ld2q_u8(S1, &v_row[0], &v_row[1]);
+                ILVRL_B2_UB(v_row[0], msa_dupq_n_u8(0), row0_lo1, row0_hi1);
+                ILVRL_B2_UB(v_row[1], msa_dupq_n_u8(0), row1_lo1, row1_hi1);
+
+                v8u16 v_dst0 = msa_addq_u16(msa_addq_u16(msa_paddlq_u8(row0_lo0), msa_paddlq_u8(row1_lo0)),
+                                            msa_addq_u16(msa_paddlq_u8(row0_lo1), msa_paddlq_u8(row1_lo1)));
+                v8u16 v_dst1 = msa_addq_u16(msa_addq_u16(msa_paddlq_u8(row0_hi0), msa_paddlq_u8(row1_hi0)),
+                                            msa_addq_u16(msa_paddlq_u8(row0_hi1), msa_paddlq_u8(row1_hi1)));
+                msa_st1q_u8(D, msa_pack_u16(msa_shrq_n_u16(msa_addq_u16(v_dst0, v_2), 2),
+                                            msa_shrq_n_u16(msa_addq_u16(v_dst1, v_2), 2)));
+            }
+        }
+        else if( cn == 4 )
+        {
+            for( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8 )
+            {
+                v16u8 row_lo0, row_hi0, row_lo1, row_hi1;
+                v8u16 row16_lo, row16_hi;
+
+                v16u8 v_row = msa_ld1q_u8(S0);
+                ILVRL_B2_UB(v_row, msa_dupq_n_u8(0), row_lo0, row_hi0);
+
+                v_row = msa_ld1q_u8(S1);
+                ILVRL_B2_UB(v_row, msa_dupq_n_u8(0), row_lo1, row_hi1);
+
+                v8u16 v_row16 = msa_addq_u16(msa_paddlq_u8(row_lo0), msa_paddlq_u8(row_lo1));
+                ILVRL_H2_UH(v_row16, msa_dupq_n_u16(0), row16_lo, row16_hi);
+                v4u32 v_p0 = msa_addq_u32(msa_paddlq_u16(row16_lo), msa_paddlq_u16(row16_hi));
+
+                v_row16 = msa_addq_u16(msa_paddlq_u8(row_hi0), msa_paddlq_u8(row_hi1));
+                ILVRL_H2_UH(v_row16, msa_dupq_n_u16(0), row16_lo, row16_hi);
+                v4u32 v_p1 = msa_addq_u32(msa_paddlq_u16(row16_lo), msa_paddlq_u16(row16_hi));
+
+                v8u16 v_dst = msa_shrq_n_u16(msa_addq_u16(msa_pack_u32(v_p0, v_p1), v_2), 2);
+                msa_st1_u8(D, msa_movn_u16(v_dst));
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int cn, step;
+};
+
+class ResizeAreaFastVec_SIMD_16u
+{
+public:
+    ResizeAreaFastVec_SIMD_16u(int _cn, int _step)
+        : cn(_cn), step(_step)
+    {
+    }
+
+    int operator() (const ushort * S, ushort * D, int w) const
+    {
+        int dx = 0;
+        const ushort * S0 = S, * S1 = (const ushort *)((const uchar *)(S0) + step);
+
+        v4u32 v_2 = msa_dupq_n_u32(2);
+
+        if( cn == 1 )
+        {
+            for( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8 )
+            {
+                v8u16 v_row[2], row0_lo0, row0_hi0, row1_lo0, row1_hi0, row0_lo1, row0_hi1, row1_lo1, row1_hi1;
+
+                msa_ld2q_u16(S0, &v_row[0], &v_row[1]);
+                ILVRL_H2_UH(v_row[0], msa_dupq_n_u16(0), row0_lo0, row0_hi0);
+                ILVRL_H2_UH(v_row[1], msa_dupq_n_u16(0), row1_lo0, row1_hi0);
+                msa_ld2q_u16(S1, &v_row[0], &v_row[1]);
+                ILVRL_H2_UH(v_row[0], msa_dupq_n_u16(0), row0_lo1, row0_hi1);
+                ILVRL_H2_UH(v_row[1], msa_dupq_n_u16(0), row1_lo1, row1_hi1);
+
+                v4u32 v_dst0 = msa_addq_u32(msa_addq_u32(msa_paddlq_u16(row0_lo0), msa_paddlq_u16(row1_lo0)),
+                                            msa_addq_u32(msa_paddlq_u16(row0_lo1), msa_paddlq_u16(row1_lo1)));
+                v4u32 v_dst1 = msa_addq_u32(msa_addq_u32(msa_paddlq_u16(row0_hi0), msa_paddlq_u16(row1_hi0)),
+                                            msa_addq_u32(msa_paddlq_u16(row0_hi1), msa_paddlq_u16(row1_hi1)));
+                msa_st1q_u16(D, msa_pack_u32(msa_shrq_n_u32(msa_addq_u32(v_dst0, v_2), 2),
+                                             msa_shrq_n_u32(msa_addq_u32(v_dst1, v_2), 2)));
+            }
+        }
+        else if( cn == 4 )
+        {
+            for( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4 )
+            {
+                v8u16 row_lo0, row_hi0, row_lo1, row_hi1;
+
+                v8u16 v_row = msa_ld1q_u16(S0);
+                ILVRL_H2_UH(v_row, msa_dupq_n_u16(0), row_lo0, row_hi0);
+                v_row = msa_ld1q_u16(S1);
+                ILVRL_H2_UH(v_row, msa_dupq_n_u16(0), row_lo1, row_hi1);
+
+                v4u32 v_dst = msa_addq_u32(msa_addq_u32(msa_paddlq_u16(row_lo0), msa_paddlq_u16(row_hi0)),
+                                           msa_addq_u32(msa_paddlq_u16(row_lo1), msa_paddlq_u16(row_hi1)));
+                msa_st1_u16(D, msa_movn_u32(msa_shrq_n_u32(msa_addq_u32(v_dst, v_2), 2)));
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int cn, step;
+};
+
+class ResizeAreaFastVec_SIMD_16s
+{
+public:
+    ResizeAreaFastVec_SIMD_16s(int _cn, int _step)
+        : cn(_cn), step(_step)
+    {
+    }
+
+    int operator() (const short * S, short * D, int w) const
+    {
+        int dx = 0;
+        const short * S0 = S, * S1 = (const short *)((const uchar *)(S0) + step);
+
+        v4i32 v_2 = msa_dupq_n_s32(2);
+
+        if( cn == 1 )
+        {
+            for( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8 )
+            {
+                v8i16 v_row[2], row0_lo0, row0_hi0, row1_lo0, row1_hi0, row0_lo1, row0_hi1, row1_lo1, row1_hi1;
+
+                msa_ld2q_s16(S0, &v_row[0], &v_row[1]);
+                ILVRL_H2_SH(v_row[0], msa_dupq_n_s16(0), row0_lo0, row0_hi0);
+                ILVRL_H2_SH(v_row[1], msa_dupq_n_s16(0), row1_lo0, row1_hi0);
+                msa_ld2q_s16(S1, &v_row[0], &v_row[1]);
+                ILVRL_H2_SH(v_row[0], msa_dupq_n_s16(0), row0_lo1, row0_hi1);
+                ILVRL_H2_SH(v_row[1], msa_dupq_n_s16(0), row1_lo1, row1_hi1);
+
+                v4i32 v_dst0 = msa_addq_s32(msa_addq_s32(msa_paddlq_s16(row0_lo0), msa_paddlq_s16(row1_lo0)),
+                                            msa_addq_s32(msa_paddlq_s16(row0_lo1), msa_paddlq_s16(row1_lo1)));
+                v4i32 v_dst1 = msa_addq_s32(msa_addq_s32(msa_paddlq_s16(row0_hi0), msa_paddlq_s16(row1_hi0)),
+                                            msa_addq_s32(msa_paddlq_s16(row0_hi1), msa_paddlq_s16(row1_hi1)));
+                msa_st1q_s16(D, msa_pack_s32(msa_shrq_n_s32(msa_addq_s32(v_dst0, v_2), 2),
+                                             msa_shrq_n_s32(msa_addq_s32(v_dst1, v_2), 2)));
+            }
+        }
+        else if( cn == 4 )
+        {
+            for( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4 )
+            {
+                v8i16 row_lo0, row_hi0, row_lo1, row_hi1;
+
+                v8i16 v_row = msa_ld1q_s16(S0);
+                ILVRL_H2_SH(v_row, msa_dupq_n_s16(0), row_lo0, row_hi0);
+                v_row = msa_ld1q_s16(S1);
+                ILVRL_H2_SH(v_row, msa_dupq_n_s16(0), row_lo1, row_hi1);
+
+                v4i32 v_dst = msa_addq_s32(msa_addq_s32(msa_paddlq_s16(row_lo0), msa_paddlq_s16(row_hi0)),
+                                           msa_addq_s32(msa_paddlq_s16(row_lo1), msa_paddlq_s16(row_hi1)));
+                msa_st1_s16(D, msa_movn_s32(msa_shrq_n_s32(msa_addq_s32(v_dst, v_2), 2)));
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int cn, step;
+};
+
+struct ResizeAreaFastVec_SIMD_32f
+{
+    ResizeAreaFastVec_SIMD_32f(int _scale_x, int _scale_y, int _cn, int _step)
+        : cn(_cn), step(_step)
+    {
+        fast_mode = _scale_x == 2 && _scale_y == 2 && (cn == 1 || cn == 4);
+    }
+
+    int operator() (const float * S, float * D, int w) const
+    {
+        if (!fast_mode)
+            return 0;
+
+        const float * S0 = S, * S1 = (const float *)((const uchar *)(S0) + step);
+        int dx = 0;
+
+        v4f32 v_025 = msa_dupq_n_f32(0.25f);
+
+        if( cn == 1 )
+        {
+            for( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4 )
+            {
+                v4f32 v_row[2];
+
+                msa_ld2q_f32(S0, &v_row[0], &v_row[1]);
+                v4f32 v_dst0 = msa_addq_f32(v_row[0], v_row[1]);
+                msa_ld2q_f32(S1, &v_row[0], &v_row[1]);
+                v4f32 v_dst1 = msa_addq_f32(v_row[0], v_row[1]);
+
+                msa_st1q_f32(D, msa_mulq_f32(msa_addq_f32(v_dst0, v_dst1), v_025));
+            }
+        }
+        else if( cn == 4 )
+        {
+            for( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4 )
+            {
+                v4f32 v_dst0 = msa_addq_f32(msa_ld1q_f32(S0), msa_ld1q_f32(S0 + 4));
+                v4f32 v_dst1 = msa_addq_f32(msa_ld1q_f32(S1), msa_ld1q_f32(S1 + 4));
+
+                msa_st1q_f32(D, msa_mulq_f32(msa_addq_f32(v_dst0, v_dst1), v_025));
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int cn;
+    bool fast_mode;
+    int step;
+};
+
 #elif CV_SIMD
 
 class ResizeAreaFastVec_SIMD_8u

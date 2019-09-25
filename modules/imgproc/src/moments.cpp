@@ -331,6 +331,79 @@ struct MomentsInTile_SIMD<uchar, int, int>
     uint16x4_t qx_init, v_step;
 };
 
+#elif CV_MSA
+
+template <>
+struct MomentsInTile_SIMD<uchar, int, int>
+{
+    MomentsInTile_SIMD()
+    {
+        qx_init = (v8u16){0, 1, 2, 3, 4, 5, 6, 7};
+        v_step = msa_dupq_n_u16(8);
+    }
+
+    void process(v8u16 src, v8u16 & qx, v4u32 & v_x0, v4u32 & v_x1, v4u32 & v_x2, v4u32 & v_x3) const
+    {
+        v8u16 src_lo, src_hi, qx_lo, qx_hi;
+
+        ILVRL_H2_UH(src, msa_dupq_n_u16(0), src_lo, src_hi);
+        ILVRL_H2_UH(qx, msa_dupq_n_u16(0), qx_lo, qx_hi);
+
+        v4u32 v_p = msa_paddlq_u16(src_lo);
+        v4u32 v_qx = msa_paddlq_u16(qx_lo);
+        v4u32 v_px = msa_mulq_u32(v_qx, v_p);
+
+        v_x0 = msa_addq_u32(v_x0, v_p);
+        v_x1 = msa_addq_u32(v_x1, v_px);
+        v_px = msa_mulq_u32(v_px, v_qx);
+        v_x2 = msa_addq_u32(v_x2, v_px);
+        v_x3 = (v4u32)msa_mlaq_s32((v4i32)v_x3, (v4i32)v_px, (v4i32)v_qx);
+
+        v_p = msa_paddlq_u16(src_hi);
+        v_qx = msa_paddlq_u16(qx_hi);
+        v_px = msa_mulq_u32(v_qx, v_p);
+
+        v_x0 = msa_addq_u32(v_x0, v_p);
+        v_x1 = msa_addq_u32(v_x1, v_px);
+        v_px = msa_mulq_u32(v_px, v_qx);
+        v_x2 = msa_addq_u32(v_x2, v_px);
+        v_x3 = (v4u32)msa_mlaq_s32((v4i32)v_x3, (v4i32)v_px, (v4i32)v_qx);
+
+        qx = msa_addq_u16(qx, v_step);
+    }
+
+    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
+    {
+        int x = 0;
+
+        v4u32 v_x0 = msa_dupq_n_u32(0), v_x1 = v_x0, v_x2 = v_x0, v_x3 = v_x0;
+        v8u16 qx = qx_init;
+
+        for( ; x <= len - 16; x += 16 )
+        {
+            v16u8 v_src = msa_ld1q_u8(ptr + x), v_lo, v_hi;
+            ILVRL_B2_UB(v_src, msa_dupq_n_u8(0), v_lo, v_hi);
+
+            process(msa_paddlq_u8(v_lo), qx, v_x0, v_x1, v_x2, v_x3);
+            process(msa_paddlq_u8(v_hi), qx, v_x0, v_x1, v_x2, v_x3);
+        }
+
+        for( ; x <= len - 8; x += 8 )
+        {
+            process(msa_movl_u8(msa_ld1_u8(ptr + x)), qx, v_x0, v_x1, v_x2, v_x3);
+        }
+
+        x0 = (int)msa_sum_u32(v_x0);
+        x1 = (int)msa_sum_u32(v_x1);
+        x2 = (int)msa_sum_u32(v_x2);
+        x3 = (int)msa_sum_u32(v_x3);
+
+        return x;
+    }
+
+    v8u16 qx_init, v_step;
+};
+
 #endif
 
 #if CV_SSE4_1
@@ -392,6 +465,126 @@ struct MomentsInTile_SIMD<ushort, int, int64>
 
     int CV_DECL_ALIGNED(16) buf[4];
     int64 CV_DECL_ALIGNED(16) buf64[2];
+};
+
+#elif CV_MSA
+
+template <>
+struct MomentsInTile_SIMD<ushort, int, int64>
+{
+    MomentsInTile_SIMD()
+    {
+        qx_init = (v4u32){0, 1, 2, 3};
+        v_step = msa_dupq_n_u32(4);
+    }
+
+    void process(v4u32 src, v4u32 & qx, v4u32 & v_x0, v4u32 & v_x1, v4u32 & v_x2, v2u64 & v_x3lo, v2u64 & v_x3hi) const
+    {
+        v4u32 v_px = msa_mulq_u32(src, qx);
+        v_x0 = msa_addq_u32(v_x0, src);
+        v_x1 = msa_addq_u32(v_x1, v_px);
+        v_px = msa_mulq_u32(v_px, qx);
+        v_x2 = msa_addq_u32(v_x2, v_px);
+
+        v4u32 px_lo, px_hi, qx_lo, qx_hi;
+        ILVRL_W2_UW(v_px, msa_dupq_n_u32(0), px_lo, px_hi);
+        ILVRL_W2_UW(qx, msa_dupq_n_u32(0), qx_lo, qx_hi);
+        v_x3lo = (v2u64)msa_mlaq_s64((v2i64)v_x3lo, (v2i64)msa_paddlq_u32(px_lo), (v2i64)msa_paddlq_u32(qx_lo));
+        v_x3hi = (v2u64)msa_mlaq_s64((v2i64)v_x3hi, (v2i64)msa_paddlq_u32(px_hi), (v2i64)msa_paddlq_u32(qx_hi));
+
+        qx = msa_addq_u32(qx, v_step);
+    }
+
+    int operator() (const ushort * ptr, int len, int & x0, int & x1, int & x2, int64 & x3)
+    {
+        int x = 0;
+
+        v4u32 v_x0 = msa_dupq_n_u32(0), v_x1 = v_x0, v_x2 = v_x0;
+        v2u64 v_x3lo = msa_dupq_n_u64(0), v_x3hi = v_x3lo;
+        v4u32 qx = qx_init;
+
+        for( ; x <= len - 8; x += 8 )
+        {
+            v8u16 v_src = msa_ld1q_u16(ptr + x), v_lo, v_hi;
+            ILVRL_H2_UH(v_src, msa_dupq_n_u16(0), v_lo, v_hi);
+
+            process(msa_paddlq_u16(v_lo), qx, v_x0, v_x1, v_x2, v_x3lo, v_x3hi);
+            process(msa_paddlq_u16(v_hi), qx, v_x0, v_x1, v_x2, v_x3lo, v_x3hi);
+        }
+
+        for( ; x <= len - 4; x += 4 )
+        {
+            process(msa_movl_u16(msa_ld1_u16(ptr + x)), qx, v_x0, v_x1, v_x2, v_x3lo, v_x3hi);
+        }
+
+        x0 = (int)msa_sum_u32(v_x0);
+        x1 = (int)msa_sum_u32(v_x1);
+        x2 = (int)msa_sum_u32(v_x2);
+        x3 = (int64)(v_x3lo[0] + v_x3lo[1] + v_x3hi[0] + v_x3hi[1]);
+
+        return x;
+    }
+
+    v4u32 qx_init, v_step;
+};
+
+template <>
+struct MomentsInTile_SIMD<short, int, int64>
+{
+    MomentsInTile_SIMD()
+    {
+        qx_init = (v4i32){0, 1, 2, 3};
+        v_step = msa_dupq_n_s32(4);
+    }
+
+    void process(v4i32 src, v4i32 & qx, v4i32 & v_x0, v4i32 & v_x1, v4i32 & v_x2, v2i64 & v_x3lo, v2i64 & v_x3hi) const
+    {
+        v4i32 v_px = msa_mulq_s32(src, qx);
+        v_x0 = msa_addq_s32(v_x0, src);
+        v_x1 = msa_addq_s32(v_x1, v_px);
+        v_px = msa_mulq_s32(v_px, qx);
+        v_x2 = msa_addq_s32(v_x2, v_px);
+
+        v4i32 px_lo, px_hi, qx_lo, qx_hi;
+        ILVRL_W2_SW(v_px, msa_dupq_n_s32(0), px_lo, px_hi);
+        ILVRL_W2_SW(qx, msa_dupq_n_s32(0), qx_lo, qx_hi);
+        v_x3lo = msa_mlaq_s64(v_x3lo, msa_paddlq_s32(px_lo), msa_paddlq_s32(qx_lo));
+        v_x3hi = msa_mlaq_s64(v_x3hi, msa_paddlq_s32(px_hi), msa_paddlq_s32(qx_hi));
+
+        qx = msa_addq_s32(qx, v_step);
+    }
+
+    int operator() (const short * ptr, int len, int & x0, int & x1, int & x2, int64 & x3)
+    {
+        int x = 0;
+
+        v4i32 v_x0 = msa_dupq_n_s32(0), v_x1 = v_x0, v_x2 = v_x0;
+        v2i64 v_x3lo = msa_dupq_n_s64(0), v_x3hi = v_x3lo;
+        v4i32 qx = qx_init;
+
+        for( ; x <= len - 8; x += 8 )
+        {
+            v8i16 v_src = msa_ld1q_s16(ptr + x), v_lo, v_hi;
+            ILVRL_H2_SH(v_src, msa_dupq_n_s16(0), v_lo, v_hi);
+
+            process(msa_paddlq_s16(v_lo), qx, v_x0, v_x1, v_x2, v_x3lo, v_x3hi);
+            process(msa_paddlq_s16(v_hi), qx, v_x0, v_x1, v_x2, v_x3lo, v_x3hi);
+        }
+
+        for( ; x <= len - 4; x += 4 )
+        {
+            process(msa_movl_s16(msa_ld1_s16(ptr + x)), qx, v_x0, v_x1, v_x2, v_x3lo, v_x3hi);
+        }
+
+        x0 = (int)msa_sum_s32(v_x0);
+        x1 = (int)msa_sum_s32(v_x1);
+        x2 = (int)msa_sum_s32(v_x2);
+        x3 = (int64)(v_x3lo[0] + v_x3lo[1] + v_x3hi[0] + v_x3hi[1]);
+
+        return x;
+    }
+
+    v4i32 qx_init, v_step;
 };
 
 #endif

@@ -262,6 +262,20 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
 #endif
 
+#if CV_MSA
+        float CV_DECL_ALIGNED(16) nA11[] = { 0, 0, 0, 0 }, nA12[] = { 0, 0, 0, 0 }, nA22[] = { 0, 0, 0, 0 };
+        const int shifter1 = W_BITS - 5;  //shifts right bits
+        const int shifter2 = W_BITS;
+
+        const v16i8 vzero = msa_dupq_n_s8((int8_t)0);
+        const v4i32 d26 = msa_dupq_n_s32((int32_t)iw00);
+        const v4i32 d27 = msa_dupq_n_s32((int32_t)iw01);
+        const v4i32 d28 = msa_dupq_n_s32((int32_t)iw10);
+        const v4i32 d29 = msa_dupq_n_s32((int32_t)iw11);
+        const v4i32 q11 = msa_dupq_n_s32((int32_t)shifter1);
+        const v4i32 q12 = msa_dupq_n_s32((int32_t)shifter2);
+#endif
+
         // extract the patch from the first image, compute covariation matrix of derivatives
         int x, y;
         for( y = 0; y < winSize.height; y++ )
@@ -430,6 +444,134 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             }
 #endif
 
+#if CV_MSA
+            for( ; x <= winSize.width*cn - 8; x += 8, dsrc += 8*2, dIptr += 8*2 )
+            {
+                v16u8 d0 = msa_ld1q_u8(&src[x]);
+                v16u8 d2 = msa_ld1q_u8(&src[x + cn]);
+                v16u8 d4 = msa_ld1q_u8(&src[x + stepI]);
+                v16u8 d6 = msa_ld1q_u8(&src[x + stepI + cn]);
+
+                /* Extract the low half and expand from v16u8 to v8u16 */
+                v8u16 q0 = msa_paddlq_u8((v16u8)msa_ilvrq_s8((v16i8)d0, (v16i8)vzero));
+                v8u16 q1 = msa_paddlq_u8((v16u8)msa_ilvrq_s8((v16i8)d2, (v16i8)vzero));
+                v8u16 q2 = msa_paddlq_u8((v16u8)msa_ilvrq_s8((v16i8)d4, (v16i8)vzero));
+                v8u16 q3 = msa_paddlq_u8((v16u8)msa_ilvrq_s8((v16i8)d6, (v16i8)vzero));
+
+                /* Processing first low quarter for d0 d2 */
+                v4i32 q5 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)q0, (v8i16)vzero)), d26);
+                v4i32 q6 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)q1, (v8i16)vzero)), d27);
+
+                /* Processing first low quarter for d4 d6 */
+                v4i32 q7 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)q2, (v8i16)vzero)), d28);
+                v4i32 q8 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)q3, (v8i16)vzero)), d29);
+
+                q5 = msa_addq_s32(q5, q6);
+                q7 = msa_addq_s32(q7, q8);
+                q5 = msa_addq_s32(q5, q7);
+
+                v4i32 q5_0 = msa_qrshrq_s32(q5, q11);
+
+                /* Processing second low quarter for d0 d2 */
+                q5 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)q0, (v8i16)vzero)), d26);
+                q6 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)q1, (v8i16)vzero)), d27);
+
+                /* Processing second low quarter for d4 d6 */
+                q7 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)q2, (v8i16)vzero)), d28);
+                q8 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)q3, (v8i16)vzero)), d29);
+
+                q5 = msa_addq_s32(q5, q6);
+                q7 = msa_addq_s32(q7, q8);
+                q5 = msa_addq_s32(q5, q7);
+
+                q5 = msa_qrshrq_s32(q5, q11);
+
+                /* Store (v4i16)ival[0:7] to Iptr */
+                msa_st1q_s16(&Iptr[x], msa_pack_s32(q5_0, q5));
+
+                v8i16 d0d1[2], d2d3[2], d4d5[2], d6d7[2];
+                msa_ld2q_s16(dsrc, &d0d1[0], &d0d1[1]);
+                msa_ld2q_s16(&dsrc[cn2], &d2d3[0], &d2d3[1]);
+                msa_ld2q_s16(&dsrc[dstep], &d4d5[0], &d4d5[1]);
+                msa_ld2q_s16(&dsrc[dstep + cn2], &d6d7[0], &d6d7[1]);
+
+                /* Processing low half for d0d1 d2d3 */
+                v4i32 q4 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)d0d1[0], (v8i16)vzero)), d26);
+                q6 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)d0d1[1], (v8i16)vzero)), d26);
+                q7 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)d2d3[0], (v8i16)vzero)), d27);
+                q8 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)d2d3[1], (v8i16)vzero)), d27);
+                q4 = msa_addq_s32(q4, q7);
+                q6 = msa_addq_s32(q6, q8);
+
+                /* Processing low half for d4d5 d6d7 */
+                q7 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)d4d5[0], (v8i16)vzero)), d28);
+                v4i32 q14 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)d4d5[1], (v8i16)vzero)), d28);
+                q8 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)d6d7[0], (v8i16)vzero)), d29);
+                v4i32 q15 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)d6d7[1], (v8i16)vzero)), d29);
+                q7 = msa_addq_s32(q7, q8);
+                q14 = msa_addq_s32(q14, q15);
+
+                q4 = msa_addq_s32(q4, q7);
+                q6 = msa_addq_s32(q6, q14);
+                v4i32 q4_0 = q4 = msa_qrshrq_s32(q4, q12);
+                v4i32 q6_0 = q6 = msa_qrshrq_s32(q6, q12);
+
+                /*
+                  iA11 += (itemtype)(ixval*ixval);
+                  iA12 += (itemtype)(ixval*iyval);
+                  iA22 += (itemtype)(iyval*iyval);
+                 */
+                v4f32 nq0 = msa_ld1q_f32(nA11);
+                v4f32 nq1 = msa_ld1q_f32(nA12);
+                v4f32 nq2 = msa_ld1q_f32(nA22);
+                q7 = msa_mulq_s32(q4, q4);
+                q8 = msa_mulq_s32(q4, q6);
+                q15 = msa_mulq_s32(q6, q6);
+                nq0 = msa_addq_f32(nq0, msa_cvtfintq_f32_s32(q7));
+                nq1 = msa_addq_f32(nq1, msa_cvtfintq_f32_s32(q8));
+                nq2 = msa_addq_f32(nq2, msa_cvtfintq_f32_s32(q15));
+
+                /* Processing high half for d0d1 d2d3 */
+                q4 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)d0d1[0], (v8i16)vzero)), d26);
+                q6 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)d0d1[1], (v8i16)vzero)), d26);
+                q7 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)d2d3[0], (v8i16)vzero)), d27);
+                q8 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)d2d3[1], (v8i16)vzero)), d27);
+                q4 = msa_addq_s32(q4, q7);
+                q6 = msa_addq_s32(q6, q8);
+
+                /* Processing high half for d4d5 d6d7 */
+                q7 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)d4d5[0], (v8i16)vzero)), d28);
+                q14 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)d4d5[1], (v8i16)vzero)), d28);
+                q8 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)d6d7[0], (v8i16)vzero)), d29);
+                q15 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)d6d7[1], (v8i16)vzero)), d29);
+                q7 = msa_addq_s32(q7, q8);
+                q14 = msa_addq_s32(q14, q15);
+
+                q4 = msa_addq_s32(q4, q7);
+                q6 = msa_addq_s32(q6, q14);
+                q4 = msa_qrshrq_s32(q4, q12);
+                q6 = msa_qrshrq_s32(q6, q12);
+
+                /* Store (v8i16)(ixval[0] iyval[0] ixval[1] iyval[1] ...) to dIptr */
+                msa_st2q_s16(dIptr, msa_pack_s32(q4_0, q4), msa_pack_s32(q6_0, q6));
+
+                /*
+                  iA11 += (itemtype)(ixval*ixval);
+                  iA12 += (itemtype)(ixval*iyval);
+                  iA22 += (itemtype)(iyval*iyval);
+                 */
+                q7 = msa_mulq_s32(q4, q4);
+                q8 = msa_mulq_s32(q4, q6);
+                q15 = msa_mulq_s32(q6, q6);
+                nq0 = msa_addq_f32(nq0, msa_cvtfintq_f32_s32(q7));
+                nq1 = msa_addq_f32(nq1, msa_cvtfintq_f32_s32(q8));
+                nq2 = msa_addq_f32(nq2, msa_cvtfintq_f32_s32(q15));
+                msa_st1q_f32(nA11, nq0);
+                msa_st1q_f32(nA12, nq1);
+                msa_st1q_f32(nA22, nq2);
+            }
+#endif
+
             for( ; x < winSize.width*cn; x++, dsrc += 2, dIptr += 2 )
             {
                 int ival = CV_DESCALE(src[x]*iw00 + src[x+cn]*iw01 +
@@ -455,7 +597,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         iA22 += v_reduce_sum(qA22);
 #endif
 
-#if CV_NEON
+#if CV_NEON || CV_MSA
         iA11 += nA11[0] + nA11[1] + nA11[2] + nA11[3];
         iA12 += nA12[0] + nA12[1] + nA12[2] + nA12[3];
         iA22 += nA22[0] + nA22[1] + nA22[2] + nA22[3];
@@ -519,6 +661,15 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             const int16x4_t d28_2 = vdup_n_s16((int16_t)iw10);
             const int16x4_t d29_2 = vdup_n_s16((int16_t)iw11);
 
+#endif
+
+#if CV_MSA
+            float CV_DECL_ALIGNED(16) nB1[] = { 0,0,0,0 }, nB2[] = { 0,0,0,0 };
+
+            const v4i32 d26_2 = msa_dupq_n_s32((int32_t)iw00);
+            const v4i32 d27_2 = msa_dupq_n_s32((int32_t)iw01);
+            const v4i32 d28_2 = msa_dupq_n_s32((int32_t)iw10);
+            const v4i32 d29_2 = msa_dupq_n_s32((int32_t)iw11);
 #endif
 
             for( y = 0; y < winSize.height; y++ )
@@ -630,6 +781,79 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 }
 #endif
 
+#if CV_MSA
+                for( ; x <= winSize.width*cn - 8; x += 8, dIptr += 8*2 )
+                {
+                    v16u8 d0 = msa_ld1q_u8(&Jptr[x]);
+                    v16u8 d2 = msa_ld1q_u8(&Jptr[x+cn]);
+                    v16u8 d4 = msa_ld1q_u8(&Jptr[x+stepJ]);
+                    v16u8 d6 = msa_ld1q_u8(&Jptr[x+stepJ+cn]);
+
+                    /*Extract the low half and process*/
+                    v8u16 q0 = msa_paddlq_u8((v16u8)msa_ilvrq_s8((v16i8)d0, (v16i8)vzero));
+                    v8u16 q1 = msa_paddlq_u8((v16u8)msa_ilvrq_s8((v16i8)d2, (v16i8)vzero));
+                    v8u16 q2 = msa_paddlq_u8((v16u8)msa_ilvrq_s8((v16i8)d4, (v16i8)vzero));
+                    v8u16 q3 = msa_paddlq_u8((v16u8)msa_ilvrq_s8((v16i8)d6, (v16i8)vzero));
+
+                    v4i32 nq4 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)q0, (v8i16)vzero)), d26_2);
+                    v4i32 nq5 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)q0, (v8i16)vzero)), d26_2);
+
+                    v4i32 nq6 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)q1, (v8i16)vzero)), d27_2);
+                    v4i32 nq7 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)q1, (v8i16)vzero)), d27_2);
+
+                    v4i32 nq8 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)q2, (v8i16)vzero)), d28_2);
+                    v4i32 nq9 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)q2, (v8i16)vzero)), d28_2);
+
+                    v4i32 nq10 = msa_mulq_s32(msa_paddlq_s16(msa_ilvrq_s16((v8i16)q3, (v8i16)vzero)), d29_2);
+                    v4i32 nq11 = msa_mulq_s32(msa_paddlq_s16(msa_ilvlq_s16((v8i16)q3, (v8i16)vzero)), d29_2);
+
+                    nq4 = msa_addq_s32(nq4, nq6);
+                    nq5 = msa_addq_s32(nq5, nq7);
+                    nq8 = msa_addq_s32(nq8, nq10);
+                    nq9 = msa_addq_s32(nq9, nq11);
+
+                    v8i16 q6 = msa_ld1q_s16(&Iptr[x]);
+
+                    nq4 = msa_addq_s32(nq4, nq8);
+                    nq5 = msa_addq_s32(nq5, nq9);
+
+                    nq8 = msa_paddlq_s16(msa_ilvlq_s16((v8i16)q6, (v8i16)vzero)); /*expand high half*/
+                    nq6 = msa_paddlq_s16(msa_ilvrq_s16((v8i16)q6, (v8i16)vzero)); /*expand low half*/
+
+                    nq4 = msa_qrshrq_s32(nq4, q11);
+                    nq5 = msa_qrshrq_s32(nq5, q11);
+
+                    v8i16 q0q1[2];
+                    msa_ld2q_s16(dIptr, &q0q1[0], &q0q1[1]);
+
+                    nq4 = msa_subq_s32(nq4, nq6);
+                    nq5 = msa_subq_s32(nq5, nq8);
+
+                    v4i32 nq2 = msa_paddlq_s16(msa_ilvrq_s16((v8i16)q0q1[0], (v8i16)vzero)); /*expand low half*/
+                    v4i32 nq3 = msa_paddlq_s16(msa_ilvlq_s16((v8i16)q0q1[0], (v8i16)vzero)); /*expand high half*/
+                    nq7 = msa_paddlq_s16(msa_ilvrq_s16((v8i16)q0q1[1], (v8i16)vzero)); /*expand low half*/
+                    nq8 = msa_paddlq_s16(msa_ilvlq_s16((v8i16)q0q1[1], (v8i16)vzero)); /*expand high half*/
+
+                    nq9 = msa_mulq_s32(nq4, nq2);
+                    nq10 = msa_mulq_s32(nq5, nq3);
+
+                    nq4 = msa_mulq_s32(nq4, nq7);
+                    nq5 = msa_mulq_s32(nq5, nq8);
+
+                    nq9 = msa_addq_s32(nq9, nq10);
+                    nq4 = msa_addq_s32(nq4, nq5);
+
+                    v4f32 nB1v = msa_ld1q_f32(nB1);
+                    v4f32 nB2v = msa_ld1q_f32(nB2);
+
+                    nB1v = msa_addq_f32(nB1v, msa_cvtfintq_f32_s32(nq9));
+                    nB2v = msa_addq_f32(nB2v, msa_cvtfintq_f32_s32(nq4));
+
+                    msa_st1q_f32(nB1, nB1v);
+                    msa_st1q_f32(nB2, nB2v);
+                }
+#endif
+
                 for( ; x < winSize.width*cn; x++, dIptr += 2 )
                 {
                     int diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
@@ -647,7 +871,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             ib2 += v_reduce_sum(qf1);
 #endif
 
-#if CV_NEON
+#if CV_NEON || CV_MSA
 
             ib1 += (float)(nB1[0] + nB1[1] + nB1[2] + nB1[3]);
             ib2 += (float)(nB2[0] + nB2[1] + nB2[2] + nB2[3]);

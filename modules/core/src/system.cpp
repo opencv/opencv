@@ -368,7 +368,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
 
-        g_hwFeatureNames[CPU_MSA] = "CPU_MSA";
+        g_hwFeatureNames[CPU_MSA] = "MSA";
 
         g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
         g_hwFeatureNames[CPU_AVX512_KNL] = "AVX512-KNL";
