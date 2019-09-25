@@ -92,6 +92,7 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     bool produceCellOutput;
     float forgetBias, cellClip;
     bool useCellClip, usePeephole;
+    bool reverse;   // If true, go in negative direction along the time axis
 
 public:
 
@@ -133,6 +134,7 @@ public:
         cellClip = params.get<float>("cell_clip", 0.0f);
         useCellClip = params.get<bool>("use_cell_clip", false);
         usePeephole = params.get<bool>("use_peephole", false);
+        reverse = params.get<bool>("reverse", false);
 
         allocated = false;
         outTailShape.clear();
@@ -288,7 +290,18 @@ public:
         Mat hOutTs = output[0].reshape(1, numSamplesTotal);
         Mat cOutTs = produceCellOutput ? output[1].reshape(1, numSamplesTotal) : Mat();
 
-        for (int ts = 0; ts < numTimeStamps; ts++)
+        int tsStart, tsEnd, tsInc;
+        if (reverse) {
+            tsStart = numTimeStamps - 1;
+            tsEnd = -1;
+            tsInc = -1;
+        }
+        else {
+            tsStart = 0;
+            tsEnd = numTimeStamps;
+            tsInc = 1;
+        }
+        for (int ts = tsStart; ts != tsEnd; ts += tsInc)
         {
             Range curRowRange(ts*numSamples, (ts + 1)*numSamples);
             Mat xCurr = xTs.rowRange(curRowRange);
