@@ -143,7 +143,7 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
 
-calib3d = {'': ['findHomography']}
+calib3d = {'': ['findHomography', 'Rodrigues']}
 
 def makeWhiteList(module_list):
     wl = {}
