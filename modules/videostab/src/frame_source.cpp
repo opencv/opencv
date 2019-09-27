@@ -64,7 +64,7 @@ public:
 
     virtual void reset() CV_OVERRIDE
     {
-#ifdef HAVE_OPENCV_VIDEOIO
+#if defined HAVE_OPENCV_VIDEOIO && !defined UNDER_RTSS
         vc.release();
         vc.open(path_);
         if (!vc.isOpened())

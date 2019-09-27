@@ -99,83 +99,8 @@ private:
     PRTGV_CAMERA_INFOA      pCameraInfos = NULL;                // Pointer to RTGV_CAMERA_INFO for receiving camera info from RtGVEnumerateCameras
     ACQUISITIONMODE         acquisitionMode;                    // Holds the acquisition mode being used by the camera
     PRTGV_FRAME             pActiveFrame;                       // Pointer to the RTGV_FRAME which will receive frames from RtGVGrabFrame
-    int                     openedCameraIndex = -1;             // The index in the camera list of the camera which has been opened.  -1 indicates that no camera has been opened.
+    int                     openedCameraHandle = -1;            // The handle of the camera which has been opened.  -1 indicates that no camera has been opened.
     uint32_t                interfaceIPAddress = 0;
-};
-
-//
-//  Capture class for use with RTX64 GigE
-//
-class CvCaptureCAM_Rtx64GigE : public CvCapture
-{
-public:
-
-    //
-    //  Constructor for RTX64 GigE Capture Class.  This is called by cvCreateCameraCapture_Rtx64GigE.
-    //
-    CvCaptureCAM_Rtx64GigE();
-
-    //
-    //  Destructor for RTX64 GigE Capture Class
-    //
-    virtual ~CvCaptureCAM_Rtx64GigE()
-    {
-        close();
-    }
-
-    //
-    //  Opens the connection with the camera.  This is called by cvCreateCameraCapture_Rtx64GigE.
-    //
-    virtual bool open(int index);
-
-    //
-    //  Closes the connection with the camera.  This is called by both the Destructor and release().
-    //
-    virtual void close();
-
-#ifdef NOT_READY_YET
-        virtual double getProperty(int) const;
-        virtual bool setProperty(int, double);
-#endif // NOT_READY_YET
-
-    //
-    //  Grabs a frame from the camera
-    //
-    virtual bool grabFrame();
-
-    //
-    //  Retrieves the grabbed frame from the camera and returns it in the IplImage format.
-    //
-    //  @param index the index of the camera from which the frame should be retrieved
-    //
-    virtual IplImage* retrieveFrame(int index);
-
-    //
-    //  Releases the resources held by the RTX64 GigE Capture class.
-    //
-    void release(void);
-
-    uint32_t                interfaceIPAddress = 0;             //  The IP Address of the RTX64 NIC
-
-protected:
-    //  Image Bits per pixel
-    const uint32_t IMAGE_BITS_PER_PIXEL = 16;
-    //  Image Height
-    const uint32_t IMAGE_HEIGHT = 1200;
-    // Image Width
-    const uint32_t IMAGE_WIDTH = 1920;
-    // Image Number of Channels (3 for RGB/BGR/etc.)
-    const uint32_t IMAGE_NUM_CHANNELS = 3;
-
-    DWORD                   numCamerasDiscovered = 0;           // The number of cameras discovered
-    bool                    streamStarted = false;              // Tracks whether or not a stream has been started
-    int                     openedCameraIndex = -1;             // Index into camera list for open camera -1 indicates no camera has been opened
-    PRTGV_FRAME             pActiveFrame = NULL;                // The Active Frame
-    IplImage                *pIplImageColorConverted;           // Output IplImage with color conversion
-    cv::Mat                 mImageSrc;
-    cv::Mat                 mImageDest;
-    PRTGV_CAMERA_INFOA      pCameraInfo = NULL;                 // Pointer to an RTGV_CAMERA_INFO structure for receiving camera info from RtGVEnumerateCameras
-    ACQUISITIONMODE         acquisitionMode;
 };
 }
 

@@ -148,9 +148,13 @@ namespace
 
     void VideoFrameSource::reset()
     {
+#ifndef UNDER_RTSS
         vc_.release();
         vc_.open(fileName_);
         CV_Assert( vc_.isOpened() );
+#else
+        CV_Error(Error::StsNotImplemented, "Functionality not available in RTX64");
+#endif
     }
 
     class CameraFrameSource : public CaptureFrameSource
