@@ -2418,7 +2418,16 @@ coordinate origin is assumed to be the top-left corner).
 
 @sa  getAffineTransform, warpAffine, transform
  */
-CV_EXPORTS_W Mat getRotationMatrix2D( Point2f center, double angle, double scale );
+CV_EXPORTS_W Mat getRotationMatrix2D(Point2f center, double angle, double scale);
+
+/** @sa getRotationMatrix2D */
+CV_EXPORTS Matx23d getRotationMatrix2D_(Point2f center, double angle, double scale);
+
+inline
+Mat getRotationMatrix2D(Point2f center, double angle, double scale)
+{
+    return Mat(getRotationMatrix2D_(center, angle, scale), true);
+}
 
 /** @brief Calculates an affine transform from three pairs of the corresponding points.
 
