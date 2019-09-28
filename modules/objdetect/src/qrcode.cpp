@@ -345,7 +345,7 @@ bool QRDetect::localization()
     CV_TRACE_FUNCTION();
     Point2f begin, end;
     vector<Vec3d> list_lines_x = searchHorizontalLines();
-    if( list_lines_x.empty() ) { return false;}
+    if( list_lines_x.empty() ) { return false; }
     vector<Point2f> list_lines_y = separateVerticalLines(list_lines_x);
     if( list_lines_y.empty() ) { return false; }
 
@@ -383,7 +383,7 @@ bool QRDetect::localization()
         localization_points.clear();
         bin_barcode = resized_bin_barcode.clone();
         list_lines_x = searchHorizontalLines();
-        if( list_lines_x.empty() ) { return false;}
+        if( list_lines_x.empty() ) { return false; }
         list_lines_y = separateVerticalLines(list_lines_x);
         if( list_lines_y.empty() ) { return false; }
 
