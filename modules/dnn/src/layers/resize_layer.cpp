@@ -58,12 +58,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
-        {
-            if (!haveCUDA())
-                return false;
-
             return interpolation == "nearest" || interpolation == "bilinear";
-        }
 
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)

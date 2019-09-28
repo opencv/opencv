@@ -106,7 +106,7 @@ public:
                     (dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0));
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4);
     }
 

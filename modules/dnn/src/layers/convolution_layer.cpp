@@ -262,9 +262,6 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
-            if (!haveCUDA())
-                return false;
-
             /* only convolution 2d and 3d supported */
             if(kernel_size.size() == 2 || kernel_size.size() == 3)
                 return true;
@@ -1402,9 +1399,6 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
-            if (!haveCUDA())
-                return false;
-
             /* only deconvolution 2d and 3d supported */
             if (kernel_size.size() == 2 || kernel_size.size() == 3)
                 return true;
@@ -1461,7 +1455,7 @@ public:
         }
         else
 #endif  // HAVE_INF_ENGINE
-            return (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+            return backendId == DNN_BACKEND_CUDA ||
             (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE));
     }
 

@@ -280,7 +280,7 @@ struct ReLUFunctor
             return slope >= 0 || !INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2019R1);
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_VKCOM;
     }
@@ -418,7 +418,7 @@ struct ReLU6Functor
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
@@ -531,7 +531,7 @@ struct TanHFunctor
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
@@ -620,7 +620,7 @@ struct SigmoidFunctor
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
@@ -711,7 +711,7 @@ struct ELUFunctor
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
@@ -804,7 +804,7 @@ struct AbsValFunctor
             return !INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2019R1);
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE;
     }
 
@@ -892,7 +892,7 @@ struct BNLLFunctor
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE;
     }
 
@@ -992,7 +992,7 @@ struct PowerFunctor
             return (targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16) || power == 1.0 || power == 0.5;
         else
             return backendId == DNN_BACKEND_OPENCV ||
-                   (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+                   backendId == DNN_BACKEND_CUDA ||
                    backendId == DNN_BACKEND_HALIDE;
     }
 
@@ -1140,7 +1140,7 @@ struct ChannelsPReLUFunctor
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }

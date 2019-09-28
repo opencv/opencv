@@ -170,9 +170,6 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
-            if (!haveCUDA())
-                return false;
-
             return type == MAX || type == AVE;
         }
         else if (backendId == DNN_BACKEND_INFERENCE_ENGINE)

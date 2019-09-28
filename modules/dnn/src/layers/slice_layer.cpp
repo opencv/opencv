@@ -118,7 +118,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA  && haveCUDA()) ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
 #ifdef HAVE_INF_ENGINE
                 INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
