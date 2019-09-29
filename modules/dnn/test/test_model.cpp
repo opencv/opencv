@@ -105,8 +105,7 @@ TEST_P(Test_Model, Classify)
 }
 
 
-// disabled: https://github.com/opencv/opencv/pull/15593
-TEST_P(Test_Model, DISABLED_DetectRegion)
+TEST_P(Test_Model, DetectRegion)
 {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
 
