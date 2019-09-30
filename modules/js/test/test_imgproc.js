@@ -69,7 +69,7 @@
 //
 
 if (typeof module !== 'undefined' && module.exports) {
-    // The envrionment is Node.js
+    // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
@@ -92,7 +92,7 @@ QUnit.test('test_imgProc', function(assert) {
         binView[0] = 10;
         cv.calcHist(source, channels, mask, hist, histSize, ranges, false);
 
-        // hist should contains a N X 1 arrary.
+        // hist should contains a N X 1 array.
         let size = hist.size();
         assert.equal(size.height, 256);
         assert.equal(size.width, 1);
@@ -940,5 +940,23 @@ QUnit.test('test_filter', function(assert) {
         inv2.delete();
         inv3.delete();
         inv4.delete();
+    }
+    //Rotate
+    {
+        let dst = new cv.Mat();
+        let src = cv.matFromArray(3, 2, cv.CV_8U, [1,2,3,4,5,6]);
+
+        cv.rotate(src, dst, cv.ROTATE_90_CLOCKWISE);
+
+        size = dst.size();
+        assert.equal(size.height, 2, "ROTATE_HEIGHT");
+        assert.equal(size.width, 3, "ROTATE_WIGTH");
+
+        let expected = new Uint8Array([5,3,1,6,4,2]);
+
+        assert.deepEqual(dst.data, expected);
+
+        dst.delete();
+        src.delete();
     }
 });

@@ -837,7 +837,7 @@ void TFImporter::populateNet(Net dstNet)
                 CV_Assert(paddings.type() == CV_32SC1);
                 if (paddings.total() == 8)
                 {
-                    // Perhabs, we have NHWC padding dimensions order.
+                    // Perhaps, we have NHWC padding dimensions order.
                     //  N    H    W    C
                     // 0 1  2 3  4 5  6 7
                     std::swap(paddings.at<int32_t>(2), paddings.at<int32_t>(6));
@@ -1129,15 +1129,14 @@ void TFImporter::populateNet(Net dstNet)
             if (value_id.find(layer.input(1)) != value_id.end())
             {
                 Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
-
+                if (newShape.total() == 4)
+                {
+                    // NHWC->NCHW
+                    std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
+                    std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                }
                 if (inpLayout == DATA_LAYOUT_NHWC)
                 {
-                    if (newShape.total() == 4)
-                    {
-                        // NHWC->NCHW
-                        std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
-                        std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
-                    }
                     if (newShape.total() != 4 || newShape.at<int>(1) == 1)
                     {
                         LayerParams permLP;
@@ -1370,6 +1369,24 @@ void TFImporter::populateNet(Net dstNet)
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
+        else if (type == "MaxPoolGrad")
+        {
+            CV_Assert(layer.input_size() == 3);
+
+            layerParams.set("pool_k_h", 0);
+            layerParams.set("pool_k_w", 0);
+            layerParams.set("pool_stride_h", 0);
+            layerParams.set("pool_stride_w", 0);
+            layerParams.set("pool_pad_h", 0);
+            layerParams.set("pool_pad_w", 0);
+
+            int id = dstNet.addLayer(name, "MaxUnpool", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(2)), id, 0);
+            connect(layer_id, dstNet, parsePin(layer.input(1) + ":1"), id, 1);
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 2);
+        }
         else if (type == "Placeholder")
         {
             if (!hasLayerAttr(layer, "dtype") ||
@@ -1391,6 +1408,9 @@ void TFImporter::populateNet(Net dstNet)
             if (getDataLayout(name, data_layouts) == DATA_LAYOUT_NHWC)
                 axis = toNCHW(axis);
             layerParams.set("axis", axis);
+
+            if (hasLayerAttr(layer, "num_split"))
+                layerParams.set("num_split", getLayerAttr(layer, "num_split").i());
 
             int id = dstNet.addLayer(name, "Slice", layerParams);
             layer_id[name] = id;

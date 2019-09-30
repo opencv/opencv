@@ -238,7 +238,7 @@ double cv::kmeans( InputArray _data, int K,
 
     attempts = std::max(attempts, 1);
     CV_Assert( data0.dims <= 2 && type == CV_32F && K > 0 );
-    CV_Assert( N >= K );
+    CV_CheckGE(N, K, "Number of clusters should be more than number of elements");
 
     Mat data(N, dims, CV_32F, data0.ptr(), isrow ? dims * sizeof(float) : static_cast<size_t>(data0.step));
 

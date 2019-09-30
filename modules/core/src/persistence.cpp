@@ -145,7 +145,7 @@ CvGenericHash* cvCreateMap( int flags, int header_size, int elem_size, CvMemStor
     return map;
 }
 
-void icvParseError( CvFileStorage* fs, const char* func_name,
+void icvParseError(const CvFileStorage* fs, const char* func_name,
                const char* err_msg, const char* source_file, int source_line )
 {
     cv::String msg = cv::format("%s(%d): %s", fs->filename, fs->lineno, err_msg);

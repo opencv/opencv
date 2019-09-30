@@ -108,20 +108,27 @@ static cv::String getModuleLocation(const void* addr)
     CV_UNUSED(addr);
 #ifdef _WIN32
     HMODULE m = 0;
-#if _WIN32_WINNT >= 0x0501
+#if _WIN32_WINNT >= 0x0501 && (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP))
     ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
         reinterpret_cast<LPCTSTR>(addr),
         &m);
 #endif
     if (m)
     {
-        char path[MAX_PATH];
-        const size_t path_size = sizeof(path)/sizeof(*path);
-        size_t sz = GetModuleFileNameA(m, path, path_size); // no unicode support
+        TCHAR path[MAX_PATH];
+        const size_t path_size = sizeof(path) / sizeof(*path);
+        size_t sz = GetModuleFileName(m, path, path_size);
         if (sz > 0 && sz < path_size)
         {
-            path[sz] = '\0';
+            path[sz] = TCHAR('\0');
+#ifdef _UNICODE
+            char char_path[MAX_PATH];
+            size_t copied = wcstombs(char_path, path, MAX_PATH);
+            CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+            return cv::String(char_path);
+#else
             return cv::String(path);
+#endif
         }
     }
 #elif defined(__linux__)

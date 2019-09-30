@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 if (typeof module !== 'undefined' && module.exports) {
-  // The envrionment is Node.js
+  // The environment is Node.js
   var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 

@@ -34,6 +34,11 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool 
 
     double l1, lInf;
     DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+#if 0
+    std::cout << "l1=" << l1 << "  lInf=" << lInf << std::endl;
+    std::cout << outputDefault.reshape(1, outputDefault.total()).t() << std::endl;
+    std::cout << outputHalide.reshape(1, outputDefault.total()).t() << std::endl;
+#endif
     normAssert(outputDefault, outputHalide, "", l1, lInf);
 }
 
@@ -381,8 +386,11 @@ TEST_P(FullyConnected, Accuracy)
     bool hasBias = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && (targetId == DNN_TARGET_OPENCL_FP16 ||
+       (targetId == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X))) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+    }
 
     Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32F);
     randu(weights, -1.0f, 1.0f);
@@ -545,6 +553,11 @@ TEST_P(ReLU, Accuracy)
     float negativeSlope = get<0>(GetParam());
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD && negativeSlope < 0)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+#endif
 
     LayerParams lp;
     lp.set("negative_slope", negativeSlope);

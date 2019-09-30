@@ -618,7 +618,7 @@ void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, Vide
             CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
         iwriter = backend_func; \
         if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p  isOpened=%d...\n", #backend_func, iwriter.empty() ? NULL : iwriter.get(), iwriter.empty() ? iwriter->isOpened() : -1)); \
+            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p  isOpened=%d...\n", #backend_func, iwriter.empty() ? NULL : iwriter.get(), iwriter.empty() ? -1 : iwriter->isOpened())); \
     } catch(const cv::Exception& e) { \
         CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
     } catch (const std::exception& e) { \

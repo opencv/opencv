@@ -512,8 +512,9 @@ string TS::str_from_code( const TS::FailureCode code )
     return "Generic/Unknown";
 }
 
-static int tsErrorCallback( int status, const char* func_name, const char* err_msg, const char* file_name, int line, TS* ts )
+static int tsErrorCallback( int status, const char* func_name, const char* err_msg, const char* file_name, int line, void* data )
 {
+    TS* ts = (TS*)data;
     const char* delim = std::string(err_msg).find('\n') == std::string::npos ? "" : "\n";
     ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d\n", cvErrorStr(status), delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
     return 0;
@@ -968,13 +969,15 @@ static std::string findData(const std::string& relative_path, bool required, boo
                 std::string prefix = path_join(datapath, subdir);
                 std::string result_;
                 CHECK_FILE_WITH_PREFIX(prefix, result_);
-#if 1  // check for misused 'optional' mode
                 if (!required && !result_.empty())
                 {
                     std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << std::endl;
-                    CV_Assert(required || result_.empty());
+                    static bool checkOptionalFlag = cv::utils::getConfigurationParameterBool("OPENCV_TEST_CHECK_OPTIONAL_DATA", false);
+                    if (checkOptionalFlag)
+                    {
+                        CV_Assert(required || result_.empty());
+                    }
                 }
-#endif
                 if (!result_.empty())
                     return result_;
             }

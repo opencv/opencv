@@ -744,7 +744,7 @@ struct AbsValFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
     {
-        return InferenceEngine::Builder::ReLULayer("").setNegativeSlope(-1);
+        return InferenceEngine::Builder::ReLULayer("").setNegativeSlope(-0.999999f);
     }
 #endif  // HAVE_INF_ENGINE
 
@@ -771,7 +771,8 @@ struct BNLLFunctor
             for( int i = 0; i < len; i++ )
             {
                 float x = srcptr[i];
-                dstptr[i] = log(1.f + exp(-abs(x)));
+                // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
+                dstptr[i] = x > 0 ? x + log(1. + exp(-x)) : log(1. + exp(x));
             }
         }
     }
@@ -779,8 +780,28 @@ struct BNLLFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        // TODO: implement OCL version
-        return false;
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("BNLLForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
     }
 #endif
 
@@ -788,7 +809,8 @@ struct BNLLFunctor
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
         Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = log(1.0f + exp(-abs(input)));
+        // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
+        top(x, y, c, n) = max(input, 0) + log(1.0f + exp(-abs(input)));
     }
 #endif  // HAVE_HALIDE
 

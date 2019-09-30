@@ -111,7 +111,8 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        CV_Assert(!input->dims.empty());
+        std::vector<size_t> dims = input->getDims();
+        CV_Assert(!dims.empty());
 
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
@@ -122,12 +123,10 @@ public:
         else
         {
             ieLayer.setType("Split");
-            ieLayer.getParameters()["axis"] = input->dims.size() - 1;
-            ieLayer.getParameters()["out_sizes"] = input->dims[0];
+            ieLayer.getParameters()["axis"] = dims.size() - 1;
+            ieLayer.getParameters()["out_sizes"] = dims[0];
         }
-        std::vector<size_t> shape(input->dims);
-        std::reverse(shape.begin(), shape.end());
-        ieLayer.setInputPorts({InferenceEngine::Port(shape)});
+        ieLayer.setInputPorts({InferenceEngine::Port(dims)});
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
