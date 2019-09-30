@@ -2506,17 +2506,25 @@ struct Net::Impl
     {
         std::vector<LayerPin>& inputLayerIds = layers[id].inputBlobsId;
 
-        if (inOutShapes[0].in[0].empty() && !layers[0].outputBlobs.empty())
+        if (id == 0 && inOutShapes[id].in[0].empty())
         {
-            ShapesVec shapes;
-            for (int i = 0; i < layers[0].outputBlobs.size(); i++)
+            if (!layers[0].outputBlobs.empty())
             {
-                Mat& inp = layers[0].outputBlobs[i];
-                CV_Assert(inp.total());
-                shapes.push_back(shape(inp));
+                ShapesVec shapes;
+                for (int i = 0; i < layers[0].outputBlobs.size(); i++)
+                {
+                    Mat& inp = layers[0].outputBlobs[i];
+                    CV_Assert(inp.total());
+                    shapes.push_back(shape(inp));
+                }
+                inOutShapes[0].in = shapes;
             }
-            inOutShapes[0].in = shapes;
-         }
+            else
+            {
+                inOutShapes[0].out.clear();
+                return;
+            }
+        }
 
         if (inOutShapes[id].in.empty())
         {
