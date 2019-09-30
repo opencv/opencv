@@ -65,3 +65,27 @@ QUnit.test('Rodrigues', function(assert) {
   assert.ok(1.01 > rvec1.data64F[0] > 0.9);
   // Answer should be around 1: 0.9999999999999999
 });
+
+QUnit.test('estimateAffine2D', function(assert) {
+   const inputs = cv.matFromArray(4, 1, cv.CV_32FC2, [
+    1, 1,
+    80, 0,
+    0, 80,
+    80, 80
+  ]);
+  const outputs = cv.matFromArray(4, 1, cv.CV_32FC2, [
+    21, 51,
+    70, 77,
+    40, 40,
+    10, 70
+  ]);
+  const M = cv.estimateAffine2D(inputs, outputs);
+  assert.ok(M instanceof cv.Mat);
+  assert.deepEqual(Array.from(M.data), [
+     23,  55,  97, 126,  87, 139, 227,  63,   0,   0,
+      0,   0,   0,   0, 232, 191,  71, 246,  12,  68,
+    165,  35,  53,  64,  99,  56,  27,  66,  14, 254,
+    212,  63, 103, 102, 102, 102, 102, 102, 182, 191,
+    195, 252, 174,  22,  55,  97,  73,  64
+  ]);
+});

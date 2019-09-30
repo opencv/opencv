@@ -112,7 +112,7 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'goodFeaturesToTrack','grabCut','initUndistortRectifyMap', 'integral','integral2', 'isContourConvex', 'line', \
                 'matchShapes', 'matchTemplate','medianBlur', 'minAreaRect', 'minEnclosingCircle', 'moments', 'morphologyEx', \
                 'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
-                'undistort','warpAffine','warpPerspective','watershed', \
+                'undistort','warpAffine','warpPerspective','warpPolar','watershed', \
                 'fillPoly', 'fillConvexPoly'],
            'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
 
@@ -143,7 +143,7 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
 
-calib3d = {'': ['findHomography', 'Rodrigues']}
+calib3d = {'': ['findHomography', 'estimateAffine2D', 'Rodrigues']}
 
 def makeWhiteList(module_list):
     wl = {}
