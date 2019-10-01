@@ -758,6 +758,12 @@ TEST_P(Eltwise, Accuracy)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);
 #endif
 
+#if defined(INF_ENGINE_RELEASE)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_OPENCL &&
+        op == "sum" && numConv == 1 && !weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+
     Net net;
 
     std::vector<int> convLayerIds(numConv);
