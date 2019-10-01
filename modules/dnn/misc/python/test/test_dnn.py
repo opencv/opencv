@@ -169,7 +169,7 @@ class dnn_test(NewOpenCVTests):
             normAssertDetections(self, ref, out, 0.5, scoresDiff, iouDiff)
 
     def test_async(self):
-        timeout = 500*10**6  # in nanoseconds (500ms)
+        timeout = 10*1000*10**6  # in nanoseconds (10 sec)
         testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt', required=testdata_required)
         model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel', required=testdata_required)
