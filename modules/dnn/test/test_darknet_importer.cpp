@@ -329,7 +329,7 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
 }
 
 #ifdef HAVE_INF_ENGINE
-static const std::chrono::milliseconds async_timeout(500);
+static const std::chrono::milliseconds async_timeout(10000);
 
 typedef testing::TestWithParam<tuple<std::string, Target> > Test_Darknet_nets_async;
 TEST_P(Test_Darknet_nets_async, Accuracy)
