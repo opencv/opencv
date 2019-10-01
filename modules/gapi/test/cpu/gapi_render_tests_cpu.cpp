@@ -11,56 +11,92 @@
 namespace opencv_test
 {
 
-INSTANTIATE_TEST_CASE_P(RenderTextTestCPU, RenderTextTest,
-                        Combine(Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
-                                Values("text"),
-                                Values(Points{Point(5, 30), Point(40, 70), Point(-1, -1)}),
-/* Font face          */        Values(FONT_HERSHEY_SIMPLEX),
-/* Font scale         */        Values(2),
-/* Color              */        Values(cv::Scalar(255, 0, 0)),
-/* Thickness          */        Values(1),
-/* Line type          */        Values(LINE_8),
-/* Bottom left origin */        testing::Bool(),
-/* NV12 format or not */        testing::Bool()));
+#define OCV cv::gapi::ocv::kernels()
 
-INSTANTIATE_TEST_CASE_P(RenderRectTestCPU, RenderRectTest,
+/* NV12 test cases */
+INSTANTIATE_TEST_CASE_P(RenderNV12OCVRects, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
-                                Values(Rects{Rect(5, 30, 40, 50),
-                                             Rect(40, 70, 40, 50),
-/* Edge case, rectangle will not be drawn */ Rect(75, 110, -40, 50),
-/* Edge case, rectangle will not be drawn */ Rect(70, 100, 0, 50)}),
-/* Color              */        Values(cv::Scalar(255, 0, 0)),
-/* Thickness          */        Values(1),
-/* Line type          */        Values(LINE_8),
-/* Shift              */        Values(0),
-/* NV12 format or not */        testing::Bool()));
+                                       cv::Size(640, 480)),
+                                Values(rects),
+                                Values(OCV)));
 
-INSTANTIATE_TEST_CASE_P(RenderCircleTestCPU, RenderCircleTest,
+INSTANTIATE_TEST_CASE_P(RenderNV12OCVCircles, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
-                                Values(Points{Point(5, 30), Point(40, 70), Point(75, 110)}),
-/* Radius             */        Values(5),
-/* Color              */        Values(cv::Scalar(255, 0, 0)),
-/* Thickness          */        Values(1),
-/* Line type          */        Values(LINE_8),
-/* Shift              */        Values(0),
-/* NV12 format or not */        testing::Bool()));
+                                       cv::Size(640, 480)),
+                                Values(circles),
+                                Values(OCV)));
 
-INSTANTIATE_TEST_CASE_P(RenderLineTestCPU, RenderLineTest,
+INSTANTIATE_TEST_CASE_P(RenderNV12OCVLines, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
-                                Values(VecOfPairOfPoints{ {Point(5, 30)  , Point(5, 40)   },
-                                                          {Point(40, 70) , Point(50, 70)  },
-                                                          {Point(75, 110), Point(100, 115)} }),
-/* Color              */        Values(cv::Scalar(255, 0, 0)),
-/* Thickness          */        Values(1),
-/* Line type          */        Values(LINE_8),
-/* Shift              */        Values(0),
-/* NV12 format or not */        testing::Bool()));
+                                       cv::Size(640, 480)),
+                                Values(lines),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12OCVMosaics, RenderNV12,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(mosaics),
+                                Values(OCV)));
+
+// FIXME difference in color
+INSTANTIATE_TEST_CASE_P(RenderNV12OCVImages, RenderNV12,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(images),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12OCVPolygons, RenderNV12,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(polygons),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12OCVTexts, RenderNV12,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(texts),
+                                Values(OCV)));
+
+/* BGR test cases */
+INSTANTIATE_TEST_CASE_P(RenderBGROCVRects, RenderBGR,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(rects),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGROCVCircles, RenderBGR,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(circles),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGROCVLines, RenderBGR,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(lines),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGROCVMosaics, RenderBGR,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(mosaics),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGROCVImages, RenderBGR,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(images),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGROCVPolygons, RenderBGR,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(polygons),
+                                Values(OCV)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGROCVTexts, RenderBGR,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(texts),
+                                Values(OCV)));
 }

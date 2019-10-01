@@ -48,6 +48,7 @@ set(gapi_srcs
     src/api/kernels_core.cpp
     src/api/kernels_imgproc.cpp
     src/api/render.cpp
+    src/api/render_ocv.cpp
     src/api/ginfer.cpp
 
     # Compiler part
