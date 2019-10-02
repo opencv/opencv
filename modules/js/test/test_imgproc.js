@@ -960,3 +960,20 @@ QUnit.test('test_filter', function(assert) {
         src.delete();
     }
 });
+
+QUnit.test('warpPolar', function(assert) {
+  const lines = new cv.Mat(255, 255, cv.CV_8U, new cv.Scalar(0));
+  for (let r = 0; r < lines.rows; r++) {
+    lines.row(r).setTo(new cv.Scalar(r));
+  }
+  cv.warpPolar(lines, lines, { width: 5, height: 5 }, new cv.Point(2, 2), 3,
+    cv.INTER_CUBIC | cv.WARP_FILL_OUTLIERS | cv.WARP_INVERSE_MAP);
+  assert.ok(lines instanceof cv.Mat);
+  assert.deepEqual(Array.from(lines.data), [
+    159, 172, 191, 210, 223,
+    146, 159, 191, 223, 236,
+    128, 128,   0,   0,   0,
+    109,  96,  64,  32,  19,
+     96,  83,  64,  45,  32
+  ]);
+});
