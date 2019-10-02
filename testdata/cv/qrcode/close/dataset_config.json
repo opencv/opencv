@@ -1,0 +1,16 @@
+{
+    "close_images": [
+        { "image_name": "close_1.png", "x": [ 1386, 1206, 425, 657 ], "y": [
+                215, 990, 758, 49 ], "info": "I love OpenCV" },
+        { "image_name": "close_2.png", "x": [ 355, 1240, 1245, 319 ], "y": [
+                34, 63, 952, 952 ],
+            "info": "https://en.wikipedia.org/wiki/QR_code" },
+        { "image_name": "close_3.png", "x": [ 1324, 577, 376, 1113 ], "y": [
+                752, 960, 214, 12 ],
+            "info": "https://github.com/opencv/opencv" },
+        { "image_name": "close_4.png", "x": [ 390, 1132, 1126, 249 ], "y": [
+                150, 203, 985, 931 ], "info": "8747978964557465080" },
+        { "image_name": "close_5.png", "x": [ 245, 1220, 1213, 231 ], "y": [
+                13, 41, 1006, 1006 ], "info": "qr code detection" }
+    ]
+}
