@@ -57,10 +57,19 @@ void performSubstitution(GModel::Graph& graph,
         const auto& patternDataNode = std::get<0>(it);
         const auto& substituteDataNode = std::get<1>(it);
         const auto& graphDataNode = patternToGraphMatch.outputDataNodes.at(patternDataNode);
+
         // delete existing edges (otherwise we cannot redirect)
-        for (auto e : graphDataNode->inEdges()) {
+        auto existingEdges = graphDataNode->inEdges();
+        // NB: we cannot iterate over node->inEdges() here directly because it gets modified when
+        //     edges are erased. Erasing an edge supposes that src/dst nodes will remove
+        //     (correspondingly) out/in edge (which is _our edge_). Now, this deleting means
+        //     node->inEdges() will also get updated in the process: so, we'd iterate over a
+        //     container which changes in this case. Using supplementary std::vector instead:
+        std::vector<ade::EdgeHandle> handles(existingEdges.begin(), existingEdges.end());
+        for (const auto& e : handles) {
             graph.erase(e);
         }
+
         GModel::redirectWriter(graph, substituteDataNode, graphDataNode);
     }
 
