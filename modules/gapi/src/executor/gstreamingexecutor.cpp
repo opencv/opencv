@@ -219,7 +219,10 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
         // Try to obtain the full input vector.
         // Note this may block us. We also may get Stop signal here
         // and then exit the thread.
-        Cmd cmd;
+        // NOTE: in order to maintain the GRunArg's underlying object
+        // lifetime, keep the whole cmd vector (of size == # of inputs)
+        // in memory.
+        std::vector<Cmd> cmd(in_queues.size());
         for (auto &&it : ade::util::indexed(in_queues))
         {
             auto id = ade::util::index(it);
@@ -235,8 +238,8 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
             }
             else
             {
-                q->pop(cmd);
-                if (cv::util::holds_alternative<Stop>(cmd))
+                q->pop(cmd[id]);
+                if (cv::util::holds_alternative<Stop>(cmd[id]))
                 {
                     // FIXME: This logic must be unified with what collectorThread is doing!
                     // Just got a stop sign. Reiterate through all queues
@@ -259,17 +262,17 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
                     return;
                 }
                 // FIXME: MOVE PROBLEM
-                const cv::GRunArg &in_arg = cv::util::get<cv::GRunArg>(cmd);
+                const cv::GRunArg &in_arg = cv::util::get<cv::GRunArg>(cmd[id]);
                 // Make Islands operate on own:: data types (i.e. in the same
                 // environment as GExecutor provides)
                 // This way several backends (e.g. Fluid) remain OpenCV-independent.
                 switch (in_arg.index()) {
 #if !defined(GAPI_STANDALONE)
                 case cv::GRunArg::index_of<cv::Mat>():
-                    isl_inputs[id].second = cv::to_own(cv::util::get<cv::Mat>(in_arg));
+                    isl_inputs[id].second = cv::GRunArg{const_cast<const cv::gapi::own::Mat&>(cv::to_own(cv::util::get<cv::Mat>(in_arg)))};
                     break;
                 case cv::GRunArg::index_of<cv::Scalar>():
-                    isl_inputs[id].second = cv::to_own(cv::util::get<cv::Scalar>(in_arg));
+                    isl_inputs[id].second = cv::GRunArg{const_cast<const cv::gapi::own::Scalar&>(cv::to_own(cv::util::get<cv::Scalar>(in_arg)))};
                     break;
 #endif // !GAPI_STANDALONE
                 default:
