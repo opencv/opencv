@@ -123,7 +123,7 @@ TEST(Any, get_ref_to_val_from_any)
    using namespace util;
    int x = 8;
    any a(x);
-   
+
    int& casted_ref =  any_cast<int>(a);
    ASSERT_EQ(casted_ref, 8);
 }
@@ -135,7 +135,7 @@ TEST(Any, update_val_via_ref)
    any a(x);
    int& casted_ref = any_cast<int>(a);
    ASSERT_EQ(casted_ref, 8);
-         
+
    casted_ref = 7;
    ASSERT_EQ(any_cast<int>(a), 7);
 }
