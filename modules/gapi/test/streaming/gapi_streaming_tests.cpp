@@ -53,6 +53,11 @@ cv::gapi::GKernelPackage OCV_FLUID_KERNELS()
 }
 
 #if 0
+// FIXME: OpenCL backend seem to work fine with Streaming
+// however the results are not very bit exact with CPU
+// It may be a problem but may be just implementation innacuracy.
+// Need to customize the comparison function in tests where OpenCL
+// is involved.
 cv::gapi::GKernelPackage OCL_KERNELS()
 {
     static cv::gapi::GKernelPackage pkg =
@@ -129,12 +134,6 @@ TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
         // the blocking pull() should never return `false`.
         EXPECT_TRUE(ccomp.pull(cv::gout(out_mat_gapi)));
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        if (cv::countNonZero(out_mat_gapi != out_mat_ocv) > 0) {
-            cv::imshow("G-API", out_mat_gapi);
-            cv::imshow("OpenCV", out_mat_ocv);
-            cv::imshow("Delta", out_mat_gapi - out_mat_ocv);
-            cv::waitKey(0);
-        }
     }
 
     EXPECT_TRUE(ccomp.running());
@@ -261,10 +260,10 @@ TEST_P(GAPI_Streaming, TestStartRestart)
 
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
                         Values(  OCV_KERNELS()
-                             //, OCL_KERNELS()       -- known issues with OpenCL backend, commented out
+                                 //, OCL_KERNELS() // FIXME: Fails bit-exactness check, maybe relax it?
                                , OCV_FLUID_KERNELS()
-                             //, OCL_FLUID_KERNELS() -- known issues with OpenCL backend, commented out
-                                 ));
+                                 //, OCL_FLUID_KERNELS() // FIXME: Fails bit-exactness check, maybe relax it?
+                               ));
 
 struct GAPI_Streaming_Unit: public ::testing::Test {
     cv::GStreamingCompiled sc;

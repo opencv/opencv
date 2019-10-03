@@ -357,11 +357,11 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
     }
 }
 
-// The idea of collecotThread is easy.  If there're multiple outptus
-// in the graph, we need to pull an object from every associated query
-// and then put the resulting vector into one single query.  While it
+// The idea of collectorThread is easy.  If there're multiple outputs
+// in the graph, we need to pull an object from every associated queue
+// and then put the resulting vector into one single queue.  While it
 // looks redundant, it simplifies dramatically the way how try_pull()
-// is implemented - we need to check one queue instead of may.
+// is implemented - we need to check one queue instead of many.
 void collectorThread(std::vector<Q*> in_queues,
                      Q&              out_queue)
 {
