@@ -1609,6 +1609,8 @@ int CV_FitLineTest::validate_test_results( int test_case_idx )
     int k, max_k = 0;
     double vec_diff = 0, t;
 
+    //std::cout << dims << " " << Mat(1, dims*2, CV_32FC1, line.data()) << " " << Mat(1, dims, CV_32FC1, line0.data()) << std::endl;
+
     for( k = 0; k < dims*2; k++ )
     {
         if( cvIsNaN(line[k]) || cvIsInf(line[k]) )
@@ -2037,6 +2039,39 @@ INSTANTIATE_TEST_CASE_P(Imgproc, ConvexityDefects_regression_5908,
                 testing::Bool(),
                 testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
         ));
+
+TEST(Imgproc_FitLine, regression_15083)
+{
+    int points2i_[] = {
+        432, 654,
+        370, 656,
+        390, 656,
+        410, 656,
+        348, 658
+    };
+    Mat points(5, 1, CV_32SC2, points2i_);
+
+    Vec4f lineParam;
+    fitLine(points, lineParam, DIST_L1, 0, 0.01, 0.01);
+    EXPECT_GE(fabs(lineParam[0]), fabs(lineParam[1]) * 4) << lineParam;
+}
+
+TEST(Imgproc_FitLine, regression_4903)
+{
+    float points2f_[] = {
+        1224.0, 576.0,
+        1234.0, 683.0,
+        1215.0, 471.0,
+        1184.0, 137.0,
+        1079.0, 377.0,
+        1239.0, 788.0,
+    };
+    Mat points(6, 1, CV_32FC2, points2f_);
+
+    Vec4f lineParam;
+    fitLine(points, lineParam, DIST_WELSCH, 0, 0.01, 0.01);
+    EXPECT_GE(fabs(lineParam[1]), fabs(lineParam[0]) * 4) << lineParam;
+}
 
 }} // namespace
 /* End of file. */
