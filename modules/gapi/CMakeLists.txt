@@ -133,5 +133,11 @@ if(TARGET opencv_test_gapi)
   target_link_libraries(opencv_test_gapi PRIVATE ade)
 endif()
 
+if(MSVC)
+  # Disable obsollete warning C4503 popping up on MSVC <<2017
+  # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
+  set_target_properties(${the_module} PROPERTIES COMPILE_FLAGS "/wd4503")
+endif()
+
 ocv_add_perf_tests()
 ocv_add_samples()

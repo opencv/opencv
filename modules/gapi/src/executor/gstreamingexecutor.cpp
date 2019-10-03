@@ -4,7 +4,6 @@
 //
 // Copyright (C) 2019 Intel Corporation
 
-
 #include "precomp.hpp"
 
 #include <iostream>
@@ -263,22 +262,25 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
                 }
                 // FIXME: MOVE PROBLEM
                 const cv::GRunArg &in_arg = cv::util::get<cv::GRunArg>(cmd[id]);
+#if defined(GAPI_STANDALONE)
+                // Standalone mode - simply store input argument in the vector as-is
+                isl_inputs[id].second = in_arg;
+#else
                 // Make Islands operate on own:: data types (i.e. in the same
                 // environment as GExecutor provides)
                 // This way several backends (e.g. Fluid) remain OpenCV-independent.
                 switch (in_arg.index()) {
-#if !defined(GAPI_STANDALONE)
                 case cv::GRunArg::index_of<cv::Mat>():
-                    isl_inputs[id].second = cv::GRunArg{const_cast<const cv::gapi::own::Mat&>(cv::to_own(cv::util::get<cv::Mat>(in_arg)))};
+                    isl_inputs[id].second = cv::GRunArg{cv::to_own(cv::util::get<cv::Mat>(in_arg))};
                     break;
                 case cv::GRunArg::index_of<cv::Scalar>():
-                    isl_inputs[id].second = cv::GRunArg{const_cast<const cv::gapi::own::Scalar&>(cv::to_own(cv::util::get<cv::Scalar>(in_arg)))};
+                    isl_inputs[id].second = cv::GRunArg{cv::to_own(cv::util::get<cv::Scalar>(in_arg))};
                     break;
-#endif // !GAPI_STANDALONE
                 default:
                     isl_inputs[id].second = in_arg;
                     break;
                 }
+#endif // GAPI_STANDALONE
             }
         }
         // Once the vector is obtained, prepare data for island execution
