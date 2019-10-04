@@ -21,15 +21,11 @@ def box2str(box):
     width, height = box[2] - left, box[3] - top
     return '[%f x %f from (%f, %f)]' % (width, height, left, top)
 
-def normAssertDetections(test, ref, out, confThreshold=0.0, scores_diff=1e-5, boxes_iou_diff=1e-4):
-    ref = np.array(ref, np.float32)
-    refClassIds, testClassIds = ref[:, 1], out[:, 1]
-    refScores, testScores = ref[:, 2], out[:, 2]
-    refBoxes, testBoxes = ref[:, 3:], out[:, 3:]
-
+def normAssertDetections(test, refClassIds, refScores, refBoxes, testClassIds, testScores, testBoxes,
+                 confThreshold=0.0, scores_diff=1e-5, boxes_iou_diff=1e-4):
     matchedRefBoxes = [False] * len(refBoxes)
     errMsg = ''
-    for i in range(len(refBoxes)):
+    for i in range(len(testBoxes)):
         testScore = testScores[i]
         if testScore < confThreshold:
             continue
@@ -66,12 +62,21 @@ def printParams(backend, target):
     }
     print('%s/%s' % (backendNames[backend], targetNames[target]))
 
+testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
+
+g_dnnBackendsAndTargets = None
 
 class dnn_test(NewOpenCVTests):
 
     def setUp(self):
         super(dnn_test, self).setUp()
 
+        global g_dnnBackendsAndTargets
+        if g_dnnBackendsAndTargets is None:
+            g_dnnBackendsAndTargets = self.initBackendsAndTargets()
+        self.dnnBackendsAndTargets = g_dnnBackendsAndTargets
+
+    def initBackendsAndTargets(self):
         self.dnnBackendsAndTargets = [
             [cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_CPU],
         ]
@@ -89,15 +94,18 @@ class dnn_test(NewOpenCVTests):
                     self.dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL])
                 if self.checkIETarget(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL_FP16):
                     self.dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL_FP16])
+        return self.dnnBackendsAndTargets
 
     def find_dnn_file(self, filename, required=True):
+        if not required:
+            required = testdata_required
         return self.find_file(filename, [os.environ.get('OPENCV_DNN_TEST_DATA_PATH', os.getcwd()),
                                          os.environ['OPENCV_TEST_DATA_PATH']],
                               required=required)
 
     def checkIETarget(self, backend, target):
-        proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt', required=True)
-        model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel', required=True)
+        proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
+        model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
         net = cv.dnn.readNet(proto, model)
         net.setPreferableBackend(backend)
         net.setPreferableTarget(target)
@@ -137,9 +145,8 @@ class dnn_test(NewOpenCVTests):
 
 
     def test_face_detection(self):
-        testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
-        proto = self.find_dnn_file('dnn/opencv_face_detector.prototxt', required=testdata_required)
-        model = self.find_dnn_file('dnn/opencv_face_detector.caffemodel', required=testdata_required)
+        proto = self.find_dnn_file('dnn/opencv_face_detector.prototxt')
+        model = self.find_dnn_file('dnn/opencv_face_detector.caffemodel', required=False)
         if proto is None or model is None:
             raise unittest.SkipTest("Missing DNN test files (dnn/opencv_face_detector.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
@@ -166,13 +173,18 @@ class dnn_test(NewOpenCVTests):
             scoresDiff = 4e-3 if target in [cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD] else 1e-5
             iouDiff = 2e-2 if target in [cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD] else 1e-4
 
-            normAssertDetections(self, ref, out, 0.5, scoresDiff, iouDiff)
+            ref = np.array(ref, np.float32)
+            refClassIds, testClassIds = ref[:, 1], out[:, 1]
+            refScores, testScores = ref[:, 2], out[:, 2]
+            refBoxes, testBoxes = ref[:, 3:], out[:, 3:]
+
+            normAssertDetections(self, refClassIds, refScores, refBoxes, testClassIds,
+                                 testScores, testBoxes, 0.5, scoresDiff, iouDiff)
 
     def test_async(self):
         timeout = 10*1000*10**6  # in nanoseconds (10 sec)
-        testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
-        proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt', required=testdata_required)
-        model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel', required=testdata_required)
+        proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
+        model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
         if proto is None or model is None:
             raise unittest.SkipTest("Missing DNN test files (dnn/layers/layer_convolution.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
