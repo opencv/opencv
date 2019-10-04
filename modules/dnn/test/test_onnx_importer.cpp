@@ -86,8 +86,8 @@ TEST_P(Test_ONNX_layers, InstanceNorm)
 
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
-    testONNXModels("maxpooling");
-    testONNXModels("two_maxpooling");
+    testONNXModels("maxpooling", npy, 0, 0, false, false);
+    testONNXModels("two_maxpooling", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Convolution)
@@ -212,7 +212,7 @@ TEST_P(Test_ONNX_layers, MaxPooling3D)
 #endif
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
-    testONNXModels("max_pool3d");
+    testONNXModels("max_pool3d", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, AvePooling3D)
