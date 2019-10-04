@@ -19,6 +19,7 @@
 #define CV_TEST_TAG_DNN_SKIP_IE_2019R1           "dnn_skip_ie_2019r1"
 #define CV_TEST_TAG_DNN_SKIP_IE_2019R1_1         "dnn_skip_ie_2019r1_1"
 #define CV_TEST_TAG_DNN_SKIP_IE_2019R2           "dnn_skip_ie_2019r2"
+#define CV_TEST_TAG_DNN_SKIP_IE_2019R3           "dnn_skip_ie_2019r3"
 #define CV_TEST_TAG_DNN_SKIP_IE_OPENCL           "dnn_skip_ie_ocl"
 #define CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16      "dnn_skip_ie_ocl_fp16"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2         "dnn_skip_ie_myriad2"

@@ -146,13 +146,13 @@ TEST_P(Test_TensorFlow_layers, padding)
     runTensorFlowNet("padding_valid");
     runTensorFlowNet("spatial_padding");
     runTensorFlowNet("mirror_pad");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
     {
         if (target == DNN_TARGET_MYRIAD)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2019R3, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
         if (target == DNN_TARGET_OPENCL_FP16)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_2019R3, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
     }
 #endif
     runTensorFlowNet("keras_pad_concat");
