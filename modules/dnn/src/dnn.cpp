@@ -46,10 +46,6 @@
 #include "op_cuda.hpp"
 #include "halide_scheduler.hpp"
 
-#ifdef HAVE_CUDA
-#include "cuda4dnn/csl/nvtx.hpp"
-#endif
-
 #include <set>
 #include <algorithm>
 #include <iostream>
@@ -2577,8 +2573,6 @@ struct Net::Impl
                     Ptr<CUDABackendNode> cudaNode = node.dynamicCast<CUDABackendNode>();
                     CV_Assert(!cudaNode.empty());
 
-                    auto info = "forwarding [" + ld.type + "] " + ld.name;
-                    cuda4dnn::csl::nvtx::Range marker(info.c_str());
                     cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, workspace);
 #endif
                 }
