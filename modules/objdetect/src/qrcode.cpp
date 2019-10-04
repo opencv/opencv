@@ -359,22 +359,26 @@ bool QRDetect::localization()
 
     bool suare_flag = false, local_points_flag = false;
     double triangle_sides[3];
-    triangle_sides[0] = norm(localization_points[0] - localization_points[1]);
-    triangle_sides[1] = norm(localization_points[1] - localization_points[2]);
-    triangle_sides[2] = norm(localization_points[2] - localization_points[0]);
-
-    double triangle_perim = (triangle_sides[0] + triangle_sides[1] + triangle_sides[2]) / 2;
-
-    double square_area = sqrt((triangle_perim * (triangle_perim - triangle_sides[0])
-                                              * (triangle_perim - triangle_sides[1])
-                                              * (triangle_perim - triangle_sides[2]))) * 2;
-    double img_square_area = bin_barcode.cols * bin_barcode.rows;
-
-    if (square_area > (img_square_area * 0.2))
+    double triangle_perim, square_area, img_square_area;
+    if (localization_points.size() == 3)
     {
-        suare_flag = true;
+        triangle_sides[0] = norm(localization_points[0] - localization_points[1]);
+        triangle_sides[1] = norm(localization_points[1] - localization_points[2]);
+        triangle_sides[2] = norm(localization_points[2] - localization_points[0]);
+
+        triangle_perim = (triangle_sides[0] + triangle_sides[1] + triangle_sides[2]) / 2;
+
+        square_area = sqrt((triangle_perim * (triangle_perim - triangle_sides[0])
+                                           * (triangle_perim - triangle_sides[1])
+                                           * (triangle_perim - triangle_sides[2]))) * 2;
+        img_square_area = bin_barcode.cols * bin_barcode.rows;
+
+        if (square_area > (img_square_area * 0.2))
+        {
+            suare_flag = true;
+        }
     }
-    if (localization_points.size() != 3)
+    else
     {
         local_points_flag = true;
     }
