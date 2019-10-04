@@ -38,10 +38,10 @@
 #define image1 Prim{cv::gapi::wip::draw::Image{cv::Point(100, 100), cv::Mat(cv::Size(200, 200), CV_8UC3, cv::Scalar::all(255)),\
                                                                     cv::Mat(cv::Size(200, 200), CV_32FC1, cv::Scalar::all(1))}}
 
-#define image2 Prim{cv::gapi::wip::draw::Image{cv::Point(100, 100), cv::Mat(cv::Size(200, 200), CV_8UC3, cv::Scalar::all(255)),\
+#define image2 Prim{cv::gapi::wip::draw::Image{cv::Point(200, 200), cv::Mat(cv::Size(200, 200), CV_8UC3, cv::Scalar::all(255)),\
                                                                     cv::Mat(cv::Size(200, 200), CV_32FC1, cv::Scalar::all(0.5))}}
 
-#define image3 Prim{cv::gapi::wip::draw::Image{cv::Point(100, 100), cv::Mat(cv::Size(200, 200), CV_8UC3, cv::Scalar::all(255)),\
+#define image3 Prim{cv::gapi::wip::draw::Image{cv::Point(300, 200), cv::Mat(cv::Size(200, 200), CV_8UC3, cv::Scalar::all(255)),\
                                                                     cv::Mat(cv::Size(200, 200), CV_32FC1, cv::Scalar::all(0.0))}}
 
 #define images Prims{image1, image2, image3}
@@ -49,7 +49,13 @@
 #define polygon1 Prim{cv::gapi::wip::draw::Poly{ {cv::Point{100, 100}, cv::Point{50, 200}, cv::Point{200, 30}, cv::Point{150, 50} }, cv::Scalar{153, 172, 58}, 1, LINE_8, 0} }
 #define polygons Prims{polygon1}
 
-#define text1 Prim{cv::gapi::wip::draw::Text{"TheBrownFoxJump", cv::Point{100, 100}, FONT_HERSHEY_SIMPLEX, 2, cv::Scalar{102, 178, 240}, 1, LINE_8, false} }
+#define text1 Prim{cv::gapi::wip::draw::Text{"TheBrownFoxJump", cv::Point{100, 100}, FONT_HERSHEY_COMPLEX, 1.3, cv::Scalar{102, 178, 240}, 5, LINE_8, \
+                                             cv::gapi::wip::draw::BackendT::FreeType} }
+
+#define text2 Prim{cv::gapi::wip::draw::Text{"qwertyuiopasdfghjklzxcvbnm", cv::Point{50, 50},   FONT_HERSHEY_COMPLEX, 1.0, cv::Scalar{255, 178, 240}, 2 } }
+#define text3 Prim{cv::gapi::wip::draw::Text{"TheBrolnFoxJqmp",            cv::Point{100, 100}, FONT_HERSHEY_COMPLEX, 1.5, cv::Scalar{200, 150, 100}, 5 } }
+#define text4 Prim{cv::gapi::wip::draw::Text{"txgbvJqmp",                  cv::Point{100, 100}, FONT_HERSHEY_COMPLEX, 2.0, cv::Scalar{150, 50, 75},   7 } }
+
 #define texts Prims{text1}
 
 namespace opencv_test
@@ -109,6 +115,9 @@ struct RenderBGR : public RenderWithParam<TestArgs>
         cv::gapi::wip::draw::drawPrimitivesOCVBGR(mat_ocv, prims);
     }
 };
+
+struct RenderTextTestBGR : public TestWithParam<std::tuple<cv::Size, cv::gapi::wip::draw::Prim>> {};
+struct RenderTextTestNV12 : public TestWithParam<std::tuple<cv::Size, cv::gapi::wip::draw::Prim>> {};
 
 } // opencv_test
 

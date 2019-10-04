@@ -99,4 +99,15 @@ INSTANTIATE_TEST_CASE_P(RenderBGROCVTexts, RenderBGR,
                                        cv::Size(640, 480)),
                                 Values(texts),
                                 Values(OCV)));
+
+// Separate tests for text rendering compare with cv::putText
+INSTANTIATE_TEST_CASE_P(RenderTextTestBGROCV, RenderTextTestBGR,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(text2, text3, text4)));
+
+INSTANTIATE_TEST_CASE_P(RenderTextTestNV12OCV, RenderTextTestNV12,
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(text2, text3, text4)));
 }

@@ -22,6 +22,21 @@ namespace draw
 // FIXME only for tests
 GAPI_EXPORTS void BGR2NV12(const cv::Mat& bgr, cv::Mat& y_plane, cv::Mat& uv_plane);
 
+void blendImage(const cv::Mat& img,
+                const cv::Mat& alpha,
+                const cv::Point& org,
+                cv::Mat background);
+
+class IBitmaskCreator
+{
+public:
+    static std::unique_ptr<IBitmaskCreator> create(BackendT type);
+    virtual int createMask(cv::Mat&) = 0;
+    virtual const cv::Size& computeMaskSize() = 0;
+    virtual void setMaskParams(const cv::gapi::wip::draw::Text& text) = 0;
+    virtual ~IBitmaskCreator() = default;
+};
+
 } // namespace draw
 } // namespace wip
 } // namespace gapi

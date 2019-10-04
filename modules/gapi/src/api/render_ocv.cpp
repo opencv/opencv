@@ -17,9 +17,7 @@ GAPI_OCV_KERNEL(GOCVRenderNV12, cv::gapi::wip::draw::GRenderNV12)
     static void run(const cv::Mat& y, const cv::Mat& uv, const cv::gapi::wip::draw::Prims& prims,
                     cv::Mat& out_y, cv::Mat& out_uv)
     {
-        /* FIXME How to render correctly on NV12 format ?
-         *
-         * Rendering on NV12 via OpenCV looks like this:
+        /* Rendering on NV12 via OpenCV looks like this:
          *
          * y --------> 1)(NV12 -> YUV) -> yuv -> 2)draw -> yuv -> 3)split -------> out_y
          *                  ^                                         |
@@ -74,7 +72,6 @@ namespace draw
 {
 
 void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz);
-void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha);
 void poly(cv::Mat mat, std::vector<cv::Point>, cv::Scalar color, int lt, int shift);
 
 void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz)
@@ -89,26 +86,6 @@ void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz)
             cell_roi = cv::mean(cell_roi);
         }
 
-};
-
-void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha)
-{
-    auto roi = mat(cv::Rect(org.x, org.y, img.size().width, img.size().height));
-    cv::Mat img32f_w;
-    cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
-
-    cv::Mat roi32f_w(roi.size(), CV_32FC3, cv::Scalar::all(1.0));
-    roi32f_w -= img32f_w;
-
-    cv::Mat img32f, roi32f;
-    img.convertTo(img32f, CV_32F, 1.0/255);
-    roi.convertTo(roi32f, CV_32F, 1.0/255);
-
-    cv::multiply(img32f, img32f_w, img32f);
-    cv::multiply(roi32f, roi32f_w, roi32f);
-    roi32f += img32f;
-
-    roi32f.convertTo(roi, CV_8U, 255.0);
 };
 
 void poly(cv::Mat mat, std::vector<cv::Point> points, cv::Scalar color, int lt, int shift)
@@ -156,10 +133,29 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
 
             case Prim::index_of<Text>():
             {
-                const auto& t_p = cv::util::get<Text>(p);
-                const auto color = converter.cvtColor(t_p.color);
-                cv::putText(in, t_p.text, t_p.org, t_p.ff, t_p.fs,
-                            color, t_p.thick, t_p.lt, t_p.bottom_left_origin);
+                auto t_p = cv::util::get<Text>(p);
+                t_p.color = converter.cvtColor(t_p.color);
+
+                auto mask_creator = cv::gapi::wip::draw::IBitmaskCreator::create(t_p.backend);
+                mask_creator->setMaskParams(t_p);
+                auto size = mask_creator->computeMaskSize();
+
+                // Allocate mask outside
+                cv::Mat mask(size, CV_8UC1);
+                int baseline = mask_creator->createMask(mask);
+
+                mask.convertTo(mask, CV_32FC1, 1 / 255.0);
+                cv::Mat color_mask;
+
+                cv::merge(std::vector<cv::Mat>(3, mask), color_mask);
+                cv::Scalar color32f = t_p.color / 255.0;
+                cv::multiply(color_mask, color32f, color_mask);
+
+                // Org is bottom left point, trasform it to top left point for blendImage
+                cv::Point tl(t_p.org.x, t_p.org.y - color_mask.size().height + baseline);
+
+                cv::gapi::wip::draw::blendImage(color_mask, mask, tl, in);
+
                 break;
             }
 
@@ -193,7 +189,8 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
                 cv::Mat img;
                 converter.cvtImg(i_p.img, img);
 
-                image(in, i_p.org, img, i_p.alpha);
+                img.convertTo(img, CV_32FC1, 1.0 / 255);
+                cv::gapi::wip::draw::blendImage(img, i_p.alpha, i_p.org, in);
                 break;
             }
 
@@ -222,5 +219,33 @@ void drawPrimitivesOCVYUV(cv::Mat &in, const Prims &prims)
 
 } // namespace draw
 } // namespace wip
+
+void cv::gapi::wip::draw::blendImage(const cv::Mat& img,
+                                     const cv::Mat& alpha,
+                                     const cv::Point& org,
+                                     cv::Mat background)
+{
+    GAPI_Assert(img.type()   == CV_32FC3);
+    GAPI_Assert(alpha.type() == CV_32FC1);
+    GAPI_Assert(background.channels() == 3u);
+
+    cv::Mat roi = background(cv::Rect(org, img.size()));
+    cv::Mat img32f_w;
+    cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
+
+    cv::Mat roi32f_w(roi.size(), CV_32FC3, cv::Scalar::all(1.0));
+    roi32f_w -= img32f_w;
+
+    cv::Mat img32f, roi32f;
+    img.copyTo(img32f);
+    roi.convertTo(roi32f, CV_32F, 1.0/255);
+
+    cv::multiply(img32f, img32f_w, img32f);
+    cv::multiply(roi32f, roi32f_w, roi32f);
+    roi32f += img32f;
+
+    roi32f.convertTo(roi, CV_8U, 255.0);
+}
+
 } // namespace gapi
 } // namespace cv

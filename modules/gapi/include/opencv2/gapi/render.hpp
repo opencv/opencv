@@ -30,11 +30,29 @@ namespace wip
 namespace draw
 {
 
+enum class BackendT
+{
+    OpenCV,
+    FreeType,
+};
+
 /**
  * A structure to represent parameters for drawing a text string.
  */
 struct Text
 {
+    Text() = default;
+
+    Text(const std::string& text_,
+         const cv::Point& org_,
+         int ff_,
+         double fs_,
+         const cv::Scalar& color_,
+         int thick_ = 1,
+         int lt_ = LINE_8,
+         BackendT backend_ = BackendT::OpenCV)
+        : text(text_), org(org_), ff(ff_), fs(fs_), color(color_), thick(thick_), lt(lt_), backend(backend_) {};
+
     /*@{*/
     std::string text;               //!< The text string to be drawn
     cv::Point   org;                //!< The bottom-left corner of the text string in the image
@@ -43,7 +61,7 @@ struct Text
     cv::Scalar  color;              //!< The text color
     int         thick;              //!< The thickness of the lines used to draw a text
     int         lt;                 //!< The line type. See #LineTypes
-    bool        bottom_left_origin; //!< When true, the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner
+    BackendT    backend;            //!< Backend which create mask with text (OpenCV/FreeType)
     /*@{*/
 };
 

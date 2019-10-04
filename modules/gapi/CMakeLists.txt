@@ -123,5 +123,14 @@ if(TARGET opencv_test_gapi)
   target_link_libraries(opencv_test_gapi PRIVATE ade)
 endif()
 
+find_package(Freetype REQUIRED)
+
+if (FREETYPE_FOUND)
+    target_compile_definitions(opencv_gapi PRIVATE -DHAVE_FREETYPE)
+    target_link_libraries(opencv_gapi PRIVATE ${FREETYPE_LIBRARIES})
+    target_include_directories(opencv_gapi PRIVATE ${FREETYPE_INCLUDE_DIRS})
+endif()
+
+
 ocv_add_perf_tests()
 ocv_add_samples()
