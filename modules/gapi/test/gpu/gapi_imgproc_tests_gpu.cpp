@@ -25,7 +25,10 @@ INSTANTIATE_TEST_CASE_P(Filter2DTestGPU, Filter2DTest,
                                 Values(-1, CV_32F),
                                 Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
-                                Values(3, 4, 5, 7),
+                                Values(cv::Size(3, 3),
+                                       cv::Size(4, 4),
+                                       cv::Size(5, 5),
+                                       cv::Size(7, 7)),
                                 Values(cv::BORDER_DEFAULT)));
 
 INSTANTIATE_TEST_CASE_P(BoxFilterTestCPU, BoxFilterTest,
