@@ -99,6 +99,44 @@ bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
     return false;
 }
 
+
+void dls::compute_poses(std::vector<cv::Mat> Rs, std::vector<cv::Mat> ts)
+{
+    std::vector<cv::Mat> R_;
+    R_.push_back(rotx(CV_PI/2));
+    R_.push_back(roty(CV_PI/2));
+    R_.push_back(rotz(CV_PI/2));
+
+    Rs.clear();
+    ts.clear();
+
+
+    // version that calls dls 3 times, to avoid Cayley singularity
+    for (int i = 0; i < 3; ++i)
+    {
+        // Make a random rotation
+        cv::Mat pp = R_[i] * ( p - cv::repeat(mn, 1, p.cols) );
+
+        // clear for new data
+        C_est_.clear();
+        t_est_.clear();
+        cost_.clear();
+
+        this->run_kernel(pp); // run dls_pnp()
+
+        // add local minima to solutions
+        for (unsigned int j = 0; j < cost_.size(); ++j)
+        {
+
+            t_est__ = t_est_[j] - C_est_[j] * R_[i] * mn;
+            C_est__ = C_est_[j] * R_[i];
+            Rs.push_back(C_est__);
+            ts.push_back(t_est__);
+        }
+    }
+}
+
+
 void dls::run_kernel(const cv::Mat& pp)
 {
     cv::Mat Mtilde(27, 27, CV_64F);
