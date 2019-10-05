@@ -64,11 +64,19 @@ def printParams(backend, target):
 
 testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
 
+g_dnnBackendsAndTargets = None
+
 class dnn_test(NewOpenCVTests):
 
     def setUp(self):
         super(dnn_test, self).setUp()
 
+        global g_dnnBackendsAndTargets
+        if g_dnnBackendsAndTargets is None:
+            g_dnnBackendsAndTargets = self.initBackendsAndTargets()
+        self.dnnBackendsAndTargets = g_dnnBackendsAndTargets
+
+    def initBackendsAndTargets(self):
         self.dnnBackendsAndTargets = [
             [cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_CPU],
         ]
@@ -86,6 +94,7 @@ class dnn_test(NewOpenCVTests):
                     self.dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL])
                 if self.checkIETarget(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL_FP16):
                     self.dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL_FP16])
+        return self.dnnBackendsAndTargets
 
     def find_dnn_file(self, filename, required=True):
         if not required:
