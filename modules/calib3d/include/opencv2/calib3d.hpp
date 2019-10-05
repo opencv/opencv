@@ -2795,25 +2795,6 @@ protected:
     CV_WRAP virtual void solve(InputArray opoints, InputArray ipoints, CV_OUT std::vector<Mat> & rVecs, CV_OUT std::vector<Mat> & tVecs) const = 0;
 
     /**
-     * @brief COPLANAR_THRESHOLD specifies tolerance for judging if object points are co-planar. If coplarity test using @get3DPointsetShape fails with
-     this threshold then a PnP method with requiresPlanarObject = true cannot be used to solve this problem
-     */
-    //static double COPLANAR_THRESHOLD;
-
-    /**
-     * @brief COLINEAR_THRESHOLD specifies tolerance for judging if object points are co-linear. If colinearity test using @get3DPointsetShape fails with
-     this threshold then no PnP method can be used to solve this problem.
-     */
-    //static double COLINEAR_THRESHOLD;
-
-    /**
-     * @brief NONCOPLANAR_THRESHOLD specifies tolerance for judging if object points are non coplanar (i.e. they are 3D). If coplarity test using @get3DPointsetShape passes with
-     this threshold then a PnP method with requires3DObject = true cannot be used to solve this problem
-     */
-    //static double NONCOPLANAR_THRESHOLD;
-
-
-    /**
       @brief geometricTests flag
      */
     bool withGeometricTests;
