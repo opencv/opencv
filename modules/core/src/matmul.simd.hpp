@@ -2328,14 +2328,14 @@ double dotProd_8u(const uchar* src1, const uchar* src2, int len)
         {
             v_uint8 v_src1 = vx_load(src1 + j);
             v_uint8 v_src2 = vx_load(src2 + j);
-            v_sum = v_dotprod_expand(v_src1, v_src2, v_sum, true);
+            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
         }
 
         for (; j <= blockSize - cWidth; j += cWidth)
         {
             v_int16 v_src10 = v_reinterpret_as_s16(vx_load_expand(src1 + j));
             v_int16 v_src20 = v_reinterpret_as_s16(vx_load_expand(src2 + j));
-            v_sum += v_reinterpret_as_u32(v_dotprod(v_src10, v_src20, true));
+            v_sum += v_reinterpret_as_u32(v_dotprod_fast(v_src10, v_src20));
         }
         r += (double)v_reduce_sum(v_sum);
 
@@ -2368,14 +2368,14 @@ double dotProd_8s(const schar* src1, const schar* src2, int len)
         {
             v_int8 v_src1 = vx_load(src1 + j);
             v_int8 v_src2 = vx_load(src2 + j);
-            v_sum = v_dotprod_expand(v_src1, v_src2, v_sum, true);
+            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
         }
 
         for (; j <= blockSize - cWidth; j += cWidth)
         {
             v_int16 v_src1 = vx_load_expand(src1 + j);
             v_int16 v_src2 = vx_load_expand(src2 + j);
-            v_sum = v_dotprod(v_src1, v_src2, v_sum, true);
+            v_sum = v_dotprod_fast(v_src1, v_src2, v_sum);
         }
         r += (double)v_reduce_sum(v_sum);
 
@@ -2408,7 +2408,7 @@ double dotProd_16u(const ushort* src1, const ushort* src2, int len)
         {
             v_uint16 v_src1 = vx_load(src1 + j);
             v_uint16 v_src2 = vx_load(src2 + j);
-            v_sum = v_dotprod_expand(v_src1, v_src2, v_sum, true);
+            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
         }
         r += (double)v_reduce_sum(v_sum);
 
@@ -2440,7 +2440,7 @@ double dotProd_16s(const short* src1, const short* src2, int len)
         {
             v_int16 v_src1 = vx_load(src1 + j);
             v_int16 v_src2 = vx_load(src2 + j);
-            v_sum = v_dotprod_expand(v_src1, v_src2, v_sum, true);
+            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
         }
         r += (double)v_reduce_sum(v_sum);
 
@@ -2469,8 +2469,8 @@ double dotProd_32s(const int* src1, const int* src2, int len)
         v_int32 v_src20 = vx_load(src2);
         v_int32 v_src11 = vx_load(src1 + step);
         v_int32 v_src21 = vx_load(src2 + step);
-        v_sum0 = v_dotprod_expand(v_src10, v_src20, v_sum0, true);
-        v_sum1 = v_dotprod_expand(v_src11, v_src21, v_sum1, true);
+        v_sum0 = v_dotprod_expand_fast(v_src10, v_src20, v_sum0);
+        v_sum1 = v_dotprod_expand_fast(v_src11, v_src21, v_sum1);
     }
     v_sum0 += v_sum1;
 #endif
@@ -2478,7 +2478,7 @@ double dotProd_32s(const int* src1, const int* src2, int len)
     {
         v_int32 v_src1 = vx_load(src1);
         v_int32 v_src2 = vx_load(src2);
-        v_sum0 = v_dotprod_expand(v_src1, v_src2, v_sum0, true);
+        v_sum0 = v_dotprod_expand_fast(v_src1, v_src2, v_sum0);
     }
     r = v_reduce_sum(v_sum0);
     vx_cleanup();

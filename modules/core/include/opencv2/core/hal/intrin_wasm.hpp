@@ -2429,9 +2429,10 @@ inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
     return v_uint16x8(wasm_v8x16_shuffle(c, d, 2,3,6,7,10,11,14,15,18,19,22,23,26,27,30,31));
 }
 
-inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const bool ignore_order = false)
+//////// Dot Product ////////
+
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 {
-    CV_UNUSED(ignore_order);
     v128_t a0 = wasm_i32x4_shr(wasm_i32x4_shl(a.val, 16), 16);
     v128_t a1 = wasm_i32x4_shr(a.val, 16);
     v128_t b0 = wasm_i32x4_shr(wasm_i32x4_shl(b.val, 16), 16);
@@ -2441,13 +2442,11 @@ inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const bool ig
     return v_int32x4(wasm_i32x4_add(c, d));
 }
 
-inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b,
-                           const v_int32x4& c, const bool ignore_order = false)
-{ return v_dotprod(a, b, ignore_order) + c; }
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_dotprod(a, b) + c; }
 
-inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const bool ignore_order = false)
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
 {
-    CV_UNUSED(ignore_order);
 #ifdef __wasm_unimplemented_simd128__
     v128_t a0 = wasm_i64x2_shr(wasm_i64x2_shl(a.val, 32), 32);
     v128_t a1 = wasm_i64x2_shr(a.val, 32);
@@ -2462,13 +2461,11 @@ inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const bool ig
     return fallback::v_dotprod(a_, b_);
 #endif
 }
-inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b,
-                           const v_int64x2& c, const bool ignore_order = false)
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
 {
 #ifdef __wasm_unimplemented_simd128__
-    return v_dotprod(a, b, ignore_order) + c;
+    return v_dotprod(a, b) + c;
 #else
-    CV_UNUSED(ignore_order);
     fallback::v_int32x4 a_(a);
     fallback::v_int32x4 b_(b);
     fallback::v_int64x2 c_(c);
@@ -2477,9 +2474,8 @@ inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b,
 }
 
 // 8 >> 32
-inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const bool ignore_order = false)
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
 {
-    CV_UNUSED(ignore_order);
     v128_t a0 = wasm_u16x8_shr(wasm_i16x8_shl(a.val, 8), 8);
     v128_t a1 = wasm_u16x8_shr(a.val, 8);
     v128_t b0 = wasm_u16x8_shr(wasm_i16x8_shl(b.val, 8), 8);
@@ -2489,13 +2485,11 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, con
         v_dotprod(v_int16x8(a1), v_int16x8(b1))).val
     );
 }
-inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
-                                   const v_uint32x4& c, const bool ignore_order = false)
-{ return v_dotprod_expand(a, b, ignore_order) + c; }
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_dotprod_expand(a, b) + c; }
 
-inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const bool ignore_order = false)
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 {
-    CV_UNUSED(ignore_order);
     v128_t a0 = wasm_i16x8_shr(wasm_i16x8_shl(a.val, 8), 8);
     v128_t a1 = wasm_i16x8_shr(a.val, 8);
     v128_t b0 = wasm_i16x8_shr(wasm_i16x8_shl(b.val, 8), 8);
@@ -2505,40 +2499,33 @@ inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const 
         v_dotprod(v_int16x8(a1), v_int16x8(b1))
     );
 }
-inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
-                                  const v_int32x4& c, const bool ignore_order = false)
-{ return v_dotprod_expand(a, b, ignore_order) + c; }
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{ return v_dotprod_expand(a, b) + c; }
 
 // 16 >> 64
-inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const bool ignore_order = false)
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
 {
-    CV_UNUSED(ignore_order);
     fallback::v_uint16x8 a_(a);
     fallback::v_uint16x8 b_(b);
     return fallback::v_dotprod_expand(a_, b_);
 }
-inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b,
-                                   const v_uint64x2& c, const bool ignore_order = false)
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
 {
-    CV_UNUSED(ignore_order);
     fallback::v_uint16x8 a_(a);
     fallback::v_uint16x8 b_(b);
     fallback::v_uint64x2 c_(c);
     return fallback::v_dotprod_expand(a_, b_, c_);
 }
 
-inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const bool ignore_order = false)
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
 {
-    CV_UNUSED(ignore_order);
     fallback::v_int16x8 a_(a);
     fallback::v_int16x8 b_(b);
     return fallback::v_dotprod_expand(a_, b_);
 }
 
-inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b,
-                                  const v_int64x2& c, const bool ignore_order = false)
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
 {
-    CV_UNUSED(ignore_order);
     fallback::v_int16x8 a_(a);
     fallback::v_int16x8 b_(b);
     fallback::v_int64x2 c_(c);
@@ -2546,11 +2533,50 @@ inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b,
 }
 
 // 32 >> 64f
-inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const bool ignore_order = false)
-{ return v_cvt_f64(v_dotprod(a, b, ignore_order)); }
-inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
-                                    const v_float64x2& c, const bool ignore_order = false)
-{ return v_dotprod_expand(a, b, ignore_order) + c; }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+//////// Fast Dot Product ////////
+
+// 16 >> 32
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
+{ return v_dotprod(a, b); }
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_dotprod(a, b, c); }
+
+// 32 >> 64
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod(a, b); }
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{ return v_dotprod(a, b, c); }
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_dotprod_expand(a, b, c); }
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{ return v_dotprod_expand(a, b, c); }
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b)
+{ return v_dotprod_expand(a, b); }
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod_expand(a, b); }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b, c); }
 
 #define OPENCV_HAL_IMPL_WASM_LOGIC_OP(_Tpvec) \
 OPENCV_HAL_IMPL_WASM_BIN_OP(&, _Tpvec, wasm_v128_and) \

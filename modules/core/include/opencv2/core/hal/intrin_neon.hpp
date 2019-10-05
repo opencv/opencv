@@ -568,224 +568,271 @@ inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
                                   ));
 }
 
-///////// Dotprod ////////////
+//////// Dot Product ////////
 
 // 16 >> 32
-inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const bool ignore_order = false)
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 {
-    int16x4_t a0, a1, b0, b1;
-    if (!ignore_order)
-    {
-        int16x8_t uzp1, uzp2;
-        _v128_unzip(a.val, b.val, uzp1, uzp2);
-        a0 = vget_low_s16(uzp1); b0 = vget_high_s16(uzp1);
-        a1 = vget_low_s16(uzp2); b1 = vget_high_s16(uzp2);
-    }
-    else
-    {
-        a0 = vget_low_s16(a.val); a1 = vget_high_s16(a.val);
-        b0 = vget_low_s16(b.val); b1 = vget_high_s16(b.val);
-    }
+    int16x8_t uzp1, uzp2;
+    _v128_unzip(a.val, b.val, uzp1, uzp2);
+    int16x4_t a0 = vget_low_s16(uzp1);
+    int16x4_t b0 = vget_high_s16(uzp1);
+    int16x4_t a1 = vget_low_s16(uzp2);
+    int16x4_t b1 = vget_high_s16(uzp2);
     int32x4_t p = vmull_s16(a0, b0);
     return v_int32x4(vmlal_s16(p, a1, b1));
 }
-inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b,
-                           const v_int32x4& c, const bool ignore_order = false)
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
 {
-    int16x4_t a0, a1, b0, b1;
-    if (!ignore_order)
-    {
-        int16x8_t uzp1, uzp2;
-        _v128_unzip(a.val, b.val, uzp1, uzp2);
-        a0 = vget_low_s16(uzp1); b0 = vget_high_s16(uzp1);
-        a1 = vget_low_s16(uzp2); b1 = vget_high_s16(uzp2);
-    }
-    else
-    {
-        a0 = vget_low_s16(a.val); a1 = vget_high_s16(a.val);
-        b0 = vget_low_s16(b.val); b1 = vget_high_s16(b.val);
-    }
+    int16x8_t uzp1, uzp2;
+    _v128_unzip(a.val, b.val, uzp1, uzp2);
+    int16x4_t a0 = vget_low_s16(uzp1);
+    int16x4_t b0 = vget_high_s16(uzp1);
+    int16x4_t a1 = vget_low_s16(uzp2);
+    int16x4_t b1 = vget_high_s16(uzp2);
     int32x4_t p = vmlal_s16(c.val, a0, b0);
     return v_int32x4(vmlal_s16(p, a1, b1));
 }
 
 // 32 >> 64
-inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const bool ignore_order = false)
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
 {
-    int32x2_t a0, a1, b0, b1;
-    if (!ignore_order)
-    {
-        int32x4_t uzp1, uzp2;
-        _v128_unzip(a.val, b.val, uzp1, uzp2);
-        a0 = vget_low_s32(uzp1); b0 = vget_high_s32(uzp1);
-        a1 = vget_low_s32(uzp2); b1 = vget_high_s32(uzp2);
-    }
-    else
-    {
-        a0 = vget_low_s32(a.val); a1 = vget_high_s32(a.val);
-        b0 = vget_low_s32(b.val); b1 = vget_high_s32(b.val);
-    }
+    int32x4_t uzp1, uzp2;
+    _v128_unzip(a.val, b.val, uzp1, uzp2);
+    int32x2_t a0 = vget_low_s32(uzp1);
+    int32x2_t b0 = vget_high_s32(uzp1);
+    int32x2_t a1 = vget_low_s32(uzp2);
+    int32x2_t b1 = vget_high_s32(uzp2);
     int64x2_t p = vmull_s32(a0, b0);
     return v_int64x2(vmlal_s32(p, a1, b1));
 }
-inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b,
-                           const v_int64x2& c, const bool ignore_order = false)
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
 {
-    int32x2_t a0, a1, b0, b1;
-    if (!ignore_order)
-    {
-        int32x4_t uzp1, uzp2;
-        _v128_unzip(a.val, b.val, uzp1, uzp2);
-        a0 = vget_low_s32(uzp1); b0 = vget_high_s32(uzp1);
-        a1 = vget_low_s32(uzp2); b1 = vget_high_s32(uzp2);
-    }
-    else
-    {
-        a0 = vget_low_s32(a.val); a1 = vget_high_s32(a.val);
-        b0 = vget_low_s32(b.val); b1 = vget_high_s32(b.val);
-    }
+    int32x4_t uzp1, uzp2;
+    _v128_unzip(a.val, b.val, uzp1, uzp2);
+    int32x2_t a0 = vget_low_s32(uzp1);
+    int32x2_t b0 = vget_high_s32(uzp1);
+    int32x2_t a1 = vget_low_s32(uzp2);
+    int32x2_t b1 = vget_high_s32(uzp2);
     int64x2_t p = vmlal_s32(c.val, a0, b0);
     return v_int64x2(vmlal_s32(p, a1, b1));
 }
 
 // 8 >> 32
-inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const bool ignore_order = false)
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
 {
 #if CV_NEON_DOT
-    CV_UNUSED(ignore_order);
     return v_uint32x4(vdotq_u32(vdupq_n_u32(0), a.val, b.val));
 #else
-    if (!ignore_order)
-    {
-        const uint8x16_t zero   = vreinterpretq_u8_u32(vdupq_n_u32(0));
-        const uint8x16_t mask   = vreinterpretq_u8_u32(vdupq_n_u32(0x00FF00FF));
-        const uint16x8_t zero32 = vreinterpretq_u16_u32(vdupq_n_u32(0));
-        const uint16x8_t mask32 = vreinterpretq_u16_u32(vdupq_n_u32(0x0000FFFF));
+    const uint8x16_t zero   = vreinterpretq_u8_u32(vdupq_n_u32(0));
+    const uint8x16_t mask   = vreinterpretq_u8_u32(vdupq_n_u32(0x00FF00FF));
+    const uint16x8_t zero32 = vreinterpretq_u16_u32(vdupq_n_u32(0));
+    const uint16x8_t mask32 = vreinterpretq_u16_u32(vdupq_n_u32(0x0000FFFF));
 
-        uint16x8_t even = vmulq_u16(vreinterpretq_u16_u8(vbslq_u8(mask, a.val, zero)),
-                                    vreinterpretq_u16_u8(vbslq_u8(mask, b.val, zero)));
-        uint16x8_t odd  = vmulq_u16(vshrq_n_u16(vreinterpretq_u16_u8(a.val), 8),
-                                    vshrq_n_u16(vreinterpretq_u16_u8(b.val), 8));
+    uint16x8_t even = vmulq_u16(vreinterpretq_u16_u8(vbslq_u8(mask, a.val, zero)),
+                                vreinterpretq_u16_u8(vbslq_u8(mask, b.val, zero)));
+    uint16x8_t odd  = vmulq_u16(vshrq_n_u16(vreinterpretq_u16_u8(a.val), 8),
+                                vshrq_n_u16(vreinterpretq_u16_u8(b.val), 8));
 
-        uint32x4_t s0 = vaddq_u32(vreinterpretq_u32_u16(vbslq_u16(mask32, even, zero32)),
-                                  vreinterpretq_u32_u16(vbslq_u16(mask32, odd,  zero32)));
-        uint32x4_t s1 = vaddq_u32(vshrq_n_u32(vreinterpretq_u32_u16(even), 16),
-                                  vshrq_n_u32(vreinterpretq_u32_u16(odd),  16));
-        return v_uint32x4(vaddq_u32(s0, s1));
-    }
-    else
-    {
-        uint16x8_t p0 = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
-        uint16x8_t p1 = vmull_u8(vget_high_u8(a.val), vget_high_u8(b.val));
-        uint32x4_t s0 = vaddl_u16(vget_low_u16(p0), vget_low_u16(p1));
-        uint32x4_t s1 = vaddl_u16(vget_high_u16(p0), vget_high_u16(p1));
-        return v_uint32x4(vaddq_u32(s0, s1));
-    }
+    uint32x4_t s0 = vaddq_u32(vreinterpretq_u32_u16(vbslq_u16(mask32, even, zero32)),
+                              vreinterpretq_u32_u16(vbslq_u16(mask32, odd,  zero32)));
+    uint32x4_t s1 = vaddq_u32(vshrq_n_u32(vreinterpretq_u32_u16(even), 16),
+                              vshrq_n_u32(vreinterpretq_u32_u16(odd),  16));
+    return v_uint32x4(vaddq_u32(s0, s1));
 #endif
 }
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
-                                   const v_uint32x4& c, const bool ignore_order = false)
+                                   const v_uint32x4& c)
 {
 #if CV_NEON_DOT
-    CV_UNUSED(ignore_order);
     return v_uint32x4(vdotq_u32(c.val, a.val, b.val));
 #else
-    return v_dotprod_expand(a, b, ignore_order) + c;
+    return v_dotprod_expand(a, b) + c;
 #endif
 }
 
-inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const bool ignore_order = false)
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 {
 #if CV_NEON_DOT
-    CV_UNUSED(ignore_order);
     return v_int32x4(vdotq_s32(vdupq_n_s32(0), a.val, b.val));
 #else
-    if (!ignore_order)
-    {
-        int16x8_t p0  = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
-        int16x8_t p1  = vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val));
-        int16x8_t uzp1, uzp2;
-        _v128_unzip(p0, p1, uzp1, uzp2);
-        int16x8_t sum = vaddq_s16(uzp1, uzp2);
-        int16x4_t uzpl1, uzpl2;
-        _v128_unzip(vget_low_s16(sum), vget_high_s16(sum), uzpl1, uzpl2);
-        return v_int32x4(vaddl_s16(uzpl1, uzpl2));
-    }
+    int16x8_t p0  = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
+    int16x8_t p1  = vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val));
+    int16x8_t uzp1, uzp2;
+    _v128_unzip(p0, p1, uzp1, uzp2);
+    int16x8_t sum = vaddq_s16(uzp1, uzp2);
+    int16x4_t uzpl1, uzpl2;
+    _v128_unzip(vget_low_s16(sum), vget_high_s16(sum), uzpl1, uzpl2);
+    return v_int32x4(vaddl_s16(uzpl1, uzpl2));
+#endif
+}
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
+                                  const v_int32x4& c)
+{
+#if CV_NEON_DOT
+    return v_int32x4(vdotq_s32(c.val, a.val, b.val));
+#else
+    return v_dotprod_expand(a, b) + c;
+#endif
+}
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
+{
+    const uint16x8_t zero = vreinterpretq_u16_u32(vdupq_n_u32(0));
+    const uint16x8_t mask = vreinterpretq_u16_u32(vdupq_n_u32(0x0000FFFF));
+
+    uint32x4_t even = vmulq_u32(vreinterpretq_u32_u16(vbslq_u16(mask, a.val, zero)),
+                                vreinterpretq_u32_u16(vbslq_u16(mask, b.val, zero)));
+    uint32x4_t odd  = vmulq_u32(vshrq_n_u32(vreinterpretq_u32_u16(a.val), 16),
+                                vshrq_n_u32(vreinterpretq_u32_u16(b.val), 16));
+    uint32x4_t uzp1, uzp2;
+    _v128_unzip(even, odd, uzp1, uzp2);
+    uint64x2_t s0  = vaddl_u32(vget_low_u32(uzp1), vget_high_u32(uzp1));
+    uint64x2_t s1  = vaddl_u32(vget_low_u32(uzp2), vget_high_u32(uzp2));
+    return v_uint64x2(vaddq_u64(s0, s1));
+}
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
+{
+    int32x4_t p0  = vmull_s16(vget_low_s16(a.val),  vget_low_s16(b.val));
+    int32x4_t p1  = vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val));
+
+    int32x4_t uzp1, uzp2;
+    _v128_unzip(p0, p1, uzp1, uzp2);
+    int32x4_t sum = vaddq_s32(uzp1, uzp2);
+
+    int32x2_t uzpl1, uzpl2;
+    _v128_unzip(vget_low_s32(sum), vget_high_s32(sum), uzpl1, uzpl2);
+    return v_int64x2(vaddl_s32(uzpl1, uzpl2));
+}
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b,
+                                  const v_int64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+// 32 >> 64f
+#if CV_SIMD128_64F
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
+                                    const v_float64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+#endif
+
+//////// Fast Dot Product ////////
+
+// 16 >> 32
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
+{
+    int16x4_t a0 = vget_low_s16(a.val);
+    int16x4_t a1 = vget_high_s16(a.val);
+    int16x4_t b0 = vget_low_s16(b.val);
+    int16x4_t b1 = vget_high_s16(b.val);
+    int32x4_t p = vmull_s16(a0, b0);
+    return v_int32x4(vmlal_s16(p, a1, b1));
+}
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{
+    int16x4_t a0 = vget_low_s16(a.val);
+    int16x4_t a1 = vget_high_s16(a.val);
+    int16x4_t b0 = vget_low_s16(b.val);
+    int16x4_t b1 = vget_high_s16(b.val);
+    int32x4_t p = vmlal_s16(c.val, a0, b0);
+    return v_int32x4(vmlal_s16(p, a1, b1));
+}
+
+// 32 >> 64
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
+{
+    int32x2_t a0 = vget_low_s32(a.val);
+    int32x2_t a1 = vget_high_s32(a.val);
+    int32x2_t b0 = vget_low_s32(b.val);
+    int32x2_t b1 = vget_high_s32(b.val);
+    int64x2_t p = vmull_s32(a0, b0);
+    return v_int64x2(vmlal_s32(p, a1, b1));
+}
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{
+    int32x2_t a0 = vget_low_s32(a.val);
+    int32x2_t a1 = vget_high_s32(a.val);
+    int32x2_t b0 = vget_low_s32(b.val);
+    int32x2_t b1 = vget_high_s32(b.val);
+    int64x2_t p = vmlal_s32(c.val, a0, b0);
+    return v_int64x2(vmlal_s32(p, a1, b1));
+}
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
+{
+#if CV_NEON_DOT
+    return v_uint32x4(vdotq_u32(vdupq_n_u32(0), a.val, b.val));
+#else
+    uint16x8_t p0 = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
+    uint16x8_t p1 = vmull_u8(vget_high_u8(a.val), vget_high_u8(b.val));
+    uint32x4_t s0 = vaddl_u16(vget_low_u16(p0), vget_low_u16(p1));
+    uint32x4_t s1 = vaddl_u16(vget_high_u16(p0), vget_high_u16(p1));
+    return v_uint32x4(vaddq_u32(s0, s1));
+#endif
+}
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{
+#if CV_NEON_DOT
+    return v_uint32x4(vdotq_u32(c.val, a.val, b.val));
+#else
+    return v_dotprod_expand_fast(a, b) + c;
+#endif
+}
+
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
+{
+#if CV_NEON_DOT
+    return v_int32x4(vdotq_s32(vdupq_n_s32(0), a.val, b.val));
+#else
     int16x8_t prod = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
     prod = vmlal_s8(prod, vget_high_s8(a.val), vget_high_s8(b.val));
     return v_int32x4(vaddl_s16(vget_low_s16(prod), vget_high_s16(prod)));
 #endif
 }
-inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
-                                  const v_int32x4& c, const bool ignore_order = false)
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
 {
 #if CV_NEON_DOT
-    CV_UNUSED(ignore_order);
     return v_int32x4(vdotq_s32(c.val, a.val, b.val));
 #else
-    return v_dotprod_expand(a, b, ignore_order) + c;
+    return v_dotprod_expand_fast(a, b) + c;
 #endif
 }
 
 // 16 >> 64
-inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const bool ignore_order = false)
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
 {
-    if (!ignore_order)
-    {
-        const uint16x8_t zero   = vreinterpretq_u16_u32(vdupq_n_u32(0));
-        const uint16x8_t mask   = vreinterpretq_u16_u32(vdupq_n_u32(0x0000FFFF));
-
-        uint32x4_t even = vmulq_u32(vreinterpretq_u32_u16(vbslq_u16(mask, a.val, zero)),
-                                    vreinterpretq_u32_u16(vbslq_u16(mask, b.val, zero)));
-        uint32x4_t odd  = vmulq_u32(vshrq_n_u32(vreinterpretq_u32_u16(a.val), 16),
-                                    vshrq_n_u32(vreinterpretq_u32_u16(b.val), 16));
-        uint32x4_t uzp1, uzp2;
-        _v128_unzip(even, odd, uzp1, uzp2);
-        uint64x2_t s0  = vaddl_u32(vget_low_u32(uzp1), vget_high_u32(uzp1));
-        uint64x2_t s1  = vaddl_u32(vget_low_u32(uzp2), vget_high_u32(uzp2));
-        return v_uint64x2(vaddq_u64(s0, s1));
-    }
     uint32x4_t p0  = vmull_u16(vget_low_u16(a.val),  vget_low_u16(b.val));
     uint32x4_t p1  = vmull_u16(vget_high_u16(a.val), vget_high_u16(b.val));
     uint64x2_t s0  = vaddl_u32(vget_low_u32(p0), vget_high_u32(p0));
     uint64x2_t s1  = vaddl_u32(vget_low_u32(p1), vget_high_u32(p1));
     return v_uint64x2(vaddq_u64(s0, s1));
 }
-inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b,
-                                   const v_uint64x2& c, const bool ignore_order = false)
-{ return v_dotprod_expand(a, b, ignore_order) + c; }
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand_fast(a, b) + c; }
 
-inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const bool ignore_order = false)
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b)
 {
-    if (!ignore_order)
-    {
-        int32x4_t p0  = vmull_s16(vget_low_s16(a.val),  vget_low_s16(b.val));
-        int32x4_t p1  = vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val));
-
-        int32x4_t uzp1, uzp2;
-        _v128_unzip(p0, p1, uzp1, uzp2);
-        int32x4_t sum = vaddq_s32(uzp1, uzp2);
-
-        int32x2_t uzpl1, uzpl2;
-        _v128_unzip(vget_low_s32(sum), vget_high_s32(sum), uzpl1, uzpl2);
-        return v_int64x2(vaddl_s32(uzpl1, uzpl2));
-    }
     int32x4_t prod = vmull_s16(vget_low_s16(a.val), vget_low_s16(b.val));
     prod = vmlal_s16(prod, vget_high_s16(a.val), vget_high_s16(b.val));
     return v_int64x2(vaddl_s32(vget_low_s32(prod), vget_high_s32(prod)));
 }
-inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b,
-                                  const v_int64x2& c, const bool ignore_order = false)
-{ return v_dotprod_expand(a, b, ignore_order) + c; }
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{ return v_dotprod_expand_fast(a, b) + c; }
 
 // 32 >> 64f
 #if CV_SIMD128_64F
-inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const bool ignore_order = false)
-{ return v_cvt_f64(v_dotprod(a, b, ignore_order)); }
-inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
-                                    const v_float64x2& c, const bool ignore_order = false)
-{ return v_dotprod_expand(a, b, ignore_order) + c; }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod_fast(a, b)); }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand_fast(a, b) + c; }
 #endif
+
 
 #define OPENCV_HAL_IMPL_NEON_LOGIC_OP(_Tpvec, suffix) \
     OPENCV_HAL_IMPL_NEON_BIN_OP(&, _Tpvec, vandq_##suffix) \

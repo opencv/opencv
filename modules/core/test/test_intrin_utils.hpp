@@ -638,8 +638,8 @@ template<typename R> struct TheTest
             EXPECT_EQ(tmp_sum, resE[i]);
         }
 
-        w_type resF = v_reduce_sum(v_dotprod(a, b, true)),
-               resG = v_reduce_sum(v_dotprod(a, b, c, true));
+        w_type resF = v_reduce_sum(v_dotprod_fast(a, b)),
+               resG = v_reduce_sum(v_dotprod_fast(a, b, c));
         EXPECT_EQ(sumAB,  resF);
         EXPECT_EQ(sumABC, resG);
         return *this;
@@ -677,8 +677,8 @@ template<typename R> struct TheTest
             EXPECT_EQ(tmp_sum, resE[i]);
         }
 
-        l4_type resF = v_reduce_sum(v_dotprod_expand(a, b, true)),
-                resG = v_reduce_sum(v_dotprod_expand(a, b, c, true));
+        l4_type resF = v_reduce_sum(v_dotprod_expand_fast(a, b)),
+                resG = v_reduce_sum(v_dotprod_expand_fast(a, b, c));
         EXPECT_EQ(sumAB,  resF);
         EXPECT_EQ(sumABC, resG);
 
