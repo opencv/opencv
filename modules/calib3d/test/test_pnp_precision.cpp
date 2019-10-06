@@ -783,7 +783,7 @@ TEST(Calib3d_PnP, precision3DObjects2)
     EXPECT_TRUE(runMethods(probGenerator,f,numGenerations,errTols,successRateThresholds));
 }
 
-//tests precision of all PnPSolver and PnPRefiner combinations for non-coplanar objects
+//tests precision of all PnPSolver and PnPRefiner combinations for coplanar objects
 TEST(Calib3d_PnP, precisionCoPlanarObjects1)
 {
     const int numGenerations = 100;
@@ -808,7 +808,7 @@ TEST(Calib3d_PnP, precisionCoPlanarObjects1)
     EXPECT_TRUE(runMethods(probGenerator,f,numGenerations,errTols,successRateThresholds));
 }
 
-//tests precision of all PnPSolver and PnPRefiner combinations for 3D (non-coplanar) objects.
+//tests precision of all PnPSolver and PnPRefiner combinations for coplanar objects.
 //These objects are smaller than those defined in the previous test.
 TEST(Calib3d_PnP, precisionCoPlanarObjects2)
 {
@@ -834,7 +834,7 @@ TEST(Calib3d_PnP, precisionCoPlanarObjects2)
     EXPECT_TRUE(runMethods(probGenerator,f,numTrials,errTols,successRateThresholds));
 }
 
-//tests precision of all PnPSolver and PnPRefiner combinations for tage objects.
+//tests precision of all PnPSolver and PnPRefiner combinations for planar tag objects.
 TEST(Calib3d_PnP, precisionTagObjects)
 {
     const int numTrials = 100;
