@@ -611,7 +611,12 @@ protected:
         projectedPoints.resize(opoints.size());
         projectPoints(opoints, trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
 
-        int num_of_solutions = solveP3P(opoints, projectedPoints, intrinsics, distCoeffs, rvecs, tvecs, method);
+        SolvePnPMethod m = (SolvePnPMethod)method;
+        Ptr<PnPSolver> solver;
+        Ptr<PnPRefiner> refiner;
+        cvtSolvePnPFlag(m,false,solver,refiner);
+        int num_of_solutions = pnp(opoints, projectedPoints, intrinsics, distCoeffs, rvecs, tvecs, solver,refiner);
+
         if (num_of_solutions != (int) rvecs.size() || num_of_solutions != (int) tvecs.size() || num_of_solutions == 0)
         {
             return false;
@@ -826,8 +831,8 @@ TEST(Calib3d_SolvePnPRansac, double_support)
     Mat R, t, RF, tF;
     vector<int> inliers;
 
-    solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
-    solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
+    solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_AP3P); //SOLVEPNP_P3P cannot solve this problem
+    solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_AP3P); //SOLVEPNP_P3P cannot solve this problem
 
     EXPECT_LE(cvtest::norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
     EXPECT_LE(cvtest::norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
@@ -984,9 +989,13 @@ TEST(Calib3d_SolvePnP, input_type)
         //solvePnPGeneric
         {
             vector<Mat> Rs, ts, RFs, tFs;
+            SolvePnPMethod m = (SolvePnPMethod)method;
+            Ptr<PnPSolver> s;
+            Ptr<PnPRefiner> r;
+            cvtSolvePnPFlag(m,false,s,r);
 
-            int res1 = solvePnPGeneric(points3dF, points2dF, Matx33f(intrinsics), Mat(), RFs, tFs, false, (SolvePnPMethod)method);
-            int res2 = solvePnPGeneric(points3d, points2d, intrinsics, Mat(), Rs, ts, false, (SolvePnPMethod)method);
+            int res1 = pnp(points3dF, points2dF, Matx33f(intrinsics), Mat(), RFs, tFs, s, r);
+            int res2 = pnp(points3d, points2d, intrinsics, Mat(), Rs, ts, s, r);
 
             EXPECT_GT(res1, 0);
             EXPECT_GT(res2, 0);
@@ -1010,9 +1019,13 @@ TEST(Calib3d_SolvePnP, input_type)
         }
         {
             vector<Mat> R1s, t1s, R2s, t2s;
+            SolvePnPMethod m = (SolvePnPMethod)method;
+            Ptr<PnPSolver> s;
+            Ptr<PnPRefiner> r;
+            cvtSolvePnPFlag(m,false,s,r);
 
-            int res1 = solvePnPGeneric(points3dF, points2d, intrinsics, Mat(), R1s, t1s, false, (SolvePnPMethod)method);
-            int res2 = solvePnPGeneric(points3d, points2dF, intrinsics, Mat(), R2s, t2s, false, (SolvePnPMethod)method);
+            int res1 = pnp(points3dF, points2d, intrinsics, Mat(), R1s, t1s, s, r);
+            int res2 = pnp(points3d, points2dF, intrinsics, Mat(), R2s, t2s, s, r);
 
             EXPECT_GT(res1, 0);
             EXPECT_GT(res2, 0);
@@ -1037,9 +1050,13 @@ TEST(Calib3d_SolvePnP, input_type)
         {
             vector<Mat_<float> > R1s, t2s;
             vector<Mat_<double> > R2s, t1s;
+            SolvePnPMethod m = (SolvePnPMethod)method;
+                            Ptr<PnPSolver> s;
+                            Ptr<PnPRefiner> r;
+                            cvtSolvePnPFlag(m,false,s,r);
 
-            int res1 = solvePnPGeneric(points3dF, points2d, intrinsics, Mat(), R1s, t1s, false, (SolvePnPMethod)method);
-            int res2 = solvePnPGeneric(points3d, points2dF, intrinsics, Mat(), R2s, t2s, false, (SolvePnPMethod)method);
+            int res1 = pnp(points3dF, points2d, intrinsics, Mat(), R1s, t1s, s, r);
+            int res2 = pnp(points3d, points2dF, intrinsics, Mat(), R2s, t2s, s, r);
 
             EXPECT_GT(res1, 0);
             EXPECT_GT(res2, 0);
@@ -1065,9 +1082,13 @@ TEST(Calib3d_SolvePnP, input_type)
         {
             vector<Matx31f> R1s, t2s;
             vector<Matx31d> R2s, t1s;
+            SolvePnPMethod m = (SolvePnPMethod)method;
+                            Ptr<PnPSolver> s;
+                            Ptr<PnPRefiner> r;
+                            cvtSolvePnPFlag(m,false,s,r);
 
-            int res1 = solvePnPGeneric(points3dF, points2d, intrinsics, Mat(), R1s, t1s, false, (SolvePnPMethod)method);
-            int res2 = solvePnPGeneric(points3d, points2dF, intrinsics, Mat(), R2s, t2s, false, (SolvePnPMethod)method);
+            int res1 = pnp(points3dF, points2d, intrinsics, Mat(), R1s, t1s, s, r);
+            int res2 = pnp(points3d, points2dF, intrinsics, Mat(), R2s, t2s, s, r);
 
             EXPECT_GT(res1, 0);
             EXPECT_GT(res2, 0);
@@ -1090,9 +1111,13 @@ TEST(Calib3d_SolvePnP, input_type)
             //solveP3P
             {
                 vector<Mat> Rs, ts, RFs, tFs;
+                SolvePnPMethod m = (SolvePnPMethod)method;
+                                Ptr<PnPSolver> s;
+                                Ptr<PnPRefiner> r;
+                                cvtSolvePnPFlag(m,false,s,r);
 
-                int res1 = solveP3P(points3dF, points2dF, Matx33f(intrinsics), Mat(), RFs, tFs, (SolvePnPMethod)method);
-                int res2 = solveP3P(points3d, points2d, intrinsics, Mat(), Rs, ts, (SolvePnPMethod)method);
+                int res1 = pnp(points3dF, points2dF, Matx33f(intrinsics), Mat(), RFs, tFs, s, r);
+                int res2 = pnp(points3d, points2d, intrinsics, Mat(), Rs, ts, s, r);
 
                 EXPECT_GT(res1, 0);
                 EXPECT_GT(res2, 0);
@@ -1116,9 +1141,13 @@ TEST(Calib3d_SolvePnP, input_type)
             }
             {
                 vector<Mat> R1s, t1s, R2s, t2s;
+                SolvePnPMethod m = (SolvePnPMethod)method;
+                                Ptr<PnPSolver> s;
+                                Ptr<PnPRefiner> r;
+                                cvtSolvePnPFlag(m,false,s,r);
 
-                int res1 = solveP3P(points3dF, points2d, intrinsics, Mat(), R1s, t1s, (SolvePnPMethod)method);
-                int res2 = solveP3P(points3d, points2dF, intrinsics, Mat(), R2s, t2s, (SolvePnPMethod)method);
+                int res1 = pnp(points3dF, points2d, intrinsics, Mat(), R1s, t1s, s, r);
+                int res2 = pnp(points3d, points2dF, intrinsics, Mat(), R2s, t2s, s, r);
 
                 EXPECT_GT(res1, 0);
                 EXPECT_GT(res2, 0);
@@ -1143,9 +1172,13 @@ TEST(Calib3d_SolvePnP, input_type)
             {
                 vector<Mat_<float> > R1s, t2s;
                 vector<Mat_<double> > R2s, t1s;
+                SolvePnPMethod m = (SolvePnPMethod)method;
+                Ptr<PnPSolver> s;
+                Ptr<PnPRefiner> r;
+                cvtSolvePnPFlag(m,false,s,r);
 
-                int res1 = solveP3P(points3dF, points2d, intrinsics, Mat(), R1s, t1s, (SolvePnPMethod)method);
-                int res2 = solveP3P(points3d, points2dF, intrinsics, Mat(), R2s, t2s, (SolvePnPMethod)method);
+                int res1 = pnp(points3dF, points2d, intrinsics, Mat(), R1s, t1s, s, r);
+                int res2 = pnp(points3d, points2dF, intrinsics, Mat(), R2s, t2s, s, r);
 
                 EXPECT_GT(res1, 0);
                 EXPECT_GT(res2, 0);
@@ -1172,8 +1205,12 @@ TEST(Calib3d_SolvePnP, input_type)
                 vector<Matx31f> R1s, t2s;
                 vector<Matx31d> R2s, t1s;
 
-                int res1 = solveP3P(points3dF, points2d, intrinsics, Mat(), R1s, t1s, (SolvePnPMethod)method);
-                int res2 = solveP3P(points3d, points2dF, intrinsics, Mat(), R2s, t2s, (SolvePnPMethod)method);
+                SolvePnPMethod m = (SolvePnPMethod)method;
+                Ptr<PnPSolver> solver;
+                Ptr<PnPRefiner> refiner;
+                cvtSolvePnPFlag(m,false,solver,refiner);
+                int res1 = pnp(points3dF, points2d, intrinsics, Mat(), R1s, t1s, solver,refiner);
+                int res2 = pnp(points3d, points2dF, intrinsics, Mat(), R2s, t2s, solver,refiner);
 
                 EXPECT_GT(res1, 0);
                 EXPECT_GT(res2, 0);
@@ -1427,8 +1464,13 @@ TEST(Calib3d_SolvePnP, generic)
                 }
 
                 vector<double> reprojectionErrors;
-                solvePnPGeneric(p3d, p2d, intrinsics, noArray(), rvecs_est, tvecs_est, false, (SolvePnPMethod)method,
-                                noArray(), noArray(), reprojectionErrors);
+                SolvePnPMethod m = (SolvePnPMethod)method;
+                                Ptr<PnPSolver> s;
+                                Ptr<PnPRefiner> r;
+                                cvtSolvePnPFlag(m,false,s,r);
+
+                pnp(p3d, p2d, intrinsics, noArray(), rvecs_est, tvecs_est, s, r,
+                                true, reprojectionErrors);
 
                 EXPECT_TRUE(!rvecs_est.empty());
                 EXPECT_TRUE(rvecs_est.size() == tvecs_est.size() && tvecs_est.size() == reprojectionErrors.size());
@@ -1495,8 +1537,10 @@ TEST(Calib3d_SolvePnP, generic)
                 }
 
                 vector<double> reprojectionErrors;
-                solvePnPGeneric(p3f, p2f, intrinsics, noArray(), rvecs_est, tvecs_est, false, (SolvePnPMethod)method,
-                                noArray(), noArray(), reprojectionErrors);
+                Ptr<PnPSolver> s;
+                     Ptr<PnPRefiner> r;
+                     cvtSolvePnPFlag((SolvePnPMethod)method,false,s,r);
+                pnp(p3f, p2f, intrinsics, noArray(), rvecs_est, tvecs_est, s, r, true, reprojectionErrors);
 
                 EXPECT_TRUE(!rvecs_est.empty());
                 EXPECT_TRUE(rvecs_est.size() == tvecs_est.size() && tvecs_est.size() == reprojectionErrors.size());
@@ -1540,34 +1584,38 @@ TEST(Calib3d_SolvePnP, refine3pts)
         projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
 
         {
-            Mat rvec_est = (Mat_<double>(3,1) << 0.2, -0.1, 0.6);
-            Mat tvec_est = (Mat_<double>(3,1) << 0.05, -0.05, 1.0);
-
-            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+            Mat rvec_init = (Mat_<double>(3,1) << 0.2, -0.1, 0.6);
+            Mat tvec_init = (Mat_<double>(3,1) << 0.05, -0.05, 1.0);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_init.clone());
+            ts.push_back(tvec_init.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerLMcpp::create());
 
             cout << "\nmethod: Levenberg-Marquardt" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
-            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
-            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est: " << ts[0].t() << std::endl;
 
-            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), 1e-6);
         }
         {
-            Mat rvec_est = (Mat_<double>(3,1) << 0.2, -0.1, 0.6);
-            Mat tvec_est = (Mat_<double>(3,1) << 0.05, -0.05, 1.0);
-
-            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+            Mat rvec_init = (Mat_<double>(3,1) << 0.2, -0.1, 0.6);
+            Mat tvec_init = (Mat_<double>(3,1) << 0.05, -0.05, 1.0);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_init.clone());
+            ts.push_back(tvec_init.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerVVS::create());
 
             cout << "\nmethod: Virtual Visual Servoing" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
-            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
-            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est: " << ts[0].t() << std::endl;
 
-            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), 1e-6);
         }
     }
 
@@ -1589,34 +1637,38 @@ TEST(Calib3d_SolvePnP, refine3pts)
         projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
 
         {
-            Mat rvec_est = (Mat_<float>(3,1) << -0.5f, 0.2f, 0.2f);
-            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.2f, 1.0f);
-
-            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+            Mat rvec_init = (Mat_<float>(3,1) << -0.5f, 0.2f, 0.2f);
+            Mat tvec_init = (Mat_<float>(3,1) << 0.0f, 0.2f, 1.0f);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_init.clone());
+            ts.push_back(tvec_init.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerLMcpp::create());
 
             cout << "\nmethod: Levenberg-Marquardt" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
-            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
-            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est: " << ts[0].t() << std::endl;
 
-            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), 1e-6);
         }
         {
-            Mat rvec_est = (Mat_<float>(3,1) << -0.5f, 0.2f, 0.2f);
-            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.2f, 1.0f);
-
-            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+            Mat rvec_init = (Mat_<float>(3,1) << -0.5f, 0.2f, 0.2f);
+            Mat tvec_init = (Mat_<float>(3,1) << 0.0f, 0.2f, 1.0f);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_init.clone());
+            ts.push_back(tvec_init.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerVVS::create());
 
             cout << "\nmethod: Virtual Visual Servoing" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
-            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
-            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est: " << ts[0].t() << std::endl;
 
-            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), 1e-6);
         }
     }
 }
@@ -1659,34 +1711,38 @@ TEST(Calib3d_SolvePnP, refine)
             EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
         }
         {
-            Mat rvec_est = (Mat_<double>(3,1) << 0.1, -0.1, 0.1);
-            Mat tvec_est = (Mat_<double>(3,1) << 0.0, -0.5, 1.0);
-
-            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+            Mat rvec_init = (Mat_<double>(3,1) << 0.1, -0.1, 0.1);
+            Mat tvec_init = (Mat_<double>(3,1) << 0.0, -0.5, 1.0);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_init.clone());
+            ts.push_back(tvec_init.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerLMcpp::create());
 
             cout << "\nmethod: Levenberg-Marquardt (C++ API)" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
-            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
-            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est: " << ts[0].t() << std::endl;
 
-            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), 1e-6);
         }
         {
-            Mat rvec_est = (Mat_<double>(3,1) << 0.1, -0.1, 0.1);
-            Mat tvec_est = (Mat_<double>(3,1) << 0.0, -0.5, 1.0);
-
-            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+            Mat rvec_init = (Mat_<double>(3,1) << 0.1, -0.1, 0.1);
+            Mat tvec_init = (Mat_<double>(3,1) << 0.0, -0.5, 1.0);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_init.clone());
+            ts.push_back(tvec_init.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerVVS::create());
 
             cout << "\nmethod: Virtual Visual Servoing" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
-            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
-            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est: " << ts[0].t() << std::endl;
 
-            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), 1e-6);
         }
     }
 
@@ -1726,34 +1782,38 @@ TEST(Calib3d_SolvePnP, refine)
             EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
         }
         {
-            Mat rvec_est = (Mat_<float>(3,1) << -0.1f, 0.1f, 0.1f);
-            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.0f, 1.0f);
-
-            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+            Mat rvec_init = (Mat_<float>(3,1) << -0.1f, 0.1f, 0.1f);
+            Mat tvec_init = (Mat_<float>(3,1) << 0.0f, 0.0f, 1.0f);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_init.clone());
+            ts.push_back(tvec_init.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerLMcpp::create());
 
             cout << "\nmethod: Levenberg-Marquardt (C++ API)" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
-            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
-            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est: " << ts[0].t() << std::endl;
 
-            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), 1e-6);
         }
         {
-            Mat rvec_est = (Mat_<float>(3,1) << -0.1f, 0.1f, 0.1f);
-            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.0f, 1.0f);
-
-            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+            Mat rvec_init = (Mat_<float>(3,1) << -0.1f, 0.1f, 0.1f);
+            Mat tvec_init = (Mat_<float>(3,1) << 0.0f, 0.0f, 1.0f);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_init.clone());
+            ts.push_back(tvec_init.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerVVS::create());
 
             cout << "\nmethod: Virtual Visual Servoing" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
-            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
-            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est: " << ts[0].t() << std::endl;
 
-            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
-            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), 1e-6);
         }
     }
 
@@ -1808,40 +1868,44 @@ TEST(Calib3d_SolvePnP, refine)
             EXPECT_LT(cvtest::norm(tvec_ground_truth, tvec_est_refine, NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
         }
         {
-            Mat rvec_est_refine = rvec_est.clone(), tvec_est_refine = tvec_est.clone();
-            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est_refine, tvec_est_refine);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_est.clone());
+            ts.push_back(tvec_est.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerLMcpp::create());
 
             cout << "\nmethod: Levenberg-Marquardt (C++ API)" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
             cout << "rvec_est: " << rvec_est.t() << std::endl;
-            cout << "rvec_est_refine: " << rvec_est_refine.t() << std::endl;
+            cout << "rvec_est_refine: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
             cout << "tvec_est: " << tvec_est.t() << std::endl;
-            cout << "tvec_est_refine: " << tvec_est_refine.t() << std::endl;
+            cout << "tvec_est_refine: " << ts[0].t() << std::endl;
 
             EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-2);
             EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-3);
 
-            EXPECT_LT(cvtest::norm(rvec_ground_truth, rvec_est_refine, NORM_INF), cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF));
-            EXPECT_LT(cvtest::norm(tvec_ground_truth, tvec_est_refine, NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
+            EXPECT_LT(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF));
+            EXPECT_LT(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
         }
         {
-            Mat rvec_est_refine = rvec_est.clone(), tvec_est_refine = tvec_est.clone();
-            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est_refine, tvec_est_refine);
+            vector<Mat> rs, ts;
+            rs.push_back(rvec_est.clone());
+            ts.push_back(tvec_est.clone());
+            pnp(p3d, p2d, intrinsics, noArray(), rs, ts, Ptr<PnPSolver>(),PnPRefinerVVS::create());
 
             cout << "\nmethod: Virtual Visual Servoing" << endl;
             cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
             cout << "rvec_est: " << rvec_est.t() << std::endl;
-            cout << "rvec_est_refine: " << rvec_est_refine.t() << std::endl;
+            cout << "rvec_est_refine: " << rs[0].t() << std::endl;
             cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
             cout << "tvec_est: " << tvec_est.t() << std::endl;
-            cout << "tvec_est_refine: " << tvec_est_refine.t() << std::endl;
+            cout << "tvec_est_refine: " << ts[0].t() << std::endl;
 
             EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-2);
             EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-3);
 
-            EXPECT_LT(cvtest::norm(rvec_ground_truth, rvec_est_refine, NORM_INF), cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF));
-            EXPECT_LT(cvtest::norm(tvec_ground_truth, tvec_est_refine, NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
+            EXPECT_LT(cvtest::norm(rvec_ground_truth, rs[0], NORM_INF), cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF));
+            EXPECT_LT(cvtest::norm(tvec_ground_truth, ts[0], NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
         }
     }
 }
