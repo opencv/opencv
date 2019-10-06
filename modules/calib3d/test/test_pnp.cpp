@@ -742,8 +742,8 @@ TEST(Calib3d_PnP, precision3DObjects1)
     const ErrorTols errTols;
 
     map<string,float> successRateThresholds;
-    successRateThresholds[solverName(PnPSolverP3PComplete::create())] = 0.6; //PnPSolverP3P fails with default errTols
-    successRateThresholds[solverName(PnPSolverEPnP3D::create())] = 0.3; //PnPSolverEPnP3D fails often with 4 points
+    successRateThresholds[solverName(PnPSolverP3PComplete::create())] = 0.6f; //PnPSolverP3P fails with default errTols
+    successRateThresholds[solverName(PnPSolverEPnP3D::create())] = 0.2f; //PnPSolverEPnP3D fails often with 4 points
 
     ProblemFormat f;
     auto rng = theRNG();
@@ -790,8 +790,8 @@ TEST(Calib3d_PnP, precisionCoPlanarObjects1)
     const ErrorTols errTols;
 
     map<string,float> successRateThresholds;
-    successRateThresholds[solverName(PnPSolverP3PComplete::create())] = 0.6;
-    successRateThresholds[solverName(PnPSolverZhang::create())] = 0.7;
+    successRateThresholds[solverName(PnPSolverP3PComplete::create())] = 0.6f;
+    successRateThresholds[solverName(PnPSolverZhang::create())] = 0.7f;
 
     const ProblemFormat f;
     auto rng = theRNG();
@@ -817,8 +817,8 @@ TEST(Calib3d_PnP, precisionCoPlanarObjects2)
     const ErrorTols errTols;
 
     map<string,float> successRateThresholds;
-    successRateThresholds[solverName(PnPSolverP3PComplete::create())] = 0.1; //PnPSolverP3P fails often to meet desired precision
-    successRateThresholds[solverName(PnPSolverZhang::create())] = 0.1;  //PnPSolverZhang fails often to meet desired precision
+    successRateThresholds[solverName(PnPSolverP3PComplete::create())] = 0.1f; //PnPSolverP3P fails often to meet desired precision
+    successRateThresholds[solverName(PnPSolverZhang::create())] = 0.1f;  //PnPSolverZhang fails often to meet desired precision
 
     const ProblemFormat f;
     auto rng = theRNG();
@@ -841,8 +841,8 @@ TEST(Calib3d_PnP, precisionTagObjects)
     const ErrorTols errTols;
 
     map<string,float> successRateThresholds;
-    successRateThresholds[solverName(PnPSolverP3PComplete::create())] = 0.9;
-    successRateThresholds[solverName(PnPSolverZhang::create())] = 0.9;
+    successRateThresholds[solverName(PnPSolverP3PComplete::create())] = 0.9f;
+    successRateThresholds[solverName(PnPSolverZhang::create())] = 0.9f;
 
     const ProblemFormat f;
     auto rng = theRNG();
