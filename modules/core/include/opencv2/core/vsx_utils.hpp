@@ -144,10 +144,10 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
     VSX_REDIRECT_2RG(vec_uint4,  vec_ushort8,  vec_mulo, __builtin_vec_mulo)
 
     // dword2 support arrived in ISA 2.07 and GCC 8+
-    VSX_IMPL_2VRG(vec_dword2,  vec_int4,  vmulesw, vec_mule)
-    VSX_IMPL_2VRG(vec_udword2, vec_uint4, vmuleuw, vec_mule)
-    VSX_IMPL_2VRG(vec_dword2,  vec_int4,  vmulosw, vec_mulo)
-    VSX_IMPL_2VRG(vec_udword2, vec_uint4, vmulouw, vec_mulo)
+    VSX_IMPL_2VRG(vec_dword2,  vec_int4,  vmulosw, vec_mule)
+    VSX_IMPL_2VRG(vec_udword2, vec_uint4, vmulouw, vec_mule)
+    VSX_IMPL_2VRG(vec_dword2,  vec_int4,  vmulesw, vec_mulo)
+    VSX_IMPL_2VRG(vec_udword2, vec_uint4, vmuleuw, vec_mulo)
 
 #endif
 
