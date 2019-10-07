@@ -16,9 +16,6 @@ namespace opencv_test
 
 TEST_P(RenderNV12, AccuracyTest)
 {
-    std::tie(sz, prims, pkg) = GetParam();
-    Init();
-
     cv::gapi::wip::draw::BGR2NV12(mat_gapi, y_mat_gapi, uv_mat_gapi);
     cv::gapi::wip::draw::render(y_mat_gapi, uv_mat_gapi, prims, pkg);
 
@@ -30,9 +27,6 @@ TEST_P(RenderNV12, AccuracyTest)
 
 TEST_P(RenderBGR, AccuracyTest)
 {
-    std::tie(sz, prims, pkg) = GetParam();
-    Init();
-
     cv::gapi::wip::draw::render(mat_gapi, prims, pkg);
     ComputeRef();
 

@@ -12,6 +12,36 @@
 #include "api/render_priv.hpp"
 #include "api/render_ocv.hpp"
 
+namespace opencv_test {
+
+using Prims = cv::gapi::wip::draw::Prims;
+using Prim  = cv::gapi::wip::draw::Prim;
+
+/** GTest parameter for Prims */
+struct PrimsTestParam
+{
+    enum Value {
+        RECTS,
+        CIRCLES,
+        LINES,
+        MOSAICS,
+        IMAGES,
+        POLYGONS,
+        TEXTS
+    } val_;
+
+    PrimsTestParam(Value val) : val_(val) {}
+    void PrintTo(std::ostream* os) const
+    {
+        static const char* svals[] = { "RECTS", "CIRCLES", "LINES", "MOSAICS", "IMAGES", "POLYGONS", "TEXTS" };
+        if (val_ >= 0 && val_ < (sizeof(svals) / sizeof(svals[0])))
+            *os << svals[val_];
+        else
+            *os << "UNKNOWN(" << (int)val_ << ")";
+    }
+
+    Prims create()
+    {
 #define rect1 Prim{cv::gapi::wip::draw::Rect{cv::Rect{101, 101, 199, 199}, cv::Scalar{153, 172, 58},  1, LINE_8, 0}}
 #define rect2 Prim{cv::gapi::wip::draw::Rect{cv::Rect{100, 100, 199, 199}, cv::Scalar{153, 172, 58},  1, LINE_8, 0}}
 #define rect3 Prim{cv::gapi::wip::draw::Rect{cv::Rect{0  , 0  , 199, 199}, cv::Scalar{153, 172, 58},  1, LINE_8, 0}}
@@ -52,18 +82,35 @@
 #define text1 Prim{cv::gapi::wip::draw::Text{"TheBrownFoxJump", cv::Point{100, 100}, FONT_HERSHEY_SIMPLEX, 2, cv::Scalar{102, 178, 240}, 1, LINE_8, false} }
 #define texts Prims{text1}
 
-namespace opencv_test
-{
+        switch ((Value)val_)
+        {
+        case RECTS: return rects;
+        case CIRCLES: return circles;
+        case LINES: return lines;
+        case MOSAICS: return mosaics;
+        case IMAGES: return images;
+        case POLYGONS: return polygons;
+        case TEXTS: return texts;
+        }
+        CV_Error(Error::StsInternal, "");
+    }
+}; // PrimsTestParam
+static inline void PrintTo(const PrimsTestParam& v, std::ostream* os) { v.PrintTo(os); }
 
-using Prims = cv::gapi::wip::draw::Prims;
-using Prim  = cv::gapi::wip::draw::Prim;
 
-template<class T>
-class RenderWithParam : public TestWithParam<T>
+using TestArgs = std::tuple<cv::Size, PrimsTestParam, cv::gapi::GKernelPackage>;
+
+template<typename T>
+class RenderWithParam : public testing::TestWithParam<T>
 {
 protected:
-    void Init()
+    void SetUp()
     {
+        auto param = testing::TestWithParam<T>::GetParam();
+        sz = get<0>(param);
+        prims = get<1>(param).create();
+        pkg = get<2>(param);
+
         MatType type = CV_8UC3;
         mat_ocv.create(sz, type);
         mat_gapi.create(sz, type);
@@ -77,8 +124,6 @@ protected:
 
     cv::Mat y_mat_ocv, uv_mat_ocv, y_mat_gapi, uv_mat_gapi, mat_ocv, mat_gapi;
 };
-
-using TestArgs = std::tuple<cv::Size,cv::gapi::wip::draw::Prims,cv::gapi::GKernelPackage>;
 
 struct RenderNV12 : public RenderWithParam<TestArgs>
 {
