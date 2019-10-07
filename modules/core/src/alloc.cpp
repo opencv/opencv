@@ -83,7 +83,35 @@ cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics()
 }
 
 #if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
-static const bool useMemalign = cv::utils::getConfigurationParameterBool("OPENCV_ENABLE_MEMALIGN", false);
+static bool readMemoryAlignmentParameter()
+{
+    bool value = true;
+#if defined(__GLIBC__) && defined(__linux__) \
+    && !defined(CV_STATIC_ANALYSIS) \
+    && !defined(OPENCV_ENABLE_MEMORY_SANITIZER) \
+    && !defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)  /* oss-fuzz */ \
+    && !defined(_WIN32)  /* MinGW? */
+    {
+        // https://github.com/opencv/opencv/issues/15526
+        value = false;
+    }
+#endif
+    value = cv::utils::getConfigurationParameterBool("OPENCV_ENABLE_MEMALIGN", value);  // should not call fastMalloc() internally
+    // TODO add checks for valgrind, ASAN if value == false
+    return value;
+}
+static inline
+bool isAlignedAllocationEnabled()
+{
+    static bool initialized = false;
+    static bool useMemalign = true;
+    if (!initialized)
+    {
+        initialized = true;  // trick to avoid stuck in acquire (works only if allocations are scope based)
+        useMemalign = readMemoryAlignmentParameter();
+    }
+    return useMemalign;
+}
 #endif
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
@@ -94,7 +122,7 @@ void* fastMalloc(size_t size)
 #endif
 {
 #ifdef HAVE_POSIX_MEMALIGN
-    if (useMemalign)
+    if (isAlignedAllocationEnabled())
     {
         void* ptr = NULL;
         if(posix_memalign(&ptr, CV_MALLOC_ALIGN, size))
@@ -104,7 +132,7 @@ void* fastMalloc(size_t size)
         return ptr;
     }
 #elif defined HAVE_MEMALIGN
-    if (useMemalign)
+    if (isAlignedAllocationEnabled())
     {
         void* ptr = memalign(CV_MALLOC_ALIGN, size);
         if(!ptr)
@@ -128,7 +156,7 @@ void fastFree(void* ptr)
 #endif
 {
 #if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
-    if (useMemalign)
+    if (isAlignedAllocationEnabled())
     {
         free(ptr);
         return;
