@@ -222,9 +222,9 @@ Big integers:
 |add, sub           | x | x |
 |shift              | x | x |
 |logical            | x | x |
+|reverse            | x | x |
 |extract            | x | x |
 |rotate (lanes)     | x | x |
-|reverse            | x | x |
 |cvt_flt64          |   | x |
 
 Floating point:
