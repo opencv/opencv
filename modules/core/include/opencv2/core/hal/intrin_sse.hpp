@@ -1923,59 +1923,6 @@ OPENCV_HAL_IMPL_SSE_UNPACKS(v_int32x4, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_SSE_UNPACKS(v_float32x4, ps, _mm_castps_si128, _mm_castsi128_ps)
 OPENCV_HAL_IMPL_SSE_UNPACKS(v_float64x2, pd, _mm_castpd_si128, _mm_castsi128_pd)
 
-inline v_uint8x16 v_reverse(const v_uint8x16 &a)
-{
-#if CV_SSSE3
-    static const __m128i perm = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-    return v_uint8x16(_mm_shuffle_epi8(a.val, perm));
-#else
-    uchar CV_DECL_ALIGNED(32) d[16];
-    v_store_aligned(d, a);
-    return v_uint8x16(d[15], d[14], d[13], d[12], d[11], d[10], d[9], d[8], d[7], d[6], d[5], d[4], d[3], d[2], d[1], d[0]);
-#endif
-}
-
-inline v_int8x16 v_reverse(const v_int8x16 &a)
-{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
-
-inline v_uint16x8 v_reverse(const v_uint16x8 &a)
-{
-#if CV_SSSE3
-    static const __m128i perm = _mm_setr_epi8(14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
-    return v_uint16x8(_mm_shuffle_epi8(a.val, perm));
-#else
-    __m128i r = _mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 1, 2, 3));
-    r = _mm_shufflelo_epi16(r, _MM_SHUFFLE(2, 3, 0, 1));
-    r = _mm_shufflehi_epi16(r, _MM_SHUFFLE(2, 3, 0, 1));
-    return v_uint16x8(r);
-#endif
-}
-
-inline v_int16x8 v_reverse(const v_int16x8 &a)
-{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
-
-inline v_uint32x4 v_reverse(const v_uint32x4 &a)
-{
-    return v_uint32x4(_mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 1, 2, 3)));
-}
-
-inline v_int32x4 v_reverse(const v_int32x4 &a)
-{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
-
-inline v_float32x4 v_reverse(const v_float32x4 &a)
-{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
-
-inline v_uint64x2 v_reverse(const v_uint64x2 &a)
-{
-    return v_uint64x2(_mm_shuffle_epi32(a.val, _MM_SHUFFLE(1, 0, 3, 2)));
-}
-
-inline v_int64x2 v_reverse(const v_int64x2 &a)
-{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
-
-inline v_float64x2 v_reverse(const v_float64x2 &a)
-{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
-
 template<int s, typename _Tpvec>
 inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 {
@@ -3319,6 +3266,102 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     t = _mm_or_si128(t, sign);
     t = _mm_packs_epi32(t, t);
     _mm_storel_epi64((__m128i*)ptr, t);
+#endif
+}
+
+template<int i>
+inline uchar v_extract_n(v_uint8x16 v)
+{
+#if CV_SSE4_1
+    return _mm_extract_epi8(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline schar v_extract_n(v_int8x16 v)
+{
+#if CV_SSE4_1
+    return _mm_extract_epi8(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline ushort v_extract_n(v_uint16x8 v)
+{
+    return _mm_extract_epi16(v.val, i);
+}
+
+template<int i>
+inline short v_extract_n(v_int16x8 v)
+{
+    return _mm_extract_epi16(v.val, i);
+}
+
+template<int i>
+inline uint v_extract_n(v_uint32x4 v)
+{
+#if CV_SSE4_1
+    return _mm_extract_epi32(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline int v_extract_n(v_int32x4 v)
+{
+#if CV_SSE4_1
+    return _mm_extract_epi32(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline uint64 v_extract_n(v_uint64x2 v)
+{
+#if CV_SSE4_1
+    return _mm_extract_epi64(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline int64 v_extract_n(v_int64x2 v)
+{
+#if CV_SSE4_1
+    return _mm_extract_epi64(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline float v_extract_n(v_float32x4 v)
+{
+#if CV_SSE4_1
+    union { int iv; float fv; } d;
+    d.iv = _mm_extract_epi32(v_reinterpret_as_u32(v).val, i);
+    return d.fv;
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline double v_extract_n(v_float64x2 v)
+{
+#if CV_SSE4_1
+    union { int64 iv; double dv; } d;
+    d.iv = _mm_extract_epi64(v_reinterpret_as_u64(v).val, i);
+    return d.dv;
+#else
+    return v_rotate_right<i>(v).get0();
 #endif
 }
 

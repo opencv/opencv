@@ -2228,6 +2228,19 @@ OPENCV_HAL_IMPL_AVX512_EXTRACT(v_int64x8)
 OPENCV_HAL_IMPL_AVX512_EXTRACT(v_float32x16)
 OPENCV_HAL_IMPL_AVX512_EXTRACT(v_float64x8)
 
+#define OPENCV_HAL_IMPL_AVX512_EXTRACT_N(_Tpvec, _Tp) \
+template<int i> inline _Tp v_extract_n(_Tpvec v) { return v_rotate_right<i>(v).get0(); }
+
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint8x64, uchar)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int8x64, schar)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint16x32, ushort)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int16x32, short)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint32x16, uint)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int32x16, int)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint64x8, uint64)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int64x8, int64)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_float32x16, float)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_float64x8, double)
 
 ///////////////////// load deinterleave /////////////////////////////
 

@@ -1777,6 +1777,25 @@ inline v_reg<_Tp, n> v_extract(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
     return r;
 }
 
+/** @brief Vector extract
+
+Scheme:
+Return the s-th element of v.
+Restriction: 0 <= s < nlanes
+
+Usage:
+@code
+v_int32x4 a;
+int r;
+r = v_extract_n<2>(a);
+@endcode
+For all types. */
+template<int s, typename _Tp, int n>
+inline _Tp v_extract_n(const v_reg<_Tp, n>& v)
+{
+    return v[s];
+}
+
 /** @brief Round
 
 Rounds each value. Input type is float vector ==> output type is int vector.*/

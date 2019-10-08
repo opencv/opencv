@@ -2195,6 +2195,19 @@ OPENCV_HAL_IMPL_AVX_EXTRACT(v_int64x4)
 OPENCV_HAL_IMPL_AVX_EXTRACT(v_float32x8)
 OPENCV_HAL_IMPL_AVX_EXTRACT(v_float64x4)
 
+#define OPENCV_HAL_IMPL_AVX_EXTRACT_N(_Tpvec, _Tp) \
+template<int i> inline _Tp v_extract_n( _Tpvec v) { return v_rotate_right<i>(v).get0(); }
+
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint8x32, uchar)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int8x32, schar)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint16x16, ushort)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int16x16, short)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint32x8, uint)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int32x8, int)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint64x4, uint64)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int64x4, int64)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_float32x8, float)
+OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_float64x4, double)
 
 ///////////////////// load deinterleave /////////////////////////////
 
