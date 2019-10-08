@@ -224,6 +224,7 @@ Big integers:
 |logical            | x | x |
 |extract            | x | x |
 |rotate (lanes)     | x | x |
+|cvt_flt64          |   | x |
 |reverse            | x | x |
 
 Floating point:
