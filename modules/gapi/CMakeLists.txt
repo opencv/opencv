@@ -123,12 +123,12 @@ if(TARGET opencv_test_gapi)
   target_link_libraries(opencv_test_gapi PRIVATE ade)
 endif()
 
-find_package(Freetype REQUIRED)
+ocv_check_modules(FREETYPE freetype2)
 
 if (FREETYPE_FOUND)
-    target_compile_definitions(opencv_gapi PRIVATE -DHAVE_FREETYPE)
-    target_link_libraries(opencv_gapi PRIVATE ${FREETYPE_LIBRARIES})
-    target_include_directories(opencv_gapi PRIVATE ${FREETYPE_INCLUDE_DIRS})
+    ocv_target_compile_definitions(opencv_gapi PRIVATE -DHAVE_FREETYPE)
+    ocv_target_link_libraries(opencv_gapi LINK_PRIVATE ${FREETYPE_LIBRARIES})
+    ocv_target_include_directories(opencv_gapi PRIVATE ${FREETYPE_INCLUDE_DIRS})
 endif()
 
 

@@ -50,7 +50,7 @@
 #define polygons Prims{polygon1}
 
 #define text1 Prim{cv::gapi::wip::draw::Text{"TheBrownFoxJump", cv::Point{100, 100}, FONT_HERSHEY_COMPLEX, 1.3, cv::Scalar{102, 178, 240}, 5, LINE_8, \
-                                             cv::gapi::wip::draw::BackendT::FreeType} }
+                                             cv::gapi::wip::draw::BackendT::OpenCV} }
 
 #define text2 Prim{cv::gapi::wip::draw::Text{"qwertyuiopasdfghjklzxcvbnm", cv::Point{50, 50},   FONT_HERSHEY_COMPLEX, 1.0, cv::Scalar{255, 178, 240}, 2 } }
 #define text3 Prim{cv::gapi::wip::draw::Text{"TheBrolnFoxJqmp",            cv::Point{100, 100}, FONT_HERSHEY_COMPLEX, 1.5, cv::Scalar{200, 150, 100}, 5 } }
