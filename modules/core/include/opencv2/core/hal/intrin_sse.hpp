@@ -1764,13 +1764,7 @@ inline v_int16x8 v_reverse(const v_int16x8 &a)
 
 inline v_uint32x4 v_reverse(const v_uint32x4 &a)
 {
-#if CV_SSE2
-    return v_uint32x4(_mm_shuffle_epi32(a.val, (3 << 0) | (2 << 2) | (1 << 4) | (0 << 6)));
-#else
-    uint CV_DECL_ALIGNED(32) d[4];
-    v_store_aligned(d, a);
-    return v_uint32x4(d[3], d[2], d[1], d[0]);
-#endif
+    return v_uint32x4(_mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 1, 2, 3)));
 }
 
 inline v_int32x4 v_reverse(const v_int32x4 &a)
@@ -1781,13 +1775,7 @@ inline v_float32x4 v_reverse(const v_float32x4 &a)
 
 inline v_uint64x2 v_reverse(const v_uint64x2 &a)
 {
-#if CV_SSE2
-    return v_uint64x2(_mm_shuffle_epi32(a.val, (2 << 0) | (3 << 2) | (0 << 4) | (1 << 6)));
-#else
-    uint64_t CV_DECL_ALIGNED(32) d[2];
-    v_store_aligned(d, a);
-    return v_uint64x2(d[1], d[0]);
-#endif
+    return v_uint64x2(_mm_shuffle_epi32(a.val, _MM_SHUFFLE(1, 0, 3, 2)));
 }
 
 inline v_int64x2 v_reverse(const v_int64x2 &a)

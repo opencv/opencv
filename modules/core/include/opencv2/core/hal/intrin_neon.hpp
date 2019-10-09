@@ -1287,7 +1287,7 @@ OPENCV_HAL_IMPL_NEON_UNPACKS(float64x2, f64)
 
 inline v_uint8x16 v_reverse(const v_uint8x16 &a)
 {
-    uint8x16_t vec = a.val;
+    uint8x16_t vec = vrev64q_u8(a.val);
     return v_uint8x16(vextq_u8(vec, vec, 8));
 }
 
@@ -1296,7 +1296,7 @@ inline v_int8x16 v_reverse(const v_int8x16 &a)
 
 inline v_uint16x8 v_reverse(const v_uint16x8 &a)
 {
-    uint16x8_t vec = a.val;
+    uint16x8_t vec = vrev64q_u16(a.val);
     return v_uint16x8(vextq_u16(vec, vec, 4));
 }
 
@@ -1305,7 +1305,7 @@ inline v_int16x8 v_reverse(const v_int16x8 &a)
 
 inline v_uint32x4 v_reverse(const v_uint32x4 &a)
 {
-    uint32x4_t vec = a.val;
+    uint32x4_t vec = vrev64q_u32(a.val);
     return v_uint32x4(vextq_u32(vec, vec, 2));
 }
 

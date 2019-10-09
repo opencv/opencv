@@ -1051,7 +1051,7 @@ inline v_float32x8 v_reverse(const v_float32x8 &a)
 
 inline v_uint64x4 v_reverse(const v_uint64x4 &a)
 {
-    return v_uint64x4(_mm256_permute4x64_epi64(a.val, (3 << 0) | (2 << 2) | (1 << 4) | (0 << 6)));
+    return v_uint64x4(_mm256_permute4x64_epi64(a.val, _MM_SHUFFLE(0, 1, 2, 3)));
 }
 
 inline v_int64x4 v_reverse(const v_int64x4 &a)
