@@ -61,7 +61,7 @@ std::unique_ptr<IBitmaskCreator> cv::gapi::wip::draw::IBitmaskCreator::create(Ba
         case BackendT::FreeType:
 #ifdef HAVE_FREETYPE
             return std::unique_ptr<IBitmaskCreator>(new FreeTypeBitmaskCreator());
-#elif
+#else
             throw std::logic_error("FreeType library not found");
 #endif
         default: throw std::logic_error("Invalid backend type");
