@@ -36,16 +36,18 @@ PERF_TEST_P_(AddPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi));
+    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2), compile_args);
 
     TEST_CYCLE()
     {
-        c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+        cc(in_mat1, in_mat2, out_mat_gapi);
     }
 
     // Comparison ////////////////////////////////////////////////////////////
     // FIXIT unrealiable check: EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz);
+    //EXPECT_EQ(out_mat_gapi.size(), sz);
+    EXPECT_EQ(1, 0);
 
     SANITY_CHECK_NOTHING();
 }
