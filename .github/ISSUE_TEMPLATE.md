@@ -5,7 +5,7 @@ If you need further assistance please read [How To Contribute](https://github.co
 Please:
 
 * Read the documentation to test with the latest developer build.
-* Check if other person has already created the same issue to avoid duplicates. You can comment on it if there already is an issue.
+* Check if other person has already report the same issue to avoid duplicates. You can comment on it if there already is an issue.
 * Try to be as detailed as possible in your report.
 * Report only one problem per created issue.
 
