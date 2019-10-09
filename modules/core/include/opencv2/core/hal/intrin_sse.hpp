@@ -1753,9 +1753,10 @@ inline v_uint16x8 v_reverse(const v_uint16x8 &a)
     static const __m128i perm = _mm_setr_epi8(14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
     return v_uint16x8(_mm_shuffle_epi8(a.val, perm));
 #else
-    ushort CV_DECL_ALIGNED(32) d[8];
-    v_store_aligned(d, a);
-    return v_uint16x8(d[7], d[6], d[5], d[4], d[3], d[2], d[1], d[0]);
+    __m128i r = _mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 1, 2, 3));
+    r = _mm_shufflelo_epi16(r, _MM_SHUFFLE(2, 3, 0, 1));
+    r = _mm_shufflehi_epi16(r, _MM_SHUFFLE(2, 3, 0, 1));
+    return v_uint16x8(r);
 #endif
 }
 
