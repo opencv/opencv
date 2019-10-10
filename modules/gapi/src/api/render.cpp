@@ -1,25 +1,25 @@
 #include <opencv2/imgproc.hpp>
-#include <opencv2/gapi/render.hpp>
+#include <opencv2/gapi/render/render.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 
 #include "api/render_priv.hpp"
 
 void cv::gapi::wip::draw::render(cv::Mat &bgr,
                                  const cv::gapi::wip::draw::Prims &prims,
-                                 const cv::gapi::GKernelPackage& pkg)
+                                 cv::GCompileArgs&& args)
 {
     cv::GMat in;
     cv::GArray<Prim> arr;
 
     cv::GComputation comp(cv::GIn(in, arr),
                           cv::GOut(cv::gapi::wip::draw::GRenderBGR::on(in, arr)));
-    comp.apply(cv::gin(bgr, prims), cv::gout(bgr), cv::compile_args(pkg));
+    comp.apply(cv::gin(bgr, prims), cv::gout(bgr), std::move(args));
 }
 
 void cv::gapi::wip::draw::render(cv::Mat &y_plane,
                                  cv::Mat &uv_plane,
                                  const Prims &prims,
-                                 const GKernelPackage& pkg)
+                                 cv::GCompileArgs&& args)
 {
     cv::GMat y_in, uv_in, y_out, uv_out;
     cv::GArray<Prim> arr;
@@ -27,8 +27,7 @@ void cv::gapi::wip::draw::render(cv::Mat &y_plane,
 
     cv::GComputation comp(cv::GIn(y_in, uv_in, arr), cv::GOut(y_out, uv_out));
     comp.apply(cv::gin(y_plane, uv_plane, prims),
-               cv::gout(y_plane, uv_plane),
-               cv::compile_args(pkg));
+               cv::gout(y_plane, uv_plane), std::move(args));
 }
 
 void cv::gapi::wip::draw::BGR2NV12(const cv::Mat &bgr,
@@ -48,3 +47,15 @@ void cv::gapi::wip::draw::BGR2NV12(const cv::Mat &bgr,
     cv::merge(std::vector<cv::Mat>{chs[1], chs[2]}, uv_plane);
     cv::resize(uv_plane, uv_plane, uv_plane.size() / 2, cv::INTER_LINEAR);
 }
+
+namespace cv
+{
+namespace detail
+{
+    template<> struct CompileArgTag<cv::gapi::wip::draw::use_freetype>
+    {
+        static const char* tag() { return "gapi.use_freetype"; }
+    };
+
+} // namespace detail
+} // namespace cv

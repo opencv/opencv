@@ -45,6 +45,8 @@
 
 #include "logger.hpp"
 
+#include "backends/render/grenderocv.hpp"
+
 namespace
 {
     cv::gapi::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
@@ -63,11 +65,13 @@ namespace
 
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
-            combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels());
+            combine(combine(cv::gapi::core::cpu::kernels(),
+                    cv::gapi::imgproc::cpu::kernels()),
+                    cv::gapi::render::ocv::kernels());
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
+
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
         auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
         return combine(ocv_pkg, user_pkg_with_aux);
@@ -202,8 +206,9 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     };
     take(kernels_to_use.backends());
     take(networks_to_use.backends());
-    m_all_kernels        = cv::gapi::combine(kernels_to_use,
-                                             auxKernelsFrom(all_backends));
+
+    m_all_kernels = cv::gapi::combine(kernels_to_use,
+                                      auxKernelsFrom(all_backends));
     // NB: The expectation in the line above is that
     // NN backends (present here via network package) always add their
     // inference kernels via auxiliary...()

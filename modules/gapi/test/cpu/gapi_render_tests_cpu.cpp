@@ -11,92 +11,76 @@
 namespace opencv_test
 {
 
-#define OCV cv::gapi::ocv::kernels()
-
 /* NV12 test cases */
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVRects, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(rects),
-                                Values(OCV)));
+                                Values(rects)));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVCircles, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(circles),
-                                Values(OCV)));
+                                Values(circles)));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVLines, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(lines),
-                                Values(OCV)));
+                                Values(lines)));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVMosaics, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(mosaics),
-                                Values(OCV)));
+                                Values(mosaics)));
 
 // FIXME difference in color
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVImages, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(images),
-                                Values(OCV)));
+                                Values(images)));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVPolygons, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(polygons),
-                                Values(OCV)));
+                                Values(polygons)));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVTexts, RenderNV12,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(texts),
-                                Values(OCV)));
+                                Values(texts)));
 
 /* BGR test cases */
 INSTANTIATE_TEST_CASE_P(RenderBGROCVRects, RenderBGR,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(rects),
-                                Values(OCV)));
+                                Values(rects)));
 
 INSTANTIATE_TEST_CASE_P(RenderBGROCVCircles, RenderBGR,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(circles),
-                                Values(OCV)));
+                                Values(circles)));
 
 INSTANTIATE_TEST_CASE_P(RenderBGROCVLines, RenderBGR,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(lines),
-                                Values(OCV)));
+                                Values(lines)));
 
 INSTANTIATE_TEST_CASE_P(RenderBGROCVMosaics, RenderBGR,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(mosaics),
-                                Values(OCV)));
+                                Values(mosaics)));
 
 INSTANTIATE_TEST_CASE_P(RenderBGROCVImages, RenderBGR,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(images),
-                                Values(OCV)));
+                                Values(images)));
 
 INSTANTIATE_TEST_CASE_P(RenderBGROCVPolygons, RenderBGR,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(polygons),
-                                Values(OCV)));
+                                Values(polygons)));
 
 INSTANTIATE_TEST_CASE_P(RenderBGROCVTexts, RenderBGR,
                         Combine(Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(texts),
-                                Values(OCV)));
+                                Values(texts)));
 }

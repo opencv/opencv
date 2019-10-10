@@ -23,12 +23,15 @@ namespace cv
 namespace gapi
 {
 
-namespace ocv { GAPI_EXPORTS cv::gapi::GKernelPackage kernels(); }
-
 namespace wip
 {
 namespace draw
 {
+
+struct use_freetype
+{
+    const char* path;
+};
 
 /**
  * A structure to represent parameters for drawing a text string.
@@ -151,27 +154,26 @@ G_TYPED_KERNEL(GRenderBGR, <cv::GMat(cv::GMat,cv::GArray<wip::draw::Prim>)>, "or
 
 @param bgr input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @param prims vector of drawing primitivies
-@param pkg contains render kernel implementation
+@param args graph compile time parameters
 */
-GAPI_EXPORTS void render(cv::Mat& bgr,
+void GAPI_EXPORTS render(cv::Mat& bgr,
                          const Prims& prims,
-                         const cv::gapi::GKernelPackage& pkg = ocv::kernels());
+                         cv::GCompileArgs&& args = {});
 
 /** @brief The function renders on two NV12 planes passed drawing primitivies
 
 @param y_plane input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
 @param uv_plane input image: 8-bit unsigned 2-channel image @ref CV_8UC2.
 @param prims vector of drawing primitivies
-@param pkg contains render kernel implementation
+@param args graph compile time parameters
 */
-GAPI_EXPORTS void render(cv::Mat& y_plane,
+void GAPI_EXPORTS render(cv::Mat& y_plane,
                          cv::Mat& uv_plane,
                          const Prims& prims,
-                         const cv::gapi::GKernelPackage& pkg = ocv::kernels());
+                         cv::GCompileArgs&& args = {});
 
 } // namespace draw
 } // namespace wip
-
 } // namespace gapi
 } // namespace cv
 
