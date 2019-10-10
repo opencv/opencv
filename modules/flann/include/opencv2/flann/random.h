@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_RANDOM_H
 #define OPENCV_FLANN_RANDOM_H
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
@@ -151,5 +153,7 @@ public:
 };
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_RANDOM_H

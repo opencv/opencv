@@ -57,9 +57,23 @@ TEST_P(Filter2DTest, AccuracyTest)
     cv::Point anchor = {-1, -1};
     double delta = 0;
 
-    cv::Mat kernel = cv::Mat(kernSize, kernSize, CV_32FC1);
-    cv::Scalar kernMean = cv::Scalar(1.0);
-    cv::Scalar kernStddev = cv::Scalar(2.0/3);
+    cv::Mat kernel = cv::Mat(filterSize, CV_32FC1);
+    cv::Scalar kernMean, kernStddev;
+
+    const auto kernSize = filterSize.width * filterSize.height;
+    const auto bigKernSize = 49;
+
+    if (kernSize < bigKernSize)
+    {
+        kernMean = cv::Scalar(0.3);
+        kernStddev = cv::Scalar(0.5);
+    }
+    else
+    {
+        kernMean = cv::Scalar(0.008);
+        kernStddev = cv::Scalar(0.008);
+    }
+
     randn(kernel, kernMean, kernStddev);
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -67,6 +81,7 @@ TEST_P(Filter2DTest, AccuracyTest)
     auto out = cv::gapi::filter2D(in, dtype, kernel, anchor, delta, borderType);
 
     cv::GComputation c(in, out);
+
     c.apply(in_mat1, out_mat_gapi, getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {

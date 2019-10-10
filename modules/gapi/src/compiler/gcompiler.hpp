@@ -29,6 +29,8 @@ class GAPI_EXPORTS GCompiler
     cv::gapi::GKernelPackage m_all_kernels;
     cv::gapi::GNetPackage    m_all_networks;
 
+    std::vector<std::unique_ptr<ade::Graph>> m_all_patterns;  // built patterns from transformations
+
     void validateInputMeta();
     void validateOutProtoArgs();
 

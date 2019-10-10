@@ -54,6 +54,7 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         const float min_variation = FLT_EPSILON;
         Mat responses = trainData->getNormCatResponses();
         Mat __cls_labels = trainData->getClassLabels();

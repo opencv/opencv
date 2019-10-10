@@ -1307,6 +1307,9 @@ public:
     // In the case (b) the existing tag and the name are copied automatically.
     uchar* reserveNodeSpace(FileNode& node, size_t sz)
     {
+        bool shrinkBlock = false;
+        size_t shrinkBlockIdx = 0, shrinkSize = 0;
+
         uchar *ptr = 0, *blockEnd = 0;
 
         if( !fs_data_ptrs.empty() )
@@ -1315,19 +1318,32 @@ public:
             size_t ofs = node.ofs;
             CV_Assert( blockIdx == fs_data_ptrs.size()-1 );
             CV_Assert( ofs <= fs_data_blksz[blockIdx] );
+            CV_Assert( freeSpaceOfs <= fs_data_blksz[blockIdx] );
             //CV_Assert( freeSpaceOfs <= ofs + sz );
 
             ptr = fs_data_ptrs[blockIdx] + ofs;
             blockEnd = fs_data_ptrs[blockIdx] + fs_data_blksz[blockIdx];
 
+            CV_Assert(ptr >= fs_data_ptrs[blockIdx] && ptr <= blockEnd);
             if( ptr + sz <= blockEnd )
             {
                 freeSpaceOfs = ofs + sz;
                 return ptr;
             }
 
-            fs_data[blockIdx]->resize(ofs);
-            fs_data_blksz[blockIdx] = ofs;
+            if (ofs == 0)  // FileNode is a first component of this block. Resize current block instead of allocation of new one.
+            {
+                fs_data[blockIdx]->resize(sz);
+                ptr = &fs_data[blockIdx]->at(0);
+                fs_data_ptrs[blockIdx] = ptr;
+                fs_data_blksz[blockIdx] = sz;
+                freeSpaceOfs = sz;
+                return ptr;
+            }
+
+            shrinkBlock = true;
+            shrinkBlockIdx = blockIdx;
+            shrinkSize = ofs;
         }
 
         size_t blockSize = std::max((size_t)CV_FS_MAX_LEN*4 - 256, sz) + 256;
@@ -1350,6 +1366,12 @@ public:
                 new_ptr[3] = ptr[3];
                 new_ptr[4] = ptr[4];
             }
+        }
+
+        if (shrinkBlock)
+        {
+            fs_data[shrinkBlockIdx]->resize(shrinkSize);
+            fs_data_blksz[shrinkBlockIdx] = shrinkSize;
         }
 
         return new_ptr;

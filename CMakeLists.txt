@@ -477,6 +477,7 @@ OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatch
 OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 OCV_OPTION(OPENCV_GENERATE_SETUPVARS  "Generate setup_vars* scripts" ON IF (NOT ANDROID AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn't match requested (WITH_XXX != HAVE_XXX)" OFF)
+OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
@@ -625,10 +626,15 @@ if(UNIX)
     set(HAVE_PTHREAD 1)
   endif()
 
-  CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN)
-  CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
-  if(HAVE_MALLOC_H)
-    CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
+  if(OPENCV_ENABLE_MEMALIGN)
+    CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN)
+    CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
+    if(HAVE_MALLOC_H)
+      CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
+    endif()
+    # TODO:
+    # - _aligned_malloc() on Win32
+    # - std::aligned_alloc() C++17 / C11
   endif()
 endif()
 
@@ -1519,7 +1525,7 @@ if(FLAKE8_FOUND AND FLAKE8_EXECUTABLE)
 endif()
 
 # ========================== java ==========================
-if(BUILD_JAVA OR BUILD_opencv_java)
+if(BUILD_JAVA)
   status("")
   status("  Java:"            BUILD_FAT_JAVA_LIB  THEN "export all functions"                                      ELSE "")
   status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"                    ELSE NO)

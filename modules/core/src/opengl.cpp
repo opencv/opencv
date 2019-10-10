@@ -45,6 +45,13 @@
 #ifdef HAVE_OPENGL
 #  include "gl_core_3_1.hpp"
 #  ifdef HAVE_CUDA
+#    if (defined(__arm__) || defined(__aarch64__)) \
+         && !defined(OPENCV_SKIP_CUDA_OPENGL_ARM_WORKAROUND)
+#      include <GL/gl.h>
+#      ifndef GL_VERSION
+#        define GL_VERSION 0x1F02
+#      endif
+#    endif
 #    include <cuda_gl_interop.h>
 #  endif
 #else // HAVE_OPENGL

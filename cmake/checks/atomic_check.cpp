@@ -2,7 +2,7 @@
 
 static int test()
 {
-    std::atomic<int> x;
+    std::atomic<long long> x;
     return x;
 }
 
