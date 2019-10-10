@@ -404,11 +404,15 @@ inline int hal_ni_fastAtan64f(const double* y, const double* x, double* dst, int
 //! @{
 inline int hal_ni_magnitude32f(const float *x, const float *y, float *dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_magnitude64f(const double *x, const double  *y, double *dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_magnitudeSqr32f(const float *x, const float *y, float *dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_magnitudeSqr64f(const double *x, const double  *y, double *dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 //! @cond IGNORED
 #define cv_hal_magnitude32f hal_ni_magnitude32f
 #define cv_hal_magnitude64f hal_ni_magnitude64f
+#define cv_hal_magnitudeSqr32f hal_ni_magnitudeSqr32f
+#define cv_hal_magnitudeSqr64f hal_ni_magnitudeSqr64f
 //! @endcond
 
 

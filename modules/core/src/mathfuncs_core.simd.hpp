@@ -14,6 +14,8 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
 void magnitude32f(const float* x, const float* y, float* mag, int len);
 void magnitude64f(const double* x, const double* y, double* mag, int len);
+void magnitudeSqr32f(const float* x, const float* y, float* mag, int len);
+void magnitudeSqr64f(const double* x, const double* y, double* mag, int len);
 void invSqrt32f(const float* src, float* dst, int len);
 void invSqrt64f(const double* src, double* dst, int len);
 void sqrt32f(const float* src, float* dst, int len);
@@ -257,6 +259,71 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
     }
 }
 
+void magnitudeSqr32f(const float* x, const float* y, float* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    int i = 0;
+
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || mag == x || mag == y )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float32 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
+        v_float32 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
+        x0 = v_muladd(x0, x0, y0*y0);
+        x1 = v_muladd(x1, x1, y1*y1);
+        v_store(mag + i, x0);
+        v_store(mag + i + VECSZ, x1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        float x0 = x[i], y0 = y[i];
+        mag[i] = x0*x0 + y0*y0;
+    }
+}
+
+void magnitudeSqr64f(const double* x, const double* y, double* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    int i = 0;
+
+#if CV_SIMD_64F
+    const int VECSZ = v_float64::nlanes;
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || mag == x || mag == y )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float64 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
+        v_float64 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
+        x0 = v_muladd(x0, x0, y0*y0);
+        x1 = v_muladd(x1, x1, y1*y1);
+        v_store(mag + i, x0);
+        v_store(mag + i + VECSZ, x1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        double x0 = x[i], y0 = y[i];
+        mag[i] = x0*x0 + y0*y0;
+    }
+}
 
 void invSqrt32f(const float* src, float* dst, int len)
 {
