@@ -237,7 +237,7 @@ public:
     {                                                                       \
         struct G_ID_HELPER_CLASS(Class)                                     \
         {                                                                   \
-            static constexpr const char * id() {return Id;};                \
+            static constexpr const char * id() {return Id;}                 \
         };                                                                  \
     }
 
