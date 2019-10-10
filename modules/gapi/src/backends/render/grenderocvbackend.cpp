@@ -120,7 +120,6 @@ namespace {
                                   const ade::NodeHandle &op_node,
                                   const cv::GKernelImpl &impl) override {
             GRenderModel rm(gr);
-            //auto render_impl = cv::util::any_cast<cv::gapi::render::ocv::KImpl>(impl.opaque);
             auto render_impl = cv::util::any_cast<cv::GCPUKernel>(impl.opaque);
             rm.metadata(op_node).set(cv::gimpl::render::ocv::RenderUnit{render_impl});
         }
