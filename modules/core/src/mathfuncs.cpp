@@ -183,7 +183,7 @@ void magnitude( InputArray src1, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    int type = src1.type(), depth = src1.depth(), cn = src1.channels();
+    int depth = src1.depth(), cn = src1.channels();
     CV_Assert((depth == CV_32F || depth == CV_64F) && (cn == 2));
 
     //TODO : modify ocl_math_op to support interleaved data
