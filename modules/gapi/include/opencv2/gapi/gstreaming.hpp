@@ -88,6 +88,11 @@ public:
      * Throws if pipeline is already running. Use stop() and then
      * setSource() to run the graph on a new video stream.
      *
+     * @note This method is not thread-safe (with respect to the user
+     * side) at the moment. Protect the access if
+     * start()/stop()/setSource() may be called on the same object in
+     * multiple threads in your application.
+     *
      * @param ins vector of inputs to process.
      * @sa gin
      */
@@ -110,6 +115,11 @@ public:
      *
      * Use pull()/try_pull() to obtain data. Throws an exception if
      * a video source was not specified.
+     *
+     * @note This method is not thread-safe (with respect to the user
+     * side) at the moment. Protect the access if
+     * start()/stop()/setSource() may be called on the same object in
+     * multiple threads in your application.
      */
     void start();
 
@@ -161,6 +171,11 @@ public:
 
     /**
      * @brief Test if the pipeline is running.
+     *
+     * @note This method is not thread-safe (with respect to the user
+     * side) at the moment. Protect the access if
+     * start()/stop()/setSource() may be called on the same object in
+     * multiple threads in your application.
      *
      * @return true if the current stream is not over yet.
      */

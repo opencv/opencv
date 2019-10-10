@@ -269,6 +269,8 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
     cv::GStreamingCompiled sc;
     cv::Mat m;
 
+    cv::GCompiled ref;
+
     GAPI_Streaming_Unit()
         : m(cv::Mat::ones(224,224,CV_8UC3))
     {
@@ -276,9 +278,12 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 
         cv::GMat a, b;
         cv::GMat c = a + b*2;
-        sc = cv::GComputation(cv::GIn(a, b), cv::GOut(c))
-            .compileStreaming(cv::GMatDesc{CV_8U,3,{224,224}},
-                              cv::GMatDesc{CV_8U,3,{224,224}});
+        auto cc = cv::GComputation(cv::GIn(a, b), cv::GOut(c));
+
+        const auto a_desc = cv::descr_of(m);
+        const auto b_desc = cv::descr_of(m);
+        sc  = cc.compileStreaming(a_desc, b_desc);
+        ref = cc.compile(a_desc, b_desc);
     }
 };
 
@@ -290,7 +295,7 @@ TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
                                           cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")})));
 }
 
-TEST_F(GAPI_Streaming_Unit, TestStartWithoutSetSource)
+TEST_F(GAPI_Streaming_Unit, TestStartWithoutnSetSource)
 {
     EXPECT_ANY_THROW(sc.start());
 }
@@ -332,12 +337,73 @@ TEST_F(GAPI_Streaming_Unit, StartStopStress)
 {
     // Runs 100 times with no deadlock - assumed stable (robust) enough
     sc.setSource(cv::gin(m, m));
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; i++)
+    {
         sc.stop();
         sc.start();
         cv::Mat out;
         for (int j = 0; j < 5; j++) EXPECT_TRUE(sc.pull(cv::gout(out)));
     }
 }
+
+TEST_F(GAPI_Streaming_Unit, SetSource_Multi_BeforeStart)
+{
+    cv::Mat eye = cv::Mat::eye  (224, 224, CV_8UC3);
+    cv::Mat zrs = cv::Mat::zeros(224, 224, CV_8UC3);
+
+    // Call setSource two times, data specified last time
+    // should be actually processed.
+    sc.setSource(cv::gin(zrs, zrs));
+    sc.setSource(cv::gin(eye, eye));
+
+    // Run the pipeline, acquire result once
+    sc.start();
+    cv::Mat out, out_ref;
+    sc.pull(cv::gout(out));
+    sc.stop();
+
+    // Pipeline should process `eye` mat, not `zrs`
+    ref(cv::gin(eye, eye), cv::gout(out_ref));
+    EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
+}
+
+TEST_F(GAPI_Streaming_Unit, SetSource_During_Execution)
+{
+    cv::Mat zrs = cv::Mat::zeros(224, 224, CV_8UC3);
+
+    sc.setSource(cv::gin(m, m));
+    sc.start();
+    EXPECT_ANY_THROW(sc.setSource(cv::gin(zrs, zrs)));
+    EXPECT_ANY_THROW(sc.setSource(cv::gin(zrs, zrs)));
+    EXPECT_ANY_THROW(sc.setSource(cv::gin(zrs, zrs)));
+    sc.stop();
+}
+
+TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
+{
+    sc.setSource(cv::gin(m, m));
+
+    // Test pipeline with `m` input
+    sc.start();
+    cv::Mat out, out_ref;
+    sc.pull(cv::gout(out));
+    sc.stop();
+
+    // Test against ref
+    ref(cv::gin(m, m), cv::gout(out_ref));
+    EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
+
+    // Now set another source
+    cv::Mat eye = cv::Mat::eye(224, 224, CV_8UC3);
+    sc.setSource(cv::gin(eye, m));
+    sc.start();
+    sc.pull(cv::gout(out));
+    sc.stop();
+
+    // Test against new ref
+    ref(cv::gin(eye, m), cv::gout(out_ref));
+    EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
+}
+
 
 } // namespace opencv_test

@@ -543,7 +543,17 @@ cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
 
 void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
 {
-    bool has_video = false;
+    GAPI_Assert(state == State::READY || state == State::STOPPED);
+
+    const auto is_video = [](const GRunArg &arg) {
+        return util::holds_alternative<cv::gapi::GVideoCapture>(arg);
+    };
+    const auto num_videos = std::count_if(ins.begin(), ins.end(), is_video);
+    if (num_videos > 1u)
+    {
+        util::throw_error(std::logic_error("Only one video source is"
+                                           " currently supported!"));
+    }
 
     // Walk through the protocol, set-up emitters appropriately
     // There's a 1:1 mapping between emitters and corresponding data inputs.
@@ -560,10 +570,6 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         // Create a streaming emitter.
         // Produces the next video frame when pulled.
         case T::index_of<cv::gapi::GVideoCapture>():
-            if (has_video)
-                util::throw_error(std::logic_error("Only one video source is"
-                                                   " currently supported!"));
-            has_video = true;
 #if !defined(GAPI_STANDALONE)
             emitter.reset(new VideoEmitter{emit_arg});
 #else
@@ -571,7 +577,6 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
                                                "standalone mode"));
 #endif
             break;
-
         default:
             // Create a constant emitter.
             // Produces always the same ("constant") value when pulled.
