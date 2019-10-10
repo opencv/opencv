@@ -1593,6 +1593,7 @@ have the same size as x.
 @sa cartToPolar, polarToCart, phase, sqrt
 */
 CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
+CV_EXPORTS_W void magnitude(InputArray xy, OutputArray magnitude);
 
 /** @brief Checks every element of an input array for invalid values.
 

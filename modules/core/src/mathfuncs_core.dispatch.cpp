@@ -51,6 +51,19 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+void magnitude32fc(const float* xy, float* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(magnitude32fc, cv_hal_magnitude32fc, xy, mag, len);
+    //TODO : use a new version of ippicv with ippsMagnitude_32fc implemented !
+    // SSE42 performance issues
+    //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32fc, reinterpret_cast<const Ipp32fc*>(xy), mag, len) >= 0);
+
+    CV_CPU_DISPATCH(magnitude32fc, (xy, mag, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
 void magnitude64f(const double* x, const double* y, double* mag, int len)
 {
     CV_INSTRUMENT_REGION();
@@ -63,6 +76,18 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+void magnitude64fc(const double* xy, double* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(magnitude64fc, cv_hal_magnitude64fc, xy, mag, len);
+    //TODO : use a new version of ippicv with ippsMagnitude_64fc implemented !
+    // SSE42 performance issues
+    //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64fc, reinterpret_cast<const Ipp64fc*>(xy), mag, len) >= 0);
+
+    CV_CPU_DISPATCH(magnitude64fc, (xy, mag, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
 
 void invSqrt32f(const float* src, float* dst, int len)
 {
@@ -181,9 +206,19 @@ void magnitude(const float* x, const float* y, float* dst, int n)
     magnitude32f(x, y, dst, n);
 }
 
+void magnitude(const float* xy, float* dst, int n)
+{
+    magnitude32fc(xy, dst, n);
+}
+
 void magnitude(const double* x, const double* y, double* dst, int n)
 {
     magnitude64f(x, y, dst, n);
+}
+
+void magnitude(const double* xy, double* dst, int n)
+{
+    magnitude64fc(xy, dst, n);
 }
 
 void sqrt(const float* src, float* dst, int len)

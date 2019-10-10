@@ -13,7 +13,9 @@ void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool ang
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees);
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
 void magnitude32f(const float* x, const float* y, float* mag, int len);
+void magnitude32fc(const float* xy, float* mag, int len);
 void magnitude64f(const double* x, const double* y, double* mag, int len);
+void magnitude64fc(const double* xy, double* mag, int len);
 void invSqrt32f(const float* src, float* dst, int len);
 void invSqrt64f(const double* src, double* dst, int len);
 void sqrt32f(const float* src, float* dst, int len);
@@ -224,6 +226,40 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
     }
 }
 
+void magnitude32fc(const float* xy, float* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    int i = 0;
+
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || mag == xy)
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float32 x0, y0, x1, y1;
+        v_load_deinterleave(xy + 2*i, x0, y0);
+        v_load_deinterleave(xy + 2*(i+VECSZ), x1, y1);
+        x0 = v_sqrt(v_muladd(x0, x0, y0*y0));
+        x1 = v_sqrt(v_muladd(x1, x1, y1*y1));
+        v_store(mag + i, x0);
+        v_store(mag + i + VECSZ, x1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        float x0 = xy[2*i+0], y0 = xy[2*i+1];
+        mag[i] = std::sqrt(x0*x0 + y0*y0);
+    }
+}
+
 void magnitude64f(const double* x, const double* y, double* mag, int len)
 {
     CV_INSTRUMENT_REGION();
@@ -257,6 +293,39 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
     }
 }
 
+void magnitude64fc(const double* xy, double* mag, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    int i = 0;
+
+#if CV_SIMD_64F
+    const int VECSZ = v_float64::nlanes;
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || mag == xy)
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float64 x0, y0, x1, y1;
+        v_load_deinterleave(xy + 2*i, x0, y0);
+        v_load_deinterleave(xy + 2*(i+VECSZ), x1, y1);
+        x0 = v_sqrt(v_muladd(x0, x0, y0*y0));
+        x1 = v_sqrt(v_muladd(x1, x1, y1*y1));
+        v_store(mag + i, x0);
+        v_store(mag + i + VECSZ, x1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        double x0 = xy[2*i+0], y0 = xy[2*i+1];
+        mag[i] = std::sqrt(x0*x0 + y0*y0);
+    }
+}
 
 void invSqrt32f(const float* src, float* dst, int len)
 {

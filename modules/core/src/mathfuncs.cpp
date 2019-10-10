@@ -179,6 +179,43 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     }
 }
 
+void magnitude( InputArray src1, OutputArray dst )
+{
+    CV_INSTRUMENT_REGION();
+
+    int type = src1.type(), depth = src1.depth(), cn = src1.channels();
+    CV_Assert((depth == CV_32F || depth == CV_64F) && (cn == 2));
+
+    //TODO : modify ocl_math_op to support interleaved data
+    //CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2,
+    //           ocl_math_op(src1, cv::noArray(), dst, OCL_OP_MAG))
+
+    Mat XY = src1.getMat();
+    dst.create(XY.dims, XY.size, CV_MAKETYPE(XY.depth(), 1));
+    Mat Mag = dst.getMat();
+
+    const Mat* arrays[] = {&XY, &Mag, 0};
+    uchar* ptrs[2] = {};
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)it.size;
+
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        if( depth == CV_32F )
+        {
+            const float *xy = (const float*)ptrs[0];
+            float *mag = (float*)ptrs[1];
+            hal::magnitude32fc( xy, mag, len );
+        }
+        else
+        {
+            const double *xy = (const double*)ptrs[0];
+            double *mag = (double*)ptrs[1];
+            hal::magnitude64fc( xy, mag, len );
+        }
+    }
+}
+
 void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION();
