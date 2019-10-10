@@ -1112,6 +1112,22 @@ OCL_TEST_P(Magnitude, Mat)
     }
 }
 
+//////////////////////////////////////// MagnitudeSqr /////////////////////////////////////////
+
+typedef ArithmTestBase MagnitudeSqr;
+
+OCL_TEST_P(MagnitudeSqr, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::magnitudeSqr(src1_roi, src2_roi, dst1_roi));
+        OCL_ON(cv::magnitudeSqr(usrc1_roi, usrc2_roi, udst1_roi));
+        Near(depth == CV_64F ? 1e-5 : 1e-2);
+    }
+}
+
 //////////////////////////////// Flip /////////////////////////////////////////////////
 
 typedef ArithmTestBase Flip;
@@ -1902,6 +1918,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(::testing::Values(CV_32F, CV_64
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, MagnitudeSqr, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx_Mask, Combine(OCL_ALL_DEPTHS, ::testing::Values(Channels(1)), Bool()));
