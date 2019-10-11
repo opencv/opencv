@@ -2195,6 +2195,102 @@ OPENCV_HAL_IMPL_AVX_EXTRACT(v_int64x4)
 OPENCV_HAL_IMPL_AVX_EXTRACT(v_float32x8)
 OPENCV_HAL_IMPL_AVX_EXTRACT(v_float64x4)
 
+template<int i>
+inline uchar v_extract_n(v_uint8x32 v)
+{
+#if CV_AVX2
+    return _mm256_extract_epi8(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline schar v_extract_n(v_int8x32 v)
+{
+#if CV_AVX2
+    return _mm256_extract_epi8(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline ushort v_extract_n(v_uint16x16 v)
+{
+    return _mm256_extract_epi16(v.val, i);
+}
+
+template<int i>
+inline short v_extract_n(v_int16x16 v)
+{
+    return _mm256_extract_epi16(v.val, i);
+}
+
+template<int i>
+inline uint v_extract_n(v_uint32x8 v)
+{
+#if CV_AVX2
+    return _mm256_extract_epi32(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline int v_extract_n(v_int32x8 v)
+{
+#if CV_AVX2
+    return _mm256_extract_epi32(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline uint64 v_extract_n(v_uint64x4 v)
+{
+#if CV_AVX2
+    return _mm256_extract_epi64(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline int64 v_extract_n(v_int64x4 v)
+{
+#if CV_AVX2
+    return _mm256_extract_epi64(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline float v_extract_n(v_float32x8 v)
+{
+#if CV_AVX2
+    union { int iv; float fv; } d;
+    d.iv = _mm256_extract_epi32(v_reinterpret_as_u32(v).val, i);
+    return d.fv;
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline double v_extract_n(v_float64x4 v)
+{
+#if CV_AVX2
+    union { int64 iv; double dv; } d;
+    d.iv = _mm256_extract_epi64(v_reinterpret_as_u64(v).val, i);
+    return d.dv;
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+/*
 #define OPENCV_HAL_IMPL_AVX_EXTRACT_N(_Tpvec, _Tp) \
 template<int i> inline _Tp v_extract_n( _Tpvec v) { return v_rotate_right<i>(v).get0(); }
 
@@ -2208,7 +2304,7 @@ OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint64x4, uint64)
 OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int64x4, int64)
 OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_float32x8, float)
 OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_float64x4, double)
-
+*/
 ///////////////////// load deinterleave /////////////////////////////
 
 inline void v_load_deinterleave( const uchar* ptr, v_uint8x32& a, v_uint8x32& b )

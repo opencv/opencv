@@ -1651,20 +1651,20 @@ OPENCV_HAL_IMPL_NEON_EXTRACT(float32x4, f32)
 OPENCV_HAL_IMPL_NEON_EXTRACT(float64x2, f64)
 #endif
 
-#define OPENCV_HAL_IMPL_NEON_EXTRACT_N(_Tpvec, _Tp) \
-template<int i> inline _Tp v_extract_n(_Tpvec v) { return v_rotate_right<i>(v).get0(); }
+#define OPENCV_HAL_IMPL_NEON_EXTRACT_N(_Tpvec, _Tp, suffix) \
+template<int i> inline _Tp v_extract_n(_Tpvec v) { return vgetq_lane_##suffix(v.val, i); }
 
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint8x16, uchar)
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int8x16, schar)
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint16x8, ushort)
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int16x8, short)
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint32x4, uint)
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int32x4, int)
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint64x2, uint64)
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int64x2, int64)
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float32x4, float)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint8x16, uchar, u8)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int8x16, schar, s8)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint16x8, ushort, u16)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int16x8, short, s16)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint32x4, uint, u32)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int32x4, int, s32)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int64x2, int64, s64)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float32x4, float, f32)
 #if CV_SIMD128_64F
-OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float64x2, double)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float64x2, double, f64)
 #endif
 
 #if CV_SIMD128_64F
