@@ -324,7 +324,7 @@ OCL_PERF_TEST_P(MagnitudeSqrFixture, MagnitudeSqr, ::testing::Combine(
 
     OCL_TEST_CYCLE() cv::magnitudeSqr(src1, src2, dst);
 
-    SANITY_CHECK(dst, 1e-6);
+    SANITY_CHECK_NOTHING(dst, 1e-6);
 }
 
 ///////////// Transpose ////////////////////////
