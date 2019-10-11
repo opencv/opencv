@@ -563,144 +563,39 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     return *this;
 }
 
-
-#if CV_SIMD
-CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_1( const uchar* ptr );
-CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_2( const uchar* ptr );
-CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_4( const uchar* ptr );
-CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_8( const uchar* ptr );
-
-CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_1( const uchar* ptr )
+#if CV_SIMD128
+template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-#if CV_SSSE3
-    static const __m128i perm = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-    return v_uint8x16(_mm_shuffle_epi8(_mm_loadu_si128((__m128i*)(ptr)), perm));
-#elif CV_VSX
-    static const vec_uchar16 perm = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
-    vec_uchar16 vec = vsx_ld(0, ptr);
-    return v_uint8x16(vec_perm(vec, vec, perm));
-#elif CV_NEON
-    uint8x16_t vec = vrev64q_u8(vld1q_u8(ptr));
-    return v_uint8x16(vextq_u8(vec, vec, 8));
-#else
-    return v_uint8x16(*(ptr + v_uint8x16::nlanes - 1),  *(ptr + v_uint8x16::nlanes - 2),
-                      *(ptr + v_uint8x16::nlanes - 3),  *(ptr + v_uint8x16::nlanes - 4),
-                      *(ptr + v_uint8x16::nlanes - 5),  *(ptr + v_uint8x16::nlanes - 6),
-                      *(ptr + v_uint8x16::nlanes - 7),  *(ptr + v_uint8x16::nlanes - 8),
-                      *(ptr + v_uint8x16::nlanes - 9),  *(ptr + v_uint8x16::nlanes - 10),
-                      *(ptr + v_uint8x16::nlanes - 11), *(ptr + v_uint8x16::nlanes - 12),
-                      *(ptr + v_uint8x16::nlanes - 13), *(ptr + v_uint8x16::nlanes - 14),
-                      *(ptr + v_uint8x16::nlanes - 15), *(ptr + v_uint8x16::nlanes - 16));
-#endif
-}
+    typedef typename V::lane_type T;
+    int end = (int)(size.width*esz);
+    int width = (end + 1)/2;
+    int width_1 = width & -v_uint8x16::nlanes;
+    int i, j;
 
-CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_2( const uchar* ptr )
-{
-#if CV_SSSE3
-    static const __m128i perm = _mm_setr_epi8(14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
-    return v_uint8x16(_mm_shuffle_epi8(_mm_loadu_si128((__m128i*)(ptr)), perm));
-#elif CV_VSX
-    static const vec_uchar16 perm = {14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1};
-    vec_uchar16 vec = vsx_ld(0, ptr);
-    return v_uint8x16(vec_perm(vec, vec, perm));
-#elif CV_NEON
-    uint16x8_t vec = vrev64q_u16(vld1q_u16((ushort*)ptr));
-    return v_reinterpret_as_u8(v_uint16x8(vextq_u16(vec, vec, 4)));
-#else
-    return v_uint8x16(*(ptr + v_uint8x16::nlanes - 2),  *(ptr + v_uint8x16::nlanes - 1),
-                      *(ptr + v_uint8x16::nlanes - 4),  *(ptr + v_uint8x16::nlanes - 3),
-                      *(ptr + v_uint8x16::nlanes - 6),  *(ptr + v_uint8x16::nlanes - 5),
-                      *(ptr + v_uint8x16::nlanes - 8),  *(ptr + v_uint8x16::nlanes - 7),
-                      *(ptr + v_uint8x16::nlanes - 10), *(ptr + v_uint8x16::nlanes - 9),
-                      *(ptr + v_uint8x16::nlanes - 12), *(ptr + v_uint8x16::nlanes - 11),
-                      *(ptr + v_uint8x16::nlanes - 14), *(ptr + v_uint8x16::nlanes - 13),
-                      *(ptr + v_uint8x16::nlanes - 16), *(ptr + v_uint8x16::nlanes - 15));
-#endif
-}
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        for( i = 0, j = end; i < width_1; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+        {
+            V t0, t1;
 
-CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_4( const uchar* ptr )
-{
-#if CV_SSE2
-    return v_uint8x16(_mm_shuffle_epi32(_mm_loadu_si128((__m128i*)(ptr)), (3 << 0) | (2 << 2) | (1 << 4) | (0 << 6)));
-#elif CV_VSX
-    static const vec_uchar16 perm = {12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3};
-    vec_uchar16 vec = vsx_ld(0, ptr);
-    return v_uint8x16(vec_perm(vec, vec, perm));
-#elif CV_NEON
-    uint32x4_t vec = vrev64q_u32(vld1q_u32((uint*)ptr));
-    return v_reinterpret_as_u8(v_uint32x4(vextq_u32(vec, vec, 2)));
-#else
-    return v_uint8x16(*(ptr + v_uint8x16::nlanes - 4),  *(ptr + v_uint8x16::nlanes - 3),
-                      *(ptr + v_uint8x16::nlanes - 2),  *(ptr + v_uint8x16::nlanes - 1),
-                      *(ptr + v_uint8x16::nlanes - 8),  *(ptr + v_uint8x16::nlanes - 7),
-                      *(ptr + v_uint8x16::nlanes - 6),  *(ptr + v_uint8x16::nlanes - 5),
-                      *(ptr + v_uint8x16::nlanes - 12), *(ptr + v_uint8x16::nlanes - 11),
-                      *(ptr + v_uint8x16::nlanes - 10), *(ptr + v_uint8x16::nlanes - 9),
-                      *(ptr + v_uint8x16::nlanes - 16), *(ptr + v_uint8x16::nlanes - 15),
-                      *(ptr + v_uint8x16::nlanes - 14), *(ptr + v_uint8x16::nlanes - 13));
-#endif
-}
+            t0 = v_load((T*)((uchar*)src + i));
+            t1 = v_load((T*)((uchar*)src + j - v_uint8x16::nlanes));
+            t0 = v_reverse(t0);
+            t1 = v_reverse(t1);
+            v_store((T*)(dst + j - v_uint8x16::nlanes), t0);
+            v_store((T*)(dst + i), t1);
+        }
+        for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
+        {
+            T t0, t1;
 
-CV_ALWAYS_INLINE v_uint8x16 v_load_mirror_8( const uchar* ptr )
-{
-#if CV_SSE2
-    return v_uint8x16(_mm_shuffle_epi32(_mm_loadu_si128((__m128i*)(ptr)), (2 << 0) | (3 << 2) | (0 << 4) | (1 << 6)));
-#elif CV_VSX
-    static const vec_uchar16 perm = {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7};
-    vec_uchar16 vec = vsx_ld(0, ptr);
-    return v_uint8x16(vec_perm(vec, vec, perm));
-#elif CV_NEON
-    uint64x2_t vec = vld1q_u64((uint64_t*)ptr);
-    uint64x1_t vec_lo = vget_low_u64(vec);
-    uint64x1_t vec_hi = vget_high_u64(vec);
-    return v_reinterpret_as_u8(v_uint64x2(vcombine_u64(vec_hi, vec_lo)));
-#else
-    return v_uint8x16(*(ptr + v_uint8x16::nlanes - 8),  *(ptr + v_uint8x16::nlanes - 7),
-                      *(ptr + v_uint8x16::nlanes - 6),  *(ptr + v_uint8x16::nlanes - 5),
-                      *(ptr + v_uint8x16::nlanes - 4),  *(ptr + v_uint8x16::nlanes - 3),
-                      *(ptr + v_uint8x16::nlanes - 2),  *(ptr + v_uint8x16::nlanes - 1),
-                      *(ptr + v_uint8x16::nlanes - 16), *(ptr + v_uint8x16::nlanes - 15),
-                      *(ptr + v_uint8x16::nlanes - 14), *(ptr + v_uint8x16::nlanes - 13),
-                      *(ptr + v_uint8x16::nlanes - 12), *(ptr + v_uint8x16::nlanes - 11),
-                      *(ptr + v_uint8x16::nlanes - 10), *(ptr + v_uint8x16::nlanes - 9));
-#endif
+            t0 = *((T*)((uchar*)src + i));
+            t1 = *((T*)((uchar*)src + j - sizeof(T)));
+            *((T*)(dst + j - sizeof(T))) = t0;
+            *((T*)(dst + i)) = t1;
+        }
+    }
 }
-
-#define FLIPHORIZ_SIMPLE(suffix) \
-template<typename T> CV_ALWAYS_INLINE void flipHoriz_single_##suffix( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz ) \
-{ \
-    int end = (int)(size.width*esz); \
-    int width = (end + 1)/2; \
-    int width_1 = width & -v_uint8x16::nlanes; \
-    int i, j; \
-    \
-    for( ; size.height--; src += sstep, dst += dstep ) \
-    { \
-        for( i = 0, j = end; i < width_1; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes ) \
-        { \
-            v_uint8x16 t0, t1; \
-            \
-            t0 = v_load_mirror_##suffix((uchar*)src + i); \
-            t1 = v_load_mirror_##suffix((uchar*)src + j - v_uint8x16::nlanes); \
-            v_store(dst + j - v_uint8x16::nlanes, t0); \
-            v_store(dst + i, t1); \
-        } \
-        for ( ; i < width; i += sizeof(T), j -= sizeof(T) ) \
-        { \
-            T t0, t1; \
-            \
-            t0 = *((T*)((uchar*)src + i)); \
-            t1 = *((T*)((uchar*)src + j - sizeof(T))); \
-            *((T*)(dst + j - sizeof(T))) = t0; \
-            *((T*)(dst + i)) = t1; \
-        } \
-    } \
-}
-
-FLIPHORIZ_SIMPLE(1);
-FLIPHORIZ_SIMPLE(2);
-FLIPHORIZ_SIMPLE(4);
-FLIPHORIZ_SIMPLE(8);
 
 template<typename T1, typename T2> CV_ALWAYS_INLINE void flipHoriz_double( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
@@ -782,19 +677,19 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
     }
     else if (esz == 8)
     {
-        flipHoriz_single_8<uint64_t>(src, sstep, dst, dstep, size, esz);
+        flipHoriz_single<v_uint64x2>(src, sstep, dst, dstep, size, esz);
     }
     else if (esz == 4)
     {
-        flipHoriz_single_4<uint>(src, sstep, dst, dstep, size, esz);
+        flipHoriz_single<v_uint32x4>(src, sstep, dst, dstep, size, esz);
     }
     else if (esz == 2)
     {
-        flipHoriz_single_2<ushort>(src, sstep, dst, dstep, size, esz);
+        flipHoriz_single<v_uint16x8>(src, sstep, dst, dstep, size, esz);
     }
     else if (esz == 1)
     {
-        flipHoriz_single_1<uchar>(src, sstep, dst, dstep, size, esz);
+        flipHoriz_single<v_uint8x16>(src, sstep, dst, dstep, size, esz);
     }
     else if (esz == 24)
     {
@@ -868,7 +763,6 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
         if( ((size_t)src0|(size_t)dst0|(size_t)src1|(size_t)dst1) % sizeof(int) == 0 )
         {
 #if CV_SIMD
-#if CV_SIMD256 || CV_SIMD512
             for( ; i <= size.width - (v_int32::nlanes * 4); i += v_int32::nlanes * 4 )
             {
 
@@ -876,15 +770,6 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
                 v_int32 t1 = vx_load((int*)(src1 + i));
                 vx_store((int*)(dst0 + i), t1);
                 vx_store((int*)(dst1 + i), t0);
-            }
-#endif
-            for( ; i <= size.width - (v_int32x4::nlanes * 4); i += v_int32x4::nlanes * 4 )
-            {
-
-                v_int32x4 t0 = v_load((int*)(src0 + i));
-                v_int32x4 t1 = v_load((int*)(src1 + i));
-                v_store((int*)(dst0 + i), t1);
-                v_store((int*)(dst1 + i), t0);
             }
 #else
             for( ; i <= size.width - 16; i += 16 )
