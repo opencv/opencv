@@ -68,9 +68,10 @@ void magnitudeSqr32f(const float* x, const float* y, float* mag, int len)
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitudeSqr32f, cv_hal_magnitudeSqr32f, x, y, mag, len);
-    //TODO ippicv must implement ippsPowerSpectr_32f
+    #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV)//TODO ippicv must implement ippsPowerSpectr_32f
     // SSE42 performance issues
-    //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_32f, x, y, mag, len) >= 0);
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_32f, x, y, mag, len) >= 0);
+    #endif
 
     CV_CPU_DISPATCH(magnitudeSqr32f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -81,9 +82,10 @@ void magnitudeSqr64f(const double* x, const double* y, double* mag, int len)
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitudeSqr64f, cv_hal_magnitudeSqr64f, x, y, mag, len);
-    //TODO ippicv must implement ippsPowerSpectr_64f
+    #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV)//TODO ippicv must implement ippsPowerSpectr_64f
     // SSE42 performance issues
-    //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_64f, x, y, mag, len) >= 0);
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_64f, x, y, mag, len) >= 0);
+    #endif
 
     CV_CPU_DISPATCH(magnitudeSqr64f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
