@@ -56,9 +56,10 @@ void magnitude32fc(const float* xy, float* mag, int len)
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitude32fc, cv_hal_magnitude32fc, xy, mag, len);
-    //TODO : use a new version of ippicv with ippsMagnitude_32fc implemented !
+    #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV)//ippicv should implement ippsMagnitude_32fc
     // SSE42 performance issues
-    //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32fc, reinterpret_cast<const Ipp32fc*>(xy), mag, len) >= 0);
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32fc, reinterpret_cast<const Ipp32fc*>(xy), mag, len) >= 0);
+    #endif
 
     CV_CPU_DISPATCH(magnitude32fc, (xy, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -81,9 +82,10 @@ void magnitude64fc(const double* xy, double* mag, int len)
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitude64fc, cv_hal_magnitude64fc, xy, mag, len);
-    //TODO : use a new version of ippicv with ippsMagnitude_64fc implemented !
+    #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV)//ippicv should implement ippsMagnitude_64fc
     // SSE42 performance issues
-    //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64fc, reinterpret_cast<const Ipp64fc*>(xy), mag, len) >= 0);
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64fc, reinterpret_cast<const Ipp64fc*>(xy), mag, len) >= 0);
+    #endif
 
     CV_CPU_DISPATCH(magnitude64fc, (xy, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
