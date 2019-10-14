@@ -149,7 +149,8 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
 //   pipeline.
 void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
                         Q& in_queue,
-                        std::vector<Q*> out_queues)
+                        std::vector<Q*> out_queues,
+                        std::function<void()> cb_completion)
 {
     // Wait for the explicit Start command.
     // ...or Stop command, this also happens.
@@ -157,15 +158,18 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
     in_queue.pop(cmd);
     GAPI_Assert(   cv::util::holds_alternative<Start>(cmd)
                 || cv::util::holds_alternative<Stop>(cmd));
-    if (cv::util::holds_alternative<Stop>(cmd)) {
+    if (cv::util::holds_alternative<Stop>(cmd))
+    {
         for (auto &&oq : out_queues) oq->push(cmd);
         return;
     }
 
     // Now start emitting the data from the source to the pipeline.
-    while (true) {
+    while (true)
+    {
         Cmd cancel;
-        if (in_queue.try_pop(cancel)) {
+        if (in_queue.try_pop(cancel))
+        {
             // if we just popped a cancellation command...
             GAPI_Assert(cv::util::holds_alternative<Stop>(cancel));
             // Broadcast it to the readers and quit.
@@ -175,7 +179,8 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
 
         // Try to obrain next data chunk from the source
         cv::GRunArg data;
-        if (emitter->pull(data)) {
+        if (emitter->pull(data))
+        {
             // // On success, broadcast it to our readers
             for (auto &&oq : out_queues)
             {
@@ -185,9 +190,13 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
                 const auto tmp = data;
                 oq->push(Cmd{tmp});
             }
-        } else {
-            // On failure, broadcast STOP message to our readers and quit.
+        }
+        else
+        {
+            // Otherwise, broadcast STOP message to our readers and quit.
+            // This usually means end-of-stream, so trigger a callback
             for (auto &&oq : out_queues) oq->push(Cmd{Stop{}});
+            if (cb_completion) cb_completion();
             return;
         }
     }
@@ -551,6 +560,8 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     const auto num_videos = std::count_if(ins.begin(), ins.end(), is_video);
     if (num_videos > 1u)
     {
+        // See below why (another reason - no documented behavior
+        // on handling videos streams of different length)
         util::throw_error(std::logic_error("Only one video source is"
                                            " currently supported!"));
     }
@@ -558,10 +569,12 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     // Walk through the protocol, set-up emitters appropriately
     // There's a 1:1 mapping between emitters and corresponding data inputs.
     for (auto it : ade::util::zip(ade::util::toRange(m_emitters),
-                                  ade::util::toRange(ins)))
+                                  ade::util::toRange(ins),
+                                  ade::util::iota(m_emitters.size())))
     {
         auto  emit_nh  = std::get<0>(it);
         auto& emit_arg = std::get<1>(it);
+        auto  emit_idx = std::get<2>(it);
         auto& emitter  = m_gim.metadata(emit_nh).get<Emitter>().object;
 
         using T = GRunArg;
@@ -581,16 +594,27 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
             // Create a constant emitter.
             // Produces always the same ("constant") value when pulled.
             emitter.reset(new ConstEmitter{emit_arg});
+            m_const_emitter_queues.push_back(&m_emitter_queues[emit_idx]);
             break;
         }
     }
+
+    // FIXME: The below code assumes our graph may have only one
+    // real video source (and so, only one stream which may really end)
+    // all other inputs are "constant" generators.
+    // Craft here a completion callback to notify Const emitters that
+    // a video source is over
+    auto real_video_completion_cb = [this]() {
+        for (auto q : m_const_emitter_queues) q->push(Cmd{Stop{}});
+    };
 
     // FIXME: ONLY now, after all executable objects are created,
     // we can set up our execution threads. Let's do it.
     // First create threads for all the emitters.
     // FIXME: One way to avoid this may be including an Emitter object as a part of
     // START message. Why not?
-    if (state == State::READY) {
+    if (state == State::READY)
+    {
         stop();
     }
 
@@ -608,7 +632,8 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         m_threads.emplace_back(emitterActorThread,
                                emitter,
                                std::ref(m_emitter_queues[id]),
-                               out_queues);
+                               out_queues,
+                               real_video_completion_cb);
     }
 
     // Now do this for every island (in a topological order)
@@ -683,10 +708,12 @@ void cv::gimpl::GStreamingExecutor::wait_shutdown()
     m_threads.clear();
 
     // Clear all queues
-    // FIXME: Since the current model assumes every thread
-    // reads the remnants of its input queues in their entirety
-    // once a Stop is received, every queue should be empty
-    // at this point so this clear() should be replaced with assert
+    // If there are constant emitters, internal queues
+    // may be polluted with constant values and have extra
+    // data at the point of shutdown.
+    // It usually happens when there's multiple inputs,
+    // one constant and one is not, and the latter ends (e.g.
+    // with end-of-stream).
     for (auto &q : m_emitter_queues) q.clear();
     for (auto &q : m_sink_queues) q->clear();
     for (auto &q : m_internal_queues) q->clear();
@@ -699,7 +726,7 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
 {
     if (state == State::STOPPED)
         return false;
-
+    GAPI_Assert(state == State::RUNNING);
     GAPI_Assert(m_sink_queues.size() == outs.size());
 
     Cmd cmd;

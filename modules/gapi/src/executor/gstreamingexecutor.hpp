@@ -109,6 +109,7 @@ protected:
     cv::util::optional<cv::GRunArgs> m_last_source;
     std::vector<std::thread> m_threads;
     std::vector<stream::Q>   m_emitter_queues;
+    std::vector<stream::Q*>  m_const_emitter_queues; // a view over m_emitter_queues
     std::vector<stream::Q*>  m_sink_queues;
     std::unordered_set<stream::Q*> m_internal_queues;
     stream::Q m_out_queue;
