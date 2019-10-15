@@ -12,7 +12,7 @@ void cv::gapi::wip::draw::render(cv::Mat &bgr,
     cv::GArray<Prim> arr;
 
     cv::GComputation comp(cv::GIn(in, arr),
-                          cv::GOut(cv::gapi::wip::draw::GRenderBGR::on(in, arr)));
+                          cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
     comp.apply(cv::gin(bgr, prims), cv::gout(bgr), std::move(args));
 }
 
@@ -23,7 +23,7 @@ void cv::gapi::wip::draw::render(cv::Mat &y_plane,
 {
     cv::GMat y_in, uv_in, y_out, uv_out;
     cv::GArray<Prim> arr;
-    std::tie(y_out, uv_out) = cv::gapi::wip::draw::GRenderNV12::on(y_in, uv_in, arr);
+    std::tie(y_out, uv_out) = cv::gapi::wip::draw::renderNV12(y_in, uv_in, arr);
 
     cv::GComputation comp(cv::GIn(y_in, uv_in, arr), cv::GOut(y_out, uv_out));
     comp.apply(cv::gin(y_plane, uv_plane, prims),
@@ -58,4 +58,17 @@ namespace detail
     };
 
 } // namespace detail
+
+GMat cv::gapi::wip::draw::render3ch(const GMat& src, const GArray<Prim>& prims)
+{
+    return cv::gapi::wip::draw::GRenderBGR::on(src, prims);
+}
+
+std::tuple<GMat, GMat> cv::gapi::wip::draw::renderNV12(const GMat& y,
+                                                       const GMat& uv,
+                                                       const GArray<cv::gapi::wip::draw::Prim>& prims)
+{
+    return cv::gapi::wip::draw::GRenderNV12::on(y, uv, prims);
+}
+
 } // namespace cv

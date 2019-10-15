@@ -139,22 +139,6 @@ using Prims     = std::vector<Prim>;
 using GMat2     = std::tuple<cv::GMat,cv::GMat>;
 using GMatDesc2 = std::tuple<cv::GMatDesc,cv::GMatDesc>;
 
-G_TYPED_KERNEL_M(GRenderNV12, <GMat2(cv::GMat,cv::GMat,cv::GArray<wip::draw::Prim>)>, "org.opencv.render.nv12")
-{
-     static GMatDesc2 outMeta(GMatDesc y_plane, GMatDesc uv_plane, GArrayDesc)
-     {
-         return std::make_tuple(y_plane, uv_plane);
-     }
-};
-
-G_TYPED_KERNEL(GRenderBGR, <cv::GMat(cv::GMat,cv::GArray<wip::draw::Prim>)>, "org.opencv.render.bgr")
-{
-     static GMatDesc outMeta(GMatDesc bgr, GArrayDesc)
-     {
-         return bgr;
-     }
-};
-
 /** @brief The function renders on the input image passed drawing primitivies
 
 @param bgr input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
@@ -176,6 +160,44 @@ void GAPI_EXPORTS render(cv::Mat& y_plane,
                          cv::Mat& uv_plane,
                          const Prims& prims,
                          cv::GCompileArgs&& args = {});
+
+G_TYPED_KERNEL_M(GRenderNV12, <GMat2(cv::GMat,cv::GMat,cv::GArray<wip::draw::Prim>)>, "org.opencv.render.nv12")
+{
+     static GMatDesc2 outMeta(GMatDesc y_plane, GMatDesc uv_plane, GArrayDesc)
+     {
+         return std::make_tuple(y_plane, uv_plane);
+     }
+};
+
+G_TYPED_KERNEL(GRenderBGR, <cv::GMat(cv::GMat,cv::GArray<wip::draw::Prim>)>, "org.opencv.render.bgr")
+{
+     static GMatDesc outMeta(GMatDesc bgr, GArrayDesc)
+     {
+         return bgr;
+     }
+};
+
+/** @brief Renders on 3 channels input
+
+Output image must be 8-bit unsigned planar 3-channel image
+
+@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3
+@param prims draw primitives
+*/
+GAPI_EXPORTS GMat render3ch(const GMat& src, const GArray<Prim>& prims);
+
+/** @brief Renders on two planes
+
+Output y image must be 8-bit unsigned planar 1-channel image @ref CV_8UC1
+uv image must be 8-bit unsigned planar 2-channel image @ref CV_8UC2
+
+@param y  input image: 8-bit unsigned 1-channel image @ref CV_8UC1
+@param uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2
+@param prims draw primitives
+*/
+GAPI_EXPORTS GMat2 renderNV12(const GMat& y,
+                              const GMat& uv,
+                              const GArray<Prim>& prims);
 
 } // namespace draw
 } // namespace wip
