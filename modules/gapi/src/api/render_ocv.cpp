@@ -1,4 +1,3 @@
-#include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/gapi/render/render.hpp> // Kernel API's
 

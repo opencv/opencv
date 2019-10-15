@@ -28,9 +28,14 @@ namespace wip
 namespace draw
 {
 
+/**
+ * A structure allows using freetype library for text rendering
+ */
 struct use_freetype
 {
-    const char* path;
+    /*@{*/
+    const char* path; //!< The path to font file (.ttf)
+    /*@{*/
 };
 
 /**

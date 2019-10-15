@@ -18,10 +18,14 @@
 #include "backends/render/grenderkernel.hpp"
 #include "backends/render/grenderocv.hpp"
 
-namespace cv     {
-namespace gimpl  {
-namespace render {
-namespace ocv    {
+namespace cv
+{
+namespace gimpl
+{
+namespace render
+{
+namespace ocv
+{
 
 struct RenderUnit
 {
