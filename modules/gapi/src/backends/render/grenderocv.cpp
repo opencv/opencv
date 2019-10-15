@@ -12,7 +12,9 @@ GAPI_RENDER_OCV_KERNEL(RenderBGRImpl, cv::gapi::wip::draw::GRenderBGR)
         const auto& prims = ctx.inPrims(1);
         auto        out   = to_ocv(ctx.outMatR(0));
 
-        // FIXME Add description for this
+        // NB: If in and out cv::Mats are the same object
+        // we can avoid copy and render on out cv::Mat
+        // It's work if this kernel is last operation in the graph
         if (in.data != out.data) {
             in.copyTo(out);
         }
@@ -31,7 +33,9 @@ GAPI_RENDER_OCV_KERNEL(RenderNV12Impl, cv::gapi::wip::draw::GRenderNV12)
         auto        out_y  = to_ocv(ctx.outMatR(0));
         auto        out_uv = to_ocv(ctx.outMatR(1));
 
-        // FIXME Add description for this
+        // NB: If in and out cv::Mats are the same object
+        // we can avoid copy and render on out cv::Mat
+        // It's work if this kernel is last operation in the graph
         if (in_y.data != out_y.data) {
             in_y.copyTo(out_y);
         }
