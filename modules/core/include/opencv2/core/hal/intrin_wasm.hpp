@@ -3111,6 +3111,38 @@ OPENCV_HAL_IMPL_WASM_LOADSTORE_INT_OP(v_float32x4, float)
 OPENCV_HAL_IMPL_WASM_LOADSTORE_INT_OP(v_float64x2, double)
 
 
+/** Reverse **/
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{ return v_uint8x16(wasm_v8x16_shuffle(a.val, a.val, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)); }
+
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{ return v_uint16x8(wasm_v8x16_shuffle(a.val, a.val, 14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1)); }
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{ return v_uint32x4(wasm_v8x16_shuffle(a.val, a.val, 12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3)); }
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{ return v_uint64x2(wasm_v8x16_shuffle(a.val, a.val, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7)); }
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
+
+
 #define OPENCV_HAL_IMPL_WASM_REDUCE_OP_4_SUM(_Tpvec, scalartype, regtype, suffix, esuffix) \
 inline scalartype v_reduce_sum(const _Tpvec& a) \
 { \
