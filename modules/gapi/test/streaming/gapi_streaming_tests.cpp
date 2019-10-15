@@ -344,7 +344,7 @@ namespace TypesTest
                 uchar *out_ptr = out.ptr(r);
 
                 for (int c = 0; c < length; c++) {
-                    out_ptr[c] = in_ptr[c] + inv[c];
+                    out_ptr[c] = cv::saturate_cast<uchar>(in_ptr[c] + inv[c]);
                 }
             }
         }
@@ -363,7 +363,7 @@ namespace TypesTest
             CV_Assert(length == static_cast<int>(inv.size()));
 
             for (int c = 0; c < length; c++) {
-                out_ptr[c] = in_ptr[c] + inv[c];
+                out_ptr[c] = cv::saturate_cast<uchar>(in_ptr[c] + inv[c]);
             }
         }
     };
