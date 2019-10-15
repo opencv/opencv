@@ -223,7 +223,7 @@ TEST_P(GAPI_Streaming, Regression_CompileTimeScalar)
     ccomp.stop();
 }
 
-TEST_P(GAPI_Streaming, TestStartRestart)
+TEST_P(GAPI_Streaming, SmokeTest_StartRestart)
 {
     cv::GMat in;
     auto res = cv::gapi::resize(in, cv::Size{300,200});
@@ -257,6 +257,41 @@ TEST_P(GAPI_Streaming, TestStartRestart)
     EXPECT_LT(0u, num_frames1);
     EXPECT_LT(0u, num_frames2);
     EXPECT_EQ(num_frames1, num_frames2);
+}
+
+TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
+{
+    // A video source is a finite one, while const source is not.
+    // Check that pipeline completes when a video source completes.
+    auto refc = cv::GComputation([](){
+        cv::GMat in;
+        return cv::GComputation(in, cv::gapi::copy(in));
+    }).compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
+                        cv::compile_args(cv::gapi::use_only{GetParam()}));
+
+    refc.setSource(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")});
+    refc.start();
+    std::size_t ref_frames = 0u;
+    cv::Mat tmp;
+    while (refc.pull(cv::gout(tmp))) ref_frames++;
+
+    cv::GMat in;
+    cv::GMat in2;
+    cv::GMat roi = cv::gapi::crop(in2, cv::Rect{1,1,256,256});
+    cv::GMat blr = cv::gapi::blur(roi, cv::Size(3,3));
+    cv::GMat out = blr - in;
+    auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
+        .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{256,256}},
+                          cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
+                          cv::compile_args(cv::gapi::use_only{GetParam()}));
+
+    cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
+    testc.setSource(cv::gin(in_const, cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")}));
+    testc.start();
+    std::size_t test_frames = 0u;
+    while (testc.pull(cv::gout(tmp))) test_frames++;
+
+    EXPECT_EQ(ref_frames, test_frames);
 }
 
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
@@ -517,6 +552,77 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     }
 }
 
+TEST(GAPI_Streaming_Types, OutputScalar)
+{
+    // This test verifies if Streaming works when pipeline
+    // produces scalar data only
+
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GScalar out = cv::gapi::mean(in);
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out))
+        .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}});
+
+    const auto video_path = findDataFile("cv/video/768x576.avi");
+    sc.setSource(cv::gapi::GVideoCapture{video_path});
+    sc.start();
+
+    cv::VideoCapture cap;
+    cap.open(video_path);
+
+    cv::Mat tmp;
+    cv::Scalar out_scl;
+    while (sc.pull(cv::gout(out_scl)))
+    {
+        cap >> tmp;
+        cv::Scalar out_ref = cv::mean(tmp);
+        EXPECT_EQ(out_ref, out_scl);
+    }
+}
+
+TEST(GAPI_Streaming_Types, OutputVector)
+{
+    // This test verifies if Streaming works when pipeline
+    // produces vector data only
+
+    initTestDataPath();
+    auto pkg = cv::gapi::kernels<TypesTest::OCVSumV>();
+
+    cv::GMat in1, in2;
+    cv::GMat roi = cv::gapi::crop(in2, cv::Rect(3,3,256,256));
+    cv::GArray<int> out = TypesTest::SumV::on(cv::gapi::mul(roi, in1));
+    auto sc = cv::GComputation(cv::GIn(in1, in2), cv::GOut(out))
+        .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{256,256}},
+                          cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
+                          cv::compile_args(pkg));
+
+    auto ocv_ref = [](const cv::Mat &ocv_in1,
+                      const cv::Mat &ocv_in2,
+                      std::vector<int> &ocv_out) {
+        auto ocv_roi = ocv_in2(cv::Rect{3,3,256,256});
+        TypesTest::OCVSumV::run(ocv_roi.mul(ocv_in1), ocv_out);
+    };
+
+    cv::Mat in_eye = cv::Mat::eye(cv::Size(256, 256), CV_8UC3);
+    const auto video_path = findDataFile("cv/video/768x576.avi");
+    sc.setSource(cv::gin(in_eye, cv::gapi::GVideoCapture{video_path}));
+    sc.start();
+
+    cv::VideoCapture cap;
+    cap.open(video_path);
+
+    cv::Mat tmp;
+    std::vector<int> ref_vec;
+    std::vector<int> out_vec;
+    while (sc.pull(cv::gout(out_vec)))
+    {
+        cap >> tmp;
+        ref_vec.clear();
+        ocv_ref(in_eye, tmp, ref_vec);
+        EXPECT_EQ(ref_vec, out_vec);
+    }
+}
 
 struct GAPI_Streaming_Unit: public ::testing::Test {
     cv::GStreamingCompiled sc;
@@ -542,6 +648,7 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 
 TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
 {
+    // FIXME: Meta check doesn't fail here (but ideally it should)
     EXPECT_NO_THROW(sc.setSource(cv::gin(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")}, m)));
     EXPECT_NO_THROW(sc.setSource(cv::gin(m, cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")})));
     EXPECT_ANY_THROW(sc.setSource(cv::gin(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")},
