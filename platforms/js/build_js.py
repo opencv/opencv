@@ -138,6 +138,8 @@ class Builder:
                "-DBUILD_PACKAGE=OFF",
                "-DBUILD_TESTS=OFF",
                "-DBUILD_PERF_TESTS=OFF"]
+        if self.options.cmake_option:
+            cmd += args.cmake_option
         if self.options.build_doc:
             cmd.append("-DBUILD_DOCS=ON")
         else:
@@ -178,6 +180,9 @@ class Builder:
             flags += "-s DISABLE_EXCEPTION_CATCHING=0 "
         if self.options.simd:
             flags += "-msimd128 "
+        if self.options.build_flags:
+            for key in args.build_flags:
+                flags += key
         return flags
 
     def config(self):
@@ -221,11 +226,26 @@ if __name__ == "__main__":
     parser.add_argument('--skip_config', action="store_true", help="Skip cmake config")
     parser.add_argument('--config_only', action="store_true", help="Only do cmake config")
     parser.add_argument('--enable_exception', action="store_true", help="Enable exception handling")
+    parser.add_argument('--cmake_option', action='append', help="Append CMake options")
+    parser.add_argument('--build_flags',action='append',help="Append Emscripten build options")
+    parser.add_argument('--config', help="Specify configuration file with own list of exported into JS functions")
     parser.add_argument('--build_wasm_intrin_test', default=False, action="store_true", help="Build WASM intrin tests")
+#   Example of JSON file with whitelist flag. In each section [], we describe the functions and classes of the modul
+#     [
+#       {
+#        "": ["Canny"]
+#       },
+#       {
+#        "": ["addWeighted"]
+#       }
+#     ]
+
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
     log.debug("Args: %s", args)
+    if args.config:
+        os.environ["OPENCV_JS_WHITELIST"] = args.config
 
     if args.emscripten_dir is None:
         log.info("Cannot get Emscripten path, please specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
