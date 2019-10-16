@@ -148,6 +148,7 @@ protected:
     double          exposureCompensation;
     bool            autoGain;
     double          targetGrey;             // Target grey value (mid grey))
+    bool            softwareTriggered;      // Flag if the camera is software triggered
 
     gint64          *pixelFormats;
     guint           pixelFormatsCnt;
@@ -275,6 +276,7 @@ bool CvCaptureCAM_Aravis::open( int index )
         exposure = exposureAvailable ? arv_camera_get_exposure_time(camera) : 0;
         gain = gainAvailable ? arv_camera_get_gain(camera) : 0;
         fps = arv_camera_get_frame_rate(camera);
+        softwareTriggered = (strcmp(arv_camera_get_trigger_source(camera), "Software") == 0);
 
         return startCapture();
     }
@@ -290,6 +292,9 @@ bool CvCaptureCAM_Aravis::grabFrame()
         ArvBuffer *arv_buffer = NULL;
         int max_tries = 10;
         int tries = 0;
+        if (softwareTriggered) {
+            arv_camera_software_trigger (camera);
+        }
         for(; tries < max_tries; tries ++) {
             arv_buffer = arv_stream_timeout_pop_buffer (stream, 200000);
             if (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
