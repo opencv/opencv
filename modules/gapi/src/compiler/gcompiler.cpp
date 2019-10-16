@@ -42,10 +42,9 @@
 // </FIXME:>
 
 #include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
+#include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 
 #include "logger.hpp"
-
-#include "backends/render/grenderocv.hpp"
 
 namespace
 {

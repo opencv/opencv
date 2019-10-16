@@ -1,17 +1,14 @@
 #include <opencv2/imgproc.hpp>
 
 #include "api/render_ocv.hpp"
-#include "backends/render/grenderkernel.hpp"
 #include "backends/render/grenderocv.hpp"
+
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 GAPI_RENDER_OCV_KERNEL(RenderBGRImpl, cv::gapi::wip::draw::GRenderBGR)
 {
-    static void run(cv::gapi::render::GRenderContext& ctx)
+    static void run(const cv::Mat& in, const cv::gapi::wip::draw::Prims& prims, cv::Mat& out)
     {
-        const auto& in    = to_ocv(ctx.inMat(0));
-        const auto& prims = ctx.inPrims(1);
-        auto        out   = to_ocv(ctx.outMatR(0));
-
         // NB: If in and out cv::Mats are the same object
         // we can avoid copy and render on out cv::Mat
         // It's work if this kernel is last operation in the graph
@@ -25,14 +22,12 @@ GAPI_RENDER_OCV_KERNEL(RenderBGRImpl, cv::gapi::wip::draw::GRenderBGR)
 
 GAPI_RENDER_OCV_KERNEL(RenderNV12Impl, cv::gapi::wip::draw::GRenderNV12)
 {
-    static void run(cv::gapi::render::GRenderContext& ctx)
+    static void run(const cv::Mat& in_y,
+                    const cv::Mat& in_uv,
+                    const cv::gapi::wip::draw::Prims& prims,
+                    cv::Mat& out_y,
+                    cv::Mat& out_uv)
     {
-        const auto& in_y   = to_ocv(ctx.inMat(0));
-        const auto& in_uv  = to_ocv(ctx.inMat(1));
-        const auto& prims  = ctx.inPrims(2);
-        auto        out_y  = to_ocv(ctx.outMatR(0));
-        auto        out_uv = to_ocv(ctx.outMatR(1));
-
         // NB: If in and out cv::Mats are the same object
         // we can avoid copy and render on out cv::Mat
         // It's work if this kernel is last operation in the graph

@@ -7,7 +7,7 @@
 #ifndef OPENCV_GAPI_GRENDEROCV_HPP
 #define OPENCV_GAPI_GRENDEROCV_HPP
 
-#include "backends/render/grenderkernel.hpp"
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 namespace cv
 {
@@ -20,26 +20,36 @@ namespace ocv
 
 GAPI_EXPORTS cv::gapi::GBackend backend();
 
-struct KImpl {
-    using Run = std::function<void(GRenderContext& ctx)>;
-    Run run;
+template<typename, typename>
+struct add_type_to_tuple;
+
+template<typename P, typename ...Ts>
+struct add_type_to_tuple<P, std::tuple<Ts...>>
+{
+    using type = std::tuple<Ts..., P>;
 };
 
-template <typename Name, typename K>
-struct GRenderKernelImpl
+template<class Impl, class K>
+class GRenderKernelImpl: public cv::detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+                         public cv::detail::KernelTag
 {
+    // TODO Use this mechanism for adding new parameter to run method
+    // using InArgs = typename add_type_to_tuple<IBitMaskCreator, typename K::InArgs>::type;
+    using InArgs = typename K::InArgs;
+    using P = detail::OCVCallHelper<Impl, InArgs, typename K::OutArgs>;
+
+public:
     using API = K;
 
-    static cv::gapi::GBackend backend() { return cv::gapi::render::ocv::backend(); }
-    static KImpl kernel()               { return KImpl{Name::run};                 }
+    static cv::gapi::GBackend backend()  { return cv::gapi::render::ocv::backend(); }
+    static cv::GCPUKernel     kernel()   { return GCPUKernel(&P::call);             }
 };
+
+#define GAPI_RENDER_OCV_KERNEL(Name, API) struct Name: public cv::gapi::render::ocv::GRenderKernelImpl<Name, API>
 
 } // namespace ocv
 } // namespace render
 } // namespace gapi
 } // namespace cv
-
-#define GAPI_RENDER_OCV_KERNEL(Name, API) struct Name: public cv::gapi::render::ocv::GRenderKernelImpl<Name, API>, \
-                                                       public cv::detail::KernelTag
 
 #endif // OPENCV_GAPI_GRENDEROCV_HPP

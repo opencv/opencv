@@ -69,11 +69,11 @@ void cv::gimpl::render::ocv::GRenderExecutable::run(std::vector<InObj>  &&input_
 
     // Initialize kernel's execution context:
     // - Input parameters
-    cv::gapi::render::GRenderContext context;
-    context.args.reserve(op.args.size());
+    GCPUContext context;
+    context.m_args.reserve(op.args.size());
     using namespace std::placeholders;
     ade::util::transform(op.args,
-                          std::back_inserter(context.args),
+                          std::back_inserter(context.m_args),
                           std::bind(&GRenderExecutable::packArg, this, _1));
 
     // - Output parameters.
@@ -81,12 +81,12 @@ void cv::gimpl::render::ocv::GRenderExecutable::run(std::vector<InObj>  &&input_
         // FIXME: Can the same GArg type resolution mechanism be reused here?
         const auto out_port  = ade::util::index(out_it);
         const auto out_desc  = ade::util::value(out_it);
-        context.results[out_port] = magazine::getObjPtr(m_res, out_desc);
+        context.m_results[out_port] = magazine::getObjPtr(m_res, out_desc);
     }
 
     auto k = gcm.metadata(this_nh).get<RenderUnit>().k;
 
-    k.run(context);
+    k.apply(context);
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
 }
@@ -99,7 +99,7 @@ cv::GArg cv::gimpl::render::ocv::GRenderExecutable::packArg(const cv::GArg &arg)
                 && arg.kind != cv::detail::ArgKind::GARRAY);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF) {
-        util::throw_error(std::logic_error("Inference supports G-types ONLY!"));
+        util::throw_error(std::logic_error("Render supports G-types ONLY!"));
     }
     GAPI_Assert(arg.kind == cv::detail::ArgKind::GOBJREF);
 
@@ -120,7 +120,8 @@ namespace {
                                   const ade::NodeHandle &op_node,
                                   const cv::GKernelImpl &impl) override {
             GRenderModel rm(gr);
-            auto render_impl = cv::util::any_cast<cv::gapi::render::ocv::KImpl>(impl.opaque);
+            //auto render_impl = cv::util::any_cast<cv::gapi::render::ocv::KImpl>(impl.opaque);
+            auto render_impl = cv::util::any_cast<cv::GCPUKernel>(impl.opaque);
             rm.metadata(op_node).set(cv::gimpl::render::ocv::RenderUnit{render_impl});
         }
 

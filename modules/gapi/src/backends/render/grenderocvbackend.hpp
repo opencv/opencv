@@ -15,8 +15,9 @@
 #include "backends/common/gbackend.hpp"
 #include "compiler/gislandmodel.hpp"
 
-#include "backends/render/grenderkernel.hpp"
 #include "backends/render/grenderocv.hpp"
+
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 namespace cv
 {
@@ -30,7 +31,7 @@ namespace ocv
 struct RenderUnit
 {
     static const char *name() { return "RenderUnit"; }
-    cv::gapi::render::ocv::KImpl k;
+    GCPUKernel k;
 };
 
 class GRenderExecutable final: public GIslandExecutable
