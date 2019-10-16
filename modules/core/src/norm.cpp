@@ -234,12 +234,29 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
             for(; i <= len - v_uint16::nlanes; i+= v_uint16::nlanes)
             {
                 v_int16 m = v_reinterpret_as_s16(vx_load_expand(mask + i));
-                v_int16 d = m != zero;
+                v_int32 m0, m1;
+
+                m = m != zero;
+
+                v_expand(m, m0, m1);
+
+                v_int32 v_res = vx_setall_s32(res);
+
 
                 v_int16 srca = v_reinterpret_as_s16(vx_load_expand(a + i));
-                v_int16 srcb = v_reinterpret_as_s16(vx_load_expand(b + i));
+                v_int32 srca0, srca1;
 
-                res = std::max(res, (int)v_reduce_max(v_abs((srca - srcb)*d)));
+                v_expand(srca, srca0, srca1);
+
+                v_int16 srcb = v_reinterpret_as_s16(vx_load_expand(b + i));
+                v_int32 srcb0, srcb1;
+
+                v_expand(srcb, srcb0, srcb1);
+
+                int max0 = v_reduce_max(v_select(m0, v_reinterpret_as_s32(v_abs(srca0 - srcb0)), v_res));
+                int max1 = v_reduce_max(v_select(m1, v_reinterpret_as_s32(v_abs(srca1 - srcb1)), v_res));
+
+                res = std::max(max0 ,max1);
 
             }
 #endif
@@ -248,6 +265,299 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
                 if( mask[i] )
                 {
                     res = std::max(res, (int)std::abs(a[i] - b[i]));
+                }
+            }
+        } else if ( cn == 2 )
+        {
+            const v_uint32 zero = vx_setall_u32((short)0);
+            for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
+            {
+                v_uint8 m = vx_load(mask + i);
+
+                v_uint16 m0, m1;
+
+                v_expand(m, m0, m1);
+
+                v_uint32 m00, m01, m10, m11;
+
+                v_expand(m0, m00, m01);
+                v_expand(m1, m10, m11);
+
+                m00 = m00 != zero;
+                m01 = m01 != zero;
+                m10 = m10 != zero;
+                m11 = m11 != zero;
+
+                v_int32 v_res = vx_setall_s32(res);
+
+                v_uint8 v_srca0, v_srca1;
+                v_load_deinterleave(a + i * cn, v_srca0, v_srca1);
+                v_uint16 v_srca00, v_srca01, v_srca10, v_srca11;
+
+                v_expand(v_srca0, v_srca00, v_srca01);
+                v_expand(v_srca1, v_srca10, v_srca11);
+
+                v_uint32 v_srca000, v_srca001, v_srca010, v_srca011;
+                v_uint32 v_srca100, v_srca101, v_srca110, v_srca111;
+
+                v_expand(v_srca00, v_srca000, v_srca001);
+                v_expand(v_srca01, v_srca010, v_srca011);
+                v_expand(v_srca10, v_srca100, v_srca101);
+                v_expand(v_srca11, v_srca110, v_srca111);
+
+                v_uint8 v_srcb0, v_srcb1;
+                v_load_deinterleave(b + i * cn, v_srcb0, v_srcb1);
+                v_uint16 v_srcb00, v_srcb01, v_srcb10, v_srcb11;
+
+                v_expand(v_srcb0, v_srcb00, v_srcb01);
+                v_expand(v_srcb1, v_srcb10, v_srcb11);
+
+                v_uint32 v_srcb000, v_srcb001, v_srcb010, v_srcb011;
+                v_uint32 v_srcb100, v_srcb101, v_srcb110, v_srcb111;
+
+                v_expand(v_srcb00, v_srcb000, v_srcb001);
+                v_expand(v_srcb01, v_srcb010, v_srcb011);
+                v_expand(v_srcb10, v_srcb100, v_srcb101);
+                v_expand(v_srcb11, v_srcb110, v_srcb111);
+
+                int max0 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca000) - v_reinterpret_as_s32(v_srcb000))), v_res));
+                int max1 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca001) - v_reinterpret_as_s32(v_srcb001))), v_res));
+                int max2 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca010) - v_reinterpret_as_s32(v_srcb010))), v_res));
+                int max3 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca011) - v_reinterpret_as_s32(v_srcb011))), v_res));
+
+                int max4 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca100) - v_reinterpret_as_s32(v_srcb100))), v_res));
+                int max5 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca101) - v_reinterpret_as_s32(v_srcb101))), v_res));
+                int max6 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca110) - v_reinterpret_as_s32(v_srcb110))), v_res));
+                int max7 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca111) - v_reinterpret_as_s32(v_srcb111))), v_res));
+
+#if CV_SIMD256
+                res = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7));
+#elif CV_SIMD512
+                res = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7, max0, max0, max0, max0, max0, max0, max0, max0));
+#else
+                res = std::max(v_reduce_max(v_int32(max0, max1, max2, max3)), v_reduce_max(v_int32(max4, max5, max6, max7)));
+#endif
+            }
+
+            a += ( i * cn );
+            b += ( i * cn );
+
+            for(; i < len; i++, a += cn, b += cn )
+            {
+                if( mask[i] )
+                {
+                    for(int j = 0; j < cn; j++ )
+                        res = std::max(res, (int)std::abs(a[j] - b[j]));
+                }
+            }
+        } else if ( cn == 3 )
+        {
+            const v_uint32 zero = vx_setall_u32((short)0);
+            for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
+            {
+                v_uint8 m = vx_load(mask + i);
+
+                v_uint16 m0, m1;
+
+                v_expand(m, m0, m1);
+
+                v_uint32 m00, m01, m10, m11;
+
+                v_expand(m0, m00, m01);
+                v_expand(m1, m10, m11);
+
+                m00 = m00 != zero;
+                m01 = m01 != zero;
+                m10 = m10 != zero;
+                m11 = m11 != zero;
+
+                v_int32 v_res = vx_setall_s32(res);
+
+                v_uint8 v_srca0, v_srca1, v_srca2;
+                v_load_deinterleave(a + i * cn, v_srca0, v_srca1, v_srca2);
+                v_uint16 v_srca00, v_srca01, v_srca10, v_srca11;
+                v_uint16 v_srca20, v_srca21;
+
+                v_expand(v_srca0, v_srca00, v_srca01);
+                v_expand(v_srca1, v_srca10, v_srca11);
+                v_expand(v_srca2, v_srca20, v_srca21);
+
+                v_uint32 v_srca000, v_srca001, v_srca010, v_srca011;
+                v_uint32 v_srca100, v_srca101, v_srca110, v_srca111;
+                v_uint32 v_srca200, v_srca201, v_srca210, v_srca211;
+
+                v_expand(v_srca00, v_srca000, v_srca001);
+                v_expand(v_srca01, v_srca010, v_srca011);
+                v_expand(v_srca10, v_srca100, v_srca101);
+                v_expand(v_srca11, v_srca110, v_srca111);
+                v_expand(v_srca20, v_srca200, v_srca201);
+                v_expand(v_srca21, v_srca210, v_srca211);
+
+                v_uint8 v_srcb0, v_srcb1, v_srcb2;
+                v_load_deinterleave(b + i * cn, v_srcb0, v_srcb1, v_srcb2);
+                v_uint16 v_srcb00, v_srcb01, v_srcb10, v_srcb11;
+                v_uint16 v_srcb20, v_srcb21;
+
+                v_expand(v_srcb0, v_srcb00, v_srcb01);
+                v_expand(v_srcb1, v_srcb10, v_srcb11);
+                v_expand(v_srcb2, v_srcb20, v_srcb21);
+
+                v_uint32 v_srcb000, v_srcb001, v_srcb010, v_srcb011;
+                v_uint32 v_srcb100, v_srcb101, v_srcb110, v_srcb111;
+                v_uint32 v_srcb200, v_srcb201, v_srcb210, v_srcb211;
+
+                v_expand(v_srcb00, v_srcb000, v_srcb001);
+                v_expand(v_srcb01, v_srcb010, v_srcb011);
+                v_expand(v_srcb10, v_srcb100, v_srcb101);
+                v_expand(v_srcb11, v_srcb110, v_srcb111);
+                v_expand(v_srcb20, v_srcb200, v_srcb201);
+                v_expand(v_srcb21, v_srcb210, v_srcb211);
+
+                int max00 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca000) - v_reinterpret_as_s32(v_srcb000))), v_res));
+                int max01 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca001) - v_reinterpret_as_s32(v_srcb001))), v_res));
+                int max02 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca010) - v_reinterpret_as_s32(v_srcb010))), v_res));
+                int max03 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca011) - v_reinterpret_as_s32(v_srcb011))), v_res));
+
+                int max04 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca100) - v_reinterpret_as_s32(v_srcb100))), v_res));
+                int max05 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca101) - v_reinterpret_as_s32(v_srcb101))), v_res));
+                int max06 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca110) - v_reinterpret_as_s32(v_srcb110))), v_res));
+                int max07 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca111) - v_reinterpret_as_s32(v_srcb111))), v_res));
+
+                int max08 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca200) - v_reinterpret_as_s32(v_srcb200))), v_res));
+                int max09 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca201) - v_reinterpret_as_s32(v_srcb201))), v_res));
+                int max10 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca210) - v_reinterpret_as_s32(v_srcb210))), v_res));
+                int max11 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca211) - v_reinterpret_as_s32(v_srcb211))), v_res));
+#if CV_SIMD256
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max11, max11, max11, max11)););
+#elif CV_SIMD512
+                res = v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07, max08, max09, max10, max11, max11, max11, max11, max11));
+#else
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03)), v_reduce_max(v_int32(max04, max05, max06, max07)));
+                res = std::max(res, v_reduce_max(v_int32(max08, max09, max10, max11)));
+#endif
+            }
+
+            a += ( i * cn );
+            b += ( i * cn );
+
+            for(; i < len; i++, a += cn, b += cn )
+            {
+                if( mask[i] )
+                {
+                    for(int j = 0; j < cn; j++ )
+                        res = std::max(res, (int)std::abs(a[j] - b[j]));
+                }
+            }
+        } else if ( cn == 4 )
+        {
+            const v_uint32 zero = vx_setall_u32((short)0);
+            for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
+            {
+                v_uint8 m = vx_load(mask + i);
+
+                v_uint16 m0, m1;
+
+                v_expand(m, m0, m1);
+
+                v_uint32 m00, m01, m10, m11;
+
+                v_expand(m0, m00, m01);
+                v_expand(m1, m10, m11);
+
+                m00 = m00 != zero;
+                m01 = m01 != zero;
+                m10 = m10 != zero;
+                m11 = m11 != zero;
+
+                v_int32 v_res = vx_setall_s32(res);
+
+                v_uint8 v_srca0, v_srca1, v_srca2, v_srca3;
+                v_load_deinterleave(a + i * cn, v_srca0, v_srca1, v_srca2, v_srca3);
+                v_uint16 v_srca00, v_srca01, v_srca10, v_srca11;
+                v_uint16 v_srca20, v_srca21, v_srca30, v_srca31;
+
+                v_expand(v_srca0, v_srca00, v_srca01);
+                v_expand(v_srca1, v_srca10, v_srca11);
+                v_expand(v_srca2, v_srca20, v_srca21);
+                v_expand(v_srca3, v_srca30, v_srca31);
+
+                v_uint32 v_srca000, v_srca001, v_srca010, v_srca011;
+                v_uint32 v_srca100, v_srca101, v_srca110, v_srca111;
+                v_uint32 v_srca200, v_srca201, v_srca210, v_srca211;
+                v_uint32 v_srca300, v_srca301, v_srca310, v_srca311;
+
+                v_expand(v_srca00, v_srca000, v_srca001);
+                v_expand(v_srca01, v_srca010, v_srca011);
+                v_expand(v_srca10, v_srca100, v_srca101);
+                v_expand(v_srca11, v_srca110, v_srca111);
+                v_expand(v_srca20, v_srca200, v_srca201);
+                v_expand(v_srca21, v_srca210, v_srca211);
+                v_expand(v_srca30, v_srca300, v_srca301);
+                v_expand(v_srca31, v_srca310, v_srca311);
+
+                v_uint8 v_srcb0, v_srcb1, v_srcb2, v_srcb3;
+                v_load_deinterleave(b + i * cn, v_srcb0, v_srcb1, v_srcb2, v_srcb3);
+                v_uint16 v_srcb00, v_srcb01, v_srcb10, v_srcb11;
+                v_uint16 v_srcb20, v_srcb21, v_srcb30, v_srcb31;
+
+                v_expand(v_srcb0, v_srcb00, v_srcb01);
+                v_expand(v_srcb1, v_srcb10, v_srcb11);
+                v_expand(v_srcb2, v_srcb20, v_srcb21);
+                v_expand(v_srcb3, v_srcb30, v_srcb31);
+
+                v_uint32 v_srcb000, v_srcb001, v_srcb010, v_srcb011;
+                v_uint32 v_srcb100, v_srcb101, v_srcb110, v_srcb111;
+                v_uint32 v_srcb200, v_srcb201, v_srcb210, v_srcb211;
+                v_uint32 v_srcb300, v_srcb301, v_srcb310, v_srcb311;
+
+                v_expand(v_srcb00, v_srcb000, v_srcb001);
+                v_expand(v_srcb01, v_srcb010, v_srcb011);
+                v_expand(v_srcb10, v_srcb100, v_srcb101);
+                v_expand(v_srcb11, v_srcb110, v_srcb111);
+                v_expand(v_srcb20, v_srcb200, v_srcb201);
+                v_expand(v_srcb21, v_srcb210, v_srcb211);
+                v_expand(v_srcb30, v_srcb300, v_srcb301);
+                v_expand(v_srcb31, v_srcb310, v_srcb311);
+
+                int max00 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca000) - v_reinterpret_as_s32(v_srcb000))), v_res));
+                int max01 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca001) - v_reinterpret_as_s32(v_srcb001))), v_res));
+                int max02 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca010) - v_reinterpret_as_s32(v_srcb010))), v_res));
+                int max03 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca011) - v_reinterpret_as_s32(v_srcb011))), v_res));
+
+                int max04 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca100) - v_reinterpret_as_s32(v_srcb100))), v_res));
+                int max05 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca101) - v_reinterpret_as_s32(v_srcb101))), v_res));
+                int max06 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca110) - v_reinterpret_as_s32(v_srcb110))), v_res));
+                int max07 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca111) - v_reinterpret_as_s32(v_srcb111))), v_res));
+
+                int max08 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca200) - v_reinterpret_as_s32(v_srcb200))), v_res));
+                int max09 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca201) - v_reinterpret_as_s32(v_srcb201))), v_res));
+                int max10 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca210) - v_reinterpret_as_s32(v_srcb210))), v_res));
+                int max11 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca211) - v_reinterpret_as_s32(v_srcb211))), v_res));
+
+                int max12 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca300) - v_reinterpret_as_s32(v_srcb300))), v_res));
+                int max13 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca301) - v_reinterpret_as_s32(v_srcb301))), v_res));
+                int max14 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca310) - v_reinterpret_as_s32(v_srcb310))), v_res));
+                int max15 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca311) - v_reinterpret_as_s32(v_srcb311))), v_res));
+#if CV_SIMD256
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max12, max13, max14, max15)););
+#elif CV_SIMD512
+                res = v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07, max08, max09, max10, max11, max12, max13, max14, max15));
+#else
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03)), v_reduce_max(v_int32(max04, max05, max06, max07)));
+                res = std::max(res, v_reduce_max(v_int32(max08, max09, max10, max11)));
+                res = std::max(res, v_reduce_max(v_int32(max12, max13, max14, max15)));
+#endif
+            }
+
+            a += ( i * cn );
+            b += ( i * cn );
+
+            for(; i < len; i++, a += cn, b += cn )
+            {
+                if( mask[i] )
+                {
+                    for(int j = 0; j < cn; j++ )
+                        res = std::max(res, (int)std::abs(a[j] - b[j]));
                 }
             }
         } else {
@@ -274,10 +584,10 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
     if(!mask)
     {
 #if CV_SIMD
-        for(; i <= l - v_int16::nlanes; i += v_int16::nlanes )
+        for(; i <= l - v_uint16::nlanes; i += v_uint16::nlanes )
         {
-            v_int16 srca = vx_load_expand(a + i);
-            v_int16 srcb = vx_load_expand(b + i);
+            v_int16 srca = v_reinterpret_as_s16(vx_load_expand(a + i));
+            v_int16 srcb = v_reinterpret_as_s16(vx_load_expand(b + i));
 
             res = std::max(res, (int)v_reduce_max(v_abs(srca - srcb)));
         }
@@ -294,12 +604,29 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
             for(; i <= len - v_uint16::nlanes; i+= v_uint16::nlanes)
             {
                 v_int16 m = v_reinterpret_as_s16(vx_load_expand(mask + i));
-                v_int16 d = m != zero;
+                v_int32 m0, m1;
 
-                v_int16 srca = vx_load_expand(a + i);
-                v_int16 srcb = vx_load_expand(b + i);
+                m = m != zero;
 
-                res = std::max(res, (int)v_reduce_max(v_abs((srca - srcb)*d)));
+                v_expand(m, m0, m1);
+
+                v_int32 v_res = vx_setall_s32(res);
+
+
+                v_int16 srca = v_reinterpret_as_s16(vx_load_expand(a + i));
+                v_int32 srca0, srca1;
+
+                v_expand(srca, srca0, srca1);
+
+                v_int16 srcb = v_reinterpret_as_s16(vx_load_expand(b + i));
+                v_int32 srcb0, srcb1;
+
+                v_expand(srcb, srcb0, srcb1);
+
+                int max0 = v_reduce_max(v_select(m0, v_reinterpret_as_s32(v_abs(srca0 - srcb0)), v_res));
+                int max1 = v_reduce_max(v_select(m1, v_reinterpret_as_s32(v_abs(srca1 - srcb1)), v_res));
+
+                res = std::max(max0 ,max1);
 
             }
 #endif
@@ -308,6 +635,299 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
                 if( mask[i] )
                 {
                     res = std::max(res, (int)std::abs(a[i] - b[i]));
+                }
+            }
+        } else if ( cn == 2 )
+        {
+            const v_uint32 zero = vx_setall_u32((short)0);
+            for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
+            {
+                v_uint8 m = vx_load(mask + i);
+
+                v_uint16 m0, m1;
+
+                v_expand(m, m0, m1);
+
+                v_uint32 m00, m01, m10, m11;
+
+                v_expand(m0, m00, m01);
+                v_expand(m1, m10, m11);
+
+                m00 = m00 != zero;
+                m01 = m01 != zero;
+                m10 = m10 != zero;
+                m11 = m11 != zero;
+
+                v_int32 v_res = vx_setall_s32(res);
+
+                v_int8 v_srca0, v_srca1;
+                v_load_deinterleave(a + i * cn, v_srca0, v_srca1);
+                v_int16 v_srca00, v_srca01, v_srca10, v_srca11;
+
+                v_expand(v_srca0, v_srca00, v_srca01);
+                v_expand(v_srca1, v_srca10, v_srca11);
+
+                v_int32 v_srca000, v_srca001, v_srca010, v_srca011;
+                v_int32 v_srca100, v_srca101, v_srca110, v_srca111;
+
+                v_expand(v_srca00, v_srca000, v_srca001);
+                v_expand(v_srca01, v_srca010, v_srca011);
+                v_expand(v_srca10, v_srca100, v_srca101);
+                v_expand(v_srca11, v_srca110, v_srca111);
+
+                v_int8 v_srcb0, v_srcb1;
+                v_load_deinterleave(b + i * cn, v_srcb0, v_srcb1);
+                v_int16 v_srcb00, v_srcb01, v_srcb10, v_srcb11;
+
+                v_expand(v_srcb0, v_srcb00, v_srcb01);
+                v_expand(v_srcb1, v_srcb10, v_srcb11);
+
+                v_int32 v_srcb000, v_srcb001, v_srcb010, v_srcb011;
+                v_int32 v_srcb100, v_srcb101, v_srcb110, v_srcb111;
+
+                v_expand(v_srcb00, v_srcb000, v_srcb001);
+                v_expand(v_srcb01, v_srcb010, v_srcb011);
+                v_expand(v_srcb10, v_srcb100, v_srcb101);
+                v_expand(v_srcb11, v_srcb110, v_srcb111);
+
+                int max0 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca000 - v_srcb000)), v_res));
+                int max1 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca001 - v_srcb001)), v_res));
+                int max2 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca010 - v_srcb010)), v_res));
+                int max3 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca011 - v_srcb011)), v_res));
+
+                int max4 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca100 - v_srcb100)), v_res));
+                int max5 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca101 - v_srcb101)), v_res));
+                int max6 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca110 - v_srcb110)), v_res));
+                int max7 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca111 - v_srcb111)), v_res));
+
+#if CV_SIMD256
+                res = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7));
+#elif CV_SIMD512
+                res = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7, max0, max0, max0, max0, max0, max0, max0, max0));
+#else
+                res = std::max(v_reduce_max(v_int32(max0, max1, max2, max3)), v_reduce_max(v_int32(max4, max5, max6, max7)));
+#endif
+            }
+
+            a += ( i * cn );
+            b += ( i * cn );
+
+            for(; i < len; i++, a += cn, b += cn )
+            {
+                if( mask[i] )
+                {
+                    for(int j = 0; j < cn; j++ )
+                        res = std::max(res, (int)std::abs(a[j] - b[j]));
+                }
+            }
+        } else if ( cn == 3 )
+        {
+            const v_uint32 zero = vx_setall_u32((short)0);
+            for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
+            {
+                v_uint8 m = vx_load(mask + i);
+
+                v_uint16 m0, m1;
+
+                v_expand(m, m0, m1);
+
+                v_uint32 m00, m01, m10, m11;
+
+                v_expand(m0, m00, m01);
+                v_expand(m1, m10, m11);
+
+                m00 = m00 != zero;
+                m01 = m01 != zero;
+                m10 = m10 != zero;
+                m11 = m11 != zero;
+
+                v_int32 v_res = vx_setall_s32(res);
+
+                v_int8 v_srca0, v_srca1, v_srca2;
+                v_load_deinterleave(a + i * cn, v_srca0, v_srca1, v_srca2);
+                v_int16 v_srca00, v_srca01, v_srca10, v_srca11;
+                v_int16 v_srca20, v_srca21;
+
+                v_expand(v_srca0, v_srca00, v_srca01);
+                v_expand(v_srca1, v_srca10, v_srca11);
+                v_expand(v_srca2, v_srca20, v_srca21);
+
+                v_int32 v_srca000, v_srca001, v_srca010, v_srca011;
+                v_int32 v_srca100, v_srca101, v_srca110, v_srca111;
+                v_int32 v_srca200, v_srca201, v_srca210, v_srca211;
+
+                v_expand(v_srca00, v_srca000, v_srca001);
+                v_expand(v_srca01, v_srca010, v_srca011);
+                v_expand(v_srca10, v_srca100, v_srca101);
+                v_expand(v_srca11, v_srca110, v_srca111);
+                v_expand(v_srca20, v_srca200, v_srca201);
+                v_expand(v_srca21, v_srca210, v_srca211);
+
+                v_int8 v_srcb0, v_srcb1, v_srcb2;
+                v_load_deinterleave(b + i * cn, v_srcb0, v_srcb1, v_srcb2);
+                v_int16 v_srcb00, v_srcb01, v_srcb10, v_srcb11;
+                v_int16 v_srcb20, v_srcb21;
+
+                v_expand(v_srcb0, v_srcb00, v_srcb01);
+                v_expand(v_srcb1, v_srcb10, v_srcb11);
+                v_expand(v_srcb2, v_srcb20, v_srcb21);
+
+                v_int32 v_srcb000, v_srcb001, v_srcb010, v_srcb011;
+                v_int32 v_srcb100, v_srcb101, v_srcb110, v_srcb111;
+                v_int32 v_srcb200, v_srcb201, v_srcb210, v_srcb211;
+
+                v_expand(v_srcb00, v_srcb000, v_srcb001);
+                v_expand(v_srcb01, v_srcb010, v_srcb011);
+                v_expand(v_srcb10, v_srcb100, v_srcb101);
+                v_expand(v_srcb11, v_srcb110, v_srcb111);
+                v_expand(v_srcb20, v_srcb200, v_srcb201);
+                v_expand(v_srcb21, v_srcb210, v_srcb211);
+
+                int max00 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca000 - v_srcb000)), v_res));
+                int max01 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca001 - v_srcb001)), v_res));
+                int max02 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca010 - v_srcb010)), v_res));
+                int max03 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca011 - v_srcb011)), v_res));
+
+                int max04 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca100 - v_srcb100)), v_res));
+                int max05 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca101 - v_srcb101)), v_res));
+                int max06 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca110 - v_srcb110)), v_res));
+                int max07 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca111 - v_srcb111)), v_res));
+
+                int max08 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca200 - v_srcb200)), v_res));
+                int max09 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca201 - v_srcb201)), v_res));
+                int max10 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca210 - v_srcb210)), v_res));
+                int max11 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca211 - v_srcb211)), v_res));
+#if CV_SIMD256
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max11, max11, max11, max11)););
+#elif CV_SIMD512
+                res = v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07, max08, max09, max10, max11, max11, max11, max11, max11));
+#else
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03)), v_reduce_max(v_int32(max04, max05, max06, max07)));
+                res = std::max(res, v_reduce_max(v_int32(max08, max09, max10, max11)));
+#endif
+            }
+
+            a += ( i * cn );
+            b += ( i * cn );
+
+            for(; i < len; i++, a += cn, b += cn )
+            {
+                if( mask[i] )
+                {
+                    for(int j = 0; j < cn; j++ )
+                        res = std::max(res, (int)std::abs(a[j] - b[j]));
+                }
+            }
+        } else if ( cn == 4 )
+        {
+            const v_uint32 zero = vx_setall_u32((short)0);
+            for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
+            {
+                v_uint8 m = vx_load(mask + i);
+
+                v_uint16 m0, m1;
+
+                v_expand(m, m0, m1);
+
+                v_uint32 m00, m01, m10, m11;
+
+                v_expand(m0, m00, m01);
+                v_expand(m1, m10, m11);
+
+                m00 = m00 != zero;
+                m01 = m01 != zero;
+                m10 = m10 != zero;
+                m11 = m11 != zero;
+
+                v_int32 v_res = vx_setall_s32(res);
+
+                v_int8 v_srca0, v_srca1, v_srca2, v_srca3;
+                v_load_deinterleave(a + i * cn, v_srca0, v_srca1, v_srca2, v_srca3);
+                v_int16 v_srca00, v_srca01, v_srca10, v_srca11;
+                v_int16 v_srca20, v_srca21, v_srca30, v_srca31;
+
+                v_expand(v_srca0, v_srca00, v_srca01);
+                v_expand(v_srca1, v_srca10, v_srca11);
+                v_expand(v_srca2, v_srca20, v_srca21);
+                v_expand(v_srca3, v_srca30, v_srca31);
+
+                v_int32 v_srca000, v_srca001, v_srca010, v_srca011;
+                v_int32 v_srca100, v_srca101, v_srca110, v_srca111;
+                v_int32 v_srca200, v_srca201, v_srca210, v_srca211;
+                v_int32 v_srca300, v_srca301, v_srca310, v_srca311;
+
+                v_expand(v_srca00, v_srca000, v_srca001);
+                v_expand(v_srca01, v_srca010, v_srca011);
+                v_expand(v_srca10, v_srca100, v_srca101);
+                v_expand(v_srca11, v_srca110, v_srca111);
+                v_expand(v_srca20, v_srca200, v_srca201);
+                v_expand(v_srca21, v_srca210, v_srca211);
+                v_expand(v_srca30, v_srca300, v_srca301);
+                v_expand(v_srca31, v_srca310, v_srca311);
+
+                v_int8 v_srcb0, v_srcb1, v_srcb2, v_srcb3;
+                v_load_deinterleave(b + i * cn, v_srcb0, v_srcb1, v_srcb2, v_srcb3);
+                v_int16 v_srcb00, v_srcb01, v_srcb10, v_srcb11;
+                v_int16 v_srcb20, v_srcb21, v_srcb30, v_srcb31;
+
+                v_expand(v_srcb0, v_srcb00, v_srcb01);
+                v_expand(v_srcb1, v_srcb10, v_srcb11);
+                v_expand(v_srcb2, v_srcb20, v_srcb21);
+                v_expand(v_srcb3, v_srcb30, v_srcb31);
+
+                v_int32 v_srcb000, v_srcb001, v_srcb010, v_srcb011;
+                v_int32 v_srcb100, v_srcb101, v_srcb110, v_srcb111;
+                v_int32 v_srcb200, v_srcb201, v_srcb210, v_srcb211;
+                v_int32 v_srcb300, v_srcb301, v_srcb310, v_srcb311;
+
+                v_expand(v_srcb00, v_srcb000, v_srcb001);
+                v_expand(v_srcb01, v_srcb010, v_srcb011);
+                v_expand(v_srcb10, v_srcb100, v_srcb101);
+                v_expand(v_srcb11, v_srcb110, v_srcb111);
+                v_expand(v_srcb20, v_srcb200, v_srcb201);
+                v_expand(v_srcb21, v_srcb210, v_srcb211);
+                v_expand(v_srcb30, v_srcb300, v_srcb301);
+                v_expand(v_srcb31, v_srcb310, v_srcb311);
+
+                int max00 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca000 - v_srcb000)), v_res));
+                int max01 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca001 - v_srcb001)), v_res));
+                int max02 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca010 - v_srcb010)), v_res));
+                int max03 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca011 - v_srcb011)), v_res));
+
+                int max04 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca100 - v_srcb100)), v_res));
+                int max05 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca101 - v_srcb101)), v_res));
+                int max06 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca110 - v_srcb110)), v_res));
+                int max07 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca111 - v_srcb111)), v_res));
+
+                int max08 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca200 - v_srcb200)), v_res));
+                int max09 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca201 - v_srcb201)), v_res));
+                int max10 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca210 - v_srcb210)), v_res));
+                int max11 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca211 - v_srcb211)), v_res));
+
+                int max12 = v_reduce_max(v_select(v_reinterpret_as_s32(m00), v_reinterpret_as_s32(v_abs(v_srca300 - v_srcb300)), v_res));
+                int max13 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca301 - v_srcb301)), v_res));
+                int max14 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca310 - v_srcb310)), v_res));
+                int max15 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca311 - v_srcb311)), v_res));
+#if CV_SIMD256
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max12, max13, max14, max15)););
+#elif CV_SIMD512
+                res = v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07, max08, max09, max10, max11, max12, max13, max14, max15));
+#else
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03)), v_reduce_max(v_int32(max04, max05, max06, max07)));
+                res = std::max(res, v_reduce_max(v_int32(max08, max09, max10, max11)));
+                res = std::max(res, v_reduce_max(v_int32(max12, max13, max14, max15)));
+#endif
+            }
+
+            a += ( i * cn );
+            b += ( i * cn );
+
+            for(; i < len; i++, a += cn, b += cn )
+            {
+                if( mask[i] )
+                {
+                    for(int j = 0; j < cn; j++ )
+                        res = std::max(res, (int)std::abs(a[j] - b[j]));
                 }
             }
         } else {
@@ -498,8 +1118,6 @@ static int normInf_8s(const schar* src, const uchar* mask, int* r, int len, int 
 CV_DEF_NORM_FUNC(L1, 8s, schar, int)
 CV_DEF_NORM_FUNC(L2, 8s, schar, int)
 
-
-//CV_DEF_NORM_ALL(8s, schar, int, int, int)
 CV_DEF_NORM_ALL(16u, ushort, int, int, double)
 CV_DEF_NORM_ALL(16s, short, int, int, double)
 CV_DEF_NORM_ALL(32s, int, int, double, double)
