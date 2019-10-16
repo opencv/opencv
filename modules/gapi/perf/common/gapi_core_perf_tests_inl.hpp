@@ -112,7 +112,7 @@ PERF_TEST_P_(SubPerfTest, TestPerformance)
     auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
                         std::move(compile_args));
     cc(in_mat1, in_mat2, out_mat_gapi);
-    
+
     TEST_CYCLE()
     {
         cc(in_mat1, in_mat2, out_mat_gapi);
@@ -1007,7 +1007,7 @@ PERF_TEST_P_(AddWeightedPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2), 
+    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
