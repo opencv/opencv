@@ -34,7 +34,7 @@ namespace draw
 struct use_freetype
 {
     /*@{*/
-    const char* path; //!< The path to font file (.ttf)
+    std::string path; //!< The path to font file (.ttf)
     /*@{*/
 };
 
@@ -201,6 +201,15 @@ GAPI_EXPORTS GMat2 renderNV12(const GMat& y,
 
 } // namespace draw
 } // namespace wip
+
+namespace render
+{
+namespace ocv
+{
+    GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
+
+} // namespace ocv
+} // namespace render
 } // namespace gapi
 } // namespace cv
 

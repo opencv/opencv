@@ -19,7 +19,6 @@ namespace ocv
 {
 
 GAPI_EXPORTS cv::gapi::GBackend backend();
-GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
 
 struct KImpl {
     using Run = std::function<void(GRenderContext& ctx)>;

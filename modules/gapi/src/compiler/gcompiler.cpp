@@ -65,6 +65,7 @@ namespace
 
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
+            // FIXME add N-arg version combine
             combine(combine(cv::gapi::core::cpu::kernels(),
                     cv::gapi::imgproc::cpu::kernels()),
                     cv::gapi::render::ocv::kernels());

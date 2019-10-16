@@ -40,23 +40,22 @@ using GConstRenderModel = ade::ConstTypedGraph
     >;
 
 cv::gimpl::render::ocv::GRenderExecutable::GRenderExecutable(const ade::Graph &g,
-                                                        const std::vector<ade::NodeHandle> &nodes)
+                                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
         GConstRenderModel gcm(m_g);
-        for (auto &nh : nodes)
-        {
-            switch (m_gm.metadata(nh).get<NodeType>().t)
-            {
-                case NodeType::OP:
-                    if (this_nh == nullptr) {
-                        this_nh = nh;
-                    }
-                    else
-                        util::throw_error(std::logic_error("Multi-node rendering is not supported!"));
-                    break;
-                default: util::throw_error(std::logic_error("Unsupported NodeType type"));
-            }
-        }                  
+
+        auto is_op = [&](ade::NodeHandle nh) {
+            return m_gm.metadata(nh).get<NodeType>().t == NodeType::OP;
+        };
+
+        auto it = ade::util::find_if(nodes, is_op);
+
+        GAPI_Assert(it != nodes.end());
+        this_nh = *it;
+
+        if (!std::none_of(std::next(it), nodes.end(), is_op)) {
+            util::throw_error(std::logic_error("Multi-node rendering is not supported!"));
+        }
 }
 
 void cv::gimpl::render::ocv::GRenderExecutable::run(std::vector<InObj>  &&input_objs,
