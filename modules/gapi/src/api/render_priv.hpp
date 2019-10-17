@@ -8,7 +8,7 @@
 #ifndef OPENCV_RENDER_PRIV_HPP
 #define OPENCV_RENDER_PRIV_HPP
 
-#include <opencv2/gapi/render.hpp>
+#include <opencv2/gapi/render/render.hpp>
 
 namespace cv
 {

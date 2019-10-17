@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_RENDER_TESTS_INL_HPP
 #define OPENCV_GAPI_RENDER_TESTS_INL_HPP
 
-#include <opencv2/gapi/render.hpp>
+#include <opencv2/gapi/render/render.hpp>
 #include "gapi_render_tests.hpp"
 
 namespace opencv_test
@@ -16,11 +16,11 @@ namespace opencv_test
 
 TEST_P(RenderNV12, AccuracyTest)
 {
-    std::tie(sz, prims, pkg) = GetParam();
+    std::tie(sz, prims) = GetParam();
     Init();
 
     cv::gapi::wip::draw::BGR2NV12(mat_gapi, y_mat_gapi, uv_mat_gapi);
-    cv::gapi::wip::draw::render(y_mat_gapi, uv_mat_gapi, prims, pkg);
+    cv::gapi::wip::draw::render(y_mat_gapi, uv_mat_gapi, prims);
 
     ComputeRef();
 
@@ -30,10 +30,10 @@ TEST_P(RenderNV12, AccuracyTest)
 
 TEST_P(RenderBGR, AccuracyTest)
 {
-    std::tie(sz, prims, pkg) = GetParam();
+    std::tie(sz, prims) = GetParam();
     Init();
 
-    cv::gapi::wip::draw::render(mat_gapi, prims, pkg);
+    cv::gapi::wip::draw::render(mat_gapi, prims);
     ComputeRef();
 
     EXPECT_EQ(0, cv::norm(mat_gapi, mat_ocv));
