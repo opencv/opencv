@@ -106,16 +106,14 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-if "OPENCV_JS_WHITELIST" in os.environ:
+track=""
+if "OPENCV_JS_WHITELIST" in os.environ:s
     track = os.environ["OPENCV_JS_WHITELIST"]
-    with open(track, 'r') as json_file:
-        json_data = json.load(json_file)
-        white_list = makeWhiteList(json_data)
 else:
-      track = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.json')
-      with open(track, 'r') as json_file:
-          json_data = json.load(json_file)
-          white_list = makeWhiteList(json_data)
+    track = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.json')
+with open(track, 'r') as json_file:
+    json_data = json.load(json_file)
+    white_list = makeWhiteList(json_data)
 # Features to be exported
 export_enums = False
 export_consts = True
