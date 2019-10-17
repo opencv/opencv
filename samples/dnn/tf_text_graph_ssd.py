@@ -122,7 +122,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
     print('Input image size: %dx%d' % (image_width, image_height))
 
     # Read the graph.
-    inpNames = ['image_tensor']
+    _inpNames = ['image_tensor']
     outNames = ['num_detections', 'detection_scores', 'detection_boxes', 'detection_classes']
 
     writeTextGraph(modelPath, outputPath, outNames)
