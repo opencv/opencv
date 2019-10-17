@@ -92,6 +92,14 @@ void Standard_Hough( int, void* )
   vector<Vec2f> s_lines;
   cvtColor( edges, standard_hough, COLOR_GRAY2BGR );
 
+  //! [window]
+  namedWindow("cvtColor", WINDOW_AUTOSIZE); // Create a window for display.
+  //! [window]
+
+  //! [imshow]
+  imshow("cvtColor", standard_hough);
+  waitKey(0);
+
   /// 1. Use Standard Hough Transform
   HoughLines( edges, s_lines, 1, CV_PI/180, min_threshold + s_trackbar, 0, 0 );
 

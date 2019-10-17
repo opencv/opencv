@@ -24,10 +24,18 @@ GAPI_OCV_KERNEL(CustomRGB2YUV,  IRGB2YUV)  { static void run(cv::Mat, cv::Mat &)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 3)
-        return -1;
+  //  if (argc < 3)
+//        return -1;
+    using namespace std;
+    using namespace cv;
+    String imageName("building.jpg");
+    if (argc > 1)
+    {
+        imageName = argv[1];
+    }
 
-    cv::Mat input = cv::imread(argv[1]);
+    cv::Mat input = imread(samples::findFile(imageName), IMREAD_COLOR);
+    //cv::Mat input = cv::imread(argv[1]);
     cv::Mat output;
 
     {
@@ -57,6 +65,7 @@ int main(int argc, char *argv[])
     cv::GComputation sobelEdgeSub(cv::GIn(gx, gy), cv::GOut(out));
     //! [graph_cap_sub]
     }
+    //cv::GComputationT lsls();
     //! [graph_gen]
     cv::GComputation sobelEdgeGen([](){
             cv::GMat in;
@@ -68,8 +77,10 @@ int main(int argc, char *argv[])
         });
     //! [graph_gen]
 
-    cv::imwrite(argv[2], output);
-
+    //cv::imwrite(argv[2], output);
+    namedWindow("Origin", WINDOW_AUTOSIZE);
+    imshow("Origin", output);
+    waitKey(0);
     //! [kernels_snippet]
     cv::gapi::GKernelPackage pkg = cv::gapi::kernels
         < CustomAdd
