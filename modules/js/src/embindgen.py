@@ -162,7 +162,8 @@ if "OPENCV_JS_WHITELIST" in os.environ:
         json_data = json.load(json_file)
         white_list = makeWhiteList(json_data)
 else:
-    white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, calib3d])
+     json_data = json.load('poi.json')
+     white_list = makeWhiteList(json_data)
 # Features to be exported
 export_enums = False
 export_consts = True
