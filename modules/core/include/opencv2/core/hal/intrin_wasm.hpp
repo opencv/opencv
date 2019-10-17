@@ -21,6 +21,18 @@ namespace cv
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
+#if (__EMSCRIPTEN_major__ * 1000000 + __EMSCRIPTEN_minor__ * 1000 + __EMSCRIPTEN_tiny__) < (1038046)
+// handle renames: https://github.com/emscripten-core/emscripten/pull/9440 (https://github.com/emscripten-core/emscripten/commit/755d5b46cb84d0aa120c10981b11d05646c29673)
+#define wasm_i32x4_trunc_saturate_f32x4 wasm_trunc_saturate_i32x4_f32x4
+#define wasm_u32x4_trunc_saturate_f32x4 wasm_trunc_saturate_u32x4_f32x4
+#define wasm_i64x2_trunc_saturate_f64x2 wasm_trunc_saturate_i64x2_f64x2
+#define wasm_u64x2_trunc_saturate_f64x2 wasm_trunc_saturate_u64x2_f64x2
+#define wasm_f32x4_convert_i32x4 wasm_convert_f32x4_i32x4
+#define wasm_f32x4_convert_u32x4 wasm_convert_f32x4_u32x4
+#define wasm_f64x2_convert_i64x2 wasm_convert_f64x2_i64x2
+#define wasm_f64x2_convert_u64x2 wasm_convert_f64x2_u64x2
+#endif // COMPATIBILITY: <1.38.46
+
 ///////// Types ///////////
 
 struct v_uint8x16
@@ -3400,25 +3412,25 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 inline v_int32x4 v_round(const v_float32x4& a)
 {
     v128_t h = wasm_f32x4_splat(0.5);
-    return v_int32x4(wasm_trunc_saturate_i32x4_f32x4(wasm_f32x4_add(a.val, h)));
+    return v_int32x4(wasm_i32x4_trunc_saturate_f32x4(wasm_f32x4_add(a.val, h)));
 }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
-    v128_t a1 = wasm_trunc_saturate_i32x4_f32x4(a.val);
-    v128_t mask = wasm_f32x4_lt(a.val, wasm_convert_f32x4_i32x4(a1));
+    v128_t a1 = wasm_i32x4_trunc_saturate_f32x4(a.val);
+    v128_t mask = wasm_f32x4_lt(a.val, wasm_f32x4_convert_i32x4(a1));
     return v_int32x4(wasm_i32x4_add(a1, mask));
 }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
 {
-    v128_t a1 = wasm_trunc_saturate_i32x4_f32x4(a.val);
-    v128_t mask = wasm_f32x4_gt(a.val, wasm_convert_f32x4_i32x4(a1));
+    v128_t a1 = wasm_i32x4_trunc_saturate_f32x4(a.val);
+    v128_t mask = wasm_f32x4_gt(a.val, wasm_f32x4_convert_i32x4(a1));
     return v_int32x4(wasm_i32x4_sub(a1, mask));
 }
 
 inline v_int32x4 v_trunc(const v_float32x4& a)
-{ return v_int32x4(wasm_trunc_saturate_i32x4_f32x4(a.val)); }
+{ return v_int32x4(wasm_i32x4_trunc_saturate_f32x4(a.val)); }
 
 #define OPENCV_HAL_IMPL_WASM_MATH_FUNC(func, cfunc, _Tpvec, _Tpnvec, _Tp, _Tpn) \
 inline _Tpnvec func(const _Tpvec& a) \
@@ -3924,7 +3936,7 @@ OPENCV_HAL_IMPL_WASM_LOADSTORE_INTERLEAVE(v_float64x2, double, f64, v_uint64x2, 
 
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
-    return v_float32x4(wasm_convert_f32x4_i32x4(a.val));
+    return v_float32x4(wasm_f32x4_convert_i32x4(a.val));
 }
 
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
@@ -3943,7 +3955,7 @@ inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 {
 #ifdef __wasm_unimplemented_simd128__
     v128_t p = v128_cvti32x4_i64x2(a.val);
-    return v_float64x2(wasm_convert_f64x2_i64x2(p));
+    return v_float64x2(wasm_f64x2_convert_i64x2(p));
 #else
     fallback::v_int32x4 a_(a);
     return fallback::v_cvt_f64(a_);
@@ -3954,7 +3966,7 @@ inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
 {
 #ifdef __wasm_unimplemented_simd128__
     v128_t p = v128_cvti32x4_i64x2_high(a.val);
-    return v_float64x2(wasm_convert_f64x2_i64x2(p));
+    return v_float64x2(wasm_f64x2_convert_i64x2(p));
 #else
     fallback::v_int32x4 a_(a);
     return fallback::v_cvt_f64_high(a_);
@@ -3976,7 +3988,7 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 inline v_float64x2 v_cvt_f64(const v_int64x2& a)
 {
 #ifdef __wasm_unimplemented_simd128__
-    return v_float64x2(wasm_convert_f64x2_i64x2(a.val));
+    return v_float64x2(wasm_f64x2_convert_i64x2(a.val));
 #else
     fallback::v_int64x2 a_(a);
     return fallback::v_cvt_f64(a_);
