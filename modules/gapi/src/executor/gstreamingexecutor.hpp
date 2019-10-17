@@ -106,7 +106,6 @@ protected:
     std::vector<ade::NodeHandle> m_emitters;
     std::vector<ade::NodeHandle> m_sinks;
 
-    cv::util::optional<cv::GRunArgs> m_last_source;
     std::vector<std::thread> m_threads;
     std::vector<stream::Q>   m_emitter_queues;
     std::vector<stream::Q*>  m_const_emitter_queues; // a view over m_emitter_queues

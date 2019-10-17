@@ -17,6 +17,8 @@
 #include <opencv2/gapi/ocl/core.hpp>
 #include <opencv2/gapi/ocl/imgproc.hpp>
 
+#include <opencv2/gapi/streaming/cap.hpp>
+
 namespace opencv_test
 {
 namespace
@@ -169,7 +171,7 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
     EXPECT_TRUE(ccomp);
     EXPECT_FALSE(ccomp.running());
 
-    ccomp.setSource(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")});
+    ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
 
     ccomp.start();
     EXPECT_TRUE(ccomp.running());
@@ -177,11 +179,14 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
     // Process the full video
     cv::Mat in_mat_gapi, out_mat_gapi;
 
+    std::size_t frames = 0u;
     while (ccomp.pull(cv::gout(in_mat_gapi, out_mat_gapi))) {
+        frames++;
         cv::Mat out_mat_ocv;
         opencv_ref(in_mat_gapi, out_mat_ocv);
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
     }
+    EXPECT_LT(0u, frames);
     EXPECT_FALSE(ccomp.running());
 
     // Stop can be called at any time (even if the pipeline is not running)
@@ -237,7 +242,7 @@ TEST_P(GAPI_Streaming, SmokeTest_StartRestart)
 
     // Run 1
     std::size_t num_frames1 = 0u;
-    ccomp.setSource(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")});
+    ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
     ccomp.start();
     EXPECT_TRUE(ccomp.running());
 
@@ -248,6 +253,7 @@ TEST_P(GAPI_Streaming, SmokeTest_StartRestart)
 
     // Run 2
     std::size_t num_frames2 = 0u;
+    ccomp.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
     ccomp.start();
     EXPECT_TRUE(ccomp.running());
     while (ccomp.pull(cv::gout(out1, out2))) num_frames2++;
@@ -269,11 +275,12 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
     }).compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
                         cv::compile_args(cv::gapi::use_only{GetParam()}));
 
-    refc.setSource(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")});
+    refc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
     refc.start();
     std::size_t ref_frames = 0u;
     cv::Mat tmp;
     while (refc.pull(cv::gout(tmp))) ref_frames++;
+    EXPECT_EQ(100u, ref_frames);
 
     cv::GMat in;
     cv::GMat in2;
@@ -286,7 +293,8 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
                           cv::compile_args(cv::gapi::use_only{GetParam()}));
 
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
-    testc.setSource(cv::gin(in_const, cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")}));
+    testc.setSource(cv::gin(in_const,
+                            gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"))));
     testc.start();
     std::size_t test_frames = 0u;
     while (testc.pull(cv::gout(tmp))) test_frames++;
@@ -390,7 +398,7 @@ TEST(GAPI_Streaming_Types, InputScalar)
     for (int i = 0; i < 10; i++)
     {
         cv::Mat out;
-        sc.pull(cv::gout(out));
+        EXPECT_TRUE(sc.pull(cv::gout(out)));
         EXPECT_EQ(0., cv::norm(out, in_mat.mul(in_scl), cv::NORM_INF));
     }
 }
@@ -426,7 +434,7 @@ TEST(GAPI_Streaming_Types, InputVector)
     for (int i = 0; i < 10; i++)
     {
         cv::Mat out_mat;
-        sc.pull(cv::gout(out_mat));
+        EXPECT_TRUE(sc.pull(cv::gout(out_mat)));
 
         cv::Mat ref_mat;
         opencv_ref(in_mat, in_vec, ref_mat);
@@ -481,17 +489,20 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
     // Compile streaming pipeline
     auto sc = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
                                  cv::compile_args(cv::gapi::use_only{kernels}));
-    sc.setSource(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")});
+    sc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
     sc.start();
 
     cv::Mat in_frame;
     cv::Mat out_mat_gapi;
     cv::Mat out_mat_ref;
 
+    std::size_t num_frames = 0u;
     while (sc.pull(cv::gout(in_frame, out_mat_gapi))) {
+        num_frames++;
         ocv_ref(in_frame, out_mat_ref);
         EXPECT_EQ(0., cv::norm(out_mat_gapi, out_mat_ref, cv::NORM_INF));
     }
+    EXPECT_LT(0u, num_frames);
 }
 
 TEST(GAPI_Streaming_Types, XChangeVector)
@@ -538,7 +549,7 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     auto sc = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
                                  cv::GMatDesc{CV_8U,3,cv::Size{576,576}},
                                  cv::compile_args(cv::gapi::use_only{kernels}));
-    sc.setSource(cv::gin(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")},
+    sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")),
                          in_eye));
     sc.start();
 
@@ -546,10 +557,13 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     cv::Mat out_mat_gapi;
     cv::Mat out_mat_ref;
 
+    std::size_t num_frames = 0u;
     while (sc.pull(cv::gout(in_frame, out_mat_gapi))) {
+        num_frames++;
         ocv_ref(in_frame, in_eye, out_mat_ref);
         EXPECT_EQ(0., cv::norm(out_mat_gapi, out_mat_ref, cv::NORM_INF));
     }
+    EXPECT_LT(0u, num_frames);
 }
 
 TEST(GAPI_Streaming_Types, OutputScalar)
@@ -565,7 +579,7 @@ TEST(GAPI_Streaming_Types, OutputScalar)
         .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}});
 
     const auto video_path = findDataFile("cv/video/768x576.avi");
-    sc.setSource(cv::gapi::GVideoCapture{video_path});
+    sc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(video_path));
     sc.start();
 
     cv::VideoCapture cap;
@@ -573,12 +587,15 @@ TEST(GAPI_Streaming_Types, OutputScalar)
 
     cv::Mat tmp;
     cv::Scalar out_scl;
+    std::size_t num_frames = 0u;
     while (sc.pull(cv::gout(out_scl)))
     {
+        num_frames++;
         cap >> tmp;
         cv::Scalar out_ref = cv::mean(tmp);
         EXPECT_EQ(out_ref, out_scl);
     }
+    EXPECT_LT(0u, num_frames);
 }
 
 TEST(GAPI_Streaming_Types, OutputVector)
@@ -606,7 +623,7 @@ TEST(GAPI_Streaming_Types, OutputVector)
 
     cv::Mat in_eye = cv::Mat::eye(cv::Size(256, 256), CV_8UC3);
     const auto video_path = findDataFile("cv/video/768x576.avi");
-    sc.setSource(cv::gin(in_eye, cv::gapi::GVideoCapture{video_path}));
+    sc.setSource(cv::gin(in_eye, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(video_path)));
     sc.start();
 
     cv::VideoCapture cap;
@@ -615,29 +632,36 @@ TEST(GAPI_Streaming_Types, OutputVector)
     cv::Mat tmp;
     std::vector<int> ref_vec;
     std::vector<int> out_vec;
+    std::size_t num_frames = 0u;
     while (sc.pull(cv::gout(out_vec)))
     {
+        num_frames++;
         cap >> tmp;
         ref_vec.clear();
         ocv_ref(in_eye, tmp, ref_vec);
         EXPECT_EQ(ref_vec, out_vec);
     }
+    EXPECT_LT(0u, num_frames);
 }
 
 struct GAPI_Streaming_Unit: public ::testing::Test {
-    cv::GStreamingCompiled sc;
     cv::Mat m;
+
+    cv::GComputation cc;
+    cv::GStreamingCompiled sc;
 
     cv::GCompiled ref;
 
     GAPI_Streaming_Unit()
         : m(cv::Mat::ones(224,224,CV_8UC3))
+        , cc([]{
+                cv::GMat a, b;
+                cv::GMat c = a + b*2;
+                return cv::GComputation(cv::GIn(a, b), cv::GOut(c));
+            })
     {
         initTestDataPath();
 
-        cv::GMat a, b;
-        cv::GMat c = a + b*2;
-        auto cc = cv::GComputation(cv::GIn(a, b), cv::GOut(c));
 
         const auto a_desc = cv::descr_of(m);
         const auto b_desc = cv::descr_of(m);
@@ -649,10 +673,10 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
 {
     // FIXME: Meta check doesn't fail here (but ideally it should)
-    EXPECT_NO_THROW(sc.setSource(cv::gin(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")}, m)));
-    EXPECT_NO_THROW(sc.setSource(cv::gin(m, cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")})));
-    EXPECT_ANY_THROW(sc.setSource(cv::gin(cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")},
-                                          cv::gapi::GVideoCapture{findDataFile("cv/video/768x576.avi")})));
+    const auto c_ptr = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
+    EXPECT_NO_THROW(sc.setSource(cv::gin(c_ptr, m)));
+    EXPECT_NO_THROW(sc.setSource(cv::gin(m, c_ptr)));
+    EXPECT_ANY_THROW(sc.setSource(cv::gin(c_ptr, c_ptr)));
 }
 
 TEST_F(GAPI_Streaming_Unit, TestStartWithoutnSetSource)
@@ -681,7 +705,7 @@ TEST_F(GAPI_Streaming_Unit, StopStartStop)
     EXPECT_NO_THROW(sc.start());
 
     std::size_t i = 0u;
-    while (i++ < 10u) sc.pull(cv::gout(out));
+    while (i++ < 10u) {EXPECT_TRUE(sc.pull(cv::gout(out)));};
 
     EXPECT_NO_THROW(sc.stop());
 }
@@ -693,13 +717,38 @@ TEST_F(GAPI_Streaming_Unit, ImplicitStop)
     // No explicit stop here - pipeline stops successfully at the test exit
 }
 
-TEST_F(GAPI_Streaming_Unit, StartStopStress)
+TEST_F(GAPI_Streaming_Unit, StartStopStart_NoSetSource)
+{
+    EXPECT_NO_THROW(sc.setSource(cv::gin(m, m)));
+    EXPECT_NO_THROW(sc.start());
+    EXPECT_NO_THROW(sc.stop());
+    EXPECT_ANY_THROW(sc.start()); // Should fails since setSource was not called
+}
+
+TEST_F(GAPI_Streaming_Unit, StartStopStress_Const)
 {
     // Runs 100 times with no deadlock - assumed stable (robust) enough
-    sc.setSource(cv::gin(m, m));
     for (int i = 0; i < 100; i++)
     {
         sc.stop();
+        sc.setSource(cv::gin(m, m));
+        sc.start();
+        cv::Mat out;
+        for (int j = 0; j < 5; j++) EXPECT_TRUE(sc.pull(cv::gout(out)));
+    }
+}
+
+TEST_F(GAPI_Streaming_Unit, StartStopStress_Video)
+{
+    // Runs 100 times with no deadlock - assumed stable (robust) enough
+    sc = cc.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
+                             cv::GMatDesc{CV_8U,3,cv::Size{768,576}});
+    m = cv::Mat::eye(cv::Size{768,576}, CV_8UC3);
+    for (int i = 0; i < 100; i++)
+    {
+        auto src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
+        sc.stop();
+        sc.setSource(cv::gin(src, m));
         sc.start();
         cv::Mat out;
         for (int j = 0; j < 5; j++) EXPECT_TRUE(sc.pull(cv::gout(out)));
@@ -728,7 +777,7 @@ TEST_F(GAPI_Streaming_Unit, SetSource_Multi_BeforeStart)
     // Run the pipeline, acquire result once
     sc.start();
     cv::Mat out, out_ref;
-    sc.pull(cv::gout(out));
+    EXPECT_TRUE(sc.pull(cv::gout(out)));
     sc.stop();
 
     // Pipeline should process `eye` mat, not `zrs`
@@ -755,7 +804,7 @@ TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
     // Test pipeline with `m` input
     sc.start();
     cv::Mat out, out_ref;
-    sc.pull(cv::gout(out));
+    EXPECT_TRUE(sc.pull(cv::gout(out)));
     sc.stop();
 
     // Test against ref
@@ -766,7 +815,7 @@ TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
     cv::Mat eye = cv::Mat::eye(224, 224, CV_8UC3);
     sc.setSource(cv::gin(eye, m));
     sc.start();
-    sc.pull(cv::gout(out));
+    EXPECT_TRUE(sc.pull(cv::gout(out)));
     sc.stop();
 
     // Test against new ref

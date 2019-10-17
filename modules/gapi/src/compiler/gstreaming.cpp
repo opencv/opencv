@@ -95,9 +95,9 @@ void cv::GStreamingCompiled::setSource(GRunArgs &&ins)
     m_priv->setSource(std::move(ins));
 }
 
-void cv::GStreamingCompiled::setSource(const cv::gapi::GVideoCapture &cap)
+void cv::GStreamingCompiled::setSource(const cv::gapi::wip::IStreamSource::Ptr &s)
 {
-    setSource(cv::gin(cap));
+    setSource(cv::gin(s));
 }
 
 void cv::GStreamingCompiled::start()

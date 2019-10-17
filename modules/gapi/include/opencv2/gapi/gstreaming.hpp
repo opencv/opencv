@@ -13,7 +13,7 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/garg.hpp>
-#include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/gapi/streaming/source.hpp>
 
 namespace cv {
 
@@ -106,15 +106,20 @@ public:
      * setSource() to run the graph on a new video stream.
      *
      * @overload
-     * @param c GVideoCapture representing the input video stream.
+     * @param s a shared pointer to IStreamSource representing the
+     * input video stream.
      */
-    void setSource(const gapi::GVideoCapture &c);
+    void setSource(const gapi::wip::IStreamSource::Ptr& s);
 
     /**
      * @brief Start the pipeline execution.
      *
      * Use pull()/try_pull() to obtain data. Throws an exception if
      * a video source was not specified.
+     *
+     * setSource() must be called first, even if the pipeline has been
+     * working already and then stopped (explicitly via stop() or due
+     * stream completion)
      *
      * @note This method is not thread-safe (with respect to the user
      * side) at the moment. Protect the access if

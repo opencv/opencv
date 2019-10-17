@@ -17,8 +17,7 @@ endif()
 
 set(the_description "OpenCV G-API Core Module")
 
-## FIXME: This is a huge dependency!
-ocv_add_module(gapi opencv_imgproc opencv_videoio)
+ocv_add_module(gapi opencv_imgproc)
 
 
 file(GLOB gapi_ext_hdrs

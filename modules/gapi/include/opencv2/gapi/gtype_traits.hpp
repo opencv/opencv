@@ -14,8 +14,8 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/gcommon.hpp>
-#include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/own/convert.hpp>
 
 namespace cv
@@ -96,11 +96,13 @@ namespace detail
     template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::UMat>              { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
-    template<>           struct GTypeOf<cv::gapi::GVideoCapture> { using type = cv::GMat;    };
 #endif // !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
+    // FIXME: This is not quite correct since IStreamSource may produce not only Mat but also Scalar
+    // and vector data. TODO: Extend the type dispatchig on these types too.
+    template<>           struct GTypeOf<cv::gapi::wip::IStreamSource::Ptr> { using type = cv::GMat;};
     template<class T> using g_type_of_t = typename GTypeOf<T>::type;
 
     // Marshalling helper for G-types and its Host types. Helps G-API

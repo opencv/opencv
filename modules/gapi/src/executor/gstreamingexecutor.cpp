@@ -10,10 +10,6 @@
 
 #include <ade/util/zip_range.hpp>
 
-#if !defined(GAPI_STANDALONE)
-#include <opencv2/videoio.hpp>   // FIXME: MOVE THIS DEPENDENCY OUT!!1
-#endif // GAPI_STANDALONE
-
 #include <opencv2/gapi/opencv_includes.hpp>
 
 #include "executor/gstreamingexecutor.hpp"
@@ -26,30 +22,22 @@ using namespace cv::gimpl::stream;
 
 #if !defined(GAPI_STANDALONE)
 class VideoEmitter final: public cv::gimpl::GIslandEmitter {
-    // FIXME: This is a huge dependency for core G-API library!
-    // It needs to be moved out to some separate module.
-    cv::VideoCapture vcap;
+    cv::gapi::wip::IStreamSource::Ptr src;
 
     virtual bool pull(cv::GRunArg &arg) override {
         // FIXME: probably we can maintain a pool of (then) pre-allocated
         // buffers to avoid runtime allocations.
         // Pool size can be determined given the internal queue size.
-        cv::Mat nextFrame;
-        vcap >> nextFrame;
-        if (nextFrame.empty()) {
+        cv::gapi::wip::Data newData;
+        if (!src->pull(newData)) {
             return false;
         }
-        // Some VideoCapture backends may still own the memory
-        // wrapped by cv::Mat we get from read() so the most
-        // robust way to allow multi-threaded pipelining is to copy
-        // that data.
-        arg = nextFrame.clone();
+        arg = std::move(static_cast<cv::GRunArg&>(newData));
         return true;
     }
 public:
     explicit VideoEmitter(const cv::GRunArg &arg) {
-        const auto &param = cv::util::get<cv::gapi::GVideoCapture>(arg);
-        GAPI_Assert(vcap.open(param.path));
+        src = cv::util::get<cv::gapi::wip::IStreamSource::Ptr>(arg);
     }
 };
 #endif // GAPI_STANDALONE
@@ -555,7 +543,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     GAPI_Assert(state == State::READY || state == State::STOPPED);
 
     const auto is_video = [](const GRunArg &arg) {
-        return util::holds_alternative<cv::gapi::GVideoCapture>(arg);
+        return util::holds_alternative<cv::gapi::wip::IStreamSource::Ptr>(arg);
     };
     const auto num_videos = std::count_if(ins.begin(), ins.end(), is_video);
     if (num_videos > 1u)
@@ -582,7 +570,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         {
         // Create a streaming emitter.
         // Produces the next video frame when pulled.
-        case T::index_of<cv::gapi::GVideoCapture>():
+        case T::index_of<cv::gapi::wip::IStreamSource::Ptr>():
 #if !defined(GAPI_STANDALONE)
             emitter.reset(new VideoEmitter{emit_arg});
 #else
@@ -667,27 +655,14 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
                            m_sink_queues,
                            std::ref(m_out_queue));
     state = State::READY;
-    m_last_source = cv::util::make_optional(std::move(ins));
 }
 
 void cv::gimpl::GStreamingExecutor::start()
 {
-    // FIXME: start/stop/pause?/etc logic
     if (state == State::STOPPED)
     {
-        if (m_last_source)
-        {
-            // STOPPED state usually means calling start() right after EOS.
-            // Anyway, our threads are terminated and in the current design we need to
-            // restart those automatically with our last-known-input.
-            setSource(std::move(*m_last_source));
-        }
-        else
-        {
-            // Of course, if there were no stream processed (and set via setSource)
-            // it is an error.
-            util::throw_error(std::logic_error("start() requires setSource() called first"));
-        }
+        util::throw_error(std::logic_error("Please call setSource() before start() "
+                                           "if the pipeline has been already stopped"));
     }
     GAPI_Assert(state == State::READY);
 
