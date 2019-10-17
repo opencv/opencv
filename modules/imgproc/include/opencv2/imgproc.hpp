@@ -396,7 +396,9 @@ enum ConnectedComponentsTypes {
     CC_STAT_WIDTH  = 2, //!< The horizontal size of the bounding box
     CC_STAT_HEIGHT = 3, //!< The vertical size of the bounding box
     CC_STAT_AREA   = 4, //!< The total area (in pixels) of the connected component
-    CC_STAT_MAX    = 5
+#ifndef CV_DOXYGEN
+    CC_STAT_MAX    = 5 //!< Max enumeration value. Used internally only for memory allocation
+#endif
 };
 
 //! connected components algorithm
