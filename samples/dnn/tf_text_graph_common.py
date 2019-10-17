@@ -21,7 +21,7 @@ def tokenize(s):
                 elif token:
                     tokens.append(token)
                     token = ""
-            isString = (symbol == '\"' or symbol == '\'') ^ isString;
+            isString = (symbol == '\"' or symbol == '\'') ^ isString
 
         elif symbol == '{' or symbol == '}' or symbol == '[' or symbol == ']':
             if token:
