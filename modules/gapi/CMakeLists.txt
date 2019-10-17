@@ -94,6 +94,10 @@ set(gapi_srcs
     # if and only if IE support is enabled
     src/backends/ie/giebackend.cpp
 
+    # Render Backend.
+    src/backends/render/grenderocvbackend.cpp
+    src/backends/render/grenderocv.cpp
+
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp

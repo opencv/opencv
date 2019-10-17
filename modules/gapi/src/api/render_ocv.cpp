@@ -1,6 +1,5 @@
-#include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/gapi/render.hpp> // Kernel API's
+#include <opencv2/gapi/render/render.hpp> // Kernel API's
 
 #include "api/render_ocv.hpp"
 
@@ -11,61 +10,6 @@ namespace gapi
 
 namespace ocv
 {
-
-GAPI_OCV_KERNEL(GOCVRenderNV12, cv::gapi::wip::draw::GRenderNV12)
-{
-    static void run(const cv::Mat& y, const cv::Mat& uv, const cv::gapi::wip::draw::Prims& prims,
-                    cv::Mat& out_y, cv::Mat& out_uv)
-    {
-        /* FIXME How to render correctly on NV12 format ?
-         *
-         * Rendering on NV12 via OpenCV looks like this:
-         *
-         * y --------> 1)(NV12 -> YUV) -> yuv -> 2)draw -> yuv -> 3)split -------> out_y
-         *                  ^                                         |
-         *                  |                                         |
-         * uv --------------                                          `----------> out_uv
-         *
-         *
-         * 1) Collect yuv mat from two planes, uv plain in two times less than y plane
-         *    so, upsample uv in tow times, with bilinear interpolation
-         *
-         * 2) Render primitives on YUV
-         *
-         * 3) Convert yuv to NV12 (using bilinear interpolation)
-         *
-         */
-
-        // NV12 -> YUV
-        cv::Mat upsample_uv, yuv;
-        cv::resize(uv, upsample_uv, uv.size() * 2, cv::INTER_LINEAR);
-        cv::merge(std::vector<cv::Mat>{y, upsample_uv}, yuv);
-
-        cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims);
-
-        // YUV -> NV12
-        cv::Mat out_u, out_v, uv_plane;
-        std::vector<cv::Mat> chs = {out_y, out_u, out_v};
-        cv::split(yuv, chs);
-        cv::merge(std::vector<cv::Mat>{chs[1], chs[2]}, uv_plane);
-        cv::resize(uv_plane, out_uv, uv_plane.size() / 2, cv::INTER_LINEAR);
-    }
-};
-
-GAPI_OCV_KERNEL(GOCVRenderBGR, cv::gapi::wip::draw::GRenderBGR)
-{
-    static void run(const cv::Mat&, const cv::gapi::wip::draw::Prims& prims, cv::Mat& out)
-    {
-        cv::gapi::wip::draw::drawPrimitivesOCVBGR(out, prims);
-    }
-};
-
-cv::gapi::GKernelPackage kernels()
-{
-    static const auto pkg = cv::gapi::kernels<GOCVRenderNV12, GOCVRenderBGR>();
-    return pkg;
-}
-
 } // namespace ocv
 
 namespace wip

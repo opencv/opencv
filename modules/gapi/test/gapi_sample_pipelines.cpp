@@ -11,6 +11,8 @@
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
 
+#include <opencv2/gapi/render/render.hpp>
+
 namespace opencv_test
 {
 
@@ -313,5 +315,4 @@ TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
     // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
     EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
 }
-
 } // namespace opencv_test
