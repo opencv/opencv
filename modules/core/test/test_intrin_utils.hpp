@@ -603,48 +603,6 @@ template<typename R> struct TheTest
         return *this;
     }
 
-    TheTest & test_cmp64()
-    {
-        Data<R> dataA, dataB;
-        R a = dataA, b = dataB;
-
-        for (int i = 0; i < R::nlanes; ++i)
-        {
-            dataA[i] = dataB[i];
-        }
-        dataA[0]++;
-
-        a = dataA, b = dataB;
-
-        Data<R> resC = (a == b);
-        Data<R> resD = (a != b);
-
-        for (int i = 0; i < R::nlanes; ++i)
-        {
-            SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
-            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
-        }
-
-        for (int i = 0; i < R::nlanes; ++i)
-        {
-            dataA[i] = dataB[i] = -1;
-        }
-
-        a = dataA, b = dataB;
-
-        resC = (a == b);
-        resD = (a != b);
-
-        for (int i = 0; i < R::nlanes; ++i)
-        {
-            SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
-            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
-        }
-        return *this;
-    }
-
     TheTest & test_dot_prod()
     {
         typedef typename V_RegTraits<R>::w_reg Rx2;
@@ -1356,6 +1314,48 @@ template<typename R> struct TheTest
         return *this;
     }
 #endif
+
+    TheTest & test_cmp64()
+    {
+        Data<R> dataA, dataB;
+        R a = dataA, b = dataB;
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            dataA[i] = dataB[i];
+        }
+        dataA[0]++;
+
+        a = dataA, b = dataB;
+
+        Data<R> resC = (a == b);
+        Data<R> resD = (a != b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
+            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
+        }
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            dataA[i] = dataB[i] = -1;
+        }
+
+        a = dataA, b = dataB;
+
+        resC = (a == b);
+        resD = (a != b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
+            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
+        }
+        return *this;
+    }
 };
 
 
