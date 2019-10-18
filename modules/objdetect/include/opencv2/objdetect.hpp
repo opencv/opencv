@@ -691,7 +691,7 @@ public:
      @param img grayscale or color (BGR) image containing (or not) QR code.
      @param points Output vector of vertices of the minimum-area quadrangle containing the code.
      */
-     CV_WRAP bool detect(InputArray img, OutputArrayOfArrays points) const;
+    CV_WRAP bool detect(InputArray img, OutputArrayOfArrays points) const;
 
     /** @brief Decodes QR code in image once it's found by the detect() method.
      Returns UTF8-encoded output string or empty string if the code cannot be decoded.
