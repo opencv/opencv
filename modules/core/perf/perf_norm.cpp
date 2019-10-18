@@ -93,11 +93,10 @@ PERF_TEST_P(Size_MatType_NormType, DISABLED_norm2_extra,
 
     Mat src1(sz, matType);
     Mat src2(sz, matType);
-    double n;
 
     declare.in(src1, src2, WARMUP_RNG);
 
-    TEST_CYCLE() n = cv::norm(src1, src2, normType);
+    TEST_CYCLE() cv::norm(src1, src2, normType);
 
     SANITY_CHECK_NOTHING();
 }
@@ -142,11 +141,10 @@ PERF_TEST_P(Size_MatType_NormType, DISABLED_norm2_mask_extra,
     Mat src1(sz, matType);
     Mat src2(sz, matType);
     Mat mask = Mat::ones(sz, CV_8U);
-    double n;
 
     declare.in(src1, src2, WARMUP_RNG).in(mask);
 
-    TEST_CYCLE() n = cv::norm(src1, src2, normType, mask);
+    TEST_CYCLE() cv::norm(src1, src2, normType, mask);
 
     SANITY_CHECK_NOTHING();
 }
