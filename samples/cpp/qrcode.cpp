@@ -101,7 +101,7 @@ int liveQRCodeDetect(const string& out_file)
     {
         Mat frame, src;
         vector<Mat> straight_barcode;
-        vector<string> decode_info;
+        vector<cv::String> decode_info;
         vector<Mat> transform;
         cap >> frame;
         if (frame.empty())
@@ -143,7 +143,7 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
     Mat color_src = imread(in_file, IMREAD_COLOR), src;
     cvtColor(color_src, src, COLOR_BGR2GRAY);
     vector<Mat> straight_barcode;
-    vector<string> decoded_info;
+    vector<cv::String> decoded_info;
     vector<Mat> transform;
     const int count_experiments = 10;
     double transform_time = 0.0;

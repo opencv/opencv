@@ -701,14 +701,14 @@ public:
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
 
-    CV_WRAP std::vector<std::string> decode(InputArray img, InputArrayOfArrays points, OutputArrayOfArrays straight_qrcode);
+    CV_WRAP std::vector<cv::String> decode(InputArray img, InputArrayOfArrays points, OutputArrayOfArrays straight_qrcode);
     /** @brief Both detects and decodes QR code
 
      @param img grayscale or color (BGR) image containing QR code.
      @param points opiotnal output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-     CV_WRAP std::vector<std::string> detectAndDecode(InputArray img, OutputArrayOfArrays points, OutputArrayOfArrays straight_qrcode);
+     CV_WRAP std::vector<cv::String> detectAndDecode(InputArray img, OutputArrayOfArrays points, OutputArrayOfArrays straight_qrcode);
 protected:
     struct Impl;
     Ptr<Impl> p;

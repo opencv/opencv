@@ -38,7 +38,7 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, decode)
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
     std::vector<std::vector< Point >> corners;
-    std::vector<std::string> decoded_info;
+    std::vector<cv::String> decoded_info;
     QRCodeDetector qrcode;
     ASSERT_TRUE(qrcode.detect(src, corners));
     TEST_CYCLE()
