@@ -101,7 +101,6 @@ TEST(TestAgeGenderIE, InferBasicTensor)
 
         const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
               auto  cvdims = cv::gapi::ie::util::to_ocv(iedims);
-        std::reverse(cvdims.begin(), cvdims.end());
         in_mat.create(cvdims, CV_32F);
         cv::randu(in_mat, -1, 1);
 

@@ -114,9 +114,11 @@ namespace detail
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
         virtual ~BasicVectorRef() {}
+
+        virtual void mov(BasicVectorRef &ref) = 0;
     };
 
-    template<typename T> class VectorRefT: public BasicVectorRef
+    template<typename T> class VectorRefT final: public BasicVectorRef
     {
         using empty_t  = util::monostate;
         using ro_ext_t = const std::vector<T> *;
@@ -200,6 +202,12 @@ namespace detail
             if (isRWOwn()) return  util::get<rw_own_t>(m_ref);
             util::throw_error(std::logic_error("Impossible happened"));
         }
+
+        virtual void mov(BasicVectorRef &v) override {
+            VectorRefT<T> *tv = dynamic_cast<VectorRefT<T>*>(&v);
+            GAPI_Assert(tv != nullptr);
+            wref() = std::move(tv->wref());
+        }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -243,6 +251,11 @@ namespace detail
         {
             check<T>();
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
+        }
+
+        void mov(VectorRef &v)
+        {
+            m_ref->mov(*v.m_ref);
         }
 
         cv::GArrayDesc descr_of() const
