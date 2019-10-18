@@ -906,6 +906,57 @@ OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(v_float32x4, float, f32)
 OPENCV_HAL_IMPL_MSA_LOADSTORE_OP(v_float64x2, double, f64)
 
+
+/** Reverse **/
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{
+    v_uint8x16 c = v_uint8x16((v16u8)__builtin_msa_vshf_b((v16i8)((v2i64){0x08090A0B0C0D0E0F, 0x0001020304050607}), msa_dupq_n_s8(0), (v16i8)a.val));
+    return c;
+}
+
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{
+    v_uint16x8 c = v_uint16x8((v8u16)__builtin_msa_vshf_h((v8i16)((v2i64){0x0004000500060007, 0x0000000100020003}), msa_dupq_n_s16(0), (v8i16)a.val));
+    return c;
+}
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{
+    v_uint32x4 c;
+    c.val[0] = a.val[3];
+    c.val[1] = a.val[2];
+    c.val[2] = a.val[1];
+    c.val[3] = a.val[0];
+    return c;
+}
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{
+    v_uint64x2 c;
+    c.val[0] = a.val[1];
+    c.val[1] = a.val[0];
+    return c;
+}
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
+
+
 #define OPENCV_HAL_IMPL_MSA_REDUCE_OP_8U(func, cfunc) \
 inline unsigned short v_reduce_##func(const v_uint16x8& a) \
 { \
