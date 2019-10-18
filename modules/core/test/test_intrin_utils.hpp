@@ -1315,6 +1315,7 @@ template<typename R> struct TheTest
     }
 #endif
 
+#if CV_SIMD_64F
     TheTest & test_cmp64()
     {
         Data<R> dataA, dataB;
@@ -1356,6 +1357,7 @@ template<typename R> struct TheTest
         }
         return *this;
     }
+#endif
 };
 
 
@@ -1559,7 +1561,9 @@ void test_hal_intrin_uint64()
     TheTest<v_uint64>()
         .test_loadstore()
         .test_addsub()
+#if CV_SIMD_64F
         .test_cmp64()
+#endif
         .test_shift<1>().test_shift<8>()
         .test_logic()
         .test_extract<0>().test_extract<1>()
@@ -1573,7 +1577,9 @@ void test_hal_intrin_int64()
     TheTest<v_int64>()
         .test_loadstore()
         .test_addsub()
+#if CV_SIMD_64F
         .test_cmp64()
+#endif
         .test_shift<1>().test_shift<8>()
         .test_logic()
         .test_extract<0>().test_extract<1>()
