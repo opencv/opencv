@@ -1,42 +1,40 @@
 #include <stdexcept>
 
 #include <opencv2/imgproc.hpp>
-#include <opencv2/gapi/render.hpp>
+#include <opencv2/gapi/render/render.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 
 #include "api/render_priv.hpp"
-
 #include "api/ocv_mask_creator.hpp"
 #include "api/freetype_mask_creator.hpp"
 
-using namespace cv::gapi::wip::draw;
-
-void cv::gapi::wip::draw::render(cv::Mat &bgr, const Prims &prims, const cv::gapi::GKernelPackage& pkg)
+void cv::gapi::wip::draw::render(cv::Mat& bgr,
+                                 const cv::gapi::wip::draw::Prims& prims,
+                                 cv::GCompileArgs&& args)
 {
     cv::GMat in;
-    cv::GArray<Prim> arr;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
 
     cv::GComputation comp(cv::GIn(in, arr),
-                          cv::GOut(GRenderBGR::on(in, arr)));
-    comp.apply(cv::gin(bgr, prims), cv::gout(bgr), cv::compile_args(pkg));
+                          cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
+    comp.apply(cv::gin(bgr, prims), cv::gout(bgr), std::move(args));
 }
 
-void cv::gapi::wip::draw::render(cv::Mat &y_plane,
-                                 cv::Mat &uv_plane,
-                                 const Prims &prims,
-                                 const cv::gapi::GKernelPackage& pkg)
+void cv::gapi::wip::draw::render(cv::Mat& y_plane,
+                                 cv::Mat& uv_plane,
+                                 const Prims& prims,
+                                 cv::GCompileArgs&& args)
 {
     cv::GMat y_in, uv_in, y_out, uv_out;
-    cv::GArray<Prim> arr;
-    std::tie(y_out, uv_out) = GRenderNV12::on(y_in, uv_in, arr);
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    std::tie(y_out, uv_out) = cv::gapi::wip::draw::renderNV12(y_in, uv_in, arr);
 
     cv::GComputation comp(cv::GIn(y_in, uv_in, arr), cv::GOut(y_out, uv_out));
     comp.apply(cv::gin(y_plane, uv_plane, prims),
-               cv::gout(y_plane, uv_plane),
-               cv::compile_args(pkg));
+               cv::gout(y_plane, uv_plane), std::move(args));
 }
 
-void cv::gapi::wip::draw::BGR2NV12(const cv::Mat &bgr, cv::Mat &y_plane, cv::Mat &uv_plane)
+void cv::gapi::wip::draw::BGR2NV12(const cv::Mat& bgr, cv::Mat& y_plane, cv::Mat& uv_plane)
 {
     GAPI_Assert(bgr.size().width  % 2 == 0);
     GAPI_Assert(bgr.size().height % 2 == 0);
@@ -52,18 +50,28 @@ void cv::gapi::wip::draw::BGR2NV12(const cv::Mat &bgr, cv::Mat &y_plane, cv::Mat
     cv::resize(uv_plane, uv_plane, uv_plane.size() / 2, cv::INTER_LINEAR);
 }
 
-std::unique_ptr<IBitmaskCreator> cv::gapi::wip::draw::IBitmaskCreator::create(BackendT type)
+namespace cv
 {
-    switch(type)
+namespace detail
+{
+    template<> struct CompileArgTag<cv::gapi::wip::draw::use_freetype>
     {
-        case BackendT::OpenCV:
-            return std::unique_ptr<IBitmaskCreator>(new OCVBitmaskCreator());
-        case BackendT::FreeType:
-#ifdef HAVE_FREETYPE
-            return std::unique_ptr<IBitmaskCreator>(new FreeTypeBitmaskCreator());
-#else
-            throw std::logic_error("FreeType library not found");
-#endif
-        default: throw std::logic_error("Invalid backend type");
-    }
+        static const char* tag() { return "gapi.use_freetype"; }
+    };
+
+} // namespace detail
+
+GMat cv::gapi::wip::draw::render3ch(const GMat& src,
+                                    const GArray<cv::gapi::wip::draw::Prim>& prims)
+{
+    return cv::gapi::wip::draw::GRenderBGR::on(src, prims);
 }
+
+std::tuple<GMat, GMat> cv::gapi::wip::draw::renderNV12(const GMat& y,
+                                                       const GMat& uv,
+                                                       const GArray<cv::gapi::wip::draw::Prim>& prims)
+{
+    return cv::gapi::wip::draw::GRenderNV12::on(y, uv, prims);
+}
+
+} // namespace cv

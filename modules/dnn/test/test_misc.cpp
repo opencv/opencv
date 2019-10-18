@@ -363,7 +363,7 @@ TEST(Net, forwardAndRetrieve)
 }
 
 #ifdef HAVE_INF_ENGINE
-static const std::chrono::milliseconds async_timeout(500);
+static const std::chrono::milliseconds async_timeout(10000);
 
 // This test runs network in synchronous mode for different inputs and then
 // runs the same model asynchronously for the same inputs.

@@ -2320,26 +2320,22 @@ double dotProd_8u(const uchar* src1, const uchar* src2, int len)
     while (i < len0)
     {
         blockSize = std::min(len0 - i, blockSize0);
-        v_int32 v_sum = vx_setzero_s32();
+        v_uint32 v_sum = vx_setzero_u32();
         const int cWidth = v_uint16::nlanes;
 
         int j = 0;
         for (; j <= blockSize - cWidth * 2; j += cWidth * 2)
         {
-            v_uint16 v_src10, v_src20, v_src11, v_src21;
-            v_expand(vx_load(src1 + j), v_src10, v_src11);
-            v_expand(vx_load(src2 + j), v_src20, v_src21);
-
-            v_sum += v_dotprod(v_reinterpret_as_s16(v_src10), v_reinterpret_as_s16(v_src20));
-            v_sum += v_dotprod(v_reinterpret_as_s16(v_src11), v_reinterpret_as_s16(v_src21));
+            v_uint8 v_src1 = vx_load(src1 + j);
+            v_uint8 v_src2 = vx_load(src2 + j);
+            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
         }
 
         for (; j <= blockSize - cWidth; j += cWidth)
         {
             v_int16 v_src10 = v_reinterpret_as_s16(vx_load_expand(src1 + j));
             v_int16 v_src20 = v_reinterpret_as_s16(vx_load_expand(src2 + j));
-
-            v_sum += v_dotprod(v_src10, v_src20);
+            v_sum += v_reinterpret_as_u32(v_dotprod_fast(v_src10, v_src20));
         }
         r += (double)v_reduce_sum(v_sum);
 
@@ -2348,48 +2344,6 @@ double dotProd_8u(const uchar* src1, const uchar* src2, int len)
         i += blockSize;
     }
     vx_cleanup();
-#elif CV_NEON
-    if( cv::checkHardwareSupport(CV_CPU_NEON) )
-    {
-        int len0 = len & -8, blockSize0 = (1 << 15), blockSize;
-        uint32x4_t v_zero = vdupq_n_u32(0u);
-        CV_DECL_ALIGNED(16) uint buf[4];
-
-        while( i < len0 )
-        {
-            blockSize = std::min(len0 - i, blockSize0);
-            uint32x4_t v_sum = v_zero;
-
-            int j = 0;
-            for( ; j <= blockSize - 16; j += 16 )
-            {
-                uint8x16_t v_src1 = vld1q_u8(src1 + j), v_src2 = vld1q_u8(src2 + j);
-
-                uint16x8_t v_src10 = vmovl_u8(vget_low_u8(v_src1)), v_src20 = vmovl_u8(vget_low_u8(v_src2));
-                v_sum = vmlal_u16(v_sum, vget_low_u16(v_src10), vget_low_u16(v_src20));
-                v_sum = vmlal_u16(v_sum, vget_high_u16(v_src10), vget_high_u16(v_src20));
-
-                v_src10 = vmovl_u8(vget_high_u8(v_src1));
-                v_src20 = vmovl_u8(vget_high_u8(v_src2));
-                v_sum = vmlal_u16(v_sum, vget_low_u16(v_src10), vget_low_u16(v_src20));
-                v_sum = vmlal_u16(v_sum, vget_high_u16(v_src10), vget_high_u16(v_src20));
-            }
-
-            for( ; j <= blockSize - 8; j += 8 )
-            {
-                uint16x8_t v_src1 = vmovl_u8(vld1_u8(src1 + j)), v_src2 = vmovl_u8(vld1_u8(src2 + j));
-                v_sum = vmlal_u16(v_sum, vget_low_u16(v_src1), vget_low_u16(v_src2));
-                v_sum = vmlal_u16(v_sum, vget_high_u16(v_src1), vget_high_u16(v_src2));
-            }
-
-            vst1q_u32(buf, v_sum);
-            r += buf[0] + buf[1] + buf[2] + buf[3];
-
-            src1 += blockSize;
-            src2 += blockSize;
-            i += blockSize;
-        }
-    }
 #endif
     return r + dotProd_(src1, src2, len - i);
 }
@@ -2412,20 +2366,16 @@ double dotProd_8s(const schar* src1, const schar* src2, int len)
         int j = 0;
         for (; j <= blockSize - cWidth * 2; j += cWidth * 2)
         {
-            v_int16 v_src10, v_src20, v_src11, v_src21;
-            v_expand(vx_load(src1 + j), v_src10, v_src11);
-            v_expand(vx_load(src2 + j), v_src20, v_src21);
-
-            v_sum += v_dotprod(v_src10, v_src20);
-            v_sum += v_dotprod(v_src11, v_src21);
+            v_int8 v_src1 = vx_load(src1 + j);
+            v_int8 v_src2 = vx_load(src2 + j);
+            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
         }
 
         for (; j <= blockSize - cWidth; j += cWidth)
         {
-            v_int16 v_src10 = vx_load_expand(src1 + j);
-            v_int16 v_src20 = vx_load_expand(src2 + j);
-
-            v_sum += v_dotprod(v_src10, v_src20);
+            v_int16 v_src1 = vx_load_expand(src1 + j);
+            v_int16 v_src2 = vx_load_expand(src2 + j);
+            v_sum = v_dotprod_fast(v_src1, v_src2, v_sum);
         }
         r += (double)v_reduce_sum(v_sum);
 
@@ -2434,87 +2384,6 @@ double dotProd_8s(const schar* src1, const schar* src2, int len)
         i += blockSize;
     }
     vx_cleanup();
-#elif CV_NEON
-    if( cv::checkHardwareSupport(CV_CPU_NEON) )
-    {
-        int len0 = len & -8, blockSize0 = (1 << 14), blockSize;
-        int32x4_t v_zero = vdupq_n_s32(0);
-        CV_DECL_ALIGNED(16) int buf[4];
-
-        while( i < len0 )
-        {
-            blockSize = std::min(len0 - i, blockSize0);
-            int32x4_t v_sum = v_zero;
-
-            int j = 0;
-            for( ; j <= blockSize - 16; j += 16 )
-            {
-                int8x16_t v_src1 = vld1q_s8(src1 + j), v_src2 = vld1q_s8(src2 + j);
-
-                int16x8_t v_src10 = vmovl_s8(vget_low_s8(v_src1)), v_src20 = vmovl_s8(vget_low_s8(v_src2));
-                v_sum = vmlal_s16(v_sum, vget_low_s16(v_src10), vget_low_s16(v_src20));
-                v_sum = vmlal_s16(v_sum, vget_high_s16(v_src10), vget_high_s16(v_src20));
-
-                v_src10 = vmovl_s8(vget_high_s8(v_src1));
-                v_src20 = vmovl_s8(vget_high_s8(v_src2));
-                v_sum = vmlal_s16(v_sum, vget_low_s16(v_src10), vget_low_s16(v_src20));
-                v_sum = vmlal_s16(v_sum, vget_high_s16(v_src10), vget_high_s16(v_src20));
-            }
-
-            for( ; j <= blockSize - 8; j += 8 )
-            {
-                int16x8_t v_src1 = vmovl_s8(vld1_s8(src1 + j)), v_src2 = vmovl_s8(vld1_s8(src2 + j));
-                v_sum = vmlal_s16(v_sum, vget_low_s16(v_src1), vget_low_s16(v_src2));
-                v_sum = vmlal_s16(v_sum, vget_high_s16(v_src1), vget_high_s16(v_src2));
-            }
-
-            vst1q_s32(buf, v_sum);
-            r += buf[0] + buf[1] + buf[2] + buf[3];
-
-            src1 += blockSize;
-            src2 += blockSize;
-            i += blockSize;
-        }
-    }
-#elif CV_MSA
-    int len0 = len & -8, blockSize0 = (1 << 14), blockSize;
-    v4i32 v_zero = msa_dupq_n_s32(0);
-    CV_DECL_ALIGNED(16) int buf[4];
-
-    while( i < len0 )
-    {
-        blockSize = std::min(len0 - i, blockSize0);
-        v4i32 v_sum = v_zero;
-
-        int j = 0;
-        for( ; j <= blockSize - 16; j += 16 )
-        {
-            v16i8 v_src1 = msa_ld1q_s8(src1 + j), v_src2 = msa_ld1q_s8(src2 + j);
-
-            v8i16 v_src10 = msa_movl_s8(msa_get_low_s8(v_src1)), v_src20 = msa_movl_s8(msa_get_low_s8(v_src2));
-            v_sum = msa_mlal_s16(v_sum, msa_get_low_s16(v_src10), msa_get_low_s16(v_src20));
-            v_sum = msa_mlal_s16(v_sum, msa_get_high_s16(v_src10), msa_get_high_s16(v_src20));
-
-            v_src10 = msa_movl_s8(msa_get_high_s8(v_src1));
-            v_src20 = msa_movl_s8(msa_get_high_s8(v_src2));
-            v_sum = msa_mlal_s16(v_sum, msa_get_low_s16(v_src10), msa_get_low_s16(v_src20));
-            v_sum = msa_mlal_s16(v_sum, msa_get_high_s16(v_src10), msa_get_high_s16(v_src20));
-        }
-
-        for( ; j <= blockSize - 8; j += 8 )
-        {
-            v8i16 v_src1 = msa_movl_s8(msa_ld1_s8(src1 + j)), v_src2 = msa_movl_s8(msa_ld1_s8(src2 + j));
-            v_sum = msa_mlal_s16(v_sum, msa_get_low_s16(v_src1), msa_get_low_s16(v_src2));
-            v_sum = msa_mlal_s16(v_sum, msa_get_high_s16(v_src1), msa_get_high_s16(v_src2));
-        }
-
-        msa_st1q_s32(buf, v_sum);
-        r += buf[0] + buf[1] + buf[2] + buf[3];
-
-        src1 += blockSize;
-        src2 += blockSize;
-        i += blockSize;
-    }
 #endif
 
     return r + dotProd_(src1, src2, len - i);
@@ -2522,42 +2391,97 @@ double dotProd_8s(const schar* src1, const schar* src2, int len)
 
 double dotProd_16u(const ushort* src1, const ushort* src2, int len)
 {
-    return dotProd_(src1, src2, len);
+    double r = 0.0;
+    int i = 0;
+
+#if CV_SIMD
+    int len0 = len & -v_uint16::nlanes, blockSize0 = (1 << 24), blockSize;
+
+    while (i < len0)
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        v_uint64 v_sum = vx_setzero_u64();
+        const int cWidth = v_uint16::nlanes;
+
+        int j = 0;
+        for (; j <= blockSize - cWidth; j += cWidth)
+        {
+            v_uint16 v_src1 = vx_load(src1 + j);
+            v_uint16 v_src2 = vx_load(src2 + j);
+            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
+        }
+        r += (double)v_reduce_sum(v_sum);
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
+    vx_cleanup();
+#endif
+    return r + dotProd_(src1, src2, len - i);
 }
 
 double dotProd_16s(const short* src1, const short* src2, int len)
 {
-    return dotProd_(src1, src2, len);
+    double r = 0.0;
+    int i = 0;
+
+#if CV_SIMD
+    int len0 = len & -v_int16::nlanes, blockSize0 = (1 << 24), blockSize;
+
+    while (i < len0)
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        v_int64 v_sum = vx_setzero_s64();
+        const int cWidth = v_int16::nlanes;
+
+        int j = 0;
+        for (; j <= blockSize - cWidth; j += cWidth)
+        {
+            v_int16 v_src1 = vx_load(src1 + j);
+            v_int16 v_src2 = vx_load(src2 + j);
+            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
+        }
+        r += (double)v_reduce_sum(v_sum);
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
+    vx_cleanup();
+#endif
+    return r + dotProd_(src1, src2, len - i);
 }
 
 double dotProd_32s(const int* src1, const int* src2, int len)
 {
-#if CV_SIMD128_64F
-    double r = 0.0;
+#if CV_SIMD_64F
+    double r = .0;
     int i = 0;
-    int lenAligned = len & -v_int32x4::nlanes;
-    v_float64x2 a(0.0, 0.0);
-    v_float64x2 b(0.0, 0.0);
-
-    for( i = 0; i < lenAligned; i += v_int32x4::nlanes )
-        {
-        v_int32x4 s1 = v_load(src1);
-        v_int32x4 s2 = v_load(src2);
-
-#if CV_VSX
-        // Do 32x32->64 multiplies, convert/round to double, accumulate
-        // Potentially less precise than FMA, but 1.5x faster than fma below.
-        a += v_cvt_f64(v_int64(vec_mule(s1.val, s2.val)));
-        b += v_cvt_f64(v_int64(vec_mulo(s1.val, s2.val)));
-#else
-        a = v_fma(v_cvt_f64(s1), v_cvt_f64(s2), a);
-        b = v_fma(v_cvt_f64_high(s1), v_cvt_f64_high(s2), b);
+    const int step  = v_int32::nlanes;
+    v_float64 v_sum0 = vx_setzero_f64();
+#if CV_SIMD_WIDTH == 16
+    const int wstep = step * 2;
+    v_float64 v_sum1 = vx_setzero_f64();
+    for (; i < len - wstep; i += wstep, src1 += wstep, src2 += wstep)
+    {
+        v_int32 v_src10 = vx_load(src1);
+        v_int32 v_src20 = vx_load(src2);
+        v_int32 v_src11 = vx_load(src1 + step);
+        v_int32 v_src21 = vx_load(src2 + step);
+        v_sum0 = v_dotprod_expand_fast(v_src10, v_src20, v_sum0);
+        v_sum1 = v_dotprod_expand_fast(v_src11, v_src21, v_sum1);
+    }
+    v_sum0 += v_sum1;
 #endif
-        src1 += v_int32x4::nlanes;
-        src2 += v_int32x4::nlanes;
-        }
-    a += b;
-    r = v_reduce_sum(a);
+    for (; i < len - step; i += step, src1 += step, src2 += step)
+    {
+        v_int32 v_src1 = vx_load(src1);
+        v_int32 v_src2 = vx_load(src2);
+        v_sum0 = v_dotprod_expand_fast(v_src1, v_src2, v_sum0);
+    }
+    r = v_reduce_sum(v_sum0);
+    vx_cleanup();
     return r + dotProd_(src1, src2, len - i);
 #else
     return dotProd_(src1, src2, len);

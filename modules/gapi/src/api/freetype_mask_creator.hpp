@@ -22,17 +22,10 @@ namespace draw {
 class FreeTypeBitmaskCreator : public IBitmaskCreator
 {
 public:
-    FreeTypeBitmaskCreator()
+    FreeTypeBitmaskCreator(const std::string& path)
     {
         FT_Init_FreeType(&m_library);
-
-        const char* font = std::getenv("FREETYPE_FONT");
-
-        if (!font) {
-            util::throw_error(std::logic_error("Please set text font to ${FREETYPE_FONT}"));
-        }
-
-        FT_New_Face(m_library, font, 0, &m_face);
+        FT_New_Face(m_library, path.c_str(), 0, &m_face);
     }
 
     virtual const cv::Size& computeMaskSize() override

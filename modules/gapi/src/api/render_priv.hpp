@@ -8,7 +8,7 @@
 #ifndef OPENCV_RENDER_PRIV_HPP
 #define OPENCV_RENDER_PRIV_HPP
 
-#include <opencv2/gapi/render.hpp>
+#include <opencv2/gapi/render/render.hpp>
 
 namespace cv
 {
@@ -30,12 +30,17 @@ void blendImage(const cv::Mat& img,
 class IBitmaskCreator
 {
 public:
-    static std::unique_ptr<IBitmaskCreator> create(BackendT type);
     virtual int createMask(cv::Mat&) = 0;
     virtual const cv::Size& computeMaskSize() = 0;
     virtual void setMaskParams(const cv::gapi::wip::draw::Text& text) = 0;
     virtual ~IBitmaskCreator() = default;
 };
+
+template<typename T, typename... Args>
+std::unique_ptr<IBitmaskCreator> make_mask_creator(Args&&... args)
+{
+    return std::unique_ptr<IBitmaskCreator>(new T(std::forward<Args>(args)...));
+}
 
 } // namespace draw
 } // namespace wip

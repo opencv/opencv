@@ -682,6 +682,29 @@ template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n
     return s;
 }
 
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+    v_dotprod_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{
+    typedef typename V_TypeTraits<_Tp>::q_type q_type;
+    v_reg<q_type, n/4> s;
+    for( int i = 0; i < (n/4); i++ )
+        s.s[i] = (q_type)a.s[i*4    ]*b.s[i*4    ] + (q_type)a.s[i*4 + 1]*b.s[i*4 + 1] +
+                 (q_type)a.s[i*4 + 2]*b.s[i*4 + 2] + (q_type)a.s[i*4 + 3]*b.s[i*4 + 3];
+    return s;
+}
+
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+    v_dotprod_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                     const v_reg<typename V_TypeTraits<_Tp>::q_type, n / 4>& c)
+{
+    typedef typename V_TypeTraits<_Tp>::q_type q_type;
+    v_reg<q_type, n/4> s;
+    for( int i = 0; i < (n/4); i++ )
+        s.s[i] = (q_type)a.s[i*4    ]*b.s[i*4    ] + (q_type)a.s[i*4 + 1]*b.s[i*4 + 1] +
+                 (q_type)a.s[i*4 + 2]*b.s[i*4 + 2] + (q_type)a.s[i*4 + 3]*b.s[i*4 + 3] + c.s[i];
+    return s;
+}
+
 template<typename _Tp, int n> inline void v_mul_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
                                                        v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>& c,
                                                        v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>& d)
@@ -1279,6 +1302,14 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
     v_float64x2 c;
     for( int i = 0; i < 2; i++ )
         c.s[i] = (double)a.s[i+2];
+    return c;
+}
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+    v_float64x2 c;
+    for( int i = 0; i < 2; i++ )
+        c.s[i] = (double)a.s[i];
     return c;
 }
 
@@ -2398,6 +2429,8 @@ inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
     return v_uint16x8(wasm_v8x16_shuffle(c, d, 2,3,6,7,10,11,14,15,18,19,22,23,26,27,30,31));
 }
 
+//////// Dot Product ////////
+
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 {
     v128_t a0 = wasm_i32x4_shr(wasm_i32x4_shl(a.val, 16), 16);
@@ -2410,15 +2443,140 @@ inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 }
 
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_dotprod(a, b) + c; }
+
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
 {
-    v128_t a0 = wasm_i32x4_shr(wasm_i32x4_shl(a.val, 16), 16);
-    v128_t a1 = wasm_i32x4_shr(a.val, 16);
-    v128_t b0 = wasm_i32x4_shr(wasm_i32x4_shl(b.val, 16), 16);
-    v128_t b1 = wasm_i32x4_shr(b.val, 16);
-    v128_t d = wasm_i32x4_mul(a0, b0);
-    v128_t e = wasm_i32x4_mul(a1, b1);
-    return v_int32x4(wasm_i32x4_add(wasm_i32x4_add(d, e), c.val));
+#ifdef __wasm_unimplemented_simd128__
+    v128_t a0 = wasm_i64x2_shr(wasm_i64x2_shl(a.val, 32), 32);
+    v128_t a1 = wasm_i64x2_shr(a.val, 32);
+    v128_t b0 = wasm_i64x2_shr(wasm_i64x2_shl(b.val, 32), 32);
+    v128_t b1 = wasm_i64x2_shr(b.val, 32);
+    v128_t c = (v128_t)((__i64x2)a0 * (__i64x2)b0);
+    v128_t d = (v128_t)((__i64x2)a1 * (__i64x2)b1);
+    return v_int64x2(wasm_i64x2_add(c, d));
+#else
+    fallback::v_int32x4 a_(a);
+    fallback::v_int32x4 b_(b);
+    return fallback::v_dotprod(a_, b_);
+#endif
 }
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{
+#ifdef __wasm_unimplemented_simd128__
+    return v_dotprod(a, b) + c;
+#else
+    fallback::v_int32x4 a_(a);
+    fallback::v_int32x4 b_(b);
+    fallback::v_int64x2 c_(c);
+    return fallback::v_dotprod(a_, b_, c_);
+#endif
+}
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
+{
+    v128_t a0 = wasm_u16x8_shr(wasm_i16x8_shl(a.val, 8), 8);
+    v128_t a1 = wasm_u16x8_shr(a.val, 8);
+    v128_t b0 = wasm_u16x8_shr(wasm_i16x8_shl(b.val, 8), 8);
+    v128_t b1 = wasm_u16x8_shr(b.val, 8);
+    return v_uint32x4((
+        v_dotprod(v_int16x8(a0), v_int16x8(b0)) +
+        v_dotprod(v_int16x8(a1), v_int16x8(b1))).val
+    );
+}
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
+{
+    v128_t a0 = wasm_i16x8_shr(wasm_i16x8_shl(a.val, 8), 8);
+    v128_t a1 = wasm_i16x8_shr(a.val, 8);
+    v128_t b0 = wasm_i16x8_shr(wasm_i16x8_shl(b.val, 8), 8);
+    v128_t b1 = wasm_i16x8_shr(b.val, 8);
+    return v_int32x4(
+        v_dotprod(v_int16x8(a0), v_int16x8(b0)) +
+        v_dotprod(v_int16x8(a1), v_int16x8(b1))
+    );
+}
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
+{
+    fallback::v_uint16x8 a_(a);
+    fallback::v_uint16x8 b_(b);
+    return fallback::v_dotprod_expand(a_, b_);
+}
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{
+    fallback::v_uint16x8 a_(a);
+    fallback::v_uint16x8 b_(b);
+    fallback::v_uint64x2 c_(c);
+    return fallback::v_dotprod_expand(a_, b_, c_);
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
+{
+    fallback::v_int16x8 a_(a);
+    fallback::v_int16x8 b_(b);
+    return fallback::v_dotprod_expand(a_, b_);
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{
+    fallback::v_int16x8 a_(a);
+    fallback::v_int16x8 b_(b);
+    fallback::v_int64x2 c_(c);
+    return fallback::v_dotprod_expand(a_, b_, c_);
+}
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+//////// Fast Dot Product ////////
+
+// 16 >> 32
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
+{ return v_dotprod(a, b); }
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_dotprod(a, b, c); }
+
+// 32 >> 64
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod(a, b); }
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{ return v_dotprod(a, b, c); }
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_dotprod_expand(a, b, c); }
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{ return v_dotprod_expand(a, b, c); }
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b)
+{ return v_dotprod_expand(a, b); }
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod_expand(a, b); }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b, c); }
 
 #define OPENCV_HAL_IMPL_WASM_LOGIC_OP(_Tpvec) \
 OPENCV_HAL_IMPL_WASM_BIN_OP(&, _Tpvec, wasm_v128_and) \
@@ -3813,6 +3971,16 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 {
     fallback::v_float32x4 a_(a);
     return fallback::v_cvt_f64_high(a_);
+}
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+#ifdef __wasm_unimplemented_simd128__
+    return v_float64x2(wasm_convert_f64x2_i64x2(a.val));
+#else
+    fallback::v_int64x2 a_(a);
+    return fallback::v_cvt_f64(a_);
+#endif
 }
 
 ////////////// Lookup table access ////////////////////

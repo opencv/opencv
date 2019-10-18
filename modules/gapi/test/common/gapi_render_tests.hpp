@@ -84,7 +84,7 @@ protected:
     cv::Mat y_mat_ocv, uv_mat_ocv, y_mat_gapi, uv_mat_gapi, mat_ocv, mat_gapi;
 };
 
-using TestArgs = std::tuple<cv::Size,cv::gapi::wip::draw::Prims,cv::gapi::GKernelPackage>;
+using TestArgs = std::tuple<cv::Size,cv::gapi::wip::draw::Prims>;
 
 struct RenderNV12 : public RenderWithParam<TestArgs>
 {
@@ -97,7 +97,7 @@ struct RenderNV12 : public RenderWithParam<TestArgs>
         cv::resize(uv_mat_ocv, upsample_uv, uv_mat_ocv.size() * 2, cv::INTER_LINEAR);
         cv::merge(std::vector<cv::Mat>{y_mat_ocv, upsample_uv}, yuv);
 
-        cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims);
+        //cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims);
 
         // YUV -> NV12
         std::vector<cv::Mat> chs(3);
@@ -112,7 +112,7 @@ struct RenderBGR : public RenderWithParam<TestArgs>
 {
     void ComputeRef()
     {
-        cv::gapi::wip::draw::drawPrimitivesOCVBGR(mat_ocv, prims);
+        //cv::gapi::wip::draw::drawPrimitivesOCVBGR(mat_ocv, prims);
     }
 };
 
