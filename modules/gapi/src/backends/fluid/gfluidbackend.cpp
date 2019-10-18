@@ -1243,22 +1243,38 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
     case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
     case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
     case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
-    default: util::throw_error(std::logic_error("Unsupported GShape type"));
     }
 }
 
 void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const GRunArgP &arg)
 {
     // Only GMat is supported as return type
+    using T = GRunArgP;
     switch (rc.shape)
     {
     case GShape::GMAT:
         {
             cv::GMatDesc desc = m_buffers[m_id_map.at(rc.id)].meta();
-            auto      &outMat = *util::get<cv::gapi::own::Mat*>(arg);
-            GAPI_Assert(outMat.data != nullptr);
-            GAPI_Assert(descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");
-            m_buffers[m_id_map.at(rc.id)].priv().bindTo(outMat, false);
+            auto &bref = m_buffers[m_id_map.at(rc.id)].priv();
+
+            switch (arg.index()) {
+            // FIXME: See the bindInArg comment on Streaming-related changes
+            case T::index_of<cv::gapi::own::Mat*>(): {
+                auto &outMat = *util::get<cv::gapi::own::Mat*>(arg);
+                GAPI_Assert(outMat.data != nullptr);
+                GAPI_Assert(descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");
+                bref.bindTo(outMat, false);
+            } break;
+#if !defined(GAPI_STANDALONE)
+            case T::index_of<cv::Mat*>(): {
+                auto &outMat = *util::get<cv::Mat*>(arg);
+                GAPI_Assert(outMat.data != nullptr);
+                GAPI_Assert(descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");
+                bref.bindTo(cv::to_own(outMat), false);
+            } break;
+#endif // GAPI_STANDALONE
+            default: GAPI_Assert(false);
+            } // switch(arg.index())
             break;
         }
     default: util::throw_error(std::logic_error("Unsupported return GShape type"));
@@ -1446,6 +1462,13 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                 // regardless if it is one fluid island (both writing to and reading from this object)
                 // or two distinct islands (both fluid)
                 auto isFluidIsland = [&](const ade::NodeHandle& node) {
+                    // With Streaming, Emitter islands may have no FusedIsland thing in meta.
+                    // FIXME: Probably this is a concept misalignment
+                    if (!gim.metadata(node).contains<FusedIsland>()) {
+                        const auto kind = gim.metadata(node).get<NodeKind>().k;
+                        GAPI_Assert(kind == NodeKind::EMIT || kind == NodeKind::SINK);
+                        return false;
+                    }
                     const auto isl = gim.metadata(node).get<FusedIsland>().object;
                     return isl->backend() == cv::gapi::fluid::backend();
                 };
@@ -1456,6 +1479,9 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                     setFluidData(data_node, false);
                 }
             } break; // case::SLOT
+            case NodeKind::EMIT:
+            case NodeKind::SINK:
+                break; // do nothing for Streaming nodes
             default: GAPI_Assert(false);
             } // switch
         } // for (gim.nodes())

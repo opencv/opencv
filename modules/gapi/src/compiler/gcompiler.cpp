@@ -28,21 +28,23 @@
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gcompiler.hpp"
 #include "compiler/gcompiled_priv.hpp"
+#include "compiler/gstreaming_priv.hpp"
 #include "compiler/passes/passes.hpp"
 #include "compiler/passes/pattern_matching.hpp"
 
 #include "executor/gexecutor.hpp"
+#include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
 #include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core
 #include <opencv2/gapi/cpu/imgproc.hpp> // ...and Imgproc kernel implementations
+#include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
 #include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
-#include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 
 #include "logger.hpp"
 
@@ -272,6 +274,12 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     m_e.addPass("exec", "fuse_islands",     passes::fuseIslands);
     m_e.addPass("exec", "sync_islands",     passes::syncIslandTags);
 
+    // FIXME: Since a set of passes is shared between
+    // GCompiled/GStreamingCompiled, this pass is added here unconditionally
+    // (even if it is not actually required to produce a GCompiled).
+    // FIXME: add a better way to do that!
+    m_e.addPass("exec", "add_streaming",    passes::addStreaming);
+
     if (dump_path.has_value())
     {
         m_e.addPass("exec", "dump_dot", std::bind(passes::dumpGraph, _1,
@@ -407,10 +415,31 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     return compiled;
 }
 
+cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
+{
+    const auto &outMetas = GModel::ConstGraph(*pg).metadata()
+        .get<OutputMeta>().outMeta;
+    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg)));
+
+    GStreamingCompiled compiled;
+    compiled.priv().setup(m_metas, outMetas, std::move(pE));
+    return compiled;
+}
+
 cv::GCompiled cv::gimpl::GCompiler::compile()
 {
     std::unique_ptr<ade::Graph> pG = generateGraph();
     runPasses(*pG);
     compileIslands(*pG);
     return produceCompiled(std::move(pG));
+}
+
+cv::GStreamingCompiled cv::gimpl::GCompiler::compileStreaming()
+{
+    // FIXME: self-note to DM: now keep these compile()/compileStreaming() in sync!
+    std::unique_ptr<ade::Graph> pG = generateGraph();
+    GModel::Graph(*pG).metadata().set(Streaming{});
+    runPasses(*pG);
+    compileIslands(*pG);
+    return produceStreamingCompiled(std::move(pG));
 }

@@ -19,6 +19,7 @@ set(the_description "OpenCV G-API Core Module")
 
 ocv_add_module(gapi opencv_imgproc)
 
+
 file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
@@ -30,6 +31,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/fluid/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
     )
 
 set(gapi_srcs
@@ -57,6 +59,7 @@ set(gapi_srcs
     src/compiler/gislandmodel.cpp
     src/compiler/gcompiler.cpp
     src/compiler/gcompiled.cpp
+    src/compiler/gstreaming.cpp
     src/compiler/passes/helpers.cpp
     src/compiler/passes/dump_dot.cpp
     src/compiler/passes/islands.cpp
@@ -66,9 +69,11 @@ set(gapi_srcs
     src/compiler/passes/transformations.cpp
     src/compiler/passes/pattern_matching.cpp
     src/compiler/passes/perform_substitution.cpp
+    src/compiler/passes/streaming.cpp
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
 
     # CPU Backend (currently built-in)
@@ -125,6 +130,12 @@ ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+endif()
+
+if(MSVC)
+  # Disable obsollete warning C4503 popping up on MSVC <<2017
+  # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
+  set_target_properties(${the_module} PROPERTIES COMPILE_FLAGS "/wd4503")
 endif()
 
 ocv_add_perf_tests()
