@@ -40,11 +40,11 @@
 #if !defined(GAPI_STANDALONE)
 #include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core
 #include <opencv2/gapi/cpu/imgproc.hpp> // ...and Imgproc kernel implementations
+#include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
 #include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
-#include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 
 #include "logger.hpp"
 
