@@ -1341,7 +1341,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; ++i)
         {
-            dataA[i] = dataB[i] = -1;
+            dataA[i] = dataB[i] = (LaneType)-1;
         }
 
         a = dataA, b = dataB;
