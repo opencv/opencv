@@ -445,6 +445,8 @@ TEST_P(Test_Darknet_layers, shortcut)
 {
     testDarknetLayer("shortcut");
     testDarknetLayer("shortcut_leaky");
+    testDarknetLayer("shortcut_unequal");
+    testDarknetLayer("shortcut_unequal_2");
 }
 
 TEST_P(Test_Darknet_layers, upsample)

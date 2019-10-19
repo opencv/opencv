@@ -1506,7 +1506,7 @@ TEST_P(Layer_Test_Eltwise_unequal, Accuracy)
     const int inpShapes[][4] = {{1, 4, 2, 2}, {1, 5, 2, 2}, {1, 3, 2, 2}};
     std::vector<String> inpNames(3);
     std::vector<Mat> inputs(3);
-    size_t numValues = 0;
+    size_t numOutValues = 1*4*2*2;  // By the first input
 
     std::vector<float> weights(3, 1);
     if (weighted)
@@ -1520,18 +1520,20 @@ TEST_P(Layer_Test_Eltwise_unequal, Accuracy)
     for (int i = 0; i < inputs.size(); ++i)
     {
         inputs[i].create(4, inpShapes[i], CV_32F);
-        numValues = std::max(numValues, inputs[i].total());
         randu(inputs[i], 0, 255);
         inpNames[i] = format("input_%d", i);
         net.connect(0, i, eltwiseId, i);
     }
-    Mat ref(1, numValues, CV_32F, Scalar(0));
+    Mat ref(1, numOutValues, CV_32F, Scalar(0));
 
     net.setInputsNames(inpNames);
     for (int i = 0; i < inputs.size(); ++i)
     {
         net.setInput(inputs[i], inpNames[i]);
-        ref.colRange(0, inputs[i].total()) += weights[i] * inputs[i].reshape(1, 1);
+        if (numOutValues >= inputs[i].total())
+            ref.colRange(0, inputs[i].total()) += weights[i] * inputs[i].reshape(1, 1);
+        else
+            ref += weights[i] * inputs[i].reshape(1, 1).colRange(0, numOutValues);
     }
 
     net.setPreferableBackend(backendId);
