@@ -114,11 +114,11 @@ public:
         CV_Assert(op == SUM || coeffs.size() == 0);
 
         int dims = inputs[0].size();
+        // Number of channels in output shape is determined by the first input tensor.
         int numChannels = inputs[0][1];
         for (int i = 1; i < inputs.size(); i++)
         {
             CV_Assert(inputs[0][0] == inputs[i][0]);
-            numChannels = std::max(numChannels, inputs[i][1]);
 
             // It's allowed for channels axis to be different.
             for (int j = 2; j < dims; j++)
@@ -177,7 +177,7 @@ public:
                 CV_Assert(srcs[i].type() == dst.type() &&
                           srcs[i].isContinuous());
                 // Sort srcs and coefficients in the order by number of channels
-                for( int j = i - 1; j >= 1 && p.srcs[j - 1]->size[1] < p.srcs[j]->size[1]; j++ )
+                for( int j = i; j >= 1 && p.srcs[j - 1]->size[1] < p.srcs[j]->size[1]; j-- )
                 {
                     std::swap(p.srcs[j - 1], p.srcs[j]);
                     if (!p.coeffs.empty())

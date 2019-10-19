@@ -420,7 +420,7 @@ namespace cv {
                     if (alpha != 1)
                     {
                         std::vector<float> coeffs(2, 1);
-                        coeffs[1] = alpha;
+                        coeffs[0] = alpha;
                         shortcut_param.set("coeff", DictValue::arrayReal<float*>(&coeffs[0], coeffs.size()));
                     }
 
@@ -431,8 +431,8 @@ namespace cv {
                     lp.layer_name = layer_name;
                     lp.layer_type = shortcut_param.type;
                     lp.layerParams = shortcut_param;
-                    lp.bottom_indexes.push_back(fused_layer_names.at(from));
                     lp.bottom_indexes.push_back(last_layer);
+                    lp.bottom_indexes.push_back(fused_layer_names.at(from));
                     last_layer = layer_name;
                     net->layers.push_back(lp);
 
@@ -599,7 +599,7 @@ namespace cv {
 
                         current_channels = 0;
                         for (size_t k = 0; k < layers_vec.size(); ++k) {
-                            layers_vec[k] = layers_vec[k] > 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
+                            layers_vec[k] = layers_vec[k] >= 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
                             current_channels += net->out_channels_vec[layers_vec[k]];
                         }
 
@@ -645,8 +645,6 @@ namespace cv {
                         int from = std::atoi(bottom_layer.c_str());
 
                         from = from < 0 ? from + layers_counter : from;
-                        current_channels = net->out_channels_vec[from];
-
                         setParams.setShortcut(from, alpha);
                     }
                     else if (layer_type == "upsample")
