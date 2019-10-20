@@ -53,11 +53,14 @@
 #include <fstream>
 #include <iterator>
 #include <numeric>
+#include <memory>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
+
+#include <opencv2/core/cuda.hpp>
 
 namespace cv {
 namespace dnn {
@@ -1065,10 +1068,15 @@ struct Net::Impl
         skipInfEngineInit = false;
 
 #ifdef HAVE_CUDA
-        /* we do not use the member initializer list to decouple the evaluation order from the declaration order */
-        stream = cuda4dnn::csl::Stream(true);
-        cublasHandle = cuda4dnn::csl::cublas::Handle(stream);
-        cudnnHandle = cuda4dnn::csl::cudnn::Handle(stream);
+        if (cv::cuda::getCudaEnabledDeviceCount() > 0)
+        {
+            cuda4dnn::csl::CSLContext context;
+            context.stream = cuda4dnn::csl::Stream(true);
+            context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream);
+            context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream);
+
+            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context)));
+        }
 #endif
     }
 
@@ -1093,10 +1101,14 @@ struct Net::Impl
     Mat output_blob;
 
 #ifdef HAVE_CUDA
-    cuda4dnn::csl::Stream stream;
-    cuda4dnn::csl::cublas::Handle cublasHandle;
-    cuda4dnn::csl::cudnn::Handle cudnnHandle;
-    cuda4dnn::csl::Workspace workspace;
+    struct CudaInfo_t
+    {
+        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt) : context(std::move(ctxt)) { }
+        cuda4dnn::csl::CSLContext context;
+        cuda4dnn::csl::Workspace workspace;
+    };
+
+    std::unique_ptr<CudaInfo_t> cudaInfo;
 #endif
 
     Ptr<BackendWrapper> wrap(Mat& host)
@@ -1865,16 +1877,13 @@ struct Net::Impl
                 continue;
             }
 
-            cuda4dnn::csl::CSLContext context;
-            context.stream = stream;
-            context.cublas_handle = cublasHandle;
-            context.cudnn_handle = cudnnHandle;
-
+            /* we make a copy so that `initCUDA` doesn't modify `cudaInfo->context` */
+            auto context = cudaInfo->context;
             auto node = layerInstance->initCUDA(&context, ld.inputBlobsWrappers, ld.outputBlobsWrappers);
             ld.backendNodes[DNN_BACKEND_CUDA] = node;
 
             auto cudaNode = node.dynamicCast<CUDABackendNode>();
-            workspace.require(cudaNode->get_workspace_memory_in_bytes());
+            cudaInfo->workspace.require(cudaNode->get_workspace_memory_in_bytes());
         }
 #endif
     }
@@ -1928,7 +1937,7 @@ struct Net::Impl
                 if (IS_DNN_CUDA_TARGET(preferableTarget))
                 {
                     auto wrapper = ld.inputBlobsWrappers[i].dynamicCast<CUDABackendWrapper>();
-                    wrapper->setStream(stream);
+                    wrapper->setStream(cudaInfo->context.stream);
                 }
 #endif
             }
@@ -1963,7 +1972,7 @@ struct Net::Impl
             if (IS_DNN_CUDA_TARGET(preferableTarget))
             {
                 auto wrapper = ld.outputBlobsWrappers[i].dynamicCast<CUDABackendWrapper>();
-                wrapper->setStream(stream);
+                wrapper->setStream(cudaInfo->context.stream);
             }
 #endif
         }
@@ -2573,7 +2582,7 @@ struct Net::Impl
                     Ptr<CUDABackendNode> cudaNode = node.dynamicCast<CUDABackendNode>();
                     CV_Assert(!cudaNode.empty());
 
-                    cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, workspace);
+                    cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, cudaInfo->workspace);
 #endif
                 }
                 else if (preferableBackend == DNN_BACKEND_HALIDE)
@@ -2642,7 +2651,7 @@ struct Net::Impl
 
 #ifdef HAVE_CUDA
         if (preferableBackend == DNN_BACKEND_CUDA)
-            stream.synchronize();
+            cudaInfo->context.stream.synchronize();
 #endif
     }
 
