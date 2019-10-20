@@ -101,7 +101,8 @@ TEST_P(Test_ONNX_layers, Convolution)
 TEST_P(Test_ONNX_layers, Convolution3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
-    throw SkipTestException("Test is enabled starts from 2019R1");
+    if(backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
     if (target != DNN_TARGET_CPU && backend != DNN_BACKEND_CUDA)
         throw SkipTestException("Only CPU and CUDA is supported");
@@ -199,7 +200,7 @@ TEST_P(Test_ONNX_layers, Eltwise3D)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU on DLIE backend, and CUDA is supported");
+        throw SkipTestException("Only CPU on DLIE backend is supported");
     testONNXModels("eltwise3d");
 }
 

@@ -50,8 +50,6 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
-#include <memory>
-
 namespace cv { namespace dnn {
 
 class NormalizeBBoxLayerImpl CV_FINAL : public NormalizeBBoxLayer

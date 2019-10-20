@@ -56,7 +56,6 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
-
 namespace cv
 {
 namespace dnn
