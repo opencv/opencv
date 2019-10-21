@@ -3277,7 +3277,7 @@ String Net::dump()
             prevNode = itBackend->second;
         }
     }
-    String colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462"};
+    String colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848"};
     String backend;
     switch (prefBackend) {
         case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
