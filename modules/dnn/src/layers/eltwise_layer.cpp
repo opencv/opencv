@@ -42,11 +42,17 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/eltwise.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -97,6 +103,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
                 (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()));
@@ -373,6 +380,28 @@ public:
         EltwiseInvoker::run(&inputs[0], (int)inputs.size(), outputs[0],
                             coeffs, op, activ.get(), nstripes);
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto op_ = [this] {
+            switch (op) {
+            case MAX: return cuda4dnn::EltwiseOpType::MAX;
+            case SUM: return cuda4dnn::EltwiseOpType::SUM;
+            case PROD: return cuda4dnn::EltwiseOpType::PRODUCT;
+            }
+            return cuda4dnn::EltwiseOpType::SUM;
+        }();
+
+        return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, coeffs);
+    }
+#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {

@@ -28,6 +28,9 @@
 
 #define CV_TEST_TAG_DNN_SKIP_VULKAN              "dnn_skip_vulkan"
 
+#define CV_TEST_TAG_DNN_SKIP_CUDA                "dnn_skip_cuda"
+#define CV_TEST_TAG_DNN_SKIP_CUDA_FP16           "dnn_skip_cuda_fp16"
+#define CV_TEST_TAG_DNN_SKIP_CUDA_FP32           "dnn_skip_cuda_fp32"
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -88,7 +91,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withInferenceEngine = true,
         bool withHalide = false,
         bool withCpuOCV = true,
-        bool withVkCom = true
+        bool withVkCom = true,
+        bool withCUDA = true
 );
 
 
@@ -108,7 +112,7 @@ public:
 
     static void getDefaultThresholds(int backend, int target, double* l1, double* lInf)
     {
-        if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
         {
             *l1 = 4e-3;
             *lInf = 2e-2;
@@ -155,6 +159,12 @@ public:
     void expectNoFallbacksFromIE(Net& net)
     {
         if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+            expectNoFallbacks(net);
+    }
+
+    void expectNoFallbacksFromCUDA(Net& net)
+    {
+        if (backend == DNN_BACKEND_CUDA)
             expectNoFallbacks(net);
     }
 

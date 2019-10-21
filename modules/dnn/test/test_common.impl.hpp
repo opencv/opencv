@@ -26,6 +26,7 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE"; return;
     case DNN_BACKEND_VKCOM: *os << "VKCOM"; return;
     case DNN_BACKEND_OPENCV: *os << "OCV"; return;
+    case DNN_BACKEND_CUDA: *os << "CUDA"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -39,6 +40,8 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
     case DNN_TARGET_VULKAN: *os << "VULKAN"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
+    case DNN_TARGET_CUDA: *os << "CUDA"; return;
+    case DNN_TARGET_CUDA_FP16: *os << "CUDA_FP16"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -182,7 +185,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withInferenceEngine /*= true*/,
         bool withHalide /*= false*/,
         bool withCpuOCV /*= true*/,
-        bool withVkCom /*= true*/
+        bool withVkCom /*= true*/,
+        bool withCUDA /*= true*/
 )
 {
 #ifdef HAVE_INF_ENGINE
@@ -217,6 +221,16 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
             targets.push_back(make_tuple(DNN_BACKEND_VKCOM, *i));
     }
+
+#ifdef HAVE_CUDA
+    if(withCUDA)
+    {
+        //for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
+        //    targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
+        targets.push_back(make_tuple(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
+    }
+#endif
+
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
@@ -337,6 +351,12 @@ void initDNNTests()
 #ifdef HAVE_VULKAN
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_VULKAN
+    );
+#endif
+
+#ifdef HAVE_CUDA
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP32, CV_TEST_TAG_DNN_SKIP_CUDA_FP16
     );
 #endif
 }

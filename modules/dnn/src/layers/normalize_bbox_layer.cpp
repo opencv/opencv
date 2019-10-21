@@ -42,7 +42,13 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/normalize_bbox.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv { namespace dnn {
 
@@ -70,7 +76,8 @@ public:
 
             return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
         }
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && (pnorm == 1 || pnorm == 2));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -256,6 +263,33 @@ public:
             outData += numPlanes * planeSize;
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        if(pnorm != 1 && pnorm != 2)
+            CV_Error(Error::StsNotImplemented, "Unsupported normalization mode");
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        NormalizeConfiguration<float> config;
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+        config.axis_start = clamp(startAxis, input_shape.size());
+        config.axis_end = clamp(endAxis, input_shape.size()) + 1; /* +1 because NormalizeOp follows [start, end) convention */
+        config.norm = pnorm;
+        config.eps = epsilon;
+
+        const auto& weightsMat = blobs.empty() ? Mat() : blobs[0];
+        return make_cuda_node<cuda4dnn::NormalizeOp>(preferableTarget, std::move(context->stream), weightsMat, config);
+    }
+#endif
 
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
