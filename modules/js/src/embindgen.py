@@ -107,7 +107,7 @@ def makeWhiteList(module_list):
     return wl
 
 track=""
-if "OPENCV_JS_WHITELIST" in os.environ:s
+if "OPENCV_JS_WHITELIST" in os.environ:
     track = os.environ["OPENCV_JS_WHITELIST"]
 else:
     track = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.json')
