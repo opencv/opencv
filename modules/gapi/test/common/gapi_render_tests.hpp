@@ -78,7 +78,7 @@ protected:
     cv::Mat y_mat_ocv, uv_mat_ocv, y_mat_gapi, uv_mat_gapi, mat_ocv, mat_gapi;
 };
 
-using TestArgs = std::tuple<cv::Size,cv::gapi::wip::draw::Prims,cv::gapi::GKernelPackage>;
+using TestArgs = std::tuple<cv::Size,cv::gapi::wip::draw::Prims>;
 
 struct RenderNV12 : public RenderWithParam<TestArgs>
 {

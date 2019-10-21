@@ -876,11 +876,12 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
 // V' = (R' - Y')*0.877
 static const float coef[5] = {0.299f, 0.587f, 0.114f, 0.492f, 0.877f};
 
-static const ushort c0 = static_cast<ushort>(coef[0]*(1 << 16) + 0.5f);
-static const ushort c1 = static_cast<ushort>(coef[1]*(1 << 16) + 0.5f);
-static const ushort c2 = static_cast<ushort>(coef[2]*(1 << 16) + 0.5f);
-static const short c3 = static_cast<short>(coef[3]*(1 << 12) + 0.5f);
-static const short c4 = static_cast<short>(coef[4]*(1 << 12) + 0.5f);
+// don't use expressions (avoid any dynamic initialization): https://github.com/opencv/opencv/issues/15690
+static const ushort c0 = 19595;  // static_cast<ushort>(coef[0]*(1 << 16) + 0.5f);
+static const ushort c1 = 38470;  // static_cast<ushort>(coef[1]*(1 << 16) + 0.5f);
+static const ushort c2 = 7471;   // static_cast<ushort>(coef[2]*(1 << 16) + 0.5f);
+static const short c3 = 2015;    // static_cast<short>(coef[3]*(1 << 12) + 0.5f);
+static const short c4 = 3592;    // static_cast<short>(coef[4]*(1 << 12) + 0.5f);
 
 void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
 {

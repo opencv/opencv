@@ -63,6 +63,8 @@ void applyTransformations(ade::passes::PassContext &ctx,
                           const gapi::GKernelPackage &pkg,
                           const std::vector<std::unique_ptr<ade::Graph>> &preGeneratedPatterns);
 
+void addStreaming(ade::passes::PassContext &ctx);
+
 }} // namespace gimpl::passes
 
 } // namespace cv

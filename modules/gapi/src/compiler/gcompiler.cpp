@@ -28,16 +28,19 @@
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gcompiler.hpp"
 #include "compiler/gcompiled_priv.hpp"
+#include "compiler/gstreaming_priv.hpp"
 #include "compiler/passes/passes.hpp"
 #include "compiler/passes/pattern_matching.hpp"
 
 #include "executor/gexecutor.hpp"
+#include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
 #include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core
 #include <opencv2/gapi/cpu/imgproc.hpp> // ...and Imgproc kernel implementations
+#include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
@@ -63,11 +66,14 @@ namespace
 
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
-            combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels());
+            // FIXME add N-arg version combine
+            combine(combine(cv::gapi::core::cpu::kernels(),
+                    cv::gapi::imgproc::cpu::kernels()),
+                    cv::gapi::render::ocv::kernels());
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
+
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
         auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
         return combine(ocv_pkg, user_pkg_with_aux);
@@ -202,8 +208,9 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     };
     take(kernels_to_use.backends());
     take(networks_to_use.backends());
-    m_all_kernels        = cv::gapi::combine(kernels_to_use,
-                                             auxKernelsFrom(all_backends));
+
+    m_all_kernels = cv::gapi::combine(kernels_to_use,
+                                      auxKernelsFrom(all_backends));
     // NB: The expectation in the line above is that
     // NN backends (present here via network package) always add their
     // inference kernels via auxiliary...()
@@ -266,6 +273,12 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     m_e.addPassStage("exec");
     m_e.addPass("exec", "fuse_islands",     passes::fuseIslands);
     m_e.addPass("exec", "sync_islands",     passes::syncIslandTags);
+
+    // FIXME: Since a set of passes is shared between
+    // GCompiled/GStreamingCompiled, this pass is added here unconditionally
+    // (even if it is not actually required to produce a GCompiled).
+    // FIXME: add a better way to do that!
+    m_e.addPass("exec", "add_streaming",    passes::addStreaming);
 
     if (dump_path.has_value())
     {
@@ -402,10 +415,31 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     return compiled;
 }
 
+cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
+{
+    const auto &outMetas = GModel::ConstGraph(*pg).metadata()
+        .get<OutputMeta>().outMeta;
+    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg)));
+
+    GStreamingCompiled compiled;
+    compiled.priv().setup(m_metas, outMetas, std::move(pE));
+    return compiled;
+}
+
 cv::GCompiled cv::gimpl::GCompiler::compile()
 {
     std::unique_ptr<ade::Graph> pG = generateGraph();
     runPasses(*pG);
     compileIslands(*pG);
     return produceCompiled(std::move(pG));
+}
+
+cv::GStreamingCompiled cv::gimpl::GCompiler::compileStreaming()
+{
+    // FIXME: self-note to DM: now keep these compile()/compileStreaming() in sync!
+    std::unique_ptr<ade::Graph> pG = generateGraph();
+    GModel::Graph(*pG).metadata().set(Streaming{});
+    runPasses(*pG);
+    compileIslands(*pG);
+    return produceStreamingCompiled(std::move(pG));
 }

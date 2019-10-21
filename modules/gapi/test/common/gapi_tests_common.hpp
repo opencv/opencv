@@ -16,12 +16,45 @@
 #include <opencv2/gapi/util/util.hpp>
 
 #include "gapi_tests_helpers.hpp"
+#include <opencv2/gapi/render/render.hpp>
 
 namespace
 {
     inline std::ostream& operator<<(std::ostream& o, const cv::GCompileArg& arg)
     {
         return o << (arg.tag.empty() ? "empty" : arg.tag);
+    }
+
+    inline std::ostream& operator<<(std::ostream& o, const cv::gapi::wip::draw::Prim& p)
+    {
+        using namespace cv::gapi::wip::draw;
+        switch (p.index())
+        {
+            case Prim::index_of<Rect>():
+                o << "cv::gapi::draw::Rect";
+                break;
+            case Prim::index_of<Text>():
+                o << "cv::gapi::draw::Text";
+                break;
+            case Prim::index_of<Circle>():
+                o << "cv::gapi::draw::Circle";
+                break;
+            case Prim::index_of<Line>():
+                o << "cv::gapi::draw::Line";
+                break;
+            case Prim::index_of<Mosaic>():
+                o << "cv::gapi::draw::Mosaic";
+                break;
+            case Prim::index_of<Image>():
+                o << "cv::gapi::draw::Image";
+                break;
+            case Prim::index_of<Poly>():
+                o << "cv::gapi::draw::Poly";
+                break;
+            default: o << "Unrecognized primitive";
+        }
+
+        return o;
     }
 }
 

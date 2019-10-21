@@ -505,7 +505,7 @@ GAPI_OCV_KERNEL(GCPUCopy, cv::gapi::core::GCopy)
 {
     static void run(const cv::Mat& in, cv::Mat& out)
     {
-        cv::Mat(in).copyTo(out);
+        in.copyTo(out);
     }
 };
 
