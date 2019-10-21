@@ -177,6 +177,8 @@ TEST_P(setInput, normalization)
     const int target   = get<1>(get<3>(GetParam()));
     const bool kSwapRB = true;
 
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)
