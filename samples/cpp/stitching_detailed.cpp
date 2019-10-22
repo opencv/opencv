@@ -100,6 +100,7 @@ double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
 string features_type = "surf";
+float match_conf = 0.65f;
 string matcher_type = "homography";
 string estimator_type = "homography";
 string ba_cost_func = "ray";
@@ -110,7 +111,6 @@ bool save_graph = false;
 std::string save_graph_to;
 string warp_type = "spherical";
 int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
-float match_conf = 0.3f;
 string seam_find_type = "gc_color";
 int blend_type = Blender::MULTI_BAND;
 int timelapse_type = Timelapser::AS_IS;
@@ -174,7 +174,7 @@ static int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--features")
         {
             features_type = argv[i + 1];
-            if (features_type == "orb")
+            if (string(features_type) == "orb")
                 match_conf = 0.3f;
             i++;
         }
