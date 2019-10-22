@@ -1220,14 +1220,23 @@ inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
 OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float32x4, ps)
 OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float64x2, pd)
 
-#define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec, cast) \
+#if CV_SSE4_1
+#define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec) \
 inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
-{ return cast(v_reinterpret_as_f64(a) == v_reinterpret_as_f64(b)); } \
+{ return _Tpvec(_mm_cmpeq_epi64(a.val, b.val)); } \
 inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
-{ return cast(v_reinterpret_as_f64(a) != v_reinterpret_as_f64(b)); }
+{ return ~(a == b); }
+#else
+#define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec) \
+inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+{ __m128i cmp = _mm_cmpeq_epi32(a.val, b.val); \
+  return _Tpvec(_mm_and_si128(cmp, _mm_shuffle_epi32(cmp, _MM_SHUFFLE(2, 3, 0, 1)))); } \
+inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+{ return ~(a == b); }
+#endif
 
-OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2, v_reinterpret_as_u64)
-OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2, v_reinterpret_as_s64)
+OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2)
+OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2)
 
 inline v_float32x4 v_not_nan(const v_float32x4& a)
 { return v_float32x4(_mm_cmpord_ps(a.val, a.val)); }

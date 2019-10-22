@@ -1442,6 +1442,50 @@ template<typename R> struct TheTest
         return *this;
     }
 #endif
+
+#if CV_SIMD_64F
+    TheTest & test_cmp64()
+    {
+        Data<R> dataA, dataB;
+        R a = dataA, b = dataB;
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            dataA[i] = dataB[i];
+        }
+        dataA[0]++;
+
+        a = dataA, b = dataB;
+
+        Data<R> resC = (a == b);
+        Data<R> resD = (a != b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
+            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
+        }
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            dataA[i] = dataB[i] = (LaneType)-1;
+        }
+
+        a = dataA, b = dataB;
+
+        resC = (a == b);
+        resD = (a != b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
+            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
+        }
+        return *this;
+    }
+#endif
 };
 
 
@@ -1657,6 +1701,9 @@ void test_hal_intrin_uint64()
     TheTest<v_uint64>()
         .test_loadstore()
         .test_addsub()
+#if CV_SIMD_64F
+        .test_cmp64()
+#endif
         .test_shift<1>().test_shift<8>()
         .test_logic()
         .test_reverse()
@@ -1671,6 +1718,9 @@ void test_hal_intrin_int64()
     TheTest<v_int64>()
         .test_loadstore()
         .test_addsub()
+#if CV_SIMD_64F
+        .test_cmp64()
+#endif
         .test_shift<1>().test_shift<8>()
         .test_logic()
         .test_reverse()
