@@ -546,7 +546,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         return util::holds_alternative<cv::gapi::wip::IStreamSource::Ptr>(arg);
     };
     const auto num_videos = std::count_if(ins.begin(), ins.end(), is_video);
-    if (num_videos > 1u)
+    if (num_videos > 1)
     {
         // See below why (another reason - no documented behavior
         // on handling videos streams of different length)
