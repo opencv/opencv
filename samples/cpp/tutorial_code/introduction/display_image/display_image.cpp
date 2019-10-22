@@ -4,19 +4,18 @@
 #include <opencv2/highgui.hpp>
 
 #include <iostream>
-#include <string>
 //! [includes]
 
 //! [namespace]
 using namespace cv;
+using namespace std;
 //! [namespace]
 
-using namespace std;
 
 int main( int argc, char** argv )
 {
     //! [load]
-    String imageName( "../data/HappyFish.jpg" ); // by default
+    String imageName( "HappyFish.jpg" ); // by default
     if( argc > 1)
     {
         imageName = argv[1];
@@ -28,7 +27,7 @@ int main( int argc, char** argv )
     //! [mat]
 
     //! [imread]
-    image = imread( imageName, IMREAD_COLOR ); // Read the file
+    image = imread( samples::findFile( imageName ), IMREAD_COLOR ); // Read the file
     //! [imread]
 
     if( image.empty() )                      // Check for invalid input

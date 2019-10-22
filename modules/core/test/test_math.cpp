@@ -3923,5 +3923,59 @@ TEST(Core_SoftFloat, CvRound)
     }
 }
 
+template<typename T>
+static void checkRounding(T in, int outCeil, int outFloor)
+{
+    EXPECT_EQ(outCeil,cvCeil(in));
+    EXPECT_EQ(outFloor,cvFloor(in));
+
+    /* cvRound is not expected to be IEEE compliant. The implementation
+       should round to one of the above. */
+    EXPECT_TRUE((cvRound(in) == outCeil) || (cvRound(in) == outFloor));
+}
+
+TEST(Core_FastMath, InlineRoundingOps)
+{
+    struct
+    {
+        double in;
+        int outCeil;
+        int outFloor;
+    } values[] =
+    {
+        // Values are chosen to convert to binary float 32/64 exactly
+        { 1.0, 1, 1 },
+        { 1.5, 2, 1 },
+        { -1.5, -1, -2}
+    };
+
+    for (int i = 0, maxi = sizeof(values) / sizeof(values[0]); i < maxi; i++)
+    {
+        checkRounding<double>(values[i].in, values[i].outCeil, values[i].outFloor);
+        checkRounding<float>((float)values[i].in, values[i].outCeil, values[i].outFloor);
+    }
+}
+
+TEST(Core_FastMath, InlineNaN)
+{
+    EXPECT_EQ( cvIsNaN((float) NAN), 1);
+    EXPECT_EQ( cvIsNaN((float) -NAN), 1);
+    EXPECT_EQ( cvIsNaN(0.0f), 0);
+    EXPECT_EQ( cvIsNaN((double) NAN), 1);
+    EXPECT_EQ( cvIsNaN((double) -NAN), 1);
+    EXPECT_EQ( cvIsNaN(0.0), 0);
+}
+
+TEST(Core_FastMath, InlineIsInf)
+{
+    // Assume HUGE_VAL is infinity. Strictly speaking, may not always be true.
+    EXPECT_EQ( cvIsInf((float) HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf((float) -HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf(0.0f), 0);
+    EXPECT_EQ( cvIsInf((double) HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf((double) -HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf(0.0), 0);
+}
+
 }} // namespace
 /* End of file. */

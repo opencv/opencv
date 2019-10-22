@@ -160,6 +160,16 @@ void v_mul_expand(const __CV_V_UINT32&, const __CV_V_UINT32&, __CV_V_UINT64&, __
 void v_mul_expand(const __CV_V_INT32&,  const __CV_V_INT32&,  __CV_V_INT64&,  __CV_V_INT64&);
 #endif
 
+// Conversions
+__CV_V_FLOAT32 v_cvt_f32(const __CV_V_INT32& a);
+__CV_V_FLOAT32 v_cvt_f32(const __CV_V_FLOAT64& a);
+__CV_V_FLOAT32 v_cvt_f32(const __CV_V_FLOAT64& a, const __CV_V_FLOAT64& b);
+__CV_V_FLOAT64 v_cvt_f64(const __CV_V_INT32& a);
+__CV_V_FLOAT64 v_cvt_f64_high(const __CV_V_INT32& a);
+__CV_V_FLOAT64 v_cvt_f64(const __CV_V_FLOAT32& a);
+__CV_V_FLOAT64 v_cvt_f64_high(const __CV_V_FLOAT32& a);
+__CV_V_FLOAT64 v_cvt_f64(const __CV_V_INT64& a);
+
 /** Cleanup **/
 #undef CV__SIMD_FORWARD
 #undef __CV_VX

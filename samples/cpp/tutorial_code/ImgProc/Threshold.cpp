@@ -49,16 +49,16 @@ static void Threshold_Demo( int, void* )
 int main( int argc, char** argv )
 {
     //! [load]
-    String imageName("../data/stuff.jpg"); // by default
+    String imageName("stuff.jpg"); // by default
     if (argc > 1)
     {
         imageName = argv[1];
     }
-    src = imread( imageName, IMREAD_COLOR ); // Load an image
+    src = imread( samples::findFile( imageName ), IMREAD_COLOR ); // Load an image
 
     if (src.empty())
     {
-        cout << "Cannot read image: " << imageName << std::endl;
+        cout << "Cannot read the image: " << imageName << std::endl;
         return -1;
     }
 
@@ -72,16 +72,16 @@ int main( int argc, char** argv )
     //! [trackbar]
     createTrackbar( trackbar_type,
                     window_name, &threshold_type,
-                    max_type, Threshold_Demo ); // Create Trackbar to choose type of Threshold
+                    max_type, Threshold_Demo ); // Create a Trackbar to choose type of Threshold
 
     createTrackbar( trackbar_value,
                     window_name, &threshold_value,
-                    max_value, Threshold_Demo ); // Create Trackbar to choose Threshold value
+                    max_value, Threshold_Demo ); // Create a Trackbar to choose Threshold value
     //! [trackbar]
 
     Threshold_Demo( 0, 0 ); // Call the function to initialize
 
-    /// Wait until user finishes program
+    /// Wait until the user finishes the program
     waitKey();
     return 0;
 }

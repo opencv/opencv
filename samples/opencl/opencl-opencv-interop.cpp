@@ -703,7 +703,7 @@ int App::process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* mem
     if (0 == mem || 0 == m_img_src)
     {
         // allocate/delete cl memory objects every frame for the simplicity.
-        // in real applicaton more efficient pipeline can be built.
+        // in real application more efficient pipeline can be built.
 
         if (use_buffer)
         {

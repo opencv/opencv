@@ -101,7 +101,7 @@ using namespace cv;
 }
 @endcode
 In this case, we initialize the camera and provide the imageView as a target for rendering each
-frame. CvVideoCamera is basically a wrapper around AVFoundation, so we provie as properties some of
+frame. CvVideoCamera is basically a wrapper around AVFoundation, so we provide as properties some of
 the AVFoundation camera options. For example we want to use the front camera, set the video size to
 352x288 and a video orientation (the video camera normally outputs in landscape mode, which results
 in transposed data when you design a portrait application).

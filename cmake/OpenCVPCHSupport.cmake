@@ -305,10 +305,13 @@ fi
 ${_command} '-D$<JOIN:$<TARGET_PROPERTY:${_targetName},COMPILE_DEFINITIONS>,' '-D>'
 ")
     GET_FILENAME_COMPONENT(_outdir ${_output} PATH)
+    if(NOT CMAKE_HOST_WIN32)  # chmod may be not available on Win32/MinGW (and it is not required)
+      set(_pch_prepare_command COMMAND chmod +x "${_pch_generate_file_cmd}")
+    endif()
     ADD_CUSTOM_COMMAND(
       OUTPUT "${_output}"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${_outdir}"
-      COMMAND chmod +x "${_pch_generate_file_cmd}"
+      ${_pch_prepare_command}
       COMMAND "${_pch_generate_file_cmd}"
       DEPENDS "${_input}" "${_pch_generate_file_cmd}"
       DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${_name}"

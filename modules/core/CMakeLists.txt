@@ -6,7 +6,7 @@ ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3)
 ocv_add_dispatched_file(convert SSE2 AVX2 VSX3)
 ocv_add_dispatched_file(convert_scale SSE2 AVX2)
 ocv_add_dispatched_file(count_non_zero SSE2 AVX2)
-ocv_add_dispatched_file(matmul SSE2 AVX2)
+ocv_add_dispatched_file(matmul SSE2 SSE4_1 AVX2 AVX512_SKX)
 ocv_add_dispatched_file(mean SSE2 AVX2)
 ocv_add_dispatched_file(merge SSE2 AVX2)
 ocv_add_dispatched_file(split SSE2 AVX2)
@@ -23,7 +23,7 @@ ocv_add_module(core
 
 set(extra_libs "")
 
-if(WINRT AND CMAKE_SYSTEM_NAME MATCHES WindowsStore AND CMAKE_SYSTEM_VERSION MATCHES "8.0")
+if(WINRT AND WINDOWS_STORE AND CMAKE_SYSTEM_VERSION MATCHES "8.0")
   list(APPEND extra_libs ole32.lib)
 endif()
 

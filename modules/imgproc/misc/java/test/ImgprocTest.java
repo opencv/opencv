@@ -807,7 +807,7 @@ public class ImgprocTest extends OpenCVTestCase {
         points.put(0, 0, 0, 0, 2, 3, 3, 4, 5, 8);
 
         Mat linePoints = new Mat(4, 1, CvType.CV_32FC1);
-        linePoints.put(0, 0, 0.53196341, 0.84676737, 2.496531, 3.7467217);
+        linePoints.put(0, 0, 0.53198653, 0.84675282, 2.5, 3.75);
 
         Imgproc.fitLine(points, dst, Imgproc.CV_DIST_L12, 0, 0.01, 0.01);
 

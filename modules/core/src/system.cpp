@@ -368,17 +368,20 @@ struct HWFeatures
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
 
+        g_hwFeatureNames[CPU_MSA] = "CPU_MSA";
+
+        g_hwFeatureNames[CPU_AVX512_COMMON] = "AVX512-COMMON";
         g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
         g_hwFeatureNames[CPU_AVX512_KNL] = "AVX512-KNL";
         g_hwFeatureNames[CPU_AVX512_KNM] = "AVX512-KNM";
         g_hwFeatureNames[CPU_AVX512_CNL] = "AVX512-CNL";
-        g_hwFeatureNames[CPU_AVX512_CEL] = "AVX512-CEL";
+        g_hwFeatureNames[CPU_AVX512_CLX] = "AVX512-CLX";
         g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
     }
 
     void initialize(void)
     {
-#ifndef WINRT
+#ifndef NO_GETENV
         if (getenv("OPENCV_DUMP_CONFIG"))
         {
             fprintf(stderr, "\nOpenCV build configuration is:\n%s\n",
@@ -483,9 +486,11 @@ struct HWFeatures
                                           have[CV_CPU_AVX_5124VNNIW] && have[CV_CPU_AVX_512VPOPCNTDQ];
                 have[CV_CPU_AVX512_SKX] = have[CV_CPU_AVX_512BW] && have[CV_CPU_AVX_512DQ] && have[CV_CPU_AVX_512VL];
                 have[CV_CPU_AVX512_CNL] = have[CV_CPU_AVX512_SKX] && have[CV_CPU_AVX_512IFMA] && have[CV_CPU_AVX_512VBMI];
-                have[CV_CPU_AVX512_CEL] = have[CV_CPU_AVX512_CNL] && have[CV_CPU_AVX_512VNNI];
-                have[CV_CPU_AVX512_ICL] = have[CV_CPU_AVX512_CEL] && have[CV_CPU_AVX_512VBMI2] &&
-                                          have[CV_CPU_AVX_512BITALG] && have[CV_CPU_AVX_512VPOPCNTDQ];
+                have[CV_CPU_AVX512_CLX] = have[CV_CPU_AVX512_SKX] && have[CV_CPU_AVX_512VNNI];
+                have[CV_CPU_AVX512_ICL] = have[CV_CPU_AVX512_SKX] &&
+                                          have[CV_CPU_AVX_512IFMA] && have[CV_CPU_AVX_512VBMI] &&
+                                          have[CV_CPU_AVX_512VNNI] &&
+                                          have[CV_CPU_AVX_512VBMI2] && have[CV_CPU_AVX_512BITALG] && have[CV_CPU_AVX_512VPOPCNTDQ];
             }
             else
             {
@@ -493,7 +498,7 @@ struct HWFeatures
                 have[CV_CPU_AVX512_KNM] = false;
                 have[CV_CPU_AVX512_SKX] = false;
                 have[CV_CPU_AVX512_CNL] = false;
-                have[CV_CPU_AVX512_CEL] = false;
+                have[CV_CPU_AVX512_CLX] = false;
                 have[CV_CPU_AVX512_ICL] = false;
             }
         }
@@ -554,7 +559,12 @@ struct HWFeatures
         have[CV_CPU_FP16] = true;
     #endif
     #endif
-
+    #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
+        have[CV_CPU_NEON] = true;
+    #endif
+    #ifdef __mips_msa
+        have[CV_CPU_MSA] = true;
+    #endif
     // there's no need to check VSX availability in runtime since it's always available on ppc64le CPUs
     have[CV_CPU_VSX] = (CV_VSX);
     // TODO: Check VSX3 availability in runtime for other platforms
@@ -565,8 +575,16 @@ struct HWFeatures
         have[CV_CPU_VSX3] = (CV_VSX3);
     #endif
 
+        bool skip_baseline_check = false;
+#ifndef NO_GETENV
+        if (getenv("OPENCV_SKIP_CPU_BASELINE_CHECK"))
+        {
+            skip_baseline_check = true;
+        }
+#endif
         int baseline_features[] = { CV_CPU_BASELINE_FEATURES };
-        if (!checkFeatures(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0])))
+        if (!checkFeatures(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0]))
+            && !skip_baseline_check)
         {
             fprintf(stderr, "\n"
                     "******************************************************************\n"
@@ -593,12 +611,12 @@ struct HWFeatures
             {
                 if (have[feature])
                 {
-                    if (dump) fprintf(stderr, "%s - OK\n", getHWFeatureNameSafe(feature));
+                    if (dump) fprintf(stderr, "    ID=%3d (%s) - OK\n", feature, getHWFeatureNameSafe(feature));
                 }
                 else
                 {
                     result = false;
-                    if (dump) fprintf(stderr, "%s - NOT AVAILABLE\n", getHWFeatureNameSafe(feature));
+                    if (dump) fprintf(stderr, "    ID=%3d (%s) - NOT AVAILABLE\n", feature, getHWFeatureNameSafe(feature));
                 }
             }
         }
@@ -614,10 +632,10 @@ struct HWFeatures
     {
         bool dump = true;
         const char* disabled_features =
-#ifndef WINRT
-                getenv("OPENCV_CPU_DISABLE");
-#else
+#ifdef NO_GETENV
                 NULL;
+#else
+                getenv("OPENCV_CPU_DISABLE");
 #endif
         if (disabled_features && disabled_features[0] != 0)
         {
@@ -892,7 +910,7 @@ String format( const char* fmt, ... )
 String tempfile( const char* suffix )
 {
     String fname;
-#ifndef WINRT
+#ifndef NO_GETENV
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
@@ -913,6 +931,20 @@ String tempfile( const char* suffix )
     CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
     fname = String(aname);
     RoUninitialize();
+#elif defined(_WIN32_WCE)
+    const auto kMaxPathSize = MAX_PATH+1;
+    wchar_t temp_dir[kMaxPathSize] = {0};
+    wchar_t temp_file[kMaxPathSize] = {0};
+
+    ::GetTempPathW(kMaxPathSize, temp_dir);
+
+    if(0 != ::GetTempFileNameW(temp_dir, L"ocv", 0, temp_file)) {
+        DeleteFileW(temp_file);
+        char aname[MAX_PATH];
+        size_t copied = wcstombs(aname, temp_file, MAX_PATH);
+        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+        fname = String(aname);
+    }
 #else
     char temp_dir2[MAX_PATH] = { 0 };
     char temp_file[MAX_PATH] = { 0 };

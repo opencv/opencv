@@ -198,7 +198,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && !_locPredTransposed && _bboxesNormalized && !_clip);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && !_locPredTransposed && _bboxesNormalized);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -927,7 +927,7 @@ public:
         ieLayer.setShareLocation(_shareLocation);
         ieLayer.setBackgroudLabelId(_backgroundLabelId);
         ieLayer.setNMSThreshold(_nmsThreshold);
-        ieLayer.setTopK(_topK);
+        ieLayer.setTopK(_topK > 0 ? _topK : _keepTopK);
         ieLayer.setKeepTopK(_keepTopK);
         ieLayer.setConfidenceThreshold(_confidenceThreshold);
         ieLayer.setVariantEncodedInTarget(_varianceEncodedInTarget);
@@ -936,6 +936,7 @@ public:
 
         InferenceEngine::Builder::Layer l = ieLayer;
         l.getParameters()["eta"] = std::string("1.0");
+        l.getParameters()["clip"] = _clip;
 
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }

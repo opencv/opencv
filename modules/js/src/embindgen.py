@@ -98,7 +98,7 @@ core = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bit
              'compare', 'convertScaleAbs', 'copyMakeBorder', 'countNonZero', 'determinant', 'dft', 'divide', 'eigen', \
              'exp', 'flip', 'getOptimalDFTSize','gemm', 'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude', \
              'max', 'mean', 'meanStdDev', 'merge', 'min', 'minMaxLoc', 'mixChannels', 'multiply', 'norm', 'normalize', \
-             'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'setIdentity', 'setRNGSeed', \
+             'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'rotate', 'setIdentity', 'setRNGSeed', \
              'solve', 'solvePoly', 'split', 'sqrt', 'subtract', 'trace', 'transform', 'transpose', 'vconcat'],
         'Algorithm': []}
 
@@ -112,7 +112,7 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'goodFeaturesToTrack','grabCut','initUndistortRectifyMap', 'integral','integral2', 'isContourConvex', 'line', \
                 'matchShapes', 'matchTemplate','medianBlur', 'minAreaRect', 'minEnclosingCircle', 'moments', 'morphologyEx', \
                 'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
-                'undistort','warpAffine','warpPerspective','watershed', \
+                'undistort','warpAffine','warpPerspective','warpPolar','watershed', \
                 'fillPoly', 'fillConvexPoly'],
            'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
 
@@ -141,9 +141,9 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'AKAZE': ['create', 'setDescriptorType', 'getDescriptorType', 'setDescriptorSize', 'getDescriptorSize', 'setDescriptorChannels', 'getDescriptorChannels', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
               'DescriptorMatcher': ['add', 'clear', 'empty', 'isMaskSupported', 'train', 'match', 'knnMatch', 'radiusMatch', 'clone', 'create'],
               'BFMatcher': ['isMaskSupported', 'create'],
-              '': ['drawKeypoints', 'drawMatches']}
+              '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
 
-calib3d = {'': ['findHomography']}
+calib3d = {'': ['findHomography', 'estimateAffine2D', 'Rodrigues']}
 
 def makeWhiteList(module_list):
     wl = {}
@@ -562,7 +562,7 @@ class JSWrapperGenerator(object):
                     match = re.search(r'const std::vector<(.*)>&', arg_type)
                     if match:
                         type_in_vect = match.group(1)
-                        if type_in_vect != 'cv::Mat':
+                        if type_in_vect in ['int', 'float', 'double', 'char', 'uchar', 'String', 'std::string']:
                             casted_arg_name = 'emscripten::vecFromJSArray<' + type_in_vect + '>(' + arg_name + ')'
                             arg_type = re.sub(r'std::vector<(.*)>', 'emscripten::val', arg_type)
                 w_signature.append(arg_type + ' ' + arg_name)

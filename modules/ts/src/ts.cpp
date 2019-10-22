@@ -512,8 +512,9 @@ string TS::str_from_code( const TS::FailureCode code )
     return "Generic/Unknown";
 }
 
-static int tsErrorCallback( int status, const char* func_name, const char* err_msg, const char* file_name, int line, TS* ts )
+static int tsErrorCallback( int status, const char* func_name, const char* err_msg, const char* file_name, int line, void* data )
 {
+    TS* ts = (TS*)data;
     const char* delim = std::string(err_msg).find('\n') == std::string::npos ? "" : "\n";
     ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d\n", cvErrorStr(status), delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
     return 0;

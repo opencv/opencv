@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_KMEANS_INDEX_H_
 #define OPENCV_FLANN_KMEANS_INDEX_H_
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <map>
 #include <cassert>
@@ -547,7 +549,7 @@ public:
 
 private:
     /**
-     * Struture representing a node in the hierarchical k-means tree.
+     * Structure representing a node in the hierarchical k-means tree.
      */
     struct KMeansNode
     {
@@ -1168,5 +1170,7 @@ private:
 };
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_KMEANS_INDEX_H_

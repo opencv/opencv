@@ -157,7 +157,7 @@ TEST(Core_Ptr, assignment)
 
     {
         Ptr<Reporter> p1(new Reporter(&deleted1));
-        p1 = p1;
+        p1 = *&p1;
         EXPECT_FALSE(deleted1);
     }
 

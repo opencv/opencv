@@ -69,7 +69,7 @@
 //
 
 if (typeof module !== 'undefined' && module.exports) {
-    // The envrionment is Node.js
+    // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
@@ -92,7 +92,7 @@ QUnit.test('test_imgProc', function(assert) {
         binView[0] = 10;
         cv.calcHist(source, channels, mask, hist, histSize, ranges, false);
 
-        // hist should contains a N X 1 arrary.
+        // hist should contains a N X 1 array.
         let size = hist.size();
         assert.equal(size.height, 256);
         assert.equal(size.width, 1);
@@ -941,4 +941,39 @@ QUnit.test('test_filter', function(assert) {
         inv3.delete();
         inv4.delete();
     }
+    //Rotate
+    {
+        let dst = new cv.Mat();
+        let src = cv.matFromArray(3, 2, cv.CV_8U, [1,2,3,4,5,6]);
+
+        cv.rotate(src, dst, cv.ROTATE_90_CLOCKWISE);
+
+        size = dst.size();
+        assert.equal(size.height, 2, "ROTATE_HEIGHT");
+        assert.equal(size.width, 3, "ROTATE_WIGTH");
+
+        let expected = new Uint8Array([5,3,1,6,4,2]);
+
+        assert.deepEqual(dst.data, expected);
+
+        dst.delete();
+        src.delete();
+    }
+});
+
+QUnit.test('warpPolar', function(assert) {
+  const lines = new cv.Mat(255, 255, cv.CV_8U, new cv.Scalar(0));
+  for (let r = 0; r < lines.rows; r++) {
+    lines.row(r).setTo(new cv.Scalar(r));
+  }
+  cv.warpPolar(lines, lines, { width: 5, height: 5 }, new cv.Point(2, 2), 3,
+    cv.INTER_CUBIC | cv.WARP_FILL_OUTLIERS | cv.WARP_INVERSE_MAP);
+  assert.ok(lines instanceof cv.Mat);
+  assert.deepEqual(Array.from(lines.data), [
+    159, 172, 191, 210, 223,
+    146, 159, 191, 223, 236,
+    128, 128,   0,   0,   0,
+    109,  96,  64,  32,  19,
+     96,  83,  64,  45,  32
+  ]);
 });

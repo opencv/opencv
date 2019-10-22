@@ -61,6 +61,7 @@ public:
     {
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
+        num_split = params.get<int>("num_split", 0);
         if (params.has("slice_point"))
         {
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
@@ -141,9 +142,10 @@ public:
         else  // Divide input blob on equal parts by axis.
         {
             CV_Assert(0 <= axis && axis < inpShape.size());
-            CV_Assert(requiredOutputs > 0 && inpShape[axis] % requiredOutputs == 0);
-            inpShape[axis] /= requiredOutputs;
-            outputs.resize(requiredOutputs, inpShape);
+            int splits = num_split ? num_split : requiredOutputs;
+            CV_Assert(splits > 0 && inpShape[axis] % splits == 0);
+            inpShape[axis] /= splits;
+            outputs.resize(splits, inpShape);
         }
         return false;
     }
@@ -299,14 +301,14 @@ public:
         {
             std::vector<size_t> outShape(numDims);
             for (int i = 0; i < numDims; ++i)
-                outShape[numDims - 1 - i] = sliceRanges[0][i].size();
+                outShape[i] = sliceRanges[0][i].size();
 
             ieLayer.getInputPorts()[1].setParameter("type", "weights");
 
-            // Fake blob which will be moved to inputs (as weights).
-            auto shapeSource = InferenceEngine::make_shared_blob<float>(
-                                   InferenceEngine::Precision::FP32,
-                                   InferenceEngine::Layout::ANY, outShape);
+            auto shapeSource = InferenceEngine::make_shared_blob<float>({
+                                   InferenceEngine::Precision::FP32, outShape,
+                                   InferenceEngine::Layout::ANY
+                               });
             shapeSource->allocate();
             addConstantData("weights", shapeSource, ieLayer);
         }

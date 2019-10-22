@@ -100,6 +100,8 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)64le")
   set(PPC64LE 1)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)64")
   set(PPC64 1)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(mips.*|MIPS.*)")
+  set(MIPS 1)
 endif()
 
 # Workaround for 32-bit operating systems on x86_64/aarch64 processor
@@ -191,6 +193,24 @@ if(NOT HAVE_CXX11)
     if(HAVE_STD_CXX11)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
       set(HAVE_CXX11 ON)
+    endif()
+  endif()
+endif()
+
+if((HAVE_CXX11
+        AND NOT MSVC
+        AND NOT (X86 OR X86_64)
+    AND NOT OPENCV_SKIP_LIBATOMIC_COMPILER_CHECK)
+    OR OPENCV_FORCE_LIBATOMIC_COMPILER_CHECK
+)
+  ocv_check_compiler_flag(CXX "" HAVE_CXX_ATOMICS_WITHOUT_LIB "${OpenCV_SOURCE_DIR}/cmake/checks/atomic_check.cpp")
+  if(NOT HAVE_CXX_ATOMICS_WITHOUT_LIB)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES atomic)
+    ocv_check_compiler_flag(CXX "" HAVE_CXX_ATOMICS_WITH_LIB "${OpenCV_SOURCE_DIR}/cmake/checks/atomic_check.cpp")
+    if(HAVE_CXX_ATOMICS_WITH_LIB)
+      list(APPEND OPENCV_LINKER_LIBS atomic)
+    else()
+      message(FATAL_ERROR "C++11 compiler must support std::atomic")
     endif()
   endif()
 endif()

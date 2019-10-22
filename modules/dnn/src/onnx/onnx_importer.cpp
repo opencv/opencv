@@ -397,11 +397,33 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("ceil_mode", layerParams.has("pad_mode"));
             layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
         }
-        else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool")
+        else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool" || layer_type == "ReduceMean")
         {
+            CV_Assert(node_proto.input_size() == 1);
             layerParams.type = "Pooling";
-            layerParams.set("pool", layer_type == "GlobalAveragePool" ? "AVE" : "MAX");
-            layerParams.set("global_pooling", true);
+            layerParams.set("pool", layer_type == "GlobalMaxPool"? "MAX" : "AVE");
+            layerParams.set("global_pooling", layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool");
+
+            if (layer_type == "ReduceMean")
+            {
+                if (layerParams.get<int>("keepdims") == 0 || !layerParams.has("axes"))
+                    CV_Error(Error::StsNotImplemented, "Unsupported mode of ReduceMean operation.");
+
+                MatShape inpShape = outShapes[node_proto.input(0)];
+                if (inpShape.size() != 4 && inpShape.size() != 5)
+                    CV_Error(Error::StsNotImplemented, "Unsupported input shape of reduce_mean operation.");
+
+                DictValue axes = layerParams.get("axes");
+                CV_Assert(axes.size() <= inpShape.size() - 2);
+                std::vector<int> kernel_size(inpShape.size() - 2, 1);
+                for (int i = 0; i < axes.size(); i++) {
+                    int axis = axes.get<int>(i);
+                    CV_Assert_N(axis >= 2 + i, axis < inpShape.size());
+                    kernel_size[axis - 2] = inpShape[axis];
+                }
+
+                layerParams.set("kernel_size", DictValue::arrayInt(&kernel_size[0], kernel_size.size()));
+            }
         }
         else if (layer_type == "Slice")
         {
@@ -443,6 +465,20 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
             layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
+         }
+        else if (layer_type == "Split")
+        {
+            DictValue splits = layerParams.get("split");
+            const int numSplits = splits.size();
+            CV_Assert(numSplits > 1);
+
+            std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
+            for (int i = 1; i < splits.size() - 1; ++i)
+            {
+                slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i - 1);
+            }
+            layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
+            layerParams.type = "Slice";
         }
         else if (layer_type == "Add" || layer_type == "Sum")
         {
@@ -463,6 +499,11 @@ void ONNXImporter::populateNet(Net dstNet)
             else {
                 layerParams.type = "Eltwise";
             }
+        }
+        else if (layer_type == "Max")
+        {
+            layerParams.type = "Eltwise";
+            layerParams.set("operation", "max");
         }
         else if (layer_type == "Sub")
         {
@@ -682,48 +723,53 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("num_output", layerParams.blobs[0].size[1] * layerParams.get<int>("group", 1));
             layerParams.set("bias_term", node_proto.input_size() == 3);
 
+            if (!layerParams.has("kernel_size"))
+                CV_Error(Error::StsNotImplemented,
+                         "Required attribute 'kernel_size' is not present.");
+
             if (layerParams.has("output_shape"))
             {
                 const DictValue& outShape = layerParams.get("output_shape");
+                DictValue strides = layerParams.get("stride");
+                DictValue kernel = layerParams.get("kernel_size");
 
-                if (outShape.size() != 4)
-                    CV_Error(Error::StsNotImplemented, "Output shape must have 4 elements.");
-
-                DictValue stride = layerParams.get("stride");
-                const int strideY = stride.getIntValue(0);
-                const int strideX = stride.getIntValue(1);
-                const int outH = outShape.getIntValue(2);
-                const int outW = outShape.getIntValue(3);
-
-                if (layerParams.get<String>("pad_mode") == "SAME")
+                String padMode;
+                std::vector<int> adjust_pads;
+                if (layerParams.has("pad_mode"))
                 {
-                    layerParams.set("adj_w", (outW - 1) % strideX);
-                    layerParams.set("adj_h", (outH - 1) % strideY);
-                }
-                else if (layerParams.get<String>("pad_mode") == "VALID")
-                {
-                    if (!layerParams.has("kernel_size"))
-                        CV_Error(Error::StsNotImplemented,
-                                 "Required attribute 'kernel_size' is not present.");
+                    padMode = toUpperCase(layerParams.get<String>("pad_mode"));
+                    if (padMode != "SAME" && padMode != "VALID")
+                        CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
-                    DictValue kernel = layerParams.get("kernel_size");
-                    layerParams.set("adj_h", (outH - kernel.getIntValue(0)) % strideY);
-                    layerParams.set("adj_w", (outW - kernel.getIntValue(1)) % strideX);
+                    for (int i = 0; i < strides.size(); i++)
+                    {
+                        int sz = outShape.get<int>(2 + i);
+                        int stride = strides.get<int>(i);
+                        adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
+                                                                 (sz - kernel.get<int>(i)) % stride);
+                    }
+                    layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], adjust_pads.size()));
                 }
             }
             else if (layerParams.has("output_padding"))
             {
-                const DictValue& adj_pad = layerParams.get("output_padding");
-                if (adj_pad.size() != 2)
-                    CV_Error(Error::StsNotImplemented, "Deconvolution3D layer is not supported");
-                layerParams.set("adj_w", adj_pad.get<int>(1));
-                layerParams.set("adj_h", adj_pad.get<int>(0));
+                replaceLayerParam(layerParams, "output_padding", "adj");
             }
         }
         else if (layer_type == "Transpose")
         {
             layerParams.type = "Permute";
             replaceLayerParam(layerParams, "perm", "order");
+
+            CV_Assert(node_proto.input_size() == 1);
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                std::vector<Mat> inputs(1, getBlob(node_proto, constBlobs, 0)), transposed;
+                runLayer(layerParams, inputs, transposed);
+                CV_Assert(transposed.size() == 1);
+                constBlobs.insert(std::make_pair(layerParams.name, transposed[0]));
+                continue;
+            }
         }
         else if (layer_type == "Unsqueeze")
         {
@@ -752,11 +798,13 @@ void ONNXImporter::populateNet(Net dstNet)
             if (axes.size() != 1)
                 CV_Error(Error::StsNotImplemented, "Multidimensional unsqueeze");
 
-            int dims[] = {1, -1};
+            MatShape inpShape = outShapes[node_proto.input(0)];
+            int axis = axes.getIntValue(0);
+            CV_Assert(0 <= axis && axis <= inpShape.size());
+            std::vector<int> outShape = inpShape;
+            outShape.insert(outShape.begin() + axis, 1);
             layerParams.type = "Reshape";
-            layerParams.set("axis", axes.getIntValue(0));
-            layerParams.set("num_axes", 1);
-            layerParams.set("dim", DictValue::arrayInt(&dims[0], 2));
+            layerParams.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
         }
         else if (layer_type == "Reshape")
         {
@@ -887,8 +935,10 @@ void ONNXImporter::populateNet(Net dstNet)
         }
 
         int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
-        layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
-
+        for (int i = 0; i < node_proto.output_size(); ++i)
+        {
+            layer_id.insert(std::make_pair(node_proto.output(i), LayerInfo(id, i)));
+        }
 
         std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
         for (int j = 0; j < node_proto.input_size(); j++) {
@@ -905,8 +955,10 @@ void ONNXImporter::populateNet(Net dstNet)
         // Compute shape of output blob for this layer.
         Ptr<Layer> layer = dstNet.getLayer(id);
         layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
-        CV_Assert(!layerOutShapes.empty());
-        outShapes[layerParams.name] = layerOutShapes[0];
+        for (int i = 0; i < node_proto.output_size() && i < (int)layerOutShapes.size(); ++i)
+        {
+            outShapes[node_proto.output(i)] = layerOutShapes[i];
+        }
     }
 }
 

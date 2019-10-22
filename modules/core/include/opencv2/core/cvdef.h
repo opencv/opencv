@@ -258,6 +258,8 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 #define CV_CPU_NEON             100
 
+#define CV_CPU_MSA              150
+
 #define CV_CPU_VSX              200
 #define CV_CPU_VSX3             201
 
@@ -267,7 +269,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_AVX512_KNL       258
 #define CV_CPU_AVX512_KNM       259
 #define CV_CPU_AVX512_CNL       260
-#define CV_CPU_AVX512_CEL       261
+#define CV_CPU_AVX512_CLX       261
 #define CV_CPU_AVX512_ICL       262
 
 // when adding to this list remember to update the following enum
@@ -308,6 +310,8 @@ enum CpuFeatures {
 
     CPU_NEON            = 100,
 
+    CPU_MSA             = 150,
+
     CPU_VSX             = 200,
     CPU_VSX3            = 201,
 
@@ -316,7 +320,7 @@ enum CpuFeatures {
     CPU_AVX512_KNL      = 258, //!< Knights Landing with AVX-512F/CD/ER/PF
     CPU_AVX512_KNM      = 259, //!< Knights Mill with AVX-512F/CD/ER/PF/4FMAPS/4VNNIW/VPOPCNTDQ
     CPU_AVX512_CNL      = 260, //!< Cannon Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI
-    CPU_AVX512_CEL      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI
+    CPU_AVX512_CLX      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/VNNI
     CPU_AVX512_ICL      = 262, //!< Ice Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI/VBMI2/BITALG/VPOPCNTDQ
 
     CPU_MAX_FEATURE     = 512  // see CV_HARDWARE_MAX_FEATURE
@@ -584,6 +588,13 @@ Cv64suf;
 #  endif
 #endif
 
+#ifdef CV_CXX_MOVE_SEMANTICS
+#define CV_CXX_MOVE(x) std::move(x)
+#else
+#define CV_CXX_MOVE(x) (x)
+#endif
+
+
 /****************************************************************************************\
 *                                    C++11 std::array                                    *
 \****************************************************************************************/
@@ -627,7 +638,7 @@ Cv64suf;
 \****************************************************************************************/
 
 #ifndef CV_NOEXCEPT
-#  ifdef CV_CXX11
+#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
 #    define CV_NOEXCEPT noexcept
 #  endif
 #endif

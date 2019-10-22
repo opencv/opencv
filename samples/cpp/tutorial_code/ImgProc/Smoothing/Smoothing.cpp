@@ -33,14 +33,14 @@ int main( int argc, char ** argv )
     namedWindow( window_name, WINDOW_AUTOSIZE );
 
     /// Load the source image
-    const char* filename = argc >=2 ? argv[1] : "../data/lena.jpg";
+    const char* filename = argc >=2 ? argv[1] : "lena.jpg";
 
-    src = imread( filename, IMREAD_COLOR );
-    if(src.empty())
+    src = imread( samples::findFile( filename ), IMREAD_COLOR );
+    if (src.empty())
     {
         printf(" Error opening image\n");
-        printf(" Usage: ./Smoothing [image_name -- default ../data/lena.jpg] \n");
-        return -1;
+        printf(" Usage:\n %s [image_name-- default lena.jpg] \n", argv[0]);
+        return EXIT_FAILURE;
     }
 
     if( display_caption( "Original Image" ) != 0 )

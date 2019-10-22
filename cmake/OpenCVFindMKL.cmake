@@ -133,7 +133,7 @@ message(STATUS "Found MKL ${MKL_VERSION_STR} at: ${MKL_ROOT_DIR}")
 set(HAVE_MKL ON)
 set(MKL_ROOT_DIR "${MKL_ROOT_DIR}" CACHE PATH "Path to MKL directory")
 set(MKL_INCLUDE_DIRS "${MKL_INCLUDE_DIRS}" CACHE PATH "Path to MKL include directory")
-set(MKL_LIBRARIES "${MKL_LIBRARIES}" CACHE STRING "MKL libarries")
+set(MKL_LIBRARIES "${MKL_LIBRARIES}" CACHE STRING "MKL libraries")
 if(UNIX AND NOT MKL_LIBRARIES_DONT_HACK)
     #it's ugly but helps to avoid cyclic lib problem
     set(MKL_LIBRARIES ${MKL_LIBRARIES} ${MKL_LIBRARIES} ${MKL_LIBRARIES} "-lpthread" "-lm" "-ldl")

@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
 
 #ifdef HAVE_OPENCL
@@ -21,6 +22,11 @@ public:
     {
         setParamsFrom(params);
         CV_Assert(blobs.size() == 1);
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -58,6 +64,15 @@ public:
         outputs_arr.getMatVector(outputs);
         blobs[0].copyTo(outputs[0]);
     }
+
+#ifdef HAVE_INF_ENGINE
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+        InferenceEngine::Builder::ConstLayer ieLayer(name);
+        ieLayer.setData(wrapToInfEngineBlob(blobs[0]));
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+    }
+#endif  // HAVE_INF_ENGINE
 };
 
 Ptr<Layer> ConstLayer::create(const LayerParams& params)
