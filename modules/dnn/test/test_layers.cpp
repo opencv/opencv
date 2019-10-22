@@ -165,6 +165,9 @@ TEST_P(Test_Caffe_layers, Pooling_ave)
 
 TEST_P(Test_Caffe_layers, MVN)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* MVN is unsupported */
+
     testLayerUsingCaffeModels("layer_mvn");
 }
 
@@ -576,6 +579,8 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* Proposal layer is unsupported */
 
     Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
 

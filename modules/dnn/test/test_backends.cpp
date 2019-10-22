@@ -106,6 +106,7 @@ TEST_P(DNNTestNetwork, AlexNet)
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_alexnet.yml" :
                                              "dnn/halide_scheduler_alexnet.yml");
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, ResNet_50)
@@ -119,6 +120,7 @@ TEST_P(DNNTestNetwork, ResNet_50)
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_resnet_50.yml" :
                                              "dnn/halide_scheduler_resnet_50.yml");
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, SqueezeNet_v1_1)
@@ -128,6 +130,7 @@ TEST_P(DNNTestNetwork, SqueezeNet_v1_1)
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_squeezenet_v1_1.yml" :
                                              "dnn/halide_scheduler_squeezenet_v1_1.yml");
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, GoogLeNet)
@@ -136,6 +139,7 @@ TEST_P(DNNTestNetwork, GoogLeNet)
     processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt",
                Size(224, 224), "prob");
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, Inception_5h)
@@ -152,6 +156,7 @@ TEST_P(DNNTestNetwork, Inception_5h)
                                              "dnn/halide_scheduler_inception_5h.yml",
                l1, lInf);
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, ENet)
@@ -165,6 +170,7 @@ TEST_P(DNNTestNetwork, ENet)
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_enet.yml" :
                                              "dnn/halide_scheduler_enet.yml",
                2e-5, 0.15);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
@@ -286,6 +292,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_coco)
     processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt",
                Size(46, 46), "", "", l1, lInf);
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
@@ -306,6 +313,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt",
                Size(46, 46), "", "", l1, lInf);
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
@@ -324,6 +332,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt",
                Size(46, 46));
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, OpenFace)
@@ -339,6 +348,8 @@ TEST_P(DNNTestNetwork, OpenFace)
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.0024 : 0.0;
     const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.0071 : 0.0;
     processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "", "", l1, lInf);
+
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, opencv_face_detector)
@@ -396,6 +407,7 @@ TEST_P(DNNTestNetwork, DenseNet_121)
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
@@ -423,8 +435,9 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 #if defined(HAVE_INF_ENGINE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     expectNoFallbacksFromIE(net);
 #endif
+    expectNoFallbacksFromCUDA(net);
 }
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false, true));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false, true, true));
 
 }} // namespace

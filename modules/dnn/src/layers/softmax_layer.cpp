@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -52,6 +53,11 @@ using std::max;
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/softmax.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -90,6 +96,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !logSoftMax) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
@@ -285,6 +292,21 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto channel_axis = clamp(axisRaw, input_wrapper->getRank());
+        return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
+    }
+#endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

@@ -93,8 +93,9 @@ public:
         m_text = text;
 
         // Convert OpenCV scale to Freetype text height
-        auto sz = cv::getTextSize(text.text, text.ff, text.fs, text.thick, nullptr);
-        int font_height = static_cast<int>(sz.height * 3.0 / 2); // 3.0 / 2 for better aligning with OpenCV
+        //auto sz = cv::getTextSize(text.text, text.ff, text.fs, text.thick, nullptr);
+        //int font_height = static_cast<int>(sz.height * 3.0 / 2); // 3.0 / 2 for better aligning with OpenCV
+        int font_height = 50;
 
         FT_Set_Pixel_Sizes(m_face, font_height, font_height);
     }

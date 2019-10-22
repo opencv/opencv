@@ -7,20 +7,12 @@ namespace cv
 {
 namespace gapi
 {
-
-namespace ocv
-{
-} // namespace ocv
-
 namespace wip
 {
 namespace draw
 {
 
-void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz);
-void poly(cv::Mat mat, std::vector<cv::Point>, cv::Scalar color, int lt, int shift);
-
-void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz)
+inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
 {
     cv::Mat msc_roi = mat(rect);
     int crop_x = msc_roi.cols - msc_roi.cols % cellSz;
@@ -34,10 +26,36 @@ void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz)
 
 };
 
-void poly(cv::Mat mat, std::vector<cv::Point> points, cv::Scalar color, int lt, int shift)
+inline void image(cv::Mat& mat,
+                  const cv::Point& org,
+                  const cv::Mat& img,
+                  const cv::Mat& alpha)
+{
+    auto roi = mat(cv::Rect(org, img.size()));
+    cv::Mat img32f_w;
+    cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
+
+    cv::Mat roi32f_w(roi.size(), CV_32FC3, cv::Scalar::all(1.0));
+    roi32f_w -= img32f_w;
+
+    cv::Mat img32f, roi32f;
+
+    img.convertTo(img32f, CV_32F, 1.0/255);
+    roi.convertTo(roi32f, CV_32F, 1.0/255);
+
+    cv::multiply(img32f, img32f_w, img32f);
+    cv::multiply(roi32f, roi32f_w, roi32f);
+    roi32f += img32f;
+
+    roi32f.convertTo(roi, CV_8U, 255.0);
+};
+
+inline void poly(cv::Mat& mat,
+                 const std::vector<cv::Point>& points,
+                 const cv::Scalar& color)
 {
     std::vector<std::vector<cv::Point>> pp{points};
-    cv::fillPoly(mat, pp, color, lt, shift);
+    cv::fillPoly(mat, pp, color);
 };
 
 struct BGR2YUVConverter
@@ -71,9 +89,9 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::IBi
         {
             case Prim::index_of<Rect>():
             {
-                const auto& t_p = cv::util::get<Rect>(p);
-                const auto color = converter.cvtColor(t_p.color);
-                cv::rectangle(in, t_p.rect, color , t_p.thick, t_p.lt, t_p.shift);
+                const auto& rp = cv::util::get<Rect>(p);
+                const auto color = converter.cvtColor(rp.color);
+                cv::rectangle(in, rp.rect, color , rp.thick);
                 break;
             }
 
@@ -107,44 +125,45 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::IBi
 
             case Prim::index_of<Circle>():
             {
-                const auto& c_p = cv::util::get<Circle>(p);
-                const auto color = converter.cvtColor(c_p.color);
-                cv::circle(in, c_p.center, c_p.radius, color, c_p.thick, c_p.lt, c_p.shift);
+                const auto& cp = cv::util::get<Circle>(p);
+                const auto color = converter.cvtColor(cp.color);
+                cv::circle(in, cp.center, cp.radius, color, cp.thick);
                 break;
             }
 
             case Prim::index_of<Line>():
             {
-                const auto& l_p = cv::util::get<Line>(p);
-                const auto color = converter.cvtColor(l_p.color);
-                cv::line(in, l_p.pt1, l_p.pt2, color, l_p.thick, l_p.lt, l_p.shift);
+                const auto& lp = cv::util::get<Line>(p);
+                const auto color = converter.cvtColor(lp.color);
+                cv::line(in, lp.pt1, lp.pt2, color, lp.thick);
                 break;
             }
 
             case Prim::index_of<Mosaic>():
             {
-                const auto& l_p = cv::util::get<Mosaic>(p);
-                mosaic(in, l_p.mos, l_p.cellSz);
+                const auto& mp = cv::util::get<Mosaic>(p);
+                GAPI_Assert(mp.decim == 0 && "Only decim = 0 supported now");
+                mosaic(in, mp.mos, mp.cellSz);
                 break;
             }
 
             case Prim::index_of<Image>():
             {
-                const auto& i_p = cv::util::get<Image>(p);
+                const auto& ip = cv::util::get<Image>(p);
 
                 cv::Mat img;
-                converter.cvtImg(i_p.img, img);
+                converter.cvtImg(ip.img, img);
 
                 img.convertTo(img, CV_32FC1, 1.0 / 255);
-                cv::gapi::wip::draw::blendImage(img, i_p.alpha, i_p.org, in);
+                cv::gapi::wip::draw::blendImage(img, ip.alpha, ip.org, in);
                 break;
             }
 
             case Prim::index_of<Poly>():
             {
-                const auto& p_p = cv::util::get<Poly>(p);
-                const auto color = converter.cvtColor(p_p.color);
-                poly(in, p_p.points, color, p_p.lt, p_p.shift);
+                const auto& pp = cv::util::get<Poly>(p);
+                const auto color = converter.cvtColor(pp.color);
+                poly(in, pp.points, color);
                 break;
             }
 

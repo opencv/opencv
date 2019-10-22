@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -53,6 +54,12 @@
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/convolution.hpp"
+#include "../cuda4dnn/primitives/transpose_convolution.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -253,6 +260,15 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            /* only convolution 2d and 3d supported */
+            if(kernel_size.size() == 2 || kernel_size.size() == 3)
+                return true;
+
+            return false;
+        }
+
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
@@ -490,8 +506,6 @@ public:
 #endif  // HAVE_VULKAN
         return Ptr<BackendNode>();
     }
-
-
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
@@ -1281,6 +1295,66 @@ public:
                           kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        CV_Assert(inputs.size() == 1);
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        CV_Assert(outputs.size() == 1);
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
+        auto output_shape = output_wrapper->getShape();
+
+        const auto output_feature_maps = blobs[0].size[0];
+        const auto input_feature_maps = input_shape[1];
+        const auto input_feature_maps_per_group = blobs[0].size[1];
+        const auto groups = input_feature_maps / input_feature_maps_per_group;
+
+        ConvolutionConfiguration config;
+        config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));
+        config.dilations.assign(std::begin(dilations), std::end(dilations));
+        config.strides.assign(std::begin(strides), std::end(strides));
+
+        if (padMode.empty())
+        {
+            config.padMode = ConvolutionConfiguration::PaddingMode::MANUAL;
+            config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
+        }
+        else if (padMode == "VALID")
+        {
+            config.padMode = ConvolutionConfiguration::PaddingMode::VALID;
+        }
+        else if (padMode == "SAME")
+        {
+            config.padMode = ConvolutionConfiguration::PaddingMode::SAME;
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by ConvolutionLayer");
+        }
+
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+        config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
+        config.groups = groups;
+
+        Mat filtersMat = fusedWeights ? weightsMat : blobs[0];
+        Mat biasMat = (hasBias() || fusedBias) ? Mat(output_feature_maps, 1, CV_32F, biasvec.data()) : Mat();
+        if (countNonZero(biasMat) == 0)
+            biasMat = Mat();
+
+        return make_cuda_node<cuda4dnn::ConvolutionOp>(
+            preferableTarget, std::move(context->stream), std::move(context->cudnn_handle), config, filtersMat, biasMat);
+    }
+#endif
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
@@ -1323,6 +1397,15 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            /* only deconvolution 2d and 3d supported */
+            if (kernel_size.size() == 2 || kernel_size.size() == 3)
+                return true;
+
+            return false;
+        }
+
 #ifdef HAVE_INF_ENGINE
         const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or IODHW layout
         const int group = numOutput / outGroupCn;
@@ -1372,7 +1455,8 @@ public:
         }
         else
 #endif  // HAVE_INF_ENGINE
-            return kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE);
+            return backendId == DNN_BACKEND_CUDA ||
+            (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -1897,6 +1981,67 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        CV_Assert(inputs.size() == 1);
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        CV_Assert(outputs.size() == 1);
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
+        auto output_shape = output_wrapper->getShape();
+
+        const auto output_feature_maps = numOutput;
+        const auto output_feature_maps_per_group = blobs[0].size[1];
+        const auto groups = output_feature_maps / output_feature_maps_per_group;
+
+        TransposeConvolutionConfiguration config;
+        config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));
+        config.dilations.assign(std::begin(dilations), std::end(dilations));
+        config.strides.assign(std::begin(strides), std::end(strides));
+
+        if (padMode.empty())
+        {
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::MANUAL;
+            config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
+        }
+        else if (padMode == "VALID")
+        {
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::VALID;
+        }
+        else if (padMode == "SAME")
+        {
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::SAME;
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by DeconvolutionLayer");
+        }
+
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+        config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
+        config.groups = groups;
+
+        CV_Assert(blobs.size() >= 1);
+        Mat filtersMat = fusedWeights ? weightsMat.t() : blobs[0];
+
+        Mat biasMat = (hasBias() || fusedBias) ? biasesMat : Mat();
+        if (countNonZero(biasMat) == 0)
+            biasMat = Mat();
+
+        return make_cuda_node<cuda4dnn::TransposeConvolutionOp>(
+            preferableTarget, std::move(context->stream), std::move(context->cudnn_handle), config, filtersMat, biasMat);
+    }
+#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
