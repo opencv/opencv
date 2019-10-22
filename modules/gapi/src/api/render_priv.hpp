@@ -52,6 +52,7 @@ struct make_mask_creator<FreeTypeBitmaskCreator>
 #ifdef HAVE_FREETYPE
         return std::unique_ptr<IBitmaskCreator>(new FreeTypeBitmaskCreator(std::forward<Args>(args)...));
 #endif
+        cv::util::suppress_unused_warning(args...);
         throw std::runtime_error("Freetype not found");
         return nullptr;
     }
