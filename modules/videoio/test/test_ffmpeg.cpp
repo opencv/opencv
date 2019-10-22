@@ -95,41 +95,58 @@ TEST(videoio_ffmpeg, image)
 
 //==========================================================================
 
-TEST(videoio_ffmpeg, raw)
+typedef tuple<string,string,int,int> Video_Paths_Ext;
+typedef testing::TestWithParam< Video_Paths_Ext > videoio_ffmpeg_cont;
+
+TEST_P(videoio_ffmpeg_cont, read)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
-    const vector<string> fileNames = { "video/big_buck_bunny.h264", "video/big_buck_bunny.h265" };
-    const vector<string> fileNamesOut = { tempfile(".h264"), tempfile(".h265") };
 
-    for (size_t i = 0; i < fileNames.size(); i++)
+    const string path = get<0>(GetParam());
+    const string ext = get<1>(GetParam());
+    const int codec = get<2>(GetParam());
+    const int pxFormat = get<3>(GetParam());
+    const string fileName = path + "." + ext;
+    const string fileNameOut = tempfile(string("." + ext).c_str());
+
+    // Write encoded video read using VideoContainer to tmp file
     {
-        // Write encoded video read using VideoContainer to tmp file
-        {
-            VideoContainer raw(findDataFile(fileNames[i]), CAP_FFMPEG);
-            ASSERT_TRUE(raw.isOpened());
-            std::ofstream file(fileNamesOut[i], ios::out | ios::trunc | std::ios::binary);
-            unsigned char* data = 0;
-            size_t size = 0;
-            while (raw.read(&data, &size))
-                file.write(reinterpret_cast<char*>(data), size);
-        }
+        VideoContainer raw(findDataFile(fileName), CAP_FFMPEG);
+        ASSERT_TRUE(raw.isOpened());
+        ASSERT_EQ(codec,raw.get(CAP_PROP_INT_CODEC));
+        ASSERT_EQ(pxFormat,raw.get(CAP_PROP_INT_PX_FORMAT));
+        std::ofstream file(fileNameOut, ios::out | ios::trunc | std::ios::binary);
+        unsigned char* data = 0;
+        size_t size = 0;
+        while (raw.read(&data, &size))
+            file.write(reinterpret_cast<char*>(data), size);
+    }
 
-        // Check decoded frames read from original media are equal to frames decoded from tmp file
+    // Check decoded frames read from original media are equal to frames decoded from tmp file
+    {
+        VideoCapture capReference(findDataFile(fileName), CAP_FFMPEG);
+        ASSERT_TRUE(capReference.isOpened());
+        VideoCapture capActual(fileNameOut.c_str(), CAP_FFMPEG);
+        ASSERT_TRUE(capActual.isOpened());
+        Mat reference, actual;
+        while (capReference.read(reference))
         {
-            VideoCapture capReference(findDataFile(fileNames[i]), CAP_FFMPEG);
-            ASSERT_TRUE(capReference.isOpened());
-            VideoCapture capActual(fileNamesOut[i].c_str(), CAP_FFMPEG);
-            ASSERT_TRUE(capActual.isOpened());
-            Mat reference, actual;
-            while (capReference.read(reference))
-            {
-                capActual.read(actual);
-                ASSERT_EQ(0, countNonZero(actual != reference));
-            }
+            capActual.read(actual);
+            ASSERT_EQ(0, countNonZero(actual != reference));
         }
     }
+
+    remove(fileNameOut.c_str());
 }
+
+const Video_Paths_Ext path_ext_format[] =
+{
+    make_tuple("video/big_buck_bunny", "h264",VideoCodec_H264,VideoChromaFormat_YUV420),
+    make_tuple("video/big_buck_bunny", "h265",VideoCodec_HEVC,VideoChromaFormat_YUV420)
+};
+
+INSTANTIATE_TEST_CASE_P(videoio, videoio_ffmpeg_cont, testing::ValuesIn(path_ext_format));
 
 //==========================================================================
 

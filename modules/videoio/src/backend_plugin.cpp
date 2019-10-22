@@ -453,6 +453,14 @@ public:
                 res = true;
         return res;
     }
+    bool readRaw(uchar** data, size_t* size) CV_OVERRIDE
+    {
+        bool res = false;
+        if (plugin_api_->Capture_retreive_raw)
+            if (CV_ERROR_OK == plugin_api_->Capture_retreive_raw(capture_, data, size))
+                res = true;
+        return res;
+    }
     bool isOpened() const CV_OVERRIDE
     {
         return capture_ != NULL;  // TODO always true

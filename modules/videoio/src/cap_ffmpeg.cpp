@@ -281,14 +281,14 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
 }
 
 static
-CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle, bool decode)
+CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
 {
     if (!handle)
         return CV_ERROR_FAIL;
     try
     {
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
-        return instance->grabFrame(decode) ? CV_ERROR_OK : CV_ERROR_FAIL;
+        return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch(...)
     {
@@ -325,22 +325,6 @@ CvResult CV_API_CALL cv_capture_read_raw(CvPluginCapture handle, uchar** data, s
     {
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
         return instance->readRaw(data, size) ? CV_ERROR_OK : CV_ERROR_FAIL;
-    }
-    catch (...)
-    {
-        return CV_ERROR_FAIL;
-    }
-}
-
-static
-CvResult CV_API_CALL cv_capture_set_raw(CvPluginCapture handle, bool readRaw)
-{
-    if (!handle)
-        return CV_ERROR_FAIL;
-    try
-    {
-        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
-        return instance->setRaw(readRaw) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch (...)
     {
@@ -431,7 +415,6 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
     /* 11*/cv_writer_set_prop,
     /* 12*/cv_writer_write,
     /* 13*/cv_capture_read_raw
-    /* 14*/cv_capture_set_raw
 };
 
 } // namespace

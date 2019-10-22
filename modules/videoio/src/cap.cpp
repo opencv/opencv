@@ -95,7 +95,7 @@ bool openBackend(const String& filename, int apiPreference, bool throwOnFail, Pt
                     {
                         if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
                             CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): created, isOpened=%d",
-                                info.name, icap->isOpened()));
+                                                            info.name, icap->isOpened()));
                         if (icap->isOpened())
                             return true;
                         icap.release();
@@ -105,16 +105,13 @@ bool openBackend(const String& filename, int apiPreference, bool throwOnFail, Pt
                         if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
                             CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): can't create capture", info.name));
                     }
-                }
-                catch (const cv::Exception& e) {
+                } catch (const cv::Exception& e) {
                     if (throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", info.name, e.what()));
-                }
-                catch (const std::exception& e) {
+                } catch (const std::exception& e) {
                     if (throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", info.name, e.what()));
-                }
-                catch (...) {
+                } catch (...) {
                     if (throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", info.name));
                 }

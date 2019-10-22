@@ -10,7 +10,7 @@
 
 // increase for backward-compatible changes, e.g. add new function
 // Main API <= Plugin API -> plugin is compatible
-#define API_VERSION 0 // preview
+#define API_VERSION 1 // preview
 // increase for incompatible changes, e.g. remove function argument
 // Main ABI == Plugin ABI -> plugin is compatible
 #define ABI_VERSION 0 // preview
@@ -20,7 +20,6 @@ extern "C" {
 #endif
 
 typedef CvResult (CV_API_CALL *cv_videoio_retrieve_cb_t)(int stream_idx, unsigned const char* data, int step, int width, int height, int cn, void* userdata);
-typedef CvResult (CV_API_CALL* cv_videoio_retrieve_raw_cb_t)(unsigned const char* data, int step, void* userdata);
 
 typedef struct CvPluginCapture_t* CvPluginCapture;
 typedef struct CvPluginWriter_t* CvPluginWriter;
@@ -150,9 +149,9 @@ typedef struct OpenCV_VideoIO_Plugin_API_preview
     @param callback retrieve callback (synchronous)
     @param userdata callback context data
 
-    @note API-CALL 13, API-Version == 0
+    @note API-CALL 13, API-Version == 1
      */
-    CvResult(CV_API_CALL* Capture_retreive_raw)(CvPluginCapture handle, cv_videoio_retrieve_raw_cb_t callback, void* userdata);
+    CvResult(CV_API_CALL *Capture_retreive_raw)(CvPluginCapture handle, uchar** data, size_t* size);
 
 } OpenCV_VideoIO_Plugin_API_preview;
 
