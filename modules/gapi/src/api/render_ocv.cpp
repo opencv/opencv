@@ -18,36 +18,12 @@ inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
     int crop_x = msc_roi.cols - msc_roi.cols % cellSz;
     int crop_y = msc_roi.rows - msc_roi.rows % cellSz;
 
-    for(int i = 0; i < crop_y; i += cellSz )
+    for(int i = 0; i < crop_y; i += cellSz ) {
         for(int j = 0; j < crop_x; j += cellSz) {
             auto cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
             cell_roi = cv::mean(cell_roi);
         }
-
-};
-
-inline void image(cv::Mat& mat,
-                  const cv::Point& org,
-                  const cv::Mat& img,
-                  const cv::Mat& alpha)
-{
-    auto roi = mat(cv::Rect(org, img.size()));
-    cv::Mat img32f_w;
-    cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
-
-    cv::Mat roi32f_w(roi.size(), CV_32FC3, cv::Scalar::all(1.0));
-    roi32f_w -= img32f_w;
-
-    cv::Mat img32f, roi32f;
-
-    img.convertTo(img32f, CV_32F, 1.0/255);
-    roi.convertTo(roi32f, CV_32F, 1.0/255);
-
-    cv::multiply(img32f, img32f_w, img32f);
-    cv::multiply(roi32f, roi32f_w, roi32f);
-    roi32f += img32f;
-
-    roi32f.convertTo(roi, CV_8U, 255.0);
+    }
 };
 
 inline void poly(cv::Mat& mat,
@@ -57,6 +33,37 @@ inline void poly(cv::Mat& mat,
     std::vector<std::vector<cv::Point>> pp{points};
     cv::fillPoly(mat, pp, color);
 };
+
+inline void blendImage(const cv::Mat& img,
+                       const cv::Mat& alpha,
+                       const cv::Point& org,
+                       cv::Mat background)
+{
+    GAPI_Assert(alpha.type() == CV_32FC1);
+    GAPI_Assert(background.channels() == 3u);
+
+    cv::Mat roi = background(cv::Rect(org, img.size()));
+    cv::Mat img32f_w;
+    cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
+
+    cv::Mat roi32f_w(roi.size(), CV_32FC3, cv::Scalar::all(1.0));
+    roi32f_w -= img32f_w;
+
+    cv::Mat img32f, roi32f;
+    if (img.type() == CV_32FC3) {
+        img.copyTo(img32f);
+    } else {
+        img.convertTo(img32f, CV_32F, 1.0/255);
+    }
+
+    roi.convertTo(roi32f, CV_32F, 1.0/255);
+
+    cv::multiply(img32f, img32f_w, img32f);
+    cv::multiply(roi32f, roi32f_w, roi32f);
+    roi32f += img32f;
+
+    roi32f.convertTo(roi, CV_8U, 255.0);
+}
 
 struct BGR2YUVConverter
 {
@@ -80,7 +87,7 @@ struct EmptyConverter
 
 // FIXME util::visitor ?
 template <typename ColorConverter>
-void drawPrimitivesOCV(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::IBitmaskCreator* mask_creator)
+void drawPrimitivesOCV(cv::Mat& in, const Prims& prims, cv::gapi::wip::draw::IBitmaskCreator* mc)
 {
     ColorConverter converter;
     for (const auto &p : prims)
@@ -100,13 +107,12 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::IBi
                 auto t_p = cv::util::get<Text>(p);
                 t_p.color = converter.cvtColor(t_p.color);
 
-                //auto mask_creator = cv::gapi::wip::draw::IBitmaskCreator::create(t_p.backend);
-                mask_creator->setMaskParams(t_p);
-                auto size = mask_creator->computeMaskSize();
+                mc->setMaskParams(t_p);
+                auto size = mc->computeMaskSize();
 
                 // Allocate mask outside
                 cv::Mat mask(size, CV_8UC1);
-                int baseline = mask_creator->createMask(mask);
+                int baseline = mc->createMask(mask);
 
                 mask.convertTo(mask, CV_32FC1, 1 / 255.0);
                 cv::Mat color_mask;
@@ -118,7 +124,7 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::IBi
                 // Org is bottom left point, trasform it to top left point for blendImage
                 cv::Point tl(t_p.org.x, t_p.org.y - color_mask.size().height + baseline);
 
-                cv::gapi::wip::draw::blendImage(color_mask, mask, tl, in);
+                blendImage(color_mask, mask, tl, in);
 
                 break;
             }
@@ -155,7 +161,7 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::IBi
                 converter.cvtImg(ip.img, img);
 
                 img.convertTo(img, CV_32FC1, 1.0 / 255);
-                cv::gapi::wip::draw::blendImage(img, ip.alpha, ip.org, in);
+                blendImage(img, ip.alpha, ip.org, in);
                 break;
             }
 
@@ -184,33 +190,5 @@ void drawPrimitivesOCVYUV(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::
 
 } // namespace draw
 } // namespace wip
-
-void cv::gapi::wip::draw::blendImage(const cv::Mat& img,
-                                     const cv::Mat& alpha,
-                                     const cv::Point& org,
-                                     cv::Mat background)
-{
-    GAPI_Assert(img.type()   == CV_32FC3);
-    GAPI_Assert(alpha.type() == CV_32FC1);
-    GAPI_Assert(background.channels() == 3u);
-
-    cv::Mat roi = background(cv::Rect(org, img.size()));
-    cv::Mat img32f_w;
-    cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
-
-    cv::Mat roi32f_w(roi.size(), CV_32FC3, cv::Scalar::all(1.0));
-    roi32f_w -= img32f_w;
-
-    cv::Mat img32f, roi32f;
-    img.copyTo(img32f);
-    roi.convertTo(roi32f, CV_32F, 1.0/255);
-
-    cv::multiply(img32f, img32f_w, img32f);
-    cv::multiply(roi32f, roi32f_w, roi32f);
-    roi32f += img32f;
-
-    roi32f.convertTo(roi, CV_8U, 255.0);
-}
-
 } // namespace gapi
 } // namespace cv

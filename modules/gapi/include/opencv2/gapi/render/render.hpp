@@ -28,12 +28,6 @@ namespace wip
 namespace draw
 {
 
-enum class BackendT
-{
-    OpenCV,
-    FreeType,
-};
-
 /**
  * A structure allows using freetype library for text rendering
  */

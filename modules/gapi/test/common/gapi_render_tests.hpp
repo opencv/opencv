@@ -79,7 +79,7 @@ protected:
         ref_mat.create(sz, type);
         gapi_mat.create(sz, type);
 
-        cv::randu(ref_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+        cv::randu(ref_mat, cv::Scalar::all(255), cv::Scalar::all(255));
         ref_mat.copyTo(gapi_mat);
     }
 
@@ -94,7 +94,7 @@ protected:
     {
         auto create_rand_mats = [](const cv::Size& size, MatType type, cv::Mat& ref_mat, cv::Mat& gapi_mat) {
             ref_mat.create(size, type);
-            cv::randu(ref_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+            cv::randu(ref_mat, cv::Scalar::all(255), cv::Scalar::all(255));
             ref_mat.copyTo(gapi_mat);
         };
 

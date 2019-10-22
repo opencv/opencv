@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2019 Intel Corporation
 
 
 #ifndef OPENCV_OCV_MASK_CREATOR_HPP
@@ -18,12 +18,12 @@ namespace draw {
 class OCVBitmaskCreator : public IBitmaskCreator
 {
 public:
-    virtual const cv::Size& computeMaskSize() override
+    virtual cv::Size computeMaskSize() override
     {
-        auto ff   = FONT_HERSHEY_COMPLEX;
+        m_ff    = FONT_HERSHEY_SIMPLEX;
         m_thick = 1;
 
-        auto sz = cv::getTextSize(m_text.text, FONT_HERSHEY_COMPLEX,
+        auto sz = cv::getTextSize(m_text.text, m_ff,
                                   m_text.fs, m_thick,
                                   &m_baseline);
 
@@ -45,7 +45,7 @@ public:
         cv::Point org((mask.cols - mask.size().width) / 2,
                       (mask.rows + mask.size().height - 2 * m_baseline) / 2);
 
-        cv::putText(mask, m_text.text, org, FONT_HERSHEY_COMPLEX,
+        cv::putText(mask, m_text.text, org, m_ff,
                     m_text.fs, 255, m_thick);
 
         return m_baseline;
@@ -60,6 +60,7 @@ private:
     cv::gapi::wip::draw::Text m_text;
     int m_baseline;
     int m_thick;
+    int m_ff;
     cv::Size m_mask_size;
 };
 

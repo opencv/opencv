@@ -1,23 +1,27 @@
-#ifdef HAVE_FREETYPE
-
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2019 Intel Corporation
 
 #ifndef OPENCV_FREETYPE_MASK_CREATOR_HPP
 #define OPENCV_FREETYPE_MASK_CREATOR_HPP
+
+#ifdef HAVE_FREETYPE
 
 #include "api/render_priv.hpp"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-namespace cv   {
-namespace gapi {
-namespace wip  {
-namespace draw {
+namespace cv
+{
+namespace gapi
+{
+namespace wip
+{
+namespace draw
+{
 
 class FreeTypeBitmaskCreator : public IBitmaskCreator
 {
@@ -28,7 +32,7 @@ public:
         FT_New_Face(m_library, path.c_str(), 0, &m_face);
     }
 
-    virtual const cv::Size& computeMaskSize() override
+    virtual cv::Size computeMaskSize() override
     {
         m_slot = m_face->glyph;
         m_mask_size = cv::Size(0, 0);
@@ -93,9 +97,8 @@ public:
         m_text = text;
 
         // Convert OpenCV scale to Freetype text height
-        //auto sz = cv::getTextSize(text.text, text.ff, text.fs, text.thick, nullptr);
-        //int font_height = static_cast<int>(sz.height * 3.0 / 2); // 3.0 / 2 for better aligning with OpenCV
-        int font_height = 50;
+        auto sz = cv::getTextSize(text.text, FONT_HERSHEY_SIMPLEX, text.fs, 1, nullptr);
+        int font_height = static_cast<int>(sz.height * 3.0 / 2); // 3.0 / 2 for better aligning with OpenCV
 
         FT_Set_Pixel_Sizes(m_face, font_height, font_height);
     }
@@ -125,6 +128,5 @@ private:
 } // namespace gapi
 } // namespace cv
 
-#endif // OPENCV_FREETYPE_MASK_CREATOR_HPP
-
 #endif // HAVE_FREETYPE
+#endif // OPENCV_FREETYPE_MASK_CREATOR_HPP

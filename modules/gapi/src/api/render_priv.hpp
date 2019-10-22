@@ -23,25 +23,39 @@ namespace draw
 GAPI_EXPORTS void cvtNV12ToYUV(const cv::Mat& y, const cv::Mat& uv, cv::Mat& yuv);
 GAPI_EXPORTS void cvtYUVToNV12(const cv::Mat& yuv, cv::Mat& y, cv::Mat& uv);
 
-void blendImage(const cv::Mat& img,
-                const cv::Mat& alpha,
-                const cv::Point& org,
-                cv::Mat background);
-
 class IBitmaskCreator
 {
 public:
     virtual int createMask(cv::Mat&) = 0;
-    virtual const cv::Size& computeMaskSize() = 0;
+    virtual cv::Size computeMaskSize() = 0;
     virtual void setMaskParams(const cv::gapi::wip::draw::Text& text) = 0;
     virtual ~IBitmaskCreator() = default;
 };
 
-template<typename T, typename... Args>
-std::unique_ptr<IBitmaskCreator> make_mask_creator(Args&&... args)
+template<typename T>
+struct make_mask_creator
 {
-    return std::unique_ptr<IBitmaskCreator>(new T(std::forward<Args>(args)...));
-}
+    template <typename... Args>
+    static std::unique_ptr<IBitmaskCreator> create(Args&&... args)
+    {
+        return std::unique_ptr<IBitmaskCreator>(new T(std::forward<Args>(args)...));
+    }
+};
+
+class FreeTypeBitmaskCreator;
+template <>
+struct make_mask_creator<FreeTypeBitmaskCreator>
+{
+    template <typename... Args>
+    static std::unique_ptr<IBitmaskCreator> create(Args&&... args)
+    {
+#ifdef HAVE_FREETYPE
+        return std::unique_ptr<IBitmaskCreator>(new FreeTypeBitmaskCreator(std::forward<Args>(args)...));
+#endif
+        throw std::runtime_error("Freetype not found");
+        return nullptr;
+    }
+};
 
 } // namespace draw
 } // namespace wip

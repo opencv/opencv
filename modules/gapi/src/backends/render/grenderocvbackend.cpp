@@ -138,8 +138,8 @@ namespace {
             auto has_use_freetype = cv::gimpl::getCompileArg<cv::gapi::wip::draw::use_freetype>(args);
 
             using namespace cv::gapi::wip::draw;
-            auto mc = has_use_freetype ? make_mask_creator<FreeTypeBitmaskCreator>(has_use_freetype.value().path)
-                                       : make_mask_creator<OCVBitmaskCreator>();
+            auto mc = has_use_freetype ? make_mask_creator<FreeTypeBitmaskCreator>::create(has_use_freetype.value().path)
+                                       : make_mask_creator<OCVBitmaskCreator>::create();
 
             return EPtr{new cv::gimpl::render::ocv::GRenderExecutable(graph, nodes, std::move(mc))};
         }
