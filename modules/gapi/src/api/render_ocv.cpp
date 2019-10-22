@@ -12,18 +12,19 @@ namespace wip
 namespace draw
 {
 
+// FIXME Support `decim` mosaic parameter
 inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
 {
     cv::Mat msc_roi = mat(rect);
     int crop_x = msc_roi.cols - msc_roi.cols % cellSz;
     int crop_y = msc_roi.rows - msc_roi.rows % cellSz;
 
-    for(int i = 0; i < crop_y; i += cellSz )
+    for(int i = 0; i < crop_y; i += cellSz ) {
         for(int j = 0; j < crop_x; j += cellSz) {
             auto cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
             cell_roi = cv::mean(cell_roi);
         }
-
+    }
 };
 
 inline void image(cv::Mat& mat,
