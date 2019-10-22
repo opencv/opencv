@@ -35,10 +35,9 @@ public:
     virtual cv::Size computeMaskSize() override
     {
         m_slot = m_face->glyph;
-        m_mask_size = cv::Size(0, 0);
-        int bmp_w          = 0;
-        int max_bottom_pad = 0;
-        m_max_top_pad    = 0;
+        int bmp_w        = 0;
+        int max_baseline = 0;
+        m_max_glyph_top  = 0;
 
         m_glyphs.resize(m_text.text.size());
         m_pos.reserve(m_text.text.size());
@@ -51,8 +50,8 @@ public:
             cv::Mat(bitmap->rows, bitmap->width, CV_8UC1, bitmap->buffer, bitmap->pitch).copyTo(m_glyphs[i]);
 
             int gl_bottom_pad = (m_slot->metrics.height - m_slot->metrics.horiBearingY) >> 6;
-            max_bottom_pad = std::max(max_bottom_pad, gl_bottom_pad);
-            m_max_top_pad = std::max(m_max_top_pad, m_slot->bitmap_top);
+            max_baseline = std::max(max_baseline, gl_bottom_pad);
+            m_max_glyph_top = std::max(m_max_glyph_top, m_slot->bitmap_top);
 
             // FIXME why bitmap->left is negative ?
             int gl_x_pad = m_slot->bitmap_left > 0 ? m_slot->bitmap_left + bmp_w - 1 : bmp_w;
@@ -73,9 +72,9 @@ public:
             m_pos.emplace_back(gl_x_pad, m_slot->bitmap_top);
         }
 
-        int bmp_h = max_bottom_pad + m_max_top_pad;
+        int bmp_h = max_baseline + m_max_glyph_top;
         m_mask_size = cv::Size(bmp_w, bmp_h);
-        m_baseline = max_bottom_pad;
+        m_baseline = max_baseline;
 
         return m_mask_size;
     }
@@ -85,7 +84,7 @@ public:
         mask = cv::Scalar(0);
         for (size_t i = 0; i < m_text.text.size(); ++i)
         {
-            cv::Rect glyph_roi(m_pos[i].x, m_max_top_pad - m_pos[i].y, m_glyphs[i].cols, m_glyphs[i].rows);
+            cv::Rect glyph_roi(m_pos[i].x, m_max_glyph_top - m_pos[i].y, m_glyphs[i].cols, m_glyphs[i].rows);
             cv::Mat roi = mask(glyph_roi);
             m_glyphs[i].copyTo(roi);
         }
@@ -119,7 +118,7 @@ private:
 
     cv::gapi::wip::draw::Text m_text;
     int m_baseline;
-    int m_max_top_pad;
+    int m_max_glyph_top;
     cv::Size m_mask_size;
 };
 

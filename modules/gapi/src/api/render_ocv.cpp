@@ -12,6 +12,7 @@ namespace wip
 namespace draw
 {
 
+// FIXME Support `decim` mosaic parameter
 inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
 {
     cv::Mat msc_roi = mat(rect);
