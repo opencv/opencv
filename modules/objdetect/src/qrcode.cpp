@@ -378,7 +378,7 @@ bool QRDetect::checkPoints(vector<Point2f> triangle_points)
           }
      });
      double frac = (double)count_b / (double)count_w;
-     if ((frac <= 0.839) || (frac >= 1.24)) {return false;}
+     if ((frac <= 0.835) || (frac >= 1.24)) {return false;}
      return true;
 }
 
@@ -712,7 +712,6 @@ bool QRDetect::localization()
        int set_size[true_points_group.size()];
        for(size_t i = 0; i < true_points_group.size(); i++)
            set_size[i] = true_points_group[i].size() * (true_points_group[i].size() - 1 ) * (true_points_group[i].size() - 2) / 6;
-
        int *** all_points = new int ** [true_points_group.size()];
        for(size_t i = 0; i < true_points_group.size(); i++)
            all_points[i] = new int* [set_size[i]];
@@ -744,7 +743,6 @@ bool QRDetect::localization()
        int end[true_points_group.size()];
        for(size_t i = 0; i < true_points_group.size(); i++)
           end[i] = iter + set_size[i];
-
        for(size_t s = 0; s < true_points_group.size(); s++)
        {
            bool flag = false;
@@ -752,7 +750,6 @@ bool QRDetect::localization()
            for (int r = iter ; r < end[s]; r++)
            {
                 size_t x = iter + s;
-
                 size_t k = r - iter;
                 if(flag) break;
 
@@ -807,7 +804,7 @@ bool QRDetect::localization()
                        {
                            if (computeTransformationPoints(x))
                            {
-                               if(checkPointsInside(transformation_points[x], not_resized_localization_points))
+                               if(((temp_num_points / 3) == 1) || ((checkPointsInside(transformation_points[x], not_resized_localization_points)) == true))
                                {
                                    if(checkPoints(transformation_points[x]))
                                    {
@@ -836,7 +833,7 @@ bool QRDetect::localization()
                if(loc[s].size() == 3)
                {
 
-                 if((true_points_group.size() > 1))
+                 if((true_points_group.size() > 1) || ((true_points_group.size() == 1) && (tmp_localization_points.size() != 0)) )
                  {
                     for(size_t j = 0; j < true_points_group[s].size(); j++)
                     {
