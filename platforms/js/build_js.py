@@ -230,15 +230,13 @@ if __name__ == "__main__":
     parser.add_argument('--build_flags',action='append',help="Append Emscripten build options")
     parser.add_argument('--build_wasm_intrin_test', default=False, action="store_true", help="Build WASM intrin tests")
     parser.add_argument('--config', help="Specify configuration file with own list of exported into JS functions")
-#   Example of JSON file with config flag. In each section [], we describe the functions and classes of the modul
-#     [
-#       {
-#        "": ["Canny"]
-#       },
-#       {
-#        "": ["addWeighted"]
-#       }
-#     ]
+#   Example of opencv_js.config.py file with config flag. We describe the functions and classes of the modul
+#     imgproc = {'': ['Canny']
+#               }
+#     core = {'': ["addWeighted"]
+#            }
+#
+#    white_list = makeWhiteList([core, imgproc])
 
     args = parser.parse_args()
 

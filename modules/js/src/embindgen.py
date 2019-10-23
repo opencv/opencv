@@ -68,7 +68,6 @@
 ###############################################################################
 
 from __future__ import print_function
-import json
 import sys, re, os
 from templates import *
 
@@ -94,8 +93,6 @@ ignore_list = ['locate',  #int&
                'meanShift' #Rect&
                ]
 
-# Classes and methods whitelist
-
 def makeWhiteList(module_list):
     wl = {}
     for m in module_list:
@@ -106,15 +103,16 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-track=""
+track = ""
 if "OPENCV_JS_WHITELIST" in os.environ:
     track = os.environ["OPENCV_JS_WHITELIST"]
 else:
-    track = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.json')
-with open(track, 'r') as json_file:
-    json_data = json.load(json_file)
-    white_list = makeWhiteList(json_data)
-# Features to be exported
+    track = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.config.py')
+with open(track, 'r') as config_file:
+     config_data = config_file.read()
+white_list = None
+exec(compile(config_data, track, 'exec'))
+
 export_enums = False
 export_consts = True
 with_wrapped_functions = True
