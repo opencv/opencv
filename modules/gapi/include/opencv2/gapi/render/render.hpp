@@ -22,7 +22,6 @@ namespace cv
 {
 namespace gapi
 {
-
 namespace wip
 {
 namespace draw
