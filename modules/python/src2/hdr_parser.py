@@ -571,8 +571,8 @@ class CppHeaderParser(object):
                     arg_type, arg_name, modlist, argno = self.parse_arg(a, argno)
                     if self.wrap_mode:
                         # TODO: Vectors should contain UMat, but this is not very easy to support and not very needed
-                        vector_mat = "vector_{}".format("Mat")
-                        vector_mat_template = "vector<{}>".format("Mat")
+                        vector_mat = "vector_{}".format(mat)
+                        vector_mat_template = "vector<{}>".format(mat)
 
                         if arg_type == "InputArray":
                             arg_type = mat
