@@ -139,7 +139,7 @@ class Builder:
                "-DBUILD_TESTS=OFF",
                "-DBUILD_PERF_TESTS=OFF"]
         if self.options.cmake_option:
-            cmd += args.cmake_option
+            cmd += self.options.cmake_option
         if self.options.build_doc:
             cmd.append("-DBUILD_DOCS=ON")
         else:
@@ -181,7 +181,7 @@ class Builder:
         if self.options.simd:
             flags += "-msimd128 "
         if self.options.build_flags:
-            for key in args.build_flags:
+            for key in self.options.build_flags:
                 flags += key
         return flags
 
@@ -229,21 +229,14 @@ if __name__ == "__main__":
     parser.add_argument('--cmake_option', action='append', help="Append CMake options")
     parser.add_argument('--build_flags',action='append',help="Append Emscripten build options")
     parser.add_argument('--build_wasm_intrin_test', default=False, action="store_true", help="Build WASM intrin tests")
-    parser.add_argument('--config', help="Specify configuration file with own list of exported into JS functions")
-#   Example of opencv_js.config.py file with config flag. We describe the functions and classes of the modul
-#     imgproc = {'': ['Canny']
-#               }
-#     core = {'': ["addWeighted"]
-#            }
-#
-#    white_list = makeWhiteList([core, imgproc])
+    parser.add_argument('--config', default='opencv_js.config.py', help="Specify configuration file with own list of exported into JS functions")
 
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
     log.debug("Args: %s", args)
-    if args.config:
-        os.environ["OPENCV_JS_WHITELIST"] = args.config
+
+    os.environ["OPENCV_JS_WHITELIST"] = args.config
 
     if args.emscripten_dir is None:
         log.info("Cannot get Emscripten path, please specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
