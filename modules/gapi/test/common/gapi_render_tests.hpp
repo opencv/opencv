@@ -9,8 +9,6 @@
 #define OPENCV_GAPI_RENDER_TESTS_HPP
 
 #include "gapi_tests_common.hpp"
-#include "api/render_priv.hpp"
-#include "api/render_ocv.hpp"
 
 namespace opencv_test
 {
@@ -105,6 +103,13 @@ protected:
     cv::Mat y_ref_mat, uv_ref_mat, y_gapi_mat, uv_gapi_mat;
 };
 
+cv::Scalar cvtBGRToYUVC(const cv::Scalar& bgr);
+void drawMosaicRef(const cv::Mat& mat, const cv::Rect &rect, int cellSz);
+void blendImageRef(cv::Mat& mat,
+                   const cv::Point& org,
+                   const cv::Mat& img,
+                   const cv::Mat& alpha);
+
 #define GAPI_RENDER_TEST_FIXTURE_NV12(Fixture, API, Number, ...)  \
 struct Fixture : public RenderNV12TestBase API {                  \
     __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__))   \
@@ -127,14 +132,6 @@ struct Fixture : public RenderBGRTestBase API {                  \
     GAPI_RENDER_TEST_FIXTURE_NV12(RenderNV12##Fixture, GET_VA_ARGS(API), Number, __VA_ARGS__) \
 
 using Points = std::vector<cv::Point>;
-GAPI_RENDER_TEST_FIXTURES(TestTexts,     FIXTURE_API(std::string, cv::Point, double, cv::Scalar), 4, text, org, fs, color)
-GAPI_RENDER_TEST_FIXTURES(TestRects,     FIXTURE_API(cv::Rect, cv::Scalar, int),                  3, rect, color, thick)
-GAPI_RENDER_TEST_FIXTURES(TestCircles,   FIXTURE_API(cv::Point, int, cv::Scalar, int),            4, center, radius, color, thick)
-GAPI_RENDER_TEST_FIXTURES(TestLines,     FIXTURE_API(cv::Point, cv::Point, cv::Scalar, int),      4, pt1, pt2, color, thick)
-GAPI_RENDER_TEST_FIXTURES(TestMosaics,   FIXTURE_API(cv::Rect, int, int),                         3, mos, cellsz, decim)
-GAPI_RENDER_TEST_FIXTURES(TestImages,    FIXTURE_API(cv::Rect, cv::Scalar, double),               3, rect, color, transparency)
-GAPI_RENDER_TEST_FIXTURES(TestPolylines, FIXTURE_API(Points, cv::Scalar, int),                    3, points, color, thick)
-
 } // opencv_test
 
 #endif //OPENCV_GAPI_RENDER_TESTS_HPP

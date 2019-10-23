@@ -2,59 +2,24 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_RENDER_TESTS_INL_HPP
-#define OPENCV_GAPI_RENDER_TESTS_INL_HPP
+#include "../test_precomp.hpp"
+#include "../common/gapi_render_tests.hpp"
 
-#include <opencv2/gapi/render/render.hpp>
-#include "gapi_render_tests.hpp"
+#include "api/render_priv.hpp"
 
 namespace opencv_test
 {
 
-inline cv::Scalar cvtBGRToYUVC(const cv::Scalar& bgr)
-{
-    double y = bgr[2] *  0.299000 + bgr[1] *  0.587000 + bgr[0] *  0.114000;
-    double u = bgr[2] * -0.168736 + bgr[1] * -0.331264 + bgr[0] *  0.500000 + 128;
-    double v = bgr[2] *  0.500000 + bgr[1] * -0.418688 + bgr[0] * -0.081312 + 128;
-    return {y, u, v};
-}
-
-inline void drawMosaicRef(const cv::Mat& mat, const cv::Rect &rect, int cellSz)
-{
-    cv::Mat msc_roi = mat(rect);
-    int crop_x = msc_roi.cols - msc_roi.cols % cellSz;
-    int crop_y = msc_roi.rows - msc_roi.rows % cellSz;
-
-    for(int i = 0; i < crop_y; i += cellSz ) {
-        for(int j = 0; j < crop_x; j += cellSz) {
-            auto cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
-            cell_roi = cv::mean(cell_roi);
-        }
-    }
-}
-
-inline void blendImageRef(cv::Mat& mat, const cv::Point& org, const cv::Mat& img, const cv::Mat& alpha)
-{
-    auto roi = mat(cv::Rect(org, img.size()));
-    cv::Mat img32f_w;
-    cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
-
-    cv::Mat roi32f_w(roi.size(), CV_32FC3, cv::Scalar::all(1.0));
-    roi32f_w -= img32f_w;
-
-    cv::Mat img32f, roi32f;
-    img.convertTo(img32f, CV_32F, 1.0/255);
-    roi.convertTo(roi32f, CV_32F, 1.0/255);
-
-    cv::multiply(img32f, img32f_w, img32f);
-    cv::multiply(roi32f, roi32f_w, roi32f);
-    roi32f += img32f;
-
-    roi32f.convertTo(roi, CV_8U, 255.0);
-};
+GAPI_RENDER_TEST_FIXTURES(TestTexts,     FIXTURE_API(std::string, cv::Point, double, cv::Scalar), 4, text, org, fs, color)
+GAPI_RENDER_TEST_FIXTURES(TestRects,     FIXTURE_API(cv::Rect, cv::Scalar, int),                  3, rect, color, thick)
+GAPI_RENDER_TEST_FIXTURES(TestCircles,   FIXTURE_API(cv::Point, int, cv::Scalar, int),            4, center, radius, color, thick)
+GAPI_RENDER_TEST_FIXTURES(TestLines,     FIXTURE_API(cv::Point, cv::Point, cv::Scalar, int),      4, pt1, pt2, color, thick)
+GAPI_RENDER_TEST_FIXTURES(TestMosaics,   FIXTURE_API(cv::Rect, int, int),                         3, mos, cellsz, decim)
+GAPI_RENDER_TEST_FIXTURES(TestImages,    FIXTURE_API(cv::Rect, cv::Scalar, double),               3, rect, color, transparency)
+GAPI_RENDER_TEST_FIXTURES(TestPolylines, FIXTURE_API(Points, cv::Scalar, int),                    3, points, color, thick)
 
 TEST_P(RenderBGRTestTexts, AccuracyTest)
 {
@@ -380,6 +345,94 @@ TEST_P(RenderNV12TestPolylines, AccuracyTest)
     }
 }
 
-} // opencv_test
+// FIXME avoid code duplicate for NV12 and BGR cases
+INSTANTIATE_TEST_CASE_P(RenderBGRTestRectsImpl, RenderBGRTestRects,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(cv::Scalar(100, 50, 150)),
+                                Values(2)));
 
-#endif //OPENCV_GAPI_RENDER_TESTS_INL_HPP
+INSTANTIATE_TEST_CASE_P(RenderNV12TestRectsImpl, RenderNV12TestRects,
+                        Combine(Values(cv::Size(1280, 720)),
+                                       Values(cv::Rect(100, 100, 200, 200)),
+                                       Values(cv::Scalar(100, 50, 150)),
+                                       Values(2)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGRTestCirclesImpl, RenderBGRTestCircles,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Point(100, 100)),
+                                Values(10),
+                                Values(cv::Scalar(100, 50, 150)),
+                                Values(2)));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12TestCirclesImpl, RenderNV12TestCircles,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Point(100, 100)),
+                                Values(10),
+                                Values(cv::Scalar(100, 50, 150)),
+                                Values(2)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGRTestLinesImpl, RenderBGRTestLines,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Point(100, 100)),
+                                Values(cv::Point(200, 200)),
+                                Values(cv::Scalar(100, 50, 150)),
+                                Values(2)));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12TestLinesImpl, RenderNV12TestLines,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Point(100, 100)),
+                                Values(cv::Point(200, 200)),
+                                Values(cv::Scalar(100, 50, 150)),
+                                Values(2)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGRTestTextsImpl, RenderBGRTestTexts,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values("SomeText"),
+                                Values(cv::Point(200, 200)),
+                                Values(2.0),
+                                Values(cv::Scalar(0, 255, 0))));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12TestTextsImpl, RenderNV12TestTexts,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values("SomeText"),
+                                Values(cv::Point(200, 200)),
+                                Values(2.0),
+                                Values(cv::Scalar(0, 255, 0))));
+
+INSTANTIATE_TEST_CASE_P(RenderBGRTestMosaicsImpl, RenderBGRTestMosaics,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(25),
+                                Values(0)));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12TestMosaicsImpl, RenderNV12TestMosaics,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(25),
+                                Values(0)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGRTestImagesImpl, RenderBGRTestImages,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(cv::Scalar(100, 150, 60)),
+                                Values(1.0)));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12TestImagesImpl, RenderNV12TestImages,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(cv::Scalar(100, 150, 60)),
+                                Values(1.0)));
+
+INSTANTIATE_TEST_CASE_P(RenderBGRTestPolylinesImpl, RenderBGRTestPolylines,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(std::vector<cv::Point>{{100, 100}, {200, 200}, {150, 300}, {400, 150}}),
+                                Values(cv::Scalar(100, 150, 60)),
+                                Values(3)));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12TestPolylinesImpl, RenderNV12TestPolylines,
+                        Combine(Values(cv::Size(1280, 720)),
+                                Values(std::vector<cv::Point>{{100, 100}, {200, 200}, {150, 300}, {400, 150}}),
+                                Values(cv::Scalar(100, 150, 60)),
+                                Values(3)));
+}
