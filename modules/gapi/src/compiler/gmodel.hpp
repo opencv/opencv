@@ -231,6 +231,8 @@ namespace GModel
     GAPI_EXPORTS void init (Graph& g);
 
     GAPI_EXPORTS ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
+    // Isn't used by the framework or default backends, required for external backend development
+    GAPI_EXPORTS ade::NodeHandle mkDataNode(Graph &g, const GShape shape);
 
     // Adds a string message to a node. Any node can be subject of log, messages then
     // appear in the dumped .dot file.x
