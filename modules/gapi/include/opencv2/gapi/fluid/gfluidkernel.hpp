@@ -68,9 +68,12 @@ public:
     // This function is a generic "getBorder" callback (extracts border-related data from kernel's input parameters)
     using B = std::function<gapi::fluid::BorderOpt(const GMetaArgs&, const GArgs&)>;
 
+    // This function is a generic "getWindow" callback (extracts window-related data from kernel's input parameters)
+    using GW = std::function<int(const GMetaArgs&, const GArgs&)>;
+
     // FIXME: move implementations out of header file
     GFluidKernel() {}
-    GFluidKernel(int w, Kind k, int l, bool scratch, const F& f, const IS &is, const RS &rs, const B& b)
+    GFluidKernel(int w, Kind k, int l, bool scratch, const F& f, const IS &is, const RS &rs, const B& b, const GW& win)
         : m_window(w)
         , m_kind(k)
         , m_lpi(l)
@@ -78,7 +81,8 @@ public:
         , m_f(f)
         , m_is(is)
         , m_rs(rs)
-        , m_b(b) {}
+        , m_b(b)
+        , m_win(win) {}
 
     int m_window = -1;
     Kind m_kind;
@@ -89,6 +93,7 @@ public:
     const IS   m_is;
     const RS   m_rs;
     const B    m_b;
+    const GW   m_win;
 };
 
 // FIXME!!!
@@ -255,6 +260,36 @@ struct get_border_helper<false, Impl, Ins...>
     }
 };
 
+template<bool CallCustomGetWindow, typename, typename... Ins>
+struct get_window_helper;
+
+template<typename Impl, typename... Ins>
+struct get_window_helper<true, Impl, Ins...>
+{
+    template<int... IIs>
+    static int get_window_impl(const GMetaArgs &metas,
+                               const cv::GArgs &in_args,
+                               cv::detail::Seq<IIs...>)
+    {
+        return Impl::getWindow(cv::detail::get_in_meta<Ins>(metas, in_args, IIs)...);
+    }
+
+    static int help(const GMetaArgs &metas, const cv::GArgs &in_args)
+    {
+        return get_window_impl(metas, in_args, typename detail::MkSeq<sizeof...(Ins)>::type());
+    }
+};
+
+template<typename Impl, typename... Ins>
+struct get_window_helper<false, Impl, Ins...>
+{
+    static int help(const cv::GMetaArgs &,
+                    const cv::GArgs     &)
+    {
+        return {};
+    }
+};
+
 template<typename, typename, typename, bool UseScratch>
 struct FluidCallHelper;
 
@@ -304,6 +339,12 @@ struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch
         constexpr bool callCustomGetBorder = (Impl::Window != 1);
         return get_border_helper<callCustomGetBorder, Impl, Ins...>::help(metas, in_args);
     }
+
+    static int getWindow(const GMetaArgs &metas, const cv::GArgs &in_args)
+    {
+        constexpr bool callCustomGetWindow = (Impl::Window > 1);
+        return get_window_helper<callCustomGetWindow, Impl, Ins...>::help(metas, in_args);
+    }
 };
 } // namespace detail
 
@@ -324,7 +365,7 @@ public:
         // functions are internal wrappers, not user API
         return GFluidKernel(Impl::Window, Impl::Kind, Impl::LPI,
                             UseScratch,
-                            &P::call, &P::init_scratch, &P::reset_scratch, &P::getBorder);
+                            &P::call, &P::init_scratch, &P::reset_scratch, &P::getBorder, &P::getWindow);
     }
 
     static cv::gapi::GBackend backend() { return cv::gapi::fluid::backend(); }

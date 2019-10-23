@@ -469,6 +469,16 @@ GAPI_FLUID_KERNEL(GFluidBlur, cv::gapi::imgproc::GBlur, true)
     {
         return { borderType, borderValue};
     }
+
+    static int getWindow( const cv::GMatDesc& /* src */,
+                          const cv::Size    &kernelSize,
+                          const cv::Point   & /* anchor */,
+                          int          /*borderType*/,
+                          const cv::Scalar  &    /*borderValue*/)
+    {
+        GAPI_Assert(kernelSize.width == kernelSize.height);
+        return kernelSize.width;
+    }
 };
 
 GAPI_FLUID_KERNEL(GFluidBoxFilter, cv::gapi::imgproc::GBoxFilter, true)
@@ -545,6 +555,18 @@ GAPI_FLUID_KERNEL(GFluidBoxFilter, cv::gapi::imgproc::GBoxFilter, true)
                             const cv::Scalar  &    borderValue)
     {
         return { borderType, borderValue};
+    }
+
+    static int getWindow( const cv::GMatDesc& /* src */,
+                          int       /* ddepth */,
+                          const cv::Size    & kernelSize,
+                          const cv::Point   & /* anchor */,
+                          bool      /* normalize */,
+                          int     /* borderType*/,
+                          const cv::Scalar  &  /*  borderValue*/)
+    {
+        GAPI_Assert(kernelSize.width == kernelSize.height);
+        return kernelSize.width;
     }
 };
 
@@ -767,6 +789,19 @@ GAPI_FLUID_KERNEL(GFluidSepFilter, cv::gapi::imgproc::GSepFilter, true)
     {
         return { borderType, borderValue};
     }
+
+    static int getWindow(const cv::GMatDesc& /* src */,
+                                int       /* ddepth */,
+                         const cv::Mat&       kernX ,
+                         const cv::Mat&       kernY ,
+                         const cv::Point&    /* anchor */,
+                         const cv::Scalar&   /* delta */,
+                            int         /* borderType*/,
+                         const cv::Scalar& /* borderValue*/)
+    {
+        GAPI_Assert((kernX.rows * kernX.cols) == (kernY.rows * kernY.cols));
+        return (kernX.rows * kernX.cols);
+    }
 };
 
 //----------------------------
@@ -828,6 +863,7 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
                             const cv::Scalar & /* borderValue */,
                                   Buffer  &    scratch)
     {
+        GAPI_Assert(ksize.height == ksize.width);
         int kxsize = ksize.width;
         int kysize = ksize.height;
 
@@ -835,7 +871,7 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         int chan  = in.chan;
 
         int buflen = kxsize + kysize +       // x, y kernels
-                     width * chan * Window;  // work buffers
+                     width * chan * ksize.width;  // work buffers
 
         cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
@@ -875,6 +911,17 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
                             const cv::Scalar  &    borderValue)
     {
         return { borderType, borderValue};
+    }
+
+    static int getWindow(const cv::GMatDesc& /* src */,
+                         const cv::Size    & ksize,
+                         double    /* sigmaX */,
+                         double    /* sigmaY */,
+                         int          /*borderType*/,
+                         const cv::Scalar  &    /*borderValue*/)
+    {
+        GAPI_Assert(ksize.height == ksize.width);
+        return ksize.height;
     }
 };
 
@@ -1019,6 +1066,19 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                             const cv::Scalar  &    borderValue)
     {
         return {borderType, borderValue};
+    }
+
+    static int getWindow(const cv::GMatDesc& /* src */,
+                         int       /* ddepth */,
+                         int       /* dx */,
+                         int       /* dy */,
+                         int       ksize,
+                         double    /* scale */,
+                         double    /* delta */,
+                         int          /*borderType*/,
+                         const cv::Scalar  &  /*  borderValue*/)
+    {
+        return ((ksize == FILTER_SCHARR) ? 3 : ksize);
     }
 };
 
@@ -1182,6 +1242,18 @@ GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
     {
         return {borderType, borderValue};
     }
+
+    static int getWindow(const cv::GMatDesc& /* src */,
+                            int       /* ddepth */,
+                            int       /* order */,
+                            int       ksize,
+                            double    /* scale */,
+                            double    /* delta */,
+                            int          /*borderType*/,
+                            const cv::Scalar  &  /*  borderValue*/)
+    {
+        return ((ksize == FILTER_SCHARR) ? 3 : ksize);
+    }
 };
 
 //------------------------
@@ -1317,6 +1389,18 @@ GAPI_FLUID_KERNEL(GFluidFilter2D, cv::gapi::imgproc::GFilter2D, true)
                             const cv::Scalar&      borderValue)
     {
         return { borderType, borderValue};
+    }
+
+    static int getWindow(const cv::GMatDesc& /* src */,
+                         int       /* ddepth */,
+                         const cv::Mat&       kernel,
+                         const cv::Point&    /* anchor */,
+                         const cv::Scalar&   /* delta */,
+                         int          /*borderType*/,
+                         const cv::Scalar  &  /*  borderValue*/)
+    {
+        GAPI_Assert(kernel.rows == kernel.cols);
+        return kernel.cols;
     }
 };
 
@@ -1505,6 +1589,17 @@ GAPI_FLUID_KERNEL(GFluidErode, cv::gapi::imgproc::GErode, true)
         return { borderType, borderValue };
     #endif
     }
+
+    static int getWindow(const cv::GMatDesc& /* src */,
+                         const cv::Mat&       kernel,
+                         const cv::Point&    /* anchor */,
+                         int       /* iterations */,
+                         int          /*borderType*/,
+                         const cv::Scalar  &  /*  borderValue*/)
+    {
+        GAPI_Assert(kernel.rows == kernel.cols);
+        return kernel.cols;
+    }
 };
 
 GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
@@ -1590,6 +1685,17 @@ GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
     #else
         return { borderType, borderValue };
     #endif
+    }
+
+    static int getWindow(const cv::GMatDesc& /* src */,
+                         const cv::Mat&       kernel,
+                         const cv::Point&    /* anchor */,
+                         int       /* iterations */,
+                         int          /*borderType*/,
+                         const cv::Scalar  &  /*  borderValue*/)
+    {
+        GAPI_Assert(kernel.rows == kernel.cols);
+        return kernel.cols;
     }
 };
 
@@ -1681,6 +1787,11 @@ GAPI_FLUID_KERNEL(GFluidMedianBlur, cv::gapi::imgproc::GMedianBlur, false)
         auto borderValue = cv::Scalar();
         return { borderType, borderValue };
     }
+
+    static int getWindow(const cv::GMatDesc& /* src */, int kernelSize)
+    {
+        return kernelSize;
+    }
 };
 
 GAPI_FLUID_KERNEL(GFluidRGB2YUV422, cv::gapi::imgproc::GRGB2YUV422, false)
@@ -1688,15 +1799,15 @@ GAPI_FLUID_KERNEL(GFluidRGB2YUV422, cv::gapi::imgproc::GRGB2YUV422, false)
     static const int Window = 1;
     static const auto Kind = cv::GFluidKernel::Kind::Filter;
 
-    static void run(const cv::gapi::fluid::View&   in,
-            cv::gapi::fluid::Buffer& out)
+    static void run(const cv::gapi::fluid::View& in,
+                    cv::gapi::fluid::Buffer& out)
     {
         const auto *src = in.InLine<uchar>(0);
         auto *dst = out.OutLine<uchar>();
 
         run_rgb2yuv422_impl(dst, src, in.length());
     }
-};
+ };
 
 GAPI_FLUID_KERNEL(GFluidRGB2HSV, cv::gapi::imgproc::GRGB2HSV, true)
 {
@@ -1795,6 +1906,11 @@ GAPI_FLUID_KERNEL(GFluidBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB, false)
         auto borderValue = cv::Scalar();
 
         return { borderType, borderValue };
+    }
+
+    static int getWindow(const cv::GMatDesc& /* src */)
+    {
+        return Window;
     }
 };
 

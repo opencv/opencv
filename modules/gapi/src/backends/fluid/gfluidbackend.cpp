@@ -69,7 +69,7 @@ namespace
         {
             GFluidModel fm(graph);
             auto fluid_impl = cv::util::any_cast<cv::GFluidKernel>(impl.opaque);
-            fm.metadata(op_node).set(cv::gimpl::FluidUnit{fluid_impl, {}, 0, {}, 0.0});
+            fm.metadata(op_node).set(cv::gimpl::FluidUnit{fluid_impl, {}, 0, -1, {}, 0.0});
         }
 
         virtual EPtr compile(const ade::Graph &graph,
@@ -1505,6 +1505,8 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                 // FIXME: check that op has only one data node on input
                 auto &fu = fg.metadata(node).get<FluidUnit>();
                 const auto &op = g.metadata(node).get<Op>();
+
+                fu.windowSize = fu.k.m_win(GModel::collectInputMeta(fg, node), op.args);
 
                 // Trigger user-defined "getBorder" callback
                 fu.border = fu.k.m_b(GModel::collectInputMeta(fg, node), op.args);

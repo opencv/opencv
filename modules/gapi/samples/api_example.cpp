@@ -4,7 +4,7 @@
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/imgproc.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
-#include <opencv2/gapi/render.hpp>
+//#include <opencv2/gapi/render.hpp>
 
 #include "../src/api/render_ocv.hpp"
 #include <opencv2/gapi/fluid/core.hpp>
@@ -131,8 +131,8 @@ int main(int argc, char* argv[])
     const cv::gapi::GKernelPackage custom = cv::gapi::kernels<GOCVHoughLines, GOCVHoughLinesToPrims>();
     const cv::gapi::GKernelPackage fluid = cv::gapi::combine(cv::gapi::core::fluid::kernels(),
                                                             cv::gapi::imgproc::fluid::kernels());
-    const cv::gapi::GKernelPackage full_custom = cv::gapi::combine(cv::gapi::ocv::kernels(), custom);
-    const auto full = cv::gapi::combine(full_custom, fluid);
+ 
+    const auto full = cv::gapi::combine(custom, fluid);
     
     cv::Mat output;
     //std::vector<cv::Vec2f> lines;
