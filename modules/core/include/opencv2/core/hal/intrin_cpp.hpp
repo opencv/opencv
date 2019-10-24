@@ -112,6 +112,7 @@ These operations allow to reorder or recombine elements in one or multiple vecto
 - Pack: @ref v_pack, @ref v_pack_u, @ref v_pack_b, @ref v_rshr_pack, @ref v_rshr_pack_u,
 @ref v_pack_store, @ref v_pack_u_store, @ref v_rshr_pack_store, @ref v_rshr_pack_u_store
 - Recombine: @ref v_zip, @ref v_recombine, @ref v_combine_low, @ref v_combine_high
+- Reverse: @ref v_reverse
 - Extract: @ref v_extract
 
 
@@ -215,6 +216,7 @@ Regular integers:
 |cvt_flt32          |   |   |   |   |   | x |
 |cvt_flt64          |   |   |   |   |   | x |
 |transpose4x4       |   |   |   |   | x | x |
+|reverse            | x | x | x | x | x | x |
 
 Big integers:
 
@@ -224,6 +226,7 @@ Big integers:
 |add, sub           | x | x |
 |shift              | x | x |
 |logical            | x | x |
+|reverse            | x | x |
 |extract            | x | x |
 |rotate (lanes)     | x | x |
 |cvt_flt64          |   | x |
@@ -250,6 +253,7 @@ Floating point:
 |transpose4x4       | x |   |
 |extract            | x | x |
 |rotate (lanes)     | x | x |
+|reverse            | x | x |
 
  @{ */
 
@@ -1722,6 +1726,23 @@ inline void v_recombine(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
         high.s[i] = a.s[i+(n/2)];
         high.s[i+(n/2)] = b.s[i+(n/2)];
     }
+}
+
+/** @brief Vector reverse order
+
+Reverse the order of the vector
+Scheme:
+@code
+  REG {A1 ... An} ==> REG {An ... A1}
+@endcode
+For all types. */
+template<typename _Tp, int n>
+inline v_reg<_Tp, n> v_reverse(const v_reg<_Tp, n>& a)
+{
+    v_reg<_Tp, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = a.s[n-i-1];
+    return c;
 }
 
 /** @brief Vector extract

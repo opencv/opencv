@@ -88,6 +88,7 @@ def main():
         update()
         ch = cv.waitKey(0)
         if ch == ord('f'):
+            global cur_func_name
             if PY3:
                 cur_func_name = next(dist_func_names)
             else:

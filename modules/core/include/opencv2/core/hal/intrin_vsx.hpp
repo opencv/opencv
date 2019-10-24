@@ -678,6 +678,53 @@ OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_float64x2)
 OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_uint64x2)
 OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_int64x2)
 
+/* Reverse */
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{
+    static const vec_uchar16 perm = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_uint8x16(vec_perm(vec, vec, perm));
+}
+
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{
+    static const vec_uchar16 perm = {14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u16(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{
+    static const vec_uchar16 perm = {12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u32(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{
+    static const vec_uchar16 perm = {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u64(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
+
 /* Extract */
 template<int s, typename _Tpvec>
 inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
