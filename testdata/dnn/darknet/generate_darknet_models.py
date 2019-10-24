@@ -25,3 +25,6 @@ def genTestData(name, inpShape, outShape):
 genTestData('shortcut', [1, 2, 3, 4], [1, 2, 3, 4])
 genTestData('upsample', [2, 3, 4, 5], [2, 3, 8, 10])
 genTestData('avgpool_softmax',  [2, 10, 4, 5], [2, 10, 1, 1])
+genTestData('shortcut_leaky', [1, 2, 3, 4], [1, 2, 3, 4])
+genTestData('shortcut_unequal', [1, 2, 3, 5], [1, 4, 3, 5])
+genTestData('shortcut_unequal_2', [1, 2, 3, 5], [1, 2, 3, 5])
