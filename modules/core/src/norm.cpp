@@ -230,15 +230,16 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
         if( cn == 1 )
         {
 #if CV_SIMD
-            const v_int16 zero = vx_setall_s16((short)0);
+            const v_int32 zero = vx_setall_s32((int)0);
             for(; i <= len - v_uint16::nlanes; i+= v_uint16::nlanes)
             {
                 v_int16 m = v_reinterpret_as_s16(vx_load_expand(mask + i));
                 v_int32 m0, m1;
 
-                m = m != zero;
-
                 v_expand(m, m0, m1);
+
+                m0 = m0 != zero;
+                m1 = m1 != zero;
 
                 v_int32 v_res = vx_setall_s32(res);
 
@@ -270,7 +271,7 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
         } else if ( cn == 2 )
         {
 #if CV_SIMD
-            const v_uint32 zero = vx_setall_u32((short)0);
+            const v_uint32 zero = vx_setall_u32((int)0);
             for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
             {
                 v_uint8 m = vx_load(mask + i);
@@ -355,7 +356,7 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
         } else if ( cn == 3 )
         {
 #if CV_SIMD
-            const v_uint32 zero = vx_setall_u32((short)0);
+            const v_uint32 zero = vx_setall_u32((int)0);
             for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
             {
                 v_uint8 m = vx_load(mask + i);
@@ -454,7 +455,7 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
         } else if ( cn == 4 )
         {
 #if CV_SIMD
-            const v_uint32 zero = vx_setall_u32((short)0);
+            const v_uint32 zero = vx_setall_u32((int)0);
             for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
             {
                 v_uint8 m = vx_load(mask + i);
@@ -604,15 +605,16 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
         if( cn == 1 )
         {
 #if CV_SIMD
-            const v_int16 zero = vx_setall_s16((short)0);
+            const v_int32 zero = vx_setall_s32((int)0);
             for(; i <= len - v_uint16::nlanes; i+= v_uint16::nlanes)
             {
                 v_int16 m = v_reinterpret_as_s16(vx_load_expand(mask + i));
                 v_int32 m0, m1;
 
-                m = m != zero;
-
                 v_expand(m, m0, m1);
+
+                m0 = m0 != zero;
+                m1 = m1 != zero;
 
                 v_int32 v_res = vx_setall_s32(res);
 
@@ -644,7 +646,7 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
         } else if ( cn == 2 )
         {
 #if CV_SIMD
-            const v_uint32 zero = vx_setall_u32((short)0);
+            const v_uint32 zero = vx_setall_u32((int)0);
             for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
             {
                 v_uint8 m = vx_load(mask + i);
@@ -728,7 +730,7 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
         } else if ( cn == 3 )
         {
 #if CV_SIMD
-            const v_uint32 zero = vx_setall_u32((short)0);
+            const v_uint32 zero = vx_setall_u32((int)0);
             for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
             {
                 v_uint8 m = vx_load(mask + i);
@@ -827,7 +829,7 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
         } else if ( cn == 4 )
         {
 #if CV_SIMD
-            const v_uint32 zero = vx_setall_u32((short)0);
+            const v_uint32 zero = vx_setall_u32((int)0);
             for(; i*cn <= len - v_uint8::nlanes*cn; i += v_uint8::nlanes )
             {
                 v_uint8 m = vx_load(mask + i);
