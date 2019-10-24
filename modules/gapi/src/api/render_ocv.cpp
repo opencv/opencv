@@ -52,11 +52,10 @@ inline void image(cv::Mat& mat,
 };
 
 inline void poly(cv::Mat& mat,
-                 const std::vector<cv::Point>& points,
-                 const cv::Scalar& color)
+                 const cv::gapi::wip::draw::Poly& pp)
 {
-    std::vector<std::vector<cv::Point>> pp{points};
-    cv::fillPoly(mat, pp, color);
+    std::vector<std::vector<cv::Point>> points{pp.points};
+    cv::fillPoly(mat, points, pp.color, pp.lt, pp.shift);
 };
 
 struct BGR2YUVConverter
@@ -100,7 +99,7 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
             {
                 const auto& tp = cv::util::get<Text>(p);
                 const auto color = converter.cvtColor(tp.color);
-                cv::putText(in, tp.text, tp.org, FONT_HERSHEY_SIMPLEX, tp.fs, color);
+                cv::putText(in, tp.text, tp.org, tp.ff, tp.fs, color, tp.thick, tp.lt, tp.bottom_left_origin);
                 break;
             }
 
@@ -141,9 +140,9 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
 
             case Prim::index_of<Poly>():
             {
-                const auto& pp = cv::util::get<Poly>(p);
-                const auto color = converter.cvtColor(pp.color);
-                poly(in, pp.points, color);
+                auto pp = cv::util::get<Poly>(p);
+                pp.color = converter.cvtColor(pp.color);
+                poly(in, pp);
                 break;
             }
 
