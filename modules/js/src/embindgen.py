@@ -103,14 +103,11 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-track = ""
-if os.environ["OPENCV_JS_WHITELIST"] == "opencv_js.config.py":
-    track = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ["OPENCV_JS_WHITELIST"])
-else:
-    track = os.environ["OPENCV_JS_WHITELIST"]
+track = os.environ["OPENCV_JS_WHITELIST"]
 white_list = None
-exec(compile(open(track, 'r').read(), track, 'exec'))
+exec(open(track).read())
 
+# Features to be exported
 export_enums = False
 export_consts = True
 with_wrapped_functions = True
