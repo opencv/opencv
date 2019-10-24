@@ -558,7 +558,10 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                 {
                     v_int32 sad4_l = vx_load_expand((short*)sad + d);
                     if (v_check_any((thresh4 > sad4_l) & ((d1 > d4) | (d4 > d2))))
+                    {
+                        dptr[y*dstep] = FILTERED;
                         continue;
+                    }
                     d += v_int16::nlanes;
                 }
                 for( ; d < ndisp; d++ )
