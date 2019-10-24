@@ -1012,6 +1012,54 @@ OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_right, v_float32x8, _mm256_castsi256_ps
 OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_left,  v_float64x4, _mm256_castsi256_pd)
 OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_right, v_float64x4, _mm256_castsi256_pd)
 
+/** Reverse **/
+inline v_uint8x32 v_reverse(const v_uint8x32 &a)
+{
+    static const __m256i perm = _mm256_setr_epi8(
+            15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+            15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+    __m256i vec = _mm256_shuffle_epi8(a.val, perm);
+    return v_uint8x32(_mm256_permute2x128_si256(vec, vec, 1));
+}
+
+inline v_int8x32 v_reverse(const v_int8x32 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x16 v_reverse(const v_uint16x16 &a)
+{
+    static const __m256i perm = _mm256_setr_epi8(
+            14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1,
+            14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
+    __m256i vec = _mm256_shuffle_epi8(a.val, perm);
+    return v_uint16x16(_mm256_permute2x128_si256(vec, vec, 1));
+}
+
+inline v_int16x16 v_reverse(const v_int16x16 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x8 v_reverse(const v_uint32x8 &a)
+{
+    static const __m256i perm = _mm256_setr_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+    return v_uint32x8(_mm256_permutevar8x32_epi32(a.val, perm));
+}
+
+inline v_int32x8 v_reverse(const v_int32x8 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x8 v_reverse(const v_float32x8 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x4 v_reverse(const v_uint64x4 &a)
+{
+    return v_uint64x4(_mm256_permute4x64_epi64(a.val, _MM_SHUFFLE(0, 1, 2, 3)));
+}
+
+inline v_int64x4 v_reverse(const v_int64x4 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x4 v_reverse(const v_float64x4 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
+
 ////////// Reduce and mask /////////
 
 /** Reduce **/

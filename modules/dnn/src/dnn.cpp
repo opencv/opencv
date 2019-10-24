@@ -103,6 +103,37 @@ public:
         static BackendRegistry impl;
         return impl;
     }
+
+    static inline bool checkIETarget(int target)
+    {
+#ifndef HAVE_INF_ENGINE
+        return false;
+#else
+        cv::dnn::Net net;
+        cv::dnn::LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testLayer";
+        lp.blobs.push_back(Mat({1, 2, 1, 1}, CV_32F, Scalar(1)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
+        net.setPreferableTarget(target);
+        static int inpDims[] = {1, 2, 3, 4};
+        net.setInput(cv::Mat(4, &inpDims[0], CV_32FC1, cv::Scalar(0)));
+        try
+        {
+            net.forward();
+        }
+        catch(...)
+        {
+            return false;
+        }
+        return true;
+#endif
+    }
+
 private:
     BackendRegistry()
     {
@@ -152,35 +183,6 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
-#endif
-    }
-    static inline bool checkIETarget(int target)
-    {
-#ifndef HAVE_INF_ENGINE
-        return false;
-#else
-        cv::dnn::Net net;
-        cv::dnn::LayerParams lp;
-        lp.set("kernel_size", 1);
-        lp.set("num_output", 1);
-        lp.set("bias_term", false);
-        lp.type = "Convolution";
-        lp.name = "testLayer";
-        lp.blobs.push_back(Mat({1, 2, 1, 1}, CV_32F, Scalar(1)));
-        net.addLayerToPrev(lp.name, lp.type, lp);
-        net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
-        net.setPreferableTarget(target);
-        static int inpDims[] = {1, 2, 3, 4};
-        net.setInput(cv::Mat(4, &inpDims[0], CV_32FC1, cv::Scalar(0)));
-        try
-        {
-            net.forward();
-        }
-        catch(...)
-        {
-            return false;
-        }
-        return true;
 #endif
     }
 
@@ -1689,6 +1691,9 @@ struct Net::Impl
         // backend. Split a whole model on several Inference Engine networks if
         // some of layers are not implemented.
 
+        bool supportsCPUFallback = preferableTarget == DNN_TARGET_CPU ||
+                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU);
+
         // Set of all input and output blobs wrappers for current network.
         std::map<LayerPin, Ptr<BackendWrapper> > netBlobsWrappers;
         for (it = layers.begin(); it != layers.end(); ++it)
@@ -1702,7 +1707,8 @@ struct Net::Impl
             if (!fused && !layer->supportBackend(preferableBackend))
             {
                 bool customizable = ld.id != 0 && ld.outputBlobs.size() == 1 &&
-                                    INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R2);
+                                    INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R2) &&
+                                    supportsCPUFallback;
                 // TODO: there is a bug in Myriad plugin with custom layers shape infer.
                 if (preferableTarget == DNN_TARGET_MYRIAD)
                 {

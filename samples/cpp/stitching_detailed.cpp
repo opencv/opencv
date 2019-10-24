@@ -116,8 +116,10 @@ double compose_megapix = -1;
 float conf_thresh = 1.f;
 #ifdef HAVE_OPENCV_XFEATURES2D
 string features_type = "surf";
+float match_conf = 0.65f;
 #else
 string features_type = "orb";
+float match_conf = 0.3f;
 #endif
 string matcher_type = "homography";
 string estimator_type = "homography";
@@ -132,7 +134,6 @@ int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
 int expos_comp_nr_feeds = 1;
 int expos_comp_nr_filtering = 2;
 int expos_comp_block_size = 32;
-float match_conf = 0.3f;
 string seam_find_type = "gc_color";
 int blend_type = Blender::MULTI_BAND;
 int timelapse_type = Timelapser::AS_IS;
@@ -196,7 +197,7 @@ static int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--features")
         {
             features_type = argv[i + 1];
-            if (features_type == "orb")
+            if (string(features_type) == "orb")
                 match_conf = 0.3f;
             i++;
         }
