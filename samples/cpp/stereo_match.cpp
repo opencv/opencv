@@ -281,7 +281,9 @@ int main(int argc, char** argv)
         printf("storing the point cloud...");
         fflush(stdout);
         Mat xyz;
-        reprojectImageTo3D(disp, xyz, Q, true);
+        Mat floatDisp;
+        disp.convertTo(floatDisp, CV_32F,1.0f/16.0f);
+        reprojectImageTo3D(floatDisp, xyz, Q, true);
         saveXYZ(point_cloud_filename.c_str(), xyz);
         printf("\n");
     }
