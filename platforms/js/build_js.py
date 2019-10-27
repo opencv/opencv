@@ -226,9 +226,9 @@ if __name__ == "__main__":
     parser.add_argument('--skip_config', action="store_true", help="Skip cmake config")
     parser.add_argument('--config_only', action="store_true", help="Only do cmake config")
     parser.add_argument('--enable_exception', action="store_true", help="Enable exception handling")
-    # Use flag --cmake option="-D...=ON" only for one argument, if you would add more change write new cmake_option flags
+    # Use flag --cmake option="-D...=ON" only for one argument, if you would add more changes write new cmake_option flags
     parser.add_argument('--cmake_option', action='append', help="Append CMake options")   
-    # Use flag --build_flags="-s USE_PTHREADS=0 -Os" for ong and more arguments as written in the example
+    # Use flag --build_flags="-s USE_PTHREADS=0 -Os" for one and more arguments as in the example
     parser.add_argument('--build_flags',action='append',help="Append Emscripten build options")
     parser.add_argument('--build_wasm_intrin_test', default=False, action="store_true", help="Build WASM intrin tests")
     # Write a path to modify file like argument of this flag
