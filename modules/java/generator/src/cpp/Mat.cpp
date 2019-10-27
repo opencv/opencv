@@ -74,7 +74,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer
 JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer_2
   (JNIEnv* env, jclass, jint rows, jint cols, jint type, jobject data)
 {
-    static const char method_name[] = "Mat::n_1Mat__IIILByteBuffer()";
+    static const char method_name[] = "Mat::n_1Mat__IIILjava_nio_ByteBuffer_2()";
     try {
         LOGD("%s", method_name);
         return (jlong) new Mat( rows, cols, type, (void*)env->GetDirectBufferAddress(data) );
@@ -87,6 +87,32 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer
     return 0;
 }
 
+
+/*
+ * Class:     org_opencv_core_Mat
+ * Method:    n_Mat
+ * Signature: (IIILjava/nio/ByteBuffer;J)J
+ *
+ * Mat::Mat(int rows, int cols, int type, void* data, size_t step)
+ */
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer_2J
+  (JNIEnv* env, jclass, jint rows, jint cols, jint type, jobject data, jlong step);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer_2J
+  (JNIEnv* env, jclass, jint rows, jint cols, jint type, jobject data, jlong step)
+{
+    static const char method_name[] = "Mat::n_1Mat__IIILjava_nio_ByteBuffer_2J()";
+    try {
+        LOGD("%s", method_name);
+        return (jlong) new Mat(rows, cols, type, (void*)env->GetDirectBufferAddress(data), (size_t)step);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
 
 
 //
