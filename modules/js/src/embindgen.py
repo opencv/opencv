@@ -103,9 +103,9 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-track = os.environ["OPENCV_JS_WHITELIST"]
 white_list = None
-exec(open(track).read())
+exec(open(os.environ["OPENCV_JS_WHITELIST"]).read())
+assert(white_list)
 
 # Features to be exported
 export_enums = False
