@@ -19,6 +19,11 @@ set(the_description "OpenCV G-API Core Module")
 
 ocv_add_module(gapi opencv_imgproc)
 
+if(MSVC)
+  # Disable obsollete warning C4503 popping up on MSVC <<2017
+  # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503)
+endif()
 
 file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
@@ -130,12 +135,6 @@ ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
-endif()
-
-if(MSVC)
-  # Disable obsollete warning C4503 popping up on MSVC <<2017
-  # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
-  set_target_properties(${the_module} PROPERTIES COMPILE_FLAGS "/wd4503")
 endif()
 
 ocv_add_perf_tests()
