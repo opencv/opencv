@@ -49,7 +49,7 @@
 
 namespace cv
 {
-
+    
 template<typename T, int shift> struct FixPtCast
 {
     typedef int type1;
@@ -719,29 +719,168 @@ template <> int PyrUpVecV<float, float>(float** src, float** dst, int width)
 
 #endif
 
+template<class CastOp>
+struct PyrDownInvoker : ParallelLoopBody
+{
+    PyrDownInvoker(const Mat& src, const Mat& dst, int borderType, int **tabR, int **tabM, int **tabL)
+    {
+        _src = &src;
+        _dst = &dst;
+        _borderType = borderType;
+        _tabR = tabR;
+        _tabM = tabM;
+        _tabL = tabL;
+    }            
+
+    inline int syloopboundary(int y) const
+    {
+        return y*2 + 2;
+    }            
+
+    void operator()(const Range& range) const override
+    {       
+        const int PD_SZ = 5;
+        typedef typename CastOp::type1 WT;
+        typedef typename CastOp::rtype T;            
+        Size ssize = _src->size(), dsize = _dst->size();
+        int cn = _src->channels();        
+        int bufstep = (int)alignSize(dsize.width*cn, 16);
+        AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
+        WT* buf = alignPtr((WT*)_buf.data(), 16);    
+        WT* rows[PD_SZ];
+        CastOp castOp;
+
+        int sy0 = -PD_SZ/2, sy = syloopboundary(range.start-1) + sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+
+        ssize.width *= cn;
+        dsize.width *= cn;
+        width0 *= cn;
+
+        for (int y = range.start; y < range.end; y++)
+        {
+            T* dst = (T*)_dst->ptr<T>(y);
+            WT *row0, *row1, *row2, *row3, *row4;
+
+            // fill the ring buffer (horizontal convolution and decimation)
+            for( ; sy <= syloopboundary(y); sy++ )
+            {
+                WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
+                int _sy = borderInterpolate(sy, ssize.height, _borderType);
+                const T* src = _src->ptr<T>(_sy);
+
+                do {
+                    int x = 0;
+                    const int* tabL = *_tabL;
+                    for( ; x < cn; x++ )
+                    {
+                        row[x] = src[tabL[x+cn*2]]*6 + (src[tabL[x+cn]] + src[tabL[x+cn*3]])*4 +
+                            src[tabL[x]] + src[tabL[x+cn*4]];
+                    }
+
+                    if( x == dsize.width )
+                        break;
+
+                    if( cn == 1 )
+                    {
+                        x += PyrDownVecH<T, WT, 1>(src + x * 2 - 2, row + x, width0 - x);
+                        for( ; x < width0; x++ )
+                            row[x] = src[x*2]*6 + (src[x*2 - 1] + src[x*2 + 1])*4 +
+                                src[x*2 - 2] + src[x*2 + 2];
+                    }
+                    else if( cn == 2 )
+                    {
+                        x += PyrDownVecH<T, WT, 2>(src + x * 2 - 4, row + x, width0 - x);
+                        for( ; x < width0; x += 2 )
+                        {
+                            const T* s = src + x*2;
+                            WT t0 = s[0] * 6 + (s[-2] + s[2]) * 4 + s[-4] + s[4];
+                            WT t1 = s[1] * 6 + (s[-1] + s[3]) * 4 + s[-3] + s[5];
+                            row[x] = t0; row[x + 1] = t1;
+                        }
+                    }
+                    else if( cn == 3 )
+                    {
+                        x += PyrDownVecH<T, WT, 3>(src + x * 2 - 6, row + x, width0 - x);
+                        for( ; x < width0; x += 3 )
+                        {
+                            const T* s = src + x*2;
+                            WT t0 = s[0]*6 + (s[-3] + s[3])*4 + s[-6] + s[6];
+                            WT t1 = s[1]*6 + (s[-2] + s[4])*4 + s[-5] + s[7];
+                            WT t2 = s[2]*6 + (s[-1] + s[5])*4 + s[-4] + s[8];
+                            row[x] = t0; row[x+1] = t1; row[x+2] = t2;
+                        }
+                    }
+                    else if( cn == 4 )
+                    {
+                        x += PyrDownVecH<T, WT, 4>(src + x * 2 - 8, row + x, width0 - x);
+                        for( ; x < width0; x += 4 )
+                        {
+                            const T* s = src + x*2;
+                            WT t0 = s[0]*6 + (s[-4] + s[4])*4 + s[-8] + s[8];
+                            WT t1 = s[1]*6 + (s[-3] + s[5])*4 + s[-7] + s[9];
+                            row[x] = t0; row[x+1] = t1;
+                            t0 = s[2]*6 + (s[-2] + s[6])*4 + s[-6] + s[10];
+                            t1 = s[3]*6 + (s[-1] + s[7])*4 + s[-5] + s[11];
+                            row[x+2] = t0; row[x+3] = t1;
+                        }
+                    }
+                    else
+                    {
+                        for( ; x < width0; x++ )
+                        {
+                            int sx = (*_tabM)[x];
+                            row[x] = src[sx]*6 + (src[sx - cn] + src[sx + cn])*4 +
+                                src[sx - cn*2] + src[sx + cn*2];
+                        }
+                    }
+
+                    // tabR
+                    const int* tabR = *_tabR;
+                    for (int x_ = 0; x < dsize.width; x++, x_++)
+                    {
+                        row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +
+                            src[tabR[x_]] + src[tabR[x_+cn*4]];
+                    }
+                } while (0);
+            }
+
+            // do vertical convolution and decimation and write the result to the destination image
+            for (int k = 0; k < PD_SZ; k++)
+                rows[k] = buf + ((y*2 - PD_SZ/2 + k - sy0) % PD_SZ)*bufstep;
+            row0 = rows[0]; row1 = rows[1]; row2 = rows[2]; row3 = rows[3]; row4 = rows[4];
+
+            int x = PyrDownVecV<WT, T>(rows, dst, dsize.width);
+            for (; x < dsize.width; x++ )
+                dst[x] = castOp(row2[x]*6 + (row1[x] + row3[x])*4 + row0[x] + row4[x]);
+        }        
+        
+    }
+
+    int **_tabR;
+    int **_tabM;
+    int **_tabL;
+    const Mat *_src;
+    const Mat *_dst;
+    int _borderType;
+};    
+
+
 template<class CastOp> void
 pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 {
     const int PD_SZ = 5;
-    typedef typename CastOp::type1 WT;
-    typedef typename CastOp::rtype T;
-
     CV_Assert( !_src.empty() );
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
-    int bufstep = (int)alignSize(dsize.width*cn, 16);
-    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf.data(), 16);
+
     int tabL[CV_CN_MAX*(PD_SZ+2)], tabR[CV_CN_MAX*(PD_SZ+2)];
     AutoBuffer<int> _tabM(dsize.width*cn);
     int* tabM = _tabM.data();
-    WT* rows[PD_SZ];
-    CastOp castOp;
 
     CV_Assert( ssize.width > 0 && ssize.height > 0 &&
                std::abs(dsize.width*2 - ssize.width) <= 2 &&
                std::abs(dsize.height*2 - ssize.height) <= 2 );
-    int sy0 = -PD_SZ/2, sy = sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+    int width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
 
     for (int x = 0; x <= PD_SZ+1; x++)
     {
@@ -753,109 +892,14 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
             tabR[x*cn + k] = sx1 + k;
         }
     }
-
-    ssize.width *= cn;
-    dsize.width *= cn;
-    width0 *= cn;
-
-    for (int x = 0; x < dsize.width; x++)
+    
+    for (int x = 0; x < dsize.width*cn; x++)
         tabM[x] = (x/cn)*2*cn + x % cn;
 
-    for (int y = 0; y < dsize.height; y++)
-    {
-        T* dst = _dst.ptr<T>(y);
-        WT *row0, *row1, *row2, *row3, *row4;
+    int *tabLPtr = tabL;
+    int *tabRPtr = tabR;
 
-        // fill the ring buffer (horizontal convolution and decimation)
-        for( ; sy <= y*2 + 2; sy++ )
-        {
-            WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
-            int _sy = borderInterpolate(sy, ssize.height, borderType);
-            const T* src = _src.ptr<T>(_sy);
-
-            do {
-                int x = 0;
-                for( ; x < cn; x++ )
-                {
-                    row[x] = src[tabL[x+cn*2]]*6 + (src[tabL[x+cn]] + src[tabL[x+cn*3]])*4 +
-                        src[tabL[x]] + src[tabL[x+cn*4]];
-                }
-
-                if( x == dsize.width )
-                    break;
-
-                if( cn == 1 )
-                {
-                    x += PyrDownVecH<T, WT, 1>(src + x * 2 - 2, row + x, width0 - x);
-                    for( ; x < width0; x++ )
-                        row[x] = src[x*2]*6 + (src[x*2 - 1] + src[x*2 + 1])*4 +
-                            src[x*2 - 2] + src[x*2 + 2];
-                }
-                else if( cn == 2 )
-                {
-                    x += PyrDownVecH<T, WT, 2>(src + x * 2 - 4, row + x, width0 - x);
-                    for( ; x < width0; x += 2 )
-                    {
-                        const T* s = src + x*2;
-                        WT t0 = s[0] * 6 + (s[-2] + s[2]) * 4 + s[-4] + s[4];
-                        WT t1 = s[1] * 6 + (s[-1] + s[3]) * 4 + s[-3] + s[5];
-                        row[x] = t0; row[x + 1] = t1;
-                    }
-                }
-                else if( cn == 3 )
-                {
-                    x += PyrDownVecH<T, WT, 3>(src + x * 2 - 6, row + x, width0 - x);
-                    for( ; x < width0; x += 3 )
-                    {
-                        const T* s = src + x*2;
-                        WT t0 = s[0]*6 + (s[-3] + s[3])*4 + s[-6] + s[6];
-                        WT t1 = s[1]*6 + (s[-2] + s[4])*4 + s[-5] + s[7];
-                        WT t2 = s[2]*6 + (s[-1] + s[5])*4 + s[-4] + s[8];
-                        row[x] = t0; row[x+1] = t1; row[x+2] = t2;
-                    }
-                }
-                else if( cn == 4 )
-                {
-                    x += PyrDownVecH<T, WT, 4>(src + x * 2 - 8, row + x, width0 - x);
-                    for( ; x < width0; x += 4 )
-                    {
-                        const T* s = src + x*2;
-                        WT t0 = s[0]*6 + (s[-4] + s[4])*4 + s[-8] + s[8];
-                        WT t1 = s[1]*6 + (s[-3] + s[5])*4 + s[-7] + s[9];
-                        row[x] = t0; row[x+1] = t1;
-                        t0 = s[2]*6 + (s[-2] + s[6])*4 + s[-6] + s[10];
-                        t1 = s[3]*6 + (s[-1] + s[7])*4 + s[-5] + s[11];
-                        row[x+2] = t0; row[x+3] = t1;
-                    }
-                }
-                else
-                {
-                    for( ; x < width0; x++ )
-                    {
-                        int sx = tabM[x];
-                        row[x] = src[sx]*6 + (src[sx - cn] + src[sx + cn])*4 +
-                            src[sx - cn*2] + src[sx + cn*2];
-                    }
-                }
-
-                // tabR
-                for (int x_ = 0; x < dsize.width; x++, x_++)
-                {
-                    row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +
-                        src[tabR[x_]] + src[tabR[x_+cn*4]];
-                }
-            } while (0);
-        }
-
-        // do vertical convolution and decimation and write the result to the destination image
-        for (int k = 0; k < PD_SZ; k++)
-            rows[k] = buf + ((y*2 - PD_SZ/2 + k - sy0) % PD_SZ)*bufstep;
-        row0 = rows[0]; row1 = rows[1]; row2 = rows[2]; row3 = rows[3]; row4 = rows[4];
-
-        int x = PyrDownVecV<WT, T>(rows, dst, dsize.width);
-        for (; x < dsize.width; x++ )
-            dst[x] = castOp(row2[x]*6 + (row1[x] + row3[x])*4 + row0[x] + row4[x]);
-    }
+    cv::parallel_for_(Range(0,dsize.height), cv::PyrDownInvoker<CastOp>(_src, _dst, borderType, &tabRPtr, &tabM, &tabLPtr));
 }
 
 
