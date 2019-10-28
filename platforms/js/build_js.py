@@ -181,7 +181,7 @@ class Builder:
         if self.options.simd:
             flags += "-msimd128 "
         if self.options.build_flags:
-                flags += self.options.build_flags
+            flags += self.options.build_flags
         return flags
 
     def config(self):
@@ -232,7 +232,7 @@ if __name__ == "__main__":
     parser.add_argument('--build_wasm_intrin_test', default=False, action="store_true", help="Build WASM intrin tests")
     # Write a path to modify file like argument of this flag
     parser.add_argument('--config', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.config.py'),
-                        help="Specify configuration file with own list of exported into JS functions") 
+                         help="Specify configuration file with own list of exported into JS functions") 
 
     args = parser.parse_args()
 
