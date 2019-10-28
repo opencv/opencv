@@ -227,7 +227,9 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
             res = std::max(res, (int)std::abs(a[i] - b[i]));
         }
     } else {
+#if CV_SIMD
         int tres;
+#endif
         if( cn == 1 )
         {
 #if CV_SIMD
@@ -333,11 +335,11 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
                 int max6 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca110) - v_reinterpret_as_s32(v_srcb110))), v_res));
                 int max7 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca111) - v_reinterpret_as_s32(v_srcb111))), v_res));
 
-#if CV_SIMD256
+#if CV_SIMD512
+                res = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7, max0, max0, max0, max0, max0, max0, max0, res));
+#elif CV_SIMD256
                 tres = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7));
                 res = std::max(tres, res);
-#elif CV_SIMD512
-                res = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7, max0, max0, max0, max0, max0, max0, max0, res));
 #else
                 tres = std::max(v_reduce_max(v_int32(max0, max1, max2, max3)), v_reduce_max(v_int32(max4, max5, max6, max7)));
                 res = std::max(tres, res);
@@ -434,10 +436,10 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
                 int max09 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca201) - v_reinterpret_as_s32(v_srcb201))), v_res));
                 int max10 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca210) - v_reinterpret_as_s32(v_srcb210))), v_res));
                 int max11 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca211) - v_reinterpret_as_s32(v_srcb211))), v_res));
-#if CV_SIMD256
-                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max11, max11, max11, res)));
-#elif CV_SIMD512
+#if CV_SIMD512
                 res = v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07, max08, max09, max10, max11, max11, max11, max11, res));
+#elif CV_SIMD256
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max11, max11, max11, res)));
 #else
                 tres = std::max(v_reduce_max(v_int32(max00, max01, max02, max03)), v_reduce_max(v_int32(max04, max05, max06, max07)));
                 tres = std::max(tres, v_reduce_max(v_int32(max08, max09, max10, max11)));
@@ -547,11 +549,11 @@ int normDiffInf_(const uchar* a, const uchar* b, const uchar* mask, int* _result
                 int max13 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca301) - v_reinterpret_as_s32(v_srcb301))), v_res));
                 int max14 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca310) - v_reinterpret_as_s32(v_srcb310))), v_res));
                 int max15 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_reinterpret_as_s32(v_srca311) - v_reinterpret_as_s32(v_srcb311))), v_res));
-#if CV_SIMD256
-                tres = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max12, max13, max14, max15)));
-                res = std::max(tres, res);
-#elif CV_SIMD512
+#if CV_SIMD512
                 tres = v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07, max08, max09, max10, max11, max12, max13, max14, max15));
+                res = std::max(tres, res);
+#elif CV_SIMD256
+                tres = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max12, max13, max14, max15)));
                 res = std::max(tres, res);
 #else
                 tres = std::max(v_reduce_max(v_int32(max00, max01, max02, max03)), v_reduce_max(v_int32(max04, max05, max06, max07)));
@@ -609,7 +611,9 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
             res = std::max(res, (int)std::abs(a[i] - b[i]));
         }
     } else {
+#if CV_SIMD
         int tres;
+#endif
         if( cn == 1 )
         {
 #if CV_SIMD
@@ -715,12 +719,11 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
                 int max5 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca101 - v_srcb101)), v_res));
                 int max6 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca110 - v_srcb110)), v_res));
                 int max7 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca111 - v_srcb111)), v_res));
-
-#if CV_SIMD256
+#if CV_SIMD512
+                res = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7, max0, max0, max0, max0, max0, max0, max0, res));
+#elif CV_SIMD256
                 tres = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7));
                 res = std::max(tres, res);
-#elif CV_SIMD512
-                res = v_reduce_max(v_int32(max0, max1, max2, max3, max4, max5, max6, max7, max0, max0, max0, max0, max0, max0, max0, res));
 #else
                 tres = std::max(v_reduce_max(v_int32(max0, max1, max2, max3)), v_reduce_max(v_int32(max4, max5, max6, max7)));
                 res = std::max(tres, res);
@@ -816,10 +819,10 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
                 int max09 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca201 - v_srcb201)), v_res));
                 int max10 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca210 - v_srcb210)), v_res));
                 int max11 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca211 - v_srcb211)), v_res));
-#if CV_SIMD256
-                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max11, max11, max11, res)));
-#elif CV_SIMD512
+#if CV_SIMD512
                 res = v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07, max08, max09, max10, max11, max11, max11, max11, res));
+#elif CV_SIMD256
+                res = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max11, max11, max11, res)));
 #else
                 tres = std::max(v_reduce_max(v_int32(max00, max01, max02, max03)), v_reduce_max(v_int32(max04, max05, max06, max07)));
                 tres = std::max(tres, v_reduce_max(v_int32(max08, max09, max10, max11)));
@@ -929,11 +932,11 @@ int normDiffInf_(const schar* a, const schar* b, const uchar* mask, int* _result
                 int max13 = v_reduce_max(v_select(v_reinterpret_as_s32(m01), v_reinterpret_as_s32(v_abs(v_srca301 - v_srcb301)), v_res));
                 int max14 = v_reduce_max(v_select(v_reinterpret_as_s32(m10), v_reinterpret_as_s32(v_abs(v_srca310 - v_srcb310)), v_res));
                 int max15 = v_reduce_max(v_select(v_reinterpret_as_s32(m11), v_reinterpret_as_s32(v_abs(v_srca311 - v_srcb311)), v_res));
-#if CV_SIMD256
-                tres = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max12, max13, max14, max15)));
-                res = std::max(tres, res);
-#elif CV_SIMD512
+#if CV_SIMD512
                 tres = v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07, max08, max09, max10, max11, max12, max13, max14, max15));
+                res = std::max(tres, res);
+#elif CV_SIMD256
+                tres = std::max(v_reduce_max(v_int32(max00, max01, max02, max03, max04, max05, max06, max07)), v_reduce_max(v_int32(max08, max09, max10, max11, max12, max13, max14, max15)));
                 res = std::max(tres, res);
 #else
                 tres = std::max(v_reduce_max(v_int32(max00, max01, max02, max03)), v_reduce_max(v_int32(max04, max05, max06, max07)));
