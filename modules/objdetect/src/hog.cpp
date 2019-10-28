@@ -317,6 +317,63 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
         xmap += 1;
     }
 
+#if CV_SIMD128
+    typedef const uchar* const T;
+    float *lutPrev, *lutCurr, *lutNext;
+    {
+        y = 0;
+        const uchar* imgPtr  = img.ptr(ymap[y]);
+        const uchar* prevPtr = img.data + img.step*ymap[y-1];
+
+        lutPrev = lutBuf+widthP2*0;
+        lutCurr = lutBuf+widthP2*3;
+
+        {
+            int x0 = xmap[-1], x1 = xmap[0];
+            T p02 = imgPtr + x0, p12 = imgPtr + x1;
+
+            lutPrev[0+widthP2*0] = lut[prevPtr[x0+0]];
+            lutPrev[0+widthP2*1] = lut[prevPtr[x0+1]];
+            lutPrev[0+widthP2*2] = lut[prevPtr[x0+2]];
+            lutCurr[0+widthP2*0] = lut[p02[0]]; lutCurr[1+widthP2*0] = lut[p12[0]];
+            lutCurr[0+widthP2*1] = lut[p02[1]]; lutCurr[1+widthP2*1] = lut[p12[1]];
+            lutCurr[0+widthP2*2] = lut[p02[2]]; lutCurr[1+widthP2*2] = lut[p12[2]];
+        }
+
+        for( x = 0; x <= width - 4; x += 4 )
+        {
+            int x0 = xmap[x], x1 = xmap[x+1], x2 = xmap[x+2], x3 = xmap[x+3];
+            T p02 = imgPtr + xmap[x+1];
+            T p12 = imgPtr + xmap[x+2];
+            T p22 = imgPtr + xmap[x+3];
+            T p32 = imgPtr + xmap[x+4];
+
+            v_float32x4 _dx00 = v_float32x4(lut[p02[0]], lut[p12[0]], lut[p22[0]], lut[p32[0]]);
+            v_float32x4 _dx10 = v_float32x4(lut[p02[1]], lut[p12[1]], lut[p22[1]], lut[p32[1]]);
+            v_float32x4 _dx20 = v_float32x4(lut[p02[2]], lut[p12[2]], lut[p22[2]], lut[p32[2]]);
+
+            v_store(lutCurr+x+widthP2*0+2, _dx00);
+            v_store(lutCurr+x+widthP2*1+2, _dx10);
+            v_store(lutCurr+x+widthP2*2+2, _dx20);
+
+            v_float32x4 _dy00 = v_float32x4(lut[prevPtr[x0+0]], lut[prevPtr[x1+0]], lut[prevPtr[x2+0]], lut[prevPtr[x3+0]]);
+            v_float32x4 _dy10 = v_float32x4(lut[prevPtr[x0+1]], lut[prevPtr[x1+1]], lut[prevPtr[x2+1]], lut[prevPtr[x3+1]]);
+            v_float32x4 _dy20 = v_float32x4(lut[prevPtr[x0+2]], lut[prevPtr[x1+2]], lut[prevPtr[x2+2]], lut[prevPtr[x3+2]]);
+
+            v_store(lutPrev+x+widthP2*0+1, _dy00);
+            v_store(lutPrev+x+widthP2*1+1, _dy10);
+            v_store(lutPrev+x+widthP2*2+1, _dy20);
+        }
+        {
+            int x0 = xmap[x];
+
+            lutPrev[x+widthP2*0+1] = lut[prevPtr[x0+0]];
+            lutPrev[x+widthP2*1+1] = lut[prevPtr[x0+1]];
+            lutPrev[x+widthP2*2+1] = lut[prevPtr[x0+2]];
+        }
+    }
+#endif
+
     float angleScale = signedGradient ? (float)(nbins/(2.0*CV_PI)) : (float)(nbins/CV_PI);
     for( y = 0; y < gradsize.height; y++ )
     {
@@ -342,171 +399,79 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
         {
             x = 0;
 #if CV_SIMD128
-            typedef const uchar* const T;
-            float *lutPrev, *lutCurr, *lutNext;
-            if (y == 0)
+            int yMod = y%3;
+
+            // Circular lut history buffer
+            if (yMod == 0)
             {
                 lutPrev = lutBuf+widthP2*0;
                 lutCurr = lutBuf+widthP2*3;
                 lutNext = lutBuf+widthP2*6;
-
-                {
-                    int x0 = xmap[-1], x1 = xmap[0];
-                    T p02 = imgPtr + x0, p12 = imgPtr + x1;
-
-                    lutPrev[0+widthP2*0] = lut[prevPtr[x0+0]];
-                    lutPrev[0+widthP2*1] = lut[prevPtr[x0+1]];
-                    lutPrev[0+widthP2*2] = lut[prevPtr[x0+2]];
-                    lutCurr[0+widthP2*0] = lut[p02[0]]; lutCurr[1+widthP2*0] = lut[p12[0]];
-                    lutCurr[0+widthP2*1] = lut[p02[1]]; lutCurr[1+widthP2*1] = lut[p12[1]];
-                    lutCurr[0+widthP2*2] = lut[p02[2]]; lutCurr[1+widthP2*2] = lut[p12[2]];
-                    lutNext[0+widthP2*0] = lut[nextPtr[x0+0]];
-                    lutNext[0+widthP2*1] = lut[nextPtr[x0+1]];
-                    lutNext[0+widthP2*2] = lut[nextPtr[x0+2]];
-                }
-                for( ; x <= width - 4; x += 4 )
-                {
-                    int x0 = xmap[x], x1 = xmap[x+1], x2 = xmap[x+2], x3 = xmap[x+3];
-                    T p02 = imgPtr + xmap[x+1];
-                    T p12 = imgPtr + xmap[x+2];
-                    T p22 = imgPtr + xmap[x+3];
-                    T p32 = imgPtr + xmap[x+4];
-
-                    v_float32x4 _dx00 = v_float32x4(lut[p02[0]], lut[p12[0]], lut[p22[0]], lut[p32[0]]);
-                    v_float32x4 _dx10 = v_float32x4(lut[p02[1]], lut[p12[1]], lut[p22[1]], lut[p32[1]]);
-                    v_float32x4 _dx20 = v_float32x4(lut[p02[2]], lut[p12[2]], lut[p22[2]], lut[p32[2]]);
-
-                    v_store(lutCurr+x+widthP2*0+2, _dx00);
-                    v_store(lutCurr+x+widthP2*1+2, _dx10);
-                    v_store(lutCurr+x+widthP2*2+2, _dx20);
-
-                    v_float32x4 _dx0 = _dx00 - v_load(lutCurr+x+widthP2*0);
-                    v_float32x4 _dx1 = _dx10 - v_load(lutCurr+x+widthP2*1);
-                    v_float32x4 _dx2 = _dx20 - v_load(lutCurr+x+widthP2*2);
-
-                    v_float32x4 _dy00 = v_float32x4(lut[prevPtr[x0+0]], lut[prevPtr[x1+0]], lut[prevPtr[x2+0]], lut[prevPtr[x3+0]]);
-                    v_float32x4 _dy01 = v_float32x4(lut[nextPtr[x0+0]], lut[nextPtr[x1+0]], lut[nextPtr[x2+0]], lut[nextPtr[x3+0]]);
-                    v_float32x4 _dy0 = _dy00 - _dy01;
-
-                    v_store(lutPrev+x+widthP2*0+1, _dy00);
-                    v_store(lutNext+x+widthP2*0+1, _dy01);
-
-                    v_float32x4 _dy10 = v_float32x4(lut[prevPtr[x0+1]], lut[prevPtr[x1+1]], lut[prevPtr[x2+1]], lut[prevPtr[x3+1]]);
-                    v_float32x4 _dy11 = v_float32x4(lut[nextPtr[x0+1]], lut[nextPtr[x1+1]], lut[nextPtr[x2+1]], lut[nextPtr[x3+1]]);
-                    v_float32x4 _dy1 = _dy10 - _dy11;
-
-                    v_store(lutPrev+x+widthP2*1+1, _dy10);
-                    v_store(lutNext+x+widthP2*1+1, _dy11);
-
-                    v_float32x4 _dy20 = v_float32x4(lut[prevPtr[x0+2]], lut[prevPtr[x1+2]], lut[prevPtr[x2+2]], lut[prevPtr[x3+2]]);
-                    v_float32x4 _dy21 = v_float32x4(lut[nextPtr[x0+2]], lut[nextPtr[x1+2]], lut[nextPtr[x2+2]], lut[nextPtr[x3+2]]);
-                    v_float32x4 _dy2 = _dy20 - _dy21;
-
-                    v_store(lutPrev+x+widthP2*2+1, _dy20);
-                    v_store(lutNext+x+widthP2*2+1, _dy21);
-
-                    v_float32x4 _mag0 = (_dx0 * _dx0) + (_dy0 * _dy0);
-                    v_float32x4 _mag1 = (_dx1 * _dx1) + (_dy1 * _dy1);
-                    v_float32x4 _mag2 = (_dx2 * _dx2) + (_dy2 * _dy2);
-
-                    v_float32x4 mask = v_reinterpret_as_f32(_mag2 > _mag1);
-                    _dx2 = v_select(mask, _dx2, _dx1);
-                    _dy2 = v_select(mask, _dy2, _dy1);
-
-                    mask = v_reinterpret_as_f32(v_max(_mag2, _mag1) > _mag0);
-                    _dx2 = v_select(mask, _dx2, _dx0);
-                    _dy2 = v_select(mask, _dy2, _dy0);
-
-                    v_store(dbuf + x, _dx2);
-                    v_store(dbuf + x + width, _dy2);
-                }
-                {
-                    int x0 = xmap[x];
-
-                    lutPrev[x+widthP2*0+1] = lut[prevPtr[x0+0]];
-                    lutPrev[x+widthP2*1+1] = lut[prevPtr[x0+1]];
-                    lutPrev[x+widthP2*2+1] = lut[prevPtr[x0+2]];
-                    lutNext[x+widthP2*0+1] = lut[nextPtr[x0+0]];
-                    lutNext[x+widthP2*1+1] = lut[nextPtr[x0+1]];
-                    lutNext[x+widthP2*2+1] = lut[nextPtr[x0+2]];
-                }
+            }
+            else if (yMod == 1)
+            {
+                lutPrev = lutBuf+widthP2*3;
+                lutCurr = lutBuf+widthP2*6;
+                lutNext = lutBuf+widthP2*0;
             }
             else
             {
-                int yMod = y%3;
+                lutPrev = lutBuf+widthP2*6;
+                lutCurr = lutBuf+widthP2*0;
+                lutNext = lutBuf+widthP2*3;
+            }
 
-                // Circular lut history buffer
-                if (yMod == 0)
-                {
-                    lutPrev = lutBuf+widthP2*0;
-                    lutCurr = lutBuf+widthP2*3;
-                    lutNext = lutBuf+widthP2*6;
-                }
-                else if (yMod == 1)
-                {
-                    lutPrev = lutBuf+widthP2*3;
-                    lutCurr = lutBuf+widthP2*6;
-                    lutNext = lutBuf+widthP2*0;
-                }
-                else
-                {
-                    lutPrev = lutBuf+widthP2*6;
-                    lutCurr = lutBuf+widthP2*0;
-                    lutNext = lutBuf+widthP2*3;
-                }
+            {
+                int x0 = xmap[-1];
 
-                {
-                    int x0 = xmap[-1];
+                lutNext[0+widthP2*0] = lut[nextPtr[x0+0]];
+                lutNext[0+widthP2*1] = lut[nextPtr[x0+1]];
+                lutNext[0+widthP2*2] = lut[nextPtr[x0+2]];
+            }
+            for( ; x <= width - 4; x += 4 )
+            {
+                int x0 = xmap[x], x1 = xmap[x+1], x2 = xmap[x+2], x3 = xmap[x+3];
 
-                    lutNext[0+widthP2*0] = lut[nextPtr[x0+0]];
-                    lutNext[0+widthP2*1] = lut[nextPtr[x0+1]];
-                    lutNext[0+widthP2*2] = lut[nextPtr[x0+2]];
-                }
-                for( ; x <= width - 4; x += 4 )
-                {
-                    int x0 = xmap[x], x1 = xmap[x+1], x2 = xmap[x+2], x3 = xmap[x+3];
+                v_float32x4 _dx0 = v_load(lutCurr+x+widthP2*0+2) - v_load(lutCurr+x+widthP2*0);
+                v_float32x4 _dx1 = v_load(lutCurr+x+widthP2*1+2) - v_load(lutCurr+x+widthP2*1);
+                v_float32x4 _dx2 = v_load(lutCurr+x+widthP2*2+2) - v_load(lutCurr+x+widthP2*2);
 
-                    v_float32x4 _dx0 = v_load(lutCurr+x+widthP2*0+2) - v_load(lutCurr+x+widthP2*0);
-                    v_float32x4 _dx1 = v_load(lutCurr+x+widthP2*1+2) - v_load(lutCurr+x+widthP2*1);
-                    v_float32x4 _dx2 = v_load(lutCurr+x+widthP2*2+2) - v_load(lutCurr+x+widthP2*2);
+                v_float32x4 _dy00 = v_float32x4(lut[nextPtr[x0+0]], lut[nextPtr[x1+0]], lut[nextPtr[x2+0]], lut[nextPtr[x3+0]]);
+                v_float32x4 _dy0 = _dy00 - v_load(lutPrev+x+widthP2*0+1);
 
-                    v_float32x4 _dy00 = v_float32x4(lut[nextPtr[x0+0]], lut[nextPtr[x1+0]], lut[nextPtr[x2+0]], lut[nextPtr[x3+0]]);
-                    v_float32x4 _dy0 = _dy00 - v_load(lutPrev+x+widthP2*0+1);
+                v_store(lutNext+x+widthP2*0+1, _dy00);
 
-                    v_store(lutNext+x+widthP2*0+1, _dy00);
+                v_float32x4 _dy10 = v_float32x4(lut[nextPtr[x0+1]], lut[nextPtr[x1+1]], lut[nextPtr[x2+1]], lut[nextPtr[x3+1]]);
+                v_float32x4 _dy1 = _dy10 - v_load(lutPrev+x+widthP2*1+1);
 
-                    v_float32x4 _dy10 = v_float32x4(lut[nextPtr[x0+1]], lut[nextPtr[x1+1]], lut[nextPtr[x2+1]], lut[nextPtr[x3+1]]);
-                    v_float32x4 _dy1 = _dy10 - v_load(lutPrev+x+widthP2*1+1);
+                v_store(lutNext+x+widthP2*1+1, _dy10);
 
-                    v_store(lutNext+x+widthP2*1+1, _dy10);
+                v_float32x4 _dy20 = v_float32x4(lut[nextPtr[x0+2]], lut[nextPtr[x1+2]], lut[nextPtr[x2+2]], lut[nextPtr[x3+2]]);
+                v_float32x4 _dy2 = _dy20 - v_load(lutPrev+x+widthP2*2+1);
 
-                    v_float32x4 _dy20 = v_float32x4(lut[nextPtr[x0+2]], lut[nextPtr[x1+2]], lut[nextPtr[x2+2]], lut[nextPtr[x3+2]]);
-                    v_float32x4 _dy2 = _dy20 - v_load(lutPrev+x+widthP2*2+1);
+                v_store(lutNext+x+widthP2*2+1, _dy20);
 
-                    v_store(lutNext+x+widthP2*2+1, _dy20);
+                v_float32x4 _mag0 = (_dx0 * _dx0) + (_dy0 * _dy0);
+                v_float32x4 _mag1 = (_dx1 * _dx1) + (_dy1 * _dy1);
+                v_float32x4 _mag2 = (_dx2 * _dx2) + (_dy2 * _dy2);
 
-                    v_float32x4 _mag0 = (_dx0 * _dx0) + (_dy0 * _dy0);
-                    v_float32x4 _mag1 = (_dx1 * _dx1) + (_dy1 * _dy1);
-                    v_float32x4 _mag2 = (_dx2 * _dx2) + (_dy2 * _dy2);
+                v_float32x4 mask = v_reinterpret_as_f32(_mag2 > _mag1);
+                _dx2 = v_select(mask, _dx2, _dx1);
+                _dy2 = v_select(mask, _dy2, _dy1);
 
-                    v_float32x4 mask = v_reinterpret_as_f32(_mag2 > _mag1);
-                    _dx2 = v_select(mask, _dx2, _dx1);
-                    _dy2 = v_select(mask, _dy2, _dy1);
+                mask = v_reinterpret_as_f32(v_max(_mag2, _mag1) > _mag0);
+                _dx2 = v_select(mask, _dx2, _dx0);
+                _dy2 = v_select(mask, _dy2, _dy0);
 
-                    mask = v_reinterpret_as_f32(v_max(_mag2, _mag1) > _mag0);
-                    _dx2 = v_select(mask, _dx2, _dx0);
-                    _dy2 = v_select(mask, _dy2, _dy0);
+                v_store(dbuf + x, _dx2);
+                v_store(dbuf + x + width, _dy2);
+            }
+            {
+                int x0 = xmap[x];
 
-                    v_store(dbuf + x, _dx2);
-                    v_store(dbuf + x + width, _dy2);
-                }
-                {
-                    int x0 = xmap[x];
-
-                    lutNext[x+widthP2*0+1] = lut[nextPtr[x0+0]];
-                    lutNext[x+widthP2*1+1] = lut[nextPtr[x0+1]];
-                    lutNext[x+widthP2*2+1] = lut[nextPtr[x0+2]];
-                }
+                lutNext[x+widthP2*0+1] = lut[nextPtr[x0+0]];
+                lutNext[x+widthP2*1+1] = lut[nextPtr[x0+1]];
+                lutNext[x+widthP2*2+1] = lut[nextPtr[x0+2]];
             }
 #endif
             for( ; x < width; x++ )
