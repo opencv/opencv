@@ -737,7 +737,7 @@ struct PyrDownInvoker : ParallelLoopBody
         return y*2 + 2;
     }            
 
-    void operator()(const Range& range) const override
+    void operator()(const Range& range) const CV_OVERRIDE
     {       
         const int PD_SZ = 5;
         typedef typename CastOp::type1 WT;
