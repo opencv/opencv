@@ -108,6 +108,13 @@ namespace detail
         return in_args.at(idx).template get<T>();
     }
 
+    template<typename T>
+    struct in_meta_type
+    {
+        using type = typename std::enable_if<is_nongapi_type<T>::value, T>::type;
+        using type = typename std::enable_if<!is_nongapi_type<T>::value, typename MetaType<T>::type>::type;
+    };
+
     // 4. The MetaHelper itself: an entity which generates outMeta() call
     //    based on kernel signature, with arguments properly substituted.
     // 4.1 - case for multiple return values

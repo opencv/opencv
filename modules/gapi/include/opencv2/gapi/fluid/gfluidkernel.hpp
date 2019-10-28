@@ -286,8 +286,65 @@ struct get_window_helper<false, Impl, Ins...>
     static int help(const cv::GMetaArgs &,
                     const cv::GArgs     &)
     {
-        return {};
+        return 1;
     }
+};
+
+/*template <class T, typename... Args, class = decltype(T::getWindow(std::declval<Args>()...))>
+std::true_type hasGetWindowTest(const T&, Args...);
+std::false_type hasGetWindowTest(...);
+template <class T, class... Args> using hasGetWindow = decltype (hasGetWindowTest(std::declval<T>(), Args...));*/
+
+
+/*template<typename, typename T>
+struct HasGetWindowMethod {
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+template<typename T, typename R,typename ... Args>
+struct HasGetWindowMethod<T, R(Args...)>
+{
+    template<typename U, int(U::*)()> struct SFINAE {};
+    template<typename U> static char Test(SFINAE<U, &U::getWindow>*);
+    template<typename U> static int Test(...);
+    static const bool Has = sizeof(Test<T>(0)) == sizeof(char);
+};*/
+
+template<typename C, typename T>
+struct has_Window                                   
+{
+private:
+    template<class U> static constexpr auto Check(U*) -> typename                         
+    std::is_same< decltype(U::Window), T >::type;                    
+                                                                                          
+    template<typename> static constexpr std::false_type Check(...);                       
+    typedef decltype(Check<C>(0)) Result;
+public:
+    static constexpr bool value = Result::value;                                                                                                       
+};
+
+template<typename, typename T>
+struct has_getWindow {
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+
+template<typename C, typename Ret, typename... Args>
+struct has_getWindow<C, Ret(Args...)> {
+private:
+    template<typename T>
+    static constexpr auto Check(T*)
+        -> typename std::is_same<decltype(T::getWindow(std::declval<Args>()...)), Ret>::type;// attempt to call it and see if the return type is correct
+
+    template<typename>
+    static constexpr std::false_type Check(...);
+
+    typedef decltype(Check<C>(0)) Result;
+
+public:
+    static constexpr bool value = Result::value;
 };
 
 template<typename, typename, typename, bool UseScratch>
@@ -332,11 +389,31 @@ struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch
         scratch_helper<UseScratch, Impl, Ins...>::help_reset(scratch_buf);
     }
 
+
+    template<int... IIs>
+    constexpr static bool has_window(const GMetaArgs &metas,
+                                     const cv::GArgs &in_args,
+                                     cv::detail::Seq<IIs...>)
+    {
+        return has_getWindow<Impl, cv::detail::get_in_meta<Ins>(metas, in_args, IIs)>::value;
+    }
+
     static gapi::fluid::BorderOpt getBorder(const GMetaArgs &metas, const cv::GArgs &in_args)
     {
+        //detail::get_in_meta<Ins>(metas, in_args, detail::MkSeq<sizeof...(Ins)>::type());
+        
         // User must provide "init" callback if Window != 1
         // TODO: move to constexpr if when we enable C++17
-        constexpr bool callCustomGetBorder = (Impl::Window != 1);
+        //constexpr bool call_ = is_available_method(Impl, int(const int), getWindow);
+        //constexpr bool call = hasGetWindow<Impl, int>::value;
+       // constexpr bool call = HasUsedMemoryMethod<Impl>::Has;
+
+        constexpr bool call1 = has_Window<Impl, const int>::value;
+        //has_window(metas, in_args, typename detail::MkSeq<sizeof...(Ins)>::type());
+        constexpr bool call2 = has_getWindow<Impl, int(cv::detail::get_in_meta_type<Ins...>::type())>::value;
+
+        constexpr bool callCustomGetBorder = call1 && (Impl::Window != 1);
+        //constexpr bool callCustomGetBorder = has_getWindow<Impl, int(cv::detail::get_in_meta<Ins>(metas, in_args, detail::MkSeq<sizeof...(Ins)>::type()))>
         return get_border_helper<callCustomGetBorder, Impl, Ins...>::help(metas, in_args);
     }
 

@@ -98,14 +98,21 @@ GAPI_FLUID_KERNEL(GFluidRGB2Gray, cv::gapi::imgproc::GRGB2Gray, false)
 GAPI_FLUID_KERNEL(GFluidBGR2Gray, cv::gapi::imgproc::GBGR2Gray, false)
 {
     static const int Window = 1;
+    int i = 3;
 
     static void run(const View &src, Buffer &dst)
     {
+        throw(std::logic_error("in run!"));
         float coef_r = coef_rgb2yuv_bt601[0];
         float coef_g = coef_rgb2yuv_bt601[1];
         float coef_b = coef_rgb2yuv_bt601[2];
         run_rgb2gray(dst, src, coef_b, coef_g, coef_r);
     }
+
+    static int getWindow(const GMat &src) {
+        abort();
+        throw(std::logic_error("in getWindow!"));
+        return 0; }
 };
 
 //--------------------------------------
