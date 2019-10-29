@@ -909,19 +909,19 @@ bool haveOpenCL()
 
 bool useOpenCL()
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    if( data->useOpenCL < 0 )
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useOpenCL < 0)
     {
         try
         {
-            data->useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
+            data.useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
         }
         catch (...)
         {
-            data->useOpenCL = 0;
+            data.useOpenCL = 0;
         }
     }
-    return data->useOpenCL > 0;
+    return data.useOpenCL > 0;
 }
 
 #ifdef HAVE_OPENCL
@@ -937,14 +937,14 @@ void setUseOpenCL(bool flag)
 {
     CV_TRACE_FUNCTION();
 
-    CoreTLSData* data = getCoreTlsData().get();
+    CoreTLSData& data = getCoreTlsData();
     if (!flag)
     {
-        data->useOpenCL = 0;
+        data.useOpenCL = 0;
     }
     else if( haveOpenCL() )
     {
-        data->useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
+        data.useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
     }
 }
 
@@ -1655,7 +1655,7 @@ size_t Device::profilingTimerResolution() const
 const Device& Device::getDefault()
 {
     const Context& ctx = Context::getDefault();
-    int idx = getCoreTlsData().get()->device;
+    int idx = getCoreTlsData().device;
     const Device& device = ctx.device(idx);
     return device;
 }
@@ -2557,9 +2557,10 @@ void attachContext(const String& platformName, void* platformID, void* context, 
     CV_OCL_CHECK(clRetainContext((cl_context)context));
 
     // clear command queue, if any
-    getCoreTlsData().get()->oclQueue.finish();
+    CoreTLSData& data = getCoreTlsData();
+    data.oclQueue.finish();
     Queue q;
-    getCoreTlsData().get()->oclQueue = q;
+    data.oclQueue = q;
 
     return;
 } // attachContext()
@@ -2747,7 +2748,7 @@ void* Queue::ptr() const
 
 Queue& Queue::getDefault()
 {
-    Queue& q = getCoreTlsData().get()->oclQueue;
+    Queue& q = getCoreTlsData().oclQueue;
     if( !q.p && haveOpenCL() )
         q.create(Context::getDefault());
     return q;
