@@ -585,14 +585,32 @@ template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, s
             v_store((T*)(dst + j - v_uint8x16::nlanes), t0);
             v_store((T*)(dst + i), t1);
         }
-        for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
+        if (((size_t)src|(size_t)dst) % sizeof(T) == 0)
         {
-            T t0, t1;
+            for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
+            {
+                T t0, t1;
 
-            t0 = *((T*)((uchar*)src + i));
-            t1 = *((T*)((uchar*)src + j - sizeof(T)));
-            *((T*)(dst + j - sizeof(T))) = t0;
-            *((T*)(dst + i)) = t1;
+                t0 = *((T*)((uchar*)src + i));
+                t1 = *((T*)((uchar*)src + j - sizeof(T)));
+                *((T*)(dst + j - sizeof(T))) = t0;
+                *((T*)(dst + i)) = t1;
+            }
+        }
+        else
+        {
+            for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
+            {
+                for (int k = 0; k < (int)sizeof(T); k++)
+                {
+                    uchar t0, t1;
+
+                    t0 = *((uchar*)src + i + k);
+                    t1 = *((uchar*)src + j + k - sizeof(T));
+                    *(dst + j + k - sizeof(T)) = t0;
+                    *(dst + i + k) = t1;
+                }
+            }
         }
     }
 }
@@ -760,18 +778,18 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
                                                   dst0 += dstep, dst1 -= dstep )
     {
         int i = 0;
+#if CV_SIMD
+        for( ; i <= size.width - (v_int32::nlanes * 4); i += v_int32::nlanes * 4 )
+        {
+            v_int32 t0 = vx_load((int*)(src0 + i));
+            v_int32 t1 = vx_load((int*)(src1 + i));
+            vx_store((int*)(dst0 + i), t1);
+            vx_store((int*)(dst1 + i), t0);
+        }
+#endif
+
         if( ((size_t)src0|(size_t)dst0|(size_t)src1|(size_t)dst1) % sizeof(int) == 0 )
         {
-#if CV_SIMD
-            for( ; i <= size.width - (v_int32::nlanes * 4); i += v_int32::nlanes * 4 )
-            {
-
-                v_int32 t0 = vx_load((int*)(src0 + i));
-                v_int32 t1 = vx_load((int*)(src1 + i));
-                vx_store((int*)(dst0 + i), t1);
-                vx_store((int*)(dst1 + i), t0);
-            }
-#else
             for( ; i <= size.width - 16; i += 16 )
             {
                 int t0 = ((int*)(src0 + i))[0];
@@ -798,7 +816,6 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
                 ((int*)(dst0 + i))[3] = t1;
                 ((int*)(dst1 + i))[3] = t0;
             }
-#endif
 
             for( ; i <= size.width - 4; i += 4 )
             {
