@@ -653,7 +653,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 
 cv::RNG& cv::theRNG()
 {
-    return getCoreTlsData().get()->rng;
+    return getCoreTlsData().rng;
 }
 
 void cv::setRNGSeed(int seed)
