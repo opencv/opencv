@@ -63,6 +63,44 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
+        __global__ void swish_vec(Span<T> output, View<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::sigmoid;
+                    vec.data[j] = vec.data[j] * sigmoid(vec.data[j]);
+                }
+                v_store(output_vPtr[i], vec);
+            }
+        }
+
+        template <class T, std::size_t N>
+        __global__ void mish_vec(Span<T> output, View<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::tanh;
+                    using device::log;
+                    using device::exp;
+                    vec.data[j] = vec.data[j] * tanh(log(1.0f + exp(vec.data[j])));
+                }
+                v_store(output_vPtr[i], vec);
+            }
+        }
+
+        template <class T, std::size_t N>
         __global__ void sigmoid_vec(Span<T> output, View<T> input) {
             using vector_type = get_vector_type_t<T, N>;
 
