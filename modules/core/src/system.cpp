@@ -1431,7 +1431,7 @@ TlsAbstraction::TlsAbstraction()
 #if (_WIN32_WINNT < 0x0600)
     tlsKey = TlsAlloc();
 #else // _WIN32_WINNT < 0x0600
-    tlsKey = FlsAlloc(opencv_fls_destructor);
+    tlsKey = FlsAlloc((PFLS_CALLBACK_FUNCTION)opencv_fls_destructor);
 #endif // _WIN32_WINNT < 0x0600
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
