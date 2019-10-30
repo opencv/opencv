@@ -62,6 +62,7 @@ public:
         PROD = 0,
         SUM = 1,
         MAX = 2,
+        DIV = 3
     } op;
     std::vector<float> coeffs;
     bool variableChannels;
@@ -79,6 +80,8 @@ public:
                 op = SUM;
             else if (operation == "max")
                 op = MAX;
+            else if (operation == "div")
+                op = DIV;
             else
                 CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
         }
@@ -97,7 +100,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
+        return (backendId == DNN_BACKEND_OPENCV && (op != DIV || preferableTarget == DNN_TARGET_CPU)) ||
                backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && !variableChannels &&
                 (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()));
@@ -267,6 +270,18 @@ public:
                             for( j = 0; j < blockSize; j++ )
                             {
                                 dstptr[j] = srcptr0[j]*srcptr1[j];
+                            }
+                            srcptr0 = (const float*)dstptr;
+                        }
+                    }
+                    else if( op == DIV )
+                    {
+                        for( k = 1; k < n; k++ )
+                        {
+                            const float* srcptr1 = srcs[k]->ptr<float>() + globalDelta;
+                            for( j = 0; j < blockSize; j++ )
+                            {
+                                dstptr[j] = srcptr0[j]/srcptr1[j];
                             }
                             srcptr0 = (const float*)dstptr;
                         }
@@ -486,6 +501,8 @@ public:
             ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::SUM);
         else if (op == PROD)
             ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MUL);
+        else if (op == DIV)
+            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::DIV);
         else if (op == MAX)
             ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MAX);
         else

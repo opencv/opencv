@@ -520,19 +520,24 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Div")
         {
-            Mat blob = getBlob(node_proto, constBlobs, 1);
-            CV_Assert_N(blob.type() == CV_32F, blob.total());
-            if (blob.total() == 1)
-            {
-                layerParams.set("scale", 1.0f / blob.at<float>(0));
-                layerParams.type = "Power";
-            }
-            else
-            {
-                layerParams.type = "Scale";
-                divide(1.0, blob, blob);
-                layerParams.blobs.push_back(blob);
-                layerParams.set("bias_term", false);
+            if (node_proto.input_size() == 2) {
+                layerParams.type = "Eltwise";
+                layerParams.set("operation", "div");
+            } else {
+                Mat blob = getBlob(node_proto, constBlobs, 1);
+                CV_Assert_N(blob.type() == CV_32F, blob.total());
+                if (blob.total() == 1)
+                {
+                    layerParams.set("scale", 1.0f / blob.at<float>(0));
+                    layerParams.type = "Power";
+                }
+                else
+                {
+                    layerParams.type = "Scale";
+                    divide(1.0, blob, blob);
+                    layerParams.blobs.push_back(blob);
+                    layerParams.set("bias_term", false);
+                }
             }
         }
         else if (layer_type == "Neg")
@@ -770,6 +775,66 @@ void ONNXImporter::populateNet(Net dstNet)
                 constBlobs.insert(std::make_pair(layerParams.name, transposed[0]));
                 continue;
             }
+        }
+        else if (layer_type == "ReduceL2")
+        {
+            CV_Assert(node_proto.input_size() == 1);
+            CV_Assert(graph_proto.node(li + 1).op_type() == "Div");
+            ++li;
+
+            layerParams.type = "Normalize";
+            layerParams.set("p", 2);
+            std::vector<int> axes;
+            if (layerParams.has("axes")) {
+                DictValue axes_dict = layerParams.get("axes");
+                if (axes_dict.size() != 1)
+                    CV_Error(Error::StsNotImplemented, "Multidimensional reduceL2");
+
+                axes.push_back(axes_dict.getIntValue(0));
+            } else {
+                shapeIt = outShapes.find(node_proto.input(0));
+                CV_Assert(shapeIt != outShapes.end());
+                MatShape inpShape = shapeIt->second;
+                for (int j = 0; j < inpShape.size(); ++j) {
+                    if (inpShape[j] == 1) {
+                        axes.push_back(j);
+                    }
+                }
+                CV_Assert(!axes.empty());
+                for (int j = 1; j < axes.size(); ++j) {
+                    CV_Assert(axes[j - 1] + 1 == axes[j]);
+                }
+            }
+            layerParams.set("axis", axes.front());
+            layerParams.set("end_axis", axes.back());
+        }
+        else if (layer_type == "Squeeze")
+        {
+            CV_Assert(node_proto.input_size() == 1);
+            std::vector<int> axes;
+            if (layerParams.has("axes")) {
+                DictValue axes_dict = layerParams.get("axes");
+                if (axes_dict.size() != 1)
+                    CV_Error(Error::StsNotImplemented, "Multidimensional squeeze");
+
+                axes.push_back(axes_dict.getIntValue(0));
+            } else {
+                shapeIt = outShapes.find(node_proto.input(0));
+                CV_Assert(shapeIt != outShapes.end());
+                MatShape inpShape = shapeIt->second;
+                for (int j = 0; j < inpShape.size(); ++j) {
+                    if (inpShape[j] == 1) {
+                        axes.push_back(j);
+                    }
+                }
+                CV_Assert(!axes.empty());
+                for (int j = 1; j < axes.size(); ++j) {
+                    CV_Assert(axes[j - 1] + 1 == axes[j]);
+                }
+            }
+            layerParams.set("axis", axes.front() - 1);
+            layerParams.set("end_axis", axes.back());
+            layerParams.type = "Flatten";
         }
         else if (layer_type == "Unsqueeze")
         {
