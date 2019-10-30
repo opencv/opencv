@@ -60,8 +60,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
     CV_Assert(depth == CV_8U);
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
     parallel_for_(Range(0, rows), cv::detail::SharrDerivInvoker(src, dst));
-    
-}    
+}
 
 }//namespace
 

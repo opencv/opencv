@@ -13,9 +13,9 @@ namespace detail
 
         void operator()(const Range& range) const CV_OVERRIDE;
         const Mat* src;
-        const Mat* dst;        
-    };    
-    
+        const Mat* dst;
+    };
+
     struct LKTrackerInvoker : ParallelLoopBody
     {
         LKTrackerInvoker( const Mat& _prevImg, const Mat& _prevDeriv, const Mat& _nextImg,

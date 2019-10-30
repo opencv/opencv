@@ -49,7 +49,7 @@
 
 namespace cv
 {
-    
+
 template<typename T, int shift> struct FixPtCast
 {
     typedef int type1;
@@ -730,23 +730,23 @@ struct PyrDownInvoker : ParallelLoopBody
         _tabR = tabR;
         _tabM = tabM;
         _tabL = tabL;
-    }            
+    }
 
     inline int syloopboundary(int y) const
     {
         return y*2 + 2;
-    }            
+    }
 
     void operator()(const Range& range) const CV_OVERRIDE
-    {       
+    {
         const int PD_SZ = 5;
         typedef typename CastOp::type1 WT;
-        typedef typename CastOp::rtype T;            
+        typedef typename CastOp::rtype T;
         Size ssize = _src->size(), dsize = _dst->size();
-        int cn = _src->channels();        
+        int cn = _src->channels();
         int bufstep = (int)alignSize(dsize.width*cn, 16);
         AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-        WT* buf = alignPtr((WT*)_buf.data(), 16);    
+        WT* buf = alignPtr((WT*)_buf.data(), 16);
         WT* rows[PD_SZ];
         CastOp castOp;
 
@@ -852,8 +852,7 @@ struct PyrDownInvoker : ParallelLoopBody
             int x = PyrDownVecV<WT, T>(rows, dst, dsize.width);
             for (; x < dsize.width; x++ )
                 dst[x] = castOp(row2[x]*6 + (row1[x] + row3[x])*4 + row0[x] + row4[x]);
-        }        
-        
+        }
     }
 
     int **_tabR;
@@ -862,8 +861,7 @@ struct PyrDownInvoker : ParallelLoopBody
     const Mat *_src;
     const Mat *_dst;
     int _borderType;
-};    
-
+};
 
 template<class CastOp> void
 pyrDown_( const Mat& _src, Mat& _dst, int borderType )
@@ -892,7 +890,7 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
             tabR[x*cn + k] = sx1 + k;
         }
     }
-    
+
     for (int x = 0; x < dsize.width*cn; x++)
         tabM[x] = (x/cn)*2*cn + x % cn;
 
