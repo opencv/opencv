@@ -1425,13 +1425,13 @@ void  TlsAbstraction::SetData(void *pData)
     tlsData = pData;
 }
 #else //WINRT
-static void opencv_fls_destructor(void* pData);
+static void WINAPI opencv_fls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
 {
 #if (_WIN32_WINNT < 0x0600)
     tlsKey = TlsAlloc();
 #else // _WIN32_WINNT < 0x0600
-    tlsKey = FlsAlloc((PFLS_CALLBACK_FUNCTION)opencv_fls_destructor);
+    tlsKey = FlsAlloc(opencv_fls_destructor);
 #endif // _WIN32_WINNT < 0x0600
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
@@ -1695,7 +1695,7 @@ static void opencv_tls_destructor(void* pData)
     getTlsStorage().releaseThread(pData);
 }
 #else	// _WIN32
-static void opencv_fls_destructor(void* pData)
+static void WINAPI opencv_fls_destructor(void* pData)
 {
     getTlsStorage().releaseThread(pData);
 }
