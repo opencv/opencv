@@ -670,7 +670,7 @@ struct SwishFunctor
     {
         return make_cuda_node<cuda4dnn::SwishOp>(target, stream);
     }
-#endif    
+#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -760,7 +760,7 @@ struct MishFunctor
     {
         return make_cuda_node<cuda4dnn::MishOp>(target, stream);
     }
-#endif    
+#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
