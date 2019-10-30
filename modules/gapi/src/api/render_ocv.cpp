@@ -27,14 +27,6 @@ inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
     }
 };
 
-inline void poly(cv::Mat& mat,
-                 const std::vector<cv::Point>& points,
-                 const cv::Scalar& color)
-{
-    std::vector<std::vector<cv::Point>> pp{points};
-    cv::fillPoly(mat, pp, color);
-};
-
 inline void blendImage(const cv::Mat& img,
                        const cv::Mat& alpha,
                        const cv::Point& org,
@@ -66,6 +58,14 @@ inline void blendImage(const cv::Mat& img,
     roi32f.convertTo(roi, CV_8U, 255.0);
 }
 
+
+inline void poly(cv::Mat& mat,
+                 const cv::gapi::wip::draw::Poly& pp)
+{
+    std::vector<std::vector<cv::Point>> points{pp.points};
+    cv::fillPoly(mat, points, pp.color, pp.lt, pp.shift);
+};
+
 struct BGR2YUVConverter
 {
     cv::Scalar cvtColor(const cv::Scalar& bgr) const
@@ -88,8 +88,12 @@ struct EmptyConverter
 
 // FIXME util::visitor ?
 template <typename ColorConverter>
-void drawPrimitivesOCV(cv::Mat& in, const Prims& prims, cv::gapi::wip::draw::IBitmaskCreator* mc)
+void drawPrimitivesOCV(cv::Mat& in,
+                       const cv::gapi::wip::draw::Prims& prims,
+                       cv::gapi::wip::draw::IBitmaskCreator* mc)
 {
+    using namespace cv::gapi::wip::draw;
+
     ColorConverter converter;
     for (const auto &p : prims)
     {
@@ -105,10 +109,10 @@ void drawPrimitivesOCV(cv::Mat& in, const Prims& prims, cv::gapi::wip::draw::IBi
 
             case Prim::index_of<Text>():
             {
-                auto t_p = cv::util::get<Text>(p);
-                t_p.color = converter.cvtColor(t_p.color);
+                auto tp = cv::util::get<Text>(p);
+                tp.color = converter.cvtColor(tp.color);
 
-                mc->setMaskParams(t_p);
+                mc->setMaskParams(tp);
                 auto size = mc->computeMaskSize();
 
                 // Allocate mask outside
@@ -119,14 +123,13 @@ void drawPrimitivesOCV(cv::Mat& in, const Prims& prims, cv::gapi::wip::draw::IBi
                 cv::Mat color_mask;
 
                 cv::merge(std::vector<cv::Mat>(3, mask), color_mask);
-                cv::Scalar color32f = t_p.color / 255.0;
+                cv::Scalar color32f = tp.color / 255.0;
                 cv::multiply(color_mask, color32f, color_mask);
 
                 // Org is bottom left point, trasform it to top left point for blendImage
-                cv::Point tl(t_p.org.x, t_p.org.y - color_mask.size().height + baseline);
+                cv::Point tl(tp.org.x, tp.org.y - color_mask.size().height + baseline);
 
                 blendImage(color_mask, mask, tl, in);
-
                 break;
             }
 
@@ -168,9 +171,9 @@ void drawPrimitivesOCV(cv::Mat& in, const Prims& prims, cv::gapi::wip::draw::IBi
 
             case Prim::index_of<Poly>():
             {
-                const auto& pp = cv::util::get<Poly>(p);
-                const auto color = converter.cvtColor(pp.color);
-                poly(in, pp.points, color);
+                auto pp = cv::util::get<Poly>(p);
+                pp.color = converter.cvtColor(pp.color);
+                poly(in, pp);
                 break;
             }
 
@@ -179,12 +182,16 @@ void drawPrimitivesOCV(cv::Mat& in, const Prims& prims, cv::gapi::wip::draw::IBi
     }
 }
 
-void drawPrimitivesOCVBGR(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::IBitmaskCreator* mc)
+void drawPrimitivesOCVBGR(cv::Mat &in,
+                          const cv::gapi::wip::draw::Prims &prims,
+                          cv::gapi::wip::draw::IBitmaskCreator* mc)
 {
     drawPrimitivesOCV<EmptyConverter>(in, prims, mc);
 }
 
-void drawPrimitivesOCVYUV(cv::Mat &in, const Prims &prims, cv::gapi::wip::draw::IBitmaskCreator* mc)
+void drawPrimitivesOCVYUV(cv::Mat &in,
+                          const cv::gapi::wip::draw::Prims &prims,
+                          cv::gapi::wip::draw::IBitmaskCreator* mc)
 {
     drawPrimitivesOCV<BGR2YUVConverter>(in, prims, mc);
 }

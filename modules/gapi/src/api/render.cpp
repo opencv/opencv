@@ -44,7 +44,6 @@ void cv::gapi::wip::draw::cvtYUVToNV12(const cv::Mat& yuv,
     std::vector<cv::Mat> chs(3);
     cv::split(yuv, chs);
     y = chs[0];
-
     cv::merge(std::vector<cv::Mat>{chs[1], chs[2]}, uv);
     cv::resize(uv, uv, uv.size() / 2, cv::INTER_LINEAR);
 }

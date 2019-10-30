@@ -28,16 +28,22 @@ class FreeTypeBitmaskCreator : public IBitmaskCreator
 public:
     FreeTypeBitmaskCreator(const std::string& path)
     {
-        FT_Init_FreeType(&m_library);
-        FT_New_Face(m_library, path.c_str(), 0, &m_face);
+        if (FT_Init_FreeType(&m_library) < 0)
+        {
+            util::throw_error(std::runtime_error("Failed to init FreeType library"));
+        }
+
+        if (FT_New_Face(m_library, path.c_str(), 0, &m_face))
+        {
+            util::throw_error(std::runtime_error("Failed to set font"));
+        }
     }
 
     virtual cv::Size computeMaskSize() override
     {
-        m_slot = m_face->glyph;
+        FT_GlyphSlot slot = m_face->glyph;
         int bmp_w        = 0;
         int max_baseline = 0;
-        m_max_glyph_top  = 0;
 
         m_glyphs.resize(m_text.text.size());
         m_pos.reserve(m_text.text.size());
@@ -45,20 +51,20 @@ public:
         for (size_t i = 0; i < m_text.text.size(); ++i)
         {
             FT_Load_Char(m_face, m_text.text[i], FT_LOAD_RENDER);
-            FT_Bitmap *bitmap = &(m_slot->bitmap);
+            FT_Bitmap *bitmap = &(slot->bitmap);
 
             cv::Mat(bitmap->rows, bitmap->width, CV_8UC1, bitmap->buffer, bitmap->pitch).copyTo(m_glyphs[i]);
 
-            int gl_bottom_pad = (m_slot->metrics.height - m_slot->metrics.horiBearingY) >> 6;
+            int gl_bottom_pad = (slot->metrics.height - slot->metrics.horiBearingY) >> 6;
             max_baseline = std::max(max_baseline, gl_bottom_pad);
-            m_max_glyph_top = std::max(m_max_glyph_top, m_slot->bitmap_top);
+            m_max_glyph_top = std::max(m_max_glyph_top, slot->bitmap_top);
 
             // FIXME why bitmap->left is negative ?
-            int gl_x_pad = m_slot->bitmap_left > 0 ? m_slot->bitmap_left + bmp_w - 1 : bmp_w;
-            auto shift = (m_slot->advance.x >> 6);
+            int gl_x_pad = slot->bitmap_left > 0 ? slot->bitmap_left + bmp_w - 1 : bmp_w;
+            auto shift = (slot->advance.x >> 6);
 
 
-            // FIXME why bitmap->width > shift m_slot->advance.x ?
+            // FIXME why bitmap->width > shift slot->advance.x ?
             if (shift < bitmap->width)
             {
                 gl_x_pad = bmp_w;
@@ -69,7 +75,7 @@ public:
                 bmp_w += shift;
             }
 
-            m_pos.emplace_back(gl_x_pad, m_slot->bitmap_top);
+            m_pos.emplace_back(gl_x_pad, slot->bitmap_top);
         }
 
         int bmp_h = max_baseline + m_max_glyph_top;
@@ -111,14 +117,13 @@ public:
 private:
     FT_Library    m_library;
     FT_Face       m_face;
-    FT_GlyphSlot  m_slot;
 
     std::vector<cv::Mat> m_glyphs;
     std::vector<cv::Point> m_pos;
 
     cv::gapi::wip::draw::Text m_text;
-    int m_baseline;
-    int m_max_glyph_top;
+    int m_baseline = 0;
+    int m_max_glyph_top = 0;
     cv::Size m_mask_size;
 };
 

@@ -58,6 +58,20 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
     return data_h;
 }
 
+ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GShape shape)
+{
+    ade::NodeHandle data_h = g.createNode();
+    g.metadata(data_h).set(NodeType{NodeType::DATA});
+
+    const auto id = g.metadata().get<DataObjectCounter>().GetNewId(shape);
+    GMetaArg meta;
+    HostCtor ctor;
+    Data::Storage storage = Data::Storage::INTERNAL; // By default, all objects are marked INTERNAL
+
+    g.metadata(data_h).set(Data{shape, id, meta, ctor, storage});
+    return data_h;
+}
+
 void GModel::linkIn(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::size_t in_port)
 {
     // Check if input is already connected

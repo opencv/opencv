@@ -20,14 +20,11 @@ class OCVBitmaskCreator : public IBitmaskCreator
 public:
     virtual cv::Size computeMaskSize() override
     {
-        m_ff    = FONT_HERSHEY_SIMPLEX;
-        m_thick = 1;
-
-        auto sz = cv::getTextSize(m_text.text, m_ff,
-                                  m_text.fs, m_thick,
+        auto sz = cv::getTextSize(m_tp.text, m_tp.ff,
+                                  m_tp.fs, m_tp.thick,
                                   &m_baseline);
 
-        m_baseline += m_thick;
+        m_baseline += m_tp.thick;
 
         m_mask_size = {sz.width, sz.height + m_baseline};
 
@@ -45,22 +42,20 @@ public:
         cv::Point org((mask.cols - mask.size().width) / 2,
                       (mask.rows + mask.size().height - 2 * m_baseline) / 2);
 
-        cv::putText(mask, m_text.text, org, m_ff,
-                    m_text.fs, 255, m_thick);
+        cv::putText(mask, m_tp.text, org, m_tp.ff,
+                    m_tp.fs, 255, m_tp.thick);
 
         return m_baseline;
     }
 
     void virtual setMaskParams(const cv::gapi::wip::draw::Text& text) override
     {
-        m_text = text;
+        m_tp = text;
     }
 
 private:
-    cv::gapi::wip::draw::Text m_text;
-    int m_baseline;
-    int m_thick;
-    int m_ff;
+    int m_baseline = 0;
+    cv::gapi::wip::draw::Text m_tp;
     cv::Size m_mask_size;
 };
 

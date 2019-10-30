@@ -50,6 +50,9 @@
 
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/tls.hpp>
+#include <opencv2/core/utils/instrumentation.hpp>
+
 namespace cv {
 
 static Mutex* __initialization_mutex = NULL;
@@ -1312,6 +1315,8 @@ bool __termination = false;
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
+namespace details {
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
@@ -1373,9 +1378,10 @@ void  TlsAbstraction::SetData(void *pData)
 }
 #endif
 #else // _WIN32
+static void opencv_tls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
 {
-    CV_Assert(pthread_key_create(&tlsKey, NULL) == 0);
+    CV_Assert(pthread_key_create(&tlsKey, opencv_tls_destructor) == 0);
 }
 TlsAbstraction::~TlsAbstraction()
 {
@@ -1416,42 +1422,46 @@ public:
     }
     ~TlsStorage()
     {
-        for(size_t i = 0; i < threads.size(); i++)
-        {
-            if(threads[i])
-            {
-                /* Current architecture doesn't allow proper global objects release, so this check can cause crashes
-
-                // Check if all slots were properly cleared
-                for(size_t j = 0; j < threads[i]->slots.size(); j++)
-                {
-                    CV_Assert(threads[i]->slots[j] == 0);
-                }
-                */
-                delete threads[i];
-            }
-        }
-        threads.clear();
+        // TlsStorage object should not be released
+        // There is no reliable way to avoid problems caused by static initialization order fiasco
+        CV_LOG_FATAL(NULL, "TlsStorage::~TlsStorage() call is not expected");
     }
 
-    void releaseThread()
+    void releaseThread(void* tlsValue = NULL)
     {
+        ThreadData *pTD = tlsValue == NULL ? (ThreadData*)tls.GetData() : (ThreadData*)tlsValue;
+        if (pTD == NULL)
+            return;  // no OpenCV TLS data for this thread
         AutoLock guard(mtxGlobalAccess);
-        ThreadData *pTD = (ThreadData*)tls.GetData();
-        for(size_t i = 0; i < threads.size(); i++)
+        for (size_t i = 0; i < threads.size(); i++)
         {
-            if(pTD == threads[i])
+            if (pTD == threads[i])
             {
-                threads[i] = 0;
-                break;
+                threads[i] = NULL;
+                if (tlsValue == NULL)
+                    tls.SetData(0);
+                std::vector<void*>& thread_slots = pTD->slots;
+                for (size_t slotIdx = 0; slotIdx < thread_slots.size(); slotIdx++)
+                {
+                    void* pData = thread_slots[slotIdx];
+                    thread_slots[slotIdx] = NULL;
+                    if (!pData)
+                        continue;
+                    TLSDataContainer* container = tlsSlots[slotIdx].container;
+                    if (container)
+                        container->deleteDataInstance(pData);
+                    else
+                        CV_LOG_ERROR(NULL, "TLS: container for slotIdx=" << slotIdx << " is NULL. Can't release thread data");
+                }
+                delete pTD;
+                return;
             }
         }
-        tls.SetData(0);
-        delete pTD;
+        CV_LOG_WARNING(NULL, "TLS: Can't release thread TLS data (unknown pointer or data race): " << (void*)pTD);
     }
 
     // Reserve TLS storage index
-    size_t reserveSlot()
+    size_t reserveSlot(TLSDataContainer* container)
     {
         AutoLock guard(mtxGlobalAccess);
         CV_Assert(tlsSlotsSize == tlsSlots.size());
@@ -1459,15 +1469,15 @@ public:
         // Find unused slots
         for(size_t slot = 0; slot < tlsSlotsSize; slot++)
         {
-            if(!tlsSlots[slot])
+            if (tlsSlots[slot].container == NULL)
             {
-                tlsSlots[slot] = 1;
+                tlsSlots[slot].container = container;
                 return slot;
             }
         }
 
         // Create new slot
-        tlsSlots.push_back(1); tlsSlotsSize++;
+        tlsSlots.push_back(TlsSlotInfo(container)); tlsSlotsSize++;
         return tlsSlotsSize - 1;
     }
 
@@ -1492,7 +1502,9 @@ public:
         }
 
         if (!keepSlot)
-            tlsSlots[slotIdx] = 0;
+        {
+            tlsSlots[slotIdx].container = NULL;  // mark slot as free (see reserveSlot() implementation)
+        }
     }
 
     // Get data by TLS storage index
@@ -1541,8 +1553,26 @@ public:
             tls.SetData((void*)threadData);
             {
                 AutoLock guard(mtxGlobalAccess);
-                threadData->idx = threads.size();
-                threads.push_back(threadData);
+
+                bool found = false;
+                // Find unused slots
+                for(size_t slot = 0; slot < threads.size(); slot++)
+                {
+                    if (threads[slot] == NULL)
+                    {
+                        threadData->idx = (int)slot;
+                        threads[slot] = threadData;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    // Create new slot
+                    threadData->idx = threads.size();
+                    threads.push_back(threadData);
+                }
             }
         }
 
@@ -1559,8 +1589,14 @@ private:
 
     Mutex  mtxGlobalAccess;           // Shared objects operation guard
     size_t tlsSlotsSize;              // equal to tlsSlots.size() in synchronized sections
-                                      // without synchronization this counter doesn't desrease - it is used for slotIdx sanity checks
-    std::vector<int> tlsSlots;        // TLS keys state
+                                      // without synchronization this counter doesn't decrease - it is used for slotIdx sanity checks
+
+    struct TlsSlotInfo
+    {
+        TlsSlotInfo(TLSDataContainer* _container) : container(_container) {}
+        TLSDataContainer* container;  // attached container (to dispose data of terminated threads)
+    };
+    std::vector<struct TlsSlotInfo> tlsSlots;  // TLS keys state
     std::vector<ThreadData*> threads; // Array for all allocated data. Thread data pointers are placed here to allow data cleanup
 };
 
@@ -1570,9 +1606,19 @@ static TlsStorage &getTlsStorage()
     CV_SINGLETON_LAZY_INIT_REF(TlsStorage, new TlsStorage())
 }
 
+#ifndef _WIN32  // pthread key destructor
+static void opencv_tls_destructor(void* pData)
+{
+    getTlsStorage().releaseThread(pData);
+}
+#endif
+
+} // namespace details
+using namespace details;
+
 TLSDataContainer::TLSDataContainer()
 {
-    key_ = (int)getTlsStorage().reserveSlot(); // Reserve key from TLS storage
+    key_ = (int)getTlsStorage().reserveSlot(this); // Reserve key from TLS storage
 }
 
 TLSDataContainer::~TLSDataContainer()
@@ -1585,11 +1631,17 @@ void TLSDataContainer::gatherData(std::vector<void*> &data) const
     getTlsStorage().gather(key_, data);
 }
 
+void TLSDataContainer::detachData(std::vector<void*> &data)
+{
+    getTlsStorage().releaseSlot(key_, data, true);
+}
+
 void TLSDataContainer::release()
 {
-    std::vector<void*> data;
-    data.reserve(32);
-    getTlsStorage().releaseSlot(key_, data); // Release key and get stored data for proper destruction
+    if (key_ == -1)
+        return;  // already released
+    std::vector<void*> data; data.reserve(32);
+    getTlsStorage().releaseSlot(key_, data, false); // Release key and get stored data for proper destruction
     key_ = -1;
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
@@ -1597,8 +1649,7 @@ void TLSDataContainer::release()
 
 void TLSDataContainer::cleanup()
 {
-    std::vector<void*> data;
-    data.reserve(32);
+    std::vector<void*> data; data.reserve(32);
     getTlsStorage().releaseSlot(key_, data, true); // Extract stored data with removal from TLS tables
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
@@ -1617,9 +1668,14 @@ void* TLSDataContainer::getData() const
     return pData;
 }
 
-TLSData<CoreTLSData>& getCoreTlsData()
+static TLSData<CoreTLSData>& getCoreTlsDataTLS()
 {
     CV_SINGLETON_LAZY_INIT_REF(TLSData<CoreTLSData>, new TLSData<CoreTLSData>())
+}
+
+CoreTLSData& getCoreTlsData()
+{
+    return getCoreTlsDataTLS().getRef();
 }
 
 #if defined CVAPI_EXPORTS && defined _WIN32 && !defined WINCE
@@ -2269,12 +2325,12 @@ String getIppVersion()
 bool useIPP()
 {
 #ifdef HAVE_IPP
-    CoreTLSData* data = getCoreTlsData().get();
-    if(data->useIPP < 0)
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useIPP < 0)
     {
-        data->useIPP = getIPPSingleton().useIPP;
+        data.useIPP = getIPPSingleton().useIPP;
     }
-    return (data->useIPP > 0);
+    return (data.useIPP > 0);
 #else
     return false;
 #endif
@@ -2282,24 +2338,24 @@ bool useIPP()
 
 void setUseIPP(bool flag)
 {
-    CoreTLSData* data = getCoreTlsData().get();
+    CoreTLSData& data = getCoreTlsData();
 #ifdef HAVE_IPP
-    data->useIPP = (getIPPSingleton().useIPP)?flag:false;
+    data.useIPP = (getIPPSingleton().useIPP)?flag:false;
 #else
     CV_UNUSED(flag);
-    data->useIPP = false;
+    data.useIPP = false;
 #endif
 }
 
 bool useIPP_NotExact()
 {
 #ifdef HAVE_IPP
-    CoreTLSData* data = getCoreTlsData().get();
-    if(data->useIPP_NE < 0)
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useIPP_NE < 0)
     {
-        data->useIPP_NE = getIPPSingleton().useIPP_NE;
+        data.useIPP_NE = getIPPSingleton().useIPP_NE;
     }
-    return (data->useIPP_NE > 0);
+    return (data.useIPP_NE > 0);
 #else
     return false;
 #endif
@@ -2307,12 +2363,12 @@ bool useIPP_NotExact()
 
 void setUseIPP_NotExact(bool flag)
 {
-    CoreTLSData* data = getCoreTlsData().get();
+    CoreTLSData& data = getCoreTlsData();
 #ifdef HAVE_IPP
-    data->useIPP_NE = flag;
+    data.useIPP_NE = flag;
 #else
     CV_UNUSED(flag);
-    data->useIPP_NE = false;
+    data.useIPP_NE = false;
 #endif
 }
 

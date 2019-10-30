@@ -96,7 +96,7 @@ class SamplesFindFile(NewOpenCVTests):
 
     def test_MissingFileException(self):
         try:
-            res = cv.samples.findFile('non_existed.file', True)
+            _res = cv.samples.findFile('non_existed.file', True)
             self.assertEqual("Dead code", 0)
         except cv.error as _e:
             pass

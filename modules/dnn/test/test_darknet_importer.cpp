@@ -390,12 +390,6 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
 
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
-
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(9, 7) << 0, 7,  0.952983f, 0.614622f, 0.150257f, 0.901369f, 0.289251f,  // a truck
                                     0, 1,  0.987908f, 0.150913f, 0.221933f, 0.742255f, 0.74626f,   // a bicycle
@@ -413,23 +407,35 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     std::string config_file = "yolov3.cfg";
     std::string weights_file = "yolov3.weights";
 
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD &&
+        getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+    {
+        scoreDiff = 0.04;
+        iouDiff = 0.2;
+    }
+#endif
+
     {
     SCOPED_TRACE("batch size 1");
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff);
     }
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL)  // Test with 'batch size 2' is disabled for DLIE/OpenCL target
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
+#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
     {
-        if (target == DNN_TARGET_OPENCL)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
-        if (target == DNN_TARGET_OPENCL_FP16)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+        if (INF_ENGINE_VER_MAJOR_LE(2018050000) && target == DNN_TARGET_OPENCL)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+        else if (INF_ENGINE_VER_MAJOR_EQ(2019020000))
+        {
+            if (target == DNN_TARGET_OPENCL)
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+            if (target == DNN_TARGET_OPENCL_FP16)
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+        }
+        else if (target == DNN_TARGET_MYRIAD &&
+                 getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
     }
 #endif
 
@@ -444,6 +450,9 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets, dnnBackendsAndTargets());
 TEST_P(Test_Darknet_layers, shortcut)
 {
     testDarknetLayer("shortcut");
+    testDarknetLayer("shortcut_leaky");
+    testDarknetLayer("shortcut_unequal");
+    testDarknetLayer("shortcut_unequal_2");
 }
 
 TEST_P(Test_Darknet_layers, upsample)

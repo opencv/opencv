@@ -9,8 +9,6 @@
 #define OPENCV_GAPI_RENDER_TESTS_HPP
 
 #include "gapi_tests_common.hpp"
-#include "api/render_priv.hpp"
-#include "api/render_ocv.hpp"
 
 namespace opencv_test
 {
@@ -79,7 +77,7 @@ protected:
         ref_mat.create(sz, type);
         gapi_mat.create(sz, type);
 
-        cv::randu(ref_mat, cv::Scalar::all(255), cv::Scalar::all(255));
+        cv::randu(ref_mat, cv::Scalar::all(0), cv::Scalar::all(255));
         ref_mat.copyTo(gapi_mat);
     }
 
@@ -94,7 +92,7 @@ protected:
     {
         auto create_rand_mats = [](const cv::Size& size, MatType type, cv::Mat& ref_mat, cv::Mat& gapi_mat) {
             ref_mat.create(size, type);
-            cv::randu(ref_mat, cv::Scalar::all(255), cv::Scalar::all(255));
+            cv::randu(ref_mat, cv::Scalar::all(0), cv::Scalar::all(255));
             ref_mat.copyTo(gapi_mat);
         };
 
@@ -104,6 +102,13 @@ protected:
 
     cv::Mat y_ref_mat, uv_ref_mat, y_gapi_mat, uv_gapi_mat;
 };
+
+cv::Scalar cvtBGRToYUVC(const cv::Scalar& bgr);
+void drawMosaicRef(const cv::Mat& mat, const cv::Rect &rect, int cellSz);
+void blendImageRef(cv::Mat& mat,
+                   const cv::Point& org,
+                   const cv::Mat& img,
+                   const cv::Mat& alpha);
 
 #define GAPI_RENDER_TEST_FIXTURE_NV12(Fixture, API, Number, ...)  \
 struct Fixture : public RenderNV12TestBase API {                  \

@@ -45,6 +45,8 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
+#include "opencv2/core/utils/tls.hpp"
+
 namespace cv
 {
 
