@@ -226,13 +226,13 @@ if __name__ == "__main__":
     parser.add_argument('--config_only', action="store_true", help="Only do cmake config")
     parser.add_argument('--enable_exception', action="store_true", help="Enable exception handling")
     # Use flag --cmake option="-D...=ON" only for one argument, if you would add more changes write new cmake_option flags
-    parser.add_argument('--cmake_option', action='append', help="Append CMake options")   
+    parser.add_argument('--cmake_option', action='append', help="Append CMake options")
     # Use flag --build_flags="-s USE_PTHREADS=0 -Os" for one and more arguments as in the example
     parser.add_argument('--build_flags', help="Append Emscripten build options")
     parser.add_argument('--build_wasm_intrin_test', default=False, action="store_true", help="Build WASM intrin tests")
     # Write a path to modify file like argument of this flag
     parser.add_argument('--config', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.config.py'),
-                        help="Specify configuration file with own list of exported into JS functions") 
+                        help="Specify configuration file with own list of exported into JS functions")
 
     args = parser.parse_args()
 
