@@ -439,3 +439,44 @@ class SplitMax(nn.Module):
 model = SplitMax()
 input = Variable(torch.randn(1, 6, 2, 3))
 save_data_and_model("split_max", input, model)
+
+class Squeeze(nn.Module):
+
+    def __init__(self):
+        super(Squeeze, self).__init__()
+
+    def forward(self, x):
+        return torch.squeeze(x, dim=1)
+
+input = Variable(torch.randn(3, 1, 2, 4))
+model = Squeeze()
+model.eval()
+save_data_and_model("squeeze", input, model)
+
+class Div(nn.Module):
+
+    def __init__(self):
+        super(Div, self).__init__()
+
+    def forward(self, a, b):
+        return torch.div(a, b)
+
+a = Variable(torch.randn(1, 3, 2, 2))
+b = Variable(torch.randn(1, 3, 2, 2))
+model = Div()
+model.eval()
+save_data_and_model_multy_inputs("div", model, a, b)
+
+class ReduceL2(nn.Module):
+
+    def __init__(self):
+        super(ReduceL2, self).__init__()
+
+    def forward(self, x):
+        norm = torch.norm(x, p=2, dim=1, keepdim=True)
+        return torch.div(x, norm)
+
+input = Variable(torch.randn(1, 3, 2, 4))
+model = ReduceL2()
+model.eval()
+save_data_and_model("reduceL2", input, model)
