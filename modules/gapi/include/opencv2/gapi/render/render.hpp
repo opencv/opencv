@@ -22,7 +22,6 @@ namespace cv
 {
 namespace gapi
 {
-
 namespace wip
 {
 namespace draw
@@ -122,7 +121,7 @@ struct Poly
     cv::Scalar             color;   //!< The line color
     int                    thick;   //!< The thickness of line
     int                    lt;      //!< The Type of the line. See #LineTypes
-    int                    shift;   //!< The number of fractional bits in the point coordinates
+    int                    shift;   //!< The number of fractional bits in the point coordinate
 };
 
 using Prim  = util::variant

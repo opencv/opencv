@@ -5,7 +5,7 @@
 
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 
-GAPI_RENDER_OCV_KERNEL(RenderBGRImpl, cv::gapi::wip::draw::GRenderBGR)
+GAPI_RENDER_OCV_KERNEL(RenderBGROCVImpl, cv::gapi::wip::draw::GRenderBGR)
 {
     static void run(const cv::Mat& in, const cv::gapi::wip::draw::Prims& prims, cv::Mat& out)
     {
@@ -20,7 +20,7 @@ GAPI_RENDER_OCV_KERNEL(RenderBGRImpl, cv::gapi::wip::draw::GRenderBGR)
     }
 };
 
-GAPI_RENDER_OCV_KERNEL(RenderNV12Impl, cv::gapi::wip::draw::GRenderNV12)
+GAPI_RENDER_OCV_KERNEL(RenderNV12OCVImpl, cv::gapi::wip::draw::GRenderNV12)
 {
     static void run(const cv::Mat& in_y,
                     const cv::Mat& in_uv,
@@ -76,6 +76,6 @@ GAPI_RENDER_OCV_KERNEL(RenderNV12Impl, cv::gapi::wip::draw::GRenderNV12)
 
 cv::gapi::GKernelPackage cv::gapi::render::ocv::kernels()
 {
-    const static auto pkg = cv::gapi::kernels<RenderBGRImpl, RenderNV12Impl>();
+    const static auto pkg = cv::gapi::kernels<RenderBGROCVImpl, RenderNV12OCVImpl>();
     return pkg;
 }

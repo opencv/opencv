@@ -7,37 +7,32 @@ namespace cv
 {
 namespace gapi
 {
-
-namespace ocv
-{
-} // namespace ocv
-
 namespace wip
 {
 namespace draw
 {
 
-void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz);
-void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha);
-void poly(cv::Mat mat, std::vector<cv::Point>, cv::Scalar color, int lt, int shift);
-
-void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz)
+// FIXME Support `decim` mosaic parameter
+inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
 {
     cv::Mat msc_roi = mat(rect);
     int crop_x = msc_roi.cols - msc_roi.cols % cellSz;
     int crop_y = msc_roi.rows - msc_roi.rows % cellSz;
 
-    for(int i = 0; i < crop_y; i += cellSz )
+    for(int i = 0; i < crop_y; i += cellSz ) {
         for(int j = 0; j < crop_x; j += cellSz) {
             auto cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
             cell_roi = cv::mean(cell_roi);
         }
-
+    }
 };
 
-void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha)
+inline void image(cv::Mat& mat,
+                  const cv::Point& org,
+                  const cv::Mat& img,
+                  const cv::Mat& alpha)
 {
-    auto roi = mat(cv::Rect(org.x, org.y, img.size().width, img.size().height));
+    auto roi = mat(cv::Rect(org, img.size()));
     cv::Mat img32f_w;
     cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
 
@@ -45,6 +40,7 @@ void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha)
     roi32f_w -= img32f_w;
 
     cv::Mat img32f, roi32f;
+
     img.convertTo(img32f, CV_32F, 1.0/255);
     roi.convertTo(roi32f, CV_32F, 1.0/255);
 
@@ -55,10 +51,11 @@ void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha)
     roi32f.convertTo(roi, CV_8U, 255.0);
 };
 
-void poly(cv::Mat mat, std::vector<cv::Point> points, cv::Scalar color, int lt, int shift)
+inline void poly(cv::Mat& mat,
+                 const cv::gapi::wip::draw::Poly& pp)
 {
-    std::vector<std::vector<cv::Point>> pp{points};
-    cv::fillPoly(mat, pp, color, lt, shift);
+    std::vector<std::vector<cv::Point>> points{pp.points};
+    cv::fillPoly(mat, points, pp.color, pp.lt, pp.shift);
 };
 
 struct BGR2YUVConverter
@@ -92,60 +89,60 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
         {
             case Prim::index_of<Rect>():
             {
-                const auto& t_p = cv::util::get<Rect>(p);
-                const auto color = converter.cvtColor(t_p.color);
-                cv::rectangle(in, t_p.rect, color , t_p.thick, t_p.lt, t_p.shift);
+                const auto& rp = cv::util::get<Rect>(p);
+                const auto color = converter.cvtColor(rp.color);
+                cv::rectangle(in, rp.rect, color , rp.thick);
                 break;
             }
 
             case Prim::index_of<Text>():
             {
-                const auto& t_p = cv::util::get<Text>(p);
-                const auto color = converter.cvtColor(t_p.color);
-                cv::putText(in, t_p.text, t_p.org, t_p.ff, t_p.fs,
-                            color, t_p.thick, t_p.lt, t_p.bottom_left_origin);
+                const auto& tp = cv::util::get<Text>(p);
+                const auto color = converter.cvtColor(tp.color);
+                cv::putText(in, tp.text, tp.org, tp.ff, tp.fs, color, tp.thick, tp.lt, tp.bottom_left_origin);
                 break;
             }
 
             case Prim::index_of<Circle>():
             {
-                const auto& c_p = cv::util::get<Circle>(p);
-                const auto color = converter.cvtColor(c_p.color);
-                cv::circle(in, c_p.center, c_p.radius, color, c_p.thick, c_p.lt, c_p.shift);
+                const auto& cp = cv::util::get<Circle>(p);
+                const auto color = converter.cvtColor(cp.color);
+                cv::circle(in, cp.center, cp.radius, color, cp.thick);
                 break;
             }
 
             case Prim::index_of<Line>():
             {
-                const auto& l_p = cv::util::get<Line>(p);
-                const auto color = converter.cvtColor(l_p.color);
-                cv::line(in, l_p.pt1, l_p.pt2, color, l_p.thick, l_p.lt, l_p.shift);
+                const auto& lp = cv::util::get<Line>(p);
+                const auto color = converter.cvtColor(lp.color);
+                cv::line(in, lp.pt1, lp.pt2, color, lp.thick);
                 break;
             }
 
             case Prim::index_of<Mosaic>():
             {
-                const auto& l_p = cv::util::get<Mosaic>(p);
-                mosaic(in, l_p.mos, l_p.cellSz);
+                const auto& mp = cv::util::get<Mosaic>(p);
+                GAPI_Assert(mp.decim == 0 && "Only decim = 0 supported now");
+                mosaic(in, mp.mos, mp.cellSz);
                 break;
             }
 
             case Prim::index_of<Image>():
             {
-                const auto& i_p = cv::util::get<Image>(p);
+                const auto& ip = cv::util::get<Image>(p);
 
                 cv::Mat img;
-                converter.cvtImg(i_p.img, img);
+                converter.cvtImg(ip.img, img);
 
-                image(in, i_p.org, img, i_p.alpha);
+                image(in, ip.org, img, ip.alpha);
                 break;
             }
 
             case Prim::index_of<Poly>():
             {
-                const auto& p_p = cv::util::get<Poly>(p);
-                const auto color = converter.cvtColor(p_p.color);
-                poly(in, p_p.points, color, p_p.lt, p_p.shift);
+                auto pp = cv::util::get<Poly>(p);
+                pp.color = converter.cvtColor(pp.color);
+                poly(in, pp);
                 break;
             }
 
