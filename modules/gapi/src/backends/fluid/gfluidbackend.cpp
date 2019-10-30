@@ -69,7 +69,7 @@ namespace
         {
             GFluidModel fm(graph);
             auto fluid_impl = cv::util::any_cast<cv::GFluidKernel>(impl.opaque);
-            fm.metadata(op_node).set(cv::gimpl::FluidUnit{fluid_impl, {}, 0, {}, 0.0});
+            fm.metadata(op_node).set(cv::gimpl::FluidUnit{fluid_impl, {}, 0, -1, {}, 0.0});
         }
 
         virtual EPtr compile(const ade::Graph &graph,
@@ -178,6 +178,12 @@ private:
     virtual void setRatio(double) override { /* nothing */ }
 public:
     using FluidAgent::FluidAgent;
+    int m_window;
+
+    FluidFilterAgent(const ade::Graph &g, ade::NodeHandle nh)
+        : FluidAgent(g, nh)
+        , m_window(GConstFluidModel(g).metadata(nh).get<FluidUnit>().window)
+    {}
 };
 
 struct FluidResizeAgent : public FluidAgent
@@ -287,11 +293,11 @@ static int calcResizeWindow(int inH, int outH)
     }
 }
 
-static int maxLineConsumption(const cv::GFluidKernel& k, int inH, int outH, int lpi, std::size_t inPort)
+static int maxLineConsumption(const cv::GFluidKernel::Kind kind, int window, int inH, int outH, int lpi, std::size_t inPort)
 {
-    switch (k.m_kind)
+    switch (kind)
     {
-    case cv::GFluidKernel::Kind::Filter: return k.m_window + lpi - 1; break;
+    case cv::GFluidKernel::Kind::Filter: return window + lpi - 1; break;
     case cv::GFluidKernel::Kind::Resize:
     {
         if  (inH >= outH)
@@ -312,11 +318,11 @@ static int maxLineConsumption(const cv::GFluidKernel& k, int inH, int outH, int 
     }
 }
 
-static int borderSize(const cv::GFluidKernel& k)
+static int borderSize(const cv::GFluidKernel::Kind kind, int window)
 {
-    switch (k.m_kind)
+    switch (kind)
     {
-    case cv::GFluidKernel::Kind::Filter: return (k.m_window - 1) / 2; break;
+    case cv::GFluidKernel::Kind::Filter: return (window - 1) / 2; break;
     // Resize never reads from border pixels
     case cv::GFluidKernel::Kind::Resize: return 0; break;
     case cv::GFluidKernel::Kind::NV12toRGB: return 0; break;
@@ -406,13 +412,13 @@ std::pair<int,int> cv::gimpl::FluidUpscaleMapper::linesReadAndNextWindow(int out
 int cv::gimpl::FluidFilterAgent::firstWindow(std::size_t) const
 {
     int lpi = std::min(k.m_lpi, m_outputLines - m_producedLines);
-    return k.m_window + lpi - 1;
+    return m_window + lpi - 1;
 }
 
 std::pair<int,int> cv::gimpl::FluidFilterAgent::linesReadAndnextWindow(std::size_t) const
 {
     int lpi = std::min(k.m_lpi, m_outputLines - m_producedLines - k.m_lpi);
-    return std::make_pair(k.m_lpi, k.m_window - 1 + lpi);
+    return std::make_pair(k.m_lpi, m_window - 1 + lpi);
 }
 
 int cv::gimpl::FluidResizeAgent::firstWindow(std::size_t) const
@@ -1016,14 +1022,14 @@ namespace
                     if (d.shape == cv::GShape::GMAT)
                     {
                         auto port = g.metadata(in_edge).get<Input>().port;
-                        fu.line_consumption[port] = maxLineConsumption(fu.k, in_h, out_h, fu.k.m_lpi, port);
+                        fu.line_consumption[port] = maxLineConsumption(fu.k.m_kind, fu.window, in_h, out_h, fu.k.m_lpi, port);
 
                         GModel::log(g, node, "Line consumption (port " + std::to_string(port) + "): "
                                     + std::to_string(fu.line_consumption[port]));
                     }
                 }
 
-                fu.border_size = borderSize(fu.k);
+                fu.border_size = borderSize(fu.k.m_kind, fu.window);
                 GModel::log(g, node, "Border size: " + std::to_string(fu.border_size));
             }
         }
@@ -1489,7 +1495,7 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
     // FIXME:
     // move to unpackKernel method
     // when https://gitlab-icv.inn.intel.com/G-API/g-api/merge_requests/66 is merged
-    ectx.addPass("exec", "init_fluid_unit_borders", [](ade::passes::PassContext &ctx)
+    ectx.addPass("exec", "init_fluid_unit_windows_and_borders", [](ade::passes::PassContext &ctx)
     {
         GModel::Graph g(ctx.graph);
         if (!GModel::isActive(g, cv::gapi::fluid::backend()))  // FIXME: Rearchitect this!
@@ -1505,9 +1511,13 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                 // FIXME: check that op has only one data node on input
                 auto &fu = fg.metadata(node).get<FluidUnit>();
                 const auto &op = g.metadata(node).get<Op>();
+                auto inputMeta = GModel::collectInputMeta(fg, node);
+
+                // Trigger user-defined "getWindow" callback
+                fu.window = fu.k.m_gw(inputMeta, op.args);
 
                 // Trigger user-defined "getBorder" callback
-                fu.border = fu.k.m_b(GModel::collectInputMeta(fg, node), op.args);
+                fu.border = fu.k.m_b(inputMeta, op.args);
             }
         }
     });

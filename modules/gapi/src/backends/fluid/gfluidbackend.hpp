@@ -27,6 +27,7 @@ struct FluidUnit
     GFluidKernel k;
     gapi::fluid::BorderOpt border;
     int border_size;
+    int window;
     std::vector<int> line_consumption;
     double ratio;
 };
