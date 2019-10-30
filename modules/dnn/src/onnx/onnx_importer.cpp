@@ -520,7 +520,7 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Div")
         {
-            if (node_proto.input_size() == 2) {
+            if (constBlobs.find(node_proto.input(1)) == constBlobs.end()) {
                 layerParams.type = "Eltwise";
                 layerParams.set("operation", "div");
             } else {
