@@ -131,6 +131,9 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #if (_WIN32_WINNT >= 0x0602)
   #include <synchapi.h>
 #endif
+#if (_WIN32_WINNT >= 0x0600)
+  #include <fibersapi.h>
+#endif // _WIN32_WINNT >= 0x0600
 #undef small
 #undef min
 #undef max
@@ -142,7 +145,7 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #ifndef __cplusplus_winrt
 #include <windows.storage.h>
 #pragma comment(lib, "runtimeobject.lib")
-#endif
+#endif // WINRT
 
 std::wstring GetTempPathWinRT()
 {
@@ -1422,24 +1425,41 @@ void  TlsAbstraction::SetData(void *pData)
     tlsData = pData;
 }
 #else //WINRT
+static void opencv_fls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
 {
+#if (_WIN32_WINNT < 0x0600)
     tlsKey = TlsAlloc();
+#else // _WIN32_WINNT < 0x0600
+    tlsKey = FlsAlloc(opencv_fls_destructor);
+#endif // _WIN32_WINNT < 0x0600
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
 TlsAbstraction::~TlsAbstraction()
 {
+#if (_WIN32_WINNT < 0x0600)
     TlsFree(tlsKey);
+#else // _WIN32_WINNT < 0x0600
+    FlsFree(tlsKey);
+#endif // _WIN32_WINNT < 0x0600
 }
 void* TlsAbstraction::GetData() const
 {
+#if _WIN32_WINNT < 0x0600
     return TlsGetValue(tlsKey);
+#else // _WIN32_WINNT < 0x0600
+    return FlsGetValue(tlsKey);
+#endif // _WIN32_WINNT < 0x0600
 }
 void  TlsAbstraction::SetData(void *pData)
 {
+#if (_WIN32_WINNT < 0x0600)
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
+#else // _WIN32_WINNT < 0x0600
+    CV_Assert(FlsSetValue(tlsKey, pData) == TRUE);
+#endif // _WIN32_WINNT < 0x0600
 }
-#endif
+#endif // WINRT
 #else // _WIN32
 static void opencv_tls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
@@ -1674,7 +1694,12 @@ static void opencv_tls_destructor(void* pData)
 {
     getTlsStorage().releaseThread(pData);
 }
-#endif
+#else	// _WIN32
+static void opencv_fls_destructor(void* pData)
+{
+    getTlsStorage().releaseThread(pData);
+}
+#endif	// _WIN32
 
 } // namespace details
 using namespace details;
