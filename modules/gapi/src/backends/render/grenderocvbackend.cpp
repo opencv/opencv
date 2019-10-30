@@ -138,9 +138,20 @@ namespace {
             auto has_use_freetype = cv::gimpl::getCompileArg<cv::gapi::wip::draw::use_freetype>(args);
 
             using namespace cv::gapi::wip::draw;
-            auto mc = has_use_freetype ? make_mask_creator<FreeTypeBitmaskCreator>::create(has_use_freetype.value().path)
-                                       : make_mask_creator<OCVBitmaskCreator>::create();
 
+            std::unique_ptr<IBitmaskCreator> mc;
+            if (has_use_freetype)
+            {
+#ifndef HAVE_FREETYPE
+                throw std::runtime_error("Freetype not found");
+#else
+                mc.reset(new FreeTypeBitmaskCreator(has_use_freetype.value().path));
+#endif
+            }
+            else
+            {
+                mc.reset(new OCVBitmaskCreator());
+            }
             return EPtr{new cv::gimpl::render::ocv::GRenderExecutable(graph, nodes, std::move(mc))};
         }
     };

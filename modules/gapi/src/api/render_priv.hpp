@@ -32,32 +32,6 @@ public:
     virtual ~IBitmaskCreator() = default;
 };
 
-template<typename T>
-struct make_mask_creator
-{
-    template <typename... Args>
-    static std::unique_ptr<IBitmaskCreator> create(Args&&... args)
-    {
-        return std::unique_ptr<IBitmaskCreator>(new T(std::forward<Args>(args)...));
-    }
-};
-
-class FreeTypeBitmaskCreator;
-template <>
-struct make_mask_creator<FreeTypeBitmaskCreator>
-{
-    template <typename... Args>
-    static std::unique_ptr<IBitmaskCreator> create(Args&&... args)
-    {
-#ifdef HAVE_FREETYPE
-        return std::unique_ptr<IBitmaskCreator>(new FreeTypeBitmaskCreator(std::forward<Args>(args)...));
-#endif
-        cv::util::suppress_unused_warning(args...);
-        throw std::runtime_error("Freetype not found");
-        return nullptr;
-    }
-};
-
 } // namespace draw
 } // namespace wip
 } // namespace gapi

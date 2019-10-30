@@ -11,6 +11,9 @@
 
 #include "api/render_priv.hpp"
 
+#include "api/freetype_mask_creator.hpp"
+#include "api/ocv_mask_creator.hpp"
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 

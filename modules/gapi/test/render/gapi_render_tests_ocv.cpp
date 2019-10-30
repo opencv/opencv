@@ -33,9 +33,6 @@ TEST_P(RenderBGROCVTestTexts, AccuracyTest)
         cv::putText(ref_mat, text, org, ff, fs, color, thick, lt, blo);
     }
 
-    cv::imshow("gapi_mat", gapi_mat);
-    cv::imshow("ref_mat", ref_mat);
-    cv::waitKey(0);
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
