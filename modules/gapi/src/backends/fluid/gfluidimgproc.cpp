@@ -778,7 +778,6 @@ GAPI_FLUID_KERNEL(GFluidSepFilter, cv::gapi::imgproc::GSepFilter, true)
 GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
 {
     // TODO: support kernel height 3, 5, 7, 9, ...
-    static const int Window = 3;
 
     static void run(const     View  &    src,
                     const cv::Size  &    ksize,
@@ -828,6 +827,7 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
                             const cv::Scalar & /* borderValue */,
                                   Buffer  &    scratch)
     {
+        GAPI_Assert(ksize.height == ksize.width);
         int kxsize = ksize.width;
         int kysize = ksize.height;
 
@@ -835,7 +835,7 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         int chan  = in.chan;
 
         int buflen = kxsize + kysize +       // x, y kernels
-                     width * chan * Window;  // work buffers
+                     width * chan * ksize.height;  // work buffers
 
         cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
@@ -875,6 +875,17 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
                             const cv::Scalar  &    borderValue)
     {
         return { borderType, borderValue};
+    }
+
+    static int getWindow(const cv::GMatDesc& /* src */,
+                         const cv::Size&        ksize,
+                         double              /* sigmaX */,
+                         double              /* sigmaY */,
+                         int                 /* borderType */,
+                         const cv::Scalar&   /* borderValue */)
+    {
+        GAPI_Assert(ksize.height == ksize.width);
+        return ksize.height;
     }
 };
 
@@ -1688,8 +1699,8 @@ GAPI_FLUID_KERNEL(GFluidRGB2YUV422, cv::gapi::imgproc::GRGB2YUV422, false)
     static const int Window = 1;
     static const auto Kind = cv::GFluidKernel::Kind::Filter;
 
-    static void run(const cv::gapi::fluid::View&   in,
-            cv::gapi::fluid::Buffer& out)
+    static void run(const cv::gapi::fluid::View& in,
+                    cv::gapi::fluid::Buffer& out)
     {
         const auto *src = in.InLine<uchar>(0);
         auto *dst = out.OutLine<uchar>();
