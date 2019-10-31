@@ -1425,7 +1425,7 @@ void  TlsAbstraction::SetData(void *pData)
     tlsData = pData;
 }
 #else //WINRT
-static void WINAPI opencv_fls_destructor(void* pData);
+static void NTAPI opencv_fls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
 {
 #if (_WIN32_WINNT < 0x0600)
