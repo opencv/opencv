@@ -897,8 +897,7 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
     int *tabLPtr = tabL;
     int *tabRPtr = tabR;
 
-    double granularity = (double)std::max(1., (double)(dsize.height / cv::getNumThreads()));
-    cv::parallel_for_(Range(0,dsize.height), cv::PyrDownInvoker<CastOp>(_src, _dst, borderType, &tabRPtr, &tabM, &tabLPtr), granularity);
+    cv::parallel_for_(Range(0,dsize.height), cv::PyrDownInvoker<CastOp>(_src, _dst, borderType, &tabRPtr, &tabM, &tabLPtr), cv::getNumThreads());
 }
 
 
