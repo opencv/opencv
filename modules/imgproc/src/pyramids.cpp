@@ -732,11 +732,6 @@ struct PyrDownInvoker : ParallelLoopBody
         _tabL = tabL;
     }
 
-    inline int syloopboundary(int y) const
-    {
-        return y*2 + 2;
-    }
-
     void operator()(const Range& range) const CV_OVERRIDE;
 
     int **_tabR;
@@ -798,7 +793,7 @@ void PyrDownInvoker<CastOp>::operator()(const Range& range) const
     WT* rows[PD_SZ];
     CastOp castOp;
 
-    int sy0 = -PD_SZ/2, sy = syloopboundary(range.start-1) + sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+    int sy0 = -PD_SZ/2, sy = range.start * 2 + sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
 
     ssize.width *= cn;
     dsize.width *= cn;
@@ -810,7 +805,8 @@ void PyrDownInvoker<CastOp>::operator()(const Range& range) const
         WT *row0, *row1, *row2, *row3, *row4;
 
         // fill the ring buffer (horizontal convolution and decimation)
-        for( ; sy <= syloopboundary(y); sy++ )
+        int sy_limit = y*2 + 2;
+        for( ; sy <= sy_limit; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
             int _sy = borderInterpolate(sy, ssize.height, _borderType);
