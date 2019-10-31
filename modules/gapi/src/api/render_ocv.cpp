@@ -197,7 +197,7 @@ void drawPrimitivesOCV(cv::Mat& in,
                 const auto& ftp  = cv::util::get<FText>(p);
                 const auto color = converter.cvtColor(ftp.color);
 
-                GAPI_Assert(ftpr && "I must pass cv::gapi::wip::draw::freetype_font"
+                GAPI_Assert(ftpr && "You must pass cv::gapi::wip::draw::freetype_font"
                                     " to the graph compile arguments");
                 int baseline = 0;
                 auto size    = ftpr->getTextSize(ftp.text, ftp.fh, &baseline);
