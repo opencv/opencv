@@ -320,9 +320,6 @@ TEST_P(Test_ONNX_layers, MultyInputs)
 
 TEST_P(Test_ONNX_layers, Div)
 {
-    if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
-        throw SkipTestException("Only OpenCV CPU is supported");
-
     const String model =  _tf("models/div.onnx");
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());

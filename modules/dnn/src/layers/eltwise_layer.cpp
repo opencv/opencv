@@ -100,7 +100,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return (backendId == DNN_BACKEND_OPENCV && (op != DIV || preferableTarget == DNN_TARGET_CPU)) ||
+        return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && !variableChannels &&
                 (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()));
@@ -407,6 +407,11 @@ public:
                 multiply(inputs[0], inputs[1], outputs[0]);
                 for (int i = 2; i < inputs.size(); ++i)
                     multiply(inputs[i], outputs[0], outputs[0]);
+                break;
+            case DIV:
+                divide(inputs[0], inputs[1], outputs[0]);
+                for (int i = 2; i < inputs.size(); ++i)
+                    divide(outputs[0], inputs[i], outputs[0]);
                 break;
             case MAX:
                 max(inputs[0], inputs[1], outputs[0]);
