@@ -9,11 +9,14 @@ namespace detail
 
     struct SharrDerivInvoker : ParallelLoopBody
     {
-        SharrDerivInvoker(const Mat& _src, const Mat& _dst);
+        SharrDerivInvoker(const Mat& _src, const Mat& _dst)
+            : src(_src), dst(_dst)
+        { }
 
         void operator()(const Range& range) const CV_OVERRIDE;
-        const Mat* src;
-        const Mat* dst;
+
+        const Mat& src;
+        const Mat& dst;
     };
 
     struct LKTrackerInvoker : ParallelLoopBody

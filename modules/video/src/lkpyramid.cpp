@@ -64,16 +64,10 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 
 }//namespace
 
-cv::detail::SharrDerivInvoker::SharrDerivInvoker(const Mat& _src, const Mat& _dst)
-{
-    src = &_src;
-    dst = &_dst;
-}
-
 void cv::detail::SharrDerivInvoker::operator()(const Range& range) const
 {
     using cv::detail::deriv_type;
-    int rows = src->rows, cols = src->cols, cn = src->channels(), colsn = cols*cn;
+    int rows = src.rows, cols = src.cols, cn = src.channels(), colsn = cols*cn;
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && tegra::calcSharrDeriv(src, dst))
@@ -90,10 +84,10 @@ void cv::detail::SharrDerivInvoker::operator()(const Range& range) const
 
     for( y = range.start; y < range.end; y++ )
     {
-        const uchar* srow0 = src->ptr<uchar>(y > 0 ? y-1 : rows > 1 ? 1 : 0);
-        const uchar* srow1 = src->ptr<uchar>(y);
-        const uchar* srow2 = src->ptr<uchar>(y < rows-1 ? y+1 : rows > 1 ? rows-2 : 0);
-        deriv_type* drow = (deriv_type *)dst->ptr<deriv_type>(y);
+        const uchar* srow0 = src.ptr<uchar>(y > 0 ? y-1 : rows > 1 ? 1 : 0);
+        const uchar* srow1 = src.ptr<uchar>(y);
+        const uchar* srow2 = src.ptr<uchar>(y < rows-1 ? y+1 : rows > 1 ? rows-2 : 0);
+        deriv_type* drow = (deriv_type *)dst.ptr<deriv_type>(y);
 
         // do vertical convolution
         x = 0;
