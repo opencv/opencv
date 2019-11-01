@@ -131,9 +131,10 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #if (_WIN32_WINNT >= 0x0602)
   #include <synchapi.h>
 #endif
-#if (_WIN32_WINNT >= 0x0600)
+#if ((_WIN32_WINNT >= 0x0600) && !defined(CV_DISABLE_FLS)) || defined(CV_FORCE_FLS)
   #include <fibersapi.h>
-#endif // _WIN32_WINNT >= 0x0600
+  #define CV_USE_FLS
+#endif
 #undef small
 #undef min
 #undef max
@@ -1425,39 +1426,41 @@ void  TlsAbstraction::SetData(void *pData)
     tlsData = pData;
 }
 #else //WINRT
+#ifdef CV_USE_FLS
 static void NTAPI opencv_fls_destructor(void* pData);
+#endif // CV_USE_FLS
 TlsAbstraction::TlsAbstraction()
 {
-#if (_WIN32_WINNT < 0x0600)
+#ifndef CV_USE_FLS
     tlsKey = TlsAlloc();
-#else // _WIN32_WINNT < 0x0600
+#else // CV_USE_FLS
     tlsKey = FlsAlloc(opencv_fls_destructor);
-#endif // _WIN32_WINNT < 0x0600
+#endif // CV_USE_FLS
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
 TlsAbstraction::~TlsAbstraction()
 {
-#if (_WIN32_WINNT < 0x0600)
+#ifndef CV_USE_FLS
     TlsFree(tlsKey);
-#else // _WIN32_WINNT < 0x0600
+#else // CV_USE_FLS
     FlsFree(tlsKey);
-#endif // _WIN32_WINNT < 0x0600
+#endif // CV_USE_FLS
 }
 void* TlsAbstraction::GetData() const
 {
-#if _WIN32_WINNT < 0x0600
+#ifndef CV_USE_FLS
     return TlsGetValue(tlsKey);
-#else // _WIN32_WINNT < 0x0600
+#else // CV_USE_FLS
     return FlsGetValue(tlsKey);
-#endif // _WIN32_WINNT < 0x0600
+#endif // CV_USE_FLS
 }
 void  TlsAbstraction::SetData(void *pData)
 {
-#if (_WIN32_WINNT < 0x0600)
+#ifndef CV_USE_FLS
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
-#else // _WIN32_WINNT < 0x0600
+#else // CV_USE_FLS
     CV_Assert(FlsSetValue(tlsKey, pData) == TRUE);
-#endif // _WIN32_WINNT < 0x0600
+#endif // CV_USE_FLS
 }
 #endif // WINRT
 #else // _WIN32
@@ -1694,12 +1697,14 @@ static void opencv_tls_destructor(void* pData)
 {
     getTlsStorage().releaseThread(pData);
 }
-#else	// _WIN32
+#else // _WIN32
+#ifdef CV_USE_FLS
 static void WINAPI opencv_fls_destructor(void* pData)
 {
     getTlsStorage().releaseThread(pData);
 }
-#endif	// _WIN32
+#endif // CV_USE_FLS
+#endif // _WIN32
 
 } // namespace details
 using namespace details;
