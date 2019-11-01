@@ -95,8 +95,8 @@ class cuda_test(NewOpenCVTests):
     def test_cudabgsegm_existence(self):
         #Test at least the existence of wrapped functions for now
 
-        bgsub = cv.cuda.createBackgroundSubtractorMOG()
-        bgsub = cv.cuda.createBackgroundSubtractorMOG2()
+        _bgsub = cv.cuda.createBackgroundSubtractorMOG()
+        _bgsub = cv.cuda.createBackgroundSubtractorMOG2()
 
         self.assertTrue(True) #It is sufficient that no exceptions have been there
 
@@ -104,8 +104,8 @@ class cuda_test(NewOpenCVTests):
         #Test at least the existence of wrapped functions for now
 
         try:
-            writer = cv.cudacodec.createVideoWriter("tmp", (128, 128), 30)
-            reader = cv.cudacodec.createVideoReader("tmp")
+            _writer = cv.cudacodec.createVideoWriter("tmp", (128, 128), 30)
+            _reader = cv.cudacodec.createVideoReader("tmp")
         except cv.error as e:
             self.assertEqual(e.code, cv.Error.StsNotImplemented)
             self.skipTest("NVCUVENC is not installed")
@@ -125,11 +125,11 @@ class cuda_test(NewOpenCVTests):
         cuMat2 = cv.cuda.cvtColor(cuMat2, cv.COLOR_RGB2GRAY)
 
         fast = cv.cuda_FastFeatureDetector.create()
-        kps = fast.detectAsync(cuMat1)
+        _kps = fast.detectAsync(cuMat1)
 
         orb = cv.cuda_ORB.create()
-        kps1, descs1 = orb.detectAndComputeAsync(cuMat1, None)
-        kps2, descs2 = orb.detectAndComputeAsync(cuMat2, None)
+        _kps1, descs1 = orb.detectAndComputeAsync(cuMat1, None)
+        _kps2, descs2 = orb.detectAndComputeAsync(cuMat2, None)
 
         bf = cv.cuda_DescriptorMatcher.createBFMatcher(cv.NORM_HAMMING)
         matches = bf.match(descs1, descs2)
@@ -144,20 +144,20 @@ class cuda_test(NewOpenCVTests):
     def test_cudafilters_existence(self):
         #Test at least the existence of wrapped functions for now
 
-        filter = cv.cuda.createBoxFilter(cv.CV_8UC1, -1, (3, 3))
-        filter = cv.cuda.createLinearFilter(cv.CV_8UC4, -1, np.eye(3))
-        filter = cv.cuda.createLaplacianFilter(cv.CV_16UC1, -1, ksize=3)
-        filter = cv.cuda.createSeparableLinearFilter(cv.CV_8UC1, -1, np.eye(3), np.eye(3))
-        filter = cv.cuda.createDerivFilter(cv.CV_8UC1, -1, 1, 1, 3)
-        filter = cv.cuda.createSobelFilter(cv.CV_8UC1, -1, 1, 1)
-        filter = cv.cuda.createScharrFilter(cv.CV_8UC1, -1, 1, 0)
-        filter = cv.cuda.createGaussianFilter(cv.CV_8UC1, -1, (3, 3), 16)
-        filter = cv.cuda.createMorphologyFilter(cv.MORPH_DILATE, cv.CV_32FC1, np.eye(3))
-        filter = cv.cuda.createBoxMaxFilter(cv.CV_8UC1, (3, 3))
-        filter = cv.cuda.createBoxMinFilter(cv.CV_8UC1, (3, 3))
-        filter = cv.cuda.createRowSumFilter(cv.CV_8UC1, cv.CV_32FC1, 3)
-        filter = cv.cuda.createColumnSumFilter(cv.CV_8UC1, cv.CV_32FC1, 3)
-        filter = cv.cuda.createMedianFilter(cv.CV_8UC1, 3)
+        _filter = cv.cuda.createBoxFilter(cv.CV_8UC1, -1, (3, 3))
+        _filter = cv.cuda.createLinearFilter(cv.CV_8UC4, -1, np.eye(3))
+        _filter = cv.cuda.createLaplacianFilter(cv.CV_16UC1, -1, ksize=3)
+        _filter = cv.cuda.createSeparableLinearFilter(cv.CV_8UC1, -1, np.eye(3), np.eye(3))
+        _filter = cv.cuda.createDerivFilter(cv.CV_8UC1, -1, 1, 1, 3)
+        _filter = cv.cuda.createSobelFilter(cv.CV_8UC1, -1, 1, 1)
+        _filter = cv.cuda.createScharrFilter(cv.CV_8UC1, -1, 1, 0)
+        _filter = cv.cuda.createGaussianFilter(cv.CV_8UC1, -1, (3, 3), 16)
+        _filter = cv.cuda.createMorphologyFilter(cv.MORPH_DILATE, cv.CV_32FC1, np.eye(3))
+        _filter = cv.cuda.createBoxMaxFilter(cv.CV_8UC1, (3, 3))
+        _filter = cv.cuda.createBoxMinFilter(cv.CV_8UC1, (3, 3))
+        _filter = cv.cuda.createRowSumFilter(cv.CV_8UC1, cv.CV_32FC1, 3)
+        _filter = cv.cuda.createColumnSumFilter(cv.CV_8UC1, cv.CV_32FC1, 3)
+        _filter = cv.cuda.createMedianFilter(cv.CV_8UC1, 3)
 
         self.assertTrue(True) #It is sufficient that no exceptions have been there
 
@@ -195,7 +195,7 @@ class cuda_test(NewOpenCVTests):
         cv.cuda.meanShiftSegmentation(cuC4, 10, 5, 5).download()
 
         clahe = cv.cuda.createCLAHE()
-        clahe.apply(cuC1, cv.cuda_Stream.Null());
+        clahe.apply(cuC1, cv.cuda_Stream.Null())
 
         histLevels = cv.cuda.histEven(cuC3, 20, 0, 255)
         cv.cuda.histRange(cuC1, histLevels)
