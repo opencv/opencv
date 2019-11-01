@@ -407,11 +407,11 @@ TEST_P(Objdetect_QRCode_Multiple, regression)
     std::vector<cv::String> decoded_info;
     QRCodeDetector qrcode;
 #ifdef HAVE_QUIRC
-    decoded_info = qrcode.MultipleDetectAndDecode(src, corners, straight_barcode);
+    decoded_info = qrcode.multipleDetectAndDecode(src, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
 #else
-    ASSERT_TRUE(qrcode.MultipleDetect(src, corners));
+    ASSERT_TRUE(qrcode.multipleDetect(src, corners));
 #endif
 
     const std::string dataset_config = findDataFile(root + "dataset_config.json");
