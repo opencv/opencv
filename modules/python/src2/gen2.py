@@ -73,7 +73,7 @@ struct PyOpenCV_Converter< ${cname} >
             return true;
         }
         ${mappable_code}
-        failmsg("Expected ${cname} for argument '%%s'", name);
+        failmsg("Expected ${cname} for argument '%s'", name);
         return false;
     }
 };
