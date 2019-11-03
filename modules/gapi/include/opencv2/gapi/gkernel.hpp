@@ -108,9 +108,33 @@ namespace detail
         return in_args.at(idx).template get<T>();
     }
 
+    // Helper for return type definition. Provides the actual logic of how return type is defined.
+    template<bool, typename...>
+    struct return_type_helper_impl;
+
+    // Helper for return type definition. Generalizes type definition for single and multiple return
+    // values in the context of G-API kernels
+    template<typename... Ts>
+    struct return_type_helper
+    {
+        using type = typename
+            return_type_helper_impl<std::tuple_size<std::tuple<Ts...>>::value == 1, Ts...>::type;
+    };
+
+    template<typename T>
+    struct return_type_helper_impl<true, T>
+    {
+        using type = T;
+    };
+
+    template<typename... Ts>
+    struct return_type_helper_impl<false, Ts...>
+    {
+        using type = std::tuple<Ts...>;
+    };
+
     // 4. The MetaHelper itself: an entity which generates outMeta() call
     //    based on kernel signature, with arguments properly substituted.
-    // 4.1 - case for multiple return values
     // FIXME: probably can be simplified with std::apply or analogue.
     template<typename, typename, typename>
     struct MetaHelper;
@@ -125,8 +149,9 @@ namespace detail
                                          detail::Seq<OIs...>)
         {
             // FIXME: decay?
-            using R   = std::tuple<typename MetaType<Outs>::type...>;
-            const R r = K::outMeta( get_in_meta<Ins>(in_meta, in_args, IIs)... );
+            using R = typename return_type_helper<typename MetaType<Outs>::type...>::type;
+            const auto r = tuple_wrap_helper<R>::get(
+                K::outMeta( get_in_meta<Ins>(in_meta, in_args, IIs)... ));
             return GMetaArgs{ GMetaArg(std::get<OIs>(r))... };
         }
         // FIXME: help users identify how outMeta must look like (via default impl w/static_assert?)
@@ -138,32 +163,6 @@ namespace detail
                                    in_args,
                                    typename detail::MkSeq<sizeof...(Ins)>::type(),
                                    typename detail::MkSeq<sizeof...(Outs)>::type());
-        }
-    };
-
-    // 4.1 - case for a single return value
-    // FIXME: How to avoid duplication here?
-    template<typename K, typename... Ins, typename Out>
-    struct MetaHelper<K, std::tuple<Ins...>, Out >
-    {
-        template<int... IIs>
-        static GMetaArgs getOutMeta_impl(const GMetaArgs &in_meta,
-                                         const GArgs &in_args,
-                                         detail::Seq<IIs...>)
-        {
-            // FIXME: decay?
-            using R = typename MetaType<Out>::type;
-            const R r = K::outMeta( get_in_meta<Ins>(in_meta, in_args, IIs)... );
-            return GMetaArgs{ GMetaArg(r) };
-        }
-        // FIXME: help users identify how outMeta must look like (via default impl w/static_assert?)
-
-        static GMetaArgs getOutMeta(const GMetaArgs &in_meta,
-                                    const GArgs &in_args)
-        {
-            return getOutMeta_impl(in_meta,
-                                   in_args,
-                                   typename detail::MkSeq<sizeof...(Ins)>::type());
         }
     };
 
@@ -208,7 +207,7 @@ template<typename, typename> class GKernelType;
 
 template<typename K, typename R, typename... Args>
 class GKernelType<K, std::function<R(Args...)> >
-    : public detail::MetaHelper<K, std::tuple<Args...>, R>
+    : public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R>>
     , public detail::NoTag
 {
 public:
