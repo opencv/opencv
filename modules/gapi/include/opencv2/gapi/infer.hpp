@@ -23,23 +23,6 @@
 
 namespace cv {
 
-namespace detail {
-    // This tiny class eliminates the semantic difference between
-    // GKernelType and GKernelTypeM.
-    // FIXME: Something similar can be reused for regular kernels
-    template<typename, typename>
-    struct KernelTypeMedium;
-
-    template<class K, typename... R, typename... Args>
-    struct KernelTypeMedium<K, std::function<std::tuple<R...>(Args...)> >:
-        public GKernelTypeM<K, std::function<std::tuple<R...>(Args...)> > {};
-
-    template<class K, typename R, typename... Args>
-    struct KernelTypeMedium<K, std::function<R(Args...)> >:
-        public GKernelType<K, std::function<R(Args...)> > {};
-
-} // namespace detail
-
 template<typename, typename> class GNetworkType;
 
 // TODO: maybe tuple_wrap_helper from util.hpp may help with this.
@@ -103,12 +86,11 @@ struct GInferListBase {
 
 // A generic inference kernel. API (::on()) is fully defined by the Net
 // template parameter.
-// Acts as a regular kernel in graph (via KernelTypeMedium).
+// Acts as a regular kernel in graph (via GKernelType).
 template<typename Net>
 struct GInfer final
     : public GInferBase
-    , public detail::KernelTypeMedium< GInfer<Net>
-                                     , typename Net::API > {
+    , public GKernelType< GInfer<Net>, typename Net::API > {
     using GInferBase::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }
@@ -119,8 +101,7 @@ struct GInfer final
 template<typename Net>
 struct GInferList final
     : public GInferListBase
-    , public detail::KernelTypeMedium< GInferList<Net>
-                                     , typename Net::APIList > {
+    , public GKernelType< GInferList<Net>, typename Net::APIList > {
     using GInferListBase::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }

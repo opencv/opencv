@@ -47,8 +47,6 @@ struct GAPI_EXPORTS GKernelImpl
     util::any         opaque;    // backend-specific opaque info
 };
 
-template<typename, typename> class GKernelTypeM;
-
 namespace detail
 {
     ////////////////////////////////////////////////////////////////////////////
@@ -108,31 +106,6 @@ namespace detail
         return in_args.at(idx).template get<T>();
     }
 
-    // Helper for return type definition. Provides the actual logic of how return type is defined.
-    template<bool, typename...>
-    struct return_type_helper_impl;
-
-    // Helper for return type definition. Generalizes type definition for single and multiple return
-    // values in the context of G-API kernels
-    template<typename... Ts>
-    struct return_type_helper
-    {
-        using type = typename
-            return_type_helper_impl<std::tuple_size<std::tuple<Ts...>>::value == 1, Ts...>::type;
-    };
-
-    template<typename T>
-    struct return_type_helper_impl<true, T>
-    {
-        using type = T;
-    };
-
-    template<typename... Ts>
-    struct return_type_helper_impl<false, Ts...>
-    {
-        using type = std::tuple<Ts...>;
-    };
-
     // 4. The MetaHelper itself: an entity which generates outMeta() call
     //    based on kernel signature, with arguments properly substituted.
     // FIXME: probably can be simplified with std::apply or analogue.
@@ -149,7 +122,7 @@ namespace detail
                                          detail::Seq<OIs...>)
         {
             // FIXME: decay?
-            using R = typename return_type_helper<typename MetaType<Outs>::type...>::type;
+            using R = return_type_helper_t<typename MetaType<Outs>::type...>;
             const auto r = tuple_wrap_helper<R>::get(
                 K::outMeta( get_in_meta<Ins>(in_meta, in_args, IIs)... ));
             return GMetaArgs{ GMetaArg(std::get<OIs>(r))... };
@@ -172,55 +145,48 @@ namespace detail
         static constexpr const char *tag() { return ""; }
     };
 
-} // namespace detail
+    template<typename, typename> class GKernelTypeImpl;
 
-// GKernelType and GKernelTypeM are base classes which implement typed ::on()
-// method based on kernel signature. GKernelTypeM stands for multiple-return-value kernels
+    template<typename K, typename... R, typename... Args>
+    class GKernelTypeImpl<K, std::function<std::tuple<R...>(Args...)> >
+        : public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...>>
+        , public detail::NoTag
+    {
+        template<int... IIs>
+        static detail::return_type_helper_t<R...> yield(cv::GCall &call, detail::Seq<IIs...>)
+        {
+            return detail::return_type_helper<R...>::get(detail::Yield<R>::yield(call, IIs)...);
+        }
+
+    public:
+        using InArgs  = std::tuple<Args...>;
+        using OutArgs = std::tuple<R...>;
+
+        static detail::return_type_helper_t<R...> on(Args... args)
+        {
+            cv::GCall call(
+                GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape...}});
+            call.pass(args...);
+            return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
+        }
+    };
+}  // namespace detail
+
+// GKernelType is a base class which implements typed ::on() method based on kernel signature.
 //
-// G_TYPED_KERNEL and G_TYPED_KERNEL_M macros inherit user classes from GKernelType and
-// GKernelTypeM respectively.
+// G_TYPED_KERNEL macros inherits user classes from GKernelType.
+template<typename, typename>
+class GKernelType;
 
-template<typename K, typename... R, typename... Args>
-class GKernelTypeM<K, std::function<std::tuple<R...>(Args...)> >
-    : public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...>>
-    , public detail::NoTag
-{
-    template<int... IIs>
-    static std::tuple<R...> yield(cv::GCall &call, detail::Seq<IIs...>)
-    {
-        return std::make_tuple(detail::Yield<R>::yield(call, IIs)...);
-    }
+// Specialization for multiple-return-value
+template<class K, typename... R, typename... Args>
+class GKernelType<K, std::function<std::tuple<R...>(Args...)> >:
+    public detail::GKernelTypeImpl<K, std::function<std::tuple<R...>(Args...)> > {};
 
-public:
-    using InArgs  = std::tuple<Args...>;
-    using OutArgs = std::tuple<R...>;
-
-    static std::tuple<R...> on(Args... args)
-    {
-        cv::GCall call(GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape...}});
-        call.pass(args...);
-        return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
-    }
-};
-
-template<typename, typename> class GKernelType;
-
-template<typename K, typename R, typename... Args>
-class GKernelType<K, std::function<R(Args...)> >
-    : public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R>>
-    , public detail::NoTag
-{
-public:
-    using InArgs  = std::tuple<Args...>;
-    using OutArgs = std::tuple<R>;
-
-    static R on(Args... args)
-    {
-        cv::GCall call(GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape}});
-        call.pass(args...);
-        return detail::Yield<R>::yield(call, 0);
-    }
-};
+// Specialization for single-return-value
+template<class K, typename R, typename... Args>
+class GKernelType<K, std::function<R(Args...)> >:
+    public detail::GKernelTypeImpl<K, std::function<std::tuple<R>(Args...)> > {};
 
 } // namespace cv
 
@@ -244,14 +210,13 @@ public:
                         public G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
-#define G_TYPED_KERNEL_M(Class, API, Id)                                    \
-    G_ID_HELPER_BODY(Class, Id)                                             \
-    struct Class final: public cv::GKernelTypeM<Class, std::function API >, \
-                        public G_ID_HELPER_CLASS(Class)
-// {body} is to be defined by user
-
 #define G_API_OP   G_TYPED_KERNEL
-#define G_API_OP_M G_TYPED_KERNEL_M
+
+#ifndef CV_DOXYGEN
+    // Backward-compatibility for multiple-return-value macros
+    #define G_TYPED_KERNEL_M G_TYPED_KERNEL
+    #define G_API_OP_M G_TYPED_KERNEL_M
+#endif
 
 namespace cv
 {

@@ -116,6 +116,39 @@ namespace detail
         using type = std::tuple<Objs...>;
         static type get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
     };
+
+    // Helper for return type definition. Provides the actual logic of how return type is defined.
+    template<bool, typename...>
+    struct return_type_helper_impl;
+
+    // Helper for return type definition. Generalizes type definition for single and multiple return
+    // values in the context of G-API kernels
+    template<typename... Ts>
+    struct return_type_helper
+    {
+        using impl = return_type_helper_impl<std::tuple_size<std::tuple<Ts...>>::value == 1, Ts...>;
+        using type = typename impl::type;
+        static type get(Ts&&... args) { return impl::get(std::forward<Ts>(args)...); }
+    };
+
+    // Alias to simplify code bloat
+    template<typename... Ts>
+    using return_type_helper_t = typename return_type_helper<Ts...>::type;
+
+    template<typename T>
+    struct return_type_helper_impl<true, T>
+    {
+        using type = T;
+        static type get(T&& obj) { return std::forward<T>(obj); }
+    };
+
+    template<typename... Ts>
+    struct return_type_helper_impl<false, Ts...>
+    {
+        using type = std::tuple<Ts...>;
+        static type get(Ts&&... args) { return std::make_tuple(std::forward<Ts>(args)...); };
+    };
+
 } // namespace detail
 } // namespace cv
 
