@@ -25,36 +25,33 @@ namespace cv {
 
 template<typename, typename> class GNetworkType;
 
-// TODO: maybe tuple_wrap_helper from util.hpp may help with this.
-// Multiple-return-value network definition (specialized base class)
+namespace detail {
+template<typename, typename> class GNetworkTypeImpl;
+
 template<typename K, typename... R, typename... Args>
-class GNetworkType<K, std::function<std::tuple<R...>(Args...)> >
+class GNetworkTypeImpl<K, std::function<std::tuple<R...>(Args...)> >
 {
 public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R...>;
 
-    using Result  = OutArgs;
+    using Result  = return_type_helper_t<R...>;
     using API     = std::function<Result(Args...)>;
 
-    using ResultL = std::tuple< cv::GArray<R>... >;
+    using ResultL = return_type_helper_t< cv::GArray<R>... >;
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
 };
+}  // namespace detail
 
-// Single-return-value network definition (specialized base class)
-template<typename K, typename R, typename... Args>
-class GNetworkType<K, std::function<R(Args...)> >
-{
-public:
-    using InArgs  = std::tuple<Args...>;
-    using OutArgs = std::tuple<R>;
+// Specialization for multiple-return-value
+template<class K, typename... R, typename... Args>
+struct GNetworkType<K, std::function<std::tuple<R...>(Args...)> >:
+    public detail::GNetworkTypeImpl<K, std::function<std::tuple<R...>(Args...)> > {};
 
-    using Result  = R;
-    using API     = std::function<R(Args...)>;
-
-    using ResultL = cv::GArray<R>;
-    using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
-};
+// Specialization for single-return-value
+template<class K, typename R, typename... Args>
+struct GNetworkType<K, std::function<R(Args...)> >:
+    public detail::GNetworkTypeImpl<K, std::function<std::tuple<R>(Args...)> > {};
 
 // Base "Infer" kernel. Note - for whatever network, kernel ID
 // is always the same. Different inference calls are distinguished by
