@@ -70,8 +70,7 @@ Better pixel accessing and editing method :
 Accessing Image Properties
 --------------------------
 
-Image properties include number of rows, columns, and channels; type of image data; number of pixels; 
-etc.
+Image properties include number of rows, columns, and channels; type of image data; number of pixels; etc.
 
 The shape of an image is accessed by img.shape. It returns a tuple of the number of rows, columns, and channels
 (if the image is color):
