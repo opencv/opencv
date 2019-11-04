@@ -213,7 +213,7 @@ struct MomentsInTile_SIMD
     }
 };
 
-#if CV_SIMD128_64F
+#if CV_SIMD128
 
 template <>
 struct MomentsInTile_SIMD<uchar, int, int>
@@ -244,25 +244,15 @@ struct MomentsInTile_SIMD<uchar, int, int>
                 qx += dx;
             }
 
-            v_uint32x4 qx01_lo, qx01_hi, qx23_lo, qx23_hi;
-            v_zip(qx0, qx1, qx01_lo, qx01_hi);
-            v_zip(qx2, qx3, qx23_lo, qx23_hi);
-            qx01_lo += qx01_hi;
-            qx23_lo += qx23_hi;
-            v_float64x2 qx0123_lo, qx0123_hi;
-            v_recombine(v_reinterpret_as_f64(qx01_lo), v_reinterpret_as_f64(qx23_lo), qx0123_lo, qx0123_hi);
-            v_store(buf, v_reinterpret_as_s32(qx0123_lo) + v_reinterpret_as_s32(qx0123_hi));
-
-            x0 = (buf[0] & 0xffff) + (buf[0] >> 16);
-            x1 = buf[1];
-            x2 = buf[2];
-            x3 = buf[3];
+            x0 = v_reduce_sum(qx0);
+            x0 = (x0 & 0xffff) + (x0 >> 16);
+            x1 = v_reduce_sum(qx1);
+            x2 = v_reduce_sum(qx2);
+            x3 = v_reduce_sum(qx3);
         }
 
         return x;
     }
-
-    int CV_DECL_ALIGNED(16) buf[4];
 };
 
 template <>
@@ -301,93 +291,17 @@ struct MomentsInTile_SIMD<ushort, int, int64>
                 v_ix0 += v_delta;
             }
 
-            v_uint32x4 v_x01_lo, v_x01_hi, v_x22_lo, v_x22_hi;
-            v_zip(v_x0, v_x1, v_x01_lo, v_x01_hi);
-            v_zip(v_x2, v_x2, v_x22_lo, v_x22_hi);
-            v_x01_lo += v_x01_hi;
-            v_x22_lo += v_x22_hi;
-            v_float64x2 v_x0122_lo, v_x0122_hi;
-            v_recombine(v_reinterpret_as_f64(v_x01_lo), v_reinterpret_as_f64(v_x22_lo), v_x0122_lo, v_x0122_hi);
-            v_store(buf64, v_reinterpret_as_s64(v_x3));
-            v_store(buf, v_reinterpret_as_s32(v_x0122_lo) + v_reinterpret_as_s32(v_x0122_hi));
-
-            x0 = buf[0];
-            x1 = buf[1];
-            x2 = buf[2];
+            x0 = v_reduce_sum(v_x0);
+            x1 = v_reduce_sum(v_x1);
+            x2 = v_reduce_sum(v_x2);
+            v_store_aligned(buf64, v_reinterpret_as_s64(v_x3));
             x3 = buf64[0] + buf64[1];
         }
 
         return x;
     }
 
-    int CV_DECL_ALIGNED(16) buf[4];
     int64 CV_DECL_ALIGNED(16) buf64[2];
-};
-
-#elif CV_NEON
-
-template <>
-struct MomentsInTile_SIMD<uchar, int, int>
-{
-    MomentsInTile_SIMD()
-    {
-        ushort CV_DECL_ALIGNED(8) init[4] = { 0, 1, 2, 3 };
-        qx_init = vld1_u16(init);
-        v_step = vdup_n_u16(4);
-    }
-
-    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
-    {
-        int x = 0;
-
-        uint32x4_t v_z = vdupq_n_u32(0), v_x0 = v_z, v_x1 = v_z,
-            v_x2 = v_z, v_x3 = v_z;
-        uint16x4_t qx = qx_init;
-
-        for( ; x <= len - 8; x += 8 )
-        {
-            uint16x8_t v_src = vmovl_u8(vld1_u8(ptr + x));
-
-            // first part
-            uint32x4_t v_qx = vmovl_u16(qx);
-            uint16x4_t v_p = vget_low_u16(v_src);
-            uint32x4_t v_px = vmull_u16(qx, v_p);
-
-            v_x0 = vaddw_u16(v_x0, v_p);
-            v_x1 = vaddq_u32(v_x1, v_px);
-            v_px = vmulq_u32(v_px, v_qx);
-            v_x2 = vaddq_u32(v_x2, v_px);
-            v_x3 = vaddq_u32(v_x3, vmulq_u32(v_px, v_qx));
-            qx = vadd_u16(qx, v_step);
-
-            // second part
-            v_qx = vmovl_u16(qx);
-            v_p = vget_high_u16(v_src);
-            v_px = vmull_u16(qx, v_p);
-
-            v_x0 = vaddw_u16(v_x0, v_p);
-            v_x1 = vaddq_u32(v_x1, v_px);
-            v_px = vmulq_u32(v_px, v_qx);
-            v_x2 = vaddq_u32(v_x2, v_px);
-            v_x3 = vaddq_u32(v_x3, vmulq_u32(v_px, v_qx));
-
-            qx = vadd_u16(qx, v_step);
-        }
-
-        vst1q_u32(buf, v_x0);
-        x0 = buf[0] + buf[1] + buf[2] + buf[3];
-        vst1q_u32(buf, v_x1);
-        x1 = buf[0] + buf[1] + buf[2] + buf[3];
-        vst1q_u32(buf, v_x2);
-        x2 = buf[0] + buf[1] + buf[2] + buf[3];
-        vst1q_u32(buf, v_x3);
-        x3 = buf[0] + buf[1] + buf[2] + buf[3];
-
-        return x;
-    }
-
-    uint CV_DECL_ALIGNED(16) buf[4];
-    uint16x4_t qx_init, v_step;
 };
 
 #endif
