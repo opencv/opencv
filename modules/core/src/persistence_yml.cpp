@@ -770,7 +770,7 @@ public:
         bool first = true;
         bool ok = true;
         FileNode root_collection(fs->getFS(), 0, 0);
-
+        FileNode root_node = fs->addNode(root_collection, std::string(), FileNode::NONE);
         for(;;)
         {
             // 0. skip leading comments and directives  and ...
@@ -821,7 +821,6 @@ public:
             if( memcmp( ptr, "...", 3 ) != 0 )
             {
                 // 2. parse the collection
-                FileNode root_node = fs->addNode(root_collection, std::string(), FileNode::NONE);
 
                 ptr = parseValue( ptr, root_node, 0, false );
                 if( !root_node.isMap() && !root_node.isSeq() )
