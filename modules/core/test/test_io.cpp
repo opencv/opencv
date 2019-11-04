@@ -1640,4 +1640,23 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
+{
+    const std::string filename = "FileStorage_YAML_parse_multiple_documents.yml";
+    FileStorage fs;
+    
+    fs.open(filename, FileStorage::WRITE);
+    fs << "a" << 42;
+    fs.release();
+
+    fs.open(filename, FileStorage::APPEND);
+    fs << "b" << 1988;
+    fs.release();
+
+    fs.open(filename, FileStorage::READ);
+    ASSERT_EQ(42, (int)fs["a"]);
+    ASSERT_EQ(1988, (int)fs["b"]);
+    fs.release();
+}
+
 }} // namespace
