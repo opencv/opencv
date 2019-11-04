@@ -1644,7 +1644,7 @@ TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
 {
     const std::string filename = "FileStorage_YAML_parse_multiple_documents.yml";
     FileStorage fs;
-    
+
     fs.open(filename, FileStorage::WRITE);
     fs << "a" << 42;
     fs.release();
