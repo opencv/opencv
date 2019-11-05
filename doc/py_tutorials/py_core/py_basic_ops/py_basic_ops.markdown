@@ -82,7 +82,7 @@ The shape of an image is accessed by img.shape. It returns a tuple of the number
 @note If an image is grayscale, the tuple returned contains only the number of rows
 and columns, so it is a good method to check whether the loaded image is grayscale or color.
 
-Total number of pixels is accessed by img.size:
+Total number of pixels is accessed by `img.size`:
 @code{.py}
 >>> print( img.size )
 562248
@@ -104,7 +104,7 @@ face detection is done over the entire image. When a face is obtained, we select
 and search for eyes inside it instead of searching the whole image. It improves accuracy (because eyes
 are always on faces :D ) and performance (because we search in a small area).
 
-ROI is obtained by using Numpy indexing again. Here I am selecting the ball and copying it to another
+ROI is again obtained using Numpy indexing. Here I am selecting the ball and copying it to another
 region in the image:
 @code{.py}
 >>> ball = img[280:340, 330:390]
