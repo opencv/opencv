@@ -1,3 +1,4 @@
+
 #include "opencv2/objdetect.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
@@ -8,7 +9,7 @@
 using namespace std;
 using namespace cv;
 
-static void drawQRCodeContour(Mat &color_image, vector<vector<Point>> transform);
+static void drawQRCodeContour(Mat &color_image, vector<Point> transform);
 static void drawFPS(Mat &color_image, double fps);
 static int  liveQRCodeDetect(const string& out_file);
 static int  imageQRCodeDetect(const string& in_file, const string& out_file);
@@ -51,26 +52,24 @@ int main(int argc, char *argv[])
     return return_code;
 }
 
-void drawQRCodeContour(Mat &color_image, vector<vector<Point>> transform)
+void drawQRCodeContour(Mat &color_image, vector<Point> transform)
 {
-    for(size_t i = 0; i < transform.size(); i++)
+    if (!transform.empty())
     {
-        if (!transform[i].empty())
-        {
-            double show_radius = (color_image.rows  > color_image.cols)
-                       ? (2.813 * color_image.rows) / color_image.cols
-                       : (2.813 * color_image.cols) / color_image.rows;
-            double contour_radius = show_radius * 0.4;
-            vector<vector<Point>> contours;
-            contours.push_back(transform[i]);
-            drawContours(color_image, contours, 0, Scalar(211, 0, 148), cvRound(contour_radius));
+        double show_radius = (color_image.rows  > color_image.cols)
+                   ? (2.813 * color_image.rows) / color_image.cols
+                   : (2.813 * color_image.cols) / color_image.rows;
+        double contour_radius = show_radius * 0.4;
 
-            RNG rng(1000);
-            for (size_t j = 0; j < 4; j++)
-            {
-                Scalar color = Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
-                circle(color_image, transform[i][j], cvRound(show_radius), color, -1);
-            }
+        vector< vector<Point> > contours;
+        contours.push_back(transform);
+        drawContours(color_image, contours, 0, Scalar(211, 0, 148), cvRound(contour_radius));
+
+        RNG rng(1000);
+        for (size_t i = 0; i < 4; i++)
+        {
+            Scalar color = Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+            circle(color_image, transform[i], cvRound(show_radius), color, -1);
         }
     }
 }
@@ -95,10 +94,9 @@ int liveQRCodeDetect(const string& out_file)
     TickMeter total;
     for(;;)
     {
-        Mat frame, src;
-        vector<Mat> straight_barcode;
-        vector<cv::String> decode_info;
-        vector<vector<Point>> transform;
+        Mat frame, src, straight_barcode;
+        string decode_info;
+        vector<Point> transform;
         cap >> frame;
         if (frame.empty())
         {
@@ -108,14 +106,11 @@ int liveQRCodeDetect(const string& out_file)
         cvtColor(frame, src, COLOR_BGR2GRAY);
 
         total.start();
-        bool result_detection = qrcode.multipleDetect(src, transform);
+        bool result_detection = qrcode.detect(src, transform);
         if (result_detection)
         {
-            decode_info = qrcode.multipleDecode(src, transform, straight_barcode);
-            for(size_t i = 0; i < decode_info.size(); i++)
-            {
-                if (!decode_info[i].empty()) { cout << decode_info[i] << endl; }
-            }
+            decode_info = qrcode.decode(src, transform, straight_barcode);
+            if (!decode_info.empty()) { cout << decode_info << endl; }
         }
         total.stop();
         double fps = 1 / total.getTimeSec();
@@ -138,9 +133,9 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
 {
     Mat color_src = imread(in_file, IMREAD_COLOR), src;
     cvtColor(color_src, src, COLOR_BGR2GRAY);
-    vector<Mat> straight_barcode;
-    vector<cv::String> decoded_info;
-    vector<vector<Point>> transform;
+    Mat straight_barcode;
+    string decoded_info;
+    vector<Point> transform;
     const int count_experiments = 10;
     double transform_time = 0.0;
     bool result_detection = false;
@@ -150,7 +145,7 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
     {
         total.start();
         transform.clear();
-        result_detection = qrcode.multipleDetect(src, transform);
+        result_detection = qrcode.detect(src, transform);
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();
@@ -158,7 +153,7 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
             continue;
 
         total.start();
-        decoded_info = qrcode.multipleDecode(src, transform, straight_barcode);
+        decoded_info = qrcode.decode(src, transform, straight_barcode);
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();
@@ -166,11 +161,9 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
     double fps = count_experiments / transform_time;
     if (!result_detection)
         cout << "QR code not found" << endl;
-    for(size_t i = 0; i < decoded_info.size(); i++)
-    {
-        if (decoded_info[i].empty())
-            cout << "QR code cannot be decoded" << endl;
-    }
+    if (decoded_info.empty())
+        cout << "QR code cannot be decoded" << endl;
+
     drawQRCodeContour(color_src, transform);
     drawFPS(color_src, fps);
 
@@ -178,8 +171,7 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
     cout << "Output image file path: " << out_file << endl;
     cout << "Size: " << color_src.size() << endl;
     cout << "FPS: " << fps << endl;
-    for(size_t i = 0; i < decoded_info.size(); i++)
-        cout << "Decoded info: " << decoded_info[i] << endl;
+    cout << "Decoded info: " << decoded_info << endl;
 
     if (!out_file.empty())
     {

@@ -64,7 +64,7 @@ PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDetect)
     Mat src = imread(image_path, IMREAD_GRAYSCALE);
     std::vector<Mat> straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-    std::vector<std::vector<Point>> corners;
+    std::vector<std::vector<Point> > corners;
     QRCodeDetector qrcode;
     TEST_CYCLE() ASSERT_TRUE(qrcode.multipleDetect(src, corners));
     for(size_t i = 0; i < corners.size(); i++)
@@ -85,7 +85,7 @@ PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDecode)
     std::vector<Mat> straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
-    std::vector<std::vector<Point2f>> corners;
+    std::vector<std::vector<Point2f> > corners;
     std::vector<cv::String> decoded_info;
     QRCodeDetector qrcode;
     ASSERT_TRUE(qrcode.multipleDetect(src, corners));
