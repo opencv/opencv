@@ -1900,18 +1900,19 @@ int FileStorage::getFormat() const
 
 FileNode FileStorage::operator [](const char* key) const
 {
-    if( p->roots.empty() )
-        return FileNode();
-
-    return p->roots[0][key];
+    return this->operator[](std::string(key));
 }
 
 FileNode FileStorage::operator [](const std::string& key) const
 {
-    if( p->roots.empty() )
-        return FileNode();
-
-    return p->roots[0][key];
+    FileNode res;
+    for (size_t i = 0; i < p->roots.size(); i++)
+    {
+        res = p->roots[i][key];
+        if (!res.empty())
+            break;
+    }
+    return res;
 }
 
 String FileStorage::releaseAndGetString()
