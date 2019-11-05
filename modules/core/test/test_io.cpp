@@ -1654,9 +1654,19 @@ TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
     fs.release();
 
     fs.open(filename, FileStorage::READ);
-    ASSERT_EQ(42, (int)fs["a"]);
-    ASSERT_EQ(1988, (int)fs["b"]);
+
+    EXPECT_EQ(42, (int)fs["a"]);
+    EXPECT_EQ(1988, (int)fs["b"]);
+
+    EXPECT_EQ(42, (int)fs.root(0)["a"]);
+    EXPECT_TRUE(fs.root(0)["b"].empty());
+
+    EXPECT_TRUE(fs.root(1)["a"].empty());
+    EXPECT_EQ(1988, (int)fs.root(1)["b"]);
+
     fs.release();
+
+    ASSERT_EQ(0, std::remove(filename.c_str()));
 }
 
 }} // namespace
