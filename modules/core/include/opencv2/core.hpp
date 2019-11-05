@@ -1466,10 +1466,7 @@ CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst);
 The function cv::pow raises every element of the input array to power:
 \f[\texttt{dst} (I) =  \texttt{src}(I)^{power}\f]
 
-So, for a non-integer power exponent, the absolute values of input array
-elements are used. However, it is possible to get true values for
-negative values using some extra operations. In the example below,
-computing the 5th root of array src shows:
+In the example below, computing the 5th root of array src shows:
 @code{.cpp}
     Mat mask = src < 0;
     pow(src, 1./5, dst);
