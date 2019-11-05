@@ -433,7 +433,7 @@ TEST_P(Objdetect_QRCode_Multiple, regression)
                   for(size_t k = 0; k < corners.size(); k++)
                   {
                       int count_eq_points = 0;
-                      for (size_t i = 0; i < corners[j].size(); i++)
+                      for (int i = 0; i < int(corners[j].size()); i++)
                       {
                           int x = config["x"][k][i];
                           int y = config["y"][k][i];
@@ -451,9 +451,9 @@ TEST_P(Objdetect_QRCode_Multiple, regression)
 
 #ifdef HAVE_QUIRC
                   size_t count_eq_info = 0;
-                  for(size_t i = 0; i < decoded_info.size(); i++)
+                  for(int i = 0; i < int(decoded_info.size()); i++)
                   {
-                      for(size_t j = 0; j < decoded_info.size(); j++)
+                      for(int j = 0; j < int(decoded_info.size()); j++)
                       {
                           std::string original_info = config["info"][j];
                           if(original_info == decoded_info[i])

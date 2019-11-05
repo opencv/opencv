@@ -710,7 +710,7 @@ public:
      */
     CV_WRAP cv::String detectAndDecode(InputArray img, OutputArray points=noArray(),
                                         OutputArray straight_qrcode = noArray());
-    CV_WRAP std::vector<cv::String> multipleDetectAndDecode(InputArray img, OutputArrayOfArrays points,
+    CV_WRAP std::vector<cv::String> multipleDetectAndDecode(InputArray img, OutputArrayOfArrays points = noArray(),
                                                     OutputArrayOfArrays straight_qrcode = noArray());
 protected:
     struct Impl;

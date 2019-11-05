@@ -1325,7 +1325,7 @@ class ParallelSearch : public ParallelLoopBody
 public:
     ParallelSearch(vector<vector<Point2f> >& true_points_group_,
                     vector<Point2f> resized_loc_points_, vector<Point2f> not_resized_loc_points_,
-                    vector<vector<Point2f> >& loc_, int tmp_num_points_, int iter_, int* end_,
+                    vector<vector<Point2f> >& loc_, int iter_, int* end_,
                     vector<vector<vector<int> > > all_points_,
                     MultipleQRDetect& cl_):
 
@@ -1333,7 +1333,6 @@ public:
                     resized_loc_points(resized_loc_points_),
                     not_resized_loc_points(not_resized_loc_points_),
                     loc(loc_),
-                    tmp_num_points(tmp_num_points_),
                     iter(iter_),
                     end(end_),
                     all_points(all_points_),
@@ -1429,7 +1428,6 @@ private:
   vector<Point2f> resized_loc_points;
   vector<Point2f> not_resized_loc_points;
   vector<vector<Point2f> >& loc;
-  int tmp_num_points;
   int iter;
   int* end;
   vector<vector<vector<int> > > all_points;
@@ -1702,7 +1700,7 @@ bool MultipleQRDetect::localization()
      int* set_size = new int[true_points_group.size()];
      for(size_t i = 0; i < true_points_group.size(); i++)
      {
-         set_size[i] = 0.5 * (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1);
+         set_size[i] = int(0.5 * (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1));
      }
      vector<vector<vector<int> > > all_points(true_points_group.size());
      for(size_t i = 0; i < true_points_group.size(); i++)
@@ -1747,7 +1745,7 @@ bool MultipleQRDetect::localization()
          end[i] = iter + set_size[i];
      ParallelSearch parallelSearch(true_points_group,
                       resized_loc_points, not_resized_loc_points,
-                      loc, tmp_num_points, iter, end, all_points, *this);
+                      loc, iter, end, all_points, *this);
      parallel_for_(Range(0, int(true_points_group.size())), parallelSearch);
      for(size_t s = 0; s < true_points_group.size(); s++)
      {

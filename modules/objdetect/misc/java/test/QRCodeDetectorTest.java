@@ -26,4 +26,14 @@ public class QRCodeDetectorTest extends OpenCVTestCase {
         assertEquals(output, "https://opencv.org/");
     }
 
+    public void testMultipleDetectAndDecode() {
+        Mat img = Imgcodecs.imread(testDataPath + "/cv/qrcode/multiple/4_qrcodes.png");
+        QRCodeDetector detector = new QRCodeDetector();
+        Vector<String> output = detector.multipleDetectAndDecode(img);
+        assertEquals(output[0], "Great Place to work");
+        assertEquals(output[1], "https://github.com/opencv/opencv/tree/3.4");
+        assertEquals(output[2], "Great Place to work");
+        assertEquals(output[3], "计算机视觉");
+    }
+
 }
