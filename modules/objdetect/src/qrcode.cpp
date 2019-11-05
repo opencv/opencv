@@ -1305,15 +1305,19 @@ bool MultipleQRDetect::checkPointsInsideTriangle(vector<Point2f> triangle_points
 }
 struct
 {
-    Point2f close;
-    bool operator()(Point2f a, Point2f b) const
+    vector<Point2f> points;
+    bool operator()(vector<int> a, vector<int> b) const
     {
-        return (sqrt((a.x - close.x) * (a.x - close.x)
-        + (a.y - close.y) * (a.y - close.y)))
-        < (sqrt((b.x - close.x) *(b.x - close.x) +
-        (b.y - close.y) * (b.y - close.y)));
+      return 0.5 * abs((points[a[1]].x - points[a[0]].x) *
+      (points[a[2]].y - points[a[0]].y) -
+      (points[a[2]].x - points[a[0]].x) *
+      (points[a[1]].y - points[a[0]].y)) <
+      0.5 * abs((points[b[1]].x - points[b[0]].x) *
+      (points[b[2]].y - points[b[0]].y) -
+      (points[b[2]].x - points[b[0]].x) *
+      (points[b[1]].y - points[b[0]].y));
     }
-} CompareDistance;
+} compareSquare;
 
 class ParallelSearch
 {
@@ -1321,7 +1325,7 @@ public:
     ParallelSearch(vector<vector<Point2f>>& true_points_group_,
                     vector<Point2f> resized_loc_points_, vector<Point2f> not_resized_loc_points_,
                     vector<vector<Point2f>>& loc_, int temp_num_points_, int iter_, int* end_,
-                    int*** all_points_,
+                    vector<vector<vector<int>>> all_points_,
                     MultipleQRDetect& cl_):
 
                     true_points_group(true_points_group_),
@@ -1356,66 +1360,65 @@ public:
                  if(cl.checkPointsInsideTriangle(triangle, resized_loc_points))
                  {
 
-                 cl.fixationPoints(triangle);
-                 if(triangle.size() == 3)
-                 {
-                     cl.localization_points[x] = triangle;
-                     if (cl.purpose == cl.SHRINKING)
+                     cl.fixationPoints(triangle);
+                     if(triangle.size() == 3)
                      {
+                         cl.localization_points[x] = triangle;
+                         if (cl.purpose == cl.SHRINKING)
+                         {
 
-                          for (size_t j = 0; j < cl.localization_points[x].size(); j++)
-                          {
-                              cl.localization_points[x][j] *= cl.coeff_expansion;
+                              for (size_t j = 0; j < cl.localization_points[x].size(); j++)
+                              {
+                                  cl.localization_points[x][j] *= cl.coeff_expansion;
 
-                          }
-                     }
-                     else if (cl.purpose == cl.ZOOMING)
-                     {
-                          for (size_t j = 0; j < cl.localization_points[x].size(); j++)
-                          {
-                               cl.localization_points[x][j] /= cl.coeff_expansion;
-                          }
-                     }
-                     for (size_t i = 0; i < cl.localization_points[x].size(); i++)
-                     {
-                          for (size_t j = i + 1; j < cl.localization_points[x].size(); j++)
-                          {
-                               if (norm(cl.localization_points[x][i] - cl.localization_points[x][j]) < 10)
-                               {
-                                   cl.localization_points[x].clear();
-                                   flag_for_break = true;
-                                   break;
-                                }
-                           } if(flag_for_break) break;
-                     }
-                     if(flag_for_break != true)
-                   {
-                       if(cl.localization_points[x].size() == 3)
-                       {
-                           if (cl.computeTransformationPoints(x))
-                           {
-                               if(((temp_num_points / 3) == 1)
-                                || ((cl.checkPointsInsideQuadrangle(cl.transformation_points[x], not_resized_loc_points)) == true))
-                               {
-                                   if(cl.checkPoints(cl.transformation_points[x]))
+                              }
+                         }
+                         else if (cl.purpose == cl.ZOOMING)
+                         {
+                              for (size_t j = 0; j < cl.localization_points[x].size(); j++)
+                              {
+                                   cl.localization_points[x][j] /= cl.coeff_expansion;
+                              }
+                         }
+                         for (size_t i = 0; i < cl.localization_points[x].size(); i++)
+                         {
+                              for (size_t j = i + 1; j < cl.localization_points[x].size(); j++)
+                              {
+                                   if (norm(cl.localization_points[x][i] - cl.localization_points[x][j]) < 10)
                                    {
-                                       for(int l = 0; l < 3; l++)
-                                          loc[s][all_points[s][k][l]].x = -1;
-
-                                       flag = true;
+                                       cl.localization_points[x].clear();
+                                       flag_for_break = true;
                                        break;
+                                    }
+                               } if(flag_for_break) break;
+                         }
+                         if(flag_for_break != true)
+                       {
+                           if(cl.localization_points[x].size() == 3)
+                           {
+                               if (cl.computeTransformationPoints(x))
+                               {
+                                   if((cl.checkPointsInsideQuadrangle(cl.transformation_points[x], not_resized_loc_points)) == true)
+                                   {
+                                       if(cl.checkPoints(cl.transformation_points[x]))
+                                       {
+                                           for(int l = 0; l < 3; l++)
+                                              loc[s][all_points[s][k][l]].x = -1;
+
+                                           flag = true;
+                                           break;
+                                       }
                                    }
-                               }
+                                }
+                                if(!flag)
+                                {
+                                     cl.transformation_points[x].clear();
+                                     cl.localization_points[x].clear();
+                                }
                             }
-                            if(!flag)
-                            {
-                                 cl.transformation_points[x].clear();
-                                 cl.localization_points[x].clear();
-                             }
                         }
                     }
-                }
-                if(flag) break;
+                    if(flag) break;
               }
           }
       }
@@ -1428,7 +1431,7 @@ private:
   int temp_num_points;
   int iter;
   int* end;
-  int*** all_points;
+  vector<vector<vector<int>>> all_points;
   MultipleQRDetect& cl;
 };
 
@@ -1595,14 +1598,16 @@ bool MultipleQRDetect::localization()
 
   Mat qrcode_labels;
   vector<Point2f> clustered_localization_points;
-
-  kmeans(all_contours_points, num_qrcodes, qrcode_labels,
+  size_t count_contours = size_t(num_qrcodes);
+  if(all_contours_points.size() < size_t(num_qrcodes))
+    count_contours = all_contours_points.size();
+  kmeans(all_contours_points, count_contours, qrcode_labels,
           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-          num_qrcodes, KMEANS_PP_CENTERS, clustered_localization_points);
+          count_contours, KMEANS_PP_CENTERS, clustered_localization_points);
 
-  vector<vector<Point2f>> qrcode_clusters(num_qrcodes);
-  for(int i = 0; i < num_qrcodes; i++)
-      for(int j = 0; j < (int)all_contours_points.size(); j++)
+  vector<vector<Point2f>> qrcode_clusters(count_contours);
+  for(int i = 0; i < int(count_contours); i++)
+      for(int j = 0; j < int(all_contours_points.size()); j++)
       {
           if (qrcode_labels.at<int>(0, j) == i)
           {
@@ -1610,7 +1615,7 @@ bool MultipleQRDetect::localization()
           }
       }
 
-  vector<vector<Point2f>> hull(num_qrcodes);
+  vector<vector<Point2f>> hull(count_contours);
   for(size_t i = 0; i < qrcode_clusters.size(); i++)
       convexHull(Mat(qrcode_clusters[i]), hull[i]);
 
@@ -1686,11 +1691,6 @@ bool MultipleQRDetect::localization()
           tmp_localization_points.clear();
      }
      if (true_points_group[0].size() < 3) break;
-     for(size_t i = 0; i < true_points_group.size(); i++)
-     {
-         CompareDistance.close = true_points_group[i][0];
-         std::sort((true_points_group[i].begin() + 1), true_points_group[i].end(), CompareDistance);
-     }
      num_points = 0;
      for(size_t i = 0; i < true_points_group.size(); i++)
      {
@@ -1703,12 +1703,12 @@ bool MultipleQRDetect::localization()
      {
          set_size[i] = 0.5 * (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1);
      }
-     int *** all_points = new int ** [true_points_group.size()];
+     vector<vector<vector<int>>> all_points(true_points_group.size());
      for(size_t i = 0; i < true_points_group.size(); i++)
-         all_points[i] = new int* [set_size[i]];
-     for(size_t i = 0; i < true_points_group.size(); i++)
-         for (int j = 0; j < set_size[i]; j++)
-              all_points[i][j] = new int[3];
+         all_points[i].resize(set_size[i]);
+    for(size_t i = 0; i < true_points_group.size(); i++)
+        for (int j = 0; j < set_size[i]; j++)
+             all_points[i][j].resize(3);
      int p = 0;
      for(size_t i = 0; i < true_points_group.size(); i++)
      {
@@ -1722,6 +1722,20 @@ bool MultipleQRDetect::localization()
                   p++;
               }
      }
+
+     for(size_t i = 0; i < true_points_group.size(); i++)
+     {
+        compareSquare.points = true_points_group[i];
+        std::sort(all_points[i].begin(), all_points[i].end(), compareSquare);
+     }
+
+     if(true_points_group.size() == 1)
+     {
+        if (set_size[0] > 35)
+          set_size[0] = 35;
+        all_points[0].resize(set_size[0]);
+
+     }
      int iter = localization_points.size();
      localization_points.resize(iter + true_points_group.size());
      transformation_points.resize(iter + true_points_group.size());
@@ -1733,9 +1747,7 @@ bool MultipleQRDetect::localization()
      ParallelSearch parallelSearch(true_points_group,
                       resized_loc_points, not_resized_loc_points,
                       loc, temp_num_points, iter, end, all_points, *this);
-
      parallel_for_(Range(0, true_points_group.size()), parallelSearch);
-
      for(size_t s = 0; s < true_points_group.size(); s++)
      {
          if(localization_points[iter + s].empty())
