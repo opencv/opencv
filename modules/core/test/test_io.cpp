@@ -944,11 +944,11 @@ TEST(Core_InputOutput, filestorage_yml_controlcharacters)
 {
     const std::string file_name = "controlcharacters.yml";
     std::string values[5] = { "[]", "{}", "some [text]", "some {test}", " {}" };
+    const int valueCount = 5;
 
     /* write */
     {
         cv::FileStorage f(file_name, cv::FileStorage::WRITE);
-        const int valueCount = 5;
         for (size_t i = 0; i < valueCount; i++) {
             EXPECT_NO_THROW(f << cv::format("key%d", i) << values[i]);
         }
