@@ -938,6 +938,33 @@ TEST(Core_InputOutput, filestorage_yml_vec2i)
     EXPECT_EQ(vec(1), ovec(1));
 
     remove(file_name.c_str());
+}    
+
+TEST(Core_InputOutput, filestorage_yml_controlcharacters)
+{
+    const std::string file_name = "controlcharacters.yml";
+    std::string values[5] = { "[]", "{}", "some [text]", "some {test}", " {}" };
+
+    /* write */
+    {
+        cv::FileStorage f(file_name, cv::FileStorage::WRITE);
+        const int valueCount = 5;
+        for (size_t i = 0; i < valueCount; i++) {
+            EXPECT_NO_THROW(f << cv::format("key%d", i) << values[i]);
+        }
+        f.release();
+    }
+    /* read */
+    {
+        cv::FileStorage f2(file_name, cv::FileStorage::READ);
+        std::string valuesRead[valueCount];
+        for (size_t i = 0; i < valueCount; i++) {
+            EXPECT_NO_THROW(f2[cv::format("key%d", i)] >> valuesRead[i]);
+            ASSERT_STREQ(values[i].c_str(), valuesRead[i].c_str());        
+        }
+        f2.release();
+    }
+    remove(file_name.c_str());
 }
 
 TEST(Core_InputOutput, filestorage_json_comment)
