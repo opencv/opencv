@@ -781,63 +781,28 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "ReduceL2")
         {
-            CV_Assert(node_proto.input_size() == 1);
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
             CV_Assert(graph_proto.node_size() > li + 1 && graph_proto.node(li + 1).op_type() == "Div");
             ++li;
-
             layerParams.type = "Normalize";
-            std::vector<int> axes;
-            if (layerParams.has("axes"))
-            {
-                DictValue axes_dict = layerParams.get("axes");
-                if (axes_dict.size() != 1)
-                    CV_Error(Error::StsNotImplemented, "Multidimensional reduceL2");
-                axes.push_back(axes_dict.getIntValue(0));
-            }
-            else
-            {
-                shapeIt = outShapes.find(node_proto.input(0));
-                CV_Assert(shapeIt != outShapes.end());
-                MatShape inpShape = shapeIt->second;
-                for (int j = 0; j < inpShape.size(); ++j)
-                {
-                    if (inpShape[j] == 1)
-                        axes.push_back(j);
-                }
-                CV_Assert(!axes.empty());
-            }
-            layerParams.set("axis", axes.front());
-            layerParams.set("end_axis", axes.back());
+
+            DictValue axes_dict = layerParams.get("axes");
+            if (axes_dict.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional reduceL2");
+            int axis = axes_dict.getIntValue(0);
+            layerParams.set("axis",axis);
+            layerParams.set("end_axis", axis);
         }
         else if (layer_type == "Squeeze")
         {
-            CV_Assert(node_proto.input_size() == 1);
-            std::vector<int> axes;
-            if (layerParams.has("axes"))
-            {
-                DictValue axes_dict = layerParams.get("axes");
-                if (axes_dict.size() != 1)
-                    CV_Error(Error::StsNotImplemented, "Multidimensional squeeze");
-                axes.push_back(axes_dict.getIntValue(0));
-            }
-            else
-            {
-                shapeIt = outShapes.find(node_proto.input(0));
-                CV_Assert(shapeIt != outShapes.end());
-                MatShape inpShape = shapeIt->second;
-                for (int j = 0; j < inpShape.size(); ++j)
-                {
-                    if (inpShape[j] == 1)
-                        axes.push_back(j);
-                }
-                CV_Assert(!axes.empty());
-                for (int j = 1; j < axes.size(); ++j)
-                {
-                    CV_Assert(axes[j - 1] + 1 == axes[j]);
-                }
-            }
-            layerParams.set("axis", axes.front() - 1);
-            layerParams.set("end_axis", axes.back());
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
+            DictValue axes_dict = layerParams.get("axes");
+            if (axes_dict.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional squeeze");
+
+            int axis = axes_dict.getIntValue(0);
+            layerParams.set("axis", axis - 1);
+            layerParams.set("end_axis", axis);
             layerParams.type = "Flatten";
         }
         else if (layer_type == "Unsqueeze")
