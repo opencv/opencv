@@ -13,6 +13,9 @@
 
 #include <opencv2/gapi/render/render.hpp>
 
+#include <opencv2/gapi/plaidml/core.hpp>
+
+
 namespace opencv_test
 {
 
@@ -315,4 +318,20 @@ TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
     // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
     EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
 }
+
+TEST(GAPI_Pipeline, PlaidMLAdd)
+{
+    cv::GMat in1, in2;
+    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(cv::gapi::add(in2, cv::gapi::add(in1, in2))));
+    //cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(cv::gapi::add(in1, in2)));
+
+    cv::Mat in_mat1(3, 3, CV_8UC1, cv::Scalar::all(15));
+    cv::Mat in_mat2(3, 3, CV_8UC1, cv::Scalar::all(1));
+    cv::Mat out_mat(3, 3, CV_8UC1, cv::Scalar::all(0));
+
+    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::core::plaidml::kernels()));
+
+    std::cout << out_mat << std::endl;
+}
+
 } // namespace opencv_test

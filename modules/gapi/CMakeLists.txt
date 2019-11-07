@@ -108,6 +108,11 @@ set(gapi_srcs
     src/backends/render/grenderocvbackend.cpp
     src/backends/render/grenderocv.cpp
 
+    #PlaidML Backend
+    src/backends/plaidml/gplaidmlkernel.cpp
+    src/backends/plaidml/gplaidmlcore.cpp
+    src/backends/plaidml/gplaidmlbackend.cpp
+
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
@@ -135,6 +140,17 @@ ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+endif()
+
+find_package(PlaidML2 CONFIG)
+message("==================================== found")
+if (PLAIDML_FOUND)
+    message("==================================== success")
+    ocv_target_compile_definitions(opencv_gapi PRIVATE -DHAVE_PLAIDML)
+    message("==================================== link ${PLAIDML_LIBRARIES}")
+    message("==================================== include ${PLAIDML_INCLUDE_DIRS}")
+    ocv_target_link_libraries(opencv_gapi LINK_PRIVATE ${PLAIDML_LIBRARIES})
+    ocv_target_include_directories(opencv_gapi PRIVATE ${PLAIDML_INCLUDE_DIRS})
 endif()
 
 ocv_add_perf_tests()

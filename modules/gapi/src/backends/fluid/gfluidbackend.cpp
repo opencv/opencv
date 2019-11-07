@@ -1575,8 +1575,6 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                 if (fd.internal == true)
                 {
                     // For now border of the buffer's storage is the border
-                    // of the first reader whose border size is the same.
-                    // FIXME: find more clever strategy of border picking
                     // (it can be a border which is common for majority of the
                     // readers, also we can calculate the number of lines which
                     // will be copied by views on each iteration and base our choice
