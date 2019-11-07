@@ -520,10 +520,13 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Div")
         {
-            if (constBlobs.find(node_proto.input(1)) == constBlobs.end()) {
+            if (constBlobs.find(node_proto.input(1)) == constBlobs.end())
+            {
                 layerParams.type = "Eltwise";
                 layerParams.set("operation", "div");
-            } else {
+            }
+            else
+            {
                 Mat blob = getBlob(node_proto, constBlobs, 1);
                 CV_Assert_N(blob.type() == CV_32F, blob.total());
                 if (blob.total() == 1)
