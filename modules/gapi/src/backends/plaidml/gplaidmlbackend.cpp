@@ -8,11 +8,8 @@
 #include "precomp.hpp"
 
 #include <ade/util/algorithm.hpp>
-
 #include <ade/util/range.hpp>
 #include <ade/util/zip_range.hpp>
-#include <ade/util/chain_range.hpp>
-
 #include <ade/typed_graph.hpp>
 
 #include <opencv2/gapi/gcommon.hpp>
@@ -23,15 +20,10 @@
 #include "compiler/gmodel.hpp"
 
 #include "backends/plaidml/gplaidmlbackend.hpp"
+#include "backends/plaidml/plaidml_util.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
-// FIXME: Is there a way to take a typed graph (our GModel),
-// and create a new typed graph _ATOP_ of that (by extending with a couple of
-// new types?).
-// Alternatively, is there a way to compose types graphs?
-//
-// If not, we need to introduce that!
 using GPlaidMLModel = ade::TypedGraph
     < cv::gimpl::PlaidMLUnit
     , cv::gimpl::Protocol
@@ -51,7 +43,6 @@ namespace
                                   const ade::NodeHandle &op_node,
                                   const cv::GKernelImpl &impl) override
         {
-            std::cout << "plaidml backend unpackKernel" << std::endl;
             GPlaidMLModel gm(graph);
             auto plaidml_impl = cv::util::any_cast<cv::GPlaidMLKernel>(impl.opaque);
             gm.metadata(op_node).set(cv::gimpl::PlaidMLUnit{plaidml_impl});
@@ -61,7 +52,6 @@ namespace
                              const cv::GCompileArgs &,
                              const std::vector<ade::NodeHandle> &nodes) const override
         {
-            std::cout << "plaidml backend compile " << std::endl;
             return EPtr{new cv::gimpl::GPlaidMLExecutable(graph, nodes)};
         }
    };
@@ -80,6 +70,7 @@ void cv::gimpl::GPlaidMLExecutable::initInputs(const std::vector<ade::NodeHandle
         return m_gm.metadata(nh).get<NodeType>().t == NodeType::OP;
     };
 
+    // FIXME works only single input graph  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     auto first_op_it = ade::util::find_if(nodes, is_op);
     GAPI_Assert(first_op_it != nodes.end());
 
@@ -87,7 +78,7 @@ void cv::gimpl::GPlaidMLExecutable::initInputs(const std::vector<ade::NodeHandle
     auto ins_meta = GModel::collectInputMeta(m_gm, *first_op_it);
 
     // FIXME We have to reserve memory that avoid reallocation
-    // because we use pointer on vector elements
+    // because we using pointer on vector elements
     input_bindings_.reserve(op.args.size());
     GAPI_Assert(op.args.size() == ins_meta.size());
     for (const auto& it : ade::util::zip(ins_meta, op.args))
@@ -101,24 +92,20 @@ void cv::gimpl::GPlaidMLExecutable::initInputs(const std::vector<ade::NodeHandle
             const auto& ref  = in_arg.get<cv::gimpl::RcDesc>();
             const auto& desc = cv::util::get<cv::GMatDesc>(in_meta);
 
-            // FIXME Remove hardcode PLAIDML_DATA_UINT8
-            auto placeholder = plaidml::edsl::Placeholder(PLAIDML_DATA_UINT8,
+            auto placeholder = plaidml::edsl::Placeholder(cv::util::plaidml::depth_from_ocv(desc.depth),
                                {desc.size.width, desc.size.height, desc.chan});
 
             auto shape = placeholder.shape();
             plaidml::TensorShape tensor_shape(shape.dtype(), shape.int_dims());
             plaidml::Buffer buffer(device_id_, tensor_shape);
 
+            input_bindings_.push_back(plaidml::exec::Binding{placeholder, buffer});
+
             auto& tensor_map = m_res.slot<plaidml::edsl::Tensor>();
-            // FIXME piecewise construct
-            input_bindings_.emplace_back(plaidml::exec::Binding{placeholder, buffer});
             // FIXME Copy here !!!;
             tensor_map.emplace(ref.id, placeholder);
-            //tensor_map.emplace(ref.id, plaidml::exec::Binding{placeholder, buffer});
 
             auto& buffer_map = m_res.slot<plaidml::Buffer*>();
-            std::cout << "ref.id = " << ref.id << std::endl;
-            std::cout << "addr = " << &(input_bindings_.back().buffer) << std::endl;
             buffer_map.emplace(ref.id, &(input_bindings_.back().buffer));
         }
     }
@@ -147,11 +134,8 @@ void cv::gimpl::GPlaidMLExecutable::initOutputs(const std::vector<ade::NodeHandl
         GAPI_Assert(out_meta.index() == cv::GMetaArg::index_of<cv::GMatDesc>());
 
         const auto& out_desc = cv::util::get<cv::GMatDesc>(out_meta);
-        std::cout << "out_desc id = " << out_rc.id << std::endl;
-        std::cout << "out_desc = " << out_desc << std::endl;
 
-        // FIXME Remove hardcode PLAIDML_DATA_UINT8
-        auto placeholder = plaidml::edsl::Placeholder(PLAIDML_DATA_UINT8,
+        auto placeholder = plaidml::edsl::Placeholder(cv::util::plaidml::depth_from_ocv(out_desc.depth),
                            {out_desc.size.width, out_desc.size.height, out_desc.chan});
 
         auto shape = placeholder.shape();
@@ -225,25 +209,24 @@ cv::gimpl::GPlaidMLExecutable::GPlaidMLExecutable(const ade::Graph &g,
 
     program_ = std::unique_ptr<plaidml::edsl::Program>(new plaidml::edsl::Program("name", output_tensors));
 
+    // FIXME 
     for (int i = 0; i < output_tensors.size(); ++i)
     {
         output_bindings_[i].tensor = program_->outputs()[i];
     }
 
-    exec_    = std::make_shared<plaidml::exec::Executable>(*program_, device_id_, target_id_, input_bindings_, output_bindings_);
+    exec_ = std::make_shared<plaidml::exec::Executable>(*program_, device_id_, target_id_, input_bindings_, output_bindings_);
     std::cout << program_->str() << std::endl;
 }
 
 void cv::gimpl::GPlaidMLExecutable::run(std::vector<InObj>  &&input_objs,
                                         std::vector<OutObj> &&output_objs)
 {
-    std::cout << "GPlaidMLBackend run" << std::endl;
-
     for (auto& it : input_objs) bindInArg (it.first, it.second);
 
     exec_->run();
 
-    for (auto& it : output_objs)  bindOutArg(it.first, it.second);
+    for (auto& it : output_objs) bindOutArg(it.first, it.second);
 }
 
 void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &arg)
@@ -256,22 +239,16 @@ void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &
         {
         case GRunArg::index_of<cv::gapi::own::Mat>():
         {
-            std::cout << "bind inputs here = " << rc.id << std::endl;
             auto& buffer_map = m_res.slot<plaidml::Buffer*>();
             auto it = buffer_map.find(rc.id);
             GAPI_Assert(it != buffer_map.end());
 
             GAPI_Assert(it->second != nullptr);
-            std::cout << "rc.id = " << rc.id << std::endl;
-            std::cout << "it->second = " << it->second << std::endl;
             //auto& mag_buffer = *(it->second);
-            std::cout << "before" << std::endl;
             auto& arg_mat = util::get<cv::gapi::own::Mat>(arg);
-            std::cout << "arg_mat " << to_ocv(arg_mat) << std::endl;
             //input_bindings_[0].buffer.copy_from(arg_mat.data);
             it->second->copy_from(arg_mat.data);
             //mag_buffer.copy_from(arg_mat.data);
-            std::cout << "after" << std::endl;
         }
         break;
 #if !defined(GAPI_STANDALONE)
@@ -348,22 +325,20 @@ cv::GArg cv::gimpl::GPlaidMLExecutable::packArg(const GArg &arg)
         return arg;
     }
     GAPI_Assert(arg.kind == cv::detail::ArgKind::GOBJREF);
-    std::cout << "packArg " << std::endl;
 
     const cv::gimpl::RcDesc &ref = arg.get<cv::gimpl::RcDesc>();
-    std::cout << "ref.id = " << ref.id << std::endl;
     switch (ref.shape)
     {
     case GShape::GMAT:
     {
-        std::cout << "GMAT" << std::endl;
         auto& tensor_map = m_res.slot<plaidml::edsl::Tensor>();
         auto it = tensor_map.find(ref.id);
-        if (it != tensor_map.end()) {
-            std::cout << "FOUND!!!" << std::endl;
-        } else {
-            std::cout << "NOT found" << std::endl;
-        }
+        GAPI_Assert(it != tensor_map.end());
+        //if (it != tensor_map.end()) {
+            //std::cout << "FOUND!!!" << std::endl;
+        //} else {
+            //std::cout << "NOT found" << std::endl;
+        //}
         return GArg(it->second);
     }
     break;
