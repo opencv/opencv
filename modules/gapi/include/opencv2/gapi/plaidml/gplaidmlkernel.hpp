@@ -104,7 +104,6 @@ struct PlaidMLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         template<typename... Outputs>
         static void call(Inputs&&... ins, Outputs&&... outs)
         {
-            //Impl::run(std::forward<Inputs>(ins)..., outs...);
             Impl::run(std::forward<Inputs>(ins)..., outs...);
         }
     };
@@ -112,7 +111,8 @@ struct PlaidMLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
     template<int... IIs, int... OIs>
     static void call_impl(GPlaidMLContext &ctx, detail::Seq<IIs...>, detail::Seq<OIs...>)
     {
-        call_wrap<decltype(plaidml_get_in<Ins>::get(ctx, IIs))...>::call(plaidml_get_in<Ins>::get(ctx, IIs)..., plaidml_get_out<Outs>::get(ctx, OIs)...);
+        call_wrap<decltype(plaidml_get_in<Ins>::get(ctx, IIs))...>::call(plaidml_get_in<Ins>::get(ctx, IIs)...,
+                                                                         plaidml_get_out<Outs>::get(ctx, OIs)...);
     }
 
     static void call(GPlaidMLContext& ctx)
