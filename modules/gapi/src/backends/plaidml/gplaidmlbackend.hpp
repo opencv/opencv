@@ -45,12 +45,15 @@ public:
         util::throw_error(std::logic_error("GPlaidMLExecutable::reshape() should never be called"));
     }
 
+    virtual void compile(const std::vector<cv::gimpl::Data>& ins_data,
+                         const std::vector<cv::gimpl::Data>& outs_data) override;
+
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
 
 private:
-    void initInputs (const std::vector<ade::NodeHandle> &nodes);
-    void initOutputs(const std::vector<ade::NodeHandle> &nodes);
+    void initBuffers(const std::vector<cv::gimpl::Data>& ins_data,
+                     std::vector<plaidml::exec::Binding>& bindings);
 
     void bindInArg  (const RcDesc &rc, const GRunArg  &arg);
     void bindOutArg (const RcDesc &rc, const GRunArgP &arg);
@@ -60,11 +63,15 @@ private:
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
 
+    std::vector<ade::NodeHandle> m_all_ops;
     std::vector<size_t> output_ids_;
+
     std::string device_id_;
     std::string target_id_;
+
     std::unique_ptr<plaidml::edsl::Program> program_;
     std::shared_ptr<plaidml::exec::Executable> exec_;
+
     std::vector<plaidml::exec::Binding> input_bindings_;
     std::vector<plaidml::exec::Binding> output_bindings_;
 
