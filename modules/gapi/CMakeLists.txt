@@ -37,6 +37,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
     )
 
 set(gapi_srcs
@@ -143,7 +144,8 @@ endif()
 
 find_package(PlaidML2 CONFIG)
 if (PLAIDML_FOUND)
-    ocv_target_compile_definitions(opencv_gapi PRIVATE -DHAVE_PLAIDML)
+    ocv_target_compile_definitions(opencv_gapi      PRIVATE -DHAVE_PLAIDML)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_PLAIDML)
     ocv_target_link_libraries(opencv_gapi LINK_PRIVATE ${PLAIDML_LIBRARIES})
     ocv_target_include_directories(opencv_gapi PRIVATE ${PLAIDML_INCLUDE_DIRS})
 endif()

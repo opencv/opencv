@@ -11,8 +11,6 @@
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
 
-#include <opencv2/gapi/render/render.hpp>
-
 #include <opencv2/gapi/plaidml/core.hpp>
 
 
@@ -317,120 +315,6 @@ TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
 
     // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
     EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
-}
-
-TEST(GAPI_Pipeline, PlaidMLAdd)
-{
-    cv::Size size(1920, 1080);
-    int type = CV_8UC1;
-
-    cv::Mat in_mat1(size, type, cv::Scalar::all(15));
-    cv::Mat in_mat2(size, type, cv::Scalar::all(1));
-    cv::Mat out_mat(size, type, cv::Scalar::all(0));
-    cv::Mat ref_mat(size, type, cv::Scalar::all(0));
-
-    ////////////////////////////// G-API //////////////////////////////////////
-    cv::GMat in1, in2;
-    auto out = in1 | (in2 ^ (in1 & (in2 + (in1 - in2))));
-
-    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
-    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::core::plaidml::kernels()));
-
-    ////////////////////////////// OpenCV /////////////////////////////////////
-    cv::subtract(in_mat1,  in_mat2, ref_mat, cv::noArray(), type);
-    cv::add(in_mat2, ref_mat, ref_mat, cv::noArray(), type);
-    cv::bitwise_and(in_mat1, ref_mat, ref_mat);
-    cv::bitwise_xor(in_mat2, ref_mat, ref_mat);
-    cv::bitwise_or(in_mat1, ref_mat, ref_mat);
-
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
-}
-
-TEST(GAPI_Pipeline, PlaidMLAdd2)
-{
-    cv::Size size(1920, 1080);
-    int type = CV_8UC1;
-
-    cv::Mat in_mat1(size, type, cv::Scalar::all(15));
-    cv::Mat in_mat2(size, type, cv::Scalar::all(1));
-    cv::Mat out_mat(size, type, cv::Scalar::all(0));
-    cv::Mat ref_mat(size, type, cv::Scalar::all(0));
-
-    ////////////////////////////// G-API //////////////////////////////////////
-    cv::GMat in1, in2;
-    auto out = in1 + (in1 + in2);
-
-    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
-    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::core::plaidml::kernels()));
-
-    ////////////////////////////// OpenCV /////////////////////////////////////
-    cv::add(in_mat1, in_mat2, ref_mat, cv::noArray(), type);
-    cv::add(in_mat1, ref_mat, ref_mat, cv::noArray(), type);
-
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
-}
-
-TEST(GAPI_Pipeline, PlaidMLAdd3)
-{
-    cv::Size size(3, 3);
-    int type = CV_8UC1;
-
-    cv::Mat in_mat1(size, type, cv::Scalar::all(1));
-    cv::Mat in_mat2(size, type, cv::Scalar::all(2));
-    cv::Mat in_mat3(size, type, cv::Scalar::all(3));
-    cv::Mat in_mat4(size, type, cv::Scalar::all(4));
-
-    cv::Mat out_mat(size, type, cv::Scalar::all(0));
-    cv::Mat ref_mat(size, type, cv::Scalar::all(0));
-
-    ////////////////////////////// G-API //////////////////////////////////////
-    cv::GMat in[4];
-    auto out = (in[3] - in[0]) + (in[2] - in[1]);
-
-    cv::GComputation comp(cv::GIn(in[0], in[1], in[2], in[3]), cv::GOut(out));
-    comp.apply(cv::gin(in_mat1, in_mat2, in_mat3, in_mat4), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::core::plaidml::kernels()));
-
-    ////////////////////////////// OpenCV /////////////////////////////////////
-    cv::subtract(in_mat4, in_mat1,  ref_mat, cv::noArray(), type);
-    cv::add(ref_mat, in_mat3, ref_mat, cv::noArray(), type);
-    cv::subtract(ref_mat, in_mat2, ref_mat, cv::noArray(), type);
-
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
-}
-
-TEST(GAPI_Pipeline, PlaidMLAdd4)
-{
-    cv::Size size(3, 3);
-    int type = CV_8UC1;
-
-    cv::Mat in_mat1(size, type, cv::Scalar::all(1));
-    cv::Mat in_mat2(size, type, cv::Scalar::all(2));
-    cv::Mat in_mat3(size, type, cv::Scalar::all(3));
-    cv::Mat in_mat4(size, type, cv::Scalar::all(4));
-
-    cv::Mat out_mat1(size, type, cv::Scalar::all(0));
-    cv::Mat out_mat2(size, type, cv::Scalar::all(0));
-    cv::Mat ref_mat1(size, type, cv::Scalar::all(0));
-    cv::Mat ref_mat2(size, type, cv::Scalar::all(0));
-
-    ////////////////////////////// G-API //////////////////////////////////////
-    cv::GMat in[4], out[2];
-    out[0] = in[0] + in[3];
-    out[1] = in[1] + in[2];
-
-    cv::GComputation comp(cv::GIn(in[0], in[1], in[2], in[3]), cv::GOut(out[0], out[1]));
-    comp.apply(cv::gin(in_mat1, in_mat2, in_mat3, in_mat4), cv::gout(out_mat1, out_mat2),
-               cv::compile_args(cv::gapi::core::plaidml::kernels()));
-
-    ////////////////////////////// OpenCV /////////////////////////////////////
-    cv::add(in_mat1, in_mat4, ref_mat1, cv::noArray(), type);
-    cv::add(in_mat2, in_mat3, ref_mat2, cv::noArray(), type);
-
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != ref_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != ref_mat2));
 }
 
 } // namespace opencv_test
