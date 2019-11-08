@@ -1,5 +1,5 @@
 Using OpenCV.js In Node.js {#tutorial_js_nodejs}
-===============================
+==========================
 
 Goals
 -----
@@ -47,14 +47,16 @@ node example1.js
 ### What just happened? ###
 
  * **In the first statement**:, by defining a global variable named 'Module', emscripten will call `Module.onRuntimeInitialized()` when the library is ready to use. Our program is in that method and uses the global variable `cv` just like in the browser.
- * The statement **`cv = require('./opencv.js')`** requires the file `opencv.js` and assign the return value to the global variable `cv`. `require()` which is a Node.js API, is used to load modules and files. In this case we load the file `opencv.js` form the current folder, and, as said previously emscripten will call `Module.onRuntimeInitialized()` when its ready.
+ * The statement **"cv = require('./opencv.js')"** requires the file `opencv.js` and assign the return value to the global variable `cv`.
+   `require()` which is a Node.js API, is used to load modules and files.
+   In this case we load the file `opencv.js` form the current folder, and, as said previously emscripten will call `Module.onRuntimeInitialized()` when its ready.
  * See [emscripten Module API](https://emscripten.org/docs/api_reference/module.html) for more details.
 
 
 Working with images
 -----
 
-OpenCV.js doesn't support image formats so we can't load png or jpeg images directly. In the browser it uses the HTML DOM (like HTMLCanvasElement and HTMLImageElement to decode and decode images. In node.js we will need to use a library for this.
+OpenCV.js doesn't support image formats so we can't load png or jpeg images directly. In the browser it uses the HTML DOM (like HTMLCanvasElement and HTMLImageElement to decode and decode images). In node.js we will need to use a library for this.
 
 In this example we use [jimp](https://www.npmjs.com/package/jimp), which supports common image formats and is pretty easy to use.
 
@@ -77,7 +79,7 @@ const Jimp = require('jimp');
 async function onRuntimeInitialized(){
 
   // load local image file with jimp. It supports jpg, png, bmp, tiff and gif:
-  var jimpSrc = await Jimp.read('./lenna.jpg');
+  var jimpSrc = await Jimp.read('./lena.jpg');
 
   // `jimpImage.bitmap` property has the decoded ImageData that we can use to create a cv:Mat
   var src = cv.matFromImageData(jimpSrc.bitmap);
@@ -112,7 +114,7 @@ cv = require('./opencv.js');
 ### Execute it ###
 
 -   Save the file as `exampleNodeJimp.js`.
--   Make sure a sample image `lenna.jpg` exists in the current directory.
+-   Make sure a sample image `lena.jpg` exists in the current directory.
 
 The following command should generate the file `output.png`:
 
@@ -155,7 +157,7 @@ const { writeFileSync } = require('fs');
   await loadOpenCV();
 
   // using node-canvas, we an image file to an object compatible with HTML DOM Image and therefore with cv.imread()
-  const image = await loadImage('./lenna.jpg');
+  const image = await loadImage('./lena.jpg');
 
   const src = cv.imread(image);
   const dst = new cv.Mat();
@@ -199,7 +201,7 @@ function installDOM() {
 ### Execute it ###
 
 -   Save the file as `exampleNodeCanvas.js`.
--   Make sure a sample image `lenna.jpg` exists in the current directory.
+-   Make sure a sample image `lena.jpg` exists in the current directory.
 
 The following command should generate the file `output.jpg`:
 
@@ -210,8 +212,6 @@ node exampleNodeCanvas.js
 
 Dealing with files
 -----
-
-<!-- This depends on https://github.com/opencv/opencv/pull/15319 -->
 
 In this tutorial you will learn how to configure emscripten so it uses the local filesystem for file operations instead of using memory. Also it tries to describe how [files are supported by emscripten applications](https://emscripten.org/docs/api_reference/Filesystem-API.html)
 
@@ -225,10 +225,6 @@ These C++ sources use standard APIs to access the filesystem and the implementat
 
 In the browser, this filesystem is emulated in memory while in Node.js there's also the possibility of using the local filesystem directly. This is often preferable since there's no need of copy file's content in memory. This section is explains how to do do just that, this is, configuring emscripten so files are accessed directly from our local filesystem and relative paths match files relative to the current local directory as expected.
 
-### Example setup ###
-
-The project setup is identical to the previous: @ref tutorial_js_nodejs_jsdom_canvas.
-
 ### The example ###
 
 The following is an adaptation of @ref tutorial_js_face_detection.
@@ -241,7 +237,7 @@ const { writeFileSync, readFileSync } = require('fs');
 (async () => {
   await loadOpenCV();
 
-  const image = await loadImage('lenna.jpg');
+  const image = await loadImage('lena.jpg');
   const src = cv.imread(image);
   let gray = new cv.Mat();
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
@@ -338,7 +334,7 @@ function installDOM(){
 
 -   Save the file as `exampleNodeCanvasData.js`.
 -   Make sure the files `aarcascade_frontalface_default.xml` and `haarcascade_eye.xml` are present in project's directory. They can be obtained from [OpenCV sources](https://github.com/opencv/opencv/tree/master/data/haarcascades).
--   Make sure a sample image file `lenna.jpg` exists in project's directory. It should display people's faces for this example to make sense. The following image is known to work:
+-   Make sure a sample image file `lena.jpg` exists in project's directory. It should display people's faces for this example to make sense. The following image is known to work:
 
 ![image](lena.jpg)
 
