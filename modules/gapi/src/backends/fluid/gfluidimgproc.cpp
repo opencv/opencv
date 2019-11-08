@@ -628,7 +628,7 @@ static void run_sepfilter(Buffer& dst, const View& src,
     else
     {
         int length = chan * width;
-        int xshift = chan * xborder;
+        int xshift = chan;
 
         // horizontal pass
 
@@ -788,8 +788,6 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
                               Buffer&    dst,
                               Buffer&    scratch)
     {
-        GAPI_Assert(ksize.height == 3);
-
         int kxsize = ksize.width;
         int kysize = ksize.height;
 
@@ -800,10 +798,16 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         int chan  = src.meta().chan;
         int length = width * chan;
 
-        float *buf[3];
+        constexpr int buffSize = 5;
+        GAPI_Assert(ksize.height <= buffSize);
+
+        float *buf[buffSize]{};
+
         buf[0] = ky + kysize;
-        buf[1] = buf[0] + length;
-        buf[2] = buf[1] + length;
+        for (int i = 1; i < ksize.height; ++i)
+        {
+            buf[i] = buf[i - 1] + length;
+        }
 
         auto  anchor = cv::Point(-1, -1);
 
