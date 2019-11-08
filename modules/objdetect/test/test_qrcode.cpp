@@ -427,10 +427,10 @@ TEST_P(Objdetect_QRCode_Multiple, regression)
             std::string name_test_image = config["image_name"];
             if (name_test_image == name_current_image)
             {
-              for(size_t j = 0; j < corners.size(); j++)
+              for(int j = 0; j < int(corners.size()); j++)
               {
                   bool ok = false;
-                  for(size_t k = 0; k < corners.size(); k++)
+                  for(int k = 0; k < int(corners.size()); k++)
                   {
                       int count_eq_points = 0;
                       for (int i = 0; i < int(corners[j].size()); i++)
