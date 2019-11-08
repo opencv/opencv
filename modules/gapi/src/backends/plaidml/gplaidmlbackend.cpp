@@ -5,6 +5,8 @@
 // Copyright (C) 2019 Intel Corporation
 
 
+#ifdef HAVE_PLAIDML
+
 #include "precomp.hpp"
 
 #include <ade/util/algorithm.hpp>
@@ -280,3 +282,5 @@ cv::GArg cv::gimpl::GPlaidMLExecutable::packArg(const GArg &arg)
         break;
     }
 }
+
+#endif // HAVE_PLAIDML

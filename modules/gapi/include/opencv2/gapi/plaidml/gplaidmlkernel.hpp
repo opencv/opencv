@@ -4,7 +4,9 @@
 //
 // Copyright (C) 2019 Intel Corporation
 //
-#if 1
+
+
+#ifdef HAVE_PLAIDML
 
 #ifndef OPENCV_GAPI_GPLAIDMLKERNEL_HPP
 #define OPENCV_GAPI_GPLAIDMLKERNEL_HPP
@@ -144,4 +146,4 @@ public:
 
 #endif // OPENCV_GAPI_GPLAIDMLKERNEL_HPP
 
-#endif // if
+#endif // HAVE_PLAIDML

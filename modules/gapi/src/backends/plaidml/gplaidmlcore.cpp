@@ -1,4 +1,4 @@
-#if 1
+#ifdef HAVE_PLAIDML
 
 #include "precomp.hpp"
 
@@ -64,4 +64,4 @@ cv::gapi::GKernelPackage cv::gapi::core::plaidml::kernels()
     return pkg;
 }
 
-#endif
+#endif // HACE_PLAIDML

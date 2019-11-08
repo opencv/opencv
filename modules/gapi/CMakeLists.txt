@@ -109,7 +109,6 @@ set(gapi_srcs
     src/backends/render/grenderocv.cpp
 
     #PlaidML Backend
-    src/backends/plaidml/gplaidmlkernel.cpp
     src/backends/plaidml/gplaidmlcore.cpp
     src/backends/plaidml/gplaidmlbackend.cpp
 

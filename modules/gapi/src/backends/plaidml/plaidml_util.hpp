@@ -5,6 +5,8 @@
 // Copyright (C) 2019 Intel Corporation
 
 
+#ifdef HAVE_PLAIDML
+
 #ifndef OPENCV_GAPI_PLAIDML_UTIL_HPP
 #define OPENCV_GAPI_PLAIDML_UTIL_HPP
 
@@ -36,3 +38,5 @@ inline plaidml_datatype depth_from_ocv(int depth)
 }
 }
 #endif // OPENCV_GAPI_PLAIDML_UTIL_HPP
+
+#endif // HAVE_PLAIDML
