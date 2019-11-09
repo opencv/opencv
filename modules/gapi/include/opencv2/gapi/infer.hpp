@@ -23,13 +23,13 @@
 
 namespace cv {
 
-template<typename, typename> class GNetworkType;
+template<typename, typename> struct GNetworkType;
 
 namespace detail {
-template<typename, typename> class GNetworkTypeImpl;
+template<typename, typename> struct GNetworkTypeImpl;
 
 template<typename K, typename... R, typename... Args>
-class GNetworkTypeImpl<K, std::function<std::tuple<R...>(Args...)> >
+struct GNetworkTypeImpl<K, std::function<std::tuple<R...>(Args...)> >
 {
 public:
     using InArgs  = std::tuple<Args...>;
