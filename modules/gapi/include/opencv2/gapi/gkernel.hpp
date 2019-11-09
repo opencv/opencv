@@ -176,17 +176,23 @@ namespace detail
 //
 // G_TYPED_KERNEL macros inherits user classes from GKernelType.
 template<typename, typename>
-class GKernelType;
+struct GKernelType;
 
 // Specialization for multiple-return-value
 template<class K, typename... R, typename... Args>
-class GKernelType<K, std::function<std::tuple<R...>(Args...)> >:
-    public detail::GKernelTypeImpl<K, std::function<std::tuple<R...>(Args...)> > {};
+struct GKernelType<K, std::function<std::tuple<R...>(Args...)> >:
+    public detail::GKernelTypeImpl<K, std::function<std::tuple<R...>(Args...)> >
+{
+    using detail::GKernelTypeImpl<K, std::function<std::tuple<R...>(Args...)>>::on;
+};
 
 // Specialization for single-return-value
 template<class K, typename R, typename... Args>
-class GKernelType<K, std::function<R(Args...)> >:
-    public detail::GKernelTypeImpl<K, std::function<std::tuple<R>(Args...)> > {};
+struct GKernelType<K, std::function<R(Args...)> >:
+    public detail::GKernelTypeImpl<K, std::function<std::tuple<R>(Args...)> >
+{
+    using detail::GKernelTypeImpl<K, std::function<std::tuple<R>(Args...)>>::on;
+};
 
 } // namespace cv
 
