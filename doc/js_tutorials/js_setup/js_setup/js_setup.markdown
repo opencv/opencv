@@ -117,6 +117,7 @@ Alternatively tests can run with [GoogleChrome/puppeteer](https://github.com/Goo
 @code{.sh}
 cd build/bin
 npm install
+npm install --no-save puppeteer    # automatically downloads Chromium package
 node run_puppeteer.js
 @endcode
 
@@ -125,6 +126,11 @@ Checkout `node run_puppeteer --help` for more options to debug and reporting.
 
 @note
 The command `npm install` only needs to be executed once, since installs the tools dependencies; after that they are ready to use.
+
+@note
+Use `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 npm install --no-save puppeteer` to skip automatic downloading of Chromium.
+You may specify own Chromium/Chrome binary through `PUPPETEER_EXECUTABLE_PATH=$(which google-chrome)` environment variable.
+**BEWARE**: Puppeteer is only guaranteed to work with the bundled Chromium, use at your own risk.
 
 
 ### Using Node.js.
@@ -136,6 +142,9 @@ cd build/bin
 npm install
 node tests.js
 @endcode
+
+@note If all tests are failed, then consider using Node.js from 8.x version (`lts/carbon` from `nvm`).
+
 
 Building OpenCV.js with Docker
 ---------------------------------------
