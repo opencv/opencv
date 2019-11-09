@@ -4,7 +4,7 @@
   "version": "1.0.1",
   "dependencies" : {
     "minimist": "^1.2.0",
-    "node-qunit" : "latest",    
+    "node-qunit" : "latest",
     "puppeteer": "^1.19.0"
   },
   "devDependencies": {

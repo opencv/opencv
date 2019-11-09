@@ -94,20 +94,20 @@ Building OpenCV.js from Source
 Running OpenCV.js Tests
 ---------------------------------------
 
-Remember to launch the build command passing `--build_test` as mentioned previously. This will generate test source code ready to run together with `opencv.js` file in `build/bin` 
+Remember to launch the build command passing `--build_test` as mentioned previously. This will generate test source code ready to run together with `opencv.js` file in `build/bin`
 
 ### Manually in your browser
 
 To run tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
 
-Navigate the web browser to `http://localhost:8080/tests.html`, which runs the unit tests automatically. Command example: 
+Navigate the web browser to `http://localhost:8080/tests.html`, which runs the unit tests automatically. Command example:
 
 @code{.sh}
 npx http-server build/bin
 firefox http://localhost:8080/tests.html
 @endcode
 
-@note 
+@note
 This snippet and the following require [Node.js](https://nodejs.org) to be installed.
 
 ### Headless with Puppeteer
@@ -120,11 +120,11 @@ npm install
 node run_puppeteer.js
 @endcode
 
-@note 
+@note
 Checkout `node run_puppeteer --help` for more options to debug and reporting.
 
 @note
-The command `npm install` only needs to be executed once, since installs the tools dependencies; after that they are ready to use. 
+The command `npm install` only needs to be executed once, since installs the tools dependencies; after that they are ready to use.
 
 
 ### Using Node.js.

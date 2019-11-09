@@ -66,7 +66,7 @@ ${colors.redBright(`=== Summary ===\n${text}`)}
   else {
     process.stdout.write(colors.green(`
  ${colors.symbols.check} No Errors :)
- 
+
  === Summary ===\n${text}
 `));
   }
@@ -111,19 +111,19 @@ ${colors.redBright(`=== Summary ===\n${text}`)}
 
 function printHelpAndExit() {
   console.log(`
-Usage: 
+Usage:
 
-  # First, remember to build opencv.s with tests enabled: 
+  # First, remember to build opencv.s with tests enabled:
   ${colors.blueBright(`python ./platforms/js/build_js.py build_js --build_test`)}
 
   # Install the tool locally (needed only once) and run it
   ${colors.blueBright(`cd build/bin`)}
   ${colors.blueBright(`npm install`)}
   ${colors.blueBright(`node run_puppeteer`)}
-  
-By default will run a headless browser silently printing a small report in the terminal. 
-But it could used to debug the tests in the browser, take screenshots, global tool or 
-targeting external servers exposing the tests. 
+
+By default will run a headless browser silently printing a small report in the terminal.
+But it could used to debug the tests in the browser, take screenshots, global tool or
+targeting external servers exposing the tests.
 
 TIP: you could install the tool globally (npm install --global build/bin) to execute it from any local folder.
 
