@@ -80,7 +80,7 @@ async function main(o = {}) {
     return await fail(`An error occurred extracting test results. Check the build folder ${o.buildFolder} is correct and has build with tests enabled.`);
   }
   o.debug && debug(colors.blackBright("* UserAgent: " + await getText('#qunit-userAgent')));
-  const testFailed = !text.includes('0 failed');
+  const testFailed = !text.includes(' 0 failed');
   if (testFailed && !o.debug) {
     process.stdout.write(colors.grey("* Use '--debug' parameter to see details of failed tests.\n"));
   }
@@ -144,7 +144,7 @@ ${colors.redBright(`=== Summary ===\n${text}`)}
   }
   function formatMessage(message, prefix) {
     prefix = prefix || '';
-    return prefix + message.split('\n').map(l => l.replace(serverAddress, o.buildFolder)).join('\n' + prefix);
+    return prefix + ('' + message).split('\n').map(l => l.replace(serverAddress, o.buildFolder)).join('\n' + prefix);
   }
 }
 
