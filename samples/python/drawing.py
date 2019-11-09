@@ -17,8 +17,6 @@ if __name__ == '__main__':
     NUMBER = 100
     DELAY = 5
     width, height = 1000, 700
-    col = "%06x" % np.random.randint(0, 0xFFFFFF)
-    color = tuple(int(col[i:i+2], 16) for i in (0, 2 ,4))
     lineType = cv.LINE_AA  # change it to LINE_8 to see non-antialiased graphics
     x1, x2, y1, y2 = -width/2, width*3/2, -height/2, height*3/2
 
@@ -41,7 +39,7 @@ if __name__ == '__main__':
         else:
             cv.arrowedLine(image, tuple(pt1), tuple(pt2), color, np.random.randint(1, 10), lineType)
         cv.imshow(wndname, image)
-        if (cv.waitKey(DELAY)>=0):
+        if cv.waitKey(DELAY)>=0:
             break
 
 # Drawing Rectangle
@@ -62,7 +60,7 @@ if __name__ == '__main__':
         else:
             cv.drawMarker(image, tuple(pt1), color, marker, marker_size)
         cv.imshow(wndname, image)
-        if (cv.waitKey(DELAY)>=0):
+        if cv.waitKey(DELAY)>=0:
             break
 
 # Drawing ellipse
@@ -81,7 +79,7 @@ if __name__ == '__main__':
         cv.ellipse(image, tuple(center), tuple(axes), angle, angle-100, angle + 200, color, thickness, lineType)
 
         cv.imshow(wndname, image)
-        if (cv.waitKey(DELAY)>=0):
+        if cv.waitKey(DELAY)>=0:
             break
 
 # Drawing Polygonal Curves
@@ -105,7 +103,7 @@ if __name__ == '__main__':
         ppt = np.asarray([*pt[0], *pt[1]])
         cv.polylines(image, [ppt], True, color, thickness = np.random.randint(1, 10), lineType = lineType)
         cv.imshow(wndname, image)
-        if(cv.waitKey(DELAY) >= 0):
+        if cv.waitKey(DELAY) >= 0:
             break
 
 # fills an area bounded by several polygonal contours
@@ -129,10 +127,10 @@ if __name__ == '__main__':
         ppt = np.asarray([*pt[0], *pt[1]])
         cv.fillPoly(image, [ppt], color, lineType)
         cv.imshow(wndname, image)
-        if(cv.waitKey(DELAY) >= 0):
+        if cv.waitKey(DELAY) >= 0:
             break
 
-# Drwaing Circles
+# Drawing Circles
     for i in range(NUMBER):
         center = []
         center.append(np.random.randint(x1, x2))
@@ -141,7 +139,7 @@ if __name__ == '__main__':
         color = tuple(int(color[i:i+2], 16) for i in (0, 2 ,4))
         cv.circle(image, tuple(center), np.random.randint(0, 300), color, np.random.randint(-1, 9), lineType)
         cv.imshow(wndname, image)
-        if(cv.waitKey(DELAY) >= 0):
+        if cv.waitKey(DELAY) >= 0:
             break
 
 # Draws a text string
@@ -153,7 +151,7 @@ if __name__ == '__main__':
         color = tuple(int(color[i:i+2], 16) for i in (0, 2 ,4))
         cv.putText(image, "Testing text rendering", tuple(org), np.random.randint(0, 8), np.random.randint(0, 100)*0.05+0.1, color, np.random.randint(1, 10), lineType)
         cv.imshow(wndname, image)
-        if(cv.waitKey(DELAY) >= 0):
+        if cv.waitKey(DELAY) >= 0:
             break
 
     textsize = cv.getTextSize("OpenCV forever!", cv.FONT_HERSHEY_COMPLEX, 3, 5)
@@ -163,7 +161,7 @@ if __name__ == '__main__':
         image2 = np.array(image) - i
         cv.putText(image2, "OpenCV forever!", org, cv.FONT_HERSHEY_COMPLEX, 3, (i, i, 255), 5, lineType);
         cv.imshow(wndname, image2);
-        if(cv.waitKey(DELAY) >= 0):
+        if cv.waitKey(DELAY) >= 0:
             break
 
     cv.waitKey(0)
