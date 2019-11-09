@@ -5,8 +5,7 @@
   "dependencies": {
     "ansi-colors": "^4.1.1",
     "minimist": "^1.2.0",
-    "node-qunit": "latest",
-    "puppeteer": "^2.0.0"
+    "node-qunit": "latest"
   },
   "devDependencies": {
     "eslint": "latest",

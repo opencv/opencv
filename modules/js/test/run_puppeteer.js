@@ -1,3 +1,15 @@
+try {
+  require('puppeteer')
+} catch (e) {
+  console.error(
+"\nFATAL ERROR:" +
+"\n    Package 'puppeteer' is not available." +
+"\n    Run 'npm install --no-save puppeteer' before running this script" +
+"\n    * You may use PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 environment variable to avoid automatic Chromium downloading" +
+"\n      (specify own Chromium/Chrome version through PUPPETEER_EXECUTABLE_PATH=`which google-chrome` environment variable)" +
+"\n");
+  process.exit(1);
+}
 const puppeteer = require('puppeteer')
 const colors = require("ansi-colors")
 const path = require("path");
