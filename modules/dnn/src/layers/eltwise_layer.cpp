@@ -62,6 +62,7 @@ public:
         PROD = 0,
         SUM = 1,
         MAX = 2,
+        DIV = 3
     } op;
     std::vector<float> coeffs;
     bool variableChannels;
@@ -79,6 +80,8 @@ public:
                 op = SUM;
             else if (operation == "max")
                 op = MAX;
+            else if (operation == "div")
+                op = DIV;
             else
                 CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
         }
@@ -271,6 +274,18 @@ public:
                             srcptr0 = (const float*)dstptr;
                         }
                     }
+                    else if( op == DIV )
+                    {
+                        for( k = 1; k < n; k++ )
+                        {
+                            const float* srcptr1 = srcs[k]->ptr<float>() + globalDelta;
+                            for( j = 0; j < blockSize; j++ )
+                            {
+                                dstptr[j] = srcptr0[j]/srcptr1[j];
+                            }
+                            srcptr0 = (const float*)dstptr;
+                        }
+                    }
                     else if( op == MAX )
                     {
                         for( k = 1; k < n; k++ )
@@ -393,6 +408,11 @@ public:
                 for (int i = 2; i < inputs.size(); ++i)
                     multiply(inputs[i], outputs[0], outputs[0]);
                 break;
+            case DIV:
+                divide(inputs[0], inputs[1], outputs[0]);
+                for (int i = 2; i < inputs.size(); ++i)
+                    divide(outputs[0], inputs[i], outputs[0]);
+                break;
             case MAX:
                 max(inputs[0], inputs[1], outputs[0]);
                 for (int i = 2; i < inputs.size(); ++i)
@@ -486,6 +506,8 @@ public:
             ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::SUM);
         else if (op == PROD)
             ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MUL);
+        else if (op == DIV)
+            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::DIV);
         else if (op == MAX)
             ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MAX);
         else
