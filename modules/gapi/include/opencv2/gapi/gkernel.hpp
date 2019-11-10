@@ -112,8 +112,31 @@ namespace detail
     template<typename, typename, typename>
     struct MetaHelper;
 
+    template<typename, typename, typename>
+    struct MetaHelperImpl;
+
+// FIXME: the below must be deleted at some point - here only to preserve current ABI
+#define ADD_GAPI_META_HELPER(OutTemplate, OutType) \
+    template<typename K, typename... Ins, typename OutTemplate> \
+    struct MetaHelper<K, std::tuple<Ins...>, OutType> : \
+        MetaHelperImpl<K, std::tuple<Ins...>, typename tuple_wrap_helper<OutType>::type> \
+    { \
+        static GMetaArgs getOutMeta(const GMetaArgs &in_meta, \
+                                    const GArgs &in_args) \
+        { \
+            using base = \
+                MetaHelperImpl<K, std::tuple<Ins...>, typename tuple_wrap_helper<OutType>::type>; \
+            return base::getOutMeta(in_meta, in_args); \
+        } \
+    };
+
+    ADD_GAPI_META_HELPER(... Outs, std::tuple<Outs...>)
+    ADD_GAPI_META_HELPER(Out, Out)
+#undef ADD_GAPI_META_HELPER
+
+    // MetaHelper implementation class that provides MetaHelper logic
     template<typename K, typename... Ins, typename... Outs>
-    struct MetaHelper<K, std::tuple<Ins...>, std::tuple<Outs...> >
+    struct MetaHelperImpl<K, std::tuple<Ins...>, std::tuple<Outs...> >
     {
         template<int... IIs, int... OIs>
         static GMetaArgs getOutMeta_impl(const GMetaArgs &in_meta,
@@ -145,24 +168,26 @@ namespace detail
         static constexpr const char *tag() { return ""; }
     };
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Kernel implementation class that provides GKernelType logic
     template<typename, typename> class GKernelTypeImpl;
 
     template<typename K, typename... R, typename... Args>
     class GKernelTypeImpl<K, std::function<std::tuple<R...>(Args...)> >
-        : public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...>>
+        : public detail::MetaHelper<K, std::tuple<Args...>, return_type_helper_t<R...>>
         , public detail::NoTag
     {
         template<int... IIs>
-        static detail::return_type_helper_t<R...> yield(cv::GCall &call, detail::Seq<IIs...>)
+        static return_type_helper_t<R...> yield(cv::GCall &call, detail::Seq<IIs...>)
         {
-            return detail::return_type_helper<R...>::get(detail::Yield<R>::yield(call, IIs)...);
+            return return_type_helper<R...>::get(detail::Yield<R>::yield(call, IIs)...);
         }
 
     public:
         using InArgs  = std::tuple<Args...>;
         using OutArgs = std::tuple<R...>;
 
-        static detail::return_type_helper_t<R...> on(Args... args)
+        static return_type_helper_t<R...> on(Args... args)
         {
             cv::GCall call(
                 GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape...}});
@@ -179,11 +204,14 @@ template<typename, typename>
 struct GKernelType;
 
 // Specialization for multiple-return-value
-template<class K, typename... R, typename... Args>
-struct GKernelType<K, std::function<std::tuple<R...>(Args...)> >:
-    public detail::GKernelTypeImpl<K, std::function<std::tuple<R...>(Args...)> >
+template<class K, typename... Rs, typename... Args>
+struct GKernelType<K, std::function<std::tuple<Rs...>(Args...)> >:
+    public detail::GKernelTypeImpl<K, std::function<std::tuple<Rs...>(Args...)> >
 {
-    using detail::GKernelTypeImpl<K, std::function<std::tuple<R...>(Args...)>>::on;
+    static detail::return_type_helper_t<Rs...> on(Args... args)
+    {
+        return detail::GKernelTypeImpl<K, std::function<std::tuple<Rs...>(Args...)>>::on(args...);
+    }
 };
 
 // Specialization for single-return-value
@@ -191,7 +219,10 @@ template<class K, typename R, typename... Args>
 struct GKernelType<K, std::function<R(Args...)> >:
     public detail::GKernelTypeImpl<K, std::function<std::tuple<R>(Args...)> >
 {
-    using detail::GKernelTypeImpl<K, std::function<std::tuple<R>(Args...)>>::on;
+    static detail::return_type_helper_t<R> on(Args... args)
+    {
+        return detail::GKernelTypeImpl<K, std::function<std::tuple<R>(Args...)>>::on(args...);
+    }
 };
 
 } // namespace cv

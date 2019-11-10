@@ -31,7 +31,6 @@ template<typename, typename> struct GNetworkTypeImpl;
 template<typename K, typename... R, typename... Args>
 struct GNetworkTypeImpl<K, std::function<std::tuple<R...>(Args...)> >
 {
-public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R...>;
 
@@ -46,12 +45,12 @@ public:
 // Specialization for multiple-return-value
 template<class K, typename... R, typename... Args>
 struct GNetworkType<K, std::function<std::tuple<R...>(Args...)> >:
-    public detail::GNetworkTypeImpl<K, std::function<std::tuple<R...>(Args...)> > {};
+    detail::GNetworkTypeImpl<K, std::function<std::tuple<R...>(Args...)> > {};
 
 // Specialization for single-return-value
 template<class K, typename R, typename... Args>
 struct GNetworkType<K, std::function<R(Args...)> >:
-    public detail::GNetworkTypeImpl<K, std::function<std::tuple<R>(Args...)> > {};
+    detail::GNetworkTypeImpl<K, std::function<std::tuple<R>(Args...)> > {};
 
 // Base "Infer" kernel. Note - for whatever network, kernel ID
 // is always the same. Different inference calls are distinguished by
