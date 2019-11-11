@@ -15,6 +15,7 @@
 #include "executor/gstreamingexecutor.hpp"
 #include "compiler/passes/passes.hpp"
 #include "backends/common/gbackend.hpp" // createMat
+#include "compiler/gcompiler.hpp" // for compileIslands
 
 namespace
 {
@@ -395,11 +396,13 @@ void collectorThread(std::vector<Q*> in_queues,
 }
 } // anonymous namespace
 
-cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model)
+cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model, cv::GCompileArgs m_args)
     : m_orig_graph(std::move(g_model))
     , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
                      .get<IslandModel>().model)
     , m_gim(*m_island_graph)
+    , comp_args(m_args)
+    , wasFinished(false)
 {
     GModel::Graph gm(*m_orig_graph);
     // NB: Right now GIslandModel is acyclic, and all the below code assumes that.
@@ -480,8 +483,8 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                                          , std::move(output_rcs)
                                          , std::move(output_metas)
                                          , nh
-                                         , in_constants
-                                         , m_gim.metadata(nh).get<IslandExec>().object});
+                                         , in_constants});
+// вынести islandExec в сетсорс m_gim.metadata(nh).get<IslandExec>().object
 
                 // Initialize queues for every operation's input
                 ade::TypedGraph<DataQueue> qgr(*m_island_graph);
@@ -623,6 +626,54 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
                                out_queues,
                                real_video_completion_cb);
     }
+
+    //get metadata 
+    cv::GMatDesc mat_desc(CV_8U,3,cv::Size(768,432));
+    cv::GMetaArgs metas{cv::GMetaArg(mat_desc)};
+    
+    if (/*wasFinished*/false) {
+        //reshape
+        //does it required unempty comp_args??
+        bool canReshape = true;
+        for (auto &op : m_ops) {
+            canReshape = op.isl_exec->canReshape();
+            if (!canReshape)
+                break;
+        }
+        if (canReshape) {
+            auto& g = *m_orig_graph.get();
+            ade::passes::PassContext ctx{g};
+            passes::initMeta(ctx, metas);
+            passes::inferMeta(ctx, true);
+            // outMetas()?
+            for (auto &op : m_ops)
+                op.isl_exec->reshape(g, cv::compile_args());
+
+        } else {
+            //???
+        }
+    } else {
+        //finishing graph
+        //set passes (ok?)
+        // is: GModel::Graph gm(m_orig_graph); eq  auto& g = *m_orig_graph.get(); ??
+        // GModel::Graph gm(*m_orig_graph);
+        // std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
+        // GIslandModel::Graph gim(*gptr);
+
+        auto pass_ctx = ade::passes::PassContext{*m_orig_graph.get()};
+        cv::gimpl::passes::initMeta(pass_ctx, metas);
+        //does inferMeta needed?? 
+        cv::gimpl::passes::inferMeta(pass_ctx, true);
+        //compile islands for m_orig_graph
+        // Get compileArgs from m_ops?? 
+        cv::gimpl::GCompiler::compileIslands(*m_orig_graph.get(), comp_args);
+
+        wasFinished = true;
+    }
+
+    //m_gim.metadata(nh).get<IslandExec>().object; // что это??
+                // берем из islamdModel
+
 
     // Now do this for every island (in a topological order)
     for (auto &&op : m_ops)

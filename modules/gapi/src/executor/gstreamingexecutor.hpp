@@ -74,6 +74,9 @@ protected:
         RUNNING,
     } state = State::STOPPED;
 
+    bool wasFinished;
+    cv::GCompileArgs comp_args;
+
     std::unique_ptr<ade::Graph> m_orig_graph;
     std::shared_ptr<ade::Graph> m_island_graph;
 
@@ -116,7 +119,7 @@ protected:
     void wait_shutdown();
 
 public:
-    explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model);
+    explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model, cv::GCompileArgs m_args);
     ~GStreamingExecutor();
     void setSource(GRunArgs &&args);
     void start();

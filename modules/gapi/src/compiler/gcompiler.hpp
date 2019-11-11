@@ -47,10 +47,11 @@ public:
 
     // But those are actually composed of this:
     using GPtr = std::unique_ptr<ade::Graph>;
-    GPtr       generateGraph();               // Unroll GComputation into a GModel
-    void       runPasses(ade::Graph &g);      // Apply all G-API passes on a GModel
-    void       compileIslands(ade::Graph &g); // Instantiate GIslandExecutables in GIslandModel
-    GCompiled  produceCompiled(GPtr &&pg);    // Produce GCompiled from processed GModel
+    GPtr        generateGraph();               // Unroll GComputation into a GModel
+    void        runPasses(ade::Graph &g);      // Apply all G-API passes on a GModel
+    void        compileIslands(ade::Graph &g); // Instantiate GIslandExecutables in GIslandModel
+    static void compileIslands(ade::Graph &g, cv::GCompileArgs &args);
+    GCompiled   produceCompiled(GPtr &&pg);    // Produce GCompiled from processed GModel
     GStreamingCompiled  produceStreamingCompiled(GPtr &&pg); // Produce GStreamingCompiled from processed GMbodel
 };
 
