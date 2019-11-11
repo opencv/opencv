@@ -51,7 +51,22 @@ Ptr<cv::cuda::SparsePyrLKOpticalFlow> cv::cuda::SparsePyrLKOpticalFlow::create(S
 
 Ptr<cv::cuda::DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<DensePyrLKOpticalFlow>(); }
 
-#else /* !defined (HAVE_CUDA) */
+#else
+
+void cv::cuda::buildImagePyramid(const GpuMat& Img, std::vector<GpuMat>& Pyr,
+                                 int maxLevel, Stream stream)
+{
+    Pyr.resize(maxLevel + 1);
+    int cn = Img.channels();
+
+    CV_Assert(cn == 1 || cn == 3 || cn == 4);
+
+    Pyr[0] = Img;
+    for (int level = 1; level <= maxLevel; ++level)
+    {
+        cuda::pyrDown(Pyr[level - 1], Pyr[level], stream);
+    }
+}
 
 namespace pyrlk
 {
@@ -95,7 +110,6 @@ namespace
         int maxLevel_;
         int iters_;
         bool useInitialFlow_;
-        void buildImagePyramid(const GpuMat& prevImg, std::vector<GpuMat>& prevPyr, const GpuMat& nextImg, std::vector<GpuMat>& nextPyr, Stream stream);
     private:
         friend class SparsePyrLKOpticalFlowImpl;
         std::vector<GpuMat> prevPyr_;
@@ -132,24 +146,6 @@ namespace
         block.z = patch.z = 1;
     }
 
-    void PyrLKOpticalFlowBase::buildImagePyramid(const GpuMat& prevImg, std::vector<GpuMat>& prevPyr, const GpuMat& nextImg, std::vector<GpuMat>& nextPyr, Stream stream)
-    {
-        prevPyr.resize(maxLevel_ + 1);
-        nextPyr.resize(maxLevel_ + 1);
-
-        int cn = prevImg.channels();
-
-        CV_Assert(cn == 1 || cn == 3 || cn == 4);
-
-        prevPyr[0] = prevImg;
-        nextPyr[0] = nextImg;
-
-        for (int level = 1; level <= maxLevel_; ++level)
-        {
-            cuda::pyrDown(prevPyr[level - 1], prevPyr[level], stream);
-            cuda::pyrDown(nextPyr[level - 1], nextPyr[level], stream);
-        }
-    }
     void PyrLKOpticalFlowBase::sparse(std::vector<GpuMat>& prevPyr, std::vector<GpuMat>& nextPyr, const GpuMat& prevPts, GpuMat& nextPts,
         GpuMat& status, GpuMat* err, Stream& stream)
     {
@@ -174,9 +170,14 @@ namespace
         if (err)
             ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, *err);
 
-        if (prevPyr.size() != size_t(maxLevel_ + 1) || nextPyr.size() != size_t(maxLevel_ + 1))
+        if (prevPyr.size() != size_t(maxLevel_ + 1))
         {
-            buildImagePyramid(prevPyr[0], prevPyr, nextPyr[0], nextPyr, stream);
+            buildImagePyramid(prevPyr[0], prevPyr, maxLevel_, stream);
+        }
+
+        if (nextPyr.size() != size_t(maxLevel_ + 1))
+        {
+            buildImagePyramid(nextPyr[0], nextPyr, maxLevel_, stream);
         }
 
         dim3 block, patch;
@@ -214,6 +215,12 @@ namespace
                 prevPts.cols, level, block, patch,
                 stream_);
         }
+
+        // prevPyr obtains the value of nextPyr
+        prevPyr.assign(nextPyr.begin(), nextPyr.end());
+        // nextPyr is cleared so that it can be
+        // constructed again for the new frame
+        nextPyr.clear();
     }
 
     void PyrLKOpticalFlowBase::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err, Stream& stream)
@@ -227,9 +234,6 @@ namespace
         }
         CV_Assert( prevImg.channels() == 1 || prevImg.channels() == 3 || prevImg.channels() == 4 );
         CV_Assert( prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type() );
-
-        // build the image pyramids.
-        buildImagePyramid(prevImg, prevPyr_, nextImg, nextPyr_, stream);
 
         sparse(prevPyr_, nextPyr_, prevPts, nextPts, status, err, stream);
 

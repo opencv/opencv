@@ -93,6 +93,44 @@ PERF_TEST_P(ImagePair, BroxOpticalFlow,
 }
 
 //////////////////////////////////////////////////////
+// buildImagePyramid
+
+PERF_TEST_P(Size_MatType, buildImagePyramid, testing::Combine(
+                testing::Values(sz1080p, sz720p, szVGA, szQVGA, szODD),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4)
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    int maxLevel = 5;
+    const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
+    perf::ERROR_TYPE error_type = CV_MAT_DEPTH(matType) <= CV_32S ? ERROR_ABSOLUTE : ERROR_RELATIVE;
+
+    if (PERF_RUN_CUDA())
+    {
+        cv::cuda::GpuMat src(sz, matType);
+        std::vector<cv::cuda::GpuMat> dst(maxLevel);
+        declare.in(src, WARMUP_RNG);
+
+        TEST_CYCLE() buildImagePyramid(src, dst, maxLevel, cv::cuda::Stream::Null());
+
+        for(int level = 0; level < maxLevel; level++) {SANITY_CHECK(dst[level], eps, error_type);}
+    }
+    else
+    {
+        Mat src(sz, matType);
+        std::vector<Mat> dst(maxLevel);
+        declare.in(src, WARMUP_RNG);
+
+        TEST_CYCLE() cv::buildPyramid(src, dst, maxLevel);
+
+        for(int level = 0; level < maxLevel; level++) {SANITY_CHECK(dst[level], eps, error_type);}
+    }
+}
+
+
+//////////////////////////////////////////////////////
 // PyrLKOpticalFlowSparse
 
 DEF_PARAM_TEST(ImagePair_Gray_NPts_WinSz_Levels_Iters, pair_string, bool, int, int, int, int);

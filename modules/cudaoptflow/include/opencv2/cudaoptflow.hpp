@@ -65,6 +65,9 @@ namespace cv { namespace cuda {
 // Interface
 //
 
+CV_EXPORTS void buildImagePyramid(const GpuMat& Img, std::vector<GpuMat>& Pyr,
+                                  int maxlevel, Stream stream);
+
 /** @brief Base interface for dense optical flow algorithms.
  */
 class CV_EXPORTS DenseOpticalFlow : public Algorithm
