@@ -64,33 +64,30 @@ static void dumpOpenCLInformation()
 
         std::vector<PlatformInfo> platforms;
         cv::ocl::getPlatfomsInfo(platforms);
-        if (platforms.size() > 0)
-        {
-            DUMP_MESSAGE_STDOUT("OpenCL Platforms: ");
-            for (size_t i = 0; i < platforms.size(); i++)
-            {
-                const PlatformInfo* platform = &platforms[i];
-                DUMP_MESSAGE_STDOUT("    " << platform->name().c_str());
-                Device current_device;
-                for (int j = 0; j < platform->deviceNumber(); j++)
-                {
-                    platform->getDevice(current_device, j);
-                    const char* deviceTypeStr = current_device.type() == Device::TYPE_CPU
-                        ? ("CPU") : (current_device.type() == Device::TYPE_GPU ? current_device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
-                    DUMP_MESSAGE_STDOUT( "        " << deviceTypeStr << ": " << current_device.name().c_str() << " (" << current_device.version().c_str() << ")");
-                    DUMP_CONFIG_PROPERTY( cv::format("cv_ocl_platform_%d_device_%d", (int)i, (int)j ),
-                        cv::format("(Platform=%s)(Type=%s)(Name=%s)(Version=%s)",
-                        platform->name().c_str(), deviceTypeStr, current_device.name().c_str(), current_device.version().c_str()) );
-                }
-            }
-        }
-        else
+        if (platforms.empty())
         {
             DUMP_MESSAGE_STDOUT("OpenCL is not available");
             DUMP_CONFIG_PROPERTY("cv_ocl", "not available");
             return;
         }
 
+        DUMP_MESSAGE_STDOUT("OpenCL Platforms: ");
+        for (size_t i = 0; i < platforms.size(); i++)
+        {
+            const PlatformInfo* platform = &platforms[i];
+            DUMP_MESSAGE_STDOUT("    " << platform->name());
+            Device current_device;
+            for (int j = 0; j < platform->deviceNumber(); j++)
+            {
+                platform->getDevice(current_device, j);
+                const char* deviceTypeStr = (current_device.type() == Device::TYPE_CPU) ? "CPU" :
+                    (current_device.type() == Device::TYPE_GPU ? current_device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
+                DUMP_MESSAGE_STDOUT( "        " << deviceTypeStr << ": " << current_device.name() << " (" << current_device.version() << ")");
+                DUMP_CONFIG_PROPERTY( cv::format("cv_ocl_platform_%d_device_%d", (int)i, j ),
+                    cv::format("(Platform=%s)(Type=%s)(Name=%s)(Version=%s)",
+                    platform->name().c_str(), deviceTypeStr, current_device.name().c_str(), current_device.version().c_str()) );
+            }
+        }
         const Device& device = Device::getDefault();
         if (!device.available())
             CV_Error(Error::OpenCLInitError, "OpenCL device is not available");
@@ -102,8 +99,8 @@ static void dumpOpenCLInformation()
         DUMP_CONFIG_PROPERTY("cv_ocl_current_platformName", device.getPlatform().name());
 #endif
 
-        const char* deviceTypeStr = device.type() == Device::TYPE_CPU
-            ? ("CPU") : (device.type() == Device::TYPE_GPU ? device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
+        const char* deviceTypeStr = (device.type() == Device::TYPE_CPU) ? "CPU" :
+            (device.type() == Device::TYPE_GPU ? device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
         DUMP_MESSAGE_STDOUT("    Type = " << deviceTypeStr);
         DUMP_CONFIG_PROPERTY("cv_ocl_current_deviceType", deviceTypeStr);
 
@@ -156,7 +153,7 @@ static void dumpOpenCLInformation()
             }
             pos = pos2 + 1;
         }
-        DUMP_CONFIG_PROPERTY("cv_ocl_current_extensions", extensionsStr.c_str());
+        DUMP_CONFIG_PROPERTY("cv_ocl_current_extensions", extensionsStr);
 
         const char* haveAmdBlasStr = haveAmdBlas() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Has AMD Blas = " << haveAmdBlasStr);
