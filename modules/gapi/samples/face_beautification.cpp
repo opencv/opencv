@@ -587,9 +587,6 @@ inline cv::GMat custom::mask3C(const cv::GMat &src,
 
 int main(int argc, char** argv)
 {
-    cv::namedWindow(config::kWinFaceBeautification, cv::WINDOW_NORMAL);
-    cv::namedWindow(config::kWinInput,              cv::WINDOW_NORMAL);
-
     cv::CommandLineParser parser(argc, argv,
 "{ help         h ||      print the help message. }"
 
@@ -610,6 +607,15 @@ int main(int argc, char** argv)
         parser.printMessage();
         return 0;
     }
+
+#if defined(HAVE_OPENCV_GAPI) && defined(HAVE_INF_ENGINE)
+
+#if INF_ENGINE_RELEASE <= 2018050000
+#   error G-API IE module supports only OpenVINO IE >= 2019 R1
+#endif
+
+    cv::namedWindow(config::kWinFaceBeautification, cv::WINDOW_NORMAL);
+    cv::namedWindow(config::kWinInput,              cv::WINDOW_NORMAL);
 
     // Parsing input arguments
     const std::string faceXmlPath = parser.get<std::string>("facepath");
@@ -774,4 +780,15 @@ int main(int argc, char** argv)
         cv::imshow(config::kWinFaceBeautification, imgBeautif);
     }
     return 0;
+
+#else
+#include <iostream>
+
+    std::cerr << "This tutorial code requires G-API module"
+                 " with Inference Engine backend to run"
+              << std::endl;
+    return 1;
+
+#endif // HAVE_OPECV_GAPI && HAVE_INF_ENGINE
+
 }
