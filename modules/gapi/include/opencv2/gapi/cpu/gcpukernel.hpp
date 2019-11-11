@@ -145,6 +145,12 @@ template<typename U> struct get_in<cv::GArray<U> >
 {
     static const std::vector<U>& get(GCPUContext &ctx, int idx) { return ctx.inArg<VectorRef>(idx).rref<U>(); }
 };
+
+//FIXME(dm): GArray<Mat>/GArray<GMat> conversion should be done more gracefully in the system
+template<> struct get_in<cv::GArray<cv::GMat> >: public get_in<cv::GArray<cv::Mat> >
+{
+};
+
 template<class T> struct get_in
 {
     static T get(GCPUContext &ctx, int idx) { return ctx.inArg<T>(idx); }
@@ -240,7 +246,6 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
             //not using a std::forward on outs is deliberate in order to
             //cause compilation error, by trying to bind rvalue references to lvalue references
             Impl::run(std::forward<Inputs>(ins)..., outs...);
-
             postprocess(outs...);
         }
     };
