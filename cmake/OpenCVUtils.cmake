@@ -377,6 +377,7 @@ macro(ocv_clear_vars)
 endmacro()
 
 set(OCV_COMPILER_FAIL_REGEX
+    "argument '.*' is not valid"                # GCC 9+
     "command line option .* is valid for .* but not for C\\+\\+" # GNU
     "command line option .* is valid for .* but not for C" # GNU
     "unrecognized .*option"                     # GNU
