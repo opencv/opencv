@@ -355,6 +355,12 @@ libraries). If you do not need the support for some of these, you can just freel
 Set the OpenCV environment variable and add it to the systems path {#tutorial_windows_install_path}
 =================================================================
 
+@note
+  Instead of adding it to your path you can add the following command to your `CMakeLists.txt` file: 
+@code
+  set("OpenCV_DIR" "/your/path/to/opencv/installation/dir")
+@endcode  
+
 First we set an environment variable to make easier our work. This will hold the build directory of
 our OpenCV library that we use in our projects. Start up a command window and enter:
 @code
