@@ -23,8 +23,8 @@ std::string qrcode_images_monitor[] = {
 };
 
 std::string qrcode_images_multiple[] = {
-  "2_qrcodes.jpg", "3_close_qrcodes.jpg", "3_qrcodes.jpg", "4_qrcodes.png",
-   "5_qrcodes.png", "6_qrcodes.jpg", "7_qrcodes.jpg", "8_close_qrcodes.jpg"
+  "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
+   "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
 };
 //#define UPDATE_QRCODE_TEST_DATA
 #ifdef  UPDATE_QRCODE_TEST_DATA
@@ -152,15 +152,15 @@ TEST(Objdetect_QRCode_Multiple, generate_test_data)
     {
         file_config << "{:" << "image_name" << qrcode_images_multiple[i];
         std::string image_path = findDataFile(root + qrcode_images_multiple[i]);
-        std::vector<std::vector<Point> > corners;
+        std::vector< std::vector< Point > > corners;
         Mat src = imread(image_path, IMREAD_GRAYSCALE);
         std::vector<Mat> straight_barcode;
         std::vector<cv::String> decoded_info;
 
         ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-        EXPECT_TRUE(detectQRCode(src, corners));
+        EXPECT_TRUE(multipleDetectQRCode(src, corners));
 #ifdef HAVE_QUIRC
-        EXPECT_TRUE(decodeQRCode(src, corners, decoded_info, straight_barcode));
+        EXPECT_TRUE(multipleDecodeQRCode(src, corners, decoded_info, straight_barcode));
 #endif
         file_config << "x" << "[:";
         for(size_t j = 0; j < corners.size(); j++)
@@ -198,6 +198,7 @@ TEST(Objdetect_QRCode_Multiple, generate_test_data)
     file_config << "]";
     file_config.release();
 }
+
 #else
 
 typedef testing::TestWithParam< std::string > Objdetect_QRCode;
@@ -402,8 +403,7 @@ TEST_P(Objdetect_QRCode_Multiple, regression)
     Mat src = imread(image_path, IMREAD_GRAYSCALE);
     std::vector<Mat> straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-
-    std::vector<std::vector<Point> > corners;
+    std::vector< std::vector< Point > > corners;
     std::vector<cv::String> decoded_info;
     QRCodeDetector qrcode;
 #ifdef HAVE_QUIRC

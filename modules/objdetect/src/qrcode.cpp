@@ -910,7 +910,7 @@ public:
     bool computeTransformationPoints(size_t cur_ind);
     Mat getBinBarcode() { return bin_barcode; }
     Mat getStraightBarcode() { return straight_barcode; }
-    vector<vector<Point2f> > getTransformationPoints() { return transformation_points; }
+    vector< vector< Point2f > > getTransformationPoints() { return transformation_points; }
     static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2);
 
 
@@ -926,7 +926,7 @@ protected:
     bool checkPointsInsideQuadrangle(vector<Point2f> triangle_points, vector<Point2f> all_localization_points);
     bool checkPointsInsideTriangle(vector<Point2f> triangle_points, vector<Point2f> all_localization_points);
     Mat barcode, bin_barcode, straight_barcode, bin_barcode_fullsize, bin_barcode_temp;
-    vector<vector<Point2f> > localization_points, transformation_points;
+    vector< vector< Point2f > > localization_points, transformation_points;
     double eps_vertical, eps_horizontal, coeff_expansion;
     struct compareSquare
     {
@@ -1225,11 +1225,11 @@ bool MultipleQRDetect::checkPoints(vector<Point2f> triangle_points)
       line( lineMask, p1, p2, 255, 1, 8, 0);
       line( lineMask, p2, p3, 255, 1, 8, 0);
       line( lineMask, p0, p3, 255, 1, 8, 0);
-      vector<vector<Point> > contours;
+      vector< vector< Point > > contours;
       vector<Vec4i> hierarchy;
       findContours(lineMask, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
       vector<Point> indices;
-      vector<vector<Point> > contours2;
+      vector< vector< Point > > contours2;
       contours2.push_back(contours[0]);
       fillPoly(lineMask, contours2, 255);
       findNonZero(lineMask, indices);
@@ -1261,7 +1261,7 @@ bool MultipleQRDetect::checkPointsInsideQuadrangle(vector<Point2f> triangle_poin
       line( lineMask, p1, p2, 255, 1, 8, 0);
       line( lineMask, p2, p3, 255, 1, 8, 0);
       line( lineMask, p0, p3, 255, 1, 8, 0);
-      vector<vector<Point> > contours;
+      vector< vector< Point > > contours;
       vector<Vec4i> hierarchy;
       findContours(lineMask, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
       int count = 0;
@@ -1287,7 +1287,7 @@ bool MultipleQRDetect::checkPointsInsideTriangle(vector<Point2f> triangle_points
       line( lineMask, p0, p1, 255, 1, 8, 0);
       line( lineMask, p1, p2, 255, 1, 8, 0);
       line( lineMask, p2, p0, 255, 1, 8, 0);
-      vector<vector<Point> > contours;
+      vector< vector< Point > > contours;
       vector<Vec4i> hierarchy;
       findContours(lineMask, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
       int count = 0;
@@ -1323,10 +1323,10 @@ bool MultipleQRDetect::compareSquare::operator()(vector<int> a, vector<int> b) c
 class ParallelSearch : public ParallelLoopBody
 {
 public:
-    ParallelSearch(vector<vector<Point2f> >& true_points_group_,
+    ParallelSearch(vector< vector< Point2f > >& true_points_group_,
                     vector<Point2f> resized_loc_points_, vector<Point2f> not_resized_loc_points_,
-                    vector<vector<Point2f> >& loc_, int iter_, int* end_,
-                    vector<vector<vector<int> > > all_points_,
+                    vector< vector< Point2f > >& loc_, int iter_, int* end_,
+                    vector< vector< vector< int > > > all_points_,
                     MultipleQRDetect& cl_):
 
                     true_points_group(true_points_group_),
@@ -1424,13 +1424,13 @@ public:
       }
   }
 private:
-  vector<vector<Point2f> >& true_points_group;
+  vector< vector< Point2f > >& true_points_group;
   vector<Point2f> resized_loc_points;
   vector<Point2f> not_resized_loc_points;
-  vector<vector<Point2f> >& loc;
+  vector< vector< Point2f > >& loc;
   int iter;
   int* end;
-  vector<vector<vector<int> > > all_points;
+  vector< vector< vector< int > > > all_points;
   MultipleQRDetect& cl;
 };
 
@@ -1555,7 +1555,7 @@ bool MultipleQRDetect::localization()
   kmeans(list_lines_y, num_points, labels,
          TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
           num_points, KMEANS_PP_CENTERS, tmp_localization_points);
-  vector<vector<Point2f> > triangles;
+  vector< vector< Point2f > > triangles;
   tmp_num_points = 0;
   bin_barcode_temp = bin_barcode.clone();
   if (purpose == SHRINKING)
@@ -1586,7 +1586,7 @@ bool MultipleQRDetect::localization()
   resize(bar, bar, new_size, 0, 0, INTER_LINEAR);
   blur(bar, blur_image, Size(3, 3));
   threshold(blur_image, threshold_output, 50, 255, THRESH_BINARY);
-  vector<vector<Point> > contours;
+  vector< vector< Point > > contours;
   vector<Vec4i> hierarchy;
 
   findContours(threshold_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
@@ -1604,7 +1604,7 @@ bool MultipleQRDetect::localization()
           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
           count_contours, KMEANS_PP_CENTERS, clustered_localization_points);
 
-  vector<vector<Point2f> > qrcode_clusters(count_contours);
+  vector< vector< Point2f > > qrcode_clusters(count_contours);
   for(int i = 0; i < count_contours; i++)
       for(int j = 0; j < int(all_contours_points.size()); j++)
       {
@@ -1614,7 +1614,7 @@ bool MultipleQRDetect::localization()
           }
       }
 
-  vector<vector<Point2f> > hull(count_contours);
+  vector< vector< Point2f > > hull(count_contours);
   for(size_t i = 0; i < qrcode_clusters.size(); i++)
       convexHull(Mat(qrcode_clusters[i]), hull[i]);
 
@@ -1634,7 +1634,7 @@ bool MultipleQRDetect::localization()
            not_resized_loc_points[j] /= coeff_expansion;
        }
    }
-   vector<vector<Point2f> > true_points_group;
+   vector< vector< Point2f > > true_points_group;
    for(size_t j = 0; j < hull.size(); j++)
    {
         Mat lineMask = Mat::zeros(bar.size(), threshold_output.type());
@@ -1677,7 +1677,7 @@ bool MultipleQRDetect::localization()
               true_points_group[i].clear();
           }
        }
-     vector<vector<Point2f> > temp_for_copy;
+     vector< vector< Point2f > > temp_for_copy;
      for(size_t i = 0; i < true_points_group.size(); i++)
      {
           if(true_points_group[i].size() != 0)
@@ -1702,7 +1702,7 @@ bool MultipleQRDetect::localization()
      {
          set_size[i] = int(0.5 * (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1));
      }
-     vector<vector<vector<int> > > all_points(true_points_group.size());
+     vector< vector< vector< int> > > all_points(true_points_group.size());
      for(size_t i = 0; i < true_points_group.size(); i++)
          all_points[i].resize(set_size[i]);
      for(size_t i = 0; i < true_points_group.size(); i++)
@@ -1739,7 +1739,7 @@ bool MultipleQRDetect::localization()
      localization_points.resize(iter + true_points_group.size());
      transformation_points.resize(iter + true_points_group.size());
 
-     vector<vector<Point2f> > loc = true_points_group;
+     vector< vector< Point2f > > loc = true_points_group;
      int* end = new int[true_points_group.size()];
      for(size_t i = 0; i < true_points_group.size(); i++)
          end[i] = iter + set_size[i];
@@ -1785,8 +1785,8 @@ bool MultipleQRDetect::localization()
      for(size_t i = 0; i < true_points_group.size(); i++)
         tmp_num_points = tmp_num_points + int(true_points_group[i].size());
       tmp_num_points = tmp_num_points + int(tmp_localization_points.size());
-      vector<vector<Point2f> > for_copy_loc;
-      vector<vector<Point2f> > for_copy_trans;
+      vector< vector< Point2f > > for_copy_loc;
+      vector< vector< Point2f > > for_copy_trans;
       for(size_t j = 0; j < localization_points.size(); j++)
       {
           if ((localization_points[j].size() == 3) && (transformation_points[j].size() == 4))
@@ -2237,7 +2237,7 @@ bool QRCodeDetector:: multipleDetect(InputArray in, OutputArrayOfArrays points) 
   MultipleQRDetect qrdet;
   qrdet.init(inarr, p->epsX, p->epsY);
   if (!qrdet.localization()) { return false; }
-  vector<vector<Point2f> > pnts2f = qrdet.getTransformationPoints();
+  vector< vector< Point2f > > pnts2f = qrdet.getTransformationPoints();
   points.create((int)pnts2f.size(), 1, points.fixedType() ? points.type() : CV_32FC2);
 
   for(int i = 0; i < (int)pnts2f.size(); i++)
@@ -2273,7 +2273,7 @@ bool QRCodeDetector:: multipleDetect(InputArray in, OutputArrayOfArrays points) 
   return true;
 }
 
-bool  multipleDetectQRCode(InputArray in, vector<vector<Point> > &points, double eps_x, double eps_y)
+bool  multipleDetectQRCode(InputArray in, vector< vector< Point > > &points, double eps_x, double eps_y)
 {
     QRCodeDetector qrdetector;
     qrdetector.setEpsX(eps_x);
@@ -2623,7 +2623,7 @@ class ParallelDecodeProcess : public ParallelLoopBody
 {
 public:
   ParallelDecodeProcess(Mat& inarr_, vector<QRDecode>& qrdec_, vector<std::string>& decoded_info_,
-                        vector<Mat>& straight_barcode_, vector<vector<Point2f> >& src_points_)
+                        vector<Mat>& straight_barcode_, vector< vector< Point2f > >& src_points_)
      : inarr(inarr_), qrdec(qrdec_), decoded_info(decoded_info_),
      straight_barcode(straight_barcode_), src_points(src_points_)
   {
@@ -2672,7 +2672,7 @@ public:
   vector<QRDecode>& qrdec;
   vector<std::string>& decoded_info;
   vector<Mat>& straight_barcode;
-  vector<vector<Point2f> >& src_points;
+  vector< vector< Point2f > >& src_points;
 
 };
 
@@ -2694,7 +2694,7 @@ vector<cv::String> QRCodeDetector:: multipleDecode(InputArray in, InputArrayOfAr
         inarr = gray;
     }
 
-    vector<vector<Point2f> > src_points ;
+    vector< vector< Point2f > > src_points ;
     for(int i = 0; i < points.size().width; i++)
     {
         vector<Point2f> tempMat = points.getMat(i);
@@ -2765,7 +2765,7 @@ vector<cv::String> QRCodeDetector:: multipleDetectAndDecode(InputArray in,
         inarr = gray;
     }
 
-    vector<vector<Point2f> > points, tempPoints;
+    vector< vector< Point2f > > points, tempPoints;
     bool ok =  multipleDetect(inarr, points);
     if(ok)
     {

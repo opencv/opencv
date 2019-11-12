@@ -64,14 +64,10 @@ PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDetect)
     Mat src = imread(image_path, IMREAD_GRAYSCALE);
     std::vector<Mat> straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-    std::vector<std::vector<Point> > corners;
+    std::vector< std::vector< Point > > corners;
     QRCodeDetector qrcode;
     TEST_CYCLE() ASSERT_TRUE(qrcode.multipleDetect(src, corners));
-    for(size_t i = 0; i < corners.size(); i++)
-    {
-        SANITY_CHECK(corners[i]);
-    }
-
+    SANITY_CHECK(corners);
 }
 
 #ifdef HAVE_QUIRC
@@ -85,8 +81,8 @@ PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDecode)
     std::vector<Mat> straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
-    std::vector<std::vector<Point2f> > corners;
-    std::vector<cv::String> decoded_info;
+    std::vector< std::vector< Point2f > > corners;
+    std::vector< cv::String > decoded_info;
     QRCodeDetector qrcode;
     ASSERT_TRUE(qrcode.multipleDetect(src, corners));
     TEST_CYCLE()
@@ -97,12 +93,14 @@ PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDecode)
             ASSERT_FALSE(decoded_info[i].empty());
         }
     }
+    std::vector< std::vector< uint8_t > > decoded_info_uint8_t;
     for(size_t i = 0; i < decoded_info.size(); i++)
     {
-        std::vector<uint8_t> decoded_info_uint8_t(decoded_info[i].begin(), decoded_info[i].end());
-        SANITY_CHECK(decoded_info_uint8_t);
-        SANITY_CHECK(straight_barcode[i]);
+        std::vector< uint8_t > tmp(decoded_info[i].begin(), decoded_info[i].end());
+        decoded_info_uint8_t.push_back(tmp);
     }
+    SANITY_CHECK(decoded_info_uint8_t);
+    SANITY_CHECK(straight_barcode);
 
 }
 #endif
@@ -118,8 +116,8 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode,
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_Multiple_QRCode,
     ::testing::Values(
-      "2_qrcodes.jpg", "3_close_qrcodes.jpg", "3_qrcodes.jpg", "4_qrcodes.png",
-       "5_qrcodes.png", "6_qrcodes.jpg", "7_qrcodes.jpg", "8_close_qrcodes.jpg"
+      "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
+       "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
     )
 );
 
