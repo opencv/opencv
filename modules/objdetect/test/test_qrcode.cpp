@@ -153,7 +153,7 @@ TEST(Objdetect_QRCode_Multiple, generate_test_data)
         file_config << "{:" << "image_name" << qrcode_images_multiple[i];
         std::string image_path = findDataFile(root + qrcode_images_multiple[i]);
         std::vector< std::vector< Point > > corners;
-        Mat src = imread(image_path, IMREAD_GRAYSCALE);
+        Mat src = imread(image_path);
         std::vector<Mat> straight_barcode;
         std::vector<cv::String> decoded_info;
 
@@ -400,7 +400,7 @@ TEST_P(Objdetect_QRCode_Multiple, regression)
 
     std::string image_path =
      findDataFile(root + name_current_image);
-    Mat src = imread(image_path, IMREAD_GRAYSCALE);
+    Mat src = imread(image_path);
     std::vector<Mat> straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
     std::vector< std::vector< Point > > corners;
