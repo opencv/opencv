@@ -854,12 +854,12 @@ template<typename R> struct TheTest
     {
         Data<R> dataA;
         R a = dataA;
-        EXPECT_EQ((LaneType)1, v_reduce_min(a));
-        EXPECT_EQ((LaneType)R::nlanes, v_reduce_max(a));
-        EXPECT_EQ((LaneType)((1 + R::nlanes)*R::nlanes/2), v_reduce_sum(a));
+        EXPECT_EQ((LaneType)1, (LaneType)v_reduce_min(a));
+        EXPECT_EQ((LaneType)R::nlanes, (LaneType)v_reduce_max(a));
+        EXPECT_EQ((LaneType)((1 + R::nlanes)*R::nlanes/2), (LaneType)v_reduce_sum(a));
         dataA[0] += R::nlanes;
         R an = dataA;
-        EXPECT_EQ((LaneType)2, v_reduce_min(an));
+        EXPECT_EQ((LaneType)2, (LaneType)v_reduce_min(an));
         return *this;
     }
 
@@ -1512,6 +1512,7 @@ void test_hal_intrin_uint8()
         .test_dotprod_expand()
         .test_min_max()
         .test_absdiff()
+        .test_reduce()
         .test_reduce_sad()
         .test_mask()
         .test_popcount()
@@ -1553,6 +1554,7 @@ void test_hal_intrin_int8()
         .test_absdiff()
         .test_absdiffs()
         .test_abs()
+        .test_reduce()
         .test_reduce_sad()
         .test_mask()
         .test_popcount()

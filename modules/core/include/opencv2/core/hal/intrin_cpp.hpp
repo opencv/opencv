@@ -205,7 +205,7 @@ Regular integers:
 |min, max           | x | x | x | x | x | x |
 |absdiff            | x | x | x | x | x | x |
 |absdiffs           |   | x |   | x |   |   |
-|reduce             |   |   |   |   | x | x |
+|reduce             | x | x | x | x | x | x |
 |mask               | x | x | x | x | x | x |
 |pack               | x | x | x | x | x | x |
 |pack_u             | x |   | x |   |   |   |
@@ -581,7 +581,7 @@ Scheme:
 @code
 {A1 A2 A3 ...} => min(A1,A2,A3,...)
 @endcode
-For 32-bit integer and 32-bit floating point types. */
+For all types except 64-bit integer. */
 OPENCV_HAL_IMPL_REDUCE_MINMAX_FUNC(v_reduce_min, std::min)
 
 /** @brief Find one max value
@@ -590,7 +590,7 @@ Scheme:
 @code
 {A1 A2 A3 ...} => max(A1,A2,A3,...)
 @endcode
-For 32-bit integer and 32-bit floating point types. */
+For all types except 64-bit integer. */
 OPENCV_HAL_IMPL_REDUCE_MINMAX_FUNC(v_reduce_max, std::max)
 
 static const unsigned char popCountTable[] =
