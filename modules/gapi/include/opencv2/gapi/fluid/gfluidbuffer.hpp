@@ -115,6 +115,8 @@ public:
            BorderOpt border);
     // Constructor for in/out buffers (for tests)
     Buffer(const cv::gapi::own::Mat &data, bool is_input);
+    ~Buffer();
+    Buffer& operator=(Buffer&&);
 
     inline uint8_t* OutLineB(int index = 0)
     {
@@ -143,7 +145,7 @@ public:
     const Priv& priv() const;   // internal use only
 
 private:
-    std::shared_ptr<Priv> m_priv;
+    std::unique_ptr<Priv> m_priv;
     const Cache* m_cache;
 };
 
