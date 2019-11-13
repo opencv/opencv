@@ -853,17 +853,18 @@ template<typename R> struct TheTest
     TheTest & test_reduce()
     {
         Data<R> dataA;
+        int sum = 0;
         for (int i = 0; i < R::nlanes; ++i)
         {
-            dataA[i]--;     // Prevent an overflow with int8
+            sum += dataA[i];   // To prevent a constant overflow with int8
         }
         R a = dataA;
-        EXPECT_EQ((LaneType)0, (LaneType)v_reduce_min(a));
-        EXPECT_EQ((LaneType)(R::nlanes - 1), (LaneType)v_reduce_max(a));
-        EXPECT_EQ((LaneType)((R::nlanes - 1)*R::nlanes/2), (LaneType)v_reduce_sum(a));
+        EXPECT_EQ((LaneType)1, (LaneType)v_reduce_min(a));
+        EXPECT_EQ((LaneType)(R::nlanes), (LaneType)v_reduce_max(a));
+        EXPECT_EQ((LaneType)(sum), (LaneType)v_reduce_sum(a));
         dataA[0] += R::nlanes;
         R an = dataA;
-        EXPECT_EQ((LaneType)1, (LaneType)v_reduce_min(an));
+        EXPECT_EQ((LaneType)2, (LaneType)v_reduce_min(an));
         return *this;
     }
 
