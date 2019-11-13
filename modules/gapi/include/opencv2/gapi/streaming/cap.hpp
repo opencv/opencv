@@ -70,6 +70,13 @@ protected:
         data = frame.clone();
         return true;
     }
+
+    virtual GMetaArg descr_of() const override 
+    {
+        Data tmp_data;
+        pull(tmp_data);
+        return descr_of(tmp_data);
+    }
 };
 
 } // namespace wip

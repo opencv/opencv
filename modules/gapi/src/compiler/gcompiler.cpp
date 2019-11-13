@@ -195,8 +195,10 @@ namespace
 
 cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                 GMetaArgs              &&metas,
-                                GCompileArgs           &&args)
+                                GCompileArgs           &&args,
+                                bool addMetaPasses)
     : m_c(c), m_metas(std::move(metas)), m_args(std::move(args))
+    , metaAdded(addMetaPasses)
 {
     using namespace std::placeholders;
 
@@ -259,7 +261,9 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                                       // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
-    if (/*!m_metas.empty()*/ false) {
+    //Input metas may be empty when a graph is compiled for streaming
+    if (metaAdded)
+    {
         m_e.addPassStage("meta");
         m_e.addPass("meta", "initialize",   std::bind(passes::initMeta, _1, std::ref(m_metas)));
         m_e.addPass("meta", "propagate",    std::bind(passes::inferMeta, _1, false));
@@ -267,8 +271,8 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
         // moved to another stage, FIXME: two dumps?
         //    m_e.addPass("meta", "dump_dot",     passes::dumpDotStdout);
     }
-        // Special stage for backend-specific transformations
-        // FIXME: document passes hierarchy and order for backend developers
+    // Special stage for backend-specific transformations
+    // FIXME: document passes hierarchy and order for backend developers
     m_e.addPassStage("transform");
 
     m_e.addPassStage("exec");
@@ -280,6 +284,9 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     // (even if it is not actually required to produce a GCompiled).
     // FIXME: add a better way to do that!
     m_e.addPass("exec", "add_streaming",    passes::addStreaming);
+    // Note: Must be called after addStreaming as addStreaming pass
+    // can possibly add new nodes to the IslandModel
+    m_e.addPass("exec", "sort_islands",     passes::topoSortIslands);
 
     if (dump_path.has_value())
     {
@@ -362,18 +369,19 @@ void cv::gimpl::GCompiler::validateOutProtoArgs()
 
 cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
 {
-    validateInputMeta();
+    //validateInputMeta();
     validateOutProtoArgs();
     return makeGraph(m_c.priv().m_ins, m_c.priv().m_outs);
 }
 
-void cv::gimpl::GCompiler:: runPasses(ade::Graph &g)
+void cv::gimpl::GCompiler::runPasses(ade::Graph &g)
 {
     m_e.runPasses(g);
     GAPI_LOG_INFO(NULL, "All compiler passes are successful");
 }
 
-void cv::gimpl::GCompiler::compileIslands(ade::Graph &g) {
+void cv::gimpl::GCompiler::compileIslands(ade::Graph &g)
+{
     compileIslands(g, m_args);
 }
 
@@ -383,11 +391,6 @@ void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, cv::GCompileArgs &args)
     std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
     GIslandModel::Graph gim(*gptr);
 
-    // Run topological sort on GIslandModel first
-    auto pass_ctx = ade::passes::PassContext{*gptr};
-    ade::passes::TopologicalSort{}(pass_ctx);
-
-    // Now compile islands
     GIslandModel::compileIslands(gim, g, args);
 }
 
@@ -422,12 +425,14 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
 
 cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
 {
-    const auto &outMetas = GModel::ConstGraph(*pg).metadata()
-        .get<OutputMeta>().outMeta;
-    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg), m_args));
+    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg), m_args, m_metas));
+
+    // const auto &outMetas = GModel::ConstGraph(*pg).metadata()
+    //     .get<OutputMeta>().outMeta;
 
     GStreamingCompiled compiled;
-    compiled.priv().setup(m_metas, outMetas, std::move(pE));
+    // compiled.priv().setup(m_metas, outMetas, std::move(pE));
+    compiled.priv().setup(std::move(pE));
     return compiled;
 }
 
@@ -441,11 +446,20 @@ cv::GCompiled cv::gimpl::GCompiler::compile()
 
 cv::GStreamingCompiled cv::gimpl::GCompiler::compileStreaming()
 {
-  //  m_args
     // FIXME: self-note to DM: now keep these compile()/compileStreaming() in sync!
     std::unique_ptr<ade::Graph> pG = generateGraph();
-    GModel::Graph(*pG).metadata().set(Streaming{});
+    GModel::Graph gm(*pG);
+    gm.metadata().set(Streaming{});
     runPasses(*pG);
-//    compileIslands(*pG);
     return produceStreamingCompiled(std::move(pG));
+}
+
+void cv::gimpl::GCompiler::runMetaPasses(ade::Graph &g, const cv::GMetaArgs &metas)
+{
+    auto pass_ctx = ade::passes::PassContext{g};
+    cv::gimpl::passes::initMeta(pass_ctx, metas);
+
+    cv::gimpl::passes::inferMeta(pass_ctx, true);
+    //compile islands for m_orig_graph
+    cv::gimpl::passes::storeResultingMeta(pass_ctx);
 }

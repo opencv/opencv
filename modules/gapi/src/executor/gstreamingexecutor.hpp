@@ -74,13 +74,14 @@ protected:
         RUNNING,
     } state = State::STOPPED;
 
-    bool wasFinished;
-    cv::GCompileArgs comp_args;
-
     std::unique_ptr<ade::Graph> m_orig_graph;
     std::shared_ptr<ade::Graph> m_island_graph;
 
     cv::gimpl::GIslandModel::Graph m_gim; // FIXME: make const?
+
+    cv::GCompileArgs m_comp_args;
+
+    GMetaArgs m_metas;
 
     // FIXME: Naive executor details are here for now
     // but then it should be moved to another place
@@ -119,7 +120,8 @@ protected:
     void wait_shutdown();
 
 public:
-    explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model, cv::GCompileArgs m_args);
+    explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model,
+                                cv::GCompileArgs m_args, const GMetaArgs& in_metas);
     ~GStreamingExecutor();
     void setSource(GRunArgs &&args);
     void start();

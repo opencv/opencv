@@ -72,13 +72,13 @@ cv::GComputation::GComputation(cv::GProtoInputArgs &&ins,
 cv::GCompiled cv::GComputation::compile(GMetaArgs &&metas, GCompileArgs &&args)
 {
     // FIXME: Cache gcompiled per parameters here?
-    cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args));
+    cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args), true);
     return comp.compile();
 }
 
 cv::GStreamingCompiled cv::GComputation::compileStreaming(GMetaArgs &&metas, GCompileArgs &&args)
 {
-    cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args));
+    cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args), false);
     return comp.compileStreaming();
 }
 

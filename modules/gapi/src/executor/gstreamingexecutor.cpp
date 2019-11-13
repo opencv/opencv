@@ -396,13 +396,14 @@ void collectorThread(std::vector<Q*> in_queues,
 }
 } // anonymous namespace
 
-cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model, cv::GCompileArgs m_args)
+cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model
+                                , cv::GCompileArgs m_args, const GMetaArgs &in_metas)
     : m_orig_graph(std::move(g_model))
     , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
                      .get<IslandModel>().model)
     , m_gim(*m_island_graph)
-    , comp_args(m_args)
-    , wasFinished(false)
+    , m_comp_args(m_args)
+    , m_metas(in_metas)
 {
     GModel::Graph gm(*m_orig_graph);
     // NB: Right now GIslandModel is acyclic, and all the below code assumes that.
@@ -423,6 +424,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
             return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
          });
 
+    //there is no metadata yet
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
     for (auto nh : sorted.nodes())
     {
@@ -433,11 +435,9 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                 std::vector<RcDesc> input_rcs;
                 std::vector<RcDesc> output_rcs;
                 std::vector<GRunArg> in_constants;
-                cv::GMetaArgs output_metas;
                 input_rcs.reserve(nh->inNodes().size());
                 in_constants.reserve(nh->inNodes().size()); // FIXME: Ugly
                 output_rcs.reserve(nh->outNodes().size());
-                output_metas.reserve(nh->outNodes().size());
 
                 std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node> > const_ins;
 
@@ -461,7 +461,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                                            , orig_data_info.shape
                                            , orig_data_info.ctor});
                 };
-                auto xtract_out = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec, cv::GMetaArgs &metas) {
+                auto xtract_out = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
                     const auto orig_data_nh
                         = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
                     const auto &orig_data_info
@@ -473,18 +473,17 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                     vec.emplace_back(RcDesc{ orig_data_info.rc
                                            , orig_data_info.shape
                                            , orig_data_info.ctor});
-                    metas.emplace_back(orig_data_info.meta);
                 };
                 // FIXME: JEZ IT WAS SO AWFUL!!!!
                 for (auto in_slot_nh  : nh->inNodes())  xtract_in(in_slot_nh,  input_rcs);
-                for (auto out_slot_nh : nh->outNodes()) xtract_out(out_slot_nh, output_rcs, output_metas);
+                for (auto out_slot_nh : nh->outNodes()) xtract_out(out_slot_nh, output_rcs);
 
                 m_ops.emplace_back(OpDesc{ std::move(input_rcs)
                                          , std::move(output_rcs)
-                                         , std::move(output_metas)
+                                         , {}
                                          , nh
-                                         , in_constants});
-// вынести islandExec в сетсорс m_gim.metadata(nh).get<IslandExec>().object
+                                         , in_constants
+                                         , {}});
 
                 // Initialize queues for every operation's input
                 ade::TypedGraph<DataQueue> qgr(*m_island_graph);
@@ -557,6 +556,87 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
                                            " currently supported!"));
     }
 
+    //extractiong meta from first frame
+    //There is no emmiters yet
+    // Taked from emitterActorThread()
+      std::vector<cv::GRunArg> datas;
+//    for (auto in : ins)
+//    {
+//        if (cv::util::holds_alternative<cv::gapi::wip::IStreamSource::Ptr>(in))
+//        {
+//            const auto source_ptr = 
+//                        cv::util::get<cv::gapi::wip::IStreamSource::Ptr>(in);
+//            //auto emitter = m_gim.metadata(eh).get<Emitter>().object;
+//
+//
+//            //FIXME: dataWasObtain show only last
+//            bool dataWasObtain;
+//
+//            cv::gapi::wip::Data tmp_data;
+//            dataWasObtain = source_ptr->pull(tmp_data);
+//
+//            cv::GRunArg data = tmp_data;
+//
+//            if(dataWasObtain)
+//                datas.emplace_back(data);
+//        }
+//    }
+
+    // Get meta data from datas and push it to m_metas
+    // Should I usr std::zip ?? (YES!!!!)
+    m_metas = descr_of(ins);
+
+    GCompiler::runMetaPasses(*m_orig_graph.get(), m_metas);
+    GCompiler::compileIslands(*m_orig_graph.get(), m_comp_args);
+
+    GModel::Graph gm(*m_orig_graph);
+
+    auto xtract_out_meta = [&](ade::NodeHandle slot_nh, cv::GMetaArgs &metas) {
+        const auto &orig_data_nh = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
+        const auto &orig_data_info = gm.metadata(orig_data_nh).get<Data>();
+        metas.emplace_back(orig_data_info.meta);
+    };
+
+// fixme: 
+// Can be moved to GStreamingExecutor constructor if m_metas not empty
+    for (auto& op : m_ops) {
+        cv::GMetaArgs output_metas;
+        output_metas.reserve(op.nh->outNodes().size());
+
+        for (auto out_slot_nh : op.nh->outNodes()) xtract_out_meta(out_slot_nh, output_metas);
+
+        op.out_metas = output_metas;
+    }
+
+
+    //PIHAEM DATA VO VSE OCHEREDI
+    for (auto it : ade::util::zip(ade::util::toRange(m_emitters),
+                                  ade::util::toRange(datas)))
+    {
+        //for ( auto it : ade::util::indexed(m_emitters) )
+        const auto eh = std::get<0>(it);
+        auto d = std::get<1>(it);
+        auto out_queues = reader_queues(*m_island_graph
+                                            , eh->outNodes().front());
+        if (true)
+        {
+            // // On success, broadcast it to our readers
+            for (auto &&oq : out_queues)
+            {
+                // FIXME: FOR SOME REASON, oq->push(Cmd{data}) doesn't work!!
+                // empty mats are arrived to the receivers!
+                // There may be a fatal bug in our variant!
+                const auto data = d;
+                oq->push(Cmd{data});
+            }
+        }
+        else
+        {
+            //throw some
+        }
+    }
+    //END OF PIHAEM DATA VO VSE OCHEREDI
+
     // Walk through the protocol, set-up emitters appropriately
     // There's a 1:1 mapping between emitters and corresponding data inputs.
     for (auto it : ade::util::zip(ade::util::toRange(m_emitters),
@@ -626,53 +706,6 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
                                out_queues,
                                real_video_completion_cb);
     }
-
-    //get metadata 
-    cv::GMatDesc mat_desc(CV_8U,3,cv::Size(768,432));
-    cv::GMetaArgs metas{cv::GMetaArg(mat_desc)};
-    
-    if (/*wasFinished*/false) {
-        //reshape
-        //does it required unempty comp_args??
-        bool canReshape = true;
-        for (auto &op : m_ops) {
-            canReshape = op.isl_exec->canReshape();
-            if (!canReshape)
-                break;
-        }
-        if (canReshape) {
-            auto& g = *m_orig_graph.get();
-            ade::passes::PassContext ctx{g};
-            passes::initMeta(ctx, metas);
-            passes::inferMeta(ctx, true);
-            // outMetas()?
-            for (auto &op : m_ops)
-                op.isl_exec->reshape(g, cv::compile_args());
-
-        } else {
-            //???
-        }
-    } else {
-        //finishing graph
-        //set passes (ok?)
-        // is: GModel::Graph gm(m_orig_graph); eq  auto& g = *m_orig_graph.get(); ??
-        // GModel::Graph gm(*m_orig_graph);
-        // std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
-        // GIslandModel::Graph gim(*gptr);
-
-        auto pass_ctx = ade::passes::PassContext{*m_orig_graph.get()};
-        cv::gimpl::passes::initMeta(pass_ctx, metas);
-        //does inferMeta needed?? 
-        cv::gimpl::passes::inferMeta(pass_ctx, true);
-        //compile islands for m_orig_graph
-        // Get compileArgs from m_ops?? 
-        cv::gimpl::GCompiler::compileIslands(*m_orig_graph.get(), comp_args);
-
-        wasFinished = true;
-    }
-
-    //m_gim.metadata(nh).get<IslandExec>().object; // что это??
-                // берем из islamdModel
 
 
     // Now do this for every island (in a topological order)

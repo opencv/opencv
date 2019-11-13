@@ -27,6 +27,11 @@ void cv::GStreamingCompiled::Priv::setup(const GMetaArgs &_metaArgs,
     m_exec     = std::move(_pE);
 }
 
+void cv::GStreamingCompiled::Priv::setup(std::unique_ptr<cv::gimpl::GStreamingExecutor> &&_pE)
+{
+    m_exec = std::move(_pE);
+}
+
 bool cv::GStreamingCompiled::Priv::isEmpty() const
 {
     return !m_exec;
@@ -49,11 +54,11 @@ void cv::GStreamingCompiled::Priv::setSource(cv::GRunArgs &&args)
 {
     // FIXME: This metadata checking should be removed at all
     // for the streaming case.
-    if (!can_describe(m_metas, args))
-    {
-        util::throw_error(std::logic_error("This object was compiled "
-                                           "for different metadata!"));
-    }
+    // if (!can_describe(m_metas, args))
+    // {
+    //     util::throw_error(std::logic_error("This object was compiled "
+    //                                        "for different metadata!"));
+    // }
     GAPI_Assert(m_exec != nullptr);
     m_exec->setSource(std::move(args));
 }

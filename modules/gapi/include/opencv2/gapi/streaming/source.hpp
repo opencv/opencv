@@ -7,6 +7,8 @@
 #ifndef OPENCV_GAPI_STREAMING_SOURCE_HPP
 #define OPENCV_GAPI_STREAMING_SOURCE_HPP
 
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gmetaarg.hpp>
 #include <memory> // shared_ptr
 #include <type_traits> // is_base_of
 
@@ -38,6 +40,7 @@ public:
     using Ptr = std::shared_ptr<IStreamSource>;
     Ptr ptr() { return shared_from_this(); }
     virtual bool pull(Data &data) = 0;
+    virtual GMetaArg descr_of() const = 0;
     virtual ~IStreamSource() = default;
 };
 

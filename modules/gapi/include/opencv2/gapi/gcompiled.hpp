@@ -14,6 +14,8 @@
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/garg.hpp>
 
+#include <ade/execution_engine/execution_engine.hpp>
+
 namespace cv {
 
 // This class represents a compiled computation.
