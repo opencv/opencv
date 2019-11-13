@@ -239,7 +239,7 @@ class GAPI_EXPORTS Buffer::Priv
 
     int m_write_caret      = -1;
 
-    std::vector<View> m_views;
+    std::vector<const View*> m_views;
 
     std::unique_ptr<BufferStorage> m_storage;
 
@@ -265,7 +265,7 @@ public:
     void allocate(BorderOpt border, int border_size, int line_consumption, int skew);
     void bindTo(const cv::gapi::own::Mat &data, bool is_input);
 
-    inline void addView(const View& view) { m_views.push_back(view); }
+    inline void addView(const View* view) { m_views.emplace_back(view); }
 
     inline const GMatDesc& meta() const { return m_desc; }
 
