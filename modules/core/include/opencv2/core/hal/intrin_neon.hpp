@@ -1241,6 +1241,20 @@ inline int v_reduce_sum(const v_int16x8& a)
     return vget_lane_s32(vpadd_s32(t1, t1), 0);
 }
 
+#define OPENCV_HAL_IMPL_NEON_REDUCE_OP_16(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
+inline scalartype v_reduce_##func(const _Tpvec& a) \
+{ \
+    _Tpnvec##_t a0 = vp##vectorfunc##_##suffix(vget_low_##suffix(a.val), vget_high_##suffix(a.val)); \
+    a0 = vp##vectorfunc##_##suffix(a0, a0); \
+    a0 = vp##vectorfunc##_##suffix(a0, a0); \
+    return (scalartype)vget_lane_##suffix(vp##vectorfunc##_##suffix(a0, a0),0); \
+}
+
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_16(v_uint8x16, uint8x8, unsigned int, max, max, u8)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_16(v_uint8x16, uint8x8, unsigned int, min, min, u8)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_16(v_int8x16, int8x8, int, max, max, s8)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_16(v_int8x16, int8x8, int, min, min, s8)
+
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
 inline scalartype v_reduce_##func(const _Tpvec& a) \
 { \
