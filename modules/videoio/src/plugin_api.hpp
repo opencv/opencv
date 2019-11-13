@@ -10,7 +10,7 @@
 
 // increase for backward-compatible changes, e.g. add new function
 // Main API <= Plugin API -> plugin is compatible
-#define API_VERSION 1 // preview
+#define API_VERSION 0 // preview
 // increase for incompatible changes, e.g. remove function argument
 // Main ABI == Plugin ABI -> plugin is compatible
 #define ABI_VERSION 0 // preview
@@ -142,16 +142,6 @@ typedef struct OpenCV_VideoIO_Plugin_API_preview
     @note API-CALL 12, API-Version == 0
      */
     CvResult (CV_API_CALL *Writer_write)(CvPluginWriter handle, const unsigned char *data, int step, int width, int height, int cn);
-
-    /** @brief Retrieve encoded frame
-
-    @param handle Capture handle
-    @param callback retrieve callback (synchronous)
-    @param userdata callback context data
-
-    @note API-CALL 13, API-Version == 1
-     */
-    CvResult(CV_API_CALL *Capture_retreive_raw)(CvPluginCapture handle, uchar** data, size_t* size);
 
 } OpenCV_VideoIO_Plugin_API_preview;
 

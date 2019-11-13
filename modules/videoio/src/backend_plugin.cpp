@@ -227,7 +227,6 @@ public:
 
     Ptr<IVideoCapture> createCapture(int camera) const CV_OVERRIDE;
     Ptr<IVideoCapture> createCapture(const std::string &filename) const CV_OVERRIDE;
-    Ptr<IVideoCapture> createRawCapture(const std::string& filename) const CV_OVERRIDE;
     Ptr<IVideoWriter>  createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const CV_OVERRIDE;
 };
 
@@ -453,14 +452,6 @@ public:
                 res = true;
         return res;
     }
-    bool readRaw(uchar** data, size_t* size) CV_OVERRIDE
-    {
-        bool res = false;
-        if (plugin_api_->Capture_retreive_raw)
-            if (CV_ERROR_OK == plugin_api_->Capture_retreive_raw(capture_, data, size))
-                res = true;
-        return res;
-    }
     bool isOpened() const CV_OVERRIDE
     {
         return capture_ != NULL;  // TODO always true
@@ -575,11 +566,6 @@ Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename) con
         CV_LOG_DEBUG(NULL, "Video I/O: can't open file capture: " << filename);
     }
     return Ptr<IVideoCapture>();
-}
-
-Ptr<IVideoCapture> PluginBackend::createRawCapture(const std::string& filename) const
-{
-    return createCapture(filename);
 }
 
 Ptr<IVideoWriter> PluginBackend::createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const

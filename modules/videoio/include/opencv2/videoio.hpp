@@ -137,7 +137,8 @@ enum VideoCaptureProperties {
        CAP_PROP_FPS            =5, //!< Frame rate.
        CAP_PROP_FOURCC         =6, //!< 4-character code of codec. see VideoWriter::fourcc .
        CAP_PROP_FRAME_COUNT    =7, //!< Number of frames in the video file.
-       CAP_PROP_FORMAT         =8, //!< Format of the %Mat objects returned by VideoCapture::retrieve().
+       CAP_PROP_FORMAT         =8, //!< Format of the %Mat objects (see Mat::type()) returned by VideoCapture::retrieve().
+                                   //!< Set value -1 to fetch undecoded RAW video streams (as Mat 8UC1).
        CAP_PROP_MODE           =9, //!< Backend-specific value indicating the current capture mode.
        CAP_PROP_BRIGHTNESS    =10, //!< Brightness of the image (only for those cameras that support).
        CAP_PROP_CONTRAST      =11, //!< Contrast of the image (only for cameras).
@@ -174,46 +175,11 @@ enum VideoCaptureProperties {
        CAP_PROP_CHANNEL       =43, //!< Video input or Channel Number (only for those cameras that support)
        CAP_PROP_AUTO_WB       =44, //!< enable/ disable auto white-balance
        CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
-       CAP_PROP_INT_CODEC     =46, //!< mapping of internal capture codec to opencv RawCodec
-       CAP_PROP_INT_PX_FORMAT =47, //!< mapping of internal capture pixel format to opencv RawPixelFormat
+       CAP_PROP_CODEC_PIXEL_FORMAT =46,    //!< (read-only) codec's pixel format. 4-character code - see VideoWriter::fourcc . Subset of [AV_PIX_FMT_*](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/raw.c) or -1 if unknown
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
      };
-
-/** @brief %VideoContainer raw codecs
-*/
-enum RawCodec
-{
-    VideoCodec_MPEG1,
-    VideoCodec_MPEG2,
-    VideoCodec_MPEG4,
-    VideoCodec_VC1,
-    VideoCodec_H264,
-    VideoCodec_JPEG,
-    VideoCodec_HEVC,
-    VideoCodec_VP8,
-    VideoCodec_VP9,
-    VideoCodec_NumCodecs,
-};
-
-/** @brief %VideoContainer raw pixel formats
-*/
-enum RawPixelFormat
-{
-    VideoChromaFormat_Monochrome = 0,
-    VideoChromaFormat_YUV420P10LE,
-    VideoChromaFormat_YUV420P12LE,
-    VideoChromaFormat_YUV444P10LE,
-    VideoChromaFormat_YUV444P12LE,
-    VideoChromaFormat_YUV420,
-    VideoChromaFormat_YUVJ420,
-    VideoChromaFormat_YUVJ422,
-    VideoChromaFormat_YUVJ444,
-    VideoChromaFormat_YUV422,
-    VideoChromaFormat_YUV444,
-    VideoChromaFormat_NumFormats
-};
 
 /** @brief %VideoWriter generic properties identifier.
  @sa VideoWriter::get(), VideoWriter::set()
@@ -828,111 +794,6 @@ public:
     CV_WRAP bool getExceptionMode() { return throwOnFail; }
 protected:
     Ptr<CvCapture> cap;
-    Ptr<IVideoCapture> icap;
-    bool throwOnFail;
-};
-
-/** @brief Class for raw video capturing from video files or ip cameras.
-
-The class provides C++ API for capturing raw encoded video bitstreams from ip cameras or video files.
-
- */
-class CV_EXPORTS_W VideoContainer
-{
-public:
-    /** @brief Default constructor
-     */
-    VideoContainer();
-
-    /** @overload
-    @brief  Opens a video file or an IP video stream for raw video capturing with API Preference
-
-    @param filename it can be:
-    - name of video file (eg. `video.avi`)
-    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
-      Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
-      documentation of source stream to know the right URL.
-    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
-    @sa The list of supported API backends cv::VideoCaptureAPIs
-    */
-    VideoContainer(const String& filename, int apiPreference = CAP_ANY);
-
-    /** @brief Default destructor
-
-    The method first calls VideoContainer::release to close the already opened file or IP video stream.
-    */
-    virtual ~VideoContainer();
-
-    /** @brief  Opens a video file or an IP video stream for raw video capturing.
-
-    @overload
-
-    Parameters are same as the constructor VideoContainer(const String& filename, int apiPreference)
-    @return `true` if the file has been successfully opened
-
-    The method first calls VideoCapture::release to close the already opened file or camera.
-     */
-    virtual bool open(const String& filename, int apiPreference = CAP_ANY);
-
-    /** @brief Returns true if raw video capturing has been initialized already.
-
-    If the previous call to VideoContainer constructor or VideoContainer::open() succeeded, the method returns
-    true.
-     */
-    virtual bool isOpened() const;
-
-    /** @brief Closes video file or IP video stream.
-
-    The method is automatically called by subsequent VideoContainer::open and by VideoContainer
-    destructor.
-
-    The C function also deallocates memory and clears \*capture pointer.
-     */
-    virtual void release();
-
-    /** @brief Reads and returns the next encoded section of the raw bitstream.
-
-    @param [out] data pointer buffer containing size bytes of the encoded video bitstream. If no data has been read size == 0.
-    @param [out] size in bytes of the encoded video bitstream.
-    @return `false` if no data has been read
-
-    The method returns the the next encoded section of the raw bitstream.  If no data is present
-    (ip camera has been disconnected, or there are no more frames in video file), the method returns false
-    with size == 0.
-
-    @sa read()
-     */
-    virtual bool read(uchar** data, size_t* size);
-
-    /** @brief Returns the specified VideoContainer property
-
-    @param propId Property identifier from cv::VideoCaptureProperties (eg. cv::CAP_PROP_POS_MSEC, cv::CAP_PROP_POS_FRAMES, ...)
-    or one from @ref videoio_flags_others
-    @return Value for the specified property. Value 0 is returned when querying a property that is
-    not supported by the backend used by the VideoContainer instance.
-
-    @note Reading / writing properties involves many layers. Some unexpected result might happens
-    along this chain.
-    @code{.txt}
-    VideoContainer -> API Backend -> Operating System -> Device Driver -> Device Hardware
-    @endcode
-    The returned value might be different from what really used by the device or it could be encoded
-    using device dependent rules (eg. steps or percentage). Effective behaviour depends from device
-    driver and API Backend
-
-    */
-    virtual double get(int propId) const;
-
-    /** Switches exceptions mode
-     *
-     * methods raise exceptions if not successful instead of returning an error code
-     */
-    void setExceptionMode(bool enable) { throwOnFail = enable; }
-
-    /// query if exception mode is active
-    bool getExceptionMode() { return throwOnFail; }
-protected:
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
 };

@@ -53,9 +53,6 @@
 #define icvReleaseCapture_FFMPEG_p cvReleaseCapture_FFMPEG
 #define icvGrabFrame_FFMPEG_p cvGrabFrame_FFMPEG
 #define icvRetrieveFrame_FFMPEG_p cvRetrieveFrame_FFMPEG
-#define icvSetRaw_FFMPEG_p cvSetRaw_FFMPEG
-#define icvReadRaw_FFMPEG_p cvReadRaw_FFMPEG
-#define icvRetrieveEncodedFrame_FFMPEG_p cvRetrieveEncodedFrame_FFMPEG
 #define icvSetCaptureProperty_FFMPEG_p cvSetCaptureProperty_FFMPEG
 #define icvGetCaptureProperty_FFMPEG_p cvGetCaptureProperty_FFMPEG
 #define icvCreateVideoWriter_FFMPEG_p cvCreateVideoWriter_FFMPEG
@@ -83,21 +80,7 @@ public:
     }
     virtual bool grabFrame() CV_OVERRIDE
     {
-        return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture, true)!=0 : false;
-    }
-    virtual bool readRaw(uchar** data, size_t* size) CV_OVERRIDE
-    {
-        if (!ffmpegCapture ||
-            !icvReadRaw_FFMPEG_p(ffmpegCapture, data, size))
-            return false;
-        return true;
-    }
-    virtual bool setRaw(bool readRaw) CV_OVERRIDE
-    {
-        if (!ffmpegCapture ||
-            !icvSetRaw_FFMPEG_p(ffmpegCapture, readRaw))
-            return false;
-        return true;
+        return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture)!=0 : false;
     }
     virtual bool retrieveFrame(int, cv::OutputArray frame) CV_OVERRIDE
     {
@@ -317,22 +300,6 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 }
 
 static
-CvResult CV_API_CALL cv_capture_read_raw(CvPluginCapture handle, uchar** data, size_t* size)
-{
-    if (!handle)
-        return CV_ERROR_FAIL;
-    try
-    {
-        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
-        return instance->readRaw(data, size) ? CV_ERROR_OK : CV_ERROR_FAIL;
-    }
-    catch (...)
-    {
-        return CV_ERROR_FAIL;
-    }
-}
-
-static
 CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
                                     CV_OUT CvPluginWriter* handle)
 {
@@ -413,8 +380,7 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
     /*  9*/cv_writer_release,
     /* 10*/cv_writer_get_prop,
     /* 11*/cv_writer_set_prop,
-    /* 12*/cv_writer_write,
-    /* 13*/cv_capture_read_raw
+    /* 12*/cv_writer_write
 };
 
 } // namespace
