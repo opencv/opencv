@@ -12,3 +12,7 @@ Introduction to OpenCV.js {#tutorial_js_table_of_contents_setup}
 -   @subpage tutorial_js_setup
 
     Build OpenCV.js from source
+
+-   @subpage tutorial_js_nodejs
+
+    Using OpenCV.js In Node.js
