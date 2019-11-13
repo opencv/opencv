@@ -558,10 +558,36 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     }
 
         //get metadata 
-    cv::GMatDesc mat_desc(CV_8U,3,cv::Size(768,432));
+    // testing meta data is cv::GMatDesc{CV_8U,3,cv::Size{768,576}}
+    cv::GMatDesc mat_desc(CV_8U,3,cv::Size(768,576));
     cv::GMetaArgs metas{cv::GMetaArg(mat_desc)};
     
-    if (/*wasFinished*/false) {
+    if (/*wasFinished*/true) {
+        //finishing graph
+        //set passes (ok?)
+        // is: GModel::Graph gm(m_orig_graph); eq  auto& g = *m_orig_graph.get(); ??
+        // GModel::Graph gm(*m_orig_graph);
+        // std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
+        // GIslandModel::Graph gim(*gptr);
+
+        auto pass_ctx = ade::passes::PassContext{*m_orig_graph.get()};
+        cv::gimpl::passes::initMeta(pass_ctx, metas);
+        //does inferMeta needed?? 
+        cv::gimpl::passes::inferMeta(pass_ctx, true);
+        //compile islands for m_orig_graph
+        // Get compileArgs from m_ops?? 
+        cv::gimpl::GCompiler::compileIslands(*m_orig_graph.get(), comp_args);
+        
+        // is it correct???
+        auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
+        int nh_index = 0;
+        for (auto nh : sorted.nodes()) {
+            m_ops[nh_index].isl_exec = m_gim.metadata(nh).get<IslandExec>().object;
+            nh_index++;
+        }
+
+        wasFinished = true;
+    } else {
         //reshape
         //does it required unempty comp_args??
         bool canReshape = true;
@@ -587,31 +613,6 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         } else {
             //???
         }
-    } else {
-        //finishing graph
-        //set passes (ok?)
-        // is: GModel::Graph gm(m_orig_graph); eq  auto& g = *m_orig_graph.get(); ??
-        // GModel::Graph gm(*m_orig_graph);
-        // std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
-        // GIslandModel::Graph gim(*gptr);
-
-        auto pass_ctx = ade::passes::PassContext{*m_orig_graph.get()};
-        cv::gimpl::passes::initMeta(pass_ctx, metas);
-        //does inferMeta needed?? 
-        cv::gimpl::passes::inferMeta(pass_ctx, true);
-        //compile islands for m_orig_graph
-        // Get compileArgs from m_ops?? 
-        cv::gimpl::GCompiler::compileIslands(*m_orig_graph.get(), comp_args);
-        
-        // is it correct???
-        auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
-        int nh_index = 0;
-        for (auto nh : sorted.nodes()) {
-            m_ops[nh_index].isl_exec = m_gim.metadata(nh).get<IslandExec>().object;
-            nh_index++;
-        }
-
-        wasFinished = true;
     }
 
     // Walk through the protocol, set-up emitters appropriately
