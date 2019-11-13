@@ -680,6 +680,9 @@ fluid::Buffer::Buffer(const cv::gapi::own::Mat &data, bool is_input)
     m_priv->bindTo(data, is_input);
 }
 
+fluid::Buffer::~Buffer() = default;
+fluid::Buffer& fluid::Buffer::operator=(fluid::Buffer&&) = default;
+
 int fluid::Buffer::linesReady() const
 {
     return m_priv->linesReady();
