@@ -2766,9 +2766,9 @@ vector<cv::String> QRCodeDetector:: multipleDetectAndDecode(InputArray in,
 
     vector< vector< Point2f > > points;
     bool ok =  multipleDetect(inarr, points);
-    if (ok)
+    if (points_.needed())
     {
-        if(points_.needed())
+        if(ok)
         {
             points_.create(int(points.size()), 1,  points_.fixedType() ? points_.type() : CV_32FC2);
             for(size_t i = 0; i < points.size(); i++)
@@ -2805,7 +2805,7 @@ vector<cv::String> QRCodeDetector:: multipleDetectAndDecode(InputArray in,
     }
     vector<cv::String> decoded_info;
     if(ok)
-        decoded_info =  multipleDecode(inarr, points, straight_qrcode);
+        decoded_info = multipleDecode(inarr, points, straight_qrcode);
     return decoded_info;
 }
 
