@@ -474,7 +474,8 @@ class ReduceL2(nn.Module):
 
     def forward(self, x):
         norm = torch.norm(x, p=2, dim=1, keepdim=True)
-        return torch.div(x, norm)
+        l2norm = torch.div(x, norm)
+        return l2norm.transpose(2, 3)
 
 input = Variable(torch.randn(1, 3, 2, 4))
 model = ReduceL2()
