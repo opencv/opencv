@@ -1796,6 +1796,21 @@ inline _Tp v_extract_n(const v_reg<_Tp, n>& v)
     return v[s];
 }
 
+/** @brief Broadcast i-th element of vector
+
+Scheme:
+@code
+{ v[0] v[1] v[2] ... v[SZ] } => { v[i], v[i], v[i] ... v[i] }
+@endcode
+Restriction: 0 <= i < nlanes (supported: TBD)
+Supported types: TBD (lets start from `int32_t` - make sense after revieving of real intrinsic support)
+ */
+template<int i, typename _Tp, int n>
+inline v_reg<_Tp, n> v_broadcast_element(const v_reg<_Tp, n>& a)
+{
+    return v_reg<_Tp, n>::all(a.s[i]);
+}
+
 /** @brief Round
 
 Rounds each value. Input type is float vector ==> output type is int vector.*/

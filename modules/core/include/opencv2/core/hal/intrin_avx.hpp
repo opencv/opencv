@@ -2290,21 +2290,72 @@ inline double v_extract_n(v_float64x4 v)
     return v_rotate_right<i>(v).get0();
 #endif
 }
-/*
-#define OPENCV_HAL_IMPL_AVX_EXTRACT_N(_Tpvec, _Tp) \
-template<int i> inline _Tp v_extract_n( _Tpvec v) { return v_rotate_right<i>(v).get0(); }
 
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint8x32, uchar)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int8x32, schar)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint16x16, ushort)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int16x16, short)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint32x8, uint)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int32x8, int)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_uint64x4, uint64)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_int64x4, int64)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_float32x8, float)
-OPENCV_HAL_IMPL_AVX_EXTRACT_N(v_float64x4, double)
-*/
+template<int i>
+inline v_int32x8 v_broadcast_element(v_int32x8 v)
+{
+    return v_int32x8(_mm256_shuffle_epi32(v.val,  _MM_SHUFFLE(i,i,i,i)));
+}
+
+template<int i>
+inline v_uint32x8 v_broadcast_element(v_uint32x8 v)
+{
+    return v_uint32x8(_mm256_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
+}
+
+template<int i>
+inline v_int16x16 v_broadcast_element(v_int16x16 v)
+{
+    v_int16x16 t = v_int16x16(_mm256_shufflelo_epi16(v.val, _MM_SHUFFLE(i, i, i, i)));
+    return v_int16x16(_mm256_shufflehi_epi16(t.val, _MM_SHUFFLE(0, 0, 0, 0)));
+}
+
+template<int i>
+inline v_uint16x16 v_broadcast_element(v_uint16x16 v)
+{
+    v_uint16x16 t = v_uint16x16(_mm256_shufflelo_epi16(v.val, _MM_SHUFFLE(i, i, i, i)));
+    return v_uint16x16(_mm256_shufflehi_epi16(t.val, _MM_SHUFFLE(0, 0, 0, 0)));
+}
+
+template<int i>
+inline v_int8x32 v_broadcast_element(v_int8x32 v)
+{
+    static const __m256i perm = _mm256_set1_epi8((char)i);
+    return v_int8x32(_mm256_shuffle_epi8(v.val, perm));
+}
+
+template<int i>
+inline v_uint8x32 v_broadcast_element(v_uint8x32 v)
+{
+    static const __m256i perm = _mm256_set1_epi8((char)i);
+    return v_uint8x32(_mm256_shuffle_epi8(v.val, perm));
+}
+
+template<int i>
+inline v_int64x4 v_broadcast_element(v_int64x4 v)
+{
+    int64 t = v_extract_n<i>(v);
+    return v_int64x4(t,t,t,t);
+}
+
+template<int i>
+inline v_uint64x4 v_broadcast_element(v_uint64x4 v)
+{
+    uint64 t = v_extract_n<i>(v);
+    return v_uint64x4(t,t,t,t);
+}
+
+template<int i>
+inline v_float64x4 v_broadcast_element(v_float64x4 v)
+{
+    return v_float64x4(_mm256_shuffle_pd(v.val, v.val, _MM_SHUFFLE(i,i,i,i)));
+}
+
+template<int i>
+inline v_float32x8 v_broadcast_element(v_float32x8 v)
+{
+    return v_float32x8(_mm256_shuffle_ps(v.val, v.val, _MM_SHUFFLE(i,i,i,i)));
+}
 ///////////////////// load deinterleave /////////////////////////////
 
 inline void v_load_deinterleave( const uchar* ptr, v_uint8x32& a, v_uint8x32& b )
