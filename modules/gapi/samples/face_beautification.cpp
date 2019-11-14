@@ -4,6 +4,12 @@
 //
 // Copyright (C) 2018-2019 Intel Corporation
 
+#if defined(HAVE_OPENCV_GAPI) && defined(HAVE_INF_ENGINE)
+
+#if INF_ENGINE_RELEASE <= 2018050000
+#   error G-API IE module supports only OpenVINO IE >= 2019 R1
+#endif
+
 #include <opencv2/gapi.hpp>
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/imgproc.hpp>
@@ -608,12 +614,6 @@ int main(int argc, char** argv)
         return 0;
     }
 
-#if defined(HAVE_OPENCV_GAPI) && defined(HAVE_INF_ENGINE)
-
-#if INF_ENGINE_RELEASE <= 2018050000
-#   error G-API IE module supports only OpenVINO IE >= 2019 R1
-#endif
-
     cv::namedWindow(config::kWinFaceBeautification, cv::WINDOW_NORMAL);
     cv::namedWindow(config::kWinInput,              cv::WINDOW_NORMAL);
 
@@ -784,6 +784,8 @@ int main(int argc, char** argv)
 #else
 #include <iostream>
 
+int main(int,char**)
+{
     std::cerr << "This tutorial code requires G-API module"
                  " with Inference Engine backend to run"
               << std::endl;
