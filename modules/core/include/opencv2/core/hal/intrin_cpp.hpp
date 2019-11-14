@@ -581,7 +581,7 @@ Scheme:
 @code
 {A1 A2 A3 ...} => min(A1,A2,A3,...)
 @endcode
-For all types except 64-bit integer. */
+For all types except 64-bit integer and 64-bit floating point types. */
 OPENCV_HAL_IMPL_REDUCE_MINMAX_FUNC(v_reduce_min, std::min)
 
 /** @brief Find one max value
@@ -590,7 +590,7 @@ Scheme:
 @code
 {A1 A2 A3 ...} => max(A1,A2,A3,...)
 @endcode
-For all types except 64-bit integer. */
+For all types except 64-bit integer and 64-bit floating point types. */
 OPENCV_HAL_IMPL_REDUCE_MINMAX_FUNC(v_reduce_max, std::max)
 
 static const unsigned char popCountTable[] =
@@ -1124,7 +1124,7 @@ Scheme:
 @code
 {A1 A2 A3 ...} => sum{A1,A2,A3,...}
 @endcode
-For 32-bit integer and 32-bit floating point types.*/
+*/
 template<typename _Tp, int n> inline typename V_TypeTraits<_Tp>::sum_type v_reduce_sum(const v_reg<_Tp, n>& a)
 {
     typename V_TypeTraits<_Tp>::sum_type c = a.s[0];

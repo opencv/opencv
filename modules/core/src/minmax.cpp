@@ -215,7 +215,7 @@ static void minMaxIdx_8u(const uchar* src, const uchar* mask, int* minval, int* 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
                         (int)0, (int)UCHAR_MAX, v_uint8x16::nlanes, len, startidx, j, len0 );
 
-        if ( len0 - j >= v_uint8x16::nlanes )
+        if ( j <= len0 - v_uint8x16::nlanes )
         {
             v_uint8x16 inc = v_setall_u8(v_uint8x16::nlanes);
             v_uint8x16 none = v_reinterpret_as_u8(v_setall_s8(-1));
@@ -292,7 +292,7 @@ static void minMaxIdx_8s(const schar* src, const uchar* mask, int* minval, int* 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
                         (int)SCHAR_MIN, (int)SCHAR_MAX, v_int8x16::nlanes, len, startidx, j, len0 );
 
-        if ( len0 - j >= v_int8x16::nlanes )
+        if ( j <= len0 - v_int8x16::nlanes )
         {
             v_uint8x16 inc = v_setall_u8(v_int8x16::nlanes);
             v_uint8x16 none = v_reinterpret_as_u8(v_setall_s8(-1));
@@ -369,7 +369,7 @@ static void minMaxIdx_16u(const ushort* src, const uchar* mask, int* minval, int
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
                         (int)0, (int)USHRT_MAX, v_uint16x8::nlanes, len, startidx, j, len0 );
 
-        if ( len0 - j >= v_uint16x8::nlanes )
+        if ( j <= len0 - v_uint16x8::nlanes )
         {
             v_uint16x8 inc = v_setall_u16(v_uint16x8::nlanes);
             v_uint16x8 none = v_reinterpret_as_u16(v_setall_s16(-1));
@@ -446,7 +446,7 @@ static void minMaxIdx_16s(const short* src, const uchar* mask, int* minval, int*
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
                         (int)SHRT_MIN, (int)SHRT_MAX, v_int16x8::nlanes, len, startidx, j, len0 );
 
-        if ( len0 - j >= v_int16x8::nlanes )
+        if ( j <= len0 - v_int16x8::nlanes )
         {
             v_uint16x8 inc = v_setall_u16(v_int16x8::nlanes);
             v_uint16x8 none = v_reinterpret_as_u16(v_setall_s16(-1));
@@ -614,7 +614,7 @@ static void minMaxIdx_32f(const float* src, const uchar* mask, float* minval, fl
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
                         FLT_MIN, FLT_MAX, 2 * v_float32x4::nlanes, len, startidx, j, len0 );
 
-        if ( len0 - j >= 2 * v_float32x4::nlanes )
+        if ( j <= len0 - 2 * v_float32x4::nlanes )
         {
             v_uint32x4 inc = v_setall_u32(v_float32x4::nlanes);
             v_uint32x4 none = v_reinterpret_as_u32(v_setall_s32(-1));
@@ -709,7 +709,7 @@ static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
                         DBL_MIN, DBL_MAX, 4 * v_float64x2::nlanes, len, startidx, j, len0 );
 
-        if ( len0 - j >= 4 * v_float64x2::nlanes )
+        if ( j <= len0 - 4 * v_float64x2::nlanes )
         {
             v_uint64x2 inc = v_setall_u64(v_float64x2::nlanes);
             v_uint64x2 none = v_reinterpret_as_u64(v_setall_s64(-1));
