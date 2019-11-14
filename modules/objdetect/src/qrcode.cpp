@@ -1216,10 +1216,10 @@ bool MultipleQRDetect::checkPoints(vector<Point2f> triangle_points)
 {
       int count_b = 0;
       int count_w = 0;
-      Point2f p0(triangle_points[0].x, triangle_points[0].y);
-      Point2f p1(triangle_points[1].x, triangle_points[1].y);
-      Point2f p2(triangle_points[2].x, triangle_points[2].y);
-      Point2f p3(triangle_points[3].x, triangle_points[3].y);
+      Point p0(triangle_points[0].x, triangle_points[0].y);
+      Point p1(triangle_points[1].x, triangle_points[1].y);
+      Point p2(triangle_points[2].x, triangle_points[2].y);
+      Point p3(triangle_points[3].x, triangle_points[3].y);
       Mat lineMask = Mat::zeros(bin_barcode.size(), bin_barcode.type());
       line( lineMask, p0, p1, 255, 1, 8, 0);
       line( lineMask, p1, p2, 255, 1, 8, 0);
@@ -1234,7 +1234,6 @@ bool MultipleQRDetect::checkPoints(vector<Point2f> triangle_points)
       contours2.push_back(contours[0]);
       fillPoly(lineMask, contours2, 255);
       findNonZero(lineMask, indices);
-
       for (size_t r = 0; r < indices.size(); r++)
       {
           int pixel = bin_barcode.at<uchar>(indices[r].y , indices[r].x);
@@ -1604,7 +1603,6 @@ bool MultipleQRDetect::localization()
   kmeans(all_contours_points, count_contours, qrcode_labels,
           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
           count_contours, KMEANS_PP_CENTERS, clustered_localization_points);
-
   vector< vector< Point2f > > qrcode_clusters(count_contours);
   for(int i = 0; i < count_contours; i++)
       for(int j = 0; j < int(all_contours_points.size()); j++)
@@ -2766,42 +2764,45 @@ vector<cv::String> QRCodeDetector:: multipleDetectAndDecode(InputArray in,
         inarr = gray;
     }
 
-    vector< vector< Point2f > > points, tempPoints;
+    vector< vector< Point2f > > points;
     bool ok =  multipleDetect(inarr, points);
-    if ((ok) && ( points_.needed() ))
+    if (ok)
     {
-        points_.create(int(points.size()), 1,  points_.fixedType() ? points_.type() : CV_32FC2);
-        for(size_t i = 0; i < points.size(); i++)
+        if(points_.needed())
         {
-            points_.create(4, 1, points_.fixedType() ? points_.type() : CV_32FC2, int(i), true);
-            Mat m = points_.getMat(int(i));
-            switch(points_.type())
+            points_.create(int(points.size()), 1,  points_.fixedType() ? points_.type() : CV_32FC2);
+            for(size_t i = 0; i < points.size(); i++)
             {
-                case 10:
-                    for(int j = 0; j < 4; j++)
-                        m.ptr<Vec2w>(0)[j] = Point_<unsigned short>(points[i][j]);
-                    break;
-                case 11:
-                    for(int j = 0; j < 4; j++)
-                        m.ptr<Vec2s>(0)[j] = Point_<short>(points[i][j]);
-                    break;
-                case 12:
-                    for(int j = 0; j < 4; j++)
-                        m.ptr<Vec2i>(0)[j] = Point2i(points[i][j]);
-                    break;
-                case 13:
-                    for(int j = 0; j < 4; j++)
-                        m.ptr<Vec2f>(0)[j] = Point2f(points[i][j]);
-                    break;
-                case 14:
-                    for(int j = 0; j < 4; j++)
-                        m.ptr<Vec2d>(0)[j] = Point2d(points[i][j]);
-                    break;
+                points_.create(4, 1, points_.fixedType() ? points_.type() : CV_32FC2, int(i), true);
+                Mat m = points_.getMat(int(i));
+                switch(points_.type())
+                {
+                    case 10:
+                        for(int j = 0; j < 4; j++)
+                            m.ptr<Vec2w>(0)[j] = Point_<unsigned short>(points[i][j]);
+                        break;
+                    case 11:
+                        for(int j = 0; j < 4; j++)
+                            m.ptr<Vec2s>(0)[j] = Point_<short>(points[i][j]);
+                        break;
+                    case 12:
+                        for(int j = 0; j < 4; j++)
+                            m.ptr<Vec2i>(0)[j] = Point2i(points[i][j]);
+                        break;
+                    case 13:
+                        for(int j = 0; j < 4; j++)
+                            m.ptr<Vec2f>(0)[j] = Point2f(points[i][j]);
+                        break;
+                    case 14:
+                        for(int j = 0; j < 4; j++)
+                            m.ptr<Vec2d>(0)[j] = Point2d(points[i][j]);
+                        break;
+                }
             }
         }
+        else
+            points_.release();
     }
-    else
-        points_.release();
     vector<cv::String> decoded_info;
     if(ok)
         decoded_info =  multipleDecode(inarr, points, straight_qrcode);
