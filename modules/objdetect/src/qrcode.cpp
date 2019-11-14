@@ -1607,12 +1607,11 @@ bool MultipleQRDetect::localization()
   for(int i = 0; i < count_contours; i++)
       for(int j = 0; j < int(all_contours_points.size()); j++)
       {
-          if (qrcode_labels.at<int>(0, j) == i)
+          if (qrcode_labels.at<int>(j, 0) == i)
           {
               qrcode_clusters[i].push_back(all_contours_points[j]);
           }
       }
-
   vector< vector< Point2f > > hull(count_contours);
   for(size_t i = 0; i < qrcode_clusters.size(); i++)
       convexHull(Mat(qrcode_clusters[i]), hull[i]);
@@ -2755,7 +2754,6 @@ vector<cv::String> QRCodeDetector:: multipleDetectAndDecode(InputArray in,
         vector<cv::String> str;
         return str;  // image data is not enough for providing reliable results
     }
-
     int incn = inarr.channels();
     if( incn == 3 || incn == 4 )
     {
@@ -2763,7 +2761,6 @@ vector<cv::String> QRCodeDetector:: multipleDetectAndDecode(InputArray in,
         cvtColor(inarr, gray, COLOR_BGR2GRAY);
         inarr = gray;
     }
-
     vector< vector< Point2f > > points;
     bool ok =  multipleDetect(inarr, points);
     if (points_.needed())
