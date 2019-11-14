@@ -724,7 +724,8 @@ protected:
     @param eps_y Epsilon neighborhood, which allows you to determine the vertical pattern of the scheme 1:1:3:1:1 according to QR code standard.
     */
 CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double eps_x = 0.2, double eps_y = 0.1);
-CV_EXPORTS bool multipleDetectQRCode(InputArray in, std::vector< std::vector< Point > > &points, double eps_x = 0.2, double eps_y = 0.1);
+CV_EXPORTS bool multipleDetectQRCode(InputArray in, std::vector< std::vector< Point > > &points,
+                                     double eps_x = 0.2, double eps_y = 0.1);
 
 /** @brief Decode QR code in image and return text that is encrypted in QR code.
     @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
