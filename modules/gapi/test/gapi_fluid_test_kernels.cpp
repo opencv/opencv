@@ -530,7 +530,7 @@ GAPI_FLUID_KERNEL(FNV12toRGB, cv::gapi::imgproc::GNV12toRGB, false)
 {
     static const int Window = 1;
     static const int LPI    = 2;
-    static const auto Kind = GFluidKernel::Kind::NV12toRGB;
+    static const auto Kind = GFluidKernel::Kind::YUV420toRGB;
 
     static void run(const cv::gapi::fluid::View   &in1,
                     const cv::gapi::fluid::View   &in2,
