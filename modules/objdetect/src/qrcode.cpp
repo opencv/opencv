@@ -1216,10 +1216,10 @@ bool MultipleQRDetect::checkPoints(vector<Point2f> triangle_points)
 {
       int count_b = 0;
       int count_w = 0;
-      Point p0(triangle_points[0].x, triangle_points[0].y);
-      Point p1(triangle_points[1].x, triangle_points[1].y);
-      Point p2(triangle_points[2].x, triangle_points[2].y);
-      Point p3(triangle_points[3].x, triangle_points[3].y);
+      Point2f p0(triangle_points[0].x, triangle_points[0].y);
+      Point2f p1(triangle_points[1].x, triangle_points[1].y);
+      Point2f p2(triangle_points[2].x, triangle_points[2].y);
+      Point2f p3(triangle_points[3].x, triangle_points[3].y);
       Mat lineMask = Mat::zeros(bin_barcode.size(), bin_barcode.type());
       line( lineMask, p0, p1, 255, 1, 8, 0);
       line( lineMask, p1, p2, 255, 1, 8, 0);
