@@ -31,12 +31,11 @@ public class QRCodeDetectorTest extends OpenCVTestCase {
         Mat img = Imgcodecs.imread(testDataPath + "/cv/qrcode/multiple/6_qrcodes.png");
         QRCodeDetector detector = new QRCodeDetector();
         List < String > output = detector.multipleDetectAndDecode(img);
-        System.out.println(output);
-        assertEquals(output.get(0), "STEP BACK");
+        assertEquals(output.get(0), "TWO STEPS FORWARD");
         assertEquals(output.get(1), "SKIP");
-        assertEquals(output.get(2), "STEP FORWARD");
-        assertEquals(output.get(3), "EXTRA");
-        assertEquals(output.get(4), "QUESTION");
-        assertEquals(output.get(5), "TWO STEPS FORWARD");
+        assertEquals(output.get(2), "QUESTION");
+        assertEquals(output.get(3), "STEP FORWARD");
+        assertEquals(output.get(4), "STEP BACK");
+        assertEquals(output.get(5), "EXTRA");
     }
 }
