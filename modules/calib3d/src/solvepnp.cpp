@@ -41,7 +41,7 @@
  //M*/
 
 #include "precomp.hpp"
-#include "upnp.h"
+//#include "upnp.h"
 #include "dls.h"
 #include "epnp.h"
 #include "p3p.h"

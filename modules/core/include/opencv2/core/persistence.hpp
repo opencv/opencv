@@ -526,6 +526,8 @@ public:
     */
     FileNode(const FileNode& node);
 
+    FileNode& operator=(const FileNode& node);
+
     /** @brief Returns element of a mapping node or a sequence node.
     @param nodename Name of an element in the mapping node.
     @returns Returns the element with the given identifier.
@@ -644,6 +646,8 @@ public:
     @param it Iterator to be used as initialization for the created iterator.
     */
     FileNodeIterator(const FileNodeIterator& it);
+
+    FileNodeIterator& operator=(const FileNodeIterator& it);
 
     //! returns the currently observed element
     FileNode operator *() const;
@@ -1326,6 +1330,7 @@ inline FileNode FileStorage::getFirstTopLevelNode() const { FileNode r = root();
 inline FileNode::FileNode() : fs(0), node(0) {}
 inline FileNode::FileNode(const CvFileStorage* _fs, const CvFileNode* _node) : fs(_fs), node(_node) {}
 inline FileNode::FileNode(const FileNode& _node) : fs(_node.fs), node(_node.node) {}
+inline FileNode& FileNode::operator=(const FileNode& _node)  { fs = _node.fs; node = _node.node; return *this; }
 inline bool FileNode::empty() const    { return node   == 0;    }
 inline bool FileNode::isNone() const   { return type() == NONE; }
 inline bool FileNode::isSeq() const    { return type() == SEQ;  }
