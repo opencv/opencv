@@ -599,6 +599,7 @@ static void run_sepfilter(Buffer& dst, const View& src,
 {
     constexpr int kMax = 11;
     GAPI_Assert(kxLen <= kMax && kyLen <= kMax);
+    GAPI_Assert(kxLen == kyLen);
 
     const SRC *in[kMax];
           DST *out;
@@ -624,6 +625,13 @@ static void run_sepfilter(Buffer& dst, const View& src,
 
         int border = xborder;
         run_sepfilter3x3_impl(out, in, width, chan, kx, ky, border, scale, delta, buf, y, y0);
+    }
+    else if (kxLen == 5 && kyLen == 5)
+    {
+        int y = dst.y();
+        int y0 = dst.priv().writeStart();
+
+        run_sepfilter5x5_impl(out, in, width, chan, kx, ky, xborder, scale, delta, buf, y, y0);
     }
     else
     {
@@ -788,7 +796,9 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
                               Buffer&    dst,
                               Buffer&    scratch)
     {
-        int kxsize = ksize.width;
+        GAPI_Assert(ksize.height == ksize.width);
+        GAPI_Assert((ksize.height == 3) || (ksize.height == 5));
+        const int kxsize = ksize.width;
         int kysize = ksize.height;
 
         auto *kx = scratch.OutLine<float>(); // cached kernX data
@@ -801,7 +811,7 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         constexpr int buffSize = 5;
         GAPI_Assert(ksize.height <= buffSize);
 
-        float *buf[buffSize]{};
+        float *buf[buffSize] = { nullptr };
 
         buf[0] = ky + kysize;
         for (int i = 1; i < ksize.height; ++i)
