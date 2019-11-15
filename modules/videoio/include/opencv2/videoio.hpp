@@ -580,14 +580,10 @@ enum { CAP_PROP_IMAGES_BASE = 18000,
 //! @} videoio_flags_others
 
 
-enum statecam
-    {
-       CAP_CAM_ERROR                = -1,
-       CAP_CAM_NOT_READY            =  0,
-       CAP_CAM_READY                =  1,
-    };
-
 class IVideoCapture;
+//! @cond IGNORED
+namespace internal { class VideoCapturePrivateAccessor; }
+//! @endcond IGNORED
 
 /** @brief Class for video capturing from video files, image sequences or cameras.
 
@@ -687,23 +683,6 @@ public:
     The C function also deallocates memory and clears \*capture pointer.
      */
     CV_WRAP virtual void release();
-
-    /** @brief Returns vector of camera states, grab video frame, if camera is ready.
-
-    @param video_captures - vector for VideoCapture object of each camera.
-    @param state - vector for camera states, size of vector is equal to the number of cameras,
-    possible states are described in enum statecam.
-    @param timeout_millisec - the timeout argument specifies the number of milliseconds that function
-    should block waiting for a frame to become ready.
-    @return `true` in the case of success.
-
-    The primary use of the function is in multi-camera environments. The method fills the state vector,
-    grabbed video frame, if camera is ready. The function returns `false` and returns an empty vector
-    of states in the case of error. You call VideoCapture::waitAny(video_captures, state, timeout_millisec)
-    and get camera status. After that call VideoCapture::retrieve() to decode and get frame if camera is
-    ready (state == CAP_CAM_READY). The method allows you to refuse to use VideoCapture::grab().
-    */
-    static bool waitAny(std::vector<VideoCapture>& video_captures, std::vector<int>& state, int timeout_millisec = -1);
 
     /** @brief Grabs the next frame from video file or capturing device.
 
@@ -814,10 +793,34 @@ public:
 
     /// query if exception mode is active
     CV_WRAP bool getExceptionMode() { return throwOnFail; }
+
+
+    /** @brief Wait for ready frames from VideoCapture.
+
+    @param streams input video streams
+    @param readyIndex stream indexes with grabbed frames (ready to use .retrieve() to fetch actual frame)
+    @param timeoutNs number of nanoseconds (0 - infinite)
+    @return `true` if streamReady is not empty
+
+    @throws Exception %Exception on stream errors (check .isOpened() to filter out malformed streams) or VideoCapture type is not supported
+
+    The primary use of the function is in multi-camera environments.
+    The method fills the ready state vector, grabbs video frame, if camera is ready.
+
+    After this call use VideoCapture::retrieve() to decode and fetch frame data.
+    */
+    static /*CV_WRAP*/
+    bool waitAny(
+            const std::vector<VideoCapture>& streams,
+            CV_OUT std::vector<int>& readyIndex,
+            int64 timeoutNs = 0);
+
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
+
+    friend class internal::VideoCapturePrivateAccessor;
 };
 
 class IVideoWriter;

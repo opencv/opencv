@@ -236,43 +236,6 @@ bool VideoCapture::grab()
     return ret;
 }
 
-bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<int>& state, int timeout_millisec)
-{
-    if(!v_captures.empty())
-    {
-        int bcknd = v_captures[0].icap->getCaptureDomain();
-
-        for(const auto& bcknd_num : v_captures)
-        {
-            if(!(bcknd == bcknd_num.icap->getCaptureDomain()))
-            {
-                CV_Error(Error::StsError, "All captures must have same backend");
-            }
-        }
-        if(state.size() != v_captures.size())
-            return false;
-        std::vector<IVideoCapture* > ipointers;
-
-        for(const auto& cupture_num : v_captures)
-        {
-            ipointers.push_back(cupture_num.icap);
-        }
-        if(!v_captures[0].icap->camerasPoll(ipointers, state, timeout_millisec))
-            return false;
-
-        for (size_t cupture_num = 0; cupture_num < state.size(); ++cupture_num)
-        {
-            if(state[cupture_num] == CAP_CAM_READY)
-            {
-                v_captures[cupture_num].icap->grabFrame();
-            }
-        }
-        return true;
-    }
-    else
-        CV_Error(Error::StsError, "Capture list is empty");
-}
-
 bool VideoCapture::retrieve(OutputArray image, int channel)
 {
     CV_INSTRUMENT_REGION();
@@ -354,6 +317,29 @@ double VideoCapture::get(int propId) const
     }
     return !icap.empty() ? icap->getProperty(propId) : 0;
 }
+
+
+bool VideoCapture::waitAny(const std::vector<VideoCapture>& streams, CV_OUT std::vector<int>& readyIndex, int64 timeoutNs)
+{
+    CV_Assert(!streams.empty());
+
+    VideoCaptureAPIs backend = (VideoCaptureAPIs)streams[0].icap->getCaptureDomain();
+
+    for (size_t i = 1; i < streams.size(); ++i)
+    {
+        VideoCaptureAPIs backend_i = (VideoCaptureAPIs)streams[i].icap->getCaptureDomain();
+        CV_CheckEQ((int)backend, (int)backend_i, "All captures must have the same backend");
+    }
+
+#if (defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO)  // see cap_v4l.cpp guard
+    if (backend == CAP_V4L2)
+        return VideoCapture_V4L_waitAny(streams, readyIndex, timeoutNs);
+#else
+    CV_UNUSED(readyIndex); CV_UNUSED(timeoutNs);
+#endif
+    CV_Error(Error::StsNotImplemented, "VideoCapture::waitAny() is supported by V4L backend only");
+}
+
 
 
 //=================================================================================================
