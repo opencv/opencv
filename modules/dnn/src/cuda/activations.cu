@@ -94,7 +94,7 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
                     using device::tanh;
                     using device::log;
                     using device::exp;
-                    vec.data[j] = vec.data[j] * tanh(log(1.0f + exp(vec.data[j])));
+                    vec.data[j] = vec.data[j] * tanh(log(T(1.0) + exp(vec.data[j])));
                 }
                 v_store(output_vPtr[i], vec);
             }
