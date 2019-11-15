@@ -35,9 +35,13 @@ PERF_TEST_P_(AddPerfTest, TestPerformance)
     out = cv::gapi::add(in1, in2, dtype);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
+    // There is no need to qualify gin, gout, descr_of with namespace (cv::)
+    // as they are in the same namespace as their actual argument (i.e. cv::Mat)
+    // and thus are found via ADL, as in the examples below.
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2), std::move(compile_args));
-    cc(in_mat1, in_mat2, out_mat_gapi);
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
+                        std::move(compile_args));
+    cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
     TEST_CYCLE()
     {
@@ -47,7 +51,6 @@ PERF_TEST_P_(AddPerfTest, TestPerformance)
     // Comparison ////////////////////////////////////////////////////////////
     // FIXIT unrealiable check: EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
     EXPECT_EQ(out_mat_gapi.size(), sz);
-    //EXPECT_EQ(1, 0);
 
     SANITY_CHECK_NOTHING();
 }
@@ -73,7 +76,7 @@ PERF_TEST_P_(AddCPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(sc),
+    auto cc = c.compile(descr_of(gin(in_mat1, sc)),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
 
@@ -109,7 +112,7 @@ PERF_TEST_P_(SubPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(in_mat1, in_mat2, out_mat_gapi);
 
@@ -146,7 +149,7 @@ PERF_TEST_P_(SubCPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(sc),
+    auto cc = c.compile(descr_of(gin(in_mat1, sc)),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
 
@@ -183,7 +186,7 @@ PERF_TEST_P_(SubRCPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(descr_of(in_mat1), descr_of(sc),
+    auto cc = c.compile(descr_of(gin(in_mat1, sc)),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
 
@@ -219,7 +222,7 @@ PERF_TEST_P_(MulPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(in_mat1, in_mat2, out_mat_gapi);
 
@@ -257,7 +260,8 @@ PERF_TEST_P_(MulDoublePerfTest, TestPerformance)
     cv::GComputation c(in1, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -293,7 +297,7 @@ PERF_TEST_P_(MulCPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(sc),
+    auto cc = c.compile(descr_of(gin(in_mat1, sc)),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
 
@@ -331,7 +335,7 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     cv::GComputation c(in1, in2, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(in_mat1, in_mat2, out_mat_gapi);
 
@@ -369,7 +373,7 @@ PERF_TEST_P_(DivCPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(sc),
+    auto cc = c.compile(descr_of(gin(in_mat1, sc)),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
 
@@ -412,7 +416,7 @@ PERF_TEST_P_(DivRCPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(sc),
+    auto cc = c.compile(descr_of(gin(in_mat1, sc)),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
 
@@ -451,7 +455,7 @@ PERF_TEST_P_(MaskPerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in, m), cv::GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi));
 
@@ -487,7 +491,8 @@ PERF_TEST_P_(MeanPerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(cv::gin(in_mat1), cv::gout(out_norm));
 
     TEST_CYCLE()
@@ -522,7 +527,7 @@ PERF_TEST_P_(Polar2CartPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out1, out2));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi, out_mat2));
 
@@ -559,7 +564,7 @@ PERF_TEST_P_(Cart2PolarPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out1, out2));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi, out_mat2));
 
@@ -605,7 +610,7 @@ PERF_TEST_P_(CmpPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
@@ -651,7 +656,7 @@ PERF_TEST_P_(CmpWithScalarPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(sc),
+    auto cc = c.compile(descr_of(gin(in_mat1, sc)),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
 
@@ -708,7 +713,7 @@ PERF_TEST_P_(BitwisePerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
@@ -743,7 +748,8 @@ PERF_TEST_P_(BitwiseNotPerfTest, TestPerformance)
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -780,8 +786,7 @@ PERF_TEST_P_(SelectPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2, in3), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
-                        cv::descr_of(in_mask),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2, in_mask)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2, in_mask), gout(out_mat_gapi));
 
@@ -817,7 +822,7 @@ PERF_TEST_P_(MinPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
@@ -853,7 +858,7 @@ PERF_TEST_P_(MaxPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
@@ -889,7 +894,7 @@ PERF_TEST_P_(AbsDiffPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
@@ -926,7 +931,7 @@ PERF_TEST_P_(AbsDiffCPerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in1, sc1), cv::GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), descr_of(sc),
+    auto cc = c.compile(descr_of(gin(in_mat1, sc)),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
 
@@ -965,7 +970,8 @@ PERF_TEST_P_(SumPerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(cv::gin(in_mat1), cv::gout(out_sum));
 
     TEST_CYCLE()
@@ -1006,7 +1012,7 @@ PERF_TEST_P_(AddWeightedPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
@@ -1054,7 +1060,8 @@ PERF_TEST_P_(NormPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(gin(in_mat1), gout(out_norm));
 
     TEST_CYCLE()
@@ -1101,7 +1108,8 @@ PERF_TEST_P_(IntegralPerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in1), cv::GOut(out1, out2));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(cv::gin(in_mat1), cv::gout(out_mat1, out_mat2));
 
     TEST_CYCLE()
@@ -1140,8 +1148,7 @@ PERF_TEST_P_(ThresholdPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, th1, mv1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(thr),
-                        cv::descr_of(maxval),
+    auto cc = c.compile(descr_of(gin(in_mat1, thr, maxval)),
                         std::move(compile_args));
     cc(gin(in_mat1, thr, maxval), gout(out_mat_gapi));
 
@@ -1181,7 +1188,7 @@ PERF_TEST_P_(ThresholdOTPerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in1, mv1), cv::GOut(out, scout));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(maxval),
+    auto cc = c.compile(descr_of(gin(in_mat1, maxval)),
                         std::move(compile_args));
     cc(gin(in_mat1, maxval), gout(out_mat_gapi, out_gapi_scalar));
 
@@ -1220,8 +1227,7 @@ PERF_TEST_P_(InRangePerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, th1, mv1), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(thrLow),
-                        cv::descr_of(thrUp),
+    auto cc = c.compile(descr_of(gin(in_mat1, thrLow, thrUp)),
                         std::move(compile_args));
     cc(gin(in_mat1, thrLow, thrUp), gout(out_mat_gapi));
 
@@ -1261,7 +1267,8 @@ PERF_TEST_P_(Split3PerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in1), cv::GOut(out1, out2, out3));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(cv::gin(in_mat1), cv::gout(out_mat_gapi, out_mat2, out_mat3));
 
     TEST_CYCLE()
@@ -1302,7 +1309,8 @@ PERF_TEST_P_(Split4PerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in1), cv::GOut(out1, out2, out3, out4));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(cv::gin(in_mat1), cv::gout(out_mat_gapi, out_mat2, out_mat3, out_mat4));
 
     TEST_CYCLE()
@@ -1342,8 +1350,8 @@ PERF_TEST_P_(Merge3PerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in1, in2, in3), cv::GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
-                        cv::descr_of(in_mat3), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2, in_mat3)),
+                        std::move(compile_args));
     cc(cv::gin(in_mat1, in_mat2, in_mat3), cv::gout(out_mat_gapi));
 
     TEST_CYCLE()
@@ -1382,8 +1390,7 @@ PERF_TEST_P_(Merge4PerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in1, in2, in3, in4), cv::GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
-                        cv::descr_of(in_mat3), cv::descr_of(in_mat4),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2, in_mat3, in_mat4)),
                         std::move(compile_args));
     cc(cv::gin(in_mat1, in_mat2, in_mat3, in_mat4), cv::gout(out_mat_gapi));
 
@@ -1421,7 +1428,8 @@ PERF_TEST_P_(RemapPerfTest, TestPerformance)
     cv::GComputation c(in1, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -1456,7 +1464,8 @@ PERF_TEST_P_(FlipPerfTest, TestPerformance)
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -1492,7 +1501,8 @@ PERF_TEST_P_(CropPerfTest, TestPerformance)
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -1527,7 +1537,8 @@ PERF_TEST_P_(CopyPerfTest, TestPerformance)
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -1576,7 +1587,7 @@ PERF_TEST_P_(ConcatHorPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
@@ -1631,8 +1642,7 @@ PERF_TEST_P_(ConcatHorVecPerfTest, TestPerformance)
     cv::GComputation c({ mats[0], mats[1], mats[2] }, { out });
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
-                        cv::descr_of(in_mat3),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2, in_mat3)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2, in_mat3), gout(out_mat_gapi));
 
@@ -1681,7 +1691,7 @@ PERF_TEST_P_(ConcatVertPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
 
@@ -1736,8 +1746,7 @@ PERF_TEST_P_(ConcatVertVecPerfTest, TestPerformance)
     cv::GComputation c({ mats[0], mats[1], mats[2] }, { out });
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2),
-                        cv::descr_of(in_mat3),
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2, in_mat3)),
                         std::move(compile_args));
     cc(gin(in_mat1, in_mat2, in_mat3), gout(out_mat_gapi));
 
@@ -1776,7 +1785,8 @@ PERF_TEST_P_(LUTPerfTest, TestPerformance)
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -1812,7 +1822,8 @@ PERF_TEST_P_(ConvertToPerfTest, TestPerformance)
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -1854,7 +1865,8 @@ PERF_TEST_P_(ResizePerfTest, TestPerformance)
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
@@ -1899,7 +1911,8 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
-    auto cc = c.compile(cv::descr_of(in_mat1), std::move(compile_args));
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
     cc(in_mat1, out_mat_gapi);
 
     TEST_CYCLE()
