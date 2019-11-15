@@ -2031,7 +2031,7 @@ bool MultipleQRDetect::localization()
      int cur_cluster = 0;
      for(size_t i = 0; i < true_points_group.size(); i++)
      {
-          p = 0;
+          cur_cluster = 0;
           for(size_t j = 1; j < true_points_group[i].size() - 1; j++)
               for(size_t k = j+1; k < true_points_group[i].size(); k++)
               {
