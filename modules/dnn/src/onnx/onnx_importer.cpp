@@ -784,6 +784,8 @@ void ONNXImporter::populateNet(Net dstNet)
             CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
             CV_Assert(graph_proto.node_size() > li + 1 && graph_proto.node(li + 1).op_type() == "Div");
             ++li;
+            node_proto = graph_proto.node(li);
+            layerParams.name = node_proto.output(0);
             layerParams.type = "Normalize";
 
             DictValue axes_dict = layerParams.get("axes");
