@@ -183,7 +183,6 @@ PERF_TEST_P_(SubRCPerfTest, TestPerformance)
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
-    //auto cc = c.compile(gin(in_mat1, sc), gout(out_mat_gapi), std::move(compile_args));
     auto cc = c.compile(descr_of(in_mat1), descr_of(sc),
                         std::move(compile_args));
     cc(gin(in_mat1, sc), gout(out_mat_gapi));
