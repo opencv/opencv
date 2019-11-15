@@ -111,7 +111,7 @@ TEST_P(videoio_container, read)
     const string codec = get<4>(GetParam());
     const string pixelFormat = get<5>(GetParam());
     const string fileName = path + "." + ext;
-    const string fileNameOut = cv::format("test_container_stream.%s", ext_raw.c_str());
+    const string fileNameOut = tempfile(cv::format("test_container_stream.%s", ext_raw.c_str()).c_str());
 
     // Write encoded video read using VideoContainer to tmp file
     {
@@ -132,21 +132,25 @@ TEST_P(videoio_container, read)
             size_t size = raw_data.total();
             if (raw_data.empty())
                 break;
-            CV_CheckTypeEQ(raw_data.type(), CV_8UC1, "");
+            ASSERT_EQ(CV_8UC1, raw_data.type());
+            ASSERT_LE(raw_data.dims, 2);
+            ASSERT_EQ(raw_data.rows, 1);
+            ASSERT_EQ((size_t)raw_data.cols, raw_data.total());
+            ASSERT_TRUE(raw_data.isContinuous());
             totalBytes += size;
             file.write(reinterpret_cast<char*>(raw_data.data), size);
             ASSERT_FALSE(file.fail());
         }
-        ASSERT_GE(totalBytes, (size_t)4096) << "Encoded stream is too small";
+        ASSERT_GE(totalBytes, (size_t)65536) << "Encoded stream is too small";
     }
 
     std::cout << "Checking extracted video stream: " << fileNameOut << std::endl;
 
     // Check decoded frames read from original media are equal to frames decoded from tmp file
     {
-        VideoCapture capReference(findDataFile(fileName), CAP_FFMPEG);
+        VideoCapture capReference(findDataFile(fileName), api);
         ASSERT_TRUE(capReference.isOpened());
-        VideoCapture capActual(fileNameOut.c_str(), CAP_FFMPEG);
+        VideoCapture capActual(fileNameOut.c_str(), api);
         ASSERT_TRUE(capActual.isOpened());
         Mat reference, actual;
         int nframes = 0, n_err = 0;
