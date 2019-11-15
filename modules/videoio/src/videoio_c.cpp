@@ -70,11 +70,6 @@ CV_IMPL int cvGrabFrame(CvCapture* capture)
     return capture ? capture->grabFrame() : 0;
 }
 
-CV_IMPL bool cvCamerasPoll(const std::vector<CvCapture*>& pointers, std::vector<int>& state, const int64_t & timeout)
-{
-    return pointers[0] ? pointers[0]->camerasPoll(pointers, state, timeout) : false;
-}
-
 CV_IMPL IplImage* cvRetrieveFrame(CvCapture* capture, int idx)
 {
     return capture ? capture->retrieveFrame(idx) : 0;

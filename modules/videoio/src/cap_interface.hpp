@@ -20,7 +20,6 @@ struct CvCapture
     virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return 0; }
     virtual bool grabFrame() { return true; }
-    virtual bool camerasPoll(const std::vector<CvCapture* >&, std::vector<int>&, int64_t) {return false;}
     virtual IplImage* retrieveFrame(int) { return 0; }
     virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
 };
@@ -46,7 +45,6 @@ public:
     virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return false; }
     virtual bool grabFrame() = 0;
-    virtual bool camerasPoll(const std::vector<IVideoCapture * >&, std::vector<int>&, const int64_t &) { return false; }
     virtual bool retrieveFrame(int, OutputArray) = 0;
     virtual bool isOpened() const = 0;
     virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
@@ -91,21 +89,6 @@ public:
     {
         return cap ? cvGrabFrame(cap) != 0 : false;
     }
-
-   bool camerasPoll(const std::vector<IVideoCapture * >& deviceHandles, std::vector<int>& state, const int64_t & timeout) CV_OVERRIDE
-   {
-       std::vector< CvCapture * > capPtrs;
-
-       for (size_t capnum = 0; capnum < deviceHandles.size(); ++capnum)
-       {
-           CV_DbgAssert(dynamic_cast< LegacyCapture * >(deviceHandles[capnum]) != nullptr);
-           LegacyCapture *ptr = static_cast<LegacyCapture * >(deviceHandles[capnum]);
-           capPtrs.push_back(ptr->cap);
-       }
-
-       return  capPtrs[0] ? cvCamerasPoll(capPtrs, state, timeout) != 0 : false;
-   }
-
     bool retrieveFrame(int channel, OutputArray image) CV_OVERRIDE
     {
         IplImage* _img = cvRetrieveFrame(cap, channel);
