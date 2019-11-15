@@ -20,6 +20,7 @@ class qrcode_detector_test(NewOpenCVTests):
         img = cv.imread(self.extraTestDataPath + '/cv/qrcode/multiple/6_qrcodes.png')
         detector = cv.QRCodeDetector()
         retval, points, straight_qrcode = detector.multipleDetectAndDecode(img)
+        print(retval)
         self.assertEqual(retval[0], "QUESTION");
         self.assertEqual(retval[1], "TWO STEPS FORWARD");
         self.assertEqual(retval[2], "EXTRA");
