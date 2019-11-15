@@ -581,6 +581,9 @@ enum { CAP_PROP_IMAGES_BASE = 18000,
 
 
 class IVideoCapture;
+//! @cond IGNORED
+namespace internal { class VideoCapturePrivateAccessor; }
+//! @endcond IGNORED
 
 /** @brief Class for video capturing from video files, image sequences or cameras.
 
@@ -790,10 +793,34 @@ public:
 
     /// query if exception mode is active
     CV_WRAP bool getExceptionMode() { return throwOnFail; }
+
+
+    /** @brief Wait for ready frames from VideoCapture.
+
+    @param streams input video streams
+    @param readyIndex stream indexes with grabbed frames (ready to use .retrieve() to fetch actual frame)
+    @param timeoutNs number of nanoseconds (0 - infinite)
+    @return `true` if streamReady is not empty
+
+    @throws Exception %Exception on stream errors (check .isOpened() to filter out malformed streams) or VideoCapture type is not supported
+
+    The primary use of the function is in multi-camera environments.
+    The method fills the ready state vector, grabbs video frame, if camera is ready.
+
+    After this call use VideoCapture::retrieve() to decode and fetch frame data.
+    */
+    static /*CV_WRAP*/
+    bool waitAny(
+            const std::vector<VideoCapture>& streams,
+            CV_OUT std::vector<int>& readyIndex,
+            int64 timeoutNs = 0);
+
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
+
+    friend class internal::VideoCapturePrivateAccessor;
 };
 
 class IVideoWriter;
