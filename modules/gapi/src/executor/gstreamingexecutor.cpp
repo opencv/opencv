@@ -396,13 +396,13 @@ void collectorThread(std::vector<Q*> in_queues,
 }
 } // anonymous namespace
 
-cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model, cv::GCompileArgs m_args)
+cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model, cv::GCompileArgs m_args, const GMetaArgs &in_metas)
     : m_orig_graph(std::move(g_model))
     , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
                      .get<IslandModel>().model)
     , m_gim(*m_island_graph)
     , comp_args(m_args)
-    , wasFinished(false)
+    , m_metas(in_metas)
 {
     GModel::Graph gm(*m_orig_graph);
     // NB: Right now GIslandModel is acyclic, and all the below code assumes that.
@@ -559,8 +559,10 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
 
         //get metadata 
     // testing meta data is cv::GMatDesc{CV_8U,3,cv::Size{768,576}}
-    cv::GMatDesc mat_desc(CV_8U,3,cv::Size(768,576));
-    cv::GMetaArgs metas{cv::GMetaArg(mat_desc)};
+    // cv::GMatDesc mat_desc(CV_8U,3,cv::Size(768,576));
+    // cv::GMetaArgs metas{cv::GMetaArg(mat_desc)};
+
+    const auto& metas = m_metas;
     
     if (/*wasFinished*/true) {
         //finishing graph
@@ -575,15 +577,59 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         //does inferMeta needed?? 
         cv::gimpl::passes::inferMeta(pass_ctx, true);
         //compile islands for m_orig_graph
+        cv::gimpl::passes::storeResultingMeta(pass_ctx);
         // Get compileArgs from m_ops?? 
         cv::gimpl::GCompiler::compileIslands(*m_orig_graph.get(), comp_args);
         
-        // is it correct???
-        auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
-        int nh_index = 0;
-        for (auto nh : sorted.nodes()) {
-            m_ops[nh_index].isl_exec = m_gim.metadata(nh).get<IslandExec>().object;
-            nh_index++;
+    GModel::Graph gm(*m_orig_graph);
+
+                auto xtract_in = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
+                    const auto orig_data_nh
+                        = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
+                    const auto &orig_data_info
+                        = gm.metadata(orig_data_nh).get<Data>();
+                    if (orig_data_info.shape == GShape::GARRAY) {
+                        // FIXME: GArray lost host constructor problem
+                        GAPI_Assert(!cv::util::holds_alternative<cv::util::monostate>(orig_data_info.ctor));
+                    }
+                    vec.emplace_back(RcDesc{ orig_data_info.rc
+                                           , orig_data_info.shape
+                                           , orig_data_info.ctor});
+                };
+                auto xtract_out = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec, cv::GMetaArgs &metas) {
+                    const auto orig_data_nh
+                        = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
+                    const auto &orig_data_info
+                        = gm.metadata(orig_data_nh).get<Data>();
+                    if (orig_data_info.shape == GShape::GARRAY) {
+                        // FIXME: GArray lost host constructor problem
+                        GAPI_Assert(!cv::util::holds_alternative<cv::util::monostate>(orig_data_info.ctor));
+                    }
+                    vec.emplace_back(RcDesc{ orig_data_info.rc
+                                           , orig_data_info.shape
+                                           , orig_data_info.ctor});
+                    metas.emplace_back(orig_data_info.meta);
+                };
+
+        for (auto& op : m_ops) {
+            op.isl_exec = m_gim.metadata(op.nh).get<IslandExec>().object;
+
+             std::vector<RcDesc> input_rcs;
+             std::vector<RcDesc> output_rcs;
+            //  std::vector<GRunArg> in_constants;
+             cv::GMetaArgs output_metas;
+
+            input_rcs.reserve(op.nh->inNodes().size());
+            // in_constants.reserve(nh->inNodes().size()); // FIXME: Ugly
+            output_rcs.reserve(op.nh->outNodes().size());
+            output_metas.reserve(op.nh->outNodes().size());
+
+            for (auto in_slot_nh  : op.nh->inNodes())  xtract_in(in_slot_nh,  input_rcs);
+            for (auto out_slot_nh : op.nh->outNodes()) xtract_out(out_slot_nh, output_rcs, output_metas);
+
+            op.in_objects = input_rcs;
+            op.out_objects = output_rcs;
+            op.out_metas = output_metas;
         }
 
         wasFinished = true;
