@@ -6,10 +6,6 @@
 
 #if defined(HAVE_OPENCV_GAPI) && defined(HAVE_INF_ENGINE)
 
-#if INF_ENGINE_RELEASE <= 2018050000
-#   error G-API IE module supports only OpenVINO IE >= 2019 R1
-#endif
-
 #include <opencv2/gapi.hpp>
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/imgproc.hpp>
@@ -106,7 +102,8 @@ G_API_NET(FaceDetector,  <cv::GMat(cv::GMat)>, "face_detector");
 G_API_NET(LandmDetector, <cv::GMat(cv::GMat)>, "landm_detector");
 
 // Function kernels
-G_TYPED_KERNEL(GBilatFilter, <cv::GMat(cv::GMat,int,double,double)>,
+G_TYPED_KERNEL(GBilatFilter,
+               <cv::GMat(cv::GMat,int,double,double)>,
                "custom.faceb12n.bilateralFilter")
 {
     static cv::GMatDesc outMeta(cv::GMatDesc in, int,double,double)
@@ -115,7 +112,8 @@ G_TYPED_KERNEL(GBilatFilter, <cv::GMat(cv::GMat,int,double,double)>,
     }
 };
 
-G_TYPED_KERNEL(GLaplacian, <cv::GMat(cv::GMat,int)>,
+G_TYPED_KERNEL(GLaplacian,
+               <cv::GMat(cv::GMat,int)>,
                "custom.faceb12n.Laplacian")
 {
     static cv::GMatDesc outMeta(cv::GMatDesc in, int)
@@ -124,7 +122,8 @@ G_TYPED_KERNEL(GLaplacian, <cv::GMat(cv::GMat,int)>,
     }
 };
 
-G_TYPED_KERNEL(GFillPolyGContours, <cv::GMat(cv::GMat,cv::GArray<Contour>)>,
+G_TYPED_KERNEL(GFillPolyGContours,
+               <cv::GMat(cv::GMat,cv::GArray<Contour>)>,
                "custom.faceb12n.fillPolyGContours")
 {
     static cv::GMatDesc outMeta(cv::GMatDesc in, cv::GArrayDesc)
@@ -133,8 +132,8 @@ G_TYPED_KERNEL(GFillPolyGContours, <cv::GMat(cv::GMat,cv::GArray<Contour>)>,
     }
 };
 
-G_TYPED_KERNEL(GPolyLines, <cv::GMat(cv::GMat,cv::GArray<Contour>,bool,
-                                     cv::Scalar)>,
+G_TYPED_KERNEL(GPolyLines,
+               <cv::GMat(cv::GMat,cv::GArray<Contour>,bool,cv::Scalar)>,
                "custom.faceb12n.polyLines")
 {
     static cv::GMatDesc outMeta(cv::GMatDesc in, cv::GArrayDesc,bool,cv::Scalar)
@@ -143,7 +142,8 @@ G_TYPED_KERNEL(GPolyLines, <cv::GMat(cv::GMat,cv::GArray<Contour>,bool,
     }
 };
 
-G_TYPED_KERNEL(GRectangle, <cv::GMat(cv::GMat,GArrayROI,cv::Scalar)>,
+G_TYPED_KERNEL(GRectangle,
+               <cv::GMat(cv::GMat,GArrayROI,cv::Scalar)>,
                "custom.faceb12n.rectangle")
 {
     static cv::GMatDesc outMeta(cv::GMatDesc in, cv::GArrayDesc,cv::Scalar)
@@ -152,7 +152,8 @@ G_TYPED_KERNEL(GRectangle, <cv::GMat(cv::GMat,GArrayROI,cv::Scalar)>,
     }
 };
 
-G_TYPED_KERNEL(GFacePostProc, <GArrayROI(cv::GMat,cv::GMat,float)>,
+G_TYPED_KERNEL(GFacePostProc,
+               <GArrayROI(cv::GMat,cv::GMat,float)>,
                "custom.faceb12n.faceDetectPostProc")
 {
     static cv::GArrayDesc outMeta(const cv::GMatDesc&,const cv::GMatDesc&,float)
@@ -161,8 +162,8 @@ G_TYPED_KERNEL(GFacePostProc, <GArrayROI(cv::GMat,cv::GMat,float)>,
     }
 };
 
-G_TYPED_KERNEL_M(GLandmPostProc, <TplPtsFaceElements_Jaw(cv::GArray<cv::GMat>,
-                                                         GArrayROI)>,
+G_TYPED_KERNEL_M(GLandmPostProc,
+                 <TplPtsFaceElements_Jaw(cv::GArray<cv::GMat>,GArrayROI)>,
                  "custom.faceb12n.landmDetectPostProc")
 {
     static std::tuple<cv::GArrayDesc,cv::GArrayDesc> outMeta(
@@ -172,8 +173,9 @@ G_TYPED_KERNEL_M(GLandmPostProc, <TplPtsFaceElements_Jaw(cv::GArray<cv::GMat>,
     }
 };
 
-G_TYPED_KERNEL_M(GGetContours, <TplFaces_FaceElements (cv::GArray<Landmarks>,
-                                                       cv::GArray<Contour>)>,
+G_TYPED_KERNEL_M(GGetContours,
+                 <TplFaces_FaceElements(cv::GArray<Landmarks>,
+                                        cv::GArray<Contour>)>,
                  "custom.faceb12n.getContours")
 {
     static std::tuple<cv::GArrayDesc,cv::GArrayDesc> outMeta(
@@ -264,7 +266,7 @@ GAPI_OCV_KERNEL(GCPURectangle, custom::GRectangle)
 //  detected face is the following:
 //  [image_id, label, conf, x_min, y_min, x_max, y_max]; all the seven elements
 //  are floating point. For more details please visit:
-// https://github.com/opencv/open_model_zoo/blob/master/intel_models/face-detection-adas-0001
+//  https://github.com/opencv/open_model_zoo/blob/master/intel_models/face-detection-adas-0001
 // This kernel is the face detection output blob parsing that returns a vector
 //  of detected faces' rects:
 GAPI_OCV_KERNEL(GCPUFacePostProc, GFacePostProc)
@@ -321,7 +323,7 @@ GAPI_OCV_KERNEL(GCPULandmPostProc, GLandmPostProc)
         //  floating point values for landmarks' normed coordinates relatively
         //  to an input ROI (not the original frame).
         //  For more details please visit:
-// https://github.com/opencv/open_model_zoo/blob/master/intel_models/facial-landmarks-35-adas-0002
+        //  https://github.com/opencv/open_model_zoo/blob/master/intel_models/facial-landmarks-35-adas-0002
         static constexpr int kNumFaceElems = 18;
         static constexpr int kNumTotal     = 35;
         const size_t numFaces = vctRects.size();
@@ -780,8 +782,9 @@ int main(int argc, char** argv)
         cv::imshow(config::kWinFaceBeautification, imgBeautif);
     }
     return 0;
+}
 
-#else
+#else // HAVE_OPENCV_GAPI && HAVE_INF_ENGINE
 #include <iostream>
 
 int main(int,char**)
@@ -790,7 +793,5 @@ int main(int,char**)
                  " with Inference Engine backend to run"
               << std::endl;
     return 1;
-
-#endif // HAVE_OPECV_GAPI && HAVE_INF_ENGINE
-
 }
+#endif // HAVE_OPECV_GAPI && HAVE_INF_ENGINE
