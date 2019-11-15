@@ -84,6 +84,8 @@ public:
     {
         if (!videoio_registry::hasBackend(apiPref))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
         writeVideo();
         VideoCapture cap;
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
@@ -170,6 +172,8 @@ public:
     {
         if (!videoio_registry::hasBackend(apiPref))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
@@ -505,5 +509,64 @@ TEST(Videoio, exceptions)
     EXPECT_THROW(cap.set(CAP_PROP_POS_FRAMES, 1), Exception);
     EXPECT_THROW(cap.open("this_does_not_exist.avi", CAP_OPENCV_MJPEG), Exception);
 }
+
+
+typedef Videoio_Writer Videoio_Writer_bad_fourcc;
+
+TEST_P(Videoio_Writer_bad_fourcc, nocrash)
+{
+    if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    VideoWriter writer;
+    EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
+    ASSERT_FALSE(writer.isOpened());
+    EXPECT_NO_THROW(writer.release());
+}
+
+static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API_nocrash()
+{
+    static const Ext_Fourcc_API params[] = {
+#ifdef HAVE_MSMF_DISABLED  // MSMF opens writer stream
+    {"wmv", "aaaa", CAP_MSMF},
+    {"mov", "aaaa", CAP_MSMF},
+#endif
+
+#ifdef HAVE_QUICKTIME
+    {"mov", "aaaa", CAP_QT},
+    {"avi", "aaaa", CAP_QT},
+    {"mkv", "aaaa", CAP_QT},
+#endif
+
+#ifdef HAVE_AVFOUNDATION
+   {"mov", "aaaa", CAP_AVFOUNDATION},
+   {"mp4", "aaaa", CAP_AVFOUNDATION},
+   {"m4v", "aaaa", CAP_AVFOUNDATION},
+#endif
+
+#ifdef HAVE_FFMPEG
+    {"avi", "aaaa", CAP_FFMPEG},
+    {"mkv", "aaaa", CAP_FFMPEG},
+#endif
+
+#ifdef HAVE_GSTREAMER
+    {"avi", "aaaa", CAP_GSTREAMER},
+    {"mkv", "aaaa", CAP_GSTREAMER},
+#endif
+    {"avi", "aaaa", CAP_OPENCV_MJPEG},
+};
+
+    const size_t N = sizeof(params)/sizeof(params[0]);
+    vector<Ext_Fourcc_API> result; result.reserve(N);
+    for (size_t i = 0; i < N; i++)
+    {
+        const Ext_Fourcc_API& src = params[i];
+        Ext_Fourcc_API e = { src.ext, src.fourcc, src.api };
+        result.push_back(e);
+    }
+    return result;
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bad_fourcc, testing::ValuesIn(generate_Ext_Fourcc_API_nocrash()));
 
 } // namespace

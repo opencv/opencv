@@ -7,8 +7,10 @@
 #include "test_precomp.hpp"
 
 #include <iomanip>
+#include <vector>
 #include "gapi_fluid_test_kernels.hpp"
 #include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/own/saturate.hpp>
 
 namespace cv
 {
@@ -72,7 +74,8 @@ GAPI_FLUID_KERNEL(FAddCSimple, TAddCSimple, false)
             for (int i = 0, w = in.length(); i < w; i++)
             {
                 //std::cout << std::setw(4) << int(in_row[i]);
-                out_row[i] = static_cast<uint8_t>(in_row[i] + cval);
+                //FIXME: it seems that over kernels might need it as well
+                out_row[i] = cv::gapi::own::saturate<uint8_t>(in_row[i] + cval);
             }
             //std::cout << std::endl;
         }
@@ -446,6 +449,56 @@ GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
     }
 };
 
+GAPI_FLUID_KERNEL(FEqualizeHist, TEqualizeHist, false)
+{
+    static const int Window = 1;
+    static const int LPI    = 2;
+
+    static void run(const cv::gapi::fluid::View   &mat,
+                    const std::vector<int>        &arr,
+                          cv::gapi::fluid::Buffer &out)
+    {
+        for (int l = 0, lpi = out.lpi(); l < lpi; l++)
+        {
+            const uint8_t* in_row  = mat.InLine <uint8_t>(l);
+                  uint8_t* out_row = out.OutLine<uint8_t>(l);
+
+            for (int i = 0, w = mat.length(); i < w; i++)
+            {
+                out_row[i] = static_cast<uint8_t>(arr[in_row[i]]);
+            }
+        }
+    }
+};
+
+GAPI_OCV_KERNEL(OCVCalcHist, TCalcHist)
+{
+    static void run(const cv::Mat& in, std::vector<int>& out)
+    {
+        out = std::vector<int>(256, 0);
+
+        // Calculate normalized accumulated integral transformation array for gapi
+        for(int i = 0; i < in.rows; ++i)
+            for(int j = 0; j < in.cols; ++j)
+                ++out[in.at<uint8_t>(i, j)];
+
+        for(unsigned int i = 1; i < out.size(); ++i)
+            out[i] += out[i-1];
+
+        int size = in.size().width * in.size().height;
+        int min = size;
+        for(unsigned int i = 0; i < out.size(); ++i)
+            if(out[i] != 0 && out[i] < min)
+                min = out[i];
+
+        for(auto & el : out)
+        {
+            // General histogram equalization formula
+            el = cvRound(((float)(el - min) / (float)(size - min))*255);
+        }
+    }
+};
+
 static const int ITUR_BT_601_CY = 1220542;
 static const int ITUR_BT_601_CUB = 2116026;
 static const int ITUR_BT_601_CUG = -409993;
@@ -477,7 +530,7 @@ GAPI_FLUID_KERNEL(FNV12toRGB, cv::gapi::imgproc::GNV12toRGB, false)
 {
     static const int Window = 1;
     static const int LPI    = 2;
-    static const auto Kind = GFluidKernel::Kind::NV12toRGB;
+    static const auto Kind = GFluidKernel::Kind::YUV420toRGB;
 
     static void run(const cv::gapi::fluid::View   &in1,
                     const cv::gapi::fluid::View   &in2,
@@ -567,6 +620,8 @@ cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         ,FSum2MatsAndScalar
         ,FTestSplit3
         ,FTestSplit3_4lpi
+        ,FEqualizeHist
+        ,OCVCalcHist
         >();
 } // namespace gapi_test_kernels
 } // namespace cv

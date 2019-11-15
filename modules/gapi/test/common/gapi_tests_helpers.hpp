@@ -13,12 +13,6 @@
 namespace opencv_test
 {
 
-// out_type == in_type in matrices initialization if out_type is marked as SAME_TYPE
-enum {
-    // TODO: why is it different from -1?
-    SAME_TYPE = std::numeric_limits<int>::max()
-};
-
 // Ensure correct __VA_ARGS__ expansion on Windows
 #define __WRAP_VAARGS(x) x
 
@@ -48,6 +42,14 @@ enum {
     __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
     __WRAP_VAARGS(__DEFINE_PARAMS_IMPL5(index+1, __VA_ARGS__))
 
+#define __DEFINE_PARAMS_IMPL7(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL6(index+1, __VA_ARGS__))
+
+#define __DEFINE_PARAMS_IMPL8(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL7(index+1, __VA_ARGS__))
+
 // user interface to define member variables of specified names
 #define DEFINE_SPECIFIC_PARAMS_0()
 
@@ -68,6 +70,12 @@ enum {
 
 #define DEFINE_SPECIFIC_PARAMS_6(...) \
     __WRAP_VAARGS(__DEFINE_PARAMS_IMPL6(0, __VA_ARGS__))
+
+#define DEFINE_SPECIFIC_PARAMS_7(...) \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL7(0, __VA_ARGS__))
+
+#define DEFINE_SPECIFIC_PARAMS_8(...) \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL8(0, __VA_ARGS__))
 } // namespace opencv_test
 
 #endif //OPENCV_GAPI_TESTS_HELPERS_HPP

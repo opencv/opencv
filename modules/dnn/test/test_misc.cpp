@@ -78,6 +78,28 @@ TEST(readNet, Regression)
     EXPECT_FALSE(net.empty());
 }
 
+typedef testing::TestWithParam<tuple<Backend, Target> > dump;
+TEST_P(dump, Regression)
+{
+    const int backend  = get<0>(GetParam());
+    const int target   = get<1>(GetParam());
+    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
+                      findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+
+    ASSERT_EQ(net.getLayerInputs(net.getLayerId("fire2/concat")).size(), 2);
+
+    int size[] = {1, 3, 227, 227};
+    Mat input = cv::Mat::ones(4, size, CV_32F);
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    EXPECT_FALSE(net.dump().empty());
+    net.forward();
+    EXPECT_FALSE(net.dump().empty());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, dump, dnnBackendsAndTargets());
+
 class FirstCustomLayer CV_FINAL : public Layer
 {
 public:
@@ -157,6 +179,8 @@ TEST_P(setInput, normalization)
     const int target   = get<1>(get<3>(GetParam()));
     const bool kSwapRB = true;
 
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)
@@ -343,7 +367,7 @@ TEST(Net, forwardAndRetrieve)
 }
 
 #ifdef HAVE_INF_ENGINE
-static const std::chrono::milliseconds async_timeout(500);
+static const std::chrono::milliseconds async_timeout(10000);
 
 // This test runs network in synchronous mode for different inputs and then
 // runs the same model asynchronously for the same inputs.
@@ -449,6 +473,42 @@ INSTANTIATE_TEST_CASE_P(/**/, Async, Combine(
   Values(CV_32F, CV_8U),
   testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
 ));
+
+typedef testing::TestWithParam<Target>  Test_Model_Optimizer;
+TEST_P(Test_Model_Optimizer, forward_two_nets)
+{
+    const int target = GetParam();
+
+    const std::string suffix = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "_fp16" : "";
+    const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+
+    Net net0 = readNet(model, proto);
+    net0.setPreferableTarget(target);
+
+    Net net1 = readNet(model, proto);
+    net1.setPreferableTarget(target);
+
+    // Generate inputs.
+    int blobSize[] = {2, 6, 75, 113};
+    Mat input(4, &blobSize[0], CV_32F);
+    randu(input, 0, 255);
+
+    net0.setInput(input);
+    Mat ref0 = net0.forward().clone();
+
+    net1.setInput(input);
+    Mat ref1 = net1.forward();
+
+    net0.setInput(input);
+    Mat ref2 = net0.forward();
+
+    normAssert(ref0, ref2, 0, 0);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,
+  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
+);
+
 #endif  // HAVE_INF_ENGINE
 
 }} // namespace

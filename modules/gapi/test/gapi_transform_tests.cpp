@@ -8,6 +8,9 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/gapi/gtransform.hpp"
+#include "opencv2/gapi/gtype_traits.hpp"
+// explicit include to use GComputation::Priv
+#include "api/gcomputation_priv.hpp"
 
 namespace opencv_test
 {
@@ -19,6 +22,9 @@ using GMat2 = std::tuple<GMat, GMat>;
 using GMat3 = std::tuple<GMat, GMat, GMat>;
 using GScalar = cv::GScalar;
 template <typename T> using GArray = cv::GArray<T>;
+
+using ArrayT = int;
+using WrongArrayT = char;
 
 GAPI_TRANSFORM(gmat_in_gmat_out, <GMat(GMat)>, "gmat_in_gmat_out")
 {
@@ -56,16 +62,34 @@ GAPI_TRANSFORM(gmat_in_gsc_out, <GScalar(GMat)>, "gmat_in_gsc_out")
     static GScalar substitute(GMat) { return {}; }
 };
 
-GAPI_TRANSFORM(garr_in_gmat_out, <GMat(GArray<int>)>, "garr_in_gmat_out")
+GAPI_TRANSFORM(garr_in_gmat_out, <GMat(GArray<ArrayT>)>, "garr_in_gmat_out")
 {
-    static GMat pattern(GArray<int>) { return {}; }
-    static GMat substitute(GArray<int>) { return {}; }
+    static GMat pattern(GArray<ArrayT>) { return {}; }
+    static GMat substitute(GArray<ArrayT>) { return {}; }
 };
 
-GAPI_TRANSFORM(gmat_in_garr_out, <GArray<int>(GMat)>, "gmat_in_garr_out")
+GAPI_TRANSFORM(gmat_in_garr_out, <GArray<ArrayT>(GMat)>, "gmat_in_garr_out")
 {
-    static GArray<int> pattern(GMat) { return {}; }
-    static GArray<int> substitute(GMat) { return {}; }
+    static GArray<ArrayT> pattern(GMat) { return {}; }
+    static GArray<ArrayT> substitute(GMat) { return {}; }
+};
+
+GAPI_TRANSFORM(garr_in_gscalar_out, <GScalar(GArray<ArrayT>)>, "garr_in_gscalar_out")
+{
+    static GScalar pattern(GArray<ArrayT>) { return {}; }
+    static GScalar substitute(GArray<ArrayT>) { return {}; }
+};
+
+GAPI_TRANSFORM(gscalar_in_garr_out, <GArray<ArrayT>(GScalar)>, "gscalar_in_garr_out")
+{
+    static GArray<ArrayT> pattern(GScalar) { return {}; }
+    static GArray<ArrayT> substitute(GScalar) { return {}; }
+};
+
+GAPI_TRANSFORM(gmat_gsc_garray_in_gmat2_out, <GMat2(GMat, GScalar, GArray<ArrayT>)>, "gmat_gsc_garray_in_gmat2_out")
+{
+    static GMat2 pattern(GMat, GScalar, GArray<ArrayT>) { return {}; }
+    static GMat2 substitute(GMat, GScalar, GArray<ArrayT>) { return {}; }
 };
 
 } // anonymous namespace
@@ -76,12 +100,18 @@ TEST(KernelPackageTransform, CreatePackage)
         < gmat_in_gmat_out
         , gmat2_in_gmat_out
         , gmat2_in_gmat3_out
+        , gmatp_in_gmatp_out
         , gsc_in_gmat_out
         , gmat_in_gsc_out
+        , garr_in_gmat_out
+        , gmat_in_garr_out
+        , garr_in_gscalar_out
+        , gscalar_in_garr_out
+        , gmat_gsc_garray_in_gmat2_out
         >();
 
     auto tr = pkg.get_transformations();
-    EXPECT_EQ(5u, tr.size());
+    EXPECT_EQ(11u, tr.size());
 }
 
 TEST(KernelPackageTransform, Include)
@@ -103,81 +133,113 @@ TEST(KernelPackageTransform, Combine)
     EXPECT_EQ(2u, tr.size());
 }
 
-TEST(KernelPackageTransform, Pattern)
+namespace
 {
-    auto tr = gmat2_in_gmat3_out::transformation();
-    GMat a, b;
-    auto pattern = tr.pattern({cv::GArg(a), cv::GArg(b)});
-
-    // return type of '2gmat_in_gmat3_out' is GMat3
-    EXPECT_EQ(3u, pattern.size());
-    for (const auto& p : pattern)
-    {
-        EXPECT_NO_THROW(p.get<GMat>());
+    template <typename T>
+    inline bool ProtoContainsT(const cv::GProtoArg &arg) {
+        return cv::GProtoArg::index_of<T>() == arg.index();
     }
+} // anonymous namespace
+
+TEST(KernelPackageTransform, gmat_gsc_garray_in_gmat2_out)
+{
+    auto tr = gmat_gsc_garray_in_gmat2_out::transformation();
+
+    auto check = [](const cv::GComputation &comp){
+        const auto &p = comp.priv();
+        EXPECT_EQ(3u, p.m_ins.size());
+        EXPECT_EQ(2u, p.m_outs.size());
+
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_ins[0]));
+        EXPECT_TRUE(ProtoContainsT<GScalar>(p.m_ins[1]));
+        EXPECT_TRUE(ProtoContainsT<cv::detail::GArrayU>(p.m_ins[2]));
+        EXPECT_TRUE(cv::util::get<cv::detail::GArrayU>(p.m_ins[2]).holds<ArrayT>());
+        EXPECT_FALSE(cv::util::get<cv::detail::GArrayU>(p.m_ins[2]).holds<WrongArrayT>());
+
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_outs[0]));
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_outs[1]));
+    };
+
+    check(tr.pattern());
+    check(tr.substitute());
 }
 
-TEST(KernelPackageTransform, Substitute)
+namespace
 {
-    auto tr = gmat2_in_gmat3_out::transformation();
-    GMat a, b;
-    auto subst = tr.substitute({cv::GArg(a), cv::GArg(b)});
-
-    EXPECT_EQ(3u, subst.size());
-    for (const auto& s : subst)
+    template<typename ArgT>
+    typename std::enable_if<(cv::detail::GTypeTraits<ArgT>::kind == cv::detail::ArgKind::GARRAY), void>::type
+    arg_check(const cv::GProtoArg &arg)
     {
-        EXPECT_NO_THROW(s.get<GMat>());
+        EXPECT_TRUE(ProtoContainsT<cv::detail::GArrayU>(arg));
+        EXPECT_TRUE(cv::util::get<cv::detail::GArrayU>(arg).holds<ArrayT>());
+        EXPECT_FALSE(cv::util::get<cv::detail::GArrayU>(arg).holds<WrongArrayT>());
     }
-}
+
+    template<typename ArgT>
+    typename std::enable_if<(cv::detail::GTypeTraits<ArgT>::kind != cv::detail::ArgKind::GARRAY), void>::type
+    arg_check(const cv::GProtoArg &arg)
+    {
+        EXPECT_TRUE(ProtoContainsT<ArgT>(arg));
+    }
+
+    template<typename InType, typename OutType>
+    void args_check(const cv::GComputation &comp)
+    {
+        const auto &p = comp.priv();
+        EXPECT_EQ(1u, p.m_ins.size());
+        EXPECT_EQ(1u, p.m_outs.size());
+        arg_check<InType>(p.m_ins[0]);
+        arg_check<OutType>(p.m_outs[0]);
+    }
+} // anonymous namespace
 
 template <typename Transformation, typename InType, typename OutType>
 static void transformTest()
 {
     auto tr = Transformation::transformation();
-    InType in;
-    auto pattern = tr.pattern({cv::GArg(in)});
-    auto subst = tr.substitute({cv::GArg(in)});
 
-    EXPECT_EQ(1u, pattern.size());
-    EXPECT_EQ(1u, subst.size());
-
-    auto checkOut = [](GArg& garg) {
-        EXPECT_TRUE(garg.kind == cv::detail::GTypeTraits<OutType>::kind);
-        EXPECT_NO_THROW(garg.get<OutType>());
-    };
-
-    checkOut(pattern[0]);
-    checkOut(subst[0]);
+    args_check<InType, OutType>(tr.pattern());
+    args_check<InType, OutType>(tr.substitute());
 }
 
-TEST(KernelPackageTransform, GMat)
+TEST(KernelPackageTransform, gmat_in_gmat_out)
 {
     transformTest<gmat_in_gmat_out, GMat, GMat>();
 }
 
-TEST(KernelPackageTransform, GMatP)
+TEST(KernelPackageTransform, gmatp_in_gmatp_out)
 {
     transformTest<gmatp_in_gmatp_out, GMatP, GMatP>();
 }
 
-TEST(KernelPackageTransform, GScalarIn)
+TEST(KernelPackageTransform, gsc_in_gmat_out)
 {
     transformTest<gsc_in_gmat_out, GScalar, GMat>();
 }
 
-TEST(KernelPackageTransform, GScalarOut)
+TEST(KernelPackageTransform, gmat_in_gsc_out)
 {
     transformTest<gmat_in_gsc_out, GMat, GScalar>();
 }
 
-TEST(KernelPackageTransform, DISABLED_GArrayIn)
+TEST(KernelPackageTransform, garr_in_gmat_out)
 {
-    transformTest<garr_in_gmat_out, GArray<int>, GMat>();
+    transformTest<garr_in_gmat_out, GArray<ArrayT>, GMat>();
 }
 
-TEST(KernelPackageTransform, DISABLED_GArrayOut)
+TEST(KernelPackageTransform, gmat_in_garr_out)
 {
-    transformTest<gmat_in_garr_out, GMat, GArray<int>>();
+    transformTest<gmat_in_garr_out, GMat, GArray<ArrayT>>();
+}
+
+TEST(KernelPackageTransform, garr_in_gscalar_out)
+{
+    transformTest<garr_in_gscalar_out, GArray<ArrayT>, GScalar>();
+}
+
+TEST(KernelPackageTransform, gscalar_in_garr_out)
+{
+    transformTest<gscalar_in_garr_out, GScalar, GArray<ArrayT>>();
 }
 
 } // namespace opencv_test

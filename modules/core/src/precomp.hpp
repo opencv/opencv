@@ -344,7 +344,7 @@ struct CoreTLSData
 #endif
 };
 
-TLSData<CoreTLSData>& getCoreTlsData();
+CoreTLSData& getCoreTlsData();
 
 #if defined(BUILD_SHARED_LIBS)
 #if defined _WIN32 || defined WINCE

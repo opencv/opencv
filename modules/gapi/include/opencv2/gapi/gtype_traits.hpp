@@ -14,6 +14,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/own/convert.hpp>
 
@@ -26,7 +27,11 @@ namespace detail
     // a double dispatch
     enum class ArgKind: int
     {
-        OPAQUE,       // Unknown, generic, opaque-to-GAPI data type - STATIC
+        OPAQUE_VAL,   // Unknown, generic, opaque-to-GAPI data type - STATIC
+                      // Note: OPAQUE is sometimes defined in Win sys headers
+#if !defined(OPAQUE) && !defined(CV_DOXYGEN)
+        OPAQUE = OPAQUE_VAL,  // deprecated value used for compatibility, use OPAQUE_VAL instead
+#endif
         GOBJREF,      // <internal> reference to object
         GMAT,         // a cv::GMat
         GMATP,        // a cv::GMatP
@@ -41,7 +46,7 @@ namespace detail
     template<typename T> struct GTypeTraits;
     template<typename T> struct GTypeTraits
     {
-        static constexpr const ArgKind kind = ArgKind::OPAQUE;
+        static constexpr const ArgKind kind = ArgKind::OPAQUE_VAL;
     };
     template<>           struct GTypeTraits<cv::GMat>
     {
@@ -95,6 +100,9 @@ namespace detail
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
+    // FIXME: This is not quite correct since IStreamSource may produce not only Mat but also Scalar
+    // and vector data. TODO: Extend the type dispatchig on these types too.
+    template<>           struct GTypeOf<cv::gapi::wip::IStreamSource::Ptr> { using type = cv::GMat;};
     template<class T> using g_type_of_t = typename GTypeOf<T>::type;
 
     // Marshalling helper for G-types and its Host types. Helps G-API

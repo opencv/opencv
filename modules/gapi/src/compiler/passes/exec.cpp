@@ -454,7 +454,7 @@ namespace
             m_changes.enqueue<Change::DropLink>(m_g, m_cons, out_edge);
         }
 
-        // D: Process the intermediate slots (betweed Prod n Cons).
+        // D: Process the intermediate slots (between Prod n Cons).
         // D/1 - Those which are optimized out are just removed from the model
         for (auto opt_slot_nh : mo.opt_interim_slots)
         {

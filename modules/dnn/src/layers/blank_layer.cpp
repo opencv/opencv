@@ -40,7 +40,13 @@
 //
 //M*/
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/reshape.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -57,6 +63,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
     }
 
@@ -107,11 +114,24 @@ public:
                 inputs[i].copyTo(outputs[i]);
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::ReshapeOp>(preferableTarget, std::move(context->stream));
+    }
+#endif
+
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        CV_Assert(!input->dims.empty());
+        std::vector<size_t> dims = input->getDims();
+        CV_Assert(!dims.empty());
 
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
@@ -122,12 +142,10 @@ public:
         else
         {
             ieLayer.setType("Split");
-            ieLayer.getParameters()["axis"] = input->dims.size() - 1;
-            ieLayer.getParameters()["out_sizes"] = input->dims[0];
+            ieLayer.getParameters()["axis"] = dims.size() - 1;
+            ieLayer.getParameters()["out_sizes"] = dims[0];
         }
-        std::vector<size_t> shape(input->dims);
-        std::reverse(shape.begin(), shape.end());
-        ieLayer.setInputPorts({InferenceEngine::Port(shape)});
+        ieLayer.setInputPorts({InferenceEngine::Port(dims)});
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }

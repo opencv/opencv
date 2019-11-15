@@ -1226,8 +1226,8 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before detection.
--   **CALIB_CB_EXHAUSTIVE ** Run an exhaustive search to improve detection rate.
--   **CALIB_CB_ACCURACY ** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
+-   **CALIB_CB_EXHAUSTIVE** Run an exhaustive search to improve detection rate.
+-   **CALIB_CB_ACCURACY** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
 This should be used if an accurate camera calibration is required.
 
 The function is analog to findchessboardCorners but uses a localized radon
@@ -1715,8 +1715,8 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 @param cameraMatrix2 Second camera matrix.
 @param distCoeffs2 Second camera distortion parameters.
 @param imageSize Size of the image used for stereo calibration.
-@param R Rotation matrix between the coordinate systems of the first and the second cameras.
-@param T Translation vector between coordinate systems of the cameras.
+@param R Rotation matrix from the coordinate system of the first camera to the second.
+@param T Translation vector from the coordinate system of the first camera to the second.
 @param R1 Output 3x3 rectification transform (rotation matrix) for the first camera.
 @param R2 Output 3x3 rectification transform (rotation matrix) for the second camera.
 @param P1 Output 3x4 projection matrix in the new (rectified) coordinate systems for the first
@@ -2378,8 +2378,11 @@ CV_EXPORTS_W void validateDisparity( InputOutputArray disparity, InputArray cost
 /** @brief Reprojects a disparity image to 3D space.
 
 @param disparity Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit
-floating-point disparity image. If 16-bit signed format is used, the values are assumed to have no
-fractional bits.
+floating-point disparity image.
+The values of 8-bit / 16-bit signed formats are assumed to have no fractional bits.
+If the disparity is 16-bit signed format as computed by
+StereoBM/StereoSGBM/StereoBinaryBM/StereoBinarySGBM and may be other algorithms,
+it should be divided by 16 (and scaled to float) before being used here.
 @param _3dImage Output 3-channel floating-point image of the same size as disparity . Each
 element of _3dImage(x,y) contains 3D coordinates of the point (x,y) computed from the disparity
 map.

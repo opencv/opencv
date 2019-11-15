@@ -42,6 +42,15 @@ public class Mat {
     }
 
     //
+    // C++: Mat::Mat(int rows, int cols, int type, void* data, size_t step)
+    //
+
+    // javadoc: Mat::Mat(rows, cols, type, data, step)
+    public Mat(int rows, int cols, int type, ByteBuffer data, long step) {
+        nativeObj = n_Mat(rows, cols, type, data, step);
+    }
+
+    //
     // C++: Mat::Mat(Size size, int type)
     //
 
@@ -735,8 +744,11 @@ public class Mat {
     // javadoc:Mat::toString()
     @Override
     public String toString() {
-        return "Mat [ " +
-                rows() + "*" + cols() + "*" + CvType.typeToString(type()) +
+        String _dims = (dims() > 0) ? "" : "-1*-1*";
+        for (int i=0; i<dims(); i++) {
+            _dims += size(i) + "*";
+        }
+        return "Mat [ " + _dims + CvType.typeToString(type()) +
                 ", isCont=" + isContinuous() + ", isSubmat=" + isSubmatrix() +
                 ", nativeObj=0x" + Long.toHexString(nativeObj) +
                 ", dataAddr=0x" + Long.toHexString(dataAddr()) +
@@ -1132,6 +1144,9 @@ public class Mat {
 
     // C++: Mat::Mat(int rows, int cols, int type, void* data)
     private static native long n_Mat(int rows, int cols, int type, ByteBuffer data);
+
+    // C++: Mat::Mat(int rows, int cols, int type, void* data, size_t step)
+    private static native long n_Mat(int rows, int cols, int type, ByteBuffer data, long step);
 
     // C++: Mat::Mat(Size size, int type)
     private static native long n_Mat(double size_width, double size_height, int type);

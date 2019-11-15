@@ -205,7 +205,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
         CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
         if (check_result != CL_SUCCESS) \
         { \
-            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
+            static_assert(std::is_convertible<decltype(msg), const char*>::value, "msg of CV_OCL_CHECK_RESULT must be const char*"); \
             cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
             CV_Error(Error::OpenCLApiCallError, error_msg); \
         } \
@@ -225,7 +225,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
         CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
         if (check_result != CL_SUCCESS && isRaiseError()) \
         { \
-            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
+            static_assert(std::is_convertible<decltype(msg), const char*>::value, "msg of CV_OCL_DBG_CHECK_RESULT must be const char*"); \
             cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
             CV_Error(Error::OpenCLApiCallError, error_msg); \
         } \
@@ -266,6 +266,9 @@ static const String getBuildExtraOptions()
     }
     return param_buildExtraOptions;
 }
+
+static const bool CV_OPENCL_ENABLE_MEM_USE_HOST_PTR = utils::getConfigurationParameterBool("OPENCV_OPENCL_ENABLE_MEM_USE_HOST_PTR", true);
+static const size_t CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR", 4);
 
 #endif // HAVE_OPENCL
 
@@ -906,19 +909,19 @@ bool haveOpenCL()
 
 bool useOpenCL()
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    if( data->useOpenCL < 0 )
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useOpenCL < 0)
     {
         try
         {
-            data->useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
+            data.useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
         }
         catch (...)
         {
-            data->useOpenCL = 0;
+            data.useOpenCL = 0;
         }
     }
-    return data->useOpenCL > 0;
+    return data.useOpenCL > 0;
 }
 
 #ifdef HAVE_OPENCL
@@ -934,14 +937,14 @@ void setUseOpenCL(bool flag)
 {
     CV_TRACE_FUNCTION();
 
-    CoreTLSData* data = getCoreTlsData().get();
+    CoreTLSData& data = getCoreTlsData();
     if (!flag)
     {
-        data->useOpenCL = 0;
+        data.useOpenCL = 0;
     }
     else if( haveOpenCL() )
     {
-        data->useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
+        data.useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
     }
 }
 
@@ -1652,7 +1655,7 @@ size_t Device::profilingTimerResolution() const
 const Device& Device::getDefault()
 {
     const Context& ctx = Context::getDefault();
-    int idx = getCoreTlsData().get()->device;
+    int idx = getCoreTlsData().device;
     const Device& device = ctx.device(idx);
     return device;
 }
@@ -1722,7 +1725,7 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     return true;
 }
 
-#ifdef WINRT
+#if defined WINRT || defined _WIN32_WCE
 static cl_device_id selectOpenCLDevice()
 {
     return NULL;
@@ -2029,16 +2032,25 @@ struct Context::Impl
             0
         };
 
-        cl_uint i, nd0 = 0, nd = 0;
+        cl_uint nd0 = 0;
         int dtype = dtype0 & 15;
-        CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, 0, 0, &nd0));
+        cl_int status = clGetDeviceIDs(pl, dtype, 0, NULL, &nd0);
+        if (status != CL_DEVICE_NOT_FOUND) // Not an error if platform has no devices
+        {
+            CV_OCL_DBG_CHECK_RESULT(status,
+                cv::format("clGetDeviceIDs(platform=%p, device_type=%d, num_entries=0, devices=NULL, numDevices=%p)", pl, dtype, &nd0).c_str());
+        }
+
+        if (nd0 == 0)
+            return;
 
         AutoBuffer<void*> dlistbuf(nd0*2+1);
         cl_device_id* dlist = (cl_device_id*)dlistbuf.data();
         cl_device_id* dlist_new = dlist + nd0;
         CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, nd0, dlist, &nd0));
-        String name0;
 
+        cl_uint i, nd = 0;
+        String name0;
         for(i = 0; i < nd0; i++)
         {
             Device d(dlist[i]);
@@ -2554,9 +2566,10 @@ void attachContext(const String& platformName, void* platformID, void* context, 
     CV_OCL_CHECK(clRetainContext((cl_context)context));
 
     // clear command queue, if any
-    getCoreTlsData().get()->oclQueue.finish();
+    CoreTLSData& data = getCoreTlsData();
+    data.oclQueue.finish();
     Queue q;
-    getCoreTlsData().get()->oclQueue = q;
+    data.oclQueue = q;
 
     return;
 } // attachContext()
@@ -2744,7 +2757,7 @@ void* Queue::ptr() const
 
 Queue& Queue::getDefault()
 {
-    Queue& q = getCoreTlsData().get()->oclQueue;
+    Queue& q = getCoreTlsData().oclQueue;
     if( !q.p && haveOpenCL() )
         q.create(Context::getDefault());
     return q;
@@ -4671,6 +4684,9 @@ public:
 
     bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
+#ifndef HAVE_OPENCL
+        return false;
+#else
         if(!u)
             return false;
 
@@ -4746,8 +4762,12 @@ public:
 #endif
             {
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                if (u->origdata == cv::alignPtr(u->origdata, 4)  // There are OpenCL runtime issues for less aligned data
-                    && !(u->originalUMatData && u->originalUMatData->handle)  // Avoid sharing of host memory between OpenCL buffers
+                if (CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
+                    // There are OpenCL runtime issues for less aligned data
+                    && (CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR != 0
+                        && u->origdata == cv::alignPtr(u->origdata, (int)CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR))
+                    // Avoid sharing of host memory between OpenCL buffers
+                    && !(u->originalUMatData && u->originalUMatData->handle)
                 )
                 {
                     handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
@@ -4777,6 +4797,7 @@ public:
             u->markHostCopyObsolete(true);
         opencl_allocator_stats.onAllocate(u->size);
         return true;
+#endif  // HAVE_OPENCL
     }
 
     /*void sync(UMatData* u) const
@@ -4905,7 +4926,7 @@ public:
                                 (CL_MAP_READ | CL_MAP_WRITE),
                                 0, u->size, 0, 0, 0, &retval);
                             CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(handle=%p, sz=%lld) => %p", (void*)u->handle, (long long int)u->size, data).c_str());
-                            CV_Assert(u->origdata == data);
+                            CV_Assert(u->origdata == data && "Details: https://github.com/opencv/opencv/issues/6293");
                             if (u->originalUMatData)
                             {
                                 CV_Assert(u->originalUMatData->data == data);
@@ -5756,7 +5777,7 @@ public:
 
 static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
 {
-    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destrutor call (using of this object is too wide)
+    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destructor call (using of this object is too wide)
     g_isOpenCVActivated = true;
     return g_allocator;
 }
@@ -5929,7 +5950,12 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
 static void getDevices(std::vector<cl_device_id>& devices, cl_platform_id platform)
 {
     cl_uint numDevices = 0;
-    CV_OCL_DBG_CHECK(clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, 0, NULL, &numDevices));
+    cl_int status = clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, 0, NULL, &numDevices);
+    if (status != CL_DEVICE_NOT_FOUND) // Not an error if platform has no devices
+    {
+        CV_OCL_DBG_CHECK_RESULT(status,
+            cv::format("clGetDeviceIDs(platform, Device::TYPE_ALL, num_entries=0, devices=NULL, numDevices=%p)", &numDevices).c_str());
+    }
 
     if (numDevices == 0)
     {

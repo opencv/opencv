@@ -57,9 +57,23 @@ TEST_P(Filter2DTest, AccuracyTest)
     cv::Point anchor = {-1, -1};
     double delta = 0;
 
-    cv::Mat kernel = cv::Mat(kernSize, kernSize, CV_32FC1);
-    cv::Scalar kernMean = cv::Scalar(1.0);
-    cv::Scalar kernStddev = cv::Scalar(2.0/3);
+    cv::Mat kernel = cv::Mat(filterSize, CV_32FC1);
+    cv::Scalar kernMean, kernStddev;
+
+    const auto kernSize = filterSize.width * filterSize.height;
+    const auto bigKernSize = 49;
+
+    if (kernSize < bigKernSize)
+    {
+        kernMean = cv::Scalar(0.3);
+        kernStddev = cv::Scalar(0.5);
+    }
+    else
+    {
+        kernMean = cv::Scalar(0.008);
+        kernStddev = cv::Scalar(0.008);
+    }
+
     randn(kernel, kernMean, kernStddev);
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -67,6 +81,7 @@ TEST_P(Filter2DTest, AccuracyTest)
     auto out = cv::gapi::filter2D(in, dtype, kernel, anchor, delta, borderType);
 
     cv::GComputation c(in, out);
+
     c.apply(in_mat1, out_mat_gapi, getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -486,6 +501,80 @@ TEST_P(NV12toBGRTest, AccuracyTest)
     {
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
+
+
+static void toPlanar(const cv::Mat& in, cv::Mat& out)
+{
+    GAPI_Assert(out.depth() == in.depth());
+    GAPI_Assert(out.channels() == 1);
+    GAPI_Assert(in.channels() == 3);
+    GAPI_Assert(out.cols == in.cols);
+    GAPI_Assert(out.rows == 3*in.rows);
+
+    std::vector<cv::Mat> outs(3);
+    for (int i = 0; i < 3; i++) {
+        outs[i] = out(cv::Rect(0, i*in.rows, in.cols, in.rows));
+    }
+    cv::split(in, outs);
+}
+
+TEST_P(NV12toRGBpTest, AccuracyTest)
+{
+    cv::Size sz_p = cv::Size(sz.width, sz.height * 3);
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in_y;
+    cv::GMat in_uv;
+    auto out = cv::gapi::NV12toRGBp(in_y, in_uv);
+
+    // Additional mat for uv
+    cv::Mat in_mat_uv(cv::Size(sz.width / 2, sz.height / 2), CV_8UC2);
+    cv::randn(in_mat_uv, cv::Scalar::all(127), cv::Scalar::all(40.f));
+
+    cv::GComputation c(cv::GIn(in_y, in_uv), cv::GOut(out));
+    cv::Mat out_mat_gapi_planar(cv::Size(sz.width, sz.height * 3), CV_8UC1);
+    c.apply(cv::gin(in_mat1, in_mat_uv), cv::gout(out_mat_gapi_planar), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::Mat out_mat_ocv_planar(cv::Size(sz.width, sz.height * 3), CV_8UC1);
+    {
+        cv::cvtColorTwoPlane(in_mat1, in_mat_uv, out_mat_ocv, cv::COLOR_YUV2RGB_NV12);
+        toPlanar(out_mat_ocv, out_mat_ocv_planar);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi_planar, out_mat_ocv_planar));
+        EXPECT_EQ(out_mat_gapi_planar.size(), sz_p);
+    }
+}
+
+
+TEST_P(NV12toBGRpTest, AccuracyTest)
+{
+    cv::Size sz_p = cv::Size(sz.width, sz.height * 3);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in_y;
+    cv::GMat in_uv;
+    auto out = cv::gapi::NV12toBGRp(in_y, in_uv);
+
+    // Additional mat for uv
+    cv::Mat in_mat_uv(cv::Size(sz.width / 2, sz.height / 2), CV_8UC2);
+    cv::randn(in_mat_uv, cv::Scalar::all(127), cv::Scalar::all(40.f));
+
+    cv::GComputation c(cv::GIn(in_y, in_uv), cv::GOut(out));
+    cv::Mat out_mat_gapi_planar(cv::Size(sz.width, sz.height * 3), CV_8UC1);
+    c.apply(cv::gin(in_mat1, in_mat_uv), cv::gout(out_mat_gapi_planar), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::Mat out_mat_ocv_planar(cv::Size(sz.width, sz.height * 3), CV_8UC1);
+    {
+        cv::cvtColorTwoPlane(in_mat1, in_mat_uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
+        toPlanar(out_mat_ocv, out_mat_ocv_planar);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi_planar, out_mat_ocv_planar));
+        EXPECT_EQ(out_mat_gapi_planar.size(), sz_p);
     }
 }
 

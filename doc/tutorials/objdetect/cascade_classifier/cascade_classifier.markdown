@@ -113,7 +113,7 @@ This tutorial code's is shown lines below. You can also download it from
 Result
 ------
 
--#  Here is the result of running the code above and using as input the video stream of a build-in
+-#  Here is the result of running the code above and using as input the video stream of a built-in
     webcam:
 
     ![](images/Cascade_Classifier_Tutorial_Result_Haar.jpg)

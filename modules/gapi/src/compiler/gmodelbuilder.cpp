@@ -80,7 +80,7 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
     std::unordered_set<GObjId> in_objs_p;
     for (const auto& in_obj : ins)
     {
-        // Objects are guarnateed to remain alive while this method
+        // Objects are guaranteed to remain alive while this method
         // is working, so it is safe to keep pointers here and below
         in_objs_p.insert(&proto::origin_of(in_obj));
     }
@@ -303,5 +303,14 @@ ade::NodeHandle cv::gimpl::GModelBuilder::put_DataNode(const GOrigin &origin)
         m_graph_data[origin] = nh;
         return nh;
     }
-    else return it->second;
+    else
+    {
+        // FIXME: One of the ugliest workarounds ever
+        if (it->first.ctor.index() == it->first.ctor.index_of<cv::util::monostate>()
+            && origin.ctor.index() !=    origin.ctor.index_of<cv::util::monostate>()) {
+            // meanwhile update existing object
+            m_gm.metadata(it->second).get<Data>().ctor = origin.ctor;
+        }
+        return it->second;
+    }
 }

@@ -48,10 +48,8 @@ CMAKE_CONFIG_GENERATOR="Visual Studio 14 2015 Win64"
 if [  ! -d "$myRepo/opencv"  ]; then
     echo "cloning opencv"
     git clone https://github.com/opencv/opencv.git
-    mkdir Build
-    mkdir Build/opencv
-    mkdir Install
-    mkdir Install/opencv
+    mkdir -p Build/opencv
+    mkdir -p Install/opencv
 else
     cd opencv
     git pull --rebase
@@ -60,8 +58,7 @@ fi
 if [  ! -d "$myRepo/opencv_contrib"  ]; then
     echo "cloning opencv_contrib"
     git clone https://github.com/opencv/opencv_contrib.git
-    mkdir Build
-    mkdir Build/opencv_contrib
+    mkdir -p Build/opencv_contrib
 else
     cd opencv_contrib
     git pull --rebase

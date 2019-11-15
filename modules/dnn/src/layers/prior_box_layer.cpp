@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
 #include <float.h>
@@ -50,6 +51,11 @@
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/prior_box.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -181,21 +187,20 @@ public:
     PriorBoxLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        _minSize = getParameter<float>(params, "min_size", 0, false, 0);
         _flip = getParameter<bool>(params, "flip", 0, false, true);
         _clip = getParameter<bool>(params, "clip", 0, false, true);
         _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
 
-        _aspectRatios.clear();
-
+        getParams("min_size", params, &_minSize);
         getAspectRatios(params);
         getVariance(params);
 
-        _maxSize = -1;
         if (params.has("max_size"))
         {
-            _maxSize = params.get("max_size").get<float>(0);
-            CV_Assert(_maxSize > _minSize);
+            getParams("max_size", params, &_maxSize);
+            CV_Assert(_minSize.size() == _maxSize.size());
+            for (int i = 0; i < _maxSize.size(); i++)
+                CV_Assert(_minSize[i] < _maxSize[i]);
         }
 
         std::vector<float> widths, heights;
@@ -214,25 +219,28 @@ public:
         }
         else
         {
-            CV_Assert(_minSize > 0);
-            _boxWidths.resize(1 + (_maxSize > 0 ? 1 : 0) + _aspectRatios.size());
-            _boxHeights.resize(_boxWidths.size());
-            _boxWidths[0] = _boxHeights[0] = _minSize;
-
-            int i = 1;
-            if (_maxSize > 0)
+            CV_Assert(!_minSize.empty());
+            for (int i = 0; i < _minSize.size(); ++i)
             {
-                // second prior: aspect_ratio = 1, size = sqrt(min_size * max_size)
-                _boxWidths[i] = _boxHeights[i] = sqrt(_minSize * _maxSize);
-                i += 1;
-            }
+                float minSize = _minSize[i];
+                CV_Assert(minSize > 0);
+                _boxWidths.push_back(minSize);
+                _boxHeights.push_back(minSize);
 
-            // rest of priors
-            for (size_t r = 0; r < _aspectRatios.size(); ++r)
-            {
-                float arSqrt = sqrt(_aspectRatios[r]);
-                _boxWidths[i + r] = _minSize * arSqrt;
-                _boxHeights[i + r] = _minSize / arSqrt;
+                if (_maxSize.size() > 0)
+                {
+                    float size = sqrt(minSize * _maxSize[i]);
+                    _boxWidths.push_back(size);
+                    _boxHeights.push_back(size);
+                }
+
+                // rest of priors
+                for (size_t r = 0; r < _aspectRatios.size(); ++r)
+                {
+                    float arSqrt = sqrt(_aspectRatios[r]);
+                    _boxWidths.push_back(minSize * arSqrt);
+                    _boxHeights.push_back(minSize / arSqrt);
+                }
             }
         }
         CV_Assert(_boxWidths.size() == _boxHeights.size());
@@ -272,8 +280,10 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine()) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan());
+               backendId == DNN_BACKEND_CUDA ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
+                   ( _explicitSizes || (_minSize.size() == 1 && _maxSize.size() <= 1)))
+               || (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -482,6 +492,44 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto feature_map_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto feature_map_shape = feature_map_wrapper->getShape();
+
+        auto image_wrapper = inputs[1].dynamicCast<CUDABackendWrapper>();
+        auto image_shape = image_wrapper->getShape();
+
+        PriorBoxConfiguration config;
+        config.feature_map_width = feature_map_shape.rbegin()[0];
+        config.feature_map_height = feature_map_shape.rbegin()[1];
+        config.image_width = image_shape.rbegin()[0];
+        config.image_height = image_shape.rbegin()[1];
+
+        config.num_priors = _numPriors;
+        config.box_widths = _boxWidths;
+        config.box_heights = _boxHeights;
+        config.offsets_x = _offsetsX;
+        config.offsets_y = _offsetsY;
+        config.stepX = _stepX;
+        config.stepY = _stepY;
+
+        config.variance = _variance;
+
+        config.clip = _clip;
+        config.normalize = _bboxesNormalized;
+
+        return make_cuda_node<cuda4dnn::PriorBoxOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
+
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
@@ -523,10 +571,9 @@ public:
             InferenceEngine::Builder::PriorBoxLayer ieLayer(name);
 
             CV_Assert(!_explicitSizes);
-
-            ieLayer.setMinSize(_minSize);
-            if (_maxSize > 0)
-                ieLayer.setMaxSize(_maxSize);
+            ieLayer.setMinSize(_minSize[0]);
+            if (!_maxSize.empty())
+                ieLayer.setMaxSize(_maxSize[0]);
 
             CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
             ieLayer.setOffset(_offsetsX[0]);
@@ -573,8 +620,8 @@ public:
     }
 
 private:
-    float _minSize;
-    float _maxSize;
+    std::vector<float> _minSize;
+    std::vector<float> _maxSize;
 
     float _stepX, _stepY;
 

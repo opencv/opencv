@@ -14,15 +14,16 @@ struct ParamColorMap {
 };
 
 String winName="False color";
-static const String ColorMaps[] = { "Autumn", "Bone", "Jet", "Winter", "Rainbow", "Ocean", "Summer",
-                                    "Spring", "Cool", "HSV", "Pink", "Hot", "Parula", "User defined (random)"};
+static const String ColorMaps[] = { "Autumn", "Bone", "Jet", "Winter", "Rainbow", "Ocean", "Summer", "Spring",
+                                    "Cool", "HSV", "Pink", "Hot", "Parula", "Magma", "Inferno", "Plasma", "Viridis",
+                                    "Cividis", "Twilight", "Twilight Shifted", "Turbo", "User defined (random)" };
 
 static void TrackColorMap(int x, void *r)
 {
     ParamColorMap *p = (ParamColorMap*)r;
     Mat dst;
     p->iColormap= x;
-    if (x == COLORMAP_PARULA + 1)
+    if (x == COLORMAP_TURBO + 1)
     {
         Mat lutRND(256, 1, CV_8UC3);
         randu(lutRND, Scalar(0, 0, 0), Scalar(255, 255, 255));
@@ -98,7 +99,7 @@ int main(int argc, char** argv)
     namedWindow(winName);
     createTrackbar("colormap", winName,&p.iColormap,1,TrackColorMap,(void*)&p);
     setTrackbarMin("colormap", winName, COLORMAP_AUTUMN);
-    setTrackbarMax("colormap", winName, COLORMAP_PARULA+1);
+    setTrackbarMax("colormap", winName, COLORMAP_TURBO+1);
     setTrackbarPos("colormap", winName, -1);
 
     TrackColorMap(0, (void*)&p);

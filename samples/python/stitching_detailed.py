@@ -48,7 +48,7 @@ def main():
     args = parser.parse_args()
     img_names=args.img_names
     print(img_names)
-    preview = args.preview
+    _preview = args.preview
     try_cuda = args.try_cuda
     work_megapix = args.work_megapix
     seam_megapix = args.seam_megapix
@@ -84,7 +84,7 @@ def main():
         print("Bad exposure compensation method")
         exit()
     expos_comp_nr_feeds = args.expos_comp_nr_feeds
-    expos_comp_nr_filtering = args.expos_comp_nr_filtering
+    _expos_comp_nr_filtering = args.expos_comp_nr_filtering
     expos_comp_block_size = args.expos_comp_block_size
     match_conf = args.match_conf
     seam_find_type = args.seam
@@ -118,7 +118,7 @@ def main():
     images=[]
     is_work_scale_set = False
     is_seam_scale_set = False
-    is_compose_scale_set = False;
+    is_compose_scale_set = False
     for name in img_names:
         full_img = cv.imread(cv.samples.findFile(name))
         if full_img is None:
@@ -163,9 +163,9 @@ def main():
         img_names_subset.append(img_names[indices[i,0]])
         img_subset.append(images[indices[i,0]])
         full_img_sizes_subset.append(full_img_sizes[indices[i,0]])
-    images = img_subset;
-    img_names = img_names_subset;
-    full_img_sizes = full_img_sizes_subset;
+    images = img_subset
+    img_names = img_names_subset
+    full_img_sizes = full_img_sizes_subset
     num_images = len(img_names)
     if num_images < 2:
         print("Need more images")
@@ -266,7 +266,7 @@ def main():
     if seam_find_type == "no":
         seam_finder = cv.detail.SeamFinder_createDefault(cv.detail.SeamFinder_NO)
     elif seam_find_type == "voronoi":
-        seam_finder = cv.detail.SeamFinder_createDefault(cv.detail.SeamFinder_VORONOI_SEAM);
+        seam_finder = cv.detail.SeamFinder_createDefault(cv.detail.SeamFinder_VORONOI_SEAM)
     elif seam_find_type == "gc_color":
         seam_finder = cv.detail_GraphCutSeamFinder("COST_COLOR")
     elif seam_find_type == "gc_colorgrad":
@@ -279,7 +279,7 @@ def main():
         print("Can't create the following seam finder ",seam_find_type)
         exit()
     seam_finder.find(images_warped_f, corners,masks_warped )
-    imgListe=[]
+    _imgListe=[]
     compose_scale=1
     corners=[]
     sizes=[]
@@ -294,8 +294,8 @@ def main():
         if not is_compose_scale_set:
             if compose_megapix > 0:
                 compose_scale = min(1.0, np.sqrt(compose_megapix * 1e6 / (full_img.shape[0]*full_img.shape[1])))
-            is_compose_scale_set = True;
-            compose_work_aspect = compose_scale / work_scale;
+            is_compose_scale_set = True
+            compose_work_aspect = compose_scale / work_scale
             warped_image_scale *= compose_work_aspect
             warper =  cv.PyRotationWarper(warp_type,warped_image_scale)
             for i in range(0,len(img_names)):
@@ -304,14 +304,14 @@ def main():
                 cameras[i].ppy *= compose_work_aspect
                 sz = (full_img_sizes[i][0] * compose_scale,full_img_sizes[i][1]* compose_scale)
                 K = cameras[i].K().astype(np.float32)
-                roi = warper.warpRoi(sz, K, cameras[i].R);
+                roi = warper.warpRoi(sz, K, cameras[i].R)
                 corners.append(roi[0:2])
                 sizes.append(roi[2:4])
         if abs(compose_scale - 1) > 1e-1:
             img =cv.resize(src=full_img, dsize=None, fx=compose_scale, fy=compose_scale, interpolation=cv.INTER_LINEAR_EXACT)
         else:
-            img = full_img;
-        img_size = (img.shape[1],img.shape[0]);
+            img = full_img
+        _img_size = (img.shape[1],img.shape[0])
         K=cameras[idx].K().astype(np.float32)
         corner,image_warped =warper.warp(img,K,cameras[idx].R,cv.INTER_LINEAR, cv.BORDER_REFLECT)
         mask =255*np.ones((img.shape[0],img.shape[1]),np.uint8)
@@ -341,9 +341,9 @@ def main():
         if timelapse:
             matones=np.ones((image_warped_s.shape[0],image_warped_s.shape[1]), np.uint8)
             timelapser.process(image_warped_s, matones, corners[idx])
-            pos_s = img_names[idx].rfind("/");
+            pos_s = img_names[idx].rfind("/")
             if pos_s == -1:
-                fixedFileName = "fixed_" + img_names[idx];
+                fixedFileName = "fixed_" + img_names[idx]
             else:
                 fixedFileName = img_names[idx][:pos_s + 1 ]+"fixed_" + img_names[idx][pos_s + 1: ]
             cv.imwrite(fixedFileName, timelapser.getDst())

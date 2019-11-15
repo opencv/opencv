@@ -6,7 +6,7 @@
 namespace opencv_test
 {
 
-/* cofiguration for tests of detectors/descriptors. shared between ocl and cpu tests. */
+/* configuration for tests of detectors/descriptors. shared between ocl and cpu tests. */
 
 // detectors/descriptors configurations to test
 #define DETECTORS_ONLY                                                                  \

@@ -41,12 +41,18 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/slice.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -61,6 +67,7 @@ public:
     {
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
+        num_split = params.get<int>("num_split", 0);
         if (params.has("slice_point"))
         {
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
@@ -111,6 +118,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
 #ifdef HAVE_INF_ENGINE
                 INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
@@ -141,9 +149,10 @@ public:
         else  // Divide input blob on equal parts by axis.
         {
             CV_Assert(0 <= axis && axis < inpShape.size());
-            CV_Assert(requiredOutputs > 0 && inpShape[axis] % requiredOutputs == 0);
-            inpShape[axis] /= requiredOutputs;
-            outputs.resize(requiredOutputs, inpShape);
+            int splits = num_split ? num_split : requiredOutputs;
+            CV_Assert(splits > 0 && inpShape[axis] % splits == 0);
+            inpShape[axis] /= splits;
+            outputs.resize(splits, inpShape);
         }
         return false;
     }
@@ -258,6 +267,28 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        std::vector<std::vector<std::size_t>> offsets;
+        for (const auto& ranges : sliceRanges)
+        {
+            std::vector<std::size_t> offsets_i;
+            for (const auto& range : ranges)
+                offsets_i.push_back(range.start);
+            offsets.push_back(std::move(offsets_i));
+        }
+
+        return make_cuda_node<cuda4dnn::SliceOp>(preferableTarget, std::move(context->stream), std::move(offsets));
+    }
+#endif
+
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
@@ -299,14 +330,14 @@ public:
         {
             std::vector<size_t> outShape(numDims);
             for (int i = 0; i < numDims; ++i)
-                outShape[numDims - 1 - i] = sliceRanges[0][i].size();
+                outShape[i] = sliceRanges[0][i].size();
 
             ieLayer.getInputPorts()[1].setParameter("type", "weights");
 
-            // Fake blob which will be moved to inputs (as weights).
-            auto shapeSource = InferenceEngine::make_shared_blob<float>(
-                                   InferenceEngine::Precision::FP32,
-                                   InferenceEngine::Layout::ANY, outShape);
+            auto shapeSource = InferenceEngine::make_shared_blob<float>({
+                                   InferenceEngine::Precision::FP32, outShape,
+                                   InferenceEngine::Layout::ANY
+                               });
             shapeSource->allocate();
             addConstantData("weights", shapeSource, ieLayer);
         }

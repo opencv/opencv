@@ -112,10 +112,10 @@ class TestCmakeBuild(unittest.TestCase):
 
 def suite(workdir, opencv_cmake_path):
     abis = {
-        "armeabi-v7a": { "ANDROID_ABI": "armeabi-v7a", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_static", 'ANDROID_NATIVE_API_LEVEL': "21" },
-        "arm64-v8a": { "ANDROID_ABI": "arm64-v8a", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_static", 'ANDROID_NATIVE_API_LEVEL': "21" },
-        "x86": { "ANDROID_ABI": "x86", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_static", 'ANDROID_NATIVE_API_LEVEL': "21" },
-        "x86_64": { "ANDROID_ABI": "x86_64", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_static", 'ANDROID_NATIVE_API_LEVEL': "21" },
+        "armeabi-v7a": { "ANDROID_ABI": "armeabi-v7a", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
+        "arm64-v8a": { "ANDROID_ABI": "arm64-v8a", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
+        "x86": { "ANDROID_ABI": "x86", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
+        "x86_64": { "ANDROID_ABI": "x86_64", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
     }
 
     suite = unittest.TestSuite()

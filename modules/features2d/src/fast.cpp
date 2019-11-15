@@ -159,15 +159,12 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                             }
 
                             max0 = K16 < v_max(max0, max1);
-                            int m = -v_reduce_sum(v_reinterpret_as_s8(max0));
-                            uchar mflag[16];
-                            v_store(mflag, max0);
+                            unsigned int m = v_signmask(v_reinterpret_as_s8(max0));
 
-                            for( k = 0; m > 0 && k < 16; k++ )
+                            for( k = 0; m > 0 && k < 16; k++, m >>= 1 )
                             {
-                                if(mflag[k])
+                                if( m & 1 )
                                 {
-                                    --m;
                                     cornerpos[ncorners++] = j+k;
                                     if(nonmax_suppression)
                                     {

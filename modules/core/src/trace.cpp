@@ -196,14 +196,27 @@ static __itt_domain* domain = NULL;
 
 static bool isITTEnabled()
 {
-    static bool isInitialized = false;
+    static volatile bool isInitialized = false;
     static bool isEnabled = false;
     if (!isInitialized)
     {
-        isEnabled = !!(__itt_api_version());
-        CV_LOG_ITT("ITT is " << (isEnabled ? "enabled" : "disabled"));
-        domain = __itt_domain_create("OpenCVTrace");
-        isInitialized = true;
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (!isInitialized)
+        {
+            bool param_traceITTEnable = utils::getConfigurationParameterBool("OPENCV_TRACE_ITT_ENABLE", true);
+            if (param_traceITTEnable)
+            {
+                isEnabled = !!(__itt_api_version());
+                CV_LOG_ITT("ITT is " << (isEnabled ? "enabled" : "disabled"));
+                domain = __itt_domain_create("OpenCVTrace");
+            }
+            else
+            {
+                CV_LOG_ITT("ITT is disabled through OpenCV parameter");
+                isEnabled = false;
+            }
+            isInitialized = true;
+        }
     }
     return isEnabled;
 }

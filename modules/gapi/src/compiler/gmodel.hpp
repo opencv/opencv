@@ -22,6 +22,8 @@
 // This part of the system is API-unaware by its design.
 //
 
+#include <opencv2/gapi/util/any.hpp>
+
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gkernel.hpp>
 
@@ -76,7 +78,8 @@ struct Data
         INTERNAL,   // data object is not listed in GComputation protocol
         INPUT,      // data object is listed in GComputation protocol as Input
         OUTPUT,     // data object is listed in GComputation protocol as Output
-        CONST,      // data object is constant
+        CONST_VAL,  // data object is constant.
+                    // Note: CONST is sometimes defined in Win sys headers
     };
     Storage storage;
 };
@@ -142,6 +145,43 @@ struct ActiveBackends
     std::unordered_set<cv::gapi::GBackend> backends;
 };
 
+// This is a graph-global flag indicating this graph is compiled for
+// the streaming case.  Streaming-neutral passes (i.e. nearly all of
+// them) can ignore this flag safely.
+//
+// FIXME: Probably a better design can be suggested.
+struct Streaming
+{
+    static const char *name() { return "StreamingFlag"; }
+};
+
+// Backend-specific inference parameters for a neural network.
+// Since these parameters are set on compilation stage (not
+// on a construction stage), these parameters are bound lately
+// to the operation node.
+// NB: These parameters are not included into GModel by default
+// since it is not used regularly by all parties.
+struct NetworkParams
+{
+    static const char *name() { return "NetworkParams"; }
+    cv::util::any opaque;
+};
+
+// This is a custom metadata handling operator.
+// Sometimes outMeta() can't be bound to input parameters only
+// so several backends (today -- mainly inference) may find this useful.
+// If provided, the meta inference pass uses this function instead of
+// OP.k.outMeta.
+struct CustomMetaFunction
+{
+    static const char *name() { return "CustomMetaFunction"; }
+    using CM = std::function< cv::GMetaArgs( const ade::Graph      &,
+                                             const ade::NodeHandle &,
+                                             const cv::GMetaArgs   &,
+                                             const cv::GArgs       &)>;
+    CM customOutMeta;
+};
+
 namespace GModel
 {
     using Graph = ade::TypedGraph
@@ -159,6 +199,8 @@ namespace GModel
         , DataObjectCounter
         , IslandModel
         , ActiveBackends
+        , CustomMetaFunction
+        , Streaming
         >;
 
     // FIXME: How to define it based on GModel???
@@ -177,6 +219,8 @@ namespace GModel
         , DataObjectCounter
         , IslandModel
         , ActiveBackends
+        , CustomMetaFunction
+        , Streaming
         >;
 
     // FIXME:
@@ -187,13 +231,15 @@ namespace GModel
     GAPI_EXPORTS void init (Graph& g);
 
     GAPI_EXPORTS ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
-
+    // Isn't used by the framework or default backends, required for external backend development
     GAPI_EXPORTS ade::NodeHandle mkDataNode(Graph &g, const GShape shape);
 
     // Adds a string message to a node. Any node can be subject of log, messages then
     // appear in the dumped .dot file.x
     GAPI_EXPORTS void log(Graph &g, ade::NodeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
     GAPI_EXPORTS void log(Graph &g, ade::EdgeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
+    // Clears logged messages of a node.
+    GAPI_EXPORTS void log_clear(Graph &g, ade::NodeHandle node);
 
     GAPI_EXPORTS void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
     GAPI_EXPORTS void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);

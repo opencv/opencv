@@ -68,4 +68,4 @@ public:
 
 }}
 
-#endif // OPENCV_GAPI_GBACKEND_HPP
+#endif // OPENCV_GAPI_GCPUBACKEND_HPP

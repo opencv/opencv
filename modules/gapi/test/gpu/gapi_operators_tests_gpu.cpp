@@ -10,7 +10,7 @@
 
 namespace
 {
-    #define CORE_GPU [] () { return cv::compile_args(cv::gapi::core::gpu::kernels()); }
+#define CORE_GPU [] () { return cv::compile_args(cv::gapi::core::gpu::kernels()); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -22,9 +22,8 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatMatTest,
                                    cv::Size(640, 480),
                                    cv::Size(128, 128)),
                             Values(-1, CV_8U, CV_32F),
-                            testing::Bool(),
                             Values(CORE_GPU),
-                            Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
+                            Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
                             Values( opPlusM, opMinusM, opDivM,
                                     opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq)));
 
@@ -34,9 +33,8 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatScalarTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
-/*init output matrices or not*/ testing::Bool(),
                                 Values(CORE_GPU),
-                                Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_f()),
+                                Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
                                 Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR,  // FIXIT avoid division by values near zero: opDiv, opDivR,
                                         opGT, opLT, opGE, opLE, opEQ, opNE,
                                         opGTR, opLTR, opGER, opLER, opEQR, opNER)));
@@ -47,9 +45,8 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatMatTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(-1),
-/*init output matrices or not*/ testing::Bool(),
                                 Values(CORE_GPU),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opAnd, opOr, opXor )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatScalarTest,
@@ -58,9 +55,8 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatScalarTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(-1),
-/*init output matrices or not*/ testing::Bool(),
                                 Values(CORE_GPU),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opAND, opOR, opXOR, opANDR, opORR, opXORR )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestGPU, NotOperatorTest,
@@ -68,7 +64,6 @@ INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestGPU, NotOperatorTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
-/*init output matrices or not*/ testing::Bool(),
+                                Values(-1),
                                 Values(CORE_GPU)));
 }

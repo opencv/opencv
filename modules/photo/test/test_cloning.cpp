@@ -86,6 +86,15 @@ TEST(Photo_SeamlessClone_normal, regression)
     EXPECT_LE(errorINF, 1);
     double errorL1 = cvtest::norm(reference, result, NORM_L1);
     EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
+
+    mask = Scalar(0, 0, 0);
+    seamlessClone(source, destination, mask, p, result, 1);
+
+    reference = destination;
+    errorINF = cvtest::norm(reference, result, NORM_INF);
+    EXPECT_LE(errorINF, 1);
+    errorL1 = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
 }
 
 TEST(Photo_SeamlessClone_mixed, regression)
