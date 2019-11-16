@@ -22,3 +22,4 @@ bin/
 *.log
 *.tlog
 build
+node_modules
