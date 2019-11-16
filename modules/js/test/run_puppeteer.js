@@ -178,7 +178,7 @@ TIP: you could install the tool globally (npm install --global build_js/bin) to 
  * screenshot?: boolean . Make screenshot on failure by default. Use --no-screenshot to disable screenshots completely.
  * noExit?: boolean default false. If true it will keep running the server - together with noHeadless you can debug in the browser.
  * noTryCatch?: boolean will disable Qunit tryCatch - so exceptions are dump to stdout rather than in the browser.
- * maxBlockDuration: QUnit timeout . if noExist then is infinity.
+ * maxBlockDuration: QUnit timeout. If noExit is given then is infinity.
   `);
   process.exit(0);
 }

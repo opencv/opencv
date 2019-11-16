@@ -94,16 +94,16 @@ Building OpenCV.js from Source
 Running OpenCV.js Tests
 ---------------------------------------
 
-Remember to launch the build command passing `--build_test` as mentioned previously. This will generate test source code ready to run together with `opencv.js` file in `build/bin`
+Remember to launch the build command passing `--build_test` as mentioned previously. This will generate test source code ready to run together with `opencv.js` file in `build_js/bin`
 
 ### Manually in your browser
 
-To run tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
+To run tests, launch a local web server in `\<build_dir\>/bin` folder. For example, node http-server which serves on `localhost:8080`.
 
 Navigate the web browser to `http://localhost:8080/tests.html`, which runs the unit tests automatically. Command example:
 
 @code{.sh}
-npx http-server build/bin
+npx http-server build_js/bin
 firefox http://localhost:8080/tests.html
 @endcode
 
@@ -115,7 +115,7 @@ This snippet and the following require [Node.js](https://nodejs.org) to be insta
 Alternatively tests can run with [GoogleChrome/puppeteer](https://github.com/GoogleChrome/puppeteer#readme) which is a version of Google Chrome that runs in the terminal (useful for Continuos integration like travis CI, etc)
 
 @code{.sh}
-cd build/bin
+cd build_js/bin
 npm install
 npm install --no-save puppeteer    # automatically downloads Chromium package
 node run_puppeteer.js
@@ -138,7 +138,7 @@ You may specify own Chromium/Chrome binary through `PUPPETEER_EXECUTABLE_PATH=$(
 For example:
 
 @code{.sh}
-cd build/bin
+cd build_js/bin
 npm install
 node tests.js
 @endcode
