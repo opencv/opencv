@@ -217,6 +217,8 @@ Regular integers:
 |cvt_flt64          |   |   |   |   |   | x |
 |transpose4x4       |   |   |   |   | x | x |
 |reverse            | x | x | x | x | x | x |
+|extract_n          | x | x | x | x | x | x |
+|broadcast_element  |   |   |   |   | x | x |
 
 Big integers:
 
@@ -230,6 +232,7 @@ Big integers:
 |extract            | x | x |
 |rotate (lanes)     | x | x |
 |cvt_flt64          |   | x |
+|extract_n          | x | x |
 
 Floating point:
 
@@ -254,6 +257,8 @@ Floating point:
 |extract            | x | x |
 |rotate (lanes)     | x | x |
 |reverse            | x | x |
+|extract_n          | x | x |
+|broadcast_element  | x |   |
 
  @{ */
 
@@ -1793,7 +1798,7 @@ For all types. */
 template<int s, typename _Tp, int n>
 inline _Tp v_extract_n(const v_reg<_Tp, n>& v)
 {
-    return v[s];
+    return v.s[s];
 }
 
 /** @brief Broadcast i-th element of vector
@@ -1802,8 +1807,8 @@ Scheme:
 @code
 { v[0] v[1] v[2] ... v[SZ] } => { v[i], v[i], v[i] ... v[i] }
 @endcode
-Restriction: 0 <= i < nlanes (supported: TBD)
-Supported types: TBD (lets start from `int32_t` - make sense after revieving of real intrinsic support)
+Restriction: 0 <= i < nlanes
+Supported types: 32-bit integers and floats (s32/u32/f32)
  */
 template<int i, typename _Tp, int n>
 inline v_reg<_Tp, n> v_broadcast_element(const v_reg<_Tp, n>& a)

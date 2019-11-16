@@ -2292,11 +2292,21 @@ inline double v_extract_n(v_float64x4 v)
 }
 
 template<int i>
-inline v_int32x8 v_broadcast_element(v_int32x8 v)
+inline v_uint32x8 v_broadcast_element(v_uint32x8 a)
 {
-    return v_int32x8(_mm256_shuffle_epi32(v.val,  _MM_SHUFFLE(i,i,i,i)));
+    static const __m256i perm = _mm256_set1_epi32((char)i);
+    return v_uint32x8(_mm256_permutevar8x32_epi32(a.val, perm));
 }
 
+template<int i>
+inline v_int32x8 v_broadcast_element(const v_int32x8 &a)
+{ return v_reinterpret_as_s32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
+
+template<int i>
+inline v_float32x8 v_broadcast_element(const v_float32x8 &a)
+{ return v_reinterpret_as_f32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
+
+/*
 template<int i>
 inline v_uint32x8 v_broadcast_element(v_uint32x8 v)
 {
@@ -2356,6 +2366,8 @@ inline v_float32x8 v_broadcast_element(v_float32x8 v)
 {
     return v_float32x8(_mm256_shuffle_ps(v.val, v.val, _MM_SHUFFLE(i,i,i,i)));
 }
+*/
+
 ///////////////////// load deinterleave /////////////////////////////
 
 inline void v_load_deinterleave( const uchar* ptr, v_uint8x32& a, v_uint8x32& b )

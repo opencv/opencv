@@ -2243,28 +2243,38 @@ OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_float32x16, float)
 OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_float64x8, double)
 
 template<int i>
-inline v_int32x16 v_broadcast_element(v_int32x16 v)
+inline v_uint32x16 v_broadcast_element(v_uint32x16 a)
 {
-    return v_int32x16(_mm512_shuffle_epi32(v.val,  _MM_SHUFFLE(i,i,i,i)));
+    static const __m512i perm = _mm512_set1_epi32((char)i);
+    return v_uint32x16(_mm512_permutexvar_epi32(perm, a.val));
 }
 
 template<int i>
+inline v_int32x16 v_broadcast_element(const v_int32x16 &a)
+{ return v_reinterpret_as_s32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
+
+template<int i>
+inline v_float32x16 v_broadcast_element(const v_float32x16 &a)
+{ return v_reinterpret_as_f32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
+
+/*
+template<int i>
 inline v_uint32x16 v_broadcast_element(v_uint32x16 v)
 {
-    return v_uint32x16(_mm512_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
+    return v_uint32x16(_mm512_shuffle_epi32(v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
 }
 
 template<int i>
 inline v_int16x32 v_broadcast_element(v_int16x32 v)
 {
-    v_int16x32 t = v_int16x32(_mm512_shufflelo_epi16(v.val, _MM_SHUFFLE(i, i, i, i)));
+    v_int16x32 t = v_int16x32(_mm512_shufflelo_epi16(v.val, _MM_SHUFFLE((char)i, (char)i, (char)i, (char)i)));
     return v_int16x32(_mm512_shufflehi_epi16(t.val, _MM_SHUFFLE(0, 0, 0, 0)));
 }
 
 template<int i>
 inline v_uint16x32 v_broadcast_element(v_uint16x32 v)
 {
-    v_uint16x32 t = v_uint16x32(_mm512_shufflelo_epi16(v.val, _MM_SHUFFLE(i, i, i, i)));
+    v_uint16x32 t = v_uint16x32(_mm512_shufflelo_epi16(v.val, _MM_SHUFFLE((char)i, (char)i, (char)i, (char)i)));
     return v_uint16x32(_mm512_shufflehi_epi16(t.val, _MM_SHUFFLE(0, 0, 0, 0)));
 }
 
@@ -2299,14 +2309,15 @@ inline v_uint64x8 v_broadcast_element(v_uint64x8 v)
 template<int i>
 inline v_float64x8 v_broadcast_element(v_float64x8 v)
 {
-    return v_float64x8(_mm512_shuffle_pd(v.val, v.val, _MM_SHUFFLE(i,i,i,i)));
+    return v_float64x8(_mm512_shuffle_pd(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
 }
 
 template<int i>
 inline v_float32x16 v_broadcast_element(v_float32x16 v)
 {
-    return v_float32x16(_mm512_shuffle_ps(v.val, v.val, _MM_SHUFFLE(i,i,i,i)));
+    return v_float32x16(_mm512_shuffle_ps(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
 }
+*/
 
 ///////////////////// load deinterleave /////////////////////////////
 
