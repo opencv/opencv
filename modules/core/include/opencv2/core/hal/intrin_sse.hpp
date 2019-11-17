@@ -57,6 +57,14 @@ namespace cv
 
 //! @cond IGNORED
 
+//
+// Compilation troubleshooting:
+// - MSVC: error C2719: 'a': formal parameter with requested alignment of 16 won't be aligned
+//   Replace parameter declaration to const reference:
+//   -v_int32x4 a
+//   +const v_int32x4& a
+//
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 ///////// Types ////////////
@@ -3270,166 +3278,94 @@ inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
 
-////////////// FP16 support ///////////////////////////
-
-inline v_float32x4 v_load_expand(const float16_t* ptr)
-{
-#if CV_FP16
-    return v_float32x4(_mm_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
-#else
-    const __m128i z = _mm_setzero_si128(), delta = _mm_set1_epi32(0x38000000);
-    const __m128i signmask = _mm_set1_epi32(0x80000000), maxexp = _mm_set1_epi32(0x7c000000);
-    const __m128 deltaf = _mm_castsi128_ps(_mm_set1_epi32(0x38800000));
-    __m128i bits = _mm_unpacklo_epi16(z, _mm_loadl_epi64((const __m128i*)ptr)); // h << 16
-    __m128i e = _mm_and_si128(bits, maxexp), sign = _mm_and_si128(bits, signmask);
-    __m128i t = _mm_add_epi32(_mm_srli_epi32(_mm_xor_si128(bits, sign), 3), delta); // ((h & 0x7fff) << 13) + delta
-    __m128i zt = _mm_castps_si128(_mm_sub_ps(_mm_castsi128_ps(_mm_add_epi32(t, _mm_set1_epi32(1 << 23))), deltaf));
-
-    t = _mm_add_epi32(t, _mm_and_si128(delta, _mm_cmpeq_epi32(maxexp, e)));
-    __m128i zmask = _mm_cmpeq_epi32(e, z);
-    __m128i ft = v_select_si128(zmask, zt, t);
-    return v_float32x4(_mm_castsi128_ps(_mm_or_si128(ft, sign)));
-#endif
-}
-
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
-{
-#if CV_FP16
-    __m128i fp16_value = _mm_cvtps_ph(v.val, 0);
-    _mm_storel_epi64((__m128i*)ptr, fp16_value);
-#else
-    const __m128i signmask = _mm_set1_epi32(0x80000000);
-    const __m128i rval = _mm_set1_epi32(0x3f000000);
-
-    __m128i t = _mm_castps_si128(v.val);
-    __m128i sign = _mm_srai_epi32(_mm_and_si128(t, signmask), 16);
-    t = _mm_andnot_si128(signmask, t);
-
-    __m128i finitemask = _mm_cmpgt_epi32(_mm_set1_epi32(0x47800000), t);
-    __m128i isnan = _mm_cmpgt_epi32(t, _mm_set1_epi32(0x7f800000));
-    __m128i naninf = v_select_si128(isnan, _mm_set1_epi32(0x7e00), _mm_set1_epi32(0x7c00));
-    __m128i tinymask = _mm_cmpgt_epi32(_mm_set1_epi32(0x38800000), t);
-    __m128i tt = _mm_castps_si128(_mm_add_ps(_mm_castsi128_ps(t), _mm_castsi128_ps(rval)));
-    tt = _mm_sub_epi32(tt, rval);
-    __m128i odd = _mm_and_si128(_mm_srli_epi32(t, 13), _mm_set1_epi32(1));
-    __m128i nt = _mm_add_epi32(t, _mm_set1_epi32(0xc8000fff));
-    nt = _mm_srli_epi32(_mm_add_epi32(nt, odd), 13);
-    t = v_select_si128(tinymask, tt, nt);
-    t = v_select_si128(finitemask, t, naninf);
-    t = _mm_or_si128(t, sign);
-    t = _mm_packs_epi32(t, t);
-    _mm_storel_epi64((__m128i*)ptr, t);
-#endif
-}
-
 template<int i>
-inline uchar v_extract_n(v_uint8x16 v)
+inline uchar v_extract_n(const v_uint8x16& v)
 {
 #if CV_SSE4_1
-    return _mm_extract_epi8(v.val, i);
+    return (uchar)_mm_extract_epi8(v.val, i);
 #else
     return v_rotate_right<i>(v).get0();
 #endif
 }
 
 template<int i>
-inline schar v_extract_n(v_int8x16 v)
+inline schar v_extract_n(const v_int8x16& v)
+{
+    return (schar)v_extract_n<i>(v_reinterpret_as_u8(v));
+}
+
+template<int i>
+inline ushort v_extract_n(const v_uint16x8& v)
+{
+    return (ushort)_mm_extract_epi16(v.val, i);
+}
+
+template<int i>
+inline short v_extract_n(const v_int16x8& v)
+{
+    return (short)v_extract_n<i>(v_reinterpret_as_u16(v));
+}
+
+template<int i>
+inline uint v_extract_n(const v_uint32x4& v)
 {
 #if CV_SSE4_1
-    return _mm_extract_epi8(v.val, i);
+    return (uint)_mm_extract_epi32(v.val, i);
 #else
     return v_rotate_right<i>(v).get0();
 #endif
 }
 
 template<int i>
-inline ushort v_extract_n(v_uint16x8 v)
+inline int v_extract_n(const v_int32x4& v)
 {
-    return _mm_extract_epi16(v.val, i);
+    return (int)v_extract_n<i>(v_reinterpret_as_u32(v));
 }
 
 template<int i>
-inline short v_extract_n(v_int16x8 v)
+inline uint64 v_extract_n(const v_uint64x2& v)
 {
-    return _mm_extract_epi16(v.val, i);
-}
-
-template<int i>
-inline uint v_extract_n(v_uint32x4 v)
-{
-#if CV_SSE4_1
-    return _mm_extract_epi32(v.val, i);
+#ifdef CV__SIMD_NATIVE_mm_extract_epi64
+    return (uint64)_v128_extract_epi64<i>(v.val);
 #else
     return v_rotate_right<i>(v).get0();
 #endif
 }
 
 template<int i>
-inline int v_extract_n(v_int32x4 v)
+inline int64 v_extract_n(const v_int64x2& v)
 {
-#if CV_SSE4_1
-    return _mm_extract_epi32(v.val, i);
-#else
-    return v_rotate_right<i>(v).get0();
-#endif
+    return (int64)v_extract_n<i>(v_reinterpret_as_u64(v));
 }
 
 template<int i>
-inline uint64 v_extract_n(v_uint64x2 v)
+inline float v_extract_n(const v_float32x4& v)
 {
-#if CV_SSE4_1
-    return _mm_extract_epi64(v.val, i);
-#else
-    return v_rotate_right<i>(v).get0();
-#endif
-}
-
-template<int i>
-inline int64 v_extract_n(v_int64x2 v)
-{
-#if CV_SSE4_1
-    return _mm_extract_epi64(v.val, i);
-#else
-    return v_rotate_right<i>(v).get0();
-#endif
-}
-
-template<int i>
-inline float v_extract_n(v_float32x4 v)
-{
-#if CV_SSE4_1
-    union { int iv; float fv; } d;
-    d.iv = _mm_extract_epi32(v_reinterpret_as_u32(v).val, i);
+    union { uint iv; float fv; } d;
+    d.iv = v_extract_n<i>(v_reinterpret_as_u32(v));
     return d.fv;
-#else
-    return v_rotate_right<i>(v).get0();
-#endif
 }
 
 template<int i>
-inline double v_extract_n(v_float64x2 v)
+inline double v_extract_n(const v_float64x2& v)
 {
-#if CV_SSE4_1
-    union { int64 iv; double dv; } d;
-    d.iv = _mm_extract_epi64(v_reinterpret_as_u64(v).val, i);
+    union { uint64 iv; double dv; } d;
+    d.iv = v_extract_n<i>(v_reinterpret_as_u64(v));
     return d.dv;
-#else
-    return v_rotate_right<i>(v).get0();
-#endif
 }
 
 template<int i>
-inline v_int32x4 v_broadcast_element(v_int32x4 v)
+inline v_int32x4 v_broadcast_element(const v_int32x4& v)
 {
     return v_int32x4(_mm_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
 }
 
 template<int i>
-inline v_uint32x4 v_broadcast_element(v_uint32x4 v)
+inline v_uint32x4 v_broadcast_element(const v_uint32x4& v)
 {
     return v_uint32x4(_mm_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
 }
-
+/*
 template<int i>
 inline v_int16x8 v_broadcast_element(v_int16x8 v)
 {
@@ -3487,12 +3423,65 @@ inline v_float64x2 v_broadcast_element(v_float64x2 v)
 {
     return v_float64x2(_mm_shuffle_pd(v.val, v.val, _MM_SHUFFLE2(i,i)));
 }
-
+*/
 template<int i>
-inline v_float32x4 v_broadcast_element(v_float32x4 v)
+inline v_float32x4 v_broadcast_element(const v_float32x4& v)
 {
-    return v_float32x4(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE(i,i,i,i)));
+    return v_float32x4(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
 }
+
+////////////// FP16 support ///////////////////////////
+
+inline v_float32x4 v_load_expand(const float16_t* ptr)
+{
+#if CV_FP16
+    return v_float32x4(_mm_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
+#else
+    const __m128i z = _mm_setzero_si128(), delta = _mm_set1_epi32(0x38000000);
+    const __m128i signmask = _mm_set1_epi32(0x80000000), maxexp = _mm_set1_epi32(0x7c000000);
+    const __m128 deltaf = _mm_castsi128_ps(_mm_set1_epi32(0x38800000));
+    __m128i bits = _mm_unpacklo_epi16(z, _mm_loadl_epi64((const __m128i*)ptr)); // h << 16
+    __m128i e = _mm_and_si128(bits, maxexp), sign = _mm_and_si128(bits, signmask);
+    __m128i t = _mm_add_epi32(_mm_srli_epi32(_mm_xor_si128(bits, sign), 3), delta); // ((h & 0x7fff) << 13) + delta
+    __m128i zt = _mm_castps_si128(_mm_sub_ps(_mm_castsi128_ps(_mm_add_epi32(t, _mm_set1_epi32(1 << 23))), deltaf));
+
+    t = _mm_add_epi32(t, _mm_and_si128(delta, _mm_cmpeq_epi32(maxexp, e)));
+    __m128i zmask = _mm_cmpeq_epi32(e, z);
+    __m128i ft = v_select_si128(zmask, zt, t);
+    return v_float32x4(_mm_castsi128_ps(_mm_or_si128(ft, sign)));
+#endif
+}
+
+inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+{
+#if CV_FP16
+    __m128i fp16_value = _mm_cvtps_ph(v.val, 0);
+    _mm_storel_epi64((__m128i*)ptr, fp16_value);
+#else
+    const __m128i signmask = _mm_set1_epi32(0x80000000);
+    const __m128i rval = _mm_set1_epi32(0x3f000000);
+
+    __m128i t = _mm_castps_si128(v.val);
+    __m128i sign = _mm_srai_epi32(_mm_and_si128(t, signmask), 16);
+    t = _mm_andnot_si128(signmask, t);
+
+    __m128i finitemask = _mm_cmpgt_epi32(_mm_set1_epi32(0x47800000), t);
+    __m128i isnan = _mm_cmpgt_epi32(t, _mm_set1_epi32(0x7f800000));
+    __m128i naninf = v_select_si128(isnan, _mm_set1_epi32(0x7e00), _mm_set1_epi32(0x7c00));
+    __m128i tinymask = _mm_cmpgt_epi32(_mm_set1_epi32(0x38800000), t);
+    __m128i tt = _mm_castps_si128(_mm_add_ps(_mm_castsi128_ps(t), _mm_castsi128_ps(rval)));
+    tt = _mm_sub_epi32(tt, rval);
+    __m128i odd = _mm_and_si128(_mm_srli_epi32(t, 13), _mm_set1_epi32(1));
+    __m128i nt = _mm_add_epi32(t, _mm_set1_epi32(0xc8000fff));
+    nt = _mm_srli_epi32(_mm_add_epi32(nt, odd), 13);
+    t = v_select_si128(tinymask, tt, nt);
+    t = v_select_si128(finitemask, t, naninf);
+    t = _mm_or_si128(t, sign);
+    t = _mm_packs_epi32(t, t);
+    _mm_storel_epi64((__m128i*)ptr, t);
+#endif
+}
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
