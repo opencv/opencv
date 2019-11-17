@@ -2061,6 +2061,14 @@ FileNode::FileNode(const FileNode& node)
     ofs = node.ofs;
 }
 
+FileNode& FileNode::operator=(const FileNode& node)
+{
+    fs = node.fs;
+    blockIdx = node.blockIdx;
+    ofs = node.ofs;
+    return *this;
+}
+
 FileNode FileNode::operator[](const std::string& nodename) const
 {
     if(!fs)
@@ -2401,6 +2409,17 @@ FileNodeIterator::FileNodeIterator(const FileNodeIterator& it)
     blockSize = it.blockSize;
     nodeNElems = it.nodeNElems;
     idx = it.idx;
+}
+
+FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
+{
+    fs = it.fs;
+    blockIdx = it.blockIdx;
+    ofs = it.ofs;
+    blockSize = it.blockSize;
+    nodeNElems = it.nodeNElems;
+    idx = it.idx;
+    return *this;
 }
 
 FileNode FileNodeIterator::operator *() const
