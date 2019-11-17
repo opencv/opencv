@@ -350,7 +350,13 @@ void BaseTest::run( int start_from )
             return;
 
         if( validate_test_results( test_case_idx ) < 0 || ts->get_err_code() < 0 )
+        {
+            std::stringstream ss;
+            dump_test_case(test_case_idx, &ss);
+            std::string s = ss.str();
+            ts->printf( TS::LOG, "%s", s.c_str());
             return;
+        }
     }
 }
 
@@ -398,6 +404,12 @@ int BaseTest::update_progress( int progress, int test_case_idx, int count, doubl
     }
 
     return progress;
+}
+
+
+void BaseTest::dump_test_case(int test_case_idx, std::ostream* out)
+{
+    *out << "test_case_idx = " << test_case_idx << std::endl;
 }
 
 
