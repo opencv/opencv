@@ -4,8 +4,6 @@
 //
 // Copyright (C) 2018-2019 Intel Corporation
 
-#if defined(HAVE_OPENCV_GAPI) && defined(HAVE_INF_ENGINE)
-
 #include <opencv2/gapi.hpp>
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/imgproc.hpp>
@@ -749,7 +747,7 @@ int main(int argc, char** argv)
     // Now we are ready to compile the pipeline to a stream with specified
     //  kernels, networks and image format expected to process
     auto stream = pipeline.compileStreaming(cv::GMatDesc{CV_8U,3,
-                                                         cv::Size(640,480)},
+                                                         cv::Size(1280,720)},
                                             cv::compile_args(kernels,
                                                              networks));
     // Setting the source for the stream:
@@ -783,15 +781,3 @@ int main(int argc, char** argv)
     }
     return 0;
 }
-
-#else // HAVE_OPENCV_GAPI && HAVE_INF_ENGINE
-#include <iostream>
-
-int main(int,char**)
-{
-    std::cerr << "This tutorial code requires G-API module"
-                 " with Inference Engine backend to run"
-              << std::endl;
-    return 1;
-}
-#endif // HAVE_OPECV_GAPI && HAVE_INF_ENGINE
