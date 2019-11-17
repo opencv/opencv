@@ -355,6 +355,9 @@ public:
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE ufixedpoint16 zero() { return ufixedpoint16(); }
     static CV_ALWAYS_INLINE ufixedpoint16 one() { return ufixedpoint16((uint16_t)(1 << fixedShift)); }
+
+    static CV_ALWAYS_INLINE ufixedpoint16 fromRaw(uint16_t v) { return ufixedpoint16(v); }
+    CV_ALWAYS_INLINE ufixedpoint16 raw() { return val; }
 };
 
 }

@@ -59,6 +59,13 @@ protected:
     bool fp_kernel;
     bool inplace;
     int border;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        ArrayTest::dump_test_case(test_case_idx, out);
+        *out << "border=" << border << std::endl;
+    }
+
 };
 
 
@@ -685,6 +692,12 @@ protected:
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     double get_success_error_level( int test_case_idx, int i, int j );
     const char* smooth_type;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        CV_FilterBaseTest::dump_test_case(test_case_idx, out);
+        *out << "smooth_type=" << smooth_type << std::endl;
+    }
 };
 
 
@@ -795,6 +808,12 @@ protected:
     double get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ );
     double sigma;
     int param1, param2;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        CV_SmoothBaseTest::dump_test_case(test_case_idx, out);
+        *out << "kernel=(" << param1 << ", " << param2 << ") sigma=" << sigma << std::endl;
+    }
 };
 
 
@@ -838,7 +857,7 @@ void CV_GaussianBlurTest::run_func()
 
 // !!! Copied from cvSmooth, if the code is changed in cvSmooth,
 // make sure to update this one too.
-#define SMALL_GAUSSIAN_SIZE 7
+#define SMALL_GAUSSIAN_SIZE 9
 static void
 calcGaussianKernel( int n, double sigma, vector<float>& kernel )
 {
@@ -847,14 +866,15 @@ calcGaussianKernel( int n, double sigma, vector<float>& kernel )
         {1.f},
         {0.25f, 0.5f, 0.25f},
         {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f},
-        {0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125}
+        {0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125},
+        {4.0 / 256, 13.0 / 256, 30.0 / 256, 51.0 / 256, 60.0 / 256, 51.0 / 256, 30.0 / 256, 13.0 / 256, 4.0 / 256}
     };
 
     kernel.resize(n);
     if( n <= SMALL_GAUSSIAN_SIZE && sigma <= 0 )
     {
-        assert( n%2 == 1 );
-        memcpy( &kernel[0], small_gaussian_tab[n>>1], n*sizeof(kernel[0]));
+        CV_Assert(n%2 == 1);
+        memcpy(&kernel[0], small_gaussian_tab[n / 2], n*sizeof(kernel[0]));
     }
     else
     {
