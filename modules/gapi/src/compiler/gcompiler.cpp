@@ -259,7 +259,7 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                                       // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
-    if (false)//(!m_metas.empty()) 
+    if (!m_metas.empty()) 
     {
         m_e.addPassStage("meta");
         m_e.addPass("meta", "initialize",   std::bind(passes::initMeta, _1, std::ref(m_metas)));
@@ -425,9 +425,6 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
 {
     std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg), m_args, m_metas));
 
-    // const auto &outMetas = GModel::ConstGraph(*pg).metadata()
-    //     .get<OutputMeta>().outMeta;
-
     GMetaArgs outMetas{};
 
     GStreamingCompiled compiled;
@@ -445,7 +442,6 @@ cv::GCompiled cv::gimpl::GCompiler::compile()
 
 cv::GStreamingCompiled cv::gimpl::GCompiler::compileStreaming()
 {
-  //  m_args
     // FIXME: self-note to DM: now keep these compile()/compileStreaming() in sync!
     std::unique_ptr<ade::Graph> pG = generateGraph();
     GModel::Graph gm(*pG);
@@ -458,6 +454,5 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::compileStreaming()
     auto pass_ctx = ade::passes::PassContext{*gptr};
     ade::passes::TopologicalSort{}(pass_ctx);
 
-//    compileIslands(*pG);
     return produceStreamingCompiled(std::move(pG));
 }
