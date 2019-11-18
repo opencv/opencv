@@ -143,7 +143,8 @@ if(TARGET opencv_test_gapi)
   target_link_libraries(opencv_test_gapi PRIVATE ade)
 endif()
 
-find_package(PlaidML2 CONFIG)
+find_package(PlaidML2 CONFIG QUIET)
+
 if (PLAIDML_FOUND)
     ocv_target_compile_definitions(opencv_gapi      PRIVATE -DHAVE_PLAIDML)
     ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_PLAIDML)
