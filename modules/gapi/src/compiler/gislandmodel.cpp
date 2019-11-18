@@ -284,10 +284,8 @@ void GIslandModel::compileIslands(Graph &g, const ade::Graph &orig_g, const GCom
                                });
 
             auto island_exe = island_obj->backend().priv()
-                .compile(orig_g, args, topo_sorted_list);
+                .compile(orig_g, args, topo_sorted_list, ins_data, outs_data);
             GAPI_Assert(nullptr != island_exe);
-
-            island_exe->compile(ins_data, outs_data);
 
             g.metadata(nh).set(IslandExec{std::move(island_exe)});
         }

@@ -32,7 +32,7 @@ TEST(GAPI_PlaidML_Pipelines, SimpleArithmetic)
 
     cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
     comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::core::plaidml::kernels()));
+               cv::compile_args(cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
 
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::add(in_mat1, in_mat2, ref_mat, cv::noArray(), type);
@@ -60,7 +60,7 @@ TEST(GAPI_PlaidML_Pipelines, ComplexArithmetic)
 
     cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
     comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::core::plaidml::kernels()));
+               cv::compile_args(cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
 
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::subtract(in_mat1,  in_mat2, ref_mat, cv::noArray(), type);
@@ -95,7 +95,7 @@ TEST(GAPI_PlaidML_Pipelines, TwoInputOperations)
 
     // FIXME Doesn't work just apply(in_mat, out_mat, ...)
     comp.apply(cv::gin(in_mat[0], in_mat[1], in_mat[2], in_mat[3]), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::core::plaidml::kernels()));
+               cv::compile_args(cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
 
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::subtract(in_mat[3], in_mat[0],  ref_mat, cv::noArray(), type);
@@ -130,7 +130,7 @@ TEST(GAPI_PlaidML_Pipelines, TwoOutputOperations)
     // FIXME Doesn't work just apply(in_mat, out_mat, ...)
     comp.apply(cv::gin(in_mat[0], in_mat[1], in_mat[2], in_mat[3]),
                cv::gout(out_mat[0], out_mat[1]),
-               cv::compile_args(cv::gapi::core::plaidml::kernels()));
+               cv::compile_args(cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
 
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::add(in_mat[0], in_mat[3], ref_mat[0], cv::noArray(), type);

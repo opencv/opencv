@@ -52,9 +52,11 @@ namespace
 
         virtual EPtr compile(const ade::Graph &graph,
                              const cv::GCompileArgs &,
-                             const std::vector<ade::NodeHandle> &nodes) const override
+                             const std::vector<ade::NodeHandle> &nodes,
+                             const std::vector<cv::gimpl::Data>& ins_data,
+                             const std::vector<cv::gimpl::Data>& outs_data) const override
         {
-            return EPtr{new cv::gimpl::GPlaidMLExecutable(graph, nodes)};
+            return EPtr{new cv::gimpl::GPlaidMLExecutable(graph, nodes, ins_data, outs_data)};
         }
    };
 }
@@ -74,7 +76,7 @@ void cv::gimpl::GPlaidMLExecutable::initBuffers(const std::vector<cv::gimpl::Dat
     bindings.reserve(data.size());
     for (const auto& d : data)
     {
-        GAPI_Assert(d.meta.index() == cv::GMetaArg::index_of<cv::GMatDesc>() &&
+        GAPI_Assert(d.shape == GShape::GMAT &&
                     "Now PlaidML backend supported only cv::GMat's");
 
         const auto& desc = cv::util::get<cv::GMatDesc>(d.meta);
@@ -92,19 +94,34 @@ void cv::gimpl::GPlaidMLExecutable::initBuffers(const std::vector<cv::gimpl::Dat
 
         auto& tensor_map = m_res.slot<plaidml::edsl::Tensor>();
         // FIXME Avoid Copy here !!!
-        tensor_map.emplace(d.rc, placeholder);
+        tensor_map.emplace(d.rc, bindings.back().tensor);
 
         auto& buffer_map = m_res.slot<plaidml::Buffer*>();
         buffer_map.emplace(d.rc, &(bindings.back().buffer));
     }
 }
 
+void cv::gimpl::GPlaidMLExecutable::initConfig()
+{
+    auto read_var_from_env = [](const char* env)
+    {
+        const char* raw = std::getenv(env);
+        if (!raw)
+        {
+            cv::util::throw_error(std::runtime_error(std::string(env) + " is't set"));
+        }
+
+        return std::string(raw);
+    };
+
+    device_id_ = read_var_from_env("PLAIDML_DEVICE");
+    target_id_ = read_var_from_env("PLAIDML_TARGET");
+}
+
 void cv::gimpl::GPlaidMLExecutable::compile(const std::vector<cv::gimpl::Data>& ins_data,
                                             const std::vector<cv::gimpl::Data>& outs_data)
 {
-    // FIXME Move this hardcode configuration
-    device_id_ = "opencl_intel_gen9_hd_graphics_neo.0";
-    target_id_ = "intel_gen9_opencl";
+    initConfig();
 
     initBuffers(ins_data,  input_bindings_);
     initBuffers(outs_data, output_bindings_);
@@ -152,16 +169,22 @@ void cv::gimpl::GPlaidMLExecutable::compile(const std::vector<cv::gimpl::Data>& 
     program_ = std::unique_ptr<plaidml::edsl::Program>(new plaidml::edsl::Program("Program", output_tensors));
 
     // FIXME Need to update tensors here
-    for (int i = 0; i < output_tensors.size(); ++i)
+    for (size_t i = 0; i < output_tensors.size(); ++i)
     {
         output_bindings_[i].tensor = program_->outputs()[i];
     }
 
-    exec_ = std::make_shared<plaidml::exec::Executable>(*program_, device_id_, target_id_, input_bindings_, output_bindings_);
+    exec_.reset(new plaidml::exec::Executable(*program_,
+                                               device_id_,
+                                               target_id_,
+                                               input_bindings_,
+                                               output_bindings_));
 }
 
 cv::gimpl::GPlaidMLExecutable::GPlaidMLExecutable(const ade::Graph &g,
-                                                  const std::vector<ade::NodeHandle> &nodes)
+                                                  const std::vector<ade::NodeHandle> &nodes,
+                                                  const std::vector<cv::gimpl::Data>& ins_data,
+                                                  const std::vector<cv::gimpl::Data>& outs_data)
     : m_g(g), m_gm(m_g)
 {
     auto is_op = [&](ade::NodeHandle nh) {
@@ -169,6 +192,8 @@ cv::gimpl::GPlaidMLExecutable::GPlaidMLExecutable(const ade::Graph &g,
     };
 
     std::copy_if(nodes.begin(), nodes.end(), std::back_inserter(m_all_ops), is_op);
+
+    compile(ins_data, outs_data);
 }
 
 void cv::gimpl::GPlaidMLExecutable::run(std::vector<InObj>  &&input_objs,

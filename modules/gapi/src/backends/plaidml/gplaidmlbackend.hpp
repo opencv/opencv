@@ -37,17 +37,17 @@ struct PlaidMLUnit
 class GPlaidMLExecutable final: public GIslandExecutable
 {
 public:
-    GPlaidMLExecutable(const ade::Graph                   &graph,
-                       const std::vector<ade::NodeHandle> &nodes);
+    GPlaidMLExecutable(const ade::Graph&                   graph,
+                       const std::vector<ade::NodeHandle>& nodes,
+                       const std::vector<cv::gimpl::Data>& ins_data,
+                       const std::vector<cv::gimpl::Data>& outs_data);
 
     virtual inline bool canReshape() const override { return false; }
+
     virtual inline void reshape(ade::Graph&, const GCompileArgs&) override
     {
         util::throw_error(std::logic_error("GPlaidMLExecutable::reshape() should never be called"));
     }
-
-    virtual void compile(const std::vector<cv::gimpl::Data>& ins_data,
-                         const std::vector<cv::gimpl::Data>& outs_data) override;
 
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
@@ -58,6 +58,12 @@ private:
 
     void bindInArg  (const RcDesc &rc, const GRunArg  &arg);
     void bindOutArg (const RcDesc &rc, const GRunArgP &arg);
+
+    void compile(const std::vector<cv::gimpl::Data>& ins_data,
+                 const std::vector<cv::gimpl::Data>& outs_data);
+
+    // FIXME User also can pass config via compile args ?
+    void initConfig();
 
     GArg packArg(const GArg &arg);
 

@@ -6,6 +6,8 @@
 #include <opencv2/gapi/plaidml/core.hpp>
 #include <opencv2/gapi/plaidml/gplaidmlkernel.hpp>
 
+#include <plaidml2/edsl/edsl.h>
+
 #define GAPI_PLAIDML_LOGICAL_OP(Name, API, Op) \
 GAPI_PLAIDML_KERNEL(Name, API) \
 { \

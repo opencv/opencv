@@ -6,15 +6,19 @@
 //
 
 
-#ifdef HAVE_PLAIDML
-
 #ifndef OPENCV_GAPI_GPLAIDMLKERNEL_HPP
 #define OPENCV_GAPI_GPLAIDMLKERNEL_HPP
 
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/garg.hpp>
 
-#include <plaidml2/edsl/edsl.h>
+namespace plaidml
+{
+namespace edsl
+{
+    class Tensor;
+} // namespace edsl
+} // namespace plaidml
 
 namespace cv
 {
@@ -145,5 +149,3 @@ public:
 } // namespace cv
 
 #endif // OPENCV_GAPI_GPLAIDMLKERNEL_HPP
-
-#endif // HAVE_PLAIDML

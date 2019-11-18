@@ -18,6 +18,9 @@
 #include "opencv2/gapi/gcommon.hpp"
 #include "opencv2/gapi/gkernel.hpp"
 
+#include "compiler/gmodel.hpp"
+
+
 namespace cv
 {
 namespace gimpl
@@ -44,6 +47,12 @@ public:
     virtual EPtr compile(const ade::Graph   &graph,
                          const GCompileArgs &args,
                          const std::vector<ade::NodeHandle> &nodes) const;
+
+    virtual EPtr compile(const ade::Graph   &graph,
+                         const GCompileArgs &args,
+                         const std::vector<ade::NodeHandle> &nodes,
+                         const std::vector<cv::gimpl::Data>& ins_data,
+                         const std::vector<cv::gimpl::Data>& outs_data) const;
 
     virtual void addBackendPasses(ade::ExecutionEngineSetupContext &);
 
