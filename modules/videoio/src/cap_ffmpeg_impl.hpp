@@ -1082,7 +1082,11 @@ bool CvCapture_FFMPEG::processRawPacket()
             const AVBitStreamFilter * bsf = av_bsf_get_by_name(filterName);
             if (!bsf)
             {
+#ifdef __OPENCV_BUILD
                 CV_WARN(cv::format("Bitstream filter is not available: %s", filterName).c_str());
+#else
+                CV_WARN("Bitstream filter is not available");
+#endif
                 return false;
             }
             int err = av_bsf_alloc(bsf, &bsfc);
@@ -1102,7 +1106,11 @@ bool CvCapture_FFMPEG::processRawPacket()
             bsfc = av_bitstream_filter_init(filterName);
             if (!bsfc)
             {
+#ifdef __OPENCV_BUILD
                 CV_WARN(cv::format("Bitstream filter is not available: %s", filterName).c_str());
+#else
+                CV_WARN("Bitstream filter is not available");
+#endif
                 return false;
             }
 #endif
