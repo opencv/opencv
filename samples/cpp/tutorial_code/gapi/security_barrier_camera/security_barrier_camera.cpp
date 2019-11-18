@@ -348,4 +348,4 @@ int main()
               << std::endl;
     return 1;
 }
-#endif  // HAVE_OPECV_GAPI && HAVE_INF_ENGINE
+#endif  // HAVE_OPECV_GAPI
