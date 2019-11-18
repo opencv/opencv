@@ -29,17 +29,8 @@ namespace draw
 class FreeTypeBitmaskCreator : public IBitmaskCreator
 {
 public:
-    FreeTypeBitmaskCreator(const std::string& path)
+    FreeTypeBitmaskCreator(const std::string& path) : m_font_path(path)
     {
-        if (FT_Init_FreeType(&m_library) < 0)
-        {
-            util::throw_error(std::runtime_error("Failed to init FreeType library"));
-        }
-
-        if (FT_New_Face(m_library, path.c_str(), 0, &m_face))
-        {
-            util::throw_error(std::runtime_error("Failed to set font"));
-        }
     }
 
     virtual cv::Size computeMaskSize() override
@@ -113,13 +104,21 @@ public:
 
     virtual ~FreeTypeBitmaskCreator() override
     {
-        FT_Done_Face(m_face);
-        FT_Done_FreeType(m_library);
+        GAPI_Assert(!FT_Done_Face(m_face));
+        GAPI_Assert(!FT_Done_FreeType(m_library));
     }
 
 private:
     FT_Library    m_library;
     FT_Face       m_face;
+
+    virtual void init() override
+    {
+        GAPI_Assert(!FT_Init_FreeType(&m_library));
+        GAPI_Assert(!FT_New_Face(m_library, m_font_path.c_str(), 0, &m_face));
+    }
+
+    std::string m_font_path;
 
     std::vector<cv::Mat> m_glyphs;
     std::vector<cv::Point> m_pos;

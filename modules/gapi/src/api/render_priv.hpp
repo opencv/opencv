@@ -29,6 +29,7 @@ public:
     virtual int createMask(cv::Mat&) = 0;
     virtual cv::Size computeMaskSize() = 0;
     virtual void setMaskParams(const cv::gapi::wip::draw::Text& text) = 0;
+    virtual void init() { /* do nothing */ };
     virtual ~IBitmaskCreator() = default;
 };
 

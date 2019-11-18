@@ -152,6 +152,9 @@ namespace {
             {
                 mc.reset(new OCVBitmaskCreator());
             }
+
+            mc->init();
+
             return EPtr{new cv::gimpl::render::ocv::GRenderExecutable(graph, nodes, std::move(mc))};
         }
     };
