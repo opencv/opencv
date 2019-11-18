@@ -50,7 +50,7 @@ public:
     {
         Filter,
         Resize,
-        NV12toRGB
+        YUV420toRGB //Color conversion of 4:2:0 chroma sub-sampling formats (NV12, I420 ..etc) to RGB
     };
 
     // This function is a generic "doWork" callback

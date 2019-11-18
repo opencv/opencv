@@ -322,6 +322,28 @@ TEST_P(Test_ONNX_layers, MultyInputs)
     expectNoFallbacksFromIE(net);
 }
 
+TEST_P(Test_ONNX_layers, Div)
+{
+    const String model =  _tf("models/div.onnx");
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp1 = blobFromNPY(_tf("data/input_div_0.npy"));
+    Mat inp2 = blobFromNPY(_tf("data/input_div_1.npy"));
+    Mat ref  = blobFromNPY(_tf("data/output_div.npy"));
+    checkBackend(&inp1, &ref);
+
+    net.setInput(inp1, "0");
+    net.setInput(inp2, "1");
+    Mat out = net.forward();
+
+    normAssert(ref, out, "", default_l1,  default_lInf);
+    expectNoFallbacksFromIE(net);
+}
+
 TEST_P(Test_ONNX_layers, DynamicReshape)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
@@ -335,6 +357,16 @@ TEST_P(Test_ONNX_layers, DynamicReshape)
 TEST_P(Test_ONNX_layers, Reshape)
 {
     testONNXModels("unsqueeze");
+}
+
+TEST_P(Test_ONNX_layers, Squeeze)
+{
+    testONNXModels("squeeze");
+}
+
+TEST_P(Test_ONNX_layers, ReduceL2)
+{
+    testONNXModels("reduceL2");
 }
 
 TEST_P(Test_ONNX_layers, Slice)

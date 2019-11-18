@@ -63,7 +63,6 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   unset(OPENCV_MODULE_${mod}_PRIVATE_OPT_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_LINK_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_WRAPPERS CACHE)
-  unset(OPENCV_DEPENDANT_TARGETS_${mod} CACHE)
 endforeach()
 
 # clean modules info which needs to be recalculated
