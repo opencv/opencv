@@ -79,8 +79,7 @@ protected:
 
     cv::gimpl::GIslandModel::Graph m_gim; // FIXME: make const?
 
-    cv::GCompileArgs comp_args;
-    bool wasFinished = false;
+    cv::GCompileArgs m_comp_args;
 
     const GMetaArgs m_metas;
 

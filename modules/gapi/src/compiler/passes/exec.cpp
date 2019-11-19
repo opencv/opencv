@@ -638,4 +638,12 @@ void passes::syncIslandTags(ade::passes::PassContext &ctx)
     GIslandModel::Graph gim(*gptr);
     GIslandModel::syncIslandTags(gim, ctx.graph);
 }
+
+void passes::topoSortIslands(ade::passes::PassContext &ctx)
+{
+    GModel::Graph gm(ctx.graph);
+    std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
+    auto pass_ctx = ade::passes::PassContext{*gptr};
+    ade::passes::TopologicalSort{}(pass_ctx);
+}
 }} // namespace cv::gimpl

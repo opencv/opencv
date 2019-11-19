@@ -35,6 +35,8 @@ class GAPI_EXPORTS GCompiler
     void validateOutProtoArgs();
 
 public:
+    // metas may be empty in case when graph compiling for streaming
+    // In this case graph get metas from first frame
     explicit GCompiler(const GComputation &c,
                              GMetaArgs    &&metas,
                              GCompileArgs &&args);
@@ -51,6 +53,8 @@ public:
     void        runPasses(ade::Graph &g);      // Apply all G-API passes on a GModel
     void        compileIslands(ade::Graph &g); // Instantiate GIslandExecutables in GIslandModel
     static void compileIslands(ade::Graph &g, cv::GCompileArgs &args);
+    static void setMetaData(ade::Graph &g, cv::GCompileArgs &args
+                            , const cv::GMetaArgs &metas);
     GCompiled   produceCompiled(GPtr &&pg);    // Produce GCompiled from processed GModel
     GStreamingCompiled  produceStreamingCompiled(GPtr &&pg); // Produce GStreamingCompiled from processed GMbodel
 };
