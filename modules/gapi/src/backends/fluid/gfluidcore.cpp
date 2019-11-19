@@ -8,23 +8,24 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/own/assert.hpp"
-#include "opencv2/core/traits.hpp"
-#include "opencv2/core/hal/hal.hpp"
-#include "opencv2/core/hal/intrin.hpp"
+#include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/core/traits.hpp>
+#include <opencv2/core/hal/hal.hpp>
+#include <opencv2/core/hal/intrin.hpp>
 
-#include "opencv2/gapi/core.hpp"
+#include <opencv2/gapi/core.hpp>
 
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
-#include "opencv2/gapi/fluid/core.hpp"
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
+#include <opencv2/gapi/fluid/core.hpp>
 
 #include "gfluidbuffer_priv.hpp"
 #include "gfluidbackend.hpp"
 #include "gfluidutils.hpp"
 
+#include <math.h>
+
 #include <cassert>
-#include <cmath>
 #include <cstdlib>
 
 namespace cv {
@@ -389,7 +390,7 @@ static void run_arithm_s1(uchar out[], const float in[], int width, const float 
     cv::util::suppress_unused_warning(v_op);
     for (; w < width; w++)
     {
-        out[w] = saturate<uchar>(s_op(in[w], scalar[0]), std::roundf);
+        out[w] = saturate<uchar>(s_op(in[w], scalar[0]), roundf);
     }
 }
 
@@ -1920,8 +1921,8 @@ GAPI_FLUID_KERNEL(GFluidPolarToCart, cv::gapi::core::GPolarToCart, false)
                           in2[l] * static_cast<float>(CV_PI / 180):
                           in2[l];
             float magnitude = in1[l];
-            float x = magnitude * std::cos(angle);
-            float y = magnitude * std::sin(angle);
+            float x = magnitude * cosf(angle);
+            float y = magnitude * sinf(angle);
             out1[l] = x;
             out2[l] = y;
         }
@@ -1954,8 +1955,8 @@ GAPI_FLUID_KERNEL(GFluidCartToPolar, cv::gapi::core::GCartToPolar, false)
         {
             float x = in1[l];
             float y = in2[l];
-            float magnitude = std::hypot(y, x);
-            float angle_rad = std::atan2(y, x);
+            float magnitude = hypotf(y, x);
+            float angle_rad = atan2f(y, x);
             float angle = angleInDegrees?
                           angle_rad * static_cast<float>(180 / CV_PI):
                           angle_rad;
@@ -2117,6 +2118,40 @@ GAPI_FLUID_KERNEL(GFluidSqrt, cv::gapi::core::GSqrt, false)
     }
 };
 
+GAPI_FLUID_KERNEL(GFluidCopy, cv::gapi::core::GCopy, false)
+{
+    static const int Window = 1;
+
+    static void run(const View &src, Buffer &dst)
+    {
+        const auto *in  = src.InLine<uchar>(0);
+              auto *out = dst.OutLine<uchar>();
+
+        GAPI_DbgAssert(dst.length() == src.length());
+        GAPI_DbgAssert(dst.meta().chan == src.meta().chan);
+        GAPI_DbgAssert(dst.meta().depth == src.meta().depth);
+
+        int width = src.length();
+        int elem_size = CV_ELEM_SIZE(CV_MAKETYPE(src.meta().depth, src.meta().chan));
+
+        int w = 0; // cycle counter
+
+    #if CV_SIMD128
+        for (; w <= width*elem_size-16; w+=16)
+        {
+            v_uint8x16 a;
+            a = v_load(&in[w]);
+            v_store(&out[w], a);
+        }
+    #endif
+
+        for (; w < width*elem_size; w++)
+        {
+            out[w] = in[w];
+        }
+    }
+};
+
 } // namespace fliud
 } // namespace gapi
 } // namespace cv
@@ -2172,6 +2207,7 @@ cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
             ,GFluidInRange
             ,GFluidResize
             ,GFluidSqrt
+            ,GFluidCopy
         #if 0
             ,GFluidMean        -- not fluid
             ,GFluidSum         -- not fluid

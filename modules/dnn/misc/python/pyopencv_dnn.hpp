@@ -3,7 +3,6 @@ typedef dnn::DictValue LayerId;
 typedef std::vector<dnn::MatShape> vector_MatShape;
 typedef std::vector<std::vector<dnn::MatShape> > vector_vector_MatShape;
 
-
 template<>
 bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
 {
@@ -22,16 +21,19 @@ bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
     }
     else if (PyFloat_Check(o))
     {
-        dv = dnn::DictValue(PyFloat_AS_DOUBLE(o));
-        return true;
-    }
-    else if (PyString_Check(o))
-    {
-        dv = dnn::DictValue(String(PyString_AsString(o)));
+        dv = dnn::DictValue(PyFloat_AsDouble(o));
         return true;
     }
     else
-        return false;
+    {
+        std::string str;
+        if (getUnicodeString(o, str))
+        {
+            dv = dnn::DictValue(str);
+            return true;
+        }
+    }
+    return false;
 }
 
 template<>
@@ -135,7 +137,7 @@ public:
 
         PyObject* args = PyList_New(inputs.size());
         for(size_t i = 0; i < inputs.size(); ++i)
-            PyList_SET_ITEM(args, i, pyopencv_from_generic_vec(inputs[i]));
+            PyList_SetItem(args, i, pyopencv_from_generic_vec(inputs[i]));
 
         PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("getMemoryShapes"), args, NULL);
         Py_DECREF(args);

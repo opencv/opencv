@@ -108,6 +108,10 @@ typedef unsigned short ushort;
 #define CV_ELEM_SIZE(type) \
     (CV_MAT_CN(type) << ((((sizeof(size_t)/4+1)*16384|0x3a50) >> CV_MAT_DEPTH(type)*2) & 3))
 
+#ifndef CV_OVERRIDE
+#  define CV_OVERRIDE override
+#endif
+
 // base.h:
 namespace cv
 {

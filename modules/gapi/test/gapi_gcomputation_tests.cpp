@@ -6,7 +6,8 @@
 
 
 #include "test_precomp.hpp"
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
+#include <ade/util/zip_range.hpp>
 
 namespace opencv_test
 {
@@ -51,6 +52,41 @@ namespace opencv_test
           {
           }
       };
+
+      struct GComputationVectorMatsAsOutput: public ::testing::Test
+      {
+          cv::Mat  in_mat;
+          cv::GComputation m_c;
+          std::vector<cv::Mat> ref_mats;
+
+          GComputationVectorMatsAsOutput() : in_mat(300, 300, CV_8UC3),
+          m_c([&](){
+                      cv::GMat in;
+                      cv::GMat out[3];
+                      std::tie(out[0], out[1], out[2]) = cv::gapi::split3(in);
+                      return cv::GComputation({in}, {out[0], out[1], out[2]});
+                  })
+          {
+              cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+              cv::split(in_mat, ref_mats);
+          }
+
+          void run(std::vector<cv::Mat>& out_mats)
+          {
+              m_c.apply({in_mat}, out_mats);
+          }
+
+          void check(const std::vector<cv::Mat>& out_mats)
+          {
+              for (const auto& it : ade::util::zip(ref_mats, out_mats))
+              {
+                  const auto& ref_mat = std::get<0>(it);
+                  const auto& out_mat = std::get<1>(it);
+
+                  EXPECT_EQ(0, cv::countNonZero(ref_mat != out_mat));
+              }
+          }
+      };
   }
 
   TEST_F(GComputationApplyTest, ThrowDontPassCustomKernel)
@@ -63,6 +99,39 @@ namespace opencv_test
       const auto pkg = cv::gapi::kernels<CustomResizeImpl>();
 
       ASSERT_NO_THROW(m_c.apply(in_mat, out_mat, cv::compile_args(pkg)));
+  }
+
+  TEST_F(GComputationVectorMatsAsOutput, OutputAllocated)
+  {
+      std::vector<cv::Mat> out_mats(3);
+      for (auto& out_mat : out_mats)
+      {
+          out_mat.create(in_mat.size(), CV_8UC1);
+      }
+
+      run(out_mats);
+      check(out_mats);
+  }
+
+  TEST_F(GComputationVectorMatsAsOutput, OutputNotAllocated)
+  {
+      std::vector<cv::Mat> out_mats(3);
+
+      run(out_mats);
+      check(out_mats);
+  }
+
+  TEST_F(GComputationVectorMatsAsOutput, OutputAllocatedWithInvalidMeta)
+  {
+      std::vector<cv::Mat> out_mats(3);
+
+      for (auto& out_mat : out_mats)
+      {
+          out_mat.create(in_mat.size() / 2, CV_8UC1);
+      }
+
+      run(out_mats);
+      check(out_mats);
   }
 
 } // namespace opencv_test

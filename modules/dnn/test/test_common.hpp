@@ -11,6 +11,23 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
+#define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
+#define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
+#define CV_TEST_TAG_DNN_SKIP_OPENCL_FP16         "dnn_skip_ocl_fp16"
+#define CV_TEST_TAG_DNN_SKIP_IE                  "dnn_skip_ie"
+#define CV_TEST_TAG_DNN_SKIP_IE_2018R5           "dnn_skip_ie_2018r5"
+#define CV_TEST_TAG_DNN_SKIP_IE_2019R1           "dnn_skip_ie_2019r1"
+#define CV_TEST_TAG_DNN_SKIP_IE_2019R1_1         "dnn_skip_ie_2019r1_1"
+#define CV_TEST_TAG_DNN_SKIP_IE_2019R2           "dnn_skip_ie_2019r2"
+#define CV_TEST_TAG_DNN_SKIP_IE_2019R3           "dnn_skip_ie_2019r3"
+#define CV_TEST_TAG_DNN_SKIP_IE_OPENCL           "dnn_skip_ie_ocl"
+#define CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16      "dnn_skip_ie_ocl_fp16"
+#define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2         "dnn_skip_ie_myriad2"
+#define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X         "dnn_skip_ie_myriadx"
+#define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD           CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
+
+#define CV_TEST_TAG_DNN_SKIP_VULKAN              "dnn_skip_vulkan"
+
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -27,6 +44,8 @@ CV__DNN_INLINE_NS_END
 
 
 namespace opencv_test {
+
+void initDNNTests();
 
 using namespace cv::dnn;
 
@@ -59,7 +78,7 @@ void normAssertDetections(
         double confThreshold = 0.0, double scores_diff = 1e-5,
         double boxes_iou_diff = 1e-4);
 
-bool readFileInMemory(const std::string& filename, std::string& content);
+void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content);
 
 #ifdef HAVE_INF_ENGINE
 bool validateVPUType();
@@ -107,8 +126,36 @@ public:
         {
             if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
                 inp->size[0] != 1 && inp->size[0] != ref->size[0])
+            {
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
                 throw SkipTestException("Inconsistent batch size of input and output blobs for Myriad plugin");
+            }
         }
+    }
+
+    void expectNoFallbacks(Net& net)
+    {
+        // Check if all the layers are supported with current backend and target.
+        // Some layers might be fused so their timings equal to zero.
+        std::vector<double> timings;
+        net.getPerfProfile(timings);
+        std::vector<String> names = net.getLayerNames();
+        CV_Assert(names.size() == timings.size());
+
+        for (int i = 0; i < names.size(); ++i)
+        {
+            Ptr<dnn::Layer> l = net.getLayer(net.getLayerId(names[i]));
+            bool fused = !timings[i];
+            if ((!l->supportBackend(backend) || l->preferableTarget != target) && !fused)
+                CV_Error(Error::StsNotImplemented, "Layer [" + l->name + "] of type [" +
+                         l->type + "] is expected to has backend implementation");
+        }
+    }
+
+    void expectNoFallbacksFromIE(Net& net)
+    {
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+            expectNoFallbacks(net);
     }
 
 protected:

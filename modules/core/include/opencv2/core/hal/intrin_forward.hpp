@@ -14,9 +14,32 @@ namespace cv
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 /** Types **/
-#if CV__SIMD_FORWARD == 512
-// [todo] 512
-#error "AVX512 Not implemented yet"
+#if CV__SIMD_FORWARD == 1024
+// [todo] 1024
+#error "1024-long ops not implemented yet"
+#elif CV__SIMD_FORWARD == 512
+// 512
+#define __CV_VX(fun)   v512_##fun
+#define __CV_V_UINT8   v_uint8x64
+#define __CV_V_INT8    v_int8x64
+#define __CV_V_UINT16  v_uint16x32
+#define __CV_V_INT16   v_int16x32
+#define __CV_V_UINT32  v_uint32x16
+#define __CV_V_INT32   v_int32x16
+#define __CV_V_UINT64  v_uint64x8
+#define __CV_V_INT64   v_int64x8
+#define __CV_V_FLOAT32 v_float32x16
+#define __CV_V_FLOAT64 v_float64x8
+struct v_uint8x64;
+struct v_int8x64;
+struct v_uint16x32;
+struct v_int16x32;
+struct v_uint32x16;
+struct v_int32x16;
+struct v_uint64x8;
+struct v_int64x8;
+struct v_float32x16;
+struct v_float64x8;
 #elif CV__SIMD_FORWARD == 256
 // 256
 #define __CV_VX(fun)   v256_##fun
@@ -136,6 +159,16 @@ void v_mul_expand(const __CV_V_INT16&,  const __CV_V_INT16&,  __CV_V_INT32&,  __
 void v_mul_expand(const __CV_V_UINT32&, const __CV_V_UINT32&, __CV_V_UINT64&, __CV_V_UINT64&);
 void v_mul_expand(const __CV_V_INT32&,  const __CV_V_INT32&,  __CV_V_INT64&,  __CV_V_INT64&);
 #endif
+
+// Conversions
+__CV_V_FLOAT32 v_cvt_f32(const __CV_V_INT32& a);
+__CV_V_FLOAT32 v_cvt_f32(const __CV_V_FLOAT64& a);
+__CV_V_FLOAT32 v_cvt_f32(const __CV_V_FLOAT64& a, const __CV_V_FLOAT64& b);
+__CV_V_FLOAT64 v_cvt_f64(const __CV_V_INT32& a);
+__CV_V_FLOAT64 v_cvt_f64_high(const __CV_V_INT32& a);
+__CV_V_FLOAT64 v_cvt_f64(const __CV_V_FLOAT32& a);
+__CV_V_FLOAT64 v_cvt_f64_high(const __CV_V_FLOAT32& a);
+__CV_V_FLOAT64 v_cvt_f64(const __CV_V_INT64& a);
 
 /** Cleanup **/
 #undef CV__SIMD_FORWARD

@@ -68,12 +68,15 @@
         @defgroup core_c_glue Connections with C++
     @}
     @defgroup core_array Operations on arrays
+    @defgroup core_async Asynchronous API
     @defgroup core_xml XML/YAML Persistence
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
+        @defgroup core_logging Logging facilities
         @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
+        @defgroup core_utils_vsx VSX utilities
         @defgroup core_utils_softfloat Softfloat support
         @defgroup core_utils_samples Utility functions for OpenCV samples
     @}
@@ -291,9 +294,9 @@ if src was not a ROI, use borderType | #BORDER_ISOLATED.
 @param src Source image.
 @param dst Destination image of the same type as src and the size Size(src.cols+left+right,
 src.rows+top+bottom) .
-@param top
-@param bottom
-@param left
+@param top the top pixels
+@param bottom the bottom pixels
+@param left the left pixels
 @param right Parameter specifying how many pixels in each direction from the source image rectangle
 to extrapolate. For example, top=1, bottom=1, left=1, right=1 mean that 1 pixel-wide border needs
 to be built.

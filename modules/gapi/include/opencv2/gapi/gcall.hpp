@@ -8,10 +8,10 @@
 #ifndef OPENCV_GAPI_GCALL_HPP
 #define OPENCV_GAPI_GCALL_HPP
 
-#include "opencv2/gapi/garg.hpp"      // GArg
-#include "opencv2/gapi/gmat.hpp"      // GMat
-#include "opencv2/gapi/gscalar.hpp"   // GScalar
-#include "opencv2/gapi/garray.hpp"    // GArray<T>
+#include <opencv2/gapi/garg.hpp>      // GArg
+#include <opencv2/gapi/gmat.hpp>      // GMat
+#include <opencv2/gapi/gscalar.hpp>   // GScalar
+#include <opencv2/gapi/garray.hpp>    // GArray<T>
 
 namespace cv {
 
@@ -38,6 +38,7 @@ public:
 
     // A generic yield method - obtain a link to operator's particular GMat output
     GMat    yield      (int output = 0);
+    GMatP   yieldP     (int output = 0);
     GScalar yieldScalar(int output = 0);
 
     template<class T> GArray<T> yieldArray(int output = 0)

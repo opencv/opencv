@@ -266,7 +266,7 @@ public class MatTest extends OpenCVTestCase {
 
     public void testEmpty() {
         assertTrue(dst.empty());
-        assertTrue(!gray0.empty());
+        assertFalse(gray0.empty());
     }
 
     public void testEyeIntIntInt() {
@@ -1194,7 +1194,7 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testToString() {
-        assertTrue(null != gray0.toString());
+        assertNotNull(gray0.toString());
     }
 
     public void testTotal() {

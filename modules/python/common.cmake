@@ -24,6 +24,22 @@ if(TARGET gen_opencv_python_source)
   add_dependencies(${the_module} gen_opencv_python_source)
 endif()
 
+ocv_assert(${PYTHON}_VERSION_MAJOR)
+ocv_assert(${PYTHON}_VERSION_MINOR)
+
+if(${PYTHON}_LIMITED_API)
+  # support only python3.3+
+  ocv_assert(${PYTHON}_VERSION_MAJOR EQUAL 3 AND ${PYTHON}_VERSION_MINOR GREATER 2)
+  target_compile_definitions(${the_module} PRIVATE CVPY_DYNAMIC_INIT)
+  if(WIN32)
+    string(REPLACE
+      "python${${PYTHON}_VERSION_MAJOR}${${PYTHON}_VERSION_MINOR}.lib"
+      "python${${PYTHON}_VERSION_MAJOR}.lib"
+      ${PYTHON}_LIBRARIES
+      "${${PYTHON}_LIBRARIES}")
+  endif()
+endif()
+
 if(APPLE)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
 elseif(WIN32 OR OPENCV_FORCE_PYTHON_LIBS)
@@ -54,6 +70,13 @@ else()
   if(NOT PYTHON_CVPY_PROCESS EQUAL 0)
     set(CVPY_SUFFIX ".so")
   endif()
+  if(${PYTHON}_LIMITED_API)
+    if(WIN32)
+      string(REGEX REPLACE "\\.[^\\.]*\\." "." CVPY_SUFFIX "${CVPY_SUFFIX}")
+    else()
+      string(REGEX REPLACE "\\.[^\\.]*\\." ".abi${${PYTHON}_VERSION_MAJOR}." CVPY_SUFFIX "${CVPY_SUFFIX}")
+    endif()
+  endif()
 endif()
 
 ocv_update(OPENCV_PYTHON_EXTENSION_BUILD_PATH "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}")
@@ -61,7 +84,6 @@ ocv_update(OPENCV_PYTHON_EXTENSION_BUILD_PATH "${LIBRARY_OUTPUT_PATH}/${MODULE_I
 set_target_properties(${the_module} PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY  "${OPENCV_PYTHON_EXTENSION_BUILD_PATH}"
                       ARCHIVE_OUTPUT_NAME ${the_module}  # prevent name conflict for python2/3 outputs
-                      DEFINE_SYMBOL CVAPI_EXPORTS
                       PREFIX ""
                       OUTPUT_NAME cv2
                       SUFFIX ${CVPY_SUFFIX})
@@ -111,9 +133,6 @@ if(WIN32)
 else()
   set(PYTHON_INSTALL_ARCHIVE ARCHIVE DESTINATION ${${PYTHON}_PACKAGES_PATH} COMPONENT python)
 endif()
-
-ocv_assert(${PYTHON}_VERSION_MAJOR)
-ocv_assert(${PYTHON}_VERSION_MINOR)
 
 set(__python_loader_subdir "")
 if(NOT OPENCV_SKIP_PYTHON_LOADER)

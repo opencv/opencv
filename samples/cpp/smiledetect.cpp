@@ -1,22 +1,23 @@
 #include "opencv2/objdetect.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
 #include <iostream>
 
 using namespace std;
 using namespace cv;
 
-static void help()
+static void help(const char** argv)
 {
     cout << "\nThis program demonstrates the smile detector.\n"
-            "Usage:\n"
-            "./smiledetect [--cascade=<cascade_path> this is the frontal face classifier]\n"
+            "Usage:\n" <<
+            argv[0] << " [--cascade=<cascade_path> this is the frontal face classifier]\n"
             "   [--smile-cascade=[<smile_cascade_path>]]\n"
             "   [--scale=<image scale greater or equal to 1, try 2.0 for example. The larger the faster the processing>]\n"
             "   [--try-flip]\n"
             "   [video_filename|camera_index]\n\n"
-            "Example:\n"
-            "./smiledetect --cascade=\"data/haarcascades/haarcascade_frontalface_alt.xml\" --smile-cascade=\"data/haarcascades/haarcascade_smile.xml\" --scale=2.0\n\n"
+            "Example:\n" <<
+            argv[0] << " --cascade=\"data/haarcascades/haarcascade_frontalface_alt.xml\" --smile-cascade=\"data/haarcascades/haarcascade_smile.xml\" --scale=2.0\n\n"
             "During execution:\n\tHit any key to quit.\n"
             "\tUsing OpenCV version " << CV_VERSION << "\n" << endl;
 }
@@ -35,7 +36,7 @@ int main( int argc, const char** argv )
     string inputName;
     bool tryflip;
 
-    help();
+    help(argv);
 
     CascadeClassifier cascade, nestedCascade;
     double scale;
@@ -46,7 +47,7 @@ int main( int argc, const char** argv )
         "{try-flip||}{@input||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     cascadeName = samples::findFile(parser.get<string>("cascade"));
@@ -56,7 +57,7 @@ int main( int argc, const char** argv )
     scale = parser.get<int>("scale");
     if (!parser.check())
     {
-        help();
+        help(argv);
         return 1;
     }
     if (scale < 1)
@@ -64,13 +65,13 @@ int main( int argc, const char** argv )
     if( !cascade.load( cascadeName ) )
     {
         cerr << "ERROR: Could not load face cascade" << endl;
-        help();
+        help(argv);
         return -1;
     }
     if( !nestedCascade.load( nestedCascadeName ) )
     {
         cerr << "ERROR: Could not load smile cascade" << endl;
-        help();
+        help(argv);
         return -1;
     }
     if( inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1) )
@@ -108,7 +109,7 @@ int main( int argc, const char** argv )
     else
     {
         cerr << "ERROR: Could not initiate capture" << endl;
-        help();
+        help(argv);
         return -1;
     }
 

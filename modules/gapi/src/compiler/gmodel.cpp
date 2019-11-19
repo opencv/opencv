@@ -14,10 +14,12 @@
 #include <ade/util/zip_range.hpp>   // util::indexed
 #include <ade/util/checked_cast.hpp>
 
-#include "opencv2/gapi/gproto.hpp"
+#include <opencv2/gapi/gproto.hpp>
 #include "api/gnode_priv.hpp"
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
+#include "api/gorigin.hpp"
+#include "compiler/gmodel_priv.hpp"
 
 namespace cv { namespace gimpl {
 
@@ -34,9 +36,9 @@ ade::NodeHandle GModel::mkOpNode(GModel::Graph &g, const GKernel &k, const std::
 
 ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
 {
-    ade::NodeHandle op_h = g.createNode();
+    ade::NodeHandle data_h = g.createNode();
     const auto id = g.metadata().get<DataObjectCounter>().GetNewId(origin.shape);
-    g.metadata(op_h).set(NodeType{NodeType::DATA});
+    g.metadata(data_h).set(NodeType{NodeType::DATA});
 
     GMetaArg meta;
     Data::Storage storage = Data::Storage::INTERNAL; // By default, all objects are marked INTERNAL
@@ -45,11 +47,25 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
     {
         auto value = value_of(origin);
         meta       = descr_of(value);
-        storage    = Data::Storage::CONST;
-        g.metadata(op_h).set(ConstValue{value});
+        storage    = Data::Storage::CONST_VAL;
+        g.metadata(data_h).set(ConstValue{value});
     }
-    g.metadata(op_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
-    return op_h;
+    g.metadata(data_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
+    return data_h;
+}
+
+ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GShape shape)
+{
+    ade::NodeHandle data_h = g.createNode();
+    g.metadata(data_h).set(NodeType{NodeType::DATA});
+
+    const auto id = g.metadata().get<DataObjectCounter>().GetNewId(shape);
+    GMetaArg meta;
+    HostCtor ctor;
+    Data::Storage storage = Data::Storage::INTERNAL; // By default, all objects are marked INTERNAL
+
+    g.metadata(data_h).set(Data{shape, id, meta, ctor, storage});
+    return data_h;
 }
 
 void GModel::linkIn(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::size_t in_port)
@@ -98,7 +114,7 @@ void GModel::linkOut(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::s
     op.outs[out_port] = RcDesc{gm.rc, gm.shape, {}};
 }
 
-std::vector<ade::NodeHandle> GModel::orderedInputs(Graph &g, ade::NodeHandle nh)
+std::vector<ade::NodeHandle> GModel::orderedInputs(ConstGraph &g, ade::NodeHandle nh)
 {
     std::vector<ade::NodeHandle> sorted_in_nhs(nh->inEdges().size());
     for (const auto& in_eh : nh->inEdges())
@@ -110,7 +126,7 @@ std::vector<ade::NodeHandle> GModel::orderedInputs(Graph &g, ade::NodeHandle nh)
     return sorted_in_nhs;
 }
 
-std::vector<ade::NodeHandle> GModel::orderedOutputs(Graph &g, ade::NodeHandle nh)
+std::vector<ade::NodeHandle> GModel::orderedOutputs(ConstGraph &g, ade::NodeHandle nh)
 {
     std::vector<ade::NodeHandle> sorted_out_nhs(nh->outEdges().size());
     for (const auto& out_eh : nh->outEdges())
@@ -169,7 +185,17 @@ void GModel::log(Graph &g, ade::EdgeHandle eh, std::string &&msg, ade::NodeHandl
     }
 }
 
-ade::NodeHandle GModel::detail::dataNodeOf(const ConstGraph &g, const GOrigin &origin)
+void GModel::log_clear(Graph &g, ade::NodeHandle node)
+{
+    if (g.metadata(node).contains<Journal>())
+    {
+        // according to documentation, clear() doesn't deallocate (__capacity__ of vector preserved)
+        g.metadata(node).get<Journal>().messages.clear();
+    }
+}
+
+
+ade::NodeHandle GModel::detail::dataNodeOf(const ConstLayoutGraph &g, const GOrigin &origin)
 {
     // FIXME: Does it still work with graph transformations, e.g. redirectWriter()??
     return g.metadata().get<Layout>().object_nodes.at(origin);

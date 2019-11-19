@@ -69,7 +69,7 @@
 //
 
 if (typeof module !== 'undefined' && module.exports) {
-    // The envrionment is Node.js
+    // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
     cv.FS_createLazyFile('/', 'haarcascade_frontalface_default.xml', // eslint-disable-line new-cap
                          'haarcascade_frontalface_default.xml', true, false);

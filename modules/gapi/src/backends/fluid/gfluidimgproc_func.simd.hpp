@@ -47,13 +47,34 @@ void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
 
 //--------------------------------------
 //
-// Fluid kernels: RGB-to-YUV, YUV-to-RGB
+// Fluid kernels: RGB-to-HSV
+//
+//--------------------------------------
+
+void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
+                      const int hdiv_table[], int width);
+
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-BayerGR
+//
+//--------------------------------------
+
+void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width);
+
+void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width);
+
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-YUV, RGB-to-YUV422, YUV-to-RGB
 //
 //--------------------------------------
 
 void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef[5]);
 
 void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef[4]);
+
+void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width);
 
 //-------------------------
 //
@@ -249,6 +270,454 @@ void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
 
 //--------------------------------------
 //
+// Fluid kernels: RGB-to-HSV
+//
+//--------------------------------------
+//
+void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
+                      const int hdiv_table[], int width)
+{
+    const int hsv_shift = 12;
+    const int hr = 180;
+
+    int j = 0;
+
+    #if CV_SIMD128
+        const int vectorStep = 16;
+
+        uint8_t ff = 0xff;
+        v_uint8x16 mask1(ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0);
+        v_uint8x16 mask2(0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0);
+        v_uint8x16 mask3(0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0);
+        v_uint8x16 mask4(0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff);
+
+        for (int w = 0; w <= 3 * (width - vectorStep); w += 3 * vectorStep)
+        {
+            v_uint8x16 r, g, b;
+            v_load_deinterleave(in + w, r, g, b);
+
+            v_uint8x16 v_min_rgb = v_min(v_min(r, g), b);
+            v_uint8x16 v_max_rgb = v_max(v_max(r, g), b);
+
+            v_uint8x16 v_diff = v_max_rgb - v_min_rgb;
+
+            v_uint8x16 v_r_eq_max = (r == v_max_rgb);
+            v_uint8x16 v_g_eq_max = (g == v_max_rgb);
+
+            v_uint8x16 v;
+            // get V-ch
+            v = v_max_rgb;
+
+            // divide v into 4x4 vectors because later int32 required
+            v_uint32x4 v_idx[4];
+            v_idx[0] = v_reinterpret_as_u32(v & mask1);
+            v_idx[1] = v_reinterpret_as_u32(v & mask2) >> 8;
+            v_idx[2] = v_reinterpret_as_u32(v & mask3) >> 16;
+            v_idx[3] = v_reinterpret_as_u32(v & mask4) >> 24;
+
+            v_uint32x4 sv_elems_32[4];
+            sv_elems_32[0] = v_reinterpret_as_u32(v_lut(sdiv_table, v_reinterpret_as_s32(v_idx[0])));
+            sv_elems_32[1] = v_reinterpret_as_u32(v_lut(sdiv_table, v_reinterpret_as_s32(v_idx[1])));
+            sv_elems_32[2] = v_reinterpret_as_u32(v_lut(sdiv_table, v_reinterpret_as_s32(v_idx[2])));
+            sv_elems_32[3] = v_reinterpret_as_u32(v_lut(sdiv_table, v_reinterpret_as_s32(v_idx[3])));
+
+            // divide and calculate s according to above feature
+            v_uint32x4 ss[4];
+
+            v_uint32x4 v_add = v_setall_u32(1) << (hsv_shift - 1);
+
+            v_uint32x4 v_diff_exp[4];
+            v_diff_exp[0] = v_reinterpret_as_u32(v_reinterpret_as_u8(v_diff) & mask1);
+            v_diff_exp[1] = v_reinterpret_as_u32(v_reinterpret_as_u8(v_diff) & mask2) >> 8;
+            v_diff_exp[2] = v_reinterpret_as_u32(v_reinterpret_as_u8(v_diff) & mask3) >> 16;
+            v_diff_exp[3] = v_reinterpret_as_u32(v_reinterpret_as_u8(v_diff) & mask4) >> 24;
+
+            // s = (diff * sdiv_table[v] + (1 << (hsv_shift-1))) >> hsv_shift;
+            ss[0] = (v_diff_exp[0] * sv_elems_32[0] + v_add) >> hsv_shift;
+            ss[1] = (v_diff_exp[1] * sv_elems_32[1] + v_add) >> hsv_shift;
+            ss[2] = (v_diff_exp[2] * sv_elems_32[2] + v_add) >> hsv_shift;
+            ss[3] = (v_diff_exp[3] * sv_elems_32[3] + v_add) >> hsv_shift;
+
+            // reconstruct order of S-ch
+            v_uint32x4 zip[8];
+            v_zip(ss[0], ss[2], zip[0], zip[1]);
+            v_zip(ss[1], ss[3], zip[2], zip[3]);
+
+            v_zip(zip[0], zip[2], zip[4], zip[5]);
+            v_zip(zip[1], zip[3], zip[6], zip[7]);
+
+            v_uint8x16 s = v_pack(v_pack(zip[4], zip[5]), v_pack(zip[6], zip[7]));
+
+            // the same divination for H-ch
+            // FIXME: REALLY UGLY and slow
+            v_uint32x4 gg[4];
+            v_uint16x8 tmp_exp[2];
+            v_expand(g, tmp_exp[0], tmp_exp[1]);
+            v_expand(tmp_exp[0], gg[0], gg[1]);
+            v_expand(tmp_exp[1], gg[2], gg[3]);
+
+            v_uint32x4 rr[4];
+            v_expand(r, tmp_exp[0], tmp_exp[1]);
+            v_expand(tmp_exp[0], rr[0], rr[1]);
+            v_expand(tmp_exp[1], rr[2], rr[3]);
+
+            v_uint32x4 bb[4];
+            v_expand(b, tmp_exp[0], tmp_exp[1]);
+            v_expand(tmp_exp[0], bb[0], bb[1]);
+            v_expand(tmp_exp[1], bb[2], bb[3]);
+
+            v_int32x4 e[4];
+            v_int16x8 sig_exp[2];
+            v_expand(v_reinterpret_as_s8(v_r_eq_max), sig_exp[0], sig_exp[1]);
+            v_expand(sig_exp[0], e[0], e[1]);
+            v_expand(sig_exp[1], e[2], e[3]);
+
+            v_int32x4 p[4];
+            v_expand(v_reinterpret_as_s8(v_g_eq_max), sig_exp[0], sig_exp[1]);
+            v_expand(sig_exp[0], p[0], p[1]);
+            v_expand(sig_exp[1], p[2], p[3]);
+
+            // reconstruct order of v_diff
+            v_zip(v_diff_exp[0], v_diff_exp[2], zip[0], zip[1]);
+            v_zip(v_diff_exp[1], v_diff_exp[3], zip[2], zip[3]);
+
+            v_zip(zip[0], zip[2], zip[4], zip[5]);
+            v_zip(zip[1], zip[3], zip[6], zip[7]);
+
+            v_uint8x16 vd = v_pack(v_pack(zip[4], zip[5]), v_pack(zip[6], zip[7]));
+
+            v_uint32x4 vdd[4];
+            v_uint16x8 vvdd[2];
+            v_expand(vd, vvdd[0], vvdd[1]);
+            v_expand(vvdd[0], vdd[0], vdd[1]);
+            v_expand(vvdd[1], vdd[2], vdd[3]);
+
+            // start computing H-ch
+            //h = (_vr & (g - b)) + (~_vr & ((_vg & (b - r + 2 * diff)) + ((~_vg) & (r - g + 4 * diff))));
+            v_int32x4 hh[4];
+            hh[0] = v_reinterpret_as_s32(v_select(e[0], v_reinterpret_as_s32(gg[0] - bb[0]),
+                                         v_select(p[0], v_reinterpret_as_s32(bb[0] - rr[0] + v_setall_u32(2) * vdd[0]),
+                                                        v_reinterpret_as_s32(rr[0] - gg[0] + v_setall_u32(4) * vdd[0]))));
+            hh[1] = v_reinterpret_as_s32(v_select(e[1], v_reinterpret_as_s32(gg[1] - bb[1]),
+                                         v_select(p[1], v_reinterpret_as_s32(bb[1] - rr[1] + v_setall_u32(2) * vdd[1]),
+                                                        v_reinterpret_as_s32(rr[1] - gg[1] + v_setall_u32(4) * vdd[1]))));
+            hh[2] = v_reinterpret_as_s32(v_select(e[2], v_reinterpret_as_s32(gg[2] - bb[2]),
+                                         v_select(p[2], v_reinterpret_as_s32(bb[2] - rr[2] + v_setall_u32(2) * vdd[2]),
+                                                        v_reinterpret_as_s32(rr[2] - gg[2] + v_setall_u32(4) * vdd[2]))));
+            hh[3] = v_reinterpret_as_s32(v_select(e[3], v_reinterpret_as_s32(gg[3] - bb[3]),
+                                         v_select(p[3], v_reinterpret_as_s32(bb[3] - rr[3] + v_setall_u32(2) * vdd[3]),
+                                                        v_reinterpret_as_s32(rr[3] - gg[3] + v_setall_u32(4) * vdd[3]))));
+
+            //h = (h * hdiv_table[diff] + (1 << (hsv_shift-1))) >> hsv_shift;
+            v_uint32x4 h_elems_32[4];
+            h_elems_32[0] = v_reinterpret_as_u32(v_lut(hdiv_table, v_reinterpret_as_s32(vdd[0])));
+            h_elems_32[1] = v_reinterpret_as_u32(v_lut(hdiv_table, v_reinterpret_as_s32(vdd[1])));
+            h_elems_32[2] = v_reinterpret_as_u32(v_lut(hdiv_table, v_reinterpret_as_s32(vdd[2])));
+            h_elems_32[3] = v_reinterpret_as_u32(v_lut(hdiv_table, v_reinterpret_as_s32(vdd[3])));
+
+            hh[0] = (hh[0] * v_reinterpret_as_s32(h_elems_32[0]) + v_reinterpret_as_s32(v_add)) >> hsv_shift;
+            hh[1] = (hh[1] * v_reinterpret_as_s32(h_elems_32[1]) + v_reinterpret_as_s32(v_add)) >> hsv_shift;
+            hh[2] = (hh[2] * v_reinterpret_as_s32(h_elems_32[2]) + v_reinterpret_as_s32(v_add)) >> hsv_shift;
+            hh[3] = (hh[3] * v_reinterpret_as_s32(h_elems_32[3]) + v_reinterpret_as_s32(v_add)) >> hsv_shift;
+
+            // check for negative H
+            v_int32x4 v_h_less_0[4];
+            v_h_less_0[0] = (hh[0] < v_setall_s32(0));
+            v_h_less_0[1] = (hh[1] < v_setall_s32(0));
+            v_h_less_0[2] = (hh[2] < v_setall_s32(0));
+            v_h_less_0[3] = (hh[3] < v_setall_s32(0));
+
+            v_int32x4 v_h_180[4];
+            v_h_180[0] = hh[0] + v_setall_s32(180);
+            v_h_180[1] = hh[1] + v_setall_s32(180);
+            v_h_180[2] = hh[2] + v_setall_s32(180);
+            v_h_180[3] = hh[3] + v_setall_s32(180);
+
+            hh[0] = v_select(v_h_less_0[0], v_h_180[0], hh[0]);
+            hh[1] = v_select(v_h_less_0[1], v_h_180[1], hh[1]);
+            hh[2] = v_select(v_h_less_0[2], v_h_180[2], hh[2]);
+            hh[3] = v_select(v_h_less_0[3], v_h_180[3], hh[3]);
+
+            // pack H-ch
+            v_uint16x8 hh_16_1 = v_pack(v_reinterpret_as_u32(hh[0]), v_reinterpret_as_u32(hh[1]));
+            v_uint16x8 hh_16_2 = v_pack(v_reinterpret_as_u32(hh[2]), v_reinterpret_as_u32(hh[3]));
+
+            v_uint8x16 h = v_pack(hh_16_1, hh_16_2);
+
+            v_store_interleave(out + w, h, s, v);
+
+            // output offset
+            j += vectorStep;
+        }
+    v_cleanup();
+    #endif
+
+    for (; j < width; ++j)
+    {
+        int r = in[j * 3    ],
+            g = in[j * 3 + 1],
+            b = in[j * 3 + 2];
+
+        int h, s, v = b;
+        int vmin = std::min({r, g, b});
+        v = std::max({r, g, b});
+        int _vr, _vg;
+
+        uchar diff = cv::saturate_cast<uchar>(v - vmin);
+        _vr = v == r ? -1 : 0;
+        _vg = v == g ? -1 : 0;
+
+        s = (diff * sdiv_table[v] + (1 << (hsv_shift-1))) >> hsv_shift;
+
+        h = (_vr & (g - b)) +
+            (~_vr & ((_vg & (b - r + 2 * diff)) + ((~_vg) & (r - g + 4 * diff))));
+
+        h = (h * hdiv_table[diff] + (1 << (hsv_shift-1))) >> hsv_shift;
+        h += h < 0 ? hr : 0;
+
+        out[j * 3    ] = cv::saturate_cast<uchar>(h);
+        out[j * 3 + 1] = (uchar)(s);
+        out[j * 3 + 2] = (uchar)(v);
+    }
+}
+
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-BayerGR
+//
+//--------------------------------------
+
+void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
+{
+
+    int j = 0;
+
+    #if CV_SIMD128
+        const int vectorStep = 16;
+
+        v_uint16x8 l_1, r_1, l_2, r_2;
+        v_uint16x8 l_3, r_3, l_4, r_4;
+
+        for (int w = 0; w <= width - 2 * vectorStep - 2; w += 2 * vectorStep) // -2 for offset vectors
+        {
+            v_uint8x16 g1, r1, g1_offset, r1_offset; // 1 line
+            v_uint8x16 b2, g2, b2_offset, g2_offset; // 2 line
+            v_uint8x16 g3, r3, g3_offset, r3_offset; // 3 line
+
+            v_load_deinterleave(in[0] + w + 1, r1, g1);
+            v_load_deinterleave(in[0] + w + 2 + 1, r1_offset, g1_offset);
+
+            v_load_deinterleave(in[1] + w, b2, g2);
+            v_load_deinterleave(in[1] + w + 2, b2_offset, g2_offset);
+
+            v_load_deinterleave(in[2] + w + 1, r3, g3);
+            v_load_deinterleave(in[2] + w + 2 + 1, r3_offset, g3_offset);
+
+
+            // calculate b-channel
+            v_expand(b2, l_1, r_1);
+            v_expand(b2_offset, l_2, r_2);
+            v_uint8x16 b2_sum = v_rshr_pack<1>(l_1 + l_2, r_1 + r_2);
+
+            v_uint8x16 b_low, b_high;
+            v_zip(b2_sum, b2_offset, b_low, b_high);
+
+
+            // calculate r-channel
+            v_expand(r1, l_1, r_1);
+            v_expand(r1_offset, l_2, r_2);
+            v_expand(r3, l_3, r_3);
+            v_expand(r3_offset, l_4, r_4);
+
+            v_uint8x16 r13offset_sum, r13_sum;
+            r13offset_sum = v_rshr_pack<2>(l_1 + l_2 + l_3 + l_4,
+                                           r_1 + r_2 + r_3 + r_4);
+            r13_sum = v_rshr_pack<1>(l_1 + l_3, r_1 + r_3);
+
+            v_uint8x16 r_low, r_high;
+            v_zip(r13_sum, r13offset_sum, r_low, r_high);
+
+
+            // calculate g-channel
+            v_expand(g1, l_1, r_1);
+            v_expand(g3, l_2, r_2);
+            v_expand(g2, l_3, r_3);
+            v_expand(g2_offset, l_4, r_4);
+
+            v_uint8x16 g_out_sum = v_rshr_pack<2>(l_1 + l_2 + l_3 + l_4,
+                                                  r_1 + r_2 + r_3 + r_4);
+
+            v_uint8x16 g_low, g_high;
+            v_zip(g2, g_out_sum, g_low, g_high);
+
+
+            v_store_interleave(out + w * 3 + 3, b_low, g_low, r_low);
+            v_store_interleave(out + w * 3 + vectorStep * 3 + 3, b_high, g_high, r_high);
+
+            // output offset for scalar code
+            j += vectorStep * 2;
+        }
+    #endif
+
+    bool curr_red = true;
+    int t0, t1, t2;
+
+    int i = 1;
+
+    for (; j < width - 1; ++j, curr_red = !curr_red)
+    {
+        if (!curr_red)
+        {
+            t0 = (in[i][j - 1] + in[i][j + 1] + 1) >> 1;
+            t1 =  in[i][j];
+            t2 = (in[i - 1][j] + in[i + 1][j] + 1) >> 1;
+
+
+            out[j * 3 + 0] = (uchar)t0;
+            out[j * 3 + 1] = (uchar)t1;
+            out[j * 3 + 2] = (uchar)t2;
+        }
+        else
+        {
+            t2 = (in[i - 1][j - 1] + in[i - 1][j + 1] +
+                  in[i + 1][j - 1] + in[i + 1][j + 1] + 2) >> 2;
+            t1 = (in[i][j - 1] + in[i][j + 1] +
+                  in[i - 1][j] + in[i + 1][j] + 2) >> 2;
+            t0 = in[i][j];
+
+            out[j * 3 + 0] = (uchar)t0;
+            out[j * 3 + 1] = (uchar)t1;
+            out[j * 3 + 2] = (uchar)t2;
+        }
+    }
+
+    out[0] = out[3];
+    out[1] = out[4];
+    out[2] = out[5];
+
+    out[3 * (width - 1)    ] = out[3 * (width - 2)    ];
+    out[3 * (width - 1) + 1] = out[3 * (width - 2) + 1];
+    out[3 * (width - 1) + 2] = out[3 * (width - 2) + 2];
+}
+
+void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width)
+{
+
+    int j = 0;
+
+    #if CV_SIMD128
+        const int vectorStep = 16;
+
+        v_uint16x8 l_1, r_1, l_2, r_2;
+        v_uint16x8 l_3, r_3, l_4, r_4;
+
+        for (int w = 0; w <= width - 2 * vectorStep - 2; w += 2 * vectorStep) // -2 for offset vectors
+        {
+            v_uint8x16 b1, g1, b1_offset, g1_offset; // 1 line
+            v_uint8x16 g2, r2, g2_offset, r2_offset; // 2 line
+            v_uint8x16 b3, g3, b3_offset, g3_offset; // 3 line
+
+            v_load_deinterleave(in[0] + w, b1, g1);
+            v_load_deinterleave(in[0] + w + 2, b1_offset, g1_offset);
+
+            v_load_deinterleave(in[1] + w, g2, r2);
+            v_load_deinterleave(in[1] + w + 2, g2_offset, r2_offset);
+
+            v_load_deinterleave(in[2] + w, b3, g3);
+            v_load_deinterleave(in[2] + w + 2, b3_offset, g3_offset);
+
+            // calculate r-channel
+            v_expand(r2, l_1, r_1);
+            v_expand(r2_offset, l_2, r_2);
+            v_uint8x16 r2_sum = v_rshr_pack<1>(l_1 + l_2, r_1 + r_2);
+
+            v_uint8x16 r_low, r_high;
+            v_zip(r2, r2_sum, r_low, r_high);
+
+
+            // calculate b-channel
+            v_expand(b1, l_1, r_1);
+            v_expand(b1_offset, l_2, r_2);
+            v_expand(b3, l_3, r_3);
+            v_expand(b3_offset, l_4, r_4);
+
+            v_uint8x16 b13offset_sum, b13_sum;
+            b13offset_sum = v_rshr_pack<2>(l_1 + l_2 + l_3 + l_4,
+                                           r_1 + r_2 + r_3 + r_4);
+            b13_sum = v_rshr_pack<1>(l_2 + l_4, r_2 + r_4);
+
+            v_uint8x16 b_low, b_high;
+            v_zip(b13offset_sum, b13_sum, b_low, b_high);
+
+
+            // calculate g-channel
+            v_expand(g1, l_1, r_1);
+            v_expand(g3, l_2, r_2);
+            v_expand(g2, l_3, r_3);
+            v_expand(g2_offset, l_4, r_4);
+
+            v_uint8x16 g_out_sum = v_rshr_pack<2>(l_1 + l_2 + l_3 + l_4,
+                                                  r_1 + r_2 + r_3 + r_4);
+
+            v_uint8x16 g_low, g_high;
+            v_zip(g_out_sum, g2_offset, g_low, g_high);
+
+
+            v_store_interleave(out + w * 3 + 3, b_low, g_low, r_low);
+            v_store_interleave(out + w * 3 + vectorStep * 3 + 3, b_high, g_high, r_high);
+
+            // output offset for scalar code
+            j += vectorStep * 2;
+        }
+    #endif
+
+    bool curr_blue = false;
+    int t0, t1, t2;
+
+    int i = 1;
+
+    for (; j < width - 1; ++j, curr_blue = !curr_blue)
+    {
+        if (!curr_blue)
+        {
+            // pixel at green at bgbg line
+            t2 = (in[i][j - 1] + in[i][j + 1] + 1) >> 1;
+            t1 =  in[i][j];
+            t0 = (in[i - 1][j] + in[i + 1][j] + 1) >> 1;
+
+            out[j * 3 + 0] = (uchar)t0;
+            out[j * 3 + 1] = (uchar)t1;
+            out[j * 3 + 2] = (uchar)t2;
+        }
+        else
+        {
+            // pixel at red at grgr line
+            t2 = in[i][j];
+
+            t1 = (in[i][j - 1] + in[i][j + 1] +
+                  in[i - 1][j] + in[i + 1][j] + 2) >> 2;
+
+            t0 = (in[i - 1][j - 1] + in[i - 1][j + 1] +
+                  in[i + 1][j - 1] + in[i + 1][j + 1] + 2) >> 2;
+
+            out[j * 3 + 0] = (uchar)t0;
+            out[j * 3 + 1] = (uchar)t1;
+            out[j * 3 + 2] = (uchar)t2;
+
+        }
+    }
+
+    out[0] = out[3];
+    out[1] = out[4];
+    out[2] = out[5];
+
+    out[3 * (width - 1)    ] = out[3 * (width - 2)    ];
+    out[3 * (width - 1) + 1] = out[3 * (width - 2) + 1];
+    out[3 * (width - 1) + 2] = out[3 * (width - 2) + 2];
+}
+
+//--------------------------------------
+//
 // Fluid kernels: RGB-to-YUV, YUV-to-RGB
 //
 //--------------------------------------
@@ -399,6 +868,112 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
         out[3*w    ] = saturate<uchar>((r + (1 << 2)) >> 3);
         out[3*w + 1] = saturate<uchar>((g + (1 << 2)) >> 3);
         out[3*w + 2] = saturate<uchar>((b + (1 << 2)) >> 3);
+    }
+}
+
+// Y' = 0.299*R' + 0.587*G' + 0.114*B'
+// U' = (B' - Y')*0.492
+// V' = (R' - Y')*0.877
+static const float coef[5] = {0.299f, 0.587f, 0.114f, 0.492f, 0.877f};
+
+static const ushort c0 = static_cast<ushort>(coef[0]*(1 << 16) + 0.5f);
+static const ushort c1 = static_cast<ushort>(coef[1]*(1 << 16) + 0.5f);
+static const ushort c2 = static_cast<ushort>(coef[2]*(1 << 16) + 0.5f);
+static const short c3 = static_cast<short>(coef[3]*(1 << 12) + 0.5f);
+static const short c4 = static_cast<short>(coef[4]*(1 << 12) + 0.5f);
+
+void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
+{
+    int w = 0, j = 0;
+
+    #if CV_SIMD128
+        const int vectorStep = 16;
+
+        for (; w <= 3 * (width - vectorStep); w += 3 * vectorStep)
+        {
+            v_uint8x16 r, g, b;
+            v_load_deinterleave(in + w, r, g, b);
+
+            // TODO: compute u and v  x2 less times
+            v_uint8x16 y, u, v;
+
+            v_uint16x8 rr1, gg1, bb1, rr2, gg2, bb2;
+            v_expand(r, rr1, rr2);
+            v_expand(g, gg1, gg2);
+            v_expand(b, bb1, bb2);
+
+            rr1 = rr1 << 7;
+            rr2 = rr2 << 7;
+            gg1 = gg1 << 7;
+            gg2 = gg2 << 7;
+            bb1 = bb1 << 7;
+            bb2 = bb2 << 7;
+
+            v_uint16x8 yy1, yy2;
+
+            yy1 = v_mul_hi(v_setall_u16(c0), rr1) +
+                  v_mul_hi(v_setall_u16(c1), gg1) +
+                  v_mul_hi(v_setall_u16(c2), bb1);
+
+            yy2 = v_mul_hi(v_setall_u16(c0), rr2) +
+                  v_mul_hi(v_setall_u16(c1), gg2) +
+                  v_mul_hi(v_setall_u16(c2), bb2);
+
+            v_int16x8 u1, u2, v1, v2;
+
+            u1 = v_mul_hi(v_setall_s16(c3), v_reinterpret_as_s16(bb1) - v_reinterpret_as_s16(yy1));
+            u2 = v_mul_hi(v_setall_s16(c3), v_reinterpret_as_s16(bb2) - v_reinterpret_as_s16(yy2));
+            v1 = v_mul_hi(v_setall_s16(c4), v_reinterpret_as_s16(rr1) - v_reinterpret_as_s16(yy1));
+            v2 = v_mul_hi(v_setall_s16(c4), v_reinterpret_as_s16(rr2) - v_reinterpret_as_s16(yy2));
+
+            y = v_pack((yy1 + v_setall_u16(1 << 6)) >> 7,
+                       (yy2 + v_setall_u16(1 << 6)) >> 7);
+            u = v_pack_u((u1 + v_setall_s16(257 << 2)) >> 3,
+                         (u2 + v_setall_s16(257 << 2)) >> 3);
+            v = v_pack_u((v1 + v_setall_s16(257 << 2)) >> 3,
+                         (v2 + v_setall_s16(257 << 2)) >> 3);
+
+            uint8_t ff = 0xff;
+            v_uint8x16 mask(ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0);
+            v_uint8x16 uu = u & mask;
+            v_uint8x16 vv = v & mask;
+            // extract even u and v
+            v_uint8x16 u_low = v_pack(v_reinterpret_as_u16(uu), v_reinterpret_as_u16(uu));
+            v_uint8x16 v_low = v_pack(v_reinterpret_as_u16(vv), v_reinterpret_as_u16(vv));
+
+            v_uint8x16 out1, out2;
+            v_zip(u_low, v_low, out1, out2);
+
+            v_store_interleave(out + j, out1, y);
+
+            // offset for output buffer
+            j += vectorStep * 2;
+        }
+    v_cleanup();
+    #endif
+
+    for (; w < width * 3; w += 6)
+    {
+        short r = in[w] << 7;
+        short g = in[w + 1] << 7;
+        short b = in[w + 2] << 7;
+        short y1 = (c0 * r + c1 * g + c2 * b) >> 16;
+        short u =  c3*(b - y1) >> 16;
+        short v =  c4*(r - y1) >> 16;
+
+        out[j]     = cv::saturate_cast<uchar>((u + (128 << 3) + (1 << 2)) >> 3); // u
+        out[j + 1] = cv::saturate_cast<uchar>((y1 + (1 << 6)) >> 7); // y1
+        out[j + 2] = cv::saturate_cast<uchar>((v + (128 << 3) + (1 << 2)) >> 3); // v
+
+        r = in[w + 3] << 7;
+        g = in[w + 4] << 7;
+        b = in[w + 5] << 7;
+        short y2 = (c0 * r + c1 * g + c2 * b) >> 16;
+
+        out[j + 3] = cv::saturate_cast<uchar>((y2 + (1 << 6)) >> 7); // y2
+
+        // offset for output buffer
+        j += 4;
     }
 }
 

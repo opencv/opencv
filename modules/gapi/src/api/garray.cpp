@@ -6,8 +6,8 @@
 
 
 #include "precomp.hpp"
-#include "opencv2/gapi/garray.hpp"
-#include "api/gapi_priv.hpp" // GOrigin
+#include <opencv2/gapi/garray.hpp>
+#include "api/gorigin.hpp"
 
 // cv::detail::GArrayU public implementation ///////////////////////////////////
 cv::detail::GArrayU::GArrayU()

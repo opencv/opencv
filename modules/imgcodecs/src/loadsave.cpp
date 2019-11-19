@@ -40,7 +40,7 @@
 //M*/
 
 //
-//  Loading and saving IPL images.
+//  Loading and saving images.
 //
 
 #include "precomp.hpp"
@@ -393,7 +393,6 @@ static void ApplyExifOrientation(const Mat& buf, Mat& img)
  *                      LOAD_MAT=2
  *                    }
  * @param[in] mat Reference to C++ Mat object (If LOAD_MAT)
- * @param[in] scale_denom Scale value
  *
 */
 static bool
@@ -459,11 +458,11 @@ imread_( const String& filename, int flags, Mat& mat )
     int type = decoder->type();
     if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
-        if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
+        if( (flags & IMREAD_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
-        if( (flags & CV_LOAD_IMAGE_COLOR) != 0 ||
-           ((flags & CV_LOAD_IMAGE_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
+        if( (flags & IMREAD_COLOR) != 0 ||
+           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
         else
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
@@ -558,11 +557,11 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         int type = decoder->type();
         if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
         {
-            if ((flags & CV_LOAD_IMAGE_ANYDEPTH) == 0)
+            if ((flags & IMREAD_ANYDEPTH) == 0)
                 type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
             if ((flags & CV_LOAD_IMAGE_COLOR) != 0 ||
-                ((flags & CV_LOAD_IMAGE_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
+                ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
                 type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
             else
                 type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
@@ -664,6 +663,8 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     for (size_t page = 0; page < img_vec.size(); page++)
     {
         Mat image = img_vec[page];
+        CV_Assert(!image.empty());
+
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
 
         Mat temp;
@@ -710,6 +711,9 @@ bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
+
+    CV_Assert(!_img.empty());
+
     std::vector<Mat> img_vec;
     if (_img.isMatVector() || _img.isUMatVector())
         _img.getMatVector(img_vec);
@@ -723,21 +727,25 @@ bool imwrite( const String& filename, InputArray _img,
 static bool
 imdecode_( const Mat& buf, int flags, Mat& mat )
 {
-    CV_Assert(!buf.empty() && buf.isContinuous());
+    CV_Assert(!buf.empty());
+    CV_Assert(buf.isContinuous());
+    CV_Assert(buf.checkVector(1, CV_8U) > 0);
+    Mat buf_row = buf.reshape(1, 1);  // decoders expects single row, avoid issues with vector columns
+
     String filename;
 
-    ImageDecoder decoder = findDecoder(buf);
+    ImageDecoder decoder = findDecoder(buf_row);
     if( !decoder )
         return 0;
 
-    if( !decoder->setSource(buf) )
+    if( !decoder->setSource(buf_row) )
     {
         filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
             return 0;
-        size_t bufSize = buf.cols*buf.rows*buf.elemSize();
-        if( fwrite( buf.ptr(), 1, bufSize, f ) != bufSize )
+        size_t bufSize = buf_row.total()*buf.elemSize();
+        if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
         {
             fclose( f );
             CV_Error( Error::StsError, "failed to write image data to temporary file" );
@@ -782,11 +790,11 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     int type = decoder->type();
     if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
-        if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
+        if( (flags & IMREAD_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
-        if( (flags & CV_LOAD_IMAGE_COLOR) != 0 ||
-           ((flags & CV_LOAD_IMAGE_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
+        if( (flags & IMREAD_COLOR) != 0 ||
+           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
         else
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
@@ -866,6 +874,7 @@ bool imencode( const String& ext, InputArray _image,
     CV_TRACE_FUNCTION();
 
     Mat image = _image.getMat();
+    CV_Assert(!image.empty());
 
     int channels = image.channels();
     CV_Assert( channels == 1 || channels == 3 || channels == 4 );

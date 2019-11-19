@@ -11,8 +11,8 @@
 #include <array>
 #include <type_traits>
 
-#include "opencv2/gapi/util/throw.hpp"
-#include "opencv2/gapi/util/util.hpp" // max_of_t
+#include <opencv2/gapi/util/throw.hpp>
+#include <opencv2/gapi/util/util.hpp> // max_of_t
 
 // A poor man's `variant` implementation, incompletely modeled against C++17 spec.
 namespace cv

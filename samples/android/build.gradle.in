@@ -62,5 +62,32 @@ gradle.afterProject { project ->
                 }
             }
         }
+
+        // (you still need to re-build OpenCV with debug information to debug it)
+        if (true) {
+            gradle.println("Override doNotStrip-debug for the project ${project.name}")
+            project.android {
+                buildTypes {
+                    debug {
+                        packagingOptions {
+                            doNotStrip '**/*.so'  // controlled by OpenCV CMake scripts
+                        }
+                    }
+                }
+            }
+        }
+        if (false || project.hasProperty("doNotStrip")) {
+            gradle.println("Override doNotStrip-release for the project ${project.name}")
+            project.android {
+                buildTypes {
+                    release {
+                        packagingOptions {
+                            doNotStrip '**/*.so'  // controlled by OpenCV CMake scripts
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }

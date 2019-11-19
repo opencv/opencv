@@ -46,8 +46,19 @@ if(";${CPU_BASELINE_FINAL};" MATCHES "SSE2"
   add_definitions(-DPNG_INTEL_SSE)
 endif()
 
+# set definitions and sources for MIPS
+if(";${CPU_BASELINE_FINAL};" MATCHES "MSA")
+    list(APPEND lib_srcs mips/mips_init.c mips/filter_msa_intrinsics.c)
+    add_definitions(-DPNG_MIPS_MSA_OPT=2)
+    ocv_warnings_disable(CMAKE_C_FLAGS -Wshadow)
+else()
+    add_definitions(-DPNG_MIPS_MSA_OPT=0)
+endif()
+
 if(PPC64LE OR PPC64)
-  if(ENABLE_VSX AND NOT PPC64)
+  # VSX3 features are backwards compatible
+  if(";${CPU_BASELINE_FINAL};" MATCHES "VSX.*"
+      AND NOT PPC64)
     list(APPEND lib_srcs powerpc/powerpc_init.c powerpc/filter_vsx_intrinsics.c)
     add_definitions(-DPNG_POWERPC_VSX_OPT=2)
   else()

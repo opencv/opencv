@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 #include <cassert>
-#include "opencv2/gapi/gcall.hpp"
+#include <opencv2/gapi/gcall.hpp>
 #include "api/gcall_priv.hpp"
 
 // GCall private implementation ////////////////////////////////////////////////
@@ -47,6 +47,11 @@ void cv::GCall::setArgs(std::vector<GArg> &&args)
 cv::GMat cv::GCall::yield(int output)
 {
     return cv::GMat(m_priv->m_node, output);
+}
+
+cv::GMatP cv::GCall::yieldP(int output)
+{
+    return cv::GMatP(m_priv->m_node, output);
 }
 
 cv::GScalar cv::GCall::yieldScalar(int output)

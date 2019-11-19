@@ -58,7 +58,7 @@ static const struct VideoBackendInfo builtin_backends[] =
 {
 #ifdef HAVE_FFMPEG
     DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, 0, cvCreateVideoWriter_FFMPEG_proxy),
-#elif defined(ENABLE_PLUGINS)
+#elif defined(ENABLE_PLUGINS) || defined(HAVE_FFMPEG_WRAPPER)
     DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
 #endif
 
@@ -70,6 +70,8 @@ static const struct VideoBackendInfo builtin_backends[] =
 
 #ifdef HAVE_MFX // Media SDK
     DECLARE_STATIC_BACKEND(CAP_INTEL_MFX, "INTEL_MFX", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, create_MFX_capture, 0, create_MFX_writer),
+#elif defined(ENABLE_PLUGINS)
+    DECLARE_DYNAMIC_BACKEND(CAP_INTEL_MFX, "INTEL_MFX", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
 #endif
 
     // Apple platform

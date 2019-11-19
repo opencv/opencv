@@ -7,8 +7,8 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/imgproc.hpp"
-#include "opencv2/gapi/ocl/imgproc.hpp"
+#include <opencv2/gapi/imgproc.hpp>
+#include <opencv2/gapi/ocl/imgproc.hpp>
 #include "backends/ocl/goclimgproc.hpp"
 
 

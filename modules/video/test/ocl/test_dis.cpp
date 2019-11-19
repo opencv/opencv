@@ -46,18 +46,13 @@
 
 namespace opencv_test { namespace {
 
-PARAM_TEST_CASE(OCL_DenseOpticalFlow_DIS, int)
-{
-    int preset;
+CV_ENUM(DIS_TestPresets, DISOpticalFlow::PRESET_ULTRAFAST, DISOpticalFlow::PRESET_FAST, DISOpticalFlow::PRESET_MEDIUM);
 
-    virtual void SetUp()
-    {
-        preset = GET_PARAM(0);
-    }
-};
+typedef ocl::TSTestWithParam<DIS_TestPresets> OCL_DenseOpticalFlow_DIS;
 
 OCL_TEST_P(OCL_DenseOpticalFlow_DIS, Mat)
 {
+    int preset = (int)GetParam();
     Mat frame1, frame2, GT;
 
     frame1 = imread(TS::ptr()->get_data_path() + "optflow/RubberWhale1.png");
@@ -68,15 +63,11 @@ OCL_TEST_P(OCL_DenseOpticalFlow_DIS, Mat)
     cvtColor(frame1, frame1, COLOR_BGR2GRAY);
     cvtColor(frame2, frame2, COLOR_BGR2GRAY);
 
-    Ptr<DenseOpticalFlow> algo;
-
-    // iterate over presets:
-    for (int i = 0; i < cvtest::ocl::test_loop_times; i++)
     {
         Mat flow;
         UMat ocl_flow;
 
-        algo = DISOpticalFlow::create(preset);
+        Ptr<DenseOpticalFlow> algo = DISOpticalFlow::create(preset);
         OCL_OFF(algo->calc(frame1, frame2, flow));
         OCL_ON(algo->calc(frame1, frame2, ocl_flow));
         ASSERT_EQ(flow.rows, ocl_flow.rows);
@@ -87,9 +78,7 @@ OCL_TEST_P(OCL_DenseOpticalFlow_DIS, Mat)
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Video, OCL_DenseOpticalFlow_DIS,
-                            Values(DISOpticalFlow::PRESET_ULTRAFAST,
-                                   DISOpticalFlow::PRESET_FAST,
-                                   DISOpticalFlow::PRESET_MEDIUM));
+                            DIS_TestPresets::all());
 
 }} // namespace
 

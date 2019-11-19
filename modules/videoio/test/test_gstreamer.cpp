@@ -73,4 +73,22 @@ Param test_data[] = {
 
 INSTANTIATE_TEST_CASE_P(videoio, videoio_gstreamer, testing::ValuesIn(test_data));
 
+TEST(Videoio_GStreamer, unsupported_pipeline)
+{
+    VideoCaptureAPIs apiPref = CAP_GSTREAMER;
+    if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    // could not link videoconvert0 to matroskamux0, matroskamux0 can't handle caps video/x-raw, format=(string)RGBA
+    std::string pipeline = "appsrc ! videoconvert ! video/x-raw, format=(string)RGBA ! matroskamux ! filesink location=test.mkv";
+    Size frame_size(640, 480);
+
+    VideoWriter writer;
+    EXPECT_NO_THROW(writer.open(pipeline, apiPref, 0/*fourcc*/, 30/*fps*/, frame_size, true));
+    EXPECT_FALSE(writer.isOpened());
+    // no frames
+    EXPECT_NO_THROW(writer.release());
+
+}
+
 } // namespace

@@ -32,8 +32,7 @@ template <> struct initializer<64>
         return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
         d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
         d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
-        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[50], d[51], d[52], d[53],
-        d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63]);
+        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63]);
     }
 };
 
@@ -604,12 +603,14 @@ template<typename R> struct TheTest
         return *this;
     }
 
-    TheTest & test_dot_prod()
+    TheTest & test_dotprod()
     {
         typedef typename V_RegTraits<R>::w_reg Rx2;
         typedef typename Rx2::lane_type w_type;
 
-        Data<R> dataA, dataB(2);
+        Data<R> dataA, dataB;
+        dataA += std::numeric_limits<LaneType>::max() - R::nlanes;
+        dataB += std::numeric_limits<LaneType>::min() + R::nlanes;
         R a = dataA, b = dataB;
 
         Data<Rx2> dataC;
@@ -622,12 +623,95 @@ template<typename R> struct TheTest
                   resE = v_dotprod(a, b, c);
 
         const int n = R::nlanes / 2;
+        w_type sumAB = 0, sumABC = 0, tmp_sum;
         for (int i = 0; i < n; ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1], resD[i]);
-            EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1] + dataC[i], resE[i]);
+
+            tmp_sum = (w_type)dataA[i*2] * (w_type)dataB[i*2] +
+                      (w_type)dataA[i*2 + 1] * (w_type)dataB[i*2 + 1];
+            sumAB  += tmp_sum;
+            EXPECT_EQ(tmp_sum, resD[i]);
+
+            tmp_sum = tmp_sum + dataC[i];
+            sumABC += tmp_sum;
+            EXPECT_EQ(tmp_sum, resE[i]);
         }
+
+        w_type resF = v_reduce_sum(v_dotprod_fast(a, b)),
+               resG = v_reduce_sum(v_dotprod_fast(a, b, c));
+        EXPECT_EQ(sumAB,  resF);
+        EXPECT_EQ(sumABC, resG);
+        return *this;
+    }
+
+    TheTest & test_dotprod_expand()
+    {
+        typedef typename V_RegTraits<R>::q_reg Rx4;
+        typedef typename Rx4::lane_type l4_type;
+
+        Data<R> dataA, dataB;
+        dataA += std::numeric_limits<LaneType>::max() - R::nlanes;
+        dataB += std::numeric_limits<LaneType>::min() + R::nlanes;
+        R a = dataA, b = dataB;
+
+        Data<Rx4> dataC;
+        Rx4 c = dataC;
+
+        Data<Rx4> resD = v_dotprod_expand(a, b),
+                  resE = v_dotprod_expand(a, b, c);
+
+        l4_type sumAB = 0, sumABC = 0, tmp_sum;
+        for (int i = 0; i < Rx4::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            tmp_sum  = (l4_type)dataA[i*4]     * (l4_type)dataB[i*4]     +
+                       (l4_type)dataA[i*4 + 1] * (l4_type)dataB[i*4 + 1] +
+                       (l4_type)dataA[i*4 + 2] * (l4_type)dataB[i*4 + 2] +
+                       (l4_type)dataA[i*4 + 3] * (l4_type)dataB[i*4 + 3];
+            sumAB  += tmp_sum;
+            EXPECT_EQ(tmp_sum, resD[i]);
+
+            tmp_sum = tmp_sum + dataC[i];
+            sumABC += tmp_sum;
+            EXPECT_EQ(tmp_sum, resE[i]);
+        }
+
+        l4_type resF = v_reduce_sum(v_dotprod_expand_fast(a, b)),
+                resG = v_reduce_sum(v_dotprod_expand_fast(a, b, c));
+        EXPECT_EQ(sumAB,  resF);
+        EXPECT_EQ(sumABC, resG);
+
+        return *this;
+    }
+
+    TheTest & test_dotprod_expand_f64()
+    {
+    #if CV_SIMD_64F
+        Data<R> dataA, dataB;
+        dataA += std::numeric_limits<LaneType>::max() - R::nlanes;
+        dataB += std::numeric_limits<LaneType>::min();
+        R a = dataA, b = dataB;
+
+        Data<v_float64> dataC;
+        v_float64 c = dataC;
+
+        Data<v_float64> resA = v_dotprod_expand(a, a),
+                        resB = v_dotprod_expand(b, b),
+                        resC = v_dotprod_expand(a, b, c);
+
+        const int n = R::nlanes / 2;
+        for (int i = 0; i < n; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ((double)dataA[i*2]     * (double)dataA[i*2] +
+                      (double)dataA[i*2 + 1] * (double)dataA[i*2  + 1], resA[i]);
+            EXPECT_EQ((double)dataB[i*2]     * (double)dataB[i*2] +
+                      (double)dataB[i*2 + 1] * (double)dataB[i*2  + 1], resB[i]);
+            EXPECT_EQ((double)dataA[i*2]     * (double)dataB[i*2] +
+                      (double)dataA[i*2 + 1] * (double)dataB[i*2  + 1] + dataC[i], resC[i]);
+        }
+    #endif
         return *this;
     }
 
@@ -660,7 +744,7 @@ template<typename R> struct TheTest
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_COMPARE_EQ((float)std::sqrt(dataA[i]), (float)resB[i]);
-            EXPECT_COMPARE_EQ(1/(float)std::sqrt(dataA[i]), (float)resC[i]);
+            EXPECT_COMPARE_EQ((float)(1/std::sqrt(dataA[i])), (float)resC[i]);
             EXPECT_COMPARE_EQ((float)abs(dataA[i]), (float)resE[i]);
         }
 
@@ -686,18 +770,24 @@ template<typename R> struct TheTest
 
     TheTest & test_popcount()
     {
+        typedef typename V_RegTraits<R>::u_reg Ru;
         static unsigned popcountTable[] = {
-            0, 1, 2, 4, 5, 7, 9, 12, 13, 15, 17, 20, 22, 25, 28, 32, 33,
-            35, 37, 40, 42, 45, 48, 52, 54, 57, 60, 64, 67, 71, 75, 80, 81,
-            83, 85, 88, 90, 93, 96, 100, 102, 105, 108, 112, 115, 119, 123,
-            128, 130, 133, 136, 140, 143, 147, 151, 156, 159, 163, 167, 172,
-            176, 181, 186, 192, 193
+            0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, //0x00-0x0f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x10-0x1f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x20-0x2f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x30-0x3f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x40-0x4f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x50-0x5f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x60-0x6f
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0x70-0x7f
+            1                                               //0x80
         };
         Data<R> dataA;
         R a = dataA;
 
-        unsigned resB = (unsigned)v_reduce_sum(v_popcount(a));
-        EXPECT_EQ(popcountTable[R::nlanes], resB);
+        Data<Ru> resB = v_popcount(a);
+        for (int i = 0; i < Ru::nlanes; ++i)
+            EXPECT_EQ(popcountTable[i + 1], resB[i]);
 
         return *this;
     }
@@ -767,6 +857,18 @@ template<typename R> struct TheTest
         EXPECT_EQ((LaneType)1, v_reduce_min(a));
         EXPECT_EQ((LaneType)R::nlanes, v_reduce_max(a));
         EXPECT_EQ((LaneType)((1 + R::nlanes)*R::nlanes/2), v_reduce_sum(a));
+        dataA[0] += R::nlanes;
+        R an = dataA;
+        EXPECT_EQ((LaneType)2, v_reduce_min(an));
+        return *this;
+    }
+
+    TheTest & test_reduce_sad()
+    {
+        Data<R> dataA, dataB(R::nlanes/2);
+        R a = dataA;
+        R b = dataB;
+        EXPECT_EQ((unsigned)(R::nlanes*R::nlanes/4), v_reduce_sad(a, b));
         return *this;
     }
 
@@ -787,23 +889,29 @@ template<typename R> struct TheTest
         all1s;
         all1s.ui = (uint_type)-1;
         LaneType mask_one = all1s.l;
+        dataB[R::nlanes - 1] = mask_one;
+        R l = dataB;
         dataB[1] = mask_one;
         dataB[R::nlanes / 2] = mask_one;
-        dataB[R::nlanes - 1] = mask_one;
         dataC *= (LaneType)-1;
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
+        dataC[R::nlanes - 1] = 0;
+        R nl = dataC;
 
-        int m = v_signmask(a);
-        EXPECT_EQ(2, m);
+        EXPECT_EQ(2, v_signmask(a));
+#if CV_SIMD_WIDTH <= 32
+        EXPECT_EQ(2 | (1 << (R::nlanes / 2)) | (1 << (R::nlanes - 1)), v_signmask(b));
+#endif
 
         EXPECT_EQ(false, v_check_all(a));
         EXPECT_EQ(false, v_check_all(b));
         EXPECT_EQ(true, v_check_all(c));
+        EXPECT_EQ(false, v_check_all(nl));
 
         EXPECT_EQ(true, v_check_any(a));
         EXPECT_EQ(true, v_check_any(b));
         EXPECT_EQ(true, v_check_any(c));
-
+        EXPECT_EQ(true, v_check_any(l));
         R f = v_select(b, d, e);
         Data<R> resF = f;
         for (int i = 0; i < R::nlanes; ++i)
@@ -1142,6 +1250,29 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_cvt64_double()
+    {
+#if CV_SIMD_64F
+        Data<R> dataA(std::numeric_limits<LaneType>::max()),
+                dataB(std::numeric_limits<LaneType>::min());
+        dataB += R::nlanes;
+
+        R a = dataA, b = dataB;
+        v_float64 c = v_cvt_f64(a), d = v_cvt_f64(b);
+
+        Data<v_float64> resC = c;
+        Data<v_float64> resD = d;
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ((double)dataA[i], resC[i]);
+            EXPECT_EQ((double)dataB[i], resD[i]);
+        }
+#endif
+        return *this;
+    }
+
     TheTest & test_matmul()
     {
         Data<R> dataV, dataA, dataB, dataC, dataD;
@@ -1318,8 +1449,10 @@ void test_hal_intrin_uint8()
         .test_mul_expand()
         .test_cmp()
         .test_logic()
+        .test_dotprod_expand()
         .test_min_max()
         .test_absdiff()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
@@ -1354,10 +1487,12 @@ void test_hal_intrin_int8()
         .test_mul_expand()
         .test_cmp()
         .test_logic()
+        .test_dotprod_expand()
         .test_min_max()
         .test_absdiff()
         .test_absdiffs()
         .test_abs()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
@@ -1383,10 +1518,12 @@ void test_hal_intrin_uint16()
         .test_cmp()
         .test_shift<1>()
         .test_shift<8>()
+        .test_dotprod_expand()
         .test_logic()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
@@ -1411,13 +1548,15 @@ void test_hal_intrin_int16()
         .test_cmp()
         .test_shift<1>()
         .test_shift<8>()
-        .test_dot_prod()
+        .test_dotprod()
+        .test_dotprod_expand()
         .test_logic()
         .test_min_max()
         .test_absdiff()
         .test_absdiffs()
         .test_abs()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
@@ -1446,6 +1585,7 @@ void test_hal_intrin_uint32()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
@@ -1469,10 +1609,13 @@ void test_hal_intrin_int32()
         .test_cmp()
         .test_popcount()
         .test_shift<1>().test_shift<8>()
+        .test_dotprod()
+        .test_dotprod_expand_f64()
         .test_logic()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
         .test_unpack()
@@ -1509,6 +1652,7 @@ void test_hal_intrin_int64()
         .test_logic()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
+        .test_cvt64_double()
         ;
 }
 
@@ -1528,6 +1672,7 @@ void test_hal_intrin_float32()
         .test_min_max()
         .test_float_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_unpack()
         .test_float_math()

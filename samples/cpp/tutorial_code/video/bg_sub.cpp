@@ -16,9 +16,9 @@ using namespace cv;
 using namespace std;
 
 const char* params
-    = "{ help h         |                   | Print usage }"
-      "{ input          | ../data/vtest.avi | Path to a video or a sequence of image }"
-      "{ algo           | MOG2              | Background subtraction method (KNN, MOG2) }";
+    = "{ help h         |           | Print usage }"
+      "{ input          | vtest.avi | Path to a video or a sequence of image }"
+      "{ algo           | MOG2      | Background subtraction method (KNN, MOG2) }";
 
 int main(int argc, char* argv[])
 {
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
     //! [create]
 
     //! [capture]
-    VideoCapture capture(parser.get<String>("input"));
+    VideoCapture capture( samples::findFile( parser.get<String>("input") ) );
     if (!capture.isOpened()){
         //error in opening the video input
         cerr << "Unable to open: " << parser.get<String>("input") << endl;

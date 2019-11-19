@@ -257,12 +257,12 @@ public:
         }
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        if (input->dims.size() == 4)
+        std::vector<size_t> dims = input->getDims();
+        if (dims.size() == 4)
         {
             InferenceEngine::Builder::NormalizeLayer ieLayer(name);
 
@@ -271,17 +271,18 @@ public:
             ieLayer.setEpsilon(epsilon);
 
             InferenceEngine::Builder::Layer l = ieLayer;
-            const int numChannels = input->dims[2];  // NOTE: input->dims are reversed (whcn)
+            const int numChannels = dims[1];
             InferenceEngine::Blob::Ptr weights;
             if (blobs.empty())
             {
-                auto onesBlob = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                         InferenceEngine::Layout::C,
-                                                                         {(size_t)numChannels});
-                onesBlob->allocate();
-                std::vector<float> ones(numChannels, 1);
-                onesBlob->set(ones);
-                weights = onesBlob;
+                weights = InferenceEngine::make_shared_blob<float>({
+                              InferenceEngine::Precision::FP32,
+                              {(size_t)numChannels}, InferenceEngine::Layout::C
+                          });
+                weights->allocate();
+
+                Mat weightsMat = infEngineBlobToMat(weights).reshape(1, numChannels);
+                Mat(numChannels, 1, CV_32F, Scalar(1)).copyTo(weightsMat);
                 l.getParameters()["channel_shared"] = false;
             }
             else
@@ -290,11 +291,7 @@ public:
                 weights = wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C);
                 l.getParameters()["channel_shared"] = blobs[0].total() == 1;
             }
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
-            l.getParameters()["weights"] = weights;
-#else
-            l.addConstantData("weights", weights);
-#endif
+            addConstantData("weights", weights, l);
             l.getParameters()["across_spatial"] = acrossSpatial;
             return Ptr<BackendNode>(new InfEngineBackendNode(l));
         }
@@ -308,54 +305,8 @@ public:
 
             return Ptr<BackendNode>(new InfEngineBackendNode(l));
         }
-#else
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.precision = InferenceEngine::Precision::FP32;
-
-        if (input->dims.size() == 4)
-        {
-            const int numChannels = input->dims[2];  // NOTE: input->dims are reversed (whcn)
-
-            lp.type = "Normalize";
-            std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-            if (blobs.empty())
-            {
-                auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                        InferenceEngine::Layout::C,
-                                                                        {(size_t)numChannels});
-                weights->allocate();
-                std::vector<float> ones(numChannels, 1);
-                weights->set(ones);
-                ieLayer->blobs["weights"] = weights;
-                ieLayer->params["channel_shared"] = "0";
-            }
-            else
-            {
-                CV_Assert(numChannels == blobs[0].total());
-                ieLayer->blobs["weights"] = wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C);
-                ieLayer->params["channel_shared"] = blobs[0].total() == 1 ? "1" : "0";
-            }
-            ieLayer->params["eps"] = format("%f", epsilon);
-            ieLayer->params["across_spatial"] = acrossSpatial ? "1" : "0";
-            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-        }
-        else
-        {
-            InferenceEngine::LayerParams lp;
-            lp.name = name;
-            lp.type = "GRN";
-            lp.precision = InferenceEngine::Precision::FP32;
-            std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-            ieLayer->params["bias"] = format("%f", epsilon);
-            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-        }
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
 private:
     int startAxis, endAxis;

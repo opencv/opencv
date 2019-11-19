@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 
-import os, sys, subprocess, argparse, shutil, glob, re
+import os, sys
+import argparse
+import glob
+import re
+import shutil
+import subprocess
+import time
+
 import logging as log
 import xml.etree.ElementTree as ET
 
@@ -118,7 +125,7 @@ class ABI:
             self.cmake_vars['ANDROID_TOOLCHAIN_NAME'] = toolchain
         else:
             self.cmake_vars['ANDROID_TOOLCHAIN'] = 'clang'
-            self.cmake_vars['ANDROID_STL'] = 'c++_static'
+            self.cmake_vars['ANDROID_STL'] = 'c++_shared'
         if ndk_api_level:
             self.cmake_vars['ANDROID_NATIVE_API_LEVEL'] = ndk_api_level
         self.cmake_vars.update(cmake_vars)
@@ -143,6 +150,8 @@ class Builder:
         self.cmake_path = self.get_cmake()
         self.ninja_path = self.get_ninja()
         self.debug = True if config.debug else False
+        self.debug_info = True if config.debug_info else False
+        self.no_samples_build = True if config.no_samples_build else False
 
     def get_cmake(self):
         if not self.config.use_android_buildtools and check_executable(['cmake', '--version']):
@@ -209,7 +218,7 @@ class Builder:
             BUILD_TESTS="OFF",
             BUILD_PERF_TESTS="OFF",
             BUILD_DOCS="OFF",
-            BUILD_ANDROID_EXAMPLES="ON",
+            BUILD_ANDROID_EXAMPLES=("OFF" if self.no_samples_build else "ON"),
             INSTALL_ANDROID_EXAMPLES="ON",
         )
         if self.ninja_path != 'ninja':
@@ -217,6 +226,8 @@ class Builder:
 
         if self.debug:
             cmake_vars['CMAKE_BUILD_TYPE'] = "Debug"
+
+        if self.debug_info:  # Release with debug info
             cmake_vars['BUILD_WITH_DEBUG_INFO'] = "ON"
 
         if self.config.extra_modules_path is not None:
@@ -233,8 +244,11 @@ class Builder:
         execute(cmd)
         # full parallelism for C++ compilation tasks
         execute([self.ninja_path, "opencv_modules"])
-        # limit parallelism for Gradle steps (avoid huge memory consumption)
-        execute([self.ninja_path, '-j3', "install" if self.debug else "install/strip"])
+        # limit parallelism for building samples (avoid huge memory consumption)
+        if self.no_samples_build:
+            execute([self.ninja_path, "install" if (self.debug_info or self.debug) else "install/strip"])
+        else:
+            execute([self.ninja_path, "-j1" if (self.debug_info or self.debug) else "-j3", "install" if (self.debug_info or self.debug) else "install/strip"])
 
     def build_javadoc(self):
         classpaths = []
@@ -242,14 +256,34 @@ class Builder:
             for f in files:
                 if f == "android.jar" or f == "annotations.jar":
                     classpaths.append(os.path.join(dir, f))
+        srcdir = os.path.join(self.resultdest, 'sdk', 'java', 'src')
+        dstdir = self.docdest
+        # synchronize with modules/java/jar/build.xml.in
+        shutil.copy2(os.path.join(SCRIPT_DIR, '../../doc/mymath.js'), dstdir)
         cmd = [
             "javadoc",
-            "-header", "OpenCV %s" % self.opencv_version,
+            '-windowtitle', 'OpenCV %s Java documentation' % self.opencv_version,
+            '-doctitle', 'OpenCV Java documentation (%s)' % self.opencv_version,
             "-nodeprecated",
-            "-footer", '<a href="http://docs.opencv.org">OpenCV %s Documentation</a>' % self.opencv_version,
             "-public",
-            '-sourcepath', os.path.join(self.resultdest, 'sdk', 'java', 'src'),
-            "-d", self.docdest,
+            '-sourcepath', srcdir,
+            '-encoding', 'UTF-8',
+            '-charset', 'UTF-8',
+            '-docencoding', 'UTF-8',
+            '--allow-script-in-comments',
+            '-header',
+'''
+            <script>
+              var url = window.location.href;
+              var pos = url.lastIndexOf('/javadoc/');
+              url = pos >= 0 ? (url.substring(0, pos) + '/javadoc/mymath.js') : (window.location.origin + '/mymath.js');
+              var script = document.createElement('script');
+              script.src = '%s/MathJax.js?config=TeX-AMS-MML_HTMLorMML,' + url;
+              document.getElementsByTagName('head')[0].appendChild(script);
+            </script>
+''' % 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0',
+            '-bottom', 'Generated on %s / OpenCV %s' % (time.strftime("%Y-%m-%d %H:%M:%S"), self.opencv_version),
+            "-d", dstdir,
             "-classpath", ":".join(classpaths),
             '-subpackages', 'org.opencv',
         ]
@@ -291,7 +325,9 @@ if __name__ == "__main__":
     parser.add_argument('--no_ccache', action="store_true", help="Do not use ccache during library build")
     parser.add_argument('--force_copy', action="store_true", help="Do not use file move during library build (useful for debug)")
     parser.add_argument('--force_opencv_toolchain', action="store_true", help="Do not use toolchain from Android NDK")
-    parser.add_argument('--debug', action="store_true", help="Build for debug")
+    parser.add_argument('--debug', action="store_true", help="Build 'Debug' binaries (CMAKE_BUILD_TYPE=Debug)")
+    parser.add_argument('--debug_info', action="store_true", help="Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)")
+    parser.add_argument('--no_samples_build', action="store_true", help="Do not build samples (speeds up build)")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)

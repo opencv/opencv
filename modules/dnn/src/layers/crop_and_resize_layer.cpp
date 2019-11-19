@@ -14,6 +14,7 @@ class CropAndResizeLayerImpl CV_FINAL : public CropAndResizeLayer
 public:
     CropAndResizeLayerImpl(const LayerParams& params)
     {
+        setParamsFrom(params);
         CV_Assert_N(params.has("width"), params.has("height"));
         outWidth = params.get<float>("width");
         outHeight = params.get<float>("height");

@@ -10,7 +10,7 @@
 
 
 #include "../../test/common/gapi_tests_common.hpp"
-#include "opencv2/gapi/core.hpp"
+#include <opencv2/gapi/core.hpp>
 
 namespace opencv_test
 {
@@ -64,6 +64,7 @@ namespace opencv_test
     class RemapPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class FlipPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class CropPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::Rect, cv::GCompileArgs>> {};
+    class CopyPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class ConcatHorPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class ConcatHorVecPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class ConcatVertPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};

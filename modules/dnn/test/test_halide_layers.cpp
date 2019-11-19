@@ -34,6 +34,11 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool 
 
     double l1, lInf;
     DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+#if 0
+    std::cout << "l1=" << l1 << "  lInf=" << lInf << std::endl;
+    std::cout << outputDefault.reshape(1, outputDefault.total()).t() << std::endl;
+    std::cout << outputHalide.reshape(1, outputDefault.total()).t() << std::endl;
+#endif
     normAssert(outputDefault, outputHalide, "", l1, lInf);
 }
 
@@ -159,23 +164,13 @@ TEST_P(Deconvolution, Accuracy)
     Backend backendId = get<0>(get<7>(GetParam()));
     Target targetId = get<1>(get<7>(GetParam()));
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && (targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_MYRIAD) &&
-        dilation.width == 2 && dilation.height == 2)
-        throw SkipTestException("");
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018040000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_CPU
-            && hasBias && group != 1)
-        throw SkipTestException("Test is disabled for OpenVINO 2018R4");
-#endif
-
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
             && inChannels == 6 && outChannels == 4 && group == 1
             && kernel == Size(1, 3) && pad == Size(1, 0)
             && stride == Size(1, 1) && dilation == Size(1, 1))
-        throw SkipTestException("Test is disabled");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
 
     int sz[] = {inChannels, outChannels / group, kernel.height, kernel.width};
@@ -216,7 +211,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Deconvolution, Combine(
 /*in size*/  Values(Size(5, 6)),
 /*kernel*/   Values(Size(3, 1), Size(1, 3)),
 /*pad*/      Values(Size(1, 0), Size(0, 1)),
-/*dilation*/ Values(Size(1, 1), Size(2, 2)),
+/*dilation*/ Values(Size(1, 1)),
 /*stride, adj. pad*/ Values(Vec4i(1,1, 0,0), Vec4i(2,2, 1,0), Vec4i(1,2, 0,1)),
 /*has bias*/ Bool(),
              dnnBackendsAndTargetsWithHalide()
@@ -241,7 +236,7 @@ TEST_P(LRN, Accuracy)
 
     if ((inSize.width == 5 || inSize.height == 5) && targetId == DNN_TARGET_MYRIAD &&
         nrmType == "ACROSS_CHANNELS")
-        throw SkipTestException("This test case is disabled");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 
     LayerParams lp;
     lp.set("norm_region", nrmType);
@@ -282,17 +277,11 @@ TEST_P(AvePooling, Accuracy)
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2018050000)
+#if defined(INF_ENGINE_RELEASE)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
             && kernel == Size(1, 1) && (stride == Size(1, 1) || stride == Size(2, 2)))
-        throw SkipTestException("Test is disabled for MyriadX target");
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2018040000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
-        stride == Size(3, 2) && kernel == Size(3, 3) && outSize != Size(1, 1))
-        throw SkipTestException("Test is fixed in OpenVINO 2018R4");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
 
     const int inWidth = (outSize.width - 1) * stride.width + kernel.width;
@@ -340,7 +329,7 @@ TEST_P(MaxPooling, Accuracy)
             && (stride == Size(1, 1) || stride == Size(2, 2))
             && (pad == Size(0, 1) || pad == Size(1, 1))
     )
-        throw SkipTestException("Test is disabled in OpenVINO <= 2018R5");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
 #endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
@@ -348,7 +337,7 @@ TEST_P(MaxPooling, Accuracy)
             && (kernel == Size(2, 2) || kernel == Size(3, 2))
             && stride == Size(1, 1) && (pad == Size(0, 0) || pad == Size(0, 1))
     )
-        throw SkipTestException("Problems with output dimension in OpenVINO 2018R5");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
 #endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
@@ -357,7 +346,7 @@ TEST_P(MaxPooling, Accuracy)
             && (stride == Size(1, 1) || stride == Size(2, 2))
             && (pad == Size(0, 1) || pad == Size(1, 1))
     )
-        throw SkipTestException("Test is disabled for MyriadX target");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);
 #endif
 
     LayerParams lp;
@@ -397,8 +386,11 @@ TEST_P(FullyConnected, Accuracy)
     bool hasBias = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && (targetId == DNN_TARGET_OPENCL_FP16 ||
+       (targetId == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X))) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+    }
 
     Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32F);
     randu(weights, -1.0f, 1.0f);
@@ -456,7 +448,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, SoftMax, Combine(
 TEST_P(Test_Halide_layers, MaxPoolUnpool)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     LayerParams pool;
     pool.set("pool", "max");
@@ -561,11 +553,10 @@ TEST_P(ReLU, Accuracy)
     float negativeSlope = get<0>(GetParam());
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE
-            && negativeSlope < 0
-    )
-        throw SkipTestException("Test is disabled");
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD && negativeSlope < 0)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_2019R3, CV_TEST_TAG_DNN_SKIP_IE_2019R2, CV_TEST_TAG_DNN_SKIP_IE);
 #endif
 
     LayerParams lp;
@@ -589,13 +580,6 @@ TEST_P(NoParamActivation, Accuracy)
     LayerParams lp;
     lp.type = get<0>(GetParam());
     lp.name = "testLayer";
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE
-            && lp.type == "AbsVal"
-    )
-        throw SkipTestException("Test is disabled");
-#endif
-
     testInPlaceActivation(lp, backendId, targetId);
 }
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, NoParamActivation, Combine(
@@ -685,14 +669,14 @@ TEST_P(Concat, Accuracy)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
             && inSize == Vec3i(1, 4, 5) && numChannels == Vec3i(1, 6, 2)
     )
-        throw SkipTestException("Test is disabled for Myriad target");  // crash
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);  // crash
 #endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_CPU
             && inSize == Vec3i(1, 4, 5) && numChannels == Vec3i(1, 6, 2)
     )
-        throw SkipTestException("Test is disabled for DLIE/CPU target");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);  // TODO: IE_CPU
 #endif
 
     Net net;
@@ -766,12 +750,18 @@ TEST_P(Eltwise, Accuracy)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
         inSize == Vec3i(1, 4, 5))
-        throw SkipTestException("Test is disabled for Myriad target");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
 #endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && numConv > 1)
-        throw SkipTestException("Test is disabled for DLIE backend");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);
+#endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_OPENCL &&
+        op == "sum" && numConv == 1 && !weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE);
 #endif
 
     Net net;

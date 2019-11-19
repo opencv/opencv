@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_FLUID_KERNEL_HPP
@@ -99,12 +99,36 @@ struct GFluidOutputRois
     std::vector<cv::gapi::own::Rect> rois;
 };
 
+struct GFluidParallelOutputRois
+{
+    std::vector<GFluidOutputRois> parallel_rois;
+};
+
+struct GFluidParallelFor
+{
+    //this function accepts:
+    // - size of the "parallel" range as the first argument
+    // - and a function to be called on the range items, designated by item index
+    std::function<void(std::size_t size, std::function<void(std::size_t index)>)> parallel_for;
+};
+
 namespace detail
 {
 template<> struct CompileArgTag<GFluidOutputRois>
 {
     static const char* tag() { return "gapi.fluid.outputRois"; }
 };
+
+template<> struct CompileArgTag<GFluidParallelFor>
+{
+    static const char* tag() { return "gapi.fluid.parallelFor"; }
+};
+
+template<> struct CompileArgTag<GFluidParallelOutputRois>
+{
+    static const char* tag() { return "gapi.fluid.parallelOutputRois"; }
+};
+
 } // namespace detail
 
 namespace detail
@@ -133,6 +157,15 @@ template<> struct fluid_get_in<cv::GScalar>
     }
 #endif // !defined(GAPI_STANDALONE)
 };
+
+template<typename U> struct fluid_get_in<cv::GArray<U>>
+{
+    static const std::vector<U>& get(const cv::GArgs &in_args, int idx)
+    {
+        return in_args.at(idx).unsafe_get<cv::detail::VectorRef>().rref<U>();
+    }
+};
+
 template<class T> struct fluid_get_in
 {
     static const T& get(const cv::GArgs &in_args, int idx)
@@ -229,6 +262,7 @@ template<typename Impl, typename... Ins, typename... Outs, bool UseScratch>
 struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch>
 {
     static_assert(all_satisfy<is_gmat_type, Outs...>::value, "return type must be GMat");
+    static_assert(contains<GMat, Ins...>::value, "input must contain at least one GMat");
 
     // Execution dispatcher ////////////////////////////////////////////////////
     template<int... IIs, int... OIs>
@@ -275,7 +309,7 @@ struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch
 
 
 template<class Impl, class K, bool UseScratch>
-class GFluidKernelImpl
+class GFluidKernelImpl : public cv::detail::KernelTag
 {
     static const int LPI = 1;
     static const auto Kind = GFluidKernel::Kind::Filter;

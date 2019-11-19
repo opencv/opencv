@@ -7,10 +7,10 @@
 
 #include "test_precomp.hpp"
 
-#include "opencv2/gapi/core.hpp"
+#include <opencv2/gapi/core.hpp>
 
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
 
  // FIXME: move these tests with priv() to internal suite
 #include "backends/fluid/gfluidbuffer_priv.hpp"
@@ -241,6 +241,26 @@ TEST(Fluid, Sum_2_Mats_And_Scalar)
 
     cc(cv::gin(in_mat1, in_s, in_mat2), cv::gout(out_mat));
     ref_mat = in_mat1 + in_mat2 + in_s;
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+}
+
+TEST(Fluid, EqualizeHist)
+{
+    cv::GMat in, out;
+    cv::GComputation c(cv::GIn(in), cv::GOut(TEqualizeHist::on(in, TCalcHist::on(in))));
+
+    cv::Mat in_mat(320, 480, CV_8UC1),
+            out_mat(320, 480, CV_8UC1),
+            ref_mat(320, 480, CV_8UC1);
+
+    cv::randu(in_mat, 200, 240);
+
+    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage));
+
+    cc(cv::gin(in_mat), cv::gout(out_mat));
+
+    cv::equalizeHist(in_mat, ref_mat);
+
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
@@ -752,7 +772,8 @@ INSTANTIATE_TEST_CASE_P(Fluid, NV12RoiTest,
                               ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0, 710, 1920, 270})
                               ));
 
-TEST(Fluid, UnusedNodeTest) {
+TEST(Fluid, UnusedNodeOutputCompileTest)
+{
     cv::GMat in;
     cv::GMat a, b, c, d;
     std::tie(a, b, c, d) = cv::gapi::split4(in);
@@ -765,6 +786,121 @@ TEST(Fluid, UnusedNodeTest) {
 
     ASSERT_NO_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat),
         cv::compile_args(cv::gapi::core::fluid::kernels())));
+}
+
+TEST(Fluid, UnusedNodeOutputReshapeTest)
+{
+    const auto test_size = cv::Size(8, 8);
+    const auto get_compile_args =
+        [] () { return cv::compile_args(cv::gapi::core::fluid::kernels()); };
+
+    cv::GMat in;
+    cv::GMat a, b, c, d;
+    std::tie(a, b, c, d) = cv::gapi::split4(in);
+    cv::GMat out = cv::gapi::resize(cv::gapi::merge3(a, b, c), test_size, 0.0, 0.0,
+        cv::INTER_LINEAR);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    cv::Mat in_mat(test_size, CV_8UC4);
+    cv::Mat out_mat(test_size, CV_8UC3);
+
+    cv::GCompiled compiled;
+    ASSERT_NO_THROW(compiled = comp.compile(descr_of(in_mat), get_compile_args()));
+
+    in_mat = cv::Mat(test_size * 2, CV_8UC4);
+    ASSERT_TRUE(compiled.canReshape());
+    ASSERT_NO_THROW(compiled.reshape(descr_of(gin(in_mat)), get_compile_args()));
+    ASSERT_NO_THROW(compiled(in_mat, out_mat));
+}
+
+TEST(Fluid, InvalidROIs)
+{
+    cv::GMat in;
+    cv::GMat out = cv::gapi::add(in, in);
+
+    cv::Mat in_mat(cv::Size(8, 8), CV_8UC3);
+    cv::Mat out_mat = in_mat.clone();
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(100));
+
+    std::vector<cv::Rect> invalid_rois =
+    {
+        cv::Rect(1, 0, 0, 0),
+        cv::Rect(0, 1, 0, 0),
+        cv::Rect(0, 0, 1, 0),
+        cv::Rect(0, 0, 0, 1),
+        cv::Rect(0, 0, out_mat.cols, 0),
+        cv::Rect(0, 0, 0, out_mat.rows),
+        cv::Rect(0, out_mat.rows, out_mat.cols, out_mat.rows),
+        cv::Rect(out_mat.cols, 0, out_mat.cols, out_mat.rows),
+    };
+
+    const auto compile_args = [] (cv::Rect roi) {
+        return cv::compile_args(cv::gapi::core::fluid::kernels(), GFluidOutputRois{{to_own(roi)}});
+    };
+
+    for (const auto& roi : invalid_rois)
+    {
+        cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+        EXPECT_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat), compile_args(roi)),
+            std::exception);
+    }
+}
+
+
+namespace
+{
+#if defined(__linux__)
+uint64_t currMemoryConsumption()
+{
+    // check self-state via /proc information
+    constexpr const char stat_file_path[] = "/proc/self/statm";
+    std::ifstream proc_stat(stat_file_path);
+    if (!proc_stat.is_open() || !proc_stat.good())
+    {
+        CV_LOG_WARNING(NULL, "Failed to open stat file: " << stat_file_path);
+        return static_cast<uint64_t>(0);
+    }
+    std::string stat_line;
+    std::getline(proc_stat, stat_line);
+    uint64_t unused, rss;
+    // using resident set size
+    std::istringstream(stat_line) >> unused >> rss;
+    CV_Assert(rss != 0);
+    return rss;
+}
+#else
+// FIXME: implement this part (at least for Windows?), right now it's enough to check Linux only
+uint64_t currMemoryConsumption() { return static_cast<uint64_t>(0); }
+#endif
+}  // anonymous namespace
+
+TEST(Fluid, MemoryConsumptionDoesNotGrowOnReshape)
+{
+    cv::GMat in;
+    cv::GMat a, b, c;
+    std::tie(a, b, c) = cv::gapi::split3(in);
+    cv::GMat merged = cv::gapi::merge4(a, b, c, a);
+    cv::GMat d, e, f, g;
+    std::tie(d, e, f, g) = cv::gapi::split4(merged);
+    cv::GMat out = cv::gapi::merge3(d, e, f);
+
+    cv::Mat in_mat(cv::Size(8, 8), CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(100));
+    cv::Mat out_mat;
+
+    const auto compile_args = [] () {
+        return cv::compile_args(cv::gapi::core::fluid::kernels());
+    };
+
+    cv::GCompiled compiled = cv::GComputation(cv::GIn(in), cv::GOut(out)).compile(
+        cv::descr_of(in_mat), compile_args());
+    ASSERT_TRUE(compiled.canReshape());
+
+    const auto mem_before = currMemoryConsumption();
+    for (int _ = 0; _ < 1000; ++_) compiled.reshape(cv::descr_of(cv::gin(in_mat)), compile_args());
+    const auto mem_after = currMemoryConsumption();
+
+    ASSERT_GE(mem_before, mem_after);
 }
 
 } // namespace opencv_test

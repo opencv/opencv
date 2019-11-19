@@ -603,7 +603,7 @@ public:
                 {
                     int xml_buf_size = 1 << 10;
                     char substr[] = "</opencv_storage>";
-                    int last_occurence = -1;
+                    int last_occurrence = -1;
                     xml_buf_size = MIN(xml_buf_size, int(file_size));
                     fseek( file, -xml_buf_size, SEEK_END );
                     std::vector<char> xml_buf_(xml_buf_size+2);
@@ -621,11 +621,11 @@ public:
                             ptr = strstr( ptr, substr );
                             if( !ptr )
                                 break;
-                            last_occurence = line_offset + (int)(ptr - ptr0);
+                            last_occurrence = line_offset + (int)(ptr - ptr0);
                             ptr += strlen(substr);
                         }
                     }
-                    if( last_occurence < 0 )
+                    if( last_occurrence < 0 )
                     {
                         release();
                         CV_Error( CV_StsError, "Could not find </opencv_storage> in the end of file.\n" );
@@ -633,7 +633,7 @@ public:
                     closeFile();
                     file = fopen( filename.c_str(), "r+t" );
                     CV_Assert(file != 0);
-                    fseek( file, last_occurence, SEEK_SET );
+                    fseek( file, last_occurrence, SEEK_SET );
                     // replace the last "</opencv_storage>" with " <!-- resumed -->", which has the same length
                     puts( " <!-- resumed -->" );
                     fseek( file, 0, SEEK_END );
@@ -716,7 +716,7 @@ public:
             else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
                 fmt = FileStorage::FORMAT_XML;
             else if(strbufsize  == bufOffset)
-                CV_Error(CV_BADARG_ERR, "Input file is empty");
+                CV_Error(CV_BADARG_ERR, "Input file is invalid");
             else
                 CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 
@@ -1307,6 +1307,9 @@ public:
     // In the case (b) the existing tag and the name are copied automatically.
     uchar* reserveNodeSpace(FileNode& node, size_t sz)
     {
+        bool shrinkBlock = false;
+        size_t shrinkBlockIdx = 0, shrinkSize = 0;
+
         uchar *ptr = 0, *blockEnd = 0;
 
         if( !fs_data_ptrs.empty() )
@@ -1315,19 +1318,32 @@ public:
             size_t ofs = node.ofs;
             CV_Assert( blockIdx == fs_data_ptrs.size()-1 );
             CV_Assert( ofs <= fs_data_blksz[blockIdx] );
+            CV_Assert( freeSpaceOfs <= fs_data_blksz[blockIdx] );
             //CV_Assert( freeSpaceOfs <= ofs + sz );
 
             ptr = fs_data_ptrs[blockIdx] + ofs;
             blockEnd = fs_data_ptrs[blockIdx] + fs_data_blksz[blockIdx];
 
+            CV_Assert(ptr >= fs_data_ptrs[blockIdx] && ptr <= blockEnd);
             if( ptr + sz <= blockEnd )
             {
                 freeSpaceOfs = ofs + sz;
                 return ptr;
             }
 
-            fs_data[blockIdx]->resize(ofs);
-            fs_data_blksz[blockIdx] = ofs;
+            if (ofs == 0)  // FileNode is a first component of this block. Resize current block instead of allocation of new one.
+            {
+                fs_data[blockIdx]->resize(sz);
+                ptr = &fs_data[blockIdx]->at(0);
+                fs_data_ptrs[blockIdx] = ptr;
+                fs_data_blksz[blockIdx] = sz;
+                freeSpaceOfs = sz;
+                return ptr;
+            }
+
+            shrinkBlock = true;
+            shrinkBlockIdx = blockIdx;
+            shrinkSize = ofs;
         }
 
         size_t blockSize = std::max((size_t)CV_FS_MAX_LEN*4 - 256, sz) + 256;
@@ -1350,6 +1366,12 @@ public:
                 new_ptr[3] = ptr[3];
                 new_ptr[4] = ptr[4];
             }
+        }
+
+        if (shrinkBlock)
+        {
+            fs_data[shrinkBlockIdx]->resize(shrinkSize);
+            fs_data_blksz[shrinkBlockIdx] = shrinkSize;
         }
 
         return new_ptr;

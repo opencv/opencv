@@ -105,6 +105,16 @@ public:
         return true;
     }
 
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        int numAxes = inputs[0].dims;
+        _startAxis = clamp(_startAxis, numAxes);
+        _endAxis = clamp(_endAxis, numAxes);
+    }
+
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
@@ -152,31 +162,19 @@ public:
         }
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
         ieLayer.setType("Flatten");
-        ieLayer.getParameters()["axis"] = _startAxis;
-        ieLayer.getParameters()["end_axis"] = _endAxis;
+        ieLayer.getParameters()["axis"] = (size_t)_startAxis;
+        ieLayer.getParameters()["end_axis"] = _endAxis;  // Do not cast to size_t because it might be negative.
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Flatten";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-        ieLayer->params["axis"] = format("%d", _startAxis);
-        ieLayer->params["end_axis"] = format("%d", _endAxis);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
     int _startAxis;
     int _endAxis;

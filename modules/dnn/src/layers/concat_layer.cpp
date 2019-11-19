@@ -310,29 +310,17 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::Builder::ConcatLayer ieLayer(name);
-        ieLayer.setAxis(clamp(axis, input->dims.size()));
+        ieLayer.setAxis(clamp(axis, input->getDims().size()));
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Concat";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ConcatLayer> ieLayer(new InferenceEngine::ConcatLayer(lp));
-        ieLayer->_axis = clamp(axis, input->dims.size());
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 };
 
 Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)

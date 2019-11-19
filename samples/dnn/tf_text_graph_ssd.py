@@ -67,7 +67,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
                'Sub', 'ResizeNearestNeighbor', 'Pad']
 
     # Node with which prefixes should be removed
-    prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Postprocessor/', 'Preprocessor/map')
+    prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Concatenate/', 'Postprocessor/', 'Preprocessor/map')
 
     # Load a config file.
     config = readTextMessage(configPath)
@@ -274,7 +274,8 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
     num_matched_layers = 0
     for node in graph_def.node:
-        if re.match('BoxPredictor_\d/BoxEncodingPredictor/Conv2D', node.name) or \
+        if re.match('BoxPredictor_\d/BoxEncodingPredictor/convolution', node.name) or \
+           re.match('BoxPredictor_\d/BoxEncodingPredictor/Conv2D', node.name) or \
            re.match('WeightSharedConvolutionalBoxPredictor(_\d)*/BoxPredictor/Conv2D', node.name):
             node.addAttr('loc_pred_transposed', True)
             num_matched_layers += 1
@@ -311,11 +312,15 @@ def createSSDGraph(modelPath, configPath, outputPath):
     addConcatNode('PriorBox/concat', priorBoxes, 'concat/axis_flatten')
 
     # Sigmoid for classes predictions and DetectionOutput layer
+    addReshape('ClassPredictor/concat', 'ClassPredictor/concat3d', [0, -1, num_classes + 1], graph_def)
+
     sigmoid = NodeDef()
     sigmoid.name = 'ClassPredictor/concat/sigmoid'
     sigmoid.op = 'Sigmoid'
-    sigmoid.input.append('ClassPredictor/concat')
+    sigmoid.input.append('ClassPredictor/concat3d')
     graph_def.node.extend([sigmoid])
+
+    addFlatten(sigmoid.name, sigmoid.name + '/Flatten', graph_def)
 
     detectionOut = NodeDef()
     detectionOut.name = 'detection_out'
@@ -325,7 +330,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
         detectionOut.input.append('BoxEncodingPredictor/concat')
     else:
         detectionOut.input.append('BoxPredictor/concat')
-    detectionOut.input.append(sigmoid.name)
+    detectionOut.input.append(sigmoid.name + '/Flatten')
     detectionOut.input.append('PriorBox/concat')
 
     detectionOut.addAttr('num_classes', num_classes + 1)

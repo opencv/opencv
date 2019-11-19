@@ -64,7 +64,6 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
 #if CV_SIMD128
     const int quarterPatternSize = patternSize/4;
     v_uint8x16 delta = v_setall_u8(0x80), t = v_setall_u8((char)threshold), K16 = v_setall_u8((char)K);
-    bool hasSimd = hasSIMD128();
 #if CV_TRY_AVX2
     Ptr<opt_AVX2::FAST_t_patternSize16_AVX2> fast_t_impl_avx2;
     if(CV_CPU_HAS_SUPPORT_AVX2)
@@ -102,7 +101,6 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
         {
             j = 3;
 #if CV_SIMD128
-            if( hasSimd )
             {
                 if( patternSize == 16 )
                 {
@@ -134,10 +132,9 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                             m1 = m1 | ((x3 < v1) & (x0 < v1));
                             m0 = m0 | m1;
 
-                            int mask = v_signmask(m0);
-                            if( mask == 0 )
+                            if( !v_check_any(m0) )
                                 continue;
-                            if( (mask & 255) == 0 )
+                            if( !v_check_any(v_combine_low(m0, m0)) )
                             {
                                 j -= 8;
                                 ptr -= 8;
@@ -161,16 +158,33 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                                 max1 = v_max(max1, v_reinterpret_as_u8(c1));
                             }
 
-                            max0 = v_max(max0, max1);
-                            int m = v_signmask(K16 < max0);
+                            max0 = K16 < v_max(max0, max1);
+                            unsigned int m = v_signmask(v_reinterpret_as_s8(max0));
 
                             for( k = 0; m > 0 && k < 16; k++, m >>= 1 )
                             {
-                                if(m & 1)
+                                if( m & 1 )
                                 {
                                     cornerpos[ncorners++] = j+k;
                                     if(nonmax_suppression)
-                                        curr[j+k] = (uchar)cornerScore<patternSize>(ptr+k, pixel, threshold);
+                                    {
+                                        short d[25];
+                                        for (int _k = 0; _k < 25; _k++)
+                                            d[_k] = (short)(ptr[k] - ptr[k + pixel[_k]]);
+
+                                        v_int16x8 a0, b0, a1, b1;
+                                        a0 = b0 = a1 = b1 = v_load(d + 8);
+                                        for(int shift = 0; shift < 8; ++shift)
+                                        {
+                                            v_int16x8 v_nms = v_load(d + shift);
+                                            a0 = v_min(a0, v_nms);
+                                            b0 = v_max(b0, v_nms);
+                                            v_nms = v_load(d + 9 + shift);
+                                            a1 = v_min(a1, v_nms);
+                                            b1 = v_max(b1, v_nms);
+                                        }
+                                        curr[j + k] = (uchar)(v_reduce_max(v_max(v_max(a0, a1), v_setzero_s16() - v_min(b0, b1))) - 1);
+                                    }
                                 }
                             }
                         }

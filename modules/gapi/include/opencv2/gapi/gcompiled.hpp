@@ -10,9 +10,9 @@
 
 #include <vector>
 
-#include "opencv2/gapi/opencv_includes.hpp"
-#include "opencv2/gapi/own/assert.hpp"
-#include "opencv2/gapi/garg.hpp"
+#include <opencv2/gapi/opencv_includes.hpp>
+#include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/gapi/garg.hpp>
 
 namespace cv {
 

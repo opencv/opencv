@@ -7,67 +7,65 @@
 
 #include "../test_precomp.hpp"
 #include "../common/gapi_operators_tests.hpp"
-#include "opencv2/gapi/cpu/core.hpp"
+#include <opencv2/gapi/cpu/core.hpp>
 
-#define CORE_CPU cv::gapi::core::cpu::kernels()
+namespace
+{
+#define CORE_CPU [] () { return cv::compile_args(cv::gapi::core::cpu::kernels()); }
+}  // anonymous namespace
 
 namespace opencv_test
 {
 
-
 // FIXME: CPU test runs are disabled since Fluid is an exclusive plugin now!
 INSTANTIATE_TEST_CASE_P(MathOperatorTestCPU, MathOperatorMatMatTest,
-                    Combine(Values(AbsExact().to_compare_f()),
-                            Values( opPlusM, opMinusM, opDivM,
-                                    opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq),
-                            Values(CV_8UC1, CV_16SC1, CV_32FC1),
+                    Combine(Values(CV_8UC1, CV_16SC1, CV_32FC1),
                             Values(cv::Size(1280, 720),
-                               cv::Size(640, 480),
-                               cv::Size(128, 128)),
+                                   cv::Size(640, 480),
+                                   cv::Size(128, 128)),
                             Values(-1, CV_8U, CV_32F),
-/*init output matrices or not*/ testing::Bool(),
-                            Values(cv::compile_args(CORE_CPU))));
+                            Values(CORE_CPU),
+                            Values(AbsExact().to_compare_obj()),
+                            Values( opPlusM, opMinusM, opDivM,
+                                    opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq)));
 
 INSTANTIATE_TEST_CASE_P(MathOperatorTestCPU, MathOperatorMatScalarTest,
-                        Combine(Values(AbsExact().to_compare_f()),
-                                Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR,  // FIXIT avoid division by values near zero: opDiv, opDivR,
-                                        opGT, opLT, opGE, opLE, opEQ, opNE,
-                                        opGTR, opLTR, opGER, opLER, opEQR, opNER),
-                                Values(CV_8UC1, CV_16SC1, CV_32FC1),
+                        Combine(Values(CV_8UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
-/*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_CPU))));
+                                Values(CORE_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR,  // FIXIT avoid division by values near zero: opDiv, opDivR,
+                                        opGT, opLT, opGE, opLE, opEQ, opNE,
+                                        opGTR, opLTR, opGER, opLER, opEQR, opNER)));
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestCPU, MathOperatorMatMatTest,
-                        Combine(Values(AbsExact().to_compare_f()),
-                                Values( opAnd, opOr, opXor ),
-                                Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                   cv::Size(640, 480),
-                                   cv::Size(128, 128)),
-                                Values(-1),
-/*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_CPU))));
-
-INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestCPU, MathOperatorMatScalarTest,
-                        Combine(Values(AbsExact().to_compare_f()),
-                                Values( opAND, opOR, opXOR, opANDR, opORR, opXORR ),
-                                Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(-1),
-/*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_CPU))));
+                                Values(CORE_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values( opAnd, opOr, opXor )));
+
+INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestCPU, MathOperatorMatScalarTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values( opAND, opOR, opXOR, opANDR, opORR, opXORR )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestCPU, NotOperatorTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-/*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_CPU))));
+                                Values(-1),
+                                Values(CORE_CPU)));
 }

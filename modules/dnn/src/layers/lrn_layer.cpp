@@ -92,7 +92,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-            return bias == 1;
+            return bias == (int)bias;
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM));
@@ -391,13 +391,13 @@ public:
 #endif  // HAVE_HALIDE
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
         float alphaSize = alpha;
         if (!normBySize)
             alphaSize *= (type == SPATIAL_NRM ? size*size : size);
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+
         InferenceEngine::Builder::NormLayer ieLayer(name);
         ieLayer.setSize(size);
         ieLayer.setAlpha(alphaSize);
@@ -407,23 +407,8 @@ public:
         InferenceEngine::Builder::Layer l = ieLayer;
         l.getParameters()["k"] = bias;
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Norm";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::NormLayer> ieLayer(new InferenceEngine::NormLayer(lp));
-
-        ieLayer->_size = size;
-        ieLayer->_k = (int)bias;
-        ieLayer->_beta = beta;
-        ieLayer->_alpha = alphaSize;
-        ieLayer->_isAcrossMaps = (type == CHANNEL_NRM);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

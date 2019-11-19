@@ -1,6 +1,6 @@
 # --- Aravis SDK ---
 if(NOT HAVE_ARAVIS_API AND PKG_CONFIG_FOUND)
-  pkg_check_modules(ARAVIS aravis-0.6 QUIET)
+  ocv_check_modules(ARAVIS aravis-0.6 QUIET)
   if(ARAVIS_FOUND)
     set(HAVE_ARAVIS_API TRUE)
   endif()
