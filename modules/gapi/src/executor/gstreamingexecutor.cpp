@@ -555,14 +555,14 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         util::throw_error(std::logic_error("Only one video source is"
                                            " currently supported!"));
     }
- 
+
     // testing meta data is cv::GMatDesc{CV_8U,3,cv::Size{768,576}}
     if (m_metas.empty()) {
         // extract meta from first frame
     } else {
         //const auto& metas = m_metas;
     }
-    
+
     const auto& metas = m_metas;
     
     if (/*wasFinished*/true) {
@@ -576,7 +576,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         cv::gimpl::GCompiler::compileIslands(*m_orig_graph.get(), comp_args);
         
         GModel::Graph gm(*m_orig_graph);
-        
+
         auto xtract_in = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
             const auto orig_data_nh
                 = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
@@ -627,13 +627,8 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
 
         wasFinished = true;
     } else {
-        bool canReshape = true;
-        for (auto &op : m_ops) {
-            canReshape = op.isl_exec->canReshape();
-            if (!canReshape)
-                break;
-        }
-
+        bool canReshape = std::all_of(m_ops.begin(), m_ops.begin(),
+                        [](OpDesc op){return op.isl_exec->canReshape();})
         if (canReshape) {
             auto& g = *m_orig_graph.get();
             ade::passes::PassContext ctx{g};
@@ -642,7 +637,6 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
             // outMetas()?
             for (auto &op : m_ops)
                 op.isl_exec->reshape(g, comp_args);
-
         } else {
             //???
         }

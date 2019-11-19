@@ -259,7 +259,7 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                                       // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
-    if (!m_metas.empty()) 
+    if (!m_metas.empty())
     {
         m_e.addPassStage("meta");
         m_e.addPass("meta", "initialize",   std::bind(passes::initMeta, _1, std::ref(m_metas)));

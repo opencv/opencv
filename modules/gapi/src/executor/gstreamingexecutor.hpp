@@ -81,7 +81,7 @@ protected:
 
     cv::GCompileArgs comp_args;
     bool wasFinished = false;
-                
+
     const GMetaArgs m_metas;
 
     // FIXME: Naive executor details are here for now
