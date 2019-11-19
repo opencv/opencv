@@ -28,6 +28,9 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarrayobject.h>
 
+#include "opencv2/core/utils/configuration.private.hpp"
+#include "opencv2/core/utils/logger.hpp"
+
 #include "pyopencv_generated_include.h"
 #include "opencv2/core/types_c.h"
 #include "opencv2/opencv_modules.hpp"
@@ -65,6 +68,22 @@ PyObject* pyopencv_from(const T& src) { return PyOpenCV_Converter<T>::from(src);
 
 static PyObject* opencv_error = NULL;
 
+static bool isPythonBindingsDebugEnabled()
+{
+    static bool param_debug = cv::utils::getConfigurationParameterBool("OPENCV_PYTHON_DEBUG", false);
+    return param_debug;
+}
+
+static void emit_failmsg(PyObject * exc, const char *msg)
+{
+    static bool param_debug = isPythonBindingsDebugEnabled();
+    if (param_debug)
+    {
+        CV_LOG_WARNING(NULL, "Bindings conversion failed: " << msg);
+    }
+    PyErr_SetString(exc, msg);
+}
+
 static int failmsg(const char *fmt, ...)
 {
     char str[1000];
@@ -74,7 +93,20 @@ static int failmsg(const char *fmt, ...)
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
-    PyErr_SetString(PyExc_TypeError, str);
+    emit_failmsg(PyExc_TypeError, str);
+    return 0;
+}
+
+static PyObject* failmsgp(const char *fmt, ...)
+{
+    char str[1000];
+
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(str, sizeof(str), fmt, ap);
+    va_end(ap);
+
+    emit_failmsg(PyExc_TypeError, str);
     return 0;
 }
 
@@ -154,19 +186,6 @@ typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 typedef std::vector<std::vector<KeyPoint> > vector_vector_KeyPoint;
-
-static PyObject* failmsgp(const char *fmt, ...)
-{
-  char str[1000];
-
-  va_list ap;
-  va_start(ap, fmt);
-  vsnprintf(str, sizeof(str), fmt, ap);
-  va_end(ap);
-
-  PyErr_SetString(PyExc_TypeError, str);
-  return 0;
-}
 
 class NumpyAllocator : public MatAllocator
 {
