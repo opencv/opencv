@@ -44,6 +44,8 @@ public:
     // there's no need in having both cv::gimpl::GBackend
     // and cv::gapi::GBackend - these two things can be unified
     // NOTE - nodes are guaranteed to be topologically sorted.
+
+    // NB: This method is deprecated
     virtual EPtr compile(const ade::Graph   &graph,
                          const GCompileArgs &args,
                          const std::vector<ade::NodeHandle> &nodes) const;

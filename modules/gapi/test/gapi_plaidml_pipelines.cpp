@@ -7,9 +7,30 @@
 #include "logger.hpp"
 
 #include <opencv2/gapi/plaidml/core.hpp>
+#include <opencv2/gapi/plaidml/plaidml.hpp>
 
 namespace opencv_test
 {
+
+inline cv::gapi::plaidml::config getConfig()
+{
+    auto read_var_from_env = [](const char* env)
+    {
+        const char* raw = std::getenv(env);
+        if (!raw)
+        {
+            cv::util::throw_error(std::runtime_error(std::string(env) + " is't set"));
+        }
+
+        return std::string(raw);
+    };
+
+    auto dev_id = read_var_from_env("PLAIDML_DEVICE");
+    auto trg_id = read_var_from_env("PLAIDML_TARGET");
+
+    return cv::gapi::plaidml::config{std::move(dev_id),
+                                     std::move(trg_id)};
+}
 
 TEST(GAPI_PlaidML_Pipelines, SimpleArithmetic)
 {
@@ -19,7 +40,7 @@ TEST(GAPI_PlaidML_Pipelines, SimpleArithmetic)
     cv::Mat in_mat1(size, type);
     cv::Mat in_mat2(size, type);
 
-    // NB: What about overload ? PlaidML don't handle it
+    // NB: What about overload ? PlaidML doesn't handle it
     cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(127));
     cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(127));
 
@@ -32,7 +53,8 @@ TEST(GAPI_PlaidML_Pipelines, SimpleArithmetic)
 
     cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
     comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
+               cv::compile_args(getConfig(),
+                                cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
 
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::add(in_mat1, in_mat2, ref_mat, cv::noArray(), type);
@@ -60,7 +82,8 @@ TEST(GAPI_PlaidML_Pipelines, ComplexArithmetic)
 
     cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
     comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
+               cv::compile_args(getConfig(),
+                                cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
 
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::subtract(in_mat1,  in_mat2, ref_mat, cv::noArray(), type);
@@ -95,7 +118,8 @@ TEST(GAPI_PlaidML_Pipelines, TwoInputOperations)
 
     // FIXME Doesn't work just apply(in_mat, out_mat, ...)
     comp.apply(cv::gin(in_mat[0], in_mat[1], in_mat[2], in_mat[3]), cv::gout(out_mat),
-               cv::compile_args(cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
+               cv::compile_args(getConfig(),
+                                cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
 
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::subtract(in_mat[3], in_mat[0],  ref_mat, cv::noArray(), type);
@@ -130,7 +154,8 @@ TEST(GAPI_PlaidML_Pipelines, TwoOutputOperations)
     // FIXME Doesn't work just apply(in_mat, out_mat, ...)
     comp.apply(cv::gin(in_mat[0], in_mat[1], in_mat[2], in_mat[3]),
                cv::gout(out_mat[0], out_mat[1]),
-               cv::compile_args(cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
+               cv::compile_args(getConfig(),
+                                cv::gapi::use_only{cv::gapi::core::plaidml::kernels()}));
 
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::add(in_mat[0], in_mat[3], ref_mat[0], cv::noArray(), type);

@@ -37,7 +37,14 @@ struct PlaidMLUnit
 class GPlaidMLExecutable final: public GIslandExecutable
 {
 public:
-    GPlaidMLExecutable(const ade::Graph&                   graph,
+    struct Config
+    {
+        std::string dev_id;
+        std::string trg_id;
+    };
+
+    GPlaidMLExecutable(Config                              cfg,
+                       const ade::Graph&                   graph,
                        const std::vector<ade::NodeHandle>& nodes,
                        const std::vector<cv::gimpl::Data>& ins_data,
                        const std::vector<cv::gimpl::Data>& outs_data);
@@ -67,14 +74,13 @@ private:
 
     GArg packArg(const GArg &arg);
 
+    Config m_cfg;
+
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
 
     std::vector<ade::NodeHandle> m_all_ops;
     std::vector<size_t> output_ids_;
-
-    std::string device_id_;
-    std::string target_id_;
 
     std::unique_ptr<plaidml::edsl::Program> program_;
     std::shared_ptr<plaidml::exec::Executable> exec_;

@@ -97,7 +97,6 @@ protected:
 // * Is orchestrated by a GExecutor instance.
 //
 
-class Data;
 class GIslandExecutable
 {
 public:
@@ -113,9 +112,6 @@ public:
 
     virtual bool canReshape() const = 0;
     virtual void reshape(ade::Graph& g, const GCompileArgs& args) = 0;
-
-    virtual void compile(const std::vector<Data>&,
-                         const std::vector<Data>&) {};
 
     virtual ~GIslandExecutable() = default;
 };

@@ -61,7 +61,7 @@ public:
     GPlaidMLKernel() = default;
     explicit GPlaidMLKernel(const F& f) : m_f(f) {};
 
-    void apply(GPlaidMLContext &ctx)
+    void apply(GPlaidMLContext &ctx) const
     {
         GAPI_Assert(m_f);
         m_f(ctx);
@@ -104,21 +104,10 @@ struct PlaidMLCallHelper;
 template<typename Impl, typename... Ins, typename... Outs>
 struct PlaidMLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 {
-    template<typename... Inputs>
-    struct call_wrap
-    {
-        template<typename... Outputs>
-        static void call(Inputs&&... ins, Outputs&&... outs)
-        {
-            Impl::run(std::forward<Inputs>(ins)..., outs...);
-        }
-    };
-
     template<int... IIs, int... OIs>
     static void call_impl(GPlaidMLContext &ctx, detail::Seq<IIs...>, detail::Seq<OIs...>)
     {
-        call_wrap<decltype(plaidml_get_in<Ins>::get(ctx, IIs))...>::call(plaidml_get_in<Ins>::get(ctx, IIs)...,
-                                                                         plaidml_get_out<Outs>::get(ctx, OIs)...);
+        Impl::run(plaidml_get_in<Ins>::get(ctx, IIs)..., plaidml_get_out<Outs>::get(ctx, OIs)...);
     }
 
     static void call(GPlaidMLContext& ctx)

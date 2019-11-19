@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/util/any.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
+#include <opencv2/gapi/plaidml/plaidml.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
@@ -50,13 +51,23 @@ namespace
             gm.metadata(op_node).set(cv::gimpl::PlaidMLUnit{plaidml_impl});
         }
 
-        virtual EPtr compile(const ade::Graph &graph,
-                             const cv::GCompileArgs &,
-                             const std::vector<ade::NodeHandle> &nodes,
+        virtual EPtr compile(const ade::Graph& graph,
+                             const cv::GCompileArgs& args,
+                             const std::vector<ade::NodeHandle>& nodes,
                              const std::vector<cv::gimpl::Data>& ins_data,
                              const std::vector<cv::gimpl::Data>& outs_data) const override
         {
-            return EPtr{new cv::gimpl::GPlaidMLExecutable(graph, nodes, ins_data, outs_data)};
+            auto has_config = cv::gimpl::getCompileArg<cv::gapi::plaidml::config>(args);
+
+            if (!has_config)
+            {
+                cv::util::throw_error(std::runtime_error("Config not found!\n"
+                                                         "You must pass cv::gapi::plaidml::config to the graph compile arguments"));
+            }
+
+            const auto& arg = has_config.value();
+            return EPtr{new cv::gimpl::GPlaidMLExecutable(cv::gimpl::GPlaidMLExecutable::Config{arg.dev_id, arg.trg_id},
+                                                          graph, nodes, ins_data, outs_data)};
         }
    };
 }
@@ -77,7 +88,7 @@ void cv::gimpl::GPlaidMLExecutable::initBuffers(const std::vector<cv::gimpl::Dat
     for (const auto& d : data)
     {
         GAPI_Assert(d.shape == GShape::GMAT &&
-                    "Now PlaidML backend supported only cv::GMat's");
+                    "Now PlaidML backend supports only cv::GMat's");
 
         const auto& desc = cv::util::get<cv::GMatDesc>(d.meta);
 
@@ -87,7 +98,7 @@ void cv::gimpl::GPlaidMLExecutable::initBuffers(const std::vector<cv::gimpl::Dat
 
         const auto& shape = placeholder.shape();
         plaidml::TensorShape tshape(shape.dtype(), shape.int_dims());
-        plaidml::Buffer buffer(device_id_, tshape);
+        plaidml::Buffer buffer(m_cfg.dev_id, tshape);
 
         bindings.push_back(plaidml::exec::Binding{std::move(placeholder),
                                                   std::move(buffer)});
@@ -101,38 +112,19 @@ void cv::gimpl::GPlaidMLExecutable::initBuffers(const std::vector<cv::gimpl::Dat
     }
 }
 
-void cv::gimpl::GPlaidMLExecutable::initConfig()
-{
-    auto read_var_from_env = [](const char* env)
-    {
-        const char* raw = std::getenv(env);
-        if (!raw)
-        {
-            cv::util::throw_error(std::runtime_error(std::string(env) + " is't set"));
-        }
-
-        return std::string(raw);
-    };
-
-    device_id_ = read_var_from_env("PLAIDML_DEVICE");
-    target_id_ = read_var_from_env("PLAIDML_TARGET");
-}
-
 void cv::gimpl::GPlaidMLExecutable::compile(const std::vector<cv::gimpl::Data>& ins_data,
                                             const std::vector<cv::gimpl::Data>& outs_data)
 {
-    initConfig();
-
     initBuffers(ins_data,  input_bindings_);
     initBuffers(outs_data, output_bindings_);
 
     ade::util::transform(outs_data, std::back_inserter(output_ids_),
-                   [](const cv::gimpl::Data& d) { return d.rc; });
+                         [](const cv::gimpl::Data& d) { return d.rc; });
 
     GConstGPlaidMLModel gcm(m_g);
     for (const auto& nh : m_all_ops)
     {
-        GPlaidMLKernel k = gcm.metadata(nh).get<PlaidMLUnit>().k;
+        const auto& k = gcm.metadata(nh).get<PlaidMLUnit>().k;
         GPlaidMLContext ctx;
 
         const auto &op = m_gm.metadata(nh).get<Op>();
@@ -175,17 +167,18 @@ void cv::gimpl::GPlaidMLExecutable::compile(const std::vector<cv::gimpl::Data>& 
     }
 
     exec_.reset(new plaidml::exec::Executable(*program_,
-                                               device_id_,
-                                               target_id_,
+                                               m_cfg.dev_id,
+                                               m_cfg.trg_id,
                                                input_bindings_,
                                                output_bindings_));
 }
 
-cv::gimpl::GPlaidMLExecutable::GPlaidMLExecutable(const ade::Graph &g,
-                                                  const std::vector<ade::NodeHandle> &nodes,
+cv::gimpl::GPlaidMLExecutable::GPlaidMLExecutable(cv::gimpl::GPlaidMLExecutable::Config cfg,
+                                                  const ade::Graph& g,
+                                                  const std::vector<ade::NodeHandle>& nodes,
                                                   const std::vector<cv::gimpl::Data>& ins_data,
                                                   const std::vector<cv::gimpl::Data>& outs_data)
-    : m_g(g), m_gm(m_g)
+    : m_cfg(std::move(cfg)), m_g(g), m_gm(m_g)
 {
     auto is_op = [&](ade::NodeHandle nh) {
         return m_gm.metadata(nh).get<NodeType>().t == NodeType::OP;
