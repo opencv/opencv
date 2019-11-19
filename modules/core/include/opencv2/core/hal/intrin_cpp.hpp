@@ -1798,6 +1798,7 @@ For all types. */
 template<int s, typename _Tp, int n>
 inline _Tp v_extract_n(const v_reg<_Tp, n>& v)
 {
+    CV_DbgAssert(s >= 0 && s < n);
     return v.s[s];
 }
 
@@ -1813,6 +1814,7 @@ Supported types: 32-bit integers and floats (s32/u32/f32)
 template<int i, typename _Tp, int n>
 inline v_reg<_Tp, n> v_broadcast_element(const v_reg<_Tp, n>& a)
 {
+    CV_DbgAssert(i >= 0 && i < n);
     return v_reg<_Tp, n>::all(a.s[i]);
 }
 

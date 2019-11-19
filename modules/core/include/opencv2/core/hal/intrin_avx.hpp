@@ -2318,67 +2318,6 @@ template<int i>
 inline v_float32x8 v_broadcast_element(const v_float32x8 &a)
 { return v_reinterpret_as_f32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
 
-/*
-template<int i>
-inline v_uint32x8 v_broadcast_element(v_uint32x8 v)
-{
-    return v_uint32x8(_mm256_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
-}
-
-template<int i>
-inline v_int16x16 v_broadcast_element(v_int16x16 v)
-{
-    v_int16x16 t = v_int16x16(_mm256_shufflelo_epi16(v.val, _MM_SHUFFLE(i, i, i, i)));
-    return v_int16x16(_mm256_shufflehi_epi16(t.val, _MM_SHUFFLE(0, 0, 0, 0)));
-}
-
-template<int i>
-inline v_uint16x16 v_broadcast_element(v_uint16x16 v)
-{
-    v_uint16x16 t = v_uint16x16(_mm256_shufflelo_epi16(v.val, _MM_SHUFFLE(i, i, i, i)));
-    return v_uint16x16(_mm256_shufflehi_epi16(t.val, _MM_SHUFFLE(0, 0, 0, 0)));
-}
-
-template<int i>
-inline v_int8x32 v_broadcast_element(v_int8x32 v)
-{
-    static const __m256i perm = _mm256_set1_epi8((char)i);
-    return v_int8x32(_mm256_shuffle_epi8(v.val, perm));
-}
-
-template<int i>
-inline v_uint8x32 v_broadcast_element(v_uint8x32 v)
-{
-    static const __m256i perm = _mm256_set1_epi8((char)i);
-    return v_uint8x32(_mm256_shuffle_epi8(v.val, perm));
-}
-
-template<int i>
-inline v_int64x4 v_broadcast_element(v_int64x4 v)
-{
-    int64 t = v_extract_n<i>(v);
-    return v_int64x4(t,t,t,t);
-}
-
-template<int i>
-inline v_uint64x4 v_broadcast_element(v_uint64x4 v)
-{
-    uint64 t = v_extract_n<i>(v);
-    return v_uint64x4(t,t,t,t);
-}
-
-template<int i>
-inline v_float64x4 v_broadcast_element(v_float64x4 v)
-{
-    return v_float64x4(_mm256_shuffle_pd(v.val, v.val, _MM_SHUFFLE(i,i,i,i)));
-}
-
-template<int i>
-inline v_float32x8 v_broadcast_element(v_float32x8 v)
-{
-    return v_float32x8(_mm256_shuffle_ps(v.val, v.val, _MM_SHUFFLE(i,i,i,i)));
-}
-*/
 
 ///////////////////// load deinterleave /////////////////////////////
 

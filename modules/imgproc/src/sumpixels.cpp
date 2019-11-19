@@ -149,7 +149,6 @@ struct Integral_SIMD<uchar, int, double>
                 el4h += el4l;
 
                 prev = v_broadcast_element<v_int32::nlanes - 1>(el4h);
-
 #endif
                 v_store(sum_row + j                  , el4l + vx_load(prev_sum_row + j                  ));
                 v_store(sum_row + j + v_int32::nlanes, el4h + vx_load(prev_sum_row + j + v_int32::nlanes));

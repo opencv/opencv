@@ -3365,65 +3365,7 @@ inline v_uint32x4 v_broadcast_element(const v_uint32x4& v)
 {
     return v_uint32x4(_mm_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
 }
-/*
-template<int i>
-inline v_int16x8 v_broadcast_element(v_int16x8 v)
-{
-    v_int16x8 t = v_int16x8(_mm_shufflelo_epi16(v.val, _MM_SHUFFLE(i, i, i, i)));
-    return v_int16x8(_mm_shufflehi_epi16(t.val, _MM_SHUFFLE(0, 0, 0, 0)));
-}
 
-template<int i>
-inline v_uint16x8 v_broadcast_element(v_uint16x8 v)
-{
-    v_uint16x8 t = v_uint16x8(_mm_shufflelo_epi16(v.val, _MM_SHUFFLE(i, i, i, i)));
-    return v_uint16x8(_mm_shufflehi_epi16(t.val, _MM_SHUFFLE(0, 0, 0, 0)));
-}
-
-template<int i>
-inline v_int8x16 v_broadcast_element(v_int8x16 v)
-{
-#if CV_SSE4_1
-    static const __m128i perm = _mm_set1_epi8((char)i);
-    return v_int8x16(_mm_shuffle_epi8(v.val, perm));
-#else
-    char t = v_extract_n<i>(v);
-    return v_int8x16(_mm_set1_epi8((char) t));
-#endif
-}
-
-template<int i>
-inline v_uint8x16 v_broadcast_element(v_uint8x16 v)
-{
-#if CV_SSE4_1
-    static const __m128i perm = _mm_set1_epi8((char)i);
-    return v_uint8x16(_mm_shuffle_epi8(v.val, perm));
-#else
-    uchar t = v_extract_n<i>(v);
-    return v_uint8x16(_mm_set1_epi8((uchar) t));
-#endif
-}
-
-template<int i>
-inline v_int64x2 v_broadcast_element(v_int64x2 v)
-{
-    int64 t = v_extract_n<i>(v);
-    return v_setall_s64(t);
-}
-
-template<int i>
-inline v_uint64x2 v_broadcast_element(v_uint64x2 v)
-{
-    uint64 t = v_extract_n<i>(v);
-    return v_setall_u64(t);
-}
-
-template<int i>
-inline v_float64x2 v_broadcast_element(v_float64x2 v)
-{
-    return v_float64x2(_mm_shuffle_pd(v.val, v.val, _MM_SHUFFLE2(i,i)));
-}
-*/
 template<int i>
 inline v_float32x4 v_broadcast_element(const v_float32x4& v)
 {

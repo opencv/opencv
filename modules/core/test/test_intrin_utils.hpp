@@ -1228,7 +1228,6 @@ template<typename R> struct TheTest
         return *this;
     }
 
-
     TheTest & test_float_math()
     {
         typedef typename V_RegTraits<R>::round_reg Ri;
