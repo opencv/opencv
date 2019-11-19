@@ -9,7 +9,7 @@ typedef std::vector<detail::CameraParams> vector_CameraParams;
 
 template<> struct pyopencvVecConverter<detail::ImageFeatures>
 {
-    static bool to(PyObject* obj, std::vector<detail::ImageFeatures>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<detail::ImageFeatures>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -22,7 +22,7 @@ template<> struct pyopencvVecConverter<detail::ImageFeatures>
 
 template<> struct pyopencvVecConverter<detail::MatchesInfo>
 {
-    static bool to(PyObject* obj, std::vector<detail::MatchesInfo>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<detail::MatchesInfo>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -35,7 +35,7 @@ template<> struct pyopencvVecConverter<detail::MatchesInfo>
 
 template<> struct pyopencvVecConverter<detail::CameraParams>
 {
-    static bool to(PyObject* obj, std::vector<detail::CameraParams>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<detail::CameraParams>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }

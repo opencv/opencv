@@ -365,6 +365,13 @@ template<typename _Tp, int n> struct v_reg
         return c;
     }
 
+    v_reg& operator=(const v_reg<_Tp, n> & r)
+    {
+        for( int i = 0; i < n; i++ )
+            s[i] = r.s[i];
+        return *this;
+    }
+
     _Tp s[n];
 //! @endcond
 };
@@ -623,7 +630,7 @@ template<typename _Tp, int n>
 inline v_reg<typename V_TypeTraits<_Tp>::abs_type, n> v_popcount(const v_reg<_Tp, n>& a)
 {
     v_reg<typename V_TypeTraits<_Tp>::abs_type, n> b = v_reg<typename V_TypeTraits<_Tp>::abs_type, n>::zero();
-    for (int i = 0; i < (int)(n*sizeof(_Tp)); i++)
+    for (int i = 0; i < n*(int)sizeof(_Tp); i++)
         b.s[i/sizeof(_Tp)] += popCountTable[v_reinterpret_as_u8(a).s[i]];
     return b;
 }

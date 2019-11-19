@@ -1058,7 +1058,15 @@ bool CvCapture_FFMPEG::processRawPacket()
         AVCodecID eVideoCodec = video_st->codec.codec_id;
 #endif
         const char* filterName = NULL;
-        if (eVideoCodec == CV_CODEC(CODEC_ID_H264) || eVideoCodec == CV_CODEC(CODEC_ID_H265))
+        if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
+#if LIBAVCODEC_VERSION_MICRO >= 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57, 24, 102)  // FFmpeg 3.0
+            || eVideoCodec == CV_CODEC(CODEC_ID_H265)
+#elif LIBAVCODEC_VERSION_MICRO < 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 34, 1)  // libav v10+
+            || eVideoCodec == CV_CODEC(CODEC_ID_HEVC)
+#endif
+        )
         {
             // check start code prefixed mode (as defined in the Annex B H.264 / H.265 specification)
             if (packet.size >= 5
@@ -1105,7 +1113,7 @@ bool CvCapture_FFMPEG::processRawPacket()
     {
         if (packet_filtered.data)
         {
-            av_packet_unref(&packet_filtered);
+            _opencv_ffmpeg_av_packet_unref(&packet_filtered);
         }
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
