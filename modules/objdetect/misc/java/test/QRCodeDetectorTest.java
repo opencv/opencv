@@ -27,10 +27,10 @@ public class QRCodeDetectorTest extends OpenCVTestCase {
         assertEquals(output, "https://opencv.org/");
     }
 
-    public void testMultipleDetectAndDecode() {
+    public void testDetectAndDecodeMulti() {
         Mat img = Imgcodecs.imread(testDataPath + "/cv/qrcode/multiple/6_qrcodes.png");
         QRCodeDetector detector = new QRCodeDetector();
-        List < String > output = detector.multipleDetectAndDecode(img);
+        List < String > output = detector.detectAndDecodeMulti(img);
         assertEquals(output.get(0), "SKIP");
         assertEquals(output.get(1), "EXTRA");
         assertEquals(output.get(2), "TWO STEPS FORWARD");

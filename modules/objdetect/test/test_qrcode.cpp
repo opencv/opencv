@@ -140,7 +140,7 @@ TEST(Objdetect_QRCode_Monitor, generate_test_data)
 }
 
 
-TEST(Objdetect_QRCode_Multiple, generate_test_data)
+TEST(Objdetect_QRCode_Multi, generate_test_data)
 {
     const std::string root = "qrcode/multiple/";
     const std::string dataset_config = findDataFile(root + "dataset_config.json");
@@ -158,9 +158,9 @@ TEST(Objdetect_QRCode_Multiple, generate_test_data)
         std::vector<cv::String> decoded_info;
 
         ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-        EXPECT_TRUE(multipleDetectQRCode(src, corners));
+        EXPECT_TRUE(detectQRCodeMulti(src, corners));
 #ifdef HAVE_QUIRC
-        EXPECT_TRUE(multipleDecodeQRCode(src, corners, decoded_info, straight_barcode));
+        EXPECT_TRUE(decodeQRCodeMulti(src, corners, decoded_info, straight_barcode));
 #endif
         file_config << "x" << "[:";
         for(size_t j = 0; j < corners.size(); j++)
@@ -391,8 +391,8 @@ TEST_P(Objdetect_QRCode_Monitor, regression)
     }
 }
 
-typedef testing::TestWithParam < std::string > Objdetect_QRCode_Multiple;
-TEST_P(Objdetect_QRCode_Multiple, regression)
+typedef testing::TestWithParam < std::string > Objdetect_QRCode_Multi;
+TEST_P(Objdetect_QRCode_Multi, regression)
 {
     const std::string name_current_image = GetParam();
     const std::string root = "qrcode/multiple/";
@@ -407,11 +407,11 @@ TEST_P(Objdetect_QRCode_Multiple, regression)
     std::vector<cv::String> decoded_info;
     QRCodeDetector qrcode;
 #ifdef HAVE_QUIRC
-    decoded_info = qrcode.multipleDetectAndDecode(src, corners, straight_barcode);
+    decoded_info = qrcode.detectAndDecodeMulti(src, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
 #else
-    ASSERT_TRUE(qrcode.multipleDetect(src, corners));
+    ASSERT_TRUE(qrcode.detectMulti(src, corners));
 #endif
 
     const std::string dataset_config = findDataFile(root + "dataset_config.json");
@@ -481,7 +481,7 @@ TEST_P(Objdetect_QRCode_Multiple, regression)
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode, testing::ValuesIn(qrcode_images_name));
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Close, testing::ValuesIn(qrcode_images_close));
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Monitor, testing::ValuesIn(qrcode_images_monitor));
-INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Multiple, testing::ValuesIn(qrcode_images_multiple));
+INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Multi, testing::ValuesIn(qrcode_images_multiple));
 
 TEST(Objdetect_QRCode_basic, not_found_qrcode)
 {

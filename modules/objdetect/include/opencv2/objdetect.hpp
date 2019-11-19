@@ -697,7 +697,7 @@ public:
      @param img grayscale or color (BGR) image containing (or not) QR codes.
      @param points Output vector of vector of vertices of the minimum-area quadrangle containing the codes.
      */
-    CV_WRAP bool multipleDetect(InputArray img, OutputArrayOfArrays points) const;
+    CV_WRAP bool detectMulti(InputArray img, OutputArrayOfArrays points) const;
 
     /** @brief Decodes QR code in image once it's found by the detect() method.
      Returns UTF8-encoded output string or empty string if the code cannot be decoded.
@@ -713,7 +713,7 @@ public:
      @param points vector of Quadrangle vertices found by detect() method (or some other algorithm).
      @param straight_qrcode The optional output vector of images containing rectified and binarized QR codes
      */
-    CV_WRAP std::vector<cv::String> multipleDecode(InputArray img, InputArrayOfArrays points, OutputArrayOfArrays straight_qrcode = noArray());
+    CV_WRAP std::vector<cv::String> decodeMulti(InputArray img, InputArrayOfArrays points, OutputArrayOfArrays straight_qrcode = noArray());
 
     /** @brief Both detects and decodes QR code
      @param img grayscale or color (BGR) image containing QR code.
@@ -728,7 +728,7 @@ public:
     @param points optional output vector of arrays of vertices of the found QR code quadrangle. Will be empty if not found.
     @param straight_qrcode The optional output vector of images containing rectified and binarized QR codes
     */
-    CV_WRAP std::vector<cv::String> multipleDetectAndDecode(InputArray img, OutputArrayOfArrays points = noArray(),
+    CV_WRAP std::vector<cv::String> detectAndDecodeMulti(InputArray img, OutputArrayOfArrays points = noArray(),
                                                     OutputArrayOfArrays straight_qrcode = noArray());
 protected:
     struct Impl;
@@ -749,7 +749,7 @@ CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double e
     @param eps_x Epsilon neighborhood, which allows you to determine the horizontal pattern of the scheme 1:1:3:1:1 according to QR code standard.
     @param eps_y Epsilon neighborhood, which allows you to determine the vertical pattern of the scheme 1:1:3:1:1 according to QR code standard.
     */
-CV_EXPORTS bool multipleDetectQRCode(InputArray in, std::vector< std::vector< Point > > &points,
+CV_EXPORTS bool detectQRCodeMulti(InputArray in, std::vector< std::vector< Point > > &points,
                                      double eps_x = 0.2, double eps_y = 0.1);
 
 /** @brief Decode QR code in image and return text that is encrypted in QR code.
@@ -766,7 +766,7 @@ CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &deco
     @param decoded_info vector of String information that is encrypted in QR codes.
     @param straight_qrcode vector of Matrixes of the type CV_8UC1 containing an binary straight QR codes.
     */
-CV_EXPORTS bool multipleDecodeQRCode(InputArray in, InputArrayOfArrays points, std::vector<cv::String> &decoded_info,
+CV_EXPORTS bool decodeQRCodeMulti(InputArray in, InputArrayOfArrays points, std::vector<cv::String> &decoded_info,
                              OutputArrayOfArrays straight_qrcode = noArray());
 
 //! @} objdetect

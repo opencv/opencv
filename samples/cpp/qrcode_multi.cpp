@@ -108,10 +108,10 @@ int liveQRCodeDetect(const string& out_file)
         cvtColor(frame, src, COLOR_BGR2GRAY);
 
         total.start();
-        bool result_detection = qrcode.multipleDetect(src, transform);
+        bool result_detection = qrcode.detectMulti(src, transform);
         if (result_detection)
         {
-            decode_info = qrcode.multipleDecode(src, transform, straight_barcode);
+            decode_info = qrcode.decodeMulti(src, transform, straight_barcode);
             for(size_t i = 0; i < decode_info.size(); i++)
             {
                 if (!decode_info[i].empty()) { cout << decode_info[i] << endl; }
@@ -150,7 +150,7 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
     {
         total.start();
         transform.clear();
-        result_detection = qrcode.multipleDetect(src, transform);
+        result_detection = qrcode.detectMulti(src, transform);
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();
@@ -158,7 +158,7 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
             continue;
 
         total.start();
-        decoded_info = qrcode.multipleDecode(src, transform, straight_barcode);
+        decoded_info = qrcode.decodeMulti(src, transform, straight_barcode);
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();

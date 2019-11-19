@@ -53,9 +53,9 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, decode)
 }
 #endif
 
-typedef ::perf::TestBaseWithParam< std::string > Perf_Objdetect_Multiple_QRCode;
+typedef ::perf::TestBaseWithParam< std::string > Perf_Objdetect_QRCode_Multi;
 
-PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDetect)
+PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, detectMulti)
 {
     const std::string name_current_image = GetParam();
     const std::string root = "cv/qrcode/multiple/";
@@ -66,12 +66,12 @@ PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDetect)
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
     std::vector< std::vector< Point2f > > corners;
     QRCodeDetector qrcode;
-    TEST_CYCLE() ASSERT_TRUE(qrcode.multipleDetect(src, corners));
+    TEST_CYCLE() ASSERT_TRUE(qrcode.detectMulti(src, corners));
     SANITY_CHECK(corners);
 }
 
 #ifdef HAVE_QUIRC
-PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDecode)
+PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
 {
     const std::string name_current_image = GetParam();
     const std::string root = "cv/qrcode/multiple/";
@@ -84,10 +84,10 @@ PERF_TEST_P_(Perf_Objdetect_Multiple_QRCode, MultipleDecode)
     std::vector< std::vector< Point2f > > corners;
     std::vector< cv::String > decoded_info;
     QRCodeDetector qrcode;
-    ASSERT_TRUE(qrcode.multipleDetect(src, corners));
+    ASSERT_TRUE(qrcode.detectMulti(src, corners));
     TEST_CYCLE()
     {
-        decoded_info = qrcode.multipleDecode(src, corners, straight_barcode);
+        decoded_info = qrcode.decodeMulti(src, corners, straight_barcode);
         for(size_t i = 0; i < decoded_info.size(); i++)
         {
             ASSERT_FALSE(decoded_info[i].empty());
@@ -114,7 +114,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode,
     )
 );
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_Multiple_QRCode,
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode_Multi,
     ::testing::Values(
       "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
        "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
