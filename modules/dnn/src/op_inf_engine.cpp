@@ -609,7 +609,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
             {
                 candidates.push_back(param_pluginPath);
             }
-
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R3)
             if (device_name == "CPU" || device_name == "FPGA")
             {
                 std::string suffixes[] = {"_avx2", "_sse4", ""};
@@ -632,6 +632,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
 #endif  // _WIN32
                 }
             }
+#endif
             bool found = false;
             for (size_t i = 0; i != candidates.size(); ++i)
             {
