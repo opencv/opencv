@@ -91,21 +91,60 @@ Building OpenCV.js from Source
     python ./platforms/js/build_js.py build_js --build_test
     @endcode
 
-    To run tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
+Running OpenCV.js Tests
+---------------------------------------
 
-    Navigate the web browser to `http://localhost:8080/tests.html`, which runs the unit tests automatically.
+Remember to launch the build command passing `--build_test` as mentioned previously. This will generate test source code ready to run together with `opencv.js` file in `build_js/bin`
 
-    You can also run tests using Node.js.
+### Manually in your browser
 
-    For example:
-    @code{.sh}
-    cd bin
-    npm install
-    node tests.js
-    @endcode
+To run tests, launch a local web server in `\<build_dir\>/bin` folder. For example, node http-server which serves on `localhost:8080`.
 
-    @note
-    It requires `node` installed in your development environment.
+Navigate the web browser to `http://localhost:8080/tests.html`, which runs the unit tests automatically. Command example:
+
+@code{.sh}
+npx http-server build_js/bin
+firefox http://localhost:8080/tests.html
+@endcode
+
+@note
+This snippet and the following require [Node.js](https://nodejs.org) to be installed.
+
+### Headless with Puppeteer
+
+Alternatively tests can run with [GoogleChrome/puppeteer](https://github.com/GoogleChrome/puppeteer#readme) which is a version of Google Chrome that runs in the terminal (useful for Continuos integration like travis CI, etc)
+
+@code{.sh}
+cd build_js/bin
+npm install
+npm install --no-save puppeteer    # automatically downloads Chromium package
+node run_puppeteer.js
+@endcode
+
+@note
+Checkout `node run_puppeteer --help` for more options to debug and reporting.
+
+@note
+The command `npm install` only needs to be executed once, since installs the tools dependencies; after that they are ready to use.
+
+@note
+Use `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 npm install --no-save puppeteer` to skip automatic downloading of Chromium.
+You may specify own Chromium/Chrome binary through `PUPPETEER_EXECUTABLE_PATH=$(which google-chrome)` environment variable.
+**BEWARE**: Puppeteer is only guaranteed to work with the bundled Chromium, use at your own risk.
+
+
+### Using Node.js.
+
+For example:
+
+@code{.sh}
+cd build_js/bin
+npm install
+node tests.js
+@endcode
+
+@note If all tests are failed, then consider using Node.js from 8.x version (`lts/carbon` from `nvm`).
+
 
 -#  [optional] To build `opencv.js` with threads optimization, append `--threads` option.
 

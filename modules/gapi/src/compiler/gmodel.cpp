@@ -50,7 +50,11 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
         storage    = Data::Storage::CONST_VAL;
         g.metadata(data_h).set(ConstValue{value});
     }
-    g.metadata(data_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
+    // FIXME: Sometimes a GArray-related node may be created w/o the
+    // associated host-type constructor (e.g. when the array is
+    // somewhere in the middle of the graph).
+    auto ctor_copy = origin.ctor;
+    g.metadata(data_h).set(Data{origin.shape, id, meta, ctor_copy, storage});
     return data_h;
 }
 

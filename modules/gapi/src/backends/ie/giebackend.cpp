@@ -6,6 +6,10 @@
 
 #include "precomp.hpp"
 
+// needs to be included regardless if IE is present or not
+// (cv::gapi::ie::backend() is still there and is defined always)
+#include "backends/ie/giebackend.hpp"
+
 #ifdef HAVE_INF_ENGINE
 
 #if INF_ENGINE_RELEASE <= 2018050000
@@ -32,7 +36,6 @@
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
 
-#include "backends/ie/giebackend.hpp"
 #include "backends/ie/util.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
@@ -601,4 +604,9 @@ InferenceEngine::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
     return wrapIE(blob);
 }
 
+#else
+cv::gapi::GBackend cv::gapi::ie::backend() {
+    // Still provide this symbol to avoid linking issues
+    util::throw_error(std::runtime_error("G-API has been compiled without OpenVINO IE support"));
+}
 #endif // HAVE_INF_ENGINE

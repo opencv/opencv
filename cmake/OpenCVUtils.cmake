@@ -288,9 +288,22 @@ function(ocv_append_target_property target prop)
   endif()
 endfunction()
 
+if(DEFINED OPENCV_DEPENDANT_TARGETS_LIST)
+  foreach(v ${OPENCV_DEPENDANT_TARGETS_LIST})
+    unset(${v} CACHE)
+  endforeach()
+  unset(OPENCV_DEPENDANT_TARGETS_LIST CACHE)
+endif()
+
 function(ocv_append_dependant_targets target)
   #ocv_debug_message("ocv_append_dependant_targets(${target} ${ARGN})")
   _ocv_fix_target(target)
+  list(FIND OPENCV_DEPENDANT_TARGETS_LIST "OPENCV_DEPENDANT_TARGETS_${target}" __id)
+  if(__id EQUAL -1)
+    list(APPEND OPENCV_DEPENDANT_TARGETS_LIST "OPENCV_DEPENDANT_TARGETS_${target}")
+    list(SORT OPENCV_DEPENDANT_TARGETS_LIST)
+    set(OPENCV_DEPENDANT_TARGETS_LIST "${OPENCV_DEPENDANT_TARGETS_LIST}" CACHE INTERNAL "")
+  endif()
   set(OPENCV_DEPENDANT_TARGETS_${target} "${OPENCV_DEPENDANT_TARGETS_${target}};${ARGN}" CACHE INTERNAL "" FORCE)
 endfunction()
 
@@ -364,6 +377,7 @@ macro(ocv_clear_vars)
 endmacro()
 
 set(OCV_COMPILER_FAIL_REGEX
+    "argument '.*' is not valid"                # GCC 9+
     "command line option .* is valid for .* but not for C\\+\\+" # GNU
     "command line option .* is valid for .* but not for C" # GNU
     "unrecognized .*option"                     # GNU

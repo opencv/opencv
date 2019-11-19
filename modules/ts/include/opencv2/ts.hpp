@@ -428,6 +428,9 @@ protected:
     // updates progress bar
     virtual int update_progress( int progress, int test_case_idx, int count, double dt );
 
+    // dump test case input parameters
+    virtual void dump_test_case(int test_case_idx, std::ostream* out);
+
     // finds test parameter
     cv::FileNode find_param( const cv::FileStorage& fs, const char* param_name );
 

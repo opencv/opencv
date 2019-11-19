@@ -1115,6 +1115,22 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_reverse()
+    {
+        Data<R> dataA;
+        R a = dataA;
+
+        Data<R> resB = v_reverse(a);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(dataA[R::nlanes - i - 1], resB[i]);
+        }
+
+        return *this;
+    }
+
     template<int s>
     TheTest & test_extract()
     {
@@ -1426,6 +1442,50 @@ template<typename R> struct TheTest
         return *this;
     }
 #endif
+
+#if CV_SIMD_64F
+    TheTest & test_cmp64()
+    {
+        Data<R> dataA, dataB;
+        R a = dataA, b = dataB;
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            dataA[i] = dataB[i];
+        }
+        dataA[0]++;
+
+        a = dataA, b = dataB;
+
+        Data<R> resC = (a == b);
+        Data<R> resD = (a != b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
+            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
+        }
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            dataA[i] = dataB[i] = (LaneType)-1;
+        }
+
+        a = dataA, b = dataB;
+
+        resC = (a == b);
+        resD = (a != b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
+            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
+        }
+        return *this;
+    }
+#endif
 };
 
 
@@ -1459,6 +1519,7 @@ void test_hal_intrin_uint8()
         .test_pack_u<1>().test_pack_u<2>().test_pack_u<3>().test_pack_u<8>()
         .test_pack_b()
         .test_unpack()
+        .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
         ;
@@ -1497,6 +1558,7 @@ void test_hal_intrin_int8()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
         .test_unpack()
+        .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
         ;
@@ -1529,6 +1591,7 @@ void test_hal_intrin_uint16()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
         .test_pack_u<1>().test_pack_u<2>().test_pack_u<7>().test_pack_u<16>()
         .test_unpack()
+        .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
         ;
@@ -1561,6 +1624,7 @@ void test_hal_intrin_int16()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
         .test_unpack()
+        .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
         ;
@@ -1590,6 +1654,7 @@ void test_hal_intrin_uint32()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
         .test_unpack()
+        .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
         .test_transpose()
@@ -1619,6 +1684,7 @@ void test_hal_intrin_int32()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
         .test_unpack()
+        .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
         .test_float_cvt32()
@@ -1635,8 +1701,12 @@ void test_hal_intrin_uint64()
     TheTest<v_uint64>()
         .test_loadstore()
         .test_addsub()
+#if CV_SIMD_64F
+        .test_cmp64()
+#endif
         .test_shift<1>().test_shift<8>()
         .test_logic()
+        .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         ;
@@ -1648,8 +1718,12 @@ void test_hal_intrin_int64()
     TheTest<v_int64>()
         .test_loadstore()
         .test_addsub()
+#if CV_SIMD_64F
+        .test_cmp64()
+#endif
         .test_shift<1>().test_shift<8>()
         .test_logic()
+        .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         .test_cvt64_double()
@@ -1680,6 +1754,7 @@ void test_hal_intrin_float32()
         .test_matmul()
         .test_transpose()
         .test_reduce_sum4()
+        .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
         ;
@@ -1709,6 +1784,7 @@ void test_hal_intrin_float64()
         .test_unpack()
         .test_float_math()
         .test_float_cvt32()
+        .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         ;

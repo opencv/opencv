@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html
 #include "perf_precomp.hpp"
 
+#include "perf_camera.impl.hpp"
+
 namespace opencv_test
 {
 using namespace perf;

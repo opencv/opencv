@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -55,6 +56,12 @@ using std::min;
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/pooling.hpp"
+#include "../cuda4dnn/primitives/max_unpooling.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -161,7 +168,11 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            return type == MAX || type == AVE;
+        }
+        else if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
             if (computeMaxIdx)
                 return false;
@@ -282,6 +293,100 @@ public:
                 break;
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        /* storing max indices is a special case and we deal with it separately */
+        if (computeMaxIdx) {
+            CV_Assert(type == MAX);
+
+            cuda4dnn::MaxPoolingConfiguration config;
+            config.window_size.assign(std::begin(kernel_size), std::end(kernel_size));
+            config.strides.assign(std::begin(strides), std::end(strides));
+
+            if (padMode.empty())
+            {
+                config.padMode = MaxPoolingConfiguration::PaddingMode::MANUAL;
+                config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            }
+            else if (padMode == "VALID")
+            {
+                config.padMode = MaxPoolingConfiguration::PaddingMode::VALID;
+            }
+            else if (padMode == "SAME")
+            {
+                config.padMode = MaxPoolingConfiguration::PaddingMode::SAME;
+            }
+            else
+            {
+                CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by PoolingLayer");
+            }
+
+            config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+
+            return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(context->stream), config);
+        }
+
+        PoolingConfiguration config;
+        if (type == MAX)
+        {
+            config.poolMode = PoolingConfiguration::PoolingMode::MAX;
+        }
+        else if (type == AVE && !avePoolPaddedArea)
+        {
+            config.poolMode = PoolingConfiguration::PoolingMode::AVERAGE_EXCLUDE_PADDING;
+        }
+        else if (type == AVE && avePoolPaddedArea)
+        {
+            config.poolMode = PoolingConfiguration::PoolingMode::AVERAGE_INCLUDE_PADDING;
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling mode");
+        }
+
+        config.window_size.assign(std::begin(kernel_size), std::end(kernel_size));
+        config.strides.assign(std::begin(strides), std::end(strides));
+
+        if (padMode.empty())
+        {
+            config.padMode = PoolingConfiguration::PaddingMode::MANUAL;
+            config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
+        }
+        else if (padMode == "VALID")
+        {
+            config.padMode = PoolingConfiguration::PaddingMode::VALID;
+        }
+        else if (padMode == "SAME")
+        {
+            config.padMode = PoolingConfiguration::PaddingMode::SAME;
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by PoolingLayer");
+        }
+
+        if (ceilMode)
+            config.roundMode = PoolingConfiguration::RoundingMode::CEIL;
+        else
+            config.roundMode = PoolingConfiguration::RoundingMode::FLOOR;
+
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+
+        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
+    }
+#endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

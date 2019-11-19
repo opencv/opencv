@@ -50,7 +50,7 @@ class facedetect_test(NewOpenCVTests):
 
             img = self.get_sample(  sample)
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-            gray = cv.GaussianBlur(gray, (5, 5), 5.1)
+            gray = cv.GaussianBlur(gray, (5, 5), 0)
 
             rects = detect(gray, cascade)
             faces.append(rects)

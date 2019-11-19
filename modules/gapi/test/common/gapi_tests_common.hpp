@@ -16,7 +16,7 @@
 #include <opencv2/gapi/util/util.hpp>
 
 #include "gapi_tests_helpers.hpp"
-#include <opencv2/gapi/render.hpp>
+#include <opencv2/gapi/render/render.hpp>
 
 namespace
 {

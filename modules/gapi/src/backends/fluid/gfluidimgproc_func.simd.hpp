@@ -100,6 +100,23 @@ RUN_SEPFILTER3X3_IMPL( float,  float)
 
 #undef RUN_SEPFILTER3X3_IMPL
 
+#define RUN_SEPFILTER5x5_IMPL(DST, SRC)                                     \
+void run_sepfilter5x5_impl(DST out[], const SRC *in[], int width, int chan, \
+                           const float kx[], const float ky[], int border,  \
+                           float scale, float delta,                        \
+                           float *buf[], int y, int y0);
+
+RUN_SEPFILTER5x5_IMPL(uchar, uchar)
+RUN_SEPFILTER5x5_IMPL(short, uchar)
+RUN_SEPFILTER5x5_IMPL(float, uchar)
+RUN_SEPFILTER5x5_IMPL(ushort, ushort)
+RUN_SEPFILTER5x5_IMPL(short, ushort)
+RUN_SEPFILTER5x5_IMPL(float, ushort)
+RUN_SEPFILTER5x5_IMPL(short, short)
+RUN_SEPFILTER5x5_IMPL(float, short)
+RUN_SEPFILTER5x5_IMPL(float, float)
+
+#undef RUN_SEPFILTER5x5_IMPL
 //-------------------------
 //
 // Fluid kernels: Filter 2D
@@ -876,11 +893,12 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
 // V' = (R' - Y')*0.877
 static const float coef[5] = {0.299f, 0.587f, 0.114f, 0.492f, 0.877f};
 
-static const ushort c0 = static_cast<ushort>(coef[0]*(1 << 16) + 0.5f);
-static const ushort c1 = static_cast<ushort>(coef[1]*(1 << 16) + 0.5f);
-static const ushort c2 = static_cast<ushort>(coef[2]*(1 << 16) + 0.5f);
-static const short c3 = static_cast<short>(coef[3]*(1 << 12) + 0.5f);
-static const short c4 = static_cast<short>(coef[4]*(1 << 12) + 0.5f);
+// don't use expressions (avoid any dynamic initialization): https://github.com/opencv/opencv/issues/15690
+static const ushort c0 = 19595;  // static_cast<ushort>(coef[0]*(1 << 16) + 0.5f);
+static const ushort c1 = 38470;  // static_cast<ushort>(coef[1]*(1 << 16) + 0.5f);
+static const ushort c2 = 7471;   // static_cast<ushort>(coef[2]*(1 << 16) + 0.5f);
+static const short c3 = 2015;    // static_cast<short>(coef[3]*(1 << 12) + 0.5f);
+static const short c4 = 3592;    // static_cast<short>(coef[4]*(1 << 12) + 0.5f);
 
 void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
 {
@@ -977,11 +995,11 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
     }
 }
 
-//-------------------------
+//-----------------------------
 //
-// Fluid kernels: sepFilter
+// Fluid kernels: sepFilter 3x3
 //
-//-------------------------
+//-----------------------------
 
 #if CV_SIMD
 // this variant not using buf[] appears 15% faster than reference any-2-float code below
@@ -1321,7 +1339,7 @@ static void run_sepfilter3x3_char2short(short out[], const uchar *in[], int widt
         }
     }
 }
-#endif
+#endif //USE_SEPFILTER3X3_CHAR2SHORT
 
 #endif  // CV_SIMD
 
@@ -1463,17 +1481,575 @@ void run_sepfilter3x3_impl(DST out[], const SRC *in[], int width, int chan,  \
     }                                                                        \
 }
 
-RUN_SEPFILTER3X3_IMPL(uchar , uchar )
-RUN_SEPFILTER3X3_IMPL( short, uchar )
-RUN_SEPFILTER3X3_IMPL( float, uchar )
+RUN_SEPFILTER3X3_IMPL(uchar, uchar)
+RUN_SEPFILTER3X3_IMPL(short, uchar)
+RUN_SEPFILTER3X3_IMPL(float, uchar)
 RUN_SEPFILTER3X3_IMPL(ushort, ushort)
-RUN_SEPFILTER3X3_IMPL( short, ushort)
-RUN_SEPFILTER3X3_IMPL( float, ushort)
-RUN_SEPFILTER3X3_IMPL( short,  short)
-RUN_SEPFILTER3X3_IMPL( float,  short)
-RUN_SEPFILTER3X3_IMPL( float,  float)
+RUN_SEPFILTER3X3_IMPL(short, ushort)
+RUN_SEPFILTER3X3_IMPL(float, ushort)
+RUN_SEPFILTER3X3_IMPL(short, short)
+RUN_SEPFILTER3X3_IMPL(float, short)
+RUN_SEPFILTER3X3_IMPL(float, float)
 
 #undef RUN_SEPFILTER3X3_IMPL
+
+//-----------------------------
+//
+// Fluid kernels: sepFilter 5x5
+//
+//-----------------------------
+
+#if CV_SIMD
+
+// this code with manually vectored rounding to uchar
+template<bool noscale, typename SRC>
+static void run_sepfilter5x5_any2char(uchar out[], const SRC *in[], int width, int chan,
+                                      const float kx[], const float ky[], int border,
+                                      float scale, float delta,
+                                      float *buf[], int y, int y0)
+{
+    constexpr int kxLen = 5;
+    constexpr int kyLen = kxLen;
+    constexpr int buffSize = 5;
+
+    int r[buffSize];
+    for (int n = 0; n < buffSize; ++n)
+    {
+        r[n] = (y - y0 + n) % 5;  // previous, this, next rows
+    }
+
+    const int length = width * chan;
+    const int shift = chan;
+
+    // horizontal pass
+
+    int k0 = (y == y0) ? 0 : 4;
+
+    for (int k = k0; k < kxLen; ++k)
+    {
+        const SRC *s[kxLen] = { nullptr };
+
+        for (int i = 0; i < kxLen; ++i)
+        {
+            //  previous , this , next pixels
+            s[i] = in[k] + (i - border)*shift;
+        }
+
+        // rely on compiler vectoring
+        for (int l = 0; l < length; ++l)
+        {
+            float sum = 0;
+            for (int j = 0; j < kxLen; ++j)
+            {
+                sum += s[j][l] * kx[j];
+            }
+            buf[r[k]][l] = sum;
+        }
+    }
+
+    // vertical pass
+
+    constexpr int nlanes = v_uint8::nlanes;
+
+    for (int l = 0; l < length;)
+    {
+        // main part of row
+        for (; l <= length - nlanes; l += nlanes)
+        {
+            v_float32 sum0 = vx_load(&buf[r[0]][l]) * vx_setall_f32(ky[0]);
+            v_float32 sum1 = vx_load(&buf[r[0]][l + nlanes / 4]) * vx_setall_f32(ky[0]);
+            v_float32 sum2 = vx_load(&buf[r[0]][l + 2 * nlanes / 4]) * vx_setall_f32(ky[0]);
+            v_float32 sum3 = vx_load(&buf[r[0]][l + 3 * nlanes / 4]) * vx_setall_f32(ky[0]);
+
+            for (int n = 1; n < kyLen; ++n)
+            {
+                sum0 = v_fma(vx_load(&buf[r[n]][l]), vx_setall_f32(ky[n]), sum0);
+                sum1 = v_fma(vx_load(&buf[r[n]][l + nlanes / 4]), vx_setall_f32(ky[n]), sum1);
+                sum2 = v_fma(vx_load(&buf[r[n]][l + 2 * nlanes / 4]), vx_setall_f32(ky[n]), sum2);
+                sum3 = v_fma(vx_load(&buf[r[n]][l + 3 * nlanes / 4]), vx_setall_f32(ky[n]), sum3);
+            }
+
+            if (!noscale)
+            {
+                sum0 = v_fma(sum0, vx_setall_f32(scale), vx_setall_f32(delta));
+                sum1 = v_fma(sum1, vx_setall_f32(scale), vx_setall_f32(delta));
+                sum2 = v_fma(sum2, vx_setall_f32(scale), vx_setall_f32(delta));
+                sum3 = v_fma(sum3, vx_setall_f32(scale), vx_setall_f32(delta));
+            }
+
+            v_int32 isum0 = v_round(sum0),
+                    isum1 = v_round(sum1),
+                    isum2 = v_round(sum2),
+                    isum3 = v_round(sum3);
+
+            v_int16 ires0 = v_pack(isum0, isum1),
+                    ires1 = v_pack(isum2, isum3);
+
+            v_uint8 res = v_pack_u(ires0, ires1);
+            v_store(reinterpret_cast<uchar*>(&out[l]), res);
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+    return;
+}
+
+// this variant with manually vectored rounding to short/ushort
+template<bool noscale, typename DST, typename SRC>
+static void run_sepfilter5x5_any2short(DST out[], const SRC *in[], int width, int chan,
+                                       const float kx[], const float ky[], int border,
+                                       float scale, float delta,
+                                       float *buf[], int y, int y0)
+{
+    constexpr int kxLen = 5;
+    constexpr int kyLen = kxLen;
+    constexpr int buffSize = 5;
+
+    int r[buffSize];
+    for (int n = 0; n < buffSize; ++n)
+    {
+        r[n] = (y - y0 + n) % 5;  // previous, this, next rows
+    }
+
+    const int length = width * chan;
+    const int shift = chan;
+
+    // horizontal pass
+
+    int k0 = (y == y0) ? 0 : 4;
+
+    for (int k = k0; k < kyLen; ++k)
+    {
+        const SRC *s[kxLen] = { nullptr };
+
+        for (int i = 0; i < kxLen; ++i)
+        {
+            //  previous , this , next pixels
+            s[i] = in[k] + (i - border)*shift;
+        }
+
+        // rely on compiler vectoring
+        for (int l = 0; l < length; ++l)
+        {
+            float sum = 0;
+            for (int j = 0; j < kxLen; ++j)
+            {
+                sum += s[j][l] * kx[j];
+            }
+            buf[r[k]][l] = sum;
+        }
+    }
+
+    // vertical pass
+
+    constexpr int nlanes = v_int16::nlanes;
+    for (int l = 0; l < length;)
+    {
+        //GAPI_Assert(length >= nlanes);
+        // main part of row
+        for (; l <= length - nlanes; l += nlanes)
+        {
+            v_float32 sum0 = vx_load(&buf[r[0]][l]) * vx_setall_f32(ky[0]);
+            v_float32 sum1 = vx_load(&buf[r[0]][l + nlanes / 2]) * vx_setall_f32(ky[0]);
+
+            for (int j = 1; j < kyLen; ++j)
+            {
+                sum0 = v_fma(vx_load(&buf[r[j]][l]), vx_setall_f32(ky[j]), sum0);
+                sum1 = v_fma(vx_load(&buf[r[j]][l + nlanes / 2]), vx_setall_f32(ky[j]), sum1);
+            }
+
+            if (!noscale)
+            {
+                sum0 = v_fma(sum0, vx_setall_f32(scale), vx_setall_f32(delta));
+                sum1 = v_fma(sum1, vx_setall_f32(scale), vx_setall_f32(delta));
+            }
+
+            v_int32 isum0 = v_round(sum0),
+                    isum1 = v_round(sum1);
+
+            if (std::is_same<DST, short>::value)
+            {
+                // signed short
+                v_int16 res = v_pack(isum0, isum1);
+                v_store(reinterpret_cast<short*>(&out[l]), res);
+            }
+            else
+            {
+                // unsigned short
+                v_uint16 res = v_pack_u(isum0, isum1);
+                v_store(reinterpret_cast<ushort*>(&out[l]), res);
+            }
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+    return;
+}
+
+// this variant not using buf[]
+template<bool noscale, typename SRC>
+static void run_sepfilter5x5_any2float(float out[], const SRC *in[], int width, int chan,
+                                       const float kx[], const float ky[], int border,
+                                       float scale, float delta)
+{
+    constexpr int kxLen = 5;
+    constexpr int kyLen = kxLen;
+    constexpr int buffSize = 5;
+
+    const int length = width * chan;
+    const int shift = chan;
+
+    static const int nlanes = v_float32::nlanes;
+    for (int l = 0; l < length; )
+    {
+        //GAPI_Assert(length >= nlanes);
+        // main part
+        for (; l <= length - nlanes; l += nlanes)
+        {
+            auto xsum = [l, border, shift, kx](const SRC inp[])
+            {
+                v_float32 t[5];
+                for (int i = 0; i < 5; ++i)
+                {
+                    t[i] = vx_load_f32(&inp[l + (i - border)*shift]);
+                }
+
+                v_float32 sum = t[0] * vx_setall_f32(kx[0]);
+                for (int j = 1; j < 5; ++j)
+                {
+                    sum = v_fma(t[j], vx_setall_f32(kx[j]), sum);
+                }
+
+                return sum;
+            };
+
+            v_float32 s[buffSize];
+            for (int m = 0; m < buffSize; ++m)
+            {
+                s[m] = xsum(in[m]);
+            }
+
+            v_float32 sum = s[0] * vx_setall_f32(ky[0]);
+            for (int n = 1; n < kyLen; ++n)
+            {
+                sum = v_fma(s[n], vx_setall_f32(ky[n]), sum);
+            }
+
+            if (!noscale)
+            {
+                sum = v_fma(sum, vx_setall_f32(scale), vx_setall_f32(delta));
+            }
+
+            v_store(&out[l], sum);
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+    return;
+}
+
+#define USE_SEPFILTER5X5_CHAR2SHORT 1
+
+#if USE_SEPFILTER5X5_CHAR2SHORT
+template<bool noscale>
+static void run_sepfilter5x5_char2short(short out[], const uchar *in[], int width, int chan,
+                                        const float kx[], const float ky[], int border,
+                                        float scale, float delta,
+                                        float *buf[], int y, int y0)
+{
+    constexpr int kxLen = 5;
+    constexpr int kyLen = kxLen;
+
+    constexpr int buffSize = 5;
+
+    schar ikx[kxLen];
+    schar iky[kyLen];
+
+    for (int i = 0; i < kxLen; ++i)
+    {
+        ikx[i] = saturate<schar>(kx[i], rintf);
+        iky[i] = saturate<schar>(ky[i], rintf);
+    }
+
+    const short iscale = saturate<short>(scale * (1 << 15), rintf);
+    const short idelta = saturate<short>(delta, rintf);
+
+    // check if this code is applicable
+    if (ikx[0] != kx[0] || ikx[1] != kx[1] || ikx[2] != kx[2] || ikx[3] != kx[3] || ikx[4] != kx[4] ||
+        iky[0] != ky[0] || iky[1] != ky[1] || iky[2] != ky[2] || iky[3] != ky[3] || iky[4] != ky[4] ||
+        idelta != delta ||
+        std::abs(scale) > 1 || std::abs(scale) < 0.01)
+    {
+        run_sepfilter5x5_any2short<noscale>(out, in, width, chan, kx, ky, border, scale, delta,
+                                            buf, y, y0);
+        return;
+    }
+
+    short *ibuf[buffSize];
+    int r[buffSize];
+
+    for (int n = 0; n < buffSize; ++n)
+    {
+        ibuf[n] = reinterpret_cast<short*>(buf[n]);
+        r[n] = (y - y0 + n) % 5;  // previous, this, next rows
+    }
+
+    const int length = width * chan;
+    const int shift = chan;
+
+    // horizontal pass
+    // full horizontal pass is needed only if the very 1st row in ROI is handled;
+    // for 2nd and further rows, it's enough to convolve only the
+    // "next" row - as we can reuse buffers from previous calls to
+    // this kernel (Fluid does rows consequently: y=y0, y0+1, ...)
+    int k0 = (y == y0) ? 0 : 4;
+
+    constexpr int nlanes = v_int16::nlanes;
+
+    for (int k = k0; k < kyLen; ++k)
+    {
+        for (int l = 0; l < length;)
+        {
+            GAPI_Assert(length >= nlanes);
+
+            // main part of output row
+            for (; l <= length - nlanes; l += nlanes)
+            {
+                v_uint16 t[kxLen];
+                v_int16 sum;
+
+                for (int i = 0; i < kxLen; ++i)
+                {
+                    // previous, current, next pixels
+                    t[i] = vx_load_expand(&in[k][l + (i - border)*shift]);
+
+                    sum += v_reinterpret_as_s16(t[i]) * vx_setall_s16(ikx[i]);
+                }
+
+                v_store(&ibuf[r[k]][l], sum);
+            }
+
+            // tail (if any)
+            if (l < length)
+            {
+                GAPI_DbgAssert(length >= nlanes);
+                l = length - nlanes;
+            }
+        }
+    }
+
+    // vertical pass
+
+    for (int l = 0; l < length;)
+    {
+        //GAPI_Assert(length >= nlanes);
+        // main part of output row
+        for (; l <= length - nlanes; l += nlanes)
+        {
+            v_int16 s[buffSize];
+            v_int16 sum;
+
+            for (int i = 0; i < kyLen; ++i)
+            {
+                // previous, current, next rows
+                s[i] = vx_load(&ibuf[r[i]][l]);
+
+                sum += s[i] * vx_setall_s16(iky[i]);
+            }
+
+            if (!noscale)
+            {
+                sum = v_mul_hi(sum << 1, vx_setall_s16(iscale)) + vx_setall_s16(idelta);
+            }
+
+            v_store(&out[l], sum);
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+    return;
+}
+#endif //USE_SEPFILTER5X5_CHAR2SHORT
+
+#endif //CV_SIMD
+
+template<bool noscale, typename DST, typename SRC>
+static void run_sepfilter5x5_reference(DST out[], const SRC *in[], int width, int chan,
+                                       const float kx[], const float ky[], int border,
+                                       float scale, float delta, float *buf[], int y, int y0)
+{
+    constexpr int kxLen = 5; // kernel size
+    constexpr int kyLen = kxLen;
+    int r[kyLen];
+    for (int n = 0; n < kyLen; ++n)
+    {
+        r[n] = (y - y0 + n) % 5; // previous, this, next rows
+    }
+
+    int length = width * chan;
+    int shift = chan;
+
+    // horizontal pass
+
+    // full horizontal pass is needed only if very 1st row in ROI;
+    // for 2nd and further rows, it is enough to convolve only the
+    // "next" row - as we can reuse buffers from previous calls to
+    // this kernel (Fluid does rows consequently: y=y0, y0+1, ...)
+
+    int k0 = (y == y0) ? 0 : 4;
+
+    for (int k = k0; k < kyLen; ++k)
+    {
+        const SRC *s[kxLen] = { nullptr };
+
+        for (int i = 0; i < kxLen; ++i)
+        {
+            //  previous , this , next pixels
+            s[i] = in[k] + (i - border)*shift;
+        }
+
+        // rely on compiler vectoring
+        for (int l = 0; l < length; ++l)
+        {
+            float sum = 0;
+            for (int i = 0; i < kxLen; ++i)
+            {
+                sum += s[i][l] * kx[i];
+            }
+            buf[r[k]][l] = sum;
+        }
+    }
+
+    // vertical pass
+
+    for (int l = 0; l < length; ++l)
+    {
+        float sum = 0;
+        for (int j = 0; j < kyLen; ++j)
+        {
+            sum += buf[r[j]][l] * ky[j];
+        }
+
+        if (!noscale)
+        {
+            sum = sum * scale + delta;
+        }
+
+        out[l] = saturate<DST>(sum, rintf);
+    }
+    return;
+}
+
+template<bool noscale, typename DST, typename SRC>
+static void run_sepfilter5x5_code(DST out[], const SRC *in[], int width, int chan,
+                                  const float kx[], const float ky[], int border,
+                                  float scale, float delta, float *buf[], int y, int y0)
+{
+#if CV_SIMD
+    int length = width * chan;
+
+    // length variable may be unused if types do not match at 'if' statements below
+    (void)length;
+
+    if (std::is_same<DST, short>::value && std::is_same<SRC, uchar>::value &&
+        length >= v_int16::nlanes)
+    {
+        run_sepfilter5x5_char2short<noscale>(reinterpret_cast<short*>(out),
+                                             reinterpret_cast<const uchar**>(in),
+                                             width, chan, kx, ky, border, scale, delta,
+                                             buf, y, y0);
+        return;
+    }
+
+    if (std::is_same<DST, float>::value && std::is_same<SRC, float>::value &&
+        length >= v_float32::nlanes)
+    {
+        run_sepfilter5x5_any2float<noscale>(reinterpret_cast<float*>(out), in, width,
+                                            chan, kx, ky, border, scale, delta);
+        return;
+    }
+
+    if (std::is_same<DST, short>::value && length >= v_int16::nlanes)
+    {
+        run_sepfilter5x5_any2short<noscale>(reinterpret_cast<short*>(out), in, width,
+                                            chan, kx, ky, border, scale, delta,
+                                            buf, y, y0);
+        return;
+    }
+
+    if (std::is_same<DST, ushort>::value && length >= v_uint16::nlanes)
+    {
+        run_sepfilter5x5_any2short<noscale>(reinterpret_cast<ushort*>(out), in, width,
+                                            chan, kx, ky, border, scale, delta,
+                                            buf, y, y0);
+        return;
+    }
+
+    if (std::is_same<DST, uchar>::value && length >= v_uint8::nlanes)
+    {
+        run_sepfilter5x5_any2char<noscale>(reinterpret_cast<uchar*>(out), in, width,
+                                           chan, kx, ky, border, scale, delta,
+                                           buf, y, y0);
+        return;
+    }
+#endif  // CV_SIMD
+
+    // reference code is quite fast for any-to-float case,
+    // but not for any-to-integral due to very slow rounding
+    run_sepfilter5x5_reference<noscale>(out, in, width, chan, kx, ky, border,
+        scale, delta, buf, y, y0);
+}
+#define RUN_SEPFILTER5x5_IMPL(DST, SRC)                                                                        \
+void run_sepfilter5x5_impl(DST out[], const SRC *in[], int width, int chan, const float kx[],                  \
+                           const float ky[], int border, float scale, float delta,                             \
+                           float *buf[], int y, int y0)                                                        \
+{                                                                                                              \
+    if (scale == 1 && delta == 0)                                                                              \
+    {                                                                                                          \
+        constexpr bool noscale = true;                                                                         \
+        run_sepfilter5x5_code<noscale>(out, in, width, chan, kx, ky, border,                                   \
+                                       scale, delta, buf, y, y0);                                              \
+    }                                                                                                          \
+    else                                                                                                       \
+    {                                                                                                          \
+        constexpr bool noscale = false;                                                                        \
+        run_sepfilter5x5_code<noscale>(out, in, width, chan, kx, ky, border,                                   \
+                                       scale, delta, buf, y, y0);                                              \
+    }                                                                                                          \
+    return;                                                                                                    \
+}
+
+RUN_SEPFILTER5x5_IMPL(uchar, uchar)
+RUN_SEPFILTER5x5_IMPL(short, uchar)
+RUN_SEPFILTER5x5_IMPL(float, uchar)
+RUN_SEPFILTER5x5_IMPL(ushort, ushort)
+RUN_SEPFILTER5x5_IMPL(short, ushort)
+RUN_SEPFILTER5x5_IMPL(float, ushort)
+RUN_SEPFILTER5x5_IMPL(short, short)
+RUN_SEPFILTER5x5_IMPL(float, short)
+RUN_SEPFILTER5x5_IMPL(float, float)
+
+#undef RUN_SEPFILTER5x5_IMPL
 
 //-------------------------
 //
