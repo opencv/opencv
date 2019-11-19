@@ -114,17 +114,18 @@ TEST_P(videoio_container, read)
     const string fileNameOut = tempfile(cv::format("test_container_stream.%s", ext_raw.c_str()).c_str());
 
     // Write encoded video read using VideoContainer to tmp file
+    size_t totalBytes = 0;
     {
         VideoCapture container(findDataFile(fileName), api);
-        ASSERT_TRUE(container.isOpened());
+        if (!container.isOpened())
+            throw SkipTestException("Video stream is not supported");
         if (!container.set(CAP_PROP_FORMAT, -1))  // turn off video decoder (extract stream)
             throw SkipTestException("Fetching of RAW video streams is not supported");
         ASSERT_EQ(-1.f, container.get(CAP_PROP_FORMAT));  // check
         EXPECT_EQ(codec, fourccToString((int)container.get(CAP_PROP_FOURCC)));
         EXPECT_EQ(pixelFormat, fourccToString((int)container.get(CAP_PROP_CODEC_PIXEL_FORMAT)));
 
-        std::ofstream file(fileNameOut, ios::out | ios::trunc | std::ios::binary);
-        size_t totalBytes = 0;
+        std::ofstream file(fileNameOut.c_str(), ios::out | ios::trunc | std::ios::binary);
         Mat raw_data;
         while (true)
         {
@@ -144,7 +145,7 @@ TEST_P(videoio_container, read)
         ASSERT_GE(totalBytes, (size_t)65536) << "Encoded stream is too small";
     }
 
-    std::cout << "Checking extracted video stream: " << fileNameOut << std::endl;
+    std::cout << "Checking extracted video stream: " << fileNameOut << " (size: " << totalBytes << " bytes)" << std::endl;
 
     // Check decoded frames read from original media are equal to frames decoded from tmp file
     {
@@ -158,7 +159,7 @@ TEST_P(videoio_container, read)
         {
             nframes++;
             ASSERT_TRUE(capActual.read(actual)) << nframes;
-            EXPECT_EQ(0, cvtest::norm(actual, reference, NORM_INF)) << nframes << " err=" << ++n_err;
+            EXPECT_EQ(0, cvtest::norm(actual, reference, NORM_INF)) << "frame=" << nframes << " err=" << ++n_err;
         }
         ASSERT_GT(nframes, 0);
     }
@@ -168,12 +169,13 @@ TEST_P(videoio_container, read)
 
 const videoio_container_params_t videoio_container_params[] =
 {
-    make_tuple(CAP_FFMPEG, "video/big_buck_bunny", "h264", "h264", "h264", "I420"),
-    make_tuple(CAP_FFMPEG, "video/big_buck_bunny", "h265", "h265", "hevc", "I420"),
-    //make_tuple(CAP_FFMPEG, "video/big_buck_bunny", "h264.mkv", "mkv.h264", "h264", "I420"),
-    //make_tuple(CAP_FFMPEG, "video/big_buck_bunny", "h265.mkv", "mkv.h265", "hevc", "I420"),
-    //make_tuple(CAP_FFMPEG, "video/big_buck_bunny", "h264.mp4", "mp4.avc1", "avc1", "I420"),
-    //make_tuple(CAP_FFMPEG, "video/big_buck_bunny", "h265.mp4", "mp4.hev1", "hev1", "I420"),
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", "h264", "h264", "I420"),
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", "h265", "hevc", "I420"),
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "mjpg.avi", "mjpg", "MJPG", "I420"),
+    //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264.mkv", "mkv.h264", "h264", "I420"),
+    //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265.mkv", "mkv.h265", "hevc", "I420"),
+    //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264.mp4", "mp4.avc1", "avc1", "I420"),
+    //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265.mp4", "mp4.hev1", "hev1", "I420"),
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_container, testing::ValuesIn(videoio_container_params));
