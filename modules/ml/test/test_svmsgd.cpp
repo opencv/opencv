@@ -103,12 +103,12 @@ TEST_P(ML_SVMSGD_Params, scale_and_features)
 }
 
 ML_SVMSGD_Param params_list[] = {
-    make_tuple(UNIFORM_SAME_SCALE, 2, 0.01),
-    make_tuple(UNIFORM_SAME_SCALE, 5, 0.01),
-    make_tuple(UNIFORM_SAME_SCALE, 100, 0.02),
-    make_tuple(UNIFORM_DIFFERENT_SCALES, 2, 0.01),
-    make_tuple(UNIFORM_DIFFERENT_SCALES, 5, 0.01),
-    make_tuple(UNIFORM_DIFFERENT_SCALES, 100, 0.01),
+    ML_SVMSGD_Param(UNIFORM_SAME_SCALE, 2, 0.01),
+    ML_SVMSGD_Param(UNIFORM_SAME_SCALE, 5, 0.01),
+    ML_SVMSGD_Param(UNIFORM_SAME_SCALE, 100, 0.02),
+    ML_SVMSGD_Param(UNIFORM_DIFFERENT_SCALES, 2, 0.01),
+    ML_SVMSGD_Param(UNIFORM_DIFFERENT_SCALES, 5, 0.01),
+    ML_SVMSGD_Param(UNIFORM_DIFFERENT_SCALES, 100, 0.01),
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, ML_SVMSGD_Params, testing::ValuesIn(params_list));

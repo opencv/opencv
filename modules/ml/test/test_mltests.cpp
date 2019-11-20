@@ -286,8 +286,8 @@ TEST_P(ML_SL_Params, save_load)
     }
     EXPECT_MAT_NEAR(responses1, responses2, 0.0);
     {
-        ifstream f1(file1, std::ios_base::binary);
-        ifstream f2(file2, std::ios_base::binary);
+        ifstream f1(file1.c_str(), std::ios_base::binary);
+        ifstream f2(file2.c_str(), std::ios_base::binary);
         ASSERT_TRUE(f1.is_open() && f2.is_open());
         const size_t BUFSZ = 10000;
         vector<char> buf1(BUFSZ, 0);
