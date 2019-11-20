@@ -120,8 +120,8 @@ template<> Ptr<SVMSGD> tuneModel<SVMSGD>(const DatasetDesc &, Ptr<SVMSGD> m)
 {
     m->setSvmsgdType(SVMSGD::ASGD);
     m->setMarginType(SVMSGD::SOFT_MARGIN);
-    m->setMarginRegularization(0.00001);
-    m->setInitialStepSize(0.1);
+    m->setMarginRegularization(0.00001f);
+    m->setInitialStepSize(0.1f);
     m->setStepDecreasingPower(0.75);
     m->setTermCriteria(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10000, 0.00001));
     return m;
@@ -190,23 +190,23 @@ void PrintTo(const ML_Params_t & param, std::ostream *os)
 }
 
 ML_Params_t ML_Params_List[] = {
-    { makePtr< ModelFactory<DTrees> >(), "mushroom", 0.027401, 0.036236 },
-    { makePtr< ModelFactory<DTrees> >(), "adult", 14.279000, 0.354323 },
-    { makePtr< ModelFactory<DTrees> >(), "vehicle", 29.761162, 4.823927 },
-    { makePtr< ModelFactory<DTrees> >(), "abalone", 7.297540, 0.510058 },
-    { makePtr< ModelFactory<Boost> >(Boost::REAL), "adult", 13.894001, 0.337763 },
-    { makePtr< ModelFactory<Boost> >(Boost::DISCRETE), "mushroom", 0.007274, 0.029400 },
-    { makePtr< ModelFactory<Boost> >(Boost::LOGIT), "ringnorm", 9.993943, 0.860256 },
-    { makePtr< ModelFactory<Boost> >(Boost::GENTLE), "spambase", 5.404347, 0.581716 },
-    { makePtr< ModelFactory<RTrees> >(), "waveform", 17.100641, 0.630052 },
-    { makePtr< ModelFactory<RTrees> >(), "mushroom", 0.006547, 0.028248 },
-    { makePtr< ModelFactory<RTrees> >(), "adult", 13.5129, 0.266065 },
-    { makePtr< ModelFactory<RTrees> >(), "abalone", 4.745199, 0.282112 },
-    { makePtr< ModelFactory<RTrees> >(), "vehicle", 24.964712, 4.469287 },
-    { makePtr< ModelFactory<RTrees> >(), "letter", 5.334999, 0.261142 },
-    { makePtr< ModelFactory<RTrees> >(), "ringnorm", 6.248733, 0.904713 },
-    { makePtr< ModelFactory<RTrees> >(), "twonorm", 4.506479, 0.449739 },
-    { makePtr< ModelFactory<RTrees> >(), "spambase", 5.243477, 0.54232 },
+    { makePtr< ModelFactory<DTrees> >(), "mushroom", 0.027401f, 0.036236f },
+    { makePtr< ModelFactory<DTrees> >(), "adult", 14.279000f, 0.354323f },
+    { makePtr< ModelFactory<DTrees> >(), "vehicle", 29.761162f, 4.823927f },
+    { makePtr< ModelFactory<DTrees> >(), "abalone", 7.297540f, 0.510058f },
+    { makePtr< ModelFactory<Boost> >(Boost::REAL), "adult", 13.894001f, 0.337763f },
+    { makePtr< ModelFactory<Boost> >(Boost::DISCRETE), "mushroom", 0.007274f, 0.029400f },
+    { makePtr< ModelFactory<Boost> >(Boost::LOGIT), "ringnorm", 9.993943f, 0.860256f },
+    { makePtr< ModelFactory<Boost> >(Boost::GENTLE), "spambase", 5.404347f, 0.581716f },
+    { makePtr< ModelFactory<RTrees> >(), "waveform", 17.100641f, 0.630052f },
+    { makePtr< ModelFactory<RTrees> >(), "mushroom", 0.006547f, 0.028248f },
+    { makePtr< ModelFactory<RTrees> >(), "adult", 13.5129f, 0.266065f },
+    { makePtr< ModelFactory<RTrees> >(), "abalone", 4.745199f, 0.282112f },
+    { makePtr< ModelFactory<RTrees> >(), "vehicle", 24.964712f, 4.469287f },
+    { makePtr< ModelFactory<RTrees> >(), "letter", 5.334999f, 0.261142f },
+    { makePtr< ModelFactory<RTrees> >(), "ringnorm", 6.248733f, 0.904713f },
+    { makePtr< ModelFactory<RTrees> >(), "twonorm", 4.506479f, 0.449739f },
+    { makePtr< ModelFactory<RTrees> >(), "spambase", 5.243477f, 0.54232f },
 };
 
 typedef testing::TestWithParam<ML_Params_t> ML_Params;

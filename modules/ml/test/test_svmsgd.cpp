@@ -26,7 +26,7 @@ static void makeData(RNG &rng, int samplesCount, const Mat &weights, float shift
     responses.create(samplesCount, 1, CV_32FC1);
     for (int i = 0 ; i < samplesCount; i++)
     {
-        float res = samples.row(i).dot(weights) + shift;
+        double res = samples.row(i).dot(weights) + shift;
         responses.at<float>(i) = res > 0 ? 1.f : -1.f;
     }
 }
