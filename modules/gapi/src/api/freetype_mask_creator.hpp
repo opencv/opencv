@@ -31,10 +31,18 @@ class FreeTypeBitmaskCreator : public IBitmaskCreator
 public:
     FreeTypeBitmaskCreator(const std::string& path) : m_font_path(path)
     {
+        if (FT_Init_FreeType(&m_library) ||
+            FT_New_Face(m_library, m_font_path.c_str(), 0, &m_face))
+        {
+            m_is_initiliazed = false;
+        }
     }
 
     virtual cv::Size computeMaskSize() override
     {
+        GAPI_Assert(m_is_initiliazed &&
+                    "FreeTypeBitmaskCreator is't initiliazed correctly !");
+
         FT_GlyphSlot slot = m_face->glyph;
         int bmp_w        = 0;
         int max_baseline = 0;
@@ -81,6 +89,9 @@ public:
 
     int virtual createMask(cv::Mat& mask) override
     {
+        GAPI_Assert(m_is_initiliazed &&
+                    "FreeTypeBitmaskCreator is't initiliazed correctly !");
+
         mask = cv::Scalar(0);
         for (size_t i = 0; i < m_text.text.size(); ++i)
         {
@@ -93,6 +104,9 @@ public:
 
     void virtual setMaskParams(const cv::gapi::wip::draw::Text& text) override
     {
+        GAPI_Assert(m_is_initiliazed &&
+                    "FreeTypeBitmaskCreator is't initiliazed correctly !");
+
         m_text = text;
 
         // Convert OpenCV scale to Freetype text height
@@ -104,19 +118,13 @@ public:
 
     virtual ~FreeTypeBitmaskCreator() override
     {
-        GAPI_Assert(!FT_Done_Face(m_face));
-        GAPI_Assert(!FT_Done_FreeType(m_library));
+        FT_Done_Face(m_face);
+        FT_Done_FreeType(m_library);
     }
 
 private:
     FT_Library    m_library;
     FT_Face       m_face;
-
-    virtual void init() override
-    {
-        GAPI_Assert(!FT_Init_FreeType(&m_library));
-        GAPI_Assert(!FT_New_Face(m_library, m_font_path.c_str(), 0, &m_face));
-    }
 
     std::string m_font_path;
 
@@ -127,6 +135,8 @@ private:
     int m_baseline = 0;
     int m_max_glyph_top = 0;
     cv::Size m_mask_size;
+
+    bool m_is_initiliazed = true;
 };
 
 } // namespace draw
