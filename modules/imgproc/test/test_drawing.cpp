@@ -251,7 +251,7 @@ int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
 int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
 {
     RNG randomGenerator(1);
-    for (size_t test = 0; test < 1000; ++test)
+    for (size_t test = 0; test < 10000; ++test)
     {
         int width = randomGenerator.uniform(0, 512+1);
         int height = randomGenerator.uniform(0, 512+1);
