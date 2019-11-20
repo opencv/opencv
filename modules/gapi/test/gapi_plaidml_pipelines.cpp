@@ -40,7 +40,7 @@ TEST(GAPI_PlaidML_Pipelines, SimpleArithmetic)
     cv::Mat in_mat1(size, type);
     cv::Mat in_mat2(size, type);
 
-    // NB: What about overload ? PlaidML doesn't handle it
+    // NB: What about overflow ? PlaidML doesn't handle it
     cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(127));
     cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(127));
 
