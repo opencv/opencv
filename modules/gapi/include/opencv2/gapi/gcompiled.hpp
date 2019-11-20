@@ -14,6 +14,8 @@
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/garg.hpp>
 
+#include <ade/execution_engine/execution_engine.hpp>
+
 namespace cv {
 
 // This class represents a compiled computation.
@@ -207,6 +209,9 @@ public:
      */
     // FIXME: Why it requires compile args?
     void reshape(const GMetaArgs& inMetas, const GCompileArgs& args);
+
+    static void setMetaData(ade::Graph &g, cv::GCompileArgs &args
+                        , const cv::GMetaArgs &metas);
 
 protected:
     /// @private

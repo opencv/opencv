@@ -392,19 +392,6 @@ void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, cv::GCompileArgs &args)
     GIslandModel::compileIslands(gim, g, args);
 }
 
-void cv::gimpl::GCompiler::setMetaData(ade::Graph &g, cv::GCompileArgs &args
-                                        , const cv::GMetaArgs &metas)
-{
-    auto pass_ctx = ade::passes::PassContext{g};
-    cv::gimpl::passes::initMeta(pass_ctx, metas);
-
-    cv::gimpl::passes::inferMeta(pass_ctx, true);
-    //compile islands for m_orig_graph
-    cv::gimpl::passes::storeResultingMeta(pass_ctx);
-    // Get compileArgs from m_ops??
-    cv::gimpl::GCompiler::compileIslands(g, args);
-}
-
 cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
 {
     // This is the final compilation step. Here:

@@ -558,7 +558,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
 
     // Setting metas
     const auto& metas = m_metas;
-    cv::gimpl::GCompiler::setMetaData(*m_orig_graph.get(), m_comp_args, metas);
+    cv::GCompiled::setMetaData(*m_orig_graph.get(), m_comp_args, metas);
 
     GModel::Graph gm(*m_orig_graph);
 
