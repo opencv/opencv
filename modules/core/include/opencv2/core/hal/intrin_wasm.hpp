@@ -4213,6 +4213,29 @@ inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
 
+template<int i, typename _Tp>
+inline typename _Tp::lane_type v_extract_n(const _Tp& a)
+{
+    return v_rotate_right<i>(a).get0();
+}
+
+template<int i>
+inline v_uint32x4 v_broadcast_element(const v_uint32x4& a)
+{
+    return v_setall_u32(v_extract_n<i>(a));
+}
+template<int i>
+inline v_int32x4 v_broadcast_element(const v_int32x4& a)
+{
+    return v_setall_s32(v_extract_n<i>(a));
+}
+template<int i>
+inline v_float32x4 v_broadcast_element(const v_float32x4& a)
+{
+    return v_setall_f32(v_extract_n<i>(a));
+}
+
+
 ////////////// FP16 support ///////////////////////////
 
 inline v_float32x4 v_load_expand(const float16_t* ptr)
