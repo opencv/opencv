@@ -80,18 +80,18 @@ TEST_P(ML_Legacy_Params, legacy_load)
 }
 
 ML_Legacy_Param param_list[] = {
-    make_tuple(CV_ANN, "waveform"),
-    make_tuple(CV_BOOST, "adult"),
-    make_tuple(CV_BOOST, "1"),
-    make_tuple(CV_BOOST, "2"),
-    make_tuple(CV_BOOST, "3"),
-    make_tuple(CV_DTREE, "abalone"),
-    make_tuple(CV_DTREE, "mushroom"),
-    make_tuple(CV_NBAYES, "waveform"),
-    make_tuple(CV_SVM, "poletelecomm"),
-    make_tuple(CV_SVM, "waveform"),
-    make_tuple(CV_RTREES, "waveform"),
-    make_tuple(CV_SVMSGD, "waveform"),
+    ML_Legacy_Param(CV_ANN, "waveform"),
+    ML_Legacy_Param(CV_BOOST, "adult"),
+    ML_Legacy_Param(CV_BOOST, "1"),
+    ML_Legacy_Param(CV_BOOST, "2"),
+    ML_Legacy_Param(CV_BOOST, "3"),
+    ML_Legacy_Param(CV_DTREE, "abalone"),
+    ML_Legacy_Param(CV_DTREE, "mushroom"),
+    ML_Legacy_Param(CV_NBAYES, "waveform"),
+    ML_Legacy_Param(CV_SVM, "poletelecomm"),
+    ML_Legacy_Param(CV_SVM, "waveform"),
+    ML_Legacy_Param(CV_RTREES, "waveform"),
+    ML_Legacy_Param(CV_SVMSGD, "waveform"),
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, ML_Legacy_Params, testing::ValuesIn(param_list));

@@ -191,8 +191,8 @@ TEST_P(ML_ANN_METHOD, Test)
 
 INSTANTIATE_TEST_CASE_P(/*none*/, ML_ANN_METHOD,
     testing::Values(
-        make_tuple<ANN_MLP_METHOD, string, int>(ml::ANN_MLP::RPROP, "rprop", 5000),
-        make_tuple<ANN_MLP_METHOD, string, int>(ml::ANN_MLP::ANNEAL, "anneal", 1000)
+        ML_ANN_METHOD_Params(ml::ANN_MLP::RPROP, "rprop", 5000),
+        ML_ANN_METHOD_Params(ml::ANN_MLP::ANNEAL, "anneal", 1000)
         //make_pair<ANN_MLP_METHOD, string>(ml::ANN_MLP::BACKPROP, "backprop", 5000); -----> NO BACKPROP TEST
     )
 );

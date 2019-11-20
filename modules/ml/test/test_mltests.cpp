@@ -69,15 +69,15 @@ struct IModelFactory
 template <typename T>
 struct ModelFactory : public IModelFactory
 {
-    Ptr<StatModel> createNew(const DatasetDesc &dataset) const override
+    Ptr<StatModel> createNew(const DatasetDesc &dataset) const CV_OVERRIDE
     {
         return tuneModel<T>(dataset, T::create());
     }
-    Ptr<StatModel> loadFromFile(const string & filename) const override
+    Ptr<StatModel> loadFromFile(const string & filename) const CV_OVERRIDE
     {
         return T::load(filename);
     }
-    string name() const override { return modelName<T>(); }
+    string name() const CV_OVERRIDE { return modelName<T>(); }
 };
 
 // implementation
@@ -131,7 +131,7 @@ template <>
 struct ModelFactory<Boost> : public IModelFactory
 {
     ModelFactory(int boostType_) : boostType(boostType_) {}
-    Ptr<StatModel> createNew(const DatasetDesc &) const override
+    Ptr<StatModel> createNew(const DatasetDesc &) const CV_OVERRIDE
     {
         Ptr<Boost> m = Boost::create();
         m->setBoostType(boostType);
@@ -143,7 +143,7 @@ struct ModelFactory<Boost> : public IModelFactory
         return m;
     }
     Ptr<StatModel> loadFromFile(const string &filename) const { return Boost::load(filename); }
-    string name() const override { return "Boost"; }
+    string name() const CV_OVERRIDE { return "Boost"; }
     int boostType;
 };
 
@@ -152,7 +152,7 @@ struct ModelFactory<SVM> : public IModelFactory
 {
     ModelFactory(int svmType_, int kernelType_, double gamma_, double c_, double nu_)
         : svmType(svmType_), kernelType(kernelType_), gamma(gamma_), c(c_), nu(nu_) {}
-    Ptr<StatModel> createNew(const DatasetDesc &) const override
+    Ptr<StatModel> createNew(const DatasetDesc &) const CV_OVERRIDE
     {
         Ptr<SVM> m = SVM::create();
         m->setType(svmType);
@@ -166,7 +166,7 @@ struct ModelFactory<SVM> : public IModelFactory
         return m;
     }
     Ptr<StatModel> loadFromFile(const string &filename) const { return SVM::load(filename); }
-    string name() const override { return "SVM"; }
+    string name() const CV_OVERRIDE { return "SVM"; }
     int svmType;
     int kernelType;
     double gamma;
@@ -286,8 +286,8 @@ TEST_P(ML_SL_Params, save_load)
     }
     EXPECT_MAT_NEAR(responses1, responses2, 0.0);
     {
-        ifstream f1(file1, std::ios::binary);
-        ifstream f2(file2, std::ios::binary);
+        ifstream f1(file1, std::ios_base::binary);
+        ifstream f2(file2, std::ios_base::binary);
         ASSERT_TRUE(f1.is_open() && f2.is_open());
         const size_t BUFSZ = 10000;
         vector<char> buf1(BUFSZ, 0);
