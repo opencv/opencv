@@ -147,7 +147,8 @@ struct Integral_SIMD<uchar, int, double>
                 v_expand(el8, el4l, el4h);
                 el4l += prev;
                 el4h += el4l;
-                prev = vx_setall_s32(v_rotate_right<v_int32::nlanes - 1>(el4h).get0());
+
+                prev = v_broadcast_element<v_int32::nlanes - 1>(el4h);
 #endif
                 v_store(sum_row + j                  , el4l + vx_load(prev_sum_row + j                  ));
                 v_store(sum_row + j + v_int32::nlanes, el4h + vx_load(prev_sum_row + j + v_int32::nlanes));
@@ -215,7 +216,8 @@ struct Integral_SIMD<uchar, float, double>
                 v_expand(el8, el4li, el4hi);
                 el4l = v_cvt_f32(el4li) + prev;
                 el4h = v_cvt_f32(el4hi) + el4l;
-                prev = vx_setall_f32(v_rotate_right<v_float32::nlanes - 1>(el4h).get0());
+
+                prev = v_broadcast_element<v_float32::nlanes - 1>(el4h);
 #endif
                 v_store(sum_row + j                    , el4l + vx_load(prev_sum_row + j                    ));
                 v_store(sum_row + j + v_float32::nlanes, el4h + vx_load(prev_sum_row + j + v_float32::nlanes));
