@@ -911,9 +911,12 @@ class CppHeaderParser(object):
                         if stmt_type.startswith("enum"):
                             decls.append([stmt_type + " " + self.get_dotted_name(name), "", [], decl, None, ""])
                         else:
-                            decls.append(decl)
+                            if "cv.cudacodec.VideoReader.nextFrame" not in decl[0]:
+                                # Disable Mat decl for specific cudacodec function which can take zero args, to allow python call to
+                                # fall through to correct GpuMat decl
+                                decls.append(decl)
 
-                            if self._generate_gpumat_decls and "cv.cuda." in decl[0]:
+                            if self._generate_gpumat_decls and "cv.cuda" in decl[0]:
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
                                 # same declaration working with GpuMat (this is important for T-Api access)
                                 args = decl[3]
