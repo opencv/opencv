@@ -124,7 +124,7 @@ The next figures show two common types of radial distortion: barrel distortion (
 ![](pics/distortion_examples2.png)
 
 In some cases the image sensor may be tilted in order to focus an oblique plane in front of the
-camera (Scheimpfug condition). This can be useful for particle image velocimetry (PIV) or
+camera (Scheimpflug principle). This can be useful for particle image velocimetry (PIV) or
 triangulation with a laser fan. The tilt causes a perspective distortion of \f$x''\f$ and
 \f$y''\f$. This distortion can be modelled in the following way, see e.g. @cite Louhichi07.
 
