@@ -12,12 +12,13 @@ static void drawQRCodeContour(Mat &color_image, vector<Point> transform);
 static void drawFPS(Mat &color_image, double fps);
 static int  liveQRCodeDetect(const string& out_file);
 static int  imageQRCodeDetect(const string& in_file, const string& out_file);
-
+static int  imageQRCodeDetectMulti(const string& in_file, const string& out_file);
 int main(int argc, char *argv[])
 {
     const string keys =
         "{h help ? |        | print help messages }"
         "{i in     |        | input  path to file for detect (with parameter - show image, otherwise - camera)}"
+        "{m multi  |        | use detect for multiple qr-codes }"
         "{o out    |        | output path to file (save image, work with -i parameter) }";
     CommandLineParser cmd_parser(argc, argv, keys);
 
@@ -27,7 +28,6 @@ int main(int argc, char *argv[])
         cmd_parser.printMessage();
         return 0;
     }
-
     string in_file_name  = cmd_parser.get<string>("in");    // input  path to image
     string out_file_name;
     if (cmd_parser.has("out"))
@@ -40,11 +40,16 @@ int main(int argc, char *argv[])
     }
 
     int return_code = 0;
+
     if (in_file_name.empty())
     {
         return_code = liveQRCodeDetect(out_file_name);
     }
-    else
+    else if (!in_file_name.empty() && (cmd_parser.has("multi")))
+    {
+        return_code = imageQRCodeDetectMulti(samples::findFile(in_file_name), out_file_name);
+    }
+    else if(!in_file_name.empty())
     {
         return_code = imageQRCodeDetect(samples::findFile(in_file_name), out_file_name);
     }
@@ -88,42 +93,89 @@ int liveQRCodeDetect(const string& out_file)
         cout << "Cannot open a camera" << endl;
         return -4;
     }
-
+    cout << "Press 'm' to switch between detectAndDecode and detectAndDecodeMulti" << endl;
     QRCodeDetector qrcode;
     TickMeter total;
     for(;;)
     {
-        Mat frame, src, straight_barcode;
-        string decode_info;
-        vector<Point> transform;
-        cap >> frame;
-        if (frame.empty())
+        for(;;)
         {
-            cout << "End of video stream" << endl;
+            Mat frame, src;
+            Mat straight_barcode;
+            string decode_info;
+            vector<Point> transform;
+            cap >> frame;
+            if (frame.empty())
+            {
+                cout << "End of video stream" << endl;
+                break;
+            }
+            cvtColor(frame, src, COLOR_BGR2GRAY);
+            total.start();
+            bool result_detection = qrcode.detect(src, transform);
+            if (result_detection)
+            {
+                decode_info = qrcode.decode(src, transform, straight_barcode);
+                if (!decode_info.empty()) { cout << decode_info << endl; }
+            }
+            total.stop();
+            double fps = 1 / total.getTimeSec();
+            total.reset();
+
+            if (result_detection) { drawQRCodeContour(frame, transform); }
+            drawFPS(frame, fps);
+
+            imshow("Live QR code detector", frame);
+            char c = (char)waitKey(30);
+            if (c == 27)
             break;
-        }
-        cvtColor(frame, src, COLOR_BGR2GRAY);
-
-        total.start();
-        bool result_detection = qrcode.detect(src, transform);
-        if (result_detection)
-        {
-            decode_info = qrcode.decode(src, transform, straight_barcode);
-            if (!decode_info.empty()) { cout << decode_info << endl; }
-        }
-        total.stop();
-        double fps = 1 / total.getTimeSec();
-        total.reset();
-
-        if (result_detection) { drawQRCodeContour(frame, transform); }
-        drawFPS(frame, fps);
-
-        imshow("Live QR code detector", frame);
-        char c = (char)waitKey(30);
-        if (c == 27)
-            break;
-        if (c == ' ' && !out_file.empty())
+            if (c == ' ' && !out_file.empty())
             imwrite(out_file, frame); // TODO write original frame too
+            if(c == 'm')
+            break;
+        }
+        for(;;)
+        {
+            Mat frame, src;
+            vector<Mat> straight_barcode;
+            vector<cv::String> decode_info;
+            vector<vector<Point> > transform;
+            cap >> frame;
+            if (frame.empty())
+            {
+                cout << "End of video stream" << endl;
+                break;
+            }
+            cvtColor(frame, src, COLOR_BGR2GRAY);
+            total.start();
+            bool result_detection = qrcode.detectMulti(src, transform);
+            if (result_detection)
+            {
+                qrcode.decodeMulti(src, decode_info, transform, straight_barcode);
+                for(size_t i = 0; i < decode_info.size(); i++)
+                {
+                    if (!decode_info[i].empty()) { cout << decode_info[i] << endl; }
+                }
+            }
+            total.stop();
+            double fps = 1 / total.getTimeSec();
+            total.reset();
+
+            if (result_detection)
+            {
+               for(size_t i = 0; i < transform.size(); i++)
+                  drawQRCodeContour(frame, transform[i]);
+            }
+            drawFPS(frame, fps);
+
+            imshow("Live QR code detector", frame);
+            char c = (char)waitKey(30);
+            if (c == 27)
+                break;
+            if (c == ' ' && !out_file.empty())
+                imwrite(out_file, frame); // TODO write original frame too
+            if(c == 'm') break;
+       }
     }
     return 0;
 }
@@ -171,6 +223,68 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
     cout << "Size: " << color_src.size() << endl;
     cout << "FPS: " << fps << endl;
     cout << "Decoded info: " << decoded_info << endl;
+
+    if (!out_file.empty())
+    {
+        imwrite(out_file, color_src);
+    }
+
+    for(;;)
+    {
+        imshow("Detect QR code on image", color_src);
+        if (waitKey(0) == 27)
+            break;
+    }
+    return 0;
+}
+
+int imageQRCodeDetectMulti(const string& in_file, const string& out_file)
+{
+    Mat color_src = imread(in_file, IMREAD_COLOR), src;
+    cvtColor(color_src, src, COLOR_BGR2GRAY);
+    vector<Mat> straight_barcode;
+    vector<cv::String> decoded_info;
+    vector<vector<Point> > transform;
+    const int count_experiments = 10;
+    double transform_time = 0.0;
+    bool result_detection = false;
+    TickMeter total;
+    QRCodeDetector qrcode;
+    for (size_t i = 0; i < count_experiments; i++)
+    {
+        total.start();
+        transform.clear();
+        result_detection = qrcode.detectMulti(src, transform);
+        total.stop();
+        transform_time += total.getTimeSec();
+        total.reset();
+        if (!result_detection)
+            continue;
+
+        total.start();
+        qrcode.decodeMulti(src, decoded_info, transform, straight_barcode);
+        total.stop();
+        transform_time += total.getTimeSec();
+        total.reset();
+    }
+    double fps = count_experiments / transform_time;
+    if (!result_detection)
+        cout << "QR code not found" << endl;
+    for(size_t i = 0; i < decoded_info.size(); i++)
+    {
+        if (decoded_info[i].empty())
+            cout << "QR code cannot be decoded" << endl;
+    }
+    for(size_t j = 0; j < transform.size(); j++)
+        drawQRCodeContour(color_src, transform[j]);
+    drawFPS(color_src, fps);
+
+    cout << "Input  image file path: " << in_file  << endl;
+    cout << "Output image file path: " << out_file << endl;
+    cout << "Size: " << color_src.size() << endl;
+    cout << "FPS: " << fps << endl;
+    for(size_t i = 0; i < decoded_info.size(); i++)
+        cout << "Decoded info: " << decoded_info[i] << endl;
 
     if (!out_file.empty())
     {

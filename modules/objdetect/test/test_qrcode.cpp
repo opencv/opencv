@@ -407,7 +407,7 @@ TEST_P(Objdetect_QRCode_Multi, regression)
     std::vector<cv::String> decoded_info;
     QRCodeDetector qrcode;
 #ifdef HAVE_QUIRC
-    decoded_info = qrcode.detectAndDecodeMulti(src, corners, straight_barcode);
+    EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
 #else

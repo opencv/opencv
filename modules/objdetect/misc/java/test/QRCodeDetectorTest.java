@@ -5,6 +5,7 @@ import org.opencv.core.Mat;
 import org.opencv.objdetect.QRCodeDetector;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.test.OpenCVTestCase;
+import java.util.ArrayList;
 
 public class QRCodeDetectorTest extends OpenCVTestCase {
 
@@ -30,7 +31,8 @@ public class QRCodeDetectorTest extends OpenCVTestCase {
     public void testDetectAndDecodeMulti() {
         Mat img = Imgcodecs.imread(testDataPath + "/cv/qrcode/multiple/6_qrcodes.png");
         QRCodeDetector detector = new QRCodeDetector();
-        List < String > output = detector.detectAndDecodeMulti(img);
+        List < String > output = new ArrayList< String >();
+        detector.detectAndDecodeMulti(img, output);
         assertEquals(output.get(0), "SKIP");
         assertEquals(output.get(1), "EXTRA");
         assertEquals(output.get(2), "TWO STEPS FORWARD");

@@ -87,19 +87,18 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
     ASSERT_TRUE(qrcode.detectMulti(src, corners));
     TEST_CYCLE()
     {
-        decoded_info = qrcode.decodeMulti(src, corners, straight_barcode);
+        ASSERT_TRUE(qrcode.decodeMulti(src, decoded_info, corners, straight_barcode));
         for(size_t i = 0; i < decoded_info.size(); i++)
         {
             ASSERT_FALSE(decoded_info[i].empty());
         }
     }
-    std::vector< std::vector< uint8_t > > decoded_info_uint8_t;
     for(size_t i = 0; i < decoded_info.size(); i++)
     {
-        std::vector< uint8_t > tmp(decoded_info[i].begin(), decoded_info[i].end());
-        decoded_info_uint8_t.push_back(tmp);
+        std::vector< uint8_t > decoded_info_uint8_t(decoded_info[i].begin(), decoded_info[i].end());
+        SANITY_CHECK(decoded_info_uint8_t);
     }
-    SANITY_CHECK(decoded_info_uint8_t);
+
     SANITY_CHECK(straight_barcode);
 
 }
