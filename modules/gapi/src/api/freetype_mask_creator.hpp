@@ -29,20 +29,22 @@ namespace draw
 class FreeTypeBitmaskCreator : public IBitmaskCreator
 {
 public:
-    FreeTypeBitmaskCreator(const std::string& path) : m_font_path(path)
+    FreeTypeBitmaskCreator(const std::string& path)
     {
-        if (FT_Init_FreeType(&m_library) ||
-            FT_New_Face(m_library, m_font_path.c_str(), 0, &m_face))
+        if (FT_Init_FreeType(&m_library) != 0)
         {
-            m_is_initiliazed = false;
+            cv::util::throw_error(std::runtime_error("Failed to initialize FT"));
+        }
+
+        if (FT_New_Face(m_library, path.c_str(), 0, &m_face))
+        {
+            FT_Done_FreeType(m_library);
+            cv::util::throw_error(std::runtime_error("Failed to create a font face"));
         }
     }
 
     virtual cv::Size computeMaskSize() override
     {
-        GAPI_Assert(m_is_initiliazed &&
-                    "FreeTypeBitmaskCreator is't initiliazed correctly !");
-
         FT_GlyphSlot slot = m_face->glyph;
         int bmp_w        = 0;
         int max_baseline = 0;
@@ -89,9 +91,6 @@ public:
 
     int virtual createMask(cv::Mat& mask) override
     {
-        GAPI_Assert(m_is_initiliazed &&
-                    "FreeTypeBitmaskCreator is't initiliazed correctly !");
-
         mask = cv::Scalar(0);
         for (size_t i = 0; i < m_text.text.size(); ++i)
         {
@@ -104,9 +103,6 @@ public:
 
     void virtual setMaskParams(const cv::gapi::wip::draw::Text& text) override
     {
-        GAPI_Assert(m_is_initiliazed &&
-                    "FreeTypeBitmaskCreator is't initiliazed correctly !");
-
         m_text = text;
 
         // Convert OpenCV scale to Freetype text height
@@ -126,8 +122,6 @@ private:
     FT_Library    m_library;
     FT_Face       m_face;
 
-    std::string m_font_path;
-
     std::vector<cv::Mat> m_glyphs;
     std::vector<cv::Point> m_pos;
 
@@ -135,8 +129,6 @@ private:
     int m_baseline = 0;
     int m_max_glyph_top = 0;
     cv::Size m_mask_size;
-
-    bool m_is_initiliazed = true;
 };
 
 } // namespace draw
