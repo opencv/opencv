@@ -14,6 +14,25 @@
 namespace cv
 {
 
+//This and its overload below are used in various MatExpr operator overloads
+//implemented to check that Matrix operands exist.
+void checkOperandsExist(const Mat& a)
+{
+    if (a.empty())
+    {
+        CV_Error(CV_StsBadArg, "Matrix operand is an empty matrix.");
+    }
+}
+
+void checkOperandsExist(const Mat& a, const Mat& b)
+{
+    if (a.empty() || b.empty())
+    {
+        CV_Error(CV_StsBadArg, "One or more matrix operands are empty.");
+    }
+}
+
+
 class MatOp_Identity CV_FINAL : public MatOp
 {
 public:
@@ -1025,6 +1044,7 @@ MatExpr min(const Mat& a, const Mat& b)
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Bin::makeExpr(e, 'm', a, b);
     return e;
