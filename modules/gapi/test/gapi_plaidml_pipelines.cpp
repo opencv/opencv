@@ -1,3 +1,10 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2019 Intel Corporation
+
+
 #ifdef HAVE_PLAIDML
 
 #include "test_precomp.hpp"
@@ -59,7 +66,7 @@ TEST(GAPI_PlaidML_Pipelines, SimpleArithmetic)
     ////////////////////////////// OpenCV /////////////////////////////////////
     cv::add(in_mat1, in_mat2, ref_mat, cv::noArray(), type);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
 }
 
 TEST(GAPI_PlaidML_Pipelines, ComplexArithmetic)
@@ -92,12 +99,12 @@ TEST(GAPI_PlaidML_Pipelines, ComplexArithmetic)
     cv::bitwise_xor(in_mat2, ref_mat, ref_mat);
     cv::bitwise_or(in_mat1, ref_mat, ref_mat);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
 }
 
 TEST(GAPI_PlaidML_Pipelines, TwoInputOperations)
 {
-    cv::Size size(3, 3);
+    cv::Size size(1920, 1080);
     int type = CV_8UC1;
 
     constexpr int kNumInputs = 4;
@@ -126,12 +133,12 @@ TEST(GAPI_PlaidML_Pipelines, TwoInputOperations)
     cv::add(ref_mat, in_mat[2], ref_mat, cv::noArray(), type);
     cv::subtract(ref_mat, in_mat[1], ref_mat, cv::noArray(), type);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
 }
 
 TEST(GAPI_PlaidML_Pipelines, TwoOutputOperations)
 {
-    cv::Size size(3, 3);
+    cv::Size size(1920, 1080);
     int type = CV_8UC1;
 
     constexpr int kNumInputs = 4;
@@ -161,8 +168,8 @@ TEST(GAPI_PlaidML_Pipelines, TwoOutputOperations)
     cv::add(in_mat[0], in_mat[3], ref_mat[0], cv::noArray(), type);
     cv::add(in_mat[1], in_mat[2], ref_mat[1], cv::noArray(), type);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat[0] != ref_mat[0]));
-    EXPECT_EQ(0, cv::countNonZero(out_mat[1] != ref_mat[1]));
+    EXPECT_EQ(0, cv::norm(out_mat[0], ref_mat[0]));
+    EXPECT_EQ(0, cv::norm(out_mat[1], ref_mat[1]));
 }
 
 } // namespace opencv_test
