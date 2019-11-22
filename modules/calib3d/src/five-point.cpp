@@ -571,7 +571,8 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     if (!_mask.empty())
     {
         Mat mask = _mask.getMat();
-        CV_Assert(mask.size() == mask1.size());
+        CV_Assert(npoints == mask.checkVector(1));
+        mask = mask.reshape(1, npoints);
         bitwise_and(mask, mask1, mask1);
         bitwise_and(mask, mask2, mask2);
         bitwise_and(mask, mask3, mask3);

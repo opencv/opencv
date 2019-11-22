@@ -153,19 +153,24 @@ public:
                 m_2 = vx_setall_f64(k5);
                 m_0 /= v_muladd(v_muladd(v_muladd(m_3, r2_0, m_2), r2_0, vx_setall_f64(k4)), r2_0, v_one);
                 m_1 /= v_muladd(v_muladd(v_muladd(m_3, r2_1, m_2), r2_1, vx_setall_f64(k4)), r2_1, v_one);
+
+                m_3 = vx_setall_f64(2.0);
+                xd_0 = v_muladd(m_3, xd_0, r2_0);
+                yd_0 = v_muladd(m_3, yd_0, r2_0);
+                xd_1 = v_muladd(m_3, xd_1, r2_1);
+                yd_1 = v_muladd(m_3, yd_1, r2_1);
+                m_2 = x_0 * y_0 * m_3;
+                m_3 = x_1 * y_1 * m_3;
+
                 x_0 *= m_0; y_0 *= m_0; x_1 *= m_1; y_1 *= m_1;
 
                 m_0 = vx_setall_f64(p1);
                 m_1 = vx_setall_f64(p2);
-                m_2 = vx_setall_f64(2.0);
-                xd_0 = v_muladd(v_muladd(m_2, xd_0, r2_0), m_1, x_0);
-                yd_0 = v_muladd(v_muladd(m_2, yd_0, r2_0), m_0, y_0);
-                xd_1 = v_muladd(v_muladd(m_2, xd_1, r2_1), m_1, x_1);
-                yd_1 = v_muladd(v_muladd(m_2, yd_1, r2_1), m_0, y_1);
+                xd_0 = v_muladd(xd_0, m_1, x_0);
+                yd_0 = v_muladd(yd_0, m_0, y_0);
+                xd_1 = v_muladd(xd_1, m_1, x_1);
+                yd_1 = v_muladd(yd_1, m_0, y_1);
 
-                m_0 *= m_2; m_1 *= m_2;
-                m_2 = x_0 * y_0;
-                m_3 = x_1 * y_1;
                 xd_0 = v_muladd(m_0, m_2, xd_0);
                 yd_0 = v_muladd(m_1, m_2, yd_0);
                 xd_1 = v_muladd(m_0, m_3, xd_1);

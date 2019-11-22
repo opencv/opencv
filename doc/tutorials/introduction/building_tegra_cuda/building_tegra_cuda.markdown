@@ -213,7 +213,7 @@ Supported platform: Drive PX 2
         -DBUILD_JASPER=OFF \
         -DBUILD_ZLIB=OFF \
         -DBUILD_EXAMPLES=ON \
-        -DBUILD_opencv_java=OFF \
+        -DBUILD_JAVA=OFF \
         -DBUILD_opencv_python2=ON \
         -DBUILD_opencv_python3=OFF \
         -DENABLE_NEON=ON \
@@ -263,7 +263,7 @@ Configuration is slightly different for the Jetson TK1 and the Jetson TX1 system
         -DBUILD_JASPER=OFF \
         -DBUILD_ZLIB=OFF \
         -DBUILD_EXAMPLES=ON \
-        -DBUILD_opencv_java=OFF \
+        -DBUILD_JAVA=OFF \
         -DBUILD_opencv_python2=ON \
         -DBUILD_opencv_python3=OFF \
         -DENABLE_NEON=ON \
@@ -300,7 +300,7 @@ __Note:__ This uses CUDA 6.5, not 8.0.
         -DBUILD_JASPER=OFF \
         -DBUILD_ZLIB=OFF \
         -DBUILD_EXAMPLES=ON \
-        -DBUILD_opencv_java=OFF \
+        -DBUILD_JAVA=OFF \
         -DBUILD_opencv_python2=ON \
         -DBUILD_opencv_python3=OFF \
         -DENABLE_PRECOMPILED_HEADERS=OFF \
@@ -345,7 +345,7 @@ The configuration options given to `cmake` below are targeted towards the functi
         -DBUILD_JASPER=OFF \
         -DBUILD_ZLIB=OFF \
         -DBUILD_EXAMPLES=ON \
-        -DBUILD_opencv_java=OFF \
+        -DBUILD_JAVA=OFF \
         -DBUILD_opencv_python2=ON \
         -DBUILD_opencv_python3=OFF \
         -DWITH_OPENCL=OFF \
@@ -476,7 +476,7 @@ For DRIVE PX 2:
         -DBUILD_JASPER=OFF \
         -DBUILD_ZLIB=OFF \
         -DBUILD_EXAMPLES=ON \
-        -DBUILD_opencv_java=OFF \
+        -DBUILD_JAVA=OFF \
         -DBUILD_opencv_nonfree=OFF \
         -DBUILD_opencv_python=ON \
         -DENABLE_NEON=ON \
@@ -513,7 +513,7 @@ For Jetson TK1:
         -DBUILD_JASPER=OFF \
         -DBUILD_ZLIB=OFF \
         -DBUILD_EXAMPLES=ON \
-        -DBUILD_opencv_java=OFF \
+        -DBUILD_JAVA=OFF \
         -DBUILD_opencv_nonfree=OFF \
         -DBUILD_opencv_python=ON \
         -DENABLE_NEON=ON \
@@ -548,7 +548,7 @@ For Jetson TX1:
         -DBUILD_JASPER=OFF \
         -DBUILD_ZLIB=OFF \
         -DBUILD_EXAMPLES=ON \
-        -DBUILD_opencv_java=OFF \
+        -DBUILD_JAVA=OFF \
         -DBUILD_opencv_nonfree=OFF \
         -DBUILD_opencv_python=ON \
         -DENABLE_PRECOMPILED_HEADERS=OFF \
@@ -585,7 +585,7 @@ For both 14.04 LTS and 16.04 LTS:
         -DBUILD_JASPER=OFF \
         -DBUILD_ZLIB=OFF \
         -DBUILD_EXAMPLES=ON \
-        -DBUILD_opencv_java=OFF \
+        -DBUILD_JAVA=OFF \
         -DBUILD_opencv_nonfree=OFF \
         -DBUILD_opencv_python=ON \
         -DWITH_OPENCL=OFF \
@@ -626,7 +626,7 @@ The following is a table of all the parameters passed to CMake in the recommende
 |BUILD_TBB|OFF|As above, for `tbb`| |
 |BUILD_TIFF|OFF|As above, for `libtiff`| |
 |BUILD_ZLIB|OFF|As above, for `zlib`| |
-|BUILD_opencv_java|OFF|Controls the building of the Java bindings for OpenCV|Building the Java bindings requires OpenCV libraries be built for static linking only|
+|BUILD_JAVA|OFF|Controls the building of the Java bindings for OpenCV|Building the Java bindings requires OpenCV libraries be built for static linking only|
 |BUILD_opencv_nonfree|OFF|Controls the building of non-free (non-open-source) elements|Used only for building 2.4.X|
 |BUILD_opencv_python|ON|Controls the building of the Python 2 bindings in OpenCV 2.4.X|Used only for building 2.4.X|
 |BUILD_opencv_python2|ON|Controls the building of the Python 2 bindings in OpenCV 3.1.0|Not used in 2.4.X|

@@ -347,7 +347,7 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
                     int bottom = (int)data[i + 6];
                     int width  = right - left + 1;
                     int height = bottom - top + 1;
-                    if (width * height <= 1)
+                    if (width <= 2 || height <= 2)
                     {
                         left   = (int)(data[i + 3] * frame.cols);
                         top    = (int)(data[i + 4] * frame.rows);

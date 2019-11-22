@@ -107,6 +107,90 @@ Building OpenCV.js from Source
     @note
     It requires `node` installed in your development environment.
 
+-#  [optional] To build `opencv.js` with threads optimization, append `--threads` option.
+
+    For example:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_js --build_wasm --threads
+    @endcode
+
+    The default threads number is the logic core number of your device. You can use `cv.parallel_pthreads_set_threads_num(number)` to set threads number by yourself and use `cv.parallel_pthreads_get_threads_num()` to get the current threads number.
+
+    @note
+    You should build wasm version of `opencv.js` if you want to enable this optimization. And the threads optimization only works in browser, not in node.js. You need to enable the `WebAssembly threads support` feature first with your browser. For example, if you use Chrome, please enable this flag in chrome://flags.
+
+-#  [optional] To build `opencv.js` with wasm simd optimization, append `--simd` option.
+
+    For example:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_js --build_wasm --simd
+    @endcode
+
+    The simd optimization is experimental as wasm simd is still in development.
+
+    @note
+    Now only emscripten LLVM upstream backend supports wasm simd, refering to https://emscripten.org/docs/porting/simd.html. So you need to setup upstream backend environment with the following command first:
+    @code{.bash}
+    ./emsdk update
+    ./emsdk install latest-upstream
+    ./emsdk activate latest-upstream
+    source ./emsdk_env.sh
+    @endcode
+
+    @note
+    You should build wasm version of `opencv.js` if you want to enable this optimization. For browser, you need to enable the `WebAssembly SIMD support` feature first. For example, if you use Chrome, please enable this flag in chrome://flags. For Node.js, you need to run script with flag `--experimental-wasm-simd`.
+
+    @note
+    The simd version of `opencv.js` built by latest LLVM upstream may not work with the stable browser or old version of Node.js. Please use the latest version of unstable browser or Node.js to get new features, like `Chrome Dev`.
+
+-#  [optional] To build wasm intrinsics tests, append `--build_wasm_intrin_test` option.
+
+    For example:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_js --build_wasm --simd --build_wasm_intrin_test
+    @endcode
+
+    For wasm intrinsics tests, you can use the following function to test all the cases:
+    @code{.js}
+    cv.test_hal_intrin_all()
+    @endcode
+
+    And the failed cases will be logged in the JavaScript debug console.
+
+    If you only want to test single data type of wasm intrinsics, you can use the following functions:
+    @code{.js}
+    cv.test_hal_intrin_uint8()
+    cv.test_hal_intrin_int8()
+    cv.test_hal_intrin_uint16()
+    cv.test_hal_intrin_int16()
+    cv.test_hal_intrin_uint32()
+    cv.test_hal_intrin_int32()
+    cv.test_hal_intrin_uint64()
+    cv.test_hal_intrin_int64()
+    cv.test_hal_intrin_float32()
+    cv.test_hal_intrin_float64()
+    @endcode
+
+-#  [optional] To build performance tests, append `--build_perf` option.
+
+    For example:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_js --build_perf
+    @endcode
+
+    To run performance tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
+
+    There are some kernels now in the performance test like `cvtColor`, `resize` and `threshold`. For example, if you want to test `threshold`, please navigate the web browser to `http://localhost:8080/perf/perf_imgproc/perf_threshold.html`. You need to input the test parameter like `(1920x1080, CV_8UC1, THRESH_BINARY)`, and then click the `Run` button to run the case. And if you don't input the parameter, it will run all the cases of this kernel.
+
+    You can also run tests using Node.js.
+
+    For example, run `threshold` with parameter `(1920x1080, CV_8UC1, THRESH_BINARY)`:
+    @code{.sh}
+    cd bin/perf
+    npm install
+    node perf_threshold.js --test_param_filter="(1920x1080, CV_8UC1, THRESH_BINARY)"
+    @endcode
+
 Building OpenCV.js with Docker
 ---------------------------------------
 
@@ -117,14 +201,41 @@ So, make sure [docker](https://www.docker.com/) is installed in your system and 
 @code{.bash}
 git clone https://github.com/opencv/opencv.git
 cd opencv
-docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
+docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:latest" python ./platforms/js/build_js.py build
 @endcode
 
 In Windows use the following PowerShell command:
 
 @code{.bash}
-docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
+docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:latest" python ./platforms/js/build_js.py build
 @endcode
 
-@note
-The example uses latest version of [trzeci/emscripten](https://hub.docker.com/r/trzeci/emscripten) docker container. At this time, the latest version works fine and is `trzeci/emscripten:sdk-tag-1.38.32-64bit`
+@warning
+The example uses latest version of emscripten. If the build fails you should try a version that is known to work fine which is `1.38.32` using the following command:
+
+@code{.bash}
+docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:sdk-tag-1.38.32-64bit" python ./platforms/js/build_js.py build
+@endcode
+
+### Building the documentation with Docker
+
+To build the documentation `doxygen` needs to be installed. Create a file named `Dockerfile` with the following content:
+
+```
+FROM trzeci/emscripten:sdk-tag-1.38.32-64bit
+
+RUN apt-get update -y
+RUN apt-get install -y doxygen
+```
+
+Then we build the docker image and name it `opencv-js-doc` with the following command (that needs to be run only once):
+
+@code{.bash}
+docker build . -t opencv-js-doc
+@endcode
+
+Now run the build command again, this time using the new image and passing `--build_doc`:
+
+@code{.bash}
+docker run --rm --workdir /code -v "$PWD":/code "opencv-js-doc" python ./platforms/js/build_js.py build --build_doc
+@endcode

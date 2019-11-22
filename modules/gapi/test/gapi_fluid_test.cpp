@@ -244,6 +244,26 @@ TEST(Fluid, Sum_2_Mats_And_Scalar)
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
+TEST(Fluid, EqualizeHist)
+{
+    cv::GMat in, out;
+    cv::GComputation c(cv::GIn(in), cv::GOut(TEqualizeHist::on(in, TCalcHist::on(in))));
+
+    cv::Mat in_mat(320, 480, CV_8UC1),
+            out_mat(320, 480, CV_8UC1),
+            ref_mat(320, 480, CV_8UC1);
+
+    cv::randu(in_mat, 200, 240);
+
+    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage));
+
+    cc(cv::gin(in_mat), cv::gout(out_mat));
+
+    cv::equalizeHist(in_mat, ref_mat);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+}
+
 TEST(Fluid, Split3)
 {
     cv::GMat bgr;

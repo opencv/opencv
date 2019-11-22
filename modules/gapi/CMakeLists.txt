@@ -2,6 +2,7 @@
 # (Restructure directories, add common pass, etc)
 if (NOT DEFINED OPENCV_INITIAL_PASS)
     cmake_minimum_required(VERSION 3.3)
+    project(gapi_standalone)
     include("cmake/standalone.cmake")
     return()
 endif()
@@ -28,6 +29,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/fluid/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/*.hpp"
     )
 
 set(gapi_srcs
@@ -46,6 +48,7 @@ set(gapi_srcs
     src/api/kernels_core.cpp
     src/api/kernels_imgproc.cpp
     src/api/render.cpp
+    src/api/render_ocv.cpp
     src/api/ginfer.cpp
 
     # Compiler part
@@ -60,7 +63,9 @@ set(gapi_srcs
     src/compiler/passes/meta.cpp
     src/compiler/passes/kernels.cpp
     src/compiler/passes/exec.cpp
+    src/compiler/passes/transformations.cpp
     src/compiler/passes/pattern_matching.cpp
+    src/compiler/passes/perform_substitution.cpp
 
     # Executor
     src/executor/gexecutor.cpp

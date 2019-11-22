@@ -2543,10 +2543,10 @@ namespace cv{
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
             const int chunksSizeAndLabelsSize = h + 1;
-            int *chunksSizeAndLabels = (int *)cv::fastMalloc(chunksSizeAndLabelsSize * sizeof(int));
+            cv::AutoBuffer<int, 0> chunksSizeAndLabels(chunksSizeAndLabelsSize);
 
             //Tree of labels
-            LabelT *P = (LabelT *)cv::fastMalloc(Plength * sizeof(LabelT));
+            cv::AutoBuffer<LabelT, 0> P(Plength);
             //First label is for background
             P[0] = 0;
 
@@ -2555,30 +2555,27 @@ namespace cv{
 
             //First scan, each thread works with chunk of img.rows/nThreads rows
             //e.g. 300 rows, 4 threads -> each chunks is composed of 75 rows
-            cv::parallel_for_(range, FirstScan(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
+            cv::parallel_for_(range, FirstScan(img, imgLabels, P.data(), chunksSizeAndLabels.data()), nParallelStripes);
 
             //merge labels of different chunks
-            mergeLabels(img, imgLabels, P, chunksSizeAndLabels);
+            mergeLabels(img, imgLabels, P.data(), chunksSizeAndLabels.data());
 
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
                 CV_Assert(i + 1 < chunksSizeAndLabelsSize);
-                flattenL(P, LabelT((i + 1) / 2) * LabelT((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
+                flattenL(P.data(), LabelT((i + 1) / 2) * LabelT((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics data
-            StatsOp *sopArray = new StatsOp[h];
+            cv::AutoBuffer<StatsOp, 0> sopArray(h);
             sop.init(nLabels);
 
             //Second scan
-            cv::parallel_for_(range, SecondScan(img, imgLabels, P, sop, sopArray, nLabels), nParallelStripes);
+            cv::parallel_for_(range, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
 
-            StatsOp::mergeStats(imgLabels, sopArray, sop, nLabels);
+            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
             sop.finish();
 
-            delete[] sopArray;
-            cv::fastFree(chunksSizeAndLabels);
-            cv::fastFree(P);
             return nLabels;
         }
     };//End struct LabelingGranaParallel

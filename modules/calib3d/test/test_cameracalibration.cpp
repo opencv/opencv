@@ -2196,4 +2196,102 @@ TEST(Calib3d_Triangulate, accuracy)
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+TEST(CV_RecoverPoseTest, regression_15341)
+{
+    // initialize test data
+    const int invalid_point_count = 2;
+    const float _points1_[] = {
+        1537.7f, 166.8f,
+        1599.1f, 179.6f,
+        1288.0f, 207.5f,
+        1507.1f, 193.2f,
+        1742.7f, 210.0f,
+        1041.6f, 271.7f,
+        1591.8f, 247.2f,
+        1524.0f, 261.3f,
+        1330.3f, 285.0f,
+        1403.1f, 284.0f,
+        1506.6f, 342.9f,
+        1502.8f, 347.3f,
+        1344.9f, 364.9f,
+        0.0f, 0.0f  // last point is initial invalid
+    };
+
+    const float _points2_[] = {
+        1533.4f, 532.9f,
+        1596.6f, 552.4f,
+        1277.0f, 556.4f,
+        1502.1f, 557.6f,
+        1744.4f, 601.3f,
+        1023.0f, 612.6f,
+        1589.2f, 621.6f,
+        1519.4f, 629.0f,
+        1320.3f, 637.3f,
+        1395.2f, 642.2f,
+        1501.5f, 710.3f,
+        1497.6f, 714.2f,
+        1335.1f, 719.61f,
+        1000.0f, 1000.0f  // last point is initial invalid
+    };
+
+    vector<Point2f> _points1; Mat(14, 1, CV_32FC2, (void*)_points1_).copyTo(_points1);
+    vector<Point2f> _points2; Mat(14, 1, CV_32FC2, (void*)_points2_).copyTo(_points2);
+
+    const int point_count = (int) _points1.size();
+    CV_Assert(point_count == (int) _points2.size());
+
+    // camera matrix with both focal lengths = 1, and principal point = (0, 0)
+    const Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+
+    int Inliers = 0;
+
+    const int ntests = 3;
+    for (int testcase = 1; testcase <= ntests; ++testcase)
+    {
+        if (testcase == 1) // testcase with vector input data
+        {
+            // init temporary test data
+            vector<unsigned char> mask(point_count);
+            vector<Point2f> points1(_points1);
+            vector<Point2f> points2(_points2);
+
+            // Estimation of fundamental matrix using the RANSAC algorithm
+            Mat E, R, t;
+            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+            EXPECT_EQ(0, (int)mask[13]) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
+            points2[12] = Point2f(0.0f, 0.0f); // provoke another outlier detection for recover Pose
+            Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+            EXPECT_EQ(0, (int)mask[12]) << "Detecting outliers in function failed, testcase " << testcase;
+        }
+        else // testcase with mat input data
+        {
+            Mat points1(_points1, true);
+            Mat points2(_points2, true);
+            Mat mask;
+
+            if (testcase == 2)
+            {
+                // init temporary testdata
+                mask = Mat::zeros(point_count, 1, CV_8UC1);
+            }
+            else // testcase == 3 - with transposed mask
+            {
+                mask = Mat::zeros(1, point_count, CV_8UC1);
+            }
+
+            // Estimation of fundamental matrix using the RANSAC algorithm
+            Mat E, R, t;
+            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+            EXPECT_EQ(0, (int)mask.at<unsigned char>(13)) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
+            points2.at<Point2f>(12) = Point2f(0.0f, 0.0f); // provoke an outlier detection
+            Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+            EXPECT_EQ(0, (int)mask.at<unsigned char>(12)) << "Detecting outliers in function failed, testcase " << testcase;
+        }
+        EXPECT_EQ(Inliers, point_count - invalid_point_count) <<
+            "Number of inliers differs from expected number of inliers, testcase " << testcase;
+    }
+}
+
 }} // namespace

@@ -28,12 +28,12 @@
 #include <opencv2/gapi/gtype_traits.hpp>
 
 #include <opencv2/gapi/infer.hpp>
-#include <opencv2/gapi/infer/ie/util.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
 
 #include "backends/ie/giebackend.hpp"
+#include "backends/ie/util.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 

@@ -25,9 +25,185 @@ namespace cv { namespace dnn {
 // OpenCV lets users use an empty input name and to prevent unexpected naming,
 // we can use some predefined name.
 static std::string kDefaultInpLayerName = "empty_inp_layer_name";
+static std::string kOpenCVLayersType = "OpenCVLayer";
+
+static std::string shapesToStr(const std::vector<Mat>& mats)
+{
+    std::ostringstream shapes;
+    shapes << mats.size() << " ";
+    for (const Mat& m : mats)
+    {
+        shapes << m.dims << " ";
+        for (int i = 0; i < m.dims; ++i)
+            shapes << m.size[i] << " ";
+    }
+    return shapes.str();
+}
+
+static void strToShapes(const std::string& str, std::vector<std::vector<size_t> >& shapes)
+{
+    std::istringstream ss(str);
+    int num, dims;
+    ss >> num;
+    shapes.resize(num);
+    for (int i = 0; i < num; ++i)
+    {
+        ss >> dims;
+        shapes[i].resize(dims);
+        for (int j = 0; j < dims; ++j)
+            ss >> shapes[i][j];
+    }
+}
+
+class InfEngineCustomLayer : public InferenceEngine::ILayerExecImpl
+{
+public:
+    explicit InfEngineCustomLayer(const InferenceEngine::CNNLayer& layer) : cnnLayer(layer)
+    {
+        std::istringstream iss(layer.GetParamAsString("impl"));
+        size_t ptr;
+        iss >> ptr;
+        cvLayer = (Layer*)ptr;
+
+        std::vector<std::vector<size_t> > shapes;
+        strToShapes(layer.GetParamAsString("internals"), shapes);
+        internals.resize(shapes.size());
+        for (int i = 0; i < shapes.size(); ++i)
+            internals[i].create(std::vector<int>(shapes[i].begin(), shapes[i].end()), CV_32F);
+    }
+
+    virtual InferenceEngine::StatusCode execute(std::vector<InferenceEngine::Blob::Ptr>& inputs,
+                                                std::vector<InferenceEngine::Blob::Ptr>& outputs,
+                                                InferenceEngine::ResponseDesc *resp) noexcept
+    {
+        std::vector<Mat> inpMats, outMats;
+        infEngineBlobsToMats(inputs, inpMats);
+        infEngineBlobsToMats(outputs, outMats);
+
+        try
+        {
+            cvLayer->forward(inpMats, outMats, internals);
+            return InferenceEngine::StatusCode::OK;
+        }
+        catch (...)
+        {
+            return InferenceEngine::StatusCode::GENERAL_ERROR;
+        }
+    }
+
+    virtual InferenceEngine::StatusCode
+    getSupportedConfigurations(std::vector<InferenceEngine::LayerConfig>& conf,
+                               InferenceEngine::ResponseDesc* resp) noexcept
+    {
+        std::vector<InferenceEngine::DataConfig> inDataConfig;
+        std::vector<InferenceEngine::DataConfig> outDataConfig;
+        for (auto& it : cnnLayer.insData)
+        {
+            InferenceEngine::DataConfig conf;
+            conf.desc = it.lock()->getTensorDesc();
+            inDataConfig.push_back(conf);
+        }
+
+        for (auto& it : cnnLayer.outData)
+        {
+            InferenceEngine::DataConfig conf;
+            conf.desc = it->getTensorDesc();
+            outDataConfig.push_back(conf);
+        }
+
+        InferenceEngine::LayerConfig layerConfig;
+        layerConfig.inConfs = inDataConfig;
+        layerConfig.outConfs = outDataConfig;
+
+        conf.push_back(layerConfig);
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode init(InferenceEngine::LayerConfig& config,
+                                     InferenceEngine::ResponseDesc *resp) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+private:
+    InferenceEngine::CNNLayer cnnLayer;
+    dnn::Layer* cvLayer;
+    std::vector<Mat> internals;
+};
+
+class InfEngineCustomLayerShapeInfer : public InferenceEngine::IShapeInferImpl
+{
+public:
+      InferenceEngine::StatusCode
+      inferShapes(const std::vector<InferenceEngine::Blob::CPtr>& inBlobs,
+                  const std::map<std::string, std::string>& params,
+                  const std::map<std::string, InferenceEngine::Blob::Ptr>& blobs,
+                  std::vector<InferenceEngine::SizeVector>& outShapes,
+                  InferenceEngine::ResponseDesc* desc) noexcept override
+      {
+          strToShapes(params.at("outputs"), outShapes);
+          return InferenceEngine::StatusCode::OK;
+      }
+};
+
+class InfEngineCustomLayerFactory : public InferenceEngine::ILayerImplFactory {
+public:
+    explicit InfEngineCustomLayerFactory(const InferenceEngine::CNNLayer* layer) : cnnLayer(*layer) {}
+
+    InferenceEngine::StatusCode
+    getImplementations(std::vector<InferenceEngine::ILayerImpl::Ptr>& impls,
+                       InferenceEngine::ResponseDesc* resp) noexcept override {
+        impls.push_back(std::make_shared<InfEngineCustomLayer>(cnnLayer));
+        return InferenceEngine::StatusCode::OK;
+    }
+
+private:
+    InferenceEngine::CNNLayer cnnLayer;
+};
+
+class InfEngineExtension : public InferenceEngine::IExtension
+{
+public:
+    virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
+    virtual void Unload() noexcept {}
+    virtual void Release() noexcept {}
+    virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
+
+    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
+                                                          InferenceEngine::ResponseDesc*) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode getFactoryFor(InferenceEngine::ILayerImplFactory*& factory,
+                                              const InferenceEngine::CNNLayer* cnnLayer,
+                                              InferenceEngine::ResponseDesc* resp) noexcept
+    {
+        if (cnnLayer->type != kOpenCVLayersType)
+            return InferenceEngine::StatusCode::NOT_IMPLEMENTED;
+        factory = new InfEngineCustomLayerFactory(cnnLayer);
+        return InferenceEngine::StatusCode::OK;
+    }
+};
 
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::Builder::Layer& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
+
+    InfEngineBackendNode::InfEngineBackendNode(Ptr<Layer>& cvLayer_, std::vector<Mat*>& inputs,
+                                               std::vector<Mat>& outputs,
+                                               std::vector<Mat>& internals)
+        : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(cvLayer_->name),
+          cvLayer(cvLayer_)
+{
+    CV_Assert(!cvLayer->name.empty());
+    layer.setName(cvLayer->name);
+    layer.setType(kOpenCVLayersType);
+    layer.getParameters()["impl"] = (size_t)cvLayer.get();
+    layer.getParameters()["outputs"] = shapesToStr(outputs);
+    layer.getParameters()["internals"] = shapesToStr(internals);
+    layer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
+    layer.setOutputPorts(std::vector<InferenceEngine::Port>(outputs.size()));
+}
 
 static std::vector<Ptr<InfEngineBackendWrapper> >
 infEngineWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
@@ -111,6 +287,8 @@ void InfEngineBackendNet::init(int targetId)
 #endif
             netBuilder.addLayer({InferenceEngine::PortInfo(id)}, outLayer);
         }
+        netBuilder.getContext().addShapeInferImpl(kOpenCVLayersType,
+                            std::make_shared<InfEngineCustomLayerShapeInfer>());
         cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
     }
 
@@ -412,6 +590,8 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
             enginePtr = pluginIt->second;
         }
         else
+#else
+        InferenceEngine::Core& ie = getCore();
 #endif
         {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
@@ -465,7 +645,9 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
                     enginePtr->AddExtension(extension, 0);
 #else
-                    getCore().AddExtension(extension, "CPU");
+                    ie.AddExtension(extension, "CPU");
+                    // OpenCV fallbacks as extensions.
+                    ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
 #endif
                     CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << libName);
                     found = true;
@@ -486,7 +668,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
             }}, 0);
 #else
             if (device_name == "CPU")
-                getCore().SetConfig({{
+                ie.SetConfig({{
                     InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, format("%d", getNumThreads()),
                 }}, device_name);
 #endif
@@ -496,7 +678,25 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
         plugin = InferenceEngine::InferencePlugin(enginePtr);
         netExec = plugin.LoadNetwork(net, {});
 #else
-        netExec = getCore().LoadNetwork(net, device_name);
+        bool isHetero = false;
+        if (device_name != "CPU")
+        {
+            isHetero = device_name == "FPGA";
+            for (auto& layer : net)
+            {
+                if (layer->type == kOpenCVLayersType)
+                {
+                    layer->affinity = "CPU";
+                    isHetero = true;
+                }
+                else
+                    layer->affinity = device_name;
+            }
+        }
+        if (isHetero)
+            netExec = ie.LoadNetwork(net, "HETERO:" + device_name + ",CPU");
+        else
+            netExec = ie.LoadNetwork(net, device_name);
 #endif
     }
     catch (const std::exception& ex)
@@ -673,6 +873,14 @@ Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
     return Mat(size, type, (void*)blob->buffer());
 }
 
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats)
+{
+    mats.resize(blobs.size());
+    for (int i = 0; i < blobs.size(); ++i)
+        mats[i] = infEngineBlobToMat(blobs[i]);
+}
+
 bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             const int requiredOutputs,
                                             std::vector<MatShape> &outputs,
@@ -770,7 +978,8 @@ void resetMyriadDevice()
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     getSharedPlugins().erase("MYRIAD");
 #else
-    getCore().UnregisterPlugin("MYRIAD");
+    // To unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
+    getCore() = InferenceEngine::Core();
 #endif
 #endif  // HAVE_INF_ENGINE
 }

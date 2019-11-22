@@ -18,9 +18,9 @@ namespace wip
 {
 namespace draw
 {
+
 // FIXME only for tests
 GAPI_EXPORTS void BGR2NV12(const cv::Mat& bgr, cv::Mat& y_plane, cv::Mat& uv_plane);
-void splitNV12TwoPlane(const cv::Mat& yuv, cv::Mat& y_plane, cv::Mat& uv_plane);
 
 } // namespace draw
 } // namespace wip
