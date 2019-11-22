@@ -45,6 +45,8 @@ public:
     GlobalLoggingInitStruct()
         : logTagManager(m_defaultUnconfiguredGlobalLevel)
     {
+        (void)getInitializationMutex();  // ensure initialization of global objects
+
         applyConfigString();
         handleMalformed();
     }

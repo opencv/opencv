@@ -647,8 +647,6 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
                     enginePtr->AddExtension(extension, 0);
 #else
                     ie.AddExtension(extension, "CPU");
-                    // OpenCV fallbacks as extensions.
-                    ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
 #endif
                     CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << libName);
                     found = true;
@@ -661,6 +659,10 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
                 CV_LOG_WARNING(NULL, "DNN-IE: Can't load extension plugin (extra layers for some networks). Specify path via OPENCV_DNN_IE_EXTRA_PLUGIN_PATH parameter");
             }
             // Some of networks can work without a library of extra layers.
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R1)
+            // OpenCV fallbacks as extensions.
+            ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
+#endif
 #ifndef _WIN32
             // Limit the number of CPU threads.
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
