@@ -2310,7 +2310,7 @@ bool QRCodeDetector:: decodeMulti(InputArray in, CV_OUT std::vector<cv::String>&
         cvtColor(inarr, gray, COLOR_BGR2GRAY);
         inarr = gray;
     }
-
+    decoded_info.clear();
     vector< vector< Point2f > > src_points ;
     for(int i = 0; i < points.size().width; i++)
     {
@@ -2375,7 +2375,7 @@ bool QRCodeDetector:: detectAndDecodeMulti(InputArray in,
         cvtColor(inarr, gray, COLOR_BGR2GRAY);
         inarr = gray;
     }
-
+    decoded_info.clear();
     vector< vector< Point2f > > points;
     bool ok = detectMulti(inarr, points);
     if (points_.needed())
