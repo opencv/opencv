@@ -1,5 +1,7 @@
-import cv2 as cv
+from __future__ import print_function
+
 import numpy as np
+import cv2 as cv
 import sys
 
 def help(filename):
@@ -41,9 +43,9 @@ class MyData:
             self.name = ''
     ## [inside]
 
-if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        help(sys.argv[0])
+def main(argv):
+    if len(argv) != 2:
+        help(argv[0])
         exit(1)
 
     # write
@@ -55,7 +57,7 @@ if __name__ == '__main__':
     m = MyData()
     ## [customIOi]
 
-    filename = sys.argv[1]
+    filename = argv[1]
 
     ## [open]
     s = cv.FileStorage(filename, cv.FileStorage_WRITE)
@@ -107,7 +109,7 @@ if __name__ == '__main__':
 
     if (not s.isOpened()):
         print ('Failed to open ', filename, file=sys.stderr)
-        help(sys.argv[0])
+        help(argv[0])
         exit(1)
 
     ## [readStr]
@@ -146,3 +148,6 @@ if __name__ == '__main__':
     ## [nonexist]
 
     print ('\nTip: Open up',filename,'with a text editor to see the serialized data.')
+
+if __name__ == '__main__':
+    main(sys.argv)
