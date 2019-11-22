@@ -1293,7 +1293,7 @@ void QRDetectMulti::ParallelSearch::operator()(const Range& range) const
              size_t k = r - iter;
              bool flag_for_break = false;
              vector<Point2f> triangle;
-             for(size_t l = 0; l < 3; l++)
+             for(int l = 0; l < 3; l++)
              {
                  triangle.push_back(true_points_group[s][all_points[s][k][l]]);
              }
@@ -2355,12 +2355,12 @@ bool QRCodeDetector:: decodeMulti(InputArray in, CV_OUT std::vector<cv::String>&
     else return false;
 }
 
-bool QRCodeDetector:: detectAndDecodeMulti(InputArray in,
+bool QRCodeDetector:: detectAndDecodeMulti(InputArray img,
                                             CV_OUT std::vector<cv::String>& decoded_info,
                                             OutputArrayOfArrays points_,
                                             OutputArrayOfArrays straight_qrcode)
 {
-    Mat inarr = in.getMat();
+    Mat inarr = img.getMat();
     CV_Assert(!inarr.empty());
     CV_Assert(inarr.depth() == CV_8U);
 

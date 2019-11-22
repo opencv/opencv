@@ -716,17 +716,17 @@ public:
 
     /** @brief Decodes QR codes in image once it's found by the detect() method.
      @param img grayscale or color (BGR) image containing QR codes.
-     @param UTF8-encoded output vector of string or empty vector of string if the codes cannot be decoded.
+     @param decoded_info UTF8-encoded output vector of string or empty vector of string if the codes cannot be decoded.
      @param points vector of Quadrangle vertices found by detect() method (or some other algorithm).
      @param straight_qrcode The optional output vector of images containing rectified and binarized QR codes
      */
-    CV_WRAP bool decodeMulti(InputArray in, CV_OUT std::vector<cv::String>& decoded_info,
+    CV_WRAP bool decodeMulti(InputArray img, CV_OUT std::vector<cv::String>& decoded_info,
                                        InputArrayOfArrays points,
                                        OutputArrayOfArrays straight_qrcode = noArray());
 
     /** @brief Both detects and decodes QR codes
     @param img grayscale or color (BGR) image containing QR codes.
-    @param UTF8-encoded output vector of string or empty vector of string if the codes cannot be decoded.
+    @param decoded_info UTF8-encoded output vector of string or empty vector of string if the codes cannot be decoded.
     @param points optional output vector of arrays of vertices of the found QR code quadrangle. Will be empty if not found.
     @param straight_qrcode The optional output vector of images containing rectified and binarized QR codes
     */
