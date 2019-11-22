@@ -313,6 +313,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool convert_rgb;
     bool frame_allocated;
     bool returnFrame;
+
     // To select a video input set cv::CAP_PROP_CHANNEL to channel number.
     // If the new channel number is than 0, then a video input will not change
     int channelNumber;
@@ -353,7 +354,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool initCapture();
     bool streaming(bool startStream);
     bool setFps(int value);
-    bool tryIoctl(unsigned long ioctlCode, void *parameter) const;
+    bool tryIoctl(unsigned long ioctlCode, void *parameter, int attempts = 10) const;
     bool controlInfo(int property_id, __u32 &v4l2id, cv::Range &range) const;
     bool icvControl(__u32 v4l2id, int &value, bool isSet) const;
 
@@ -406,10 +407,10 @@ bool CvCaptureCAM_V4L::try_palette_v4l2()
     form.fmt.pix.field       = V4L2_FIELD_ANY;
     form.fmt.pix.width       = width;
     form.fmt.pix.height      = height;
-
-    if (!tryIoctl(VIDIOC_S_FMT, &form))
+    if (!tryIoctl(VIDIOC_S_FMT, &form, 2))
+    {
         return false;
-
+    }
     return palette == form.fmt.pix.pixelformat;
 }
 
@@ -424,13 +425,11 @@ bool CvCaptureCAM_V4L::setVideoInputChannel()
 
     if(channel == channelNumber)
         return true;
-
     /* Query information about new input channel */
     videoInput = v4l2_input();
     videoInput.index = channelNumber;
     if (!tryIoctl(VIDIOC_ENUMINPUT, &videoInput))
         return false;
-
     //To select a video input applications store the number of the desired input in an integer
     // and call the VIDIOC_S_INPUT ioctl with a pointer to this integer. Side effects are possible.
     // For example inputs may support different video standards, so the driver may implicitly
@@ -481,6 +480,8 @@ bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
     //in case palette is already set and works, no need to setup.
     if (palette != 0 && try_palette_v4l2()) {
         return true;
+    } else if (errno == EBUSY) {
+        return false;
     }
     __u32 try_order[] = {
             V4L2_PIX_FMT_BGR24,
@@ -637,7 +638,9 @@ bool CvCaptureCAM_V4L::initCapture()
     }
 
     if (!autosetup_capture_mode_v4l2()) {
-        fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
+        if (errno != EBUSY) {
+            fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
+        }
         return false;
     }
 
@@ -857,9 +860,15 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
     return true;
 }
 
-bool CvCaptureCAM_V4L::tryIoctl(unsigned long ioctlCode, void *parameter) const
+bool CvCaptureCAM_V4L::tryIoctl(unsigned long ioctlCode, void *parameter, int attempts) const
 {
+    if (attempts == 0) {
+        return false;
+    }
     while (-1 == ioctl(deviceHandle, ioctlCode, parameter)) {
+        if ((attempts > 0) && (--attempts == 0)) {
+            return false;
+        }
         if (!(errno == EBUSY || errno == EAGAIN))
             return false;
 
@@ -1969,8 +1978,9 @@ CvCapture* cvCreateCameraCapture_V4L( int index )
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if(capture->open(index))
+    if(capture->open(index)) {
         return capture;
+    }
 
     delete capture;
     return NULL;
