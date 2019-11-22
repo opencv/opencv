@@ -21,6 +21,8 @@ namespace logging {
 
 static LogLevel parseLogLevelConfiguration()
 {
+    (void)getInitializationMutex();  // ensure initialization of global objects
+
     static cv::String param_log_level = utils::getConfigurationParameterString("OPENCV_LOG_LEVEL",
 #if defined NDEBUG
             "WARNING"
