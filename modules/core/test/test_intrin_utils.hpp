@@ -134,17 +134,21 @@ template <typename R> struct Data
     }
     const LaneType & operator[](int i) const
     {
+#if 0   // TODO: strange bug - AVX2 tests are failed with this
+        CV_CheckGE(i, 0, ""); CV_CheckLT(i, (int)R::nlanes, "");
+#else
         CV_Assert(i >= 0 && i < R::nlanes);
+#endif
         return d[i];
     }
     LaneType & operator[](int i)
     {
-        CV_Assert(i >= 0 && i < R::nlanes);
+        CV_CheckGE(i, 0, ""); CV_CheckLT(i, (int)R::nlanes, "");
         return d[i];
     }
     int_type as_int(int i) const
     {
-        CV_Assert(i >= 0 && i < R::nlanes);
+        CV_CheckGE(i, 0, ""); CV_CheckLT(i, (int)R::nlanes, "");
         union
         {
             LaneType l;
@@ -1190,6 +1194,40 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    template<int s>
+    TheTest & test_extract_n()
+    {
+        SCOPED_TRACE(s);
+        Data<R> dataA;
+        LaneType test_value = (LaneType)(s + 50);
+        dataA[s] = test_value;
+        R a = dataA;
+
+        LaneType res = v_extract_n<s>(a);
+        EXPECT_EQ(test_value, res);
+
+        return *this;
+    }
+
+    template<int s>
+    TheTest & test_broadcast_element()
+    {
+        SCOPED_TRACE(s);
+        Data<R> dataA;
+        LaneType test_value = (LaneType)(s + 50);
+        dataA[s] = test_value;
+        R a = dataA;
+
+        Data<R> res = v_broadcast_element<s>(a);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(i);
+            EXPECT_EQ(test_value, res[i]);
+        }
+        return *this;
+    }
+
     TheTest & test_float_math()
     {
         typedef typename V_RegTraits<R>::round_reg Ri;
@@ -1498,6 +1536,7 @@ template<typename R> struct TheTest
 void test_hal_intrin_uint8()
 {
     DUMP_ENTRY(v_uint8);
+    typedef v_uint8 R;
     TheTest<v_uint8>()
         .test_loadstore()
         .test_interleave()
@@ -1522,21 +1561,21 @@ void test_hal_intrin_uint8()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
-        ;
-
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
-    TheTest<v_uint8>()
         .test_pack<9>().test_pack<10>().test_pack<13>().test_pack<15>()
         .test_pack_u<9>().test_pack_u<10>().test_pack_u<13>().test_pack_u<15>()
         .test_extract<16>().test_extract<17>().test_extract<23>().test_extract<31>()
         .test_rotate<16>().test_rotate<17>().test_rotate<23>().test_rotate<31>()
-        ;
 #endif
+        ;
 }
 
 void test_hal_intrin_int8()
 {
     DUMP_ENTRY(v_int8);
+    typedef v_int8 R;
     TheTest<v_int8>()
         .test_loadstore()
         .test_interleave()
@@ -1561,6 +1600,8 @@ void test_hal_intrin_int8()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
 
@@ -1569,6 +1610,7 @@ void test_hal_intrin_int8()
 void test_hal_intrin_uint16()
 {
     DUMP_ENTRY(v_uint16);
+    typedef v_uint16 R;
     TheTest<v_uint16>()
         .test_loadstore()
         .test_interleave()
@@ -1594,12 +1636,15 @@ void test_hal_intrin_uint16()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
 
 void test_hal_intrin_int16()
 {
     DUMP_ENTRY(v_int16);
+    typedef v_int16 R;
     TheTest<v_int16>()
         .test_loadstore()
         .test_interleave()
@@ -1627,6 +1672,8 @@ void test_hal_intrin_int16()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
 
@@ -1635,6 +1682,7 @@ void test_hal_intrin_int16()
 void test_hal_intrin_uint32()
 {
     DUMP_ENTRY(v_uint32);
+    typedef v_uint32 R;
     TheTest<v_uint32>()
         .test_loadstore()
         .test_interleave()
@@ -1657,6 +1705,8 @@ void test_hal_intrin_uint32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         .test_transpose()
         ;
 }
@@ -1664,6 +1714,7 @@ void test_hal_intrin_uint32()
 void test_hal_intrin_int32()
 {
     DUMP_ENTRY(v_int32);
+    typedef v_int32 R;
     TheTest<v_int32>()
         .test_loadstore()
         .test_interleave()
@@ -1687,6 +1738,8 @@ void test_hal_intrin_int32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         .test_float_cvt32()
         .test_float_cvt64()
         .test_transpose()
@@ -1698,6 +1751,7 @@ void test_hal_intrin_int32()
 void test_hal_intrin_uint64()
 {
     DUMP_ENTRY(v_uint64);
+    typedef v_uint64 R;
     TheTest<v_uint64>()
         .test_loadstore()
         .test_addsub()
@@ -1709,12 +1763,15 @@ void test_hal_intrin_uint64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
 
 void test_hal_intrin_int64()
 {
     DUMP_ENTRY(v_int64);
+    typedef v_int64 R;
     TheTest<v_int64>()
         .test_loadstore()
         .test_addsub()
@@ -1726,6 +1783,8 @@ void test_hal_intrin_int64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         .test_cvt64_double()
         ;
 }
@@ -1734,6 +1793,7 @@ void test_hal_intrin_int64()
 void test_hal_intrin_float32()
 {
     DUMP_ENTRY(v_float32);
+    typedef v_float32 R;
     TheTest<v_float32>()
         .test_loadstore()
         .test_interleave()
@@ -1757,20 +1817,20 @@ void test_hal_intrin_float32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        ;
-
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
-    TheTest<v_float32>()
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()
-        ;
 #endif
+        ;
 }
 
 void test_hal_intrin_float64()
 {
     DUMP_ENTRY(v_float64);
 #if CV_SIMD_64F
+    typedef v_float64 R;
     TheTest<v_float64>()
         .test_loadstore()
         .test_addsub()
@@ -1787,14 +1847,13 @@ void test_hal_intrin_float64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
-        ;
-
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
-    TheTest<v_float64>()
         .test_extract<2>().test_extract<3>()
         .test_rotate<2>().test_rotate<3>()
+#endif
         ;
-#endif //CV_SIMD256
 
 #endif
 }
@@ -1804,14 +1863,14 @@ void test_hal_intrin_float16()
 {
     DUMP_ENTRY(v_float16);
 #if CV_FP16
-    TheTest<v_float32>().test_loadstore_fp16_f32();
+    TheTest<v_float32>()
+        .test_loadstore_fp16_f32()
 #endif
 #if CV_SIMD_FP16
-    TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
-    ;
 #endif
+        ;
 }
 #endif
 

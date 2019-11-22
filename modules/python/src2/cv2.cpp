@@ -137,6 +137,17 @@ private:
     PyGILState_STATE _state;
 };
 
+static void pyRaiseCVException(const cv::Exception &e)
+{
+    PyObject_SetAttrString(opencv_error, "file", PyString_FromString(e.file.c_str()));
+    PyObject_SetAttrString(opencv_error, "func", PyString_FromString(e.func.c_str()));
+    PyObject_SetAttrString(opencv_error, "line", PyInt_FromLong(e.line));
+    PyObject_SetAttrString(opencv_error, "code", PyInt_FromLong(e.code));
+    PyObject_SetAttrString(opencv_error, "msg", PyString_FromString(e.msg.c_str()));
+    PyObject_SetAttrString(opencv_error, "err", PyString_FromString(e.err.c_str()));
+    PyErr_SetString(opencv_error, e.what());
+}
+
 #define ERRWRAP2(expr) \
 try \
 { \
@@ -145,13 +156,7 @@ try \
 } \
 catch (const cv::Exception &e) \
 { \
-    PyObject_SetAttrString(opencv_error, "file", PyString_FromString(e.file.c_str())); \
-    PyObject_SetAttrString(opencv_error, "func", PyString_FromString(e.func.c_str())); \
-    PyObject_SetAttrString(opencv_error, "line", PyInt_FromLong(e.line)); \
-    PyObject_SetAttrString(opencv_error, "code", PyInt_FromLong(e.code)); \
-    PyObject_SetAttrString(opencv_error, "msg", PyString_FromString(e.msg.c_str())); \
-    PyObject_SetAttrString(opencv_error, "err", PyString_FromString(e.err.c_str())); \
-    PyErr_SetString(opencv_error, e.what()); \
+    pyRaiseCVException(e); \
     return 0; \
 }
 
