@@ -21,6 +21,8 @@ namespace logging {
 
 static LogLevel parseLogLevelConfiguration()
 {
+    (void)getInitializationMutex();  // ensure initialization of global objects
+
     static cv::String param_log_level = utils::getConfigurationParameterString("OPENCV_LOG_LEVEL",
 #if defined NDEBUG
             "WARNING"
@@ -71,8 +73,6 @@ namespace internal {
 
 void writeLogMessage(LogLevel logLevel, const char* message)
 {
-    static std::ios_base::Init s_iostream_initializer;
-
     const int threadID = cv::utils::getThreadID();
     std::ostringstream ss;
     switch (logLevel)
