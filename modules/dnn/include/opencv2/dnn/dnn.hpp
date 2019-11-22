@@ -71,7 +71,8 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_HALIDE,
         DNN_BACKEND_INFERENCE_ENGINE,  //!< Intel's Inference Engine computational backend.
         DNN_BACKEND_OPENCV,
-        DNN_BACKEND_VKCOM
+        DNN_BACKEND_VKCOM,
+        DNN_BACKEND_CUDA
     };
 
     /**
@@ -85,7 +86,9 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_OPENCL_FP16,
         DNN_TARGET_MYRIAD,
         DNN_TARGET_VULKAN,
-        DNN_TARGET_FPGA  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
+        DNN_TARGET_FPGA,  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
+        DNN_TARGET_CUDA,
+        DNN_TARGET_CUDA_FP16
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -274,6 +277,20 @@ CV__DNN_INLINE_NS_BEGIN
         virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs);
 
         virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
+
+        /**
+         * @brief Returns a CUDA backend node
+         *
+         * @param   context  void pointer to CSLContext object
+         * @param   inputs   layer inputs
+         * @param   outputs  layer outputs
+         */
+        virtual Ptr<BackendNode> initCUDA(
+            void *context,
+            const std::vector<Ptr<BackendWrapper>>& inputs,
+            const std::vector<Ptr<BackendWrapper>>& outputs
+        );
+
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
         * @param[in] node Backend node with Halide functions.
@@ -424,7 +441,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param inpPin descriptor of the second layer input.
          *
          * Descriptors have the following template <DFN>&lt;layer_name&gt;[.input_number]</DFN>:
-         * - the first part of the template <DFN>layer_name</DFN> is sting name of the added layer.
+         * - the first part of the template <DFN>layer_name</DFN> is string name of the added layer.
          *   If this part is empty then the network input pseudo layer will be used;
          * - the second optional part of the template <DFN>input_number</DFN>
          *   is either number of the layer input, either label one.
@@ -515,13 +532,15 @@ CV__DNN_INLINE_NS_BEGIN
          * @see Target
          *
          * List of supported combinations backend / target:
-         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE | DNN_BACKEND_HALIDE |
-         * |------------------------|--------------------|------------------------------|--------------------|
-         * | DNN_TARGET_CPU         |                  + |                            + |                  + |
-         * | DNN_TARGET_OPENCL      |                  + |                            + |                  + |
-         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |
-         * | DNN_TARGET_MYRIAD      |                    |                            + |                    |
-         * | DNN_TARGET_FPGA        |                    |                            + |                    |
+         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE | DNN_BACKEND_HALIDE |  DNN_BACKEND_CUDA |
+         * |------------------------|--------------------|------------------------------|--------------------|-------------------|
+         * | DNN_TARGET_CPU         |                  + |                            + |                  + |                   |
+         * | DNN_TARGET_OPENCL      |                  + |                            + |                  + |                   |
+         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |                   |
+         * | DNN_TARGET_MYRIAD      |                    |                            + |                    |                   |
+         * | DNN_TARGET_FPGA        |                    |                            + |                    |                   |
+         * | DNN_TARGET_CUDA        |                    |                              |                    |                 + |
+         * | DNN_TARGET_CUDA_FP16   |                    |                              |                    |                 + |
          */
         CV_WRAP void setPreferableTarget(int targetId);
 
@@ -999,9 +1018,14 @@ CV__DNN_INLINE_NS_BEGIN
       * Model creates net from file with trained weights and config,
       * sets preprocessing input and runs forward pass.
       */
-     class CV_EXPORTS_W Model : public Net
+     class CV_EXPORTS_W_SIMPLE Model : public Net
      {
      public:
+         /**
+          * @brief Default constructor.
+          */
+         Model();
+
          /**
           * @brief Create model from deep learning network represented in one of the supported formats.
           * An order of @p model and @p config arguments does not matter.
@@ -1020,7 +1044,7 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[in] size New input size.
           *  @note If shape of the new blob less than 0, then frame size not change.
          */
-         Model& setInputSize(const Size& size);
+         CV_WRAP Model& setInputSize(const Size& size);
 
          /** @brief Set input size for frame.
          *  @param[in] width New input width.
@@ -1028,27 +1052,27 @@ CV__DNN_INLINE_NS_BEGIN
          *  @note If shape of the new blob less than 0,
          *  then frame size not change.
          */
-         Model& setInputSize(int width, int height);
+         CV_WRAP Model& setInputSize(int width, int height);
 
          /** @brief Set mean value for frame.
           *  @param[in] mean Scalar with mean values which are subtracted from channels.
          */
-         Model& setInputMean(const Scalar& mean);
+         CV_WRAP Model& setInputMean(const Scalar& mean);
 
          /** @brief Set scalefactor value for frame.
           *  @param[in] scale Multiplier for frame values.
          */
-         Model& setInputScale(double scale);
+         CV_WRAP Model& setInputScale(double scale);
 
          /** @brief Set flag crop for frame.
           *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
          */
-         Model& setInputCrop(bool crop);
+         CV_WRAP Model& setInputCrop(bool crop);
 
          /** @brief Set flag swapRB for frame.
           *  @param[in] swapRB Flag which indicates that swap first and last channels.
          */
-         Model& setInputSwapRB(bool swapRB);
+         CV_WRAP Model& setInputSwapRB(bool swapRB);
 
          /** @brief Set preprocessing parameters for frame.
          *  @param[in] size New input size.
@@ -1078,7 +1102,7 @@ CV__DNN_INLINE_NS_BEGIN
       * ClassificationModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and return top-1 prediction.
       */
-     class CV_EXPORTS_W ClassificationModel : public Model
+     class CV_EXPORTS_W_SIMPLE ClassificationModel : public Model
      {
      public:
          /**
@@ -1132,7 +1156,36 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] image the generated image.
           */
          CV_WRAP void generate(InputArray frame, OutputArray image);
+     };
 
+        /** @brief This class represents high-level API for segmentation  models
+      *
+      * SegmentationModel allows to set params for preprocessing input image.
+      * SegmentationModel creates net from file with trained weights and config,
+      * sets preprocessing input, runs forward pass and returns the class prediction for each pixel.
+      */
+     class CV_EXPORTS_W SegmentationModel: public Model
+     {
+     public:
+         /**
+          * @brief Create segmentation model from network represented in one of the supported formats.
+          * An order of @p model and @p config arguments does not matter.
+          * @param[in] model Binary file contains trained weights.
+          * @param[in] config Text file contains network configuration.
+          */
+          CV_WRAP SegmentationModel(const String& model, const String& config = "");
+
+         /**
+          * @brief Create model from deep learning network.
+          * @param[in] network Net object.
+          */
+         CV_WRAP SegmentationModel(const Net& network);
+
+         /** @brief Given the @p input frame, create input blob, run net
+          *  @param[in]  frame  The input image.
+          *  @param[out] mask Allocated class prediction for each pixel
+          */
+         CV_WRAP void segment(InputArray frame, OutputArray mask);
      };
 
      /** @brief This class represents high-level API for object detection networks.
@@ -1142,7 +1195,15 @@ CV__DNN_INLINE_NS_BEGIN
       * sets preprocessing input, runs forward pass and return result detections.
       * For DetectionModel SSD, Faster R-CNN, YOLO topologies are supported.
       */
-     class CV_EXPORTS_W DetectionModel : public Model
+
+     /** @brief This class represents high-level API for object detection networks.
+      *
+      * DetectionModel allows to set params for preprocessing input image.
+      * DetectionModel creates net from file with trained weights and config,
+      * sets preprocessing input, runs forward pass and return result detections.
+      * For DetectionModel SSD, Faster R-CNN, YOLO topologies are supported.
+      */
+     class CV_EXPORTS_W_SIMPLE DetectionModel : public Model
      {
      public:
          /**

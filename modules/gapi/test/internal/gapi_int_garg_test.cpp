@@ -39,14 +39,14 @@ using GArg_Test_Types = ::testing::Types
    , Expected<cv::GArray<cv::Rect>,     cv::detail::ArgKind::GARRAY>
 
  // Built-in types
-   , Expected<int,                      cv::detail::ArgKind::OPAQUE>
-   , Expected<float,                    cv::detail::ArgKind::OPAQUE>
-   , Expected<int*,                     cv::detail::ArgKind::OPAQUE>
-   , Expected<cv::Point,                cv::detail::ArgKind::OPAQUE>
-   , Expected<std::string,              cv::detail::ArgKind::OPAQUE>
-   , Expected<cv::Mat,                  cv::detail::ArgKind::OPAQUE>
-   , Expected<std::vector<int>,         cv::detail::ArgKind::OPAQUE>
-   , Expected<std::vector<cv::Point>,   cv::detail::ArgKind::OPAQUE>
+   , Expected<int,                      cv::detail::ArgKind::OPAQUE_VAL>
+   , Expected<float,                    cv::detail::ArgKind::OPAQUE_VAL>
+   , Expected<int*,                     cv::detail::ArgKind::OPAQUE_VAL>
+   , Expected<cv::Point,                cv::detail::ArgKind::OPAQUE_VAL>
+   , Expected<std::string,              cv::detail::ArgKind::OPAQUE_VAL>
+   , Expected<cv::Mat,                  cv::detail::ArgKind::OPAQUE_VAL>
+   , Expected<std::vector<int>,         cv::detail::ArgKind::OPAQUE_VAL>
+   , Expected<std::vector<cv::Point>,   cv::detail::ArgKind::OPAQUE_VAL>
    >;
 
 TYPED_TEST_CASE(GArgKind, GArg_Test_Types);

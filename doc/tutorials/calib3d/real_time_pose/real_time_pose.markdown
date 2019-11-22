@@ -253,8 +253,8 @@ Here is explained in detail the code for the real time application:
     @code{.cpp}
     RobustMatcher rmatcher;                                                          // instantiate RobustMatcher
 
-    cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);       // instatiate ORB feature detector
-    cv::DescriptorExtractor * extractor = new cv::OrbDescriptorExtractor();          // instatiate ORB descriptor extractor
+    cv::FeatureDetector * detector = new cv::OrbFeatureDetector(numKeyPoints);       // instantiate ORB feature detector
+    cv::DescriptorExtractor * extractor = new cv::OrbDescriptorExtractor();          // instantiate ORB descriptor extractor
 
     rmatcher.setFeatureDetector(detector);                                           // set feature detector
     rmatcher.setDescriptorExtractor(extractor);                                      // set descriptor extractor

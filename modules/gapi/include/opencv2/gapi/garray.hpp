@@ -20,6 +20,9 @@
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 
+#include <opencv2/gapi/gmat.hpp>    // flatten_g only!
+#include <opencv2/gapi/gscalar.hpp> // flatten_g only!
+
 namespace cv
 {
 // Forward declaration; GNode and GOrigin are an internal
@@ -78,7 +81,7 @@ namespace detail
 
     protected:
         GArrayU();                                // Default constructor
-        template<class> friend class cv::GArray;  //  (avialable to GArray<T> only)
+        template<class> friend class cv::GArray;  //  (available to GArray<T> only)
 
         void setConstructFcn(ConstructVec &&cv);  // Store T-aware constructor
 
@@ -111,9 +114,11 @@ namespace detail
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
         virtual ~BasicVectorRef() {}
+
+        virtual void mov(BasicVectorRef &ref) = 0;
     };
 
-    template<typename T> class VectorRefT: public BasicVectorRef
+    template<typename T> class VectorRefT final: public BasicVectorRef
     {
         using empty_t  = util::monostate;
         using ro_ext_t = const std::vector<T> *;
@@ -197,6 +202,12 @@ namespace detail
             if (isRWOwn()) return  util::get<rw_own_t>(m_ref);
             util::throw_error(std::logic_error("Impossible happened"));
         }
+
+        virtual void mov(BasicVectorRef &v) override {
+            VectorRefT<T> *tv = dynamic_cast<VectorRefT<T>*>(&v);
+            GAPI_Assert(tv != nullptr);
+            wref() = std::move(tv->wref());
+        }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -242,11 +253,34 @@ namespace detail
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
         }
 
+        void mov(VectorRef &v)
+        {
+            m_ref->mov(*v.m_ref);
+        }
+
         cv::GArrayDesc descr_of() const
         {
             return m_ref->m_desc;
         }
     };
+
+    // Helper (FIXME: work-around?)
+    // stripping G types to their host types
+    // like cv::GArray<GMat> would still map to std::vector<cv::Mat>
+    // but not to std::vector<cv::GMat>
+#if defined(GAPI_STANDALONE)
+#  define FLATTEN_NS cv::gapi::own
+#else
+#  define FLATTEN_NS cv
+#endif
+    template<class T> struct flatten_g;
+    template<> struct flatten_g<cv::GMat>    { using type = FLATTEN_NS::Mat; };
+    template<> struct flatten_g<cv::GScalar> { using type = FLATTEN_NS::Scalar; };
+    template<class T> struct flatten_g       { using type = T; };
+#undef FLATTEN_NS
+    // FIXME: the above mainly duplicates "ProtoToParam" thing from gtyped.hpp
+    // but I decided not to include gtyped here - probably worth moving that stuff
+    // to some common place? (DM)
 } // namespace detail
 
 /** \addtogroup gapi_data_objects
@@ -263,10 +297,16 @@ public:
     detail::GArrayU strip() const { return m_ref; }
 
 private:
-    static void VCTor(detail::VectorRef& vref) { vref.reset<T>(); }
+    // Host type (or Flat type) - the type this GArray is actually
+    // specified to.
+    using HT = typename detail::flatten_g<typename std::decay<T>::type>::type;
+
+    static void VCTor(detail::VectorRef& vref) {
+        vref.reset<HT>();
+    }
     void putDetails() {
         m_ref.setConstructFcn(&VCTor);
-        m_ref.specifyType<T>();
+        m_ref.specifyType<HT>();
     }
 
     detail::GArrayU m_ref;

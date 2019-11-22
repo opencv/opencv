@@ -47,10 +47,14 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
     {
         auto value = value_of(origin);
         meta       = descr_of(value);
-        storage    = Data::Storage::CONST;
+        storage    = Data::Storage::CONST_VAL;
         g.metadata(data_h).set(ConstValue{value});
     }
-    g.metadata(data_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
+    // FIXME: Sometimes a GArray-related node may be created w/o the
+    // associated host-type constructor (e.g. when the array is
+    // somewhere in the middle of the graph).
+    auto ctor_copy = origin.ctor;
+    g.metadata(data_h).set(Data{origin.shape, id, meta, ctor_copy, storage});
     return data_h;
 }
 
@@ -184,6 +188,16 @@ void GModel::log(Graph &g, ade::EdgeHandle eh, std::string &&msg, ade::NodeHandl
         g.metadata(eh).set(Journal{{s}});
     }
 }
+
+void GModel::log_clear(Graph &g, ade::NodeHandle node)
+{
+    if (g.metadata(node).contains<Journal>())
+    {
+        // according to documentation, clear() doesn't deallocate (__capacity__ of vector preserved)
+        g.metadata(node).get<Journal>().messages.clear();
+    }
+}
+
 
 ade::NodeHandle GModel::detail::dataNodeOf(const ConstLayoutGraph &g, const GOrigin &origin)
 {

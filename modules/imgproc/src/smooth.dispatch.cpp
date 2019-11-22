@@ -43,6 +43,10 @@
 
 #include "precomp.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
+
+#include <opencv2/core/utils/configuration.private.hpp>
+
 #include <vector>
 
 #include "opencv2/core/hal/intrin.hpp"
@@ -67,109 +71,212 @@ namespace cv {
                                      Gaussian Blur
 \****************************************************************************************/
 
-Mat getGaussianKernel(int n, double sigma, int ktype)
+/**
+ * Bit-exact in terms of softfloat computations
+ *
+ * returns sum of kernel values. Should be equal to 1.0
+ */
+static
+softdouble getGaussianKernelBitExact(std::vector<softdouble>& result, int n, double sigma)
 {
     CV_Assert(n > 0);
-    const int SMALL_GAUSSIAN_SIZE = 7;
-    static const float small_gaussian_tab[][SMALL_GAUSSIAN_SIZE] =
+    //TODO: incorrect SURF implementation requests kernel with n = 20 (PATCH_SZ): https://github.com/opencv/opencv/issues/15856
+    //CV_Assert((n & 1) == 1);  // odd
+
+    if (sigma <= 0)
     {
-        {1.f},
-        {0.25f, 0.5f, 0.25f},
-        {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f},
-        {0.03125f, 0.109375f, 0.21875f, 0.28125f, 0.21875f, 0.109375f, 0.03125f}
-    };
-
-    const float* fixed_kernel = n % 2 == 1 && n <= SMALL_GAUSSIAN_SIZE && sigma <= 0 ?
-        small_gaussian_tab[n>>1] : 0;
-
-    CV_Assert( ktype == CV_32F || ktype == CV_64F );
-    Mat kernel(n, 1, ktype);
-    float* cf = kernel.ptr<float>();
-    double* cd = kernel.ptr<double>();
-
-    double sigmaX = sigma > 0 ? sigma : ((n-1)*0.5 - 1)*0.3 + 0.8;
-    double scale2X = -0.5/(sigmaX*sigmaX);
-    double sum = 0;
-
-    int i;
-    for( i = 0; i < n; i++ )
-    {
-        double x = i - (n-1)*0.5;
-        double t = fixed_kernel ? (double)fixed_kernel[i] : std::exp(scale2X*x*x);
-        if( ktype == CV_32F )
+        if (n == 1)
         {
-            cf[i] = (float)t;
-            sum += cf[i];
+            result = std::vector<softdouble>(1, softdouble::one());
+            return softdouble::one();
         }
-        else
+        else if (n == 3)
         {
-            cd[i] = t;
-            sum += cd[i];
+            softdouble v3[] = {
+                softdouble::fromRaw(0x3fd0000000000000),  // 0.25
+                softdouble::fromRaw(0x3fe0000000000000),  // 0.5
+                softdouble::fromRaw(0x3fd0000000000000)   // 0.25
+            };
+            result.assign(v3, v3 + 3);
+            return softdouble::one();
+        }
+        else if (n == 5)
+        {
+            softdouble v5[] = {
+                softdouble::fromRaw(0x3fb0000000000000),  // 0.0625
+                softdouble::fromRaw(0x3fd0000000000000),  // 0.25
+                softdouble::fromRaw(0x3fd8000000000000),  // 0.375
+                softdouble::fromRaw(0x3fd0000000000000),  // 0.25
+                softdouble::fromRaw(0x3fb0000000000000)   // 0.0625
+            };
+            result.assign(v5, v5 + 5);
+            return softdouble::one();
+        }
+        else if (n == 7)
+        {
+            softdouble v7[] = {
+                softdouble::fromRaw(0x3fa0000000000000),  // 0.03125
+                softdouble::fromRaw(0x3fbc000000000000),  // 0.109375
+                softdouble::fromRaw(0x3fcc000000000000),  // 0.21875
+                softdouble::fromRaw(0x3fd2000000000000),  // 0.28125
+                softdouble::fromRaw(0x3fcc000000000000),  // 0.21875
+                softdouble::fromRaw(0x3fbc000000000000),  // 0.109375
+                softdouble::fromRaw(0x3fa0000000000000)   // 0.03125
+            };
+            result.assign(v7, v7 + 7);
+            return softdouble::one();
+        }
+        else if (n == 9)
+        {
+            softdouble v9[] = {
+                softdouble::fromRaw(0x3f90000000000000),  // 4  / 256
+                softdouble::fromRaw(0x3faa000000000000),  // 13 / 256
+                softdouble::fromRaw(0x3fbe000000000000),  // 30 / 256
+                softdouble::fromRaw(0x3fc9800000000000),  // 51 / 256
+                softdouble::fromRaw(0x3fce000000000000),  // 60 / 256
+                softdouble::fromRaw(0x3fc9800000000000),  // 51 / 256
+                softdouble::fromRaw(0x3fbe000000000000),  // 30 / 256
+                softdouble::fromRaw(0x3faa000000000000),  // 13 / 256
+                softdouble::fromRaw(0x3f90000000000000)   // 4  / 256
+            };
+            result.assign(v9, v9 + 9);
+            return softdouble::one();
         }
     }
 
-    CV_DbgAssert(fabs(sum) > 0);
-    sum = 1./sum;
-    for( i = 0; i < n; i++ )
+    softdouble sd_0_15 = softdouble::fromRaw(0x3fc3333333333333);  // 0.15
+    softdouble sd_0_35 = softdouble::fromRaw(0x3fd6666666666666);  // 0.35
+    softdouble sd_minus_0_125 = softdouble::fromRaw(0xbfc0000000000000);  // -0.5*0.25
+
+    softdouble sigmaX = sigma > 0 ? softdouble(sigma) : mulAdd(softdouble(n), sd_0_15, sd_0_35);// softdouble(((n-1)*0.5 - 1)*0.3 + 0.8)
+    softdouble scale2X = sd_minus_0_125/(sigmaX*sigmaX);
+
+    int n2_ = (n - 1) / 2;
+    cv::AutoBuffer<softdouble> values(n2_ + 1);
+    softdouble sum = softdouble::zero();
+    for (int i = 0, x = 1 - n; i < n2_; i++, x+=2)
     {
-        if( ktype == CV_32F )
-            cf[i] = (float)(cf[i]*sum);
-        else
-            cd[i] *= sum;
+        // x = i - (n - 1)*0.5
+        // t = std::exp(scale2X*x*x)
+        softdouble t = exp(softdouble(x*x)*scale2X);
+        values[i] = t;
+        sum += t;
+    }
+    sum *= softdouble(2);
+    //values[n2_] = softdouble::one(); // x=0 in exp(softdouble(x*x)*scale2X);
+    sum += softdouble::one();
+    if ((n & 1) == 0)
+    {
+        //values[n2_ + 1] = softdouble::one();
+        sum += softdouble::one();
+    }
+
+    // normalize: sum(k[i]) = 1
+    softdouble mul1 = softdouble::one()/sum;
+
+    result.resize(n);
+
+    softdouble sum2 = softdouble::zero();
+    for (int i = 0; i < n2_; i++ )
+    {
+        softdouble t = values[i] * mul1;
+        result[i] = t;
+        result[n - 1 - i] = t;
+        sum2 += t;
+    }
+    sum2 *= softdouble(2);
+    result[n2_] = /*values[n2_]*/ softdouble::one() * mul1;
+    sum2 += result[n2_];
+    if ((n & 1) == 0)
+    {
+        result[n2_ + 1] = result[n2_];
+        sum2 += result[n2_];
+    }
+
+    return sum2;
+}
+
+Mat getGaussianKernel(int n, double sigma, int ktype)
+{
+    CV_CheckDepth(ktype, ktype == CV_32F || ktype == CV_64F, "");
+    Mat kernel(n, 1, ktype);
+
+    std::vector<softdouble> kernel_bitexact;
+    getGaussianKernelBitExact(kernel_bitexact, n, sigma);
+
+    if (ktype == CV_32F)
+    {
+        for (int i = 0; i < n; i++)
+            kernel.at<float>(i) = (float)kernel_bitexact[i];
+    }
+    else
+    {
+        CV_DbgAssert(ktype == CV_64F);
+        for (int i = 0; i < n; i++)
+            kernel.at<double>(i) = kernel_bitexact[i];
     }
 
     return kernel;
 }
 
-template <typename T>
-static std::vector<T> getFixedpointGaussianKernel( int n, double sigma )
+static
+softdouble getGaussianKernelFixedPoint_ED(CV_OUT std::vector<int64_t>& result, const std::vector<softdouble> kernel_bitexact, int fractionBits)
 {
-    if (sigma <= 0)
+    const int n = (int)kernel_bitexact.size();
+    CV_Assert((n & 1) == 1);  // odd
+
+    CV_CheckGT(fractionBits, 0, "");
+    CV_CheckLE(fractionBits, 32, "");
+
+    int64_t fractionMultiplier = CV_BIG_INT(1) << fractionBits;
+    softdouble fractionMultiplier_sd(fractionMultiplier);
+
+    result.resize(n);
+
+    int n2_ = n / 2;  // n is odd
+    softdouble err = softdouble::zero();
+    int64_t sum = 0;
+    for (int i = 0; i < n2_; i++)
     {
-        if(n == 1)
-            return std::vector<T>(1, softdouble(1.0));
-        else if(n == 3)
-        {
-            T v3[] = { softdouble(0.25), softdouble(0.5), softdouble(0.25) };
-            return std::vector<T>(v3, v3 + 3);
-        }
-        else if(n == 5)
-        {
-            T v5[] = { softdouble(0.0625), softdouble(0.25), softdouble(0.375), softdouble(0.25), softdouble(0.0625) };
-            return std::vector<T>(v5, v5 + 5);
-        }
-        else if(n == 7)
-        {
-            T v7[] = { softdouble(0.03125), softdouble(0.109375), softdouble(0.21875), softdouble(0.28125), softdouble(0.21875), softdouble(0.109375), softdouble(0.03125) };
-            return std::vector<T>(v7, v7 + 7);
-        }
+        //softdouble err0 = err;
+        softdouble adj_v = kernel_bitexact[i] * fractionMultiplier_sd + err;
+        int64_t v0 = cvRound(adj_v);  // cvFloor() provides bad results
+        err = adj_v - softdouble(v0);
+        //printf("%3d: adj_v=%8.3f(%8.3f+%8.3f)  v0=%d   ed_err=%8.3f\n", i, (double)adj_v, (double)(kernel_bitexact[i] * fractionMultiplier_sd), (double)err0, (int)v0, (double)err);
+
+        result[i] = v0;
+        result[n - 1 - i] = v0;
+        sum += v0;
     }
-
-
-    softdouble sigmaX = sigma > 0 ? softdouble(sigma) : mulAdd(softdouble(n),softdouble(0.15),softdouble(0.35));// softdouble(((n-1)*0.5 - 1)*0.3 + 0.8)
-    softdouble scale2X = softdouble(-0.5*0.25)/(sigmaX*sigmaX);
-    std::vector<softdouble> values(n);
-    softdouble sum(0.);
-    for(int i = 0, x = 1 - n; i < n; i++, x+=2 )
-    {
-        // x = i - (n - 1)*0.5
-        // t = std::exp(scale2X*x*x)
-        values[i] = exp(softdouble(x*x)*scale2X);
-        sum += values[i];
-    }
-    sum = softdouble::one()/sum;
-
-    std::vector<T> kernel(n);
-    for(int i = 0; i < n; i++ )
-    {
-        kernel[i] = values[i] * sum;
-    }
-
-    return kernel;
-};
+    sum *= 2;
+    softdouble adj_v_center = kernel_bitexact[n2_] * fractionMultiplier_sd + err;
+    int64_t v_center = fractionMultiplier - sum;
+    result[n2_] = v_center;
+    //printf("center = %g ===> %g  ===> %g\n", (double)(kernel_bitexact[n2_] * fractionMultiplier), (double)adj_v_center, (double)v_center);
+    return (adj_v_center - softdouble(v_center));
+}
 
 static void getGaussianKernel(int n, double sigma, int ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
-template <typename T> static void getGaussianKernel(int n, double sigma, int, std::vector<T>& res) { res = getFixedpointGaussianKernel<T>(n, sigma); }
+template <typename T> static void getGaussianKernel(int n, double sigma, int, std::vector<T>& res);
+//{ res = getFixedpointGaussianKernel<T>(n, sigma); }
+
+template<> void getGaussianKernel<ufixedpoint16>(int n, double sigma, int, std::vector<ufixedpoint16>& res)
+{
+    std::vector<softdouble> res_sd;
+    softdouble s0 = getGaussianKernelBitExact(res_sd, n, sigma);
+    CV_UNUSED(s0);
+
+    std::vector<int64_t> fixed_256;
+    softdouble approx_err = getGaussianKernelFixedPoint_ED(fixed_256, res_sd, 8);
+    CV_UNUSED(approx_err);
+
+    res.resize(n);
+    for (int i = 0; i < n; i++)
+    {
+        res[i] = ufixedpoint16::fromRaw((uint16_t)fixed_256[i]);
+        //printf("%03d: %d\n", i, res[i].raw());
+    }
+}
 
 template <typename T>
 static void createGaussianKernels( T & kx, T & ky, int type, Size &ksize,
@@ -363,7 +470,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
 #endif
 
-#ifdef HAVE_IPP
+#if 0 //defined HAVE_IPP
 // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
 #if IPP_DISABLE_GAUSSIANBLUR_PARALLEL
 #define IPP_GAUSSIANBLUR_PARALLEL 0
@@ -477,6 +584,19 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 }
 #endif
 
+template<typename T>
+static bool validateGaussianBlurKernel(std::vector<T>& kernel)
+{
+    softdouble validation_sum = softdouble::zero();
+    for (size_t i = 0; i < kernel.size(); i++)
+    {
+        validation_sum += softdouble((double)kernel[i]);
+    }
+
+    bool isValid = validation_sum == softdouble::one();
+    return isValid;
+}
+
 void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                   double sigma1, double sigma2,
                   int borderType)
@@ -533,17 +653,30 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     CV_OVX_RUN(true,
                openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
 
-    CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
+    //CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
 
     if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
     {
         std::vector<ufixedpoint16> fkx, fky;
         createGaussianKernels(fkx, fky, type, ksize, sigma1, sigma2);
-        if (src.data == dst.data)
-            src = src.clone();
-        CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint16_t*)&fkx[0], (int)fkx.size(), (const uint16_t*)&fky[0], (int)fky.size(), borderType),
-            CV_CPU_DISPATCH_MODES_ALL);
-        return;
+
+        static bool param_check_gaussian_blur_bitexact_kernels = utils::getConfigurationParameterBool("OPENCV_GAUSSIANBLUR_CHECK_BITEXACT_KERNELS", false);
+        if (param_check_gaussian_blur_bitexact_kernels && !validateGaussianBlurKernel(fkx))
+        {
+            CV_LOG_INFO(NULL, "GaussianBlur: bit-exact fx kernel can't be applied: ksize=" << ksize << " sigma=" << Size2d(sigma1, sigma2));
+        }
+        else if (param_check_gaussian_blur_bitexact_kernels && !validateGaussianBlurKernel(fky))
+        {
+            CV_LOG_INFO(NULL, "GaussianBlur: bit-exact fy kernel can't be applied: ksize=" << ksize << " sigma=" << Size2d(sigma1, sigma2));
+        }
+        else
+        {
+            if (src.data == dst.data)
+                src = src.clone();
+            CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint16_t*)&fkx[0], (int)fkx.size(), (const uint16_t*)&fky[0], (int)fky.size(), borderType),
+                CV_CPU_DISPATCH_MODES_ALL);
+            return;
+        }
     }
 
     sepFilter2D(src, dst, sdepth, kx, ky, Point(-1, -1), 0, borderType);

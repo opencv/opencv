@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_DIST_H_
 #define OPENCV_FLANN_DIST_H_
 
+//! @cond IGNORED
+
 #include <cmath>
 #include <cstdlib>
 #include <string.h>
@@ -900,5 +902,7 @@ typename Distance::ResultType ensureSimpleDistance( typename Distance::ResultTyp
 }
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_DIST_H_

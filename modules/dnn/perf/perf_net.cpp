@@ -123,9 +123,12 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 
 PERF_TEST_P_(DNNTestNetwork, OpenFace)
 {
-    if (backend == DNN_BACKEND_HALIDE ||
-       (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+#endif
     processNet("dnn/openface_nn4.small2.v1.t7", "", "",
             Mat(cv::Size(96, 96), CV_32FC3));
 }
@@ -142,8 +145,6 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "ssd_mobilenet_v1_coco_2017_11_17.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
@@ -151,8 +152,6 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
     processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "ssd_mobilenet_v2_coco_2018_03_29.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
@@ -189,16 +188,6 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX");
-#endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled for Myriad in OpenVINO 2019R2");
-#endif
-
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }

@@ -45,7 +45,7 @@ gen_template_func_body = Template("""$code_decl
 gen_template_mappable = Template("""
     {
         ${mappable} _src;
-        if (pyopencv_to(src, _src, name))
+        if (pyopencv_to(src, _src, info))
         {
             return cv_mappable_to(_src, dst);
         }
@@ -62,7 +62,7 @@ struct PyOpenCV_Converter< ${cname} >
     {
         return pyopencv_${name}_Instance(r);
     }
-    static bool to(PyObject* src, ${cname}& dst, const char* name)
+    static bool to(PyObject* src, ${cname}& dst, const ArgInfo& info)
     {
         if(!src || src == Py_None)
             return true;
@@ -73,7 +73,7 @@ struct PyOpenCV_Converter< ${cname} >
             return true;
         }
         ${mappable_code}
-        failmsg("Expected ${cname} for argument '%%s'", name);
+        failmsg("Expected ${cname} for argument '%s'", info.name);
         return false;
     }
 };
@@ -81,7 +81,7 @@ struct PyOpenCV_Converter< ${cname} >
 """)
 
 gen_template_map_type_cvt = Template("""
-template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name);
+template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const ArgInfo& info);
 
 """)
 
@@ -89,7 +89,7 @@ gen_template_set_prop_from_map = Template("""
     if( PyMapping_HasKeyString(src, (char*)"$propname") )
     {
         tmp = PyMapping_GetItemString(src, (char*)"$propname");
-        ok = tmp && pyopencv_to(tmp, dst.$propname);
+        ok = tmp && pyopencv_to(tmp, dst.$propname, ArgInfo("$propname", false));
         Py_DECREF(tmp);
         if(!ok) return false;
     }""")
@@ -143,7 +143,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to(value, p->v${access}${member}) ? 0 : -1;
+    return pyopencv_to(value, p->v${access}${member}, ArgInfo("value", false)) ? 0 : -1;
 }
 """)
 
@@ -161,7 +161,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
         return -1;
     }
-    return pyopencv_to(value, _self_${access}${member}) ? 0 : -1;
+    return pyopencv_to(value, _self_${access}${member}, ArgInfo("value", false)) ? 0 : -1;
 }
 """)
 
@@ -238,10 +238,10 @@ class ClassInfo(object):
 
     def gen_map_code(self, codegen):
         all_classes = codegen.classes
-        code = "static bool pyopencv_to(PyObject* src, %s& dst, const char* name)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
+        code = "static bool pyopencv_to(PyObject* src, %s& dst, const ArgInfo& info)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
         if self.base:
-            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.base].cname
+            code += "\n    return pyopencv_to(src, (%s&)dst, info);\n}\n" % all_classes[self.base].cname
         else:
             code += "\n    return true;\n}\n"
         return code
@@ -721,7 +721,7 @@ class FuncInfo(object):
                     aname, argno = v.py_outlist[0]
                     code_ret = "return pyopencv_from(%s)" % (aname,)
             else:
-                # ther is more than 1 return parameter; form the tuple out of them
+                # there is more than 1 return parameter; form the tuple out of them
                 fmtspec = "N"*len(v.py_outlist)
                 backcvt_arg_list = []
                 for aname, argno in v.py_outlist:

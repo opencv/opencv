@@ -126,7 +126,7 @@ def postprocess(frame, outs):
                     bottom = int(detection[6])
                     width = right - left + 1
                     height = bottom - top + 1
-                    if width * height <= 1:
+                    if width <= 2 or height <= 2:
                         left = int(detection[3] * frameWidth)
                         top = int(detection[4] * frameHeight)
                         right = int(detection[5] * frameWidth)

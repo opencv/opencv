@@ -23,6 +23,7 @@
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/gmetaarg.hpp>
 #include <opencv2/gapi/own/scalar.hpp>
+#include <opencv2/gapi/streaming/source.hpp>
 
 namespace cv {
 
@@ -76,7 +77,7 @@ public:
         return util::unsafe_any_cast<typename std::remove_reference<T>::type>(value);
     }
 
-    detail::ArgKind kind = detail::ArgKind::OPAQUE;
+    detail::ArgKind kind = detail::ArgKind::OPAQUE_VAL;
 
 protected:
     util::any value;
@@ -92,11 +93,32 @@ using GRunArg  = util::variant<
     cv::Scalar,
     cv::UMat,
 #endif // !defined(GAPI_STANDALONE)
+    cv::gapi::wip::IStreamSource::Ptr,
     cv::gapi::own::Mat,
     cv::gapi::own::Scalar,
     cv::detail::VectorRef
     >;
 using GRunArgs = std::vector<GRunArg>;
+
+namespace gapi
+{
+namespace wip
+{
+/**
+ * @brief This aggregate type represents all types which G-API can handle (via variant).
+ *
+ * It only exists to overcome C++ language limitations (where a `using`-defined class can't be forward-declared).
+ */
+struct Data: public GRunArg
+{
+    using GRunArg::GRunArg;
+    template <typename T>
+    Data& operator= (const T& t) { GRunArg::operator=(t); return *this; }
+    template <typename T>
+    Data& operator= (T&& t) { GRunArg::operator=(std::move(t)); return *this; }
+};
+} // namespace wip
+} // namespace gapi
 
 using GRunArgP = util::variant<
 #if !defined(GAPI_STANDALONE)
@@ -109,7 +131,6 @@ using GRunArgP = util::variant<
     cv::detail::VectorRef
     >;
 using GRunArgsP = std::vector<GRunArgP>;
-
 
 template<typename... Ts> inline GRunArgs gin(const Ts&... args)
 {

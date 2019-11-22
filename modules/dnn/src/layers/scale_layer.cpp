@@ -11,9 +11,15 @@ Implementation of Scale layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/scale_shift.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -50,7 +56,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && axis == 1);
     }
 
@@ -138,6 +146,28 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        CV_Assert(!blobs.empty() || inputs.size() == 2);
+
+        cv::Mat weightsMat = hasWeights ? blobs[0] : Mat();
+
+        /* if the weights are provided, bias will be in blobs[1]; otherwise, it will be in blobs[0]
+         * in either case, it is at the end of the blobs vector => bias = blobs.back()
+         */
+        cv::Mat biasMat = hasBias ? blobs.back() : Mat();
+
+        return make_cuda_node<cuda4dnn::ScaleShiftOp>(preferableTarget, std::move(context->stream), axis, weightsMat, biasMat);
+    }
+#endif
+
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
         switch (node->backendId)
@@ -207,12 +237,13 @@ public:
         }
         else
         {
-            auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                    {numChannels});
+            auto weights = InferenceEngine::make_shared_blob<float>({
+                               InferenceEngine::Precision::FP32, {(size_t)numChannels},
+                               InferenceEngine::Layout::C
+                           });
             weights->allocate();
-
-            std::vector<float> ones(numChannels, 1);
-            weights->set(ones);
+            float* buf = weights->buffer().as<float*>();
+            std::fill(buf, buf + numChannels, 1);
             addConstantData("weights", weights, l);
         }
         if (hasBias)

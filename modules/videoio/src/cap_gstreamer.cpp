@@ -687,18 +687,20 @@ bool GStreamerCapture::open(const String &filename_)
     // else, we might have a file or a manual pipeline.
     // if gstreamer cannot parse the manual pipeline, we assume we were given and
     // ordinary file path.
+    CV_LOG_INFO(NULL, "OpenCV | GStreamer: " << filename);
     if (!gst_uri_is_valid(filename))
     {
         if (utils::fs::exists(filename_))
         {
-            uri.attach(g_filename_to_uri(filename, NULL, NULL));
+            GSafePtr<GError> err;
+            uri.attach(gst_filename_to_uri(filename, err.getRef()));
             if (uri)
             {
                 file = true;
             }
             else
             {
-                CV_WARN("Error opening file: " << filename << " (" << uri.get() << ")");
+                CV_WARN("Error opening file: " << filename << " (" << err->message << ")");
                 return false;
             }
         }
@@ -718,7 +720,7 @@ bool GStreamerCapture::open(const String &filename_)
     {
         uri.attach(g_strdup(filename));
     }
-
+    CV_LOG_INFO(NULL, "OpenCV | GStreamer: mode - " << (file ? "FILE" : manualpipeline ? "MANUAL" : "URI"));
     bool element_from_uri = false;
     if (!uridecodebin)
     {

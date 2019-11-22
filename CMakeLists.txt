@@ -29,40 +29,19 @@ else()
   cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
 endif()
 
-option(ENABLE_PIC "Generate position independent code (necessary for shared libraries)" TRUE)
-set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
-
-set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
-
-# Following block can break build in case of cross-compiling
-# but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
-# so we will try to detect cross-compiling by the presence of CMAKE_TOOLCHAIN_FILE
-if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  if(NOT CMAKE_TOOLCHAIN_FILE)
-    # it _must_ go before project(OpenCV) in order to work
-    if(WIN32)
-      set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
-    else()
-      set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
-    endif()
-  else()
-    #Android: set output folder to ${CMAKE_BINARY_DIR}
-    set(LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
-    # any cross-compiling
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
-  endif()
-endif()
-
+#
+# Configure CMake policies
+#
 if(POLICY CMP0026)
   cmake_policy(SET CMP0026 NEW)
 endif()
 
 if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 NEW)
+  cmake_policy(SET CMP0042 NEW)  # CMake 3.0+ (2.8.12): MacOS "@rpath" in target's install name
 endif()
 
 if(POLICY CMP0046)
-  cmake_policy(SET CMP0046 NEW)
+  cmake_policy(SET CMP0046 NEW)  # warn about non-existed dependencies
 endif()
 
 if(POLICY CMP0051)
@@ -74,17 +53,25 @@ if(POLICY CMP0054)  # CMake 3.1: Only interpret if() arguments as variables or k
 endif()
 
 if(POLICY CMP0056)
-  cmake_policy(SET CMP0056 NEW)
+  cmake_policy(SET CMP0056 NEW)  # try_compile(): link flags
 endif()
 
 if(POLICY CMP0067)
-  cmake_policy(SET CMP0067 NEW)
+  cmake_policy(SET CMP0067 NEW)  # CMake 3.8: try_compile(): honor language standard variables (like C++11)
 endif()
 
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)  # CMake 3.9+: `RPATH` settings on macOS do not affect `install_name`.
 endif()
 
+if(POLICY CMP0075)
+  cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
+endif()
+
+
+#
+# Configure OpenCV CMake hooks
+#
 include(cmake/OpenCVUtils.cmake)
 ocv_cmake_reset_hooks()
 ocv_check_environment_variables(OPENCV_CMAKE_HOOKS_DIR)
@@ -97,48 +84,45 @@ endif()
 
 ocv_cmake_hook(CMAKE_INIT)
 
-# must go before the project command
+# must go before the project()/enable_language() commands
 ocv_update(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE)
-  set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES} )
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${CMAKE_CONFIGURATION_TYPES}")
+endif()
+
+option(ENABLE_PIC "Generate position independent code (necessary for shared libraries)" TRUE)
+set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
+
+ocv_cmake_hook(PRE_CMAKE_BOOTSTRAP)
+
+# Bootstap CMake system: setup CMAKE_SYSTEM_NAME and other vars
+enable_language(CXX C)
+
+ocv_cmake_hook(POST_CMAKE_BOOTSTRAP)
+
+if(NOT OPENCV_SKIP_CMAKE_SYSTEM_FILE)
+  include("cmake/platforms/OpenCV-${CMAKE_SYSTEM_NAME}.cmake" OPTIONAL RESULT_VARIABLE "OPENCV_CMAKE_SYSTEM_FILE")
+  if(NOT OPENCV_CMAKE_SYSTEM_FILE)
+    message(STATUS "OpenCV: system-specific configuration file is not found: '${CMAKE_SYSTEM_NAME}'")
+  endif()
+endif()
+
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)  # https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT.html
+  if(NOT CMAKE_TOOLCHAIN_FILE)
+    if(WIN32)
+      set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory" FORCE)
+    else()
+      set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory" FORCE)
+    endif()
+  else()
+    # any cross-compiling
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory" FORCE)
+  endif()
 endif()
 
 enable_testing()
 
 project(OpenCV CXX C)
-
-if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-  set(WINRT TRUE)
-endif()
-
-if(WINRT OR WINCE)
-  add_definitions(-DNO_GETENV)
-endif()
-
-if(WINRT)
-  add_definitions(-DWINRT)
-
-  # Making definitions available to other configurations and
-  # to filter dependency restrictions at compile time.
-  if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone)
-    set(WINRT_PHONE TRUE)
-    add_definitions(-DWINRT_PHONE)
-  elseif(CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-    set(WINRT_STORE TRUE)
-    add_definitions(-DWINRT_STORE)
-  endif()
-
-  if(CMAKE_SYSTEM_VERSION MATCHES 10)
-    set(WINRT_10 TRUE)
-    add_definitions(-DWINRT_10)
-  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.1)
-    set(WINRT_8_1 TRUE)
-    add_definitions(-DWINRT_8_1)
-  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.0)
-    set(WINRT_8_0 TRUE)
-    add_definitions(-DWINRT_8_0)
-  endif()
-endif()
 
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
@@ -465,7 +449,7 @@ OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binar
 # OpenCV build options
 # ===================================================
 OCV_OPTION(ENABLE_CCACHE              "Use ccache"                                               (UNIX AND NOT IOS AND (CMAKE_GENERATOR MATCHES "Makefile" OR CMAKE_GENERATOR MATCHES "Ninja")) )
-OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  ON IF (MSVC OR (NOT IOS AND NOT CMAKE_CROSSCOMPILING) ) )
+OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  MSVC IF (MSVC OR (NOT IOS AND NOT CMAKE_CROSSCOMPILING) ) )
 OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        (MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode) )
 OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add flags: -g -pg)" OFF  IF CV_GCC )
 OCV_OPTION(ENABLE_COVERAGE            "Enable coverage collection with  GCov"                    OFF  IF CV_GCC )
@@ -493,6 +477,7 @@ OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatch
 OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 OCV_OPTION(OPENCV_GENERATE_SETUPVARS  "Generate setup_vars* scripts" ON IF (NOT ANDROID AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn't match requested (WITH_XXX != HAVE_XXX)" OFF)
+OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
@@ -501,6 +486,7 @@ if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
 endif()
 
+set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -513,8 +499,20 @@ ocv_cmake_hook(POST_OPTIONS)
 #  Build & install layouts
 # ----------------------------------------------------------------------------
 
+if(OPENCV_TEST_DATA_PATH)
+  get_filename_component(OPENCV_TEST_DATA_PATH ${OPENCV_TEST_DATA_PATH} ABSOLUTE)
+endif()
+
 # Save libs and executables in the same place
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications")
+
+if(ANDROID)
+  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
+else()
+  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib")
+  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib")
+endif()
 
 if(ANDROID)
   if(ANDROID_ABI MATCHES "NEON")
@@ -525,134 +523,14 @@ if(ANDROID)
   endif()
 endif()
 
-if(ANDROID OR WIN32)
-  ocv_update(OPENCV_DOC_INSTALL_PATH doc)
-endif()
-
-if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
-  if(DEFINED OpenCV_RUNTIME AND DEFINED OpenCV_ARCH)
-    ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "${OpenCV_ARCH}/${OpenCV_RUNTIME}/")
-  else()
-    message(STATUS "Can't detect runtime and/or arch")
-    ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "")
-  endif()
-elseif(ANDROID)
-  ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "sdk/native/")
-else()
-  ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "")
-endif()
-
-if(ANDROID)
-  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples/${ANDROID_NDK_ABI_NAME}")
-else()
-  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples")
-endif()
-
-if(ANDROID)
-  ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin/${ANDROID_NDK_ABI_NAME}")
-else()
-  ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin")
-endif()
-
-if(NOT OPENCV_TEST_INSTALL_PATH)
-  ocv_update(OPENCV_TEST_INSTALL_PATH "${OPENCV_BIN_INSTALL_PATH}")
-endif()
-
-if (OPENCV_TEST_DATA_PATH)
-  get_filename_component(OPENCV_TEST_DATA_PATH ${OPENCV_TEST_DATA_PATH} ABSOLUTE)
-endif()
-
-if(ANDROID)
-  ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "sdk/etc/testdata")
-elseif(WIN32)
-  ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "testdata")
-endif()
-
-if(ANDROID)
-  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(OPENCV_LIB_INSTALL_PATH     sdk/native/libs/${ANDROID_NDK_ABI_NAME})
-  ocv_update(OPENCV_LIB_ARCHIVE_INSTALL_PATH sdk/native/staticlibs/${ANDROID_NDK_ABI_NAME})
-  ocv_update(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
-  ocv_update(OPENCV_CONFIG_INSTALL_PATH  sdk/native/jni)
-  ocv_update(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
-  ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH samples/native)
-  ocv_update(OPENCV_OTHER_INSTALL_PATH   sdk/etc)
-  ocv_update(OPENCV_LICENSES_INSTALL_PATH "${OPENCV_OTHER_INSTALL_PATH}/licenses")
-else()
-  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib")
-  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
-
-  if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
-    if(OpenCV_STATIC)
-      ocv_update(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
-    else()
-      ocv_update(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}lib${LIB_SUFFIX}")
-    endif()
-    ocv_update(OPENCV_3P_LIB_INSTALL_PATH  "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
-    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH    samples)
-    ocv_update(OPENCV_JAR_INSTALL_PATH java)
-    ocv_update(OPENCV_OTHER_INSTALL_PATH   etc)
-    ocv_update(OPENCV_CONFIG_INSTALL_PATH  ".")
-    ocv_update(OPENCV_INCLUDE_INSTALL_PATH "include")
-    ocv_update(OPENCV_LICENSES_INSTALL_PATH "${OPENCV_OTHER_INSTALL_PATH}/licenses")
-  else()
-    # Note: layout differs from OpenCV 3.4
-    include(GNUInstallDirs)
-    ocv_update(OPENCV_INCLUDE_INSTALL_PATH       "${CMAKE_INSTALL_INCLUDEDIR}/opencv4")
-    ocv_update(OPENCV_LIB_INSTALL_PATH           "${CMAKE_INSTALL_LIBDIR}")
-    ocv_update(OPENCV_CONFIG_INSTALL_PATH        "${OPENCV_LIB_INSTALL_PATH}/cmake/opencv4")
-    ocv_update(OPENCV_3P_LIB_INSTALL_PATH        "${OPENCV_LIB_INSTALL_PATH}/opencv4/3rdparty")
-    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH   "${CMAKE_INSTALL_DATAROOTDIR}/opencv4/samples")
-    ocv_update(OPENCV_DOC_INSTALL_PATH           "${CMAKE_INSTALL_DATAROOTDIR}/doc/opencv4")
-    ocv_update(OPENCV_JAR_INSTALL_PATH           "${CMAKE_INSTALL_DATAROOTDIR}/java/opencv4")
-    ocv_update(OPENCV_TEST_DATA_INSTALL_PATH     "${CMAKE_INSTALL_DATAROOTDIR}/opencv4/testdata")
-    ocv_update(OPENCV_OTHER_INSTALL_PATH         "${CMAKE_INSTALL_DATAROOTDIR}/opencv4")
-    ocv_update(OPENCV_LICENSES_INSTALL_PATH      "${CMAKE_INSTALL_DATAROOTDIR}/licenses/opencv4")
-  endif()
-  #ocv_update(OPENCV_PYTHON_INSTALL_PATH  "python")  # no default value, see https://github.com/opencv/opencv/issues/13202
-endif()
-
-ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-if(INSTALL_TO_MANGLED_PATHS)
-  foreach(v
-      OPENCV_INCLUDE_INSTALL_PATH
-      # file names include version (.so/.dll): OPENCV_LIB_INSTALL_PATH
-      OPENCV_CONFIG_INSTALL_PATH
-      OPENCV_3P_LIB_INSTALL_PATH
-      OPENCV_SAMPLES_SRC_INSTALL_PATH
-      OPENCV_DOC_INSTALL_PATH
-      # JAR file name includes version: OPENCV_JAR_INSTALL_PATH
-      OPENCV_TEST_DATA_INSTALL_PATH
-      OPENCV_OTHER_INSTALL_PATH
-    )
-    string(REGEX REPLACE "opencv[0-9]*" "opencv-${OPENCV_VERSION}" ${v} "${${v}}")
-  endforeach()
-endif()
-
-if(ANDROID)
-  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_LIB_INSTALL_PATH}")
-elseif(INSTALL_CREATE_DISTRIB)
-  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_JAR_INSTALL_PATH}/${OpenCV_ARCH}")
-else()
-  ocv_update(OPENCV_JNI_INSTALL_PATH "${OPENCV_JAR_INSTALL_PATH}")
-endif()
-ocv_update(OPENCV_JNI_BIN_INSTALL_PATH "${OPENCV_JNI_INSTALL_PATH}")
-
-if(NOT OPENCV_LIB_ARCHIVE_INSTALL_PATH)
-  set(OPENCV_LIB_ARCHIVE_INSTALL_PATH ${OPENCV_LIB_INSTALL_PATH})
-endif()
-
 if(WIN32)
   # Postfix of DLLs:
-  set(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
-  set(OPENCV_DEBUG_POSTFIX d)
+  ocv_update(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+  ocv_update(OPENCV_DEBUG_POSTFIX d)
 else()
   # Postfix of so's:
-  set(OPENCV_DLLVERSION "")
-  set(OPENCV_DEBUG_POSTFIX "")
+  ocv_update(OPENCV_DLLVERSION "")
+  ocv_update(OPENCV_DEBUG_POSTFIX "")
 endif()
 
 if(DEFINED CMAKE_DEBUG_POSTFIX)
@@ -662,6 +540,8 @@ endif()
 if((INSTALL_CREATE_DISTRIB AND BUILD_SHARED_LIBS AND NOT DEFINED BUILD_opencv_world) OR APPLE_FRAMEWORK)
   set(BUILD_opencv_world ON CACHE INTERNAL "")
 endif()
+
+include(cmake/OpenCVInstallLayout.cmake)
 
 # ----------------------------------------------------------------------------
 #  Path for build/platform -specific headers
@@ -746,10 +626,15 @@ if(UNIX)
     set(HAVE_PTHREAD 1)
   endif()
 
-  CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN)
-  CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
-  if(HAVE_MALLOC_H)
-    CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
+  if(OPENCV_ENABLE_MEMALIGN)
+    CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN)
+    CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
+    if(HAVE_MALLOC_H)
+      CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
+    endif()
+    # TODO:
+    # - _aligned_malloc() on Win32
+    # - std::aligned_alloc() C++17 / C11
   endif()
 endif()
 
@@ -1521,19 +1406,22 @@ endif()
 
 if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
   if(INF_ENGINE_TARGET)
+    list(GET INF_ENGINE_TARGET 0 ie_target)
     set(__msg "YES (${INF_ENGINE_RELEASE} / ${INF_ENGINE_VERSION})")
-    get_target_property(_lib ${INF_ENGINE_TARGET} IMPORTED_LOCATION)
-    get_target_property(_lib_imp_rel ${INF_ENGINE_TARGET} IMPORTED_IMPLIB_RELEASE)
-    get_target_property(_lib_imp_dbg ${INF_ENGINE_TARGET} IMPORTED_IMPLIB_DEBUG)
-    get_target_property(_lib_rel ${INF_ENGINE_TARGET} IMPORTED_LOCATION_RELEASE)
-    get_target_property(_lib_dbg ${INF_ENGINE_TARGET} IMPORTED_LOCATION_DEBUG)
+    get_target_property(_lib ${ie_target} IMPORTED_LOCATION)
+    get_target_property(_lib_imp_rel ${ie_target} IMPORTED_IMPLIB_RELEASE)
+    get_target_property(_lib_imp_dbg ${ie_target} IMPORTED_IMPLIB_DEBUG)
+    get_target_property(_lib_rel ${ie_target} IMPORTED_LOCATION_RELEASE)
+    get_target_property(_lib_dbg ${ie_target} IMPORTED_LOCATION_DEBUG)
     ocv_build_features_string(_lib
       IF _lib THEN "${_lib}"
       IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
       IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+      IF _lib_rel  THEN "${_lib_rel}"
+      IF _lib_dbg  THEN "${_lib_dbg}"
       ELSE "unknown"
     )
-    get_target_property(_inc ${INF_ENGINE_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(_inc ${ie_target} INTERFACE_INCLUDE_DIRECTORIES)
     status("    Inference Engine:" "${__msg}")
     status("                libs:" "${_lib}")
     status("            includes:" "${_inc}")
@@ -1637,7 +1525,7 @@ if(FLAKE8_FOUND AND FLAKE8_EXECUTABLE)
 endif()
 
 # ========================== java ==========================
-if(BUILD_JAVA OR BUILD_opencv_java)
+if(BUILD_JAVA)
   status("")
   status("  Java:"            BUILD_FAT_JAVA_LIB  THEN "export all functions"                                      ELSE "")
   status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"                    ELSE NO)

@@ -119,8 +119,9 @@ template<class T> struct ocl_get_in
 struct tracked_cv_umat{
     //TODO Think if T - API could reallocate UMat to a proper size - how do we handle this ?
     //tracked_cv_umat(cv::UMat& m) : r{(m)}, original_data{m.getMat(ACCESS_RW).data} {}
-    tracked_cv_umat(cv::UMat& m) : r{ (m) }, original_data{ nullptr } {}
-    cv::UMat r;
+    tracked_cv_umat(cv::UMat& m) : r(m), original_data{ nullptr } {}
+    cv::UMat &r; // FIXME: It was a value (not a reference) before.
+                 // Actually OCL backend should allocate its internal data!
     uchar* original_data;
 
     operator cv::UMat& (){ return r;}
@@ -198,7 +199,7 @@ struct OCLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         static void call(Inputs&&... ins, Outputs&&... outs)
         {
             //not using a std::forward on outs is deliberate in order to
-            //cause compilation error, by tring to bind rvalue references to lvalue references
+            //cause compilation error, by trying to bind rvalue references to lvalue references
             Impl::run(std::forward<Inputs>(ins)..., outs...);
 
             postprocess_ocl(outs...);

@@ -54,7 +54,7 @@
 #endif
 
 #if defined __linux__ || defined __APPLE__ || defined __GLIBC__ \
-    || defined __HAIKU__
+    || defined __HAIKU__ || defined __EMSCRIPTEN__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -132,6 +132,10 @@
 #  define CV_PARALLEL_FRAMEWORK "ms-concurrency"
 #elif defined HAVE_PTHREADS_PF
 #  define CV_PARALLEL_FRAMEWORK "pthreads"
+#endif
+
+#ifdef CV_PARALLEL_FRAMEWORK
+#include <atomic>
 #endif
 
 #include "parallel_impl.hpp"
@@ -487,20 +491,20 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
         return;
 
 #ifdef CV_PARALLEL_FRAMEWORK
-    static volatile int flagNestedParallelFor = 0;
-    bool isNotNestedRegion = flagNestedParallelFor == 0;
+    static std::atomic<bool> flagNestedParallelFor(false);
+    bool isNotNestedRegion = !flagNestedParallelFor.load();
     if (isNotNestedRegion)
-      isNotNestedRegion = CV_XADD(&flagNestedParallelFor, 1) == 0;
+      isNotNestedRegion = !flagNestedParallelFor.exchange(true);
     if (isNotNestedRegion)
     {
         try
         {
             parallel_for_impl(range, body, nstripes);
-            flagNestedParallelFor = 0;
+            flagNestedParallelFor = false;
         }
         catch (...)
         {
-            flagNestedParallelFor = 0;
+            flagNestedParallelFor = false;
             throw;
         }
     }
@@ -808,7 +812,7 @@ int cv::getNumberOfCPUs(void)
 #elif defined __ANDROID__
     static int ncpus = getNumberOfCPUsImpl();
     return ncpus;
-#elif defined __linux__ || defined __GLIBC__ || defined __HAIKU__
+#elif defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
     int numCPU=0;

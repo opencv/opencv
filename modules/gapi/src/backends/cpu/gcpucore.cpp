@@ -413,7 +413,7 @@ GAPI_OCV_KERNEL(GCPUSplit3, cv::gapi::core::GSplit3)
         std::vector<cv::Mat> outMats = {m1, m2, m3};
         cv::split(in, outMats);
 
-        // Write back FIXME: Write a helper or avoid this nonsence completely!
+        // Write back FIXME: Write a helper or avoid this nonsense completely!
         m1 = outMats[0];
         m2 = outMats[1];
         m3 = outMats[2];
@@ -427,7 +427,7 @@ GAPI_OCV_KERNEL(GCPUSplit4, cv::gapi::core::GSplit4)
         std::vector<cv::Mat> outMats = {m1, m2, m3, m4};
         cv::split(in, outMats);
 
-        // Write back FIXME: Write a helper or avoid this nonsence completely!
+        // Write back FIXME: Write a helper or avoid this nonsense completely!
         m1 = outMats[0];
         m2 = outMats[1];
         m3 = outMats[2];
@@ -498,6 +498,14 @@ GAPI_OCV_KERNEL(GCPUCrop, cv::gapi::core::GCrop)
     static void run(const cv::Mat& in, cv::Rect rect, cv::Mat& out)
     {
         cv::Mat(in, rect).copyTo(out);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUCopy, cv::gapi::core::GCopy)
+{
+    static void run(const cv::Mat& in, cv::Mat& out)
+    {
+        in.copyTo(out);
     }
 };
 
@@ -611,6 +619,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPURemap
          , GCPUFlip
          , GCPUCrop
+         , GCPUCopy
          , GCPUConcatHor
          , GCPUConcatVert
          , GCPULUT

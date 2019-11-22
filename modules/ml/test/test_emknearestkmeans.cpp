@@ -614,7 +614,7 @@ protected:
 
         if( data.empty() )
         {
-            ts->printf(cvtest::TS::LOG, "File with spambase dataset cann't be read.\n");
+            ts->printf(cvtest::TS::LOG, "File with spambase dataset can't be read.\n");
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
             return;
         }

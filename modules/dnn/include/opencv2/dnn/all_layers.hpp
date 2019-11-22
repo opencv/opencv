@@ -104,7 +104,7 @@ CV__DNN_INLINE_NS_BEGIN
         h_t &= o_t \odot tanh(c_t),               \\
         c_t &= f_t \odot c_{t-1} + i_t \odot g_t, \\
         @f}
-        where @f$\odot@f$ is per-element multiply operation and @f$i_t, f_t, o_t, g_t@f$ is internal gates that are computed using learned wights.
+        where @f$\odot@f$ is per-element multiply operation and @f$i_t, f_t, o_t, g_t@f$ is internal gates that are computed using learned weights.
 
         Gates are computed as follows:
         @f{eqnarray*}{

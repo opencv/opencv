@@ -1764,7 +1764,7 @@ Note that the parameters margin regularization, initial step size, and step decr
 
 To use SVMSGD algorithm do as follows:
 
-- first, create the SVMSGD object. The algoorithm will set optimal parameters by default, but you can set your own parameters via functions setSvmsgdType(),
+- first, create the SVMSGD object. The algorithm will set optimal parameters by default, but you can set your own parameters via functions setSvmsgdType(),
   setMarginType(), setMarginRegularization(), setInitialStepSize(), and setStepDecreasingPower().
 
 - then the SVM model can be trained using the train features and the correspondent labels by the method train().

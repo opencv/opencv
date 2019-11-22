@@ -481,7 +481,7 @@ class videoInput{
         bool setupDeviceFourcc(int deviceID, int w, int h,int fourcc);
 
         //These two are only for capture cards
-        //USB and Firewire cameras souldn't specify connection
+        //USB and Firewire cameras shouldn't specify connection
         bool setupDevice(int deviceID, int connection);
         bool setupDevice(int deviceID, int w, int h, int connection);
 
@@ -2945,6 +2945,22 @@ int videoInput::start(int deviceID, videoDevice *VD){
 
     DebugPrintOut("SETUP: Device is setup and ready to capture.\n\n");
     VD->readyToCapture = true;
+
+    // check for optional saving the direct show graph to a file
+    const char* graph_filename = getenv("OPENCV_DSHOW_SAVEGRAPH_FILENAME");
+    if (graph_filename) {
+        size_t filename_len = strlen(graph_filename);
+        std::vector<WCHAR> wfilename(filename_len + 1);
+        size_t len = mbstowcs(&wfilename[0], graph_filename, filename_len  + 1);
+        CV_Assert(len == filename_len);
+
+        HRESULT res = SaveGraphFile(VD->pGraph, &wfilename[0]);
+        if (SUCCEEDED(res)) {
+            DebugPrintOut("Saved DSHOW graph to %s\n", graph_filename);
+        } else {
+            DebugPrintOut("Failed to save DSHOW graph to %s\n", graph_filename);
+        }
+    }
 
     //Release filters - seen someone else do this
     //looks like it solved the freezes

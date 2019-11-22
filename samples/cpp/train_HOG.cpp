@@ -2,7 +2,7 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/ml.hpp"
 #include "opencv2/objdetect.hpp"
-
+#include "opencv2/videoio.hpp"
 #include <iostream>
 #include <time.h>
 

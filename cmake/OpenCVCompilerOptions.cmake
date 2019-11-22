@@ -123,6 +123,9 @@ if(CV_GCC OR CV_CLANG)
   add_extra_compiler_option(-Wsign-promo)
   add_extra_compiler_option(-Wuninitialized)
   add_extra_compiler_option(-Winit-self)
+  if(CV_GCC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0))
+    add_extra_compiler_option(-Wno-psabi)
+  endif()
   if(HAVE_CXX11)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT ENABLE_PRECOMPILED_HEADERS)
       add_extra_compiler_option(-Wsuggest-override)
@@ -282,11 +285,6 @@ if(MSVC)
   endif()
 endif()
 
-# Adding additional using directory for WindowsPhone 8.0 to get Windows.winmd properly
-if(WINRT_PHONE AND WINRT_8_0)
-  set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /AI\$(WindowsSDK_MetadataPath)")
-endif()
-
 include(cmake/OpenCVCompilerOptimizations.cmake)
 if(COMMAND ocv_compiler_optimization_options)
   ocv_compiler_optimization_options()
@@ -385,6 +383,19 @@ endif()
 if(MSVC)
   include(cmake/OpenCVCRTLinkage.cmake)
   add_definitions(-D_VARIADIC_MAX=10)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  get_directory_property(__DIRECTORY_COMPILE_DEFINITIONS COMPILE_DEFINITIONS)
+  if((NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS_RELEASE} ${__DIRECTORY_COMPILE_DEFINITIONS}" MATCHES "_WIN32_WINNT"
+      AND NOT OPENCV_CMAKE_SKIP_MACRO_WIN32_WINNT)
+      OR OPENCV_CMAKE_FORCE_MACRO_WIN32_WINNT
+  )
+    # https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt
+    # Target Windows 7 API
+    set(OPENCV_CMAKE_MACRO_WIN32_WINNT "0x0601" CACHE STRING "Value of _WIN32_WINNT macro")
+    add_definitions(-D_WIN32_WINNT=${OPENCV_CMAKE_MACRO_WIN32_WINNT})
+  endif()
 endif()
 
 # Enable compiler options for OpenCV modules/apps/samples only (ignore 3rdparty)

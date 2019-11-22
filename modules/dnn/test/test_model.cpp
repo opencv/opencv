@@ -8,10 +8,10 @@
 namespace opencv_test { namespace {
 
 template<typename TString>
-static std::string _tf(TString filename)
+static std::string _tf(TString filename, bool required = true)
 {
     String rootFolder = "dnn/";
-    return findDataFile(rootFolder + filename);
+    return findDataFile(rootFolder + filename, required);
 }
 
 
@@ -88,6 +88,25 @@ public:
         out.convertTo(out, exp.type());
         normAssert(exp, out, "", norm, norm);
     }
+
+    void testSegmentationModel(const std::string& weights_file, const std::string& config_file,
+                               const std::string& inImgPath, const std::string& outImgPath,
+                               float norm, const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                               double scale = 1.0, bool swapRB = false, bool crop = false)
+    {
+        checkBackend();
+
+        Mat frame = imread(inImgPath);
+        Mat mask;
+        Mat exp = imread(outImgPath, 0);
+
+        SegmentationModel model(weights_file, config_file);
+        model.setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
+
+        model.segment(frame, mask);
+        normAssert(mask, exp, "", norm, norm);
+    }
 };
 
 TEST_P(Test_Model, Classify)
@@ -96,7 +115,7 @@ TEST_P(Test_Model, Classify)
 
     std::string img_path = _tf("grace_hopper_227.png");
     std::string config_file = _tf("bvlc_alexnet.prototxt");
-    std::string weights_file = _tf("bvlc_alexnet.caffemodel");
+    std::string weights_file = _tf("bvlc_alexnet.caffemodel", false);
 
     Size size{227, 227};
     float norm = 1e-4;
@@ -127,7 +146,7 @@ TEST_P(Test_Model, DetectRegion)
                                     Rect2d(58, 141, 117, 249)};
 
     std::string img_path = _tf("dog416.png");
-    std::string weights_file = _tf("yolo-voc.weights");
+    std::string weights_file = _tf("yolo-voc.weights", false);
     std::string config_file = _tf("yolo-voc.cfg");
 
     double scale = 1.0 / 255.0;
@@ -160,7 +179,7 @@ TEST_P(Test_Model, DetectionOutput)
                                     Rect2d(132, 223, 207, 344)};
 
     std::string img_path = _tf("dog416.png");
-    std::string weights_file = _tf("resnet50_rfcn_final.caffemodel");
+    std::string weights_file = _tf("resnet50_rfcn_final.caffemodel", false);
     std::string config_file = _tf("rfcn_pascal_voc_resnet50.prototxt");
 
     Scalar mean = Scalar(102.9801, 115.9465, 122.7717);
@@ -203,7 +222,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
         refBoxes.emplace_back(left, top, width, height);
     }
 
-    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel");
+    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel", false);
     std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
 
     Scalar mean = Scalar(127.5, 127.5, 127.5);
@@ -249,6 +268,44 @@ TEST_P(Test_Model, Generative_GAN)
     bool swapRB = false;
 
     testGenerativeModel(network, inp, exp, norm, size, mean, scale, swapRB);
+}
+
+TEST_P(Test_Model, Detection_normalized)
+{
+    std::string img_path = _tf("grace_hopper_227.png");
+    std::vector<int> refClassIds = {15};
+    std::vector<float> refConfidences = {0.999222f};
+    std::vector<Rect2d> refBoxes = {Rect2d(0, 4, 227, 222)};
+
+    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel", false);
+    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+
+    Scalar mean = Scalar(127.5, 127.5, 127.5);
+    double scale = 1.0 / 127.5;
+    Size size{300, 300};
+
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5e-3 : 1e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : 1e-5;
+    float confThreshold = FLT_MIN;
+    double nmsThreshold = 0.0;
+    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
+                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
+}
+
+TEST_P(Test_Model, Segmentation)
+{
+    std::string inp = _tf("dog416.png");
+    std::string weights_file = _tf("fcn8s-heavy-pascal.prototxt");
+    std::string config_file = _tf("fcn8s-heavy-pascal.caffemodel", false);
+    std::string exp = _tf("segmentation_exp.png");
+
+    Size size{128, 128};
+    float norm = 0;
+    double scale = 1.0;
+    Scalar mean = Scalar();
+    bool swapRB = false;
+
+    testSegmentationModel(weights_file, config_file, inp, exp, norm, size, mean, scale, swapRB);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model, dnnBackendsAndTargets());

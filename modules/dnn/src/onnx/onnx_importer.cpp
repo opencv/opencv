@@ -465,6 +465,20 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
             layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
+         }
+        else if (layer_type == "Split")
+        {
+            DictValue splits = layerParams.get("split");
+            const int numSplits = splits.size();
+            CV_Assert(numSplits > 1);
+
+            std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
+            for (int i = 1; i < splits.size() - 1; ++i)
+            {
+                slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i - 1);
+            }
+            layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
+            layerParams.type = "Slice";
         }
         else if (layer_type == "Add" || layer_type == "Sum")
         {
@@ -486,6 +500,11 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.type = "Eltwise";
             }
         }
+        else if (layer_type == "Max")
+        {
+            layerParams.type = "Eltwise";
+            layerParams.set("operation", "max");
+        }
         else if (layer_type == "Sub")
         {
             Mat blob = getBlob(node_proto, constBlobs, 1);
@@ -501,19 +520,27 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Div")
         {
-            Mat blob = getBlob(node_proto, constBlobs, 1);
-            CV_Assert_N(blob.type() == CV_32F, blob.total());
-            if (blob.total() == 1)
+            if (constBlobs.find(node_proto.input(1)) == constBlobs.end())
             {
-                layerParams.set("scale", 1.0f / blob.at<float>(0));
-                layerParams.type = "Power";
+                layerParams.type = "Eltwise";
+                layerParams.set("operation", "div");
             }
             else
             {
-                layerParams.type = "Scale";
-                divide(1.0, blob, blob);
-                layerParams.blobs.push_back(blob);
-                layerParams.set("bias_term", false);
+                Mat blob = getBlob(node_proto, constBlobs, 1);
+                CV_Assert_N(blob.type() == CV_32F, blob.total());
+                if (blob.total() == 1)
+                {
+                    layerParams.set("scale", 1.0f / blob.at<float>(0));
+                    layerParams.type = "Power";
+                }
+                else
+                {
+                    layerParams.type = "Scale";
+                    divide(1.0, blob, blob);
+                    layerParams.blobs.push_back(blob);
+                    layerParams.set("bias_term", false);
+                }
             }
         }
         else if (layer_type == "Neg")
@@ -741,6 +768,44 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             layerParams.type = "Permute";
             replaceLayerParam(layerParams, "perm", "order");
+
+            CV_Assert(node_proto.input_size() == 1);
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                std::vector<Mat> inputs(1, getBlob(node_proto, constBlobs, 0)), transposed;
+                runLayer(layerParams, inputs, transposed);
+                CV_Assert(transposed.size() == 1);
+                constBlobs.insert(std::make_pair(layerParams.name, transposed[0]));
+                continue;
+            }
+        }
+        else if (layer_type == "ReduceL2")
+        {
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
+            CV_Assert(graph_proto.node_size() > li + 1 && graph_proto.node(li + 1).op_type() == "Div");
+            ++li;
+            node_proto = graph_proto.node(li);
+            layerParams.name = node_proto.output(0);
+            layerParams.type = "Normalize";
+
+            DictValue axes_dict = layerParams.get("axes");
+            if (axes_dict.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional reduceL2");
+            int axis = axes_dict.getIntValue(0);
+            layerParams.set("axis",axis);
+            layerParams.set("end_axis", axis);
+        }
+        else if (layer_type == "Squeeze")
+        {
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
+            DictValue axes_dict = layerParams.get("axes");
+            if (axes_dict.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional squeeze");
+
+            int axis = axes_dict.getIntValue(0);
+            layerParams.set("axis", axis - 1);
+            layerParams.set("end_axis", axis);
+            layerParams.type = "Flatten";
         }
         else if (layer_type == "Unsqueeze")
         {
@@ -906,8 +971,10 @@ void ONNXImporter::populateNet(Net dstNet)
         }
 
         int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
-        layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
-
+        for (int i = 0; i < node_proto.output_size(); ++i)
+        {
+            layer_id.insert(std::make_pair(node_proto.output(i), LayerInfo(id, i)));
+        }
 
         std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
         for (int j = 0; j < node_proto.input_size(); j++) {
@@ -924,8 +991,10 @@ void ONNXImporter::populateNet(Net dstNet)
         // Compute shape of output blob for this layer.
         Ptr<Layer> layer = dstNet.getLayer(id);
         layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
-        CV_Assert(!layerOutShapes.empty());
-        outShapes[layerParams.name] = layerOutShapes[0];
+        for (int i = 0; i < node_proto.output_size() && i < (int)layerOutShapes.size(); ++i)
+        {
+            outShapes[node_proto.output(i)] = layerOutShapes[i];
+        }
     }
 }
 

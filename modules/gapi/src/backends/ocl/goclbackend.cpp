@@ -7,9 +7,6 @@
 
 #include "precomp.hpp"
 
-#include <functional>
-#include <unordered_set>
-
 #include <ade/util/algorithm.hpp>
 
 #include <ade/util/range.hpp>
@@ -26,8 +23,6 @@
 #include "compiler/gmodel.hpp"
 
 #include "backends/ocl/goclbackend.hpp"
-#include "backends/ocl/goclimgproc.hpp"
-#include "backends/ocl/goclcore.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
@@ -92,7 +87,7 @@ cv::gimpl::GOCLExecutable::GOCLExecutable(const ade::Graph &g,
         {
             m_dataNodes.push_back(nh);
             const auto &desc = m_gm.metadata(nh).get<Data>();
-            if (desc.storage == Data::Storage::CONST)
+            if (desc.storage == Data::Storage::CONST_VAL)
             {
                 auto rc = RcDesc{desc.rc, desc.shape, desc.ctor};
                 magazine::bindInArg(m_res, rc, m_gm.metadata(nh).get<ConstValue>().arg);

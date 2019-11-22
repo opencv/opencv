@@ -45,7 +45,7 @@ def main():
 
 
     small = img
-    for i in xrange(3):
+    for _i in xrange(3):
         small = cv.pyrDown(small)
 
     def onmouse(event, x, y, flags, param):

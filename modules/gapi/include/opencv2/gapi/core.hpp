@@ -8,6 +8,8 @@
 #ifndef OPENCV_GAPI_CORE_HPP
 #define OPENCV_GAPI_CORE_HPP
 
+#include <math.h>
+
 #include <utility> // std::tuple
 
 #include <opencv2/imgproc.hpp>
@@ -392,8 +394,8 @@ namespace core {
             {
                 GAPI_Assert(fx != 0. && fy != 0.);
                 return in.withSize
-                    (Size(static_cast<int>(std::round(in.size.width  * fx)),
-                          static_cast<int>(std::round(in.size.height * fy))));
+                    (Size(static_cast<int>(round(in.size.width  * fx)),
+                          static_cast<int>(round(in.size.height * fy))));
             }
         }
     };
@@ -434,9 +436,16 @@ namespace core {
         }
     };
 
+    // TODO: eliminate the need in this kernel (streaming)
     G_TYPED_KERNEL(GCrop, <GMat(GMat, Rect)>, "org.opencv.core.transform.crop") {
         static GMatDesc outMeta(GMatDesc in, Rect rc) {
             return in.withSize(Size(rc.width, rc.height));
+        }
+    };
+
+    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.transform.copy") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in;
         }
     };
 
@@ -699,7 +708,7 @@ GAPI_EXPORTS GMat divRC(const GScalar& divident, const GMat& src, double scale, 
 /** @brief Applies a mask to a matrix.
 
 The function mask set value from given matrix if the corresponding pixel value in mask matrix set to true,
-and set the matrix value to 0 overwise.
+and set the matrix value to 0 otherwise.
 
 Supported src matrix data types are @ref CV_8UC1, @ref CV_16SC1, @ref CV_16UC1. Supported mask data type is @ref CV_8UC1.
 
@@ -1267,8 +1276,8 @@ GAPI_EXPORTS std::tuple<GMat, GMat> integral(const GMat& src, int sdepth = -1, i
 The function applies fixed-level thresholding to a single- or multiple-channel matrix.
 The function is typically used to get a bi-level (binary) image out of a grayscale image ( cmp functions could be also used for
 this purpose) or for removing a noise, that is, filtering out pixels with too small or too large
-values. There are several depths of thresholding supported by the function. They are determined by
-depth parameter.
+values. There are several types of thresholding supported by the function. They are determined by
+type parameter.
 
 Also, the special values cv::THRESH_OTSU or cv::THRESH_TRIANGLE may be combined with one of the
 above values. In these cases, the function determines the optimal threshold value using the Otsu's
@@ -1284,17 +1293,17 @@ Output matrix must be of the same size and depth as src.
 @param src input matrix (@ref CV_8UC1, @ref CV_8UC3, or @ref CV_32FC1).
 @param thresh threshold value.
 @param maxval maximum value to use with the cv::THRESH_BINARY and cv::THRESH_BINARY_INV thresholding
-depths.
-@param depth thresholding depth (see the cv::ThresholdTypes).
+types.
+@param type thresholding type (see the cv::ThresholdTypes).
 
 @sa min, max, cmpGT, cmpLE, cmpGE, cmpLS
  */
-GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int depth);
+GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int type);
 /** @overload
-This function appicable for all threshold depths except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
+This function applicable for all threshold types except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
 @note Function textual ID is "org.opencv.core.matrixop.thresholdOT"
 */
-GAPI_EXPORTS std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int depth);
+GAPI_EXPORTS std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int type);
 
 /** @brief Applies a range-level threshold to each matrix element.
 
@@ -1496,6 +1505,19 @@ Output matrix must be of the same depth as input one, size is specified by given
 @sa resize
 */
 GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
+
+/** @brief Copies a matrix.
+
+Copies an input array. Works as a regular Mat::clone but happens in-graph.
+Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
+in the streaming mode). Will be deprecated and removed in the future.
+
+@note Function textual ID is "org.opencv.core.transform.copy"
+
+@param src input matrix.
+@sa crop
+*/
+GAPI_EXPORTS GMat copy(const GMat& src);
 
 /** @brief Applies horizontal concatenation to given matrices.
 
