@@ -100,7 +100,7 @@ GAPI_TEST_FIXTURE(AddWeightedTest, initMatsRandU, FIXTURE_API(CompareMats), 1, c
 GAPI_TEST_FIXTURE(NormTest, initMatrixRandU, FIXTURE_API(CompareScalars,NormTypes), 2,
     cmpF, opType)
 GAPI_TEST_FIXTURE(IntegralTest, initNothing, <>, 0)
-GAPI_TEST_FIXTURE(ThresholdTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
+GAPI_TEST_FIXTURE(ThresholdTest, initMatrixRandU, FIXTURE_API(int, cv::Scalar), 2, tt, maxval)
 GAPI_TEST_FIXTURE(ThresholdOTTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
 GAPI_TEST_FIXTURE(InRangeTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Split3Test, initMatrixRandU, <>, 0)

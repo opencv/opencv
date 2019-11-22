@@ -94,11 +94,7 @@ void CV_LRTest::run( int /*start_from*/ )
     // initialize variables from the popular Iris Dataset
     string dataFileName = ts->get_data_path() + "iris.data";
     Ptr<TrainData> tdata = TrainData::loadFromCSV(dataFileName, 0);
-
-    if (tdata.empty()) {
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-        return;
-    }
+    ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << dataFileName;
 
     // run LR classifier train classifier
     Ptr<LogisticRegression> p = LogisticRegression::create();
@@ -156,6 +152,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     // initialize variables from the popular Iris Dataset
     string dataFileName = ts->get_data_path() + "iris.data";
     Ptr<TrainData> tdata = TrainData::loadFromCSV(dataFileName, 0);
+    ASSERT_FALSE(tdata.empty()) << "Could not find test data file : " << dataFileName;
 
     Mat responses1, responses2;
     Mat learnt_mat1, learnt_mat2;

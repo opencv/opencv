@@ -214,7 +214,7 @@ INSTANTIATE_TEST_CASE_P(filter2DTestFluid, Filter2DTest,
                                 Values(-1, CV_32F),
                                 Values(IMGPROC_FLUID),
                                 Values(ToleranceFilter(1e-4f, 0.01).to_compare_obj()),
-                                Values(3), // add kernel size=4,5,7 when implementation ready
+                                Values(cv::Size(3, 3)), // add kernel size=4x4,5x5,7x7 when implementation ready
                                 Values(cv::BORDER_DEFAULT)));
 
 } // opencv_test

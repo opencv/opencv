@@ -50,7 +50,7 @@ Now we will learn how to write a simple Hello World Application in Xcode using O
 Output
 ------
 
-![](images/output.png)
+![](images/ios_hello_output.png)
 
 Changes for XCode5+ and iOS8+
 -----------------------------

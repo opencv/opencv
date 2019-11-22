@@ -7,8 +7,6 @@
 #ifndef OPENCV_GAPI_INFER_IE_HPP
 #define OPENCV_GAPI_INFER_IE_HPP
 
-#ifdef HAVE_INF_ENGINE
-
 #include <unordered_map>
 #include <string>
 #include <array>
@@ -16,6 +14,9 @@
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
+
+#include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
+#include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 
 namespace cv {
 namespace gapi {
@@ -100,7 +101,5 @@ protected:
 } // namespace ie
 } // namespace gapi
 } // namespace cv
-
-#endif // HAVE_INF_ENGINE
 
 #endif // OPENCV_GAPI_INFER_HPP

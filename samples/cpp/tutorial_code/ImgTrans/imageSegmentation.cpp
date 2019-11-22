@@ -15,8 +15,8 @@ int main(int argc, char *argv[])
 {
     //! [load_image]
     // Load the image
-    CommandLineParser parser( argc, argv, "{@input | ../data/cards.png | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input | cards.png | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ) );
     if( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;

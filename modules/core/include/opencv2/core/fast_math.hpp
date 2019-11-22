@@ -102,7 +102,7 @@
     #define CV_INLINE_ROUND_DBL(value) \
         int out; \
         double temp; \
-        __asm__( "fctiw %[temp],%[in]\n\tmffprwz %[out],%[temp]\n\t" : [out] "=r" (out), [temp] "=d" (temp) : [in] "d" ((double)(value)) : ); \
+        __asm__( "fctiw %[temp],%[in]\n\tmfvsrwz %[out],%[temp]\n\t" : [out] "=r" (out), [temp] "=d" (temp) : [in] "d" ((double)(value)) : ); \
         return out;
 
     // FP32 also works with FP64 routine above

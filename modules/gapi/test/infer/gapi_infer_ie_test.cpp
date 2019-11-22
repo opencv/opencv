@@ -35,7 +35,8 @@
 #include <ade/util/iota_range.hpp>
 
 #include <opencv2/gapi/infer/ie.hpp>
-#include <opencv2/gapi/infer/ie/util.hpp>
+
+#include "backends/ie/util.hpp"
 
 namespace opencv_test
 {

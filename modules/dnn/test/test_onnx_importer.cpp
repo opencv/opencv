@@ -86,8 +86,8 @@ TEST_P(Test_ONNX_layers, InstanceNorm)
 
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
-    testONNXModels("maxpooling");
-    testONNXModels("two_maxpooling");
+    testONNXModels("maxpooling", npy, 0, 0, false, false);
+    testONNXModels("two_maxpooling", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Convolution)
@@ -212,7 +212,7 @@ TEST_P(Test_ONNX_layers, MaxPooling3D)
 #endif
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
-    testONNXModels("max_pool3d");
+    testONNXModels("max_pool3d", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, AvePooling3D)
@@ -422,13 +422,22 @@ TEST_P(Test_ONNX_nets, Googlenet)
 TEST_P(Test_ONNX_nets, CaffeNet)
 {
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_2019R3);
+#endif
     testONNXModels("caffenet", pb);
 }
 
 TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
 {
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_2019R3);
+#endif
     // Reference output values are in range [-4.992, -1.161]
     testONNXModels("rcnn_ilsvrc13", pb, 0.0045);
 }
