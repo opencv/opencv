@@ -3588,6 +3588,9 @@ public:
     Scalar s;
 };
 
+void checkOperandsExist(const Mat& a);
+void checkOperandsExist(const Mat& a, Mat& b);
+
 //! @} core_basic
 
 //! @relates cv::MatExpr
