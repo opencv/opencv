@@ -64,7 +64,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
     # Nodes that should be kept.
     keepOps = ['Conv2D', 'BiasAdd', 'Add', 'Relu', 'Relu6', 'Placeholder', 'FusedBatchNorm',
                'DepthwiseConv2dNative', 'ConcatV2', 'Mul', 'MaxPool', 'AvgPool', 'Identity',
-               'Sub', 'ResizeNearestNeighbor', 'Pad']
+               'Sub', 'ResizeNearestNeighbor', 'Pad', 'FusedBatchNormV3']
 
     # Node with which prefixes should be removed
     prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Concatenate/', 'Postprocessor/', 'Preprocessor/map')
