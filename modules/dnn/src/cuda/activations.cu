@@ -92,8 +92,8 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
                 v_load(vec, input_vPtr[i]);
                 for (int j = 0; j < vector_type::size(); j++) {
                     using device::tanh;
-                    using device::exp;
-                    vec.data[j] = T(vec.data[j] * tanh(log(1.0f + exp(vec.data[j]))));
+                    using device::log1pexp;
+                    vec.data[j] = vec.data[j] * tanh(log1pexp(vec.data[j]));
                 }
                 v_store(output_vPtr[i], vec);
             }
