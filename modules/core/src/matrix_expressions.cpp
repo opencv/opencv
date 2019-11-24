@@ -1702,6 +1702,7 @@ MatExpr Mat::t() const
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(*this);
     MatExpr e;
     MatOp_T::makeExpr(e, *this);
     return e;

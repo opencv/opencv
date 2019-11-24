@@ -3589,7 +3589,7 @@ public:
 };
 
 void checkOperandsExist(const Mat& a);
-void checkOperandsExist(const Mat& a, Mat& b);
+void checkOperandsExist(const Mat& a, const Mat& b);
 
 //! @} core_basic
 
