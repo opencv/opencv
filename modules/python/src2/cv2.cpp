@@ -392,6 +392,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             oarr = (PyArrayObject*) o;
         }
         else {
+            CV_Assert(PyArray_ISCONTIGUOUS(oarr));
             oarr = PyArray_GETCONTIGUOUS(oarr);
             o = (PyObject*) oarr;
         }
