@@ -280,13 +280,13 @@ class dnn_test(NewOpenCVTests):
         net = cv.dnn.readNetFromCaffe(str.encode(proto))
         src_shape = [1, 2, 5, 5]
         dst_shape = [1, 2, 3, 3]
-        inp = np.arange(0, np.prod(src_shape)).reshape(src_shape)
+        inp = np.arange(0, np.prod(src_shape), dtype=np.float32).reshape(src_shape)
         roi = np.empty(dst_shape)
         net.setInput(inp, "input")
         net.setInput(roi, "roi")
         out = net.forward()
         ref = inp[:, :, 1:4, 1:4]
-        assert(np.allclose(out, ref))
+        normAssert(self, out, ref)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
