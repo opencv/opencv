@@ -69,7 +69,8 @@ TEST(GAPI_PlaidML_Pipelines, SimpleArithmetic)
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
 }
 
-TEST(GAPI_PlaidML_Pipelines, ComplexArithmetic)
+// FIXME PlaidML cpu backend does't support bitwise operations
+TEST(GAPI_PlaidML_Pipelines, DISABLED_ComplexArithmetic)
 {
     cv::Size size(1920, 1080);
     int type = CV_8UC1;
