@@ -38,15 +38,17 @@ TEST(ML_KNearest, accuracy)
     }
     {
         // TODO: broken
-        // SCOPED_TRACE("KDTree");
-        // Mat bestLabels;
-        // float err = 1000;
-        // Ptr<KNearest> knn = KNearest::create();
-        // knn->setAlgorithmType(KNearest::KDTREE);
-        // knn->train(trainData, ml::ROW_SAMPLE, trainLabels);
-        // knn->findNearest(testData, 4, bestLabels);
-        // EXPECT_TRUE(calcErr( bestLabels, testLabels, sizes, err, true ));
-        // EXPECT_LE(err, 0.01f);
+#if 0
+        SCOPED_TRACE("KDTree");
+        Mat bestLabels;
+        float err = 1000;
+        Ptr<KNearest> knn = KNearest::create();
+        knn->setAlgorithmType(KNearest::KDTREE);
+        knn->train(trainData, ml::ROW_SAMPLE, trainLabels);
+        knn->findNearest(testData, 4, bestLabels);
+        EXPECT_TRUE(calcErr( bestLabels, testLabels, sizes, err, true ));
+        EXPECT_LE(err, 0.01f);
+#endif
     }
 }
 

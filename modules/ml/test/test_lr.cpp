@@ -71,7 +71,7 @@ TEST(ML_LR, save_load)
     comp_learnt_mats.convertTo(comp_learnt_mats, CV_32S);
     comp_learnt_mats = comp_learnt_mats/255;
     // check if there is any difference between computed learnt mat and retrieved mat
-    EXPECT_EQ(sum(comp_learnt_mats)[0], comp_learnt_mats.rows);
+    EXPECT_EQ(comp_learnt_mats.rows, sum(comp_learnt_mats)[0]);
 
     remove( filename.c_str() );
 }

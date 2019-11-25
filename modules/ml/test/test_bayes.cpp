@@ -12,14 +12,17 @@ TEST(ML_NBAYES, regression_5911)
     Ptr<ml::NormalBayesClassifier> nb = cv::ml::NormalBayesClassifier::create();
 
     // data:
-    Mat_<float> X(N,4);
-    X << 1,2,3,4,  1,2,3,4,   1,2,3,4,    1,2,3,4,
-         5,5,5,5,  5,5,5,5,   5,5,5,5,    5,5,5,5,
-         4,3,2,1,  4,3,2,1,   4,3,2,1,    4,3,2,1;
+    float X_data[] = {
+        1,2,3,4,  1,2,3,4,   1,2,3,4,    1,2,3,4,
+        5,5,5,5,  5,5,5,5,   5,5,5,5,    5,5,5,5,
+        4,3,2,1,  4,3,2,1,   4,3,2,1,    4,3,2,1
+    };
+    Mat_<float> X(N, 4, X_data);
 
     // labels:
-    Mat_<int> Y(N,1);
-    Y << 0,0,0,0, 1,1,1,1, 2,2,2,2;
+    int Y_data[] = { 0,0,0,0, 1,1,1,1, 2,2,2,2 };
+    Mat_<int> Y(N, 1, Y_data);
+
     nb->train(X, ml::ROW_SAMPLE, Y);
 
     // single prediction:
@@ -36,8 +39,8 @@ TEST(ML_NBAYES, regression_5911)
     Mat R2,P2;
     nb->predictProb(X, R2, P2);
 
-    EXPECT_EQ(sum(R1 == R2)[0], 255 * R2.total());
-    EXPECT_EQ(sum(P1 == P2)[0], 255 * P2.total());
+    EXPECT_EQ(255 * R2.total(), sum(R1 == R2)[0]);
+    EXPECT_EQ(255 * P2.total(), sum(P1 == P2)[0]);
 
     // bulk prediction, with non-continuous memory storage
     Mat R3_(N, 1+1, CV_32S),
@@ -46,8 +49,8 @@ TEST(ML_NBAYES, regression_5911)
     Mat R3 = R3_.col(0).clone(),
         P3 = P3_.colRange(0,3).clone();
 
-    EXPECT_EQ(sum(R1 == R3)[0], 255 * R3.total());
-    EXPECT_EQ(sum(P1 == P3)[0], 255 * P3.total());
+    EXPECT_EQ(255 * R3.total(), sum(R1 == R3)[0]);
+    EXPECT_EQ(255 * P3.total(), sum(P1 == P3)[0]);
 }
 
 }} // namespace

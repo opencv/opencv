@@ -53,7 +53,7 @@ static Ptr<TrainData> makeRandomData2(int datasize)
 {
     cv::Mat samples = cv::Mat::zeros( datasize, 2, CV_32FC1 );
     cv::Mat responses = cv::Mat::zeros( datasize, 1, CV_32S );
-    RNG &rng = cv::theRNG(); // fixed!
+    RNG &rng = cv::theRNG();
     for (int i = 0; i < datasize; ++i)
     {
         int response = rng.uniform(0, 2);  // Random from {0, 1}.
@@ -146,9 +146,9 @@ TEST(ML_SVM, getSupportVectors)
     svm->train(trainingDataMat, cv::ml::ROW_SAMPLE, labelsMat);
 
     Mat sv = svm->getSupportVectors();
-    EXPECT_EQ(sv.rows, 1);    // by default compressed SV returned
+    EXPECT_EQ(1, sv.rows);    // by default compressed SV returned
     sv = svm->getUncompressedSupportVectors();
-    EXPECT_EQ(sv.rows, 3);
+    EXPECT_EQ(3, sv.rows);
 
     // Test retrieval of SVs and compressed SVs on non-linear SVM
     svm->setKernel(SVM::POLY);
@@ -156,9 +156,9 @@ TEST(ML_SVM, getSupportVectors)
     svm->train(trainingDataMat, cv::ml::ROW_SAMPLE, labelsMat);
 
     sv = svm->getSupportVectors();
-    EXPECT_EQ(sv.rows, 3);
+    EXPECT_EQ(3, sv.rows);
     sv = svm->getUncompressedSupportVectors();
-    EXPECT_EQ(sv.rows, 0);    // inapplicable for non-linear SVMs
+    EXPECT_EQ(0, sv.rows);    // inapplicable for non-linear SVMs
 }
 
 }} // namespace

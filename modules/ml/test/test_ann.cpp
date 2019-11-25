@@ -11,7 +11,7 @@ namespace opencv_test { namespace {
 struct Activation
 {
     int id;
-    string name;
+    const char * name;
 };
 void PrintTo(const Activation &a, std::ostream *os) { *os << a.name; }
 
@@ -193,7 +193,7 @@ INSTANTIATE_TEST_CASE_P(/*none*/, ML_ANN_METHOD,
     testing::Values(
         ML_ANN_METHOD_Params(ml::ANN_MLP::RPROP, "rprop", 5000),
         ML_ANN_METHOD_Params(ml::ANN_MLP::ANNEAL, "anneal", 1000)
-        //make_pair<ANN_MLP_METHOD, string>(ml::ANN_MLP::BACKPROP, "backprop", 5000); -----> NO BACKPROP TEST
+        // ML_ANN_METHOD_Params(ml::ANN_MLP::BACKPROP, "backprop", 500) -----> NO BACKPROP TEST
     )
 );
 

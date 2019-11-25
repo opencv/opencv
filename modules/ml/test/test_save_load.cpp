@@ -104,32 +104,4 @@ INSTANTIATE_TEST_CASE_P(/**/, ML_Legacy_Params, testing::ValuesIn(param_list));
     remove(filename.c_str());
 }*/
 
-// TEST(DISABLED_ML_SVM, linear_save_load)
-// {
-//     Ptr<cv::ml::SVM> svm1, svm2, svm3;
-//
-//     svm1 = Algorithm::load<SVM>("SVM45_X_38-1.xml");
-//     svm2 = Algorithm::load<SVM>("SVM45_X_38-2.xml");
-//     string tname = tempfile("a.json");
-//     svm2->save(tname + "?base64");
-//     svm3 = Algorithm::load<SVM>(tname);
-//
-//     ASSERT_EQ(svm1->getVarCount(), svm2->getVarCount());
-//     ASSERT_EQ(svm1->getVarCount(), svm3->getVarCount());
-//
-//     int m = 10000, n = svm1->getVarCount();
-//     Mat samples(m, n, CV_32F), r1, r2, r3;
-//     randu(samples, 0., 1.);
-//
-//     svm1->predict(samples, r1);
-//     svm2->predict(samples, r2);
-//     svm3->predict(samples, r3);
-//
-//     double eps = 1e-4;
-//     EXPECT_LE(cvtest::norm(r1, r2, NORM_INF), eps);
-//     EXPECT_LE(cvtest::norm(r1, r3, NORM_INF), eps);
-//
-//     remove(tname.c_str());
-// }
-
 }} // namespace
