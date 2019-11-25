@@ -1,281 +1,119 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                        Intel License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of Intel Corporation may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
 
-using cv::ml::SVMSGD;
-using cv::ml::TrainData;
-
-class CV_SVMSGDTrainTest : public cvtest::BaseTest
+static const int TEST_VALUE_LIMIT = 500;
+enum
 {
-public:
-    enum TrainDataType
-    {
-        UNIFORM_SAME_SCALE,
-        UNIFORM_DIFFERENT_SCALES
-    };
-
-    CV_SVMSGDTrainTest(const Mat &_weights, float shift, TrainDataType type, double precision = 0.01);
-private:
-    virtual void run( int start_from );
-    static float decisionFunction(const Mat &sample, const Mat &weights, float shift);
-    void makeData(int samplesCount, const Mat &weights, float shift, RNG &rng, Mat &samples, Mat & responses);
-    void generateSameBorders(int featureCount);
-    void generateDifferentBorders(int featureCount);
-
-    TrainDataType type;
-    double precision;
-    std::vector<std::pair<float,float> > borders;
-    cv::Ptr<TrainData> data;
-    cv::Mat testSamples;
-    cv::Mat testResponses;
-    static const int TEST_VALUE_LIMIT = 500;
+    UNIFORM_SAME_SCALE,
+    UNIFORM_DIFFERENT_SCALES
 };
 
-void CV_SVMSGDTrainTest::generateSameBorders(int featureCount)
-{
-    float lowerLimit = -TEST_VALUE_LIMIT;
-    float upperLimit = TEST_VALUE_LIMIT;
+CV_ENUM(SVMSGD_TYPE, UNIFORM_SAME_SCALE, UNIFORM_DIFFERENT_SCALES)
 
-    for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
-    {
-        borders.push_back(std::pair<float,float>(lowerLimit, upperLimit));
-    }
-}
+typedef std::vector< std::pair<float,float> > BorderList;
 
-void CV_SVMSGDTrainTest::generateDifferentBorders(int featureCount)
-{
-    float lowerLimit = -TEST_VALUE_LIMIT;
-    float upperLimit = TEST_VALUE_LIMIT;
-    cv::RNG rng(0);
-
-    for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
-    {
-        int crit = rng.uniform(0, 2);
-
-        if (crit > 0)
-        {
-            borders.push_back(std::pair<float,float>(lowerLimit, upperLimit));
-        }
-        else
-        {
-            borders.push_back(std::pair<float,float>(lowerLimit/1000, upperLimit/1000));
-        }
-    }
-}
-
-float CV_SVMSGDTrainTest::decisionFunction(const Mat &sample, const Mat &weights, float shift)
-{
-    return static_cast<float>(sample.dot(weights)) + shift;
-}
-
-void CV_SVMSGDTrainTest::makeData(int samplesCount, const Mat &weights, float shift, RNG &rng, Mat &samples, Mat & responses)
+static void makeData(RNG &rng, int samplesCount, const Mat &weights, float shift, const BorderList & borders, Mat &samples, Mat & responses)
 {
     int featureCount = weights.cols;
-
     samples.create(samplesCount, featureCount, CV_32FC1);
     for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
-    {
         rng.fill(samples.col(featureIndex), RNG::UNIFORM, borders[featureIndex].first, borders[featureIndex].second);
-    }
-
     responses.create(samplesCount, 1, CV_32FC1);
-
     for (int i = 0 ; i < samplesCount; i++)
     {
-        responses.at<float>(i) = decisionFunction(samples.row(i), weights, shift) > 0 ? 1.f : -1.f;
+        double res = samples.row(i).dot(weights) + shift;
+        responses.at<float>(i) = res > 0 ? 1.f : -1.f;
     }
-
 }
 
-CV_SVMSGDTrainTest::CV_SVMSGDTrainTest(const Mat &weights, float shift, TrainDataType _type, double _precision)
+//==================================================================================================
+
+typedef tuple<SVMSGD_TYPE, int, double> ML_SVMSGD_Param;
+typedef testing::TestWithParam<ML_SVMSGD_Param> ML_SVMSGD_Params;
+
+TEST_P(ML_SVMSGD_Params, scale_and_features)
 {
-    type = _type;
-    precision = _precision;
+    const int type = get<0>(GetParam());
+    const int featureCount = get<1>(GetParam());
+    const double precision = get<2>(GetParam());
 
-    int featureCount = weights.cols;
+    RNG &rng = cv::theRNG();
 
-    switch(type)
+    Mat_<float> weights(1, featureCount);
+    rng.fill(weights, RNG::UNIFORM, -1, 1);
+    const float shift = static_cast<float>(rng.uniform(-featureCount, featureCount));
+
+    BorderList borders;
+    float lowerLimit = -TEST_VALUE_LIMIT;
+    float upperLimit = TEST_VALUE_LIMIT;
+    if (type == UNIFORM_SAME_SCALE)
     {
-    case UNIFORM_SAME_SCALE:
-        generateSameBorders(featureCount);
-        break;
-    case UNIFORM_DIFFERENT_SCALES:
-        generateDifferentBorders(featureCount);
-        break;
-    default:
-        CV_Error(CV_StsBadArg, "Unknown train data type");
+        for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
+            borders.push_back(std::pair<float,float>(lowerLimit, upperLimit));
     }
-
-    RNG rng(0);
+    else if (type == UNIFORM_DIFFERENT_SCALES)
+    {
+        for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
+        {
+            int crit = rng.uniform(0, 2);
+            if (crit > 0)
+                borders.push_back(std::pair<float,float>(lowerLimit, upperLimit));
+            else
+                borders.push_back(std::pair<float,float>(lowerLimit/1000, upperLimit/1000));
+        }
+    }
+    ASSERT_FALSE(borders.empty());
 
     Mat trainSamples;
     Mat trainResponses;
     int trainSamplesCount = 10000;
-    makeData(trainSamplesCount, weights, shift, rng, trainSamples, trainResponses);
-    data = TrainData::create(trainSamples, cv::ml::ROW_SAMPLE, trainResponses);
+    makeData(rng, trainSamplesCount, weights, shift, borders, trainSamples, trainResponses);
+    ASSERT_EQ(trainResponses.type(), CV_32FC1);
 
+    Mat testSamples;
+    Mat testResponses;
     int testSamplesCount = 100000;
-    makeData(testSamplesCount, weights, shift, rng, testSamples, testResponses);
-}
+    makeData(rng, testSamplesCount, weights, shift, borders, testSamples, testResponses);
+    ASSERT_EQ(testResponses.type(), CV_32FC1);
 
-void CV_SVMSGDTrainTest::run( int /*start_from*/ )
-{
+    Ptr<TrainData> data = TrainData::create(trainSamples, cv::ml::ROW_SAMPLE, trainResponses);
+    ASSERT_TRUE(data);
+
     cv::Ptr<SVMSGD> svmsgd = SVMSGD::create();
+    ASSERT_TRUE(svmsgd);
 
     svmsgd->train(data);
 
     Mat responses;
-
     svmsgd->predict(testSamples, responses);
+    ASSERT_EQ(responses.type(), CV_32FC1);
+    ASSERT_EQ(responses.rows, testSamplesCount);
 
     int errCount = 0;
-    int testSamplesCount = testSamples.rows;
-
-    CV_Assert((responses.type() == CV_32FC1) && (testResponses.type() == CV_32FC1));
     for (int i = 0; i < testSamplesCount; i++)
-    {
         if (responses.at<float>(i) * testResponses.at<float>(i) < 0)
             errCount++;
-    }
-
     float err = (float)errCount / testSamplesCount;
-
-    if ( err > precision )
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-    }
+    EXPECT_LE(err, precision);
 }
 
-void makeWeightsAndShift(int featureCount, Mat &weights, float &shift)
-{
-    weights.create(1, featureCount, CV_32FC1);
-    cv::RNG rng(0);
-    double lowerLimit = -1;
-    double upperLimit = 1;
+ML_SVMSGD_Param params_list[] = {
+    ML_SVMSGD_Param(UNIFORM_SAME_SCALE, 2, 0.01),
+    ML_SVMSGD_Param(UNIFORM_SAME_SCALE, 5, 0.01),
+    ML_SVMSGD_Param(UNIFORM_SAME_SCALE, 100, 0.02),
+    ML_SVMSGD_Param(UNIFORM_DIFFERENT_SCALES, 2, 0.01),
+    ML_SVMSGD_Param(UNIFORM_DIFFERENT_SCALES, 5, 0.01),
+    ML_SVMSGD_Param(UNIFORM_DIFFERENT_SCALES, 100, 0.01),
+};
 
-    rng.fill(weights, RNG::UNIFORM, lowerLimit, upperLimit);
-    shift = static_cast<float>(rng.uniform(-featureCount, featureCount));
-}
+INSTANTIATE_TEST_CASE_P(/**/, ML_SVMSGD_Params, testing::ValuesIn(params_list));
 
-
-TEST(ML_SVMSGD, trainSameScale2)
-{
-    int featureCount = 2;
-
-    Mat weights;
-
-    float shift = 0;
-    makeWeightsAndShift(featureCount, weights, shift);
-
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_SAME_SCALE);
-    test.safe_run();
-}
-
-TEST(ML_SVMSGD, trainSameScale5)
-{
-    int featureCount = 5;
-
-    Mat weights;
-
-    float shift = 0;
-    makeWeightsAndShift(featureCount, weights, shift);
-
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_SAME_SCALE);
-    test.safe_run();
-}
-
-TEST(ML_SVMSGD, trainSameScale100)
-{
-    int featureCount = 100;
-
-    Mat weights;
-
-    float shift = 0;
-    makeWeightsAndShift(featureCount, weights, shift);
-
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_SAME_SCALE, 0.02);
-    test.safe_run();
-}
-
-TEST(ML_SVMSGD, trainDifferentScales2)
-{
-    int featureCount = 2;
-
-    Mat weights;
-
-    float shift = 0;
-    makeWeightsAndShift(featureCount, weights, shift);
-
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_DIFFERENT_SCALES, 0.01);
-    test.safe_run();
-}
-
-TEST(ML_SVMSGD, trainDifferentScales5)
-{
-    int featureCount = 5;
-
-    Mat weights;
-
-    float shift = 0;
-    makeWeightsAndShift(featureCount, weights, shift);
-
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_DIFFERENT_SCALES, 0.01);
-    test.safe_run();
-}
-
-TEST(ML_SVMSGD, trainDifferentScales100)
-{
-    int featureCount = 100;
-
-    Mat weights;
-
-    float shift = 0;
-    makeWeightsAndShift(featureCount, weights, shift);
-
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_DIFFERENT_SCALES, 0.01);
-    test.safe_run();
-}
+//==================================================================================================
 
 TEST(ML_SVMSGD, twoPoints)
 {
