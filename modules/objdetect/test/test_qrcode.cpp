@@ -21,7 +21,6 @@ std::string qrcode_images_close[] = {
 std::string qrcode_images_monitor[] = {
   "monitor_1.png", "monitor_2.png", "monitor_3.png", "monitor_4.png", "monitor_5.png"
 };
-
 std::string qrcode_images_multiple[] = {
   "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
    "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
@@ -496,6 +495,8 @@ TEST(Objdetect_QRCode_basic, not_found_qrcode)
     EXPECT_ANY_THROW(qrcode.decode(zero_image, corners, straight_barcode));
 #endif
 }
+
+
 
 #endif // UPDATE_QRCODE_TEST_DATA
 

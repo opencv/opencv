@@ -105,7 +105,6 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
 }
 #endif
 
-
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode,
     ::testing::Values(
         "version_1_down.jpg", "version_1_left.jpg", "version_1_right.jpg", "version_1_up.jpg", "version_1_top.jpg",
@@ -120,7 +119,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode_Multi,
        "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
     )
 );
-
 
 typedef ::perf::TestBaseWithParam< tuple< std::string, Size > > Perf_Objdetect_Not_QRCode;
 

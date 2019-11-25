@@ -693,7 +693,8 @@ public:
      */
     CV_WRAP bool detect(InputArray img, OutputArray points) const;
 
-        /** @brief Decodes QR code in image once it's found by the detect() method.
+    /** @brief Decodes QR code in image once it's found by the detect() method.
+
      Returns UTF8-encoded output string or empty string if the code cannot be decoded.
      @param img grayscale or color (BGR) image containing QR code.
      @param points Quadrangle vertices found by detect() method (or some other algorithm).
@@ -702,6 +703,7 @@ public:
     CV_WRAP cv::String decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
 
     /** @brief Both detects and decodes QR code
+
      @param img grayscale or color (BGR) image containing QR code.
      @param points optional output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
@@ -745,14 +747,15 @@ protected:
     @param eps_y Epsilon neighborhood, which allows you to determine the vertical pattern of the scheme 1:1:3:1:1 according to QR code standard.
     */
 CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double eps_x = 0.2, double eps_y = 0.1);
+
 /** @brief Decode QR code in image and return text that is encrypted in QR code.
     @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
     @param points Input vector of vertices of a quadrangle of minimal area that describes QR code.
     @param decoded_info String information that is encrypted in QR code.
     @param straight_qrcode Matrix of the type CV_8UC1 containing an binary straight QR code.
     */
-
 CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode = noArray());
+
 /** @brief Detect QR codes in image and return vector of minimum area of quadrangle that describes QR codes.
     @param in  Matrix of the type CV_8UC1 containing an image where QR codes are detected.
     @param points Output vector of vector of vertices of a quadrangle of minimal area that describes QR codes.
@@ -761,8 +764,6 @@ CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &deco
     */
 CV_EXPORTS bool detectQRCodeMulti(InputArray in, std::vector< std::vector< Point > > &points,
                                      double eps_x = 0.2, double eps_y = 0.1);
-
-
 
 /** @brief Decode QR codes in image and return text that is encrypted in QR code.
     @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.

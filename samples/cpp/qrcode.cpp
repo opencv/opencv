@@ -13,6 +13,7 @@ static void drawFPS(Mat &color_image, double fps);
 static int  liveQRCodeDetect(const string& out_file);
 static int  imageQRCodeDetect(const string& in_file, const string& out_file);
 static int  imageQRCodeDetectMulti(const string& in_file, const string& out_file);
+
 int main(int argc, char *argv[])
 {
     const string keys =
@@ -28,6 +29,7 @@ int main(int argc, char *argv[])
         cmd_parser.printMessage();
         return 0;
     }
+
     string in_file_name  = cmd_parser.get<string>("in");    // input  path to image
     string out_file_name;
     if (cmd_parser.has("out"))
@@ -40,7 +42,6 @@ int main(int argc, char *argv[])
     }
 
     int return_code = 0;
-
     if (in_file_name.empty())
     {
         return_code = liveQRCodeDetect(out_file_name);
@@ -93,10 +94,11 @@ int liveQRCodeDetect(const string& out_file)
         cout << "Cannot open a camera" << endl;
         return -4;
     }
+
     cout << "Press 'm' to switch between detectAndDecode and detectAndDecodeMulti" << endl;
     QRCodeDetector qrcode;
     TickMeter total;
-    char m = 'u';
+    bool switch_mode = false;
     char c = (char)waitKey(30);
     for(;;)
     {
@@ -108,7 +110,7 @@ int liveQRCodeDetect(const string& out_file)
             break;
         }
         cvtColor(frame, src, COLOR_BGR2GRAY);
-        if (m == 'u')
+        if (!switch_mode)
         {
             Mat straight_barcode;
             string decode_info;
@@ -123,7 +125,7 @@ int liveQRCodeDetect(const string& out_file)
             total.stop();
             if (result_detection) { drawQRCodeContour(frame, transform); }
         }
-        else if (m == 'm')
+        else if (switch_mode)
         {
             vector<Mat> straight_barcode;
             vector<cv::String> decode_info;
@@ -154,10 +156,10 @@ int liveQRCodeDetect(const string& out_file)
           break;
        if (c == ' ' && !out_file.empty())
           imwrite(out_file, frame); // TODO write original frame too
-       if ((c == 'm') && (m != 'm')) //switch between detectAndDecode and detectAndDecodeMulti
-          m = 'm';
+       if ((c == 'm') && (switch_mode != true)) //switch between detectAndDecode and detectAndDecodeMulti
+          switch_mode = true;
        else if (c == 'm')
-          m = 'u';
+          switch_mode = false;
     }
     return 0;
 }
