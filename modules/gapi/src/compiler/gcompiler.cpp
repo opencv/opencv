@@ -301,6 +301,10 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     for (auto &b : backends)
     {
         b.priv().addBackendPasses(ectx);
+        if (!m_metas.empty())
+        {
+            b.priv().addMetaSensitiveBackendPasses(ectx);
+        }
     }
 }
 
@@ -486,4 +490,20 @@ void cv::gimpl::GCompiler::runMetaPasses(ade::Graph &g, const cv::GMetaArgs &met
     cv::gimpl::passes::initMeta(pass_ctx, metas);
     cv::gimpl::passes::inferMeta(pass_ctx, true);
     cv::gimpl::passes::storeResultingMeta(pass_ctx);
+
+    // Also run meta-sensitive backend-specific passes, if there's any.
+    // FIXME: This may be hazardous if our backend are not very robust
+    // in their passes -- how can we guarantee correct functioning in the
+    // future?
+    ade::ExecutionEngine engine;
+    engine.addPassStage("exec"); // FIXME: Need a better decision on how we replicate
+                                 // our main compiler stages here.
+    ade::ExecutionEngineSetupContext ectx(engine);
+
+    // NB: &&b or &b doesn't work here since "backends" is a set. Nevermind
+    for (auto b : GModel::Graph(g).metadata().get<ActiveBackends>().backends)
+    {
+        b.priv().addMetaSensitiveBackendPasses(ectx);
+    }
+    engine.runPasses(g);
 }

@@ -695,7 +695,6 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
     {
         initTestDataPath();
 
-
         const auto a_desc = cv::descr_of(m);
         const auto b_desc = cv::descr_of(m);
         sc  = cc.compileStreaming(a_desc, b_desc);
@@ -705,10 +704,17 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 
 TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
 {
-    // FIXME: Meta check doesn't fail here (but ideally it should)
     const auto c_ptr = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
+    auto c_desc = cv::GMatDesc{CV_8U,3,{768,576}};
+    auto m_desc = cv::descr_of(m);
+
+    sc = cc.compileStreaming(c_desc, m_desc);
     EXPECT_NO_THROW(sc.setSource(cv::gin(c_ptr, m)));
+
+    sc = cc.compileStreaming(m_desc, c_desc);
     EXPECT_NO_THROW(sc.setSource(cv::gin(m, c_ptr)));
+
+    sc = cc.compileStreaming(c_desc, c_desc);
     EXPECT_ANY_THROW(sc.setSource(cv::gin(c_ptr, c_ptr)));
 }
 

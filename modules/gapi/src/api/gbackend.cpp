@@ -46,6 +46,13 @@ void cv::gapi::GBackend::Priv::addBackendPasses(ade::ExecutionEngineSetupContext
     // add custom (backend-specific) graph transformations
 }
 
+void cv::gapi::GBackend::Priv::addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupContext &)
+{
+    // Do nothing by default, plugins may override this to
+    // add custom (backend-specific) graph transformations
+    // which are sensitive to metadata
+}
+
 cv::gapi::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
 {
     return {};

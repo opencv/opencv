@@ -128,7 +128,7 @@ namespace
             ;
         }
 
-        virtual void addBackendPasses(ade::ExecutionEngineSetupContext &ectx) override;
+        virtual void addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupContext &ectx) override;
 
     };
 }
@@ -1417,7 +1417,7 @@ void cv::gimpl::GParallelFluidExecutable::run(std::vector<InObj>  &&input_objs,
 
 // FIXME: these passes operate on graph global level!!!
 // Need to fix this for heterogeneous (island-based) processing
-void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
+void GFluidBackendImpl::addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupContext &ectx)
 {
     using namespace cv::gimpl;
 
