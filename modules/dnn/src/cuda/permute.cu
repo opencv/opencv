@@ -83,7 +83,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(input.rank() == order.size());
         CV_Assert(input.size() == output.size());
 
-        /* squeezable axes at the begining of both tensors which aren't permuted can be eliminated
+        /* squeezable axes at the beginning of both tensors which aren't permuted can be eliminated
          *
          * Reasoning:
          * ----------

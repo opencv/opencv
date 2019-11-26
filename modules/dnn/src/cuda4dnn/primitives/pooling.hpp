@@ -168,7 +168,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                  * copying the input to a bigger tensor and padding the ends manually
                  *
                  * But we first try to avoid the transformation using cuDNN's flexibility. cuDNN can accept a smaller or
-                 * a bigger output shape. This effectively allows us to have arbitary padding at the right.
+                 * a bigger output shape. This effectively allows us to have arbitrary padding at the right.
                  */
                 if (std::any_of(std::begin(padding_left), std::end(padding_left), is_not_zero))
                 {

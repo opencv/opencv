@@ -218,7 +218,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                      *
                      * cuDNN frequently assumes that the first axis is the batch axis and the
                      * second axis is the channel axis; hence, we copy the shape of a lower rank
-                     * tensor to the begining of `dims`
+                     * tensor to the beginning of `dims`
                      */
                     std::copy(start, end, std::begin(dims));
 

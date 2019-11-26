@@ -540,7 +540,7 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     auto fluid_kernels = cv::gapi::core::fluid::kernels();
     fluid_kernels.include<TypesTest::FluidAddV>();
 
-    // Here OCV takes precedense over Fluid, whith SubC & SumV remaining
+    // Here OCV takes precedense over Fluid, with SubC & SumV remaining
     // in Fluid.
     auto kernels = cv::gapi::combine(fluid_kernels, ocv_kernels);
 
