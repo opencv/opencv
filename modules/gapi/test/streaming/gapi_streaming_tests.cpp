@@ -302,7 +302,7 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
     EXPECT_EQ(ref_frames, test_frames);
 }
 
-TEST_P(GAPI_Streaming, DISABLED_SmokeTest_AutoMeta)
+TEST_P(GAPI_Streaming, SmokeTest_AutoMeta)
 {
     cv::GMat in;
     cv::GMat in2;
@@ -314,14 +314,27 @@ TEST_P(GAPI_Streaming, DISABLED_SmokeTest_AutoMeta)
         .compileStreaming(cv::compile_args(cv::gapi::use_only{GetParam()}));
 
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
+    cv::Mat tmp;
+
+    // Test with one video source
     auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
     testc.setSource(cv::gin(in_const, in_src));
     testc.start();
 
     std::size_t test_frames = 0u;
-    cv::Mat tmp;
     while (testc.pull(cv::gout(tmp))) test_frames++;
+    EXPECT_EQ(100u, test_frames);
+
+    // Now test with another one
+    in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"));
+    testc.setSource(cv::gin(in_const, in_src));
+    testc.start();
+
+    test_frames = 0u;
+    while (testc.pull(cv::gout(tmp))) test_frames++;
+    EXPECT_EQ(165u, test_frames);
 }
+
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
                         Values(  OCV_KERNELS()
                                  //, OCL_KERNELS() // FIXME: Fails bit-exactness check, maybe relax it?

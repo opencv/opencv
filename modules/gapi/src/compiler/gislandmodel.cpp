@@ -273,6 +273,7 @@ void GIslandModel::compileIslands(Graph &g, const ade::Graph &orig_g, const GCom
             g.metadata(nh).set(IslandExec{std::move(island_exe)});
         }
     }
+    g.metadata().set(IslandsCompiled{});
 }
 
 ade::NodeHandle GIslandModel::producerOf(const ConstGraph &g, ade::NodeHandle &data_nh)

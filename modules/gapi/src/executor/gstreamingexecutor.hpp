@@ -78,6 +78,7 @@ protected:
     std::shared_ptr<ade::Graph> m_island_graph;
     cv::GCompileArgs m_comp_args;
     cv::GMetaArgs m_last_metas;
+    util::optional<bool> m_reshapable;
 
     cv::gimpl::GIslandModel::Graph m_gim; // FIXME: make const?
 
@@ -92,7 +93,7 @@ protected:
 
         std::vector<GRunArg> in_constants;
 
-        // FIXME: remove it as unused
+        // FIXME: remove it as unused???
         std::shared_ptr<GIslandExecutable> isl_exec;
     };
     std::vector<OpDesc> m_ops;

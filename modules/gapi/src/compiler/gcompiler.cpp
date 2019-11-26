@@ -374,7 +374,12 @@ cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
         validateInputMeta();
     }
     validateOutProtoArgs();
-    return makeGraph(m_c.priv().m_ins, m_c.priv().m_outs);
+    auto g = makeGraph(m_c.priv().m_ins, m_c.priv().m_outs);
+    if (!m_metas.empty())
+    {
+        GModel::Graph(*g).metadata().set(OriginalInputMeta{m_metas});
+    }
+    return g;
 }
 
 void cv::gimpl::GCompiler::runPasses(ade::Graph &g)
@@ -388,7 +393,7 @@ void cv::gimpl::GCompiler::compileIslands(ade::Graph &g)
     compileIslands(g, m_args);
 }
 
-void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, cv::GCompileArgs &args)
+void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, const cv::GCompileArgs &args)
 {
     GModel::Graph gm(g);
     std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
