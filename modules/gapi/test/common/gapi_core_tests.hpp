@@ -73,7 +73,7 @@ inline std::ostream& operator<<(std::ostream& os, bitwiseOp op)
 // 1. Default parameters: int type, cv::Size sz, int dtype, getCompileArgs() function
 //      - available in test body
 // 2. Input/output matrices will be initialized by initMatsRandU (in this fixture)
-// 3. Specific parameters: opType, testWithScalar, scale, doReverseOp of correponding types
+// 3. Specific parameters: opType, testWithScalar, scale, doReverseOp of corresponding types
 //      - created (and initialized) automatically
 //      - available in test body
 // Note: all parameter _values_ (e.g. type CV_8UC3) are set via INSTANTIATE_TEST_CASE_P macro

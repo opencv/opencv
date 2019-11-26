@@ -53,7 +53,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      * "TensorType" is used when only meta-information such as the size or shape is required, i.e. the data won't be touched
      */
 
-    /** if the \p axis is a negative index, the equivalent postive index is returned; otherwise, returns \p axis */
+    /** if the \p axis is a negative index, the equivalent positive index is returned; otherwise, returns \p axis */
     CUDA4DNN_HOST_DEVICE constexpr std::size_t clamp_axis(int axis, std::size_t rank) {
         return axis < 0 ? axis + rank : axis;
     }

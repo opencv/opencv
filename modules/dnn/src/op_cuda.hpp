@@ -65,7 +65,7 @@ namespace cv { namespace dnn {
          * \param[out]  destTensor  destination tensor
          * \param       stream      CUDA stream to use for the memory transfer
          *
-         * The memory copy starts from begining \p srcMat. The number of elements copied is
+         * The memory copy starts from beginning \p srcMat. The number of elements copied is
          * equal to the number of elements in \p destTensor.
          *
          * Pre-conditions:
