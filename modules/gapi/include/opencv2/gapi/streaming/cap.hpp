@@ -45,37 +45,61 @@ namespace wip {
 class GCaptureSource: public IStreamSource
 {
 public:
-    explicit GCaptureSource(int id) : cap(id) {}
-    explicit GCaptureSource(const std::string &path) : cap(path) {}
+    explicit GCaptureSource(int id) : cap(id) { prep(); }
+    explicit GCaptureSource(const std::string &path) : cap(path) { prep(); }
 
     // TODO: Add more constructor overloads to make it
     // fully compatible with VideoCapture's interface.
 
 protected:
     cv::VideoCapture cap;
+    cv::Mat first;
+    bool first_pulled = false;
+
+    void prep()
+    {
+        // Prepare first frame to report its meta to engine
+        // when needed
+        GAPI_Assert(first.empty());
+        cv::Mat tmp;
+        if (!cap.read(tmp))
+        {
+            GAPI_Assert(false && "Couldn't grab the very first frame");
+        }
+        // NOTE: Some decode/media VideoCapture backends continue
+        // owning the video buffer under cv::Mat so in order to
+        // process it safely in a highly concurrent pipeline, clone()
+        // is the only right way.
+        first = tmp.clone();
+    }
+
     virtual bool pull(cv::gapi::wip::Data &data) override
     {
+        if (!first_pulled)
+        {
+            GAPI_Assert(!first.empty());
+            first_pulled = true;
+            data = first; // no need to clone here since it was cloned already
+            return true;
+        }
+
         if (!cap.isOpened()) return false;
+
         cv::Mat frame;
         if (!cap.read(frame))
         {
             // end-of-stream happened
             return false;
         }
-
-        // NOTE: Some decode/media VideoCapture backends continue
-        // owning the video buffer under cv::Mat so in order to
-        // process it safely in a highly concurrent pipeline, clone()
-        // is the only right way.
+        // Same reason to clone as in prep()
         data = frame.clone();
         return true;
     }
 
-    virtual GMetaArg descr_of() const override 
+    virtual GMetaArg descr_of() const override
     {
-        Data tmp_data;
-        pull(tmp_data);
-        return descr_of(tmp_data);
+        GAPI_Assert(!first.empty());
+        return cv::GMetaArg{cv::descr_of(first)};
     }
 };
 

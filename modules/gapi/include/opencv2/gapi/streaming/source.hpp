@@ -7,10 +7,11 @@
 #ifndef OPENCV_GAPI_STREAMING_SOURCE_HPP
 #define OPENCV_GAPI_STREAMING_SOURCE_HPP
 
-#include <opencv2/gapi/garg.hpp>
-#include <opencv2/gapi/gmetaarg.hpp>
-#include <memory> // shared_ptr
-#include <type_traits> // is_base_of
+#include <memory>                      // shared_ptr
+#include <type_traits>                 // is_base_of
+
+#include <opencv2/gapi/gmetaarg.hpp>   // GMetaArg
+
 
 namespace cv {
 namespace gapi {

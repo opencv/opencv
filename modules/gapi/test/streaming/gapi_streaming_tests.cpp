@@ -302,6 +302,26 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
     EXPECT_EQ(ref_frames, test_frames);
 }
 
+TEST_P(GAPI_Streaming, DISABLED_SmokeTest_AutoMeta)
+{
+    cv::GMat in;
+    cv::GMat in2;
+    cv::GMat roi = cv::gapi::crop(in2, cv::Rect{1,1,256,256});
+    cv::GMat blr = cv::gapi::blur(roi, cv::Size(3,3));
+    cv::GMat out = blr - in;
+
+    auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
+        .compileStreaming(cv::compile_args(cv::gapi::use_only{GetParam()}));
+
+    cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
+    auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
+    testc.setSource(cv::gin(in_const, in_src));
+    testc.start();
+
+    std::size_t test_frames = 0u;
+    cv::Mat tmp;
+    while (testc.pull(cv::gout(tmp))) test_frames++;
+}
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
                         Values(  OCV_KERNELS()
                                  //, OCL_KERNELS() // FIXME: Fails bit-exactness check, maybe relax it?
@@ -821,120 +841,6 @@ TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
     // Test against new ref
     ref(cv::gin(eye, m), cv::gout(out_ref));
     EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
-}
-
-// Meta data get from setsource
-TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_Set_In_SetSource)
-{
-    cv::GMat in;
-    cv::GMat in2;
-    cv::GMat roi = cv::gapi::crop(in2, cv::Rect{1,1,256,256});
-    cv::GMat blr = cv::gapi::blur(roi, cv::Size(3,3));
-    cv::GMat out = blr - in;
-    std::size_t ref_frames = 0u;
-    cv::Mat tmp;
-    cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
-    //in mats descr cv::GMatDesc{CV_8U,3,cv::Size{256,256}},
-    //in mats descr cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                          
-    auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
-        .compileStreaming({}
-                        , cv::compile_args(cv::gapi::use_only{GetParam()}));
-
-    testc.setSource(cv::gin(in_const,
-            gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"))));
-    testc.start();
-    std::size_t test_frames = 0u;
-    while (testc.pull(cv::gout(tmp))) test_frames++;
-    testc.stop();
-
-    EXPECT_EQ(ref_frames, test_frames);
-}
-
-// Meta data set in compileStreaming and in setSource
-// compileStreaming meta = setSource meta
-TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_Set_In_SetSources_Is_Eq)
-{
-    cv::GMat in;
-    cv::GMat in2;
-    cv::GMat roi = cv::gapi::crop(in2, cv::Rect{1,1,256,256});
-    cv::GMat blr = cv::gapi::blur(roi, cv::Size(3,3));
-    cv::GMat out = blr - in;
-    std::size_t ref_frames = 0u;
-    cv::Mat tmp;
-
-    auto testc = cv::GComputation(cv::GIn(in), cv::GOut(out))
-        .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{1024, 768}}
-                        , cv::compile_args(cv::gapi::use_only{GetParam()}));
-
-    testc.setSource(cv::gin(
-                    gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"))));
-    testc.start();
-    std::size_t test_frames = 0u;
-    while (testc.pull(cv::gout(tmp))) test_frames++;
-
-    EXPECT_EQ(ref_frames, test_frames);
-}
-
-// Meta data set in compileStreaming and in setSource
-// compileStreaming meta != setSource meta
-TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_Set_In_SetSources_Not_Eq)
-{
-    cv::GMat in;
-    cv::GMat in2;
-    cv::GMat roi = cv::gapi::crop(in2, cv::Rect{1,1,256,256});
-    cv::GMat blr = cv::gapi::blur(roi, cv::Size(3,3));
-    cv::GMat out = blr - in;
-    std::size_t ref_frames = 0u;
-    cv::Mat tmp;
-
-    auto testc = cv::GComputation(cv::GIn(in), cv::GOut(out))
-        .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{1024, 768}}
-                        , cv::compile_args(cv::gapi::use_only{GetParam()}));
-
-    testc.setSource(cv::gin(
-                    gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"))));
-    testc.start();
-    std::size_t test_frames = 0u;
-    while (testc.pull(cv::gout(tmp))) test_frames++;
-
-    EXPECT_EQ(ref_frames, test_frames);
-}
-
-TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_Set_In_SetSource_Twice)
-{
-    cv::GMat in;
-    cv::GMat in2;
-    cv::GMat roi = cv::gapi::crop(in2, cv::Rect{1,1,256,256});
-    cv::GMat blr = cv::gapi::blur(roi, cv::Size(3,3));
-    cv::GMat out = blr - in;
-    std::size_t ref_frames = 0u;
-    cv::Mat tmp;
-    //in mats descr cv::GMatDesc{CV_8U,3,cv::Size{256,256}},
-    //in mats descr cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                          
-    auto testc = cv::GComputation(cv::GIn(in), cv::GOut(out))
-        .compileStreaming({}
-                        , cv::compile_args(cv::gapi::use_only{GetParam()}));
-
-    testc.setSource(cv::gin(
-                    gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"))));
-    testc.start();
-    std::size_t test_frames = 0u;
-    while (testc.pull(cv::gout(tmp))) test_frames++;
-    testc.stop();
-
-    EXPECT_EQ(ref_frames, test_frames);
-
-
-    testc.setSource(cv::gin(
-            gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"))));
-    testc.start();
-    test_frames = 0u;
-    while (testc.pull(cv::gout(tmp))) test_frames++;
-    testc.stop();
-
-    EXPECT_EQ(ref_frames, test_frames);
 }
 
 } // namespace opencv_test

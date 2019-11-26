@@ -52,13 +52,11 @@ const cv::GMetaArgs& cv::GStreamingCompiled::Priv::outMetas() const
 // the G*Compiled's priv?
 void cv::GStreamingCompiled::Priv::setSource(cv::GRunArgs &&args)
 {
-    // FIXME: This metadata checking should be removed at all
-    // for the streaming case.
-    // if (!can_describe(m_metas, args))
-    // {
-    //     util::throw_error(std::logic_error("This object was compiled "
-    //                                        "for different metadata!"));
-    // }
+    if (!m_metas.empty() && !can_describe(m_metas, args))
+    {
+        util::throw_error(std::logic_error("This object was compiled "
+                                           "for different metadata!"));
+    }
     GAPI_Assert(m_exec != nullptr);
     m_exec->setSource(std::move(args));
 }

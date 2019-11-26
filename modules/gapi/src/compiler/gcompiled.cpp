@@ -14,8 +14,6 @@
 
 #include "compiler/gcompiled_priv.hpp"
 #include "backends/common/gbackend.hpp"
-#include "compiler/passes/passes.hpp"
-#include "compiler/gcompiler.hpp"
 
 // GCompiled private implementation ////////////////////////////////////////////
 void cv::GCompiled::Priv::setup(const GMetaArgs &_metaArgs,

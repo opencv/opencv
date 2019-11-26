@@ -29,9 +29,8 @@ class GAPI_EXPORTS GCompiler
     cv::gapi::GKernelPackage m_all_kernels;
     cv::gapi::GNetPackage    m_all_networks;
 
-    std::vector<std::unique_ptr<ade::Graph>> m_all_patterns;  // built patterns from transformations
-
-    bool metaAdded = true;
+    // Patters built from transformations
+    std::vector<std::unique_ptr<ade::Graph>> m_all_patterns;
 
     void validateInputMeta();
     void validateOutProtoArgs();
@@ -41,8 +40,7 @@ public:
     // In this case graph get metas from first frame
     explicit GCompiler(const GComputation &c,
                              GMetaArgs    &&metas,
-                             GCompileArgs &&args,
-                             bool addMetaPasses = true);
+                             GCompileArgs &&args);
 
     // The method which does everything...
     GCompiled compile();
