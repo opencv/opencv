@@ -502,7 +502,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
   (v4u32)__builtin_msa_pckev_w((v4i32)__builtin_msa_sat_u_d((v2u64)__e, 31), (v4i32)__builtin_msa_sat_u_d((v2u64)__d, 31)); \
 })
 
-/* Minimum values between corresponding elements in the two vectors are written to teh returned vector. */
+/* Minimum values between corresponding elements in the two vectors are written to the returned vector. */
 #define msa_minq_s8(__a, __b)  (__builtin_msa_min_s_b(__a, __b))
 #define msa_minq_s16(__a, __b) (__builtin_msa_min_s_h(__a, __b))
 #define msa_minq_s32(__a, __b) (__builtin_msa_min_s_w(__a, __b))
@@ -514,7 +514,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
 #define msa_minq_f32(__a, __b) (__builtin_msa_fmin_w(__a, __b))
 #define msa_minq_f64(__a, __b) (__builtin_msa_fmin_d(__a, __b))
 
-/* Maximum values between corresponding elements in the two vectors are written to teh returned vector. */
+/* Maximum values between corresponding elements in the two vectors are written to the returned vector. */
 #define msa_maxq_s8(__a, __b)  (__builtin_msa_max_s_b(__a, __b))
 #define msa_maxq_s16(__a, __b) (__builtin_msa_max_s_h(__a, __b))
 #define msa_maxq_s32(__a, __b) (__builtin_msa_max_s_w(__a, __b))

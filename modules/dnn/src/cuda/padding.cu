@@ -103,7 +103,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(output.rank() == input.rank());
         CV_Assert(output.rank() == ranges.size());
 
-        /* squeezable axes at the begining of both tensors can be eliminated
+        /* squeezable axes at the beginning of both tensors can be eliminated
          *
          * Reasoning:
          * ----------
