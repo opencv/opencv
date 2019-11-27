@@ -1,0 +1,2 @@
+[python]
+binpath = @CMAKE_PYTHON_BINARIES_PATH@

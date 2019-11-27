@@ -3,6 +3,7 @@ OpenCV Python binary extension loader
 '''
 import os
 import sys
+import configparser
 
 try:
     import numpy
@@ -35,31 +36,32 @@ def bootstrap():
     PYTHON_EXTENSIONS_PATHS = []
     BINARIES_PATHS = []
 
-    g_vars = globals()
     l_vars = locals()
 
-    if sys.version_info[:2] < (3, 0):
-        from . load_config_py2 import exec_file_wrapper
-    else:
-        from . load_config_py3 import exec_file_wrapper
-
-    def load_first_config(fnames, required=True):
+    def load_first_config(fnames, configkey, varname, required=True):
+        config = configparser.ConfigParser()
         for fname in fnames:
             fpath = os.path.join(LOADER_DIR, fname)
             if not os.path.exists(fpath):
                 if DEBUG: print('OpenCV loader: config not found, skip: {}'.format(fpath))
                 continue
             if DEBUG: print('OpenCV loader: loading config: {}'.format(fpath))
-            exec_file_wrapper(fpath, g_vars, l_vars)
+            config.read(fpath)
+            paths = config["python"][configkey].split(":")
+            for path in paths:
+                if os.path.isabs(path):
+                    l_vars[varname].append(path)
+                else:
+                    l_vars[varname].append(os.path.join(LOADER_DIR, path))
             return True
         if required:
             raise ImportError('OpenCV loader: missing configuration file: {}. Check OpenCV installation.'.format(fnames))
 
-    load_first_config(['config.py'], True)
+    load_first_config(['config.ini'], "binpath", "BINARIES_PATHS", True)
     load_first_config([
-        'config-{}.{}.py'.format(sys.version_info[0], sys.version_info[1]),
-        'config-{}.py'.format(sys.version_info[0])
-    ], True)
+        'config-{}.{}.ini'.format(sys.version_info[0], sys.version_info[1]),
+        'config-{}.ini'.format(sys.version_info[0])
+    ], "extensionpath", "PYTHON_EXTENSIONS_PATHS", True)
 
     if DEBUG: print('OpenCV loader: PYTHON_EXTENSIONS_PATHS={}'.format(str(l_vars['PYTHON_EXTENSIONS_PATHS'])))
     if DEBUG: print('OpenCV loader: BINARIES_PATHS={}'.format(str(l_vars['BINARIES_PATHS'])))

@@ -1,0 +1,2 @@
+[python]
+extensionpath = @CMAKE_PYTHON_EXTENSION_PATH@
