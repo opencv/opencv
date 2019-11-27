@@ -278,11 +278,28 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
     {
         const auto& inp = inpWrappers[i];
         const std::string& inpName = inp->dataPtr->getName();
+
+        std::string inpLayerName = inpName;
+        size_t inpPortId = inpName.rfind('.');
+        if (inpPortId != std::string::npos)
+        {
+            std::string portIdStr = inpName.substr(inpPortId + 1);
+            if (std::all_of(portIdStr.begin(), portIdStr.end(), ::isdigit))
+            {
+                inpLayerName = inpName.substr(0, inpPortId);
+                inpPortId = atoi(portIdStr.c_str());
+            }
+            else
+                inpPortId = 0;
+        }
+        else
+            inpPortId = 0;
+
         int inpId;
-        it = layers.find(inpName);
+        it = layers.find(inpLayerName);
         if (it == layers.end())
         {
-            InferenceEngine::Builder::InputLayer inpLayer(!inpName.empty() ? inpName : kDefaultInpLayerName);
+            InferenceEngine::Builder::InputLayer inpLayer(!inpLayerName.empty() ? inpLayerName : kDefaultInpLayerName);
             std::vector<size_t> shape(inp->blob->getTensorDesc().getDims());
             inpLayer.setPort(InferenceEngine::Port(shape));
             inpId = netBuilder.addLayer(inpLayer);
@@ -292,24 +309,28 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
         else
             inpId = it->second;
 
-        netBuilder.connect((size_t)inpId, {(size_t)layerId, i});
-        unconnectedLayersIds.erase(inpId);
+        netBuilder.connect({(size_t)inpId, inpPortId}, {(size_t)layerId, i});
+        unconnectedPorts.erase({inpId, inpPortId});
     }
     CV_Assert(!outputs.empty());
-    InferenceEngine::DataPtr dataPtr = infEngineDataNode(outputs[0]);
+    for (int i = 0; i < outputs.size(); ++i)
+    {
+        InferenceEngine::DataPtr dataPtr = infEngineDataNode(outputs[i]);
+        std::string outputName = outputs.size() > 1 ? (layerName + "." + std::to_string(i)) : layerName;
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    dataPtr->name = layerName;
+        dataPtr->name = outputName;
 #else
-    dataPtr->setName(layerName);
+        dataPtr->setName(outputName);
 #endif
+    }
 }
 
 void InfEngineBackendNet::init(Target targetId)
 {
     if (!hasNetOwner)
     {
-        CV_Assert(!unconnectedLayersIds.empty());
-        for (int id : unconnectedLayersIds)
+        CV_Assert(!unconnectedPorts.empty());
+        for (const auto& port : unconnectedPorts)
         {
             InferenceEngine::Builder::OutputLayer outLayer("myconv1");
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
@@ -320,7 +341,7 @@ void InfEngineBackendNet::init(Target targetId)
                                            InferenceEngine::Precision::FP32;
             outLayer.setPort(InferenceEngine::Port({}, p));
 #endif
-            netBuilder.addLayer({InferenceEngine::PortInfo(id)}, outLayer);
+            netBuilder.addLayer({InferenceEngine::PortInfo(port.first, port.second)}, outLayer);
         }
         netBuilder.getContext().addShapeInferImpl(kOpenCVLayersType,
                             std::make_shared<InfEngineCustomLayerShapeInfer>());
@@ -409,8 +430,10 @@ void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
 
     int id = netBuilder.addLayer(layer);
     const std::string& layerName = layer.getName();
+
     CV_Assert(layers.insert({layerName, id}).second);
-    unconnectedLayersIds.insert(id);
+    for (int i = 0; i < layer.getOutputPorts().size(); ++i)
+        unconnectedPorts.insert({id, i});
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     // By default, all the weights are connected to last ports ids.
