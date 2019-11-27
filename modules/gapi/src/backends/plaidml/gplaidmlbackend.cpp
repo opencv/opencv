@@ -158,19 +158,20 @@ void cv::gimpl::GPlaidMLExecutable::compile(const std::vector<cv::gimpl::Data>& 
         output_tensors.emplace_back(tensor_map[out_id]);
     }
 
-    program_ = std::unique_ptr<plaidml::edsl::Program>(new plaidml::edsl::Program("Program", output_tensors));
+    plaidml::edsl::Program program("Program", output_tensors);
+    binder_.reset(new plaidml::exec::Binder(program));
 
-    // FIXME Need to update tensors here
-    for (size_t i = 0; i < output_tensors.size(); ++i)
+    for (const auto& binding : input_bindings_)
     {
-        output_bindings_[i].tensor = program_->outputs()[i];
+        binder_->set_input(binding.tensor, binding.buffer);
     }
 
-    exec_.reset(new plaidml::exec::Executable(*program_,
-                                               m_cfg.dev_id,
-                                               m_cfg.trg_id,
-                                               input_bindings_,
-                                               output_bindings_));
+    for (const auto& binding : output_bindings_)
+    {
+        binder_->set_output(binding.tensor, binding.buffer);
+    }
+
+    exec_ = binder_->compile();
 }
 
 cv::gimpl::GPlaidMLExecutable::GPlaidMLExecutable(cv::gimpl::GPlaidMLExecutable::Config cfg,
@@ -205,23 +206,23 @@ void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &
     {
     case GShape::GMAT:
     {
-        auto& buffer_map = m_res.slot<plaidml::Buffer*>();
-        auto it = buffer_map.find(rc.id);
-        GAPI_Assert(it != buffer_map.end());
+        auto& tensor_map = m_res.slot<plaidml::edsl::Tensor>();
+        auto it = tensor_map.find(rc.id);
+        GAPI_Assert(it != tensor_map.end());
 
         switch (arg.index())
         {
         case GRunArg::index_of<cv::gapi::own::Mat>():
         {
             auto& arg_mat = util::get<cv::gapi::own::Mat>(arg);
-            it->second->copy_from(arg_mat.data);
+            binder_->input(it->second).copy_from(arg_mat.data);
         }
         break;
 #if !defined(GAPI_STANDALONE)
         case GRunArg::index_of<cv::Mat>() :
         {
             auto& arg_mat = util::get<cv::Mat>(arg);
-            it->second->copy_from(arg_mat.data);
+            binder_->input(it->second).copy_from(arg_mat.data);
         }
         break;
 #endif //  !defined(GAPI_STANDALONE)
@@ -241,23 +242,23 @@ void cv::gimpl::GPlaidMLExecutable::bindOutArg(const RcDesc &rc, const GRunArgP 
     {
     case GShape::GMAT:
     {
-        auto& buffer_map = m_res.slot<plaidml::Buffer*>();
-        auto it = buffer_map.find(rc.id);
-        GAPI_Assert(it != buffer_map.end());
+        auto& tensor_map = m_res.slot<plaidml::edsl::Tensor>();
+        auto it = tensor_map.find(rc.id);
+        GAPI_Assert(it != tensor_map.end());
 
         switch (arg.index())
         {
         case GRunArgP::index_of<cv::gapi::own::Mat*>():
         {
             auto& arg_mat = *util::get<cv::gapi::own::Mat*>(arg);
-            it->second->copy_into(arg_mat.data);
+            binder_->output(it->second).copy_into(arg_mat.data);
         }
         break;
 #if !defined(GAPI_STANDALONE)
         case GRunArgP::index_of<cv::Mat*>() :
         {
             auto& arg_mat = *util::get<cv::Mat*>(arg);
-            it->second->copy_into(arg_mat.data);
+            binder_->output(it->second).copy_into(arg_mat.data);
         }
         break;
 #endif //  !defined(GAPI_STANDALONE)

@@ -80,9 +80,10 @@ private:
     GModel::ConstGraph m_gm;
 
     std::vector<ade::NodeHandle> m_all_ops;
+
     std::vector<size_t> output_ids_;
 
-    std::unique_ptr<plaidml::edsl::Program> program_;
+    std::unique_ptr<plaidml::exec::Binder>     binder_;
     std::shared_ptr<plaidml::exec::Executable> exec_;
 
     std::vector<plaidml::exec::Binding> input_bindings_;
