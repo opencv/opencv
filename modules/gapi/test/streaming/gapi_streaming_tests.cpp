@@ -335,6 +335,71 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta)
     EXPECT_EQ(165u, test_frames);
 }
 
+
+TEST_P(GAPI_Streaming, SmokeTest_Two_Const_Mats)
+{
+    cv::GMat in;
+    cv::GMat in2;
+    cv::GMat roi = cv::gapi::crop(in2, cv::Rect{1,1,256,256});
+    cv::GMat blr = cv::gapi::blur(roi, cv::Size(3,3));
+    cv::GMat out = blr - in;
+
+    auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
+        .compileStreaming(cv::compile_args(cv::gapi::use_only{GetParam()}));
+
+    cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
+    cv::Mat tmp;
+
+    // Test with firs image
+    auto in_src = cv::imread(findDataFile("cv/edgefilter/statue.png"));
+    testc.setSource(cv::gin(in_const, in_src));
+    testc.start();
+
+    ASSERT_TRUE(testc.pull(cv::gout(tmp)));
+
+    testc.stop();
+
+    // Now test with second image
+    in_src = cv::imread(findDataFile("cv/edgefilter/kodim23.png"));
+    testc.setSource(cv::gin(in_const, in_src));
+    testc.start();
+
+    ASSERT_TRUE(testc.pull(cv::gout(tmp)));
+
+    testc.stop();
+}
+
+TEST_P(GAPI_Streaming, SmokeTest_One_Video_One_Const_Scalar)
+{
+    cv::GMat in_m;
+    cv::GScalar in_s;
+    cv::GMat out_m = in_m * in_s;
+
+    auto testc = cv::GComputation(cv::GIn(in_m, in_s), cv::GOut(out_m))
+        .compileStreaming(cv::compile_args(cv::gapi::use_only{GetParam()}));
+
+    cv::Mat tmp;
+    // Test with one video source and scalar
+    auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
+    cv::Scalar sc = 32;
+    testc.setSource(cv::gin(in_src, sc));
+    testc.start();
+
+    std::size_t test_frames = 0u;
+    while (testc.pull(cv::gout(tmp))) test_frames++;
+    EXPECT_EQ(100u, test_frames);
+
+    // Now test with another one video source and scalar
+    in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"));
+    sc = 16;
+    testc.setSource(cv::gin(in_src, sc));
+    testc.start();
+
+    test_frames = 0u;
+    while (testc.pull(cv::gout(tmp))) test_frames++;
+    EXPECT_EQ(165u, test_frames);
+}
+
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
                         Values(  OCV_KERNELS()
                                  //, OCL_KERNELS() // FIXME: Fails bit-exactness check, maybe relax it?
@@ -409,6 +474,38 @@ namespace TypesTest
         }
     };
 } // namespace TypesTest
+
+TEST_P(GAPI_Streaming, SmokeTest_One_Video_One_Const_Vector)
+{
+    cv::GMat in_m;
+    cv::GArray<int> in_v;
+    cv::GMat out_m = TypesTest::AddV::on(in_m, in_v) - in_m;
+
+    // Run pipeline
+    auto testc = cv::GComputation(cv::GIn(in_m, in_v), cv::GOut(out_m))
+                    .compileStreaming(cv::compile_args(cv::gapi::kernels<TypesTest::OCVAddV>()));
+
+    cv::Mat tmp;
+    // Test with one video source and vector
+    auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
+    std::vector<int> first_in_vec(2304, 1);
+    testc.setSource(cv::gin(in_src, first_in_vec));
+    testc.start();
+
+    std::size_t test_frames = 0u;
+    while (testc.pull(cv::gout(tmp))) test_frames++;
+    EXPECT_EQ(100u, test_frames);
+
+    // Now test with another one
+    in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"));
+    std::vector<int> second_in_vec(5760, 1);
+    testc.setSource(cv::gin(in_src, second_in_vec));
+    testc.start();
+
+    test_frames = 0u;
+    while (testc.pull(cv::gout(tmp))) test_frames++;
+    EXPECT_EQ(165u, test_frames);
+}
 
 TEST(GAPI_Streaming_Types, InputScalar)
 {
