@@ -96,6 +96,7 @@ protected:
 // * Is instantiated by the last step of the Islands fusion procedure;
 // * Is orchestrated by a GExecutor instance.
 //
+
 class GIslandExecutable
 {
 public:
