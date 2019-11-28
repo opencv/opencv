@@ -136,8 +136,8 @@ TEST_P(Test_TensorFlow_layers, Convolution3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
+    if (target != DNN_TARGET_CPU && backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("Only CPU and CUDA is supported");
     runTensorFlowNet("conv3d");
 }
 
@@ -145,8 +145,17 @@ TEST_P(Test_TensorFlow_layers, padding)
 {
     runTensorFlowNet("padding_valid");
     runTensorFlowNet("spatial_padding");
-    runTensorFlowNet("keras_pad_concat");
     runTensorFlowNet("mirror_pad");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        if (target == DNN_TARGET_MYRIAD)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2019R3, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+        if (target == DNN_TARGET_OPENCL_FP16)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_2019R3, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+    }
+#endif
+    runTensorFlowNet("keras_pad_concat");
 }
 
 TEST_P(Test_TensorFlow_layers, padding_same)
@@ -243,8 +252,8 @@ TEST_P(Test_TensorFlow_layers, MaxPooling3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
+    if (target != DNN_TARGET_CPU && backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("Only CPU and CUDA is supported");
     runTensorFlowNet("max_pool3d");
 }
 
@@ -253,13 +262,16 @@ TEST_P(Test_TensorFlow_layers, AvePooling3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
+    if (target != DNN_TARGET_CPU && backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("Only CPU and CUDA is supported");
     runTensorFlowNet("ave_pool3d");
 }
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* bugged */
+
     runTensorFlowNet("deconvolution");
     runTensorFlowNet("deconvolution_same");
     runTensorFlowNet("deconvolution_stride_2_same");
@@ -279,7 +291,7 @@ TEST_P(Test_TensorFlow_layers, matmul)
     // Reference output values are in range [-5.688, 4.484]
     double l1 = target == DNN_TARGET_MYRIAD ? 6.1e-3 : default_l1;
     runTensorFlowNet("nhwc_reshape_matmul", false, l1);
-
+    runTensorFlowNet("matmul_layout");
 }
 
 TEST_P(Test_TensorFlow_layers, reshape)
@@ -472,8 +484,11 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
                                   "faster_rcnn_resnet50_coco_2018_01_28"};
 
     checkBackend();
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+#ifdef INF_ENGINE_RELEASE
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+        (INF_ENGINE_VER_MAJOR_LT(2019020000) || target != DNN_TARGET_CPU))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
@@ -573,6 +588,10 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16 &&
+        INF_ENGINE_VER_MAJOR_EQ(2019020000))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
 #endif
 
     checkBackend();
@@ -663,6 +682,8 @@ TEST_P(Test_TensorFlow_layers, quantized)
 
 TEST_P(Test_TensorFlow_layers, lstm)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* not supported */
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
@@ -673,7 +694,8 @@ TEST_P(Test_TensorFlow_layers, lstm)
 
 TEST_P(Test_TensorFlow_layers, split)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD &&
+        getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2);
     runTensorFlowNet("split");
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
@@ -729,6 +751,7 @@ TEST_P(Test_TensorFlow_layers, subpixel)
 TEST_P(Test_TensorFlow_layers, keras_mobilenet_head)
 {
     runTensorFlowNet("keras_mobilenet_head");
+    runTensorFlowNet("keras_learning_phase");
 }
 
 TEST_P(Test_TensorFlow_layers, resize_bilinear)

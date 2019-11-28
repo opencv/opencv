@@ -113,12 +113,18 @@
 #  define CV_AVX_512IFMA 1
 #  define CV_AVX_512VBMI 1
 #endif
-#ifdef CV_CPU_COMPILE_AVX512_CEL
-#  define CV_AVX512_CEL 1
+#ifdef CV_CPU_COMPILE_AVX512_CLX
+#  define CV_AVX512_CLX 1
 #  define CV_AVX_512VNNI 1
 #endif
 #ifdef CV_CPU_COMPILE_AVX512_ICL
 #  define CV_AVX512_ICL 1
+#  undef CV_AVX_512IFMA
+#  define CV_AVX_512IFMA 1
+#  undef CV_AVX_512VBMI
+#  define CV_AVX_512VBMI 1
+#  undef CV_AVX_512VNNI
+#  define CV_AVX_512VNNI 1
 #  define CV_AVX_512VBMI2 1
 #  define CV_AVX_512BITALG 1
 #  define CV_AVX_512VPOPCNTDQ 1
@@ -150,6 +156,16 @@
 
 #ifdef CV_CPU_COMPILE_VSX3
 #  define CV_VSX3 1
+#endif
+
+#ifdef CV_CPU_COMPILE_MSA
+#  include "hal/msa_macros.h"
+#  define CV_MSA 1
+#endif
+
+#ifdef __EMSCRIPTEN__
+#  define CV_WASM_SIMD 1
+#  include <wasm_simd128.h>
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
@@ -301,8 +317,8 @@ struct VZeroUpperGuard {
 #ifndef CV_AVX512_CNL
 #  define CV_AVX512_CNL 0
 #endif
-#ifndef CV_AVX512_CEL
-#  define CV_AVX512_CEL 0
+#ifndef CV_AVX512_CLX
+#  define CV_AVX512_CLX 0
 #endif
 #ifndef CV_AVX512_ICL
 #  define CV_AVX512_ICL 0
@@ -318,4 +334,12 @@ struct VZeroUpperGuard {
 
 #ifndef CV_VSX3
 #  define CV_VSX3 0
+#endif
+
+#ifndef CV_MSA
+#  define CV_MSA 0
+#endif
+
+#ifndef CV_WASM_SIMD
+#  define CV_WASM_SIMD 0
 #endif

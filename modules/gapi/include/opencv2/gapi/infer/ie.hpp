@@ -7,8 +7,6 @@
 #ifndef OPENCV_GAPI_INFER_IE_HPP
 #define OPENCV_GAPI_INFER_IE_HPP
 
-#ifdef HAVE_INF_ENGINE
-
 #include <unordered_map>
 #include <string>
 #include <array>
@@ -17,12 +15,31 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
 
+#include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
+#include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+
 namespace cv {
 namespace gapi {
 // FIXME: introduce a new sub-namespace for NN?
 namespace ie {
 
 GAPI_EXPORTS cv::gapi::GBackend backend();
+
+/**
+ * Specify how G-API and IE should trait input data
+ *
+ * In OpenCV, the same cv::Mat is used to represent both
+ * image and tensor data. Sometimes those are hardly distinguishable,
+ * so this extra parameter is used to give G-API a hint.
+ *
+ * This hint controls how G-API reinterprets the data when converting
+ * it to IE Blob format (and which layout/etc is assigned to this data).
+ */
+enum class TraitAs: int
+{
+    TENSOR, //!< G-API traits an associated cv::Mat as a raw tensor and passes dimensions as-is
+    IMAGE   //!< G-API traits an associated cv::Mat as an image so creates an "image" blob (NCHW/NHWC, etc)
+};
 
 namespace detail {
     struct ParamDesc {
@@ -34,7 +51,8 @@ namespace detail {
         std::vector<std::string> input_names;
         std::vector<std::string> output_names;
 
-        std::unordered_map<std::string, cv::Mat> const_inputs;
+        using ConstInput = std::pair<cv::Mat, TraitAs>;
+        std::unordered_map<std::string, ConstInput> const_inputs;
 
         // NB: nun_* may differ from topology's real input/output port numbers
         // (e.g. topology's partial execution)
@@ -82,8 +100,9 @@ public:
     }
 
     Params<Net>& constInput(const std::string &layer_name,
-                            const cv::Mat &data) {
-        desc.const_inputs[layer_name] = data;
+                            const cv::Mat &data,
+                            TraitAs hint = TraitAs::TENSOR) {
+        desc.const_inputs[layer_name] = {data, hint};
         return *this;
     }
 
@@ -100,7 +119,5 @@ protected:
 } // namespace ie
 } // namespace gapi
 } // namespace cv
-
-#endif // HAVE_INF_ENGINE
 
 #endif // OPENCV_GAPI_INFER_HPP

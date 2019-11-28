@@ -145,6 +145,16 @@ struct ActiveBackends
     std::unordered_set<cv::gapi::GBackend> backends;
 };
 
+// This is a graph-global flag indicating this graph is compiled for
+// the streaming case.  Streaming-neutral passes (i.e. nearly all of
+// them) can ignore this flag safely.
+//
+// FIXME: Probably a better design can be suggested.
+struct Streaming
+{
+    static const char *name() { return "StreamingFlag"; }
+};
+
 // Backend-specific inference parameters for a neural network.
 // Since these parameters are set on compilation stage (not
 // on a construction stage), these parameters are bound lately
@@ -190,6 +200,7 @@ namespace GModel
         , IslandModel
         , ActiveBackends
         , CustomMetaFunction
+        , Streaming
         >;
 
     // FIXME: How to define it based on GModel???
@@ -209,6 +220,7 @@ namespace GModel
         , IslandModel
         , ActiveBackends
         , CustomMetaFunction
+        , Streaming
         >;
 
     // FIXME:
@@ -219,7 +231,7 @@ namespace GModel
     GAPI_EXPORTS void init (Graph& g);
 
     GAPI_EXPORTS ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
-
+    // Isn't used by the framework or default backends, required for external backend development
     GAPI_EXPORTS ade::NodeHandle mkDataNode(Graph &g, const GShape shape);
 
     // Adds a string message to a node. Any node can be subject of log, messages then

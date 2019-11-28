@@ -11,9 +11,15 @@ Implementation of padding layer, which adds paddings to input blob.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include <vector>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/padding.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -100,6 +106,7 @@ public:
                     (dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0));
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4);
     }
 
@@ -160,6 +167,27 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unknown padding type: " + paddingType);
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        cuda4dnn::PaddingType ptype;
+        if (paddingType == "constant")
+            ptype = PaddingType::CONSTANT;
+        else if (paddingType == "reflect")
+            ptype = PaddingType::REFLECTION101;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
+
+        return make_cuda_node<cuda4dnn::PaddingOp>(preferableTarget, std::move(context->stream), ptype, paddingValue, dstRanges);
+    }
+#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

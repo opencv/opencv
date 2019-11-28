@@ -1068,6 +1068,79 @@ OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_int64x8,    epi64)
 OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_float32x16, ps)
 OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_float64x8,  pd)
 
+/** Reverse **/
+inline v_uint8x64 v_reverse(const v_uint8x64 &a)
+{
+#if CV_AVX_512VBMI
+    static const __m512i perm = _mm512_set_epi32(
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+            0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f,
+            0x20212223, 0x24252627, 0x28292a2b, 0x2c2d2e2f,
+            0x30313233, 0x34353637, 0x38393a3b, 0x3c3d3e3f);
+    return v_uint8x64(_mm512_permutexvar_epi8(perm, a.val));
+#else
+    static const __m512i shuf = _mm512_set_epi32(
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f);
+    static const __m512i perm = _mm512_set_epi64(1, 0, 3, 2, 5, 4, 7, 6);
+    __m512i vec = _mm512_shuffle_epi8(a.val, shuf);
+    return v_uint8x64(_mm512_permutexvar_epi64(perm, vec));
+#endif
+}
+
+inline v_int8x64 v_reverse(const v_int8x64 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x32 v_reverse(const v_uint16x32 &a)
+{
+#if CV_AVX_512VBMI
+    static const __m512i perm = _mm512_set_epi32(
+            0x00000001, 0x00020003, 0x00040005, 0x00060007,
+            0x00080009, 0x000a000b, 0x000c000d, 0x000e000f,
+            0x00100011, 0x00120013, 0x00140015, 0x00160017,
+            0x00180019, 0x001a001b, 0x001c001d, 0x001e001f);
+    return v_uint16x32(_mm512_permutexvar_epi16(perm, a.val));
+#else
+    static const __m512i shuf = _mm512_set_epi32(
+            0x01000302, 0x05040706, 0x09080b0a, 0x0d0c0f0e,
+            0x01000302, 0x05040706, 0x09080b0a, 0x0d0c0f0e,
+            0x01000302, 0x05040706, 0x09080b0a, 0x0d0c0f0e,
+            0x01000302, 0x05040706, 0x09080b0a, 0x0d0c0f0e);
+    static const __m512i perm = _mm512_set_epi64(1, 0, 3, 2, 5, 4, 7, 6);
+    __m512i vec = _mm512_shuffle_epi8(a.val, shuf);
+    return v_uint16x32(_mm512_permutexvar_epi64(perm, vec));
+#endif
+}
+
+inline v_int16x32 v_reverse(const v_int16x32 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x16 v_reverse(const v_uint32x16 &a)
+{
+    static const __m512i perm = _mm512_set_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,14, 15);
+    return v_uint32x16(_mm512_permutexvar_epi32(perm, a.val));
+}
+
+inline v_int32x16 v_reverse(const v_int32x16 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x16 v_reverse(const v_float32x16 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x8 v_reverse(const v_uint64x8 &a)
+{
+    static const __m512i perm = _mm512_set_epi64(0, 1, 2, 3, 4, 5, 6, 7);
+    return v_uint64x8(_mm512_permutexvar_epi64(perm, a.val));
+}
+
+inline v_int64x8 v_reverse(const v_int64x8 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x8 v_reverse(const v_float64x8 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
+
 ////////// Reduce /////////
 
 /** Reduce **/
@@ -1473,6 +1546,32 @@ inline v_float64x8 v_cvt_f64(const v_float32x16& a)
 inline v_float64x8 v_cvt_f64_high(const v_float32x16& a)
 { return v_float64x8(_mm512_cvtps_pd(_v512_extract_high(a.val))); }
 
+// from (Mysticial and wim) https://stackoverflow.com/q/41144668
+inline v_float64x8 v_cvt_f64(const v_int64x8& v)
+{
+#if CV_AVX_512DQ
+    return v_float64x8(_mm512_cvtepi64_pd(v.val));
+#else
+    // constants encoded as floating-point
+    __m512i magic_i_lo   = _mm512_set1_epi64x(0x4330000000000000); // 2^52
+    __m512i magic_i_hi32 = _mm512_set1_epi64x(0x4530000080000000); // 2^84 + 2^63
+    __m512i magic_i_all  = _mm512_set1_epi64x(0x4530000080100000); // 2^84 + 2^63 + 2^52
+    __m512d magic_d_all  = _mm512_castsi512_pd(magic_i_all);
+
+    // Blend the 32 lowest significant bits of v with magic_int_lo
+    __m512i v_lo         = _mm512_blend_epi32(magic_i_lo, v.val, 0x55);
+    // Extract the 32 most significant bits of v
+    __m512i v_hi         = _mm512_srli_epi64(v.val, 32);
+    // Flip the msb of v_hi and blend with 0x45300000
+            v_hi         = _mm512_xor_si512(v_hi, magic_i_hi32);
+    // Compute in double precision
+    __m512d v_hi_dbl     = _mm512_sub_pd(_mm512_castsi512_pd(v_hi), magic_d_all);
+    // (v_hi - magic_d_all) + v_lo  Do not assume associativity of floating point addition
+    __m512d result       = _mm512_add_pd(v_hi_dbl, _mm512_castsi512_pd(v_lo));
+    return v_float64x8(result);
+#endif
+}
+
 ////////////// Lookup table access ////////////////////
 
 inline v_int8x64 v512_lut(const schar* tab, const int* idx)
@@ -1672,11 +1771,151 @@ inline v_float32x16 v_pack_triplets(const v_float32x16& vec)
 
 ////////// Matrix operations /////////
 
+//////// Dot Product ////////
+
+// 16 >> 32
 inline v_int32x16 v_dotprod(const v_int16x32& a, const v_int16x32& b)
 { return v_int32x16(_mm512_madd_epi16(a.val, b.val)); }
-
 inline v_int32x16 v_dotprod(const v_int16x32& a, const v_int16x32& b, const v_int32x16& c)
 { return v_dotprod(a, b) + c; }
+
+// 32 >> 64
+inline v_int64x8 v_dotprod(const v_int32x16& a, const v_int32x16& b)
+{
+    __m512i even = _mm512_mul_epi32(a.val, b.val);
+    __m512i odd = _mm512_mul_epi32(_mm512_srli_epi64(a.val, 32), _mm512_srli_epi64(b.val, 32));
+    return v_int64x8(_mm512_add_epi64(even, odd));
+}
+inline v_int64x8 v_dotprod(const v_int32x16& a, const v_int32x16& b, const v_int64x8& c)
+{ return v_dotprod(a, b) + c; }
+
+// 8 >> 32
+inline v_uint32x16 v_dotprod_expand(const v_uint8x64& a, const v_uint8x64& b)
+{
+    __m512i even_a = _mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, a.val, _mm512_setzero_si512());
+    __m512i odd_a  = _mm512_srli_epi16(a.val, 8);
+
+    __m512i even_b = _mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, b.val, _mm512_setzero_si512());
+    __m512i odd_b  = _mm512_srli_epi16(b.val, 8);
+
+    __m512i prod0  = _mm512_madd_epi16(even_a, even_b);
+    __m512i prod1  = _mm512_madd_epi16(odd_a, odd_b);
+    return v_uint32x16(_mm512_add_epi32(prod0, prod1));
+}
+inline v_uint32x16 v_dotprod_expand(const v_uint8x64& a, const v_uint8x64& b, const v_uint32x16& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+inline v_int32x16 v_dotprod_expand(const v_int8x64& a, const v_int8x64& b)
+{
+    __m512i even_a = _mm512_srai_epi16(_mm512_bslli_epi128(a.val, 1), 8);
+    __m512i odd_a  = _mm512_srai_epi16(a.val, 8);
+
+    __m512i even_b = _mm512_srai_epi16(_mm512_bslli_epi128(b.val, 1), 8);
+    __m512i odd_b  = _mm512_srai_epi16(b.val, 8);
+
+    __m512i prod0  = _mm512_madd_epi16(even_a, even_b);
+    __m512i prod1  = _mm512_madd_epi16(odd_a, odd_b);
+    return v_int32x16(_mm512_add_epi32(prod0, prod1));
+}
+inline v_int32x16 v_dotprod_expand(const v_int8x64& a, const v_int8x64& b, const v_int32x16& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+// 16 >> 64
+inline v_uint64x8 v_dotprod_expand(const v_uint16x32& a, const v_uint16x32& b)
+{
+    __m512i mullo = _mm512_mullo_epi16(a.val, b.val);
+    __m512i mulhi = _mm512_mulhi_epu16(a.val, b.val);
+    __m512i mul0  = _mm512_unpacklo_epi16(mullo, mulhi);
+    __m512i mul1  = _mm512_unpackhi_epi16(mullo, mulhi);
+
+    __m512i p02   = _mm512_mask_blend_epi32(0xAAAA, mul0, _mm512_setzero_si512());
+    __m512i p13   = _mm512_srli_epi64(mul0, 32);
+    __m512i p46   = _mm512_mask_blend_epi32(0xAAAA, mul1, _mm512_setzero_si512());
+    __m512i p57   = _mm512_srli_epi64(mul1, 32);
+
+    __m512i p15_  = _mm512_add_epi64(p02, p13);
+    __m512i p9d_  = _mm512_add_epi64(p46, p57);
+
+    return v_uint64x8(_mm512_add_epi64(
+        _mm512_unpacklo_epi64(p15_, p9d_),
+        _mm512_unpackhi_epi64(p15_, p9d_)
+    ));
+}
+inline v_uint64x8 v_dotprod_expand(const v_uint16x32& a, const v_uint16x32& b, const v_uint64x8& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+inline v_int64x8 v_dotprod_expand(const v_int16x32& a, const v_int16x32& b)
+{
+    __m512i prod = _mm512_madd_epi16(a.val, b.val);
+    __m512i even = _mm512_srai_epi64(_mm512_bslli_epi128(prod, 4), 32);
+    __m512i odd  = _mm512_srai_epi64(prod, 32);
+    return v_int64x8(_mm512_add_epi64(even, odd));
+}
+inline v_int64x8 v_dotprod_expand(const v_int16x32& a, const v_int16x32& b, const v_int64x8& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+// 32 >> 64f
+inline v_float64x8 v_dotprod_expand(const v_int32x16& a, const v_int32x16& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x8 v_dotprod_expand(const v_int32x16& a, const v_int32x16& b, const v_float64x8& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+//////// Fast Dot Product ////////
+
+// 16 >> 32
+inline v_int32x16 v_dotprod_fast(const v_int16x32& a, const v_int16x32& b)
+{ return v_dotprod(a, b); }
+inline v_int32x16 v_dotprod_fast(const v_int16x32& a, const v_int16x32& b, const v_int32x16& c)
+{ return v_dotprod(a, b, c); }
+
+// 32 >> 64
+inline v_int64x8 v_dotprod_fast(const v_int32x16& a, const v_int32x16& b)
+{ return v_dotprod(a, b); }
+inline v_int64x8 v_dotprod_fast(const v_int32x16& a, const v_int32x16& b, const v_int64x8& c)
+{ return v_dotprod(a, b, c); }
+
+// 8 >> 32
+inline v_uint32x16 v_dotprod_expand_fast(const v_uint8x64& a, const v_uint8x64& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint32x16 v_dotprod_expand_fast(const v_uint8x64& a, const v_uint8x64& b, const v_uint32x16& c)
+{ return v_dotprod_expand(a, b, c); }
+
+inline v_int32x16 v_dotprod_expand_fast(const v_int8x64& a, const v_int8x64& b)
+{ return v_dotprod_expand(a, b); }
+inline v_int32x16 v_dotprod_expand_fast(const v_int8x64& a, const v_int8x64& b, const v_int32x16& c)
+{ return v_dotprod_expand(a, b, c); }
+
+// 16 >> 64
+inline v_uint64x8 v_dotprod_expand_fast(const v_uint16x32& a, const v_uint16x32& b)
+{
+    __m512i mullo = _mm512_mullo_epi16(a.val, b.val);
+    __m512i mulhi = _mm512_mulhi_epu16(a.val, b.val);
+    __m512i mul0  = _mm512_unpacklo_epi16(mullo, mulhi);
+    __m512i mul1  = _mm512_unpackhi_epi16(mullo, mulhi);
+
+    __m512i p02   = _mm512_mask_blend_epi32(0xAAAA, mul0, _mm512_setzero_si512());
+    __m512i p13   = _mm512_srli_epi64(mul0, 32);
+    __m512i p46   = _mm512_mask_blend_epi32(0xAAAA, mul1, _mm512_setzero_si512());
+    __m512i p57   = _mm512_srli_epi64(mul1, 32);
+
+    __m512i p15_  = _mm512_add_epi64(p02, p13);
+    __m512i p9d_  = _mm512_add_epi64(p46, p57);
+    return v_uint64x8(_mm512_add_epi64(p15_, p9d_));
+}
+inline v_uint64x8 v_dotprod_expand_fast(const v_uint16x32& a, const v_uint16x32& b, const v_uint64x8& c)
+{ return v_dotprod_expand_fast(a, b) + c; }
+
+inline v_int64x8 v_dotprod_expand_fast(const v_int16x32& a, const v_int16x32& b)
+{ return v_dotprod_expand(a, b); }
+inline v_int64x8 v_dotprod_expand_fast(const v_int16x32& a, const v_int16x32& b, const v_int64x8& c)
+{ return v_dotprod_expand(a, b, c); }
+
+// 32 >> 64f
+inline v_float64x8 v_dotprod_expand_fast(const v_int32x16& a, const v_int32x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_float64x8 v_dotprod_expand_fast(const v_int32x16& a, const v_int32x16& b, const v_float64x8& c)
+{ return v_dotprod_expand(a, b) + c; }
+
 
 #define OPENCV_HAL_AVX512_SPLAT2_PS(a, im) \
     v_float32x16(_mm512_permute_ps(a.val, _MM_SHUFFLE(im, im, im, im)))
@@ -1988,6 +2227,35 @@ OPENCV_HAL_IMPL_AVX512_EXTRACT(v_uint64x8)
 OPENCV_HAL_IMPL_AVX512_EXTRACT(v_int64x8)
 OPENCV_HAL_IMPL_AVX512_EXTRACT(v_float32x16)
 OPENCV_HAL_IMPL_AVX512_EXTRACT(v_float64x8)
+
+#define OPENCV_HAL_IMPL_AVX512_EXTRACT_N(_Tpvec, _Tp) \
+template<int i> inline _Tp v_extract_n(_Tpvec v) { return v_rotate_right<i>(v).get0(); }
+
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint8x64, uchar)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int8x64, schar)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint16x32, ushort)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int16x32, short)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint32x16, uint)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int32x16, int)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint64x8, uint64)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int64x8, int64)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_float32x16, float)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_float64x8, double)
+
+template<int i>
+inline v_uint32x16 v_broadcast_element(v_uint32x16 a)
+{
+    static const __m512i perm = _mm512_set1_epi32((char)i);
+    return v_uint32x16(_mm512_permutexvar_epi32(perm, a.val));
+}
+
+template<int i>
+inline v_int32x16 v_broadcast_element(const v_int32x16 &a)
+{ return v_reinterpret_as_s32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
+
+template<int i>
+inline v_float32x16 v_broadcast_element(const v_float32x16 &a)
+{ return v_reinterpret_as_f32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
 
 
 ///////////////////// load deinterleave /////////////////////////////

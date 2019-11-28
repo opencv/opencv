@@ -97,7 +97,7 @@ def main():
         obj_points.append(pattern_points)
 
     # calculate camera distortion
-    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None)
+    rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None)
 
     print("\nRMS:", rms)
     print("camera matrix:\n", camera_matrix)
@@ -106,7 +106,7 @@ def main():
     # undistort the image with the calibration
     print('')
     for fn in img_names if debug_dir else []:
-        path, name, ext = splitfn(fn)
+        _path, name, _ext = splitfn(fn)
         img_found = os.path.join(debug_dir, name + '_chess.png')
         outfile = os.path.join(debug_dir, name + '_undistorted.png')
 

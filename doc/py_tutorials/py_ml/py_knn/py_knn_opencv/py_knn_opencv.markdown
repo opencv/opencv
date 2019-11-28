@@ -54,7 +54,7 @@ print( accuracy )
 @endcode
 So our basic OCR app is ready. This particular example gave me an accuracy of 91%. One option
 improve accuracy is to add more data for training, especially the wrong ones. So instead of finding
-this training data everytime I start application, I better save it, so that next time, I directly
+this training data every time I start application, I better save it, so that next time, I directly
 read this data from a file and start classification. You can do it with the help of some Numpy
 functions like np.savetxt, np.savez, np.load etc. Please check their docs for more details.
 @code{.py}

@@ -234,7 +234,10 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestGPU, ThresholdTest,
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC,
-                                    cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)));
+                                       cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV),
+                                Values(cv::Scalar(0, 0, 0, 0),
+                                       cv::Scalar(100, 100, 100, 100),
+                                       cv::Scalar(255, 255, 255, 255))));
 
 INSTANTIATE_TEST_CASE_P(ThresholdTestGPU, ThresholdOTTest,
                         Combine(Values(CV_8UC1),
@@ -336,6 +339,14 @@ INSTANTIATE_TEST_CASE_P(CropTestGPU, CropTest,
                                 Values(CORE_GPU),
                                 Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50))));
 
+INSTANTIATE_TEST_CASE_P(CopyTestGPU, CopyTest,
+                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_GPU)));
+
 INSTANTIATE_TEST_CASE_P(LUTTestGPU, LUTTest,
                         Combine(Values(CV_8UC1, CV_8UC3),
                                 Values(cv::Size(1280, 720),
@@ -378,6 +389,8 @@ INSTANTIATE_TEST_CASE_P(ConcatVertTestGPU, ConcatVertTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(CORE_GPU)));
+
+// PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestGPU, BackendOutputAllocationTest,
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),

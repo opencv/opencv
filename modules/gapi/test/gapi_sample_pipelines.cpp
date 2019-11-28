@@ -11,6 +11,9 @@
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
 
+#include <opencv2/gapi/plaidml/core.hpp>
+
+
 namespace opencv_test
 {
 

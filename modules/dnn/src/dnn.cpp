@@ -43,7 +43,9 @@
 #include "op_halide.hpp"
 #include "op_inf_engine.hpp"
 #include "op_vkcom.hpp"
+#include "op_cuda.hpp"
 #include "halide_scheduler.hpp"
+
 #include <set>
 #include <algorithm>
 #include <iostream>
@@ -51,11 +53,14 @@
 #include <fstream>
 #include <iterator>
 #include <numeric>
+#include <memory>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
+
+#include <opencv2/core/cuda.hpp>
 
 namespace cv {
 namespace dnn {
@@ -98,6 +103,37 @@ public:
         static BackendRegistry impl;
         return impl;
     }
+
+    static inline bool checkIETarget(int target)
+    {
+#ifndef HAVE_INF_ENGINE
+        return false;
+#else
+        cv::dnn::Net net;
+        cv::dnn::LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testLayer";
+        lp.blobs.push_back(Mat({1, 2, 1, 1}, CV_32F, Scalar(1)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
+        net.setPreferableTarget(target);
+        static int inpDims[] = {1, 2, 3, 4};
+        net.setInput(cv::Mat(4, &inpDims[0], CV_32FC1, cv::Scalar(0)));
+        try
+        {
+            net.forward();
+        }
+        catch(...)
+        {
+            return false;
+        }
+        return true;
+#endif
+    }
+
 private:
     BackendRegistry()
     {
@@ -141,34 +177,12 @@ private:
         if (haveVulkan())
             backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
 #endif
-    }
-    static inline bool checkIETarget(int target)
-    {
-#ifndef HAVE_INF_ENGINE
-        return false;
-#else
-        cv::dnn::Net net;
-        cv::dnn::LayerParams lp;
-        lp.set("kernel_size", 1);
-        lp.set("num_output", 1);
-        lp.set("bias_term", false);
-        lp.type = "Convolution";
-        lp.name = "testLayer";
-        lp.blobs.push_back(Mat({1, 2, 1, 1}, CV_32F, Scalar(1)));
-        net.addLayerToPrev(lp.name, lp.type, lp);
-        net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
-        net.setPreferableTarget(target);
-        static int inpDims[] = {1, 2, 3, 4};
-        net.setInput(cv::Mat(4, &inpDims[0], CV_32FC1, cv::Scalar(0)));
-        try
-        {
-            net.forward();
+
+#ifdef HAVE_CUDA
+        if (haveCUDA()) {
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
-        catch(...)
-        {
-            return false;
-        }
-        return true;
 #endif
     }
 
@@ -1010,6 +1024,22 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         return Ptr<BackendWrapper>(new VkComBackendWrapper(m));
 #endif  // HAVE_VULKAN
     }
+    else if (backendId == DNN_BACKEND_CUDA)
+    {
+        CV_Assert(haveCUDA());
+
+#ifdef HAVE_CUDA
+        switch (targetId)
+        {
+        case DNN_TARGET_CUDA:
+            return CUDABackendWrapperFP32::create(m);
+        case DNN_TARGET_CUDA_FP16:
+            return CUDABackendWrapperFP16::create(m);
+        default:
+            CV_Assert(IS_DNN_CUDA_TARGET(targetId));
+        }
+#endif
+    }
     else
         CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     return Ptr<BackendWrapper>();
@@ -1038,6 +1068,18 @@ struct Net::Impl
         preferableBackend = DNN_BACKEND_DEFAULT;
         preferableTarget = DNN_TARGET_CPU;
         skipInfEngineInit = false;
+
+#ifdef HAVE_CUDA
+        if (cv::cuda::getCudaEnabledDeviceCount() > 0)
+        {
+            cuda4dnn::csl::CSLContext context;
+            context.stream = cuda4dnn::csl::Stream(true);
+            context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream);
+            context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream);
+
+            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context)));
+        }
+#endif
     }
 
     Ptr<DataLayer> netInputLayer;
@@ -1059,6 +1101,17 @@ struct Net::Impl
     bool isAsync;
     std::vector<int64> layersTimings;
     Mat output_blob;
+
+#ifdef HAVE_CUDA
+    struct CudaInfo_t
+    {
+        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt) : context(std::move(ctxt)) { }
+        cuda4dnn::csl::CSLContext context;
+        cuda4dnn::csl::Workspace workspace;
+    };
+
+    std::unique_ptr<CudaInfo_t> cudaInfo;
+#endif
 
     Ptr<BackendWrapper> wrap(Mat& host)
     {
@@ -1094,6 +1147,21 @@ struct Net::Impl
   #ifdef HAVE_VULKAN
                 return Ptr<BackendWrapper>(new VkComBackendWrapper(baseBuffer, host));
   #endif
+            }
+            else if (preferableBackend == DNN_BACKEND_CUDA)
+            {
+                CV_Assert(haveCUDA());
+#ifdef HAVE_CUDA
+                switch (preferableTarget)
+                {
+                case DNN_TARGET_CUDA:
+                    return CUDABackendWrapperFP32::create(baseBuffer, shape);
+                case DNN_TARGET_CUDA_FP16:
+                    return CUDABackendWrapperFP16::create(baseBuffer, shape);
+                default:
+                    CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
+                }
+#endif
             }
             else
                 CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
@@ -1200,6 +1268,9 @@ struct Net::Impl
                   preferableTarget == DNN_TARGET_FPGA);
         CV_Assert(preferableBackend != DNN_BACKEND_VKCOM ||
                   preferableTarget == DNN_TARGET_VULKAN);
+        CV_Assert(preferableBackend != DNN_BACKEND_CUDA ||
+                  IS_DNN_CUDA_TARGET(preferableTarget));
+
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
         {
             if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
@@ -1235,6 +1306,17 @@ struct Net::Impl
                 preferableTarget = DNN_TARGET_CPU;
             }
 
+            if (preferableBackend == DNN_BACKEND_CUDA && !haveCUDA())
+            {
+#ifdef HAVE_CUDA
+                CV_LOG_WARNING(NULL, "unable to use CUDA backend; switching to CPU");
+#else
+                CV_LOG_WARNING(NULL, "DNN module was not built with CUDA backend; switching to CPU");
+#endif
+                preferableBackend = DNN_BACKEND_OPENCV;
+                preferableTarget = DNN_TARGET_CPU;
+            }
+
             clear();
 
             allocateLayers(blobsToKeep_);
@@ -1245,7 +1327,7 @@ struct Net::Impl
 
             initBackend();
 
-            if (!netWasAllocated )
+            if (!netWasAllocated)
             {
 #ifdef HAVE_HALIDE
                 if (preferableBackend == DNN_BACKEND_HALIDE)
@@ -1389,6 +1471,8 @@ struct Net::Impl
             initInfEngineBackend();
         else if (preferableBackend == DNN_BACKEND_VKCOM)
             initVkComBackend();
+        else if (preferableBackend == DNN_BACKEND_CUDA)
+            initCUDABackend();
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -1607,6 +1691,9 @@ struct Net::Impl
         // backend. Split a whole model on several Inference Engine networks if
         // some of layers are not implemented.
 
+        bool supportsCPUFallback = preferableTarget == DNN_TARGET_CPU ||
+                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU);
+
         // Set of all input and output blobs wrappers for current network.
         std::map<LayerPin, Ptr<BackendWrapper> > netBlobsWrappers;
         for (it = layers.begin(); it != layers.end(); ++it)
@@ -1619,11 +1706,39 @@ struct Net::Impl
             Ptr<Layer> layer = ld.layerInstance;
             if (!fused && !layer->supportBackend(preferableBackend))
             {
-                addInfEngineNetOutputs(ld);
-                net = Ptr<InfEngineBackendNet>();
-                netBlobsWrappers.clear();  // Is not used for R5 release but we don't wrap it to #ifdef.
-                layer->preferableTarget = DNN_TARGET_CPU;
-                continue;
+                bool customizable = ld.id != 0 && ld.outputBlobs.size() == 1 &&
+                                    INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R2) &&
+                                    supportsCPUFallback;
+                // TODO: there is a bug in Myriad plugin with custom layers shape infer.
+                if (preferableTarget == DNN_TARGET_MYRIAD)
+                {
+                    for (int i = 0; customizable && i < ld.inputBlobs.size(); ++i)
+                    {
+                        customizable = ld.inputBlobs[i]->size[0] == 1;
+                    }
+                }
+
+                // TODO: fix these workarounds
+                if (preferableTarget == DNN_TARGET_MYRIAD ||
+                    preferableTarget == DNN_TARGET_OPENCL ||
+                    preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    customizable &= ld.type != "Concat";
+
+                if (preferableTarget == DNN_TARGET_OPENCL ||
+                    preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    customizable &= ld.type != "Power";
+
+                if (preferableTarget == DNN_TARGET_OPENCL)
+                    customizable &= ld.type != "Eltwise";
+
+                if (!customizable)
+                {
+                    addInfEngineNetOutputs(ld);
+                    net = Ptr<InfEngineBackendNet>();
+                    netBlobsWrappers.clear();  // Is not used for R5 release but we don't wrap it to #ifdef.
+                    layer->preferableTarget = DNN_TARGET_CPU;
+                    continue;
+                }
             }
             ld.skip = true;  // Initially skip all Inference Engine supported layers.
 
@@ -1662,7 +1777,13 @@ struct Net::Impl
 
             if (!fused)
             {
-                node = layer->initInfEngine(ld.inputBlobsWrappers);
+                if (layer->supportBackend(preferableBackend))
+                    node = layer->initInfEngine(ld.inputBlobsWrappers);
+                else
+                {
+                    node = Ptr<BackendNode>(new InfEngineBackendNode(
+                        ld.layerInstance, ld.inputBlobs, ld.outputBlobs, ld.internals));
+                }
             }
             else if (node.empty())
                 continue;
@@ -1744,6 +1865,35 @@ struct Net::Impl
 #endif  // HAVE_INF_ENGINE
     }
 
+    void initCUDABackend() {
+        CV_Assert(haveCUDA());
+
+#ifdef HAVE_CUDA
+        for (auto& layer : layers)
+        {
+            auto& ld = layer.second;
+            auto& layerInstance = ld.layerInstance;
+
+            if (!layerInstance->supportBackend(DNN_BACKEND_CUDA))
+            {
+                std::ostringstream os;
+                os << "CUDA backend will fallback to the CPU implementation for the layer \"" << ld.name
+                   << "\" of type " << ld.type << '\n';
+                CV_LOG_INFO(NULL, os.str().c_str());
+                continue;
+            }
+
+            /* we make a copy so that `initCUDA` doesn't modify `cudaInfo->context` */
+            auto context = cudaInfo->context;
+            auto node = layerInstance->initCUDA(&context, ld.inputBlobsWrappers, ld.outputBlobsWrappers);
+            ld.backendNodes[DNN_BACKEND_CUDA] = node;
+
+            auto cudaNode = node.dynamicCast<CUDABackendNode>();
+            cudaInfo->workspace.require(cudaNode->get_workspace_memory_in_bytes());
+        }
+#endif
+    }
+
     void allocateLayer(int lid, const LayersShapesMap& layersShapes)
     {
         CV_TRACE_FUNCTION();
@@ -1789,6 +1939,13 @@ struct Net::Impl
             for (size_t i = 0; i < ninputs; i++)
             {
                 ld.inputBlobsWrappers[i] = wrap(netInputLayer->inputsData[i]);
+#ifdef HAVE_CUDA
+                if (IS_DNN_CUDA_TARGET(preferableTarget))
+                {
+                    auto wrapper = ld.inputBlobsWrappers[i].dynamicCast<CUDABackendWrapper>();
+                    wrapper->setStream(cudaInfo->context.stream);
+                }
+#endif
             }
         }
         else
@@ -1817,9 +1974,18 @@ struct Net::Impl
         for (int i = 0; i < ld.outputBlobs.size(); ++i)
         {
             ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
+#ifdef HAVE_CUDA
+            if (IS_DNN_CUDA_TARGET(preferableTarget))
+            {
+                auto wrapper = ld.outputBlobsWrappers[i].dynamicCast<CUDABackendWrapper>();
+                wrapper->setStream(cudaInfo->context.stream);
+            }
+#endif
         }
-        ld.internalBlobsWrappers.resize(ld.internals.size());
-        for (int i = 0; i < ld.internals.size(); ++i)
+
+        /* CUDA backend has its own system for internal blobs; we don't need these */
+        ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA) ? 0 : ld.internals.size());
+        for (int i = 0; i < ld.internalBlobsWrappers.size(); ++i)
         {
             ld.internalBlobsWrappers[i] = wrap(ld.internals[i]);
         }
@@ -1860,6 +2026,7 @@ struct Net::Impl
     void fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
     {
         if( !fusion || (preferableBackend != DNN_BACKEND_OPENCV &&
+                        preferableBackend != DNN_BACKEND_CUDA &&
                         preferableBackend != DNN_BACKEND_INFERENCE_ENGINE))
             return;
 
@@ -2210,6 +2377,15 @@ struct Net::Impl
 
         blobManager.reset();
         backendWrappers.clear();
+
+        for(auto& layer : layers)
+        {
+            auto& ld = layer.second;
+            ld.inputBlobsWrappers.clear();
+            ld.outputBlobsWrappers.clear();
+            ld.internalBlobsWrappers.clear();
+        }
+
         // Fake references to input blobs.
         for (int i = 0; i < layers[0].outputBlobs.size(); ++i)
             blobManager.addReference(LayerPin(0, i));
@@ -2404,7 +2580,18 @@ struct Net::Impl
             {
                 Ptr<BackendNode> node = it->second;
                 CV_Assert(!node.empty());
-                if (preferableBackend == DNN_BACKEND_HALIDE)
+                if (preferableBackend == DNN_BACKEND_CUDA)
+                {
+                    CV_Assert(haveCUDA());
+
+#ifdef HAVE_CUDA
+                    Ptr<CUDABackendNode> cudaNode = node.dynamicCast<CUDABackendNode>();
+                    CV_Assert(!cudaNode.empty());
+
+                    cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, cudaInfo->workspace);
+#endif
+                }
+                else if (preferableBackend == DNN_BACKEND_HALIDE)
                 {
                     forwardHalide(ld.outputBlobsWrappers, node);
                 }
@@ -2467,23 +2654,36 @@ struct Net::Impl
 
         //forward itself
         forwardLayer(ld);
+
+#ifdef HAVE_CUDA
+        if (preferableBackend == DNN_BACKEND_CUDA)
+            cudaInfo->context.stream.synchronize();
+#endif
     }
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     {
         std::vector<LayerPin>& inputLayerIds = layers[id].inputBlobsId;
 
-        if (inOutShapes[0].in[0].empty() && !layers[0].outputBlobs.empty())
+        if (id == 0 && inOutShapes[id].in[0].empty())
         {
-            ShapesVec shapes;
-            for (int i = 0; i < layers[0].outputBlobs.size(); i++)
+            if (!layers[0].outputBlobs.empty())
             {
-                Mat& inp = layers[0].outputBlobs[i];
-                CV_Assert(inp.total());
-                shapes.push_back(shape(inp));
+                ShapesVec shapes;
+                for (int i = 0; i < layers[0].outputBlobs.size(); i++)
+                {
+                    Mat& inp = layers[0].outputBlobs[i];
+                    CV_Assert(inp.total());
+                    shapes.push_back(shape(inp));
+                }
+                inOutShapes[0].in = shapes;
             }
-            inOutShapes[0].in = shapes;
-         }
+            else
+            {
+                inOutShapes[0].out.clear();
+                return;
+            }
+        }
 
         if (inOutShapes[id].in.empty())
         {
@@ -2507,6 +2707,12 @@ struct Net::Impl
         int requiredOutputs = layers[id].requiredOutputs.size();
         inOutShapes[id].supportInPlace =
                 layers[id].getLayerInstance()->getMemoryShapes(is, requiredOutputs, os, ints);
+
+        for (int i = 0; i < ints.size(); i++)
+            CV_Assert(total(ints[i]) > 0);
+
+        for (int i = 0; i < os.size(); i++)
+            CV_Assert(total(os[i]) > 0);
     }
 
     void getLayersShapes(const ShapesVec& netInputShapes,
@@ -3077,13 +3283,14 @@ String Net::dump()
             prevNode = itBackend->second;
         }
     }
-    String colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462"};
+    String colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848"};
     String backend;
     switch (prefBackend) {
         case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
         case DNN_BACKEND_HALIDE: backend = "HALIDE/"; break;
         case DNN_BACKEND_INFERENCE_ENGINE: backend = "DLIE/"; break;
         case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
+        case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
     }
     out << "digraph G {" << '\n';
     // Add nodes
@@ -3180,6 +3387,8 @@ String Net::dump()
              case DNN_TARGET_OPENCL_FP16: out << "OCL_FP16\\n"; colorId = 2; break;
              case DNN_TARGET_MYRIAD: out << "MYRIAD\\n"; colorId = 3; break;
              case DNN_TARGET_FPGA: out << "FPGA\\n"; colorId = 4; break;
+             case DNN_TARGET_CUDA: out << "CUDA\\n"; colorId = 5; break;
+             case DNN_TARGET_CUDA_FP16: out << "CUDA_FP16\\n"; colorId = 6; break;
          }
          out << ((skipId.size() == 1)? "\" " : " }\" ");
          out << "fillcolor=\"" << colors[colorId] << "\" ";
@@ -3241,14 +3450,11 @@ Ptr<Layer> Net::getLayer(LayerId layerId)
 std::vector<Ptr<Layer> > Net::getLayerInputs(LayerId layerId)
 {
     LayerData &ld = impl->getLayerData(layerId);
-    if (!ld.layerInstance)
-        CV_Error(Error::StsNullPtr, format("Requested layer \"%s\" was not initialized", ld.name.c_str()));
 
     std::vector<Ptr<Layer> > inputLayers;
-    inputLayers.reserve(ld.inputLayersId.size());
-    std::set<int>::iterator it;
-    for (it = ld.inputLayersId.begin(); it != ld.inputLayersId.end(); ++it) {
-        inputLayers.push_back(getLayer(*it));
+    inputLayers.reserve(ld.inputBlobsId.size());
+    for (int i = 0; i < ld.inputBlobsId.size(); ++i) {
+        inputLayers.push_back(getLayer(ld.inputBlobsId[i].lid));
     }
     return inputLayers;
 }
@@ -3583,6 +3789,16 @@ int Layer::outputNameToIndex(const String&)
 bool Layer::supportBackend(int backendId)
 {
     return backendId == DNN_BACKEND_OPENCV;
+}
+
+Ptr<BackendNode> Layer::initCUDA(
+    void*,
+    const std::vector<Ptr<BackendWrapper>>&,
+    const std::vector<Ptr<BackendWrapper>>&)
+{
+    CV_Error(Error::StsNotImplemented, "CUDA pipeline of " + type +
+                                       " layers is not defined.");
+    return Ptr<BackendNode>();
 }
 
 Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper> > &)

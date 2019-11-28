@@ -29,6 +29,8 @@ class GAPI_EXPORTS GCompiler
     cv::gapi::GKernelPackage m_all_kernels;
     cv::gapi::GNetPackage    m_all_networks;
 
+    std::vector<std::unique_ptr<ade::Graph>> m_all_patterns;  // built patterns from transformations
+
     void validateInputMeta();
     void validateOutProtoArgs();
 
@@ -40,12 +42,16 @@ public:
     // The method which does everything...
     GCompiled compile();
 
-    // But is actually composed of this:
+    // This too.
+    GStreamingCompiled compileStreaming();
+
+    // But those are actually composed of this:
     using GPtr = std::unique_ptr<ade::Graph>;
     GPtr       generateGraph();               // Unroll GComputation into a GModel
     void       runPasses(ade::Graph &g);      // Apply all G-API passes on a GModel
     void       compileIslands(ade::Graph &g); // Instantiate GIslandExecutables in GIslandModel
     GCompiled  produceCompiled(GPtr &&pg);    // Produce GCompiled from processed GModel
+    GStreamingCompiled  produceStreamingCompiled(GPtr &&pg); // Produce GStreamingCompiled from processed GMbodel
 };
 
 }}

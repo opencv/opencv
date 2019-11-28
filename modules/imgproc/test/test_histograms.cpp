@@ -1307,9 +1307,18 @@ cvTsCalcHist( const vector<Mat>& images, CvHistogram* hist, Mat mask, const vect
                 for( k = 0; k < cdims; k++ )
                 {
                     double v = val[k], lo = hist->thresh[k][0], hi = hist->thresh[k][1];
-                    idx[k] = cvFloor((v - lo)*dims[k]/(hi - lo));
-                    if( idx[k] < 0 || idx[k] >= dims[k] )
+                    if (v < lo || v >= hi)
                         break;
+                    double idx_ = (v - lo)*dims[k]/(hi - lo);
+                    idx[k] = cvFloor(idx_);
+                    if (idx[k] < 0)
+                    {
+                        idx[k] = 0;
+                    }
+                    if (idx[k] >= dims[k])
+                    {
+                        idx[k] = dims[k] - 1;
+                    }
                 }
             }
             else

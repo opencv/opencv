@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -50,6 +51,11 @@
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/activation.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -221,6 +227,18 @@ public:
         func.apply(src, dst, len, planeSize, cn0, cn1);
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return func.initCUDA(Layer::preferableTarget, context->stream);
+    }
+#endif
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
@@ -261,7 +279,9 @@ struct ReLUFunctor
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
             return slope >= 0 || !INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2019R1);
 #endif
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_VKCOM;
     }
 
@@ -296,6 +316,13 @@ struct ReLUFunctor
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::ReLUOp>(target, stream, slope);
+    }
+#endif
 
 #ifdef HAVE_OPENCL
     bool initKernel(ocl::Kernel &ker, const UMat &src) const
@@ -370,8 +397,6 @@ struct ReLUFunctor
     }
 #endif  // HAVE_VULKAN
 
-
-
     bool tryFuse(Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
@@ -392,7 +417,9 @@ struct ReLU6Functor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
@@ -460,6 +487,13 @@ struct ReLU6Functor
     }
 #endif
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::ClippedReLUOp>(target, stream, minValue, maxValue);
+    }
+#endif
+
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
@@ -496,7 +530,9 @@ struct TanHFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
@@ -540,6 +576,13 @@ struct TanHFunctor
     }
 #endif
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::TanHOp>(target, stream);
+    }
+#endif
+
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
@@ -576,7 +619,9 @@ struct SigmoidFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
@@ -620,6 +665,13 @@ struct SigmoidFunctor
     }
 #endif
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::SigmoidOp>(target, stream);
+    }
+#endif
+
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
@@ -658,7 +710,9 @@ struct ELUFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
@@ -702,6 +756,13 @@ struct ELUFunctor
     }
 #endif
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::ELUOp>(target, stream);
+    }
+#endif
+
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
@@ -742,7 +803,9 @@ struct AbsValFunctor
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
             return !INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2019R1);
 #endif
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -785,6 +848,13 @@ struct AbsValFunctor
     }
 #endif
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::AbsValOp>(target, stream);
+    }
+#endif
+
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
@@ -821,7 +891,9 @@ struct BNLLFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -862,6 +934,13 @@ struct BNLLFunctor
         }
 
         return true;
+    }
+#endif
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::BNLLOp>(target, stream);
     }
 #endif
 
@@ -912,7 +991,9 @@ struct PowerFunctor
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
             return (targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16) || power == 1.0 || power == 0.5;
         else
-            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+            return backendId == DNN_BACKEND_OPENCV ||
+                   backendId == DNN_BACKEND_CUDA ||
+                   backendId == DNN_BACKEND_HALIDE;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -970,6 +1051,13 @@ struct PowerFunctor
         }
 
         return true;
+    }
+#endif
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::PowerOp>(target, stream, power, scale, shift);
     }
 #endif
 
@@ -1051,7 +1139,9 @@ struct ChannelsPReLUFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
@@ -1123,6 +1213,13 @@ struct ChannelsPReLUFunctor
         }
 
         return true;
+    }
+#endif
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::ChannelwiseReLUOp>(target, stream, scale);
     }
 #endif
 

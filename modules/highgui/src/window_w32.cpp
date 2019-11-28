@@ -40,6 +40,9 @@
 //M*/
 
 #include "precomp.hpp"
+
+using namespace cv;
+
 #include <windowsx.h> // required for GET_X_LPARAM() and GET_Y_LPARAM() macros
 
 #if defined _WIN32
@@ -549,6 +552,48 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
     }
 
     __END__;
+}
+
+double cvGetPropTopmost_W32(const char* name)
+{
+    double result = -1;
+
+    CV_Assert(name);
+
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error(Error::StsNullPtr, "NULL window");
+
+    LONG style = GetWindowLongA(window->frame, GWL_EXSTYLE); // -20
+    if (!style)
+    {
+        std::ostringstream errorMsg;
+        errorMsg << "window(" << name << "): failed to retrieve extended window style using GetWindowLongA(); error code: " << GetLastError();
+        CV_Error(Error::StsError, errorMsg.str().c_str());
+    }
+
+    result = (style & WS_EX_TOPMOST) == WS_EX_TOPMOST;
+
+    return result;
+}
+
+void cvSetPropTopmost_W32(const char* name, const bool topmost)
+{
+    CV_Assert(name);
+
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error(Error::StsNullPtr, "NULL window");
+
+    HWND flag    = topmost ? HWND_TOPMOST : HWND_TOP;
+    BOOL success = SetWindowPos(window->frame, flag, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+    if (!success)
+    {
+        std::ostringstream errorMsg;
+        errorMsg << "window(" << name << "): error reported by SetWindowPos(" << (topmost ? "HWND_TOPMOST" : "HWND_TOP") << "), error code:  " << GetLastError();
+        CV_Error(Error::StsError, errorMsg.str().c_str());
+    }
 }
 
 void cv::setWindowTitle(const String& winname, const String& title)

@@ -53,17 +53,6 @@ static std::string _tf(TString filename)
     return (getOpenCVExtraDir() + "/dnn/") + filename;
 }
 
-static std::vector<String> getOutputsNames(const Net& net)
-{
-    std::vector<String> names;
-    std::vector<int> outLayers = net.getUnconnectedOutLayers();
-    std::vector<String> layersNames = net.getLayerNames();
-    names.resize(outLayers.size());
-    for (size_t i = 0; i < outLayers.size(); ++i)
-          names[i] = layersNames[outLayers[i] - 1];
-    return names;
-}
-
 TEST(Test_Darknet, read_tiny_yolo_voc)
 {
     Net net = readNetFromDarknet(_tf("tiny-yolo-voc.cfg"));
@@ -159,7 +148,7 @@ public:
         net.setPreferableTarget(target);
         net.setInput(inp);
         std::vector<Mat> outs;
-        net.forward(outs, getOutputsNames(net));
+        net.forward(outs, net.getUnconnectedOutLayersNames());
 
         for (int b = 0; b < batch_size; ++b)
         {
@@ -339,15 +328,67 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     }
 }
 
+#ifdef HAVE_INF_ENGINE
+static const std::chrono::milliseconds async_timeout(10000);
+
+typedef testing::TestWithParam<tuple<std::string, Target> > Test_Darknet_nets_async;
+TEST_P(Test_Darknet_nets_async, Accuracy)
+{
+    if (INF_ENGINE_VER_MAJOR_LT(2019020000))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
+    std::string prefix = get<0>(GetParam());
+    int target = get<1>(GetParam());
+
+    const int numInputs = 2;
+    std::vector<Mat> inputs(numInputs);
+    int blobSize[] = {1, 3, 416, 416};
+    for (int i = 0; i < numInputs; ++i)
+    {
+        inputs[i].create(4, &blobSize[0], CV_32F);
+        randu(inputs[i], 0, 1);
+    }
+
+    Net netSync = readNet(findDataFile("dnn/" + prefix + ".cfg"),
+                          findDataFile("dnn/" + prefix + ".weights", false));
+    netSync.setPreferableTarget(target);
+
+    // Run synchronously.
+    std::vector<Mat> refs(numInputs);
+    for (int i = 0; i < numInputs; ++i)
+    {
+        netSync.setInput(inputs[i]);
+        refs[i] = netSync.forward().clone();
+    }
+
+    Net netAsync = readNet(findDataFile("dnn/" + prefix + ".cfg"),
+                           findDataFile("dnn/" + prefix + ".weights", false));
+    netAsync.setPreferableTarget(target);
+
+    // Run asynchronously. To make test more robust, process inputs in the reversed order.
+    for (int i = numInputs - 1; i >= 0; --i)
+    {
+        netAsync.setInput(inputs[i]);
+
+        AsyncArray out = netAsync.forwardAsync();
+        ASSERT_TRUE(out.valid());
+        Mat result;
+        EXPECT_TRUE(out.get(result, async_timeout));
+        normAssert(refs[i], result, format("Index: %d", i).c_str(), 0, 0);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets_async, Combine(
+    Values("yolo-voc", "tiny-yolo-voc", "yolov3"),
+    ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
+));
+
+#endif
+
 TEST_P(Test_Darknet_nets, YOLOv3)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
-
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
 
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(9, 7) << 0, 7,  0.952983f, 0.614622f, 0.150257f, 0.901369f, 0.289251f,  // a truck
@@ -366,14 +407,36 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     std::string config_file = "yolov3.cfg";
     std::string weights_file = "yolov3.weights";
 
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD &&
+        getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+    {
+        scoreDiff = 0.04;
+        iouDiff = 0.2;
+    }
+#endif
+
     {
     SCOPED_TRACE("batch size 1");
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff);
     }
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL)  // Test with 'batch size 2' is disabled for DLIE/OpenCL target
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        if (INF_ENGINE_VER_MAJOR_LE(2018050000) && target == DNN_TARGET_OPENCL)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+        else if (INF_ENGINE_VER_MAJOR_EQ(2019020000))
+        {
+            if (target == DNN_TARGET_OPENCL)
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+            if (target == DNN_TARGET_OPENCL_FP16)
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+        }
+        else if (target == DNN_TARGET_MYRIAD &&
+                 getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+    }
 #endif
 
     {
@@ -387,6 +450,9 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets, dnnBackendsAndTargets());
 TEST_P(Test_Darknet_layers, shortcut)
 {
     testDarknetLayer("shortcut");
+    testDarknetLayer("shortcut_leaky");
+    testDarknetLayer("shortcut_unequal");
+    testDarknetLayer("shortcut_unequal_2");
 }
 
 TEST_P(Test_Darknet_layers, upsample)

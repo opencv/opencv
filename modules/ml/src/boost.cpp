@@ -88,6 +88,7 @@ public:
 
     void startTraining( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         DTreesImpl::startTraining(trainData, flags);
         sumResult.assign(w->sidx.size(), 0.);
 
@@ -184,6 +185,7 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         startTraining(trainData, flags);
         int treeidx, ntrees = bparams.weakCount >= 0 ? bparams.weakCount : 10000;
         vector<int> sidx = w->sidx;
@@ -482,6 +484,7 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         return impl.train(trainData, flags);
     }
 

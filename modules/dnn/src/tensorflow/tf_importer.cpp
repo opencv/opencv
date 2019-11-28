@@ -1129,15 +1129,14 @@ void TFImporter::populateNet(Net dstNet)
             if (value_id.find(layer.input(1)) != value_id.end())
             {
                 Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
-
+                if (newShape.total() == 4)
+                {
+                    // NHWC->NCHW
+                    std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
+                    std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                }
                 if (inpLayout == DATA_LAYOUT_NHWC)
                 {
-                    if (newShape.total() == 4)
-                    {
-                        // NHWC->NCHW
-                        std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
-                        std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
-                    }
                     if (newShape.total() != 4 || newShape.at<int>(1) == 1)
                     {
                         LayerParams permLP;

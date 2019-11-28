@@ -24,6 +24,7 @@ TEST(OwnMat, DefaultConstruction)
     ASSERT_EQ(m.type(), 0);
     ASSERT_EQ(m.depth(), 0);
     ASSERT_TRUE(m.dims.empty());
+    ASSERT_TRUE(m.empty());
 }
 
 TEST(OwnMat, Create)
@@ -42,6 +43,7 @@ TEST(OwnMat, Create)
     ASSERT_EQ(m.elemSize(), sizeof(uint8_t));
     ASSERT_EQ(m.step,   sizeof(uint8_t) * m.cols);
     ASSERT_TRUE(m.dims.empty());
+    ASSERT_FALSE(m.empty());
 }
 
 TEST(OwnMat, CreateND)
@@ -60,6 +62,7 @@ TEST(OwnMat, CreateND)
     ASSERT_EQ(sizeof(float)  , m.elemSize());
     ASSERT_EQ(0u             , m.step      );
     ASSERT_EQ(dims           , m.dims      );
+    ASSERT_FALSE(m.empty());
 }
 
 TEST(OwnMat, CreateOverload)
@@ -78,6 +81,7 @@ TEST(OwnMat, CreateOverload)
     ASSERT_EQ(m.elemSize(), sizeof(uint8_t));
     ASSERT_EQ(m.step,   sizeof(uint8_t) * m.cols);
     ASSERT_TRUE(m.dims.empty());
+    ASSERT_FALSE(m.empty());
 }
 
 TEST(OwnMat, Create3chan)
@@ -95,6 +99,7 @@ TEST(OwnMat, Create3chan)
     ASSERT_EQ(m.elemSize(), 3 * sizeof(uint8_t));
     ASSERT_EQ(m.step,       3*  sizeof(uint8_t) * m.cols);
     ASSERT_TRUE(m.dims.empty());
+    ASSERT_FALSE(m.empty());
 }
 
 struct NonEmptyMat {
@@ -116,7 +121,8 @@ namespace {
                 mat.type(),
                 mat.depth(),
                 mat.channels(),
-                mat.dims
+                mat.dims,
+                mat.empty()
         );
     };
 
@@ -227,11 +233,11 @@ TEST(OwnMatConversion, WithND)
     {
         data[i] = static_cast<uint8_t>(i);
     }
-    cv::Mat cvMat(dims, CV_32S, data.data());
+    cv::Mat cvMat(dims, CV_8U, data.data());
     auto ownMat = to_own(cvMat);
     auto cvMatFromOwn = cv::gapi::own::to_ocv(ownMat);
 
-    EXPECT_EQ(0, cv::countNonZero(cvMat != cvMatFromOwn))
+    EXPECT_EQ(0, cv::norm(cvMat, cvMatFromOwn, NORM_INF))
         << cvMat << std::endl
         << (cvMat != cvMatFromOwn);
 }

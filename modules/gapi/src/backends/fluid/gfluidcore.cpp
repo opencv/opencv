@@ -2118,6 +2118,40 @@ GAPI_FLUID_KERNEL(GFluidSqrt, cv::gapi::core::GSqrt, false)
     }
 };
 
+GAPI_FLUID_KERNEL(GFluidCopy, cv::gapi::core::GCopy, false)
+{
+    static const int Window = 1;
+
+    static void run(const View &src, Buffer &dst)
+    {
+        const auto *in  = src.InLine<uchar>(0);
+              auto *out = dst.OutLine<uchar>();
+
+        GAPI_DbgAssert(dst.length() == src.length());
+        GAPI_DbgAssert(dst.meta().chan == src.meta().chan);
+        GAPI_DbgAssert(dst.meta().depth == src.meta().depth);
+
+        int width = src.length();
+        int elem_size = CV_ELEM_SIZE(CV_MAKETYPE(src.meta().depth, src.meta().chan));
+
+        int w = 0; // cycle counter
+
+    #if CV_SIMD128
+        for (; w <= width*elem_size-16; w+=16)
+        {
+            v_uint8x16 a;
+            a = v_load(&in[w]);
+            v_store(&out[w], a);
+        }
+    #endif
+
+        for (; w < width*elem_size; w++)
+        {
+            out[w] = in[w];
+        }
+    }
+};
+
 } // namespace fliud
 } // namespace gapi
 } // namespace cv
@@ -2173,6 +2207,7 @@ cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
             ,GFluidInRange
             ,GFluidResize
             ,GFluidSqrt
+            ,GFluidCopy
         #if 0
             ,GFluidMean        -- not fluid
             ,GFluidSum         -- not fluid

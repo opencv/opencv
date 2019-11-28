@@ -86,6 +86,8 @@ TEST_P(dump, Regression)
     Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                       findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
 
+    ASSERT_EQ(net.getLayerInputs(net.getLayerId("fire2/concat")).size(), 2);
+
     int size[] = {1, 3, 227, 227};
     Mat input = cv::Mat::ones(4, size, CV_32F);
     net.setInput(input);
@@ -177,6 +179,8 @@ TEST_P(setInput, normalization)
     const int target   = get<1>(get<3>(GetParam()));
     const bool kSwapRB = true;
 
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)
@@ -363,7 +367,7 @@ TEST(Net, forwardAndRetrieve)
 }
 
 #ifdef HAVE_INF_ENGINE
-static const std::chrono::milliseconds async_timeout(500);
+static const std::chrono::milliseconds async_timeout(10000);
 
 // This test runs network in synchronous mode for different inputs and then
 // runs the same model asynchronously for the same inputs.

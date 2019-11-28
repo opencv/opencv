@@ -18,6 +18,7 @@ LONG_TESTS_DEBUG_VALGRIND = [
     ('dnn', '*eccv16*', 1000),  # very large DNN models
     ('dnn', '*OpenPose*', 1000),  # very large DNN models
     ('dnn', '*SSD/*', 1000),  # very large DNN models
+    ('gapi', 'Fluid.MemoryConsumptionDoesNotGrowOnReshape', 1000000),  # test doesn't work properly under valgrind
     ('face', 'CV_Face_FacemarkLBF.test_workflow', 10000.0), # >40min on i7
     ('features2d', 'Features2d/DescriptorImage.no_crash/3', 1000),
     ('features2d', 'Features2d/DescriptorImage.no_crash/4', 1000),

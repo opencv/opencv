@@ -28,6 +28,7 @@ namespace cv
     }
 
            cv::gapi::own::Mat to_own(Mat&&) = delete;
+
     inline cv::gapi::own::Mat to_own(Mat const& m) {
         return (m.dims == 2)
             ?  cv::gapi::own::Mat{m.rows, m.cols, m.type(), m.data, m.step}
@@ -40,7 +41,6 @@ namespace cv
     inline cv::gapi::own::Size to_own (const Size& s) { return {s.width, s.height}; };
 
     inline cv::gapi::own::Rect to_own (const Rect& r) { return {r.x, r.y, r.width, r.height}; };
-
 
 
 namespace gapi

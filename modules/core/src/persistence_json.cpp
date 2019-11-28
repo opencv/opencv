@@ -578,10 +578,14 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }
                             ptr++;
+                            if (i + 1 >= CV_FS_MAX_LEN)
+                                CV_PARSE_ERROR_CPP("string is too long");
                             switch ( *ptr )
                             {
                             case '\\':
@@ -605,6 +609,8 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }
@@ -620,6 +626,8 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }

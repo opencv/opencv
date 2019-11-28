@@ -35,7 +35,8 @@
 #include <ade/util/iota_range.hpp>
 
 #include <opencv2/gapi/infer/ie.hpp>
-#include <opencv2/gapi/infer/ie/util.hpp>
+
+#include "backends/ie/util.hpp"
 
 namespace opencv_test
 {
@@ -98,9 +99,8 @@ TEST(TestAgeGenderIE, InferBasicTensor)
         reader.ReadWeights(weights_path);
         auto net = reader.getNetwork();
 
-        const auto &iedims = net.getInputsInfo().begin()->second->getDims();
+        const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
               auto  cvdims = cv::gapi::ie::util::to_ocv(iedims);
-        std::reverse(cvdims.begin(), cvdims.end());
         in_mat.create(cvdims, CV_32F);
         cv::randu(in_mat, -1, 1);
 
