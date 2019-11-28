@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <type_traits>
+#include <iostream>
 
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
@@ -39,6 +40,14 @@ namespace detail
         GARRAY,       // a cv::GArrayU (note - exactly GArrayU, not GArray<T>!)
     };
 
+    enum class OpaqueKind: int
+    {
+        OPAQUE_UNSUPPORTED,   // Unknown, generic, opaque-to-GAPI data type unsupported in graph seriallization
+        OPAQUE_INT,      // int user G-API opaque data
+        OPAQUE_DOUBLE,            // double user G-API opaque data
+        OPAQUE_CV_SIZE,           // cv::Size user G-API opaque data
+    };
+
     // Describe G-API types (G-types) with traits.  Mostly used by
     // cv::GArg to store meta information about types passed into
     // operation arguments. Please note that cv::GComputation is
@@ -47,26 +56,46 @@ namespace detail
     template<typename T> struct GTypeTraits
     {
         static constexpr const ArgKind kind = ArgKind::OPAQUE_VAL;
+        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_UNSUPPORTED;
+    };
+    template<> struct GTypeTraits<int>
+    {
+        static constexpr const ArgKind kind = ArgKind::OPAQUE_VAL;
+        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_INT;
+    };
+    template<> struct GTypeTraits<double>
+    {
+        static constexpr const ArgKind kind = ArgKind::OPAQUE_VAL;
+        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_DOUBLE;
+    };
+    template<> struct GTypeTraits<cv::Size>
+    {
+        static constexpr const ArgKind kind = ArgKind::OPAQUE_VAL;
+        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_CV_SIZE;
     };
     template<>           struct GTypeTraits<cv::GMat>
     {
         static constexpr const ArgKind kind = ArgKind::GMAT;
         static constexpr const GShape shape = GShape::GMAT;
+        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_UNSUPPORTED;
     };
     template<>           struct GTypeTraits<cv::GMatP>
     {
         static constexpr const ArgKind kind = ArgKind::GMATP;
         static constexpr const GShape shape = GShape::GMAT;
+        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_UNSUPPORTED;
     };
     template<>           struct GTypeTraits<cv::GScalar>
     {
         static constexpr const ArgKind kind = ArgKind::GSCALAR;
         static constexpr const GShape shape = GShape::GSCALAR;
+        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_UNSUPPORTED;
     };
     template<class T> struct GTypeTraits<cv::GArray<T> >
     {
         static constexpr const ArgKind kind = ArgKind::GARRAY;
         static constexpr const GShape shape = GShape::GARRAY;
+        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_UNSUPPORTED;
         using host_type  = std::vector<T>;
         using strip_type = cv::detail::VectorRef;
         static cv::detail::GArrayU   wrap_value(const cv::GArray<T>  &t) { return t.strip();}

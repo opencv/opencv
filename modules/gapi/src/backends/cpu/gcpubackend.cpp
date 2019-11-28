@@ -80,6 +80,138 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
     // into an execution script.
     for (auto &nh : nodes)
     {
+        std::cout << m_gm.metadata(nh).get<NodeType>().name() << " " <<  (int)m_gm.metadata(nh).get<NodeType>().t << std::endl;
+        std::cout << m_gm.metadata(nh).get<Island>().name() << " " << m_gm.metadata(nh).get<Island>().island << std::endl;
+        //std::cout << m_gm.metadata(nh).get<OutputMeta>().name() << " size " << m_gm.metadata(nh).get<OutputMeta>().outMeta.size() << std::endl;
+        //std::cout << m_gm.metadata(nh).get<Protocol>().name() << " " << m_gm.metadata(nh).get<Protocol>().inputs.size() << std::endl;
+        //std::cout << m_gm.metadata(nh).get<ActiveBackends>().name() << " " << m_gm.metadata(nh).get<ActiveBackends>().backends.size() << std::endl;
+        //std::cout << m_gm.metadata(nh).get<Journal>().name() << " " << m_gm.metadata(nh).get<Journal>().messages[0] << std::endl;
+        if(m_gm.metadata(nh).get<NodeType>().t == NodeType::OP)
+        {
+            std::cout << m_gm.metadata(nh).get<Op>().name() << " op kernel name" << m_gm.metadata(nh).get<Op>().k.name << std::endl;
+            std::cout << m_gm.metadata(nh).get<Op>().name() << " op kernel tag" << m_gm.metadata(nh).get<Op>().k.tag << std::endl;
+            std::cout << m_gm.metadata(nh).get<Op>().name() << " op kernel outShapes.size() " << m_gm.metadata(nh).get<Op>().k.outShapes.size() << std::endl;
+            for(size_t i=0; i < m_gm.metadata(nh).get<Op>().k.outShapes.size(); ++i)
+            {
+                std::cout << m_gm.metadata(nh).get<Op>().name() << " op kernel outShapes[" << i << "] " << (int)m_gm.metadata(nh).get<Op>().k.outShapes[i] << std::endl;
+            }
+
+            std::cout << "args size = " << m_gm.metadata(nh).get<Op>().args.size() << "  outs size = " << m_gm.metadata(nh).get<Op>().outs.size() << std::endl;
+
+            for(size_t i=0; i < m_gm.metadata(nh).get<Op>().args.size(); ++i)
+            {
+                std::cout << " arg kind " << (int)m_gm.metadata(nh).get<Op>().args[i].kind << std::endl;
+                if(m_gm.metadata(nh).get<Op>().args[i].kind == cv::detail::ArgKind::GOBJREF)
+                {
+                    std::cout << "kind GOBJREF!!!" << std::endl;
+                    const cv::gimpl::RcDesc &ref = m_gm.metadata(nh).get<Op>().args[i].get<cv::gimpl::RcDesc>();
+                    std::cout << "ref.id " << ref.id << std::endl;
+                    switch (ref.shape)
+                    {
+                        case GShape::GMAT:    std::cout << "GMAT" << std::endl; break;
+                        case GShape::GSCALAR: std::cout << "GSCALAR" << std::endl; break;
+                        case GShape::GARRAY:  std::cout << "GARRAY" << std::endl; break;
+                        default:
+                           util::throw_error(std::logic_error("Unsupported GShape type"));
+                        break;
+                    }
+                }
+                else if(m_gm.metadata(nh).get<Op>().args[i].kind == cv::detail::ArgKind::GMAT)
+                {
+                    std::cout << "kind GMAT!!!" << std::endl;
+                }
+                else if(m_gm.metadata(nh).get<Op>().args[i].kind == cv::detail::ArgKind::GMATP)
+                {
+                    std::cout << "kind GMATP!!!" << std::endl;
+                }
+                else if(m_gm.metadata(nh).get<Op>().args[i].kind == cv::detail::ArgKind::GSCALAR)
+                {
+                    std::cout << "kind GSCALAR!!!" << std::endl;
+                }
+                else if(m_gm.metadata(nh).get<Op>().args[i].kind == cv::detail::ArgKind::GARRAY)
+                {
+                    std::cout << "kind GSCALAR!!!" << std::endl;
+                }
+                else if(m_gm.metadata(nh).get<Op>().args[i].kind == cv::detail::ArgKind::OPAQUE)
+                {
+                    std::cout << "kind OPAQUE!!!" << std::endl;
+                    //try to get int or double
+                    //std::cout << m_gm.metadata(nh).get<Op>().args[i].get<int>() << std::endl;
+                    if(m_gm.metadata(nh).get<Op>().args[i].opaque_kind == cv::detail::OpaqueKind::OPAQUE_INT)
+                    {
+                        std::cout << m_gm.metadata(nh).get<Op>().args[i].get<int>() << std::endl;
+                    }
+                    else if(m_gm.metadata(nh).get<Op>().args[i].opaque_kind == cv::detail::OpaqueKind::OPAQUE_DOUBLE)
+                    {
+                        std::cout << m_gm.metadata(nh).get<Op>().args[i].get<double>() << std::endl;
+                    }
+                    else if(m_gm.metadata(nh).get<Op>().args[i].opaque_kind == cv::detail::OpaqueKind::OPAQUE_CV_SIZE)
+                    {
+                        auto tmp_size =  m_gm.metadata(nh).get<Op>().args[i].get<cv::Size>();
+                        std::cout << tmp_size.width << " " << tmp_size.height << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "UNSUPPORTED OPAQUE!!!" << std::endl;
+                    }
+                    //std::cout << m_gm.metadata(nh).get<Op>().args[i].unsafe_get<int>() << std::endl;
+                }
+                else
+                {
+                    util::throw_error(std::logic_error("Unknown arg type"));
+                }
+            }
+
+            for (const auto &eh : nh->inEdges())
+            {
+                std::cout << m_gm.metadata(eh).get<Input>().name() << " port " << m_gm.metadata(eh).get<Input>().port << std::endl;
+                auto in_edge = GModel::getInEdgeByPort(m_gm, nh, m_gm.metadata(eh).get<Input>().port);
+                GAPI_Assert(in_edge == eh);
+            }
+
+            for (const auto &eh : nh->outEdges())
+            {
+                std::cout << m_gm.metadata(eh).get<Output>().name() << " port " << m_gm.metadata(eh).get<Output>().port << std::endl;
+            }
+
+
+            GMetaArgs tmp_in_meta = GModel::collectInputMeta(m_gm, nh);
+            std::cout << " tmp_in_meta size " << tmp_in_meta.size() << std::endl;
+            for(auto &meta : tmp_in_meta)
+            {
+                std::cout << meta << std::endl;
+            }
+            GMetaArgs tmp_out_meta = GModel::collectOutputMeta(m_gm, nh);
+            std::cout << " tmp_out_meta size " << tmp_out_meta.size() << std::endl;
+            for(auto &meta : tmp_out_meta)
+            {
+                std::cout << meta << std::endl;
+            }
+            auto inputs_nh = GModel::orderedInputs(m_gm, nh);
+            std::cout << " inputs_nh size " << inputs_nh.size() << std::endl;
+            for (auto &in_nh : inputs_nh)
+            {
+                std::cout << m_gm.metadata(in_nh).get<Data>().name() << " in data shape " << (int)m_gm.metadata(in_nh).get<Data>().shape << std::endl;
+            }
+            auto outputs_nh = GModel::orderedOutputs(m_gm, nh);
+            std::cout << " outputs_nh size " << outputs_nh.size() << std::endl;
+            for (auto &out_nh : outputs_nh)
+            {
+                std::cout << m_gm.metadata(out_nh).get<Data>().name() << " out data shape " << (int)m_gm.metadata(out_nh).get<Data>().shape << std::endl;
+            }
+        }
+        else if(m_gm.metadata(nh).get<NodeType>().t == NodeType::DATA)
+        {
+            std::cout << m_gm.metadata(nh).get<Data>().name() << " data shape " << (int)m_gm.metadata(nh).get<Data>().shape << std::endl;
+        }
+        else
+        {
+            util::throw_error(std::logic_error("Unsupported NodeType type"));
+        }
+        std::cout << "*** NEXT NODE ***" << std::endl;
+    }
+    for (auto &nh : nodes)
+    {
         switch (m_gm.metadata(nh).get<NodeType>().t)
         {
         case NodeType::OP: m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)}); break;
