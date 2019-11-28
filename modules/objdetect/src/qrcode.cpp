@@ -1958,7 +1958,7 @@ bool QRDetectMulti::localization()
        {
             cur_cluster = 0;
             for(size_t j = 1; j < true_points_group[i].size() - 1; j++)
-                for(size_t k = j+1; k < true_points_group[i].size(); k++)
+                for(size_t k = j + 1; k < true_points_group[i].size(); k++)
                 {
                     all_points[i][cur_cluster][0] = 0;
                     all_points[i][cur_cluster][1] = int(j);
@@ -1974,7 +1974,7 @@ bool QRDetectMulti::localization()
        if(true_points_group.size() == 1)
        {
           if (set_size[0] > 35)
-            set_size[0] = 35;
+             set_size[0] = 35;
           all_points[0].resize(set_size[0]);
        }
        int iter = int(localization_points.size());
