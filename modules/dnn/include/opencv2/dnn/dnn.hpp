@@ -1158,7 +1158,7 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP void generate(InputArray frame, OutputArray image);
      };
 
-        /** @brief This class represents high-level API for segmentation  models
+    /** @brief This class represents high-level API for segmentation  models
       *
       * SegmentationModel allows to set params for preprocessing input image.
       * SegmentationModel creates net from file with trained weights and config,
@@ -1187,14 +1187,6 @@ CV__DNN_INLINE_NS_BEGIN
           */
          CV_WRAP void segment(InputArray frame, OutputArray mask);
      };
-
-     /** @brief This class represents high-level API for object detection networks.
-      *
-      * DetectionModel allows to set params for preprocessing input image.
-      * DetectionModel creates net from file with trained weights and config,
-      * sets preprocessing input, runs forward pass and return result detections.
-      * For DetectionModel SSD, Faster R-CNN, YOLO topologies are supported.
-      */
 
      /** @brief This class represents high-level API for object detection networks.
       *
