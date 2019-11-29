@@ -161,9 +161,8 @@ class Arguments(NewOpenCVTests):
     def test_parse_to_int_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpInt)
         min_int, max_int = get_limits(ctypes.c_int)
-        for convertible in (-10, -1, 2, True, False, int(43.2), np.uint8(15), np.int8(33),
-                            np.int16(-13), np.int32(4), np.int64(345), (23), min_int, max_int,
-                            np.int_(33)):
+        for convertible in (-10, -1, 2, int(43.2), np.uint8(15), np.int8(33), np.int16(-13),
+                            np.int32(4), np.int64(345), (23), min_int, max_int, np.int_(33)):
             expected = 'int: {0:d}'.format(convertible)
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
@@ -180,9 +179,9 @@ class Arguments(NewOpenCVTests):
 
     @unittest.skip('Wrong conversion behavior')
     def test_parse_to_int_not_convertible_extra(self):
-        for not_convertible in (np.float32(2.3), np.array([3, ], dtype=int),
-                                np.array([-2, ], dtype=np.int32), np.array([1, ], dtype=np.int),
-                                np.array([11, ], dtype=np.uint8)):
+        for not_convertible in (np.bool_(True), True, False, np.float32(2.3),
+                                np.array([3, ], dtype=int), np.array([-2, ], dtype=np.int32),
+                                np.array([1, ], dtype=np.int), np.array([11, ], dtype=np.uint8)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpInt(not_convertible)
@@ -207,7 +206,7 @@ class Arguments(NewOpenCVTests):
                 _ = cv.utils.dumpSizeT(not_convertible)
 
     @unittest.skip('Wrong conversion behavior')
-    def test_parse_to_size_t_not_convertible_extra(self):
+    def test_parse_to_size_t_convertible_extra(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpSizeT)
         _, max_size_t = get_limits(ctypes.c_size_t)
         for convertible in (max_size_t,):
@@ -216,7 +215,9 @@ class Arguments(NewOpenCVTests):
             self.assertEqual(expected, actual,
                              msg=get_conversion_error_msg(convertible, expected, actual))
 
-        for not_convertible in (np.array([123, ], dtype=np.uint8),):
+    @unittest.skip('Wrong conversion behavior')
+    def test_parse_to_size_t_not_convertible_extra(self):
+        for not_convertible in (np.bool_(True), True, False, np.array([123, ], dtype=np.uint8),):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpSizeT(not_convertible)
@@ -224,7 +225,7 @@ class Arguments(NewOpenCVTests):
     def test_parse_to_float_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpFloat)
         min_float, max_float = get_limits(ctypes.c_float)
-        for convertible in (2, True, False, -13, 1.24, float(32), np.float(32.45), np.double(12.23),
+        for convertible in (2, -13, 1.24, float(32), np.float(32.45), np.double(12.23),
                             np.float32(-12.3), np.float64(3.22), np.float_(-1.5), min_float,
                             max_float, np.inf, -np.inf, float('Inf'), -float('Inf'),
                             np.double(np.inf), np.double(-np.inf), np.double(float('Inf')),
@@ -258,7 +259,8 @@ class Arguments(NewOpenCVTests):
 
     @unittest.skip('Wrong conversion behavior')
     def test_parse_to_float_not_convertible_extra(self):
-        for not_convertible in (np.array([123, ], dtype=int), np.array([1., ]), np.array([False]),
+        for not_convertible in (np.bool_(False), True, False, np.array([123, ], dtype=int),
+                                np.array([1., ]), np.array([False]),
                                 np.array([True], dtype=np.bool)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
@@ -268,7 +270,7 @@ class Arguments(NewOpenCVTests):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpDouble)
         min_float, max_float = get_limits(ctypes.c_float)
         min_double, max_double = get_limits(ctypes.c_double)
-        for convertible in (2, True, False, -13, 1.24, np.float(32.45), float(2), np.double(12.23),
+        for convertible in (2, -13, 1.24, np.float(32.45), float(2), np.double(12.23),
                             np.float32(-12.3), np.float64(3.22), np.float_(-1.5), min_float,
                             max_float, min_double, max_double, np.inf, -np.inf, float('Inf'),
                             -float('Inf'), np.double(np.inf), np.double(-np.inf),
@@ -295,7 +297,8 @@ class Arguments(NewOpenCVTests):
 
     @unittest.skip('Wrong conversion behavior')
     def test_parse_to_double_not_convertible_extra(self):
-        for not_convertible in (np.array([123, ], dtype=int), np.array([1., ]), np.array([False]),
+        for not_convertible in (np.bool_(False), True, False, np.array([123, ], dtype=int),
+                                np.array([1., ]), np.array([False]),
                                 np.array([12.4], dtype=np.double), np.array([True], dtype=np.bool)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
