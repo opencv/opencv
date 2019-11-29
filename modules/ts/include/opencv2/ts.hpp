@@ -180,12 +180,21 @@ using testing::tuple_size;
 using testing::tuple_element;
 
 
-class SkipTestException: public cv::Exception
+namespace details {
+class SkipTestExceptionBase: public cv::Exception
+{
+public:
+    SkipTestExceptionBase(bool handlingTags);
+    SkipTestExceptionBase(const cv::String& message, bool handlingTags);
+};
+}
+
+class SkipTestException: public details::SkipTestExceptionBase
 {
 public:
     int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
-    SkipTestException() : dummy(0) {}
-    SkipTestException(const cv::String& message) : dummy(0) { this->msg = message; }
+    SkipTestException() : details::SkipTestExceptionBase(false), dummy(0) {}
+    SkipTestException(const cv::String& message) : details::SkipTestExceptionBase(message, false), dummy(0) { }
 };
 
 /** Apply tag to the current test

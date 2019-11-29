@@ -125,6 +125,20 @@ bool required_opencv_test_namespace = false;  // compilation check for non-refac
 namespace cvtest
 {
 
+details::SkipTestExceptionBase::SkipTestExceptionBase(bool handlingTags)
+{
+    if (!handlingTags)
+    {
+        testTagIncreaseSkipCount("skip_other", true, true);
+    }
+}
+details::SkipTestExceptionBase::SkipTestExceptionBase(const cv::String& message, bool handlingTags)
+{
+    if (!handlingTags)
+        testTagIncreaseSkipCount("skip_other", true, true);
+    this->msg = message;
+}
+
 uint64 param_seed = 0x12345678; // real value is passed via parseCustomOptions function
 
 static std::string path_join(const std::string& prefix, const std::string& subpath)
@@ -848,6 +862,17 @@ void testTearDown()
         ::testing::Test::RecordProperty("total_memory_usage",
                 cv::format("%llu", (unsigned long long)(memory_usage + ocl_memory_usage)));
     }
+}
+
+bool checkBigDataTests()
+{
+    if (!runBigDataTests)
+    {
+        testTagIncreaseSkipCount("skip_bigdata", true, true);
+        printf("[     SKIP ] BigData tests are disabled\n");
+        return false;
+    }
+    return true;
 }
 
 void parseCustomOptions(int argc, char **argv)

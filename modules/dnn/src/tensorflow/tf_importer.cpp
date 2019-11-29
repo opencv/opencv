@@ -1585,7 +1585,7 @@ void TFImporter::populateNet(Net dstNet)
                 }
             }
         }
-        else if (type == "FusedBatchNorm")
+        else if (type == "FusedBatchNorm" || type == "FusedBatchNormV3")
         {
             // op: "FusedBatchNorm"
             // input: "input"

@@ -2,10 +2,15 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
+#include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 #include "opencv2/ml.hpp"
 #include "opencv2/core/core_c.h"
 
+#include <fstream>
+using std::ifstream;
+
 namespace opencv_test {
+
 using namespace cv::ml;
 
 #define CV_NBAYES   "nbayes"
@@ -18,8 +23,6 @@ using namespace cv::ml;
 #define CV_RTREES   "rtrees"
 #define CV_ERTREES  "ertrees"
 #define CV_SVMSGD   "svmsgd"
-
-enum { CV_TRAIN_ERROR=0, CV_TEST_ERROR=1 };
 
 using cv::Ptr;
 using cv::ml::StatModel;
@@ -34,58 +37,14 @@ using cv::ml::Boost;
 using cv::ml::RTrees;
 using cv::ml::SVMSGD;
 
-class CV_MLBaseTest : public cvtest::BaseTest
-{
-public:
-    CV_MLBaseTest( const char* _modelName );
-    virtual ~CV_MLBaseTest();
-protected:
-    virtual int read_params( const cv::FileStorage& fs );
-    virtual void run( int startFrom );
-    virtual int prepare_test_case( int testCaseIdx );
-    virtual std::string& get_validation_filename();
-    virtual int run_test_case( int testCaseIdx ) = 0;
-    virtual int validate_test_results( int testCaseIdx ) = 0;
+void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 );
+void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& _means, const vector<Mat>& covs, int dataType, int labelType );
+int maxIdx( const vector<int>& count );
+bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& labelsMap, bool checkClusterUniq=true );
+bool calcErr( const Mat& labels, const Mat& origLabels, const vector<int>& sizes, float& err, bool labelsEquivalent = true, bool checkClusterUniq=true );
 
-    int train( int testCaseIdx );
-    float get_test_error( int testCaseIdx, std::vector<float> *resp = 0 );
-    void save( const char* filename );
-    void load( const char* filename );
-
-    Ptr<TrainData> data;
-    std::string modelName, validationFN;
-    std::vector<std::string> dataSetNames;
-    cv::FileStorage validationFS;
-
-    Ptr<StatModel> model;
-
-    std::map<int, int> cls_map;
-
-    int64 initSeed;
-};
-
-class CV_AMLTest : public CV_MLBaseTest
-{
-public:
-    CV_AMLTest( const char* _modelName );
-    virtual ~CV_AMLTest() {}
-protected:
-    virtual int run_test_case( int testCaseIdx );
-    virtual int validate_test_results( int testCaseIdx );
-};
-
-class CV_SLMLTest : public CV_MLBaseTest
-{
-public:
-    CV_SLMLTest( const char* _modelName );
-    virtual ~CV_SLMLTest() {}
-protected:
-    virtual int run_test_case( int testCaseIdx );
-    virtual int validate_test_results( int testCaseIdx );
-
-    std::vector<float> test_resps1, test_resps2; // predicted responses for test data
-    std::string fname1, fname2;
-};
+// used in LR test
+bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& error);
 
 } // namespace
 
