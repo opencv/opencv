@@ -284,6 +284,32 @@ typedef uint32_t __u32;
 
 namespace cv {
 
+static const char* decode_ioctl_code(unsigned long ioctlCode)
+{
+    switch (ioctlCode)
+    {
+#define CV_ADD_IOCTL_CODE(id) case id: return #id
+    CV_ADD_IOCTL_CODE(VIDIOC_G_FMT);
+    CV_ADD_IOCTL_CODE(VIDIOC_S_FMT);
+    CV_ADD_IOCTL_CODE(VIDIOC_REQBUFS);
+    CV_ADD_IOCTL_CODE(VIDIOC_DQBUF);
+    CV_ADD_IOCTL_CODE(VIDIOC_QUERYCAP);
+    CV_ADD_IOCTL_CODE(VIDIOC_S_PARM);
+    CV_ADD_IOCTL_CODE(VIDIOC_G_PARM);
+    CV_ADD_IOCTL_CODE(VIDIOC_QUERYBUF);
+    CV_ADD_IOCTL_CODE(VIDIOC_QBUF);
+    CV_ADD_IOCTL_CODE(VIDIOC_STREAMON);
+    CV_ADD_IOCTL_CODE(VIDIOC_STREAMOFF);
+    CV_ADD_IOCTL_CODE(VIDIOC_ENUMINPUT);
+    CV_ADD_IOCTL_CODE(VIDIOC_G_INPUT);
+    CV_ADD_IOCTL_CODE(VIDIOC_S_INPUT);
+    CV_ADD_IOCTL_CODE(VIDIOC_G_CTRL);
+    CV_ADD_IOCTL_CODE(VIDIOC_S_CTRL);
+#undef CV_ADD_IOCTL_CODE
+    }
+    return "unknown";
+}
+
 /* Device Capture Objects */
 /* V4L2 structure */
 struct Buffer
@@ -305,6 +331,9 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_V4L; }
 
     int deviceHandle;
+    bool v4l_buffersRequested;
+    bool v4l_streamStarted;
+
     int bufferIndex;
     bool FirstCapture;
     String deviceName;
@@ -345,6 +374,8 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool open(const char* deviceName);
     bool isOpened() const;
 
+    void closeDevice();
+
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
@@ -381,7 +412,10 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 /***********************   Implementations  ***************************************/
 
 CvCaptureCAM_V4L::CvCaptureCAM_V4L() :
-    deviceHandle(-1), bufferIndex(-1),
+    deviceHandle(-1),
+    v4l_buffersRequested(false),
+    v4l_streamStarted(false),
+    bufferIndex(-1),
     FirstCapture(true),
     palette(0),
     width(0), height(0), width_set(0), height_set(0),
@@ -395,11 +429,32 @@ CvCaptureCAM_V4L::CvCaptureCAM_V4L() :
     memset(&timestamp, 0, sizeof(timestamp));
 }
 
-CvCaptureCAM_V4L::~CvCaptureCAM_V4L() {
-    streaming(false);
-    releaseBuffers();
+CvCaptureCAM_V4L::~CvCaptureCAM_V4L()
+{
+    try
+    {
+        closeDevice();
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "VIDEOIO(V4L2): unable properly close device: " << deviceName);
+        if (deviceHandle != -1)
+            close(deviceHandle);
+    }
+}
+
+void CvCaptureCAM_V4L::closeDevice()
+{
+    if (v4l_streamStarted)
+        streaming(false);
+    if (v4l_buffersRequested)
+        releaseBuffers();
     if(deviceHandle != -1)
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): close(" << deviceHandle << ")");
         close(deviceHandle);
+    }
+    deviceHandle = -1;
 }
 
 bool CvCaptureCAM_V4L::isOpened() const
@@ -415,7 +470,7 @@ bool CvCaptureCAM_V4L::try_palette_v4l2()
     form.fmt.pix.field       = V4L2_FIELD_ANY;
     form.fmt.pix.width       = width;
     form.fmt.pix.height      = height;
-    if (!tryIoctl(VIDIOC_S_FMT, &form))
+    if (!tryIoctl(VIDIOC_S_FMT, &form, true))
     {
         return false;
     }
@@ -460,9 +515,7 @@ bool CvCaptureCAM_V4L::try_init_v4l2()
     // The cv::CAP_PROP_MODE used for set the video input channel number
     if (!setVideoInputChannel())
     {
-#ifndef NDEBUG
-        fprintf(stderr, "(DEBUG) V4L2: Unable to set Video Input Channel.");
-#endif
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): Unable to set Video Input Channel");
         return false;
     }
 
@@ -470,16 +523,14 @@ bool CvCaptureCAM_V4L::try_init_v4l2()
     capability = v4l2_capability();
     if (!tryIoctl(VIDIOC_QUERYCAP, &capability))
     {
-#ifndef NDEBUG
-        fprintf(stderr, "(DEBUG) V4L2: Unable to query capability.");
-#endif
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): Unable to query capability");
         return false;
     }
 
     if ((capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0)
     {
         /* Nope. */
-        fprintf(stderr, "VIDEOIO ERROR: V4L2: Unable to capture video memory.");
+        CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): not supported - device is unable to capture video (missing V4L2_CAP_VIDEO_CAPTURE)");
         return false;
     }
     return true;
@@ -488,10 +539,18 @@ bool CvCaptureCAM_V4L::try_init_v4l2()
 bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
 {
     //in case palette is already set and works, no need to setup.
-    if (palette != 0 && try_palette_v4l2()) {
-        return true;
-    } else if (errno == EBUSY) {
-        return false;
+    if (palette != 0)
+    {
+        if (try_palette_v4l2())
+        {
+            return true;
+        }
+        else if (errno == EBUSY)
+        {
+            CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): device is busy");
+            closeDevice();
+            return false;
+        }
     }
     __u32 try_order[] = {
             V4L2_PIX_FMT_BGR24,
@@ -519,6 +578,10 @@ bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
         palette = try_order[i];
         if (try_palette_v4l2()) {
             return true;
+        } else if (errno == EBUSY) {
+            CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): device is busy");
+            closeDevice();
+            return false;
         }
     }
     return false;
@@ -534,9 +597,15 @@ bool CvCaptureCAM_V4L::setFps(int value)
     streamparm.parm.capture.timeperframe.numerator = 1;
     streamparm.parm.capture.timeperframe.denominator = __u32(value);
     if (!tryIoctl(VIDIOC_S_PARM, &streamparm) || !tryIoctl(VIDIOC_G_PARM, &streamparm))
+    {
+        CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't set FPS: " << value);
         return false;
+    }
 
-    fps = streamparm.parm.capture.timeperframe.denominator;
+    CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): FPS="
+            << streamparm.parm.capture.timeperframe.denominator << "/"
+            << streamparm.parm.capture.timeperframe.numerator);
+    fps = streamparm.parm.capture.timeperframe.denominator;  // TODO use numerator
     return true;
 }
 
@@ -631,10 +700,9 @@ bool CvCaptureCAM_V4L::initCapture()
     if (!isOpened())
         return false;
 
-    if (!try_init_v4l2()) {
-#ifndef NDEBUG
-        fprintf(stderr, " try_init_v4l2 open \"%s\": %s\n", deviceName.c_str(), strerror(errno));
-#endif
+    if (!try_init_v4l2())
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): init failed: errno=" << errno << " (" << strerror(errno) << ")");
         return false;
     }
 
@@ -642,14 +710,17 @@ bool CvCaptureCAM_V4L::initCapture()
     form = v4l2_format();
     form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    if (!tryIoctl(VIDIOC_G_FMT, &form)) {
-        fprintf( stderr, "VIDEOIO ERROR: V4L2: Could not obtain specifics of capture window.\n");
+    if (!tryIoctl(VIDIOC_G_FMT, &form))
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): Could not obtain specifics of capture window (VIDIOC_G_FMT): errno=" << errno << " (" << strerror(errno) << ")");
         return false;
     }
 
-    if (!autosetup_capture_mode_v4l2()) {
-        if (errno != EBUSY) {
-            fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
+    if (!autosetup_capture_mode_v4l2())
+    {
+        if (errno != EBUSY)
+        {
+            CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): Pixel format of incoming image is unsupported by OpenCV");
         }
         return false;
     }
@@ -691,16 +762,16 @@ bool CvCaptureCAM_V4L::requestBuffers()
 {
     unsigned int buffer_number = bufferSize;
     while (buffer_number > 0) {
-        if (!requestBuffers(buffer_number))
-            return false;
-        if (req.count >= buffer_number)
+        if (requestBuffers(buffer_number) && req.count >= buffer_number)
+        {
             break;
+        }
 
         buffer_number--;
-        fprintf(stderr, "Insufficient buffer memory on %s -- decreasing buffers\n", deviceName.c_str());
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): Insufficient buffer memory -- decreasing buffers: " << buffer_number);
     }
     if (buffer_number < 1) {
-        fprintf(stderr, "Insufficient buffer memory on %s\n", deviceName.c_str());
+        CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): Insufficient buffer memory");
         return false;
     }
     bufferSize = req.count;
@@ -718,13 +789,18 @@ bool CvCaptureCAM_V4L::requestBuffers(unsigned int buffer_number)
     req.memory = V4L2_MEMORY_MMAP;
 
     if (!tryIoctl(VIDIOC_REQBUFS, &req)) {
-        if (EINVAL == errno) {
-            fprintf(stderr, "%s does not support memory mapping\n", deviceName.c_str());
-        } else {
-            perror("VIDIOC_REQBUFS");
+        int err = errno;
+        if (EINVAL == err)
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): no support for memory mapping");
+        }
+        else
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_REQBUFS: errno=" << err << " (" << strerror(err) << ")");
         }
         return false;
     }
+    v4l_buffersRequested = true;
     return true;
 }
 
@@ -738,7 +814,7 @@ bool CvCaptureCAM_V4L::createBuffers()
         buf.index = n_buffers;
 
         if (!tryIoctl(VIDIOC_QUERYBUF, &buf)) {
-            perror("VIDIOC_QUERYBUF");
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_QUERYBUF: errno=" << errno << " (" << strerror(errno) << ")");
             return false;
         }
 
@@ -751,7 +827,7 @@ bool CvCaptureCAM_V4L::createBuffers()
                 deviceHandle, buf.m.offset);
 
         if (MAP_FAILED == buffers[n_buffers].start) {
-            perror("mmap");
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed mmap(" << buf.length << "): errno=" << errno << " (" << strerror(errno) << ")");
             return false;
         }
         maxLength = maxLength > buf.length ? maxLength : buf.length;
@@ -795,7 +871,7 @@ bool CvCaptureCAM_V4L::open(int _index)
         }
         if (_index < 0)
         {
-            fprintf(stderr, "VIDEOIO ERROR: V4L: can't find camera device\n");
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2): can't find camera device");
             name.clear();
             return false;
         }
@@ -808,16 +884,15 @@ bool CvCaptureCAM_V4L::open(int _index)
     bool res = open(name.c_str());
     if (!res)
     {
-        CV_LOG_WARNING(NULL, cv::format("VIDEOIO ERROR: V4L: can't open camera by index %d", _index));
+        CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't open camera by index");
     }
     return res;
 }
 
 bool CvCaptureCAM_V4L::open(const char* _deviceName)
 {
-#ifndef NDEBUG
-    fprintf(stderr, "(DEBUG) V4L: opening %s\n", _deviceName);
-#endif
+    CV_Assert(_deviceName);
+    CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << _deviceName << "): opening...");
     FirstCapture = true;
     width = DEFAULT_V4L_WIDTH;
     height = DEFAULT_V4L_HEIGHT;
@@ -833,6 +908,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     bufferIndex = -1;
 
     deviceHandle = ::open(deviceName.c_str(), O_RDWR /* required */ | O_NONBLOCK, 0);
+    CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << _deviceName << "): deviceHandle=" << deviceHandle);
     if (deviceHandle == -1)
         return false;
 
@@ -846,7 +922,8 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
     buf.memory = V4L2_MEMORY_MMAP;
 
     while (!tryIoctl(VIDIOC_DQBUF, &buf)) {
-        if (errno == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE))) {
+        int err = errno;
+        if (err == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE))) {
             // Maybe buffer not in the queue? Try to put there
             if (!tryIoctl(VIDIOC_QBUF, &buf))
                 return false;
@@ -854,7 +931,7 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
         }
         /* display the error and stop processing */
         returnFrame = false;
-        perror("VIDIOC_DQBUF");
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't read frame (VIDIOC_DQBUF): errno=" << err << " (" << strerror(err) << ")");
         return false;
     }
 
@@ -872,38 +949,64 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
 
 bool CvCaptureCAM_V4L::tryIoctl(unsigned long ioctlCode, void *parameter, bool failIfBusy, int attempts) const
 {
-    CV_LOG_DEBUG(NULL, "tryIoctl(handle=" << deviceHandle << ", ioctl=0x" << std::hex << ioctlCode << ", ...)");
-    if (attempts == 0) {
-        return false;
-    }
-    while (-1 == ioctl(deviceHandle, ioctlCode, parameter)) {
-        const bool isBusy = (errno == EBUSY);
-        if (isBusy & failIfBusy) {
-            return false;
-        }
-        if ((attempts > 0) && (--attempts == 0)) {
-            return false;
-        }
+    CV_Assert(attempts > 0);
+    CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): tryIoctl(" << deviceHandle << ", "
+            << decode_ioctl_code(ioctlCode) << "(" << ioctlCode << "), failIfBusy=" << failIfBusy << ")"
+    );
+    while (true)
+    {
+        errno = 0;
+        int result = ioctl(deviceHandle, ioctlCode, parameter);
+        int err = errno;
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): call ioctl(" << deviceHandle << ", "
+                << decode_ioctl_code(ioctlCode) << "(" << ioctlCode << "), ...) => "
+                << result << "    errno=" << err << " (" << strerror(err) << ")"
+        );
 
+        if (result != -1)
+            return true;  // success
+
+        const bool isBusy = (err == EBUSY);
+        if (isBusy && failIfBusy)
+        {
+            CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): ioctl returns with errno=EBUSY");
+            return false;
+        }
         if (!(isBusy || errno == EAGAIN))
             return false;
+
+        if (--attempts == 0) {
+            return false;
+        }
 
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(deviceHandle, &fds);
 
         /* Timeout. */
+        static int param_v4l_select_timeout = (int)utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_V4L_SELECT_TIMEOUT", 10);
         struct timeval tv;
-        tv.tv_sec = 10;
+        tv.tv_sec = param_v4l_select_timeout;
         tv.tv_usec = 0;
 
-        int result = select(deviceHandle + 1, &fds, NULL, NULL, &tv);
-        if (0 == result) {
-            fprintf(stderr, "select timeout\n");
+        errno = 0;
+        result = select(deviceHandle + 1, &fds, NULL, NULL, &tv);
+        err = errno;
+
+        if (0 == result)
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): select() timeout.");
             return false;
         }
-        if (-1 == result && EINTR != errno)
-            perror("select");
+
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): select(" << deviceHandle << ") => "
+                << result << "   errno = " << err << " (" << strerror(err) << ")"
+        );
+
+        if (EINTR == err)  // don't loop if signal occurred, like Ctrl+C
+        {
+            return false;
+        }
     }
     return true;
 }
@@ -930,14 +1033,12 @@ bool CvCaptureCAM_V4L::grabFrame()
             buf.index = index;
 
             if (!tryIoctl(VIDIOC_QBUF, &buf)) {
-                perror("VIDIOC_QBUF");
+                CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_QBUF (buffer=" << index << "): errno=" << errno << " (" << strerror(errno) << ")");
                 return false;
             }
         }
 
-        if(!streaming(true)) {
-            /* error enabling the stream */
-            perror("VIDIOC_STREAMON");
+        if (!streaming(true)) {
             return false;
         }
 
@@ -952,9 +1053,12 @@ bool CvCaptureCAM_V4L::grabFrame()
         FirstCapture = false;
     }
     // In the case that the grab frame was without retrieveFrame
-    if (bufferIndex >= 0) {
+    if (bufferIndex >= 0)
+    {
         if (!tryIoctl(VIDIOC_QBUF, &buffers[bufferIndex].buffer))
-            perror("VIDIOC_QBUF");
+        {
+            CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_QBUF (buffer=" << bufferIndex << "): errno=" << errno << " (" << strerror(errno) << ")");
+        }
     }
     return read_frame_v4l2();
 }
@@ -1469,6 +1573,7 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
 #ifdef HAVE_JPEG
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): decoding JPEG frame: size=" << currentBuffer.buffer.bytesused);
         cv::imdecode(Mat(1, currentBuffer.buffer.bytesused, CV_8U, currentBuffer.start), IMREAD_COLOR, &destination);
         return;
 #endif
@@ -1711,7 +1816,7 @@ bool CvCaptureCAM_V4L::controlInfo(int property_id, __u32 &_v4l2id, cv::Range &r
     v4l2_queryctrl queryctrl = v4l2_queryctrl();
     queryctrl.id = __u32(v4l2id);
     if (v4l2id == -1 || !tryIoctl(VIDIOC_QUERYCTRL, &queryctrl)) {
-        fprintf(stderr, "VIDEOIO ERROR: V4L2: property %s is not supported\n", capPropertyName(property_id).c_str());
+        CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): property " << capPropertyName(property_id) << " is not supported");
         return false;
     }
     _v4l2id = __u32(v4l2id);
@@ -1742,7 +1847,9 @@ bool CvCaptureCAM_V4L::icvControl(__u32 v4l2id, int &value, bool isSet) const
 
     /* The driver may clamp the value or return ERANGE, ignored here */
     if (!tryIoctl(isSet ? VIDIOC_S_CTRL : VIDIOC_G_CTRL, &control)) {
-        switch (errno) {
+        int err = errno;
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed " << (isSet ? "VIDIOC_S_CTRL" : "VIDIOC_G_CTRL") << ": errno=" << err << " (" << strerror(err) << ")");
+        switch (err) {
 #ifndef NDEBUG
         case EINVAL:
             fprintf(stderr,
@@ -1757,7 +1864,6 @@ bool CvCaptureCAM_V4L::icvControl(__u32 v4l2id, int &value, bool isSet) const
             break;
 #endif
         default:
-            perror(isSet ? "VIDIOC_S_CTRL" : "VIDIOC_G_CTRL");
             break;
         }
         return false;
@@ -1791,7 +1897,7 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
         v4l2_streamparm sp = v4l2_streamparm();
         sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         if (!tryIoctl(VIDIOC_G_PARM, &sp)) {
-            fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to get camera FPS\n");
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): Unable to get camera FPS");
             return -1;
         }
         return sp.parm.capture.timeperframe.denominator / (double)sp.parm.capture.timeperframe.numerator;
@@ -1881,7 +1987,7 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
             return true;
 
         if (value > MAX_V4L_BUFFERS || value < 1) {
-            fprintf(stderr, "V4L: Bad buffer size %d, buffer size must be from 1 to %d\n", value, MAX_V4L_BUFFERS);
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): Bad buffer size " << value << ", buffer size must be from 1 to " << MAX_V4L_BUFFERS);
             return false;
         }
         bufferSize = value;
@@ -1937,13 +2043,15 @@ void CvCaptureCAM_V4L::releaseBuffers()
 
     bufferIndex = -1;
     FirstCapture = true;
-    if (!isOpened())
+
+    if (!v4l_buffersRequested)
         return;
+    v4l_buffersRequested = false;
 
     for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers) {
         if (buffers[n_buffers].start) {
             if (-1 == munmap(buffers[n_buffers].start, buffers[n_buffers].length)) {
-                perror("munmap");
+                CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed munmap(): errno=" << errno << " (" << strerror(errno) << ")");
             } else {
                 buffers[n_buffers].start = 0;
             }
@@ -1957,11 +2065,28 @@ void CvCaptureCAM_V4L::releaseBuffers()
 
 bool CvCaptureCAM_V4L::streaming(bool startStream)
 {
-    if (!isOpened())
-        return !startStream;
+    if (startStream != v4l_streamStarted)
+    {
+        if (!isOpened())
+        {
+            CV_Assert(v4l_streamStarted == false);
+            return !startStream;
+        }
 
-    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    return tryIoctl(startStream ? VIDIOC_STREAMON : VIDIOC_STREAMOFF, &type);
+        type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        bool result = tryIoctl(startStream ? VIDIOC_STREAMON : VIDIOC_STREAMOFF, &type);
+        if (result)
+        {
+            v4l_streamStarted = startStream;
+            return true;
+        }
+        if (startStream)
+        {
+            CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_STREAMON: errno=" << errno << " (" << strerror(errno) << ")");
+        }
+        return false;
+    }
+    return startStream;
 }
 
 IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
@@ -1981,6 +2106,7 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
     } else {
         // for mjpeg streams the size might change in between, so we have to change the header
         // We didn't allocate memory when not convert_rgb, but we have to recreate the header
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): buffer input size=" << currentBuffer.buffer.bytesused);
         if (frame.imageSize != (int)currentBuffer.buffer.bytesused)
             v4l2_create_frame();
 
@@ -1990,7 +2116,9 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
     }
     //Revert buffer to the queue
     if (!tryIoctl(VIDIOC_QBUF, &buffers[bufferIndex].buffer))
-        perror("VIDIOC_QBUF");
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_QBUF: errno=" << errno << " (" << strerror(errno) << ")");
+    }
 
     bufferIndex = -1;
     return &frame;

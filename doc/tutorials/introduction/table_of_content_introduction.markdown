@@ -114,7 +114,7 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     _Compatibility:_ \> OpenCV 2.4.2
 
-    _Author:_ Artem Myagkov, Eduard Feicho
+    _Author:_ Artem Myagkov, Eduard Feicho, Steve Nicholson
 
     We will learn how to setup OpenCV for using it in iOS!
 

@@ -457,10 +457,6 @@ namespace CV__SIMD_NAMESPACE {
 using namespace CV__SIMD_NAMESPACE;
 #endif
 
-#ifndef CV_DOXYGEN
-CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
-#endif
-
 #ifndef CV_SIMD_64F
 #define CV_SIMD_64F 0
 #endif
@@ -469,9 +465,14 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #define CV_SIMD_FP16 0  //!< Defined to 1 on native support of operations with float16x8_t / float16x16_t (SIMD256) types
 #endif
 
-
 #ifndef CV_SIMD
 #define CV_SIMD 0
+#endif
+
+#include "simd_utils.impl.hpp"
+
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
 
 } // cv::
