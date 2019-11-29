@@ -9,9 +9,9 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
-from os import environ
+import os
 
-from tests_common import NewOpenCVTests
+from tests_common import NewOpenCVTests, unittest
 
 class cuda_test(NewOpenCVTests):
     def setUp(self):
@@ -101,16 +101,22 @@ class cuda_test(NewOpenCVTests):
 
         self.assertTrue(True) #It is sufficient that no exceptions have been there
 
+    @unittest.skipIf('OPENCV_TEST_DATA_PATH' not in os.environ,
+                     "OPENCV_TEST_DATA_PATH is not defined")
     def test_cudacodec(self):
         #Test the functionality but not the results of the video reader
 
-        vid_path = environ['OPENCV_TEST_DATA_PATH'] + '/cv/video/1920x1080.avi'
+        vid_path = os.environ['OPENCV_TEST_DATA_PATH'] + '/cv/video/1920x1080.avi'
         try:
-            _reader = cv.cudacodec.createVideoReader(vid_path)
-            ret,gpu_mat = _reader.nextFrame()
+            reader = cv.cudacodec.createVideoReader(vid_path)
+            ret, gpu_mat = reader.nextFrame()
             self.assertTrue(ret)
+            self.assertTrue('GpuMat' in str(type(gpu_mat)), msg=type(gpu_mat))
+            #TODO: print(cv.utils.dumpInputArray(gpu_mat)) # - no support for GpuMat
+
             # not checking output, therefore sepearate tests for different signatures is unecessary
-            ret,_ = _reader.nextFrame(gpu_mat)
+            ret, _gpu_mat2 = reader.nextFrame(gpu_mat)
+            #TODO: self.assertTrue(gpu_mat == gpu_mat2)
             self.assertTrue(ret)
         except cv.error as e:
             notSupported = (e.code == cv.Error.StsNotImplemented or e.code == cv.Error.StsUnsupportedFormat or e.code == cv.Error.GPU_API_CALL_ERROR)

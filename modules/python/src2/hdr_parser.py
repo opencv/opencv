@@ -86,10 +86,6 @@ class CppHeaderParser(object):
             modlist.append("/O")
             arg_str = arg_str.replace("CV_OUT", "")
 
-        if "CV_GPU" in arg_str:
-            modlist.append("/G")
-            arg_str = arg_str.replace("CV_GPU", "")
-
         if "CV_IN_OUT" in arg_str:
             modlist.append("/IO")
             arg_str = arg_str.replace("CV_IN_OUT", "")
@@ -915,13 +911,11 @@ class CppHeaderParser(object):
                         if stmt_type.startswith("enum"):
                             decls.append([stmt_type + " " + self.get_dotted_name(name), "", [], decl, None, ""])
                         else:
-                            has_gpu_mat = any(flag == '/G' for var in decl[3] for flag in var[3])
-                            if not has_gpu_mat:
-                                decls.append(decl)
+                            decls.append(decl)
 
                             if self._generate_gpumat_decls and "cv.cuda" in decl[0]:
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
-                                # same declaration working with GpuMat (this is important for T-Api access)
+                                # same declaration working with GpuMat
                                 args = decl[3]
                                 has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
                                 if has_mat:

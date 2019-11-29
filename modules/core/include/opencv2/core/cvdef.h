@@ -413,7 +413,6 @@ Cv64suf;
 #define CV_EXPORTS_W_MAP CV_EXPORTS
 #define CV_IN_OUT
 #define CV_OUT
-#define CV_GPU
 #define CV_PROP
 #define CV_PROP_RW
 #define CV_WRAP
