@@ -680,6 +680,13 @@ struct SwishFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
     {
@@ -762,6 +769,13 @@ struct MishFunctor
         top(x, y, c, n) = input * tanh(log(1.0f + exp(input)));
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
 
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
