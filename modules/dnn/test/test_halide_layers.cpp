@@ -583,7 +583,7 @@ TEST_P(NoParamActivation, Accuracy)
     testInPlaceActivation(lp, backendId, targetId);
 }
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, NoParamActivation, Combine(
-/*type*/ Values("TanH", "Sigmoid", "AbsVal", "BNLL"),
+/*type*/ Values("TanH", "Sigmoid", "AbsVal", "BNLL", "Swish", "Mish"),
          dnnBackendsAndTargetsWithHalide()
 ));
 
