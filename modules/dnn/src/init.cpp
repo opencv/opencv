@@ -103,6 +103,8 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(PReLU,          ChannelsPReLULayer);
     CV_DNN_REGISTER_LAYER_CLASS(Sigmoid,        SigmoidLayer);
     CV_DNN_REGISTER_LAYER_CLASS(TanH,           TanHLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Swish,          SwishLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Mish,           MishLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ELU,            ELULayer);
     CV_DNN_REGISTER_LAYER_CLASS(BNLL,           BNLLLayer);
     CV_DNN_REGISTER_LAYER_CLASS(AbsVal,         AbsLayer);
