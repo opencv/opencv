@@ -462,6 +462,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<TanHLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS SwishLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SwishLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS MishLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<MishLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS SigmoidLayer : public ActivationLayer
     {
     public:
