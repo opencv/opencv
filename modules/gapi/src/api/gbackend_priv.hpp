@@ -56,7 +56,7 @@ public:
                          const std::vector<ade::NodeHandle> &nodes,
                          const std::vector<cv::gimpl::Data>& ins_data,
                          const std::vector<cv::gimpl::Data>& outs_data) const;
-    
+
     // Ask backend to provide general backend-specific compiler passes
     virtual void addBackendPasses(ade::ExecutionEngineSetupContext &);
 
