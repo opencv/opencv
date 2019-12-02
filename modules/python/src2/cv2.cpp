@@ -635,10 +635,27 @@ bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo& info)
     }
     if (PyArray_IsIntegerScalar(obj))
     {
-        if (PyArray_IsPythonNumber(obj))
+        if (PyLong_Check(obj))
         {
+#ifdef HAVE_LONG_LONG
             value = PyLong_AsUnsignedLongLong(obj);
+#else
+            value = PyLong_AsUnsignedLong(obj);
+#endif
         }
+#if PY_MAJOR_VERSION < 3
+        // Python 2.x has PyIntObject which is not a subtype of PyLongObject
+        // Overflow check here is unnecessary because object will be converted to long on the
+        // interpreter side
+        else if (PyInt_Check(obj))
+        {
+    #ifdef HAVE_LONG_LONG
+            value = PyInt_AsUnsignedLongLongMask(obj);
+    #else
+            value = PyInt_AsUnsignedLongMask(obj);
+    #endif
+        }
+#endif
         else
         {
             PyArray_ScalarAsCtype(obj, &value);
