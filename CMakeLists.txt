@@ -276,6 +276,9 @@ OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
 OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
   VISIBLE_IF TRUE
   VERIFY INF_ENGINE_TARGET)
+OCV_OPTION(WITH_NGRAPH "Include nGraph support" WITH_INF_ENGINE
+  VISIBLE_IF TRUE
+  VERIFY TARGET ngraph::ngraph)
 OCV_OPTION(WITH_JASPER "Include JPEG2K support" ON
   VISIBLE_IF NOT IOS
   VERIFY HAVE_JASPER)
@@ -1489,10 +1492,35 @@ if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
     )
     get_target_property(_inc ${ie_target} INTERFACE_INCLUDE_DIRECTORIES)
     status("    Inference Engine:" "${__msg}")
-    status("                libs:" "${_lib}")
-    status("            includes:" "${_inc}")
+    status("        * libs:" "${_lib}")
+    status("        * includes:" "${_inc}")
   else()
     status("    Inference Engine:"     "NO")
+  endif()
+endif()
+if(WITH_NGRAPH OR HAVE_NGRAPH)
+  if(HAVE_NGRAPH)
+    set(__target ngraph::ngraph)
+    set(__msg "YES (${ngraph_VERSION})")
+    get_target_property(_lib ${__target} IMPORTED_LOCATION)
+    get_target_property(_lib_imp_rel ${__target} IMPORTED_IMPLIB_RELEASE)
+    get_target_property(_lib_imp_dbg ${__target} IMPORTED_IMPLIB_DEBUG)
+    get_target_property(_lib_rel ${__target} IMPORTED_LOCATION_RELEASE)
+    get_target_property(_lib_dbg ${__target} IMPORTED_LOCATION_DEBUG)
+    ocv_build_features_string(_lib
+      IF _lib THEN "${_lib}"
+      IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
+      IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+      IF _lib_rel  THEN "${_lib_rel}"
+      IF _lib_dbg  THEN "${_lib_dbg}"
+      ELSE "unknown"
+    )
+    get_target_property(_inc ${__target} INTERFACE_INCLUDE_DIRECTORIES)
+    status("    nGraph:" "${__msg}")
+    status("        * libs:" "${_lib}")
+    status("        * includes:" "${_inc}")
+  else()
+    status("    nGraph:"     "NO")
   endif()
 endif()
 

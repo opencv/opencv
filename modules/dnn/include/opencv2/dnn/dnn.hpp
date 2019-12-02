@@ -47,9 +47,9 @@
 #include "opencv2/core/async.hpp"
 
 #if !defined CV_DOXYGEN && !defined CV_STATIC_ANALYSIS && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v14 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v15 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_34_v14 { } using namespace experimental_dnn_34_v14; }}
+namespace cv { namespace dnn { namespace experimental_dnn_34_v15 { } using namespace experimental_dnn_34_v15; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -74,10 +74,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         //! DNN_BACKEND_DEFAULT equals to DNN_BACKEND_INFERENCE_ENGINE if
         //! OpenCV is built with Intel's Inference Engine library or
         //! DNN_BACKEND_OPENCV otherwise.
-        DNN_BACKEND_DEFAULT,
+        DNN_BACKEND_DEFAULT = 0,
         DNN_BACKEND_HALIDE,
-        DNN_BACKEND_INFERENCE_ENGINE,  //!< Intel's Inference Engine computational backend.
-        DNN_BACKEND_OPENCV
+        DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel's Inference Engine computational backend
+                                                 //!< @sa setInferenceEngineBackendType
+        DNN_BACKEND_OPENCV,
+        // OpenCV 4.x: DNN_BACKEND_VKCOM,
+        // OpenCV 4.x: DNN_BACKEND_CUDA,
+
+#ifdef __OPENCV_BUILD
+        DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
+        DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
+#endif
     };
 
     /**
@@ -277,6 +285,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs);
 
         virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs);
+
+        virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
