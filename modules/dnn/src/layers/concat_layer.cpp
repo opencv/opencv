@@ -45,6 +45,7 @@
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 
 #ifdef HAVE_OPENCL
@@ -113,7 +114,7 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !padding) ||
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && !padding) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
     }
 
@@ -344,6 +345,23 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
 #endif  // HAVE_INF_ENGINE
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == nodes.size());
+        ngraph::NodeVector inp_nodes;
+        for (auto& node : nodes) {
+            inp_nodes.push_back(node.dynamicCast<InfEngineNgraphNode>()->node);
+        }
+
+        InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
+        auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, clamp(axis, data->getDims().size()));
+        return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)

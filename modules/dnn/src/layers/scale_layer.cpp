@@ -14,6 +14,8 @@ Implementation of Scale layer.
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_CUDA
@@ -59,7 +61,7 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && axis == 1);
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && axis == 1);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -251,6 +253,34 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
 #endif  // HAVE_INF_ENGINE
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(!blobs.empty());
+        const size_t numChannels = blobs[0].total();
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
+        shape[1] = numChannels;
+        auto weight = hasWeights ?
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                           ngraph::Shape(shape), blobs[0].data) :
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                           ngraph::Shape(shape), std::vector<float>(numChannels, 1).data());
+
+        auto bias = hasBias ?
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                           ngraph::Shape(shape), blobs.back().data) :
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                           ngraph::Shape(shape), std::vector<float>(numChannels, 0).data());
+
+        auto scale_node = std::make_shared<ngraph::op::v1::Multiply>(ieInpNode, weight, ngraph::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(scale_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(scale_shift));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
     {

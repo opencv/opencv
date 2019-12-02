@@ -21,6 +21,54 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
+static Backend parseInferenceEngineBackendType(const cv::String& backend)
+{
+    CV_Assert(!backend.empty());
+    if (backend == CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        return DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    if (backend == CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API)
+        return DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019;
+    CV_Error(Error::StsBadArg, cv::format("Unknown IE backend: %s", backend.c_str()));
+}
+static const char* dumpInferenceEngineBackendType(Backend backend)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        return CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        return CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API;
+    CV_Error(Error::StsBadArg, cv::format("Invalid backend ID for IE: %d", backend));
+}
+Backend& getInferenceEngineBackendTypeParam()
+{
+    static Backend param = parseInferenceEngineBackendType(
+        utils::getConfigurationParameterString("OPENCV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019_TYPE",
+#ifdef HAVE_NGRAPH
+            CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API  // future: CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
+#else
+            CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API
+#endif
+        )
+    );
+    return param;
+}
+
+CV__DNN_INLINE_NS_BEGIN
+
+cv::String getInferenceEngineBackendType()
+{
+    return dumpInferenceEngineBackendType(getInferenceEngineBackendTypeParam());
+}
+cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
+{
+    Backend newBackend = parseInferenceEngineBackendType(newBackendType);
+    Backend& param = getInferenceEngineBackendTypeParam();
+    Backend old = param;
+    param = newBackend;
+    return dumpInferenceEngineBackendType(old);
+}
+
+CV__DNN_INLINE_NS_END
+
 // For networks with input layer which has an empty name, IE generates a name id[some_number].
 // OpenCV lets users use an empty input name and to prevent unexpected naming,
 // we can use some predefined name.
@@ -161,38 +209,25 @@ private:
     InferenceEngine::CNNLayer cnnLayer;
 };
 
-class InfEngineExtension : public InferenceEngine::IExtension
+InferenceEngine::StatusCode InfEngineExtension::getFactoryFor(
+        InferenceEngine::ILayerImplFactory*& factory,
+        const InferenceEngine::CNNLayer* cnnLayer,
+        InferenceEngine::ResponseDesc* resp
+) noexcept
 {
-public:
-    virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
-    virtual void Unload() noexcept {}
-    virtual void Release() noexcept {}
-    virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
-
-    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
-                                                          InferenceEngine::ResponseDesc*) noexcept
-    {
-        return InferenceEngine::StatusCode::OK;
-    }
-
-    InferenceEngine::StatusCode getFactoryFor(InferenceEngine::ILayerImplFactory*& factory,
-                                              const InferenceEngine::CNNLayer* cnnLayer,
-                                              InferenceEngine::ResponseDesc* resp) noexcept
-    {
-        if (cnnLayer->type != kOpenCVLayersType)
-            return InferenceEngine::StatusCode::NOT_IMPLEMENTED;
-        factory = new InfEngineCustomLayerFactory(cnnLayer);
-        return InferenceEngine::StatusCode::OK;
-    }
-};
+    if (cnnLayer->type != kOpenCVLayersType)
+        return InferenceEngine::StatusCode::NOT_IMPLEMENTED;
+    factory = new InfEngineCustomLayerFactory(cnnLayer);
+    return InferenceEngine::StatusCode::OK;
+}
 
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::Builder::Layer& _layer)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019), layer(_layer) {}
 
     InfEngineBackendNode::InfEngineBackendNode(Ptr<Layer>& cvLayer_, std::vector<Mat*>& inputs,
                                                std::vector<Mat>& outputs,
                                                std::vector<Mat>& internals)
-        : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(cvLayer_->name),
+        : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019), layer(cvLayer_->name),
           cvLayer(cvLayer_)
 {
     CV_Assert(!cvLayer->name.empty());
@@ -269,7 +304,7 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
 #endif
 }
 
-void InfEngineBackendNet::init(int targetId)
+void InfEngineBackendNet::init(Target targetId)
 {
     if (!hasNetOwner)
     {
@@ -403,7 +438,7 @@ static InferenceEngine::Layout estimateLayout(const Mat& m)
 
 static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
 {
-    std::vector<size_t> shape(&m.size[0], &m.size[0] + m.dims);
+    std::vector<size_t> shape = getShape<size_t>(m);
     if (m.type() == CV_32F)
         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
                {InferenceEngine::Precision::FP32, shape, estimateLayout(m)}));
@@ -429,7 +464,7 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<s
 
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout)
 {
-    std::vector<size_t> shape(&m.size[0], &m.size[0] + m.dims);
+    std::vector<size_t> shape = getShape<size_t>(m);
     return wrapToInfEngineBlob(m, shape, layout);
 }
 
@@ -461,14 +496,14 @@ InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr)
 }
 
 InfEngineBackendWrapper::InfEngineBackendWrapper(int targetId, const cv::Mat& m)
-    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE, targetId)
+    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, targetId)
 {
     dataPtr = wrapToInfEngineDataNode(m);
     blob = wrapToInfEngineBlob(m, estimateLayout(m));
 }
 
 InfEngineBackendWrapper::InfEngineBackendWrapper(Ptr<BackendWrapper> wrapper)
-    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE, wrapper->targetId)
+    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, wrapper->targetId)
 {
     Ptr<InfEngineBackendWrapper> ieWrapper = wrapper.dynamicCast<InfEngineBackendWrapper>();
     CV_Assert(!ieWrapper.empty());
@@ -506,7 +541,7 @@ static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr>& getShar
     return sharedPlugins;
 }
 #else
-static InferenceEngine::Core& getCore()
+InferenceEngine::Core& getCore()
 {
     static InferenceEngine::Core core;
     return core;
@@ -565,7 +600,11 @@ static bool detectMyriadX_()
 #else
     try
     {
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R3)
         auto netExec = getCore().LoadNetwork(cnn, "MYRIAD", {{"VPU_PLATFORM", "VPU_2480"}});
+#else
+        auto netExec = getCore().LoadNetwork(cnn, "MYRIAD", {{"VPU_MYRIAD_PLATFORM", "VPU_MYRIAD_2480"}});
+#endif
 #endif
         auto infRequest = netExec.CreateInferRequest();
     } catch(...) {
@@ -704,7 +743,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
     }
     catch (const std::exception& ex)
     {
-        CV_Error(Error::StsAssert, format("Failed to initialize Inference Engine backend: %s", ex.what()));
+        CV_Error(Error::StsError, format("Failed to initialize Inference Engine backend (device = %s): %s", device_name.c_str(), ex.what()));
     }
 }
 
@@ -744,6 +783,7 @@ void InfEngineBackendNet::InfEngineReqWrapper::makePromises(const std::vector<Pt
 void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                                   bool isAsync)
 {
+    CV_LOG_DEBUG(NULL, "InfEngineBackendNet::forward(" << (isAsync ? "async" : "sync") << ")");
     // Look for finished requests.
     Ptr<InfEngineReqWrapper> reqWrapper;
     for (auto& wrapper : infRequests)
@@ -791,6 +831,8 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
         infRequestPtr->SetCompletionCallback(
             [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode status)
             {
+                CV_LOG_DEBUG(NULL, "DNN(IE): completionCallback(" << (int)status << ")");
+
                 InfEngineReqWrapper* wrapper;
                 request->GetUserData((void**)&wrapper, 0);
                 CV_Assert(wrapper && "Internal error");
@@ -916,8 +958,9 @@ bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
 
 bool InfEngineBackendLayer::supportBackend(int backendId)
 {
+    CV_LOG_DEBUG(NULL, "InfEngineBackendLayer::supportBackend(" << backendId << ")");
     return backendId == DNN_BACKEND_DEFAULT ||
-           (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+           (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
 }
 
 void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs,
@@ -1030,7 +1073,18 @@ cv::String getInferenceEngineVPUType()
     static cv::String vpu_type = getInferenceEngineVPUType_();
     return vpu_type;
 }
+
 #else  // HAVE_INF_ENGINE
+
+cv::String getInferenceEngineBackendType()
+{
+    CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
+}
+cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
+{
+    CV_UNUSED(newBackendType);
+    CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
+}
 cv::String getInferenceEngineVPUType()
 {
     CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");

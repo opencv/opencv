@@ -43,12 +43,48 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
+
 #include <float.h>
 #include <string>
 #include "../nms.inl.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
+#include <ngraph/op/experimental/layers/detection_output.hpp>
+
+namespace ngraph {
+namespace op {
+
+class Dummy : public Op {
+public:
+    Dummy() : Op("Dummy", {}) {
+        constructor_validate_and_infer_types();
+    }
+
+    void validate_and_infer_types() override {
+        set_output_type(0, ngraph::element::Type(), {});
+    }
+
+    std::shared_ptr<Node> copy_with_new_args(const NodeVector& new_args) const override {
+        if (!new_args.empty())
+            throw ngraph_error("Incorrect number of new arguments");
+        return std::make_shared<Dummy>();
+    }
+
+    static constexpr NodeTypeInfo type_info{"Dummy", 1};
+    const NodeTypeInfo& get_type_info() const override {
+        return type_info;
+    }
+};
+
+constexpr NodeTypeInfo Dummy::type_info;
+
+}  // namespace op
+}  // namespace ngraph
 #endif
 
 namespace cv
@@ -198,7 +234,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && !_locPredTransposed && _bboxesNormalized);
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && !_locPredTransposed && _bboxesNormalized);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -941,6 +977,36 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
 #endif  // HAVE_INF_ENGINE
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(nodes.size() == 3);
+        auto& box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto& class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto& proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+
+        ngraph::op::DetectionOutputAttrs attrs;
+        attrs.num_classes                = _numClasses;
+        attrs.background_label_id        = _backgroundLabelId;
+        attrs.top_k                      = _topK > 0 ? _topK : _keepTopK;
+        attrs.variance_encoded_in_target = _varianceEncodedInTarget;
+        attrs.keep_top_k                 = {_keepTopK};
+        attrs.nms_threshold              = _nmsThreshold;
+        attrs.confidence_threshold       = _confidenceThreshold;
+        attrs.share_location             = _shareLocation;
+        attrs.clip_before_nms            = _clip;
+        attrs.code_type                  = std::string{"caffe.PriorBoxParameter." + _codeType};
+        attrs.normalized                 = true;
+
+        auto aux_class_preds = std::make_shared<ngraph::op::Dummy>();
+        auto aux_box_preds   = std::make_shared<ngraph::op::Dummy>();
+        auto det_out = std::make_shared<ngraph::op::DetectionOutput>(box_logits, class_preds,
+                       proposals, aux_class_preds, aux_box_preds, attrs);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(det_out));
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 float util::caffe_box_overlap(const util::NormalizedBBox& a, const util::NormalizedBBox& b)
