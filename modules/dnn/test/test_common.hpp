@@ -11,9 +11,19 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
+// src/op_inf_engine.hpp
+#define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_GE(ver) (((INF_ENGINE_RELEASE) / 10000) >= ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_LT(ver) (((INF_ENGINE_RELEASE) / 10000) < ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
+
+
 #define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL_FP16         "dnn_skip_ocl_fp16"
+#define CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER       "dnn_skip_ie_nn_builder"
+#define CV_TEST_TAG_DNN_SKIP_IE_NGRAPH           "dnn_skip_ie_ngraph"
 #define CV_TEST_TAG_DNN_SKIP_IE                  "dnn_skip_ie"
 #define CV_TEST_TAG_DNN_SKIP_IE_2018R5           "dnn_skip_ie_2018r5"
 #define CV_TEST_TAG_DNN_SKIP_IE_2019R1           "dnn_skip_ie_2019r1"
@@ -26,6 +36,26 @@
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X         "dnn_skip_ie_myriadx"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD           CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
 
+
+#ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_EQ(2018050000)
+#  define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2018R5
+#elif INF_ENGINE_VER_MAJOR_EQ(2019010000)
+#  if INF_ENGINE_RELEASE < 2019010100
+#    define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1
+#  else
+#    define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1
+#  endif
+#elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
+#  define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R2
+#elif INF_ENGINE_VER_MAJOR_EQ(2019030000)
+#  define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R3
+#endif
+#endif // HAVE_INF_ENGINE
+
+#ifndef CV_TEST_TAG_DNN_SKIP_IE_VERSION
+#    define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE
+#endif
 
 
 namespace cv { namespace dnn {
@@ -86,8 +116,11 @@ bool validateVPUType();
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine = true,
         bool withHalide = false,
-        bool withCpuOCV = true
+        bool withCpuOCV = true,
+        bool withNgraph = true
 );
+
+testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE();
 
 
 class DNNTestLayer : public TestWithParam<tuple<Backend, Target> >
@@ -120,7 +153,8 @@ public:
 
     static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
     {
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            && target == DNN_TARGET_MYRIAD)
         {
             if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
                 inp->size[0] != 1 && inp->size[0] != ref->size[0])
@@ -131,7 +165,7 @@ public:
         }
     }
 
-    void expectNoFallbacks(Net& net)
+    void expectNoFallbacks(Net& net, bool raiseError = true)
     {
         // Check if all the layers are supported with current backend and target.
         // Some layers might be fused so their timings equal to zero.
@@ -140,20 +174,27 @@ public:
         std::vector<String> names = net.getLayerNames();
         CV_Assert(names.size() == timings.size());
 
+        bool hasFallbacks = false;
         for (int i = 0; i < names.size(); ++i)
         {
             Ptr<dnn::Layer> l = net.getLayer(net.getLayerId(names[i]));
             bool fused = !timings[i];
             if ((!l->supportBackend(backend) || l->preferableTarget != target) && !fused)
-                CV_Error(Error::StsNotImplemented, "Layer [" + l->name + "] of type [" +
-                         l->type + "] is expected to has backend implementation");
+            {
+                hasFallbacks = true;
+                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to has backend implementation" << endl;
+            }
         }
+        if (hasFallbacks && raiseError)
+            CV_Error(Error::StsNotImplemented, "Implementation fallbacks are not expected in this test");
     }
 
     void expectNoFallbacksFromIE(Net& net)
     {
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
             expectNoFallbacks(net);
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            expectNoFallbacks(net, false);
     }
 
 protected:
@@ -165,12 +206,5 @@ protected:
 
 } // namespace
 
-
-// src/op_inf_engine.hpp
-#define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
-#define INF_ENGINE_VER_MAJOR_GE(ver) (((INF_ENGINE_RELEASE) / 10000) >= ((ver) / 10000))
-#define INF_ENGINE_VER_MAJOR_LT(ver) (((INF_ENGINE_RELEASE) / 10000) < ((ver) / 10000))
-#define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
-#define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
 
 #endif
