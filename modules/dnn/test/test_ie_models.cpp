@@ -254,20 +254,6 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     infRequest.Infer();
 }
 
-std::vector<String> getOutputsNames(const Net& net)
-{
-    std::vector<String> names;
-    if (names.empty())
-    {
-        std::vector<int> outLayers = net.getUnconnectedOutLayers();
-        std::vector<String> layersNames = net.getLayerNames();
-        names.resize(outLayers.size());
-        for (size_t i = 0; i < outLayers.size(); ++i)
-            names[i] = layersNames[outLayers[i] - 1];
-    }
-    return names;
-}
-
 void runCV(Backend backendId, Target targetId, const std::string& xmlPath, const std::string& binPath,
            const std::map<std::string, cv::Mat>& inputsMap,
            std::map<std::string, cv::Mat>& outputsMap)
@@ -279,7 +265,7 @@ void runCV(Backend backendId, Target targetId, const std::string& xmlPath, const
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
 
-    std::vector<String> outNames = getOutputsNames(net);
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
     std::vector<Mat> outs;
     net.forward(outs, outNames);
 

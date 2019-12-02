@@ -182,6 +182,17 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
         ASSERT_FALSE(net.empty());
     }
 
+    // Test input layer size
+    std::vector<MatShape> inLayerShapes;
+    std::vector<MatShape> outLayerShapes;
+    net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    ASSERT_FALSE(inLayerShapes.empty());
+    ASSERT_EQ(inLayerShapes[0].size(), 4);
+    ASSERT_EQ(inLayerShapes[0][0], 1);
+    ASSERT_EQ(inLayerShapes[0][1], 3);
+    ASSERT_EQ(inLayerShapes[0][2], 227);
+    ASSERT_EQ(inLayerShapes[0][3], 227);
+
     const float l1 = 1e-5;
     const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-3 : 1e-4;
 
