@@ -2772,6 +2772,18 @@ struct Net::Impl
     {
         std::vector<LayerPin>& inputLayerIds = layers[id].inputBlobsId;
 
+        if (inOutShapes[0].in[0].empty() && !layers[0].outputBlobs.empty())
+        {
+            ShapesVec shapes;
+            for (int i = 0; i < layers[0].outputBlobs.size(); i++)
+            {
+                Mat& inp = layers[0].outputBlobs[i];
+                CV_Assert(inp.total());
+                shapes.push_back(shape(inp));
+            }
+            inOutShapes[0].in = shapes;
+         }
+
         if (inOutShapes[id].in.empty())
         {
             for(int i = 0; i < inputLayerIds.size(); i++)
@@ -2934,13 +2946,22 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
 #endif
 
     std::vector<String> inputsNames;
+    std::vector<MatShape> inp_shapes;
     for (auto& it : ieNet.getInputsInfo())
     {
         inputsNames.push_back(it.first);
+        std::vector<size_t> dims = it.second->getTensorDesc().getDims();
+        inp_shapes.push_back(std::vector<int>(dims.begin(), dims.end()));
     }
 
     Net cvNet;
     cvNet.setInputsNames(inputsNames);
+
+    // set empty input to determine input shapes
+    for (int inp_id = 0; inp_id < inputsNames.size(); ++inp_id)
+    {
+        cvNet.setInput(Mat(inp_shapes[inp_id], CV_32F), inputsNames[inp_id]);
+    }
 
     Ptr<BackendNode> backendNode;
 #ifdef HAVE_DNN_NGRAPH
