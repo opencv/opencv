@@ -57,13 +57,10 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
+            backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             return (interpolation == "nearest" && scaleWidth == scaleHeight) ||
-                   (interpolation == "bilinear");
-        }
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
-            return (interpolation == "nearest" && scaleWidth == scaleHeight && scaleWidth == 0.5) ||
                    (interpolation == "bilinear");
         }
 #endif
