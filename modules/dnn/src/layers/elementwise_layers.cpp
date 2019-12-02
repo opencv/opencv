@@ -613,6 +613,184 @@ struct TanHFunctor
     int64 getFLOPSPerElement() const { return 1; }
 };
 
+struct SwishFunctor
+{
+    typedef SwishLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = x / (1.0f + exp(-x));
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("SwishForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::SwishOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = input / (1.0f + exp(-input));
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_VULKAN
+    std::shared_ptr<vkcom::OpBase> initVkCom()
+    {
+        // TODO: add vkcom implementation
+        return std::shared_ptr<vkcom::OpBase>();
+    }
+#endif  // HAVE_VULKAN
+
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
+
+    int64 getFLOPSPerElement() const { return 3; }
+
+};
+
+struct MishFunctor
+{
+    typedef MishLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = x * tanh(log(1.0f + exp(x)));
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("MishForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::MishOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = input * tanh(log(1.0f + exp(input)));
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_VULKAN
+    std::shared_ptr<vkcom::OpBase> initVkCom()
+    {
+        // TODO: add vkcom implementation
+        return std::shared_ptr<vkcom::OpBase>();
+    }
+#endif  // HAVE_VULKAN
+
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
+
+    int64 getFLOPSPerElement() const { return 3; }
+
+};
+
 struct SigmoidFunctor
 {
     typedef SigmoidLayer Layer;
@@ -1287,6 +1465,22 @@ Ptr<ReLU6Layer> ReLU6Layer::create(const LayerParams& params)
 Ptr<TanHLayer> TanHLayer::create(const LayerParams& params)
 {
     Ptr<TanHLayer> l(new ElementWiseLayer<TanHFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<SwishLayer> SwishLayer::create(const LayerParams& params)
+{
+    Ptr<SwishLayer> l(new ElementWiseLayer<SwishFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<MishLayer> MishLayer::create(const LayerParams& params)
+{
+    Ptr<MishLayer> l(new ElementWiseLayer<MishFunctor>());
     l->setParamsFrom(params);
 
     return l;

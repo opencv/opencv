@@ -16,6 +16,9 @@ extern int testThreads;
 
 void testSetUp();
 void testTearDown();
+
+bool checkBigDataTests();
+
 }
 
 // check for required "opencv_test" namespace
@@ -37,7 +40,7 @@ void testTearDown();
           Body(); \
           CV__TEST_CLEANUP \
        } \
-       catch (const cvtest::SkipTestException& e) \
+       catch (const cvtest::details::SkipTestExceptionBase& e) \
        { \
           printf("[     SKIP ] %s\n", e.what()); \
        } \
@@ -74,9 +77,8 @@ void testTearDown();
 
 #define CV__TEST_BIGDATA_BODY_IMPL(name) \
     { \
-       if (!cvtest::runBigDataTests) \
+       if (!cvtest::checkBigDataTests()) \
        { \
-           printf("[     SKIP ] BigData tests are disabled\n"); \
            return; \
        } \
        CV__TRACE_APP_FUNCTION_NAME(name); \
@@ -85,7 +87,7 @@ void testTearDown();
           Body(); \
           CV__TEST_CLEANUP \
        } \
-       catch (const cvtest::SkipTestException& e) \
+       catch (const cvtest::details::SkipTestExceptionBase& e) \
        { \
           printf("[     SKIP ] %s\n", e.what()); \
        } \

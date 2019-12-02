@@ -385,6 +385,19 @@ if(MSVC)
   add_definitions(-D_VARIADIC_MAX=10)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  get_directory_property(__DIRECTORY_COMPILE_DEFINITIONS COMPILE_DEFINITIONS)
+  if((NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS_RELEASE} ${__DIRECTORY_COMPILE_DEFINITIONS}" MATCHES "_WIN32_WINNT"
+      AND NOT OPENCV_CMAKE_SKIP_MACRO_WIN32_WINNT)
+      OR OPENCV_CMAKE_FORCE_MACRO_WIN32_WINNT
+  )
+    # https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt
+    # Target Windows 7 API
+    set(OPENCV_CMAKE_MACRO_WIN32_WINNT "0x0601" CACHE STRING "Value of _WIN32_WINNT macro")
+    add_definitions(-D_WIN32_WINNT=${OPENCV_CMAKE_MACRO_WIN32_WINNT})
+  endif()
+endif()
+
 # Enable compiler options for OpenCV modules/apps/samples only (ignore 3rdparty)
 macro(ocv_add_modules_compiler_options)
   if(MSVC AND NOT OPENCV_SKIP_MSVC_W4_OPTION)

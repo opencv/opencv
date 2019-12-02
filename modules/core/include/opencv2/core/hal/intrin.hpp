@@ -143,6 +143,7 @@ CV_INTRIN_DEF_TYPE_TRAITS(double, int64, uint64, double, void, void, double, 2);
 
 #ifndef CV_DOXYGEN
 
+#ifndef CV_CPU_OPTIMIZATION_HAL_NAMESPACE
 #ifdef CV_CPU_DISPATCH_MODE
     #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE __CV_CAT(hal_, CV_CPU_DISPATCH_MODE)
     #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace __CV_CAT(hal_, CV_CPU_DISPATCH_MODE) {
@@ -152,6 +153,7 @@ CV_INTRIN_DEF_TYPE_TRAITS(double, int64, uint64, double, void, void, double, 2);
     #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace hal_baseline {
     #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
 #endif
+#endif // CV_CPU_OPTIMIZATION_HAL_NAMESPACE
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
@@ -168,29 +170,29 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #   undef CV_MSA
 #endif
 
-#if CV_SSE2 || CV_NEON || CV_VSX || CV_MSA || CV_WASM_SIMD
+#if (CV_SSE2 || CV_NEON || CV_VSX || CV_MSA || CV_WASM_SIMD) && !defined(CV_FORCE_SIMD128_CPP)
 #define CV__SIMD_FORWARD 128
 #include "opencv2/core/hal/intrin_forward.hpp"
 #endif
 
-#if CV_SSE2
+#if CV_SSE2 && !defined(CV_FORCE_SIMD128_CPP)
 
 #include "opencv2/core/hal/intrin_sse_em.hpp"
 #include "opencv2/core/hal/intrin_sse.hpp"
 
-#elif CV_NEON
+#elif CV_NEON && !defined(CV_FORCE_SIMD128_CPP)
 
 #include "opencv2/core/hal/intrin_neon.hpp"
 
-#elif CV_VSX
+#elif CV_VSX && !defined(CV_FORCE_SIMD128_CPP)
 
 #include "opencv2/core/hal/intrin_vsx.hpp"
 
-#elif CV_MSA
+#elif CV_MSA && !defined(CV_FORCE_SIMD128_CPP)
 
 #include "opencv2/core/hal/intrin_msa.hpp"
 
-#elif CV_WASM_SIMD
+#elif CV_WASM_SIMD && !defined(CV_FORCE_SIMD128_CPP)
 #include "opencv2/core/hal/intrin_wasm.hpp"
 
 #else
@@ -455,10 +457,6 @@ namespace CV__SIMD_NAMESPACE {
 using namespace CV__SIMD_NAMESPACE;
 #endif
 
-#ifndef CV_DOXYGEN
-CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
-#endif
-
 #ifndef CV_SIMD_64F
 #define CV_SIMD_64F 0
 #endif
@@ -467,9 +465,14 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #define CV_SIMD_FP16 0  //!< Defined to 1 on native support of operations with float16x8_t / float16x16_t (SIMD256) types
 #endif
 
-
 #ifndef CV_SIMD
 #define CV_SIMD 0
+#endif
+
+#include "simd_utils.impl.hpp"
+
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
 
 } // cv::

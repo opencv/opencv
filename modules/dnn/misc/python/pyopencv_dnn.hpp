@@ -4,9 +4,9 @@ typedef std::vector<dnn::MatShape> vector_MatShape;
 typedef std::vector<std::vector<dnn::MatShape> > vector_vector_MatShape;
 
 template<>
-bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
+bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if (!o || o == Py_None)
         return true; //Current state will be used
     else if (PyLong_Check(o))
@@ -34,12 +34,6 @@ bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
         }
     }
     return false;
-}
-
-template<>
-bool pyopencv_to(PyObject *o, std::vector<Mat> &blobs, const char *name) //required for Layer::blobs RW
-{
-  return pyopencvVecConverter<Mat>::to(o, blobs, ArgInfo(name, false));
 }
 
 template<typename T>
