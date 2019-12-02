@@ -46,7 +46,15 @@
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
+#include <ngraph/op/experimental/layers/roi_pooling.hpp>
+#include <ngraph/op/experimental/layers/psroi_pooling.hpp>
+#endif
+
 #include "../op_vkcom.hpp"
+
 #include <float.h>
 #include <algorithm>
 #include <numeric>
@@ -172,7 +180,7 @@ public:
         {
             return type == MAX || type == AVE;
         }
-        else if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
             if (computeMaxIdx)
                 return false;
@@ -192,6 +200,9 @@ public:
 #else
             return false;
 #endif
+        }
+        else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+            return type != STOCHASTIC;
         }
         else
         {
@@ -480,6 +491,50 @@ public:
         return Ptr<BackendNode>();
     }
 #endif  // HAVE_INF_ENGINE
+
+
+
+#ifdef HAVE_DNN_NGRAPH
+virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                    const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+{
+    CV_Assert_N((inputs.size() == 1 && (type == MAX || type == AVE)) || inputs.size() == 2, nodes.size() == inputs.size());
+    auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+    ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
+    if (!padMode.empty())
+        pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
+
+    auto rounding_type = ceilMode ? ngraph::op::RoundingType::CEIL : ngraph::op::RoundingType::FLOOR;
+    if (type == AVE) {
+        auto exclude_pad = !avePoolPaddedArea;
+        auto ave_pool = std::make_shared<ngraph::op::v1::AvgPool>(ieInpNode, ngraph::Strides(strides),
+                        ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                        exclude_pad, rounding_type, pad_type);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(ave_pool));
+    }
+    else if (type == MAX) {
+        auto max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
+                        ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                        rounding_type, pad_type);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(max_pool));
+    }
+    else if (type == ROI) {
+        auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto roi = std::make_shared<ngraph::op::ROIPooling>(ieInpNode, coords,
+                   ngraph::Shape{(size_t)pooledSize.height, (size_t)pooledSize.width}, spatialScale, "max");
+        return Ptr<BackendNode>(new InfEngineNgraphNode(roi));
+    }
+    else if (type == PSROI) {
+        auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto psroi = std::make_shared<ngraph::op::PSROIPooling>(ieInpNode, coords,
+                     (size_t)psRoiOutChannels, (size_t)pooledSize.width, spatialScale, 1, 1, "average");
+        return Ptr<BackendNode>(new InfEngineNgraphNode(psroi));
+    }
+    else
+        CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+}
+#endif  // HAVE_DNN_NGRAPH
 
 
     class PoolingInvoker : public ParallelLoopBody

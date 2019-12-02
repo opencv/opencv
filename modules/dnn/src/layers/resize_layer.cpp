@@ -10,6 +10,11 @@
 #include "../op_inf_engine.hpp"
 #include <opencv2/imgproc.hpp>
 
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
+#include <ngraph/op/experimental/layers/interpolate.hpp>
+#endif
+
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/resize.hpp"
 using namespace cv::dnn::cuda4dnn;
@@ -61,7 +66,8 @@ public:
             return interpolation == "nearest" || interpolation == "bilinear";
 
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
+            backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             return (interpolation == "nearest" && scaleWidth == scaleHeight) ||
                    (interpolation == "bilinear");
@@ -221,6 +227,35 @@ public:
         return Ptr<BackendNode>();
     }
 
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        ngraph::op::InterpolateAttrs attrs;
+        attrs.pads_begin.push_back(0);
+        attrs.pads_end.push_back(0);
+        attrs.axes = ngraph::AxisSet{2, 3};
+        attrs.align_corners = false;
+
+        if (interpolation == "nearest") {
+            attrs.mode = "nearest";
+            attrs.antialias = false;
+        } else if (interpolation == "bilinear") {
+            attrs.mode = "linear";
+        } else {
+            CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
+        }
+
+        std::vector<int64_t> shape = {outHeight, outWidth};
+        auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());
+        auto interp = std::make_shared<ngraph::op::Interpolate>(ieInpNode, out_shape, attrs);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(interp));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 protected:
     int outWidth, outHeight, zoomFactorWidth, zoomFactorHeight;
     String interpolation;
@@ -254,8 +289,12 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019
+            || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE ||
                backendId == DNN_BACKEND_CUDA;
     }
 
@@ -291,6 +330,23 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        ngraph::op::InterpolateAttrs attrs;
+        attrs.pads_begin.push_back(0);
+        attrs.pads_end.push_back(0);
+        attrs.axes = ngraph::AxisSet{2, 3};
+        attrs.mode = "linear";
+        std::vector<int64_t> shape = {outHeight, outWidth};
+        auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());
+        auto interp = std::make_shared<ngraph::op::Interpolate>(ieInpNode, out_shape, attrs);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(interp));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 };
 

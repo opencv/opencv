@@ -45,7 +45,9 @@
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
 
@@ -165,6 +167,15 @@ public:
     }
 #endif  // HAVE_INF_ENGINE
 
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto node = func.initNgraphAPI(ieInpNode);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(node));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
@@ -276,8 +287,10 @@ struct ReLUFunctor
     bool supportBackend(int backendId, int)
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
             return slope >= 0 || !INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2019R1);
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
@@ -389,6 +402,17 @@ struct ReLUFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        if (slope) {
+            auto param = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &slope);
+            return std::make_shared<ngraph::op::PRelu>(node, param);
+        }
+        return std::make_shared<ngraph::op::Relu>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
     {
@@ -420,7 +444,7 @@ struct ReLU6Functor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -509,6 +533,13 @@ struct ReLU6Functor
     }
 #endif  // HAVE_INF_ENGINE
 
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        return std::make_shared<ngraph::op::Clamp>(node, minValue, maxValue);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
     {
@@ -533,7 +564,7 @@ struct TanHFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -597,6 +628,13 @@ struct TanHFunctor
         return InferenceEngine::Builder::TanHLayer("");
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        return std::make_shared<ngraph::op::Tanh>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
@@ -685,6 +723,13 @@ struct SwishFunctor
         CV_Error(Error::StsNotImplemented, "");
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
@@ -775,6 +820,13 @@ struct MishFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
     {
@@ -800,7 +852,7 @@ struct SigmoidFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||  backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -865,6 +917,13 @@ struct SigmoidFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        return std::make_shared<ngraph::op::Sigmoid>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
     {
@@ -891,7 +950,7 @@ struct ELUFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||  backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -956,6 +1015,13 @@ struct ELUFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        return std::make_shared<ngraph::op::Elu>(node, 1.0);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
     {
@@ -978,7 +1044,7 @@ struct AbsValFunctor
     bool supportBackend(int backendId, int)
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return !INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2019R1);
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
@@ -1047,6 +1113,16 @@ struct AbsValFunctor
         return InferenceEngine::Builder::ReLULayer("").setNegativeSlope(-0.999999f);
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        float coeff = -0.999999f;
+        // float coeff = preferableTarget == DNN_TARGET_MYRIAD ? -0.999f : -0.999999f;
+        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeff);
+        return std::make_shared<ngraph::op::PRelu>(node, slope);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
@@ -1138,6 +1214,13 @@ struct BNLLFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
     {
@@ -1166,8 +1249,10 @@ struct PowerFunctor
 
     bool supportBackend(int backendId, int targetId)
     {
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
             return (targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16) || power == 1.0 || power == 0.5;
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
         else
             return backendId == DNN_BACKEND_OPENCV ||
                    backendId == DNN_BACKEND_CUDA ||
@@ -1265,6 +1350,22 @@ struct PowerFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                                 ngraph::Shape{1}, &scale);
+        auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                                 ngraph::Shape{1}, &shift);
+        auto power_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                                 ngraph::Shape{1}, &power);
+
+        auto mul = std::make_shared<ngraph::op::v1::Multiply>(scale_node, node, ngraph::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(mul, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
+        return std::make_shared<ngraph::op::v1::Power>(scale_shift, power_node, ngraph::op::AutoBroadcastType::NUMPY);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()
     {
@@ -1320,7 +1421,7 @@ struct ChannelsPReLUFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -1419,6 +1520,15 @@ struct ChannelsPReLUFunctor
         return l;
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        const size_t numChannels = scale.total();
+        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numChannels}, scale.data);
+        return std::make_shared<ngraph::op::PRelu>(node, slope);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 #ifdef HAVE_VULKAN
     std::shared_ptr<vkcom::OpBase> initVkCom()

@@ -80,6 +80,7 @@ endif()
 
 set(include_dirs ${fw_inc})
 set(sources_options "")
+
 set(libs libprotobuf ${LAPACK_LIBRARIES})
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
@@ -108,10 +109,20 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-inconsistent-missing-override")  # Clang
 endif()
+
+set(dnn_runtime_libs "")
+if(INF_ENGINE_TARGET)
+  list(APPEND dnn_runtime_libs ${INF_ENGINE_TARGET})
+endif()
+if(HAVE_NGRAPH)
+  add_definitions(-DHAVE_DNN_NGRAPH)
+  list(APPEND dnn_runtime_libs ngraph::ngraph)
+endif()
+
 ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
-ocv_create_module(${libs} ${INF_ENGINE_TARGET})
+ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
-ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
+ocv_add_accuracy_tests(${dnn_runtime_libs})
 
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")

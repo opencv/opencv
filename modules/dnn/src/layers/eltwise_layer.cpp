@@ -45,6 +45,7 @@
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -109,8 +110,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && op != DIV) ||  // TODO: not implemented, see PR #15811
                (backendId == DNN_BACKEND_HALIDE && op != DIV) ||  // TODO: not implemented, see PR #15811
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && !variableChannels &&
-                (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()));
+               ((((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()))
+                || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && !variableChannels));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -549,6 +550,36 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
 #endif  // HAVE_INF_ENGINE
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto curr_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        if (!coeffs.empty()) {
+            auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0]);
+            curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+        }
+
+        for (size_t i = 1; i < nodes.size(); i++)
+        {
+            auto next_node = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+            if (!coeffs.empty()) {
+                auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[i]);
+                next_node = std::make_shared<ngraph::op::v1::Multiply>(next_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+            }
+            switch (op) {
+                case SUM:  curr_node = std::make_shared<ngraph::op::v1::Add>(curr_node, next_node); break;
+                case PROD: curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, next_node); break;
+                case DIV:  curr_node = std::make_shared<ngraph::op::v1::Divide>(curr_node, next_node); break;
+                case MAX:  curr_node = std::make_shared<ngraph::op::v1::Maximum>(curr_node, next_node); break;
+                default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+            }
+        }
+        return Ptr<BackendNode>(new InfEngineNgraphNode(curr_node));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
