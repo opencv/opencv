@@ -270,6 +270,11 @@ NumpyAllocator g_numpyAllocator;
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
+static bool isBool(PyObject* obj) CV_NOEXCEPT
+{
+    return PyArray_IsScalar(obj, Bool) || PyBool_Check(obj);
+}
+
 // special case, when the converter needs full ArgInfo structure
 static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 {
@@ -581,15 +586,21 @@ template<>
 bool pyopencv_to(PyObject* obj, bool& value, const ArgInfo& info)
 {
     CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj)
     {
         return true;
     }
-    if (PyArray_IsScalar(obj, Bool) || PyArray_IsIntegerScalar(obj) || PyBool_Check(obj))
+    if (obj == Py_None)
+    {
+        failmsg("must be bool, not NoneType");
+        return false;
+    }
+    if (isBool(obj) || PyArray_IsIntegerScalar(obj))
     {
         npy_bool npy_value = NPY_FALSE;
         const int ret_code = PyArray_BoolConverter(obj, &npy_value);
-        if (ret_code >= 0) {
+        if (ret_code >= 0)
+        {
             value = (npy_value == NPY_TRUE);
             return true;
         }
@@ -608,15 +619,25 @@ template<>
 bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo& info)
 {
     CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj)
     {
         return true;
+    }
+    if (obj == Py_None)
+    {
+        failmsg("must be integer, not NoneType");
+        return false;
+    }
+    if (isBool(obj))
+    {
+        failmsg("must be integer type, not bool");
+        return false;
     }
     if (PyArray_IsIntegerScalar(obj))
     {
         if (PyArray_IsPythonNumber(obj))
         {
-            value = static_cast<size_t>(PyLong_AsUnsignedLong(obj));
+            value = PyLong_AsUnsignedLongLong(obj);
         }
         else
         {
@@ -641,20 +662,21 @@ template<>
 bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info)
 {
     CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj)
     {
         return true;
     }
-    if (PyBool_Check(obj))
+    if (obj == Py_None)
     {
-        const int res = PyObject_IsTrue(obj);
-        if (res < 0) {
-            failmsg("Can't convert bool to integer");
-            return false;
-        }
-        value = res;
+        failmsg("must be integer, not NoneType");
+        return false;
     }
-    else if (PyArray_IsIntegerScalar(obj))
+    if (isBool(obj))
+    {
+        failmsg("must be integer, not bool");
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
     {
         value = PyArray_PyIntAsInt(obj);
     }
@@ -693,9 +715,19 @@ template<>
 bool pyopencv_to(PyObject* obj, double& value, const ArgInfo& info)
 {
     CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj)
     {
         return true;
+    }
+    if (obj == Py_None)
+    {
+        failmsg("must be double, not NoneType");
+        return false;
+    }
+    if (isBool(obj))
+    {
+        failmsg("must be double, not bool");
+        return false;
     }
     if (PyArray_IsPythonNumber(obj))
     {
@@ -708,14 +740,17 @@ bool pyopencv_to(PyObject* obj, double& value, const ArgInfo& info)
             value = PyFloat_AsDouble(obj);
         }
     }
-    else if(PyArray_CheckScalar(obj))
+    else if (PyArray_CheckScalar(obj))
     {
         PyArray_Descr* descriptor = PyArray_DescrFromScalar(obj);
-        if (descriptor->type_num == NPY_FLOAT) {
+        if (descriptor->type_num == NPY_FLOAT)
+        {
             float res = 0.f;
             PyArray_ScalarAsCtype(obj, &res);
             value = res;
-        } else if(descriptor->type_num == NPY_DOUBLE) {
+        }
+        else if (descriptor->type_num == NPY_DOUBLE)
+        {
             PyArray_ScalarAsCtype(obj, &value);
         }
     }
@@ -737,9 +772,19 @@ template<>
 bool pyopencv_to(PyObject* obj, float& value, const ArgInfo& info)
 {
     CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj)
     {
         return true;
+    }
+    if (obj == Py_None)
+    {
+        failmsg("must be float, not NoneType");
+        return false;
+    }
+    if (isBool(obj))
+    {
+        failmsg("must be float, not bool");
+        return false;
     }
     if (PyArray_IsPythonNumber(obj))
     {
@@ -754,12 +799,15 @@ bool pyopencv_to(PyObject* obj, float& value, const ArgInfo& info)
             value = static_cast<float>(res);
         }
     }
-    else if(PyArray_CheckScalar(obj))
+    else if (PyArray_CheckScalar(obj))
     {
         PyArray_Descr* descriptor = PyArray_DescrFromScalar(obj);
-        if (descriptor->type_num == NPY_FLOAT) {
+        if (descriptor->type_num == NPY_FLOAT)
+        {
             PyArray_ScalarAsCtype(obj, &value);
-        } else if(descriptor->type_num == NPY_DOUBLE) {
+        }
+        else if (descriptor->type_num == NPY_DOUBLE)
+        {
             double res = 0.;
             PyArray_ScalarAsCtype(obj, &res);
             value = static_cast<float>(res);
