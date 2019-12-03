@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#if defined _WIN32 && defined(_M_ARM)
+#if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64))
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
