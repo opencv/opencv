@@ -17,7 +17,7 @@
     @{
       @defgroup gapi_meta_args G-API Metadata Descriptors
     @}
-    @defgroup gapi_std_backends G-API Standard backends
+    @defgroup gapi_std_backends G-API Standard Backends
     @defgroup gapi_compile_args G-API Graph Compilation Arguments
 @}
  */

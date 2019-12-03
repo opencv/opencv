@@ -39,6 +39,8 @@ namespace detail
 /**
  * \addtogroup gapi_main_classes
  * @{
+ *
+ * @brief G-API classes for constructed and compiled graphs.
  */
 /**
  * @brief GComputation class represents a captured computation

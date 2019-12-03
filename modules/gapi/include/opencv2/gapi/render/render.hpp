@@ -18,6 +18,56 @@
 #include <opencv2/gapi/own/exports.hpp>
 #include <opencv2/gapi/own/scalar.hpp>
 
+
+/** \defgroup gapi_draw G-API Drawing and composition functionality
+ *  @{
+ *
+ *  @brief Functions for in-graph drawing.
+ *
+ *  @note This is a Work in Progress functionality and APIs may
+ *  change in the future releases.
+ *
+ *  G-API can do some in-graph drawing with a generic operations and a
+ *  set of [rendering primitives](@ref gapi_draw_prims).
+ *  In contrast with traditional OpenCV, in G-API user need to form a
+ *  *rendering list* of primitives to draw. This list can be built
+ *  manually or generated within a graph. This list is passed to
+ *  [special operations or functions](@ref gapi_draw_api) where all
+ *  primitives are interpreted and applied to the image.
+ *
+ *  For example, in a complex pipeline a list of detected objects
+ *  can be translated in-graph to a list of cv::gapi::wip::draw::Rect
+ *  primitives to highlight those with bounding boxes, or a list of
+ *  detected faces can be translated in-graph to a list of
+ *  cv::gapi::wip::draw::Mosaic primitives to hide sensitive content
+ *  or protect privacy.
+ *
+ *  Like any other operations, rendering in G-API can be reimplemented
+ *  by different backends. Currently only an OpenCV-based backend is
+ *  available.
+ *
+ *  In addition to the graph-level operations, there are also regular
+ *  (immediate) OpenCV-like functions are available -- see
+ *  cv::gapi::wip::draw::render(). These functions are just wrappers
+ *  over regular G-API and build the rendering graphs on the fly, so
+ *  take compilation arguments as parameters.
+ *
+ *  Currently this API is more machine-oriented than human-oriented.
+ *  The main purpose is to translate a set of domain-specific objects
+ *  to a list of primitives to draw. For example, in order to generate
+ *  a picture like this:
+ *
+ *  ![](modules/gapi/doc/pics/render_example.png)
+ *
+ *  Rendering list needs to be generated as follows:
+ *
+ *  @include modules/gapi/samples/draw_example.cpp
+ *
+ *  @defgroup gapi_draw_prims Drawing primitives
+ *  @defgroup gapi_draw_api Drawing operations and functions
+ *  @}
+ */
+
 namespace cv
 {
 namespace gapi
@@ -28,17 +78,21 @@ namespace draw
 {
 
 /**
- * A structure allows using freetype library for text rendering
+ * @brief This structure enables freetype library for text rendering
  */
 struct use_freetype
 {
     /*@{*/
-    std::string path; //!< The path to font file (.ttf)
+    std::string path; //!< The path to the font file (.ttf)
     /*@{*/
 };
 
+//! @addtogroup gapi_draw_prims
+//! @{
 /**
- * A structure to represent parameters for drawing a text string.
+ * @brief This structure represents a text string to draw.
+ *
+ * Parameters match cv::putText().
  */
 struct Text
 {
@@ -55,7 +109,9 @@ struct Text
 };
 
 /**
- * A structure to represent parameters for drawing a rectangle
+ * @brief This structure represents a rectangle to draw.
+ *
+ * Parameters match cv::rectangle().
  */
 struct Rect
 {
@@ -67,7 +123,9 @@ struct Rect
 };
 
 /**
- * A structure to represent parameters for drawing a circle
+ * @brief This structure represents a circle to draw.
+ *
+ * Parameters match cv::circle().
  */
 struct Circle
 {
@@ -80,7 +138,9 @@ struct Circle
 };
 
 /**
- * A structure to represent parameters for drawing a line
+ * @brief This structure represents a line to draw.
+ *
+ * Parameters match cv::line().
  */
 struct Line
 {
@@ -93,17 +153,21 @@ struct Line
 };
 
 /**
- * A structure to represent parameters for drawing a mosaic
+ * @brief This structure represents a mosaicing operation.
+ *
+ * Mosaicing is a very basic method to obfuscate regions in the image.
  */
 struct Mosaic
 {
     cv::Rect   mos;    //!< Coordinates of the mosaic
-    int        cellSz; //!< Cell size (same for X, Y). Note: mos size must be multiple of cell size
+    int        cellSz; //!< Cell size (same for X, Y). Note: mosaic size must be a multiple of cell size
     int        decim;  //!< Decimation (0 stands for no decimation)
 };
 
 /**
- * A structure to represent parameters for drawing an image
+ * @brief This structure represents an image to draw.
+ *
+ * Image is blended on a frame using the specified mask.
  */
 struct Image
 {
@@ -113,7 +177,7 @@ struct Image
 };
 
 /**
- * A structure to represent parameters for drawing a polygon
+ * @brief This structure represents a polygon to draw.
  */
 struct Poly
 {
@@ -135,9 +199,14 @@ using Prim  = util::variant
     >;
 
 using Prims     = std::vector<Prim>;
+//! @} gapi_draw_prims
+
 using GMat2     = std::tuple<cv::GMat,cv::GMat>;
 using GMatDesc2 = std::tuple<cv::GMatDesc,cv::GMatDesc>;
 
+
+//! @addtogroup gapi_draw_api
+//! @{
 /** @brief The function renders on the input image passed drawing primitivies
 
 @param bgr input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
@@ -197,6 +266,7 @@ uv image must be 8-bit unsigned planar 2-channel image @ref CV_8UC2
 GAPI_EXPORTS GMat2 renderNV12(const GMat& y,
                               const GMat& uv,
                               const GArray<Prim>& prims);
+//! @} gapi_draw_api
 
 } // namespace draw
 } // namespace wip

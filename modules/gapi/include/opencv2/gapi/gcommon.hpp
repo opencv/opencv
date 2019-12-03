@@ -62,8 +62,8 @@ namespace detail {
 /** \addtogroup gapi_compile_args
  * @{
  *
- * @brief Compilation arguments: a set of data structures which can be
- * passed to control compilation process
+ * @brief Compilation arguments: data structures controlling the
+ * compilation process
  *
  * G-API comes with a number of graph compilation options which can be
  * passed to cv::GComputation::apply() or
