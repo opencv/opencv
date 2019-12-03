@@ -8,6 +8,8 @@
 #define OPENCV_GAPI_GRENDEROCV_HPP
 
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
+#include "api/render_priv.hpp"
+#include "api/ft_render.hpp"
 
 namespace cv
 {
@@ -33,10 +35,8 @@ template<class Impl, class K>
 class GRenderKernelImpl: public cv::detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
                          public cv::detail::KernelTag
 {
-    // TODO Use this mechanism for adding new parameter to run method
-    // using InArgs = typename add_type_to_tuple<IBitMaskCreator, typename K::InArgs>::type;
-    using InArgs = typename K::InArgs;
-    using P = detail::OCVCallHelper<Impl, InArgs, typename K::OutArgs>;
+    using InArgs = typename add_type_to_tuple<cv::gapi::wip::draw::FTTextRender*, typename K::InArgs>::type;
+    using P      = detail::OCVCallHelper<Impl, InArgs, typename K::OutArgs>;
 
 public:
     using API = K;
