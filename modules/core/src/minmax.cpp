@@ -140,8 +140,7 @@ CV_ALWAYS_INLINE v_uint64x2 v_select(const v_uint64x2& mask, const v_uint64x2& a
 }
 #endif
 
-#define MINMAXIDX_REDUCE(suffix, suffix2, maxLimit, IR, valMin, valMax, idxMin, \
-                         idxMax, none, minVal, maxVal, minIdx, maxIdx, delta) \
+#define MINMAXIDX_REDUCE(suffix, suffix2, maxLimit, IR) \
 template<typename T, typename VT, typename IT> CV_ALWAYS_INLINE void \
 minMaxIdx_reduce_##suffix( VT &valMin, VT &valMax, IT &idxMin, IT &idxMax, IT &none, \
                   T &minVal, T &maxVal, size_t &minIdx, size_t &maxIdx, \
@@ -161,14 +160,14 @@ minMaxIdx_reduce_##suffix( VT &valMin, VT &valMax, IT &idxMin, IT &idxMax, IT &n
     } \
 }
 
-MINMAXIDX_REDUCE(u8, u8, UCHAR_MAX, uchar, valMin, valMax, idxMin, idxMax, none, minVal, maxVal, minIdx, maxIdx, delta)
-MINMAXIDX_REDUCE(s8, u8, UCHAR_MAX, uchar, valMin, valMax, idxMin, idxMax, none, minVal, maxVal, minIdx, maxIdx, delta)
-MINMAXIDX_REDUCE(u16, u16, USHRT_MAX, ushort, valMin, valMax, idxMin, idxMax, none, minVal, maxVal, minIdx, maxIdx, delta)
-MINMAXIDX_REDUCE(s16, u16, USHRT_MAX, ushort, valMin, valMax, idxMin, idxMax, none, minVal, maxVal, minIdx, maxIdx, delta)
-MINMAXIDX_REDUCE(s32, u32, UINT_MAX, uint, valMin, valMax, idxMin, idxMax, none, minVal, maxVal, minIdx, maxIdx, delta)
-MINMAXIDX_REDUCE(f32, u32, (1 << 23) - 1, float, valMin, valMax, idxMin, idxMax, none, minVal, maxVal, minIdx, maxIdx, delta)
+MINMAXIDX_REDUCE(u8, u8, UCHAR_MAX, uchar)
+MINMAXIDX_REDUCE(s8, u8, UCHAR_MAX, uchar)
+MINMAXIDX_REDUCE(u16, u16, USHRT_MAX, ushort)
+MINMAXIDX_REDUCE(s16, u16, USHRT_MAX, ushort)
+MINMAXIDX_REDUCE(s32, u32, UINT_MAX, uint)
+MINMAXIDX_REDUCE(f32, u32, (1 << 23) - 1, float)
 #if CV_SIMD128_64F
-MINMAXIDX_REDUCE(f64, u64, UINT_MAX, double, valMin, valMax, idxMin, idxMax, none, minVal, maxVal, minIdx, maxIdx, delta)
+MINMAXIDX_REDUCE(f64, u64, UINT_MAX, double)
 #endif
 
 template<typename T, typename WT> CV_ALWAYS_INLINE void
