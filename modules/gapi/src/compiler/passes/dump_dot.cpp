@@ -151,6 +151,7 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
         }
     }
 
+#if 0
     // And finally dump a GIslandModel (not connected with GModel directly,
     // but projected in the same .dot file side-by-side)
     auto pIG = gr.metadata().get<IslandModel>().model;
@@ -211,6 +212,7 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
             break;
         }
     }
+#endif
 
     os << "}" << std::endl;
 }

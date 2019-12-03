@@ -86,6 +86,7 @@ set(gapi_srcs
     src/backends/cpu/gcpukernel.cpp
     src/backends/cpu/gcpuimgproc.cpp
     src/backends/cpu/gcpucore.cpp
+    src/backends/cpu/serialization.cpp
 
     # Fluid Backend (also built-in, FIXME:move away)
     src/backends/fluid/gfluidbuffer.cpp

@@ -247,8 +247,8 @@ namespace GModel
     GAPI_EXPORTS void redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
     GAPI_EXPORTS void redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
 
-    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedInputs (ConstGraph &g, ade::NodeHandle nh);
-    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedOutputs(ConstGraph &g, ade::NodeHandle nh);
+    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedInputs (const ConstGraph &g, const ade::NodeHandle nh);
+    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedOutputs(const ConstGraph &g, const ade::NodeHandle nh);
 
     // Returns input meta array for given op node
     // Array is sparse, as metadata for non-gapi input objects is empty

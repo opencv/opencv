@@ -54,7 +54,6 @@ namespace detail
     template<> struct GTypeTraits<cv::gimpl::RcDesc>
     {
         static constexpr const ArgKind kind = ArgKind::GOBJREF;
-        static constexpr const OpaqueKind opaque_kind = OpaqueKind::OPAQUE_UNSUPPORTED;
     };
 }
 
