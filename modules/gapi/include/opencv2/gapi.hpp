@@ -13,7 +13,7 @@
 /** \defgroup gapi G-API framework
 @{
     @defgroup gapi_main_classes G-API Main Classes
-    @defgroup gapi_data_objects G-API Data Objects
+    @defgroup gapi_data_objects G-API Data Types
     @{
       @defgroup gapi_meta_args G-API Metadata Descriptors
     @}
