@@ -473,7 +473,7 @@ namespace TypesTest
     };
 } // namespace TypesTest
 
-TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoArra)
+TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoArray)
 {
     cv::GMat in_m;
     cv::GArray<int> in_v;
