@@ -7,8 +7,11 @@
 #ifndef OPENCV_GAPI_STREAMING_SOURCE_HPP
 #define OPENCV_GAPI_STREAMING_SOURCE_HPP
 
-#include <memory> // shared_ptr
-#include <type_traits> // is_base_of
+#include <memory>                      // shared_ptr
+#include <type_traits>                 // is_base_of
+
+#include <opencv2/gapi/gmetaarg.hpp>   // GMetaArg
+
 
 namespace cv {
 namespace gapi {
@@ -38,6 +41,7 @@ public:
     using Ptr = std::shared_ptr<IStreamSource>;
     Ptr ptr() { return shared_from_this(); }
     virtual bool pull(Data &data) = 0;
+    virtual GMetaArg descr_of() const = 0;
     virtual ~IStreamSource() = default;
 };
 

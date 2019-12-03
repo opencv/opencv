@@ -410,11 +410,12 @@ public:
      *
      * @param in_metas vector of input metadata configuration. Grab
      * metadata from real data objects (like cv::Mat or cv::Scalar)
-     * using cv::descr_of(), or create it on your own.  @param args
-     * compilation arguments for this compilation process. Compilation
-     * arguments directly affect what kind of executable object would
-     * be produced, e.g. which kernels (and thus, devices) would be
-     * used to execute computation.
+     * using cv::descr_of(), or create it on your own.
+     *
+     * @param args compilation arguments for this compilation
+     * process. Compilation arguments directly affect what kind of
+     * executable object would be produced, e.g. which kernels (and
+     * thus, devices) would be used to execute computation.
      *
      * @return GStreamingCompiled, a streaming-oriented executable
      * computation compiled specifically for the given input
@@ -423,6 +424,27 @@ public:
      * @sa @ref gapi_compile_args
      */
     GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
+
+    /**
+     * @brief Compile the computation for streaming mode.
+     *
+     * This method triggers compilation process and produces a new
+     * GStreamingCompiled object which then can process video stream
+     * data in any format. Underlying mechanisms will be adjusted to
+     * every new input video stream automatically, but please note that
+     * _not all_ existing backends support this (see reshape()).
+     *
+     * @param args compilation arguments for this compilation
+     * process. Compilation arguments directly affect what kind of
+     * executable object would be produced, e.g. which kernels (and
+     * thus, devices) would be used to execute computation.
+     *
+     * @return GStreamingCompiled, a streaming-oriented executable
+     * computation compiled for any input image format.
+     *
+     * @sa @ref gapi_compile_args
+     */
+    GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
 
     // 2. Direct metadata version
     /**
