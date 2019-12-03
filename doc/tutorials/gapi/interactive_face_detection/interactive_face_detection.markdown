@@ -191,6 +191,14 @@ cv::GStreamingCompiled -- in constract to a traditional callable
 cv::GCompiled, these objects are closer to media players in their
 semantics.
 
+@note There is no need to pass metadata arguments describing the
+format of the input video stream in
+cv::GComputation::compileStreaming() -- G-API figures automatically
+what are the formats of the input vector and adjusts the pipeline to
+these formats on-the-fly. User still can pass metadata there as with
+regular cv::GComputation::compile() in order to fix the pipeline to
+the specific input format.
+
 # Running the pipeline  {#gapi_ifd_running}
 
 Pipelining optimization is based on processing multiple input video

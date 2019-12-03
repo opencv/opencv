@@ -308,13 +308,11 @@ int main(int argc, char *argv[])
     auto kernels = cv::gapi::kernels<custom::OCVPostProc>();
     auto networks = cv::gapi::networks(det_net, age_net, emo_net);
 
-    // Compile our pipeline for a specific input image format (this
-    // can be relaxed in the future) and pass our kernels & networks
-    // as parameters.  This is the place where G-API learns which
+    // Compile our pipeline and pass our kernels & networks as
+    // parameters.  This is the place where G-API learns which
     // networks & kernels we're actually operating with (the graph
     // description itself known nothing about that).
-    auto cc = pp.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size(1280,720)},
-                                  cv::compile_args(kernels, networks));
+    auto cc = pp.compileStreaming(cv::compile_args(kernels, networks));
     //! [Compile]
 
     std::cout << "Reading " << input << std::endl;
@@ -369,7 +367,7 @@ int main(int argc, char *argv[])
         std::cout << "Processed " << frames << " frames in " << avg.elapsed() << std::endl;
     } else { // (serial flag)
         Avg avg;
-        avg.start();
+
         //! [Run_Serial]
         cv::VideoCapture cap(input);
         cv::Mat in_frame, frame;            // The captured frame itself
@@ -379,15 +377,20 @@ int main(int argc, char *argv[])
         std::vector<cv::Mat> out_emotions;  // Array of classified emotions (one blob per face)
         std::size_t frames = 0u;            // Frame counter (not produced by the graph)
 
-        auto cc2 = pp.compile(cv::GMatDesc{CV_8U,3,cv::Size(1280,720)},
-                              cv::compile_args(kernels, networks));
-
         while (cap.read(in_frame)) {
-            cc2(cv::gin(in_frame),
-                cv::gout(frame, faces, out_ages, out_genders, out_emotions));
-            frames++;
+            pp.apply(cv::gin(in_frame),
+                     cv::gout(frame, faces, out_ages, out_genders, out_emotions),
+                     cv::compile_args(kernels, networks));
             labels::DrawResults(frame, faces, out_ages, out_genders, out_emotions);
-            labels::DrawFPS(frame, frames, avg.fps(frames));
+            frames++;
+            if (frames == 1u) {
+                // Start timer only after 1st frame processed -- compilation
+                // happens on-the-fly here
+                avg.start();
+            } else {
+                // Measurfe & draw FPS for all other frames
+                labels::DrawFPS(frame, frames, avg.fps(frames-1));
+            }
             if (!no_show) {
                 cv::imshow("Out", frame);
                 if (cv::waitKey(1) >= 0) break;
