@@ -1041,11 +1041,11 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
             Mat err = reprojectionError.getMat();
             if (type == CV_32F)
             {
-                err.at<float>(0,static_cast<int>(i)) = static_cast<float>(rmse);
+                err.at<float>(static_cast<int>(i)) = static_cast<float>(rmse);
             }
             else
             {
-                err.at<double>(0,static_cast<int>(i)) = rmse;
+                err.at<double>(static_cast<int>(i)) = rmse;
             }
         }
     }
