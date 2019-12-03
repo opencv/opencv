@@ -96,6 +96,7 @@ public:
         in_mat2 = cv::Mat(sz_in, type);
 
         sc = initScalarRandU(100);
+
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
         cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
 

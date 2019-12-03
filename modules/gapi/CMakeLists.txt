@@ -59,6 +59,7 @@ set(gapi_srcs
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
+    src/api/ft_render.cpp
 
     # Compiler part
     src/compiler/gmodel.cpp
@@ -141,6 +142,13 @@ ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+endif()
+
+if (HAVE_FREETYPE)
+  ocv_target_compile_definitions(opencv_gapi      PRIVATE -DHAVE_FREETYPE)
+  ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_FREETYPE)
+  ocv_target_link_libraries(opencv_gapi LINK_PRIVATE ${FREETYPE_LIBRARIES})
+  ocv_target_include_directories(opencv_gapi PRIVATE ${FREETYPE_INCLUDE_DIRS})
 endif()
 
 if(HAVE_PLAIDML)
