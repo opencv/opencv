@@ -26,8 +26,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ double exp(double val) { return ::exp(val); }
 
     template <class T> __device__ T expm1(T val);
-    template <> inline __device__ __half expm1(__half val) { return hexp(val) + __half(1); }
-    template <> inline __device__ __half2 expm1(__half2 val) { return h2exp(val) + __half2(1, 1); }
+    template <> inline __device__ __half expm1(__half val) { return hexp(val) - __half(1); }
+    template <> inline __device__ __half2 expm1(__half2 val) { return h2exp(val) - __half2(1, 1); }
     template <> inline __device__ float expm1(float val) { return expm1f(val); }
     template <> inline __device__ double expm1(double val) { return ::expm1(val); }
 
@@ -50,8 +50,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ double min(double x, double y) { return fmin(x, y); }
 
     template <class T> __device__ T log1p(T val);
-    template <> inline __device__ __half log1p(__half val) { return hlog(val) + __half(1); }
-    template <> inline __device__ __half2 log1p(__half2 val) { return h2log(val) + __half2(1, 1); }
+    template <> inline __device__ __half log1p(__half val) { return hlog(__half(1) + val); }
+    template <> inline __device__ __half2 log1p(__half2 val) { return h2log(__half2(1, 1) + val); }
     template <> inline __device__ float log1p(float val) { return log1pf(val); }
 
     template <class T> __device__ T log1pexp(T val);
