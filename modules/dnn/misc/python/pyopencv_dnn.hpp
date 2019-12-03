@@ -159,6 +159,11 @@ public:
             CV_Error(Error::StsNotImplemented, "Failed to call \"forward\" method");
 
         std::vector<Mat> pyOutputs;
+        CV_Assert(PyList_Check(res));
+        for (int i = 0; i < PyList_Size(res); i++) {
+            PyObject* elem = PyList_GetItem(res, i);
+            CV_Assert_N(PyArray_Check(elem), PyArray_ISCONTIGUOUS((PyArrayObject*)elem));
+        }
         CV_Assert(pyopencv_to(res, pyOutputs, ArgInfo("", 0)));
 
         CV_Assert(pyOutputs.size() == outputs.size());

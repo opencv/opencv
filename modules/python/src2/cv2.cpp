@@ -392,7 +392,8 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             oarr = (PyArrayObject*) o;
         }
         else {
-            o = PyArray_FromArray(oarr,  PyArray_DescrFromType(typenum), NPY_ARRAY_ALIGNED);
+            oarr = PyArray_GETCONTIGUOUS(oarr);
+            o = (PyObject*) oarr;
         }
 
         _strides = PyArray_STRIDES(oarr);
