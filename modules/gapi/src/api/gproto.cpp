@@ -110,6 +110,9 @@ cv::GMetaArg cv::descr_of(const cv::GRunArg &arg)
         case GRunArg::index_of<cv::detail::VectorRef>():
             return cv::GMetaArg(util::get<cv::detail::VectorRef>(arg).descr_of());
 
+        case GRunArg::index_of<cv::gapi::wip::IStreamSource::Ptr>():
+            return cv::util::get<cv::gapi::wip::IStreamSource::Ptr>(arg)->descr_of();
+
         default: util::throw_error(std::logic_error("Unsupported GRunArg type"));
     }
 }
