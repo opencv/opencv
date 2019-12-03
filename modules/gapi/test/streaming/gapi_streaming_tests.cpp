@@ -336,7 +336,7 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta)
 }
 
 
-TEST_P(GAPI_Streaming, SmokeTest_Two_Const_Mats)
+TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_2xConstMat)
 {
     cv::GMat in;
     cv::GMat in2;
@@ -350,7 +350,7 @@ TEST_P(GAPI_Streaming, SmokeTest_Two_Const_Mats)
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
     cv::Mat tmp;
 
-    // Test with firs image
+    // Test with first image
     auto in_src = cv::imread(findDataFile("cv/edgefilter/statue.png"));
     testc.setSource(cv::gin(in_const, in_src));
     testc.start();
@@ -369,7 +369,7 @@ TEST_P(GAPI_Streaming, SmokeTest_Two_Const_Mats)
     testc.stop();
 }
 
-TEST_P(GAPI_Streaming, SmokeTest_One_Video_One_Const_Scalar)
+TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoScalar)
 {
     cv::GMat in_m;
     cv::GScalar in_s;
@@ -381,8 +381,7 @@ TEST_P(GAPI_Streaming, SmokeTest_One_Video_One_Const_Scalar)
     cv::Mat tmp;
     // Test with one video source and scalar
     auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
-    cv::Scalar sc = 32;
-    testc.setSource(cv::gin(in_src, sc));
+    testc.setSource(cv::gin(in_src, cv::Scalar{1.25}));
     testc.start();
 
     std::size_t test_frames = 0u;
@@ -391,8 +390,7 @@ TEST_P(GAPI_Streaming, SmokeTest_One_Video_One_Const_Scalar)
 
     // Now test with another one video source and scalar
     in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"));
-    sc = 16;
-    testc.setSource(cv::gin(in_src, sc));
+    testc.setSource(cv::gin(in_src, cv::Scalar{0.75}));
     testc.start();
 
     test_frames = 0u;
@@ -475,7 +473,7 @@ namespace TypesTest
     };
 } // namespace TypesTest
 
-TEST_P(GAPI_Streaming, SmokeTest_One_Video_One_Const_Vector)
+TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoArra)
 {
     cv::GMat in_m;
     cv::GArray<int> in_v;
@@ -488,7 +486,7 @@ TEST_P(GAPI_Streaming, SmokeTest_One_Video_One_Const_Vector)
     cv::Mat tmp;
     // Test with one video source and vector
     auto in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
-    std::vector<int> first_in_vec(2304, 1);
+    std::vector<int> first_in_vec(768*3, 1);
     testc.setSource(cv::gin(in_src, first_in_vec));
     testc.start();
 
@@ -498,7 +496,7 @@ TEST_P(GAPI_Streaming, SmokeTest_One_Video_One_Const_Vector)
 
     // Now test with another one
     in_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/1920x1080.avi"));
-    std::vector<int> second_in_vec(5760, 1);
+    std::vector<int> second_in_vec(1920*3, 1);
     testc.setSource(cv::gin(in_src, second_in_vec));
     testc.start();
 

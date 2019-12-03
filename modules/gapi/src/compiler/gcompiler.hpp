@@ -32,11 +32,12 @@ class GAPI_EXPORTS GCompiler
     // Patters built from transformations
     std::vector<std::unique_ptr<ade::Graph>> m_all_patterns;
 
+
     void validateInputMeta();
     void validateOutProtoArgs();
 
 public:
-    // metas may be empty in case when graph compiling for streaming
+    // Metas may be empty in case when graph compiling for streaming
     // In this case graph get metas from first frame
     explicit GCompiler(const GComputation &c,
                              GMetaArgs    &&metas,

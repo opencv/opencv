@@ -473,8 +473,7 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::compileStreaming()
 {
     // FIXME: self-note to DM: now keep these compile()/compileStreaming() in sync!
     std::unique_ptr<ade::Graph> pG = generateGraph();
-    GModel::Graph gm(*pG);
-    gm.metadata().set(Streaming{});
+    GModel::Graph(*pG).metadata().set(Streaming{});
     runPasses(*pG);
     if (!m_metas.empty())
     {

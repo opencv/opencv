@@ -60,7 +60,7 @@ public:
     // Ask backend to provide general backend-specific compiler passes
     virtual void addBackendPasses(ade::ExecutionEngineSetupContext &);
 
-    // Ask compiler to put extra meta-sensitive backend passes Since
+    // Ask backend to put extra meta-sensitive backend passes Since
     // the inception of Streaming API one can compile graph without
     // meta information, so if some passes depend on this information,
     // they are called when meta information becomes available.

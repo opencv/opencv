@@ -93,7 +93,6 @@ protected:
 
         std::vector<GRunArg> in_constants;
 
-        // FIXME: remove it as unused???
         std::shared_ptr<GIslandExecutable> isl_exec;
     };
     std::vector<OpDesc> m_ops;
