@@ -1482,12 +1482,7 @@ typedef VResizeNoVec VResizeLanczos4Vec_32f;
 #endif
 
 
-/*
-    Note, x86 shows reduced performance here. This function is included in
-    IPP by default. For now, disable it on these targets until a more
-    exhaustive performance analysis can be done.
-*/
-#if CV_SIMD128 && !CV_SSE
+#if CV_SIMD128
 
 template<typename ST, typename DT, typename AT, typename DVT>
 struct HResizeLinearVec_X4
