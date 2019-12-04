@@ -78,9 +78,9 @@ namespace draw
 {
 
 /**
- * @brief This structure enables freetype library for text rendering
+ * @brief This structure specifies which FreeType font to use by FText primitives.
  */
-struct use_freetype
+struct freetype_font
 {
     /*@{*/
     std::string path; //!< The path to the font file (.ttf)
@@ -105,6 +105,23 @@ struct Text
     int         thick;              //!< The thickness of the lines used to draw a text
     int         lt;                 //!< The line type. See #LineTypes
     bool        bottom_left_origin; //!< When true, the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner
+    /*@{*/
+};
+
+/**
+ * @brief This structure represents a text string to draw using
+ * FreeType renderer.
+ *
+ * If OpenCV is built without FreeType support, this primitive will
+ * fail at the execution stage.
+ */
+struct FText
+{
+    /*@{*/
+    std::wstring text;              //!< The text string to be drawn
+    cv::Point    org;               //!< The bottom-left corner of the text string in the image
+    int          fh;                //!< The height of text
+    cv::Scalar   color;             //!< The text color
     /*@{*/
 };
 
@@ -190,6 +207,7 @@ struct Poly
 
 using Prim  = util::variant
     < Text
+    , FText
     , Rect
     , Circle
     , Line

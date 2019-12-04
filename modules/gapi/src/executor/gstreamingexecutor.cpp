@@ -15,6 +15,7 @@
 #include "executor/gstreamingexecutor.hpp"
 #include "compiler/passes/passes.hpp"
 #include "backends/common/gbackend.hpp" // createMat
+#include "compiler/gcompiler.hpp" // for compileIslands
 
 namespace
 {
@@ -420,6 +421,10 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
             return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
          });
 
+    // If metadata was not passed to compileStreaming, Islands are not compiled at this point.
+    // It is fine -- Islands are then compiled in setSource (at the first valid call).
+    const bool islands_compiled = m_gim.metadata().contains<IslandsCompiled>();
+
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
     for (auto nh : sorted.nodes())
     {
@@ -440,7 +445,8 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
 
                 // FIXME: THIS ORDER IS IRRELEVANT TO PROTOCOL OR ANY OTHER ORDER!
                 // FIXME: SAME APPLIES TO THE REGULAR GEEXECUTOR!!
-                auto xtract_in = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
+                auto xtract_in = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec)
+                {
                     const auto orig_data_nh
                         = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
                     const auto &orig_data_info
@@ -458,7 +464,8 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                                            , orig_data_info.shape
                                            , orig_data_info.ctor});
                 };
-                auto xtract_out = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec, cv::GMetaArgs &metas) {
+                auto xtract_out = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec, cv::GMetaArgs &metas)
+                {
                     const auto orig_data_nh
                         = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
                     const auto &orig_data_info
@@ -476,13 +483,16 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                 for (auto in_slot_nh  : nh->inNodes())  xtract_in(in_slot_nh,  input_rcs);
                 for (auto out_slot_nh : nh->outNodes()) xtract_out(out_slot_nh, output_rcs, output_metas);
 
+                std::shared_ptr<GIslandExecutable> isl_exec = islands_compiled
+                    ? m_gim.metadata(nh).get<IslandExec>().object
+                    : nullptr;
                 m_ops.emplace_back(OpDesc{ std::move(input_rcs)
                                          , std::move(output_rcs)
                                          , std::move(output_metas)
                                          , nh
                                          , in_constants
-                                         , m_gim.metadata(nh).get<IslandExec>().object});
-
+                                         , isl_exec
+                                         });
                 // Initialize queues for every operation's input
                 ade::TypedGraph<DataQueue> qgr(*m_island_graph);
                 for (auto eh : nh->inEdges())
@@ -542,7 +552,8 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
 {
     GAPI_Assert(state == State::READY || state == State::STOPPED);
 
-    const auto is_video = [](const GRunArg &arg) {
+    const auto is_video = [](const GRunArg &arg)
+    {
         return util::holds_alternative<cv::gapi::wip::IStreamSource::Ptr>(arg);
     };
     const auto num_videos = std::count_if(ins.begin(), ins.end(), is_video);
@@ -553,6 +564,67 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         util::throw_error(std::logic_error("Only one video source is"
                                            " currently supported!"));
     }
+
+    GModel::ConstGraph gm(*m_orig_graph);
+    // Now the tricky-part: completing Islands compilation if compileStreaming
+    // has been called without meta arguments.
+    // The logic is basically the following:
+    // - (0) Collect metadata from input vector;
+    // - (1) If graph is compiled with meta
+    //   - (2) Just check if the passed objects have correct meta.
+    // - (3) Otherwise:
+    //   - (4) Run metadata inference;
+    //   - (5) If islands are not compiled at this point OR are not reshapeable:
+    //     - (6) Compile them for a first time with this meta;
+    //     - (7) Update internal structures with this island information
+    //   - (8) Otherwise:
+    //     - (9) Reshape islands to this new metadata.
+    //     - (10) Update internal structures again
+    const auto update_int_metas = [&]()
+    {
+        for (auto& op : m_ops)
+        {
+            op.out_metas.resize(0);
+            for (auto out_slot_nh : op.nh->outNodes())
+            {
+                const auto &orig_nh = m_gim.metadata(out_slot_nh).get<DataSlot>().original_data_node;
+                const auto &orig_info = gm.metadata(orig_nh).get<Data>();
+                op.out_metas.emplace_back(orig_info.meta);
+            }
+        }
+    };
+    const auto new_meta = cv::descr_of(ins); // 0
+    if (gm.metadata().contains<OriginalInputMeta>()) // (1)
+    {
+        // NB: Metadata is tested in setSource() already - just put an assert here
+        GAPI_Assert(new_meta == gm.metadata().get<OriginalInputMeta>().inputMeta); // (2)
+    }
+    else // (3)
+    {
+        GCompiler::runMetaPasses(*m_orig_graph.get(), new_meta); // (4)
+        if (!m_gim.metadata().contains<IslandsCompiled>()
+            || (m_reshapable.has_value() && m_reshapable.value() == false)) // (5)
+        {
+            bool is_reshapable = true;
+            GCompiler::compileIslands(*m_orig_graph.get(), m_comp_args); // (6)
+            for (auto& op : m_ops)
+            {
+                op.isl_exec = m_gim.metadata(op.nh).get<IslandExec>().object;
+                is_reshapable &= op.isl_exec->canReshape();
+            }
+            update_int_metas(); // (7)
+            m_reshapable = util::make_optional(is_reshapable);
+        }
+        else // (8)
+        {
+            for (auto& op : m_ops)
+            {
+                op.isl_exec->reshape(*m_orig_graph, m_comp_args); // (9)
+            }
+            update_int_metas(); // (10)
+        }
+    }
+    // Metadata handling is done!
 
     // Walk through the protocol, set-up emitters appropriately
     // There's a 1:1 mapping between emitters and corresponding data inputs.
@@ -592,7 +664,8 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     // all other inputs are "constant" generators.
     // Craft here a completion callback to notify Const emitters that
     // a video source is over
-    auto real_video_completion_cb = [this]() {
+    auto real_video_completion_cb = [this]()
+    {
         for (auto q : m_const_emitter_queues) q->push(Cmd{Stop{}});
     };
 
@@ -623,6 +696,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
                                out_queues,
                                real_video_completion_cb);
     }
+
 
     // Now do this for every island (in a topological order)
     for (auto &&op : m_ops)

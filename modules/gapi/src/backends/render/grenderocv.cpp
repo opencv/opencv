@@ -7,7 +7,10 @@
 
 GAPI_RENDER_OCV_KERNEL(RenderBGROCVImpl, cv::gapi::wip::draw::GRenderBGR)
 {
-    static void run(const cv::Mat& in, const cv::gapi::wip::draw::Prims& prims, cv::Mat& out)
+    static void run(const cv::Mat& in,
+                    const cv::gapi::wip::draw::Prims& prims,
+                    cv::gapi::wip::draw::FTTextRender* ftpr,
+                    cv::Mat& out)
     {
         // NB: If in and out cv::Mats are the same object
         // we can avoid copy and render on out cv::Mat
@@ -16,7 +19,7 @@ GAPI_RENDER_OCV_KERNEL(RenderBGROCVImpl, cv::gapi::wip::draw::GRenderBGR)
             in.copyTo(out);
         }
 
-        cv::gapi::wip::draw::drawPrimitivesOCVBGR(out, prims);
+        cv::gapi::wip::draw::drawPrimitivesOCVBGR(out, prims, ftpr);
     }
 };
 
@@ -25,6 +28,7 @@ GAPI_RENDER_OCV_KERNEL(RenderNV12OCVImpl, cv::gapi::wip::draw::GRenderNV12)
     static void run(const cv::Mat& in_y,
                     const cv::Mat& in_uv,
                     const cv::gapi::wip::draw::Prims& prims,
+                    cv::gapi::wip::draw::FTTextRender* ftpr,
                     cv::Mat& out_y,
                     cv::Mat& out_uv)
     {
@@ -63,7 +67,7 @@ GAPI_RENDER_OCV_KERNEL(RenderNV12OCVImpl, cv::gapi::wip::draw::GRenderNV12)
         cv::resize(in_uv, upsample_uv, in_uv.size() * 2, cv::INTER_LINEAR);
         cv::merge(std::vector<cv::Mat>{in_y, upsample_uv}, yuv);
 
-        cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims);
+        cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims, ftpr);
 
         // YUV -> NV12
         cv::Mat out_u, out_v, uv_plane;

@@ -2,6 +2,7 @@
 #include <opencv2/gapi/render/render.hpp> // Kernel API's
 
 #include "api/render_ocv.hpp"
+#include "api/ft_render.hpp"
 
 namespace cv
 {
@@ -27,12 +28,15 @@ inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
     }
 };
 
-inline void image(cv::Mat& mat,
-                  const cv::Point& org,
-                  const cv::Mat& img,
-                  const cv::Mat& alpha)
+inline void blendImage(const cv::Mat& img,
+                       const cv::Mat& alpha,
+                       const cv::Point& org,
+                       cv::Mat background)
 {
-    auto roi = mat(cv::Rect(org, img.size()));
+    GAPI_Assert(alpha.type() == CV_32FC1);
+    GAPI_Assert(background.channels() == 3u);
+
+    cv::Mat roi = background(cv::Rect(org, img.size()));
     cv::Mat img32f_w;
     cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
 
@@ -40,8 +44,12 @@ inline void image(cv::Mat& mat,
     roi32f_w -= img32f_w;
 
     cv::Mat img32f, roi32f;
+    if (img.type() == CV_32FC3) {
+        img.copyTo(img32f);
+    } else {
+        img.convertTo(img32f, CV_32F, 1.0/255);
+    }
 
-    img.convertTo(img32f, CV_32F, 1.0/255);
     roi.convertTo(roi32f, CV_32F, 1.0/255);
 
     cv::multiply(img32f, img32f_w, img32f);
@@ -49,7 +57,22 @@ inline void image(cv::Mat& mat,
     roi32f += img32f;
 
     roi32f.convertTo(roi, CV_8U, 255.0);
-};
+}
+
+inline void blendTextMask(cv::Mat& img,
+                          cv::Mat& mask,
+                          const cv::Point& tl,
+                          const cv::Scalar& color)
+{
+    mask.convertTo(mask, CV_32FC1, 1 / 255.0);
+    cv::Mat color_mask;
+
+    cv::merge(std::vector<cv::Mat>(3, mask), color_mask);
+    cv::Scalar color32f = color / 255.0;
+    cv::multiply(color_mask, color32f, color_mask);
+
+    blendImage(color_mask, mask, tl, img);
+}
 
 inline void poly(cv::Mat& mat,
                  const cv::gapi::wip::draw::Poly& pp)
@@ -80,8 +103,16 @@ struct EmptyConverter
 
 // FIXME util::visitor ?
 template <typename ColorConverter>
-void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
+void drawPrimitivesOCV(cv::Mat& in,
+                       const cv::gapi::wip::draw::Prims& prims,
+                       cv::gapi::wip::draw::FTTextRender* ftpr)
 {
+#ifndef HAVE_FREETYPE
+    cv::util::suppress_unused_warning(ftpr);
+#endif
+
+    using namespace cv::gapi::wip::draw;
+
     ColorConverter converter;
     for (const auto &p : prims)
     {
@@ -95,11 +126,54 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
                 break;
             }
 
+            // FIXME avoid code duplicate for Text and FText
             case Prim::index_of<Text>():
             {
-                const auto& tp = cv::util::get<Text>(p);
-                const auto color = converter.cvtColor(tp.color);
-                cv::putText(in, tp.text, tp.org, tp.ff, tp.fs, color, tp.thick, tp.lt, tp.bottom_left_origin);
+                auto tp = cv::util::get<Text>(p);
+                tp.color = converter.cvtColor(tp.color);
+
+                int baseline = 0;
+                auto size    = cv::getTextSize(tp.text, tp.ff, tp.fs, tp.thick, &baseline);
+                baseline    += tp.thick;
+                size.height += baseline;
+
+                // Allocate mask outside
+                cv::Mat mask(size, CV_8UC1, cv::Scalar::all(0));
+                // Org it's bottom left position for baseline
+                cv::Point org(0, mask.rows - baseline);
+                cv::putText(mask, tp.text, org, tp.ff, tp.fs, 255, tp.thick);
+
+                // Org is bottom left point, trasform it to top left point for blendImage
+                cv::Point tl(tp.org.x, tp.org.y - mask.size().height + baseline);
+
+                blendTextMask(in, mask, tl, tp.color);
+                break;
+            }
+
+            case Prim::index_of<FText>():
+            {
+#ifdef HAVE_FREETYPE
+                const auto& ftp  = cv::util::get<FText>(p);
+                const auto color = converter.cvtColor(ftp.color);
+
+                GAPI_Assert(ftpr && "I must pass cv::gapi::wip::draw::freetype_font"
+                                    " to the graph compile arguments");
+                int baseline = 0;
+                auto size    = ftpr->getTextSize(ftp.text, ftp.fh, &baseline);
+
+                // Allocate mask outside
+                cv::Mat mask(size, CV_8UC1, cv::Scalar::all(0));
+                // Org it's bottom left position for baseline
+                cv::Point org(0, mask.rows - baseline);
+                ftpr->putText(mask, ftp.text, org, ftp.fh);
+
+                // Org is bottom left point, trasform it to top left point for blendImage
+                cv::Point tl(ftp.org.x, ftp.org.y - mask.size().height + baseline);
+
+                blendTextMask(in, mask, tl, color);
+#else
+                cv::util::throw_error(std::runtime_error("FreeType not found !"));
+#endif
                 break;
             }
 
@@ -134,7 +208,8 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
                 cv::Mat img;
                 converter.cvtImg(ip.img, img);
 
-                image(in, ip.org, img, ip.alpha);
+                img.convertTo(img, CV_32FC1, 1.0 / 255);
+                blendImage(img, ip.alpha, ip.org, in);
                 break;
             }
 
@@ -151,14 +226,18 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
     }
 }
 
-void drawPrimitivesOCVBGR(cv::Mat &in, const Prims &prims)
+void drawPrimitivesOCVBGR(cv::Mat &in,
+                          const cv::gapi::wip::draw::Prims &prims,
+                          cv::gapi::wip::draw::FTTextRender* ftpr)
 {
-    drawPrimitivesOCV<EmptyConverter>(in, prims);
+    drawPrimitivesOCV<EmptyConverter>(in, prims, ftpr);
 }
 
-void drawPrimitivesOCVYUV(cv::Mat &in, const Prims &prims)
+void drawPrimitivesOCVYUV(cv::Mat &in,
+                          const cv::gapi::wip::draw::Prims &prims,
+                          cv::gapi::wip::draw::FTTextRender* ftpr)
 {
-    drawPrimitivesOCV<BGR2YUVConverter>(in, prims);
+    drawPrimitivesOCV<BGR2YUVConverter>(in, prims, ftpr);
 }
 
 } // namespace draw
