@@ -97,16 +97,45 @@ public:
 // FIXME!!!
 // This is the temporary and experimental API
 // which should be replaced by runtime roi-based scheduling
+/** \addtogroup gapi_compile_args
+ * @{
+ */
+/**
+ * @brief This structure allows to control the output image region
+ * which Fluid backend will produce in the graph.
+ *
+ * This feature is useful for external tiling and parallelism, but
+ * will be deprecated in the future releases.
+ */
 struct GFluidOutputRois
 {
     std::vector<cv::gapi::own::Rect> rois;
 };
 
+/**
+ * @brief This structure forces Fluid backend to generate multiple
+ * parallel output regions in the graph. These regions execute in parallel.
+ *
+ * This feature may be deprecated in the future releases.
+ */
 struct GFluidParallelOutputRois
 {
     std::vector<GFluidOutputRois> parallel_rois;
 };
 
+/**
+ * @brief This structure allows to customize the way how Fluid executes
+ * parallel regions.
+ *
+ * For example, user can utilize his own threading runtime via this parameter.
+ * The `parallel_for` member functor is called by the Fluid runtime with the
+ * following arguments:
+ *
+ * @param size Size of the parallel range to process in this thread
+ * @param f A function which is called for every integer index in this range.
+ *
+ * This feature may be deprecated in the future releases.
+ */
 struct GFluidParallelFor
 {
     //this function accepts:
@@ -114,6 +143,7 @@ struct GFluidParallelFor
     // - and a function to be called on the range items, designated by item index
     std::function<void(std::size_t size, std::function<void(std::size_t index)>)> parallel_for;
 };
+/** @} gapi_compile_args */
 
 namespace detail
 {

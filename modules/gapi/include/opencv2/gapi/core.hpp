@@ -18,7 +18,7 @@
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
 
-/** \defgroup gapi_core G-API core functionality
+/** \defgroup gapi_core G-API Core functionality
 @{
     @defgroup gapi_math Graph API: Math operations
     @defgroup gapi_pixelwise Graph API: Pixelwise operations

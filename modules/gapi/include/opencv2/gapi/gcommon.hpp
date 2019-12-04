@@ -25,10 +25,6 @@ namespace detail
     // This is a trait-like structure to mark backend-specific compile arguments
     // with tags
     template<typename T> struct CompileArgTag;
-    template<typename T> struct CompileArgTag
-    {
-        static const char* tag() { return ""; };
-    };
 
     // These structures are tags which separate kernels and transformations
     struct KernelTag

@@ -298,6 +298,15 @@ namespace ocv
 } // namespace ocv
 } // namespace render
 } // namespace gapi
+
+namespace detail
+{
+    template<> struct CompileArgTag<cv::gapi::wip::draw::freetype_font>
+    {
+        static const char* tag() { return "gapi.freetype_font"; }
+    };
+} // namespace detail
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_RENDER_HPP
