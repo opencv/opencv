@@ -294,7 +294,7 @@ private:
     Ptr<DescriptorExtractor> wrapped;
 };
 
-#if 0
+#ifdef OPENCV_BINDINGS_PARSER
 //DO NOT REMOVE! The block is required for sources parser
 enum
 {
