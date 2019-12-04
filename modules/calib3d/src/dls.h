@@ -16,6 +16,8 @@ public:
 
     bool compute_pose(cv::Mat& R, cv::Mat& t);
 
+    void compute_poses(std::vector<cv::Mat> Rs, std::vector<cv::Mat> ts);
+
 private:
 
     // initialisation
