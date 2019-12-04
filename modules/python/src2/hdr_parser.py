@@ -913,9 +913,9 @@ class CppHeaderParser(object):
                         else:
                             decls.append(decl)
 
-                            if self._generate_gpumat_decls and "cv.cuda." in decl[0]:
+                            if self._generate_gpumat_decls and "cv.cuda" in decl[0]:
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
-                                # same declaration working with GpuMat (this is important for T-Api access)
+                                # same declaration working with GpuMat
                                 args = decl[3]
                                 has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
                                 if has_mat:
