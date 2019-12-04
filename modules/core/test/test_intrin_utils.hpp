@@ -859,8 +859,8 @@ template<typename R> struct TheTest
             sum += (int)(dataA[i]);   // To prevent a constant overflow with int8
         }
         R a = dataA;
-        EXPECT_EQ((int)1, (int)v_reduce_min(a));
-        EXPECT_EQ((int)(R::nlanes), (int)v_reduce_max(a));
+        EXPECT_EQ((LaneType)1, (LaneType)v_reduce_min(a));
+        EXPECT_EQ((LaneType)(R::nlanes), (LaneType)v_reduce_max(a));
         EXPECT_EQ((int)(sum), (int)v_reduce_sum(a));
         dataA[0] += R::nlanes;
         R an = dataA;
