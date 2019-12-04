@@ -349,8 +349,7 @@ class ArgInfo(object):
         self.py_outputarg = False
 
     def isbig(self):
-        return self.tp == "Mat" or self.tp == "vector_Mat" or self.tp == "cuda::GpuMat"\
-               or self.tp == "UMat" or self.tp == "vector_UMat" # or self.tp.startswith("vector")
+        return self.tp in ["Mat", "vector_Mat", "GpuMat", "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
