@@ -53,6 +53,7 @@
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/eltwise.hpp"
+#include "../cuda4dnn/primitives/shortcut.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -155,8 +156,14 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            if(variableChannels)
+                return op == SUM && coeffs.empty();
+            return true;
+        }
+
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && op != DIV) ||  // TODO: not implemented, see PR #15811
                ((((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()))
                 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && channelsMode == ELTWISE_CHANNNELS_SAME));
@@ -622,6 +629,13 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        if(variableChannels)
+        {
+            CV_Assert(op == SUM);
+            CV_Assert(coeffs.empty());
+            return make_cuda_node<cuda4dnn::ShortcutOp>(preferableTarget, std::move(context->stream));
+        }
 
         auto op_ = [this] {
             switch (op) {
