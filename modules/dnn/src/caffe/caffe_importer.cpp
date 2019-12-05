@@ -424,6 +424,36 @@ public:
         }
         dstNet.setInputsNames(netInputs);
 
+        std::vector<MatShape> inp_shapes;
+        if (net.input_shape_size() > 0 || (layersSize > 0 && net.layer(0).has_input_param() &&
+            net.layer(0).input_param().shape_size() > 0)) {
+
+            int size = (net.input_shape_size() > 0) ? net.input_shape_size() :
+                                                      net.layer(0).input_param().shape_size();
+            for (int inp_id = 0; inp_id < size; inp_id++)
+            {
+                const caffe::BlobShape &_input_shape = (net.input_shape_size() > 0) ?
+                                                        net.input_shape(inp_id) :
+                                                        net.layer(0).input_param().shape(inp_id);
+                MatShape shape;
+                for (int i = 0; i < _input_shape.dim_size(); i++) {
+                    shape.push_back((int)_input_shape.dim(i));
+                }
+                inp_shapes.push_back(shape);
+            }
+        }
+        else if (net.input_dim_size() > 0) {
+            MatShape shape;
+            for (int dim = 0; dim < net.input_dim_size(); dim++) {
+                shape.push_back(net.input_dim(dim));
+            }
+            inp_shapes.push_back(shape);
+        }
+
+        for (int inp_id = 0; inp_id < inp_shapes.size(); inp_id++) {
+            dstNet.setInput(Mat(inp_shapes[inp_id], CV_32F), netInputs[inp_id]);
+        }
+
         addedBlobs.clear();
     }
 
