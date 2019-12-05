@@ -6,7 +6,7 @@
 
 In this tutorial you will learn:
 * How to integrate Deep Learning inference in a G-API graph;
-* How to run a G-API graph on video stream and obtain data from it.
+* How to run a G-API graph on a video stream and obtain data from it.
 
 # Prerequisites {#gapi_ifd_prereq}
 
@@ -35,7 +35,7 @@ hardware blocks on the same chip like decoders and GPUs, and extra
 accelerators can be plugged in as extensions, like Intel® Movidius™
 Neural Compute Stick for deep learning offload.
 
-Given all this manifold of options and a variety in video analityics
+Given all this manifold of options and a variety in video analytics
 algorithms, managing such pipelines effectively quickly becomes a
 problem. For sure it can be done manually, but this approach doesn't
 scale: if a change is required in the algorithm (e.g. a new pipeline
@@ -60,15 +60,67 @@ of the following steps:
    two networks;
 4. Visualization.
 
-![Interactive Face Detection pipeline overivew](pics/pipeline.png)
+\dot
+digraph pipeline {
+  node [shape=record fontname=Helvetica fontsize=10 style=filled color="#4c7aa4" fillcolor="#5b9bd5" fontcolor="white"];
+  edge [color="#62a8e7"];
+  splines=ortho;
+
+  rankdir = LR;
+  subgraph cluster_0 {
+    color=invis;
+    capture [label="Capture\nDecode"];
+    resize [label="Resize\nConvert"];
+    detect [label="Detect faces"];
+    capture -> resize -> detect
+  }
+
+  subgraph cluster_1 {
+    graph[style=dashed];
+
+    subgraph cluster_2 {
+      color=invis;
+      temp_4 [style=invis shape=point width=0];
+      postproc_1 [label="Crop\nResize\nConvert"];
+      age_gender [label="Classify\nAge/gender"];
+      postproc_1 -> age_gender [constraint=true]
+      temp_4 -> postproc_1 [constraint=none]
+    }
+
+    subgraph cluster_3 {
+      color=invis;
+      postproc_2 [label="Crop\nResize\nConvert"];
+      emo [label="Classify\nEmotions"];
+      postproc_2 -> emo [constraint=true]
+    }
+    label="(for each face)";
+  }
+
+  temp_1 [style=invis shape=point width=0];
+  temp_2 [style=invis shape=point width=0];
+  detect -> temp_1 [arrowhead=none]
+  temp_1 -> postproc_1
+
+  capture -> {temp_4, temp_2} [arrowhead=none constraint=false]
+  temp_2 -> postproc_2
+
+  temp_1 -> temp_2 [arrowhead=none constraint=false]
+
+  temp_3 [style=invis shape=point width=0];
+  show [label="Visualize\nDisplay"];
+
+  {age_gender, emo} -> temp_3 [arrowhead=none]
+  temp_3 -> show
+}
+\enddot
 
 # Constructing a pipeline {#gapi_ifd_constructing}
 
 Constructing a G-API graph for a video streaming case does not differ
-much from a regular usage of G-API -- it is still about defining graph
-*data* (with cv::GMat, cv::GScalar, and cv::GArray) and *operations*
-over it. Inference also becomes an operation in the graph, but is
-defined in a little bit different way.
+much from a [regular usage](@ref gapi_example) of G-API -- it is still
+about defining graph *data* (with cv::GMat, cv::GScalar, and
+cv::GArray) and *operations* over it. Inference also becomes an
+operation in the graph, but is defined in a little bit different way.
 
 ## Declaring Deep Learning topologies {#gapi_ifd_declaring_nets}
 
@@ -113,7 +165,7 @@ one input cv::GMat and produces one output cv::GMat.
 
 In this sample we use a pre-trained SSD-based network and its output
 needs to be parsed to an array of detections (object regions of
-interest, ROIs). This is done by a custom operation `custom::PostProc`,
+interest, ROIs). It is done by a custom operation `custom::PostProc`,
 which returns an array of rectangles (of type `cv::GArray<cv::Rect>`)
 back to the pipeline. This operation also filters out results by a
 confidence threshold -- and these details are hidden in the kernel

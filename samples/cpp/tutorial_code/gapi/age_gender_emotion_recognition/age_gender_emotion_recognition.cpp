@@ -315,6 +315,9 @@ int main(int argc, char *argv[])
     auto cc = pp.compileStreaming(cv::compile_args(kernels, networks));
     //! [Compile]
 
+    Avg avg;
+    std::size_t frames = 0u;            // Frame counter (not produced by the graph)
+
     std::cout << "Reading " << input << std::endl;
     // Duplicate huge portions of the code in if/else branches in the sake of
     // better documentation snippets
@@ -324,7 +327,6 @@ int main(int argc, char *argv[])
         cc.setSource(cv::gin(in_src));
         //! [Source]
 
-        Avg avg;
         avg.start();
 
         //! [Run]
@@ -337,7 +339,6 @@ int main(int argc, char *argv[])
         std::vector<cv::Mat> out_ages;      // Array of inferred ages (one blob per face)
         std::vector<cv::Mat> out_genders;   // Array of inferred genders (one blob per face)
         std::vector<cv::Mat> out_emotions;  // Array of classified emotions (one blob per face)
-        std::size_t frames = 0u;            // Frame counter (not produced by the graph)
 
         // Implement different execution policies depending on the display option
         // for the best performance.
@@ -363,11 +364,7 @@ int main(int argc, char *argv[])
             if (!no_show) cv::imshow("Out", frame);
         }
         //! [Run]
-        cc.stop();
-        std::cout << "Processed " << frames << " frames in " << avg.elapsed() << std::endl;
     } else { // (serial flag)
-        Avg avg;
-
         //! [Run_Serial]
         cv::VideoCapture cap(input);
         cv::Mat in_frame, frame;            // The captured frame itself
@@ -375,7 +372,6 @@ int main(int argc, char *argv[])
         std::vector<cv::Mat> out_ages;      // Array of inferred ages (one blob per face)
         std::vector<cv::Mat> out_genders;   // Array of inferred genders (one blob per face)
         std::vector<cv::Mat> out_emotions;  // Array of classified emotions (one blob per face)
-        std::size_t frames = 0u;            // Frame counter (not produced by the graph)
 
         while (cap.read(in_frame)) {
             pp.apply(cv::gin(in_frame),
@@ -397,8 +393,9 @@ int main(int argc, char *argv[])
             }
         }
         //! [Run_Serial]
-        std::cout << "Processed " << frames << " frames in " << avg.elapsed() << std::endl;
     }
+    std::cout << "Processed " << frames << " frames in " << avg.elapsed()
+              << " (" << avg.fps(frames) << " FPS)" << std::endl;
     return 0;
 }
 #else
