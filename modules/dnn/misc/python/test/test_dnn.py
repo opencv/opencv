@@ -248,32 +248,33 @@ class dnn_test(NewOpenCVTests):
                 return [inputs[0][:,:,self.ystart:self.yend,self.xstart:self.xend]]
 
         cv.dnn_registerLayer('CropCaffe', CropLayer)
-        proto = 'name: "TestCrop"\n' \
-        'input: "input"\n' \
-        'input_shape\n' \
-        '{\n' \
-        '    dim: 1\n' \
-        '    dim: 2\n' \
-        '    dim: 5\n' \
-        '    dim: 5\n' \
-        '}\n' \
-        'input: "roi"\n' \
-        'input_shape\n' \
-        '{\n' \
-        '    dim: 1\n' \
-        '    dim: 2\n' \
-        '    dim: 3\n' \
-        '    dim: 3\n' \
-        '}\n' \
-        'layer {\n' \
-        '  name: "Crop"\n' \
-        '  type: "CropCaffe"\n' \
-        '  bottom: "input"\n' \
-        '  bottom: "roi"\n' \
-        '  top: "Crop"\n' \
-        '} '
+        proto = '''
+        name: "TestCrop"
+        input: "input"
+        input_shape
+        {
+            dim: 1
+            dim: 2
+            dim: 5
+            dim: 5
+        }
+        input: "roi"
+        input_shape
+        {
+            dim: 1
+            dim: 2
+            dim: 3
+            dim: 3
+        }
+        layer {
+          name: "Crop"
+          type: "CropCaffe"
+          bottom: "input"
+          bottom: "roi"
+          top: "Crop"
+        }'''
 
-        net = cv.dnn.readNetFromCaffe(str.encode(proto))
+        net = cv.dnn.readNetFromCaffe(bytearray(proto.encode()))
         for backend, target in self.dnnBackendsAndTargets:
             if backend != cv.dnn.DNN_BACKEND_OPENCV:
                 continue
