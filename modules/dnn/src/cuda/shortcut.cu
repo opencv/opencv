@@ -41,6 +41,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const auto actual_idx = i * vector_type::size();
                 const auto b = actual_idx / batch_stride_input; /* `input` and `output` have the same shape */
                 const auto c = (actual_idx % batch_stride_input) / channel_stride;
+                const auto c_offset = (actual_idx % batch_stride_input) % channel_stride;
 
                 vector_type vec_input;
                 v_load(vec_input, input_vPtr[i]);
@@ -53,7 +54,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                  * which have a corresponding channel in `from`.
                  */
                 if (c < c_from) {
-                    const auto from_actual_idx = b * batch_stride_from + c * channel_stride;
+                    const auto from_actual_idx = b * batch_stride_from + c * channel_stride + c_offset;
                     const auto from_vec_idx = from_actual_idx / vector_type::size();
 
                     vector_type vec_from;
