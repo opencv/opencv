@@ -286,7 +286,7 @@ class dnn_test(NewOpenCVTests):
             src_shape = [1, 2, 5, 5]
             dst_shape = [1, 2, 3, 3]
             inp = np.arange(0, np.prod(src_shape), dtype=np.float32).reshape(src_shape)
-            roi = np.empty(dst_shape)
+            roi = np.empty(dst_shape, dtype=np.float32)
             net.setInput(inp, "input")
             net.setInput(roi, "roi")
             out = net.forward()
