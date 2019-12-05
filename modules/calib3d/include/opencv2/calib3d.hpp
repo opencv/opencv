@@ -60,24 +60,24 @@ or
 
 \f[s  \vecthree{u}{v}{1} = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}
 \begin{bmatrix}
-r_{11} & r_{12} & r_{13} & t_1  \\
-r_{21} & r_{22} & r_{23} & t_2  \\
-r_{31} & r_{32} & r_{33} & t_3
+r_{11} & r_{12} & r_{13} & t_x  \\
+r_{21} & r_{22} & r_{23} & t_y  \\
+r_{31} & r_{32} & r_{33} & t_z
 \end{bmatrix}
 \begin{bmatrix}
-X \\
-Y \\
-Z \\
+X_w \\
+Y_w \\
+Z_w \\
 1
 \end{bmatrix}\f]
 
 where:
 
--   \f$(X, Y, Z)\f$ are the coordinates of a 3D point in the world coordinate space
+-   \f$(X_w, Y_w, Z_w)\f$ are the coordinates of a 3D point in the world coordinate space
 -   \f$(u, v)\f$ are the coordinates of the projection point in pixels
 -   \f$A\f$ is a camera matrix, or a matrix of intrinsic parameters
--   \f$(cx, cy)\f$ is a principal point that is usually at the image center
--   \f$fx, fy\f$ are the focal lengths expressed in pixel units.
+-   \f$(c_x, c_y)\f$ is a principal point that is usually at the image center
+-   \f$f_x, f_y\f$ are the focal lengths expressed in pixel units.
 
 Thus, if an image from the camera is scaled by a factor, all of these parameters should be scaled
 (multiplied/divided, respectively) by the same factor. The matrix of intrinsic parameters does not
@@ -85,15 +85,15 @@ depend on the scene viewed. So, once estimated, it can be re-used as long as the
 fixed (in case of zoom lens). The joint rotation-translation matrix \f$[R|t]\f$ is called a matrix of
 extrinsic parameters. It is used to describe the camera motion around a static scene, or vice versa,
 rigid motion of an object in front of a still camera. That is, \f$[R|t]\f$ translates coordinates of a
-point \f$(X, Y, Z)\f$ to a coordinate system, fixed with respect to the camera. The transformation above
-is equivalent to the following (when \f$z \ne 0\f$ ):
+world point \f$(X_w, Y_w, Z_w)\f$ to a coordinate system, fixed with respect to the camera.
+The transformation above is equivalent to the following (when \f$z \ne 0\f$ ):
 
 \f[\begin{array}{l}
-\vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\
-x' = x/z \\
-y' = y/z \\
-u = f_x*x' + c_x \\
-v = f_y*y' + c_y
+\vecthree{X_c}{Y_c}{Z_c} = R  \vecthree{X_w}{Y_w}{Z_w} + t \\
+x' = X_c/Z_c \\
+y' = Y_c/Z_c \\
+u = f_x \times x' + c_x \\
+v = f_y \times y' + c_y
 \end{array}\f]
 
 The following figure illustrates the pinhole camera model.
@@ -104,14 +104,14 @@ Real lenses usually have some distortion, mostly radial distortion and slight ta
 So, the above model is extended as:
 
 \f[\begin{array}{l}
-\vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\
-x' = x/z \\
-y' = y/z \\
+\vecthree{X_c}{Y_c}{Z_c} = R  \vecthree{X_w}{Y_w}{Z_w} + t \\
+x' = X_c/Z_c \\
+y' = Y_c/Z_c \\
 x'' = x'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\
 y'' = y'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
 \text{where} \quad r^2 = x'^2 + y'^2  \\
-u = f_x*x'' + c_x \\
-v = f_y*y'' + c_y
+u = f_x \times x'' + c_x \\
+v = f_y \times y'' + c_y
 \end{array}\f]
 
 \f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$, \f$k_5\f$, and \f$k_6\f$ are radial distortion coefficients. \f$p_1\f$ and \f$p_2\f$ are
@@ -133,8 +133,8 @@ s\vecthree{x'''}{y'''}{1} =
 \vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}(\tau_x, \tau_y)}
 {0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
 {0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
-u = f_x*x''' + c_x \\
-v = f_y*y''' + c_y
+u = f_x \times x''' + c_x \\
+v = f_y \times y''' + c_y
 \end{array}\f]
 
 where the matrix \f$R(\tau_x, \tau_y)\f$ is defined by two rotations with angular parameter \f$\tau_x\f$
@@ -317,7 +317,7 @@ enum HandEyeCalibrationMethod
 @param jacobian Optional output Jacobian matrix, 3x9 or 9x3, which is a matrix of partial
 derivatives of the output array components with respect to the input array components.
 
-\f[\begin{array}{l} \theta \leftarrow norm(r) \\ r  \leftarrow r/ \theta \\ R =  \cos{\theta} I + (1- \cos{\theta} ) r r^T +  \sin{\theta} \vecthreethree{0}{-r_z}{r_y}{r_z}{0}{-r_x}{-r_y}{r_x}{0} \end{array}\f]
+\f[\begin{array}{l} \theta \leftarrow norm(r) \\ r  \leftarrow r/ \theta \\ R =  \cos(\theta) I + (1- \cos{\theta} ) r r^T +  \sin(\theta) \vecthreethree{0}{-r_z}{r_y}{r_z}{0}{-r_x}{-r_y}{r_x}{0} \end{array}\f]
 
 Inverse transformation can be also done easily, since
 
@@ -325,7 +325,16 @@ Inverse transformation can be also done easily, since
 
 A rotation vector is a convenient and most compact representation of a rotation matrix (since any
 rotation matrix has just 3 degrees of freedom). The representation is used in the global 3D geometry
-optimization procedures like calibrateCamera, stereoCalibrate, or solvePnP .
+optimization procedures like @ref calibrateCamera, @ref stereoCalibrate, or @ref solvePnP .
+
+@note More information about the computation of the derivative of a 3D rotation matrix with respect to its exponential coordinate
+can be found in:
+    - A Compact Formula for the Derivative of a 3-D Rotation in Exponential Coordinates, Guillermo Gallego, Anthony J. Yezzi @cite Gallego2014ACF
+
+@note Useful information on SE(3) and Lie Groups can be found in:
+    - A tutorial on SE(3) transformation parameterizations and on-manifold optimization, Jose-Luis Blanco @cite blanco2010tutorial
+    - Lie Groups for 2D and 3D Transformation, Ethan Eade @cite Eade17
+    - A micro Lie theory for state estimation in robotics, Joan Solà, Jérémie Deray, Dinesh Atchuthan @cite Sol2018AML
  */
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
@@ -634,10 +643,10 @@ Number of input points must be 4. Object points must be defined in the following
 - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
-1xN/Nx1 3-channel, where N is the number of points. vector\<Point3f\> can be also passed here.
+1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
-where N is the number of points. vector\<Point2f\> can be also passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+where N is the number of points. vector\<Point2d\> can be also passed here.
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
@@ -695,7 +704,7 @@ using the perspective projection model \f$ \Pi \f$ and the camera intrinsic para
   v \\
   1
   \end{bmatrix} &=
-  \bf{A} \hspace{0.1em} \Pi \hspace{0.2em} ^{c}\bf{M}_w
+  \bf{A} \hspace{0.1em} \Pi \hspace{0.2em} ^{c}\bf{T}_w
   \begin{bmatrix}
   X_{w} \\
   Y_{w} \\
@@ -743,7 +752,7 @@ a 3D point expressed in the world frame into the camera frame:
   Z_c \\
   1
   \end{bmatrix} &=
-  \hspace{0.2em} ^{c}\bf{M}_w
+  \hspace{0.2em} ^{c}\bf{T}_w
   \begin{bmatrix}
   X_{w} \\
   Y_{w} \\
@@ -809,9 +818,9 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
 /** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
-1xN/Nx1 3-channel, where N is the number of points. vector\<Point3f\> can be also passed here.
+1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
-where N is the number of points. vector\<Point2f\> can be also passed here.
+where N is the number of points. vector\<Point2d\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
@@ -861,7 +870,7 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
 1x3/3x1 3-channel. vector\<Point3f\> can be also passed here.
 @param imagePoints Array of corresponding image points, 3x2 1-channel or 1x3/3x1 2-channel.
  vector\<Point2f\> can be also passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
@@ -890,10 +899,10 @@ CV_EXPORTS_W int solveP3P( InputArray objectPoints, InputArray imagePoints,
 to the camera coordinate frame) from a 3D-2D point correspondences and starting from an initial solution.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or 1xN/Nx1 3-channel,
-where N is the number of points. vector\<Point3f\> can also be passed here.
+where N is the number of points. vector\<Point3d\> can also be passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
-where N is the number of points. vector\<Point2f\> can also be passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+where N is the number of points. vector\<Point2d\> can also be passed here.
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
@@ -918,10 +927,10 @@ CV_EXPORTS_W void solvePnPRefineLM( InputArray objectPoints, InputArray imagePoi
 to the camera coordinate frame) from a 3D-2D point correspondences and starting from an initial solution.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or 1xN/Nx1 3-channel,
-where N is the number of points. vector\<Point3f\> can also be passed here.
+where N is the number of points. vector\<Point3d\> can also be passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
-where N is the number of points. vector\<Point2f\> can also be passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+where N is the number of points. vector\<Point2d\> can also be passed here.
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
@@ -960,10 +969,10 @@ Number of input points must be 4 and 2 solutions are returned. Object points mus
 Only 1 solution is returned.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
-1xN/Nx1 3-channel, where N is the number of points. vector\<Point3f\> can be also passed here.
+1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
-where N is the number of points. vector\<Point2f\> can be also passed here.
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+where N is the number of points. vector\<Point2d\> can be also passed here.
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
@@ -1028,7 +1037,7 @@ using the perspective projection model \f$ \Pi \f$ and the camera intrinsic para
   v \\
   1
   \end{bmatrix} &=
-  \bf{A} \hspace{0.1em} \Pi \hspace{0.2em} ^{c}\bf{M}_w
+  \bf{A} \hspace{0.1em} \Pi \hspace{0.2em} ^{c}\bf{T}_w
   \begin{bmatrix}
   X_{w} \\
   Y_{w} \\
@@ -1076,7 +1085,7 @@ a 3D point expressed in the world frame into the camera frame:
   Z_c \\
   1
   \end{bmatrix} &=
-  \hspace{0.2em} ^{c}\bf{M}_w
+  \hspace{0.2em} ^{c}\bf{T}_w
   \begin{bmatrix}
   X_{w} \\
   Y_{w} \\

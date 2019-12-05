@@ -1734,7 +1734,7 @@ struct Net::Impl
             Ptr<Layer> layer = ld.layerInstance;
             if (!fused && !layer->supportBackend(preferableBackend))
             {
-                bool customizable = ld.id != 0 && ld.outputBlobs.size() == 1 &&
+                bool customizable = ld.id != 0 &&
                                     INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R2) &&
                                     supportsCPUFallback;
                 // TODO: there is a bug in Myriad plugin with custom layers shape infer.

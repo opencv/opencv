@@ -132,7 +132,7 @@ private:
     std::map<std::string, int> layers;
     std::vector<std::string> requestedOutputs;
 
-    std::set<int> unconnectedLayersIds;
+    std::set<std::pair<int, int> > unconnectedPorts;
 };
 
 class InfEngineBackendNode : public BackendNode

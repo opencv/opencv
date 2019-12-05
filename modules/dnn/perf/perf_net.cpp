@@ -108,7 +108,7 @@ PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 
 PERF_TEST_P_(DNNTestNetwork, ENet)
 {
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) ||
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     processNet("dnn/Enet-model-best.net", "", "enet.yml",
