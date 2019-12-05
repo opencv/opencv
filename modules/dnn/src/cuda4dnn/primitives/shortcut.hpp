@@ -40,8 +40,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
 
-            auto from_wrapper_y = inputs[1].dynamicCast<wrapper_type>();
-            auto from = from_wrapper_y->getView();
+            auto from_wrapper = inputs[1].dynamicCast<wrapper_type>();
+            auto from = from_wrapper->getView();
 
             /* output shape is determined by the input shape */
             CV_Assert(is_shape_same(output, input));
