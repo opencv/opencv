@@ -247,46 +247,52 @@ class dnn_test(NewOpenCVTests):
             def forward(self, inputs):
                 return [inputs[0][:,:,self.ystart:self.yend,self.xstart:self.xend]]
 
-        cv.dnn_registerLayer('Crop', CropLayer)
-        proto = '''
-            name: "TestCrop"
-
-            input: "input"
-            input_shape
-            {
-                dim: 1
-                dim: 2
-                dim: 5
-                dim: 5
-            }
-
-            input: "roi"
-            input_shape
-            {
-                dim: 1
-                dim: 2
-                dim: 3
-                dim: 3
-            }
-
-            layer {
-              name: "Crop"
-              type: "Crop"
-              bottom: "input"
-              bottom: "roi"
-              top: "Crop"
-            }'''
+        cv.dnn_registerLayer('CropCaffe', CropLayer)
+        proto = 'name: "TestCrop"' \
+        'input: "input"' \
+        'input_shape' \
+        '{' \
+        '    dim: 1' \
+        '    dim: 2' \
+        '    dim: 5' \
+        '    dim: 5' \
+        '}' \
+        'input: "roi"' \
+        'input_shape' \
+        '{' \
+        '    dim: 1' \
+        '    dim: 2' \
+        '    dim: 3' \
+        '    dim: 3' \
+        '}' \
+        'layer {' \
+        '  name: "Crop"' \
+        '  type: "CropCaffe"' \
+        '  bottom: "input"' \
+        '  bottom: "roi"' \
+        '  top: "Crop"' \
+        '} '
 
         net = cv.dnn.readNetFromCaffe(str.encode(proto))
-        src_shape = [1, 2, 5, 5]
-        dst_shape = [1, 2, 3, 3]
-        inp = np.arange(0, np.prod(src_shape), dtype=np.float32).reshape(src_shape)
-        roi = np.empty(dst_shape)
-        net.setInput(inp, "input")
-        net.setInput(roi, "roi")
-        out = net.forward()
-        ref = inp[:, :, 1:4, 1:4]
-        normAssert(self, out, ref)
+        for backend, target in self.dnnBackendsAndTargets:
+            if backend != cv.dnn.DNN_BACKEND_OPENCV:
+                continue
+
+            printParams(backend, target)
+
+            net.setPreferableBackend(backend)
+            net.setPreferableTarget(target)
+            src_shape = [1, 2, 5, 5]
+            dst_shape = [1, 2, 3, 3]
+            inp = np.arange(0, np.prod(src_shape), dtype=np.float32).reshape(src_shape)
+            roi = np.empty(dst_shape)
+            net.setInput(inp, "input")
+            net.setInput(roi, "roi")
+            out = net.forward()
+            ref = inp[:, :, 1:4, 1:4]
+            normAssert(self, out, ref)
+
+        cv.dnn_unregisterLayer('CropCaffe')
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
