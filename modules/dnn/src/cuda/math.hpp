@@ -120,6 +120,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
 
     template <class T> __device__ T clamp(T value, T lower, T upper) { return min(max(value, lower), upper); }
 
+    template <class T> __device__ T round(T value);
+    template <> inline __device__ double round(double value) { return ::round(value); }
+    template <> inline __device__ float round(float value) { return roundf(value); }
+    template <> inline __device__ __half round(__half value) { return hrint(value); }
+    template <> inline __device__ __half2 round(__half2 value) { return h2rint(value); }
+
+    template <class T> __device__ T ceil(T value);
+    template <> inline __device__ double ceil(double value) { return ::ceil(value); }
+    template <> inline __device__ float ceil(float value) { return ceilf(value); }
+    template <> inline __device__ __half ceil(__half value) { return hceil(value); }
+    template <> inline __device__ __half2 ceil(__half2 value) { return h2ceil(value); }
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_MATH_HPP */
