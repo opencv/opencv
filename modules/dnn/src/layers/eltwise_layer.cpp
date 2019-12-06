@@ -108,7 +108,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && op != DIV) ||  // TODO: not implemented, see PR #15811
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && op != DIV) ||  // TODO: not implemented, see PR #15811
                ((((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()))
                 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && !variableChannels));
@@ -471,6 +471,7 @@ public:
             case MAX: return cuda4dnn::EltwiseOpType::MAX;
             case SUM: return cuda4dnn::EltwiseOpType::SUM;
             case PROD: return cuda4dnn::EltwiseOpType::PRODUCT;
+            case DIV: return cuda4dnn::EltwiseOpType::DIV;
             }
             return cuda4dnn::EltwiseOpType::SUM;
         }();
