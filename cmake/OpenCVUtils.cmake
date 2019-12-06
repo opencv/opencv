@@ -1412,7 +1412,9 @@ function(ocv_target_link_libraries target)
   foreach(dep ${LINK_DEPS})
     if(" ${dep}" STREQUAL " ${target}")
       # prevent "link to itself" warning (world problem)
-    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL "LINK_PUBLIC")
+    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL "LINK_PUBLIC"
+        OR " ${dep}" STREQUAL " PRIVATE" OR " ${dep}" STREQUAL "PUBLIC"
+    )
       if(NOT LINK_PENDING STREQUAL "")
         __ocv_push_target_link_libraries(${LINK_MODE} ${LINK_PENDING})
         set(LINK_PENDING "")
