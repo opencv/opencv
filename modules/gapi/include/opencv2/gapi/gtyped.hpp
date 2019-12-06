@@ -39,6 +39,46 @@ namespace detail
     auto make_default()->decltype(T{}) {return {};}
 }; // detail
 
+/**
+ * @brief This class is a typed wrapper over a regular GComputation.
+ *
+ * `std::function<>`-like template parameter specifies the graph
+ *  signature so methods so the object's constructor, methods like
+ *  `apply()` and the derived `GCompiledT::operator()` also become
+ *  typed.
+ *
+ *  There is no need to use cv::gin() or cv::gout() modifiers with
+ *  objects of this class.  Instead, all input arguments are followed
+ *  by all output arguments in the order from the template argument
+ *  signature.
+ *
+ *  Refer to the following example. Regular (untyped) code is written this way:
+ *
+ *  @snippet modules/gapi/samples/api_ref_snippets.cpp Untyped_Example
+ *
+ *  Here:
+ *
+ *  - cv::GComputation object is created with a lambda constructor
+ *    where it is defined as a two-input, one-output graph.
+ *
+ *  - Its method `apply()` in fact takes arbitrary number of arguments
+ *    (as vectors) so user can pass wrong number of inputs/outputs
+ *    here. C++ compiler wouldn't notice that since the cv::GComputation
+ *    API is polymorphic, and only a run-time error will be generated.
+ *
+ *  Now the same code written with typed API:
+ *
+ *  @snippet modules/gapi/samples/api_ref_snippets.cpp Typed_Example
+ *
+ *  The key difference is:
+ *
+ *  - Now the constructor lambda *must take* parameters and *must
+ *    return* values as defined in the `GComputationT<>` signature.
+ *  - Its method `apply()` does not require any extra specifiers to
+ *    separate input arguments from the output ones
+ *  - A `GCompiledT` (compilation product) takes input/output
+ *    arguments with no extra specifiers as well.
+ */
 template<typename> class GComputationT;
 
 // Single return value implementation

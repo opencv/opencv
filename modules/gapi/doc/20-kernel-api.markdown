@@ -54,10 +54,10 @@ handled in a special way. All other types are opaque to G-API and
 passed to kernel in `outMeta()` or in execution callbacks as-is.
 
 Kernel's return value can _only_ be of G-API dynamic type -- cv::GMat,
-cv::GScalar, or cv::GArray<T>. If an operation has more than one output,
-it should be wrapped into an `std::tuple<>` (which can contain only
-mentioned G-API types). Arbitrary-output-number operations are not
-supported.
+cv::GScalar, or `cv::GArray<T>`. If an operation has more than one
+output, it should be wrapped into an `std::tuple<>` (which can contain
+only mentioned G-API types). Arbitrary-output-number operations are
+not supported.
 
 Once a kernel is defined, it can be used in pipelines with special,
 G-API-supplied method "::on()". This method has the same signature as
@@ -141,7 +141,7 @@ just follow the signature conventions defined by the plugin. G-API
 will call this method during execution and supply all the necessary
 information (and forward the original opaque data as-is).
 
-# Compound kernels
+# Compound kernels {#gapi_kernel_compound}
 
 Sometimes kernel is a single thing only on API level. It is convenient
 for users, but on a particular  implementation side it would be better to

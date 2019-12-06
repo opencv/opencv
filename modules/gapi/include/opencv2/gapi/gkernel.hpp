@@ -239,12 +239,31 @@ public:
         static constexpr const char * id() {return Id;}                     \
     };                                                                      \
 //! @endcond
+
+/**
+ * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
+ * for more details.
+ *
+ * @param Class type name for this operation.
+ * @param API an `std::function<>`-like signature for the operation;
+ *    return type is a single value.
+ * @param Id string identifier for the operation. Must be unique.
+ */
 #define G_TYPED_KERNEL(Class, API, Id)                                      \
     G_ID_HELPER_BODY(Class, Id)                                             \
     struct Class final: public cv::GKernelType<Class, std::function API >,  \
                         public G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
+/**
+ * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
+ * for more details.
+ *
+ * @param Class type name for this operation.
+ * @param API an `std::function<>`-like signature for the operation;
+ *    return type is a tuple of multiple values.
+ * @param Id string identifier for the operation. Must be unique.
+ */
 #define G_TYPED_KERNEL_M(Class, API, Id)                                    \
     G_ID_HELPER_BODY(Class, Id)                                             \
     struct Class final: public cv::GKernelTypeM<Class, std::function API >, \

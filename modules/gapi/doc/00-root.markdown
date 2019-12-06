@@ -64,7 +64,7 @@ included explicitly. The first four lines of `main()` create and
 initialize OpenCV's standard video capture object, which fetches
 video frames from either an attached camera or a specified file.
 
-G-API pipelie is constructed next. In fact, it is a series of G-API
+G-API pipeline is constructed next. In fact, it is a series of G-API
 operation calls on cv::GMat data. The important aspect of G-API is
 that this code block is just a declaration of actions, but not the
 actions themselves. No processing happens at this point, G-API only

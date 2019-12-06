@@ -18,12 +18,12 @@
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
 
-/** \defgroup gapi_core G-API core (basic) functionality
+/** \defgroup gapi_core G-API Core functionality
 @{
     @defgroup gapi_math Graph API: Math operations
     @defgroup gapi_pixelwise Graph API: Pixelwise operations
     @defgroup gapi_matrixop Graph API: Operations on matrices
-    @defgroup gapi_transform Graph API: Geometric, depth and LUT-like image transformations
+    @defgroup gapi_transform Graph API: Image and channel composition functions
 @}
  */
 namespace cv { namespace gapi {
