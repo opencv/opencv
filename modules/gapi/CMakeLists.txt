@@ -1,15 +1,13 @@
 # FIXME: Rework standalone build in more generic maner
 # (Restructure directories, add common pass, etc)
-if (NOT DEFINED OPENCV_INITIAL_PASS)
+if(NOT DEFINED OPENCV_INITIAL_PASS)
     cmake_minimum_required(VERSION 3.3)
     project(gapi_standalone)
     include("cmake/standalone.cmake")
     return()
 endif()
 
-# FIXME: Remove CXX11 check after complete switch to OpenCV 4 branch
-# (CI, bundle, workloads, etc)
-if (NOT HAVE_CXX11 OR NOT TARGET ade)
+if(NOT TARGET ade)
   # can't build G-API because of the above reasons
   ocv_module_disable(gapi)
   return()
@@ -131,9 +129,13 @@ ocv_source_group("Include" FILES ${gapi_ext_hdrs})
 ocv_set_module_sources(HEADERS ${gapi_ext_hdrs} SOURCES ${gapi_srcs})
 ocv_module_include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
 
-# Note `ade` is not a module name but link dependency for ${the_module}
-# (which is opencv_gapi)
-ocv_create_module(ade ${INF_ENGINE_TARGET})
+ocv_create_module()
+
+ocv_target_link_libraries(${the_module} PRIVATE ade ${INF_ENGINE_TARGET})
+if(HAVE_TBB)
+  ocv_target_link_libraries(${the_module} PRIVATE tbb)
+endif()
+
 ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 # FIXME: test binary is linked with ADE directly since ADE symbols
 # are not exported from libopencv_gapi.so in any form - thus
@@ -144,17 +146,17 @@ if(TARGET opencv_test_gapi)
   target_link_libraries(opencv_test_gapi PRIVATE ade)
 endif()
 
-if (HAVE_FREETYPE)
+if(HAVE_FREETYPE)
   ocv_target_compile_definitions(opencv_gapi      PRIVATE -DHAVE_FREETYPE)
   ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_FREETYPE)
-  ocv_target_link_libraries(opencv_gapi LINK_PRIVATE ${FREETYPE_LIBRARIES})
+  ocv_target_link_libraries(opencv_gapi PRIVATE ${FREETYPE_LIBRARIES})
   ocv_target_include_directories(opencv_gapi PRIVATE ${FREETYPE_INCLUDE_DIRS})
 endif()
 
 if(HAVE_PLAIDML)
   ocv_target_compile_definitions(opencv_gapi      PRIVATE -DHAVE_PLAIDML)
   ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_PLAIDML)
-  ocv_target_link_libraries(opencv_gapi LINK_PRIVATE ${PLAIDML_LIBRARIES})
+  ocv_target_link_libraries(opencv_gapi PRIVATE ${PLAIDML_LIBRARIES})
   ocv_target_include_directories(opencv_gapi SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
 endif()
 
