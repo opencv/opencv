@@ -192,6 +192,9 @@ struct GAPI_EXPORTS GNetParam {
     util::any params;    // Backend-interpreted parameter structure
 };
 
+/** \addtogroup gapi_compile_args
+ * @{
+ */
 /**
  * @brief A container class for network configurations. Similar to
  * GKernelPackage.Use cv::gapi::networks() to construct this object.
@@ -204,6 +207,7 @@ struct GAPI_EXPORTS GNetPackage {
     std::vector<GBackend> backends() const;
     std::vector<GNetParam> networks;
 };
+/** @} gapi_compile_args */
 } // namespace gapi
 
 namespace detail {
