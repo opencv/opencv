@@ -537,8 +537,29 @@ namespace gapi {
 
     /** @} */
 
+    // FYI - this function is already commented above
     GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
                                         const GKernelPackage  &rhs);
+
+    /**
+     * @brief Combines multiple G-API kernel packages into one
+     *
+     * @overload
+     *
+     * This function successively combines the passed kernel packages using a right fold.
+     * Calling `combine(a, b, c)` is equal to `combine(a, combine(b, c))`.
+     *
+     * @return The resulting kernel package
+     */
+    template<typename... Ps>
+    GKernelPackage combine(const GKernelPackage &a, const GKernelPackage &b, Ps&&... rest)
+    {
+        return combine(a, combine(b, rest...));
+    }
+
+    /** \addtogroup gapi_compile_args
+     * @{
+     */
     /**
      * @brief cv::use_only() is a special combinator which hints G-API to use only
      * kernels specified in cv::GComputation::compile() (and not to extend kernels available by
@@ -548,6 +569,7 @@ namespace gapi {
     {
         GKernelPackage pkg;
     };
+    /** @} */
 
 } // namespace gapi
 
