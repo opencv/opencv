@@ -380,6 +380,7 @@ TEST_P(Test_ONNX_layers, Div)
 
     normAssert(ref, out, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(Test_ONNX_layers, DynamicReshape)
