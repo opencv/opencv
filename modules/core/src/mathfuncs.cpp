@@ -180,7 +180,7 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     }
 }
 
-void magnitude( InputArray src1, OutputArray dst )
+void magnitudeComplex( InputArray src1, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 

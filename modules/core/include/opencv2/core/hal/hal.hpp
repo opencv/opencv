@@ -246,8 +246,6 @@ CV_EXPORTS void log(const double* src, double* dst, int n);
 CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
 CV_EXPORTS void magnitude(const float* x, const float* y, float* dst, int n);
 CV_EXPORTS void magnitude(const double* x, const double* y, double* dst, int n);
-CV_EXPORTS void magnitude(const float* xy, float* dst, int n);
-CV_EXPORTS void magnitude(const double* xy, double* dst, int n);
 CV_EXPORTS void sqrt(const float* src, float* dst, int len);
 CV_EXPORTS void sqrt(const double* src, double* dst, int len);
 CV_EXPORTS void invSqrt(const float* src, float* dst, int len);

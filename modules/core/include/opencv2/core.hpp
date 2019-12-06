@@ -1592,10 +1592,19 @@ from the corresponding elements of x and y arrays:
 @param y floating-point array of y-coordinates of the vectors; it must
 have the same size as x.
 @param magnitude output array of the same size and type as x.
-@sa cartToPolar, polarToCart, phase, sqrt
+@sa magnitudeComplex, cartToPolar, polarToCart, phase, sqrt
 */
 CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
-CV_EXPORTS_W void magnitude(InputArray xy, OutputArray magnitude);
+
+/** @brief Calculates the magnitude of 2D vectors.
+
+Same as cv::magnitude, but x and y are interleaved channels
+\f[\texttt{dst} (I) =  \sqrt{\texttt{x}(I)^2 + \texttt{y}(I)^2}\f]
+@param xy floating-point array of xy-coordinates of the vectors CV_32FC2 or CV_64FC2).
+@param magnitude output array of the same size and type as x.
+@sa magnitude, cartToPolar, polarToCart, phase, sqrt
+*/
+CV_EXPORTS_W void magnitudeComplex(InputArray xy, OutputArray magnitude);
 
 /** @brief Checks every element of an input array for invalid values.
 
