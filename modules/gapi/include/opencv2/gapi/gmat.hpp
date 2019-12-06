@@ -29,8 +29,7 @@ struct GOrigin;
 /** \addtogroup gapi_data_objects
  * @{
  *
- * @brief G-API data objects are used to build G-API
- * expressions.
+ * @brief G-API data objects used to build G-API expressions.
  *
  * These objects do not own any particular data (except compile-time
  * associated values like with cv::GScalar) and are used to construct

@@ -1,6 +1,5 @@
-#include <opencv2/imgproc.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp> // cv::FONT*, cv::LINE*, cv::FILLED
+#include <opencv2/highgui.hpp> // imwrite
 
 #include <opencv2/gapi.hpp>
 #include <opencv2/gapi/render.hpp>

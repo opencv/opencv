@@ -131,8 +131,9 @@ struct GFluidParallelOutputRois
  * The `parallel_for` member functor is called by the Fluid runtime with the
  * following arguments:
  *
- * @param size Size of the parallel range to process in this thread
- * @param f A function which is called for every integer index in this range.
+ * @param size Size of the parallel range to process
+ * @param f A function which should be called for every integer index
+ *   in this range by the specified parallel_for implementation.
  *
  * This feature may be deprecated in the future releases.
  */

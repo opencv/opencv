@@ -44,7 +44,7 @@ namespace detail
  *
  * `std::function<>`-like template parameter specifies the graph
  *  signature so methods so the object's constructor, methods like
- *  `apply()` and the derived `GCompiledT::operator()` aslo become
+ *  `apply()` and the derived `GCompiledT::operator()` also become
  *  typed.
  *
  *  There is no need to use cv::gin() or cv::gout() modifiers with

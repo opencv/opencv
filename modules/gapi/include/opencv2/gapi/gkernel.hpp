@@ -247,7 +247,7 @@ public:
  * @param Class type name for this operation.
  * @param API an `std::function<>`-like signature for the operation;
  *    return type is a single value.
- * @param Id string identified for the operation. Must be unique.
+ * @param Id string identifier for the operation. Must be unique.
  */
 #define G_TYPED_KERNEL(Class, API, Id)                                      \
     G_ID_HELPER_BODY(Class, Id)                                             \
@@ -262,7 +262,7 @@ public:
  * @param Class type name for this operation.
  * @param API an `std::function<>`-like signature for the operation;
  *    return type is a tuple of multiple values.
- * @param Id string identified for the operation. Must be unique.
+ * @param Id string identifier for the operation. Must be unique.
  */
 #define G_TYPED_KERNEL_M(Class, API, Id)                                    \
     G_ID_HELPER_BODY(Class, Id)                                             \
