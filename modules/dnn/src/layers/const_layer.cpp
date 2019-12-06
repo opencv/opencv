@@ -7,10 +7,16 @@
 
 #include "../precomp.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_cuda.hpp"
 #include "layers_common.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/const.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv { namespace dnn {
@@ -26,7 +32,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
+               backendId == DNN_BACKEND_CUDA;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -73,6 +81,21 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        CV_Assert(blobs.size() == 1);
+        return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blobs[0]);
+    }
+#endif
+
 };
 
 Ptr<Layer> ConstLayer::create(const LayerParams& params)

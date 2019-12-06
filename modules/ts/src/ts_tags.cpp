@@ -23,8 +23,10 @@ static std::map<std::string, int>& getTestTagsSkipExtraCounts()
     static std::map<std::string, int> testTagsSkipExtraCounts;
     return testTagsSkipExtraCounts;
 }
-static void increaseTagsSkipCount(const std::string& tag, bool isMain)
+void testTagIncreaseSkipCount(const std::string& tag, bool isMain, bool appendSkipTests)
 {
+    if (appendSkipTests)
+        skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
     std::map<std::string, int>& counts = isMain ? getTestTagsSkipCounts() : getTestTagsSkipExtraCounts();
     std::map<std::string, int>::iterator i = counts.find(tag);
     if (i == counts.end())
@@ -46,7 +48,8 @@ static std::vector<std::string>& getTestTagsSkipList()
 #if OPENCV_32BIT_CONFIGURATION
         testSkipWithTags.push_back(CV_TEST_TAG_MEMORY_2GB);
 #else
-        testSkipWithTags.push_back(CV_TEST_TAG_MEMORY_6GB);
+        if (!cvtest::runBigDataTests)
+            testSkipWithTags.push_back(CV_TEST_TAG_MEMORY_6GB);
 #endif
         testSkipWithTags.push_back(CV_TEST_TAG_VERYLONG);
 #if defined(_DEBUG)
@@ -191,11 +194,14 @@ public:
     {
         if (!skipped_tests.empty())
         {
-            std::cout << "[ SKIPSTAT ] " << skipped_tests.size() << " tests via tags" << std::endl;
+            std::cout << "[ SKIPSTAT ] " << skipped_tests.size() << " tests skipped" << std::endl;
             const std::vector<std::string>& skipTags = getTestTagsSkipList();
             const std::map<std::string, int>& counts = getTestTagsSkipCounts();
             const std::map<std::string, int>& countsExtra = getTestTagsSkipExtraCounts();
-            for (std::vector<std::string>::const_iterator i = skipTags.begin(); i != skipTags.end(); ++i)
+            std::vector<std::string> skipTags_all = skipTags;
+            skipTags_all.push_back("skip_bigdata");
+            skipTags_all.push_back("skip_other");
+            for (std::vector<std::string>::const_iterator i = skipTags_all.begin(); i != skipTags_all.end(); ++i)
             {
                 int c1 = 0;
                 std::map<std::string, int>::const_iterator i1 = counts.find(*i);
@@ -300,7 +306,7 @@ void checkTestTags()
             if (found != tags.size())
             {
                 skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
-                throw SkipTestException("Test tags don't pass required tags list (--test_tag parameter)");
+                throw details::SkipTestExceptionBase("Test tags don't pass required tags list (--test_tag parameter)", true);
             }
         }
     }
@@ -316,7 +322,7 @@ void checkTestTags()
         const std::string& testTag = testTags[i];
         if (isTestTagSkipped(testTag, skipTag))
         {
-            increaseTagsSkipCount(skipTag, skip_message.empty());
+            testTagIncreaseSkipCount(skipTag, skip_message.empty());
             if (skip_message.empty()) skip_message = "Test with tag '" + testTag + "' is skipped ('" + skipTag + "' is in skip list)";
         }
     }
@@ -326,7 +332,7 @@ void checkTestTags()
         const std::string& testTag = testTagsImplied[i];
         if (isTestTagSkipped(testTag, skipTag))
         {
-            increaseTagsSkipCount(skipTag, skip_message.empty());
+            testTagIncreaseSkipCount(skipTag, skip_message.empty());
             if (skip_message.empty()) skip_message = "Test with tag '" + testTag + "' is skipped (implied '" + skipTag + "' is in skip list)";
         }
     }
@@ -334,7 +340,7 @@ void checkTestTags()
     if (!skip_message.empty())
     {
         skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
-        throw SkipTestException(skip_message);
+        throw details::SkipTestExceptionBase(skip_message, true);
     }
 }
 

@@ -57,6 +57,14 @@ namespace cv
 
 //! @cond IGNORED
 
+//
+// Compilation troubleshooting:
+// - MSVC: error C2719: 'a': formal parameter with requested alignment of 16 won't be aligned
+//   Replace parameter declaration to const reference:
+//   -v_int32x4 a
+//   +const v_int32x4& a
+//
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 ///////// Types ////////////
@@ -1220,14 +1228,23 @@ inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
 OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float32x4, ps)
 OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float64x2, pd)
 
-#define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec, cast) \
+#if CV_SSE4_1
+#define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec) \
 inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
-{ return cast(v_reinterpret_as_f64(a) == v_reinterpret_as_f64(b)); } \
+{ return _Tpvec(_mm_cmpeq_epi64(a.val, b.val)); } \
 inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
-{ return cast(v_reinterpret_as_f64(a) != v_reinterpret_as_f64(b)); }
+{ return ~(a == b); }
+#else
+#define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec) \
+inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+{ __m128i cmp = _mm_cmpeq_epi32(a.val, b.val); \
+  return _Tpvec(_mm_and_si128(cmp, _mm_shuffle_epi32(cmp, _MM_SHUFFLE(2, 3, 0, 1)))); } \
+inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+{ return ~(a == b); }
+#endif
 
-OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2, v_reinterpret_as_u64)
-OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2, v_reinterpret_as_s64)
+OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2)
+OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2)
 
 inline v_float32x4 v_not_nan(const v_float32x4& a)
 { return v_float32x4(_mm_cmpord_ps(a.val, a.val)); }
@@ -1913,6 +1930,59 @@ OPENCV_HAL_IMPL_SSE_UNPACKS(v_uint32x4, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_SSE_UNPACKS(v_int32x4, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_SSE_UNPACKS(v_float32x4, ps, _mm_castps_si128, _mm_castsi128_ps)
 OPENCV_HAL_IMPL_SSE_UNPACKS(v_float64x2, pd, _mm_castpd_si128, _mm_castsi128_pd)
+
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{
+#if CV_SSSE3
+    static const __m128i perm = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+    return v_uint8x16(_mm_shuffle_epi8(a.val, perm));
+#else
+    uchar CV_DECL_ALIGNED(32) d[16];
+    v_store_aligned(d, a);
+    return v_uint8x16(d[15], d[14], d[13], d[12], d[11], d[10], d[9], d[8], d[7], d[6], d[5], d[4], d[3], d[2], d[1], d[0]);
+#endif
+}
+
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{
+#if CV_SSSE3
+    static const __m128i perm = _mm_setr_epi8(14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1);
+    return v_uint16x8(_mm_shuffle_epi8(a.val, perm));
+#else
+    __m128i r = _mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 1, 2, 3));
+    r = _mm_shufflelo_epi16(r, _MM_SHUFFLE(2, 3, 0, 1));
+    r = _mm_shufflehi_epi16(r, _MM_SHUFFLE(2, 3, 0, 1));
+    return v_uint16x8(r);
+#endif
+}
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{
+    return v_uint32x4(_mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 1, 2, 3)));
+}
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{
+    return v_uint64x2(_mm_shuffle_epi32(a.val, _MM_SHUFFLE(1, 0, 3, 2)));
+}
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
 
 template<int s, typename _Tpvec>
 inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
@@ -3207,6 +3277,100 @@ inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_
 inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+
+template<int i>
+inline uchar v_extract_n(const v_uint8x16& v)
+{
+#if CV_SSE4_1
+    return (uchar)_mm_extract_epi8(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline schar v_extract_n(const v_int8x16& v)
+{
+    return (schar)v_extract_n<i>(v_reinterpret_as_u8(v));
+}
+
+template<int i>
+inline ushort v_extract_n(const v_uint16x8& v)
+{
+    return (ushort)_mm_extract_epi16(v.val, i);
+}
+
+template<int i>
+inline short v_extract_n(const v_int16x8& v)
+{
+    return (short)v_extract_n<i>(v_reinterpret_as_u16(v));
+}
+
+template<int i>
+inline uint v_extract_n(const v_uint32x4& v)
+{
+#if CV_SSE4_1
+    return (uint)_mm_extract_epi32(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline int v_extract_n(const v_int32x4& v)
+{
+    return (int)v_extract_n<i>(v_reinterpret_as_u32(v));
+}
+
+template<int i>
+inline uint64 v_extract_n(const v_uint64x2& v)
+{
+#ifdef CV__SIMD_NATIVE_mm_extract_epi64
+    return (uint64)_v128_extract_epi64<i>(v.val);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline int64 v_extract_n(const v_int64x2& v)
+{
+    return (int64)v_extract_n<i>(v_reinterpret_as_u64(v));
+}
+
+template<int i>
+inline float v_extract_n(const v_float32x4& v)
+{
+    union { uint iv; float fv; } d;
+    d.iv = v_extract_n<i>(v_reinterpret_as_u32(v));
+    return d.fv;
+}
+
+template<int i>
+inline double v_extract_n(const v_float64x2& v)
+{
+    union { uint64 iv; double dv; } d;
+    d.iv = v_extract_n<i>(v_reinterpret_as_u64(v));
+    return d.dv;
+}
+
+template<int i>
+inline v_int32x4 v_broadcast_element(const v_int32x4& v)
+{
+    return v_int32x4(_mm_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
+}
+
+template<int i>
+inline v_uint32x4 v_broadcast_element(const v_uint32x4& v)
+{
+    return v_uint32x4(_mm_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
+}
+
+template<int i>
+inline v_float32x4 v_broadcast_element(const v_float32x4& v)
+{
+    return v_float32x4(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
+}
 
 ////////////// FP16 support ///////////////////////////
 

@@ -857,8 +857,8 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 
     CV_Assert(K1.empty() || (K1.size() == Size(3,3)));
     CV_Assert(D1.empty() || (D1.total() == 4));
-    CV_Assert(K2.empty() || (K1.size() == Size(3,3)));
-    CV_Assert(D2.empty() || (D1.total() == 4));
+    CV_Assert(K2.empty() || (K2.size() == Size(3,3)));
+    CV_Assert(D2.empty() || (D2.total() == 4));
 
     CV_Assert((!K1.empty() && !K2.empty() && !D1.empty() && !D2.empty()) || !(flags & CALIB_FIX_INTRINSIC));
 

@@ -109,6 +109,17 @@ struct Protocol
     std::vector<ade::NodeHandle> out_nhs;
 };
 
+// The original metadata the graph has been compiled for.
+// - For regular GCompiled, this information always present and
+//   is NOT updated on reshape()
+// - For GStreamingCompiled, this information may be missing.
+//   It means that compileStreaming() was called without meta.
+struct OriginalInputMeta
+{
+    static const char *name() { return "OriginalInputMeta"; }
+    GMetaArgs inputMeta;
+};
+
 struct OutputMeta
 {
     static const char *name() { return "OutputMeta"; }
@@ -143,6 +154,16 @@ struct ActiveBackends
 {
     static const char *name() { return "ActiveBackends"; }
     std::unordered_set<cv::gapi::GBackend> backends;
+};
+
+// This is a graph-global flag indicating this graph is compiled for
+// the streaming case.  Streaming-neutral passes (i.e. nearly all of
+// them) can ignore this flag safely.
+//
+// FIXME: Probably a better design can be suggested.
+struct Streaming
+{
+    static const char *name() { return "StreamingFlag"; }
 };
 
 // Backend-specific inference parameters for a neural network.
@@ -183,6 +204,7 @@ namespace GModel
         , ConstValue
         , Island
         , Protocol
+        , OriginalInputMeta
         , OutputMeta
         , Journal
         , ade::passes::TopologicalSortData
@@ -190,6 +212,7 @@ namespace GModel
         , IslandModel
         , ActiveBackends
         , CustomMetaFunction
+        , Streaming
         >;
 
     // FIXME: How to define it based on GModel???
@@ -202,6 +225,7 @@ namespace GModel
         , ConstValue
         , Island
         , Protocol
+        , OriginalInputMeta
         , OutputMeta
         , Journal
         , ade::passes::TopologicalSortData
@@ -209,6 +233,7 @@ namespace GModel
         , IslandModel
         , ActiveBackends
         , CustomMetaFunction
+        , Streaming
         >;
 
     // FIXME:
@@ -219,7 +244,7 @@ namespace GModel
     GAPI_EXPORTS void init (Graph& g);
 
     GAPI_EXPORTS ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
-
+    // Isn't used by the framework or default backends, required for external backend development
     GAPI_EXPORTS ade::NodeHandle mkDataNode(Graph &g, const GShape shape);
 
     // Adds a string message to a node. Any node can be subject of log, messages then

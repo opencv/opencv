@@ -1900,18 +1900,19 @@ int FileStorage::getFormat() const
 
 FileNode FileStorage::operator [](const char* key) const
 {
-    if( p->roots.empty() )
-        return FileNode();
-
-    return p->roots[0][key];
+    return this->operator[](std::string(key));
 }
 
 FileNode FileStorage::operator [](const std::string& key) const
 {
-    if( p->roots.empty() )
-        return FileNode();
-
-    return p->roots[0][key];
+    FileNode res;
+    for (size_t i = 0; i < p->roots.size(); i++)
+    {
+        res = p->roots[i][key];
+        if (!res.empty())
+            break;
+    }
+    return res;
 }
 
 String FileStorage::releaseAndGetString()
@@ -2058,6 +2059,14 @@ FileNode::FileNode(const FileNode& node)
     fs = node.fs;
     blockIdx = node.blockIdx;
     ofs = node.ofs;
+}
+
+FileNode& FileNode::operator=(const FileNode& node)
+{
+    fs = node.fs;
+    blockIdx = node.blockIdx;
+    ofs = node.ofs;
+    return *this;
 }
 
 FileNode FileNode::operator[](const std::string& nodename) const
@@ -2400,6 +2409,17 @@ FileNodeIterator::FileNodeIterator(const FileNodeIterator& it)
     blockSize = it.blockSize;
     nodeNElems = it.nodeNElems;
     idx = it.idx;
+}
+
+FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
+{
+    fs = it.fs;
+    blockIdx = it.blockIdx;
+    ofs = it.ofs;
+    blockSize = it.blockSize;
+    nodeNElems = it.nodeNElems;
+    idx = it.idx;
+    return *this;
 }
 
 FileNode FileNodeIterator::operator *() const

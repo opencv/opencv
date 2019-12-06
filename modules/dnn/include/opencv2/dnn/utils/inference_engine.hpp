@@ -14,6 +14,27 @@ namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 
+/* Values for 'OPENCV_DNN_BACKEND_INFERENCE_ENGINE_TYPE' parameter */
+#define CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API     "NN_BUILDER"
+#define CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH             "NGRAPH"
+
+/** @brief Returns Inference Engine internal backend API.
+ *
+ * See values of `CV_DNN_BACKEND_INFERENCE_ENGINE_*` macros.
+ *
+ * Default value is controlled through `OPENCV_DNN_BACKEND_INFERENCE_ENGINE_TYPE` runtime parameter (environment variable).
+ */
+CV_EXPORTS_W cv::String getInferenceEngineBackendType();
+
+/** @brief Specify Inference Engine internal backend API.
+ *
+ * See values of `CV_DNN_BACKEND_INFERENCE_ENGINE_*` macros.
+ *
+ * @returns previous value of internal backend API
+ */
+CV_EXPORTS_W cv::String setInferenceEngineBackendType(const cv::String& newBackendType);
+
+
 /** @brief Release a Myriad device (binded by OpenCV).
  *
  * Single Myriad device cannot be shared across multiple processes which uses

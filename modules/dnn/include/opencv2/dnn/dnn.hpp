@@ -67,11 +67,17 @@ CV__DNN_INLINE_NS_BEGIN
         //! DNN_BACKEND_DEFAULT equals to DNN_BACKEND_INFERENCE_ENGINE if
         //! OpenCV is built with Intel's Inference Engine library or
         //! DNN_BACKEND_OPENCV otherwise.
-        DNN_BACKEND_DEFAULT,
+        DNN_BACKEND_DEFAULT = 0,
         DNN_BACKEND_HALIDE,
-        DNN_BACKEND_INFERENCE_ENGINE,  //!< Intel's Inference Engine computational backend.
+        DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel's Inference Engine computational backend
+                                                 //!< @sa setInferenceEngineBackendType
         DNN_BACKEND_OPENCV,
-        DNN_BACKEND_VKCOM
+        DNN_BACKEND_VKCOM,
+        DNN_BACKEND_CUDA,
+#ifdef __OPENCV_BUILD
+        DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
+        DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
+#endif
     };
 
     /**
@@ -85,7 +91,9 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_OPENCL_FP16,
         DNN_TARGET_MYRIAD,
         DNN_TARGET_VULKAN,
-        DNN_TARGET_FPGA  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
+        DNN_TARGET_FPGA,  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
+        DNN_TARGET_CUDA,
+        DNN_TARGET_CUDA_FP16
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -273,7 +281,23 @@ CV__DNN_INLINE_NS_BEGIN
 
         virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs);
 
+        virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
+
         virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
+
+        /**
+         * @brief Returns a CUDA backend node
+         *
+         * @param   context  void pointer to CSLContext object
+         * @param   inputs   layer inputs
+         * @param   outputs  layer outputs
+         */
+        virtual Ptr<BackendNode> initCUDA(
+            void *context,
+            const std::vector<Ptr<BackendWrapper>>& inputs,
+            const std::vector<Ptr<BackendWrapper>>& outputs
+        );
+
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
         * @param[in] node Backend node with Halide functions.
@@ -515,13 +539,15 @@ CV__DNN_INLINE_NS_BEGIN
          * @see Target
          *
          * List of supported combinations backend / target:
-         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE | DNN_BACKEND_HALIDE |
-         * |------------------------|--------------------|------------------------------|--------------------|
-         * | DNN_TARGET_CPU         |                  + |                            + |                  + |
-         * | DNN_TARGET_OPENCL      |                  + |                            + |                  + |
-         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |
-         * | DNN_TARGET_MYRIAD      |                    |                            + |                    |
-         * | DNN_TARGET_FPGA        |                    |                            + |                    |
+         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE | DNN_BACKEND_HALIDE |  DNN_BACKEND_CUDA |
+         * |------------------------|--------------------|------------------------------|--------------------|-------------------|
+         * | DNN_TARGET_CPU         |                  + |                            + |                  + |                   |
+         * | DNN_TARGET_OPENCL      |                  + |                            + |                  + |                   |
+         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |                   |
+         * | DNN_TARGET_MYRIAD      |                    |                            + |                    |                   |
+         * | DNN_TARGET_FPGA        |                    |                            + |                    |                   |
+         * | DNN_TARGET_CUDA        |                    |                              |                    |                 + |
+         * | DNN_TARGET_CUDA_FP16   |                    |                              |                    |                 + |
          */
         CV_WRAP void setPreferableTarget(int targetId);
 

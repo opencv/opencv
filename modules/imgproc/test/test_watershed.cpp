@@ -83,7 +83,7 @@ void CV_WatershedTest::run( int /* start_from */)
         Point* p = (Point*)cvGetSeqElem(cnts, 0);
 
         //expected image was added with 1 in order to save to png
-        //so now we substract 1 to get real color
+        //so now we subtract 1 to get real color
         if(!exp.empty())
             colors.push_back(exp.ptr(p->y)[p->x] - 1);
     }

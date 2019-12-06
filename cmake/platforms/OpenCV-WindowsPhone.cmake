@@ -1,4 +1,4 @@
-include("${CMAKE_CURRENT_LIST_DIR}/OpenCV_WinRT.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/OpenCV-WinRT.cmake")
 
 # Adding additional using directory for WindowsPhone 8.0 to get Windows.winmd properly
 if(WINRT_8_0)

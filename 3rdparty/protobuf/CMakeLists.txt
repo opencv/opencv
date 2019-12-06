@@ -22,6 +22,7 @@ else()
                                        -Wenum-compare-switch
                                        -Wsuggest-override -Winconsistent-missing-override
                                        -Wimplicit-fallthrough
+                                       -Warray-bounds  # GCC 9+
   )
 endif()
 if(CV_ICC)

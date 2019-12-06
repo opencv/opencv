@@ -319,6 +319,29 @@ double VideoCapture::get(int propId) const
 }
 
 
+bool VideoCapture::waitAny(const std::vector<VideoCapture>& streams, CV_OUT std::vector<int>& readyIndex, int64 timeoutNs)
+{
+    CV_Assert(!streams.empty());
+
+    VideoCaptureAPIs backend = (VideoCaptureAPIs)streams[0].icap->getCaptureDomain();
+
+    for (size_t i = 1; i < streams.size(); ++i)
+    {
+        VideoCaptureAPIs backend_i = (VideoCaptureAPIs)streams[i].icap->getCaptureDomain();
+        CV_CheckEQ((int)backend, (int)backend_i, "All captures must have the same backend");
+    }
+
+#if (defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO)  // see cap_v4l.cpp guard
+    if (backend == CAP_V4L2)
+        return VideoCapture_V4L_waitAny(streams, readyIndex, timeoutNs);
+#else
+    CV_UNUSED(readyIndex); CV_UNUSED(timeoutNs);
+#endif
+    CV_Error(Error::StsNotImplemented, "VideoCapture::waitAny() is supported by V4L backend only");
+}
+
+
+
 //=================================================================================================
 
 

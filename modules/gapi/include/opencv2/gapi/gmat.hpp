@@ -211,6 +211,7 @@ GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 
 /** @} */
 
+// FIXME: WHY??? WHY it is under different namespace?
 namespace gapi { namespace own {
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own

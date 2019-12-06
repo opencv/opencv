@@ -1068,6 +1068,79 @@ OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_int64x8,    epi64)
 OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_float32x16, ps)
 OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_float64x8,  pd)
 
+/** Reverse **/
+inline v_uint8x64 v_reverse(const v_uint8x64 &a)
+{
+#if CV_AVX_512VBMI
+    static const __m512i perm = _mm512_set_epi32(
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+            0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f,
+            0x20212223, 0x24252627, 0x28292a2b, 0x2c2d2e2f,
+            0x30313233, 0x34353637, 0x38393a3b, 0x3c3d3e3f);
+    return v_uint8x64(_mm512_permutexvar_epi8(perm, a.val));
+#else
+    static const __m512i shuf = _mm512_set_epi32(
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
+            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f);
+    static const __m512i perm = _mm512_set_epi64(1, 0, 3, 2, 5, 4, 7, 6);
+    __m512i vec = _mm512_shuffle_epi8(a.val, shuf);
+    return v_uint8x64(_mm512_permutexvar_epi64(perm, vec));
+#endif
+}
+
+inline v_int8x64 v_reverse(const v_int8x64 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x32 v_reverse(const v_uint16x32 &a)
+{
+#if CV_AVX_512VBMI
+    static const __m512i perm = _mm512_set_epi32(
+            0x00000001, 0x00020003, 0x00040005, 0x00060007,
+            0x00080009, 0x000a000b, 0x000c000d, 0x000e000f,
+            0x00100011, 0x00120013, 0x00140015, 0x00160017,
+            0x00180019, 0x001a001b, 0x001c001d, 0x001e001f);
+    return v_uint16x32(_mm512_permutexvar_epi16(perm, a.val));
+#else
+    static const __m512i shuf = _mm512_set_epi32(
+            0x01000302, 0x05040706, 0x09080b0a, 0x0d0c0f0e,
+            0x01000302, 0x05040706, 0x09080b0a, 0x0d0c0f0e,
+            0x01000302, 0x05040706, 0x09080b0a, 0x0d0c0f0e,
+            0x01000302, 0x05040706, 0x09080b0a, 0x0d0c0f0e);
+    static const __m512i perm = _mm512_set_epi64(1, 0, 3, 2, 5, 4, 7, 6);
+    __m512i vec = _mm512_shuffle_epi8(a.val, shuf);
+    return v_uint16x32(_mm512_permutexvar_epi64(perm, vec));
+#endif
+}
+
+inline v_int16x32 v_reverse(const v_int16x32 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x16 v_reverse(const v_uint32x16 &a)
+{
+    static const __m512i perm = _mm512_set_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,14, 15);
+    return v_uint32x16(_mm512_permutexvar_epi32(perm, a.val));
+}
+
+inline v_int32x16 v_reverse(const v_int32x16 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x16 v_reverse(const v_float32x16 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x8 v_reverse(const v_uint64x8 &a)
+{
+    static const __m512i perm = _mm512_set_epi64(0, 1, 2, 3, 4, 5, 6, 7);
+    return v_uint64x8(_mm512_permutexvar_epi64(perm, a.val));
+}
+
+inline v_int64x8 v_reverse(const v_int64x8 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x8 v_reverse(const v_float64x8 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
+
 ////////// Reduce /////////
 
 /** Reduce **/
@@ -2154,6 +2227,35 @@ OPENCV_HAL_IMPL_AVX512_EXTRACT(v_uint64x8)
 OPENCV_HAL_IMPL_AVX512_EXTRACT(v_int64x8)
 OPENCV_HAL_IMPL_AVX512_EXTRACT(v_float32x16)
 OPENCV_HAL_IMPL_AVX512_EXTRACT(v_float64x8)
+
+#define OPENCV_HAL_IMPL_AVX512_EXTRACT_N(_Tpvec, _Tp) \
+template<int i> inline _Tp v_extract_n(_Tpvec v) { return v_rotate_right<i>(v).get0(); }
+
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint8x64, uchar)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int8x64, schar)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint16x32, ushort)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int16x32, short)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint32x16, uint)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int32x16, int)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_uint64x8, uint64)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_int64x8, int64)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_float32x16, float)
+OPENCV_HAL_IMPL_AVX512_EXTRACT_N(v_float64x8, double)
+
+template<int i>
+inline v_uint32x16 v_broadcast_element(v_uint32x16 a)
+{
+    static const __m512i perm = _mm512_set1_epi32((char)i);
+    return v_uint32x16(_mm512_permutexvar_epi32(perm, a.val));
+}
+
+template<int i>
+inline v_int32x16 v_broadcast_element(const v_int32x16 &a)
+{ return v_reinterpret_as_s32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
+
+template<int i>
+inline v_float32x16 v_broadcast_element(const v_float32x16 &a)
+{ return v_reinterpret_as_f32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
 
 
 ///////////////////// load deinterleave /////////////////////////////

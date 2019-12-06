@@ -100,7 +100,7 @@ public:
         lInf = lInf ? lInf : default_lInf;
         normAssert(outRef, outBlobs[0], "", l1, lInf);
 
-        if (check2ndBlob && backend != DNN_BACKEND_INFERENCE_ENGINE)
+        if (check2ndBlob && backend == DNN_BACKEND_OPENCV)
         {
             Mat out2 = outBlobs[1];
             Mat ref2 = readTorchBlob(_tf(prefix + "_output_2" + suffix), isBinary);
@@ -136,8 +136,8 @@ TEST_P(Test_Torch_layers, run_reshape_change_batch_size)
 
 TEST_P(Test_Torch_layers, run_reshape)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     runTorchNet("net_reshape_batch");
     runTorchNet("net_reshape_channels", "", false, true);
 }
@@ -209,8 +209,8 @@ TEST_P(Test_Torch_layers, net_lp_pooling)
 
 TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     runTorchNet("net_conv_gemm_lrn", "", false, true, true,
                 target == DNN_TARGET_OPENCL_FP16 ? 0.046 : 0.0,
                 target == DNN_TARGET_OPENCL_FP16 ? 0.023 : 0.0);
@@ -223,6 +223,8 @@ TEST_P(Test_Torch_layers, net_inception_block)
 
 TEST_P(Test_Torch_layers, net_normalize)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* only L1 and L2 norms are supported */
     runTorchNet("net_normalize", "", false, true);
 }
 
@@ -235,9 +237,10 @@ TEST_P(Test_Torch_layers, net_padding)
 
 TEST_P(Test_Torch_layers, net_non_spatial)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 &&
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+                     CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     runTorchNet("net_non_spatial", "", false, true);
 }
 
@@ -251,9 +254,10 @@ TEST_P(Test_Torch_layers, run_paralel)
 TEST_P(Test_Torch_layers, net_residual)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL ||
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_OPENCL ||
                                                     target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+                     CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
     runTorchNet("net_residual", "", false, true);
 }
@@ -263,8 +267,8 @@ class Test_Torch_nets : public DNNTestLayer {};
 TEST_P(Test_Torch_nets, OpenFace_accuracy)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
 #endif
     checkBackend();
 
@@ -339,11 +343,11 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     checkBackend();
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("");
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
     {
-        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
-        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL);
-        if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+        if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
         throw SkipTestException("");
     }
 
@@ -395,17 +399,17 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
 TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 {
 #if defined INF_ENGINE_RELEASE
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
 #endif
 
     checkBackend();
 
 #if defined(INF_ENGINE_RELEASE)
 #if INF_ENGINE_RELEASE <= 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 #endif
 

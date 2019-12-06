@@ -16,7 +16,7 @@ correspondingly window color changes. By default, initial color will be set to B
 
 For cv.getTrackbarPos() function, first argument is the trackbar name, second one is the window
 name to which it is attached, third argument is the default value, fourth one is the maximum value
-and fifth one is the callback function which is executed everytime trackbar value changes. The
+and fifth one is the callback function which is executed every time trackbar value changes. The
 callback function always has a default argument which is the trackbar position. In our case,
 function does nothing, so we simply pass.
 

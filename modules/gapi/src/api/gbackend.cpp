@@ -40,10 +40,27 @@ cv::gapi::GBackend::Priv::compile(const ade::Graph&,
     return {};
 }
 
+std::unique_ptr<cv::gimpl::GIslandExecutable>
+cv::gapi::GBackend::Priv::compile(const ade::Graph& graph,
+                                  const GCompileArgs& args,
+                                  const std::vector<ade::NodeHandle>& nodes,
+                                  const std::vector<cv::gimpl::Data>&,
+                                  const std::vector<cv::gimpl::Data>&) const
+{
+    return compile(graph, args, nodes);
+}
+
 void cv::gapi::GBackend::Priv::addBackendPasses(ade::ExecutionEngineSetupContext &)
 {
     // Do nothing by default, plugins may override this to
     // add custom (backend-specific) graph transformations
+}
+
+void cv::gapi::GBackend::Priv::addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupContext &)
+{
+    // Do nothing by default, plugins may override this to
+    // add custom (backend-specific) graph transformations
+    // which are sensitive to metadata
 }
 
 cv::gapi::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
@@ -118,7 +135,7 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, bool is_umat)
             if (is_umat)
             {
                 auto& mag_umat = mag.template slot<cv::UMat>()[rc.id];
-                mag_umat = (util::get<cv::UMat>(arg));
+                mag_umat = util::get<cv::Mat>(arg).getUMat(ACCESS_READ);
             }
             else
             {
@@ -185,7 +202,7 @@ void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat)
             if (is_umat)
             {
                 auto& mag_umat = mag.template slot<cv::UMat>()[rc.id];
-                mag_umat = (*util::get<cv::UMat*>(arg));
+                mag_umat = util::get<cv::Mat*>(arg)->getUMat(ACCESS_RW);
             }
             else
             {

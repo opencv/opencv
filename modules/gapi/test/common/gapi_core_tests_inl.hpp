@@ -1293,6 +1293,8 @@ TEST_P(NormalizeTest, Test)
     }
 }
 
+// PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
+
 TEST_P(BackendOutputAllocationTest, EmptyOutput)
 {
     // G-API code //////////////////////////////////////////////////////////////
