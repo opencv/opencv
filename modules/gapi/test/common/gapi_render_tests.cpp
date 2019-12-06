@@ -21,16 +21,27 @@ cv::Scalar cvtBGRToYUVC(const cv::Scalar& bgr)
 
 void drawMosaicRef(const cv::Mat& mat, const cv::Rect &rect, int cellSz)
 {
-    cv::Mat msc_roi = mat(rect);
+    cv::Rect mat_rect(0, 0, mat.cols, mat.rows);
+    auto intersection = mat_rect & rect;
+
+    cv::Mat msc_roi = mat(intersection);
     int crop_x = msc_roi.cols - msc_roi.cols % cellSz;
     int crop_y = msc_roi.rows - msc_roi.rows % cellSz;
 
+    cv::Mat cell_roi;
     for(int i = 0; i < crop_y; i += cellSz ) {
         for(int j = 0; j < crop_x; j += cellSz) {
-            auto cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
+            cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
             cell_roi = cv::mean(cell_roi);
         }
     }
+
+    // Handle tail
+    cell_roi = msc_roi(cv::Rect(crop_x, 0, msc_roi.cols - crop_x, crop_y));
+    cell_roi = cv::mean(cell_roi);
+
+    cell_roi = msc_roi(cv::Rect(0, crop_y, msc_roi.cols, msc_roi.rows - crop_y));
+    cell_roi = cv::mean(cell_roi);
 }
 
 void blendImageRef(cv::Mat& mat, const cv::Point& org, const cv::Mat& img, const cv::Mat& alpha)
