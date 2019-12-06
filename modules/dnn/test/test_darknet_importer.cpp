@@ -115,6 +115,42 @@ public:
         net.setInput(inp);
         Mat out = net.forward();
         normAssert(out, ref, "", default_l1, default_lInf);
+
+        if (inp.size[0] == 1)  // test handling of batch size
+        {
+            SCOPED_TRACE("batch size 2");
+
+            std::vector<int> sz2 = shape(inp);
+            sz2[0] = 2;
+
+            Net net2 = readNet(cfg, model);
+            net2.setPreferableBackend(backend);
+            net2.setPreferableTarget(target);
+            Range ranges0[4] = { Range(0, 1), Range::all(), Range::all(), Range::all() };
+            Range ranges1[4] = { Range(1, 2), Range::all(), Range::all(), Range::all() };
+            Mat inp2(sz2, inp.type(), Scalar::all(0));
+            inp.copyTo(inp2(ranges0));
+            inp.copyTo(inp2(ranges1));
+            net2.setInput(inp2);
+            Mat out2 = net2.forward();
+            EXPECT_EQ(0, cv::norm(out2(ranges0), out2(ranges1), NORM_INF)) << "Batch result is not equal: " << name;
+
+            Mat ref2 = ref;
+            if (ref.dims == 2 && out2.dims == 3)
+            {
+                int ref_3d_sizes[3] = {1, ref.rows, ref.cols};
+                ref2 = Mat(3, ref_3d_sizes, ref.type(), (void*)ref.data);
+            }
+            /*else if (ref.dims == 3 && out2.dims == 4)
+            {
+                int ref_4d_sizes[4] = {1, ref.size[0], ref.size[1], ref.size[2]};
+                ref2 = Mat(4, ref_4d_sizes, ref.type(), (void*)ref.data);
+            }*/
+            ASSERT_EQ(out2.dims, ref2.dims) << ref.dims;
+
+            normAssert(out2(ranges0), ref2, "", default_l1, default_lInf);
+            normAssert(out2(ranges1), ref2, "", default_l1, default_lInf);
+        }
     }
 };
 
