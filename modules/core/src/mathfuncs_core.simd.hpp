@@ -10,7 +10,9 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 // forward declarations
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
+void fastAtan32fc(const float *XY, float *angle, int len, bool angleInDegrees);
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees);
+void fastAtan64fc(const double *XY, double *angle, int len, bool angleInDegrees);
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
 void magnitude32f(const float* x, const float* y, float* mag, int len);
 void magnitude32fc(const float* xy, float* mag, int len);
@@ -166,6 +168,52 @@ void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool ang
     fastAtan32f_(Y, X, angle, len, angleInDegrees );
 }
 
+static void fastAtan32fc_(const float *XY, float *angle, int len, bool angleInDegrees )
+{
+    float scale = angleInDegrees ? 1.f : (float)(CV_PI/180);
+    int i = 0;
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    v_atan_f32 v(scale);
+
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            // if it's inplace operation, we cannot repeatedly process
+            // the tail for the second time, so we have to use the
+            // scalar code
+            if( i == 0 )
+                break;
+            i = len - VECSZ*2;
+        }
+
+        v_float32 x0, y0, x1, y1;
+        v_load_deinterleave(XY + 2*i, x0, y0);
+        v_load_deinterleave(XY + 2*(i+VECSZ), x1, y1);
+
+        v_float32 r0 = v.compute(y0, x0);
+        v_float32 r1 = v.compute(y1, x1);
+
+        v_store(angle + i, r0);
+        v_store(angle + i + VECSZ, r1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        float x0 = XY[2*i+0], y0 = XY[2*i+1];
+        angle[i] = atan_f32(y0, x0)*scale;
+    }
+}
+
+void fastAtan32fc(const float *XY, float *angle, int len, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION();
+    fastAtan32fc_(XY, angle, len, angleInDegrees );
+}
+
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
     CV_INSTRUMENT_REGION();
@@ -185,6 +233,27 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
             angle[i + j] = abuf[j];
     }
 }
+
+void fastAtan64fc(const double *XY, double *angle, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    const int BLKSZ = 128;
+    float ybuf[BLKSZ], xbuf[BLKSZ], abuf[BLKSZ];
+    for( int i = 0; i < len; i += BLKSZ )
+    {
+        int j, blksz = std::min(BLKSZ, len - i);
+        for( j = 0; j < blksz; j++ )
+        {
+            ybuf[j] = (float)XY[2*(i + j)+1];
+            xbuf[j] = (float)XY[2*(i + j)+0];
+        }
+        fastAtan32f_(ybuf, xbuf, abuf, blksz, angleInDegrees);
+        for( j = 0; j < blksz; j++ )
+            angle[i + j] = abuf[j];
+    }
+}
+
 
 // deprecated
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )

@@ -21,6 +21,16 @@ void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool ang
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+void fastAtan32fc(const float *XY, float *angle, int len, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(fastAtan32fc, cv_hal_fastAtan32fc, XY, angle, len, angleInDegrees);
+
+    CV_CPU_DISPATCH(fastAtan32fc, (XY, angle, len, angleInDegrees),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
     CV_INSTRUMENT_REGION();
@@ -28,6 +38,16 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
     CALL_HAL(fastAtan64f, cv_hal_fastAtan64f, Y, X, angle, len, angleInDegrees);
 
     CV_CPU_DISPATCH(fastAtan64f, (Y, X, angle, len, angleInDegrees),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void fastAtan64fc(const double *XY, double *angle, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(fastAtan64fc, cv_hal_fastAtan64fc, XY, angle, len, angleInDegrees);
+
+    CV_CPU_DISPATCH(fastAtan64fc, (XY, angle, len, angleInDegrees),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
