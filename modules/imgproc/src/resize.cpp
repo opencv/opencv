@@ -1634,7 +1634,7 @@ struct HResizeLinearVecU8_X4
         else if(cn == 3)
         {
             const int step = 4;
-            const int len0 = xmax & -step;
+            const int len0 = xmax - step;
             for( ; k <= (count - 2); k+=2 )
             {
                 const uchar *S0 = src[k];
