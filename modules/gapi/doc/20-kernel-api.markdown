@@ -18,7 +18,25 @@ compilation).
 
 Kernel-implementation hierarchy may look like:
 
-![Kernel API/implementation hierarchy example](pics/kernel_hierarchy.png)
+@dot Kernel API/implementation hierarchy example
+digraph {
+  rankdir=BT;
+  node [shape=record];
+
+  ki_a [label="{<f0> interface\nA}"];
+  ki_b [label="{<f0> interface\nB}"];
+
+  {rank=same; ki_a ki_b};
+
+  "CPU::A"     -> ki_a [dir="forward"];
+  "OpenCL::A"  -> ki_a [dir="forward"];
+  "Halide::A"  -> ki_a [dir="forward"];
+
+  "CPU::B"     -> ki_b [dir="forward"];
+  "OpenCL::B"  -> ki_b [dir="forward"];
+  "Halide::B"  -> ki_b [dir="forward"];
+}
+@enddot
 
 A pipeline itself then can be expressed only in terms of `A`, `B`, and
 so on, and choosing which implementation to use in execution becomes
