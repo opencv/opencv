@@ -32,7 +32,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
-    template <class T, std::size_t N>
+    template <class T, std::size_t N> static
     void launch_vectorized_fill(const Stream& stream, Span<T> output, T value) {
         CV_Assert(is_fully_aligned<T>(output, N));
 
