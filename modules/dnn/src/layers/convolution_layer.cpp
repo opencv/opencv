@@ -414,14 +414,11 @@ public:
             {
                 activType = OCL4DNN_CONV_FUSED_ACTIV_TANH;
             }
-
-            if (activType == OCL4DNN_CONV_FUSED_ACTIV_NONE)
-            {
-                newActiv = false;
-                activ.reset();
-            }
         }
-        else if(IS_DNN_CUDA_TARGET(preferableTarget))
+#endif
+
+#ifdef HAVE_CUDA
+        if(IS_DNN_CUDA_TARGET(preferableTarget))
         {
             Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
             if(!activ_relu.empty())
