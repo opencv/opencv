@@ -8,7 +8,6 @@
 #include "math.hpp"
 #include "types.hpp"
 #include "grid_stride_range.hpp"
-#include "vector_traits.hpp"
 #include "execution.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
@@ -107,7 +106,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 index_type in_offset_r1 = c_start * in_image_size + in_y1 * in_width;
                 index_type out_idx = c_start * out_image_size + y * out_width + x;
 
-                #pragma unroll 1 /* to reduce register pressure and thereby increase the number of blocks */
+                #pragma unroll 1 /* disable unrolling to reduce register pressure; not sure how but it works */
                 for (auto c = c_start; c < c_end; c++) {
                     auto v_00 = input[in_offset_r0 + in_x0],
                          v_01 = input[in_offset_r0 + in_x1],
