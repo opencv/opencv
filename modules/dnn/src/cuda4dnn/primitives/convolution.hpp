@@ -49,14 +49,17 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
         enum class ActivationType {
             NONE,
-            RELU,
+            RELU, /* uses value provided in `relu_negative_slope` */
             CLIPPED_RELU, /* uses values provided in `crelu_floor` and `crelu_ceil` */
+            POWER, /* scale and shift fused beforehand (fuseWeights); only `power_exp` is handled by CUDA */
             TANH,
-            SIGMOID
+            SIGMOID,
+            SWISH,
+            MISH
         };
 
         ActivationType activation;
-        float crelu_floor, crelu_ceil;
+        float relu_negative_slope, crelu_floor, crelu_ceil, power_exp;
     };
 
     template <class T>
@@ -204,8 +207,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             convoluter = csl::Convolution<T>(cudnnHandle, params);
 
             activation = config.activation;
+            relu_negative_slope = config.relu_negative_slope;
             crelu_floor = config.crelu_floor;
             crelu_ceil = config.crelu_ceil;
+            power_exp = config.power_exp;
 
             csl::WorkspaceBuilder builder;
             if (!transformed_shape.empty()) {
@@ -250,16 +255,25 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                         kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
                         break;
                     case ConvolutionConfiguration::ActivationType::RELU:
-                        kernels::biasN_relu_inplace<T>(stream, output, inner_size, biasTensor);
+                        kernels::biasN_relu_inplace<T>(stream, output, inner_size, biasTensor, relu_negative_slope);
                         break;
                     case ConvolutionConfiguration::ActivationType::CLIPPED_RELU:
                         kernels::biasN_clipped_relu_inplace<T>(stream, output, inner_size, biasTensor, crelu_floor, crelu_ceil);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::POWER:
+                        kernels::biasN_power_inplace<T>(stream, output, inner_size, biasTensor, power_exp);
                         break;
                     case ConvolutionConfiguration::ActivationType::TANH:
                         kernels::biasN_tanh_inplace<T>(stream, output, inner_size, biasTensor);
                         break;
                     case ConvolutionConfiguration::ActivationType::SIGMOID:
                         kernels::biasN_sigmoid_inplace<T>(stream, output, inner_size, biasTensor);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SWISH:
+                        kernels::biasN_swish_inplace<T>(stream, output, inner_size, biasTensor);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::MISH:
+                        kernels::biasN_mish_inplace<T>(stream, output, inner_size, biasTensor);
                         break;
                 }
             }
@@ -270,16 +284,25 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     case ConvolutionConfiguration::ActivationType::NONE:
                         break;
                     case ConvolutionConfiguration::ActivationType::RELU:
-                        kernels::relu<T>(stream, output, output, 0.0);
+                        kernels::relu<T>(stream, output, output, relu_negative_slope);
                         break;
                     case ConvolutionConfiguration::ActivationType::CLIPPED_RELU:
                         kernels::clipped_relu<T>(stream, output, output, crelu_floor, crelu_ceil);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::POWER:
+                        kernels::power<T>(stream, output, output, power_exp, 1.0, 0.0);
                         break;
                     case ConvolutionConfiguration::ActivationType::TANH:
                         kernels::tanh<T>(stream, output, output);
                         break;
                     case ConvolutionConfiguration::ActivationType::SIGMOID:
                         kernels::sigmoid<T>(stream, output, output);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SWISH:
+                        kernels::swish<T>(stream, output, output);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::MISH:
+                        kernels::mish<T>(stream, output, output);
                         break;
                 }
             }
@@ -299,7 +322,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         std::size_t scratch_mem_in_bytes;
 
         ConvolutionConfiguration::ActivationType activation;
-        float crelu_floor, crelu_ceil;
+        float relu_negative_slope, crelu_floor, crelu_ceil, power_exp;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

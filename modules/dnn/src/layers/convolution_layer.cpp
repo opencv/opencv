@@ -242,7 +242,7 @@ public:
 
 #ifdef HAVE_CUDA
     cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
-    float cuda_crelu_floor, cuda_crelu_ceil;
+    float cuda_relu_slope, cuda_crelu_floor, cuda_crelu_ceil, cuda_power_exp;
 #endif
 
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
@@ -422,7 +422,10 @@ public:
         {
             Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
             if(!activ_relu.empty())
+            {
                 cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::RELU;
+                cuda_relu_slope = activ_relu->negativeSlope;
+            }
 
             Ptr<ReLU6Layer> activ_relu6 = activ.dynamicCast<ReLU6Layer>();
             if(!activ_relu6.empty())
@@ -432,6 +435,20 @@ public:
                 cuda_crelu_ceil = activ_relu6->maxValue;
             }
 
+            Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+            if (!activ_power.empty())
+            {
+                if (activ_power->scale != 1.f || activ_power->shift != 0.f)
+                {
+                    const int outCh = blobs[0].size[0];
+                    fuseWeights(Mat(1, outCh, CV_32F, Scalar(activ_power->scale)),
+                                Mat(1, outCh, CV_32F, Scalar(activ_power->shift)));
+                }
+
+                cuda_power_exp = activ_power->power;
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::POWER;
+            }
+
             Ptr<TanHLayer> activ_tanh = activ.dynamicCast<TanHLayer>();
             if(!activ_tanh.empty())
                 cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::TANH;
@@ -439,6 +456,14 @@ public:
             Ptr<SigmoidLayer> activ_sigmoid = activ.dynamicCast<SigmoidLayer>();
             if(!activ_sigmoid.empty())
                 cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SIGMOID;
+
+            Ptr<SwishLayer> activ_swish = activ.dynamicCast<SwishLayer>();
+            if(!activ_swish.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SWISH;
+
+            Ptr<MishLayer> activ_mish = activ.dynamicCast<MishLayer>();
+            if(!activ_mish.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::MISH;
 
             if (cudaActType == cuda4dnn::ConvolutionConfiguration::ActivationType::NONE)
                 activ.reset();
@@ -1453,8 +1478,10 @@ public:
         config.groups = groups;
 
         config.activation = cudaActType;
+        config.relu_negative_slope = cuda_relu_slope;
         config.crelu_floor = cuda_crelu_floor;
         config.crelu_ceil = cuda_crelu_ceil;
+        config.power_exp = cuda_power_exp;
 
         Mat filtersMat = fusedWeights ? weightsMat : blobs[0];
         Mat biasMat = (hasBias() || fusedBias) ? Mat(output_feature_maps, 1, CV_32F, biasvec.data()) : Mat();
