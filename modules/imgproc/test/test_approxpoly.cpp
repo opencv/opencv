@@ -363,10 +363,13 @@ TEST(Imgproc_ApproxPoly, bad_epsilon)
     inputPoints.push_back(Point2f(0.0f, 0.0f));
     std::vector<Point2f> outputPoints;
 
-    double eps = INFINITY;
+    double eps = std::numeric_limits<double>::infinity();
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 
     eps = 9e99;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = -1e-6;
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 
     eps = NAN;
