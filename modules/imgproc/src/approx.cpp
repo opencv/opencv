@@ -677,6 +677,13 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
 {
     CV_INSTRUMENT_REGION();
 
+    //Prevent unreasonable error values (Douglas-Peucker algorithm)
+    //from being used.
+    if (epsilon < 0.0 || !(epsilon < 1e30))
+    {
+        CV_Error(CV_StsOutOfRange, "Epsilon not valid.");
+    }
+
     Mat curve = _curve.getMat();
     int npoints = curve.checkVector(2), depth = curve.depth();
     CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F));
