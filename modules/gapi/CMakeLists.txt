@@ -44,6 +44,7 @@ set(gapi_srcs
     src/api/gorigin.cpp
     src/api/gmat.cpp
     src/api/garray.cpp
+    src/api/gopaque.cpp
     src/api/gscalar.cpp
     src/api/gkernel.cpp
     src/api/gbackend.cpp

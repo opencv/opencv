@@ -12,6 +12,7 @@
 #include <opencv2/gapi/gmat.hpp>      // GMat
 #include <opencv2/gapi/gscalar.hpp>   // GScalar
 #include <opencv2/gapi/garray.hpp>    // GArray<T>
+#include <opencv2/gapi/gopaque.hpp>    // GOpaque<T>
 
 namespace cv {
 
@@ -46,6 +47,11 @@ public:
         return GArray<T>(yieldArray(output));
     }
 
+    template<class T> GOpaque<T> yieldOpaque(int output = 0)
+    {
+        return GOpaque<T>(yieldOpaque(output));
+    }
+
     // Internal use only
     Priv& priv();
     const Priv& priv() const;
@@ -57,6 +63,8 @@ protected:
 
     // Public version returns a typed array, this one is implementation detail
     detail::GArrayU yieldArray(int output = 0);
+    // Public version returns a typed opaque, this one is implementation detail
+    detail::GOpaqueU yieldOpaque(int output = 0);
 };
 
 } // namespace cv
