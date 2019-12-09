@@ -553,10 +553,10 @@ public:
             }
             else
             {
-                Mat newWeights = blobs[0].reshape(1, outCn);
-                Mat cvWeights = weightsMat.colRange(0, newWeights.cols);
+                Mat newWeights;
+                Mat cvWeights = weightsMat.colRange(0, blobs[0].total() / outCn);
                 cvWeights.copyTo(newWeights);
-                ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, blobs[0].data);
+                ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, newWeights.data);
             }
         }
 
@@ -2033,9 +2033,9 @@ public:
 
         if (fusedWeights)
         {
-            int inpCn = blobs[0].size[0];
-            Mat newWeights = blobs[0].reshape(1, inpCn);
+            Mat newWeights;
             transpose(weightsMat, newWeights);
+            ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, newWeights.data);
         }
         size_t batch = ieInpNode->get_shape()[0];
         std::vector<size_t> out_shape = {batch, (size_t)numOutput};
