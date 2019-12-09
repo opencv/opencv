@@ -346,11 +346,37 @@ OPENCV_HAL_IMPL_VSX_EXPAND(v_int16x8, v_int32x4, short, vec_unpackl, vec_unpackh
 OPENCV_HAL_IMPL_VSX_EXPAND(v_uint32x4, v_uint64x2, uint, vec_unpacklu, vec_unpackhu)
 OPENCV_HAL_IMPL_VSX_EXPAND(v_int32x4, v_int64x2, int, vec_unpackl, vec_unpackh)
 
+/* Load and zero expand a 4 byte value into the second dword, first is don't care. */
+#if !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    #define _LXSIWZX(out, ptr, T) __asm__ ("lxsiwzx %x0, 0, %1\r\n" : "=wa"(out) : "r" (ptr) : "memory");
+#else
+    /* This is compiler-agnostic, but will introduce an unneeded splat on the critical path. */
+    #define _LXSIWZX(out, ptr, T) out = (T)vec_udword2_sp(*(uint32_t*)(ptr));
+#endif
+
 inline v_uint32x4 v_load_expand_q(const uchar* ptr)
-{ return v_uint32x4(vec_uint4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
+{
+    // Zero-extend the extra 24B instead of unpacking. Usually faster in small kernel
+    // Likewise note, value is zero extended and upper 4 bytes are zero'ed.
+    vec_uchar16 pmu = {8, 12, 12, 12, 9, 12, 12, 12, 10, 12, 12, 12, 11, 12, 12, 12};
+    vec_uchar16 out;
+
+    _LXSIWZX(out, ptr, vec_uchar16);
+    out = vec_perm(out, out, pmu);
+    return v_uint32x4((vec_uint4)out);
+}
 
 inline v_int32x4 v_load_expand_q(const schar* ptr)
-{ return v_int32x4(vec_int4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
+{
+    vec_char16 out;
+    vec_short8 outs;
+    vec_int4 outw;
+
+    _LXSIWZX(out, ptr, vec_char16);
+    outs = vec_unpackl(out);
+    outw = vec_unpackh(outs);
+    return v_int32x4(outw);
+}
 
 /* pack */
 #define OPENCV_HAL_IMPL_VSX_PACK(_Tpvec, _Tp, _Tpwvec, _Tpvn, _Tpdel, sfnc, pkfnc, addfnc, pack)    \
