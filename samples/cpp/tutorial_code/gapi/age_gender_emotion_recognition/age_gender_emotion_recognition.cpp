@@ -30,7 +30,8 @@ const std::string keys =
     "{ emom   |   | IE emotions recognition model IR }"
     "{ emow   |   | IE emotions recognition model weights }"
     "{ emod   |   | IE emotions recognition model device }"
-    "{ pure   |   | When set, no output is displayed. Useful for benchmarking }";
+    "{ pure   |   | When set, no output is displayed. Useful for benchmarking }"
+    "{ ser    |   | Run serially (no pipelining involved). Useful for benchmarking }";
 
 struct Avg {
     struct Elapsed {
@@ -73,6 +74,7 @@ namespace custom {
 // executed. The _how_ is defined at graph compilation stage (via parameters),
 // not on the graph construction stage.
 
+//! [G_API_NET]
 // Face detector: takes one Mat, returns another Mat
 G_API_NET(Faces, <cv::GMat(cv::GMat)>, "face-detector");
 
@@ -84,7 +86,9 @@ G_API_NET(AgeGender, <AGInfo(cv::GMat)>,   "age-gender-recoginition");
 
 // Emotion recognition - takes one Mat, returns another.
 G_API_NET(Emotions, <cv::GMat(cv::GMat)>, "emotions-recognition");
+//! [G_API_NET]
 
+//! [Postproc]
 // SSD Post-processing function - this is not a network but a kernel.
 // The kernel body is declared separately, this is just an interface.
 // This operation takes two Mats (detections and the source image),
@@ -101,6 +105,7 @@ G_API_OP(PostProc, <cv::GArray<cv::Rect>(cv::GMat, cv::GMat)>, "custom.fd_postpr
     }
 };
 
+// OpenCV-based implementation of the above kernel.
 GAPI_OCV_KERNEL(OCVPostProc, PostProc) {
     static void run(const cv::Mat &in_ssd_result,
                     const cv::Mat &in_frame,
@@ -124,10 +129,12 @@ GAPI_OCV_KERNEL(OCVPostProc, PostProc) {
             if (image_id < 0.f) {  // indicates end of detections
                 break;
             }
-            if (confidence < 0.5f) { // fixme: hard-coded snapshot
+            if (confidence < 0.5f) { // a hard-coded snapshot
                 continue;
             }
 
+            // Convert floating-point coordinates to the absolute image
+            // frame coordinates; clip by the source image boundaries.
             cv::Rect rc;
             rc.x      = static_cast<int>(rc_left   * upscale.width);
             rc.y      = static_cast<int>(rc_top    * upscale.height);
@@ -137,6 +144,8 @@ GAPI_OCV_KERNEL(OCVPostProc, PostProc) {
         }
     }
 };
+//! [Postproc]
+
 } // namespace custom
 
 namespace labels {
@@ -208,9 +217,11 @@ int main(int argc, char *argv[])
     }
     const std::string input = cmd.get<std::string>("input");
     const bool no_show = cmd.get<bool>("pure");
+    const bool be_serial = cmd.get<bool>("ser");
 
     // Express our processing pipeline. Lambda-based constructor
     // is used to keep all temporary objects in a dedicated scope.
+    //! [GComputation]
     cv::GComputation pp([]() {
             // Declare an empty GMat - the beginning of the pipeline.
             cv::GMat in;
@@ -256,6 +267,7 @@ int main(int argc, char *argv[])
             return cv::GComputation(cv::GIn(in),
                                     cv::GOut(frame, faces, ages, genders, emotions));
         });
+    //! [GComputation]
 
     // Note: it might be very useful to have dimensions loaded at this point!
     // After our computation is defined, specify how it should be executed.
@@ -269,7 +281,8 @@ int main(int argc, char *argv[])
     //
     // OpenCV DNN backend will have its own parmater structure with settings
     // relevant to OpenCV DNN module. Same applies to other possible inference
-    // backends, like cuDNN, etc (:-))
+    // backends...
+    //! [Param_Cfg]
     auto det_net = cv::gapi::ie::Params<custom::Faces> {
         cmd.get<std::string>("fdm"),   // read cmd args: path to topology IR
         cmd.get<std::string>("fdw"),   // read cmd args: path to weights
@@ -287,57 +300,102 @@ int main(int argc, char *argv[])
         cmd.get<std::string>("emow"),   // read cmd args: path to weights
         cmd.get<std::string>("emod"),   // read cmd args: device specifier
     };
+    //! [Param_Cfg]
 
+    //! [Compile]
     // Form a kernel package (with a single OpenCV-based implementation of our
-    // post-processing) and a network package (holding our three networks).x
+    // post-processing) and a network package (holding our three networks).
     auto kernels = cv::gapi::kernels<custom::OCVPostProc>();
     auto networks = cv::gapi::networks(det_net, age_net, emo_net);
 
-    // Compile our pipeline for a specific input image format (TBD - can be relaxed)
-    // and pass our kernels & networks as parameters.
-    // This is the place where G-API learns which networks & kernels we're actually
-    // operating with (the graph description itself known nothing about that).
-    auto cc = pp.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size(1280,720)},
-                                  cv::compile_args(kernels, networks));
-
-    std::cout << "Reading " << input << std::endl;
-    cc.setSource(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
+    // Compile our pipeline and pass our kernels & networks as
+    // parameters.  This is the place where G-API learns which
+    // networks & kernels we're actually operating with (the graph
+    // description itself known nothing about that).
+    auto cc = pp.compileStreaming(cv::compile_args(kernels, networks));
+    //! [Compile]
 
     Avg avg;
-    avg.start();
-    cc.start();
+    std::size_t frames = 0u;            // Frame counter (not produced by the graph)
 
-    cv::Mat frame;
-    std::vector<cv::Rect> faces;
-    std::vector<cv::Mat> out_ages;
-    std::vector<cv::Mat> out_genders;
-    std::vector<cv::Mat> out_emotions;
-    std::size_t frames = 0u;
+    std::cout << "Reading " << input << std::endl;
+    // Duplicate huge portions of the code in if/else branches in the sake of
+    // better documentation snippets
+    if (!be_serial) {
+        //! [Source]
+        auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input);
+        cc.setSource(cv::gin(in_src));
+        //! [Source]
 
-    // Implement different execution policies depending on the display option
-    // for the best performance.
-    while (cc.running()) {
-        auto out_vector = cv::gout(frame, faces, out_ages, out_genders, out_emotions);
-        if (no_show) {
-            // This is purely a video processing. No need to balance with UI rendering.
-            // Use a blocking pull() to obtain data. Break the loop if the stream is over.
-            if (!cc.pull(std::move(out_vector)))
-                break;
-        } else if (!cc.try_pull(std::move(out_vector))) {
-            // Use a non-blocking try_pull() to obtain data.
-            // If there's no data, let UI refresh (and handle keypress)
-            if (cv::waitKey(1) >= 0) break;
-            else continue;
+        avg.start();
+
+        //! [Run]
+        // After data source is specified, start the execution
+        cc.start();
+
+        // Declare data objects we will be receiving from the pipeline.
+        cv::Mat frame;                      // The captured frame itself
+        std::vector<cv::Rect> faces;        // Array of detected faces
+        std::vector<cv::Mat> out_ages;      // Array of inferred ages (one blob per face)
+        std::vector<cv::Mat> out_genders;   // Array of inferred genders (one blob per face)
+        std::vector<cv::Mat> out_emotions;  // Array of classified emotions (one blob per face)
+
+        // Implement different execution policies depending on the display option
+        // for the best performance.
+        while (cc.running()) {
+            auto out_vector = cv::gout(frame, faces, out_ages, out_genders, out_emotions);
+            if (no_show) {
+                // This is purely a video processing. No need to balance
+                // with UI rendering.  Use a blocking pull() to obtain
+                // data. Break the loop if the stream is over.
+                if (!cc.pull(std::move(out_vector)))
+                    break;
+            } else if (!cc.try_pull(std::move(out_vector))) {
+                // Use a non-blocking try_pull() to obtain data.
+                // If there's no data, let UI refresh (and handle keypress)
+                if (cv::waitKey(1) >= 0) break;
+                else continue;
+            }
+            // At this point we have data for sure (obtained in either
+            // blocking or non-blocking way).
+            frames++;
+            labels::DrawResults(frame, faces, out_ages, out_genders, out_emotions);
+            labels::DrawFPS(frame, frames, avg.fps(frames));
+            if (!no_show) cv::imshow("Out", frame);
         }
-        // At this point we have data for sure (obtained in either blocking or non-blocking way).
-        frames++;
-        labels::DrawResults(frame, faces, out_ages, out_genders, out_emotions);
-        labels::DrawFPS(frame, frames, avg.fps(frames));
-        if (!no_show) cv::imshow("Out", frame);
-    }
-    cc.stop();
-    std::cout << "Processed " << frames << " frames in " << avg.elapsed() << std::endl;
+        //! [Run]
+    } else { // (serial flag)
+        //! [Run_Serial]
+        cv::VideoCapture cap(input);
+        cv::Mat in_frame, frame;            // The captured frame itself
+        std::vector<cv::Rect> faces;        // Array of detected faces
+        std::vector<cv::Mat> out_ages;      // Array of inferred ages (one blob per face)
+        std::vector<cv::Mat> out_genders;   // Array of inferred genders (one blob per face)
+        std::vector<cv::Mat> out_emotions;  // Array of classified emotions (one blob per face)
 
+        while (cap.read(in_frame)) {
+            pp.apply(cv::gin(in_frame),
+                     cv::gout(frame, faces, out_ages, out_genders, out_emotions),
+                     cv::compile_args(kernels, networks));
+            labels::DrawResults(frame, faces, out_ages, out_genders, out_emotions);
+            frames++;
+            if (frames == 1u) {
+                // Start timer only after 1st frame processed -- compilation
+                // happens on-the-fly here
+                avg.start();
+            } else {
+                // Measurfe & draw FPS for all other frames
+                labels::DrawFPS(frame, frames, avg.fps(frames-1));
+            }
+            if (!no_show) {
+                cv::imshow("Out", frame);
+                if (cv::waitKey(1) >= 0) break;
+            }
+        }
+        //! [Run_Serial]
+    }
+    std::cout << "Processed " << frames << " frames in " << avg.elapsed()
+              << " (" << avg.fps(frames) << " FPS)" << std::endl;
     return 0;
 }
 #else
