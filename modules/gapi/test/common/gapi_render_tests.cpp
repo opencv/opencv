@@ -34,13 +34,15 @@ void drawMosaicRef(const cv::Mat& mat, const cv::Rect &rect, int cellSz)
             cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
             cell_roi = cv::mean(cell_roi);
         }
+        cell_roi = msc_roi(cv::Rect(crop_x, i, msc_roi.cols - crop_x, cellSz));
+        cell_roi = cv::mean(cell_roi);
     }
 
-    // Handle tail
-    cell_roi = msc_roi(cv::Rect(crop_x, 0, msc_roi.cols - crop_x, crop_y));
-    cell_roi = cv::mean(cell_roi);
-
-    cell_roi = msc_roi(cv::Rect(0, crop_y, msc_roi.cols, msc_roi.rows - crop_y));
+    for(int j = 0; j < crop_x; j += cellSz) {
+        cell_roi = msc_roi(cv::Rect(j, crop_y, cellSz, msc_roi.rows - crop_y));
+        cell_roi = cv::mean(cell_roi);
+    }
+    cell_roi = msc_roi(cv::Rect(crop_x, crop_y, msc_roi.cols - crop_x, msc_roi.rows - crop_y));
     cell_roi = cv::mean(cell_roi);
 }
 
