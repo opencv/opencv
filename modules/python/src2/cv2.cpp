@@ -18,6 +18,13 @@
 
 #if PY_MAJOR_VERSION < 3
 #undef CVPY_DYNAMIC_INIT
+#else
+#define CV_PYTHON_3 1
+#endif
+
+// Python definition alias to prevent define collisions
+#if defined(PY_LONG_LONG)
+#define CV_HAVE_LONG_LONG 1
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER > 1800)
@@ -637,22 +644,26 @@ bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo& info)
     {
         if (PyLong_Check(obj))
         {
-#ifdef HAVE_LONG_LONG
-            value = PyLong_AsUnsignedLongLong(obj);
+#if defined(CV_PYTHON_3)
+            value = PyLong_AsSize_t(obj);
 #else
+    #if ULONG_MAX == SIZE_MAX
             value = PyLong_AsUnsignedLong(obj);
+    #else
+            value = PyLong_AsUnsignedLongLong(obj);
+    #endif
 #endif
         }
-#if PY_MAJOR_VERSION < 3
+#if !defined(CV_PYTHON_3)
         // Python 2.x has PyIntObject which is not a subtype of PyLongObject
         // Overflow check here is unnecessary because object will be converted to long on the
         // interpreter side
         else if (PyInt_Check(obj))
         {
-    #ifdef HAVE_LONG_LONG
-            value = PyInt_AsUnsignedLongLongMask(obj);
-    #else
+    #if ULONG_MAX == SIZE_MAX
             value = PyInt_AsUnsignedLongMask(obj);
+    #else
+            value = PyInt_AsUnsignedLongLongMask(obj);
     #endif
         }
 #endif
@@ -1900,7 +1911,7 @@ static bool init_body(PyObject * m)
 #pragma GCC visibility push(default)
 #endif
 
-#if PY_MAJOR_VERSION >= 3
+#if defined(CV_PYTHON_3)
 // === Python 3
 
 static struct PyModuleDef cv2_moduledef =
