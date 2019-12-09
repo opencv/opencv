@@ -9,6 +9,10 @@
 #  define CV_NEON 1
 #endif
 
+// MSVC 2019 bug. Details: https://github.com/opencv/opencv/pull/16027
+void test_aliased_type(const uint8x16_t& a) { }
+void test_aliased_type(const int8x16_t& a) { }
+
 #if defined CV_NEON
 int test()
 {

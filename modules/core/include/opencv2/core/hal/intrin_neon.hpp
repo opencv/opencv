@@ -56,7 +56,7 @@ namespace cv
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD128 1
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(_M_ARM64)
 #define CV_SIMD128_64F 1
 #else
 #define CV_SIMD128_64F 0
