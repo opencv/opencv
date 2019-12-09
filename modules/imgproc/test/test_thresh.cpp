@@ -434,4 +434,13 @@ BIGDATA_TEST(Imgproc_Threshold, huge)
     ASSERT_EQ((uint64)nz, n / 2);
 }
 
+TEST(Imgproc_Threshold, regression_THRESH_TOZERO_IPP_16085)
+{
+    Size sz(16, 16);
+    Mat input(sz, CV_32F, Scalar::all(2));
+    Mat result;
+    cv::threshold(input, result, 2.0, 0.0, THRESH_TOZERO);
+    EXPECT_EQ(0, cv::norm(result, NORM_INF));
+}
+
 }} // namespace
