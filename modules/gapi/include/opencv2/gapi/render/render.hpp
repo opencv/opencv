@@ -43,6 +43,18 @@ struct freetype_font
  */
 struct Text
 {
+    /**
+     * @brief Text constructor
+     *
+     * @param text_               The text string to be drawn
+     * @param org_                The bottom-left corner of the text string in the image
+     * @param ff_                 The font type, see #HersheyFonts
+     * @param fs_                 The font scale factor that is multiplied by the font-specific base size
+     * @param color_              The text color
+     * @param thick_              The thickness of the lines used to draw a text
+     * @param lt_                 The line type. See #LineTypes
+     * @param bottom_left_origin_ When true, the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner
+     */
     Text(const std::string& text_,
          const cv::Point& org_,
          int ff_,
@@ -73,6 +85,14 @@ struct Text
  */
 struct FText
 {
+    /**
+     * @brief FText constructor
+     *
+     * @param text_ The text string to be drawn
+     * @param org_  The bottom-left corner of the text string in the image
+     * @param fh_   The height of text
+     * @param color_ The text color
+     */
     FText(const std::wstring& text_,
           const cv::Point& org_,
           int fh_,
@@ -94,6 +114,15 @@ struct FText
  */
 struct Rect
 {
+    /**
+     * @brief Rect constructor
+     *
+     * @param rect_   Coordinates of the rectangle
+     * @param color_  The bottom-left corner of the text string in the image
+     * @param thick_  The thickness of lines that make up the rectangle. Negative values, like #FILLED, mean that the function has to draw a filled rectangle
+     * @param lt_     The type of the line. See #LineTypes
+     * @param shift_  The number of fractional bits in the point coordinates
+     */
     Rect(const cv::Rect& rect_,
          const cv::Scalar& color_,
          int thick_ = 1,
@@ -117,6 +146,16 @@ struct Rect
  */
 struct Circle
 {
+    /**
+     * @brief Circle constructor
+     *
+     * @param  center_ The center of the circle
+     * @param  radius_ The radius of the circle
+     * @param  color_  The color of the  circle
+     * @param  thick_  The thickness of the circle outline, if positive. Negative values, like #FILLED, mean that a filled circle is to be drawn
+     * @param  lt_     The Type of the circle boundary. See #LineTypes
+     * @param  shift_  The Number of fractional bits in the coordinates of the center and in the radius value
+     */
     Circle(const cv::Point& center_,
            int radius_,
            const cv::Scalar& color_,
@@ -142,6 +181,16 @@ struct Circle
  */
 struct Line
 {
+    /**
+     * @brief Line constructor
+     *
+     * @param  pt1_    The first point of the line segment
+     * @param  pt2_    The second point of the line segment
+     * @param  color_  The line color
+     * @param  thick_  The thickness of line
+     * @param  lt_     The Type of the line. See #LineTypes
+     * @param  shift_  The number of fractional bits in the point coordinates
+    */
     Line(const cv::Point& pt1_,
          const cv::Point& pt2_,
          const cv::Scalar& color_,
@@ -167,6 +216,13 @@ struct Line
  */
 struct Mosaic
 {
+    /**
+     * @brief Mosaic constructor
+     *
+     * @param mos_    Coordinates of the mosaic
+     * @param cellSz_ Cell size (same for X, Y). Note: mos size must be multiple of cell size
+     * @param decim_  Decimation (0 stands for no decimation)
+    */
     Mosaic(const cv::Rect& mos_,
            int cellSz_,
            int decim_) :
@@ -186,6 +242,13 @@ struct Mosaic
  */
 struct Image
 {
+    /**
+     * @brief Mosaic constructor
+     *
+     * @param  org_   The bottom-left corner of the image
+     * @param  img_   Image to draw
+     * @param  alpha_ Alpha channel for image to draw (same size and number of channels)
+    */
     Image(const cv::Point& org_,
           const cv::Mat& img_,
           const cv::Mat& alpha_) :
@@ -205,6 +268,15 @@ struct Image
  */
 struct Poly
 {
+    /**
+     * @brief Mosaic constructor
+     *
+     * @param points_ Points to connect
+     * @param color_  The line color
+     * @param thick_  The thickness of line
+     * @param lt_     The Type of the line. See #LineTypes
+     * @param shift_  The number of fractional bits in the point coordinate
+    */
     Poly(const std::vector<cv::Point>& points_,
          const cv::Scalar& color_,
          int thick_ = 1,
