@@ -163,12 +163,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         auto in_width = input.get_axis_size(-1);
 
         auto num_effective_channels = input.size_range(0, 2);
+        auto num_iters = num_effective_channels * out_height * out_width;
 
-        if (num_effective_channels % 16 == 0 && num_effective_channels > 163840) {
+        if (num_effective_channels % 16 == 0 && num_iters > 163840) {
             launch_multichannel_resize_bilinear<T, 16>(stream, output, out_height, out_width, input, in_height, in_width, scale_y, scale_x);
-        } else if (num_effective_channels % 8 == 0 && num_effective_channels > 81920) {
+        } else if (num_effective_channels % 8 == 0 && num_iters > 81920) {
             launch_multichannel_resize_bilinear<T, 8>(stream, output, out_height, out_width, input, in_height, in_width, scale_y, scale_x);
-        } else if (num_effective_channels % 4 == 0 && num_effective_channels > 40960) {
+        } else if (num_effective_channels % 4 == 0 && num_iters > 40960) {
             launch_multichannel_resize_bilinear<T, 4>(stream, output, out_height, out_width, input, in_height, in_width, scale_y, scale_x);
         } else if (num_effective_channels % 2 == 0) {
             launch_multichannel_resize_bilinear<T, 2>(stream, output, out_height, out_width, input, in_height, in_width, scale_y, scale_x);
