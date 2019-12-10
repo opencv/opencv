@@ -18,7 +18,7 @@
 #include <opencv2/gapi/util/variant.hpp>
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/own/assert.hpp>
-#include<iostream>
+
 namespace cv
 {
 // Forward declaration; GNode and GOrigin are an internal
@@ -39,7 +39,7 @@ struct GOpaqueDesc
     bool operator== (const GOpaqueDesc&) const { return true; }
 };
 template<typename U> GOpaqueDesc descr_of(const U &) { return {};}
-static inline GOpaqueDesc empty_opaque_desc() {return {}; }
+static inline GOpaqueDesc empty_gopaque_desc() {return {}; }
 /** @} */
 
 std::ostream& operator<<(std::ostream& os, const cv::GOpaqueDesc &desc);
@@ -135,9 +135,9 @@ namespace detail
         OpaqueRefT() { init(); }
         virtual ~OpaqueRefT() {}
 
-        explicit OpaqueRefT(const T&  obj) : m_ref(&obj)           { std::cout<<"here1"<<std::endl; init(&obj); }
-        explicit OpaqueRefT(      T&  obj) : m_ref(&obj)           { std::cout<<"here2"<<std::endl; init(&obj); }
-        explicit OpaqueRefT(      T&& obj) : m_ref(std::move(obj)) { std::cout<<"here3"<<std::endl; init(&obj); }
+        explicit OpaqueRefT(const T&  obj) : m_ref(&obj)           { init(&obj); }
+        explicit OpaqueRefT(      T&  obj) : m_ref(&obj)           { init(&obj); }
+        explicit OpaqueRefT(      T&& obj) : m_ref(std::move(obj)) { init(&obj); }
 
         // Reset a OpaqueRefT. Called only for objects instantiated
         // internally in G-API (e.g. temporary GOpaque<T>'s within a
@@ -169,7 +169,7 @@ namespace detail
         T& wref()
         {
             GAPI_Assert(isRWExt() || isRWOwn());
-            if (isRWExt()) { std::cout<<"ext"<<std::endl; return *util::get<rw_ext_t>(m_ref);}
+            if (isRWExt()) return *util::get<rw_ext_t>(m_ref);
             if (isRWOwn()) return  util::get<rw_own_t>(m_ref);
             util::throw_error(std::logic_error("Impossible happened"));
         }
@@ -266,9 +266,9 @@ namespace detail
 template<typename T> class GOpaque
 {
 public:
-    GOpaque() { putDetails(); }             // Empty constructor
+    GOpaque() { putDetails(); }              // Empty constructor
     explicit GOpaque(detail::GOpaqueU &&ref) // GOpaqueU-based constructor
-        : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
+        : m_ref(ref) { putDetails(); }       // (used by GCall, not for users)
 
     detail::GOpaqueU strip() const { return m_ref; }
 
