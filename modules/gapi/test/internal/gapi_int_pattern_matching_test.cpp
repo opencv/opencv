@@ -47,12 +47,12 @@ void initGModel(ade::Graph& gr,
     gm.metadata().set(p);
 }
 
-bool isConsumedBy(cv::gimpl::GModel::Graph gm, ade::NodeHandle data_nh, ade::NodeHandle op_nh) {
+bool isConsumedBy(const cv::gimpl::GModel::ConstGraph &gm, ade::NodeHandle data_nh, ade::NodeHandle op_nh) {
     auto oi = cv::gimpl::GModel::orderedInputs(gm, op_nh);
     return std::find(oi.begin(), oi.end(), data_nh) != oi.end();
 }
 
-std::string opName(cv::gimpl::GModel::Graph gm, ade::NodeHandle op_nh) {
+std::string opName(const cv::gimpl::GModel::ConstGraph &gm, ade::NodeHandle op_nh) {
     return gm.metadata(op_nh).get<cv::gimpl::Op>().k.name;
 }
 
