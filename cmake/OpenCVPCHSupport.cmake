@@ -125,11 +125,11 @@ MACRO(_PCH_GET_COMPILE_COMMAND out_command _input _output)
             STRING(REGEX REPLACE "^ +" "" pchsupport_compiler_cxx_arg1 ${CMAKE_CXX_COMPILER_ARG1})
 
             SET(${out_command}
-              ${CMAKE_CXX_COMPILER} ${pchsupport_compiler_cxx_arg1} ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}
+              ${CMAKE_CXX_COMPILER} ${pchsupport_compiler_cxx_arg1} ${_compile_FLAGS} -x c++-header -o ${_output} -c ${_input}
               )
         ELSE(CMAKE_CXX_COMPILER_ARG1)
             SET(${out_command}
-              ${CMAKE_CXX_COMPILER}  ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}
+              ${CMAKE_CXX_COMPILER}  ${_compile_FLAGS} -x c++-header -o ${_output} -c ${_input}
               )
         ENDIF(CMAKE_CXX_COMPILER_ARG1)
     ELSE()
