@@ -149,7 +149,7 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
 // are broadcasted in the graph from island to island via queues,
 // starting with the emitters (sources). Since queues are bounded,
 // thread may block on push() if the queue is full already and is not
-// popped for some reason in the reader thread. In order to aovid
+// popped for some reason in the reader thread. In order to avoid
 // this, once an Island gets Stop on an input, it start reading all
 // other input queues until it reaches Stop messages there as well.
 // Only then the thread terminates so in theory queues are left
@@ -163,12 +163,12 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
 //    const data -- infinite data generators) to push Stop messages as
 //    well - in order to maintain a regular Stop procedure as defined
 //    above.
-// 3. "Sop" message coming from a constant emitter after triggering an
+// 3. "Stop" message coming from a constant emitter after triggering an
 //    EOS notification -- see (2).
 //
 // There is a problem with (3). Sometimes it terminates the pipeline
 // too early while some frames could still be produced with no issue,
-// and our test fail with error like "got 99 frames, expected 100".
+// and our test fails with error like "got 99 frames, expected 100".
 // This is how it reproduces:
 //
 //                   q1
@@ -176,7 +176,7 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
 //                   q0             q2    .->
 //   [stream input]  ---> [ ISL1 ] -------'
 //
-// Video emitter is pushing frames to q0, and ISL1 is takin every
+// Video emitter is pushing frames to q0, and ISL1 is taking every
 // frame from this queue and processes it. Meanwhile, q1 is a
 // const-input-queue staffed with const data already, ISL2 already
 // popped one, and is waiting for data from q2 (of ISL1) to arrive.
