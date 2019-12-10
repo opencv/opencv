@@ -431,6 +431,7 @@ TEST_P(Objdetect_QRCode_Multi, regression)
                   bool ok = false;
                   for(int k = 0; k < int(corners.size()); k++)
                   {
+
                       int count_eq_points = 0;
                       for (int i = 0; i < int(corners[j].size()); i++)
                       {
