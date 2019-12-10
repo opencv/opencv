@@ -100,6 +100,30 @@ macro(ocv_update VAR)
   endif()
 endmacro()
 
+function(_ocv_access_removed_variable VAR ACCESS)
+  if(ACCESS STREQUAL "MODIFIED_ACCESS")
+    set(OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR} 1 PARENT_SCOPE)
+    return()
+  endif()
+  if(ACCESS MATCHES "UNKNOWN_.*"
+      AND NOT OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE
+      AND NOT OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR}
+  )
+    message(WARNING "OpenCV: Variable has been removed from CMake scripts: ${VAR}")
+    set(OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR} 1 PARENT_SCOPE)  # suppress similar messages
+  endif()
+endfunction()
+macro(ocv_declare_removed_variable VAR)
+  if(NOT DEFINED ${VAR})  # don't hit external variables
+    variable_watch(${VAR} _ocv_access_removed_variable)
+  endif()
+endmacro()
+macro(ocv_declare_removed_variables)
+  foreach(_var ${ARGN})
+    ocv_declare_removed_variable(${_var})
+  endforeach()
+endmacro()
+
 # Search packages for the host system instead of packages for the target system
 # in case of cross compilation these macros should be defined by the toolchain file
 if(NOT COMMAND find_host_package)

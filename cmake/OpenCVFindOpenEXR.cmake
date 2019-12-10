@@ -15,7 +15,7 @@ file(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles_ENV_PATH)
 
 if(WIN32)
     SET(OPENEXR_ROOT "C:/Deploy" CACHE STRING "Path to the OpenEXR \"Deploy\" folder")
-    if(CMAKE_CL_64)
+    if(X86_64)
         SET(OPENEXR_LIBSEARCH_SUFFIXES x64/Release x64 x64/Debug)
     elseif(MSVC)
         SET(OPENEXR_LIBSEARCH_SUFFIXES Win32/Release Win32 Win32/Debug)
