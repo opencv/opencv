@@ -57,21 +57,6 @@ Ptr<cuda::BackgroundSubtractorMOG2> cv::cuda::createBackgroundSubtractorMOG2(int
 
 #else
 
-namespace cv
-{
-namespace cuda
-{
-namespace device
-{
-namespace mog2
-{
-void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean, float alphaT, float prune, bool detectShadows, const Constants *const constants, cudaStream_t stream);
-void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, const Constants *const constants, cudaStream_t stream);
-} // namespace mog2
-} // namespace device
-} // namespace cuda
-} // namespace cv
-
 namespace
 {
 // default parameters of gaussian background detection algorithm
