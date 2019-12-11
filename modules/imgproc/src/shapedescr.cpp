@@ -60,6 +60,29 @@ static void findCircle3pts(Point2f *pts, Point2f &center, float &radius)
     Point2f midPoint2 = (pts[0] + pts[2]) / 2.0f;
     float c2 = midPoint2.x * v2.x + midPoint2.y * v2.y;
     float det = v1.x * v2.y - v1.y * v2.x;
+    if (det == 0) {
+        // v1 and v2 are colinear, so the longest distance between any 2 points
+        // is the diameter of the minimum enclosing circle.
+        float d1 = (float)norm(pts[0] - pts[1]);
+        float d2 = (float)norm(pts[0] - pts[2]);
+        float d3 = (float)norm(pts[1] - pts[2]);
+        if (d1 >= d2 && d1 >= d3)
+        {
+            center = (pts[0] + pts[1]) / 2.0f;
+            radius = (d1 / 2.0f)+EPS;
+        }
+        else if (d2 >= d1 && d2 >= d3)
+        {
+            center = (pts[0] + pts[2]) / 2.0f;
+            radius = (d2 / 2.0f)+EPS;
+        }
+        else if (d3 >= d1 && d3 >= d2)
+        {
+            center = (pts[1] + pts[2]) / 2.0f;
+            radius = (d3 / 2.0f)+EPS;
+        }
+        return;
+    }
     float cx = (c1 * v2.y - c2 * v1.y) / det;
     float cy = (v1.x * c2 - v2.x * c1) / det;
     center.x = (float)cx;

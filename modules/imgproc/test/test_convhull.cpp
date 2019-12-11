@@ -1085,6 +1085,79 @@ int CV_MinCircleTest2::validate_test_results( int test_case_idx )
 }
 
 /****************************************************************************************\
+*                                 MinEnclosingCircle Test 3                              *
+\****************************************************************************************/
+
+TEST(Imgproc_MinEnclosingCircle, basic_test) {
+    vector<Point2f> pts;
+    pts.push_back(Point2f(0, 0));
+    pts.push_back(Point2f(10, 0));
+    pts.push_back(Point2f(5, 1));
+    const float EPS = 1.0e-4f; // must match shapedescr.cpp
+    Point2f center;
+    float radius;
+
+    // pts[2] is within the circle with diameter pts[0] - pts[1].
+    //        2
+    // 0             1
+    // NB: The triangle is obtuse, so the only pts[0] and pts[1] are on the circle.
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_EQ(Point2f(5, 0), center);
+    EXPECT_FLOAT_EQ(5 + EPS, radius);
+
+    // pts[2] is on the circle with diameter pts[0] - pts[1].
+    //  2
+    // 0 1
+    pts[2] = Point2f(5, 5);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_EQ(Point2f(5, 0), center);
+    EXPECT_FLOAT_EQ(5 + EPS, radius);
+
+    // pts[2] is outside the circle with diameter pts[0] - pts[1].
+    //   2
+    //
+    //
+    // 0   1
+    // NB: The triangle is acute, so all 3 points are on the circle.
+    pts[2] = Point2f(5, 10);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_EQ(Point2f(5, 3.75), center);
+    EXPECT_FLOAT_EQ(6.25 + EPS, radius);
+
+    // The 3 points are colinear.
+    pts[2] = Point2f(3, 0);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_EQ(Point2f(5, 0), center);
+    EXPECT_FLOAT_EQ(5 + EPS, radius);
+
+    // 2 points are the same.
+    pts[2] = pts[1];
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_EQ(Point2f(5, 0), center);
+    EXPECT_FLOAT_EQ(5 + EPS, radius);
+
+    // 3 points are the same.
+    pts[0] = pts[1];
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_EQ(Point2f(10, 0), center);
+    EXPECT_FLOAT_EQ(0 + EPS, radius);
+}
+
+TEST(Imgproc_MinEnclosingCircle, regression_16051) {
+    vector<Point2f> pts;
+    pts.push_back(Point2f(85, 1415));
+    pts.push_back(Point2f(87, 1415));
+    pts.push_back(Point2f(89, 1414));
+    pts.push_back(Point2f(89, 1414));
+    pts.push_back(Point2f(87, 1412));
+    Point2f center;
+    float radius;
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_EQ(Point2f(86.9, 1414.1), center);
+    EXPECT_FLOAT_EQ(2.1024551, radius);
+}
+
+/****************************************************************************************\
 *                                   Perimeter Test                                     *
 \****************************************************************************************/
 
