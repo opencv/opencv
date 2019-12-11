@@ -74,7 +74,7 @@ static bool isPythonBindingsDebugEnabled()
     return param_debug;
 }
 
-static void emit_failmsg(PyObject * exc, const char *msg)
+static void emitPyError(PyObject* exc, const char* msg)
 {
     static bool param_debug = isPythonBindingsDebugEnabled();
     if (param_debug)
@@ -84,30 +84,31 @@ static void emit_failmsg(PyObject * exc, const char *msg)
     PyErr_SetString(exc, msg);
 }
 
-static int failmsg(const char *fmt, ...)
+
+template <class... Args>
+void reportPyError(PyObject* errorType, const char* fmt, Args&&... args)
 {
-    char str[1000];
-
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(str, sizeof(str), fmt, ap);
-    va_end(ap);
-
-    emit_failmsg(PyExc_TypeError, str);
-    return 0;
+    char msg[1000];
+    snprintf(msg, sizeof(msg), fmt, args...);
+    emitPyError(errorType, msg);
 }
 
-static PyObject* failmsgp(const char *fmt, ...)
+template <>
+void reportPyError(PyObject* errorType, const char* msg)
 {
-    char str[1000];
+    emitPyError(errorType, msg);
+}
 
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(str, sizeof(str), fmt, ap);
-    va_end(ap);
+template <class... Args>
+void reportTypeError(const char* fmt, Args&&... args)
+{
+    reportPyError(PyExc_TypeError, fmt, std::forward<Args>(args)...);
+}
 
-    emit_failmsg(PyExc_TypeError, str);
-    return 0;
+template <class... Args>
+void reportValueError(const char* fmt, Args&&... args)
+{
+    reportPyError(PyExc_ValueError, fmt, std::forward<Args>(args)...);
 }
 
 class PyAllowThreads
@@ -201,19 +202,22 @@ public:
     UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
     {
         UMatData* u = new UMatData(this);
-        u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*) o);
-        npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
-        for( int i = 0; i < dims - 1; i++ )
+        u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*)o);
+        npy_intp* _strides = PyArray_STRIDES((PyArrayObject*)o);
+        for (int i = 0; i < dims - 1; ++i)
+        {
             step[i] = (size_t)_strides[i];
-        step[dims-1] = CV_ELEM_SIZE(type);
-        u->size = sizes[0]*step[0];
+        }
+        step[dims - 1] = CV_ELEM_SIZE(type);
+        u->size = sizes[0] * step[0];
         u->userdata = o;
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags,
+                       UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
-        if( data != 0 )
+        if (data != 0)
         {
             // issue #6969: CV_Error(Error::StsAssert, "The data should normally be NULL!");
             // probably this is safe to do in such extreme case
@@ -222,21 +226,28 @@ public:
         PyEnsureGIL gil;
 
         int depth = CV_MAT_DEPTH(type);
-        int cn = CV_MAT_CN(type);
-        const int f = (int)(sizeof(size_t)/8);
-        int typenum = depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
-        depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
-        depth == CV_32S ? NPY_INT : depth == CV_32F ? NPY_FLOAT :
-        depth == CV_64F ? NPY_DOUBLE : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
-        int i, dims = dims0;
-        cv::AutoBuffer<npy_intp> _sizes(dims + 1);
-        for( i = 0; i < dims; i++ )
-            _sizes[i] = sizes[i];
-        if( cn > 1 )
-            _sizes[dims++] = cn;
-        PyObject* o = PyArray_SimpleNew(dims, _sizes.data(), typenum);
-        if(!o)
-            CV_Error_(Error::StsError, ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dims));
+        const int typenum = NumpyAllocator::getNumpyType(depth);
+
+        const int cn = CV_MAT_CN(type);
+        const int dims = dims0 + static_cast<int>(cn > 1);
+
+        cv::AutoBuffer<npy_intp> dimensionSizes(dims);
+        for (int i = 0; i < dims; i++)
+        {
+            dimensionSizes[i] = sizes[i];
+        }
+        if (cn > 1)
+        {
+            // last element should be number of channels
+            dimensionSizes[dims0] = cn;
+        }
+
+        PyObject* o = PyArray_SimpleNew(dims, dimensionSizes.data(), typenum);
+        if (!o)
+        {
+            CV_Error_(Error::StsError,
+                      ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dims));
+        }
         return allocate(o, dims0, sizes, type, step);
     }
 
@@ -247,17 +258,70 @@ public:
 
     void deallocate(UMatData* u) const CV_OVERRIDE
     {
-        if(!u)
+        if (!u)
+        {
             return;
+        }
         PyEnsureGIL gil;
         CV_Assert(u->urefcount >= 0);
         CV_Assert(u->refcount >= 0);
-        if(u->refcount == 0)
+        if (u->refcount == 0)
         {
             PyObject* o = (PyObject*)u->userdata;
             Py_XDECREF(o);
             delete u;
         }
+    }
+
+    static int getNumpyType(int cvDepth)
+    {
+        switch(cvDepth)
+        {
+            case CV_8U:
+                return NPY_UBYTE;
+            case CV_8S:
+                return NPY_BYTE;
+            case CV_16U:
+                return NPY_USHORT;
+            case CV_16S:
+                return NPY_SHORT;
+            case CV_32S:
+                return NPY_INT;
+            case CV_32F:
+                return NPY_FLOAT;
+            case CV_64F:
+                return NPY_DOUBLE;
+            default:
+                const int f = (int)(sizeof(size_t) / 8);
+                return f * NPY_ULONGLONG + (f ^ 1) * NPY_UINT;
+        }
+        CV_Assert(false);
+        return 0;
+    }
+
+    static int getCVType(int numpyType)
+    {
+        switch (numpyType)
+        {
+            case NPY_TYPES::NPY_UBYTE:
+                return CV_8U;
+            case NPY_TYPES::NPY_BYTE:
+                return CV_8S;
+            case NPY_TYPES::NPY_USHORT:
+                return CV_16U;
+            case NPY_TYPES::NPY_SHORT:
+                return CV_16S;
+            case NPY_TYPES::NPY_INT:
+                return CV_32S;
+            case NPY_TYPES::NPY_FLOAT:
+                return CV_32F;
+            case NPY_TYPES::NPY_DOUBLE:
+                return CV_64F;
+            default:
+                return -1;
+        }
+        CV_Assert(false);
+        return 0;
     }
 
     const MatAllocator* stdAllocator;
@@ -271,11 +335,12 @@ enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 // special case, when the converter needs full ArgInfo structure
 static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 {
-    bool allowND = true;
-    if(!o || o == Py_None)
+    if (!o || o == Py_None)
     {
-        if( !m.data )
+        if (!m.data)
+        {
             m.allocator = &g_numpyAllocator;
+        }
         return true;
     }
 
@@ -304,7 +369,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                 m.at<double>(i) = (double)PyFloat_AsDouble(oi);
             else
             {
-                failmsg("%s is not a numerical tuple", info.name);
+                reportTypeError("%s is not a numerical tuple", info.name);
                 m.release();
                 return false;
             }
@@ -314,34 +379,28 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     if( !PyArray_Check(o) )
     {
-        failmsg("%s is not a numpy array, neither a scalar", info.name);
+        reportTypeError("%s is not a numpy array, neither a scalar", info.name);
         return false;
     }
 
     PyArrayObject* oarr = (PyArrayObject*) o;
 
-    bool needcopy = false, needcast = false;
-    int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
-    int type = typenum == NPY_UBYTE ? CV_8U :
-               typenum == NPY_BYTE ? CV_8S :
-               typenum == NPY_USHORT ? CV_16U :
-               typenum == NPY_SHORT ? CV_16S :
-               typenum == NPY_INT ? CV_32S :
-               typenum == NPY_INT32 ? CV_32S :
-               typenum == NPY_FLOAT ? CV_32F :
-               typenum == NPY_DOUBLE ? CV_64F : -1;
+    bool needcopy = false;
+    const int typenum = PyArray_TYPE(oarr);
+    int newTypenum = typenum;
+    int type = NumpyAllocator::getCVType(typenum);
 
-    if( type < 0 )
+    if (type < 0)
     {
-        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || typenum == NPY_LONG )
+        if (typenum == NPY_INT64 || typenum == NPY_UINT64 || typenum == NPY_LONG)
         {
-            needcopy = needcast = true;
-            new_typenum = NPY_INT;
+            needcopy = true;
+            newTypenum = NPY_INT;
             type = CV_32S;
         }
         else
         {
-            failmsg("%s data type = %d is not supported", info.name, typenum);
+            reportTypeError("%s data type = %d is not supported", info.name, typenum);
             return false;
         }
     }
@@ -351,49 +410,52 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 #endif
 
     int ndims = PyArray_NDIM(oarr);
-    if(ndims >= CV_MAX_DIM)
+    if (ndims >= CV_MAX_DIM)
     {
-        failmsg("%s dimensionality (=%d) is too high", info.name, ndims);
+        reportTypeError("%s dimensionality (=%d) is too high", info.name, ndims);
         return false;
     }
 
-    int size[CV_MAX_DIM+1];
-    size_t step[CV_MAX_DIM+1];
-    size_t elemsize = CV_ELEM_SIZE1(type);
+    int size[CV_MAX_DIM + 1];
+    size_t step[CV_MAX_DIM + 1];
+    const size_t elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(oarr);
     const npy_intp* _strides = PyArray_STRIDES(oarr);
-    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
+    bool isMultichannel = (ndims == 3) && (_sizes[2] <= CV_CN_MAX);
 
-    for( int i = ndims-1; i >= 0 && !needcopy; i-- )
+    // lazy evaluate second part of condition
+    needcopy = needcopy || (isMultichannel && _strides[1] != (npy_intp)elemsize * _sizes[2]);
+
+    for (int i = ndims - 1; i >= 0 && !needcopy; i--)
     {
         // these checks handle cases of
         //  a) multi-dimensional (ndims > 2) arrays, as well as simpler 1- and 2-dimensional cases
         //  b) transposed arrays, where _strides[] elements go in non-descending order
         //  c) flipped arrays, where some of _strides[] elements are negative
         // the _sizes[i] > 1 is needed to avoid spurious copies when NPY_RELAXED_STRIDES is set
-        if( (i == ndims-1 && _sizes[i] > 1 && (size_t)_strides[i] != elemsize) ||
-            (i < ndims-1 && _sizes[i] > 1 && _strides[i] < _strides[i+1]) )
-            needcopy = true;
+        needcopy = (i == ndims - 1 && _sizes[i] > 1 && (size_t)_strides[i] != elemsize)
+                   || (i < ndims - 1 && _sizes[i] > 1 && _strides[i] < _strides[i + 1]);
     }
-
-    if( ismultichannel && _strides[1] != (npy_intp)elemsize*_sizes[2] )
-        needcopy = true;
 
     if (needcopy)
     {
         if (info.outputarg)
         {
-            failmsg("Layout of the output array %s is incompatible with cv::Mat (step[ndims-1] != elemsize or step[1] != elemsize*nchannels)", info.name);
+            reportTypeError("Layout of the output array %s is incompatible with cv::Mat "
+                            "(step[ndims-1] != elemsize or step[1] != elemsize*nchannels)",
+                            info.name);
             return false;
         }
 
-        if( needcast ) {
-            o = PyArray_Cast(oarr, new_typenum);
-            oarr = (PyArrayObject*) o;
+        if (typenum != newTypenum)
+        {
+            o = PyArray_Cast(oarr, newTypenum);
+            oarr = (PyArrayObject*)o;
         }
-        else {
+        else
+        {
             oarr = PyArray_GETCONTIGUOUS(oarr);
-            o = (PyObject*) oarr;
+            o = (PyObject*)oarr;
         }
 
         _strides = PyArray_STRIDES(oarr);
@@ -417,29 +479,24 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     }
 
     // handle degenerate case
-    if( ndims == 0) {
+    if (ndims == 0)
+    {
         size[ndims] = 1;
         step[ndims] = elemsize;
         ndims++;
     }
 
-    if( ismultichannel )
+    if (isMultichannel)
     {
         ndims--;
         type |= CV_MAKETYPE(0, size[2]);
-    }
-
-    if( ndims > 2 && !allowND )
-    {
-        failmsg("%s has more than 2 dimensions", info.name);
-        return false;
     }
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
     m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
     m.addref();
 
-    if( !needcopy )
+    if (!needcopy)
     {
         Py_INCREF(o);
     }
@@ -452,7 +509,8 @@ template<typename _Tp, int m, int n>
 bool pyopencv_to(PyObject* o, Matx<_Tp, m, n>& mx, const ArgInfo& info)
 {
     Mat tmp;
-    if (!pyopencv_to(o, tmp, info)) {
+    if (!pyopencv_to(o, tmp, info))
+    {
         return false;
     }
 
@@ -469,10 +527,12 @@ bool pyopencv_to(PyObject* o, Vec<_Tp, cn>& vec, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const Mat& m)
 {
-    if( !m.data )
+    if (!m.data)
+    {
         Py_RETURN_NONE;
+    }
     Mat temp, *p = (Mat*)&m;
-    if(!p->u || p->allocator != &g_numpyAllocator)
+    if (!p->u || p->allocator != &g_numpyAllocator)
     {
         temp.allocator = &g_numpyAllocator;
         ERRWRAP2(m.copyTo(temp));
@@ -527,8 +587,8 @@ static PyObject* pyopencv_from(void*& ptr)
 
 struct SafeSeqItem
 {
-    PyObject * item;
-    SafeSeqItem(PyObject *obj, size_t idx) { item = PySequence_GetItem(obj, idx); }
+    PyObject* item;
+    SafeSeqItem(PyObject* obj, Py_ssize_t idx) { item = PySequence_GetItem(obj, idx); }
     ~SafeSeqItem() { Py_XDECREF(item); }
 };
 
@@ -539,7 +599,7 @@ static bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo& info)
     if (PySequence_Check(o)) {
         if (4 < PySequence_Size(o))
         {
-            failmsg("Scalar value for argument '%s' is longer than 4", info.name);
+            reportValueError("Scalar value for argument '%s' is longer than 4", info.name);
             return false;
         }
         for (Py_ssize_t i = 0; i < PySequence_Size(o); i++) {
@@ -548,7 +608,7 @@ static bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo& info)
             if (PyFloat_Check(item) || PyInt_Check(item)) {
                 s[(int)i] = PyFloat_AsDouble(item);
             } else {
-                failmsg("Scalar value for argument '%s' is not numeric", info.name);
+                reportValueError("Scalar value for argument '%s' is not numeric", info.name);
                 return false;
             }
         }
@@ -556,7 +616,7 @@ static bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo& info)
         if (PyFloat_Check(o) || PyInt_Check(o)) {
             s[0] = PyFloat_AsDouble(o);
         } else {
-            failmsg("Scalar value for argument '%s' is not numeric", info.name);
+            reportValueError("Scalar value for argument '%s' is not numeric", info.name);
             return false;
         }
     }
@@ -770,14 +830,15 @@ PyObject* pyopencv_from(const Rect2d& r)
 template<>
 bool pyopencv_to(PyObject* obj, Range& r, const ArgInfo& info)
 {
-    CV_UNUSED(info);
     if(!obj || obj == Py_None)
+    {
         return true;
+    }
     while (PySequence_Check(obj))
     {
         if (2 != PySequence_Size(obj))
         {
-            failmsg("Range value for argument '%s' is longer than 2", info.name);
+            reportValueError("Range value for argument '%s' is longer than 2", info.name);
             return false;
         }
         {
@@ -786,7 +847,7 @@ bool pyopencv_to(PyObject* obj, Range& r, const ArgInfo& info)
             if (PyInt_Check(item)) {
                 r.start = (int)PyInt_AsLong(item);
             } else {
-                failmsg("Range.start value for argument '%s' is not integer", info.name);
+                reportValueError("Range.start value for argument '%s' is not integer", info.name);
                 break;
             }
         }
@@ -796,7 +857,7 @@ bool pyopencv_to(PyObject* obj, Range& r, const ArgInfo& info)
             if (PyInt_Check(item)) {
                 r.end = (int)PyInt_AsLong(item);
             } else {
-                failmsg("Range.end value for argument '%s' is not integer", info.name);
+                reportValueError("Range.end value for argument '%s' is not integer", info.name);
                 break;
             }
         }
@@ -1573,7 +1634,8 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
         return 1;
     }
     (*dst) = 0;
-    return failmsg("Expected single character string for argument '%s'", info.name);
+    reportValueError("Expected single character string for argument '%s'", info.name);
+    return 0;
 }
 
 #ifdef __GNUC__

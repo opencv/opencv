@@ -19,7 +19,10 @@ pass_by_val_types = ["Point*", "Point2f*", "Rect*", "String*", "double*", "float
 gen_template_check_self = Template("""
     ${cname} * self1 = 0;
     if (!pyopencv_${name}_getp(self, self1))
-        return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
+    {
+        reportTypeError("Incorrect type of self (must be '${name}' or its derivative)");
+        return NULL;
+    }
     ${pname} _self_ = ${cvt}(self1);
 """)
 gen_template_call_constructor_prelude = Template("""new (&(self->v)) Ptr<$cname>(); // init Ptr with placement new
@@ -73,7 +76,7 @@ struct PyOpenCV_Converter< ${cname} >
             return true;
         }
         ${mappable_code}
-        failmsg("Expected ${cname} for argument '%s'", info.name);
+        reportTypeError("Expected ${cname} for argument '%s'", info.name);
         return false;
     }
 };
@@ -130,7 +133,10 @@ static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *clo
 {
     $cname* _self_ = dynamic_cast<$cname*>(p->v.get());
     if (!_self_)
-        return failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
+    {
+        reportTypeError("Incorrect type of object (must be '${name}' or its derivative)");
+        return NULL;
+    }
     return pyopencv_from(_self_${access}${member});
 }
 """)
@@ -158,7 +164,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
     $cname* _self_ = dynamic_cast<$cname*>(p->v.get());
     if (!_self_)
     {
-        failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
+        reportTypeError("Incorrect type of object (must be '${name}' or its derivative)");
         return -1;
     }
     return pyopencv_to(value, _self_${access}${member}, ArgInfo("value", false)) ? 0 : -1;
