@@ -16,9 +16,6 @@ class Stream;
 
 namespace device { namespace mog2 {
 
-void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean, float alphaT, float prune, bool detectShadows, const Constants *const constants, cudaStream_t stream);
-void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, const Constants *const constants, cudaStream_t stream);
-
 typedef struct
 {
     float Tb_;
@@ -31,6 +28,9 @@ typedef struct
     int nmixtures_;
     unsigned char shadowVal_;
 } Constants;
+
+void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean, float alphaT, float prune, bool detectShadows, const Constants *const constants, cudaStream_t stream);
+void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, const Constants *const constants, cudaStream_t stream);
 
 } } } }
 
