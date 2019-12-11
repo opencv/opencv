@@ -121,6 +121,11 @@ public:
         {
             SCOPED_TRACE("batch size 2");
 
+#if defined(INF_ENGINE_RELEASE)
+            if (target == DNN_TARGET_MYRIAD && name == "shortcut")
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+#endif
+
             std::vector<int> sz2 = shape(inp);
             sz2[0] = 2;
 
