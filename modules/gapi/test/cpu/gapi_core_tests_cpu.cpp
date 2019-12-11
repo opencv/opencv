@@ -167,7 +167,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestCPU, BitwiseTest,
                                 Values(AND, OR, XOR)));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestCPU, NotTest,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
