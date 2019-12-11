@@ -348,7 +348,7 @@ cvMemStorageAlloc( CvMemStorage* storage, size_t size )
 }
 
 
-CV_IMPL CvString
+/*CV_IMPL CvString
 cvMemStorageAllocString( CvMemStorage* storage, const char* ptr, int len )
 {
     CvString str;
@@ -360,7 +360,7 @@ cvMemStorageAllocString( CvMemStorage* storage, const char* ptr, int len )
     str.ptr[str.len] = '\0';
 
     return str;
-}
+}*/
 
 
 /****************************************************************************************\
@@ -388,7 +388,7 @@ cvCreateSeq( int seq_flags, size_t header_size, size_t elem_size, CvMemStorage* 
         int elemtype = CV_MAT_TYPE(seq_flags);
         int typesize = CV_ELEM_SIZE(elemtype);
 
-        if( elemtype != CV_SEQ_ELTYPE_GENERIC && elemtype != CV_USRTYPE1 &&
+        if( elemtype != CV_SEQ_ELTYPE_GENERIC && elemtype != CV_SEQ_ELTYPE_PTR &&
             typesize != 0 && typesize != (int)elem_size )
             CV_Error( CV_StsBadSize,
             "Specified element size doesn't match to the size of the specified element type "

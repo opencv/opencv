@@ -17,13 +17,6 @@
 # INF_ENGINE_TARGET - set to name of imported library target representing InferenceEngine
 #
 
-if(NOT HAVE_CXX11)
-    message(WARNING "DL Inference engine requires C++11. You can turn it on via ENABLE_CXX11=ON CMake flag.")
-    return()
-endif()
-
-# =======================
-
 function(add_custom_ie_build _inc _lib _lib_rel _lib_dbg _msg)
   if(NOT _inc OR NOT (_lib OR _lib_rel OR _lib_dbg))
     return()

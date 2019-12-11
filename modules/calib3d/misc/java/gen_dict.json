@@ -1,7 +1,6 @@
 {
     "class_ignore_list": [
-        "CirclesGridFinderParameters",
-        "CirclesGridFinderParameters2"
+        "CirclesGridFinderParameters"
     ],
     "namespaces_dict": {
         "cv.fisheye": "fisheye"

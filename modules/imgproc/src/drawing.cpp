@@ -1733,7 +1733,7 @@ PolyLine( Mat& img, const Point2l* v, int count, bool is_closed,
 /* ADDING A SET OF PREDEFINED MARKERS WHICH COULD BE USED TO HIGHLIGHT POSITIONS IN AN IMAGE */
 /* ----------------------------------------------------------------------------------------- */
 
-void drawMarker(Mat& img, Point position, const Scalar& color, int markerType, int markerSize, int thickness, int line_type)
+void drawMarker(InputOutputArray img, Point position, const Scalar& color, int markerType, int markerSize, int thickness, int line_type)
 {
     switch(markerType)
     {
@@ -1869,13 +1869,12 @@ void rectangle( InputOutputArray _img, Point pt1, Point pt2,
 }
 
 
-void rectangle( Mat& img, Rect rec,
+void rectangle( InputOutputArray img, Rect rec,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( 0 <= shift && shift <= XY_SHIFT );
     if( !rec.empty() )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
                    color, thickness, lineType, shift );
@@ -1972,10 +1971,12 @@ void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
     EllipseEx( img, center, axes, _angle, 0, 360, buf, thickness, lineType );
 }
 
-void fillConvexPoly( Mat& img, const Point* pts, int npts,
+void fillConvexPoly( InputOutputArray _img, const Point* pts, int npts,
                      const Scalar& color, int line_type, int shift )
 {
     CV_INSTRUMENT_REGION();
+
+    Mat img = _img.getMat();
 
     if( !pts || npts <= 0 )
         return;
@@ -1990,12 +1991,13 @@ void fillConvexPoly( Mat& img, const Point* pts, int npts,
     FillConvexPoly( img, _pts.data(), npts, buf, line_type, shift );
 }
 
-
-void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
+void fillPoly( InputOutputArray _img, const Point** pts, const int* npts, int ncontours,
                const Scalar& color, int line_type,
                int shift, Point offset )
 {
     CV_INSTRUMENT_REGION();
+
+    Mat img = _img.getMat();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
@@ -2021,11 +2023,12 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
     FillEdgeCollection(img, edges, buf);
 }
 
-
-void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
+void polylines( InputOutputArray _img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
                 const Scalar& color, int thickness, int line_type, int shift )
 {
     CV_INSTRUMENT_REGION();
+
+    Mat img = _img.getMat();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
@@ -2371,24 +2374,21 @@ double getFontScaleFromHeight(const int fontFace, const int pixelHeight, const i
 
 }
 
-
-void cv::fillConvexPoly(InputOutputArray _img, InputArray _points,
+void cv::fillConvexPoly(InputOutputArray img, InputArray _points,
                         const Scalar& color, int lineType, int shift)
 {
     CV_INSTRUMENT_REGION();
 
-    Mat img = _img.getMat(), points = _points.getMat();
+    Mat points = _points.getMat();
     CV_Assert(points.checkVector(2, CV_32S) >= 0);
     fillConvexPoly(img, points.ptr<Point>(), points.rows*points.cols*points.channels()/2, color, lineType, shift);
 }
 
-
-void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
+void cv::fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                   const Scalar& color, int lineType, int shift, Point offset)
 {
     CV_INSTRUMENT_REGION();
 
-    Mat img = _img.getMat();
     int i, ncontours = (int)pts.total();
     if( ncontours == 0 )
         return;
@@ -2407,14 +2407,12 @@ void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
     fillPoly(img, (const Point**)ptsptr, npts, (int)ncontours, color, lineType, shift, offset);
 }
 
-
-void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
+void cv::polylines(InputOutputArray img, InputArrayOfArrays pts,
                    bool isClosed, const Scalar& color,
-                   int thickness, int lineType, int shift )
+                   int thickness, int lineType, int shift)
 {
     CV_INSTRUMENT_REGION();
 
-    Mat img = _img.getMat();
     bool manyContours = pts.kind() == _InputArray::STD_VECTOR_VECTOR ||
                         pts.kind() == _InputArray::STD_VECTOR_MAT;
     int i, ncontours = manyContours ? (int)pts.total() : 1;

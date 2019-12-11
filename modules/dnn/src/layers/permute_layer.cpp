@@ -42,13 +42,21 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_vkcom.hpp"
+
 #include <float.h>
 #include <algorithm>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/permute.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -89,7 +97,7 @@ public:
             {
                 CV_Error(Error::StsBadArg,
                          format("Orders of dimensions in Permute layer parameter"
-                                "must be in [0...%d]", _numAxes - 1));
+                                "must be in [0...%zu]", _numAxes - 1));
             }
             if (std::find(_order.begin(), _order.end(), currentOrder) != _order.end())
             {
@@ -106,7 +114,9 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine());
+               backendId == DNN_BACKEND_CUDA ||
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine()) ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -369,6 +379,28 @@ public:
                 }
             }
         }
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::PermuteOp>(preferableTarget, std::move(context->stream), _order);
+    }
+#endif
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        CV_Assert(!_order.empty());
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPermute(_order));
+        return Ptr<BackendNode>(new VkComBackendNode(input, op));
+#endif // HAVE_VULKAN
+        return Ptr<BackendNode>();
     }
 
 #ifdef HAVE_INF_ENGINE

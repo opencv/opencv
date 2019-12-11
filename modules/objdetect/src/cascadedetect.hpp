@@ -647,4 +647,10 @@ inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
     sum = (double)tmp;
     return 1;
 }
+
+namespace haar_cvt
+{
+bool convert(const FileNode& oldcascade_root, FileStorage& newfs);
+}
+
 }

@@ -43,15 +43,15 @@ static const char* getTestOpMath(unsigned testOp)
 
 const char* depthToString_(int depth)
 {
-    static const char* depthNames[] = { "CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F", "CV_USRTYPE1" };
-    return (depth <= CV_USRTYPE1 && depth >= 0) ? depthNames[depth] : NULL;
+    static const char* depthNames[] = { "CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F", "CV_16F" };
+    return (depth <= CV_16F && depth >= 0) ? depthNames[depth] : NULL;
 }
 
 const cv::String typeToString_(int type)
 {
     int depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
-    if (depth >= 0 && depth <= CV_USRTYPE1)
+    if (depth >= 0 && depth <= CV_16F)
         return cv::format("%sC%d", depthToString_(depth), cn);
     return cv::String();
 }
@@ -67,7 +67,7 @@ void check_failed_auto_(const T& v1, const T& v2, const CheckContext& ctx)
         ss << "must be " << getTestOpPhraseStr(ctx.testOp) << std::endl;
     }
     ss  << "    '" << ctx.p2_str << "' is " << v2;
-    cv::errorNoReturn(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
+    cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_MatDepth(const int v1, const int v2, const CheckContext& ctx)
 {
@@ -79,7 +79,7 @@ void check_failed_MatDepth(const int v1, const int v2, const CheckContext& ctx)
         ss << "must be " << getTestOpPhraseStr(ctx.testOp) << std::endl;
     }
     ss  << "    '" << ctx.p2_str << "' is " << v2 << " (" << depthToString(v2) << ")";
-    cv::errorNoReturn(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
+    cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_MatType(const int v1, const int v2, const CheckContext& ctx)
 {
@@ -91,7 +91,7 @@ void check_failed_MatType(const int v1, const int v2, const CheckContext& ctx)
         ss << "must be " << getTestOpPhraseStr(ctx.testOp) << std::endl;
     }
     ss  << "    '" << ctx.p2_str << "' is " << v2 << " (" << typeToString(v2) << ")";
-    cv::errorNoReturn(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
+    cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_MatChannels(const int v1, const int v2, const CheckContext& ctx)
 {
@@ -113,6 +113,10 @@ void check_failed_auto(const double v1, const double v2, const CheckContext& ctx
 {
     check_failed_auto_<double>(v1, v2, ctx);
 }
+void check_failed_auto(const Size_<int> v1, const Size_<int> v2, const CheckContext& ctx)
+{
+    check_failed_auto_< Size_<int> >(v1, v2, ctx);
+}
 
 
 template<typename T> static CV_NORETURN
@@ -123,7 +127,7 @@ void check_failed_auto_(const T& v, const CheckContext& ctx)
         << "    '" << ctx.p2_str << "'" << std::endl
         << "where" << std::endl
         << "    '" << ctx.p1_str << "' is " << v;
-    cv::errorNoReturn(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
+    cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_MatDepth(const int v, const CheckContext& ctx)
 {
@@ -132,7 +136,7 @@ void check_failed_MatDepth(const int v, const CheckContext& ctx)
         << "    '" << ctx.p2_str << "'" << std::endl
         << "where" << std::endl
         << "    '" << ctx.p1_str << "' is " << v << " (" << depthToString(v) << ")";
-    cv::errorNoReturn(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
+    cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_MatType(const int v, const CheckContext& ctx)
 {
@@ -141,7 +145,7 @@ void check_failed_MatType(const int v, const CheckContext& ctx)
         << "    '" << ctx.p2_str << "'" << std::endl
         << "where" << std::endl
         << "    '" << ctx.p1_str << "' is " << v << " (" << typeToString(v) << ")";
-    cv::errorNoReturn(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
+    cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_MatChannels(const int v, const CheckContext& ctx)
 {
@@ -162,6 +166,10 @@ void check_failed_auto(const float v, const CheckContext& ctx)
 void check_failed_auto(const double v, const CheckContext& ctx)
 {
     check_failed_auto_<double>(v, ctx);
+}
+void check_failed_auto(const Size_<int> v, const CheckContext& ctx)
+{
+    check_failed_auto_< Size_<int> >(v, ctx);
 }
 
 

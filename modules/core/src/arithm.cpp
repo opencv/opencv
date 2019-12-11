@@ -171,7 +171,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
                        bool bitwise, int oclop )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
-    int kind1 = psrc1->kind(), kind2 = psrc2->kind();
+    _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     int type2 = psrc2->type(), depth2 = CV_MAT_DEPTH(type2), cn2 = CV_MAT_CN(type2);
     int dims1 = psrc1->dims(), dims2 = psrc2->dims();
@@ -604,7 +604,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       void* usrdata=0, int oclop=-1 )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
-    int kind1 = psrc1->kind(), kind2 = psrc2->kind();
+    _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     bool haveMask = !_mask.empty();
     bool reallocate = false;
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
@@ -935,59 +935,6 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra())
-    {
-        int kind1 = _src1.kind(), kind2 = _src2.kind();
-        Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-        bool src1Scalar = checkScalar(src1, _src2.type(), kind1, kind2);
-        bool src2Scalar = checkScalar(src2, _src1.type(), kind2, kind1);
-
-        if (!src1Scalar && !src2Scalar &&
-            src1.depth() == CV_8U && src2.type() == src1.type() &&
-            src1.dims == 2 && src2.size() == src1.size() &&
-            mask.empty())
-        {
-            if (dtype < 0)
-            {
-                if (_dst.fixedType())
-                {
-                    dtype = _dst.depth();
-                }
-                else
-                {
-                    dtype = src1.depth();
-                }
-            }
-
-            dtype = CV_MAT_DEPTH(dtype);
-
-            if (!_dst.fixedType() || dtype == _dst.depth())
-            {
-                _dst.create(src1.size(), CV_MAKE_TYPE(dtype, src1.channels()));
-
-                if (dtype == CV_16S)
-                {
-                    Mat dst = _dst.getMat();
-                    if(tegra::subtract_8u8u16s(src1, src2, dst))
-                        return;
-                }
-                else if (dtype == CV_32F)
-                {
-                    Mat dst = _dst.getMat();
-                    if(tegra::subtract_8u8u32f(src1, src2, dst))
-                        return;
-                }
-                else if (dtype == CV_8S)
-                {
-                    Mat dst = _dst.getMat();
-                    if(tegra::subtract_8u8u8s(src1, src2, dst))
-                        return;
-                }
-            }
-        }
-    }
-#endif
     arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB );
 }
 
@@ -996,6 +943,13 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
     CV_INSTRUMENT_REGION();
 
     arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
+}
+
+void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    _src.copyTo(_dst, _mask);
 }
 
 /****************************************************************************************\
@@ -1271,7 +1225,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
-    int kind1 = _src1.kind(), kind2 = _src2.kind();
+    _InputArray::KindFlag kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
@@ -1650,7 +1604,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                          InputArray _upperb, OutputArray _dst )
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
     int stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
     int sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
@@ -1775,7 +1729,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
                _upperb.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_inRange(_src, _lowerb, _upperb, _dst))
 
-    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();
 
     bool lbScalar = false, ubScalar = false;

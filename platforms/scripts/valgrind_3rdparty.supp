@@ -204,3 +204,14 @@
    fun:start_thread
    fun:clone
 }
+
+{
+   clone-unknown-leak
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:_Znwm
+   obj:*
+   obj:*
+   fun:start_thread
+   fun:clone
+}

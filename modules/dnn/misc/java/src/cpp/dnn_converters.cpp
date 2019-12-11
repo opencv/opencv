@@ -6,6 +6,7 @@
 
 #include "dnn_converters.hpp"
 
+#define LOG_TAG "org.opencv.dnn"
 
 void Mat_to_MatShape(cv::Mat& mat, MatShape& matshape)
 {

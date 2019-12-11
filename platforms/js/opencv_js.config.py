@@ -1,3 +1,4 @@
+# Classes and methods whitelist
 core = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bitwise_or', 'bitwise_xor', 'cartToPolar',\
              'compare', 'convertScaleAbs', 'copyMakeBorder', 'countNonZero', 'determinant', 'dft', 'divide', 'eigen', \
              'exp', 'flip', 'getOptimalDFTSize','gemm', 'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude', \
@@ -47,6 +48,35 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
 
-calib3d = {'': ['findHomography', 'estimateAffine2D', 'Rodrigues']}
+photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
+              'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
+              'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard', 'inpaint'],
+        'CalibrateCRF': ['process'],
+        'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
+                      'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
+        'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
+        'CalibrateRobertson' : ['getMaxIter', 'setMaxIter', 'getThreshold', 'setThreshold', 'getRadiance'],
+        'MergeExposures' : ['process'],
+        'MergeDebevec' : ['process'],
+        'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', \
+                          'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
+        'MergeRobertson' : ['process'],
+        'Tonemap' : ['process' , 'getGamma', 'setGamma'],
+        'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias', \
+                          'getSigmaColor', 'setSigmaColor', 'getSigmaSpace','setSigmaSpace'],
+        'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],
+        'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', \
+                             'getColorAdaptation', 'setColorAdaptation']
+        }
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, calib3d])
+aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'estimatePoseCharucoBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
+        'aruco_Dictionary': ['get', 'drawMarker'],
+        'aruco_Board': ['create'],
+        'aruco_GridBoard': ['create', 'draw'],
+        'aruco_CharucoBoard': ['create', 'draw'],
+        }
+
+calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues']}
+
+
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, calib3d])

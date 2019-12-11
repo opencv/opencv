@@ -3,9 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 #include "perf_precomp.hpp"
 
-namespace opencv_test
-{
-using namespace perf;
+namespace opencv_test {
 
 PERF_TEST(Undistort, InitUndistortMap)
 {

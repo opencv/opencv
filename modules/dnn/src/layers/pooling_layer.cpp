@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 
@@ -51,6 +52,8 @@
 #include <ngraph/op/experimental/layers/roi_pooling.hpp>
 #include <ngraph/op/experimental/layers/psroi_pooling.hpp>
 #endif
+
+#include "../op_vkcom.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -61,6 +64,12 @@ using std::min;
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/pooling.hpp"
+#include "../cuda4dnn/primitives/max_unpooling.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -85,7 +94,7 @@ public:
         if (params.has("pool") || params.has("kernel_size") ||
             params.has("kernel_w") || params.has("kernel_h"))
         {
-            String pool = params.get<String>("pool", "max").toLowerCase();
+            String pool = toLowerCase(params.get<String>("pool", "max"));
             if (pool == "max")
                 type = MAX;
             else if (pool == "ave")
@@ -167,7 +176,11 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            return type == MAX || type == AVE;
+        }
+        else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
             if (computeMaxIdx)
                 return false;
@@ -192,10 +205,18 @@ public:
             return type != STOCHASTIC;
         }
         else
-            return (kernel_size.size() == 3 && backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU) ||
-                   ((kernel_size.empty() || kernel_size.size() == 2) && (backendId == DNN_BACKEND_OPENCV ||
-                   (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-                   (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r)))));
+        {
+            if (kernel_size.size() == 3)
+                return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU);
+            if (kernel_size.empty() || kernel_size.size() == 2)
+                return backendId == DNN_BACKEND_OPENCV ||
+                       (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
+                           (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r))) ||
+                       (backendId == DNN_BACKEND_VKCOM && haveVulkan() &&
+                           (type == MAX || type == AVE));
+            else
+                return false;
+        }
     }
 
 #ifdef HAVE_OPENCL
@@ -282,6 +303,135 @@ public:
                 CV_Error(Error::StsNotImplemented, "Not implemented");
                 break;
         }
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        /* storing max indices is a special case and we deal with it separately */
+        if (computeMaxIdx) {
+            CV_Assert(type == MAX);
+
+            cuda4dnn::MaxPoolingConfiguration config;
+            config.window_size.assign(std::begin(kernel_size), std::end(kernel_size));
+            config.strides.assign(std::begin(strides), std::end(strides));
+
+            if (padMode.empty())
+            {
+                config.padMode = MaxPoolingConfiguration::PaddingMode::MANUAL;
+                config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            }
+            else if (padMode == "VALID")
+            {
+                config.padMode = MaxPoolingConfiguration::PaddingMode::VALID;
+            }
+            else if (padMode == "SAME")
+            {
+                config.padMode = MaxPoolingConfiguration::PaddingMode::SAME;
+            }
+            else
+            {
+                CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by PoolingLayer");
+            }
+
+            config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+
+            return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(context->stream), config);
+        }
+
+        PoolingConfiguration config;
+        if (type == MAX)
+        {
+            config.poolMode = PoolingConfiguration::PoolingMode::MAX;
+        }
+        else if (type == AVE && !avePoolPaddedArea)
+        {
+            config.poolMode = PoolingConfiguration::PoolingMode::AVERAGE_EXCLUDE_PADDING;
+        }
+        else if (type == AVE && avePoolPaddedArea)
+        {
+            config.poolMode = PoolingConfiguration::PoolingMode::AVERAGE_INCLUDE_PADDING;
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling mode");
+        }
+
+        config.window_size.assign(std::begin(kernel_size), std::end(kernel_size));
+        config.strides.assign(std::begin(strides), std::end(strides));
+
+        if (padMode.empty())
+        {
+            config.padMode = PoolingConfiguration::PaddingMode::MANUAL;
+            config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
+        }
+        else if (padMode == "VALID")
+        {
+            config.padMode = PoolingConfiguration::PaddingMode::VALID;
+        }
+        else if (padMode == "SAME")
+        {
+            config.padMode = PoolingConfiguration::PaddingMode::SAME;
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by PoolingLayer");
+        }
+
+        if (ceilMode)
+            config.roundMode = PoolingConfiguration::RoundingMode::CEIL;
+        else
+            config.roundMode = PoolingConfiguration::RoundingMode::FLOOR;
+
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+
+        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
+    }
+#endif
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        int padding_mode;
+        vkcom::PoolType pool_type;
+        int filter_size[2] = {kernel.height, kernel.width};
+        int pad_size[2] = {pad.height, pad.width};
+        int stride_size[2] = {stride.height, stride.width};
+        pool_type = type == MAX ? vkcom::kPoolTypeMax:
+                   (type == AVE ? vkcom::kPoolTypeAvg:
+                            vkcom::kPoolTypeNum);
+
+        if (padMode.empty())
+        {
+            padding_mode = vkcom::kPaddingModeCaffe;
+        }
+        else if (padMode == "VALID")
+        {
+            padding_mode = vkcom::kPaddingModeValid;
+        }
+        else if (padMode == "SAME")
+        {
+            padding_mode = vkcom::kPaddingModeSame;
+        }
+        else
+            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
+
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPool(filter_size, pad_size,
+                                                            stride_size, padding_mode,
+                                                            pool_type, avePoolPaddedArea));
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
+#endif
+        return Ptr<BackendNode>();
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
@@ -405,7 +555,8 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         std::vector<size_t> kernel_size;
         std::vector<size_t> strides;
 
-        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), avePoolPaddedArea(false), nstripes(0),
+        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), pad_l(0), pad_t(0), pad_r(0), pad_b(0),
+                           avePoolPaddedArea(false), nstripes(0),
                            computeMaxIdx(0), poolingType(MAX), spatialScale(0) {}
 
         static void run(const Mat& src, const Mat& rois, Mat& dst, Mat& mask,

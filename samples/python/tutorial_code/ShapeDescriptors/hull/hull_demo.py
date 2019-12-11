@@ -13,7 +13,7 @@ def thresh_callback(val):
     canny_output = cv.Canny(src_gray, threshold, threshold * 2)
 
     # Find contours
-    _, contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
     # Find the convex hull object for each contour
     hull_list = []

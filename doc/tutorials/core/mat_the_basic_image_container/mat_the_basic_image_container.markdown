@@ -262,7 +262,7 @@ OpenCV offers support for output of other common OpenCV data structures too via 
     ![](images/MatBasicContainerOut15.png)
 
 Most of the samples here have been included in a small console application. You can download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp)
 or in the core section of the cpp samples.
 
 You can also find a quick video demonstration of this on

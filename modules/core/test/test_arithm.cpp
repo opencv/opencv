@@ -476,7 +476,7 @@ struct CopyOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -498,7 +498,7 @@ struct SetOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -1847,13 +1847,54 @@ INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
     testing::Values(-1, CV_16S, CV_32S, CV_32F),
     testing::Bool()));
 
-TEST(Core_FindNonZero, singular)
+TEST(Core_FindNonZero, regression)
 {
     Mat img(10, 10, CV_8U, Scalar::all(0));
-    vector<Point> pts, pts2(10);
+    vector<Point> pts, pts2(5);
     findNonZero(img, pts);
     findNonZero(img, pts2);
     ASSERT_TRUE(pts.empty() && pts2.empty());
+
+    RNG rng((uint64)-1);
+    size_t nz = 0;
+    for( int i = 0; i < 10; i++ )
+    {
+        int idx = rng.uniform(0, img.rows*img.cols);
+        if( !img.data[idx] ) nz++;
+        img.data[idx] = (uchar)rng.uniform(1, 256);
+    }
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_8S );
+    pts.clear();
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_16U );
+    pts.resize(pts.size()*2);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_16S );
+    pts.resize(pts.size()*3);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_32S );
+    pts.resize(pts.size()*4);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_32F );
+    pts.resize(pts.size()*5);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_64F );
+    pts.clear();
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
 }
 
 TEST(Core_BoolVector, support)
@@ -2245,6 +2286,7 @@ template <typename T> static inline
 void testDivideChecks(const Mat& dst)
 {
     ASSERT_FALSE(dst.empty());
+    CV_StaticAssert(std::numeric_limits<T>::is_integer, "");
     for (int y = 0; y < dst.rows; y++)
     {
         for (int x = 0; x < dst.cols; x++)
@@ -2261,6 +2303,36 @@ void testDivideChecks(const Mat& dst)
         }
     }
 }
+
+template <typename T> static inline
+void testDivideChecksFP(const Mat& dst)
+{
+    ASSERT_FALSE(dst.empty());
+    CV_StaticAssert(!std::numeric_limits<T>::is_integer, "");
+    for (int y = 0; y < dst.rows; y++)
+    {
+        for (int x = 0; x < dst.cols; x++)
+        {
+            if ((y % 3) == 0 && (x % 4) == 2)
+            {
+                EXPECT_TRUE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else if ((x % 4) == 2)
+            {
+                EXPECT_TRUE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else
+            {
+                EXPECT_FALSE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+                EXPECT_FALSE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+        }
+    }
+}
+
+template <> inline void testDivideChecks<float>(const Mat& dst) { testDivideChecksFP<float>(dst); }
+template <> inline void testDivideChecks<double>(const Mat& dst) { testDivideChecksFP<double>(dst); }
+
 
 template <typename T> static inline
 void testDivide(bool isUMat, double scale, bool largeSize, bool tailProcessing, bool roi)

@@ -2,7 +2,7 @@ File Input and Output using XML and YAML files {#tutorial_file_input_output_with
 ==============================================
 
 @prev_tutorial{tutorial_discrete_fourier_transform}
-@next_tutorial{tutorial_interoperability_with_OpenCV_1}
+@next_tutorial{tutorial_how_to_use_OpenCV_parallel_for_}
 
 Goal
 ----
@@ -19,7 +19,7 @@ Source code
 -----------
 
 You can [download this from here
-](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
 `samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code
 library.
 

@@ -93,19 +93,19 @@ Code
 
 @add_toggle_cpp
 -   The tutorial's code is shown below. You can also download it
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp
 @end_toggle
 
 @add_toggle_java
 -   The tutorial's code is shown below. You can also download it
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
     @include samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java
 @end_toggle
 
 @add_toggle_python
 -   The tutorial's code is shown below. You can also download it
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py)
     @include samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py
 @end_toggle
 

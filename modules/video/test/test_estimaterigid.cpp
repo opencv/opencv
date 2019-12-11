@@ -42,6 +42,15 @@
 
 #include "test_precomp.hpp"
 
+// this is test for a deprecated function. let's ignore deprecated warnings in this file
+#if defined(__clang__)
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+    #pragma warning( disable : 4996)
+#endif
+
 namespace opencv_test { namespace {
 
 class CV_RigidTransform_Test : public cvtest::BaseTest

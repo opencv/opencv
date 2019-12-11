@@ -223,6 +223,8 @@ TEST_P(Test_Torch_layers, net_inception_block)
 
 TEST_P(Test_Torch_layers, net_normalize)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* only L1 and L2 norms are supported */
     runTorchNet("net_normalize", "", false, true);
 }
 

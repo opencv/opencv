@@ -52,7 +52,7 @@ Backend& getInferenceEngineBackendTypeParam()
     return param;
 }
 
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 cv::String getInferenceEngineBackendType()
 {
@@ -67,7 +67,7 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
     return dumpInferenceEngineBackendType(old);
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 
 // For networks with input layer which has an empty name, IE generates a name id[some_number].
 // OpenCV lets users use an empty input name and to prevent unexpected naming,
@@ -556,6 +556,7 @@ void InfEngineBackendWrapper::setHostDirty()
 
 }
 
+
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
 static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr>& getSharedPlugins()
 {
@@ -1042,7 +1043,7 @@ void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
 #endif  // HAVE_INF_ENGINE
 }
 
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 void resetMyriadDevice()
 {
@@ -1119,5 +1120,5 @@ cv::String getInferenceEngineVPUType()
 #endif  // HAVE_INF_ENGINE
 
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv

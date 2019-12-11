@@ -377,7 +377,7 @@ ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
 #endif // HAVE_OPENCL
 
 static inline void
-compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, int diffusivity)
+compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, KAZE::DiffusivityType diffusivity)
 {
   CV_INSTRUMENT_REGION();
 
@@ -398,7 +398,7 @@ compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcont
       charbonnier_diffusivity(Lx, Ly, Lflow, kcontrast);
     break;
     default:
-      CV_Error(diffusivity, "Diffusivity is not supported");
+      CV_Error_(Error::StsError, ("Diffusivity is not supported: %d", static_cast<int>(diffusivity)));
     break;
   }
 }

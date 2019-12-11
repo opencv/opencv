@@ -115,7 +115,7 @@ class CornerSubPix {
         matCorners.get(0, 0, matCornersData);
         for (int i = 0; i < corners.rows(); i++) {
             Imgproc.circle(copy, new Point(cornersData[i * 2], cornersData[i * 2 + 1]), radius,
-                    new Scalar(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256)), Core.FILLED);
+                    new Scalar(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256)), Imgproc.FILLED);
             matCornersData[i * 2] = cornersData[i * 2];
             matCornersData[i * 2 + 1] = cornersData[i * 2 + 1];
         }

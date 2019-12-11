@@ -1074,11 +1074,6 @@ struct scalar_loader_n<sizeof(float), OP, float, T2, v_float32>
         v_float32 r0 = op::r(v_src1, v_src2, scalar);
         v_float32 r1 = op::r(v_src1s, v_src2s, scalar);
 
-        #if CV_VERSION_MAJOR == 3
-        r0 = op::pre(v_src2, r0);
-        r1 = op::pre(v_src2s, r1);
-        #endif
-
         v_store(dst, r0);
         v_store(dst + step, r1);
     }
@@ -1090,11 +1085,6 @@ struct scalar_loader_n<sizeof(float), OP, float, T2, v_float32>
 
         v_float32 r0 = op::r(v_src1, scalar);
         v_float32 r1 = op::r(v_src1s, scalar);
-
-        #if CV_VERSION_MAJOR == 3
-        r0 = op::pre(v_src1, r0);
-        r1 = op::pre(v_src1s, r1);
-        #endif
 
         v_store(dst, r0);
         v_store(dst + step, r1);
@@ -1184,11 +1174,6 @@ struct scalar_loader_n<sizeof(float), OP, float, double, v_float32>
         v_float32 r0 = r(v_src1, v_src2, scalar);
         v_float32 r1 = r(v_src1s, v_src2s, scalar);
 
-        #if CV_VERSION_MAJOR == 3
-        r0 = op::pre(v_src2, r0);
-        r1 = op::pre(v_src2s, r1);
-        #endif
-
         v_store(dst, r0);
         v_store(dst + step, r1);
     }
@@ -1199,11 +1184,6 @@ struct scalar_loader_n<sizeof(float), OP, float, double, v_float32>
 
         v_float32 r0 = r(v_src1, scalar);
         v_float32 r1 = r(v_src1s, scalar);
-
-        #if CV_VERSION_MAJOR == 3
-        r0 = op::pre(v_src1, r0);
-        r1 = op::pre(v_src1s, r1);
-        #endif
 
         v_store(dst, r0);
         v_store(dst + step, r1);
@@ -1251,11 +1231,6 @@ struct scalar_loader_n<sizeof(double), OP, double, double, v_float64>
         v_float64 r0 = op::r(v_src1, v_src2, scalar);
         v_float64 r1 = op::r(v_src1s, v_src2s, scalar);
 
-        #if CV_VERSION_MAJOR == 3
-        r0 = op::pre(v_src2, r0);
-        r1 = op::pre(v_src2s, r1);
-        #endif
-
         v_store(dst, r0);
         v_store(dst + step, r1);
     }
@@ -1266,11 +1241,6 @@ struct scalar_loader_n<sizeof(double), OP, double, double, v_float64>
 
         v_float64 r0 = op::r(v_src1, scalar);
         v_float64 r1 = op::r(v_src1s, scalar);
-
-        #if CV_VERSION_MAJOR == 3
-        r0 = op::pre(v_src1, r0);
-        r1 = op::pre(v_src1s, r1);
-        #endif
 
         v_store(dst, r0);
         v_store(dst + step, r1);
@@ -1587,19 +1557,6 @@ DEFINE_SIMD_F64(mul, mul_loop_d)
 
 ///////////////////////////// Operations //////////////////////////////////
 
-#if CV_VERSION_MAJOR == 3
-template<typename T1, typename Tvec>
-struct op_div_f
-{
-    static inline Tvec r(const Tvec& a, const Tvec& b)
-    {
-        const Tvec v_zero = Tvec();
-        return v_select(b == v_zero, v_zero, a / b);
-    }
-    static inline T1 r(T1 a, T1 b)
-    { return b != (T1)0 ? a / b : (T1)0; }
-};
-#else
 template<typename T1, typename Tvec>
 struct op_div_f
 {
@@ -1608,7 +1565,6 @@ struct op_div_f
     static inline T1 r(T1 a, T1 b)
     { return a / b; }
 };
-#endif
 
 template<typename T1, typename T2, typename Tvec>
 struct op_div_scale
@@ -1624,7 +1580,22 @@ struct op_div_scale
         return v_select(denom == v_zero, v_zero, res);
     }
     static inline T1 r(T1 a, T1 denom, const T2* scalar)
-    { return denom != (T1)0 ? c_div(a, denom, *scalar) : (T1)0; }
+    {
+        CV_StaticAssert(std::numeric_limits<T1>::is_integer, "");
+        return denom != (T1)0 ? c_div(a, denom, *scalar) : (T1)0;
+    }
+};
+
+template<>
+struct op_div_scale<float, float, v_float32>
+{
+    static inline v_float32 r(const v_float32& a, const v_float32& b, const float* scalar)
+    {
+        const v_float32 v_scalar = vx_setall_f32(*scalar);
+        return a * v_scalar / b;
+    }
+    static inline float r(float a, float denom, const float* scalar)
+    { return c_div(a, denom, *scalar); }
 };
 
 template<>
@@ -1636,14 +1607,9 @@ struct op_div_scale<double, double, v_float64>
         const v_float64 v_scalar = vx_setall_f64(*scalar);
         return a * v_scalar / b;
     }
-    static inline v_float64 pre(const v_float64& denom, const v_float64& res)
-    {
-        const v_float64 v_zero = vx_setzero_f64();
-        return v_select(denom == v_zero, v_zero, res);
-    }
 #endif
     static inline double r(double a, double denom, const double* scalar)
-    { return denom != 0.0 ? c_div(a, denom, *scalar) : 0.0; }
+    { return c_div(a, denom, *scalar); }
 };
 
 //////////////////////////// Loops /////////////////////////////////
@@ -1864,7 +1830,22 @@ struct op_recip
         return v_select(denom == v_zero, v_zero, res);
     }
     static inline T1 r(T1 denom, const T2* scalar)
-    { return denom != (T1)0 ? c_div(*scalar, denom) : (T1)0; }
+    {
+        CV_StaticAssert(std::numeric_limits<T1>::is_integer, "");
+        return denom != (T1)0 ? c_div(*scalar, denom) : (T1)0;
+    }
+};
+
+template<>
+struct op_recip<float, float, v_float32>
+{
+    static inline v_float32 r(const v_float32& a, const float* scalar)
+    {
+        const v_float32 v_scalar = vx_setall_f32(*scalar);
+        return v_scalar / a;
+    }
+    static inline float r(float denom, const float* scalar)
+    { return c_div(*scalar, denom); }
 };
 
 template<>
@@ -1876,14 +1857,9 @@ struct op_recip<double, double, v_float64>
         const v_float64 v_scalar = vx_setall_f64(*scalar);
         return v_scalar / a;
     }
-    static inline v_float64 pre(const v_float64& denom, const v_float64& res)
-    {
-        const v_float64 v_zero = vx_setzero_f64();
-        return v_select(denom == v_zero, v_zero, res);
-    }
 #endif
     static inline double r(double denom, const double* scalar)
-    { return denom != 0.0 ? c_div(*scalar, denom) : 0.0; }
+    { return c_div(*scalar, denom); }
 };
 
 //////////////////////////// Loops /////////////////////////////////

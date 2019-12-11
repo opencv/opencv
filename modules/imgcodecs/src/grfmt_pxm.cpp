@@ -341,14 +341,14 @@ bool PxMDecoder::readData( Mat& img )
                     if( color )
                     {
                         if( img.depth() == CV_8U )
-                            icvCvt_RGB2BGR_8u_C3R( src, 0, data, 0, cvSize(m_width,1) );
+                            icvCvt_RGB2BGR_8u_C3R( src, 0, data, 0, Size(m_width,1) );
                         else
-                            icvCvt_RGB2BGR_16u_C3R( (ushort *)src, 0, (ushort *)data, 0, cvSize(m_width,1) );
+                            icvCvt_RGB2BGR_16u_C3R( (ushort *)src, 0, (ushort *)data, 0, Size(m_width,1) );
                     }
                     else if( img.depth() == CV_8U )
-                        icvCvt_BGR2Gray_8u_C3C1R( src, 0, data, 0, cvSize(m_width,1), 2 );
+                        icvCvt_BGR2Gray_8u_C3C1R( src, 0, data, 0, Size(m_width,1), 2 );
                     else
-                        icvCvt_BGRA2Gray_16u_CnC1R( (ushort *)src, 0, (ushort *)data, 0, cvSize(m_width,1), 3, 2 );
+                        icvCvt_BGRA2Gray_16u_CnC1R( (ushort *)src, 0, (ushort *)data, 0, Size(m_width,1), 3, 2 );
                 }
             }
             result = true;
@@ -520,10 +520,10 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
             {
                 if( depth == 8 )
                     icvCvt_BGR2RGB_8u_C3R( (const uchar*)data, 0,
-                        (uchar*)buffer, 0, cvSize(width,1) );
+                        (uchar*)buffer, 0, Size(width,1) );
                 else
                     icvCvt_BGR2RGB_16u_C3R( (const ushort*)data, 0,
-                        (ushort*)buffer, 0, cvSize(width,1) );
+                        (ushort*)buffer, 0, Size(width,1) );
             }
 
             // swap endianness if necessary

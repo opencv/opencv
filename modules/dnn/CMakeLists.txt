@@ -16,9 +16,15 @@ ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APP
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
-else()
-  ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 endif()
+
+ocv_option(OPENCV_DNN_CUDA "Build with CUDA support" HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+
+if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+  add_definitions(-DCV_CUDA4DNN=1)
+endif()
+
+ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
@@ -76,10 +82,25 @@ set(include_dirs ${fw_inc})
 set(sources_options "")
 
 set(libs libprotobuf ${LAPACK_LIBRARIES})
+
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   list(APPEND include_dirs ${OPENCL_INCLUDE_DIRS})
 else()
   set(sources_options EXCLUDE_OPENCL)
+endif()
+
+if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+  list(APPEND include_dirs ${CUDA_TOOLKIT_INCLUDE} ${CUDNN_INCLUDE_DIRS})
+  set(CC_LIST ${CUDA_ARCH_BIN})
+  separate_arguments(CC_LIST)
+  foreach(cc ${CC_LIST})
+    if(cc VERSION_LESS 5.3)
+      message(FATAL_ERROR "CUDA backend for DNN module requires CC 5.3 or higher. Please remove unsupported architectures from CUDA_ARCH_BIN option.")
+    endif()
+  endforeach()
+  unset(CC_LIST)
+else()
+  set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
 
 ocv_module_include_directories(${include_dirs})

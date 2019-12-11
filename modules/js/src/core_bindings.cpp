@@ -86,12 +86,23 @@ namespace hal {
 
 using namespace emscripten;
 using namespace cv;
+
 #ifdef HAVE_OPENCV_DNN
 using namespace dnn;
 #endif
 
+#ifdef HAVE_OPENCV_ARUCO
+using namespace aruco;
+#endif
+
 namespace binding_utils
 {
+    template<typename classT, typename enumT>
+    static inline typename std::underlying_type<enumT>::type classT::* underlying_ptr(enumT classT::* enum_ptr)
+    {
+        return reinterpret_cast<typename std::underlying_type<enumT>::type classT::*>(enum_ptr);
+    }
+
     template<typename T>
     emscripten::val matData(const cv::Mat& mat)
     {

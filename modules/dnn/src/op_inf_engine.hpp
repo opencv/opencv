@@ -212,6 +212,7 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
+
 class InfEngineExtension : public InferenceEngine::IExtension
 {
 public:
@@ -232,11 +233,11 @@ public:
 };
 
 
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 bool isMyriadX();
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 
 InferenceEngine::Core& getCore();
 

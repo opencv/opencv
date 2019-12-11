@@ -38,11 +38,7 @@ protected:
     virtual void* createDataInstance() const = 0;
     virtual void  deleteDataInstance(void* pData) const = 0;
 
-#if OPENCV_ABI_COMPATIBILITY > 300
 private:
-#else
-public:
-#endif
     int key_;
 
     friend class cv::details::TlsStorage;  // core/src/system.cpp
@@ -52,8 +48,8 @@ public:
 
 private:
     // Disable copy/assign (noncopyable pattern)
-    TLSDataContainer(TLSDataContainer &);
-    TLSDataContainer& operator =(const TLSDataContainer &);
+    TLSDataContainer(TLSDataContainer &) = delete;
+    TLSDataContainer& operator =(const TLSDataContainer &) = delete;
 };
 
 

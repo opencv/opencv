@@ -10,11 +10,8 @@
 
 #include <opencv2/imgproc.hpp>
 
-namespace cv
-{
-namespace dnn
-{
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+namespace cv { namespace dnn {
+CV__DNN_INLINE_NS_BEGIN
 
 template <typename T>
 static inline float rectOverlap(const T& a, const T& b)
@@ -61,6 +58,6 @@ void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<float>& 
     NMSFast_(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rotatedRectIOU);
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }// dnn
 }// cv

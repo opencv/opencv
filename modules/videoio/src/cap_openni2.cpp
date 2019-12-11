@@ -39,6 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "cap_interface.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
@@ -223,7 +224,7 @@ openni::VideoMode CvCapture_OpenNI2::defaultStreamOutputMode(int stream)
 
 
 CvCapture_OpenNI2::CvCapture_OpenNI2(int index) :
-    CvCapture_OpenNI2(index, NULL)
+    CvCapture_OpenNI2(index, nullptr)
 { }
 
 CvCapture_OpenNI2::CvCapture_OpenNI2(const char * filename) :
@@ -1100,23 +1101,23 @@ IplImage* CvCapture_OpenNI2::retrieveFrame( int outputType )
     return image;
 }
 
-CvCapture* cvCreateCameraCapture_OpenNI2( int index )
+cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_cam( int index )
 {
     CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( index );
 
     if( capture->isOpened() )
-        return capture;
+        return cv::makePtr<cv::LegacyCapture>(capture);
 
     delete capture;
     return 0;
 }
 
-CvCapture* cvCreateFileCapture_OpenNI2( const char* filename )
+cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_file( const std::string &filename )
 {
-    CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( filename );
+    CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( filename.c_str() );
 
     if( capture->isOpened() )
-        return capture;
+        return cv::makePtr<cv::LegacyCapture>(capture);
 
     delete capture;
     return 0;

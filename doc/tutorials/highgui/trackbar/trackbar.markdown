@@ -27,19 +27,19 @@ Let's modify the program made in the tutorial @ref tutorial_adding_images. We wi
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp)
 @include cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java)
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java)
 @include java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py)
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py)
 @include python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py
 @end_toggle
 

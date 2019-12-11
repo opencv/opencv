@@ -271,3 +271,12 @@
    fun:_ZN16IlmThread_opencv10ThreadPoolC1Ej
    fun:_ZN16IlmThread_opencv10ThreadPool16globalThreadPoolEv
 }
+
+{
+   OpenCV-test-gapi-thread-tls
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+}

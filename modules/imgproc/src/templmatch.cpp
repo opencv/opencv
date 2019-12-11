@@ -1120,11 +1120,6 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::matchTemplate(img, templ, result, method))
-        return;
-#endif
-
     CV_IPP_RUN_FAST(ipp_matchTemplate(img, templ, result, method))
 
     crossCorr( img, templ, result, Point(0,0), 0, 0);

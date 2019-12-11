@@ -210,7 +210,7 @@ void calib::calibDataController::filterFrames()
                 worstElemIndex = i;
             }
         }
-        showOverlayMessage(cv::format("Frame %d is worst", worstElemIndex + 1));
+        showOverlayMessage(cv::format("Frame %zu is worst", worstElemIndex + 1));
 
         if(mCalibData->imagePoints.size()) {
             mCalibData->imagePoints.erase(mCalibData->imagePoints.begin() + worstElemIndex);

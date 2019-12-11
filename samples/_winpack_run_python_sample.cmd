@@ -2,7 +2,7 @@
 SETLOCAL
 
 SET SCRIPT_DIR=%~dp0
-IF NOT EXIST "%SCRIPT_DIR%\..\..\build\setup_vars_opencv3.cmd" (
+IF NOT EXIST "%SCRIPT_DIR%\..\..\build\setup_vars_opencv4.cmd" (
   ECHO ERROR: OpenCV Winpack installation is required
   pause
   exit
@@ -78,7 +78,7 @@ echo SRC_FILENAME=%SRC_FILENAME%
 call :dirname "%SRC_FILENAME%" SRC_DIR
 call :dirname "%PYTHON%" PYTHON_DIR
 PUSHD %SRC_DIR%
-CALL "%SCRIPT_DIR%\..\..\build\setup_vars_opencv3.cmd"
+CALL "%SCRIPT_DIR%\..\..\build\setup_vars_opencv4.cmd"
 ECHO Run: %*
 %PYTHON% %*
 SET result=%errorlevel%
@@ -97,7 +97,7 @@ EXIT /B %result%
 
 :rundemo
 PUSHD "%SCRIPT_DIR%\python"
-CALL "%SCRIPT_DIR%\..\..\build\setup_vars_opencv3.cmd"
+CALL "%SCRIPT_DIR%\..\..\build\setup_vars_opencv4.cmd"
 %PYTHON% demo.py
 SET result=%errorlevel%
 IF %result% NEQ 0 (

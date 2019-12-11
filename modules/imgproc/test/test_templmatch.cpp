@@ -49,7 +49,7 @@ public:
     CV_TemplMatchTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     double get_success_error_level( int test_case_idx, int i, int j );
@@ -75,13 +75,13 @@ CV_TemplMatchTest::CV_TemplMatchTest()
 }
 
 
-int CV_TemplMatchTest::read_params( CvFileStorage* fs )
+int CV_TemplMatchTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_template_size = cvReadInt( find_param( fs, "max_template_size" ), max_template_size );
+    read( find_param( fs, "max_template_size" ), max_template_size, max_template_size );
     max_template_size = cvtest::clipInt( max_template_size, 1, 100 );
 
     return code;
