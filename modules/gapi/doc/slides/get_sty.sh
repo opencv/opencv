@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 MTHEME_VER=2fa6084b9d34fec9d2d5470eb9a17d0bf712b6c8
 MTHEME_DIR=mtheme.sty
 
@@ -16,6 +18,8 @@ function make_sty {
     make -C "$tmp_dir"/mtheme-"$MTHEME_VER"
     cp   -v "$tmp_dir"/mtheme-"$MTHEME_VER"/*.sty "$MTHEME_DIR"
     rm -r "$tmp_dir"
+    # Put our own .gitignore to ignore this directory completely
+    echo "*" > "$MTHEME_DIR/.gitignore"
 }
 
 make_sty

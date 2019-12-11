@@ -21,7 +21,5 @@ bin/
 *.suo
 *.log
 *.tlog
-*.bbl
-*.blg
 build
 node_modules
