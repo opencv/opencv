@@ -80,14 +80,14 @@ public:
         ELTWISE_CHANNNELS_USE_MAX,               //!< number of channels from inputs may be different,
                                                  //!< output's number of channels is equal to maximal number of input channels
                                                  //!< @note supported operation: `SUM`
-    } channelsMode;
+    } channelsModeInput;
 
-    bool variableChannels;                       //!< number of channels are different on input
-    /*size_t*/int outputChannels;
+
+    mutable OutputChannelsMode channelsMode;     //!< "optimized" channels mode (switch to ELTWISE_CHANNNELS_SAME if number of input channels are equal)
+    mutable /*size_t*/int outputChannels;
 
     EltwiseLayerImpl(const LayerParams& params)
-        : variableChannels(false)
-        , outputChannels(0)
+        : outputChannels(0)
     {
         setParamsFrom(params);
         op = SUM;
@@ -117,31 +117,32 @@ public:
             }
         }
 
-        channelsMode = ELTWISE_CHANNNELS_SAME;
+        channelsModeInput = ELTWISE_CHANNNELS_SAME;
         if (params.has("output_channels_mode"))
         {
             String v = toLowerCase(params.get<String>("output_channels_mode"));
             if (v == "same")
             {
-                channelsMode = ELTWISE_CHANNNELS_SAME;
+                channelsModeInput = ELTWISE_CHANNNELS_SAME;
             }
             else if (v == "input_0")
             {
-                channelsMode = ELTWISE_CHANNNELS_INPUT_0;
+                channelsModeInput = ELTWISE_CHANNNELS_INPUT_0;
             }
             else if (v == "input_0_truncate")
             {
-                channelsMode = ELTWISE_CHANNNELS_INPUT_0_TRUNCATE;
+                channelsModeInput = ELTWISE_CHANNNELS_INPUT_0_TRUNCATE;
             }
             else if (v == "max_input_channels")
             {
-                channelsMode = ELTWISE_CHANNNELS_USE_MAX;
+                channelsModeInput = ELTWISE_CHANNNELS_USE_MAX;
                 if (op != SUM)
                     CV_Error(cv::Error::StsBadArg, "[" + type + "]:(" + name + ") 'max' channels mode is limited to SUM operation only");
             }
             else
                 CV_Error(cv::Error::StsBadArg, "[" + type + "]:(" + name + ") unknown channels mode: \"" + v + "\"");
         }
+        channelsMode = channelsModeInput;
 
         // TODO Must have checks for other unknown options
     }
@@ -151,7 +152,7 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
                ((((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()))
-                || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && !variableChannels));
+                || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && channelsMode == ELTWISE_CHANNNELS_SAME));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -166,26 +167,31 @@ public:
 
         int dims = inputs[0].size();
         // Number of channels in output shape is determined by the first input tensor.
+        bool variableChannels = false;
         int numChannels = inputs[0][1];
         for (size_t i = 1; i < inputs.size(); i++)
         {
             CV_Assert(inputs[0][0] == inputs[i][0]);  // batch sizes are equal
 
-            if (channelsMode == ELTWISE_CHANNNELS_SAME)
+            int input_channels = inputs[i][1];
+            if (numChannels != input_channels)
+                variableChannels = true;
+
+            if (channelsModeInput == ELTWISE_CHANNNELS_SAME)
             {
-                CV_Assert(numChannels == inputs[i][1]);
+                CV_Assert(numChannels == input_channels);
             }
-            else if (channelsMode == ELTWISE_CHANNNELS_INPUT_0)
+            else if (channelsModeInput == ELTWISE_CHANNNELS_INPUT_0)
             {
-                CV_Assert(numChannels >= inputs[i][1]);
+                CV_Assert(numChannels >= input_channels);
             }
-            else if (channelsMode == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
+            else if (channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
             {
                 // nothing to check
             }
-            else if (channelsMode == ELTWISE_CHANNNELS_USE_MAX)
+            else if (channelsModeInput == ELTWISE_CHANNNELS_USE_MAX)
             {
-                numChannels = std::max(numChannels, inputs[i][1]);
+                numChannels = std::max(numChannels, input_channels);
             }
             else
             {
@@ -196,43 +202,12 @@ public:
                 CV_Assert(inputs[0][j] == inputs[i][j]);
         }
 
+        channelsMode = variableChannels ? channelsModeInput : ELTWISE_CHANNNELS_SAME;
+        outputChannels = numChannels;
+
         outputs.assign(1, inputs[0]);
         outputs[0][1] = numChannels;
         return false;
-    }
-
-    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
-    {
-        std::vector<Mat> inputs;
-        inputs_arr.getMatVector(inputs);  // TODO(perf): slow on non-CPU targets, like OpenCL
-        variableChannels = false;
-        outputChannels = inputs[0].size[1];
-        for (size_t i = 1; i < inputs.size(); ++i)
-        {
-            int input_channels = inputs[i].size[1];
-            if (outputChannels != input_channels)
-                variableChannels = true;
-            if (channelsMode == ELTWISE_CHANNNELS_SAME)
-            {
-                CV_Assert(outputChannels == input_channels);
-            }
-            else if (channelsMode == ELTWISE_CHANNNELS_INPUT_0)
-            {
-                CV_Assert(outputChannels >= input_channels);
-            }
-            else if (channelsMode == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
-            {
-                // no checks
-            }
-            else if (channelsMode == ELTWISE_CHANNNELS_USE_MAX)
-            {
-                outputChannels = std::max(outputChannels, input_channels);
-            }
-            else
-            {
-                CV_Assert(0 && "Internal error");
-            }
-        }
     }
 
 
@@ -281,7 +256,7 @@ public:
                 CV_Assert(srcs[i].type() == dst.type());
                 p.srcNumChannels[i] = (srcs[i].dims >= 4) ? srcs[i].size[1] : 1;
 
-                if (!self.variableChannels)
+                if (self.channelsMode == ELTWISE_CHANNNELS_SAME)
                 {
                     CV_Assert(srcs[i].size == dst.size);
                 }
@@ -523,7 +498,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        if ((inputs_.depth() == CV_16S && op != SUM) || variableChannels)
+        if ((inputs_.depth() == CV_16S && op != SUM) || (channelsMode != ELTWISE_CHANNNELS_SAME))
             return false;
 
         inputs_.getUMatVector(inputs);
