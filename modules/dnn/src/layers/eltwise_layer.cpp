@@ -265,6 +265,7 @@ public:
                     if (i == 0)
                         CV_Assert(srcs[0].size == dst.size);
                     CV_Assert(self.outputChannels >= p.srcNumChannels[i]);
+                    sortInputs = true;
                 }
                 else if (self.channelsMode == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
                 {
@@ -288,7 +289,7 @@ public:
                     // Sort srcs and coefficients in the desc order by number of channels
                     for (int j = i; j >= 1; j--)
                     {
-                        if (p.srcs[j - 1]->size[1] < p.srcs[j]->size[1])
+                        if (std::min(self.outputChannels, p.srcs[j - 1]->size[1]) < std::min(self.outputChannels, p.srcs[j]->size[1]))
                         {
                             std::swap(p.srcs[j - 1], p.srcs[j]);
                             std::swap(p.srcNumChannels[j - 1], p.srcNumChannels[j]);
