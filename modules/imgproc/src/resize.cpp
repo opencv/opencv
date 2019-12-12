@@ -1547,7 +1547,7 @@ struct HResizeLinearVec_X4
 struct HResizeLinearVecU8_X4
 {
     int operator()(const uchar** src, uchar** _dst, int count, const int* xofs,
-        const uchar* _alpha, int, int, int cn, int, int xmax) const
+        const uchar* _alpha, int smax, int, int cn, int, int xmax) const
     {
         const short *alpha = (const short*)_alpha;
         int **dst = (int**)_dst;
@@ -1633,8 +1633,18 @@ struct HResizeLinearVecU8_X4
         }
         else if(cn == 3)
         {
-            const int step = 4;
-            const int len0 = xmax - step;
+            int len0 = xmax - cn;
+
+            /* This may need to trim 1 or more extra units depending on the amount of
+               scaling. Test until we find the first value which we know cannot overrun. */
+            while (len0 >= cn &&
+                xofs[len0 - cn] + cn >= smax - cn  // check access: v_load_expand_q(S+xofs[dx]+cn)
+            )
+            {
+                len0 -= cn;
+            }
+            CV_DbgAssert(len0 <= 0 || len0 >= cn);
+
             for( ; k <= (count - 2); k+=2 )
             {
                 const uchar *S0 = src[k];
@@ -1642,7 +1652,7 @@ struct HResizeLinearVecU8_X4
                 const uchar *S1 = src[k+1];
                 int *D1 = dst[k+1];
 
-                for( dx = 0; dx < len0; dx += 3*step/4 )
+                for( dx = 0; dx < len0; dx += cn )
                 {
                     v_int16x8 a = v_load(alpha+dx*2);
                     v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S0+xofs[dx]) | (v_load_expand_q(S0+xofs[dx]+cn)<<16)), a));
@@ -1653,7 +1663,7 @@ struct HResizeLinearVecU8_X4
             {
                 const uchar *S = src[k];
                 int *D = dst[k];
-                for( dx = 0; dx < len0; dx += 3*step/4 )
+                for( dx = 0; dx < len0; dx += cn )
                 {
                     v_int16x8 a = v_load(alpha+dx*2);
                     v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S+xofs[dx]) | (v_load_expand_q(S+xofs[dx]+cn)<<16)), a));
