@@ -136,7 +136,7 @@ class Arguments(NewOpenCVTests):
                              msg=get_conversion_error_msg(convertible_false, 'bool: false', actual))
 
     def test_parse_to_bool_not_convertible(self):
-        for not_convertible in (1.2, np.float(2.3), 's', 'str', (1, 2), [1, 2], complex(1, 1), None,
+        for not_convertible in (1.2, np.float(2.3), 's', 'str', (1, 2), [1, 2], complex(1, 1),
                                 complex(imag=2), complex(1.1), np.array([1, 0], dtype=np.bool)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
@@ -170,7 +170,7 @@ class Arguments(NewOpenCVTests):
         min_int, max_int = get_limits(ctypes.c_int)
         for not_convertible in (1.2, np.float(4), float(3), np.double(45), 's', 'str',
                                 np.array([1, 2]), (1,), [1, 2], min_int - 1, max_int + 1,
-                                complex(1, 1), complex(imag=2), complex(1.1), None):
+                                complex(1, 1), complex(imag=2), complex(1.1)):
             with self.assertRaises((TypeError, OverflowError, ValueError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpInt(not_convertible)
@@ -197,7 +197,7 @@ class Arguments(NewOpenCVTests):
     def test_parse_to_size_t_not_convertible(self):
         for not_convertible in (1.2, True, False, np.bool_(True), np.float(4), float(3),
                                 np.double(45), 's', 'str', np.array([1, 2]), (1,), [1, 2],
-                                np.float64(6), complex(1, 1), complex(imag=2), complex(1.1), None):
+                                np.float64(6), complex(1, 1), complex(imag=2), complex(1.1)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpSizeT(not_convertible)
@@ -246,7 +246,7 @@ class Arguments(NewOpenCVTests):
                              msg=get_conversion_error_msg(inf, expected, actual))
 
     def test_parse_to_float_not_convertible(self):
-        for not_convertible in ('s', 'str', (12,), [1, 2], None, np.array([1, 2], dtype=np.float),
+        for not_convertible in ('s', 'str', (12,), [1, 2], np.array([1, 2], dtype=np.float),
                                 np.array([1, 2], dtype=np.double), complex(1, 1), complex(imag=2),
                                 complex(1.1)):
             with self.assertRaises((TypeError), msg=get_no_exception_msg(not_convertible)):
@@ -283,7 +283,7 @@ class Arguments(NewOpenCVTests):
                           "Actual: {}".format(type(nan).__name__, actual))
 
     def test_parse_to_double_not_convertible(self):
-        for not_convertible in ('s', 'str', (12,), [1, 2], None, np.array([1, 2], dtype=np.float),
+        for not_convertible in ('s', 'str', (12,), [1, 2], np.array([1, 2], dtype=np.float),
                                 np.array([1, 2], dtype=np.double), complex(1, 1), complex(imag=2),
                                 complex(1.1)):
             with self.assertRaises((TypeError), msg=get_no_exception_msg(not_convertible)):
