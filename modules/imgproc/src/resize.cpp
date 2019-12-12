@@ -1637,14 +1637,13 @@ struct HResizeLinearVecU8_X4
 
             /* This may need to trim 1 or more extra units depending on the amount of
                scaling. Test until we find the first value which we know cannot overrun. */
-            while((xofs[len0 - cn] + cn) == (smax - cn))
+            while (len0 >= cn &&
+                xofs[len0 - cn] + cn >= smax - cn  // check access: v_load_expand_q(S+xofs[dx]+cn)
+            )
             {
                 len0 -= cn;
-                if(len0 == 0)
-                {
-                    break;
-                }
             }
+            CV_DbgAssert(len0 <= 0 || len0 >= cn);
 
             for( ; k <= (count - 2); k+=2 )
             {
