@@ -149,7 +149,7 @@ namespace detail
         {
             if (isEmpty())
             {
-                T empty_obj;
+                T empty_obj{};
                 m_desc = cv::descr_of(empty_obj);
                 m_ref  = std::move(empty_obj);
                 GAPI_Assert(isRWOwn());
