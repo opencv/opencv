@@ -493,15 +493,41 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestFTextsImpl, RenderNV12OCVTestFTexts,
                             Values(cv::Scalar(0, 255, 0))));
 #endif // HAVE_FREETYPE
 
+// FIXME Implement a macros to instantiate the tests because BGR and NV12 have the same parameters
+
 INSTANTIATE_TEST_CASE_P(RenderBGROCVTestMosaicsImpl, RenderBGROCVTestMosaics,
                         Combine(Values(cv::Size(1280, 720)),
-                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(cv::Rect(100, 100, 200, 200),      // Normal case
+                                       cv::Rect(-50, -50, 200, 200),      // Intersection with left-top corner
+                                       cv::Rect(-50, 100, 200, 200),      // Intersection with left side
+                                       cv::Rect(-50, 600, 200, 200),      // Intersection with left-bottom corner
+                                       cv::Rect(100, 600, 200, 200),      // Intersection with bottom side
+                                       cv::Rect(1200, 700, 200, 200),     // Intersection with right-bottom corner
+                                       cv::Rect(1200, 400, 200, 200),     // Intersection with right side
+                                       cv::Rect(1200, -50, 200, 200),     // Intersection with right-top corner
+                                       cv::Rect(500, -50, 200, 200),      // Intersection with top side
+                                       cv::Rect(-100, 300, 1480, 300),    // From left to right side with intersection
+                                       cv::Rect(5000, 2000, 100, 100),    // Outside image
+                                       cv::Rect(-300, -300, 3000, 3000),  // Cover all image
+                                       cv::Rect(100, 100, -500, -500)),   // Negative width and height
                                 Values(25),
                                 Values(0)));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestMosaicsImpl, RenderNV12OCVTestMosaics,
                         Combine(Values(cv::Size(1280, 720)),
-                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(cv::Rect(100, 100, 200, 200),      // Normal case
+                                       cv::Rect(-50, -50, 200, 200),      // Intersection with left-top corner
+                                       cv::Rect(-50, 100, 200, 200),      // Intersection with left side
+                                       cv::Rect(-50, 600, 200, 200),      // Intersection with left-bottom corner
+                                       cv::Rect(100, 600, 200, 200),      // Intersection with bottom side
+                                       cv::Rect(1200, 700, 200, 200),     // Intersection with right-bottom corner
+                                       cv::Rect(1200, 400, 200, 200),     // Intersection with right side
+                                       cv::Rect(1200, -50, 200, 200),     // Intersection with right-top corner
+                                       cv::Rect(500, -50, 200, 200),      // Intersection with top side
+                                       cv::Rect(-100, 300, 1480, 300),    // From left to right side with intersection
+                                       cv::Rect(5000, 2000, 100, 100),    // Outside image
+                                       cv::Rect(-300, -300, 3000, 3000),  // Cover all image
+                                       cv::Rect(100, 100, -500, -500)),   // Negative width and height
                                 Values(25),
                                 Values(0)));
 
