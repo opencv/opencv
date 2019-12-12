@@ -396,16 +396,18 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
             return;
         }
         GAPI_Assert(isl_inputs.size() == isl_input_args.size());
-        for (auto &&it : ade::util::zip(ade::util::toRange(in_rcs),
-                                        ade::util::toRange(isl_inputs),
-                                        ade::util::toRange(isl_input_args)))
+        for (auto &&it : ade::util::indexed(ade::util::zip(ade::util::toRange(in_rcs),
+                                            ade::util::toRange(isl_inputs),
+                                            ade::util::toRange(isl_input_args))))
         {
-            const auto &in_rc     = std::get<0>(it);
-            auto       &isl_input = std::get<1>(it);
-            const auto &in_arg    = std::get<2>(it); // FIXME: MOVE PROBLEM
+            const auto &value     = ade::util::value(it);
+            const auto &in_rc     = std::get<0>(value);
+            auto       &isl_input = std::get<1>(value);
+            const auto &in_arg    = std::get<2>(value); // FIXME: MOVE PROBLEM
             isl_input.first = in_rc;
 #if defined(GAPI_STANDALONE)
             // Standalone mode - simply store input argument in the vector as-is
+            auto id               = ade::util::index(it);
             isl_inputs[id].second = in_arg;
 #else
             // Make Islands operate on own:: data types (i.e. in the same
