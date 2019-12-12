@@ -85,31 +85,52 @@ static void emitPyError(PyObject* exc, const char* msg)
 }
 
 
-template <class... Args>
-void reportPyError(PyObject* errorType, const char* fmt, Args&&... args)
+#ifdef CV_CXX11
+template<class... Args> void reportPyError(PyObject* errorType, const char* fmt, Args&&... args)
 {
     char msg[1000];
     snprintf(msg, sizeof(msg), fmt, args...);
     emitPyError(errorType, msg);
 }
 
-template <>
-void reportPyError(PyObject* errorType, const char* msg)
+template<> void reportPyError(PyObject* errorType, const char* msg)
 {
     emitPyError(errorType, msg);
 }
 
-template <class... Args>
-void reportTypeError(const char* fmt, Args&&... args)
+template<class... Args> void reportTypeError(const char* fmt, Args&&... args)
 {
     reportPyError(PyExc_TypeError, fmt, std::forward<Args>(args)...);
 }
 
-template <class... Args>
-void reportValueError(const char* fmt, Args&&... args)
+template<class... Args> void reportValueError(const char* fmt, Args&&... args)
 {
     reportPyError(PyExc_ValueError, fmt, std::forward<Args>(args)...);
 }
+#else
+static void reportPyError(PyObject* errorType, const char* fmt, va_list args)
+{
+    char msg[1000];
+    vsnprintf(msg, sizeof(msg), fmt, args);
+    emitPyError(errorType, msg);
+}
+
+static void reportTypeError(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    reportPyError(PyExc_TypeError, fmt, args);
+    va_end(args);
+}
+
+static void reportValueError(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    reportPyError(PyExc_ValueError, fmt, args);
+    va_end(args);
+}
+#endif // CV_CXX11
 
 class PyAllowThreads
 {
@@ -303,19 +324,19 @@ public:
     {
         switch (numpyType)
         {
-            case NPY_TYPES::NPY_UBYTE:
+            case NPY_UBYTE:
                 return CV_8U;
-            case NPY_TYPES::NPY_BYTE:
+            case NPY_BYTE:
                 return CV_8S;
-            case NPY_TYPES::NPY_USHORT:
+            case NPY_USHORT:
                 return CV_16U;
-            case NPY_TYPES::NPY_SHORT:
+            case NPY_SHORT:
                 return CV_16S;
-            case NPY_TYPES::NPY_INT:
+            case NPY_INT:
                 return CV_32S;
-            case NPY_TYPES::NPY_FLOAT:
+            case NPY_FLOAT:
                 return CV_32F;
-            case NPY_TYPES::NPY_DOUBLE:
+            case NPY_DOUBLE:
                 return CV_64F;
             default:
                 return -1;
