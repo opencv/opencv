@@ -25,25 +25,53 @@ void drawMosaicRef(const cv::Mat& mat, const cv::Rect &rect, int cellSz)
     auto intersection = mat_rect & rect;
 
     cv::Mat msc_roi = mat(intersection);
-    int crop_x = msc_roi.cols - msc_roi.cols % cellSz;
-    int crop_y = msc_roi.rows - msc_roi.rows % cellSz;
+
+    bool has_crop_x = false;
+    bool has_crop_y = false;
+
+    int cols = msc_roi.cols;
+    int rows = msc_roi.rows;
+
+    if (msc_roi.cols % cellSz != 0)
+    {
+        has_crop_x = true;
+        cols -= msc_roi.cols % cellSz;
+    }
+
+    if (msc_roi.rows % cellSz != 0)
+    {
+        has_crop_y = true;
+        rows -= msc_roi.rows % cellSz;
+    }
 
     cv::Mat cell_roi;
-    for(int i = 0; i < crop_y; i += cellSz ) {
-        for(int j = 0; j < crop_x; j += cellSz) {
+    for(int i = 0; i < rows; i += cellSz )
+    {
+        for(int j = 0; j < cols; j += cellSz)
+        {
             cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
             cell_roi = cv::mean(cell_roi);
         }
-        cell_roi = msc_roi(cv::Rect(crop_x, i, msc_roi.cols - crop_x, cellSz));
-        cell_roi = cv::mean(cell_roi);
+        if (has_crop_x)
+        {
+            cell_roi = msc_roi(cv::Rect(cols, i, msc_roi.cols - cols, cellSz));
+            cell_roi = cv::mean(cell_roi);
+        }
     }
 
-    for(int j = 0; j < crop_x; j += cellSz) {
-        cell_roi = msc_roi(cv::Rect(j, crop_y, cellSz, msc_roi.rows - crop_y));
-        cell_roi = cv::mean(cell_roi);
+    if (has_crop_y)
+    {
+        for(int j = 0; j < cols; j += cellSz)
+        {
+            cell_roi = msc_roi(cv::Rect(j, rows, cellSz, msc_roi.rows - rows));
+            cell_roi = cv::mean(cell_roi);
+        }
+        if (has_crop_x)
+        {
+            cell_roi = msc_roi(cv::Rect(cols, rows, msc_roi.cols - cols, msc_roi.rows - rows));
+            cell_roi = cv::mean(cell_roi);
+        }
     }
-    cell_roi = msc_roi(cv::Rect(crop_x, crop_y, msc_roi.cols - crop_x, msc_roi.rows - crop_y));
-    cell_roi = cv::mean(cell_roi);
 }
 
 void blendImageRef(cv::Mat& mat, const cv::Point& org, const cv::Mat& img, const cv::Mat& alpha)
