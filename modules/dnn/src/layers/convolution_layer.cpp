@@ -420,53 +420,61 @@ public:
 #ifdef HAVE_CUDA
         if(IS_DNN_CUDA_TARGET(preferableTarget))
         {
-            Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
-            if(!activ_relu.empty())
+            if (activ.empty())
             {
-                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::RELU;
-                cuda_relu_slope = activ_relu->negativeSlope;
+                /* setActivation was called without a layer => reset all fusions */
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::NONE;
             }
-
-            Ptr<ReLU6Layer> activ_relu6 = activ.dynamicCast<ReLU6Layer>();
-            if(!activ_relu6.empty())
+            else
             {
-                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::CLIPPED_RELU;
-                cuda_crelu_floor = activ_relu6->minValue;
-                cuda_crelu_ceil = activ_relu6->maxValue;
-            }
-
-            Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
-            if (!activ_power.empty())
-            {
-                if (activ_power->scale != 1.f || activ_power->shift != 0.f)
+                Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
+                if(!activ_relu.empty())
                 {
-                    const int outCh = blobs[0].size[0];
-                    fuseWeights(Mat(1, outCh, CV_32F, Scalar(activ_power->scale)),
-                                Mat(1, outCh, CV_32F, Scalar(activ_power->shift)));
+                    cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::RELU;
+                    cuda_relu_slope = activ_relu->negativeSlope;
                 }
 
-                cuda_power_exp = activ_power->power;
-                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::POWER;
+                Ptr<ReLU6Layer> activ_relu6 = activ.dynamicCast<ReLU6Layer>();
+                if(!activ_relu6.empty())
+                {
+                    cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::CLIPPED_RELU;
+                    cuda_crelu_floor = activ_relu6->minValue;
+                    cuda_crelu_ceil = activ_relu6->maxValue;
+                }
+
+                Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+                if (!activ_power.empty())
+                {
+                    if (activ_power->scale != 1.f || activ_power->shift != 0.f)
+                    {
+                        const int outCh = blobs[0].size[0];
+                        fuseWeights(Mat(1, outCh, CV_32F, Scalar(activ_power->scale)),
+                                    Mat(1, outCh, CV_32F, Scalar(activ_power->shift)));
+                    }
+
+                    cuda_power_exp = activ_power->power;
+                    cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::POWER;
+                }
+
+                Ptr<TanHLayer> activ_tanh = activ.dynamicCast<TanHLayer>();
+                if(!activ_tanh.empty())
+                    cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::TANH;
+
+                Ptr<SigmoidLayer> activ_sigmoid = activ.dynamicCast<SigmoidLayer>();
+                if(!activ_sigmoid.empty())
+                    cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SIGMOID;
+
+                Ptr<SwishLayer> activ_swish = activ.dynamicCast<SwishLayer>();
+                if(!activ_swish.empty())
+                    cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SWISH;
+
+                Ptr<MishLayer> activ_mish = activ.dynamicCast<MishLayer>();
+                if(!activ_mish.empty())
+                    cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::MISH;
+
+                if (cudaActType == cuda4dnn::ConvolutionConfiguration::ActivationType::NONE)
+                    activ.reset();
             }
-
-            Ptr<TanHLayer> activ_tanh = activ.dynamicCast<TanHLayer>();
-            if(!activ_tanh.empty())
-                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::TANH;
-
-            Ptr<SigmoidLayer> activ_sigmoid = activ.dynamicCast<SigmoidLayer>();
-            if(!activ_sigmoid.empty())
-                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SIGMOID;
-
-            Ptr<SwishLayer> activ_swish = activ.dynamicCast<SwishLayer>();
-            if(!activ_swish.empty())
-                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SWISH;
-
-            Ptr<MishLayer> activ_mish = activ.dynamicCast<MishLayer>();
-            if(!activ_mish.empty())
-                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::MISH;
-
-            if (cudaActType == cuda4dnn::ConvolutionConfiguration::ActivationType::NONE)
-                activ.reset();
         }
 #endif
         return !activ.empty();
