@@ -254,7 +254,7 @@ public:
 #endif
 
 #ifdef HAVE_CUDA
-        cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::NONE;
+        cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
     }
 
@@ -423,7 +423,7 @@ public:
             if (activ.empty())
             {
                 /* setActivation was called without a layer => reset all fusions */
-                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::NONE;
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
             }
             else
             {
@@ -472,7 +472,7 @@ public:
                 if(!activ_mish.empty())
                     cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::MISH;
 
-                if (cudaActType == cuda4dnn::ConvolutionConfiguration::ActivationType::NONE)
+                if (cudaActType == cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY)
                     activ.reset();
             }
         }
@@ -1485,7 +1485,7 @@ public:
         config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
         config.groups = groups;
 
-        config.activation = cudaActType;
+        config.activation_type = cudaActType;
         config.relu_negative_slope = cuda_relu_slope;
         config.crelu_floor = cuda_crelu_floor;
         config.crelu_ceil = cuda_crelu_ceil;

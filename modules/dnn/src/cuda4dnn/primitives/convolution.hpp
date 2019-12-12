@@ -13,7 +13,7 @@
 #include "../csl/tensor_ops.hpp"
 #include "../kernels/scale_shift.hpp"
 #include "../kernels/activations.hpp"
-#include "../kernels/bias_activations.hpp"
+#include "../kernels/bias_activation.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -48,7 +48,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         std::size_t groups;
 
         enum class ActivationType {
-            NONE,
+            IDENTITY,
             RELU, /* uses value provided in `relu_negative_slope` */
             CLIPPED_RELU, /* uses values provided in `crelu_floor` and `crelu_ceil` */
             POWER, /* scale and shift fused beforehand (fuseWeights); only `power_exp` is handled by CUDA */
@@ -58,7 +58,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             MISH
         };
 
-        ActivationType activation;
+        ActivationType activation_type;
         float relu_negative_slope, crelu_floor, crelu_ceil, power_exp;
     };
 
@@ -206,11 +206,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             convoluter = csl::Convolution<T>(cudnnHandle, params);
 
-            activation = config.activation;
+            activation = config.activation_type;
             relu_negative_slope = config.relu_negative_slope;
             crelu_floor = config.crelu_floor;
             crelu_ceil = config.crelu_ceil;
             power_exp = config.power_exp;
+
+            if (activation == ConvolutionConfiguration::ActivationType::POWER && power_exp == 1.0f)
+                activation = ConvolutionConfiguration::ActivationType::IDENTITY;
 
             csl::WorkspaceBuilder builder;
             if (!transformed_shape.empty()) {
@@ -251,7 +254,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 std::size_t inner_size = output.size_range(2, output.rank());
                 switch(activation)
                 {
-                    case ConvolutionConfiguration::ActivationType::NONE:
+                    case ConvolutionConfiguration::ActivationType::IDENTITY:
                         kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
                         break;
                     case ConvolutionConfiguration::ActivationType::RELU:
@@ -281,7 +284,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             {
                 switch(activation)
                 {
-                    case ConvolutionConfiguration::ActivationType::NONE:
+                    case ConvolutionConfiguration::ActivationType::IDENTITY:
                         break;
                     case ConvolutionConfiguration::ActivationType::RELU:
                         kernels::relu<T>(stream, output, output, relu_negative_slope);
