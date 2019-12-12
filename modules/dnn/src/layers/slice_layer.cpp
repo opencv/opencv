@@ -370,8 +370,9 @@ public:
         auto strides = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
                                         ngraph::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
 
-        auto slice = std::make_shared<ngraph::op::DynSlice>(ieInpNode, lower_bounds, upper_bounds,
-                                                            strides, ngraph::AxisSet{}, ngraph::AxisSet{});
+        auto slice = std::make_shared<ngraph::op::v1::StridedSlice>(ieInpNode,
+                                      lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
+
         return Ptr<BackendNode>(new InfEngineNgraphNode(slice));
     }
 #endif  // HAVE_DNN_NGRAPH

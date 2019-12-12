@@ -355,4 +355,25 @@ _exit_:
 
 TEST(Imgproc_ApproxPoly, accuracy) { CV_ApproxPolyTest test; test.safe_run(); }
 
+//Tests to make sure that unreasonable epsilon (error)
+//values never get passed to the Douglas-Peucker algorithm.
+TEST(Imgproc_ApproxPoly, bad_epsilon)
+{
+    std::vector<Point2f> inputPoints;
+    inputPoints.push_back(Point2f(0.0f, 0.0f));
+    std::vector<Point2f> outputPoints;
+
+    double eps = std::numeric_limits<double>::infinity();
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = 9e99;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = -1e-6;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = NAN;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+}
+
 }} // namespace
