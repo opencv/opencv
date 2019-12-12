@@ -16,7 +16,7 @@ namespace cv
 
 //This and its overload below are used in various MatExpr operator overloads
 //implemented to check that Matrix operands exist.
-void checkOperandsExist(const Mat& a)
+static void checkOperandsExist(const Mat& a)
 {
     if (a.empty())
     {
@@ -24,7 +24,7 @@ void checkOperandsExist(const Mat& a)
     }
 }
 
-void checkOperandsExist(const Mat& a, const Mat& b)
+static void checkOperandsExist(const Mat& a, const Mat& b)
 {
     if (a.empty() || b.empty())
     {
