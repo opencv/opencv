@@ -425,6 +425,7 @@ namespace cv {
                     }
 
                     shortcut_param.set<std::string>("op", "sum");
+                    shortcut_param.set<std::string>("output_channels_mode", "input_0_truncate");
 
                     darknet::LayerParameter lp;
                     std::string layer_name = cv::format("shortcut_%d", layer_id);

@@ -1815,6 +1815,15 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
 
 
 namespace {
+
+#ifdef OPENCV_WITH_ITT
+bool overrideThreadName()
+{
+    static bool param = utils::getConfigurationParameterBool("OPENCV_TRACE_ITT_SET_THREAD_NAME", false);
+    return param;
+}
+#endif
+
 static int g_threadNum = 0;
 class ThreadID {
 public:
@@ -1823,7 +1832,8 @@ public:
         id(CV_XADD(&g_threadNum, 1))
     {
 #ifdef OPENCV_WITH_ITT
-        __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
+        if (overrideThreadName())
+            __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
 #endif
     }
 };

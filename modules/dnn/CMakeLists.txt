@@ -64,6 +64,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     /wd4456 /wd4510 /wd4610 /wd4800
     /wd4701 /wd4703                    # potentially uninitialized local/pointer variable 'value' used
     /wd4505                            # unreferenced local function has been removed
+    /wd4458                            # declaration of 'x' hides class member. GCC still works, MSVC bug is here: https://developercommunity.visualstudio.com/content/problem/219311/c-c4458-declaration-hides-class-member-warning-iss.html
     -wd858 -wd2196
     -Winvalid-offsetof                 # Apple Clang (attr_value.pb.cc)
 )

@@ -630,8 +630,10 @@ public:
         auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{4});
         auto strides      = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{1});
 
-        auto slice_layer = std::make_shared<ngraph::op::DynSlice>(layer_shape, lower_bounds, upper_bounds, strides);
-        auto slice_image = std::make_shared<ngraph::op::DynSlice>(image_shape, lower_bounds, upper_bounds, strides);
+        auto slice_layer = std::make_shared<ngraph::op::v1::StridedSlice>(layer_shape,
+                                            lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
+        auto slice_image = std::make_shared<ngraph::op::v1::StridedSlice>(image_shape,
+                                            lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
 
         if (_explicitSizes)
         {

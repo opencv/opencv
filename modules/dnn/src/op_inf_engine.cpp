@@ -751,11 +751,16 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
             {
                 if (layer->type == kOpenCVLayersType)
                 {
-                    layer->affinity = "CPU";
                     isHetero = true;
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2019R3)
+                    // Not sure about lower versions but in 2019R3 we do not need this
+                    layer->affinity = "CPU";
                 }
                 else
+                {
                     layer->affinity = device_name;
+#endif
+                }
             }
         }
         if (isHetero)
