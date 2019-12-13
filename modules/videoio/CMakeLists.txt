@@ -80,7 +80,7 @@ endif()
 if (WIN32 AND HAVE_DSHOW)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.cpp)
   list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.hpp)
-  if (MINGW64)
+  if(MINGW AND X86_64)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTRSAFE_NO_DEPRECATE")
   endif()
 endif()
@@ -267,7 +267,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
 if(WIN32 AND HAVE_FFMPEG_WRAPPER)
   #copy ffmpeg dll to the output folder
-  if(MSVC64 OR MINGW64)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(FFMPEG_SUFFIX _64)
   endif()
 
