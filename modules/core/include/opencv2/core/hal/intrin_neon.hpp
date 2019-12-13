@@ -1239,8 +1239,8 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
 #else
 // workaround for 64bit integer load on 32bit Arm.  details: https://github.com/opencv/opencv/pull/15555#issuecomment-564590064
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, u64)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
+OPENCV_HAL_IMPL_NEON_WORKAROUND_64(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_NEON_WORKAROUND_64(v_int64x2, int64, s64)
 #endif
 
 inline unsigned v_reduce_sum(const v_uint8x16& a)
