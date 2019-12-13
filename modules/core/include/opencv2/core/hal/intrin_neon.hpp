@@ -1203,17 +1203,44 @@ inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
 { vst1_##suffix(ptr, vget_high_##suffix(a.val)); }
 
+#define OPENCV_HAL_IMPL_NEON_WORKAROUND_64(_Tpvec, _Tp, suffix) \
+inline _Tpvec v_load(const _Tp* ptr) \
+{ return _Tpvec(vreinterpretq_##suffix##_u8(vld1q_u8((const unsigned char*)ptr))); } \
+inline _Tpvec v_load_aligned(const _Tp* ptr) \
+{ return _Tpvec(vreinterpretq_##suffix##_u8(vld1q_u8((const unsigned char*)ptr))); } \
+#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(vreinterpretq_##suffix##_u8(vcombine_u8(vld1_u8((const unsigned char*)ptr), vdup_n_u8((_Tp)0))); } \
+inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
+{ return _Tpvec(vreinterpretq_##suffix##_u8(vcombine_u8(vld1_u8((const unsigned char*)ptr0), vld1_u8((const unsigned char*)ptr1)))); } \
+inline void v_store(_Tp* ptr, const _Tpvec& a) \
+{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix##(a.val)); } \
+inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
+{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix##(a.val)); } \
+inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
+{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix##(a.val)); } \
+inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode /*mode*/) \
+{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix##(a.val)); } \
+inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
+{ vst1_u8((unsigned char*)ptr, vget_low_u8(vreinterpretq_u8_##suffix##(a.val))); } \
+inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
+{ vst1_u8((unsigned char*)ptr, vget_high_u8(vreinterpretq_u8_##suffix##(a.val))); }
+
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int16x8, short, s16)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint32x4, unsigned, u32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int32x4, int, s32)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, u64)
-OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
 #if CV_SIMD128_64F
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
+#else
+// workaround for 64bit integer load on 32bit Arm.  details: https://github.com/opencv/opencv/pull/15555#issuecomment-564590064
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
 #endif
 
 inline unsigned v_reduce_sum(const v_uint8x16& a)
