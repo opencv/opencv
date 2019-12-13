@@ -1440,12 +1440,14 @@ endmacro()
 function(ocv_target_link_libraries target)
   set(LINK_DEPS ${ARGN})
   _ocv_fix_target(target)
-  set(LINK_MODE "LINK_PRIVATE")
+  set(LINK_MODE "PRIVATE")
   set(LINK_PENDING "")
   foreach(dep ${LINK_DEPS})
     if(" ${dep}" STREQUAL " ${target}")
       # prevent "link to itself" warning (world problem)
-    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL "LINK_PUBLIC")
+    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL " LINK_PUBLIC"  # deprecated
+        OR " ${dep}" STREQUAL " PRIVATE" OR " ${dep}" STREQUAL " PUBLIC" OR " ${dep}" STREQUAL " INTERFACE"
+    )
       if(NOT LINK_PENDING STREQUAL "")
         __ocv_push_target_link_libraries(${LINK_MODE} ${LINK_PENDING})
         set(LINK_PENDING "")
@@ -1584,7 +1586,10 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
         endif()
         if (TARGET ${dep})
           get_target_property(_type ${dep} TYPE)
-          if(_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS OR _type STREQUAL "INTERFACE_LIBRARY")
+          if((_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS)
+              OR _type STREQUAL "INTERFACE_LIBRARY"
+              OR DEFINED OPENCV_MODULE_${dep}_LOCATION  # OpenCV modules
+          )
             # nothing
           else()
             get_target_property(_output ${dep} IMPORTED_LOCATION)
