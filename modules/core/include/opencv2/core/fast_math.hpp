@@ -414,4 +414,3 @@ CV_INLINE int cvIsInf( float value )
 //! @} core_utils
 
 #endif
-
