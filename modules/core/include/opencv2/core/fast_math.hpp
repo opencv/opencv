@@ -235,6 +235,8 @@ CV_INLINE int cvFloor( double value )
         defined(__PPC64__) \
     )
     return __builtin_floor(value);
+#elif defined __GNUC__
+    return (int)(floor(value));
 #else
     int i = (int)value;
     return i - (i > value);
@@ -255,6 +257,8 @@ CV_INLINE int cvCeil( double value )
         defined(__PPC64__) \
     )
     return __builtin_ceil(value);
+#elif defined __GNUC__
+    return (int)(ceil(value));
 #else
     int i = (int)value;
     return i + (i < value);
@@ -345,6 +349,8 @@ CV_INLINE int cvFloor( float value )
         defined(__PPC64__) \
     )
     return __builtin_floorf(value);
+#elif defined __GNUC__
+    return (int)(floorf(value));
 #else
     int i = (int)value;
     return i - (i > value);
@@ -365,6 +371,8 @@ CV_INLINE int cvCeil( float value )
         defined(__PPC64__) \
     )
     return __builtin_ceilf(value);
+#elif defined __GNUC__
+    return (int)(ceil(value));
 #else
     int i = (int)value;
     return i + (i < value);
@@ -406,3 +414,4 @@ CV_INLINE int cvIsInf( float value )
 //! @} core_utils
 
 #endif
+
