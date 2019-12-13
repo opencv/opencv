@@ -211,13 +211,36 @@ NPY_TYPES asNumpyType<double>()
     return NPY_DOUBLE;
 }
 
-template<class T>
-void parseNumpyScalar(PyObject* obj, T& value)
+template <class T>
+PyArray_Descr* getNumpyTypeDescriptor()
 {
+    return PyArray_DescrFromType(asNumpyType<T>());
+}
+
+template <>
+PyArray_Descr* getNumpyTypeDescriptor<size_t>()
+{
+#if SIZE_MAX == ULONG_MAX
+    return PyArray_DescrFromType(NPY_ULONG);
+#elif SIZE_MAX == ULLONG_MAX
+    return PyArray_DescrFromType(NPY_ULONGLONG);
+#else
+    return PyArray_DescrFromType(NPY_UINT);
+#endif
+}
+
+template<class T>
+bool parseNumpyScalar(PyObject* obj, T& value)
+{
+    if (!PyArray_CheckScalar(obj))
+    {
+        return false;
+    }
     // According to the numpy documentation:
     // There are 21 statically-defined PyArray_Descr objects for the built-in data-types
-    PyArray_Descr* descr = PyArray_DescrFromType(asNumpyType<T>());
-    PyArray_CastScalarToCtype(obj, &value, descr);
+    PyArray_Descr* targetDescr = getNumpyTypeDescriptor<T>();
+    PyArray_CastScalarToCtype(obj, &value, targetDescr);
+    return true;
 }
 
 } // namespace
@@ -711,7 +734,10 @@ bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo& info)
 #endif
         else
         {
-            parseNumpyScalar<size_t>(obj, value);
+            const bool isParsed = parseNumpyScalar<size_t>(obj, value);
+            if (!isParsed) {
+                failmsg("Argument '%s' can not be safely parsed to 'size_t'", info.name);
+            }
         }
     }
     else
@@ -800,7 +826,10 @@ bool pyopencv_to(PyObject* obj, double& value, const ArgInfo& info)
     }
     else if (PyArray_CheckScalar(obj))
     {
-        parseNumpyScalar<double>(obj, value);
+        const bool isParsed = parseNumpyScalar<double>(obj, value);
+        if (!isParsed) {
+            failmsg("Argument '%s' can not be safely parsed to 'double'", info.name);
+        }
     }
     else
     {
@@ -843,7 +872,10 @@ bool pyopencv_to(PyObject* obj, float& value, const ArgInfo& info)
     }
     else if (PyArray_CheckScalar(obj))
     {
-       parseNumpyScalar<float>(obj, value);
+       const bool isParsed = parseNumpyScalar<float>(obj, value);
+        if (!isParsed) {
+            failmsg("Argument '%s' can not be safely parsed to 'float'", info.name);
+        }
     }
     else
     {
