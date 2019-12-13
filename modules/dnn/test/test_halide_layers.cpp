@@ -828,7 +828,7 @@ TEST_P(Eltwise, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Eltwise, Combine(
 /*input size*/ Values(Vec3i(1, 4, 5), Vec3i(2, 8, 6)),
-/*operation*/  Values("prod", "sum", "max"),
+/*operation*/  Values("prod", "sum", "prod", "max"),
 /*num convs*/  Values(1, 2, 3),
 /*weighted(for sum only)*/ Bool(),
                dnnBackendsAndTargetsWithHalide()
