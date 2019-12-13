@@ -16,10 +16,11 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace testing;
 
-static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false)
+static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false, bool randInput = true)
 {
     DNNTestLayer::checkBackend(backendId, targetId);
-    randu(input, -1.0f, 1.0f);
+    if (randInput)
+        randu(input, -1.0f, 1.0f);
 
     net.setInput(input);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
@@ -776,6 +777,14 @@ TEST_P(Eltwise, Accuracy)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
+    bool convInputShift = 1;
+    int numEltwiseInputs = numConv;
+    if (op == "div")
+    {
+        numConv = 1;
+        convInputShift = 0; // first input is convolution
+    }
+
     Net net;
 
     std::vector<int> convLayerIds(numConv);
@@ -815,20 +824,29 @@ TEST_P(Eltwise, Accuracy)
     eltwiseParam.type = "Eltwise";
     eltwiseParam.name = "testLayer";
     int eltwiseId = net.addLayer(eltwiseParam.name, eltwiseParam.type, eltwiseParam);
-    net.connect(0, 0, eltwiseId, 0);
+    if (convInputShift == 1)
+        net.connect(0, 0, eltwiseId, 0);
     for (int i = 0; i < numConv; ++i)
     {
-        net.connect(convLayerIds[i], 0, eltwiseId, i + 1);
+        net.connect(convLayerIds[i], 0, eltwiseId, i + convInputShift);
+    }
+    if (convInputShift == 0)
+        net.connect(0, 0, eltwiseId, numConv);
+    for (int i = numConv; i < numEltwiseInputs; ++i)
+    {
+        net.connect(0, 0, eltwiseId, i + 1);
     }
 
     int sz[] = {1, inSize[0], inSize[1], inSize[2]};
     Mat input(4, &sz[0], CV_32F);
-    test(input, net, backendId, targetId);
+    if (op == "div")
+        randu(input, 1.0f, 1.0f);  // ensure no divisor value has absouluate value of less than 0.5
+    test(input, net, backendId, targetId, /*skipCheck*/false, (op == "div") ? false : true);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Eltwise, Combine(
 /*input size*/ Values(Vec3i(1, 4, 5), Vec3i(2, 8, 6)),
-/*operation*/  Values("prod", "sum", "max"),
+/*operation*/  Values("prod", "sum", "div", "max"),
 /*num convs*/  Values(1, 2, 3),
 /*weighted(for sum only)*/ Bool(),
                dnnBackendsAndTargetsWithHalide()
