@@ -823,12 +823,25 @@ TEST_P(Eltwise, Accuracy)
 
     int sz[] = {1, inSize[0], inSize[1], inSize[2]};
     Mat input(4, &sz[0], CV_32F);
+    // ensure no divisor value has absouluate value of less than 0.5
+    if (op == "div") {
+        for (int i = 0; i < sz[0]; ++i) {
+            for (int j = 0; j < sz[1]; ++j) {
+                for (int k = 0; k < sz[2]; ++k) {
+                    for (int l = 0; l < sz[3]; ++l) {
+                        input.at<float>(i, j, k, l) = std::fabs(input.at<float>(i, j, k, l)) > 0.5 ?
+                                                        input.at<float>(i, j, k, l) : 0.55;
+                    }
+                }
+            }
+        }
+    }
     test(input, net, backendId, targetId);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Eltwise, Combine(
 /*input size*/ Values(Vec3i(1, 4, 5), Vec3i(2, 8, 6)),
-/*operation*/  Values("prod", "sum", "max"),
+/*operation*/  Values("prod", "sum", "div", "max"),
 /*num convs*/  Values(1, 2, 3),
 /*weighted(for sum only)*/ Bool(),
                dnnBackendsAndTargetsWithHalide()
