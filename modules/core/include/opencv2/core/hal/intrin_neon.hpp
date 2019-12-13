@@ -1213,17 +1213,17 @@ inline _Tpvec v_load_low(const _Tp* ptr) \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { return _Tpvec(vreinterpretq_##suffix##_u8(vcombine_u8(vld1_u8((const unsigned char*)ptr0), vld1_u8((const unsigned char*)ptr1)))); } \
 inline void v_store(_Tp* ptr, const _Tpvec& a) \
-{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix##(a.val)); } \
+{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix(a.val)); } \
 inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
-{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix##(a.val)); } \
+{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix(a.val)); } \
 inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
-{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix##(a.val)); } \
+{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix(a.val)); } \
 inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode /*mode*/) \
-{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix##(a.val)); } \
+{ vst1q_u8((unsigned char*)ptr, vreinterpretq_u8_##suffix(a.val)); } \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
-{ vst1_u8((unsigned char*)ptr, vget_low_u8(vreinterpretq_u8_##suffix##(a.val))); } \
+{ vst1_u8((unsigned char*)ptr, vget_low_u8(vreinterpretq_u8_##suffix(a.val))); } \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
-{ vst1_u8((unsigned char*)ptr, vget_high_u8(vreinterpretq_u8_##suffix##(a.val))); }
+{ vst1_u8((unsigned char*)ptr, vget_high_u8(vreinterpretq_u8_##suffix(a.val))); }
 
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int8x16, schar, s8)
