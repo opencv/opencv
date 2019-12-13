@@ -775,6 +775,16 @@ models = [
         url='https://www.dropbox.com/s/065l4vr8bptzohb/resnet-34_kinetics.onnx?dl=1',
         sha='88897629e4abb0fddef939f0c2d668a4edeb0788',
         filename='resnet-34_kinetics.onnx'),
+    Model(
+        name='Alexnet Facial Keypoints (ONNX)', # https://github.com/ismalakazel/Facial-Keypoint-Detection
+        url='https://drive.google.com/uc?export=dowload&id=1etGXT9WQK1KjDkJ0pUTH-CaHHva4p9cY',
+        sha='e1b82b56b59ab96b50189e1b39487d91d4fa0eea',
+        filename='onnx/models/facial_keypoints.onnx'),
+    Model(
+        name='LightWeight Human Pose Estimation (ONNX)', # https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch
+        url='https://drive.google.com/uc?export=dowload&id=1T2Kq01WXzPMrQdnEOUEiVBhwouW8Pka5',
+        sha='20370164b8c43aa14625c0be4e31f62b9b397ac4',
+        filename='onnx/models/lightweight_pose_estimation.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
