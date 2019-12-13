@@ -1208,7 +1208,6 @@ inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(vreinterpretq_##suffix##_u8(vld1q_u8((const unsigned char*)ptr))); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(vreinterpretq_##suffix##_u8(vld1q_u8((const unsigned char*)ptr))); } \
-#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
 inline _Tpvec v_load_low(const _Tp* ptr) \
 { return _Tpvec(vreinterpretq_##suffix##_u8(vcombine_u8(vld1_u8((const unsigned char*)ptr), vdup_n_u8((_Tp)0))); } \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
