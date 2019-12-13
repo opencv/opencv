@@ -36,7 +36,7 @@ constexpr char       kParserOptions[]         =
 "{ input        i ||      a path to an input. Skip to capture from a camera.}"
 "{ boxes        b |false| set true to draw face Boxes in the \"Input\" window.}"
 "{ landmarks    m |false| set true to draw landMarks in the \"Input\" window.}"
-"{ streaming    s |true|  set false to disable Streaming-API.}"
+"{ streaming    s |true|  set false to disable stream pipelining.}"
 "{ performance  p |false| set true to disable output displaying.}";
 
 const     cv::Scalar kClrWhite (255, 255, 255);
@@ -640,18 +640,21 @@ int main(int argc, char** argv)
     {
 //! [net_usg_fd]
         cv::GMat  gimgIn;                                                                           // input
+
         cv::GMat  faceOut  = cv::gapi::infer<custom::FaceDetector>(gimgIn);
 //! [net_usg_fd]
         GArrayROI garRects = custom::GFacePostProc::on(faceOut, gimgIn, config::kConfThresh);       // post-proc
-        cv::GArray<Landmarks> garElems;                                                             // |
-        cv::GArray<Contour>   garJaws;                                                              // |output arrays
+
 //! [net_usg_ld]
         cv::GArray<cv::GMat> landmOut  = cv::gapi::infer<custom::LandmDetector>(garRects, gimgIn);
 //! [net_usg_ld]
+        cv::GArray<Landmarks> garElems;                                                             // |
+        cv::GArray<Contour>   garJaws;                                                              // |output arrays
         std::tie(garElems, garJaws)    = custom::GLandmPostProc::on(landmOut, garRects);            // post-proc
         cv::GArray<Contour> garElsConts;                                                            // face elements
         cv::GArray<Contour> garFaceConts;                                                           // whole faces
-        std::tie(garElsConts, garFaceConts) = custom::GGetContours::on(garElems, garJaws);
+        std::tie(garElsConts, garFaceConts) = custom::GGetContours::on(garElems, garJaws);          // interpolation
+
 //! [msk_ppline]
         cv::GMat mskSharp        = custom::GFillPolyGContours::on(gimgIn, garElsConts);             // |
         cv::GMat mskSharpG       = cv::gapi::gaussianBlur(mskSharp, config::kGKernelSize,           // |
@@ -666,6 +669,7 @@ int main(int argc, char** argv)
         cv::GMat mskFacesWhite   = cv::gapi::threshold(mskFacesGaussed, 0, 255, cv::THRESH_BINARY); // |
         cv::GMat mskNoFaces      = cv::gapi::bitwise_not(mskFacesWhite);                            // |
 //! [msk_ppline]
+
         cv::GMat gimgBilat       = custom::GBilatFilter::on(gimgIn, config::kBSize,
                                                             config::kBSigmaCol, config::kBSigmaSp);
         cv::GMat gimgSharp       = custom::unsharpMask(gimgIn, config::kUnshSigma,

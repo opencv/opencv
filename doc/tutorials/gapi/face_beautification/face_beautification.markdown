@@ -26,7 +26,7 @@ This sample requires:
 ## Face beautification algorithm {#gapi_fb_algorithm}
 
 We will implement a simple face beautification algorithm using a
-combination of modern Deep Learning techniques and a traditional
+combination of modern Deep Learning techniques and traditional
 Computer Vision. The general idea behind the algorithm is to make
 face skin smoother while preserving face features like eyes or a
 mouth contrast. The algorithm identifies parts of the face using a DNN
@@ -120,14 +120,14 @@ Briefly the algorithm is described as follows:
   - A face part mask \f$p\f$ -- identifying regions to preserve
     (sharpen).
   - A face skin mask \f$s\f$ -- identifying regions to blur;
-- The final result \f$O\f$ is a composition of above features
+- The final result \f$O\f$ is a composition of features above
   calculated as \f$O = b*I + p*U + s*L\f$.
 
 Generating face element masks based on a limited set of features (just
 35 per face, including all its parts) is not very trivial and is
-described in the below sections.
+described in the sections below.
 
-# Constucting a G-API pipeline {#gapi_fb_pipeline}
+# Constructing a G-API pipeline {#gapi_fb_pipeline}
 
 ## Declaring Deep Learning topologies {#gapi_fb_decl_nets}
 
@@ -143,15 +143,15 @@ described in the "Face Analytics pipeline" tutorial.
 
 ## Describing the processing graph {#gapi_fb_ppline}
 
-The below code generates the graph for the above algorithm:
+The code below generates a graph for the algorithm above:
 
 @snippet cpp/tutorial_code/gapi/face_beautification/face_beautification.cpp ppl
 
 The resulting graph is a mixture of G-API's standard operations,
 user-defined operations (namespace `custom::`), and DNN inference.
-The generic function `cv::gapi::infer<>()` is used to trigger inference
-within the graph; networks to infer are specified as template
-paramters.  The sample code is using two versions of `cv::gapi::infer<>()`:
+The generic function `cv::gapi::infer<>()` allows to trigger inference
+within the pipeline; networks to infer are specified as template
+parameters.  The sample code is using two versions of `cv::gapi::infer<>()`:
 - A frame-oriented one is used to detect faces on the input frame.
 - An ROI-list oriented one is used to run landmarks inference on a
   list of faces -- this version produces an array of landmarks per
@@ -166,14 +166,14 @@ The unsharp mask \f$U\f$ for image \f$I\f$ is defined as:
 
 \f[U = I - s * L(M(I)),\f]
 
-where \f$M()\f$ is a median filter, \f$L()\f$ is the Laplacian operator,
+where \f$M()\f$ is a median filter, \f$L()\f$ is the Laplace operator,
 and \f$s\f$ is a strength coefficient. While G-API doesn't provide
 this function out-of-the-box, it is expressed naturally with the
 existing G-API operations:
 
 @snippet cpp/tutorial_code/gapi/face_beautification/face_beautification.cpp unsh
 
-Note that the above code snipped is a regular C++ function defined
+Note that the code snipped above is a regular C++ function defined
 with G-API types. Users can write functions like this to simplify
 graph construction; when called, this function just puts the relevant
 nodes to the pipeline it is used in.
@@ -195,13 +195,13 @@ following kernel:
 
 ## Facial landmarks post-processing {#gapi_fb_landm_detect}
 
-The algorithm infers face elements (like the eyes, the mouth and the head
-contour itself) using a generic facial landmarks detector
+The algorithm infers locations of face elements (like the eyes, the mouth
+and the head contour itself) using a generic facial landmarks detector
 (<a href="https://github.com/opencv/open_model_zoo/blob/master/models/intel/facial-landmarks-35-adas-0002/description/facial-landmarks-35-adas-0002.md">details</a>)
-from OpenVINO™ Open Model Zoo. Because of that, the detected landmarks
-can not be used as-is, and some interpolation is applied to identify
-regions of interest on the face. These regions are represented as
-closed contours and are used for mask generation. This landmarks
+from OpenVINO™ Open Model Zoo. However, the detected landmarks as-is are not
+enough to generate masks --- this operation requires regions of interest on
+the face represented by closed contours, so some interpolation is applied to
+get them. This landmarks
 processing and interpolation is performed by the following kernel:
 
 @snippet cpp/tutorial_code/gapi/face_beautification/face_beautification.cpp ld_pp_cnts
@@ -223,14 +223,14 @@ Eye contours are estimated with the following function:
 
 Briefly, this function restores the bottom side of an eye by a
 half-ellipse based on two points in left and right eye
-corners. In fact, `cv::ellipse2Poly()` is used to approximage the eye region, and
+corners. In fact, `cv::ellipse2Poly()` is used to approximate the eye region, and
 the function only defines ellipse parameters based on just two points:
 - The ellipse center and the \f$X\f$ half-axis calculated by two eye Points;
 - The \f$Y\f$ half-axis calculated according to the assumption that an average
 eye width is \f$1/3\f$ of its length;
 - The start and the end angles which are 0 and 180 (refer to
   `cv::ellipse()` documentation);
-- The angle delta: how much poits to produce in the contour;
+- The angle delta: how much points to produce in the contour;
 - The inclination angle of the axes.
 
 The use of the `atan2()` instead of just `atan()` in function
@@ -247,7 +247,7 @@ The function  approximates the forehead contour:
 
 As we have only jaw points in our detected landmarks, we have to get a
 half-ellipse based on three points of a jaw: the leftmost, the
-rightmost and the lowest. The jaw width is assumed to be equal to the
+rightmost and the lowest one. The jaw width is assumed to be equal to the
 forehead width and the latter is calculated using the left and the
 right points. Speaking of the \f$Y\f$ axis, we have no points to get
 it directly, and instead assume that the forehead height is about \f$2/3\f$
@@ -275,7 +275,7 @@ The steps to get the masks are:
     * revert the output (by `cv::gapi::bitwise_not`) to get the background
       mask (`mskNoFaces`).
 
-# Configuring and runnig the pipeline {#gapi_fb_comp_args}
+# Configuring and running the pipeline {#gapi_fb_comp_args}
 
 Once the graph is fully expressed, we can finally compile it and run
 on real data. G-API graph compilation is the stage where the G-API
@@ -294,7 +294,7 @@ specified in its template argument. We should pass there the network
 type we have defined in `G_API_NET()` in the early beginning of the
 tutorial.
 
-Network parameters are then wrapped in a `cv::gapi::NetworkPackage`:
+Network parameters are then wrapped in `cv::gapi::NetworkPackage`:
 
 @snippet cpp/tutorial_code/gapi/face_beautification/face_beautification.cpp netw
 
@@ -321,7 +321,7 @@ More on this in "Face Analytics Pipeline"
 
 ## Running the streaming pipeline {#gapi_fb_running}
 
-In order to run the G-API streaminmg pipeline, all we need is to
+In order to run the G-API streaming pipeline, all we need is to
 specify the input video source, call
 `cv::GStreamingCompiled::start()`, and then fetch the pipeline
 processing results:
@@ -341,7 +341,7 @@ The tutorial has two goals: to show the use of brand new features of
 G-API introduced in OpenCV 4.2, and give a basic understanding on a
 sample face beautification algorithm.
 
-The example of the result:
+The result of the algorithm application:
 
 ![Face Beautification example](pics/example.jpg)
 
@@ -367,7 +367,7 @@ The face detector takes the input image and returns a blob with the shape
 [1,1,200,7] after the inference (200 is the maximum number of
 faces which can be detected).
 In order to process every face individually, we need to convert this output to a
-list of regions in the image.
+list of regions on the image.
 
 The masks for different filters are built based on facial landmarks, which are
 inferred for every face. The result of the inference
@@ -398,13 +398,14 @@ Some points to be mentioned about this kernel implementation:
 - It takes a `cv::Mat` from the detector and a `cv::Mat` from the input; it
 returns an array of ROI's where faces have been detected.
 
-- There is `cv::Mat` data parsing by the pointer on a float used.
+- `cv::Mat` data parsing by the pointer on a float is used here.
 
 - By far the most important thing here is solving an issue that sometimes
 detector returns coordinates located outside of the image; if we pass such an
 ROI to be processed, errors in the landmarks detection will occur. The frame box
-`borders` is created and then intersected with the face rect (by `operator&()`)
-to handle such cases and save the ROI which is for sure inside the frame.
+`borders` is created and then intersected with the face rectangle
+(by `operator&()`) to handle such cases and save the ROI which is for sure
+inside the frame.
 
 Data parsing after the facial landmarks detector happens according to the same
 scheme with inconsiderable adjustments.
