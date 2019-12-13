@@ -31,7 +31,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == 2);
             CV_Assert(outputs.size() == 1);
 
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
@@ -40,21 +39,32 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
 
-            auto from_wrapper = inputs[1].dynamicCast<wrapper_type>();
-            auto from = from_wrapper->getView();
-
             /* output shape is determined by the input shape */
             CV_Assert(is_shape_same(output, input));
 
-            /* the shape of `from` and `output` must be same except for channels */
-            CV_Assert(output.rank() == from.rank());
-            for (int i = 0; i < output.rank(); i++) {
-                if (i != 1) {
-                    CV_Assert(from.get_axis_size(i) == output.get_axis_size(i));
+            for (int i = 1; i < inputs.size(); i++)
+            {
+                auto from_wrapper = inputs[i].dynamicCast<wrapper_type>();
+                auto from = from_wrapper->getView();
+
+                CV_Assert(output.rank() == from.rank());
+                for (int i = 0; i < output.rank(); i++) {
+                    if (i != 1) {
+                        CV_Assert(from.get_axis_size(i) == output.get_axis_size(i));
+                    }
+                }
+
+                if (i == 1)
+                {
+                    /* optimized path for first two inputs */
+                    kernels::input_shortcut<T>(stream, output, input, from);
+                }
+                else
+                {
+                    kernels::input_shortcut<T>(stream, output, output, from);
                 }
             }
 
-            kernels::input_shortcut<T>(stream, output, input, from);
         }
 
     private:

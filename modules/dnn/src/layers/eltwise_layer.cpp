@@ -158,9 +158,9 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
-            if(variableChannels)
+            if(channelsModeInput == ELTWISE_CHANNNELS_INPUT_0 || channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
                 return op == SUM && coeffs.empty();
-            return true;
+            return channelsModeInput == ELTWISE_CHANNNELS_SAME;
         }
 
         return backendId == DNN_BACKEND_OPENCV ||
@@ -630,12 +630,14 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        if(variableChannels)
+        if(channelsModeInput == ELTWISE_CHANNNELS_INPUT_0 || channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
         {
             CV_Assert(op == SUM);
             CV_Assert(coeffs.empty());
             return make_cuda_node<cuda4dnn::ShortcutOp>(preferableTarget, std::move(context->stream));
         }
+
+        CV_Assert(channelsModeInput == ELTWISE_CHANNNELS_SAME);
 
         auto op_ = [this] {
             switch (op) {
