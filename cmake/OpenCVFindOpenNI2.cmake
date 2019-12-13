@@ -13,7 +13,7 @@ if(NOT "${OPENNI2_INCLUDE_DIR}" STREQUAL "${OPENNI2_INCLUDE_DIR_INTERNAL}")
 endif()
 
 if(WIN32)
-    if(NOT (MSVC64 OR MINGW64))
+    if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
         find_file(OPENNI2_INCLUDES "OpenNI.h" PATHS $ENV{OPENNI2_INCLUDE} "$ENV{OPEN_NI_INSTALL_PATH}Include" DOC "OpenNI2 c++ interface header")
         find_library(OPENNI2_LIBRARY "OpenNI2" PATHS $ENV{OPENNI2_LIB} DOC "OpenNI2 library")
     else()
