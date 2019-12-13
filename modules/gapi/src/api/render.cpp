@@ -57,28 +57,16 @@ void cv::gapi::wip::draw::cvtNV12ToYUV(const cv::Mat& y,
     cv::merge(std::vector<cv::Mat>{y, upsample_uv}, yuv);
 }
 
-namespace cv
-{
-namespace detail
-{
-    template<> struct CompileArgTag<cv::gapi::wip::draw::freetype_font>
-    {
-        static const char* tag() { return "gapi.freetype_font"; }
-    };
-
-} // namespace detail
-
-GMat cv::gapi::wip::draw::render3ch(const GMat& src,
-                                    const GArray<cv::gapi::wip::draw::Prim>& prims)
+cv::GMat cv::gapi::wip::draw::render3ch(const cv::GMat& src,
+                                        const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
 {
     return cv::gapi::wip::draw::GRenderBGR::on(src, prims);
 }
 
-std::tuple<GMat, GMat> cv::gapi::wip::draw::renderNV12(const GMat& y,
-                                                       const GMat& uv,
-                                                       const GArray<cv::gapi::wip::draw::Prim>& prims)
+std::tuple<cv::GMat, cv::GMat>
+cv::gapi::wip::draw::renderNV12(const cv::GMat& y,
+                                const cv::GMat& uv,
+                                const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
 {
     return cv::gapi::wip::draw::GRenderNV12::on(y, uv, prims);
 }
-
-} // namespace cv

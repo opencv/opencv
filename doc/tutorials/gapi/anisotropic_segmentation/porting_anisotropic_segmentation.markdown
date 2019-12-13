@@ -157,7 +157,7 @@ Now this file can be visalized with a `dot` command like this:
 
     $ dot segm.dot -Tpng -o segm.png
 
-or viewed instantly with `xdot` command (please refer to your
+or viewed interactively with `xdot` (please refer to your
 distribution/operating system documentation on how to install these
 packages).
 

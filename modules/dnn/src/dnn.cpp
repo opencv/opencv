@@ -3040,8 +3040,29 @@ struct Net::Impl
         ShapesVec& os = inOutShapes[id].out;
         ShapesVec& ints = inOutShapes[id].internal;
         int requiredOutputs = layers[id].requiredOutputs.size();
-        inOutShapes[id].supportInPlace =
-                layers[id].getLayerInstance()->getMemoryShapes(is, requiredOutputs, os, ints);
+        Ptr<Layer> l = layers[id].getLayerInstance();
+        CV_Assert(l);
+        bool layerSupportInPlace = false;
+        try
+        {
+            layerSupportInPlace = l->getMemoryShapes(is, requiredOutputs, os, ints);
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "OPENCV/DNN: [" << l->type << "]:(" << l->name << "): getMemoryShapes() throws exception." <<
+                    " inputs=" << is.size() << " outputs=" << os.size() << "/" << requiredOutputs);
+            for (size_t i = 0; i < is.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    input[" << i << "] = " << toString(is[i]));
+            }
+            for (size_t i = 0; i < os.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    output[" << i << "] = " << toString(os[i]));
+            }
+            CV_LOG_ERROR(NULL, "Exception message: " << e.what());
+            throw;
+        }
+        inOutShapes[id].supportInPlace = layerSupportInPlace;
 
         for (int i = 0; i < ints.size(); i++)
             CV_Assert(total(ints[i]) > 0);

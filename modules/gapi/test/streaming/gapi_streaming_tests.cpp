@@ -39,47 +39,65 @@ void initTestDataPath()
 #endif // WINRT
 }
 
-cv::gapi::GKernelPackage OCV_KERNELS()
+enum class KernelPackage: int
 {
-    static cv::gapi::GKernelPackage pkg =
-        cv::gapi::combine(cv::gapi::core::cpu::kernels(),
-                          cv::gapi::imgproc::cpu::kernels());
-    return pkg;
+    OCV,
+    OCV_FLUID,
+    OCL,
+    OCL_FLUID,
+};
+std::ostream& operator<< (std::ostream &os, const KernelPackage &e)
+{
+    switch (e)
+    {
+#define _C(X) case KernelPackage::X: os << #X; break
+        _C(OCV);
+        _C(OCV_FLUID);
+        _C(OCL);
+        _C(OCL_FLUID);
+#undef _C
+    default: GAPI_Assert(false);
+    }
+    return os;
 }
 
-cv::gapi::GKernelPackage OCV_FLUID_KERNELS()
-{
-    static cv::gapi::GKernelPackage pkg =
-        cv::gapi::combine(OCV_KERNELS(),
-                          cv::gapi::core::fluid::kernels());
-    return pkg;
-}
-
-#if 0
-// FIXME: OpenCL backend seem to work fine with Streaming
-// however the results are not very bit exact with CPU
-// It may be a problem but may be just implementation innacuracy.
-// Need to customize the comparison function in tests where OpenCL
-// is involved.
-cv::gapi::GKernelPackage OCL_KERNELS()
-{
-    static cv::gapi::GKernelPackage pkg =
-        cv::gapi::combine(cv::gapi::core::ocl::kernels(),
-                          cv::gapi::imgproc::ocl::kernels());
-    return pkg;
-}
-
-cv::gapi::GKernelPackage OCL_FLUID_KERNELS()
-{
-    static cv::gapi::GKernelPackage pkg =
-        cv::gapi::combine(OCL_KERNELS(),
-                          cv::gapi::core::fluid::kernels());
-    return pkg;
-}
-#endif // 0
-
-struct GAPI_Streaming: public ::testing::TestWithParam<cv::gapi::GKernelPackage> {
+struct GAPI_Streaming: public ::testing::TestWithParam<KernelPackage> {
     GAPI_Streaming() { initTestDataPath(); }
+
+    cv::gapi::GKernelPackage getKernelPackage()
+    {
+        using namespace cv::gapi;
+        switch (GetParam())
+        {
+        case KernelPackage::OCV:
+            return cv::gapi::combine(core::cpu::kernels(),
+                                     imgproc::cpu::kernels());
+            break;
+
+        case KernelPackage::OCV_FLUID:
+            return cv::gapi::combine(core::cpu::kernels(),
+                                     imgproc::cpu::kernels(),
+                                     core::fluid::kernels());
+            break;
+
+        // FIXME: OpenCL backend seem to work fine with Streaming
+        // however the results are not very bit exact with CPU
+        // It may be a problem but may be just implementation innacuracy.
+        // Need to customize the comparison function in tests where OpenCL
+        // is involved.
+        case KernelPackage::OCL:
+            return cv::gapi::combine(core::ocl::kernels(),
+                                     imgproc::ocl::kernels());
+            break;
+
+        case KernelPackage::OCL_FLUID:
+            return cv::gapi::combine(core::ocl::kernels(),
+                                     imgproc::ocl::kernels(),
+                                     core::fluid::kernels());
+            break;
+        }
+        throw std::logic_error("Unknown package");
+    }
 };
 
 } // anonymous namespace
@@ -122,7 +140,7 @@ TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
 
     // Compilation & testing
     auto ccomp = c.compileStreaming(cv::descr_of(in_mat),
-                                    cv::compile_args(cv::gapi::use_only{GetParam()}));
+                                    cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
     EXPECT_TRUE(ccomp);
     EXPECT_FALSE(ccomp.running());
 
@@ -167,7 +185,7 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
 
     // Compilation & testing
     auto ccomp = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                                    cv::compile_args(cv::gapi::use_only{GetParam()}));
+                                    cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
     EXPECT_TRUE(ccomp);
     EXPECT_FALSE(ccomp.running());
 
@@ -213,7 +231,7 @@ TEST_P(GAPI_Streaming, Regression_CompileTimeScalar)
     cv::GComputation c(cv::GIn(in), cv::GOut(tmp, tmp + 1));
 
     auto ccomp = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,512}},
-                                    cv::compile_args(cv::gapi::use_only{GetParam()}));
+                                    cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
 
     cv::Mat in_mat = cv::imread(findDataFile("cv/edgefilter/kodim23.png"));
     cv::Mat out_mat1, out_mat2;
@@ -236,7 +254,7 @@ TEST_P(GAPI_Streaming, SmokeTest_StartRestart)
     cv::GComputation c(cv::GIn(in), cv::GOut(cv::gapi::copy(in), out));
 
     auto ccomp = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                                    cv::compile_args(cv::gapi::use_only{GetParam()}));
+                                    cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
     EXPECT_TRUE(ccomp);
     EXPECT_FALSE(ccomp.running());
 
@@ -273,7 +291,7 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
         cv::GMat in;
         return cv::GComputation(in, cv::gapi::copy(in));
     }).compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                        cv::compile_args(cv::gapi::use_only{GetParam()}));
+                        cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
 
     refc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi")));
     refc.start();
@@ -290,7 +308,7 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
     auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
         .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{256,256}},
                           cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                          cv::compile_args(cv::gapi::use_only{GetParam()}));
+                          cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
 
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
     testc.setSource(cv::gin(in_const,
@@ -311,7 +329,7 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta)
     cv::GMat out = blr - in;
 
     auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
-        .compileStreaming(cv::compile_args(cv::gapi::use_only{GetParam()}));
+        .compileStreaming(cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
 
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
     cv::Mat tmp;
@@ -345,7 +363,7 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_2xConstMat)
     cv::GMat out = blr - in;
 
     auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
-        .compileStreaming(cv::compile_args(cv::gapi::use_only{GetParam()}));
+        .compileStreaming(cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
 
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
     cv::Mat tmp;
@@ -376,7 +394,7 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoScalar)
     cv::GMat out_m = in_m * in_s;
 
     auto testc = cv::GComputation(cv::GIn(in_m, in_s), cv::GOut(out_m))
-        .compileStreaming(cv::compile_args(cv::gapi::use_only{GetParam()}));
+        .compileStreaming(cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
 
     cv::Mat tmp;
     // Test with one video source and scalar
@@ -399,10 +417,10 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoScalar)
 }
 
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
-                        Values(  OCV_KERNELS()
-                                 //, OCL_KERNELS() // FIXME: Fails bit-exactness check, maybe relax it?
-                               , OCV_FLUID_KERNELS()
-                                 //, OCL_FLUID_KERNELS() // FIXME: Fails bit-exactness check, maybe relax it?
+                        Values(  KernelPackage::OCV
+                             //, KernelPackage::OCL // FIXME: Fails bit-exactness check, maybe relax it?
+                               , KernelPackage::OCV_FLUID
+                             //, KernelPackage::OCL // FIXME: Fails bit-exactness check, maybe relax it?
                                ));
 
 namespace TypesTest

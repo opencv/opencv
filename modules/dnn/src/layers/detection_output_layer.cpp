@@ -55,36 +55,6 @@
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/detection_output.hpp>
-
-namespace ngraph {
-namespace op {
-
-class Dummy : public Op {
-public:
-    Dummy() : Op("Dummy", {}) {
-        constructor_validate_and_infer_types();
-    }
-
-    void validate_and_infer_types() override {
-        set_output_type(0, ngraph::element::Type(), {});
-    }
-
-    std::shared_ptr<Node> copy_with_new_args(const NodeVector& new_args) const override {
-        if (!new_args.empty())
-            throw ngraph_error("Incorrect number of new arguments");
-        return std::make_shared<Dummy>();
-    }
-
-    static constexpr NodeTypeInfo type_info{"Dummy", 1};
-    const NodeTypeInfo& get_type_info() const override {
-        return type_info;
-    }
-};
-
-constexpr NodeTypeInfo Dummy::type_info;
-
-}  // namespace op
-}  // namespace ngraph
 #endif
 
 namespace cv
@@ -1000,10 +970,8 @@ public:
         attrs.code_type                  = std::string{"caffe.PriorBoxParameter." + _codeType};
         attrs.normalized                 = true;
 
-        auto aux_class_preds = std::make_shared<ngraph::op::Dummy>();
-        auto aux_box_preds   = std::make_shared<ngraph::op::Dummy>();
         auto det_out = std::make_shared<ngraph::op::DetectionOutput>(box_logits, class_preds,
-                       proposals, aux_class_preds, aux_box_preds, attrs);
+                       proposals, attrs);
         return Ptr<BackendNode>(new InfEngineNgraphNode(det_out));
     }
 #endif  // HAVE_DNN_NGRAPH
