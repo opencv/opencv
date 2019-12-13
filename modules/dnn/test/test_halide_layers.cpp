@@ -825,16 +825,7 @@ TEST_P(Eltwise, Accuracy)
     Mat input(4, &sz[0], CV_32F);
     // ensure no divisor value has absouluate value of less than 0.5
     if (op == "div") {
-        for (int i = 0; i < sz[0]; ++i) {
-            for (int j = 0; j < sz[1]; ++j) {
-                for (int k = 0; k < sz[2]; ++k) {
-                    for (int l = 0; l < sz[3]; ++l) {
-                        input.at<float>(i, j, k, l) = std::fabs(input.at<float>(i, j, k, l)) > 0.5 ?
-                                                        input.at<float>(i, j, k, l) : 0.55;
-                    }
-                }
-            }
-        }
+        randu(input, 0.55f, 1.5f);
     }
     test(input, net, backendId, targetId);
 }
