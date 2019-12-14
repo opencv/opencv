@@ -55,7 +55,7 @@ CenSurE creates a feature vector using full spatial resolution at all scales in 
 BRIEF in OpenCV
 ---------------
 
-Below code shows the computation of BRIEF descriptors with the help of CenSurE detector. 
+Below code shows the computation of BRIEF descriptors with the help of CenSurE detector.
 
 note, that you need [opencv contrib](https://github.com/opencv/opencv_contrib)) to use this.
 @code{.py}
