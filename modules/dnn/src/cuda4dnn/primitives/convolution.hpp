@@ -12,6 +12,8 @@
 #include "../csl/tensor.hpp"
 #include "../csl/tensor_ops.hpp"
 #include "../kernels/scale_shift.hpp"
+#include "../kernels/activations.hpp"
+#include "../kernels/bias_activation.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -44,6 +46,20 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
         /* group count for grouped convolution */
         std::size_t groups;
+
+        enum class ActivationType {
+            IDENTITY,
+            RELU, /* uses value provided in `relu_negative_slope` */
+            CLIPPED_RELU, /* uses values provided in `crelu_floor` and `crelu_ceil` */
+            POWER, /* scale and shift fused beforehand (fuseWeights); only `power_exp` is handled by CUDA */
+            TANH,
+            SIGMOID,
+            SWISH,
+            MISH
+        };
+
+        ActivationType activation_type;
+        float relu_negative_slope, crelu_floor, crelu_ceil, power_exp;
     };
 
     template <class T>
@@ -59,7 +75,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const auto& strides = config.strides;
 
             const auto convolution_order = kernel_size.size();
-            CV_Assert(convolution_order >= 1);
+            CV_Assert(convolution_order > 1);
 
             CV_Assert(convolution_order == dilations.size());
             CV_Assert(convolution_order == strides.size());
@@ -72,7 +88,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const auto groups = config.groups;
 
             if (convolution_order > 3)
-                CV_Error(Error::StsNotImplemented, "Only 1D/2D/3D convolution is supported.");
+                CV_Error(Error::StsNotImplemented, "Only 2D/3D convolution is supported.");
 
             const auto rank = input_shape.size();
             const auto output_feature_maps = output_shape[1];
@@ -190,6 +206,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             convoluter = csl::Convolution<T>(cudnnHandle, params);
 
+            activation = config.activation_type;
+            relu_negative_slope = config.relu_negative_slope;
+            crelu_floor = config.crelu_floor;
+            crelu_ceil = config.crelu_ceil;
+            power_exp = config.power_exp;
+
+            if (activation == ConvolutionConfiguration::ActivationType::POWER && power_exp == 1.0f)
+                activation = ConvolutionConfiguration::ActivationType::IDENTITY;
+
             csl::WorkspaceBuilder builder;
             if (!transformed_shape.empty()) {
                 auto& shape = transformed_shape;
@@ -227,7 +252,62 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             if (!biasTensor.empty())
             {
                 std::size_t inner_size = output.size_range(2, output.rank());
-                kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
+                switch(activation)
+                {
+                    case ConvolutionConfiguration::ActivationType::IDENTITY:
+                        kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::RELU:
+                        kernels::biasN_relu_inplace<T>(stream, output, inner_size, biasTensor, relu_negative_slope);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::CLIPPED_RELU:
+                        kernels::biasN_clipped_relu_inplace<T>(stream, output, inner_size, biasTensor, crelu_floor, crelu_ceil);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::POWER:
+                        kernels::biasN_power_inplace<T>(stream, output, inner_size, biasTensor, power_exp);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::TANH:
+                        kernels::biasN_tanh_inplace<T>(stream, output, inner_size, biasTensor);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SIGMOID:
+                        kernels::biasN_sigmoid_inplace<T>(stream, output, inner_size, biasTensor);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SWISH:
+                        kernels::biasN_swish_inplace<T>(stream, output, inner_size, biasTensor);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::MISH:
+                        kernels::biasN_mish_inplace<T>(stream, output, inner_size, biasTensor);
+                        break;
+                }
+            }
+            else
+            {
+                switch(activation)
+                {
+                    case ConvolutionConfiguration::ActivationType::IDENTITY:
+                        break;
+                    case ConvolutionConfiguration::ActivationType::RELU:
+                        kernels::relu<T>(stream, output, output, relu_negative_slope);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::CLIPPED_RELU:
+                        kernels::clipped_relu<T>(stream, output, output, crelu_floor, crelu_ceil);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::POWER:
+                        kernels::power<T>(stream, output, output, power_exp, 1.0, 0.0);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::TANH:
+                        kernels::tanh<T>(stream, output, output);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SIGMOID:
+                        kernels::sigmoid<T>(stream, output, output);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SWISH:
+                        kernels::swish<T>(stream, output, output);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::MISH:
+                        kernels::mish<T>(stream, output, output);
+                        break;
+                }
             }
         }
 
@@ -243,6 +323,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::TensorTransform<T> inputTransformer;
 
         std::size_t scratch_mem_in_bytes;
+
+        ConvolutionConfiguration::ActivationType activation;
+        float relu_negative_slope, crelu_floor, crelu_ceil, power_exp;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */
