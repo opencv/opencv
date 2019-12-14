@@ -2606,7 +2606,7 @@ struct Net::Impl
                 }
             }
 
-            if (preferableBackend != DNN_BACKEND_OPENCV)
+            if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA)
                 continue;  // Go to the next layer.
 
             // the optimization #2. if there is concat layer that concatenates channels
@@ -2674,6 +2674,22 @@ struct Net::Impl
 
                         if(inp_i_data->skip || inp_i_data->consumers.size() != 1)
                             break;
+#ifdef HAVE_CUDA
+                        if (preferableBackend == DNN_BACKEND_CUDA &&
+                            (inp_i_data->layerInstance->supportBackend(DNN_BACKEND_CUDA) == false || inp_i_data->layerInstance->type == "Region"))
+                        {
+                            /* If any of the inputs are computed on host, we cannot continue with the fusion because we
+                             * cannot store the dirty state information for each part of the of memory separately.
+                             *
+                             * Consider input_0 uses a CPU fallback and input_1 runs on GPU. After the CPU completes executing,
+                             * the output on the GPU will be overwritten (and hence input_1) by the contents of the host data.
+                             *
+                             * Region layer performs NMS on CPU. For the same reasons, we cannot eliminate concat if one of the
+                             * inputs comes from a region layer.
+                             */
+                            break;
+                        }
+#endif
                         realinputs[i] = pin;
                     }
 
@@ -2691,6 +2707,10 @@ struct Net::Impl
                             umats[0] = umat_output;
                             OpenCLBackendWrapper::update(ld.outputBlobsWrappers, umats);
                         }
+#endif
+#ifdef HAVE_CUDA
+                        if (preferableBackend == DNN_BACKEND_CUDA)
+                            ld.outputBlobsWrappers[0] = wrap(output);
 #endif
                         Range chrange[] = { Range::all(), Range::all(), Range::all(), Range::all() };
                         int ofs = 0;
@@ -2716,10 +2736,39 @@ struct Net::Impl
                                 OpenCLBackendWrapper::update(inp_i_data->outputBlobsWrappers, umats);
                             }
 #endif
+#ifdef HAVE_CUDA
+                            if (preferableBackend == DNN_BACKEND_CUDA)
+                            {
+                                auto cuda_wrapper = wrap(output).dynamicCast<CUDABackendWrapper>();
+                                auto offset = chrange[1].start * (output.size[2] * output.size[3]);
+                                auto shape = MatShape{1, chrange[1].size(), output.size[2], output.size[3]};
+                                cuda_wrapper->update(shape, offset);
+                                inp_i_data->outputBlobsWrappers[pin.oid] = cuda_wrapper.staticCast<BackendWrapper>();
+                            }
+#endif
                             // Layers that refer old input Mat will refer to the
                             // new data but the same Mat object.
                             CV_Assert_N(curr_output.data == output_slice.data, oldPtr == &curr_output);
                         }
+
+#ifdef HAVE_CUDA
+                        if (preferableBackend == DNN_BACKEND_CUDA)
+                        {
+                            for (int i = 0; i < ld.consumers.size(); i++)
+                            {
+                                LayerData& consumer = layers[ld.consumers[i].lid];
+                                for (int j = 0; j < consumer.inputBlobsId.size(); j++)
+                                {
+                                    if (consumer.inputBlobsId[j].lid == ld.id)
+                                    {
+                                        CV_Assert(consumer.inputBlobs[j]->data == ld.outputBlobs[0].data);
+                                        consumer.inputBlobsWrappers[j] = ld.outputBlobsWrappers[0];
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+#endif
                         ld.skip = true;
                         printf_(("\toptimized out Concat layer %s\n", concatLayer->name.c_str()));
                     }
