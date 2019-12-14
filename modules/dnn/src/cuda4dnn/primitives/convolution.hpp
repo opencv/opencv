@@ -13,7 +13,13 @@
 #include "../csl/tensor_ops.hpp"
 #include "../kernels/scale_shift.hpp"
 #include "../kernels/activations.hpp"
+#include "../kernels/activation_eltwise.hpp"
 #include "../kernels/bias_activation.hpp"
+#include "../kernels/bias_eltwise_activation.hpp"
+#include "../kernels/bias_activation_eltwise.hpp"
+#include "../kernels/activation_eltwise.hpp"
+#include "../kernels/eltwise_activation.hpp"
+#include "../kernels/eltwise_ops.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -46,6 +52,16 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
         /* group count for grouped convolution */
         std::size_t groups;
+
+        enum class FusionMode {
+            NONE,
+            ACTIVATION, /* act(conv) */
+            ELTWISE_SUM, /* eltwise + conv */ /* eltwise tensor is passed as second input to forward */
+            ELTWISE_SUM_THEN_ACTIVATION, /* act(eltwise + conv) */
+            ACTIVATION_THEN_ELTWISE_SUM, /* eltwise + act(conv) */
+        };
+
+        FusionMode fusion_mode;
 
         enum class ActivationType {
             IDENTITY,
@@ -206,6 +222,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             convoluter = csl::Convolution<T>(cudnnHandle, params);
 
+            fusion_mode = config.fusion_mode;
             activation = config.activation_type;
             relu_negative_slope = config.relu_negative_slope;
             crelu_floor = config.crelu_floor;
@@ -230,7 +247,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+            /* input[0] = conv input, input[1] = bias (from fused eltwise layer) */
+            CV_Assert(inputs.size() == 1 || inputs.size() == 2);
+            CV_Assert(outputs.size() == 1);
 
             csl::WorkspaceAllocator allocator(workspace);
 
@@ -249,8 +268,100 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output = output_wrapper->getSpan();
 
             convoluter.convolve(output, input, filtersTensor, allocator.get_instance());
-            if (!biasTensor.empty())
+
+            if (fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM ||
+                fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION ||
+                fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM)
             {
+                CV_Assert(inputs.size() == 2);
+            }
+
+            if (!biasTensor.empty() && inputs.size() == 2)
+            {
+                /* bias and eltwise */
+                CV_Assert(fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM ||
+                          fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION ||
+                          fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM);
+
+                auto eltwise_wrapper = inputs[1].dynamicCast<wrapper_type>();
+                auto eltwise = eltwise_wrapper->getView();
+                CV_Assert(is_shape_same(eltwise, output));
+
+                std::size_t inner_size = output.size_range(2, output.rank());
+
+                if (fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM)
+                {
+                    kernels::biasN_eltwise_identity_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                }
+                else if (fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION)
+                {
+                    /* activation(conv + bias + eltwise) */
+                    switch (activation)
+                    {
+                    case ConvolutionConfiguration::ActivationType::IDENTITY:
+                        kernels::biasN_eltwise_identity_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::RELU:
+                        kernels::biasN_eltwise_relu_inplace<T>(stream, output, inner_size, biasTensor, eltwise, relu_negative_slope);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::CLIPPED_RELU:
+                        kernels::biasN_eltwise_clipped_relu_inplace<T>(stream, output, inner_size, biasTensor, eltwise, crelu_floor, crelu_ceil);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::POWER:
+                        kernels::biasN_eltwise_power_inplace<T>(stream, output, inner_size, biasTensor, eltwise, power_exp);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::TANH:
+                        kernels::biasN_eltwise_tanh_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SIGMOID:
+                        kernels::biasN_eltwise_sigmoid_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SWISH:
+                        kernels::biasN_eltwise_swish_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::MISH:
+                        kernels::biasN_eltwise_mish_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    }
+                }
+                else if (fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM)
+                {
+                    /* activation(conv + bias) + eltwise */
+                    switch (activation)
+                    {
+                    case ConvolutionConfiguration::ActivationType::IDENTITY:
+                        kernels::biasN_eltwise_identity_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::RELU:
+                        kernels::biasN_relu_eltwise_inplace<T>(stream, output, inner_size, biasTensor, eltwise, relu_negative_slope);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::CLIPPED_RELU:
+                        kernels::biasN_clipped_relu_eltwise_inplace<T>(stream, output, inner_size, biasTensor, eltwise, crelu_floor, crelu_ceil);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::POWER:
+                        kernels::biasN_power_eltwise_inplace<T>(stream, output, inner_size, biasTensor, eltwise, power_exp);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::TANH:
+                        kernels::biasN_tanh_eltwise_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SIGMOID:
+                        kernels::biasN_sigmoid_eltwise_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SWISH:
+                        kernels::biasN_swish_eltwise_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::MISH:
+                        kernels::biasN_mish_eltwise_inplace<T>(stream, output, inner_size, biasTensor, eltwise);
+                        break;
+                    }
+                }
+            }
+            else if (!biasTensor.empty() && inputs.size() == 1)
+            {
+                /* bias but no eltwise */
+                CV_Assert(fusion_mode == ConvolutionConfiguration::FusionMode::NONE ||
+                          fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION);
+
                 std::size_t inner_size = output.size_range(2, output.rank());
                 switch(activation)
                 {
@@ -280,8 +391,90 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                         break;
                 }
             }
-            else
+            else if (biasTensor.empty() && inputs.size() == 2)
             {
+                /* no bias but eltwise */
+                CV_Assert(fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM ||
+                          fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION ||
+                          fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM);
+
+                auto eltwise_wrapper = inputs[1].dynamicCast<wrapper_type>();
+                auto eltwise = eltwise_wrapper->getView();
+                CV_Assert(is_shape_same(eltwise, output));
+
+                /* we pass `eltwise` as `bias` (with `inner_size` as one) to bias-activation kernels */
+
+                if (fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM)
+                {
+                    kernels::eltwise_sum_2<T>(stream, output, output, eltwise);
+                }
+                else if (fusion_mode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION)
+                {
+                    switch (activation)
+                    {
+                    case ConvolutionConfiguration::ActivationType::IDENTITY:
+                        kernels::eltwise_sum_2<T>(stream, output, output, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::RELU:
+                        kernels::eltwise_sum_2_relu<T>(stream, output, output, eltwise, relu_negative_slope);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::CLIPPED_RELU:
+                        kernels::eltwise_sum_2_clipped_relu<T>(stream, output, output, eltwise, crelu_floor, crelu_ceil);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::POWER:
+                        kernels::eltwise_sum_2_power<T>(stream, output, output, eltwise, power_exp);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::TANH:
+                        kernels::eltwise_sum_2_tanh<T>(stream, output, output, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SIGMOID:
+                        kernels::eltwise_sum_2_sigmoid<T>(stream, output, output, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SWISH:
+                        kernels::eltwise_sum_2_swish<T>(stream, output, output, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::MISH:
+                        kernels::eltwise_sum_2_mish<T>(stream, output, output, eltwise);
+                        break;
+                    }
+                }
+                else if (fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM)
+                {
+                    switch (activation)
+                    {
+                    case ConvolutionConfiguration::ActivationType::IDENTITY:
+                        kernels::eltwise_sum_2<T>(stream, output, output, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::RELU:
+                        kernels::relu_eltwise_inplace<T>(stream, output, eltwise, relu_negative_slope);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::CLIPPED_RELU:
+                        kernels::clipped_relu_eltwise_inplace<T>(stream, output, eltwise, crelu_floor, crelu_ceil);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::POWER:
+                        kernels::power_eltwise_inplace<T>(stream, output, eltwise, power_exp);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::TANH:
+                        kernels::tanh_eltwise_inplace<T>(stream, output, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SIGMOID:
+                        kernels::sigmoid_eltwise_inplace<T>(stream, output, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::SWISH:
+                        kernels::swish_eltwise_inplace<T>(stream, output, eltwise);
+                        break;
+                    case ConvolutionConfiguration::ActivationType::MISH:
+                        kernels::mish_eltwise_inplace<T>(stream, output, eltwise);
+                        break;
+                    }
+                }
+            }
+            else if(biasTensor.empty() && inputs.size() == 1)
+            {
+                /* no bias and no eltwise */
+                CV_Assert(fusion_mode == ConvolutionConfiguration::FusionMode::NONE ||
+                          fusion_mode == ConvolutionConfiguration::FusionMode::ACTIVATION);
+
                 switch(activation)
                 {
                     case ConvolutionConfiguration::ActivationType::IDENTITY:
@@ -324,6 +517,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
         std::size_t scratch_mem_in_bytes;
 
+        ConvolutionConfiguration::FusionMode fusion_mode;
         ConvolutionConfiguration::ActivationType activation;
         float relu_negative_slope, crelu_floor, crelu_ceil, power_exp;
     };

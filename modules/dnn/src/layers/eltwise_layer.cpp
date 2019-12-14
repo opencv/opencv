@@ -64,13 +64,6 @@ namespace dnn
 class EltwiseLayerImpl CV_FINAL : public EltwiseLayer
 {
 public:
-    enum EltwiseOp
-    {
-        PROD = 0,
-        SUM = 1,
-        MAX = 2,
-        DIV = 3
-    } op;
     std::vector<float> coeffs;
 
     enum OutputChannelsMode

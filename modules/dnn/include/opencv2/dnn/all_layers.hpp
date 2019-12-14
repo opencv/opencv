@@ -518,6 +518,14 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS EltwiseLayer : public Layer
     {
     public:
+        enum EltwiseOp
+        {
+            PROD = 0,
+            SUM = 1,
+            MAX = 2,
+            DIV = 3
+        } op;
+
         static Ptr<EltwiseLayer> create(const LayerParams &params);
     };
 
