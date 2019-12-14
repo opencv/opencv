@@ -64,8 +64,6 @@ namespace dnn
 class EltwiseLayerImpl CV_FINAL : public EltwiseLayer
 {
 public:
-    std::vector<float> coeffs;
-
     enum OutputChannelsMode
     {
         ELTWISE_CHANNNELS_SAME = 0,              //!< number of channels from inputs must be the same and equal to output's number of channels

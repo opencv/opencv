@@ -501,7 +501,7 @@ public:
         if(IS_DNN_CUDA_TARGET(preferableTarget))
         {
             Ptr<EltwiseLayer> eltwise = top.dynamicCast<EltwiseLayer>();
-            if (!eltwise.empty() && eltwise->op == EltwiseLayer::SUM)
+            if (!eltwise.empty() && eltwise->op == EltwiseLayer::SUM && eltwise->coeffs.empty())
             {
                 /* we also need to check that the eltwise input does not require shortcut mechanism
                 * it's difficult to verify it here but we hope that `fuseLayers` has done the check already

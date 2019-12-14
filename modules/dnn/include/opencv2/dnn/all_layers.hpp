@@ -518,6 +518,8 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS EltwiseLayer : public Layer
     {
     public:
+        std::vector<float> coeffs;
+
         enum EltwiseOp
         {
             PROD = 0,

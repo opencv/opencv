@@ -2482,7 +2482,7 @@ struct Net::Impl
                     // CUDA backend supports fusion with eltwise sum (without variable channels)
                     if (IS_DNN_CUDA_TARGET(preferableTarget) && !nextEltwiseLayer.empty())
                     {
-                        if (nextEltwiseLayer->op != EltwiseLayer::SUM)
+                        if (nextEltwiseLayer->op != EltwiseLayer::SUM || !nextEltwiseLayer->coeffs.empty())
                             nextEltwiseLayer = Ptr<EltwiseLayer>();
 
                         auto& inputs = nextData->inputBlobs;
