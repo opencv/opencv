@@ -668,6 +668,12 @@ public:
                 for (int i = 2; i < inputBuffers.size(); ++i)
                     topExpr *= inputBuffers[i](x, y, c, n);
                 break;
+            case DIV:
+                topExpr = inputBuffers[0](x, y, c, n) /
+                          inputBuffers[1](x, y, c, n);
+                for (int i = 2; i < inputBuffers.size(); ++i)
+                    topExpr /= inputBuffers[i](x, y, c, n);
+                break;
             case MAX:
                 topExpr = max(inputBuffers[0](x, y, c, n),
                               inputBuffers[1](x, y, c, n));

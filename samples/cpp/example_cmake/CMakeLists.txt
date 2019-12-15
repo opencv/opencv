@@ -27,4 +27,4 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 add_executable(opencv_example example.cpp)
 
 # Link your application with OpenCV libraries
-target_link_libraries(opencv_example LINK_PRIVATE ${OpenCV_LIBS})
+target_link_libraries(opencv_example PRIVATE ${OpenCV_LIBS})

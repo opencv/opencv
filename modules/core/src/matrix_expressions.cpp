@@ -14,6 +14,25 @@
 namespace cv
 {
 
+//This and its overload below are used in various MatExpr operator overloads
+//implemented to check that Matrix operands exist.
+static void checkOperandsExist(const Mat& a)
+{
+    if (a.empty())
+    {
+        CV_Error(CV_StsBadArg, "Matrix operand is an empty matrix.");
+    }
+}
+
+static void checkOperandsExist(const Mat& a, const Mat& b)
+{
+    if (a.empty() || b.empty())
+    {
+        CV_Error(CV_StsBadArg, "One or more matrix operands are empty.");
+    }
+}
+
+
 class MatOp_Identity CV_FINAL : public MatOp
 {
 public:
@@ -659,6 +678,7 @@ MatExpr MatExpr::mul(const Mat& m, double scale) const
 
 MatExpr operator + (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, b, 1, 1);
     return e;
@@ -666,6 +686,7 @@ MatExpr operator + (const Mat& a, const Mat& b)
 
 MatExpr operator + (const Mat& a, const Scalar& s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, Mat(), 1, 0, s);
     return e;
@@ -673,6 +694,7 @@ MatExpr operator + (const Mat& a, const Scalar& s)
 
 MatExpr operator + (const Scalar& s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, Mat(), 1, 0, s);
     return e;
@@ -687,6 +709,7 @@ MatExpr operator + (const MatExpr& e, const Mat& m)
 
 MatExpr operator + (const Mat& m, const MatExpr& e)
 {
+    checkOperandsExist(m);
     MatExpr en;
     e.op->add(e, MatExpr(m), en);
     return en;
@@ -715,6 +738,7 @@ MatExpr operator + (const MatExpr& e1, const MatExpr& e2)
 
 MatExpr operator - (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, b, 1, -1);
     return e;
@@ -722,6 +746,7 @@ MatExpr operator - (const Mat& a, const Mat& b)
 
 MatExpr operator - (const Mat& a, const Scalar& s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, Mat(), 1, 0, -s);
     return e;
@@ -729,6 +754,7 @@ MatExpr operator - (const Mat& a, const Scalar& s)
 
 MatExpr operator - (const Scalar& s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, Mat(), -1, 0, s);
     return e;
@@ -736,6 +762,7 @@ MatExpr operator - (const Scalar& s, const Mat& a)
 
 MatExpr operator - (const MatExpr& e, const Mat& m)
 {
+    checkOperandsExist(m);
     MatExpr en;
     e.op->subtract(e, MatExpr(m), en);
     return en;
@@ -743,6 +770,7 @@ MatExpr operator - (const MatExpr& e, const Mat& m)
 
 MatExpr operator - (const Mat& m, const MatExpr& e)
 {
+    checkOperandsExist(m);
     MatExpr en;
     e.op->subtract(MatExpr(m), e, en);
     return en;
@@ -771,6 +799,7 @@ MatExpr operator - (const MatExpr& e1, const MatExpr& e2)
 
 MatExpr operator - (const Mat& m)
 {
+    checkOperandsExist(m);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, m, Mat(), -1, 0);
     return e;
@@ -785,6 +814,7 @@ MatExpr operator - (const MatExpr& e)
 
 MatExpr operator * (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_GEMM::makeExpr(e, 0, a, b);
     return e;
@@ -792,6 +822,7 @@ MatExpr operator * (const Mat& a, const Mat& b)
 
 MatExpr operator * (const Mat& a, double s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, Mat(), s, 0);
     return e;
@@ -799,6 +830,7 @@ MatExpr operator * (const Mat& a, double s)
 
 MatExpr operator * (double s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, Mat(), s, 0);
     return e;
@@ -813,6 +845,7 @@ MatExpr operator * (const MatExpr& e, const Mat& m)
 
 MatExpr operator * (const Mat& m, const MatExpr& e)
 {
+    checkOperandsExist(m);
     MatExpr en;
     e.op->matmul(MatExpr(m), e, en);
     return en;
@@ -841,6 +874,7 @@ MatExpr operator * (const MatExpr& e1, const MatExpr& e2)
 
 MatExpr operator / (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '/', a, b);
     return e;
@@ -848,6 +882,7 @@ MatExpr operator / (const Mat& a, const Mat& b)
 
 MatExpr operator / (const Mat& a, double s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_AddEx::makeExpr(e, a, Mat(), 1./s, 0);
     return e;
@@ -855,6 +890,7 @@ MatExpr operator / (const Mat& a, double s)
 
 MatExpr operator / (double s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '/', a, Mat(), s);
     return e;
@@ -869,6 +905,7 @@ MatExpr operator / (const MatExpr& e, const Mat& m)
 
 MatExpr operator / (const Mat& m, const MatExpr& e)
 {
+    checkOperandsExist(m);
     MatExpr en;
     e.op->divide(MatExpr(m), e, en);
     return en;
@@ -897,6 +934,7 @@ MatExpr operator / (const MatExpr& e1, const MatExpr& e2)
 
 MatExpr operator < (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_LT, a, b);
     return e;
@@ -904,6 +942,7 @@ MatExpr operator < (const Mat& a, const Mat& b)
 
 MatExpr operator < (const Mat& a, double s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_LT, a, s);
     return e;
@@ -911,6 +950,7 @@ MatExpr operator < (const Mat& a, double s)
 
 MatExpr operator < (double s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_GT, a, s);
     return e;
@@ -918,6 +958,7 @@ MatExpr operator < (double s, const Mat& a)
 
 MatExpr operator <= (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_LE, a, b);
     return e;
@@ -925,6 +966,7 @@ MatExpr operator <= (const Mat& a, const Mat& b)
 
 MatExpr operator <= (const Mat& a, double s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_LE, a, s);
     return e;
@@ -932,6 +974,7 @@ MatExpr operator <= (const Mat& a, double s)
 
 MatExpr operator <= (double s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_GE, a, s);
     return e;
@@ -939,6 +982,7 @@ MatExpr operator <= (double s, const Mat& a)
 
 MatExpr operator == (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_EQ, a, b);
     return e;
@@ -946,6 +990,7 @@ MatExpr operator == (const Mat& a, const Mat& b)
 
 MatExpr operator == (const Mat& a, double s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_EQ, a, s);
     return e;
@@ -953,6 +998,7 @@ MatExpr operator == (const Mat& a, double s)
 
 MatExpr operator == (double s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_EQ, a, s);
     return e;
@@ -960,6 +1006,7 @@ MatExpr operator == (double s, const Mat& a)
 
 MatExpr operator != (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_NE, a, b);
     return e;
@@ -967,6 +1014,7 @@ MatExpr operator != (const Mat& a, const Mat& b)
 
 MatExpr operator != (const Mat& a, double s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_NE, a, s);
     return e;
@@ -974,6 +1022,7 @@ MatExpr operator != (const Mat& a, double s)
 
 MatExpr operator != (double s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_NE, a, s);
     return e;
@@ -981,6 +1030,7 @@ MatExpr operator != (double s, const Mat& a)
 
 MatExpr operator >= (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_GE, a, b);
     return e;
@@ -988,6 +1038,7 @@ MatExpr operator >= (const Mat& a, const Mat& b)
 
 MatExpr operator >= (const Mat& a, double s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_GE, a, s);
     return e;
@@ -995,6 +1046,7 @@ MatExpr operator >= (const Mat& a, double s)
 
 MatExpr operator >= (double s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_LE, a, s);
     return e;
@@ -1002,6 +1054,7 @@ MatExpr operator >= (double s, const Mat& a)
 
 MatExpr operator > (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_GT, a, b);
     return e;
@@ -1009,6 +1062,7 @@ MatExpr operator > (const Mat& a, const Mat& b)
 
 MatExpr operator > (const Mat& a, double s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_GT, a, s);
     return e;
@@ -1016,6 +1070,7 @@ MatExpr operator > (const Mat& a, double s)
 
 MatExpr operator > (double s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Cmp::makeExpr(e, CV_CMP_LT, a, s);
     return e;
@@ -1025,6 +1080,7 @@ MatExpr min(const Mat& a, const Mat& b)
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Bin::makeExpr(e, 'm', a, b);
     return e;
@@ -1034,6 +1090,7 @@ MatExpr min(const Mat& a, double s)
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, 'n', a, s);
     return e;
@@ -1043,6 +1100,7 @@ MatExpr min(double s, const Mat& a)
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, 'n', a, s);
     return e;
@@ -1052,6 +1110,7 @@ MatExpr max(const Mat& a, const Mat& b)
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Bin::makeExpr(e, 'M', a, b);
     return e;
@@ -1061,6 +1120,7 @@ MatExpr max(const Mat& a, double s)
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, 'N', a, s);
     return e;
@@ -1070,6 +1130,7 @@ MatExpr max(double s, const Mat& a)
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, 'N', a, s);
     return e;
@@ -1077,6 +1138,7 @@ MatExpr max(double s, const Mat& a)
 
 MatExpr operator & (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '&', a, b);
     return e;
@@ -1084,6 +1146,7 @@ MatExpr operator & (const Mat& a, const Mat& b)
 
 MatExpr operator & (const Mat& a, const Scalar& s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '&', a, s);
     return e;
@@ -1091,6 +1154,7 @@ MatExpr operator & (const Mat& a, const Scalar& s)
 
 MatExpr operator & (const Scalar& s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '&', a, s);
     return e;
@@ -1098,6 +1162,7 @@ MatExpr operator & (const Scalar& s, const Mat& a)
 
 MatExpr operator | (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '|', a, b);
     return e;
@@ -1105,6 +1170,7 @@ MatExpr operator | (const Mat& a, const Mat& b)
 
 MatExpr operator | (const Mat& a, const Scalar& s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '|', a, s);
     return e;
@@ -1112,6 +1178,7 @@ MatExpr operator | (const Mat& a, const Scalar& s)
 
 MatExpr operator | (const Scalar& s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '|', a, s);
     return e;
@@ -1119,6 +1186,7 @@ MatExpr operator | (const Scalar& s, const Mat& a)
 
 MatExpr operator ^ (const Mat& a, const Mat& b)
 {
+    checkOperandsExist(a, b);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '^', a, b);
     return e;
@@ -1126,6 +1194,7 @@ MatExpr operator ^ (const Mat& a, const Mat& b)
 
 MatExpr operator ^ (const Mat& a, const Scalar& s)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '^', a, s);
     return e;
@@ -1133,6 +1202,7 @@ MatExpr operator ^ (const Mat& a, const Scalar& s)
 
 MatExpr operator ^ (const Scalar& s, const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '^', a, s);
     return e;
@@ -1140,6 +1210,7 @@ MatExpr operator ^ (const Scalar& s, const Mat& a)
 
 MatExpr operator ~(const Mat& a)
 {
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, '~', a, Scalar());
     return e;
@@ -1149,6 +1220,7 @@ MatExpr abs(const Mat& a)
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(a);
     MatExpr e;
     MatOp_Bin::makeExpr(e, 'a', a, Scalar());
     return e;
@@ -1630,6 +1702,7 @@ MatExpr Mat::t() const
 {
     CV_INSTRUMENT_REGION();
 
+    checkOperandsExist(*this);
     MatExpr e;
     MatOp_T::makeExpr(e, *this);
     return e;
