@@ -40,11 +40,8 @@ if (X86 AND UNIX AND NOT APPLE AND NOT ANDROID AND BUILD_SHARED_LIBS)
 endif()
 
 set(IPP_X64 0)
-if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
-    set(IPP_X64 1)
-endif()
-if(CMAKE_CL_64)
-    set(IPP_X64 1)
+if(X86_64)
+  set(IPP_X64 1)
 endif()
 
 # This function detects Intel IPP version by analyzing .h file
