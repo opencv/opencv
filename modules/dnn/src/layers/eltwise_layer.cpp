@@ -630,14 +630,24 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
+        CV_Assert(channelsModeInput == ELTWISE_CHANNNELS_INPUT_0 ||
+                  channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE ||
+                  channelsModeInput == ELTWISE_CHANNNELS_SAME);
+
         if(channelsModeInput == ELTWISE_CHANNNELS_INPUT_0 || channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
         {
-            CV_Assert(op == SUM);
-            CV_Assert(coeffs.empty());
-            return make_cuda_node<cuda4dnn::ShortcutOp>(preferableTarget, std::move(context->stream));
+            auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+            for (int i = 1; i < inputs.size(); i++)
+            {
+                auto from_wrapper = inputs[i].dynamicCast<CUDABackendWrapper>();
+                if (input_wrapper->getShape()[1] != from_wrapper->getShape()[1])
+                {
+                    CV_Assert(op == SUM);
+                    CV_Assert(coeffs.empty());
+                    return make_cuda_node<cuda4dnn::ShortcutOp>(preferableTarget, std::move(context->stream));
+                }
+            }
         }
-
-        CV_Assert(channelsModeInput == ELTWISE_CHANNNELS_SAME);
 
         auto op_ = [this] {
             switch (op) {
