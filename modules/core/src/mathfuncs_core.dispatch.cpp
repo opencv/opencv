@@ -228,19 +228,9 @@ void magnitude(const float* x, const float* y, float* dst, int n)
     magnitude32f(x, y, dst, n);
 }
 
-void magnitude(const float* xy, float* dst, int n)
-{
-    magnitude32fc(xy, dst, n);
-}
-
 void magnitude(const double* x, const double* y, double* dst, int n)
 {
     magnitude64f(x, y, dst, n);
-}
-
-void magnitude(const double* xy, double* dst, int n)
-{
-    magnitude64fc(xy, dst, n);
 }
 
 void sqrt(const float* src, float* dst, int len)
