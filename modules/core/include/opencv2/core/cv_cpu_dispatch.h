@@ -72,7 +72,7 @@
 #  define CV_AVX 1
 #endif
 #ifdef CV_CPU_COMPILE_FP16
-#  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM)
+#  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
 #    include <arm_neon.h>
 #  else
 #    include <immintrin.h>
@@ -133,7 +133,7 @@
 #  define CV_FMA3 1
 #endif
 
-#if defined _WIN32 && defined(_M_ARM)
+#if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
@@ -201,7 +201,7 @@ struct VZeroUpperGuard {
 #  define CV_MMX 1
 #  define CV_SSE 1
 #  define CV_SSE2 1
-#elif defined _WIN32 && defined(_M_ARM)
+#elif defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
