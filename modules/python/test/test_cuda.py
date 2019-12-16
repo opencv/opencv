@@ -34,37 +34,70 @@ class cuda_test(NewOpenCVTests):
         cuMat2 = cv.cuda_GpuMat()
         cuMat1.upload(npMat1)
         cuMat2.upload(npMat2)
+        cuMatDst = cv.cuda_GpuMat(cuMat1.size(),cuMat1.type())
 
         self.assertTrue(np.allclose(cv.cuda.add(cuMat1, cuMat2).download(),
                                          cv.add(npMat1, npMat2)))
 
+        cv.cuda.add(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.add(npMat1, npMat2)))
+
         self.assertTrue(np.allclose(cv.cuda.subtract(cuMat1, cuMat2).download(),
                                          cv.subtract(npMat1, npMat2)))
+
+        cv.cuda.subtract(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.subtract(npMat1, npMat2)))
 
         self.assertTrue(np.allclose(cv.cuda.multiply(cuMat1, cuMat2).download(),
                                          cv.multiply(npMat1, npMat2)))
 
+        cv.cuda.multiply(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.multiply(npMat1, npMat2)))
+
         self.assertTrue(np.allclose(cv.cuda.divide(cuMat1, cuMat2).download(),
                                          cv.divide(npMat1, npMat2)))
+
+        cv.cuda.divide(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.divide(npMat1, npMat2)))
 
         self.assertTrue(np.allclose(cv.cuda.absdiff(cuMat1, cuMat2).download(),
                                          cv.absdiff(npMat1, npMat2)))
 
+        cv.cuda.absdiff(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.absdiff(npMat1, npMat2)))
+
         self.assertTrue(np.allclose(cv.cuda.compare(cuMat1, cuMat2, cv.CMP_GE).download(),
                                          cv.compare(npMat1, npMat2, cv.CMP_GE)))
+
+        cuMatDst1 = cv.cuda_GpuMat(cuMat1.size(),cv.CV_8UC3)
+        cv.cuda.compare(cuMat1, cuMat2, cv.CMP_GE, cuMatDst1)
+        self.assertTrue(np.allclose(cuMatDst1.download(),cv.compare(npMat1, npMat2, cv.CMP_GE)))
 
         self.assertTrue(np.allclose(cv.cuda.abs(cuMat1).download(),
                                          np.abs(npMat1)))
 
+        cv.cuda.abs(cuMat1, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),np.abs(npMat1)))
+
         self.assertTrue(np.allclose(cv.cuda.sqrt(cv.cuda.sqr(cuMat1)).download(),
                                     cv.cuda.abs(cuMat1).download()))
 
+        cv.cuda.sqr(cuMat1, cuMatDst)
+        cv.cuda.sqrt(cuMatDst, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.cuda.abs(cuMat1).download()))
 
         self.assertTrue(np.allclose(cv.cuda.log(cv.cuda.exp(cuMat1)).download(),
                                                             npMat1))
 
+        cv.cuda.exp(cuMat1, cuMatDst)
+        cv.cuda.log(cuMatDst, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),npMat1))
+
         self.assertTrue(np.allclose(cv.cuda.pow(cuMat1, 2).download(),
                                          cv.pow(npMat1, 2)))
+
+        cv.cuda.pow(cuMat1, 2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.pow(npMat1, 2)))
 
     def test_cudaarithm_logical(self):
         npMat1 = (np.random.random((128, 128)) * 255).astype(np.uint8)
@@ -74,24 +107,58 @@ class cuda_test(NewOpenCVTests):
         cuMat2 = cv.cuda_GpuMat()
         cuMat1.upload(npMat1)
         cuMat2.upload(npMat2)
+        cuMatDst = cv.cuda_GpuMat(cuMat1.size(),cuMat1.type())
 
         self.assertTrue(np.allclose(cv.cuda.bitwise_or(cuMat1, cuMat2).download(),
                                          cv.bitwise_or(npMat1, npMat2)))
 
+        cv.cuda.bitwise_or(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.bitwise_or(npMat1, npMat2)))
+
         self.assertTrue(np.allclose(cv.cuda.bitwise_and(cuMat1, cuMat2).download(),
                                          cv.bitwise_and(npMat1, npMat2)))
+
+        cv.cuda.bitwise_and(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.bitwise_and(npMat1, npMat2)))
 
         self.assertTrue(np.allclose(cv.cuda.bitwise_xor(cuMat1, cuMat2).download(),
                                          cv.bitwise_xor(npMat1, npMat2)))
 
+        cv.cuda.bitwise_xor(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.bitwise_xor(npMat1, npMat2)))
+
         self.assertTrue(np.allclose(cv.cuda.bitwise_not(cuMat1).download(),
                                          cv.bitwise_not(npMat1)))
+
+        cv.cuda.bitwise_not(cuMat1, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.bitwise_not(npMat1)))
 
         self.assertTrue(np.allclose(cv.cuda.min(cuMat1, cuMat2).download(),
                                          cv.min(npMat1, npMat2)))
 
+        cv.cuda.min(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.min(npMat1, npMat2)))
+
         self.assertTrue(np.allclose(cv.cuda.max(cuMat1, cuMat2).download(),
                                          cv.max(npMat1, npMat2)))
+
+        cv.cuda.max(cuMat1, cuMat2, cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.max(npMat1, npMat2)))
+
+    def test_cudaarithm_arithmetic(self):
+        npMat1 = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+
+        cuMat1 = cv.cuda_GpuMat(npMat1)
+        cuMatDst = cv.cuda_GpuMat(cuMat1.size(),cuMat1.type())
+        cuMatB = cv.cuda_GpuMat(cuMat1.size(),cv.CV_8UC1)
+        cuMatG = cv.cuda_GpuMat(cuMat1.size(),cv.CV_8UC1)
+        cuMatR = cv.cuda_GpuMat(cuMat1.size(),cv.CV_8UC1)
+
+        self.assertTrue(np.allclose(cv.cuda.merge(cv.cuda.split(cuMat1)),npMat1))
+
+        cv.cuda.split(cuMat1,[cuMatB,cuMatG,cuMatR])
+        cv.cuda.merge([cuMatB,cuMatG,cuMatR],cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),npMat1))
 
     def test_cudabgsegm_existence(self):
         #Test at least the existence of wrapped functions for now
