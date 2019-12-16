@@ -56,7 +56,7 @@ namespace cv
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD128 1
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(_M_ARM64)
 #define CV_SIMD128_64F 1
 #else
 #define CV_SIMD128_64F 0
@@ -1531,7 +1531,7 @@ inline v_int32x4 v_load_expand_q(const schar* ptr)
     return v_int32x4(vmovl_s16(v1));
 }
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(_M_ARM64)
 #define OPENCV_HAL_IMPL_NEON_UNPACKS(_Tpvec, suffix) \
 inline void v_zip(const v_##_Tpvec& a0, const v_##_Tpvec& a1, v_##_Tpvec& b0, v_##_Tpvec& b1) \
 { \
