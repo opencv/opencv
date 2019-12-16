@@ -1619,7 +1619,7 @@ bool QRDetectMulti::checkPointsInsideQuadrangle(const vector<Point2f>& quadrangl
     int count = 0;
     for(size_t i = 0; i < not_resized_loc_points.size(); i++)
     {
-        int pixel = lineMask.at<uchar>(not_resized_loc_points[i].y , not_resized_loc_points[i].x);
+        int pixel = lineMask.at<uchar>(int(not_resized_loc_points[i].y), int(not_resized_loc_points[i].x));
         if(pixel != 0)
         {
             count++;
@@ -1641,7 +1641,7 @@ bool QRDetectMulti::checkPointsInsideTriangle(const vector<Point2f>& triangle_po
     double eps = 3;
     for(size_t i = 0; i < resized_loc_points.size(); i++)
     {
-        int pixel = lineMask.at<uchar>(resized_loc_points[i].y , resized_loc_points[i].x);
+        int pixel = lineMask.at<uchar>(int(resized_loc_points[i].y), int(resized_loc_points[i].x));
         if(pixel != 0)
         {
             if((abs(resized_loc_points[i].x - points[0].x) > eps)
@@ -1887,7 +1887,7 @@ void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
         fillConvexPoly(lineMask, hull_int, int(hull_int.size()), 255);
         for(size_t i = 0; i < not_resized_loc_points.size(); i++)
         {
-            int pixel = lineMask.at<uchar>(not_resized_loc_points[i].y , not_resized_loc_points[i].x);
+            int pixel = lineMask.at<uchar>(int(not_resized_loc_points[i].y), int(not_resized_loc_points[i].x));
             if(pixel != 0)
             {
                 true_points_group[j].push_back(tmp_localization_points[i]);
@@ -1939,7 +1939,6 @@ bool QRDetectMulti::checkSets(vector<vector<Point2f> >& true_points_group, vecto
     for(size_t i = 0; i < true_points_group.size(); i++)
     {
         set_size[i] = int(0.5 * (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1));
-        //set_size[i] = int( (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1) * true_points_group[i].size() / 6);
     }
     vector< vector< Vec3i > > all_points(true_points_group.size());
     for(size_t i = 0; i < true_points_group.size(); i++)
