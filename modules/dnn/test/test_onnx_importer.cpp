@@ -590,8 +590,17 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 #endif
 
     // output range: [-11; 8]
-    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : default_l1;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.14 : default_lInf;
+    double l1 =  default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.017;
+        lInf = 0.14;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.018;
+        lInf = 0.16;
+    }
     testONNXModels("tiny_yolo2", pb, l1, lInf);
 }
 
@@ -620,16 +629,22 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
         if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     }
 
-    double l1 = default_l1;
-    double lInf = default_lInf;
+    double l1 = default_l1, lInf = default_lInf;
     // output range: [-3; 3]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    {
         l1 = 0.009;
         lInf = 0.035;
     }
-    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_CPU) {
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_CPU)
+    {
         l1 = 4.6e-5;
         lInf = 1.9e-4;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.008;
+        lInf = 0.04;
     }
     testONNXModels("LResNet100E_IR", pb, l1, lInf);
 }
@@ -747,8 +762,12 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     net.setPreferableTarget(target);
 
     // output range [-5, 11]
-    float l1 = 0.0013;
-    float lInf = 0.009;
+    float l1 = 0.0013, lInf = 0.009;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.008;
+        lInf = 0.04;
+    }
 
     checkBackend(&input0, &ref0);
     net.setInput(input0);
