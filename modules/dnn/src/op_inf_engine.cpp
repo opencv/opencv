@@ -1045,6 +1045,20 @@ void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
 
 CV__DNN_INLINE_NS_BEGIN
 
+std::vector<std::string> listInferenceEngineDevices()
+{
+    std::vector<std::string> availableDevices;
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+    auto& sharedPlugins = getSharedPlugins();
+    availableDevices << "TODO";
+    return allDevices;
+#else
+    InferenceEngine::Core ie = getCore();
+    availableDevices = ie.GetAvailableDevices();
+#endif
+    return availableDevices;
+}
+
 void resetMyriadDevice()
 {
 #ifdef HAVE_INF_ENGINE

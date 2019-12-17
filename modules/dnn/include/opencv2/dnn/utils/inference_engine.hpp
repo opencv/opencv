@@ -42,6 +42,10 @@ CV_EXPORTS_W cv::String setInferenceEngineBackendType(const cv::String& newBacke
  */
 CV_EXPORTS_W void resetMyriadDevice();
 
+/** @brief List available devices
+ * The devices are returned as { "CPU", "GPU", "FPGA.0", "FPGA.1", "MYRIAD" }
+ */
+CV_EXPORTS_W std::vector<std::string> listInferenceEngineDevices();
 
 /* Values for 'OPENCV_DNN_IE_VPU_TYPE' parameter */
 #define CV_DNN_INFERENCE_ENGINE_VPU_TYPE_UNSPECIFIED ""
