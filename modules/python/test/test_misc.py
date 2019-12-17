@@ -195,9 +195,11 @@ class Arguments(NewOpenCVTests):
                              msg=get_conversion_error_msg(convertible, expected, actual))
 
     def test_parse_to_size_t_not_convertible(self):
+        min_long, _ = get_limits(ctypes.c_long)
         for not_convertible in (1.2, True, False, np.bool_(True), np.float(4), float(3),
                                 np.double(45), 's', 'str', np.array([1, 2]), (1,), [1, 2],
-                                np.float64(6), complex(1, 1), complex(imag=2), complex(1.1)):
+                                np.float64(6), complex(1, 1), complex(imag=2), complex(1.1),
+                                -1, min_long, np.int8(-35)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpSizeT(not_convertible)

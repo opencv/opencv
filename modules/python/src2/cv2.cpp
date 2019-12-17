@@ -13,7 +13,7 @@
 #   define Py_LIMITED_API 0x03030000
 #endif
 
-#include <math.h>
+#include <cmath>
 #include <Python.h>
 
 #if PY_MAJOR_VERSION < 3
@@ -41,16 +41,112 @@
 
 #define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
 
+#ifdef CV_CXX11
+#include <type_traits>
+#endif
+
+namespace stdx {
+#ifdef CV_CXX11
+using std::enable_if;
+using std::is_integral;
+using std::is_floating_point;
+#else
+template<class T, T v>
+struct integral_constant
+{
+    typedef T value_type;
+    typedef integral_constant type;
+    static const value_type value = v;
+    operator value_type() const { return value; }
+};
+
+typedef integral_constant<bool, true> true_type;
+typedef integral_constant<bool, false> false_type;
+
+template<class T, class U>
+struct is_same : false_type
+{
+};
+
+template<class T>
+struct is_same<T, T> : true_type
+{
+};
+
+template<bool Condition, class TEnable = void>
+struct enable_if
+{
+};
+
+template<class TEnable>
+struct enable_if<true, TEnable>
+{
+    typedef TEnable type;
+};
+
+template<class T>
+struct remove_const
+{
+    typedef T type;
+};
+
+template<class T>
+struct remove_const<const T>
+{
+    typedef T type;
+};
+
+template<class T>
+struct remove_volatile
+{
+    typedef T type;
+};
+
+template<class T>
+struct remove_volatile<volatile T>
+{
+    typedef T type;
+};
+
+template<class T>
+struct remove_cv
+{
+    typedef typename remove_const<typename remove_volatile<T>::type>::type type;
+};
+
+template<class T>
+struct is_integral
+    : integral_constant<bool, is_same<bool, typename remove_cv<T>::type>::value
+                                  || is_same<char, typename remove_cv<T>::type>::value
+                                  || is_same<int8_t, typename remove_cv<T>::type>::value
+                                  || is_same<uint8_t, typename remove_cv<T>::type>::value
+                                  || is_same<int16_t, typename remove_cv<T>::type>::value
+                                  || is_same<uint16_t, typename remove_cv<T>::type>::value
+                                  || is_same<int32_t, typename remove_cv<T>::type>::value
+                                  || is_same<uint32_t, typename remove_cv<T>::type>::value
+                                  || is_same<int64_t, typename remove_cv<T>::type>::value
+                                  || is_same<uint64_t, typename remove_cv<T>::type>::value
+                                  || is_same<size_t, typename remove_cv<T>::type>::value>
+{
+};
+
+template<class T>
+struct is_floating_point
+    : integral_constant<bool, is_same<float, typename remove_cv<T>::type>::value
+                                  || is_same<double, typename remove_cv<T>::type>::value>
+{
+};
+#endif
+} // namespace stdx
+
 class ArgInfo
 {
 public:
-    const char * name;
+    const char* name;
     bool outputarg;
     // more fields may be added if necessary
 
-    ArgInfo(const char * name_, bool outputarg_)
-        : name(name_)
-        , outputarg(outputarg_) {}
+    ArgInfo(const char* name_, bool outputarg_) : name(name_), outputarg(outputarg_) {}
 
 private:
     ArgInfo(const ArgInfo&); // = delete
@@ -230,17 +326,52 @@ PyArray_Descr* getNumpyTypeDescriptor<size_t>()
 }
 
 template<class T>
+typename stdx::enable_if<stdx::is_floating_point<T>::value, bool>::type
+canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
+{
+    return PyArray_CanCastTo(PyArray_DescrFromScalar(obj), to);
+}
+
+template<class T>
+typename stdx::enable_if<stdx::is_integral<T>::value, bool>::type
+canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
+{
+    PyArray_Descr* from = PyArray_DescrFromScalar(obj);
+    if (PyArray_CanCastTo(from, to))
+    {
+        return true;
+    }
+    else
+    {
+        if (PyDataType_ISSIGNED(from) && PyDataType_ISUNSIGNED(to))
+        {
+            // Check if signed input is positive so it can be safely cast to unsigned output
+            int64_t in = 0;
+            PyArray_CastScalarToCtype(obj, &in, getNumpyTypeDescriptor<int64_t>());
+            return in >= 0;
+        }
+        else
+        {
+            return false;
+        }
+    }
+}
+
+template<class T>
 bool parseNumpyScalar(PyObject* obj, T& value)
 {
-    if (!PyArray_CheckScalar(obj))
+    if (PyArray_CheckScalar(obj))
     {
-        return false;
+        // According to the numpy documentation:
+        // There are 21 statically-defined PyArray_Descr objects for the built-in data-types
+        PyArray_Descr* to = getNumpyTypeDescriptor<T>();
+        if (canBeSafelyCasted<T>(obj, to))
+        {
+            PyArray_CastScalarToCtype(obj, &value, to);
+            return true;
+        }
     }
-    // According to the numpy documentation:
-    // There are 21 statically-defined PyArray_Descr objects for the built-in data-types
-    PyArray_Descr* targetDescr = getNumpyTypeDescriptor<T>();
-    PyArray_CastScalarToCtype(obj, &value, targetDescr);
-    return true;
+    return false;
 }
 
 } // namespace
@@ -725,6 +856,11 @@ bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo& info)
         // interpreter side
         else if (PyInt_Check(obj))
         {
+            const long res = PyInt_AsLong(obj);
+            if (res < 0) {
+                failmsg("Argument '%s' can not be safely parsed to 'size_t'", info.name);
+                return false;
+            }
     #if ULONG_MAX == SIZE_MAX
             value = PyInt_AsUnsignedLongMask(obj);
     #else
@@ -737,6 +873,7 @@ bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo& info)
             const bool isParsed = parseNumpyScalar<size_t>(obj, value);
             if (!isParsed) {
                 failmsg("Argument '%s' can not be safely parsed to 'size_t'", info.name);
+                return false;
             }
         }
     }
@@ -829,6 +966,7 @@ bool pyopencv_to(PyObject* obj, double& value, const ArgInfo& info)
         const bool isParsed = parseNumpyScalar<double>(obj, value);
         if (!isParsed) {
             failmsg("Argument '%s' can not be safely parsed to 'double'", info.name);
+            return false;
         }
     }
     else
@@ -875,6 +1013,7 @@ bool pyopencv_to(PyObject* obj, float& value, const ArgInfo& info)
        const bool isParsed = parseNumpyScalar<float>(obj, value);
         if (!isParsed) {
             failmsg("Argument '%s' can not be safely parsed to 'float'", info.name);
+            return false;
         }
     }
     else
