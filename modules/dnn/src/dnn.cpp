@@ -2450,7 +2450,9 @@ struct Net::Impl
                      ld.layerInstance->type != "Concat")) )
                     continue;
 
-                if (preferableBackend == DNN_BACKEND_CUDA && IS_DNN_CUDA_TARGET(preferableTarget) && ld.layerInstance->type != "Convolution")
+                if (preferableBackend == DNN_BACKEND_CUDA && IS_DNN_CUDA_TARGET(preferableTarget)
+                    && ld.layerInstance->type != "Convolution"
+                    && ld.layerInstance->type != "Concat")
                     continue;
 
                 while (nextData)
