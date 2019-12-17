@@ -1048,6 +1048,7 @@ CV__DNN_INLINE_NS_BEGIN
 std::vector<std::string> listInferenceEngineDevices()
 {
     std::vector<std::string> availableDevices;
+#ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     auto& sharedPlugins = getSharedPlugins();
     availableDevices << "TODO";
@@ -1056,6 +1057,7 @@ std::vector<std::string> listInferenceEngineDevices()
     InferenceEngine::Core ie = getCore();
     availableDevices = ie.GetAvailableDevices();
 #endif
+#endif  // HAVE_INF_ENGINE
     return availableDevices;
 }
 
