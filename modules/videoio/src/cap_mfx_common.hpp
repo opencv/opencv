@@ -6,6 +6,7 @@
 #define MFXHELPER_H
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -259,11 +260,10 @@ public:
         DBG(std::cout << "MFX QueryIOSurf: " << res << std::endl);
         if (res < MFX_ERR_NONE)
             return 0;
-        return new SurfacePool(request.Info.Width,
-                               request.Info.Height,
-                               request.NumFrameSuggested,
-                               params.mfx.FrameInfo);
+        return _create(request, params);
     }
+private:
+    static SurfacePool* _create(const mfxFrameAllocRequest& request, const mfxVideoParam& params);
 private:
     SurfacePool(const SurfacePool &);
     SurfacePool &operator=(const SurfacePool &);
@@ -283,6 +283,29 @@ public:
 protected:
     virtual bool initDeviceSession(MFXVideoSession &session) = 0;
 };
+
+
+// TODO: move to core::util?
+#ifdef CV_CXX11
+#include <thread>
+static void sleep_ms(int64 ms)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+#elif defined(__linux__)
+#include <time.h>
+static void sleep_ms(int64 ms)
+{
+    nanosleep(ms * 1000 * 1000);
+}
+#elif defined _WIN32
+static void sleep_ms(int64 ms)
+{
+    Sleep(ms);
+}
+#else
+#error "Can not detect sleep_ms() implementation"
+#endif
 
 
 // Linux specific
@@ -310,7 +333,6 @@ private:
 #ifdef _WIN32
 
 #include <Windows.h>
-inline void sleep(unsigned long sec) { Sleep(1000 * sec); }
 
 class DXHandle : public DeviceHandler {
 public:
