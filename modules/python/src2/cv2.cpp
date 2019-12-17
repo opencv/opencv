@@ -15,6 +15,7 @@
 
 #include <cmath>
 #include <Python.h>
+#include <limits>
 
 #if PY_MAJOR_VERSION < 3
 #undef CVPY_DYNAMIC_INIT
@@ -37,107 +38,12 @@
 #include "opencv2/core/types_c.h"
 #include "opencv2/opencv_modules.hpp"
 #include "pycompat.hpp"
+#include "type_traits.hpp"
 #include <map>
 
 #define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
 
-#ifdef CV_CXX11
-#include <type_traits>
-#endif
 
-namespace stdx {
-#ifdef CV_CXX11
-using std::enable_if;
-using std::is_integral;
-using std::is_floating_point;
-#else
-template<class T, T v>
-struct integral_constant
-{
-    typedef T value_type;
-    typedef integral_constant type;
-    static const value_type value = v;
-    operator value_type() const { return value; }
-};
-
-typedef integral_constant<bool, true> true_type;
-typedef integral_constant<bool, false> false_type;
-
-template<class T, class U>
-struct is_same : false_type
-{
-};
-
-template<class T>
-struct is_same<T, T> : true_type
-{
-};
-
-template<bool Condition, class TEnable = void>
-struct enable_if
-{
-};
-
-template<class TEnable>
-struct enable_if<true, TEnable>
-{
-    typedef TEnable type;
-};
-
-template<class T>
-struct remove_const
-{
-    typedef T type;
-};
-
-template<class T>
-struct remove_const<const T>
-{
-    typedef T type;
-};
-
-template<class T>
-struct remove_volatile
-{
-    typedef T type;
-};
-
-template<class T>
-struct remove_volatile<volatile T>
-{
-    typedef T type;
-};
-
-template<class T>
-struct remove_cv
-{
-    typedef typename remove_const<typename remove_volatile<T>::type>::type type;
-};
-
-template<class T>
-struct is_integral
-    : integral_constant<bool, is_same<bool, typename remove_cv<T>::type>::value
-                                  || is_same<char, typename remove_cv<T>::type>::value
-                                  || is_same<int8_t, typename remove_cv<T>::type>::value
-                                  || is_same<uint8_t, typename remove_cv<T>::type>::value
-                                  || is_same<int16_t, typename remove_cv<T>::type>::value
-                                  || is_same<uint16_t, typename remove_cv<T>::type>::value
-                                  || is_same<int32_t, typename remove_cv<T>::type>::value
-                                  || is_same<uint32_t, typename remove_cv<T>::type>::value
-                                  || is_same<int64_t, typename remove_cv<T>::type>::value
-                                  || is_same<uint64_t, typename remove_cv<T>::type>::value
-                                  || is_same<size_t, typename remove_cv<T>::type>::value>
-{
-};
-
-template<class T>
-struct is_floating_point
-    : integral_constant<bool, is_same<float, typename remove_cv<T>::type>::value
-                                  || is_same<double, typename remove_cv<T>::type>::value>
-{
-};
-#endif
-} // namespace stdx
 
 class ArgInfo
 {
@@ -325,15 +231,21 @@ PyArray_Descr* getNumpyTypeDescriptor<size_t>()
 #endif
 }
 
+template <class T, class U>
+bool isRepresentable(U value) {
+    return (std::numeric_limits<T>::min() <= value) && (value <= std::numeric_limits<T>::max());
+}
+
 template<class T>
 typename stdx::enable_if<stdx::is_floating_point<T>::value, bool>::type
 canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
 {
-    return PyArray_CanCastTo(PyArray_DescrFromScalar(obj), to);
+    return PyArray_CanCastTo(PyArray_DescrFromScalar(obj), to) != 0;
 }
 
+
 template<class T>
-typename stdx::enable_if<stdx::is_integral<T>::value, bool>::type
+typename stdx::enable_if<stdx::is_integral<T>::value && stdx::is_signed<T>::value, bool>::type
 canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
 {
     PyArray_Descr* from = PyArray_DescrFromScalar(obj);
@@ -343,19 +255,45 @@ canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
     }
     else
     {
-        if (PyDataType_ISSIGNED(from) && PyDataType_ISUNSIGNED(to))
+        // False negative scenarios:
+        // - Input has wider limits but value is representable within output limits
+        int64_t input = 0;
+        PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<int64_t>());
+        return isRepresentable<T>(static_cast<int64_t>(input));
+    }
+}
+
+template<class T>
+typename stdx::enable_if<stdx::is_integral<T>::value && stdx::is_unsigned<T>::value, bool>::type
+canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
+{
+    PyArray_Descr* from = PyArray_DescrFromScalar(obj);
+    if (PyArray_CanCastTo(from, to))
+    {
+        return true;
+    }
+    else
+    {
+        // False negative scenarios:
+        // - Signed input is positive so it can be safely cast to unsigned output
+        // - Input has wider limits but value is representable within output limits
+        // - All the above
+        if (PyDataType_ISSIGNED(from))
         {
-            // Check if signed input is positive so it can be safely cast to unsigned output
-            int64_t in = 0;
-            PyArray_CastScalarToCtype(obj, &in, getNumpyTypeDescriptor<int64_t>());
-            return in >= 0;
+            int64_t input = 0;
+            PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<int64_t>());
+            return (input >= 0) && isRepresentable<T>(static_cast<uint64_t>(input));
         }
         else
         {
-            return false;
+            uint64_t input = 0;
+            PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<uint64_t>());
+            return isRepresentable<T>(input);
         }
+        return false;
     }
 }
+
 
 template<class T>
 bool parseNumpyScalar(PyObject* obj, T& value)
