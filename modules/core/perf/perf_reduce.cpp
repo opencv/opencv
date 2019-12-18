@@ -35,7 +35,10 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
     int runs = 15;
     TEST_CYCLE_MULTIRUN(runs) reduce(src, vec, 0, reduceOp, ddepth);
 
-    SANITY_CHECK(vec, 1);
+    if (reduceOp == REDUCE_SUM2)
+      SANITY_CHECK_NOTHING();
+    else
+      SANITY_CHECK(vec, 1);
 }
 
 PERF_TEST_P(Size_MatType_ROp, reduceC,
@@ -62,7 +65,10 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
 
     TEST_CYCLE() reduce(src, vec, 1, reduceOp, ddepth);
 
-    SANITY_CHECK(vec, 1);
+    if (reduceOp == REDUCE_SUM2)
+      SANITY_CHECK_NOTHING();
+    else
+      SANITY_CHECK(vec, 1);
 }
 
 } // namespace
