@@ -1605,13 +1605,14 @@ struct HResizeLinearVecU8_X4
 
                 for( dx = 0; dx < len0; dx += step )
                 {
+                    int ofs[4] = { xofs[dx], xofs[dx + 2], xofs[dx + 4], xofs[dx + 6] };
                     v_int16x8 al = v_load(alpha+dx*2);
                     v_int16x8 ah = v_load(alpha+dx*2+8);
                     v_uint16x8 sl, sh;
-                    v_expand(v_interleave_pairs(v_lut_quads(S0, xofs+dx)), sl, sh);
+                    v_expand(v_interleave_pairs(v_lut_quads(S0, ofs)), sl, sh);
                     v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
                     v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
-                    v_expand(v_interleave_pairs(v_lut_pairs(S1, xofs+dx)), sl, sh);
+                    v_expand(v_interleave_pairs(v_lut_quads(S1, ofs)), sl, sh);
                     v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
                     v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
                 }
@@ -1622,10 +1623,11 @@ struct HResizeLinearVecU8_X4
                 int *D = dst[k];
                 for( dx = 0; dx < len0; dx += step )
                 {
+                    int ofs[4] = { xofs[dx], xofs[dx + 2], xofs[dx + 4], xofs[dx + 6] };
                     v_int16x8 al = v_load(alpha+dx*2);
                     v_int16x8 ah = v_load(alpha+dx*2+8);
                     v_uint16x8 sl, sh;
-                    v_expand(v_interleave_pairs(v_lut_quads(S, xofs+dx)), sl, sh);
+                    v_expand(v_interleave_pairs(v_lut_quads(S, ofs)), sl, sh);
                     v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
                     v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
                 }
