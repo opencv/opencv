@@ -20,7 +20,7 @@ PERF_TEST_P(Size_MatType, magnitude, TYPICAL_MATS_MAGNITUDE)
 
     TEST_CYCLE() magnitude(src1, src2, dst);
 
-    //SANITY_CHECK(dst);
+    SANITY_CHECK(dst);
 }
 
 #define TYPICAL_MAT_SIZES_MAGNITUDECOMPLEX  TYPICAL_MAT_SIZES
@@ -38,7 +38,7 @@ PERF_TEST_P(Size_MatType, magnitudeComplex, TYPICAL_MATS_MAGNITUDECOMPLEX)
 
     TEST_CYCLE() magnitudeComplex(src1, dst);
 
-    //SANITY_CHECK(dst);
+    SANITY_CHECK(dst);
 }
 
 } // namespace
