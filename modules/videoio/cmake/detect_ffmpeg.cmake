@@ -25,23 +25,12 @@ if(NOT HAVE_FFMPEG AND WIN32 AND NOT ARM AND NOT OPENCV_FFMPEG_SKIP_DOWNLOAD)
 endif()
 
 if(NOT HAVE_FFMPEG AND PKG_CONFIG_FOUND)
-  pkg_check_modules(FFMPEG libavcodec libavformat libavutil libswscale QUIET)
-  pkg_check_modules(FFMPEG_libavresample libavresample QUIET) # optional
+  ocv_check_modules(FFMPEG libavcodec libavformat libavutil libswscale)
   if(FFMPEG_FOUND)
+    ocv_check_modules(FFMPEG_libavresample libavresample) # optional
     if(FFMPEG_libavresample_FOUND)
       list(APPEND FFMPEG_LIBRARIES ${FFMPEG_libavresample_LIBRARIES})
     endif()
-    # rewrite libraries to absolute paths
-    foreach(lib ${FFMPEG_LIBRARIES})
-      find_library(FFMPEG_ABSOLUTE_${lib} "${lib}" PATHS "${FFMPEG_lib${lib}_LIBDIR}" "${FFMPEG_LIBRARY_DIRS}" NO_DEFAULT_PATH)
-      if(FFMPEG_ABSOLUTE_${lib})
-        list(APPEND ffmpeg_abs_libs "${FFMPEG_ABSOLUTE_${lib}}")
-      else()
-        list(APPEND ffmpeg_abs_libs "${lib}")
-      endif()
-    endforeach()
-    set(FFMPEG_LIBRARIES "${ffmpeg_abs_libs}" CACHE INTERNAL "" FORCE)
-
     set(HAVE_FFMPEG TRUE)
   endif()
 endif()
@@ -65,12 +54,10 @@ endif()
 
 #==================================
 
-if(HAVE_FFMPEG)
-  set(defs "HAVE_FFMPEG")
-  if(HAVE_FFMPEG_WRAPPER)
-    list(APPEND defs "HAVE_FFMPEG_WRAPPER")
-  endif()
-  ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "${defs}")
+if(HAVE_FFMPEG_WRAPPER)
+  ocv_add_external_target(ffmpeg "" "" "HAVE_FFMPEG_WRAPPER")
+elseif(HAVE_FFMPEG)
+  ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "HAVE_FFMPEG")
 endif()
 
 set(HAVE_FFMPEG ${HAVE_FFMPEG} PARENT_SCOPE)

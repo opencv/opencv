@@ -173,9 +173,9 @@ conv7_2_h = tf.space_to_batch_nd(conv7_1_h, [1, 1], [[1, 1], [1, 1]], name='Pad_
 conv7_2_h = conv(conv7_2_h, stride=2, pad='VALID', name='conv7_2_h', activ=tf.nn.relu)
 
 conv8_1_h = conv(conv7_2_h, pad='SAME', name='conv8_1_h', activ=tf.nn.relu)
-conv8_2_h = conv(conv8_1_h, pad='SAME', name='conv8_2_h', activ=tf.nn.relu)
+conv8_2_h = conv(conv8_1_h, pad='VALID', name='conv8_2_h', activ=tf.nn.relu)
 conv9_1_h = conv(conv8_2_h, 'conv9_1_h', activ=tf.nn.relu)
-conv9_2_h = conv(conv9_1_h, pad='SAME', name='conv9_2_h', activ=tf.nn.relu)
+conv9_2_h = conv(conv9_1_h, pad='VALID', name='conv9_2_h', activ=tf.nn.relu)
 
 conv4_3_norm = l2norm(layer_256_1_relu1, 'conv4_3_norm')
 

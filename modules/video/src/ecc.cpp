@@ -90,7 +90,7 @@ static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2,
 
 
     //instead of dividing each block with den,
-    //just pre-devide the block of gradients (it's more efficient)
+    //just pre-divide the block of gradients (it's more efficient)
 
     Mat src1Divided_;
     Mat src2Divided_;
@@ -550,7 +550,7 @@ double cv::findTransformECC(InputArray templateImage,
 
         const double correlation = templateZM.dot(imageWarped);
 
-        // calculate enhanced correlation coefficiont (ECC)->rho
+        // calculate enhanced correlation coefficient (ECC)->rho
         last_rho = rho;
         rho = correlation/(imgNorm*tmpNorm);
         if (cvIsNaN(rho)) {

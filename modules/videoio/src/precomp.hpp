@@ -46,9 +46,17 @@
 #include "opencv2/videoio/legacy/constants_c.h"
 
 #include "opencv2/core/utility.hpp"
+#ifdef __OPENCV_BUILD
 #include "opencv2/core/private.hpp"
+#endif
 
 #include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.defines.hpp>
+#ifdef NDEBUG
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
+#else
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
+#endif
 #include <opencv2/core/utils/logger.hpp>
 
 #include "opencv2/imgcodecs.hpp"

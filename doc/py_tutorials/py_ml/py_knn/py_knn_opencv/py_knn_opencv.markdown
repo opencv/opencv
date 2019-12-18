@@ -21,7 +21,6 @@ train_data, and next 250 samples as test_data. So let's prepare them first.
 @code{.py}
 import numpy as np
 import cv2 as cv
-from matplotlib import pyplot as plt
 
 img = cv.imread('digits.png')
 gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
@@ -55,7 +54,7 @@ print( accuracy )
 @endcode
 So our basic OCR app is ready. This particular example gave me an accuracy of 91%. One option
 improve accuracy is to add more data for training, especially the wrong ones. So instead of finding
-this training data everytime I start application, I better save it, so that next time, I directly
+this training data every time I start application, I better save it, so that next time, I directly
 read this data from a file and start classification. You can do it with the help of some Numpy
 functions like np.savetxt, np.savez, np.load etc. Please check their docs for more details.
 @code{.py}
@@ -89,7 +88,6 @@ alphabets directly.
 @code{.py}
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Load the data, converters convert the letter to a number
 data= np.loadtxt('letter-recognition.data', dtype= 'float32', delimiter = ',',

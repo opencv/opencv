@@ -102,7 +102,9 @@ bool  BmpDecoder::readHeader()
             m_width  = m_strm.getDWord();
             m_height = m_strm.getDWord();
             m_bpp    = m_strm.getDWord() >> 16;
-            m_rle_code = (BmpCompression)m_strm.getDWord();
+            int m_rle_code_ = m_strm.getDWord();
+            CV_Assert(m_rle_code_ >= 0 && m_rle_code_ <= BMP_BITFIELDS);
+            m_rle_code = (BmpCompression)m_rle_code_;
             m_strm.skip(12);
             int clrused = m_strm.getDWord();
             m_strm.skip( size - 36 );

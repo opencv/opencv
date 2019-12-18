@@ -37,7 +37,11 @@ set_property(TARGET ${FLUID_TARGET} PROPERTY CXX_STANDARD 11)
 
 if(MSVC)
   target_compile_options(${FLUID_TARGET} PUBLIC "/wd4251")
+  target_compile_options(${FLUID_TARGET} PUBLIC "/wd4275")
   target_compile_definitions(${FLUID_TARGET} PRIVATE _CRT_SECURE_NO_DEPRECATE)
+  # Disable obsollete warning C4503 popping up on MSVC <<2017
+  # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
+  set_target_properties(${FLUID_TARGET} PROPERTIES COMPILE_FLAGS "/wd4503")
 endif()
 
 target_link_libraries(${FLUID_TARGET} PRIVATE ade)

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GOCLKERNEL_HPP
@@ -32,7 +32,7 @@ namespace gapi
 namespace ocl
 {
     /**
-     * \addtogroup gapi_std_backends G-API Standard backends
+     * \addtogroup gapi_std_backends G-API Standard Backends
      * @{
      */
     /**
@@ -119,8 +119,9 @@ template<class T> struct ocl_get_in
 struct tracked_cv_umat{
     //TODO Think if T - API could reallocate UMat to a proper size - how do we handle this ?
     //tracked_cv_umat(cv::UMat& m) : r{(m)}, original_data{m.getMat(ACCESS_RW).data} {}
-    tracked_cv_umat(cv::UMat& m) : r{ (m) }, original_data{ nullptr } {}
-    cv::UMat r;
+    tracked_cv_umat(cv::UMat& m) : r(m), original_data{ nullptr } {}
+    cv::UMat &r; // FIXME: It was a value (not a reference) before.
+                 // Actually OCL backend should allocate its internal data!
     uchar* original_data;
 
     operator cv::UMat& (){ return r;}
@@ -198,7 +199,7 @@ struct OCLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         static void call(Inputs&&... ins, Outputs&&... outs)
         {
             //not using a std::forward on outs is deliberate in order to
-            //cause compilation error, by tring to bind rvalue references to lvalue references
+            //cause compilation error, by trying to bind rvalue references to lvalue references
             Impl::run(std::forward<Inputs>(ins)..., outs...);
 
             postprocess_ocl(outs...);
@@ -226,7 +227,8 @@ struct OCLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 } // namespace detail
 
 template<class Impl, class K>
-class GOCLKernelImpl: public detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
+class GOCLKernelImpl: public cv::detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+                      public cv::detail::KernelTag
 {
     using P = detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 

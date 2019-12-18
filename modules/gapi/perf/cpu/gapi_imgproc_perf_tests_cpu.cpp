@@ -7,8 +7,7 @@
 
 #include "../perf_precomp.hpp"
 #include "../common/gapi_imgproc_perf_tests.hpp"
-#include "opencv2/gapi/cpu/imgproc.hpp"
-
+#include <opencv2/gapi/cpu/imgproc.hpp>
 
 #define IMGPROC_CPU cv::gapi::imgproc::cpu::kernels()
 
@@ -185,4 +184,18 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRPerfTestCPU, YUV2BGRPerfTest,
         Values(szVGA, sz720p, sz1080p),
         Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(RGB2HSVPerfTestCPU, RGB2HSVPerfTest,
+        Combine(Values(AbsExact().to_compare_f()),
+            Values(szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(BayerGR2RGBPerfTestCPU, BayerGR2RGBPerfTest,
+        Combine(Values(AbsExact().to_compare_f()),
+            Values(szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(RGB2YUV422PerfTestCPU, RGB2YUV422PerfTest,
+        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
+            Values(szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(IMGPROC_CPU))));
 }

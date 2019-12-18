@@ -11,10 +11,14 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
-#include <iostream>
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/max_unpooling.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -35,6 +39,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && !poolPad.width && !poolPad.height);
     }
 
@@ -43,12 +48,18 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 2);
+        CV_Assert(inputs.size() == 2 || inputs.size() == 3);
         CV_Assert(total(inputs[0]) == total(inputs[1]));
 
-        MatShape outShape = inputs[0];
-        outShape[2] = (outShape[2] - 1) * poolStride.height + poolKernel.height - 2 * poolPad.height;
-        outShape[3] = (outShape[3] - 1) * poolStride.width + poolKernel.width - 2 * poolPad.width;
+        MatShape outShape;
+        if (inputs.size() == 2)
+        {
+            outShape = inputs[0];
+            outShape[2] = (outShape[2] - 1) * poolStride.height + poolKernel.height - 2 * poolPad.height;
+            outShape[3] = (outShape[3] - 1) * poolStride.width + poolKernel.width - 2 * poolPad.width;
+        }
+        else
+            outShape = inputs[2];
 
         outputs.clear();
         outputs.push_back(outShape);
@@ -71,7 +82,7 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_Assert(inputs.size() == 2);
+        CV_Assert(inputs.size() == 2 || inputs.size() == 3);
         Mat& input = inputs[0];
         Mat& indices = inputs[1];
 
@@ -117,6 +128,35 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        cuda4dnn::MaxUnpoolingConfiguration config;
+        auto& window_size = config.window_size;
+        window_size.resize(2);
+        window_size[0] = poolKernel.height;
+        window_size[1] = poolKernel.width;
+
+        auto& strides = config.strides;
+        strides.resize(2);
+        strides[0] = poolStride.height;
+        strides[1] = poolStride.width;
+
+        auto& pads_begin = config.pads_begin;
+        pads_begin.resize(2);
+        pads_begin[0] = poolPad.height;
+        pads_begin[1] = poolPad.width;
+
+        return make_cuda_node<cuda4dnn::MaxUnpoolingOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {

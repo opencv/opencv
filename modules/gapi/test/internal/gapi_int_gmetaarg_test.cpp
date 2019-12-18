@@ -133,4 +133,69 @@ TEST(GMetaArg, Can_Get_Metas_From_Output_Run_Args)
     EXPECT_EQ(cv::Size(3, 3), m_desc.size);
 }
 
+TEST(GMetaArg, Can_Describe_RunArg)
+{
+    cv::Mat m(3, 3, CV_8UC3);
+    cv::UMat um(3, 3, CV_8UC3);
+    cv::Scalar s;
+    constexpr int w = 3, h = 3, c = 3;
+    uchar data[w*h*c];
+    cv::gapi::own::Mat om(h, w, CV_8UC3, data);
+    cv::gapi::own::Scalar os;
+    std::vector<int> v;
+
+    GMetaArgs metas = {GMetaArg(descr_of(m)),
+                       GMetaArg(descr_of(um)),
+                       GMetaArg(descr_of(s)),
+                       GMetaArg(descr_of(om)),
+                       GMetaArg(descr_of(os)),
+                       GMetaArg(descr_of(v))};
+
+    auto in_run_args = cv::gin(m, um, s, om, os, v);
+
+    for (int i = 0; i < 3; i++) {
+        EXPECT_TRUE(can_describe(metas[i], in_run_args[i]));
+    }
+}
+
+TEST(GMetaArg, Can_Describe_RunArgs)
+{
+    cv::Mat m(3, 3, CV_8UC3);
+    cv::Scalar s;
+    std::vector<int> v;
+
+    GMetaArgs metas0 = {GMetaArg(descr_of(m)), GMetaArg(descr_of(s)), GMetaArg(descr_of(v))};
+    auto in_run_args0  = cv::gin(m, s, v);
+
+    EXPECT_TRUE(can_describe(metas0, in_run_args0));
+
+    auto in_run_args01  = cv::gin(m, s);
+    EXPECT_FALSE(can_describe(metas0, in_run_args01));
+}
+
+TEST(GMetaArg, Can_Describe_RunArgP)
+{
+    cv::Mat m(3, 3, CV_8UC3);
+    cv::UMat um(3, 3, CV_8UC3);
+    cv::Scalar s;
+    constexpr int w = 3, h = 3, c = 3;
+    uchar data[w*h*c];
+    cv::gapi::own::Mat om(h, w, CV_8UC3, data);
+    cv::gapi::own::Scalar os;
+    std::vector<int> v;
+
+    GMetaArgs metas = {GMetaArg(descr_of(m)),
+                       GMetaArg(descr_of(um)),
+                       GMetaArg(descr_of(s)),
+                       GMetaArg(descr_of(om)),
+                       GMetaArg(descr_of(os)),
+                       GMetaArg(descr_of(v))};
+
+    auto out_run_args = cv::gout(m, um, s, om, os, v);
+
+    for (int i = 0; i < 3; i++) {
+        EXPECT_TRUE(can_describe(metas[i], out_run_args[i]));
+    }
+}
+
 } // namespace opencv_test

@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 if (typeof module !== 'undefined' && module.exports) {
-    // The envrionment is Node.js
+    // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
@@ -59,7 +59,7 @@ QUnit.test('Detectors', function(assert) {
 
   let akaze = new cv.AKAZE();
   akaze.detect(image, kp);
-  assert.equal(kp.size(), 52, 'AKAZE');
+  assert.equal(kp.size(), 53, 'AKAZE');
 });
 
 QUnit.test('BFMatcher', function(assert) {
@@ -79,4 +79,37 @@ QUnit.test('BFMatcher', function(assert) {
   matcher.match(descriptors, descriptors, dm);
 
   assert.equal(dm.size(), 67);
+});
+
+QUnit.test('Drawing', function(assert) {
+  // Generate key points.
+  let image = generateTestFrame();
+
+  let kp = new cv.KeyPointVector();
+  let descriptors = new cv.Mat();
+  let orb = new cv.ORB();
+  orb.detectAndCompute(image, new cv.Mat(), kp, descriptors);
+  assert.equal(kp.size(), 67);
+
+  let dst = new cv.Mat();
+  cv.drawKeypoints(image, kp, dst);
+  assert.equal(dst.rows, image.rows);
+  assert.equal(dst.cols, image.cols);
+
+  // Run a matcher.
+  let dm = new cv.DMatchVector();
+  let matcher = new cv.BFMatcher();
+  matcher.match(descriptors, descriptors, dm);
+  assert.equal(dm.size(), 67);
+
+  cv.drawMatches(image, kp, image, kp, dm, dst);
+  assert.equal(dst.rows, image.rows);
+  assert.equal(dst.cols, 2 * image.cols);
+
+  dm = new cv.DMatchVectorVector();
+  matcher.knnMatch(descriptors, descriptors, dm, 2);
+  assert.equal(dm.size(), 67);
+  cv.drawMatchesKnn(image, kp, image, kp, dm, dst);
+  assert.equal(dst.rows, image.rows);
+  assert.equal(dst.cols, 2 * image.cols);
 });

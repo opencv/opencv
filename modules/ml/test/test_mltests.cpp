@@ -1,224 +1,373 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                        Intel License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of Intel Corporation may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
 
-namespace opencv_test {
+namespace opencv_test { namespace {
 
-CV_AMLTest::CV_AMLTest( const char* _modelName ) : CV_MLBaseTest( _modelName )
+struct DatasetDesc
 {
-    validationFN = "avalidation.xml";
+    string name;
+    int resp_idx;
+    int train_count;
+    int cat_num;
+    string type_desc;
+public:
+    Ptr<TrainData> load()
+    {
+        string filename = findDataFile(name + ".data");
+        Ptr<TrainData> data = TrainData::loadFromCSV(filename, 0, resp_idx, resp_idx + 1, type_desc);
+        data->setTrainTestSplit(train_count);
+        data->shuffleTrainTest();
+        return data;
+    }
+};
+
+// see testdata/ml/protocol.txt (?)
+DatasetDesc datasets[] = {
+    { "mushroom", 0, 4000, 16, "cat" },
+    { "adult", 14, 22561, 16, "ord[0,2,4,10-12],cat[1,3,5-9,13,14]" },
+    { "vehicle", 18, 761, 4, "ord[0-17],cat[18]" },
+    { "abalone", 8, 3133, 16, "ord[1-8],cat[0]" },
+    { "ringnorm", 20, 300, 2, "ord[0-19],cat[20]" },
+    { "spambase", 57, 3221, 3, "ord[0-56],cat[57]" },
+    { "waveform", 21, 300, 3, "ord[0-20],cat[21]" },
+    { "elevators", 18, 5000, 0, "ord" },
+    { "letter", 16, 10000, 26, "ord[0-15],cat[16]" },
+    { "twonorm", 20, 300, 3, "ord[0-19],cat[20]" },
+    { "poletelecomm", 48, 2500, 0, "ord" },
+};
+
+static DatasetDesc & getDataset(const string & name)
+{
+    const int sz = sizeof(datasets)/sizeof(datasets[0]);
+    for (int i = 0; i < sz; ++i)
+    {
+        DatasetDesc & desc = datasets[i];
+        if (desc.name == name)
+            return desc;
+    }
+    CV_Error(Error::StsInternal, "");
 }
 
-int CV_AMLTest::run_test_case( int testCaseIdx )
+//==================================================================================================
+
+// interfaces and templates
+
+template <typename T> string modelName() { return "Unknown"; };
+template <typename T> Ptr<T> tuneModel(const DatasetDesc &, Ptr<T> m) { return m; }
+
+struct IModelFactory
 {
-    CV_TRACE_FUNCTION();
-    int code = cvtest::TS::OK;
-    code = prepare_test_case( testCaseIdx );
+    virtual Ptr<StatModel> createNew(const DatasetDesc &dataset) const = 0;
+    virtual Ptr<StatModel> loadFromFile(const string &filename) const = 0;
+    virtual string name() const = 0;
+    virtual ~IModelFactory() {}
+};
 
-    if (code == cvtest::TS::OK)
+template <typename T>
+struct ModelFactory : public IModelFactory
+{
+    Ptr<StatModel> createNew(const DatasetDesc &dataset) const CV_OVERRIDE
     {
-        //#define GET_STAT
-#ifdef GET_STAT
-        const char* data_name = ((CvFileNode*)cvGetSeqElem( dataSetNames, testCaseIdx ))->data.str.ptr;
-        printf("%s, %s      ", name, data_name);
-        const int icount = 100;
-        float res[icount];
-        for (int k = 0; k < icount; k++)
-        {
-#endif
-            data->shuffleTrainTest();
-            code = train( testCaseIdx );
-#ifdef GET_STAT
-            float case_result = get_error();
-
-            res[k] = case_result;
-        }
-        float mean = 0, sigma = 0;
-        for (int k = 0; k < icount; k++)
-        {
-            mean += res[k];
-        }
-        mean = mean /icount;
-        for (int k = 0; k < icount; k++)
-        {
-            sigma += (res[k] - mean)*(res[k] - mean);
-        }
-        sigma = sqrt(sigma/icount);
-        printf("%f, %f\n", mean, sigma);
-#endif
+        return tuneModel<T>(dataset, T::create());
     }
-    return code;
+    Ptr<StatModel> loadFromFile(const string & filename) const CV_OVERRIDE
+    {
+        return T::load(filename);
+    }
+    string name() const CV_OVERRIDE { return modelName<T>(); }
+};
+
+// implementation
+
+template <> string modelName<NormalBayesClassifier>() { return "NormalBayesClassifier"; }
+template <> string modelName<DTrees>() { return "DTrees"; }
+template <> string modelName<KNearest>() { return "KNearest"; }
+template <> string modelName<RTrees>() { return "RTrees"; }
+template <> string modelName<SVMSGD>() { return "SVMSGD"; }
+
+template<> Ptr<DTrees> tuneModel<DTrees>(const DatasetDesc &dataset, Ptr<DTrees> m)
+{
+    m->setMaxDepth(10);
+    m->setMinSampleCount(2);
+    m->setRegressionAccuracy(0);
+    m->setUseSurrogates(false);
+    m->setCVFolds(0);
+    m->setUse1SERule(false);
+    m->setTruncatePrunedTree(false);
+    m->setPriors(Mat());
+    m->setMaxCategories(dataset.cat_num);
+    return m;
 }
 
-int CV_AMLTest::validate_test_results( int testCaseIdx )
+template<> Ptr<RTrees> tuneModel<RTrees>(const DatasetDesc &dataset, Ptr<RTrees> m)
 {
-    CV_TRACE_FUNCTION();
-    int iters;
-    float mean, sigma;
-    // read validation params
-    FileNode resultNode =
-        validationFS.getFirstTopLevelNode()["validation"][modelName][dataSetNames[testCaseIdx]]["result"];
-    resultNode["iter_count"] >> iters;
-    if ( iters > 0)
-    {
-        resultNode["mean"] >> mean;
-        resultNode["sigma"] >> sigma;
-        model->save(format("/Users/vp/tmp/dtree/testcase_%02d.cur.yml", testCaseIdx));
-        float curErr = get_test_error( testCaseIdx );
-        const int coeff = 4;
-        ts->printf( cvtest::TS::LOG, "Test case = %d; test error = %f; mean error = %f (diff=%f), %d*sigma = %f\n",
-                                testCaseIdx, curErr, mean, abs( curErr - mean), coeff, coeff*sigma );
-        if ( abs( curErr - mean) > coeff*sigma )
-        {
-            ts->printf( cvtest::TS::LOG, "abs(%f - %f) > %f - OUT OF RANGE!\n", curErr, mean, coeff*sigma, coeff );
-            return cvtest::TS::FAIL_BAD_ACCURACY;
-        }
-        else
-            ts->printf( cvtest::TS::LOG, ".\n" );
-
-    }
-    else
-    {
-        ts->printf( cvtest::TS::LOG, "validation info is not suitable" );
-        return cvtest::TS::FAIL_INVALID_TEST_DATA;
-    }
-    return cvtest::TS::OK;
+    m->setMaxDepth(20);
+    m->setMinSampleCount(2);
+    m->setRegressionAccuracy(0);
+    m->setUseSurrogates(false);
+    m->setPriors(Mat());
+    m->setCalculateVarImportance(true);
+    m->setActiveVarCount(0);
+    m->setTermCriteria(TermCriteria(TermCriteria::COUNT, 100, 0.0));
+    m->setMaxCategories(dataset.cat_num);
+    return m;
 }
 
-namespace {
-
-TEST(ML_DTree, regression) { CV_AMLTest test( CV_DTREE ); test.safe_run(); }
-TEST(ML_Boost, regression) { CV_AMLTest test( CV_BOOST ); test.safe_run(); }
-TEST(ML_RTrees, regression) { CV_AMLTest test( CV_RTREES ); test.safe_run(); }
-TEST(DISABLED_ML_ERTrees, regression) { CV_AMLTest test( CV_ERTREES ); test.safe_run(); }
-
-TEST(ML_NBAYES, regression_5911)
+template<> Ptr<SVMSGD> tuneModel<SVMSGD>(const DatasetDesc &, Ptr<SVMSGD> m)
 {
-    int N=12;
-    Ptr<ml::NormalBayesClassifier> nb = cv::ml::NormalBayesClassifier::create();
-
-    // data:
-    Mat_<float> X(N,4);
-    X << 1,2,3,4,  1,2,3,4,   1,2,3,4,    1,2,3,4,
-         5,5,5,5,  5,5,5,5,   5,5,5,5,    5,5,5,5,
-         4,3,2,1,  4,3,2,1,   4,3,2,1,    4,3,2,1;
-
-    // labels:
-    Mat_<int> Y(N,1);
-    Y << 0,0,0,0, 1,1,1,1, 2,2,2,2;
-    nb->train(X, ml::ROW_SAMPLE, Y);
-
-    // single prediction:
-    Mat R1,P1;
-    for (int i=0; i<N; i++)
-    {
-        Mat r,p;
-        nb->predictProb(X.row(i), r, p);
-        R1.push_back(r);
-        P1.push_back(p);
-    }
-
-    // bulk prediction (continuous memory):
-    Mat R2,P2;
-    nb->predictProb(X, R2, P2);
-
-    EXPECT_EQ(sum(R1 == R2)[0], 255 * R2.total());
-    EXPECT_EQ(sum(P1 == P2)[0], 255 * P2.total());
-
-    // bulk prediction, with non-continuous memory storage
-    Mat R3_(N, 1+1, CV_32S),
-        P3_(N, 3+1, CV_32F);
-    nb->predictProb(X, R3_.col(0), P3_.colRange(0,3));
-    Mat R3 = R3_.col(0).clone(),
-        P3 = P3_.colRange(0,3).clone();
-
-    EXPECT_EQ(sum(R1 == R3)[0], 255 * R3.total());
-    EXPECT_EQ(sum(P1 == P3)[0], 255 * P3.total());
+    m->setSvmsgdType(SVMSGD::ASGD);
+    m->setMarginType(SVMSGD::SOFT_MARGIN);
+    m->setMarginRegularization(0.00001f);
+    m->setInitialStepSize(0.1f);
+    m->setStepDecreasingPower(0.75);
+    m->setTermCriteria(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10000, 0.00001));
+    return m;
 }
 
-TEST(ML_RTrees, getVotes)
+template <>
+struct ModelFactory<Boost> : public IModelFactory
 {
-    int n = 12;
-    int count, i;
-    int label_size = 3;
-    int predicted_class = 0;
-    int max_votes = -1;
-    int val;
-    // RTrees for classification
-    Ptr<ml::RTrees> rt = cv::ml::RTrees::create();
-
-    //data
-    Mat data(n, 4, CV_32F);
-    randu(data, 0, 10);
-
-    //labels
-    Mat labels = (Mat_<int>(n,1) << 0,0,0,0, 1,1,1,1, 2,2,2,2);
-
-    rt->train(data, ml::ROW_SAMPLE, labels);
-
-    //run function
-    Mat test(1, 4, CV_32F);
-    Mat result;
-    randu(test, 0, 10);
-    rt->getVotes(test, result, 0);
-
-    //count vote amount and find highest vote
-    count = 0;
-    const int* result_row = result.ptr<int>(1);
-    for( i = 0; i < label_size; i++ )
+    ModelFactory(int boostType_) : boostType(boostType_) {}
+    Ptr<StatModel> createNew(const DatasetDesc &) const CV_OVERRIDE
     {
-        val = result_row[i];
-        //predicted_class = max_votes < val? i;
-        if( max_votes < val )
-        {
-            max_votes = val;
-            predicted_class = i;
-        }
-        count += val;
+        Ptr<Boost> m = Boost::create();
+        m->setBoostType(boostType);
+        m->setWeakCount(20);
+        m->setWeightTrimRate(0.95);
+        m->setMaxDepth(4);
+        m->setUseSurrogates(false);
+        m->setPriors(Mat());
+        return m;
     }
+    Ptr<StatModel> loadFromFile(const string &filename) const { return Boost::load(filename); }
+    string name() const CV_OVERRIDE { return "Boost"; }
+    int boostType;
+};
 
-    EXPECT_EQ(count, (int)rt->getRoots().size());
-    EXPECT_EQ(result.at<float>(0, predicted_class), rt->predict(test));
+template <>
+struct ModelFactory<SVM> : public IModelFactory
+{
+    ModelFactory(int svmType_, int kernelType_, double gamma_, double c_, double nu_)
+        : svmType(svmType_), kernelType(kernelType_), gamma(gamma_), c(c_), nu(nu_) {}
+    Ptr<StatModel> createNew(const DatasetDesc &) const CV_OVERRIDE
+    {
+        Ptr<SVM> m = SVM::create();
+        m->setType(svmType);
+        m->setKernel(kernelType);
+        m->setDegree(0);
+        m->setGamma(gamma);
+        m->setCoef0(0);
+        m->setC(c);
+        m->setNu(nu);
+        m->setP(0);
+        return m;
+    }
+    Ptr<StatModel> loadFromFile(const string &filename) const { return SVM::load(filename); }
+    string name() const CV_OVERRIDE { return "SVM"; }
+    int svmType;
+    int kernelType;
+    double gamma;
+    double c;
+    double nu;
+};
+
+//==================================================================================================
+
+struct ML_Params_t
+{
+    Ptr<IModelFactory> factory;
+    string dataset;
+    float mean;
+    float sigma;
+};
+
+void PrintTo(const ML_Params_t & param, std::ostream *os)
+{
+    *os << param.factory->name() << "_" << param.dataset;
+}
+
+ML_Params_t ML_Params_List[] = {
+    { makePtr< ModelFactory<DTrees> >(), "mushroom", 0.027401f, 0.036236f },
+    { makePtr< ModelFactory<DTrees> >(), "adult", 14.279000f, 0.354323f },
+    { makePtr< ModelFactory<DTrees> >(), "vehicle", 29.761162f, 4.823927f },
+    { makePtr< ModelFactory<DTrees> >(), "abalone", 7.297540f, 0.510058f },
+    { makePtr< ModelFactory<Boost> >(Boost::REAL), "adult", 13.894001f, 0.337763f },
+    { makePtr< ModelFactory<Boost> >(Boost::DISCRETE), "mushroom", 0.007274f, 0.029400f },
+    { makePtr< ModelFactory<Boost> >(Boost::LOGIT), "ringnorm", 9.993943f, 0.860256f },
+    { makePtr< ModelFactory<Boost> >(Boost::GENTLE), "spambase", 5.404347f, 0.581716f },
+    { makePtr< ModelFactory<RTrees> >(), "waveform", 17.100641f, 0.630052f },
+    { makePtr< ModelFactory<RTrees> >(), "mushroom", 0.006547f, 0.028248f },
+    { makePtr< ModelFactory<RTrees> >(), "adult", 13.5129f, 0.266065f },
+    { makePtr< ModelFactory<RTrees> >(), "abalone", 4.745199f, 0.282112f },
+    { makePtr< ModelFactory<RTrees> >(), "vehicle", 24.964712f, 4.469287f },
+    { makePtr< ModelFactory<RTrees> >(), "letter", 5.334999f, 0.261142f },
+    { makePtr< ModelFactory<RTrees> >(), "ringnorm", 6.248733f, 0.904713f },
+    { makePtr< ModelFactory<RTrees> >(), "twonorm", 4.506479f, 0.449739f },
+    { makePtr< ModelFactory<RTrees> >(), "spambase", 5.243477f, 0.54232f },
+};
+
+typedef testing::TestWithParam<ML_Params_t> ML_Params;
+
+TEST_P(ML_Params, accuracy)
+{
+    const ML_Params_t & param = GetParam();
+    DatasetDesc &dataset = getDataset(param.dataset);
+    Ptr<TrainData> data = dataset.load();
+    ASSERT_TRUE(data);
+    ASSERT_TRUE(data->getNSamples() > 0);
+
+    Ptr<StatModel> m = param.factory->createNew(dataset);
+    ASSERT_TRUE(m);
+    ASSERT_TRUE(m->train(data, 0));
+
+    float err = m->calcError(data, true, noArray());
+    EXPECT_NEAR(err, param.mean, 4 * param.sigma);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, ML_Params, testing::ValuesIn(ML_Params_List));
+
+
+//==================================================================================================
+
+struct ML_SL_Params_t
+{
+    Ptr<IModelFactory> factory;
+    string dataset;
+};
+
+void PrintTo(const ML_SL_Params_t & param, std::ostream *os)
+{
+    *os << param.factory->name() << "_" << param.dataset;
+}
+
+ML_SL_Params_t ML_SL_Params_List[] = {
+    { makePtr< ModelFactory<NormalBayesClassifier> >(), "waveform" },
+    { makePtr< ModelFactory<KNearest> >(), "waveform" },
+    { makePtr< ModelFactory<KNearest> >(), "abalone" },
+    { makePtr< ModelFactory<SVM> >(SVM::C_SVC, SVM::LINEAR, 1, 0.5, 0), "waveform" },
+    { makePtr< ModelFactory<SVM> >(SVM::NU_SVR, SVM::RBF, 0.00225, 62.5, 0.03), "poletelecomm" },
+    { makePtr< ModelFactory<DTrees> >(), "mushroom" },
+    { makePtr< ModelFactory<DTrees> >(), "abalone" },
+    { makePtr< ModelFactory<Boost> >(Boost::REAL), "adult" },
+    { makePtr< ModelFactory<RTrees> >(), "waveform" },
+    { makePtr< ModelFactory<RTrees> >(), "abalone" },
+    { makePtr< ModelFactory<SVMSGD> >(), "waveform" },
+};
+
+typedef testing::TestWithParam<ML_SL_Params_t> ML_SL_Params;
+
+TEST_P(ML_SL_Params, save_load)
+{
+    const ML_SL_Params_t & param = GetParam();
+
+    DatasetDesc &dataset = getDataset(param.dataset);
+    Ptr<TrainData> data = dataset.load();
+    ASSERT_TRUE(data);
+    ASSERT_TRUE(data->getNSamples() > 0);
+
+    Mat responses1, responses2;
+    string file1 = tempfile(".json.gz");
+    string file2 = tempfile(".json.gz");
+    {
+        Ptr<StatModel> m = param.factory->createNew(dataset);
+        ASSERT_TRUE(m);
+        ASSERT_TRUE(m->train(data, 0));
+        m->calcError(data, true, responses1);
+        m->save(file1 + "?base64");
+    }
+    {
+        Ptr<StatModel> m = param.factory->loadFromFile(file1);
+        ASSERT_TRUE(m);
+        m->calcError(data, true, responses2);
+        m->save(file2 + "?base64");
+    }
+    EXPECT_MAT_NEAR(responses1, responses2, 0.0);
+    {
+        ifstream f1(file1.c_str(), std::ios_base::binary);
+        ifstream f2(file2.c_str(), std::ios_base::binary);
+        ASSERT_TRUE(f1.is_open() && f2.is_open());
+        const size_t BUFSZ = 10000;
+        vector<char> buf1(BUFSZ, 0);
+        vector<char> buf2(BUFSZ, 0);
+        while (true)
+        {
+            f1.read(&buf1[0], BUFSZ);
+            f2.read(&buf2[0], BUFSZ);
+            EXPECT_EQ(f1.gcount(), f2.gcount());
+            EXPECT_EQ(f1.eof(), f2.eof());
+            if (!f1.good() || !f2.good() || f1.gcount() != f2.gcount())
+                break;
+            ASSERT_EQ(buf1, buf2);
+        }
+    }
+    remove(file1.c_str());
+    remove(file2.c_str());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, ML_SL_Params, testing::ValuesIn(ML_SL_Params_List));
+
+//==================================================================================================
+
+TEST(TrainDataGet, layout_ROW_SAMPLE)  // Details: #12236
+{
+    cv::Mat test = cv::Mat::ones(150, 30, CV_32FC1) * 2;
+    test.col(3) += Scalar::all(3);
+    cv::Mat labels = cv::Mat::ones(150, 3, CV_32SC1) * 5;
+    labels.col(1) += 1;
+    cv::Ptr<cv::ml::TrainData> train_data = cv::ml::TrainData::create(test, cv::ml::ROW_SAMPLE, labels);
+    train_data->setTrainTestSplitRatio(0.9);
+
+    Mat tidx = train_data->getTestSampleIdx();
+    EXPECT_EQ((size_t)15, tidx.total());
+
+    Mat tresp = train_data->getTestResponses();
+    EXPECT_EQ(15, tresp.rows);
+    EXPECT_EQ(labels.cols, tresp.cols);
+    EXPECT_EQ(5, tresp.at<int>(0, 0)) << tresp;
+    EXPECT_EQ(6, tresp.at<int>(0, 1)) << tresp;
+    EXPECT_EQ(6, tresp.at<int>(14, 1)) << tresp;
+    EXPECT_EQ(5, tresp.at<int>(14, 2)) << tresp;
+
+    Mat tsamples = train_data->getTestSamples();
+    EXPECT_EQ(15, tsamples.rows);
+    EXPECT_EQ(test.cols, tsamples.cols);
+    EXPECT_EQ(2, tsamples.at<float>(0, 0)) << tsamples;
+    EXPECT_EQ(5, tsamples.at<float>(0, 3)) << tsamples;
+    EXPECT_EQ(2, tsamples.at<float>(14, test.cols - 1)) << tsamples;
+    EXPECT_EQ(5, tsamples.at<float>(14, 3)) << tsamples;
+}
+
+TEST(TrainDataGet, layout_COL_SAMPLE)  // Details: #12236
+{
+    cv::Mat test = cv::Mat::ones(30, 150, CV_32FC1) * 3;
+    test.row(3) += Scalar::all(3);
+    cv::Mat labels = cv::Mat::ones(3, 150, CV_32SC1) * 5;
+    labels.row(1) += 1;
+    cv::Ptr<cv::ml::TrainData> train_data = cv::ml::TrainData::create(test, cv::ml::COL_SAMPLE, labels);
+    train_data->setTrainTestSplitRatio(0.9);
+
+    Mat tidx = train_data->getTestSampleIdx();
+    EXPECT_EQ((size_t)15, tidx.total());
+
+    Mat tresp = train_data->getTestResponses();  // always row-based, transposed
+    EXPECT_EQ(15, tresp.rows);
+    EXPECT_EQ(labels.rows, tresp.cols);
+    EXPECT_EQ(5, tresp.at<int>(0, 0)) << tresp;
+    EXPECT_EQ(6, tresp.at<int>(0, 1)) << tresp;
+    EXPECT_EQ(6, tresp.at<int>(14, 1)) << tresp;
+    EXPECT_EQ(5, tresp.at<int>(14, 2)) << tresp;
+
+
+    Mat tsamples = train_data->getTestSamples();
+    EXPECT_EQ(15, tsamples.cols);
+    EXPECT_EQ(test.rows, tsamples.rows);
+    EXPECT_EQ(3, tsamples.at<float>(0, 0)) << tsamples;
+    EXPECT_EQ(6, tsamples.at<float>(3, 0)) << tsamples;
+    EXPECT_EQ(6, tsamples.at<float>(3, 14)) << tsamples;
+    EXPECT_EQ(3, tsamples.at<float>(test.rows - 1, 14)) << tsamples;
 }
 
 }} // namespace
-/* End of file. */

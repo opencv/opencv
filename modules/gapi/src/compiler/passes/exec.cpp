@@ -17,7 +17,7 @@
 #include <ade/util/algorithm.hpp>   // contains
 #include <ade/util/chain_range.hpp> // chain
 
-#include "opencv2/gapi/util/optional.hpp"  // util::optional
+#include <opencv2/gapi/util/optional.hpp>  // util::optional
 #include "logger.hpp"    // GAPI_LOG
 
 #include "compiler/gmodel.hpp"
@@ -454,7 +454,7 @@ namespace
             m_changes.enqueue<Change::DropLink>(m_g, m_cons, out_edge);
         }
 
-        // D: Process the intermediate slots (betweed Prod n Cons).
+        // D: Process the intermediate slots (between Prod n Cons).
         // D/1 - Those which are optimized out are just removed from the model
         for (auto opt_slot_nh : mo.opt_interim_slots)
         {
@@ -637,5 +637,13 @@ void passes::syncIslandTags(ade::passes::PassContext &ctx)
     std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
     GIslandModel::Graph gim(*gptr);
     GIslandModel::syncIslandTags(gim, ctx.graph);
+}
+
+void passes::topoSortIslands(ade::passes::PassContext &ctx)
+{
+    GModel::Graph gm(ctx.graph);
+    std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
+    auto pass_ctx = ade::passes::PassContext{*gptr};
+    ade::passes::TopologicalSort{}(pass_ctx);
 }
 }} // namespace cv::gimpl

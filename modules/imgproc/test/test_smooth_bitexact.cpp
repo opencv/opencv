@@ -14,11 +14,14 @@ namespace opencv_test { namespace {
         { fixedOne >> 2, fixedOne >> 1, fixedOne >> 2 }, // size 3, sigma 0
         { fixedOne >> 4, fixedOne >> 2, 6 * (fixedOne >> 4), fixedOne >> 2, fixedOne >> 4 }, // size 5, sigma 0
         { fixedOne >> 5, 7 * (fixedOne >> 6), 7 * (fixedOne >> 5), 9 * (fixedOne >> 5), 7 * (fixedOne >> 5), 7 * (fixedOne >> 6), fixedOne >> 5 }, // size 7, sigma 0
-        { 4, 13, 30, 51, 61, 51, 30, 13, 4 }, // size 9, sigma 0
-        { 81, 95, 81 }, // size 3, sigma 1.75
-        { 65, 125, 65 }, // size 3, sigma 0.875
+        { 4, 13, 30, 51, 60, 51, 30, 13, 4 }, // size 9, sigma 0
+#if 1
+#define CV_TEST_INACCURATE_GAUSSIAN_BLUR
+        { 81, 94, 81 }, // size 3, sigma 1.75
+        { 65, 126, 65 }, // size 3, sigma 0.875
         { 0, 7, 242, 7, 0 }, // size 5, sigma 0.375
         { 4, 56, 136, 56, 4 } // size 5, sigma 0.75
+#endif
     };
 
     template <typename T, int fixedShift>
@@ -68,11 +71,13 @@ TEST(GaussianBlur_Bitexact, Linear8U)
         { CV_8UC1, Size( 256, 128), Size(5, 5), 0, 0, vector<int64_t>(v[2], v[2]+5), vector<int64_t>(v[2], v[2]+5) },
         { CV_8UC1, Size( 256, 128), Size(7, 7), 0, 0, vector<int64_t>(v[3], v[3]+7), vector<int64_t>(v[3], v[3]+7) },
         { CV_8UC1, Size( 256, 128), Size(9, 9), 0, 0, vector<int64_t>(v[4], v[4]+9), vector<int64_t>(v[4], v[4]+9) },
+#ifdef CV_TEST_INACCURATE_GAUSSIAN_BLUR
         { CV_8UC1, Size( 256, 128), Size(3, 3), 1.75, 0.875, vector<int64_t>(v[5], v[5]+3), vector<int64_t>(v[6], v[6]+3) },
         { CV_8UC2, Size( 256, 128), Size(3, 3), 1.75, 0.875, vector<int64_t>(v[5], v[5]+3), vector<int64_t>(v[6], v[6]+3) },
         { CV_8UC3, Size( 256, 128), Size(3, 3), 1.75, 0.875, vector<int64_t>(v[5], v[5]+3), vector<int64_t>(v[6], v[6]+3) },
         { CV_8UC4, Size( 256, 128), Size(3, 3), 1.75, 0.875, vector<int64_t>(v[5], v[5]+3), vector<int64_t>(v[6], v[6]+3) },
         { CV_8UC1, Size( 256, 128), Size(5, 5), 0.375, 0.75, vector<int64_t>(v[7], v[7]+5), vector<int64_t>(v[8], v[8]+5) }
+#endif
     };
 
     int bordermodes[] = {
@@ -156,6 +161,34 @@ TEST(GaussianBlur_Bitexact, Linear8U)
                 << "GaussianBlur " << cn << "-chan mat " << drows << "x" << dcols << " by kernel " << kernel << " sigma(" << modes[modeind].sigma_x << ";" << modes[modeind].sigma_y << ") failed with max diff " << cvtest::norm(refdst, dst, cv::NORM_INF);
         }
     }
+}
+
+TEST(GaussianBlur_Bitexact, regression_15015)
+{
+    Mat src(100,100,CV_8UC3,Scalar(255,255,255));
+    Mat dst;
+    GaussianBlur(src, dst, Size(5, 5), 0);
+    ASSERT_EQ(0.0, cvtest::norm(dst, src, NORM_INF));
+}
+
+
+static void checkGaussianBlur_8Uvs32F(const Mat& src8u, const Mat& src32f, int N, double sigma)
+{
+    Mat dst8u; GaussianBlur(src8u, dst8u, Size(N, N), sigma);     // through bit-exact path
+    Mat dst8u_32f; dst8u.convertTo(dst8u_32f, CV_32F);
+
+    Mat dst32f; GaussianBlur(src32f, dst32f, Size(N, N), sigma);  // without bit-exact computations
+
+    double normINF_32f = cv::norm(dst8u_32f, dst32f, NORM_INF);
+    EXPECT_LE(normINF_32f, 1.0);
+}
+
+TEST(GaussianBlur_Bitexact, regression_9863)
+{
+    Mat src8u = imread(cvtest::findDataFile("shared/lena.png"));
+     Mat src32f; src8u.convertTo(src32f, CV_32F);
+
+    checkGaussianBlur_8Uvs32F(src8u, src32f, 151, 30);
 }
 
 }} // namespace

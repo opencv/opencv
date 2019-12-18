@@ -6,6 +6,9 @@
 #include "precomp.hpp"
 #include "sumpixels.hpp"
 
+#include "opencv2/core/hal/intrin.hpp"
+
+
 namespace cv {
 namespace { // Anonymous namespace to avoid exposing the implementation classes
 
@@ -79,9 +82,9 @@ public:
     {
         // Note the negative index is because the sums/sqsums pointers point to the first real pixel
         // after the border pixel so we have to look backwards
-        _mm512_mask_storeu_epi64(&sums[-num_channels], (1<<num_channels)-1, _mm512_setzero_si512());
+        _mm512_mask_storeu_epi64(&sums[-(ptrdiff_t)num_channels], (1<<num_channels)-1, _mm512_setzero_si512());
         if (sqsums)
-            _mm512_mask_storeu_epi64(&sqsums[-num_channels], (1<<num_channels)-1, _mm512_setzero_si512());
+            _mm512_mask_storeu_epi64(&sqsums[-(ptrdiff_t)num_channels], (1<<num_channels)-1, _mm512_setzero_si512());
     }
 
 
@@ -180,11 +183,11 @@ public:
         //
         _mm512_mask_storeu_pd(
                 results_ptr,   // Store the result here
-                data_mask,     // Using the data mask to avoid overrunning the line
+                (__mmask8)data_mask,     // Using the data mask to avoid overrunning the line
                 calculate_integral( // Writing the value of the integral derived from:
-                        src_longs,                                           // input data
-                        _mm512_maskz_loadu_pd(data_mask, above_values_ptr),  // and the results from line above
-                        accumulator                                          // keeping track of the accumulator
+                        src_longs,                                                    // input data
+                        _mm512_maskz_loadu_pd((__mmask8)data_mask, above_values_ptr), // and the results from line above
+                        accumulator                                                   // keeping track of the accumulator
                 )
         );
     }

@@ -256,6 +256,12 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
     std::vector<cl_platform_id> platforms(numPlatforms);
+    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
+
+    // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
+
     size_t exts_len;
     cv::AutoBuffer<char> extensions;
     bool is_support_cl_khr_d3d11_sharing = false;
@@ -264,9 +270,6 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 #endif
     for (int i = 0; i < (int)numPlatforms; i++)
     {
-        status = clGetPlatformIDs(numPlatforms, &platforms[i], NULL);
-        if (status != CL_SUCCESS)
-            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
         status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get length of CL_PLATFORM_EXTENSIONS");
@@ -479,7 +482,7 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
     std::vector<cl_platform_id> platforms(numPlatforms);
     status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
 
@@ -587,7 +590,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
     std::vector<cl_platform_id> platforms(numPlatforms);
     status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
 
@@ -697,7 +700,7 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
     std::vector<cl_platform_id> platforms(numPlatforms);
     status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
 

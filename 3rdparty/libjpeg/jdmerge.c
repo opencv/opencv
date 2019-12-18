@@ -2,7 +2,7 @@
  * jdmerge.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2013-2015 by Guido Vollbeding.
+ * Modified 2013-2017 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -38,6 +38,12 @@
 #include "jpeglib.h"
 
 #ifdef UPSAMPLE_MERGING_SUPPORTED
+
+
+#if RANGE_BITS < 2
+  /* Deliberate syntax err */
+  Sorry, this code requires 2 or more range extension bits.
+#endif
 
 
 /* Private subobject */

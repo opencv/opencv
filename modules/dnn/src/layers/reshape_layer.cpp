@@ -42,8 +42,16 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/reshape.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -138,6 +146,7 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
 
     size_t srcTotal = total(srcShape);
     size_t dstTotal = total(dstShape);
+    CV_Assert(dstTotal != 0);
 
     if (inferDim != -1)
     {
@@ -178,7 +187,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+               backendId == DNN_BACKEND_CUDA ||
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -257,34 +267,42 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::ReshapeOp>(preferableTarget, std::move(context->stream));
+    }
+#endif
+
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::ReshapeLayer ieLayer(name);
         CV_Assert(outShapes.size() == 1);
         ieLayer.setDims(outShapes[0]);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Reshape";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ReshapeLayer> ieLayer(new InferenceEngine::ReshapeLayer(lp));
-        if (!newShapeDesc.empty())
-            ieLayer->shape = newShapeDesc;
-        else
-        {
-            CV_Assert(inputs.size() == 2);
-            InferenceEngine::DataPtr shapeSrc = infEngineDataNode(inputs[1]);
-            // NOTE: shapeSrc->dims are reversed
-            ieLayer->shape = std::vector<int>(shapeSrc->dims.rbegin(), shapeSrc->dims.rend());
-        }
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(outShapes.size() == 1);
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        std::vector<int64_t> out(outShapes[0].begin(), outShapes[0].end());
+        auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                       ngraph::Shape{out.size()}, out.data());
+        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, shape, true);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     std::vector<MatShape> outShapes;

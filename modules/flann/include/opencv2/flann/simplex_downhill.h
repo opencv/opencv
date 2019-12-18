@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_SIMPLEX_DOWNHILL_H_
 #define OPENCV_FLANN_SIMPLEX_DOWNHILL_H_
 
+//! @cond IGNORED
+
 namespace cvflann
 {
 
@@ -182,5 +184,7 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
 }
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_SIMPLEX_DOWNHILL_H_

@@ -23,9 +23,12 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     switch (v) {
     case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
     case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
-    case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
     case DNN_BACKEND_VKCOM: *os << "VKCOM"; return;
     case DNN_BACKEND_OPENCV: *os << "OCV"; return;
+    case DNN_BACKEND_CUDA: *os << "CUDA"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019: *os << "DLIE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -39,6 +42,8 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
     case DNN_TARGET_VULKAN: *os << "VULKAN"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
+    case DNN_TARGET_CUDA: *os << "CUDA"; return;
+    case DNN_TARGET_CUDA_FP16: *os << "CUDA_FP16"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -160,23 +165,21 @@ void normAssertDetections(
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
-bool readFileInMemory(const std::string& filename, std::string& content)
+void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content)
 {
-    std::ios::openmode mode = std::ios::in | std::ios::binary;
+    const std::ios::openmode mode = std::ios::in | std::ios::binary;
     std::ifstream ifs(filename.c_str(), mode);
-    if (!ifs.is_open())
-        return false;
+    ASSERT_TRUE(ifs.is_open());
 
     content.clear();
 
     ifs.seekg(0, std::ios::end);
-    content.reserve(ifs.tellg());
+    const size_t sz = ifs.tellg();
+    content.resize(sz);
     ifs.seekg(0, std::ios::beg);
 
-    content.assign((std::istreambuf_iterator<char>(ifs)),
-                   std::istreambuf_iterator<char>());
-
-    return true;
+    ifs.read((char*)content.data(), sz);
+    ASSERT_FALSE(ifs.fail());
 }
 
 
@@ -184,7 +187,9 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withInferenceEngine /*= true*/,
         bool withHalide /*= false*/,
         bool withCpuOCV /*= true*/,
-        bool withVkCom /*= true*/
+        bool withVkCom /*= true*/,
+        bool withCUDA /*= true*/,
+        bool withNgraph /*= true*/
 )
 {
 #ifdef HAVE_INF_ENGINE
@@ -202,13 +207,24 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #ifdef HAVE_INF_ENGINE
     if (withInferenceEngine)
     {
-        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE);
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
             if (*i == DNN_TARGET_MYRIAD && !withVPU)
                 continue;
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, *i));
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
         }
+    }
+    if (withNgraph)
+    {
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+        {
+            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+                continue;
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
+        }
+
     }
 #else
     CV_UNUSED(withInferenceEngine);
@@ -219,6 +235,16 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
             targets.push_back(make_tuple(DNN_BACKEND_VKCOM, *i));
     }
+
+#ifdef HAVE_CUDA
+    if(withCUDA)
+    {
+        //for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
+        //    targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
+        targets.push_back(make_tuple(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
+    }
+#endif
+
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
@@ -233,6 +259,40 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
     return testing::ValuesIn(targets);
 }
 
+testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE()
+{
+#ifdef HAVE_INF_ENGINE
+    bool withVPU = validateVPUType();
+
+    std::vector< tuple<Backend, Target> > targets;
+    std::vector< Target > available;
+
+    {
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+        {
+            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+                continue;
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
+        }
+    }
+
+    {
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+        {
+            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+                continue;
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
+        }
+
+    }
+
+    return testing::ValuesIn(targets);
+#else
+    return testing::ValuesIn(std::vector< tuple<Backend, Target> >());
+#endif
+}
 
 #ifdef HAVE_INF_ENGINE
 static std::string getTestInferenceEngineVPUType()
@@ -281,6 +341,14 @@ static bool validateVPUType_()
             exit(1);
         }
     }
+    if (have_vpu_target)
+    {
+        std::string dnn_vpu_type = getInferenceEngineVPUType();
+        if (dnn_vpu_type == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2)
+            registerGlobalSkipTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2);
+        if (dnn_vpu_type == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+            registerGlobalSkipTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+    }
     return true;
 }
 
@@ -290,5 +358,59 @@ bool validateVPUType()
     return result;
 }
 #endif // HAVE_INF_ENGINE
+
+
+void initDNNTests()
+{
+    const char* extraTestDataPath =
+#ifdef WINRT
+        NULL;
+#else
+        getenv("OPENCV_DNN_TEST_DATA_PATH");
+#endif
+    if (extraTestDataPath)
+        cvtest::addDataSearchPath(extraTestDataPath);
+
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_HALIDE,
+        CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16
+    );
+#if defined(INF_ENGINE_RELEASE)
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_IE,
+#if INF_ENGINE_VER_MAJOR_EQ(2018050000)
+        CV_TEST_TAG_DNN_SKIP_IE_2018R5,
+#elif INF_ENGINE_VER_MAJOR_EQ(2019010000)
+        CV_TEST_TAG_DNN_SKIP_IE_2019R1,
+# if INF_ENGINE_RELEASE == 2019010100
+        CV_TEST_TAG_DNN_SKIP_IE_2019R1_1,
+# endif
+#elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
+        CV_TEST_TAG_DNN_SKIP_IE_2019R2,
+#elif INF_ENGINE_VER_MAJOR_EQ(2019030000)
+        CV_TEST_TAG_DNN_SKIP_IE_2019R3,
+#endif
+#ifdef HAVE_DNN_NGRAPH
+        CV_TEST_TAG_DNN_SKIP_IE_NGRAPH,
+#endif
+        CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER
+    );
+#endif
+    registerGlobalSkipTag(
+        // see validateVPUType(): CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
+        CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
+    );
+#ifdef HAVE_VULKAN
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_VULKAN
+    );
+#endif
+
+#ifdef HAVE_CUDA
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP32, CV_TEST_TAG_DNN_SKIP_CUDA_FP16
+    );
+#endif
+}
 
 } // namespace

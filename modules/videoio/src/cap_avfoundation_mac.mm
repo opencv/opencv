@@ -45,7 +45,7 @@
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
 #include <stdio.h>
-#include <AvailabilityMacros.h>
+#include <Availability.h>
 #import <AVFoundation/AVFoundation.h>
 
 #define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
@@ -323,6 +323,49 @@ void CvCaptureCAM::stopCaptureDevice() {
 
 int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
+
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
+    if (@available(macOS 10.14, *))
+    {
+        AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+        if (status == AVAuthorizationStatusDenied)
+        {
+            fprintf(stderr, "OpenCV: camera access has been denied. Either run 'tccutil reset Camera' "
+                            "command in same terminal to reset application authorization status, "
+                            "either modify 'System Preferences -> Security & Privacy -> Camera' "
+                            "settings for your application.\n");
+            [localpool drain];
+            return 0;
+        }
+        else if (status != AVAuthorizationStatusAuthorized)
+        {
+            if (!cv::utils::getConfigurationParameterBool("OPENCV_AVFOUNDATION_SKIP_AUTH", false))
+            {
+                fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
+                [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
+                if ([NSThread isMainThread])
+                {
+                    // we run the main loop for 0.1 sec to show the message
+                    [[NSRunLoop mainRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+                }
+                else
+                {
+                    fprintf(stderr, "OpenCV: can not spin main run loop from other thread, set "
+                                    "OPENCV_AVFOUNDATION_SKIP_AUTH=1 to disable authorization request "
+                                    "and perform it in your application.\n");
+                }
+            }
+            else
+            {
+                fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), set "
+                                "OPENCV_AVFOUNDATION_SKIP_AUTH=0 to enable authorization request or "
+                                "perform it in your application.\n", status);
+            }
+            [localpool drain];
+            return 0;
+        }
+    }
+#endif
 
     // get capture device
     NSArray *devices = [[AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo]
@@ -1171,7 +1214,7 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
         NSError *error = nil;
 
 
-        // Make sure the file does not already exist. Necessary to overwirte??
+        // Make sure the file does not already exist. Necessary to overwrite??
         /*
         NSFileManager *fileManager = [NSFileManager defaultManager];
         if ([fileManager fileExistsAtPath:path]){

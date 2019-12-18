@@ -4,12 +4,13 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_MFX
-
 namespace opencv_test { namespace {
 
 TEST(videoio_mfx, read_invalid)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     VideoCapture cap;
     ASSERT_NO_THROW(cap.open("nonexistent-file", CAP_INTEL_MFX));
     ASSERT_FALSE(cap.isOpened());
@@ -20,6 +21,9 @@ TEST(videoio_mfx, read_invalid)
 
 TEST(videoio_mfx, write_invalid)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     const string filename = cv::tempfile(".264");
     VideoWriter writer;
     bool res = true;
@@ -84,6 +88,9 @@ typedef testing::TestWithParam< Size_FPS_Ext > videoio_mfx;
 
 TEST_P(videoio_mfx, read_write_raw)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     const Size FRAME_SIZE = get<0>(GetParam());
     const double FPS = get<1>(GetParam());
     const char *ext = get<2>(GetParam());
@@ -144,5 +151,3 @@ INSTANTIATE_TEST_CASE_P(videoio, videoio_mfx,
                             testing::Values(".mpeg2", ".264", ".265")));
 
 }} // namespace
-
-#endif

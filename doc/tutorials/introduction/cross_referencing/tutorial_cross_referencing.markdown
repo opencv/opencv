@@ -4,7 +4,7 @@ Cross referencing OpenCV from other Doxygen projects {#tutorial_cross_referencin
 Cross referencing OpenCV
 ------------------------
 
-[Doxygen](https://www.stack.nl/~dimitri/doxygen/) is a tool to generate
+[Doxygen](http://www.doxygen.nl) is a tool to generate
 documentations like the OpenCV documentation you are reading right now.
 It is used by a variety of software projects and if you happen to use it
 to generate your own documentation, and you are using OpenCV inside your
@@ -36,14 +36,14 @@ Open your Doxyfile using your favorite text editor and search for the key
 `TAGFILES`. Change it as follows:
 
 @code
-TAGFILES = ./docs/doxygen-tags/opencv.tag=http://docs.opencv.org/4.1.0
+TAGFILES = ./docs/doxygen-tags/opencv.tag=http://docs.opencv.org/4.2.0
 @endcode
 
 If you had other definitions already, you can append the line using a `\`:
 
 @code
 TAGFILES = ./docs/doxygen-tags/libstdc++.tag=https://gcc.gnu.org/onlinedocs/libstdc++/latest-doxygen \
-           ./docs/doxygen-tags/opencv.tag=http://docs.opencv.org/4.1.0
+           ./docs/doxygen-tags/opencv.tag=http://docs.opencv.org/4.2.0
 @endcode
 
 Doxygen can now use the information from the tag file to link to the OpenCV
@@ -57,5 +57,5 @@ contain a `your_project.tag` file in its root directory.
 References
 ----------
 
-- [Doxygen: Linking to external documentation](https://www.stack.nl/~dimitri/doxygen/manual/external.html)
+- [Doxygen: Linking to external documentation](http://www.doxygen.nl/manual/external.html)
 - [opencv.tag](opencv.tag)

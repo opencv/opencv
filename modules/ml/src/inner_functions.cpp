@@ -59,9 +59,10 @@ bool StatModel::empty() const { return !isTrained(); }
 
 int StatModel::getVarCount() const { return 0; }
 
-bool StatModel::train( const Ptr<TrainData>&, int )
+bool StatModel::train(const Ptr<TrainData>& trainData, int )
 {
     CV_TRACE_FUNCTION();
+    CV_Assert(!trainData.empty());
     CV_Error(CV_StsNotImplemented, "");
     return false;
 }
@@ -69,6 +70,7 @@ bool StatModel::train( const Ptr<TrainData>&, int )
 bool StatModel::train( InputArray samples, int layout, InputArray responses )
 {
     CV_TRACE_FUNCTION();
+    CV_Assert(!samples.empty());
     return train(TrainData::create(samples, layout, responses));
 }
 
@@ -134,6 +136,7 @@ public:
 float StatModel::calcError(const Ptr<TrainData>& data, bool testerr, OutputArray _resp) const
 {
     CV_TRACE_FUNCTION_SKIP_NESTED();
+    CV_Assert(!data.empty());
     Mat samples = data->getSamples();
     Mat sidx = testerr ? data->getTestSampleIdx() : data->getTrainSampleIdx();
     Mat weights = testerr ? data->getTestSampleWeights() : data->getTrainSampleWeights();

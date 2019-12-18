@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_RESULTSET_H
 #define OPENCV_FLANN_RESULTSET_H
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <cstring>
 #include <iostream>
@@ -301,7 +303,7 @@ public:
         unsigned int index_;
     };
 
-    /** Default cosntructor */
+    /** Default constructor */
     UniqueResultSet() :
         is_full_(false), worst_distance_(std::numeric_limits<DistanceType>::max())
     {
@@ -539,5 +541,7 @@ private:
     DistanceType radius_;
 };
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_RESULTSET_H

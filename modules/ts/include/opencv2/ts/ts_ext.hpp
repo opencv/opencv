@@ -13,6 +13,12 @@ void checkIppStatus();
 extern bool skipUnstableTests;
 extern bool runBigDataTests;
 extern int testThreads;
+
+void testSetUp();
+void testTearDown();
+
+bool checkBigDataTests();
+
 }
 
 // check for required "opencv_test" namespace
@@ -24,13 +30,8 @@ extern int testThreads;
 
 #define CV__TEST_INIT \
     CV__TEST_NAMESPACE_CHECK \
-    fflush(stdout); fflush(stderr); \
-    cv::ipp::setIppStatus(0); \
-    cv::theRNG().state = cvtest::param_seed; \
-    cv::setNumThreads(cvtest::testThreads);
-#define CV__TEST_CLEANUP \
-    fflush(stdout); fflush(stderr); \
-    ::cvtest::checkIppStatus();
+    ::cvtest::testSetUp();
+#define CV__TEST_CLEANUP ::cvtest::testTearDown();
 #define CV__TEST_BODY_IMPL(name) \
     { \
        CV__TRACE_APP_FUNCTION_NAME(name); \
@@ -39,7 +40,7 @@ extern int testThreads;
           Body(); \
           CV__TEST_CLEANUP \
        } \
-       catch (const cvtest::SkipTestException& e) \
+       catch (const cvtest::details::SkipTestExceptionBase& e) \
        { \
           printf("[     SKIP ] %s\n", e.what()); \
        } \
@@ -76,9 +77,8 @@ extern int testThreads;
 
 #define CV__TEST_BIGDATA_BODY_IMPL(name) \
     { \
-       if (!cvtest::runBigDataTests) \
+       if (!cvtest::checkBigDataTests()) \
        { \
-           printf("[     SKIP ] BigData tests are disabled\n"); \
            return; \
        } \
        CV__TRACE_APP_FUNCTION_NAME(name); \
@@ -87,14 +87,14 @@ extern int testThreads;
           Body(); \
           CV__TEST_CLEANUP \
        } \
-       catch (const cvtest::SkipTestException& e) \
+       catch (const cvtest::details::SkipTestExceptionBase& e) \
        { \
           printf("[     SKIP ] %s\n", e.what()); \
        } \
     } \
 
 // Special type of tests which require / use or validate processing of huge amount of data (>= 2Gb)
-#if defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__)
+#if defined(_M_X64) || defined(_M_ARM64) || defined(__x86_64__) || defined(__aarch64__)
 #define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, test_name, ::testing::Test, Body, CV__TEST_BIGDATA_BODY_IMPL)
 #else
 #define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, DISABLED_ ## test_name, ::testing::Test, Body, CV__TEST_BIGDATA_BODY_IMPL)

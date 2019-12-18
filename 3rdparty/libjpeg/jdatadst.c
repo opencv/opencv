@@ -2,7 +2,7 @@
  * jdatadst.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2009-2012 by Guido Vollbeding.
+ * Modified 2009-2017 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -170,9 +170,9 @@ term_destination (j_compress_ptr cinfo)
     if (JFWRITE(dest->outfile, dest->buffer, datacount) != datacount)
       ERREXIT(cinfo, JERR_FILE_WRITE);
   }
-  fflush(dest->outfile);
+  JFFLUSH(dest->outfile);
   /* Make sure we wrote the output file OK */
-  if (ferror(dest->outfile))
+  if (JFERROR(dest->outfile))
     ERREXIT(cinfo, JERR_FILE_WRITE);
 }
 

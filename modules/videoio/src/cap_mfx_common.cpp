@@ -17,7 +17,7 @@ using namespace cv;
 bool DeviceHandler::init(MFXVideoSession &session)
 {
     mfxStatus res = MFX_ERR_NONE;
-    mfxIMPL impl = MFX_IMPL_AUTO;
+    mfxIMPL impl = MFX_IMPL_AUTO_ANY;
     mfxVersion ver = { {19, 1} };
 
     res = session.Init(impl, &ver);
@@ -196,5 +196,3 @@ bool WriteBitstream::isOpened() const
 {
     return output.is_open();
 }
-
-//==================================================================================================

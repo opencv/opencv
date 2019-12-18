@@ -2949,6 +2949,34 @@ TEST(Core_KMeans, compactness)
     }
 }
 
+TEST(Core_KMeans, bad_input)
+{
+    const int N = 100;
+    const int attempts = 4;
+    const TermCriteria crit = TermCriteria(TermCriteria::COUNT, 5, 0); // low number of iterations
+    const int K = 3;
+    Mat data(N, 1, CV_32FC2);
+    cv::randu(data, Scalar(-200, -200), Scalar(200, 200));
+    {
+        SCOPED_TRACE("Huge value");
+        data.at<Vec2f>(10, 0) = Vec2f(1e20f, 0);
+        Mat labels, centers;
+        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+    }
+    {
+        SCOPED_TRACE("Negative value");
+        data.at<Vec2f>(10, 0) = Vec2f(0, -1e20f);
+        Mat labels, centers;
+        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+    }
+    {
+        SCOPED_TRACE("NaN");
+        data.at<Vec2f>(10, 0) = Vec2f(0, std::numeric_limits<float>::quiet_NaN());
+        Mat labels, centers;
+        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+    }
+}
+
 TEST(CovariationMatrixVectorOfMat, accuracy)
 {
     unsigned int col_problem_size = 8, row_problem_size = 8, vector_size = 16;
@@ -3921,6 +3949,60 @@ TEST(Core_SoftFloat, CvRound)
         EXPECT_EQ(values[i].out32, saturate_cast<int32_t>(values[i].inVal));
         EXPECT_EQ((uint32_t)(values[i].out32), saturate_cast<uint32_t>(values[i].inVal));
     }
+}
+
+template<typename T>
+static void checkRounding(T in, int outCeil, int outFloor)
+{
+    EXPECT_EQ(outCeil,cvCeil(in));
+    EXPECT_EQ(outFloor,cvFloor(in));
+
+    /* cvRound is not expected to be IEEE compliant. The implementation
+       should round to one of the above. */
+    EXPECT_TRUE((cvRound(in) == outCeil) || (cvRound(in) == outFloor));
+}
+
+TEST(Core_FastMath, InlineRoundingOps)
+{
+    struct
+    {
+        double in;
+        int outCeil;
+        int outFloor;
+    } values[] =
+    {
+        // Values are chosen to convert to binary float 32/64 exactly
+        { 1.0, 1, 1 },
+        { 1.5, 2, 1 },
+        { -1.5, -1, -2}
+    };
+
+    for (int i = 0, maxi = sizeof(values) / sizeof(values[0]); i < maxi; i++)
+    {
+        checkRounding<double>(values[i].in, values[i].outCeil, values[i].outFloor);
+        checkRounding<float>((float)values[i].in, values[i].outCeil, values[i].outFloor);
+    }
+}
+
+TEST(Core_FastMath, InlineNaN)
+{
+    EXPECT_EQ( cvIsNaN((float) NAN), 1);
+    EXPECT_EQ( cvIsNaN((float) -NAN), 1);
+    EXPECT_EQ( cvIsNaN(0.0f), 0);
+    EXPECT_EQ( cvIsNaN((double) NAN), 1);
+    EXPECT_EQ( cvIsNaN((double) -NAN), 1);
+    EXPECT_EQ( cvIsNaN(0.0), 0);
+}
+
+TEST(Core_FastMath, InlineIsInf)
+{
+    // Assume HUGE_VAL is infinity. Strictly speaking, may not always be true.
+    EXPECT_EQ( cvIsInf((float) HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf((float) -HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf(0.0f), 0);
+    EXPECT_EQ( cvIsInf((double) HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf((double) -HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf(0.0), 0);
 }
 
 }} // namespace

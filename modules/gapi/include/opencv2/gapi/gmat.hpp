@@ -14,9 +14,9 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/gcommon.hpp> // GShape
 
-#include "opencv2/gapi/own/types.hpp" // cv::gapi::own::Size
-#include "opencv2/gapi/own/convert.hpp" // to_own
-#include "opencv2/gapi/own/assert.hpp"
+#include <opencv2/gapi/own/types.hpp> // cv::gapi::own::Size
+#include <opencv2/gapi/own/convert.hpp> // to_own
+#include <opencv2/gapi/own/assert.hpp>
 
 // TODO GAPI_EXPORTS or so
 namespace cv
@@ -29,10 +29,24 @@ struct GOrigin;
 /** \addtogroup gapi_data_objects
  * @{
  *
- * @brief Data-representing objects which can be used to build G-API
- * expressions.
+ * @brief G-API data objects used to build G-API expressions.
+ *
+ * These objects do not own any particular data (except compile-time
+ * associated values like with cv::GScalar) and are used to construct
+ * graphs.
+ *
+ * Every graph in G-API starts and ends with data objects.
+ *
+ * Once constructed and compiled, G-API operates with regular host-side
+ * data instead. Refer to the below table to find the mapping between
+ * G-API and regular data types.
+ *
+ *    G-API data type    | I/O data type
+ *    ------------------ | -------------
+ *    cv::GMat           | cv::Mat
+ *    cv::GScalar        | cv::Scalar
+ *    `cv::GArray<T>`    | std::vector<T>
  */
-
 class GAPI_EXPORTS GMat
 {
 public:
@@ -46,6 +60,16 @@ private:
     std::shared_ptr<GOrigin> m_priv;
 };
 
+class GAPI_EXPORTS GMatP : public GMat
+{
+public:
+    using GMat::GMat;
+};
+
+namespace gapi { namespace own {
+    class Mat;
+}}//gapi::own
+
 /** @} */
 
 /**
@@ -58,16 +82,41 @@ struct GAPI_EXPORTS GMatDesc
     int depth;
     int chan;
     cv::gapi::own::Size size; // NB.: no multi-dimensional cases covered yet
+    bool planar;
+    std::vector<int> dims; // FIXME: Maybe it's real questionable to have it here
+
+    GMatDesc(int d, int c, cv::gapi::own::Size s, bool p = false)
+        : depth(d), chan(c), size(s), planar(p) {}
+
+    GMatDesc(int d, const std::vector<int> &dd)
+        : depth(d), chan(-1), size{-1,-1}, planar(false), dims(dd) {}
+
+    GMatDesc(int d, std::vector<int> &&dd)
+        : depth(d), chan(-1), size{-1,-1}, planar(false), dims(std::move(dd)) {}
+
+    GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
 
     inline bool operator== (const GMatDesc &rhs) const
     {
-        return depth == rhs.depth && chan == rhs.chan && size == rhs.size;
+        return    depth  == rhs.depth
+               && chan   == rhs.chan
+               && size   == rhs.size
+               && planar == rhs.planar
+               && dims   == rhs.dims;
     }
 
     inline bool operator!= (const GMatDesc &rhs) const
     {
         return !(*this == rhs);
     }
+
+    bool isND() const { return !dims.empty(); }
+
+    // Checks if the passed mat can be described by this descriptor
+    // (it handles the case when
+    // 1-channel mat can be reinterpreted as is (1-channel mat)
+    // and as a 3-channel planar mat with height divided by 3)
+    bool canDescribe(const cv::gapi::own::Mat& mat) const;
 
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
@@ -88,6 +137,8 @@ struct GAPI_EXPORTS GMatDesc
     {
         return withSize(to_own(sz));
     }
+
+    bool canDescribe(const cv::Mat& mat) const;
 #endif // !defined(GAPI_STANDALONE)
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
@@ -125,6 +176,43 @@ struct GAPI_EXPORTS GMatDesc
         desc.chan = dchan;
         return desc;
     }
+
+    // Meta combinator: return a new GMatDesc with planar flag set
+    // (no size changes are performed, only channel interpretation is changed
+    // (interleaved -> planar)
+    GMatDesc asPlanar() const
+    {
+        GAPI_Assert(planar == false);
+        GMatDesc desc(*this);
+        desc.planar = true;
+        return desc;
+    }
+
+    // Meta combinator: return a new GMatDesc
+    // reinterpreting 1-channel input as planar image
+    // (size height is divided by plane number)
+    GMatDesc asPlanar(int planes) const
+    {
+        GAPI_Assert(planar == false);
+        GAPI_Assert(chan == 1);
+        GAPI_Assert(planes > 1);
+        GAPI_Assert(size.height % planes == 0);
+        GMatDesc desc(*this);
+        desc.size.height /=  planes;
+        desc.chan = planes;
+        return desc.asPlanar();
+    }
+
+    // Meta combinator: return a new GMatDesc with planar flag set to false
+    // (no size changes are performed, only channel interpretation is changed
+    // (planar -> interleaved)
+    GMatDesc asInterleaved() const
+    {
+        GAPI_Assert(planar == true);
+        GMatDesc desc(*this);
+        desc.planar = false;
+        return desc;
+    }
 };
 
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
@@ -137,8 +225,8 @@ GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 
 /** @} */
 
+// FIXME: WHY??? WHY it is under different namespace?
 namespace gapi { namespace own {
-    class Mat;
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own
 

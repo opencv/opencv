@@ -11,12 +11,20 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/batch_norm.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -29,8 +37,11 @@ class BatchNormLayerImpl CV_FINAL : public BatchNormLayer
 public:
     Mat weights_, bias_;
     UMat umat_weight, umat_bias;
+    mutable int dims;
+
 
     BatchNormLayerImpl(const LayerParams& params)
+        : dims(-1)
     {
         setParamsFrom(params);
         CV_Assert(blobs.size() >= 2);
@@ -142,6 +153,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        dims = inputs[0].size();
         if (!useGlobalStats && inputs[0][0] != 1)
             CV_Error(Error::StsNotImplemented, "Batch normalization in training mode with batch size > 1");
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
@@ -150,9 +162,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
+        return (backendId == DNN_BACKEND_OPENCV) ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide()) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && (preferableTarget == DNN_TARGET_CPU || dims == 4));
     }
 
 #ifdef HAVE_OPENCL
@@ -178,11 +191,12 @@ public:
         }
 
         UMat &inpBlob = inputs[0];
-        CV_Assert(inpBlob.dims == 2 || inpBlob.dims == 4);
         int groups = inpBlob.size[0];
         int channels = inpBlob.size[1];
-        int rows = inpBlob.dims > 2 ? inpBlob.size[2] : 1;
-        int cols = inpBlob.dims > 2 ? inpBlob.size[3] : 1;
+        int planeSize = 1;
+        for (size_t i = 2; i < inpBlob.dims; i++) {
+            planeSize *= inpBlob.size[i];
+        }
 
         String opts = (use_half) ? " -DDtype=half" : " -DDtype=float";
         for (size_t ii = 0; ii < outputs.size(); ii++)
@@ -196,7 +210,7 @@ public:
             }
             else
             {
-                MatShape s = shape(groups * channels, rows * cols);
+                MatShape s = shape(groups * channels, planeSize);
                 UMat src = inputs[ii].reshape(1, s.size(), &s[0]);
                 UMat dst = outputs[ii].reshape(1, s.size(), &s[0]);
                 int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
@@ -248,9 +262,10 @@ public:
         CV_Assert(inputs.size() == 1);
 
         Mat &inpBlob = inputs[0];
-        CV_Assert(inpBlob.dims == 2 || inpBlob.dims == 4);
-        int rows = inpBlob.dims > 2 ? inpBlob.size[2] : 1;
-        int cols = inpBlob.dims > 2 ? inpBlob.size[3] : 1;
+        int planeSize = 1;
+        for (size_t i = 2; i < inpBlob.dims; i++) {
+            planeSize *= inpBlob.size[i];
+        }
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
@@ -262,8 +277,8 @@ public:
                 {
                     float w = weights_.at<float>(n);
                     float b = bias_.at<float>(n);
-                    Mat inpBlobPlane(rows, cols, CV_32F, inpBlob.ptr<float>(num, n));
-                    Mat outBlobPlane(rows, cols, CV_32F, outBlob.ptr<float>(num, n));
+                    Mat inpBlobPlane(1, planeSize, CV_32F, inpBlob.ptr<float>(num, n));
+                    Mat outBlobPlane(1, planeSize, CV_32F, outBlob.ptr<float>(num, n));
                     inpBlobPlane.convertTo(outBlobPlane, CV_32F, w, b);
                 }
             }
@@ -299,6 +314,18 @@ public:
                 dstptr[i] = w * srcptr[i] + b;
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::BatchNormOp>(preferableTarget, std::move(context->stream), weights_, bias_);
+    }
+#endif
 
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
@@ -346,31 +373,30 @@ public:
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
         const size_t numChannels = weights_.total();
         addConstantData("weights", wrapToInfEngineBlob(weights_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
         addConstantData("biases", wrapToInfEngineBlob(bias_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "ScaleShift";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
-
-        const size_t numChannels = weights_.total();
-        ieLayer->_weights = wrapToInfEngineBlob(weights_, {numChannels}, InferenceEngine::Layout::C);
-        ieLayer->_biases = wrapToInfEngineBlob(bias_, {numChannels}, InferenceEngine::Layout::C);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
+        shape[1] = weights_.total();
+        auto weight = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), weights_.data);
+        auto bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), bias_.data);
+        auto scale_node = std::make_shared<ngraph::op::v1::Multiply>(ieInpNode, weight, ngraph::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(scale_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(scale_shift));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

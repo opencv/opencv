@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GISLANDMODEL_HPP
@@ -15,8 +15,8 @@
 #include <ade/typed_graph.hpp>
 #include <ade/passes/topological_sort.hpp>
 
-#include "opencv2/gapi/util/optional.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/util/optional.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 #include "compiler/gobjref.hpp"
 
@@ -96,6 +96,7 @@ protected:
 // * Is instantiated by the last step of the Islands fusion procedure;
 // * Is orchestrated by a GExecutor instance.
 //
+
 class GIslandExecutable
 {
 public:
@@ -115,13 +116,21 @@ public:
     virtual ~GIslandExecutable() = default;
 };
 
-
+// GIslandEmitter - a backend-specific thing which feeds data into
+// the pipeline. This one is just an interface, implementations are executor-defined.
+class GIslandEmitter
+{
+public:
+    // Obtain next value from the emitter
+    virtual bool pull(GRunArg &) = 0;
+    virtual ~GIslandEmitter() = default;
+};
 
 // Couldn't reuse NodeType here - FIXME unify (move meta to a shared place)
 struct NodeKind
 {
     static const char *name() { return "NodeKind"; }
-    enum { ISLAND, SLOT} k;
+    enum { ISLAND, SLOT, EMIT, SINK} k;
 };
 
 // FIXME: Rename to Island (as soon as current GModel::Island is renamed
@@ -144,6 +153,25 @@ struct IslandExec
     std::shared_ptr<GIslandExecutable> object;
 };
 
+struct Emitter
+{
+    static const char *name() { return "Emitter"; }
+    std::size_t proto_index;
+    std::shared_ptr<GIslandEmitter> object;
+};
+
+struct Sink
+{
+    static const char *name() { return "Sink"; }
+    std::size_t proto_index;
+};
+
+// This flag is set in graph's own metadata if compileIsland was successful
+struct IslandsCompiled
+{
+    static const char *name() { return "IslandsCompiled"; }
+};
+
 namespace GIslandModel
 {
     using Graph = ade::TypedGraph
@@ -151,6 +179,9 @@ namespace GIslandModel
         , FusedIsland
         , DataSlot
         , IslandExec
+        , Emitter
+        , Sink
+        , IslandsCompiled
         , ade::passes::TopologicalSortData
         >;
 
@@ -160,6 +191,9 @@ namespace GIslandModel
         , FusedIsland
         , DataSlot
         , IslandExec
+        , Emitter
+        , Sink
+        , IslandsCompiled
         , ade::passes::TopologicalSortData
         >;
 
@@ -169,6 +203,8 @@ namespace GIslandModel
     ade::NodeHandle mkSlotNode(Graph &g, const ade::NodeHandle &data_nh);
     ade::NodeHandle mkIslandNode(Graph &g, const gapi::GBackend &bknd, const ade::NodeHandle &op_nh, const ade::Graph &orig_g);
     ade::NodeHandle mkIslandNode(Graph &g, std::shared_ptr<GIsland>&& isl);
+    ade::NodeHandle mkEmitNode(Graph &g, std::size_t in_idx); // streaming-related
+    ade::NodeHandle mkSinkNode(Graph &g, std::size_t out_idx); // streaming-related
 
     // GIslandModel API
     void syncIslandTags(Graph &g, ade::Graph &orig_g);

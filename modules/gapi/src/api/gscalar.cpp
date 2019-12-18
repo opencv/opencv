@@ -7,9 +7,9 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/own/convert.hpp"
-#include "api/gapi_priv.hpp" // GOrigin
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/own/convert.hpp>
+#include "api/gorigin.hpp"
 
 // cv::GScalar public implementation ///////////////////////////////////////////
 cv::GScalar::GScalar()

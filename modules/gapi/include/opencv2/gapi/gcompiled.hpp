@@ -10,9 +10,9 @@
 
 #include <vector>
 
-#include "opencv2/gapi/opencv_includes.hpp"
-#include "opencv2/gapi/own/assert.hpp"
-#include "opencv2/gapi/garg.hpp"
+#include <opencv2/gapi/opencv_includes.hpp>
+#include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/gapi/garg.hpp>
 
 namespace cv {
 
@@ -60,6 +60,8 @@ namespace cv {
  * At the same time, two different GCompiled objects produced from the
  * single cv::GComputation are completely independent and can be used
  * concurrently.
+ *
+ * @sa GStreamingCompiled
  */
 class GAPI_EXPORTS GCompiled
 {

@@ -13,7 +13,7 @@ In this tutorial you will learn how to:
 Motivation
 ----------
 
-Why is it interesting to extend the SVM optimation problem in order to handle non-linearly separable
+Why is it interesting to extend the SVM optimization problem in order to handle non-linearly separable
 training data? Most of the applications in which SVMs are used in computer vision require a more
 powerful tool than a simple linear classifier. This stems from the fact that in these tasks __the
 training data can be rarely separated using an hyperplane__.
@@ -88,9 +88,6 @@ Source Code
 
 You may also find the source code in `samples/cpp/tutorial_code/ml/non_linear_svms` folder of the OpenCV source library or
 [download it from here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp).
-
-@note The following code has been implemented with OpenCV 3.0 classes and functions. An equivalent version of the code
-using OpenCV 2.4 can be found in [this page.](http://docs.opencv.org/2.4/doc/tutorials/ml/non_linear_svms/non_linear_svms.html#nonlinearsvms)
 
 @add_toggle_cpp
 -   **Downloadable code**: Click

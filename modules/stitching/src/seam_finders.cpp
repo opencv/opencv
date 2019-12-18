@@ -55,7 +55,7 @@ Ptr<SeamFinder> SeamFinder::createDefault(int type)
         return makePtr<VoronoiSeamFinder>();
     if (type == DP_SEAM)
         return makePtr<DpSeamFinder>();
-    CV_Error(Error::StsBadArg, "unsupported exposure compensation method");
+    CV_Error(Error::StsBadArg, "unsupported seam finder method");
 }
 
 

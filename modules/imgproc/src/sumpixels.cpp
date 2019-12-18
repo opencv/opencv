@@ -127,7 +127,7 @@ struct Integral_SIMD<uchar, int, double>
             {
                 v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
                 v_int32 el4l, el4h;
-#if CV_AVX2
+#if CV_AVX2 && CV_SIMD_WIDTH == 32
                 __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 4));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 8));
@@ -138,7 +138,7 @@ struct Integral_SIMD<uchar, int, double>
 #else
                 el8 += v_rotate_left<1>(el8);
                 el8 += v_rotate_left<2>(el8);
-#if CV_SIMD_WIDTH == 32
+#if CV_SIMD_WIDTH >= 32
                 el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
                 el8 += v_rotate_left<8>(el8);
@@ -147,7 +147,8 @@ struct Integral_SIMD<uchar, int, double>
                 v_expand(el8, el4l, el4h);
                 el4l += prev;
                 el4h += el4l;
-                prev = vx_setall_s32(v_rotate_right<v_int32::nlanes - 1>(el4h).get0());
+
+                prev = v_broadcast_element<v_int32::nlanes - 1>(el4h);
 #endif
                 v_store(sum_row + j                  , el4l + vx_load(prev_sum_row + j                  ));
                 v_store(sum_row + j + v_int32::nlanes, el4h + vx_load(prev_sum_row + j + v_int32::nlanes));
@@ -194,7 +195,7 @@ struct Integral_SIMD<uchar, float, double>
             {
                 v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
                 v_float32 el4l, el4h;
-#if CV_AVX2
+#if CV_AVX2 && CV_SIMD_WIDTH == 32
                 __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 4));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 8));
@@ -205,7 +206,7 @@ struct Integral_SIMD<uchar, float, double>
 #else
                 el8 += v_rotate_left<1>(el8);
                 el8 += v_rotate_left<2>(el8);
-#if CV_SIMD_WIDTH == 32
+#if CV_SIMD_WIDTH >= 32
                 el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
                 el8 += v_rotate_left<8>(el8);
@@ -215,7 +216,8 @@ struct Integral_SIMD<uchar, float, double>
                 v_expand(el8, el4li, el4hi);
                 el4l = v_cvt_f32(el4li) + prev;
                 el4h = v_cvt_f32(el4hi) + el4l;
-                prev = vx_setall_f32(v_rotate_right<v_float32::nlanes - 1>(el4h).get0());
+
+                prev = v_broadcast_element<v_float32::nlanes - 1>(el4h);
 #endif
                 v_store(sum_row + j                    , el4l + vx_load(prev_sum_row + j                    ));
                 v_store(sum_row + j + v_float32::nlanes, el4h + vx_load(prev_sum_row + j + v_float32::nlanes));

@@ -16,9 +16,15 @@ ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APP
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
-else()
-  ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 endif()
+
+ocv_option(OPENCV_DNN_CUDA "Build with CUDA support" HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+
+if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+  add_definitions(-DCV_CUDA4DNN=1)
+endif()
+
+ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
@@ -31,7 +37,9 @@ else()
                                        -Wunused-parameter -Wsign-compare
   )
 endif()
-
+if(HAVE_CUDA)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+endif()
 if(NOT HAVE_CXX11)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-undef)  # LANG_CXX11 from protobuf files
 endif()
@@ -56,6 +64,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     /wd4456 /wd4510 /wd4610 /wd4800
     /wd4701 /wd4703                    # potentially uninitialized local/pointer variable 'value' used
     /wd4505                            # unreferenced local function has been removed
+    /wd4458                            # declaration of 'x' hides class member. GCC still works, MSVC bug is here: https://developercommunity.visualstudio.com/content/problem/219311/c-c4458-declaration-hides-class-member-warning-iss.html
     -wd858 -wd2196
     -Winvalid-offsetof                 # Apple Clang (attr_value.pb.cc)
 )
@@ -72,11 +81,27 @@ endif()
 
 set(include_dirs ${fw_inc})
 set(sources_options "")
+
 set(libs libprotobuf ${LAPACK_LIBRARIES})
+
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   list(APPEND include_dirs ${OPENCL_INCLUDE_DIRS})
 else()
   set(sources_options EXCLUDE_OPENCL)
+endif()
+
+if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+  list(APPEND include_dirs ${CUDA_TOOLKIT_INCLUDE} ${CUDNN_INCLUDE_DIRS})
+  set(CC_LIST ${CUDA_ARCH_BIN})
+  separate_arguments(CC_LIST)
+  foreach(cc ${CC_LIST})
+    if(cc VERSION_LESS 5.3)
+      message(FATAL_ERROR "CUDA backend for DNN module requires CC 5.3 or higher. Please remove unsupported architectures from CUDA_ARCH_BIN option.")
+    endif()
+  endforeach()
+  unset(CC_LIST)
+else()
+  set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
 
 ocv_module_include_directories(${include_dirs})
@@ -85,10 +110,20 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-inconsistent-missing-override")  # Clang
 endif()
+
+set(dnn_runtime_libs "")
+if(INF_ENGINE_TARGET)
+  list(APPEND dnn_runtime_libs ${INF_ENGINE_TARGET})
+endif()
+if(HAVE_NGRAPH)
+  add_definitions(-DHAVE_DNN_NGRAPH)
+  list(APPEND dnn_runtime_libs ngraph::ngraph)
+endif()
+
 ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
-ocv_create_module(${libs} ${INF_ENGINE_TARGET})
+ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
-ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
+ocv_add_accuracy_tests(${dnn_runtime_libs})
 
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")

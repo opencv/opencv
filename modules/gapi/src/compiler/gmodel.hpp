@@ -22,11 +22,10 @@
 // This part of the system is API-unaware by its design.
 //
 
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gkernel.hpp"
-#include "api/gapi_priv.hpp"   // GShape
-#include "api/gproto_priv.hpp" // origin_of
-#include "backends/common/gbackend.hpp"
+#include <opencv2/gapi/util/any.hpp>
+
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gislandmodel.hpp"
@@ -79,7 +78,8 @@ struct Data
         INTERNAL,   // data object is not listed in GComputation protocol
         INPUT,      // data object is listed in GComputation protocol as Input
         OUTPUT,     // data object is listed in GComputation protocol as Output
-        CONST,      // data object is constant
+        CONST_VAL,  // data object is constant.
+                    // Note: CONST is sometimes defined in Win sys headers
     };
     Storage storage;
 };
@@ -109,6 +109,17 @@ struct Protocol
     std::vector<ade::NodeHandle> out_nhs;
 };
 
+// The original metadata the graph has been compiled for.
+// - For regular GCompiled, this information always present and
+//   is NOT updated on reshape()
+// - For GStreamingCompiled, this information may be missing.
+//   It means that compileStreaming() was called without meta.
+struct OriginalInputMeta
+{
+    static const char *name() { return "OriginalInputMeta"; }
+    GMetaArgs inputMeta;
+};
+
 struct OutputMeta
 {
     static const char *name() { return "OutputMeta"; }
@@ -119,16 +130,6 @@ struct Journal
 {
     static const char *name() { return "Journal"; }
     std::vector<std::string> messages;
-};
-
-// The mapping between user-side GMat/GScalar/... objects
-// and its  appropriate nodes. Can be stored in graph optionally
-// (NOT used by any compiler or backends, introspection purposes
-// only)
-struct Layout
-{
-    static const char *name() { return "Layout"; }
-    GOriginMap<ade::NodeHandle> object_nodes;
 };
 
 // Unique data object counter (per-type)
@@ -155,6 +156,43 @@ struct ActiveBackends
     std::unordered_set<cv::gapi::GBackend> backends;
 };
 
+// This is a graph-global flag indicating this graph is compiled for
+// the streaming case.  Streaming-neutral passes (i.e. nearly all of
+// them) can ignore this flag safely.
+//
+// FIXME: Probably a better design can be suggested.
+struct Streaming
+{
+    static const char *name() { return "StreamingFlag"; }
+};
+
+// Backend-specific inference parameters for a neural network.
+// Since these parameters are set on compilation stage (not
+// on a construction stage), these parameters are bound lately
+// to the operation node.
+// NB: These parameters are not included into GModel by default
+// since it is not used regularly by all parties.
+struct NetworkParams
+{
+    static const char *name() { return "NetworkParams"; }
+    cv::util::any opaque;
+};
+
+// This is a custom metadata handling operator.
+// Sometimes outMeta() can't be bound to input parameters only
+// so several backends (today -- mainly inference) may find this useful.
+// If provided, the meta inference pass uses this function instead of
+// OP.k.outMeta.
+struct CustomMetaFunction
+{
+    static const char *name() { return "CustomMetaFunction"; }
+    using CM = std::function< cv::GMetaArgs( const ade::Graph      &,
+                                             const ade::NodeHandle &,
+                                             const cv::GMetaArgs   &,
+                                             const cv::GArgs       &)>;
+    CM customOutMeta;
+};
+
 namespace GModel
 {
     using Graph = ade::TypedGraph
@@ -166,13 +204,15 @@ namespace GModel
         , ConstValue
         , Island
         , Protocol
+        , OriginalInputMeta
         , OutputMeta
         , Journal
         , ade::passes::TopologicalSortData
         , DataObjectCounter
-        , Layout
         , IslandModel
         , ActiveBackends
+        , CustomMetaFunction
+        , Streaming
         >;
 
     // FIXME: How to define it based on GModel???
@@ -185,63 +225,55 @@ namespace GModel
         , ConstValue
         , Island
         , Protocol
+        , OriginalInputMeta
         , OutputMeta
         , Journal
         , ade::passes::TopologicalSortData
         , DataObjectCounter
-        , Layout
         , IslandModel
         , ActiveBackends
+        , CustomMetaFunction
+        , Streaming
         >;
+
+    // FIXME:
+    // Export a single class, not a bunch of functions inside a namespace
 
     // User should initialize graph before using it
     // GAPI_EXPORTS for tests
     GAPI_EXPORTS void init (Graph& g);
 
-    ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
-
-    // FIXME: change it to take GMeta instead of GShape?
-    ade::NodeHandle mkDataNode(Graph &g, const GOrigin& origin);
+    GAPI_EXPORTS ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
+    // Isn't used by the framework or default backends, required for external backend development
+    GAPI_EXPORTS ade::NodeHandle mkDataNode(Graph &g, const GShape shape);
 
     // Adds a string message to a node. Any node can be subject of log, messages then
     // appear in the dumped .dot file.x
-    void log(Graph &g, ade::NodeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
-    void log(Graph &g, ade::EdgeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
+    GAPI_EXPORTS void log(Graph &g, ade::NodeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
+    GAPI_EXPORTS void log(Graph &g, ade::EdgeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
+    // Clears logged messages of a node.
+    GAPI_EXPORTS void log_clear(Graph &g, ade::NodeHandle node);
 
-    void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
-    void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
+    GAPI_EXPORTS void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
+    GAPI_EXPORTS void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
 
-    // FIXME: Align this GModel API properly, it is a mess now
-    namespace detail
-    {
-        // FIXME: GAPI_EXPORTS only because of tests!!!
-        GAPI_EXPORTS ade::NodeHandle dataNodeOf(const ConstGraph& g, const GOrigin &origin);
-    }
-    template<typename T> inline ade::NodeHandle dataNodeOf(const ConstGraph& g, T &&t)
-    {
-        return detail::dataNodeOf(g, cv::gimpl::proto::origin_of(GProtoArg{t}));
-    }
+    GAPI_EXPORTS void redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
+    GAPI_EXPORTS void redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
 
-    void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
-    void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
-
-    void redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
-    void redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
-
-    std::vector<ade::NodeHandle> orderedInputs (Graph &g, ade::NodeHandle nh);
-    std::vector<ade::NodeHandle> orderedOutputs(Graph &g, ade::NodeHandle nh);
+    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedInputs (const ConstGraph &g, ade::NodeHandle nh);
+    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedOutputs(const ConstGraph &g, ade::NodeHandle nh);
 
     // Returns input meta array for given op node
     // Array is sparse, as metadata for non-gapi input objects is empty
     // TODO:
     // Cover with tests!!
-    GMetaArgs collectInputMeta(GModel::ConstGraph cg, ade::NodeHandle node);
-    GMetaArgs collectOutputMeta(GModel::ConstGraph cg, ade::NodeHandle node);
+    GAPI_EXPORTS GMetaArgs collectInputMeta(const GModel::ConstGraph &cg, ade::NodeHandle node);
+    GAPI_EXPORTS GMetaArgs collectOutputMeta(const GModel::ConstGraph &cg, ade::NodeHandle node);
 
-    ade::EdgeHandle getInEdgeByPort(const GModel::ConstGraph& cg, const ade::NodeHandle& nh, std::size_t in_port);
+    GAPI_EXPORTS ade::EdgeHandle getInEdgeByPort(const GModel::ConstGraph& cg, const ade::NodeHandle& nh, std::size_t in_port);
 
     // Returns true if the given backend participates in the execution
-    bool isActive(const GModel::Graph &cg, const cv::gapi::GBackend &backend);
+    GAPI_EXPORTS bool isActive(const GModel::Graph &cg, const cv::gapi::GBackend &backend);
 } // namespace GModel
 
 

@@ -9,12 +9,12 @@
 
 #include <iomanip>   // hex, dec (debug)
 
-#include "opencv2/gapi/own/convert.hpp"
-#include "opencv2/gapi/own/types.hpp"
+#include <opencv2/gapi/own/convert.hpp>
+#include <opencv2/gapi/own/types.hpp>
 
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
 #include "backends/fluid/gfluidbuffer_priv.hpp"
-#include "opencv2/gapi/opencv_includes.hpp"
+#include <opencv2/gapi/opencv_includes.hpp>
 
 #include "backends/fluid/gfluidutils.hpp" // saturate
 
@@ -347,12 +347,20 @@ std::unique_ptr<fluid::BufferStorage> createStorage(int capacity, int desc_width
         std::unique_ptr<fluid::BufferStorageWithBorder> storage(new BufferStorageWithBorder);
         storage->init(type, border_size, border.value());
         storage->create(capacity, desc_width, type);
+#if defined __GNUC__ && __GNUC__ < 5
         return std::move(storage);
+#else
+        return storage;
+#endif
     }
 
     std::unique_ptr<BufferStorageWithoutBorder> storage(new BufferStorageWithoutBorder);
     storage->create(capacity, desc_width, type);
+#if defined __GNUC__ && __GNUC__ < 5
     return std::move(storage);
+#else
+    return storage;
+#endif
 }
 
 std::unique_ptr<BufferStorage> createStorage(const cv::gapi::own::Mat& data, cv::gapi::own::Rect roi);
@@ -360,7 +368,11 @@ std::unique_ptr<BufferStorage> createStorage(const cv::gapi::own::Mat& data, cv:
 {
     std::unique_ptr<BufferStorageWithoutBorder> storage(new BufferStorageWithoutBorder);
     storage->attach(data, roi);
+#if defined __GNUC__ && __GNUC__ < 5
     return std::move(storage);
+#else
+    return storage;
+#endif
 }
 } // namespace
 } // namespace fluid

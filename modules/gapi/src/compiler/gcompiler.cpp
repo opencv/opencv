@@ -21,26 +21,30 @@
 #include "api/gnode_priv.hpp"   // FIXME: why it is here?
 #include "api/gproto_priv.hpp"  // FIXME: why it is here?
 #include "api/gcall_priv.hpp"   // FIXME: why it is here?
-#include "api/gapi_priv.hpp"    // FIXME: why it is here?
+
 #include "api/gbackend_priv.hpp" // Backend basic API (newInstance, etc)
 
 #include "compiler/gmodel.hpp"
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gcompiler.hpp"
 #include "compiler/gcompiled_priv.hpp"
+#include "compiler/gstreaming_priv.hpp"
 #include "compiler/passes/passes.hpp"
+#include "compiler/passes/pattern_matching.hpp"
 
 #include "executor/gexecutor.hpp"
+#include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
-#include "opencv2/gapi/cpu/core.hpp"    // Also directly refer to Core
-#include "opencv2/gapi/cpu/imgproc.hpp" // ...and Imgproc kernel implementations
+#include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core
+#include <opencv2/gapi/cpu/imgproc.hpp> // ...and Imgproc kernel implementations
+#include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
-#include "opencv2/gapi/gcompoundkernel.hpp" // compound::backend()
+#include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
 
 #include "logger.hpp"
 
@@ -48,16 +52,37 @@ namespace
 {
     cv::gapi::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
     {
+        auto withAuxKernels = [](const cv::gapi::GKernelPackage& pkg) {
+            cv::gapi::GKernelPackage aux_pkg;
+            for (const auto &b : pkg.backends()) {
+                aux_pkg = combine(aux_pkg, b.priv().auxiliaryKernels());
+            }
+            return combine(pkg, aux_pkg);
+        };
+
+        auto has_use_only = cv::gimpl::getCompileArg<cv::gapi::use_only>(args);
+        if (has_use_only)
+            return withAuxKernels(has_use_only.value().pkg);
+
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
-            combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels(),
-                    cv::unite_policy::KEEP);
+            // FIXME add N-arg version combine
+            combine(combine(cv::gapi::core::cpu::kernels(),
+                    cv::gapi::imgproc::cpu::kernels()),
+                    cv::gapi::render::ocv::kernels());
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
+
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
-        return combine(ocv_pkg, user_pkg.value_or(cv::gapi::GKernelPackage{}), cv::unite_policy::REPLACE);
+        auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
+        return combine(ocv_pkg, user_pkg_with_aux);
+    }
+
+    cv::gapi::GNetPackage getNetworkPackage(cv::GCompileArgs &args)
+    {
+        return cv::gimpl::getCompileArg<cv::gapi::GNetPackage>(args)
+            .value_or(cv::gapi::GNetPackage{});
     }
 
     cv::util::optional<std::string> getGraphDumpDirectory(cv::GCompileArgs& args)
@@ -75,6 +100,94 @@ namespace
             return cv::util::make_optional(dump_info.value().m_dump_path);
         }
     }
+
+    template<typename C>
+    cv::gapi::GKernelPackage auxKernelsFrom(const C& c) {
+        cv::gapi::GKernelPackage result;
+        for (const auto &b : c) {
+            result = cv::gapi::combine(result, b.priv().auxiliaryKernels());
+        }
+        return result;
+    }
+
+    // Creates ADE graph from input/output proto args
+    std::unique_ptr<ade::Graph> makeGraph(const cv::GProtoArgs &ins, const cv::GProtoArgs &outs) {
+        std::unique_ptr<ade::Graph> pG(new ade::Graph);
+        ade::Graph& g = *pG;
+
+        cv::gimpl::GModel::Graph gm(g);
+        cv::gimpl::GModel::init(gm);
+        cv::gimpl::GModelBuilder builder(g);
+        auto proto_slots = builder.put(ins, outs);
+
+        // Store Computation's protocol in metadata
+        cv::gimpl::Protocol p;
+        std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
+        gm.metadata().set(p);
+
+        return pG;
+    }
+
+    using adeGraphs = std::vector<std::unique_ptr<ade::Graph>>;
+
+    // Creates ADE graphs (patterns and substitutes) from pkg's transformations
+    void makeTransformationGraphs(const cv::gapi::GKernelPackage& pkg,
+                                  adeGraphs& patterns,
+                                  adeGraphs& substitutes) {
+        const auto& transforms = pkg.get_transformations();
+        const auto size = transforms.size();
+        if (0u == size) return;
+
+        // pre-generate all required graphs
+        patterns.resize(size);
+        substitutes.resize(size);
+        for (auto it : ade::util::zip(ade::util::toRange(transforms),
+                                      ade::util::toRange(patterns),
+                                      ade::util::toRange(substitutes))) {
+            const auto& t = std::get<0>(it);
+            auto& p = std::get<1>(it);
+            auto& s = std::get<2>(it);
+
+            auto pattern_comp = t.pattern();
+            p = makeGraph(pattern_comp.priv().m_ins, pattern_comp.priv().m_outs);
+
+            auto substitute_comp = t.substitute();
+            s = makeGraph(substitute_comp.priv().m_ins, substitute_comp.priv().m_outs);
+        }
+    }
+
+    void checkTransformations(const cv::gapi::GKernelPackage& pkg,
+                              const adeGraphs& patterns,
+                              const adeGraphs& substitutes) {
+        const auto& transforms = pkg.get_transformations();
+        const auto size = transforms.size();
+        if (0u == size) return;
+
+        GAPI_Assert(size == patterns.size());
+        GAPI_Assert(size == substitutes.size());
+
+        const auto empty = [] (const cv::gimpl::SubgraphMatch& m) {
+            return m.inputDataNodes.empty() && m.startOpNodes.empty()
+                && m.finishOpNodes.empty() && m.outputDataNodes.empty()
+                && m.inputTestDataNodes.empty() && m.outputTestDataNodes.empty();
+        };
+
+        // **FIXME**: verify other types of endless loops. now, only checking if pattern exists in
+        //            substitute within __the same__ transformation
+        for (size_t i = 0; i < size; ++i) {
+            const auto& p = patterns[i];
+            const auto& s = substitutes[i];
+
+            auto matchInSubstitute = cv::gimpl::findMatches(*p, *s);
+            if (!empty(matchInSubstitute)) {
+                std::stringstream ss;
+                ss << "Error: (in transformation with description: '"
+                    << transforms[i].description
+                    << "') pattern is detected inside substitute";
+                throw std::runtime_error(ss.str());
+            }
+        }
+    }
 } // anonymous namespace
 
 
@@ -86,14 +199,45 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     : m_c(c), m_metas(std::move(metas)), m_args(std::move(args))
 {
     using namespace std::placeholders;
-    m_all_kernels       = getKernelPackage(m_args);
-    auto lookup_order   = getCompileArg<gapi::GLookupOrder>(m_args).value_or(gapi::GLookupOrder());
-    auto dump_path      = getGraphDumpDirectory(m_args);
+
+    auto kernels_to_use  = getKernelPackage(m_args);
+    auto networks_to_use = getNetworkPackage(m_args);
+    std::unordered_set<cv::gapi::GBackend> all_backends;
+    const auto take = [&](std::vector<cv::gapi::GBackend> &&v) {
+        all_backends.insert(v.begin(), v.end());
+    };
+    take(kernels_to_use.backends());
+    take(networks_to_use.backends());
+
+    m_all_kernels = cv::gapi::combine(kernels_to_use,
+                                      auxKernelsFrom(all_backends));
+    // NB: The expectation in the line above is that
+    // NN backends (present here via network package) always add their
+    // inference kernels via auxiliary...()
+
+    // sanity check transformations
+    {
+        adeGraphs patterns, substitutes;
+        // FIXME: returning vectors of unique_ptrs from makeTransformationGraphs results in
+        //        compile error (at least) on GCC 9 with usage of copy-ctor of std::unique_ptr, so
+        //        using initialization by lvalue reference instead
+        makeTransformationGraphs(m_all_kernels, patterns, substitutes);
+        checkTransformations(m_all_kernels, patterns, substitutes);
+
+        // NB: saving generated patterns to m_all_patterns to be used later in passes
+        m_all_patterns = std::move(patterns);
+    }
+
+    auto dump_path       = getGraphDumpDirectory(m_args);
 
     m_e.addPassStage("init");
     m_e.addPass("init", "check_cycles",  ade::passes::CheckCycles());
-    m_e.addPass("init", "expand_kernels",  std::bind(passes::expandKernels, _1,
-                                                     m_all_kernels)); // NB: package is copied
+    m_e.addPass("init", "apply_transformations",
+                std::bind(passes::applyTransformations, _1, std::cref(m_all_kernels),
+                    std::cref(m_all_patterns)));  // Note: and re-using patterns here
+    m_e.addPass("init", "expand_kernels",
+                std::bind(passes::expandKernels, _1,
+                          m_all_kernels)); // NB: package is copied
     m_e.addPass("init", "topo_sort",     ade::passes::TopologicalSort());
     m_e.addPass("init", "init_islands",  passes::initIslands);
     m_e.addPass("init", "check_islands", passes::checkIslands);
@@ -106,18 +250,25 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     m_all_kernels.remove(cv::gapi::compound::backend());
 
     m_e.addPassStage("kernels");
-    m_e.addPass("kernels", "resolve_kernels", std::bind(passes::resolveKernels, _1,
-                                                     std::ref(m_all_kernels), // NB: and not copied here
-                                                     lookup_order));
+    m_e.addPass("kernels", "bind_net_params",
+                std::bind(passes::bindNetParams, _1,
+                          networks_to_use));
+    m_e.addPass("kernels", "resolve_kernels",
+                std::bind(passes::resolveKernels, _1,
+                          std::ref(m_all_kernels)));  // NB: and not copied here
+                                                      // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
+    //Input metas may be empty when a graph is compiled for streaming
     m_e.addPassStage("meta");
-    m_e.addPass("meta", "initialize",   std::bind(passes::initMeta, _1, std::ref(m_metas)));
-    m_e.addPass("meta", "propagate",    std::bind(passes::inferMeta, _1, false));
-    m_e.addPass("meta", "finalize",     passes::storeResultingMeta);
-    // moved to another stage, FIXME: two dumps?
-    //    m_e.addPass("meta", "dump_dot",     passes::dumpDotStdout);
-
+    if (!m_metas.empty())
+    {
+        m_e.addPass("meta", "initialize",   std::bind(passes::initMeta, _1, std::ref(m_metas)));
+        m_e.addPass("meta", "propagate",    std::bind(passes::inferMeta, _1, false));
+        m_e.addPass("meta", "finalize",     passes::storeResultingMeta);
+        // moved to another stage, FIXME: two dumps?
+        //    m_e.addPass("meta", "dump_dot",     passes::dumpDotStdout);
+    }
     // Special stage for backend-specific transformations
     // FIXME: document passes hierarchy and order for backend developers
     m_e.addPassStage("transform");
@@ -126,18 +277,34 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     m_e.addPass("exec", "fuse_islands",     passes::fuseIslands);
     m_e.addPass("exec", "sync_islands",     passes::syncIslandTags);
 
+    // FIXME: Since a set of passes is shared between
+    // GCompiled/GStreamingCompiled, this pass is added here unconditionally
+    // (even if it is not actually required to produce a GCompiled).
+    // FIXME: add a better way to do that!
+    m_e.addPass("exec", "add_streaming",    passes::addStreaming);
+
+    // Note: Must be called after addStreaming as addStreaming pass
+    // can possibly add new nodes to the IslandModel
+    m_e.addPass("exec", "sort_islands",     passes::topoSortIslands);
+
     if (dump_path.has_value())
     {
         m_e.addPass("exec", "dump_dot", std::bind(passes::dumpGraph, _1,
                                                   dump_path.value()));
     }
 
-    // Process backends at the last moment (after all G-API passes are added).
+    // FIXME: This should be called for "ActiveBackends" only (see metadata).
+    // However, ActiveBackends are known only after passes are actually executed.
+    // At these stage, they are not executed yet.
     ade::ExecutionEngineSetupContext ectx(m_e);
     auto backends = m_all_kernels.backends();
     for (auto &b : backends)
     {
         b.priv().addBackendPasses(ectx);
+        if (!m_metas.empty())
+        {
+            b.priv().addMetaSensitiveBackendPasses(ectx);
+        }
     }
 }
 
@@ -156,6 +323,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
         {
         // FIXME: Auto-generate methods like this from traits:
         case GProtoArg::index_of<cv::GMat>():
+        case GProtoArg::index_of<cv::GMatP>():
             return util::holds_alternative<cv::GMatDesc>(meta);
 
         case GProtoArg::index_of<cv::GScalar>():
@@ -204,25 +372,18 @@ void cv::gimpl::GCompiler::validateOutProtoArgs()
 
 cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
 {
-    validateInputMeta();
+    if (!m_metas.empty())
+    {
+        // Metadata may be empty if we're compiling our graph for streaming
+        validateInputMeta();
+    }
     validateOutProtoArgs();
-
-    // Generate ADE graph from expression-based computation
-    std::unique_ptr<ade::Graph> pG(new ade::Graph);
-    ade::Graph& g = *pG;
-
-    GModel::Graph gm(g);
-    cv::gimpl::GModel::init(gm);
-    cv::gimpl::GModelBuilder builder(g);
-    auto proto_slots = builder.put(m_c.priv().m_ins, m_c.priv().m_outs);
-    GAPI_LOG_INFO(NULL, "Generated graph: " << g.nodes().size() << " nodes" << std::endl);
-
-    // Store Computation's protocol in metadata
-    Protocol p;
-    std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
-    gm.metadata().set(p);
-
-    return pG;
+    auto g = makeGraph(m_c.priv().m_ins, m_c.priv().m_outs);
+    if (!m_metas.empty())
+    {
+        GModel::Graph(*g).metadata().set(OriginalInputMeta{m_metas});
+    }
+    return g;
 }
 
 void cv::gimpl::GCompiler::runPasses(ade::Graph &g)
@@ -233,22 +394,22 @@ void cv::gimpl::GCompiler::runPasses(ade::Graph &g)
 
 void cv::gimpl::GCompiler::compileIslands(ade::Graph &g)
 {
+    compileIslands(g, m_args);
+}
+
+void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, const cv::GCompileArgs &args)
+{
     GModel::Graph gm(g);
     std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
     GIslandModel::Graph gim(*gptr);
 
-    // Run topological sort on GIslandModel first
-    auto pass_ctx = ade::passes::PassContext{*gptr};
-    ade::passes::TopologicalSort{}(pass_ctx);
-
-    // Now compile islands
-    GIslandModel::compileIslands(gim, g, m_args);
+    GIslandModel::compileIslands(gim, g, args);
 }
 
 cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
 {
     // This is the final compilation step. Here:
-    // - An instance of GExecutor is created. Depening on the platform,
+    // - An instance of GExecutor is created. Depending on the platform,
     //   build configuration, etc, a GExecutor may be:
     //   - a naive single-thread graph interpreter;
     //   - a std::thread-based thing
@@ -274,10 +435,74 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     return compiled;
 }
 
+cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
+{
+    GStreamingCompiled compiled;
+    GMetaArgs outMetas;
+
+    // FIXME: the whole below construct is ugly, need to revise
+    // how G*Compiled learns about its meta.
+    if (!m_metas.empty())
+    {
+        outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
+    }
+
+    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg)));
+    if (!m_metas.empty() && !outMetas.empty())
+    {
+        compiled.priv().setup(m_metas, outMetas, std::move(pE));
+    }
+    else if (m_metas.empty() && outMetas.empty())
+    {
+        // Otherwise, set it up with executor object only
+        compiled.priv().setup(std::move(pE));
+    }
+    else GAPI_Assert(false && "Impossible happened -- please report a bug");
+    return compiled;
+}
+
 cv::GCompiled cv::gimpl::GCompiler::compile()
 {
     std::unique_ptr<ade::Graph> pG = generateGraph();
     runPasses(*pG);
     compileIslands(*pG);
     return produceCompiled(std::move(pG));
+}
+
+cv::GStreamingCompiled cv::gimpl::GCompiler::compileStreaming()
+{
+    // FIXME: self-note to DM: now keep these compile()/compileStreaming() in sync!
+    std::unique_ptr<ade::Graph> pG = generateGraph();
+    GModel::Graph(*pG).metadata().set(Streaming{});
+    runPasses(*pG);
+    if (!m_metas.empty())
+    {
+        // If the metadata has been passed, compile our islands!
+        compileIslands(*pG);
+    }
+    return produceStreamingCompiled(std::move(pG));
+}
+
+void cv::gimpl::GCompiler::runMetaPasses(ade::Graph &g, const cv::GMetaArgs &metas)
+{
+    auto pass_ctx = ade::passes::PassContext{g};
+    cv::gimpl::passes::initMeta(pass_ctx, metas);
+    cv::gimpl::passes::inferMeta(pass_ctx, true);
+    cv::gimpl::passes::storeResultingMeta(pass_ctx);
+
+    // Also run meta-sensitive backend-specific passes, if there's any.
+    // FIXME: This may be hazardous if our backend are not very robust
+    // in their passes -- how can we guarantee correct functioning in the
+    // future?
+    ade::ExecutionEngine engine;
+    engine.addPassStage("exec"); // FIXME: Need a better decision on how we replicate
+                                 // our main compiler stages here.
+    ade::ExecutionEngineSetupContext ectx(engine);
+
+    // NB: &&b or &b doesn't work here since "backends" is a set. Nevermind
+    for (auto b : GModel::Graph(g).metadata().get<ActiveBackends>().backends)
+    {
+        b.priv().addMetaSensitiveBackendPasses(ectx);
+    }
+    engine.runPasses(g);
 }

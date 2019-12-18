@@ -1,3 +1,7 @@
+if(COMMAND ocv_cmake_dump_vars)  # include guard
+  return()
+endif()
+
 include(CMakeParseArguments)
 
 # Debugging function
@@ -12,7 +16,8 @@ function(ocv_cmake_dump_vars)
     string(TOLOWER "${__variableName}" __variableName_lower)
     if((__variableName MATCHES "${regex}" OR __variableName_lower MATCHES "${regex_lower}")
         AND NOT __variableName_lower MATCHES "^__")
-      set(__VARS "${__VARS}${__variableName}=${${__variableName}}\n")
+      get_property(__value VARIABLE PROPERTY "${__variableName}")
+      set(__VARS "${__VARS}${__variableName}=${__value}\n")
     endif()
   endforeach()
   if(DUMP_TOFILE)
@@ -93,6 +98,30 @@ macro(ocv_update VAR)
   else()
     #ocv_debug_message("Preserve old value for ${VAR}: ${${VAR}}")
   endif()
+endmacro()
+
+function(_ocv_access_removed_variable VAR ACCESS)
+  if(ACCESS STREQUAL "MODIFIED_ACCESS")
+    set(OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR} 1 PARENT_SCOPE)
+    return()
+  endif()
+  if(ACCESS MATCHES "UNKNOWN_.*"
+      AND NOT OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE
+      AND NOT OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR}
+  )
+    message(WARNING "OpenCV: Variable has been removed from CMake scripts: ${VAR}")
+    set(OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR} 1 PARENT_SCOPE)  # suppress similar messages
+  endif()
+endfunction()
+macro(ocv_declare_removed_variable VAR)
+  if(NOT DEFINED ${VAR})  # don't hit external variables
+    variable_watch(${VAR} _ocv_access_removed_variable)
+  endif()
+endmacro()
+macro(ocv_declare_removed_variables)
+  foreach(_var ${ARGN})
+    ocv_declare_removed_variable(${_var})
+  endforeach()
 endmacro()
 
 # Search packages for the host system instead of packages for the target system
@@ -283,9 +312,22 @@ function(ocv_append_target_property target prop)
   endif()
 endfunction()
 
+if(DEFINED OPENCV_DEPENDANT_TARGETS_LIST)
+  foreach(v ${OPENCV_DEPENDANT_TARGETS_LIST})
+    unset(${v} CACHE)
+  endforeach()
+  unset(OPENCV_DEPENDANT_TARGETS_LIST CACHE)
+endif()
+
 function(ocv_append_dependant_targets target)
   #ocv_debug_message("ocv_append_dependant_targets(${target} ${ARGN})")
   _ocv_fix_target(target)
+  list(FIND OPENCV_DEPENDANT_TARGETS_LIST "OPENCV_DEPENDANT_TARGETS_${target}" __id)
+  if(__id EQUAL -1)
+    list(APPEND OPENCV_DEPENDANT_TARGETS_LIST "OPENCV_DEPENDANT_TARGETS_${target}")
+    list(SORT OPENCV_DEPENDANT_TARGETS_LIST)
+    set(OPENCV_DEPENDANT_TARGETS_LIST "${OPENCV_DEPENDANT_TARGETS_LIST}" CACHE INTERNAL "")
+  endif()
   set(OPENCV_DEPENDANT_TARGETS_${target} "${OPENCV_DEPENDANT_TARGETS_${target}};${ARGN}" CACHE INTERNAL "" FORCE)
 endfunction()
 
@@ -359,6 +401,7 @@ macro(ocv_clear_vars)
 endmacro()
 
 set(OCV_COMPILER_FAIL_REGEX
+    "argument '.*' is not valid"                # GCC 9+
     "command line option .* is valid for .* but not for C\\+\\+" # GNU
     "command line option .* is valid for .* but not for C" # GNU
     "unrecognized .*option"                     # GNU
@@ -410,12 +453,34 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
       else()
         set(__msg "")
       endif()
+      if(CMAKE_REQUIRED_LIBRARIES)
+        set(__link_libs LINK_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+      else()
+        set(__link_libs)
+      endif()
+      set(__cmake_flags "")
+      if(CMAKE_EXE_LINKER_FLAGS)  # CMP0056 do this on new CMake
+        list(APPEND __cmake_flags "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}")
+      endif()
+
+      # CMP0067 do this on new CMake
+      if(DEFINED CMAKE_CXX_STANDARD)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}")
+      endif()
+      if(DEFINED CMAKE_CXX_STANDARD_REQUIRED)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_STANDARD_REQUIRED=${CMAKE_CXX_STANDARD_REQUIRED}")
+      endif()
+      if(DEFINED CMAKE_CXX_EXTENSIONS)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_EXTENSIONS=${CMAKE_CXX_EXTENSIONS}")
+      endif()
+
       MESSAGE(STATUS "Performing Test ${RESULT}${__msg}")
       TRY_COMPILE(${RESULT}
         "${CMAKE_BINARY_DIR}"
         "${_fname}"
-        CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}"   # CMP0056 do this on new CMake
+        CMAKE_FLAGS ${__cmake_flags}
         COMPILE_DEFINITIONS "${FLAG}"
+        ${__link_libs}
         OUTPUT_VARIABLE OUTPUT)
 
       if(${RESULT})
@@ -701,7 +766,7 @@ endfunction()
 
 # Usage: ocv_append_build_options(HIGHGUI FFMPEG)
 macro(ocv_append_build_options var_prefix pkg_prefix)
-  foreach(suffix INCLUDE_DIRS LIBRARIES LIBRARY_DIRS)
+  foreach(suffix INCLUDE_DIRS LIBRARIES LIBRARY_DIRS LINK_LIBRARIES)
     if(${pkg_prefix}_${suffix})
       list(APPEND ${var_prefix}_${suffix} ${${pkg_prefix}_${suffix}})
       list(REMOVE_DUPLICATES ${var_prefix}_${suffix})
@@ -739,7 +804,9 @@ macro(ocv_check_modules define)
     endif()
     unset(${define}_${__modname}_FOUND)
   endforeach()
-  pkg_check_modules(${define} ${ARGN})
+  if(PKG_CONFIG_FOUND OR PkgConfig_FOUND)
+    pkg_check_modules(${define} ${ARGN})
+  endif()
   if(${define}_FOUND)
     set(HAVE_${define} 1)
   endif()
@@ -753,28 +820,46 @@ macro(ocv_check_modules define)
       set(${define}_${__modname}_FOUND 1)
     endif()
   endforeach()
-endmacro()
-
-
-# Macro that checks if module has been installed.
-# After it adds module to build and define
-# constants passed as second arg
-macro(CHECK_MODULE module_name define cv_module)
-  set(${define} 0)
-  if(PKG_CONFIG_FOUND)
-    set(ALIAS               ALIASOF_${module_name})
-    set(ALIAS_FOUND                 ${ALIAS}_FOUND)
-    set(ALIAS_INCLUDE_DIRS   ${ALIAS}_INCLUDE_DIRS)
-    set(ALIAS_LIBRARY_DIRS   ${ALIAS}_LIBRARY_DIRS)
-    set(ALIAS_LIBRARIES         ${ALIAS}_LIBRARIES)
-
-    PKG_CHECK_MODULES(${ALIAS} ${module_name})
-    if(${ALIAS_FOUND})
-      set(${define} 1)
-      ocv_append_build_options(${cv_module} ${ALIAS})
+  if(${define}_FOUND AND ${define}_LIBRARIES)
+    if(${define}_LINK_LIBRARIES_XXXXX)  # CMake 3.12+: https://gitlab.kitware.com/cmake/cmake/merge_requests/2068
+      set(${define}_LIBRARIES "${${define}_LINK_LIBRARIES}" CACHE INTERNAL "")
+    else()
+      unset(_libs)          # absolute paths
+      unset(_libs_paths)  # -L args
+      foreach(flag ${${define}_LDFLAGS})
+        if(flag MATCHES "^-L(.*)")
+          list(APPEND _libs_paths ${CMAKE_MATCH_1})
+        elseif(IS_ABSOLUTE "${flag}")
+          list(APPEND _libs "${flag}")
+        elseif(flag MATCHES "^-l(.*)")
+          set(_lib "${CMAKE_MATCH_1}")
+          if(_libs_paths)
+            find_library(pkgcfg_lib_${define}_${_lib} NAMES ${_lib}
+                         HINTS ${_libs_paths} NO_DEFAULT_PATH)
+          endif()
+          find_library(pkgcfg_lib_${define}_${_lib} NAMES ${_lib})
+          mark_as_advanced(pkgcfg_lib_${define}_${_lib})
+          if(pkgcfg_lib_${define}_${_lib})
+            list(APPEND _libs "${pkgcfg_lib_${define}_${_lib}}")
+          else()
+            message(WARNING "ocv_check_modules(${define}): can't find library '${_lib}'. Specify 'pkgcfg_lib_${define}_${_lib}' manually")
+            list(APPEND _libs "${_lib}")
+          endif()
+        else()
+          # -pthread
+          #message(WARNING "ocv_check_modules(${define}): unknown LDFLAG '${flag}'")
+        endif()
+      endforeach()
+      set(${define}_LINK_LIBRARIES "${_libs}")
+      set(${define}_LIBRARIES "${_libs}" CACHE INTERNAL "")
+      unset(_lib)
+      unset(_libs)
+      unset(_libs_paths)
     endif()
   endif()
 endmacro()
+
+
 
 if(NOT DEFINED CMAKE_ARGC) # Guard CMake standalone invocations
 
@@ -1091,15 +1176,6 @@ function(ocv_convert_to_lib_name var)
   set(${var} ${tmp} PARENT_SCOPE)
 endfunction()
 
-if(MSVC AND BUILD_SHARED_LIBS)  # no defaults for static libs (modern CMake is required)
-  if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
-    option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
-    option(INSTALL_PDB "Add install PDB rules" ON)
-  elseif(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
-    option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default (not supported)" OFF)
-    option(INSTALL_PDB "Add install PDB rules" OFF)
-  endif()
-endif()
 
 # add install command
 function(ocv_install_target)
@@ -1132,6 +1208,18 @@ function(ocv_install_target)
 
   if(MSVC)
     set(__target "${ARGV0}")
+
+    # don't move this into global scope of this file: compiler settings (like MSVC variable) are not available during processing
+    if(BUILD_SHARED_LIBS)  # no defaults for static libs (modern CMake is required)
+      if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
+        option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
+        option(INSTALL_PDB "Add install PDB rules" ON)
+      elseif(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
+        option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default (not supported)" OFF)
+        option(INSTALL_PDB "Add install PDB rules" OFF)
+      endif()
+    endif()
+
     if(INSTALL_PDB AND NOT INSTALL_IGNORE_PDB
         AND NOT OPENCV_${__target}_PDB_SKIP
     )
@@ -1176,7 +1264,7 @@ function(ocv_install_target)
           endif()
 
 #          message(STATUS "Adding PDB file installation rule: target=${__target} dst=${__dst} component=${__pdb_install_component}")
-          if("${__target_type}" STREQUAL "SHARED_LIBRARY")
+          if("${__target_type}" STREQUAL "SHARED_LIBRARY" OR "${__target_type}" STREQUAL "MODULE_LIBRARY")
             install(FILES "$<TARGET_PDB_FILE:${__target}>" DESTINATION "${__dst}"
                 COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
           else()
@@ -1343,12 +1431,14 @@ endmacro()
 function(ocv_target_link_libraries target)
   set(LINK_DEPS ${ARGN})
   _ocv_fix_target(target)
-  set(LINK_MODE "LINK_PRIVATE")
+  set(LINK_MODE "PRIVATE")
   set(LINK_PENDING "")
   foreach(dep ${LINK_DEPS})
     if(" ${dep}" STREQUAL " ${target}")
       # prevent "link to itself" warning (world problem)
-    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL "LINK_PUBLIC")
+    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL " LINK_PUBLIC"  # deprecated
+        OR " ${dep}" STREQUAL " PRIVATE" OR " ${dep}" STREQUAL " PUBLIC" OR " ${dep}" STREQUAL " INTERFACE"
+    )
       if(NOT LINK_PENDING STREQUAL "")
         __ocv_push_target_link_libraries(${LINK_MODE} ${LINK_PENDING})
         set(LINK_PENDING "")
@@ -1487,7 +1577,10 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
         endif()
         if (TARGET ${dep})
           get_target_property(_type ${dep} TYPE)
-          if(_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS OR _type STREQUAL "INTERFACE_LIBRARY")
+          if((_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS)
+              OR _type STREQUAL "INTERFACE_LIBRARY"
+              OR DEFINED OPENCV_MODULE_${dep}_LOCATION  # OpenCV modules
+          )
             # nothing
           else()
             get_target_property(_output ${dep} IMPORTED_LOCATION)
@@ -1769,3 +1862,22 @@ macro(ocv_git_describe var_name path)
     set(${var_name} "unknown")
   endif()
 endmacro()
+
+
+# ocv_update_file(filepath content [VERBOSE])
+# - write content to file
+# - will not change modification time in case when file already exists and content has not changed
+function(ocv_update_file filepath content)
+  if(EXISTS "${filepath}")
+    file(READ "${filepath}" actual_content)
+  else()
+    set(actual_content "")
+  endif()
+  if("${actual_content}" STREQUAL "${content}")
+    if(";${ARGN};" MATCHES ";VERBOSE;")
+      message(STATUS "${filepath} contains the same content")
+    endif()
+  else()
+    file(WRITE "${filepath}" "${content}")
+  endif()
+endfunction()

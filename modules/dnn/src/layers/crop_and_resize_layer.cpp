@@ -7,6 +7,11 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/crop_and_resize.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
 namespace cv { namespace dnn {
 
 class CropAndResizeLayerImpl CV_FINAL : public CropAndResizeLayer
@@ -14,6 +19,7 @@ class CropAndResizeLayerImpl CV_FINAL : public CropAndResizeLayer
 public:
     CropAndResizeLayerImpl(const LayerParams& params)
     {
+        setParamsFrom(params);
         CV_Assert_N(params.has("width"), params.has("height"));
         outWidth = params.get<float>("width");
         outHeight = params.get<float>("height");
@@ -33,6 +39,11 @@ public:
         outputs[0][2] = outHeight;
         outputs[0][3] = outWidth;
         return false;
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -109,6 +120,18 @@ public:
             out(dstRanges).setTo(inp.ptr<float>(0, 0, 0)[0]);
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::CropAndResizeOp>(preferableTarget, std::move(context->stream));
+    }
+#endif
 
 private:
     int outWidth, outHeight;

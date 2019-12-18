@@ -32,28 +32,16 @@ int normHamming(const uchar* a, int n)
 
     int i = 0;
     int result = 0;
-#if CV_AVX2
+
+#if CV_SIMD && CV_SIMD_WIDTH > 16
     {
-        __m256i _r0 = _mm256_setzero_si256();
-        __m256i _0 = _mm256_setzero_si256();
-        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
-        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
-
-        for(; i <= n - 32; i+= 32)
-        {
-            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
-
-            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_a0, _popcnt_mask));
-            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
-                             _mm256_and_si256(_mm256_srli_epi16(_a0, 4), _popcnt_mask));
-
-            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
-        }
-        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
-        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
+        v_uint64 t = vx_setzero_u64();
+        for (; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+            t += v_popcount(v_reinterpret_as_u64(vx_load(a + i)));
+        result = (int)v_reduce_sum(t);
+        vx_cleanup();
     }
-#endif // CV_AVX2
+#endif
 
 #if CV_POPCNT
     {
@@ -68,18 +56,14 @@ int normHamming(const uchar* a, int n)
             result += CV_POPCNT_U32(*(uint*)(a + i));
         }
     }
-#endif // CV_POPCNT
-
-#if CV_SIMD128
+#elif CV_SIMD
     {
-        v_uint32x4 t = v_setzero_u32();
+        v_uint64x2 t = v_setzero_u64();
         for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-        {
-            t += v_popcount(v_load(a + i));
-        }
-        result += v_reduce_sum(t);
+            t += v_popcount(v_reinterpret_as_u64(v_load(a + i)));
+        result += (int)v_reduce_sum(t);
     }
-#endif // CV_SIMD128
+#endif
 #if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4)
     {
@@ -100,31 +84,15 @@ int normHamming(const uchar* a, const uchar* b, int n)
 
     int i = 0;
     int result = 0;
-#if CV_AVX2
+
+#if CV_SIMD && CV_SIMD_WIDTH > 16
     {
-        __m256i _r0 = _mm256_setzero_si256();
-        __m256i _0 = _mm256_setzero_si256();
-        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
-        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
-
-        for(; i <= n - 32; i+= 32)
-        {
-            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
-            __m256i _b0 = _mm256_loadu_si256((const __m256i*)(b + i));
-
-            __m256i _xor = _mm256_xor_si256(_a0, _b0);
-
-            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_xor, _popcnt_mask));
-            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
-                             _mm256_and_si256(_mm256_srli_epi16(_xor, 4), _popcnt_mask));
-
-            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
-        }
-        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
-        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
+        v_uint64 t = vx_setzero_u64();
+        for (; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+            t += v_popcount(v_reinterpret_as_u64(vx_load(a + i) ^ vx_load(b + i)));
+        result += (int)v_reduce_sum(t);
     }
-#endif // CV_AVX2
+#endif
 
 #if CV_POPCNT
     {
@@ -139,18 +107,14 @@ int normHamming(const uchar* a, const uchar* b, int n)
             result += CV_POPCNT_U32(*(uint*)(a + i) ^ *(uint*)(b + i));
         }
     }
-#endif // CV_POPCNT
-
-#if CV_SIMD128
+#elif CV_SIMD
     {
-        v_uint32x4 t = v_setzero_u32();
+        v_uint64x2 t = v_setzero_u64();
         for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-        {
-            t += v_popcount(v_load(a + i) ^ v_load(b + i));
-        }
-        result += v_reduce_sum(t);
+            t += v_popcount(v_reinterpret_as_u64(v_load(a + i) ^ v_load(b + i)));
+        result += (int)v_reduce_sum(t);
     }
-#endif // CV_SIMD128
+#endif
 #if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4)
     {

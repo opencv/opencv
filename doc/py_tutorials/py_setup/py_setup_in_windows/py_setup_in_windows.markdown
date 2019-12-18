@@ -15,18 +15,18 @@ Installing OpenCV from prebuilt binaries
 
 -#  Below Python packages are to be downloaded and installed to their default locations.
 
-    -#  [Python-2.7.x](http://www.python.org/ftp/python/2.7.13/python-2.7.13.msi).
+    -#  Python 3.x (3.4+) or Python 2.7.x from [here](https://www.python.org/downloads/).
 
-    -#  [Numpy](https://sourceforge.net/projects/numpy/files/NumPy/1.10.2/numpy-1.10.2-win32-superpack-python2.7.exe/download).
+    -#  Numpy package (for example, using `pip install numpy` command).
 
-    -#  [Matplotlib](https://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.5.0/windows/matplotlib-1.5.0.win32-py2.7.exe/download) (*Matplotlib is optional, but recommended since we use it a lot in our tutorials*).
+    -#  Matplotlib (`pip install matplotlib`) (*Matplotlib is optional, but recommended since we use it a lot in our tutorials*).
 
--#  Install all packages into their default locations. Python will be installed to `C:/Python27/`.
+-#  Install all packages into their default locations. Python will be installed to `C:/Python27/` in case of Python 2.7.
 
 -#  After installation, open Python IDLE. Enter **import numpy** and make sure Numpy is working fine.
 
--#  Download latest OpenCV release from [sourceforge
-    site](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/2.4.6/OpenCV-2.4.6.0.exe/download)
+-#  Download latest OpenCV release from [GitHub](https://github.com/opencv/opencv/releases) or
+    [SourceForge site](https://sourceforge.net/projects/opencvlibrary/files/)
     and double-click to extract it.
 
 -#  Goto **opencv/build/python/2.7** folder.
@@ -49,16 +49,13 @@ Building OpenCV from source
 
     -#  [Visual Studio 2012](http://go.microsoft.com/?linkid=9816768)
 
-    -#  [CMake](http://www.cmake.org/files/v2.8/cmake-2.8.11.2-win32-x86.exe)
+    -#  [CMake](https://cmake.org/download/)
 
 -#  Download and install necessary Python packages to their default locations
 
-    -#  [Python 2.7.x](http://python.org/ftp/python/2.7.5/python-2.7.5.msi)
+    -#  Python
 
-    -#  [Numpy](http://sourceforge.net/projects/numpy/files/NumPy/1.7.1/numpy-1.7.1-win32-superpack-python2.7.exe/download)
-
-    -#  [Matplotlib](https://downloads.sourceforge.net/project/matplotlib/matplotlib/matplotlib-1.3.0/matplotlib-1.3.0.win32-py2.7.exe)
-        (*Matplotlib is optional, but recommended since we use it a lot in our tutorials.*)
+    -#  Numpy
 
     @note In this case, we are using 32-bit binaries of Python packages. But if you want to use
     OpenCV for x64, 64-bit binaries of Python packages are to be installed. Problem is that, there

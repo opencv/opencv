@@ -11,10 +11,6 @@ mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
 
 if(OPENCL_FOUND)
 
-  if(WITH_OPENCL_D3D11_NV AND EXISTS "${OPENCL_INCLUDE_DIR}/CL/cl_d3d11_ext.h")
-    set(HAVE_OPENCL_D3D11_NV ON)
-  endif()
-
   if(OPENCL_LIBRARY)
     set(HAVE_OPENCL_STATIC ON)
     set(OPENCL_LIBRARIES "${OPENCL_LIBRARY}")
@@ -82,4 +78,7 @@ if(OPENCL_FOUND)
       list(APPEND OPENCL_INCLUDE_DIRS "${CLAMDBLAS_INCLUDE_DIR}")
     endif()
   endif()
+
+  # check WITH_OPENCL_D3D11_NV is located in OpenCVDetectDirectX.cmake file
+
 endif()

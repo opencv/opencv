@@ -793,6 +793,7 @@ class CppHeaderParser(object):
         COMMENT = 1 # inside a multi-line comment
         DIRECTIVE = 2 # inside a multi-line preprocessor directive
         DOCSTRING = 3 # inside a multi-line docstring
+        DIRECTIVE_IF_0 = 4 # inside a '#if 0' directive
 
         state = SCAN
 
@@ -801,6 +802,8 @@ class CppHeaderParser(object):
         docstring = ""
         self.lineno = 0
         self.wrap_mode = wmode
+
+        depth_if_0 = 0
 
         for l0 in linelist:
             self.lineno += 1
@@ -813,8 +816,28 @@ class CppHeaderParser(object):
                 # fall through to the if state == DIRECTIVE check
 
             if state == DIRECTIVE:
-                if not l.endswith("\\"):
-                    state = SCAN
+                if l.endswith("\\"):
+                    continue
+                state = SCAN
+                l = re.sub(r'//(.+)?', '', l).strip()  # drop // comment
+                if l == '#if 0' or l == '#if defined(__OPENCV_BUILD)' or l == '#ifdef __OPENCV_BUILD':
+                    state = DIRECTIVE_IF_0
+                    depth_if_0 = 1
+                continue
+
+            if state == DIRECTIVE_IF_0:
+                if l.startswith('#'):
+                    l = l[1:].strip()
+                    if l.startswith("if"):
+                        depth_if_0 += 1
+                        continue
+                    if l.startswith("endif"):
+                        depth_if_0 -= 1
+                        if depth_if_0 == 0:
+                            state = SCAN
+                else:
+                    # print('---- {:30s}:{:5d}: {}'.format(hname[-30:], self.lineno, l))
+                    pass
                 continue
 
             if state == COMMENT:
@@ -827,7 +850,7 @@ class CppHeaderParser(object):
             if state == DOCSTRING:
                 pos = l.find("*/")
                 if pos < 0:
-                    docstring += l + "\n"
+                    docstring += l0
                     continue
                 docstring += l[:pos] + "\n"
                 l = l[pos+2:]
@@ -913,9 +936,9 @@ class CppHeaderParser(object):
                         else:
                             decls.append(decl)
 
-                            if self._generate_gpumat_decls and "cv.cuda." in decl[0]:
+                            if self._generate_gpumat_decls and "cv.cuda" in decl[0]:
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
-                                # same declaration working with GpuMat (this is important for T-Api access)
+                                # same declaration working with GpuMat
                                 args = decl[3]
                                 has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
                                 if has_mat:

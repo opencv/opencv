@@ -757,6 +757,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             }
             setIppErrorStatus();
             break;
+#if 0  // details: https://github.com/opencv/opencv/pull/16085
         case THRESH_TOZERO:
             if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh + FLT_EPSILON, 0))
             {
@@ -765,6 +766,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             }
             setIppErrorStatus();
             break;
+#endif
         case THRESH_TOZERO_INV:
             if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
             {
@@ -1142,6 +1144,9 @@ getThreshVal_Otsu_8u( const Mat& _src )
 
     const int N = 256;
     int i, j, h[N] = {0};
+    #if CV_ENABLE_UNROLLED
+    int h_unrolled[3][N] = {};
+    #endif
     for( i = 0; i < size.height; i++ )
     {
         const uchar* src = _src.ptr() + step*i;
@@ -1150,9 +1155,9 @@ getThreshVal_Otsu_8u( const Mat& _src )
         for( ; j <= size.width - 4; j += 4 )
         {
             int v0 = src[j], v1 = src[j+1];
-            h[v0]++; h[v1]++;
+            h[v0]++; h_unrolled[0][v1]++;
             v0 = src[j+2]; v1 = src[j+3];
-            h[v0]++; h[v1]++;
+            h_unrolled[1][v0]++; h_unrolled[2][v1]++;
         }
         #endif
         for( ; j < size.width; j++ )
@@ -1161,7 +1166,12 @@ getThreshVal_Otsu_8u( const Mat& _src )
 
     double mu = 0, scale = 1./(size.width*size.height);
     for( i = 0; i < N; i++ )
+    {
+        #if CV_ENABLE_UNROLLED
+        h[i] += h_unrolled[0][i] + h_unrolled[1][i] + h_unrolled[2][i];
+        #endif
         mu += i*(double)h[i];
+    }
 
     mu *= scale;
     double mu1 = 0, q1 = 0;
@@ -1206,6 +1216,9 @@ getThreshVal_Triangle_8u( const Mat& _src )
 
     const int N = 256;
     int i, j, h[N] = {0};
+    #if CV_ENABLE_UNROLLED
+    int h_unrolled[3][N] = {};
+    #endif
     for( i = 0; i < size.height; i++ )
     {
         const uchar* src = _src.ptr() + step*i;
@@ -1214,9 +1227,9 @@ getThreshVal_Triangle_8u( const Mat& _src )
         for( ; j <= size.width - 4; j += 4 )
         {
             int v0 = src[j], v1 = src[j+1];
-            h[v0]++; h[v1]++;
+            h[v0]++; h_unrolled[0][v1]++;
             v0 = src[j+2]; v1 = src[j+3];
-            h[v0]++; h[v1]++;
+            h_unrolled[1][v0]++; h_unrolled[2][v1]++;
         }
         #endif
         for( ; j < size.width; j++ )
@@ -1226,6 +1239,13 @@ getThreshVal_Triangle_8u( const Mat& _src )
     int left_bound = 0, right_bound = 0, max_ind = 0, max = 0;
     int temp;
     bool isflipped = false;
+
+    #if CV_ENABLE_UNROLLED
+    for( i = 0; i < N; i++ )
+    {
+        h[i] += h_unrolled[0][i] + h_unrolled[1][i] + h_unrolled[2][i];
+    }
+    #endif
 
     for( i = 0; i < N; i++ )
     {

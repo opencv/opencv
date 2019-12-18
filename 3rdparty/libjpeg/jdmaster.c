@@ -2,7 +2,7 @@
  * jdmaster.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2002-2015 by Guido Vollbeding.
+ * Modified 2002-2017 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -237,18 +237,17 @@ prepare_range_limit_table (j_decompress_ptr cinfo)
   JSAMPLE * table;
   int i;
 
-  table = (JSAMPLE *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				5 * (MAXJSAMPLE+1) * SIZEOF(JSAMPLE));
+  table = (JSAMPLE *) (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo,
+    JPOOL_IMAGE, (RANGE_CENTER * 2 + MAXJSAMPLE + 1) * SIZEOF(JSAMPLE));
   /* First segment of range limit table: limit[x] = 0 for x < 0 */
-  MEMZERO(table, 2 * (MAXJSAMPLE+1) * SIZEOF(JSAMPLE));
-  table += 2 * (MAXJSAMPLE+1);	/* allow negative subscripts of table */
+  MEMZERO(table, RANGE_CENTER * SIZEOF(JSAMPLE));
+  table += RANGE_CENTER;	/* allow negative subscripts of table */
   cinfo->sample_range_limit = table;
   /* Main part of range limit table: limit[x] = x */
   for (i = 0; i <= MAXJSAMPLE; i++)
     table[i] = (JSAMPLE) i;
   /* End of range limit table: limit[x] = MAXJSAMPLE for x > MAXJSAMPLE */
-  for (; i < 3 * (MAXJSAMPLE+1); i++)
+  for (; i <=  MAXJSAMPLE + RANGE_CENTER; i++)
     table[i] = MAXJSAMPLE;
 }
 

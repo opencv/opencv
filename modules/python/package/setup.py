@@ -9,7 +9,7 @@ def main():
     os.chdir(SCRIPT_DIR)
 
     package_name = 'opencv'
-    package_version = os.environ.get('OPENCV_VERSION', '4.1.0')  # TODO
+    package_version = os.environ.get('OPENCV_VERSION', '4.2.0')  # TODO
 
     long_description = 'Open Source Computer Vision Library Python bindings'  # TODO
 
@@ -44,6 +44,7 @@ def main():
           'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
           'Programming Language :: C++',
           'Programming Language :: Python :: Implementation :: CPython',
           'Topic :: Scientific/Engineering',

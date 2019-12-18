@@ -52,7 +52,11 @@
 #include <cstdio>
 
 #if defined(__GNUC__) || defined(__clang__) // at least GCC 3.1+, clang 3.5+
-#  define CV_FORMAT_PRINTF(string_idx, first_to_check) __attribute__ ((format (printf, string_idx, first_to_check)))
+#  if defined(__MINGW_PRINTF_FORMAT)  // https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/.
+#    define CV_FORMAT_PRINTF(string_idx, first_to_check) __attribute__ ((format (__MINGW_PRINTF_FORMAT, string_idx, first_to_check)))
+#  else
+#    define CV_FORMAT_PRINTF(string_idx, first_to_check) __attribute__ ((format (printf, string_idx, first_to_check)))
+#  endif
 #else
 #  define CV_FORMAT_PRINTF(A, B)
 #endif
@@ -398,7 +402,7 @@ inline unsigned RNG::next()
     return (unsigned)state;
 }
 
-//! returns the next unifomly-distributed random number of the specified type
+//! returns the next uniformly-distributed random number of the specified type
 template<typename _Tp> static inline _Tp randu()
 {
   return (_Tp)theRNG();

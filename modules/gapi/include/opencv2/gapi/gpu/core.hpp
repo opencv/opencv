@@ -8,10 +8,10 @@
 #ifndef OPENCV_GAPI_GPU_CORE_API_HPP
 #define OPENCV_GAPI_GPU_CORE_API_HPP
 /** @file
-* @deprecated Use "opencv2/gapi/ocl/core.hpp" instead.
+* @deprecated Use <opencv2/gapi/ocl/core.hpp> instead.
 */
 
-#include "opencv2/gapi/ocl/core.hpp"
+#include <opencv2/gapi/ocl/core.hpp>
 
 namespace cv {
 namespace gapi {

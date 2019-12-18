@@ -389,7 +389,7 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
     }
 #endif
 
-#if defined(HAVE_IPP)
+#if 0 //defined(HAVE_IPP)
 static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool normalize, int borderType)
 {
 #ifdef HAVE_IPP_IW
@@ -476,7 +476,7 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
     CV_OVX_RUN(true,
                openvx_boxfilter(src, dst, ddepth, ksize, anchor, normalize, borderType))
 
-    CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
+    //CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 
     borderType = (borderType&~BORDER_ISOLATED);
 

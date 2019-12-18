@@ -18,7 +18,25 @@ compilation).
 
 Kernel-implementation hierarchy may look like:
 
-![Kernel API/implementation hierarchy example](pics/kernel_hierarchy.png)
+@dot Kernel API/implementation hierarchy example
+digraph {
+  rankdir=BT;
+  node [shape=record];
+
+  ki_a [label="{<f0> interface\nA}"];
+  ki_b [label="{<f0> interface\nB}"];
+
+  {rank=same; ki_a ki_b};
+
+  "CPU::A"     -> ki_a [dir="forward"];
+  "OpenCL::A"  -> ki_a [dir="forward"];
+  "Halide::A"  -> ki_a [dir="forward"];
+
+  "CPU::B"     -> ki_b [dir="forward"];
+  "OpenCL::B"  -> ki_b [dir="forward"];
+  "Halide::B"  -> ki_b [dir="forward"];
+}
+@enddot
 
 A pipeline itself then can be expressed only in terms of `A`, `B`, and
 so on, and choosing which implementation to use in execution becomes
@@ -54,10 +72,10 @@ handled in a special way. All other types are opaque to G-API and
 passed to kernel in `outMeta()` or in execution callbacks as-is.
 
 Kernel's return value can _only_ be of G-API dynamic type -- cv::GMat,
-cv::GScalar, or cv::GArray<T>. If an operation has more than one output,
-it should be wrapped into an `std::tuple<>` (which can contain only
-mentioned G-API types). Arbitrary-output-number operations are not
-supported.
+cv::GScalar, or `cv::GArray<T>`. If an operation has more than one
+output, it should be wrapped into an `std::tuple<>` (which can contain
+only mentioned G-API types). Arbitrary-output-number operations are
+not supported.
 
 Once a kernel is defined, it can be used in pipelines with special,
 G-API-supplied method "::on()". This method has the same signature as
@@ -141,7 +159,7 @@ just follow the signature conventions defined by the plugin. G-API
 will call this method during execution and supply all the necessary
 information (and forward the original opaque data as-is).
 
-# Compound kernels
+# Compound kernels {#gapi_kernel_compound}
 
 Sometimes kernel is a single thing only on API level. It is convenient
 for users, but on a particular  implementation side it would be better to

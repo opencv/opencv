@@ -76,7 +76,7 @@ implemented as a structure based on a one SIMD register.
 - cv::v_uint32x4 and cv::v_int32x4: four 32-bit integer values (unsgined/signed) - int
 - cv::v_uint64x2 and cv::v_int64x2: two 64-bit integer values (unsigned/signed) - int64
 - cv::v_float32x4: four 32-bit floating point values (signed) - float
-- cv::v_float64x2: two 64-bit floating point valies (signed) - double
+- cv::v_float64x2: two 64-bit floating point values (signed) - double
 
 @note
 cv::v_float64x2 is not implemented in NEON variant, if you want to use this type, don't forget to
@@ -112,6 +112,7 @@ These operations allow to reorder or recombine elements in one or multiple vecto
 - Pack: @ref v_pack, @ref v_pack_u, @ref v_pack_b, @ref v_rshr_pack, @ref v_rshr_pack_u,
 @ref v_pack_store, @ref v_pack_u_store, @ref v_rshr_pack_store, @ref v_rshr_pack_u_store
 - Recombine: @ref v_zip, @ref v_recombine, @ref v_combine_low, @ref v_combine_high
+- Reverse: @ref v_reverse
 - Extract: @ref v_extract
 
 
@@ -171,7 +172,8 @@ Different type conversions and casts:
 
 ### Matrix operations
 
-In these operations vectors represent matrix rows/columns: @ref v_dotprod, @ref v_matmul, @ref v_transpose4x4
+In these operations vectors represent matrix rows/columns: @ref v_dotprod, @ref v_dotprod_fast,
+@ref v_dotprod_expand, @ref v_dotprod_expand_fast, @ref v_matmul, @ref v_transpose4x4
 
 ### Usability
 
@@ -195,7 +197,10 @@ Regular integers:
 |mul_expand         | x | x | x | x | x |   |
 |compare            | x | x | x | x | x | x |
 |shift              |   |   | x | x | x | x |
-|dotprod            |   |   |   | x |   |   |
+|dotprod            |   |   |   | x |   | x |
+|dotprod_fast       |   |   |   | x |   | x |
+|dotprod_expand     | x | x | x | x |   | x |
+|dotprod_expand_fast| x | x | x | x |   | x |
 |logical            | x | x | x | x | x | x |
 |min, max           | x | x | x | x | x | x |
 |absdiff            | x | x | x | x | x | x |
@@ -211,6 +216,9 @@ Regular integers:
 |cvt_flt32          |   |   |   |   |   | x |
 |cvt_flt64          |   |   |   |   |   | x |
 |transpose4x4       |   |   |   |   | x | x |
+|reverse            | x | x | x | x | x | x |
+|extract_n          | x | x | x | x | x | x |
+|broadcast_element  |   |   |   |   | x | x |
 
 Big integers:
 
@@ -220,8 +228,11 @@ Big integers:
 |add, sub           | x | x |
 |shift              | x | x |
 |logical            | x | x |
+|reverse            | x | x |
 |extract            | x | x |
 |rotate (lanes)     | x | x |
+|cvt_flt64          |   | x |
+|extract_n          | x | x |
 
 Floating point:
 
@@ -245,6 +256,9 @@ Floating point:
 |transpose4x4       | x |   |
 |extract            | x | x |
 |rotate (lanes)     | x | x |
+|reverse            | x | x |
+|extract_n          | x | x |
+|broadcast_element  | x |   |
 
  @{ */
 
@@ -354,6 +368,13 @@ template<typename _Tp, int n> struct v_reg
         v_reg<_Tp2, n2> c;
         std::memcpy(&c.s[0], &s[0], bytes);
         return c;
+    }
+
+    v_reg& operator=(const v_reg<_Tp, n> & r)
+    {
+        for( int i = 0; i < n; i++ )
+            s[i] = r.s[i];
+        return *this;
     }
 
     _Tp s[n];
@@ -603,27 +624,20 @@ static const unsigned char popCountTable[] =
     3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
     4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
 };
-/** @brief Count the 1 bits in the vector and return 4 values
+/** @brief Count the 1 bits in the vector lanes and return result as corresponding unsigned type
 
 Scheme:
 @code
-{A1 A2 A3 ...} => popcount(A1)
+{A1 A2 A3 ...} => {popcount(A1), popcount(A2), popcount(A3), ...}
 @endcode
-Any types but result will be in v_uint32x4*/
-template<typename _Tp, int n> inline v_uint32x4 v_popcount(const v_reg<_Tp, n>& a)
+For all integer types. */
+template<typename _Tp, int n>
+inline v_reg<typename V_TypeTraits<_Tp>::abs_type, n> v_popcount(const v_reg<_Tp, n>& a)
 {
-    v_uint8x16 b;
-    b = v_reinterpret_as_u8(a);
-    for( int i = 0; i < v_uint8x16::nlanes; i++ )
-    {
-        b.s[i] = popCountTable[b.s[i]];
-    }
-    v_uint32x4 c;
-    for( int i = 0; i < v_uint32x4::nlanes; i++ )
-    {
-        c.s[i] = b.s[i*4] + b.s[i*4+1] + b.s[i*4+2] + b.s[i*4+3];
-    }
-    return c;
+    v_reg<typename V_TypeTraits<_Tp>::abs_type, n> b = v_reg<typename V_TypeTraits<_Tp>::abs_type, n>::zero();
+    for (int i = 0; i < n*(int)sizeof(_Tp); i++)
+        b.s[i/sizeof(_Tp)] += popCountTable[v_reinterpret_as_u8(a).s[i]];
+    return b;
 }
 
 
@@ -860,17 +874,18 @@ inline v_reg<_Tp, n> v_muladd(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
 /** @brief Dot product of elements
 
 Multiply values in two registers and sum adjacent result pairs.
+
 Scheme:
 @code
   {A1 A2 ...} // 16-bit
 x {B1 B2 ...} // 16-bit
 -------------
 {A1B1+A2B2 ...} // 32-bit
+
 @endcode
-Implemented only for 16-bit signed source type (v_int16x8).
 */
 template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
-    v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
 {
     typedef typename V_TypeTraits<_Tp>::w_type w_type;
     v_reg<w_type, n/2> c;
@@ -888,12 +903,11 @@ Scheme:
 x {B1 B2 ...} // 16-bit
 -------------
   {A1B1+A2B2+C1 ...} // 32-bit
-
 @endcode
-Implemented only for 16-bit signed source type (v_int16x8).
 */
 template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
-    v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b, const v_reg<typename V_TypeTraits<_Tp>::w_type, n / 2>& c)
+v_dotprod(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+          const v_reg<typename V_TypeTraits<_Tp>::w_type, n / 2>& c)
 {
     typedef typename V_TypeTraits<_Tp>::w_type w_type;
     v_reg<w_type, n/2> s;
@@ -901,6 +915,95 @@ template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n
         s.s[i] = (w_type)a.s[i*2]*b.s[i*2] + (w_type)a.s[i*2+1]*b.s[i*2+1] + c.s[i];
     return s;
 }
+
+/** @brief Fast Dot product of elements
+
+Same as cv::v_dotprod, but it may perform unorder sum between result pairs in some platforms,
+this intrinsic can be used if the sum among all lanes is only matters
+and also it should be yielding better performance on the affected platforms.
+
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
+v_dotprod_fast(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{ return v_dotprod(a, b); }
+
+/** @brief Fast Dot product of elements
+
+Same as cv::v_dotprod_fast, but add a third element to the sum of adjacent pairs.
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
+v_dotprod_fast(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+               const v_reg<typename V_TypeTraits<_Tp>::w_type, n / 2>& c)
+{ return v_dotprod(a, b, c); }
+
+/** @brief Dot product of elements and expand
+
+Multiply values in two registers and expand the sum of adjacent result pairs.
+
+Scheme:
+@code
+  {A1 A2 A3 A4 ...} // 8-bit
+x {B1 B2 B3 B4 ...} // 8-bit
+-------------
+  {A1B1+A2B2+A3B3+A4B4 ...} // 32-bit
+
+@endcode
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+v_dotprod_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{
+    typedef typename V_TypeTraits<_Tp>::q_type q_type;
+    v_reg<q_type, n/4> s;
+    for( int i = 0; i < (n/4); i++ )
+        s.s[i] = (q_type)a.s[i*4    ]*b.s[i*4    ] + (q_type)a.s[i*4 + 1]*b.s[i*4 + 1] +
+                 (q_type)a.s[i*4 + 2]*b.s[i*4 + 2] + (q_type)a.s[i*4 + 3]*b.s[i*4 + 3];
+    return s;
+}
+
+/** @brief Dot product of elements
+
+Same as cv::v_dotprod_expand, but add a third element to the sum of adjacent pairs.
+Scheme:
+@code
+  {A1 A2 A3 A4 ...} // 8-bit
+x {B1 B2 B3 B4 ...} // 8-bit
+-------------
+  {A1B1+A2B2+A3B3+A4B4+C1 ...} // 32-bit
+@endcode
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+v_dotprod_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                 const v_reg<typename V_TypeTraits<_Tp>::q_type, n / 4>& c)
+{
+    typedef typename V_TypeTraits<_Tp>::q_type q_type;
+    v_reg<q_type, n/4> s;
+    for( int i = 0; i < (n/4); i++ )
+        s.s[i] = (q_type)a.s[i*4    ]*b.s[i*4    ] + (q_type)a.s[i*4 + 1]*b.s[i*4 + 1] +
+                 (q_type)a.s[i*4 + 2]*b.s[i*4 + 2] + (q_type)a.s[i*4 + 3]*b.s[i*4 + 3] + c.s[i];
+    return s;
+}
+
+/** @brief Fast Dot product of elements and expand
+
+Multiply values in two registers and expand the sum of adjacent result pairs.
+
+Same as cv::v_dotprod_expand, but it may perform unorder sum between result pairs in some platforms,
+this intrinsic can be used if the sum among all lanes is only matters
+and also it should be yielding better performance on the affected platforms.
+
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+v_dotprod_expand_fast(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{ return v_dotprod_expand(a, b); }
+
+/** @brief Fast Dot product of elements
+
+Same as cv::v_dotprod_expand_fast, but add a third element to the sum of adjacent pairs.
+*/
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+v_dotprod_expand_fast(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                      const v_reg<typename V_TypeTraits<_Tp>::q_type, n / 4>& c)
+{ return v_dotprod_expand(a, b, c); }
 
 /** @brief Multiply and expand
 
@@ -1079,6 +1182,7 @@ template<typename _Tp, int n> inline typename V_TypeTraits< typename V_TypeTrait
 }
 
 /** @brief Get negative values mask
+@deprecated v_signmask depends on a lane count heavily and therefore isn't universal enough
 
 Returned value is a bit mask with bits set to 1 on places corresponding to negative packed values indexes.
 Example:
@@ -1086,7 +1190,7 @@ Example:
 v_int32x4 r; // set to {-1, -1, 1, 1}
 int mask = v_signmask(r); // mask = 3 <== 00000000 00000000 00000000 00000011
 @endcode
-For all types except 64-bit. */
+*/
 template<typename _Tp, int n> inline int v_signmask(const v_reg<_Tp, n>& a)
 {
     int mask = 0;
@@ -1095,10 +1199,27 @@ template<typename _Tp, int n> inline int v_signmask(const v_reg<_Tp, n>& a)
     return mask;
 }
 
+/** @brief Get first negative lane index
+
+Returned value is an index of first negative lane (undefined for input of all positive values)
+Example:
+@code{.cpp}
+v_int32x4 r; // set to {0, 0, -1, -1}
+int idx = v_heading_zeros(r); // idx = 2
+@endcode
+*/
+template <typename _Tp, int n> inline int v_scan_forward(const v_reg<_Tp, n>& a)
+{
+    for (int i = 0; i < n; i++)
+        if(V_TypeTraits<_Tp>::reinterpret_int(a.s[i]) < 0)
+            return i;
+    return 0;
+}
+
 /** @brief Check if all packed values are less than zero
 
 Unsigned values will be casted to signed: `uchar 254 => char -2`.
-For all types except 64-bit. */
+*/
 template<typename _Tp, int n> inline bool v_check_all(const v_reg<_Tp, n>& a)
 {
     for( int i = 0; i < n; i++ )
@@ -1110,7 +1231,7 @@ template<typename _Tp, int n> inline bool v_check_all(const v_reg<_Tp, n>& a)
 /** @brief Check if any of packed values is less than zero
 
 Unsigned values will be casted to signed: `uchar 254 => char -2`.
-For all types except 64-bit. */
+*/
 template<typename _Tp, int n> inline bool v_check_any(const v_reg<_Tp, n>& a)
 {
     for( int i = 0; i < n; i++ )
@@ -1619,6 +1740,23 @@ inline void v_recombine(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
     }
 }
 
+/** @brief Vector reverse order
+
+Reverse the order of the vector
+Scheme:
+@code
+  REG {A1 ... An} ==> REG {An ... A1}
+@endcode
+For all types. */
+template<typename _Tp, int n>
+inline v_reg<_Tp, n> v_reverse(const v_reg<_Tp, n>& a)
+{
+    v_reg<_Tp, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = a.s[n-i-1];
+    return c;
+}
+
 /** @brief Vector extract
 
 Scheme:
@@ -1649,6 +1787,42 @@ inline v_reg<_Tp, n> v_extract(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
     for (; i < n; ++i)
         r.s[i] = b.s[i-shift];
     return r;
+}
+
+/** @brief Vector extract
+
+Scheme:
+Return the s-th element of v.
+Restriction: 0 <= s < nlanes
+
+Usage:
+@code
+v_int32x4 a;
+int r;
+r = v_extract_n<2>(a);
+@endcode
+For all types. */
+template<int s, typename _Tp, int n>
+inline _Tp v_extract_n(const v_reg<_Tp, n>& v)
+{
+    CV_DbgAssert(s >= 0 && s < n);
+    return v.s[s];
+}
+
+/** @brief Broadcast i-th element of vector
+
+Scheme:
+@code
+{ v[0] v[1] v[2] ... v[SZ] } => { v[i], v[i], v[i] ... v[i] }
+@endcode
+Restriction: 0 <= i < nlanes
+Supported types: 32-bit integers and floats (s32/u32/f32)
+ */
+template<int i, typename _Tp, int n>
+inline v_reg<_Tp, n> v_broadcast_element(const v_reg<_Tp, n>& a)
+{
+    CV_DbgAssert(i >= 0 && i < n);
+    return v_reg<_Tp, n>::all(a.s[i]);
 }
 
 /** @brief Round
@@ -1792,6 +1966,17 @@ template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<int, n*2>& a)
 
 Supported input type is cv::v_float32x4. */
 template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<float, n*2>& a)
+{
+    v_reg<double, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = (double)a.s[i];
+    return c;
+}
+
+/** @brief Convert to double
+
+Supported input type is cv::v_int64x2. */
+template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<int64, n>& a)
 {
     v_reg<double, n> c;
     for( int i = 0; i < n; i++ )
@@ -2361,16 +2546,6 @@ v_pack_store(float16_t* ptr, v_reg<float, V_TypeTraits<float>::nlanes128>& v)
 }
 
 inline void v_cleanup() {}
-
-//! @}
-
-//! @name Check SIMD support
-//! @{
-//! @brief Check CPU capability of SIMD operation
-static inline bool hasSIMD128()
-{
-    return false;
-}
 
 //! @}
 

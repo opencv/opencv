@@ -5,7 +5,7 @@ Goals
 -----
 
 In this tutorial We will learn to setup OpenCV-Python in Ubuntu System.
-Below steps are tested for Ubuntu 16.04 (64-bit) and Ubuntu 14.04 (32-bit).
+Below steps are tested for Ubuntu 16.04 and 18.04 (both 64-bit).
 
 OpenCV-Python can be installed in Ubuntu in two ways:
 - Install from pre-built binaries available in Ubuntu repositories
@@ -62,17 +62,36 @@ We need **CMake** to configure the installation, **GCC** for compilation, **Pyth
 
 ```
 sudo apt-get install cmake
-sudo apt-get install python-devel numpy
-sudo apt-get install gcc gcc-c++
+sudo apt-get install gcc g++
+```
+to support python2:
+
+```
+sudo apt-get install python-dev python-numpy
+```
+
+to support python3:
+
+```
+sudo apt-get install python3-dev python3-numpy
 ```
 
 Next we need **GTK** support for GUI features, Camera support (v4l), Media Support
 (ffmpeg, gstreamer) etc.
 
 ```
-sudo apt-get install gtk2-devel
-sudo apt-get install ffmpeg-devel
-sudo apt-get install gstreamer-plugins-base-devel
+sudo apt-get install libavcodec-dev libavformat-dev libswscale-dev
+sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev
+```
+
+to support gtk2:
+```
+sudo apt-get install libgtk2.0-dev
+```
+
+to support gtk3:
+```
+sudo apt-get install libgtk-3-dev
 ```
 
 ### Optional Dependencies
@@ -86,13 +105,14 @@ But it may be a little old.
 If you want to get latest libraries, you can install development files for system libraries of these formats.
 
 ```
-sudo apt-get install libpng-devel
-sudo apt-get install libjpeg-turbo-devel
-sudo apt-get install jasper-devel
-sudo apt-get install openexr-devel
-sudo apt-get install libtiff-devel
-sudo apt-get install libwebp-devel
+sudo apt-get install libpng-dev
+sudo apt-get install libjpeg-dev
+sudo apt-get install libopenexr-dev
+sudo apt-get install libtiff-dev
+sudo apt-get install libwebp-dev
 ```
+
+@note If you are using Ubuntu 16.04 you can also install ```libjasper-dev``` to add a system level support for the JPEG2000 format.
 
 ### Downloading OpenCV
 

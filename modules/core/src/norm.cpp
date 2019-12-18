@@ -63,7 +63,31 @@ int normHamming(const uchar* a, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-#if CV_ENABLE_UNROLLED
+#if CV_SIMD
+    v_uint64 t = vx_setzero_u64();
+    if ( cellSize == 2)
+    {
+        v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x55));
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        {
+            v_uint16 a0 = v_reinterpret_as_u16(vx_load(a + i));
+            t += v_popcount(v_reinterpret_as_u64((a0 | (a0 >> 1)) & mask));
+        }
+    }
+    else    // cellSize == 4
+    {
+        v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x11));
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        {
+            v_uint16 a0 = v_reinterpret_as_u16(vx_load(a + i));
+            v_uint16 a1 = a0 | (a0 >> 2);
+            t += v_popcount(v_reinterpret_as_u64((a1 | (a1 >> 1)) & mask));
+
+        }
+    }
+    result += (int)v_reduce_sum(t);
+    vx_cleanup();
+#elif CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i]] + tab[a[i+1]] + tab[a[i+2]] + tab[a[i+3]];
 #endif
@@ -85,7 +109,30 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-#if CV_ENABLE_UNROLLED
+#if CV_SIMD
+    v_uint64 t = vx_setzero_u64();
+    if ( cellSize == 2)
+    {
+        v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x55));
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        {
+            v_uint16 ab0 = v_reinterpret_as_u16(vx_load(a + i) ^ vx_load(b + i));
+            t += v_popcount(v_reinterpret_as_u64((ab0 | (ab0 >> 1)) & mask));
+        }
+    }
+    else    // cellSize == 4
+    {
+        v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x11));
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        {
+            v_uint16 ab0 = v_reinterpret_as_u16(vx_load(a + i) ^ vx_load(b + i));
+            v_uint16 ab1 = ab0 | (ab0 >> 2);
+            t += v_popcount(v_reinterpret_as_u64((ab1 | (ab1 >> 1)) & mask));
+        }
+    }
+    result += (int)v_reduce_sum(t);
+    vx_cleanup();
+#elif CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
                 tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
@@ -99,13 +146,20 @@ float normL2Sqr_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
 #if CV_SIMD
-    v_float32 v_d = vx_setzero_f32();
-    for (; j <= n - v_float32::nlanes; j += v_float32::nlanes)
+    v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
+    v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
+    for (; j <= n - 4 * v_float32::nlanes; j += 4 * v_float32::nlanes)
     {
-        v_float32 t = vx_load(a + j) - vx_load(b + j);
-        v_d = v_muladd(t, t, v_d);
+        v_float32 t0 = vx_load(a + j) - vx_load(b + j);
+        v_float32 t1 = vx_load(a + j + v_float32::nlanes) - vx_load(b + j + v_float32::nlanes);
+        v_float32 t2 = vx_load(a + j + 2 * v_float32::nlanes) - vx_load(b + j + 2 * v_float32::nlanes);
+        v_float32 t3 = vx_load(a + j + 3 * v_float32::nlanes) - vx_load(b + j + 3 * v_float32::nlanes);
+        v_d0 = v_muladd(t0, t0, v_d0);
+        v_d1 = v_muladd(t1, t1, v_d1);
+        v_d2 = v_muladd(t2, t2, v_d2);
+        v_d3 = v_muladd(t3, t3, v_d3);
     }
-    d = v_reduce_sum(v_d);
+    d = v_reduce_sum(v_d0 + v_d1 + v_d2 + v_d3);
 #endif
     for( ; j < n; j++ )
     {
@@ -120,10 +174,16 @@ float normL1_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
 #if CV_SIMD
-    v_float32 v_d = vx_setzero_f32();
-    for (; j <= n - v_float32::nlanes; j += v_float32::nlanes)
-        v_d += v_absdiff(vx_load(a + j), vx_load(b + j));
-    d = v_reduce_sum(v_d);
+    v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
+    v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
+    for (; j <= n - 4 * v_float32::nlanes; j += 4 * v_float32::nlanes)
+    {
+        v_d0 += v_absdiff(vx_load(a + j), vx_load(b + j));
+        v_d1 += v_absdiff(vx_load(a + j + v_float32::nlanes), vx_load(b + j + v_float32::nlanes));
+        v_d2 += v_absdiff(vx_load(a + j + 2 * v_float32::nlanes), vx_load(b + j + 2 * v_float32::nlanes));
+        v_d3 += v_absdiff(vx_load(a + j + 3 * v_float32::nlanes), vx_load(b + j + 3 * v_float32::nlanes));
+    }
+    d = v_reduce_sum(v_d0 + v_d1 + v_d2 + v_d3);
 #endif
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
@@ -134,8 +194,11 @@ int normL1_(const uchar* a, const uchar* b, int n)
 {
     int j = 0, d = 0;
 #if CV_SIMD
-    for (; j <= n - v_uint8::nlanes; j += v_uint8::nlanes)
-        d += v_reduce_sad(vx_load(a + j), vx_load(b + j));
+    for (; j <= n - 4 * v_uint8::nlanes; j += 4 * v_uint8::nlanes)
+        d += v_reduce_sad(vx_load(a + j), vx_load(b + j)) +
+             v_reduce_sad(vx_load(a + j + v_uint8::nlanes), vx_load(b + j + v_uint8::nlanes)) +
+             v_reduce_sad(vx_load(a + j + 2 * v_uint8::nlanes), vx_load(b + j + 2 * v_uint8::nlanes)) +
+             v_reduce_sad(vx_load(a + j + 3 * v_uint8::nlanes), vx_load(b + j + 3 * v_uint8::nlanes));
 #endif
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
@@ -1015,7 +1078,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
+    CV_CheckTypeEQ(_src1.type(), _src2.type(), "Input type mismatch");
+    CV_Assert(_src1.sameSize(_src2));
 
 #if defined HAVE_OPENCL || defined HAVE_IPP
     double _result = 0;
