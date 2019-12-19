@@ -253,7 +253,7 @@ TEST_P(Test_Model, Keypoints_pose)
 #endif
 
     Mat inp = imread(_tf("pose.png"));
-    std::string weights = _tf("onnx/models/lightweight_pose_estimation.onnx");
+    std::string weights = _tf("onnx/models/lightweight_pose_estimation.onnx", false);
     Mat exp = blobFromNPY(_tf("keypoints_exp.npy"));
 
 
@@ -274,7 +274,7 @@ TEST_P(Test_Model, Keypoints_face)
 #endif
 
     Mat inp = imread(_tf("gray_face.png"), 0);
-    std::string weights = _tf("onnx/models/facial_keypoints.onnx");
+    std::string weights = _tf("onnx/models/facial_keypoints.onnx", false);
     Mat exp = blobFromNPY(_tf("facial_keypoints_exp.npy"));
 
     Size size{224, 224};
