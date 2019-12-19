@@ -108,6 +108,9 @@ public:
         if (hasWeights)
             model = findDataFile("dnn/darknet/" + name + ".weights", false);
 
+        if (backend == DNN_BACKEND_CUDA)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+
         checkBackend(&inp, &ref);
 
         Net net = readNet(cfg, model);

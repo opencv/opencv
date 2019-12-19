@@ -1622,6 +1622,9 @@ TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
     int backendId = get<0>(get<1>(GetParam()));
     int targetId = get<1>(get<1>(GetParam()));
 
+    if (backendId == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+
     Net net;
     LayerParams lp;
     lp.type = "Eltwise";
@@ -1684,6 +1687,9 @@ TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0)
     bool weighted = get<0>(GetParam());
     int backendId = get<0>(get<1>(GetParam()));
     int targetId = get<1>(get<1>(GetParam()));
+
+    if (backendId == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
 
     Net net;
     LayerParams lp;
