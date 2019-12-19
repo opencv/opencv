@@ -38,6 +38,7 @@ PERF_TEST_P(Size_MatType, magnitudeComplex, TYPICAL_MATS_MAGNITUDECOMPLEX)
 
     TEST_CYCLE() magnitudeComplex(src1, dst);
 
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace
