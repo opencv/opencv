@@ -309,6 +309,8 @@ TEST_P(Test_TensorFlow_layers, AvePooling3D)
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     runTensorFlowNet("deconvolution");
     runTensorFlowNet("deconvolution_same");
     runTensorFlowNet("deconvolution_stride_2_same");

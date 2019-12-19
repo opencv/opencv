@@ -178,6 +178,9 @@ TEST_P(Deconvolution, Accuracy)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
 
+    if (targetId == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+
     int sz[] = {inChannels, outChannels / group, kernel.height, kernel.width};
     Mat weights(4, &sz[0], CV_32F);
     randu(weights, -1.0f, 1.0f);
