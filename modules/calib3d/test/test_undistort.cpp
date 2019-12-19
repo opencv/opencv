@@ -1290,7 +1290,7 @@ void CV_UndistortMapTest::prepare_to_validation( int )
     }
 }
 
-TEST(Calib3d_Undistort, accuracy) { CV_UndistortTest test; test.safe_run(); }
+TEST(Calib3d_UndistortImgproc, accuracy) { CV_UndistortTest test; test.safe_run(); }
 TEST(Calib3d_InitUndistortMap, accuracy) { CV_UndistortMapTest test; test.safe_run(); }
 
 TEST(Calib3d_UndistortPoints, inputShape)
