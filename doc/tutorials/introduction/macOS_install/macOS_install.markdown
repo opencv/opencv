@@ -14,6 +14,10 @@ This tutorial will assume you have [Python](https://docs.python.org/3/using/mac.
 [Numpy](https://docs.scipy.org/doc/numpy-1.10.1/user/install.html) and
 [Git](https://www.atlassian.com/git/tutorials/install-git) installed on your machine.
 
+@note
+OSX comes with Python 2.7 by default, you will need to install Python 3.8 if you want to use it specifically.
+If you XCode and XCode Command Line-Tools installed, you already have git installed on your machine.
+
 Installing CMake
 ----------------
 -# Find the version for your system and download CMake from their release's [page](https://cmake.org/download/)
@@ -75,8 +79,8 @@ Building OpenCV from Source Using CMake
     -   set full path to OpenCV source code, e.g. /home/user/opencv
     -   set full path to \<cmake_build_dir\>, e.g. /home/user/opencv/build
     -   set optional parameters
-    -   run: “Configure”
-    -   run: “Generate”
+    -   run: "Configure"
+    -   run: "Generate"
 
     @note
     Use `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..` , without spaces after -D if the above example doesn't work.
@@ -89,10 +93,12 @@ Building OpenCV from Source Using CMake
     -   set BUILD_EXAMPLES to build all examples
 
 -#  [optional] Building python. Set the following python parameters:
-    -   PYTHON2(3)_EXECUTABLE = \<path to python\>
+    -   PYTHON3_EXECUTABLE = \<path to python\>
     -   PYTHON_INCLUDE_DIR = /usr/include/python\<version\>
-    -   PYTHON2(3)_NUMPY_INCLUDE_DIRS =
+    -   PYTHON3_NUMPY_INCLUDE_DIRS =
         /usr/lib/python\<version\>/dist-packages/numpy/core/include/
+    @note
+    To specify Python2 versions, you can replace PYTHON3_ with PYTHON2_ in the above parameters.
 
 -#  Build. From build directory execute *make*, it is recommended to do this in several threads
 
@@ -101,10 +107,6 @@ Building OpenCV from Source Using CMake
     make -j7 # runs 7 jobs in parallel
     @endcode
 
--# Finally, install using the following command:
-    @code{.bash}
-    make install
-    @endcode
 @note
 You can also use a package manager like [Homebrew](https://brew.sh/)
-or [pip](https://pip.pypa.io/en/stable/) to install official releases of OpenCV only (Not the cutting edge).
+or [pip](https://pip.pypa.io/en/stable/) to install releases of OpenCV only (Not the cutting edge).
