@@ -47,393 +47,372 @@
 #include "opencv2/core/cuda/vec_math.hpp"
 #include "opencv2/core/cuda/limits.hpp"
 
-namespace cv { namespace cuda { namespace device
+#include "mog2.hpp"
+
+namespace cv
 {
-    namespace mog2
+namespace cuda
+{
+namespace device
+{
+namespace mog2
+{
+///////////////////////////////////////////////////////////////
+// Utility
+
+__device__ __forceinline__ float cvt(uchar val)
+{
+    return val;
+}
+__device__ __forceinline__ float3 cvt(const uchar3 &val)
+{
+    return make_float3(val.x, val.y, val.z);
+}
+__device__ __forceinline__ float4 cvt(const uchar4 &val)
+{
+    return make_float4(val.x, val.y, val.z, val.w);
+}
+
+__device__ __forceinline__ float sqr(float val)
+{
+    return val * val;
+}
+__device__ __forceinline__ float sqr(const float3 &val)
+{
+    return val.x * val.x + val.y * val.y + val.z * val.z;
+}
+__device__ __forceinline__ float sqr(const float4 &val)
+{
+    return val.x * val.x + val.y * val.y + val.z * val.z;
+}
+
+__device__ __forceinline__ float sum(float val)
+{
+    return val;
+}
+__device__ __forceinline__ float sum(const float3 &val)
+{
+    return val.x + val.y + val.z;
+}
+__device__ __forceinline__ float sum(const float4 &val)
+{
+    return val.x + val.y + val.z;
+}
+
+template <class Ptr2D>
+__device__ __forceinline__ void swap(Ptr2D &ptr, int x, int y, int k, int rows)
+{
+    typename Ptr2D::elem_type val = ptr(k * rows + y, x);
+    ptr(k * rows + y, x) = ptr((k + 1) * rows + y, x);
+    ptr((k + 1) * rows + y, x) = val;
+}
+
+///////////////////////////////////////////////////////////////
+// MOG2
+
+template <bool detectShadows, typename SrcT, typename WorkT>
+__global__ void mog2(const PtrStepSz<SrcT> frame, PtrStepb fgmask, PtrStepb modesUsed,
+                     PtrStepf gmm_weight, PtrStepf gmm_variance, PtrStep<WorkT> gmm_mean,
+                     const float alphaT, const float alpha1, const float prune, const Constants *const constants)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < frame.cols && y < frame.rows)
     {
-        ///////////////////////////////////////////////////////////////
-        // Utility
+        WorkT pix = cvt(frame(y, x));
 
-        __device__ __forceinline__ float cvt(uchar val)
+        //calculate distances to the modes (+ sort)
+        //here we need to go in descending order!!!
+
+        bool background = false; // true - the pixel classified as background
+
+        //internal:
+
+        bool fitsPDF = false; //if it remains zero a new GMM mode will be added
+
+        int nmodes = modesUsed(y, x);
+        const int nNewModes = nmodes; //current number of modes in GMM
+
+        float totalWeight = 0.0f;
+
+        //go through all modes
+
+        for (int mode = 0; mode < nmodes; ++mode)
         {
-            return val;
-        }
-        __device__ __forceinline__ float3 cvt(const uchar3& val)
-        {
-            return make_float3(val.x, val.y, val.z);
-        }
-        __device__ __forceinline__ float4 cvt(const uchar4& val)
-        {
-            return make_float4(val.x, val.y, val.z, val.w);
-        }
-
-        __device__ __forceinline__ float sqr(float val)
-        {
-            return val * val;
-        }
-        __device__ __forceinline__ float sqr(const float3& val)
-        {
-            return val.x * val.x + val.y * val.y + val.z * val.z;
-        }
-        __device__ __forceinline__ float sqr(const float4& val)
-        {
-            return val.x * val.x + val.y * val.y + val.z * val.z;
-        }
-
-        __device__ __forceinline__ float sum(float val)
-        {
-            return val;
-        }
-        __device__ __forceinline__ float sum(const float3& val)
-        {
-            return val.x + val.y + val.z;
-        }
-        __device__ __forceinline__ float sum(const float4& val)
-        {
-            return val.x + val.y + val.z;
-        }
-
-        template <class Ptr2D>
-        __device__ __forceinline__ void swap(Ptr2D& ptr, int x, int y, int k, int rows)
-        {
-            typename Ptr2D::elem_type val = ptr(k * rows + y, x);
-            ptr(k * rows + y, x) = ptr((k + 1) * rows + y, x);
-            ptr((k + 1) * rows + y, x) = val;
-        }
-
-        ///////////////////////////////////////////////////////////////
-        // MOG2
-
-        __constant__ int           c_nmixtures;
-        __constant__ float         c_Tb;
-        __constant__ float         c_TB;
-        __constant__ float         c_Tg;
-        __constant__ float         c_varInit;
-        __constant__ float         c_varMin;
-        __constant__ float         c_varMax;
-        __constant__ float         c_tau;
-        __constant__ unsigned char c_shadowVal;
-
-        void loadConstants(int nmixtures, float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, unsigned char shadowVal)
-        {
-            varMin = ::fminf(varMin, varMax);
-            varMax = ::fmaxf(varMin, varMax);
-
-            cudaSafeCall( cudaMemcpyToSymbol(c_nmixtures, &nmixtures, sizeof(int)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_Tb, &Tb, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_TB, &TB, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_Tg, &Tg, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_varInit, &varInit, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_varMin, &varMin, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_varMax, &varMax, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_tau, &tau, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_shadowVal, &shadowVal, sizeof(unsigned char)) );
-        }
-
-        template <bool detectShadows, typename SrcT, typename WorkT>
-        __global__ void mog2(const PtrStepSz<SrcT> frame, PtrStepb fgmask, PtrStepb modesUsed,
-                             PtrStepf gmm_weight, PtrStepf gmm_variance, PtrStep<WorkT> gmm_mean,
-                             const float alphaT, const float alpha1, const float prune)
-        {
-            const int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-            if (x >= frame.cols || y >= frame.rows)
-                return;
-
-            WorkT pix = cvt(frame(y, x));
-
-            //calculate distances to the modes (+ sort)
-            //here we need to go in descending order!!!
-
-            bool background = false; // true - the pixel classified as background
-
-            //internal:
-
-            bool fitsPDF = false; //if it remains zero a new GMM mode will be added
-
-            int nmodes = modesUsed(y, x);
-            int nNewModes = nmodes; //current number of modes in GMM
-
-            float totalWeight = 0.0f;
-
-            //go through all modes
-
-            for (int mode = 0; mode < nmodes; ++mode)
-            {
-                //need only weight if fit is found
-                float weight = alpha1 * gmm_weight(mode * frame.rows + y, x) + prune;
-                int swap_count = 0;
-                //fit not found yet
-                if (!fitsPDF)
-                {
-                    //check if it belongs to some of the remaining modes
-                    float var = gmm_variance(mode * frame.rows + y, x);
-
-                    WorkT mean = gmm_mean(mode * frame.rows + y, x);
-
-                    //calculate difference and distance
-                    WorkT diff = mean - pix;
-                    float dist2 = sqr(diff);
-
-                    //background? - Tb - usually larger than Tg
-                    if (totalWeight < c_TB && dist2 < c_Tb * var)
-                        background = true;
-
-                    //check fit
-                    if (dist2 < c_Tg * var)
-                    {
-                        //belongs to the mode
-                        fitsPDF = true;
-
-                        //update distribution
-
-                        //update weight
-                        weight += alphaT;
-                        float k = alphaT / weight;
-
-                        //update mean
-                        gmm_mean(mode * frame.rows + y, x) = mean - k * diff;
-
-                        //update variance
-                        float varnew = var + k * (dist2 - var);
-
-                        //limit the variance
-                        varnew = ::fmaxf(varnew, c_varMin);
-                        varnew = ::fminf(varnew, c_varMax);
-
-                        gmm_variance(mode * frame.rows + y, x) = varnew;
-
-                        //sort
-                        //all other weights are at the same place and
-                        //only the matched (iModes) is higher -> just find the new place for it
-
-                        for (int i = mode; i > 0; --i)
-                        {
-                            //check one up
-                            if (weight < gmm_weight((i - 1) * frame.rows + y, x))
-                                break;
-
-                            swap_count++;
-                            //swap one up
-                            swap(gmm_weight, x, y, i - 1, frame.rows);
-                            swap(gmm_variance, x, y, i - 1, frame.rows);
-                            swap(gmm_mean, x, y, i - 1, frame.rows);
-                        }
-
-                        //belongs to the mode - bFitsPDF becomes 1
-                    }
-                } // !fitsPDF
-
-                //check prune
-                if (weight < -prune)
-                {
-                    weight = 0.0f;
-                    nmodes--;
-                }
-
-                gmm_weight((mode - swap_count) * frame.rows + y, x) = weight; //update weight by the calculated value
-                totalWeight += weight;
-            }
-
-            //renormalize weights
-
-            totalWeight = 1.f / totalWeight;
-            for (int mode = 0; mode < nmodes; ++mode)
-                gmm_weight(mode * frame.rows + y, x) *= totalWeight;
-
-            nmodes = nNewModes;
-
-            //make new mode if needed and exit
-
+            //need only weight if fit is found
+            float weight = alpha1 * gmm_weight(mode * frame.rows + y, x) + prune;
+            int swap_count = 0;
+            //fit not found yet
             if (!fitsPDF)
             {
-                // replace the weakest or add a new one
-                int mode = nmodes == c_nmixtures ? c_nmixtures - 1 : nmodes++;
+                //check if it belongs to some of the remaining modes
+                const float var = gmm_variance(mode * frame.rows + y, x);
 
-                if (nmodes == 1)
-                    gmm_weight(mode * frame.rows + y, x) = 1.f;
-                else
+                const WorkT mean = gmm_mean(mode * frame.rows + y, x);
+
+                //calculate difference and distance
+                const WorkT diff = mean - pix;
+                const float dist2 = sqr(diff);
+
+                //background? - Tb - usually larger than Tg
+                if (totalWeight < constants->TB_ && dist2 < constants->Tb_ * var)
+                    background = true;
+
+                //check fit
+                if (dist2 < constants->Tg_ * var)
                 {
-                    gmm_weight(mode * frame.rows + y, x) = alphaT;
+                    //belongs to the mode
+                    fitsPDF = true;
 
-                    // renormalize all other weights
+                    //update distribution
 
-                    for (int i = 0; i < nmodes - 1; ++i)
-                        gmm_weight(i * frame.rows + y, x) *= alpha1;
-                }
+                    //update weight
+                    weight += alphaT;
+                    float k = alphaT / weight;
 
-                // init
+                    //update mean
+                    gmm_mean(mode * frame.rows + y, x) = mean - k * diff;
 
-                gmm_mean(mode * frame.rows + y, x) = pix;
-                gmm_variance(mode * frame.rows + y, x) = c_varInit;
+                    //update variance
+                    float varnew = var + k * (dist2 - var);
 
-                //sort
-                //find the new place for it
+                    //limit the variance
+                    varnew = ::fmaxf(varnew, constants->varMin_);
+                    varnew = ::fminf(varnew, constants->varMax_);
 
-                for (int i = nmodes - 1; i > 0; --i)
-                {
-                    // check one up
-                    if (alphaT < gmm_weight((i - 1) * frame.rows + y, x))
-                        break;
+                    gmm_variance(mode * frame.rows + y, x) = varnew;
 
-                    //swap one up
-                    swap(gmm_weight, x, y, i - 1, frame.rows);
-                    swap(gmm_variance, x, y, i - 1, frame.rows);
-                    swap(gmm_mean, x, y, i - 1, frame.rows);
-                }
-            }
+                    //sort
+                    //all other weights are at the same place and
+                    //only the matched (iModes) is higher -> just find the new place for it
 
-            //set the number of modes
-            modesUsed(y, x) = nmodes;
-
-            bool isShadow = false;
-            if (detectShadows && !background)
-            {
-                float tWeight = 0.0f;
-
-                // check all the components  marked as background:
-                for (int mode = 0; mode < nmodes; ++mode)
-                {
-                    WorkT mean = gmm_mean(mode * frame.rows + y, x);
-
-                    WorkT pix_mean = pix * mean;
-
-                    float numerator = sum(pix_mean);
-                    float denominator = sqr(mean);
-
-                    // no division by zero allowed
-                    if (denominator == 0)
-                        break;
-
-                    // if tau < a < 1 then also check the color distortion
-                    if (numerator <= denominator && numerator >= c_tau * denominator)
+                    for (int i = mode; i > 0; --i)
                     {
-                        float a = numerator / denominator;
-
-                        WorkT dD = a * mean - pix;
-
-                        if (sqr(dD) < c_Tb * gmm_variance(mode * frame.rows + y, x) * a * a)
-                        {
-                            isShadow = true;
+                        //check one up
+                        if (weight < gmm_weight((i - 1) * frame.rows + y, x))
                             break;
-                        }
-                    };
 
-                    tWeight += gmm_weight(mode * frame.rows + y, x);
-                    if (tWeight > c_TB)
-                        break;
+                        swap_count++;
+                        //swap one up
+                        swap(gmm_weight, x, y, i - 1, frame.rows);
+                        swap(gmm_variance, x, y, i - 1, frame.rows);
+                        swap(gmm_mean, x, y, i - 1, frame.rows);
+                    }
+
+                    //belongs to the mode - bFitsPDF becomes 1
                 }
+            } // !fitsPDF
+
+            //check prune
+            if (weight < -prune)
+            {
+                weight = 0.0f;
+                nmodes--;
             }
 
-            fgmask(y, x) = background ? 0 : isShadow ? c_shadowVal : 255;
+            gmm_weight((mode - swap_count) * frame.rows + y, x) = weight; //update weight by the calculated value
+            totalWeight += weight;
         }
 
-        template <typename SrcT, typename WorkT>
-        void mog2_caller(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean,
-                         float alphaT, float prune, bool detectShadows, cudaStream_t stream)
+        //renormalize weights
+
+        totalWeight = 1.f / totalWeight;
+        for (int mode = 0; mode < nmodes; ++mode)
+            gmm_weight(mode * frame.rows + y, x) *= totalWeight;
+
+        nmodes = nNewModes;
+
+        //make new mode if needed and exit
+
+        if (!fitsPDF)
         {
-            dim3 block(32, 8);
-            dim3 grid(divUp(frame.cols, block.x), divUp(frame.rows, block.y));
+            // replace the weakest or add a new one
+            const int mode = nmodes == constants->nmixtures_ ? constants->nmixtures_ - 1 : nmodes++;
 
-            const float alpha1 = 1.0f - alphaT;
-
-            if (detectShadows)
-            {
-                cudaSafeCall( cudaFuncSetCacheConfig(mog2<true, SrcT, WorkT>, cudaFuncCachePreferL1) );
-
-                mog2<true, SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, modesUsed,
-                                                                    weight, variance, (PtrStepSz<WorkT>) mean,
-                                                                    alphaT, alpha1, prune);
-            }
+            if (nmodes == 1)
+                gmm_weight(mode * frame.rows + y, x) = 1.f;
             else
             {
-                cudaSafeCall( cudaFuncSetCacheConfig(mog2<false, SrcT, WorkT>, cudaFuncCachePreferL1) );
+                gmm_weight(mode * frame.rows + y, x) = alphaT;
 
-                mog2<false, SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, modesUsed,
-                                                                    weight, variance, (PtrStepSz<WorkT>) mean,
-                                                                    alphaT, alpha1, prune);
+                // renormalize all other weights
+
+                for (int i = 0; i < nmodes - 1; ++i)
+                    gmm_weight(i * frame.rows + y, x) *= alpha1;
             }
 
-            cudaSafeCall( cudaGetLastError() );
+            // init
 
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
+            gmm_mean(mode * frame.rows + y, x) = pix;
+            gmm_variance(mode * frame.rows + y, x) = constants->varInit_;
 
-        void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean,
-                      float alphaT, float prune, bool detectShadows, cudaStream_t stream)
-        {
-            typedef void (*func_t)(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean, float alphaT, float prune, bool detectShadows, cudaStream_t stream);
+            //sort
+            //find the new place for it
 
-            static const func_t funcs[] =
+            for (int i = nmodes - 1; i > 0; --i)
             {
-                0, mog2_caller<uchar, float>, 0, mog2_caller<uchar3, float3>, mog2_caller<uchar4, float4>
-            };
+                // check one up
+                if (alphaT < gmm_weight((i - 1) * frame.rows + y, x))
+                    break;
 
-            funcs[cn](frame, fgmask, modesUsed, weight, variance, mean, alphaT, prune, detectShadows, stream);
+                //swap one up
+                swap(gmm_weight, x, y, i - 1, frame.rows);
+                swap(gmm_variance, x, y, i - 1, frame.rows);
+                swap(gmm_mean, x, y, i - 1, frame.rows);
+            }
         }
 
-        template <typename WorkT, typename OutT>
-        __global__ void getBackgroundImage2(const PtrStepSzb modesUsed, const PtrStepf gmm_weight, const PtrStep<WorkT> gmm_mean, PtrStep<OutT> dst)
+        //set the number of modes
+        modesUsed(y, x) = nmodes;
+
+        bool isShadow = false;
+        if (detectShadows && !background)
         {
-            const int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const int y = blockIdx.y * blockDim.y + threadIdx.y;
+            float tWeight = 0.0f;
 
-            if (x >= modesUsed.cols || y >= modesUsed.rows)
-                return;
-
-            int nmodes = modesUsed(y, x);
-
-            WorkT meanVal = VecTraits<WorkT>::all(0.0f);
-            float totalWeight = 0.0f;
-
+            // check all the components  marked as background:
             for (int mode = 0; mode < nmodes; ++mode)
             {
-                float weight = gmm_weight(mode * modesUsed.rows + y, x);
+                const WorkT mean = gmm_mean(mode * frame.rows + y, x);
 
-                WorkT mean = gmm_mean(mode * modesUsed.rows + y, x);
-                meanVal = meanVal + weight * mean;
+                const WorkT pix_mean = pix * mean;
 
-                totalWeight += weight;
+                const float numerator = sum(pix_mean);
+                const float denominator = sqr(mean);
 
-                if(totalWeight > c_TB)
+                // no division by zero allowed
+                if (denominator == 0)
+                    break;
+
+                // if tau < a < 1 then also check the color distortion
+                else if (numerator <= denominator && numerator >= constants->tau_ * denominator)
+                {
+                    const float a = numerator / denominator;
+
+                    WorkT dD = a * mean - pix;
+
+                    if (sqr(dD) < constants->Tb_ * gmm_variance(mode * frame.rows + y, x) * a * a)
+                    {
+                        isShadow = true;
+                        break;
+                    }
+                };
+
+                tWeight += gmm_weight(mode * frame.rows + y, x);
+                if (tWeight > constants->TB_)
                     break;
             }
-
-            meanVal = meanVal * (1.f / totalWeight);
-
-            dst(y, x) = saturate_cast<OutT>(meanVal);
         }
 
-        template <typename WorkT, typename OutT>
-        void getBackgroundImage2_caller(PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream)
-        {
-            dim3 block(32, 8);
-            dim3 grid(divUp(modesUsed.cols, block.x), divUp(modesUsed.rows, block.y));
-
-            cudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage2<WorkT, OutT>, cudaFuncCachePreferL1) );
-
-            getBackgroundImage2<WorkT, OutT><<<grid, block, 0, stream>>>(modesUsed, weight, (PtrStepSz<WorkT>) mean, (PtrStepSz<OutT>) dst);
-            cudaSafeCall( cudaGetLastError() );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-
-        void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream)
-        {
-            typedef void (*func_t)(PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream);
-
-            static const func_t funcs[] =
-            {
-                0, getBackgroundImage2_caller<float, uchar>, 0, getBackgroundImage2_caller<float3, uchar3>, getBackgroundImage2_caller<float4, uchar4>
-            };
-
-            funcs[cn](modesUsed, weight, mean, dst, stream);
-        }
+        fgmask(y, x) = background ? 0 : isShadow ? constants->shadowVal_ : 255;
     }
-}}}
+}
 
+template <typename SrcT, typename WorkT>
+void mog2_caller(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean,
+                 float alphaT, float prune, bool detectShadows, const Constants *const constants, cudaStream_t stream)
+{
+    dim3 block(32, 8);
+    dim3 grid(divUp(frame.cols, block.x), divUp(frame.rows, block.y));
+
+    const float alpha1 = 1.0f - alphaT;
+
+    if (detectShadows)
+    {
+        cudaSafeCall(cudaFuncSetCacheConfig(mog2<true, SrcT, WorkT>, cudaFuncCachePreferL1));
+
+        mog2<true, SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>)frame, fgmask, modesUsed,
+                                                            weight, variance, (PtrStepSz<WorkT>)mean,
+                                                            alphaT, alpha1, prune, constants);
+    }
+    else
+    {
+        cudaSafeCall(cudaFuncSetCacheConfig(mog2<false, SrcT, WorkT>, cudaFuncCachePreferL1));
+
+        mog2<false, SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>)frame, fgmask, modesUsed,
+                                                             weight, variance, (PtrStepSz<WorkT>)mean,
+                                                             alphaT, alpha1, prune, constants);
+    }
+
+    cudaSafeCall(cudaGetLastError());
+
+    if (stream == 0)
+        cudaSafeCall(cudaDeviceSynchronize());
+}
+
+void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean,
+              float alphaT, float prune, bool detectShadows, const Constants *const constants, cudaStream_t stream)
+{
+    typedef void (*func_t)(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean, float alphaT, float prune, bool detectShadows, const Constants *const constants, cudaStream_t stream);
+
+    static const func_t funcs[] =
+        {
+            0, mog2_caller<uchar, float>, 0, mog2_caller<uchar3, float3>, mog2_caller<uchar4, float4>};
+
+    funcs[cn](frame, fgmask, modesUsed, weight, variance, mean, alphaT, prune, detectShadows, constants, stream);
+}
+
+template <typename WorkT, typename OutT>
+__global__ void getBackgroundImage2(const PtrStepSzb modesUsed, const PtrStepf gmm_weight, const PtrStep<WorkT> gmm_mean, PtrStep<OutT> dst, const Constants *const constants)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= modesUsed.cols || y >= modesUsed.rows)
+        return;
+
+    int nmodes = modesUsed(y, x);
+
+    WorkT meanVal = VecTraits<WorkT>::all(0.0f);
+    float totalWeight = 0.0f;
+
+    for (int mode = 0; mode < nmodes; ++mode)
+    {
+        float weight = gmm_weight(mode * modesUsed.rows + y, x);
+
+        WorkT mean = gmm_mean(mode * modesUsed.rows + y, x);
+        meanVal = meanVal + weight * mean;
+
+        totalWeight += weight;
+
+        if (totalWeight > constants->TB_)
+            break;
+    }
+
+    meanVal = meanVal * (1.f / totalWeight);
+
+    dst(y, x) = saturate_cast<OutT>(meanVal);
+}
+
+template <typename WorkT, typename OutT>
+void getBackgroundImage2_caller(PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, const Constants *const constants, cudaStream_t stream)
+{
+    dim3 block(32, 8);
+    dim3 grid(divUp(modesUsed.cols, block.x), divUp(modesUsed.rows, block.y));
+
+    cudaSafeCall(cudaFuncSetCacheConfig(getBackgroundImage2<WorkT, OutT>, cudaFuncCachePreferL1));
+
+    getBackgroundImage2<WorkT, OutT><<<grid, block, 0, stream>>>(modesUsed, weight, (PtrStepSz<WorkT>)mean, (PtrStepSz<OutT>)dst, constants);
+    cudaSafeCall(cudaGetLastError());
+
+    if (stream == 0)
+        cudaSafeCall(cudaDeviceSynchronize());
+}
+
+void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, const Constants *const constants, cudaStream_t stream)
+{
+    typedef void (*func_t)(PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, const Constants *const constants, cudaStream_t stream);
+
+    static const func_t funcs[] =
+        {
+            0, getBackgroundImage2_caller<float, uchar>, 0, getBackgroundImage2_caller<float3, uchar3>, getBackgroundImage2_caller<float4, uchar4>};
+
+    funcs[cn](modesUsed, weight, mean, dst, constants, stream);
+}
+} // namespace mog2
+} // namespace device
+} // namespace cuda
+} // namespace cv
 
 #endif /* CUDA_DISABLER */
