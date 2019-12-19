@@ -2405,7 +2405,7 @@ struct Net::Impl
                         break;
                 }
 
-                if (preferableBackend != DNN_BACKEND_OPENCV)
+                if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA)
                     continue;  // Go to the next layer.
 
                 // TODO: OpenCL target support more fusion styles.
@@ -2413,6 +2413,9 @@ struct Net::Impl
                      (!cv::ocl::useOpenCL() || (ld.layerInstance->type != "Convolution" &&
                      ld.layerInstance->type != "MVN" && ld.layerInstance->type != "Pooling" &&
                      ld.layerInstance->type != "Concat")) )
+                    continue;
+
+                if (preferableBackend == DNN_BACKEND_CUDA && IS_DNN_CUDA_TARGET(preferableTarget) && ld.layerInstance->type != "Convolution")
                     continue;
 
                 while (nextData)
@@ -2424,6 +2427,16 @@ struct Net::Impl
                         nextData->type != "ReLU6" &&
                         nextData->type != "TanH" &&
                         nextData->type != "Power")
+                        break;
+
+                    if (IS_DNN_CUDA_TARGET(preferableTarget) &&
+                        nextData->type != "ReLU" &&
+                        nextData->type != "ReLU6" &&
+                        nextData->type != "Power" &&
+                        nextData->type != "TanH" &&
+                        nextData->type != "Sigmoid" &&
+                        nextData->type != "Swish" &&
+                        nextData->type != "Mish")
                         break;
 
                     Ptr<ActivationLayer> nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();

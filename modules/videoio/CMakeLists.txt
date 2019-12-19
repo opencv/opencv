@@ -203,8 +203,8 @@ ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})
 
 # copy FFmpeg dll to the output folder
 if(WIN32 AND HAVE_FFMPEG_WRAPPER)
-  if(MSVC64 OR MINGW64)
-    set(FFMPEG_SUFFIX "_64")
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(FFMPEG_SUFFIX _64)
   endif()
   set(ffmpeg_dir "${OpenCV_BINARY_DIR}/3rdparty/ffmpeg")
   set(ffmpeg_bare_name "opencv_videoio_ffmpeg${FFMPEG_SUFFIX}.dll")

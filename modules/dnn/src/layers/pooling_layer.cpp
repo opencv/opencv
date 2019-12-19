@@ -68,6 +68,7 @@ using namespace cv::dnn::ocl4dnn;
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/pooling.hpp"
+#include "../cuda4dnn/primitives/roi_pooling.hpp"
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -178,7 +179,7 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
-            return type == MAX || type == AVE;
+            return type == MAX || type == AVE || type == ROI;
         }
         else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
@@ -313,6 +314,8 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        if (type == ROI)
+            return make_cuda_node<cuda4dnn::ROIPoolingOp>(preferableTarget, std::move(context->stream), spatialScale);
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();

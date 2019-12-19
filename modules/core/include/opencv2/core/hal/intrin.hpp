@@ -58,7 +58,7 @@
 namespace {
 inline unsigned int trailingZeros32(unsigned int value) {
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1700) || defined(_M_ARM)
+#if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64)
     unsigned long index = 0;
     _BitScanForward(&index, value);
     return (unsigned int)index;

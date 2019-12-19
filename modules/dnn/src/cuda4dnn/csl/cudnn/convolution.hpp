@@ -224,6 +224,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                     );
                 }
                 CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionGroupCount(descriptor, group_count));
+                if (std::is_same<T, half>::value)
+                    CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionMathType(descriptor, CUDNN_TENSOR_OP_MATH));
             } catch (...) {
                 /* cudnnDestroyConvolutionDescriptor will not fail for a valid desriptor object */
                 CUDA4DNN_CHECK_CUDNN(cudnnDestroyConvolutionDescriptor(descriptor));

@@ -288,7 +288,7 @@ if(X86 OR X86_64)
     ocv_update(CPU_AVX2_FLAGS_ON "/arch:AVX2")
     ocv_update(CPU_AVX_FLAGS_ON "/arch:AVX")
     ocv_update(CPU_FP16_FLAGS_ON "/arch:AVX")
-    if(NOT MSVC64)
+    if(NOT X86_64)
       # 64-bit MSVC compiler uses SSE/SSE2 by default
       ocv_update(CPU_SSE_FLAGS_ON "/arch:SSE")
       ocv_update(CPU_SSE_SUPPORTED ON)

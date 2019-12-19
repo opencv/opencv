@@ -1467,4 +1467,19 @@ TEST(Core_sortIdx, regression_8941)
         "expected=" << std::endl << expected;
 }
 
+
+//These tests guard regressions against running MatExpr
+//operations on empty operands and giving bogus
+//results.
+TEST(Core_MatExpr, empty_check_15760)
+{
+    EXPECT_THROW(Mat c = min(Mat(), Mat()), cv::Exception);
+    EXPECT_THROW(Mat c = abs(Mat()), cv::Exception);
+    EXPECT_THROW(Mat c = min(Mat(), Mat()), cv::Exception);
+    EXPECT_THROW(Mat c = Mat() | Mat(), cv::Exception);
+    EXPECT_THROW(Mat c = Mat() + Mat(), cv::Exception);
+    EXPECT_THROW(Mat c = Mat().t(), cv::Exception);
+    EXPECT_THROW(Mat c = Mat().cross(Mat()), cv::Exception);
+}
+
 }} // namespace

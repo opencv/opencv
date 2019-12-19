@@ -239,12 +239,22 @@ public:
     ocl4dnnFusedActiv_t activType;
     float power;
 #endif
+
+#ifdef HAVE_CUDA
+    cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
+    float cuda_relu_slope, cuda_crelu_floor, cuda_crelu_ceil, cuda_power_exp;
+#endif
+
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
     {
 #ifdef HAVE_OPENCL
         newActiv = false;
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
         power = 0.f;
+#endif
+
+#ifdef HAVE_CUDA
+        cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
     }
 
@@ -404,6 +414,61 @@ public:
             {
                 activType = OCL4DNN_CONV_FUSED_ACTIV_TANH;
             }
+        }
+#endif
+
+#ifdef HAVE_CUDA
+        cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
+
+        if(IS_DNN_CUDA_TARGET(preferableTarget))
+        {
+            Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
+            if(!activ_relu.empty())
+            {
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::RELU;
+                cuda_relu_slope = activ_relu->negativeSlope;
+            }
+
+            Ptr<ReLU6Layer> activ_relu6 = activ.dynamicCast<ReLU6Layer>();
+            if(!activ_relu6.empty())
+            {
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::CLIPPED_RELU;
+                cuda_crelu_floor = activ_relu6->minValue;
+                cuda_crelu_ceil = activ_relu6->maxValue;
+            }
+
+            Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+            if (!activ_power.empty())
+            {
+                if (activ_power->scale != 1.f || activ_power->shift != 0.f)
+                {
+                    const int outCh = blobs[0].size[0];
+                    fuseWeights(Mat(1, outCh, CV_32F, Scalar(activ_power->scale)),
+                                Mat(1, outCh, CV_32F, Scalar(activ_power->shift)));
+                }
+
+                cuda_power_exp = activ_power->power;
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::POWER;
+            }
+
+            Ptr<TanHLayer> activ_tanh = activ.dynamicCast<TanHLayer>();
+            if(!activ_tanh.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::TANH;
+
+            Ptr<SigmoidLayer> activ_sigmoid = activ.dynamicCast<SigmoidLayer>();
+            if(!activ_sigmoid.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SIGMOID;
+
+            Ptr<SwishLayer> activ_swish = activ.dynamicCast<SwishLayer>();
+            if(!activ_swish.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SWISH;
+
+            Ptr<MishLayer> activ_mish = activ.dynamicCast<MishLayer>();
+            if(!activ_mish.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::MISH;
+
+            if (cudaActType == cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY)
+                activ.reset();
         }
 #endif
         return !activ.empty();
@@ -1417,6 +1482,12 @@ public:
         config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
         config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
         config.groups = groups;
+
+        config.activation_type = cudaActType;
+        config.relu_negative_slope = cuda_relu_slope;
+        config.crelu_floor = cuda_crelu_floor;
+        config.crelu_ceil = cuda_crelu_ceil;
+        config.power_exp = cuda_power_exp;
 
         Mat filtersMat = fusedWeights ? weightsMat : blobs[0];
         Mat biasMat = (hasBias() || fusedBias) ? Mat(output_feature_maps, 1, CV_32F, biasvec.data()) : Mat();
