@@ -641,6 +641,60 @@ TEST_P(Test_Model_Optimizer, forward_two_nets)
 
     normAssert(ref0, ref2, 0, 0);
 }
+
+TEST_P(Test_Model_Optimizer, readFromBuffer)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        throw SkipTestException("No support for async forward");
+
+    const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
+    const std::string& weightsFile = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
+    const std::string& modelFile = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    else
+        FAIL() << "Unknown backendId";
+
+    Net net1 = readNetFromModelOptimizer(modelFile, weightsFile);
+    net1.setPreferableBackend(backendId);
+    net1.setPreferableTarget(targetId);
+
+
+    std::vector<char> modelConfig;
+    readFileContent(modelFile, modelConfig);
+    std::vector<char> weights;
+    readFileContent(weightsFile, weights);
+
+    Net net2 = readNetFromModelOptimizer(
+            (const uchar*)modelConfig.data(), modelConfig.size(),
+            (const uchar*)weights.data(), weights.size()
+    );
+    net2.setPreferableBackend(backendId);
+    net2.setPreferableTarget(targetId);
+
+    int blobSize[] = {2, 6, 75, 113};
+    Mat input(4, &blobSize[0], CV_32F);
+    randu(input, 0, 255);
+
+    Mat ref, actual;
+    {
+        net1.setInput(input);
+        ref = net1.forward();
+    }
+    {
+        net2.setInput(input);
+        actual = net2.forward();
+    }
+
+    normAssert(ref, actual, "", 0, 0);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,
     dnnBackendsAndTargetsIE()
 );
