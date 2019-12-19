@@ -568,7 +568,7 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 
     checkBackend();
 
-    double scoresDiff = (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) ? 2.9e-5 : 1e-5;
+    double scoresDiff = backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ? 2.9e-5 : 1e-5;
     for (int i = 0; i < 2; ++i)
     {
         std::string proto = findDataFile("dnn/" + names[i] + ".pbtxt");

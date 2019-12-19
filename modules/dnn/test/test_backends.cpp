@@ -203,7 +203,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
 #endif
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 560), Scalar(127.5, 127.5, 127.5), false);
-    float scoreDiff  = 0.0, iouDiff = 0.0;
+    float scoreDiff = 0.0, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         scoreDiff = 0.029;
@@ -228,7 +228,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.216 : 0.2;
-    float scoreDiff  = 0.0, iouDiff = 0.0;
+    float scoreDiff = 0.0, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         scoreDiff = 0.095;
@@ -260,7 +260,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
 
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 560), Scalar(), false);
-    float scoreDiff  = 0.0, iouDiff = 0.0;
+    float scoreDiff = 0.0, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         scoreDiff = 0.012;
@@ -284,7 +284,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float scoreDiff  = 2e-5, iouDiff = 0.0;
+    float scoreDiff = 2e-5, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         scoreDiff = 0.013;
@@ -308,7 +308,7 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);  // TODO HALIDE_CPU
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float scoreDiff  = 0.0, iouDiff = 0.0;
+    float scoreDiff = 0.0, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
         scoreDiff = 0.0325;
@@ -316,7 +316,7 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     else if (target == DNN_TARGET_MYRIAD)
     {
         scoreDiff = 0.0325;
-        iouDiff = 0.062;
+        iouDiff = 0.032;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
@@ -435,7 +435,7 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float scoreDiff  = 0.0, iouDiff = 0.0;
+    float scoreDiff = 0.0, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         scoreDiff = 0.015;

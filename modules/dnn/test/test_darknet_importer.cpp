@@ -108,9 +108,6 @@ public:
         if (hasWeights)
             model = findDataFile("dnn/darknet/" + name + ".weights", false);
 
-        if (backend == DNN_BACKEND_CUDA)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
-
         checkBackend(&inp, &ref);
 
         Net net = readNet(cfg, model);
@@ -376,6 +373,7 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
         scoreDiff = 0.008;
         iouDiff = 0.02;
     }
+
     std::string config_file = "tiny-yolo-voc.cfg";
     std::string weights_file = "tiny-yolo-voc.weights";
 
@@ -529,6 +527,8 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets, dnnBackendsAndTargets());
 
 TEST_P(Test_Darknet_layers, shortcut)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testDarknetLayer("shortcut");
     testDarknetLayer("shortcut_leaky");
     testDarknetLayer("shortcut_unequal");
