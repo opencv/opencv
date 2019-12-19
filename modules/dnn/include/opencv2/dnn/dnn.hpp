@@ -394,13 +394,32 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP Net();  //!< Default constructor.
         CV_WRAP ~Net(); //!< Destructor frees the net only if there aren't references to the net anymore.
 
-        /** @brief Create a network from Intel's Model Optimizer intermediate representation.
+        /** @brief Create a network from Intel's Model Optimizer intermediate representation (IR).
          *  @param[in] xml XML configuration file with network's topology.
          *  @param[in] bin Binary file with trained weights.
          *  Networks imported from Intel's Model Optimizer are launched in Intel's Inference Engine
          *  backend.
          */
         CV_WRAP static Net readFromModelOptimizer(const String& xml, const String& bin);
+
+        /** @brief Create a network from Intel's Model Optimizer in-memory buffers with intermediate representation (IR).
+         *  @param[in] bufferModelConfig buffer with model's configuration.
+         *  @param[in] bufferWeights buffer with model's trained weights.
+         *  @returns Net object.
+         */
+        CV_WRAP static
+        Net readFromModelOptimizer(const std::vector<uchar>& bufferModelConfig, const std::vector<uchar>& bufferWeights);
+
+        /** @brief Create a network from Intel's Model Optimizer in-memory buffers with intermediate representation (IR).
+         *  @param[in] bufferModelConfigPtr buffer pointer of model's configuration.
+         *  @param[in] bufferModelConfigSize buffer size of model's configuration.
+         *  @param[in] bufferWeightsPtr buffer pointer of model's trained weights.
+         *  @param[in] bufferWeightsSize buffer size of model's trained weights.
+         *  @returns Net object.
+         */
+        static
+        Net readFromModelOptimizer(const uchar* bufferModelConfigPtr, size_t bufferModelConfigSize,
+                                            const uchar* bufferWeightsPtr, size_t bufferWeightsSize);
 
         /** Returns true if there are no layers in the network. */
         CV_WRAP bool empty() const;
@@ -869,7 +888,31 @@ CV__DNN_INLINE_NS_BEGIN
      *  Networks imported from Intel's Model Optimizer are launched in Intel's Inference Engine
      *  backend.
      */
-    CV_EXPORTS_W Net readNetFromModelOptimizer(const String &xml, const String &bin);
+    CV_EXPORTS_W
+    Net readNetFromModelOptimizer(const String &xml, const String &bin);
+
+    /** @brief Load a network from Intel's Model Optimizer intermediate representation.
+     *  @param[in] bufferModelConfig Buffer contains XML configuration with network's topology.
+     *  @param[in] bufferWeights Buffer contains binary data with trained weights.
+     *  @returns Net object.
+     *  Networks imported from Intel's Model Optimizer are launched in Intel's Inference Engine
+     *  backend.
+     */
+    CV_EXPORTS_W
+    Net readNetFromModelOptimizer(const std::vector<uchar>& bufferModelConfig, const std::vector<uchar>& bufferWeights);
+
+    /** @brief Load a network from Intel's Model Optimizer intermediate representation.
+     *  @param[in] bufferModelConfigPtr Pointer to buffer which contains XML configuration with network's topology.
+     *  @param[in] bufferModelConfigSize Binary size of XML configuration data.
+     *  @param[in] bufferWeightsPtr Pointer to buffer which contains binary data with trained weights.
+     *  @param[in] bufferWeightsSize Binary size of trained weights data.
+     *  @returns Net object.
+     *  Networks imported from Intel's Model Optimizer are launched in Intel's Inference Engine
+     *  backend.
+     */
+    CV_EXPORTS
+    Net readNetFromModelOptimizer(const uchar* bufferModelConfigPtr, size_t bufferModelConfigSize,
+                                           const uchar* bufferWeightsPtr, size_t bufferWeightsSize);
 
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
