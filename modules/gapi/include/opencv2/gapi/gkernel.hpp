@@ -319,6 +319,20 @@ namespace std
 
 namespace cv {
 namespace gapi {
+    class GFunctor
+    {
+    public:
+        virtual cv::GKernelImpl impl()       = 0;
+        virtual cv::gapi::GBackend backend() = 0;
+        const char* id() { return m_id; }
+
+        virtual ~GFunctor() = default;
+    protected:
+        GFunctor(const char* id) : m_id(id) { };
+    private:
+        const char* m_id;
+    };
+
     /** \addtogroup gapi_compile_args
      * @{
      */
@@ -396,6 +410,10 @@ namespace gapi {
         }
 
     public:
+        void include(GFunctor& functor)
+        {
+            m_id_kernels[functor.id()] = std::make_pair(functor.backend(), functor.impl());
+        }
         /**
          * @brief Returns total number of kernels
          * in the package (across all backends included)
@@ -550,6 +568,15 @@ namespace gapi {
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
+        cv::util::suppress_unused_warning(unused);
+        return pkg;
+    };
+
+    template<typename... FF>
+    GKernelPackage kernels(FF&... functors)
+    {
+        GKernelPackage pkg;
+        int unused[] = { 0, (pkg.include(functors), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
     };

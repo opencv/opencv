@@ -12,7 +12,7 @@
 #include "logger.hpp"
 
 #include <opencv2/gapi/plaidml/core.hpp>
-
+#include <opencv2/gapi/core.hpp>
 
 namespace opencv_test
 {
@@ -43,6 +43,11 @@ namespace
         {
             out = in.clone();
         }
+    };
+
+    G_TYPED_KERNEL(GCustom, <GMat(GMat)>, "org.opencv.test.custom")
+    {
+         static GMatDesc outMeta(GMatDesc in) { return in; }
     };
 }
 
@@ -315,6 +320,62 @@ TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
 
     // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
     EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
+}
+
+TEST(GAPI_Pipeline, LambdaFunctorExample)
+{
+    cv::GMat in;
+    cv::GMat out = GCustom::on(in);
+    cv::GComputation comp(in, out);
+
+    cv::Mat in_mat(3, 3, CV_8UC1, cv::Scalar::all(1));
+    cv::Mat ref_mat;
+    cv::Mat out_mat;
+    int value = 5;
+
+    // OpenCV //////////////////////////////////////////////////////////////////////////
+    ref_mat = in_mat + value;
+
+    // G-API //////////////////////////////////////////////////////////////////////////
+    auto impl = cv::make_ocv_functor<GCustom>([&value](const cv::Mat& src, cv::Mat& dst)
+                {
+                    dst = src + value;
+                });
+
+    auto pkg = cv::gapi::kernels(impl);
+    comp.apply(in_mat, out_mat, cv::compile_args(pkg));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+}
+
+TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
+{
+    cv::GMat in1, in2;
+    cv::GMat out = cv::gapi::add(in1, in2);
+    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
+
+    cv::Mat in_mat1(3, 3, CV_8UC1, cv::Scalar::all(1));
+    cv::Mat in_mat2(3, 3, CV_8UC1, cv::Scalar::all(10));
+
+    // OpenCV //////////////////////////////////////////////////////////////////////////
+    cv::Mat ref_mat = in_mat1 + in_mat2;
+
+
+    // G-API //////////////////////////////////////////////////////////////////////////
+    bool was_called = false;
+    auto impl = cv::make_ocv_functor<cv::gapi::core::GAdd>([&was_called]
+                (const cv::Mat& src1, const cv::Mat& src2, int dtype, cv::Mat& dst)
+                {
+                    was_called = true;
+                    dst = src1 + src2;
+                });
+
+    cv::Mat out_mat;
+    auto pkg = cv::gapi::kernels(impl);
+    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+    EXPECT_TRUE(was_called);
 }
 
 } // namespace opencv_test

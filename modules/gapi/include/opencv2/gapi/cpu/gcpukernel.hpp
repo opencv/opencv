@@ -248,6 +248,12 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
             Impl::run(std::forward<Inputs>(ins)..., outs...);
             postprocess(outs...);
         }
+
+        template<typename... Outputs>
+        static void call(Impl impl, Inputs&&... ins, Outputs&&... outs)
+        {
+            impl(std::forward<Inputs>(ins)..., outs...);
+        }
     };
 
     template<int... IIs, int... OIs>
@@ -262,9 +268,23 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         call_and_postprocess<decltype(get_in<Ins>::get(ctx, IIs))...>::call(get_in<Ins>::get(ctx, IIs)..., get_out<Outs>::get(ctx, OIs)...);
     }
 
+    template<int... IIs, int... OIs>
+    static void call_impl(cv::GCPUContext &ctx, Impl impl, detail::Seq<IIs...>, detail::Seq<OIs...>)
+    {
+        call_and_postprocess<decltype(cv::detail::get_in<Ins>::get(ctx, IIs))...>::call(impl, cv::detail::get_in<Ins>::get(ctx, IIs)...,
+                                                                                           cv::detail::get_out<Outs>::get(ctx, OIs)...);
+    }
+
     static void call(GCPUContext &ctx)
     {
         call_impl(ctx,
+                  typename detail::MkSeq<sizeof...(Ins)>::type(),
+                  typename detail::MkSeq<sizeof...(Outs)>::type());
+    }
+
+    static void callFunctor(cv::GCPUContext &ctx, Impl impl)
+    {
+        call_impl(ctx, impl,
                   typename detail::MkSeq<sizeof...(Ins)>::type(),
                   typename detail::MkSeq<sizeof...(Outs)>::type());
     }
@@ -286,6 +306,25 @@ public:
 };
 
 #define GAPI_OCV_KERNEL(Name, API) struct Name: public cv::GCPUKernelImpl<Name, API>
+
+class GCPUFunctor : public cv::gapi::GFunctor
+{
+public:
+    using F = std::function<void(cv::GCPUContext &)>;
+    GCPUFunctor(const char* id, F f) : cv::gapi::GFunctor(id), impl_{cv::GCPUKernel(f)} { };
+
+    cv::GKernelImpl impl()       override { return impl_;                    }
+    cv::gapi::GBackend backend() override { return cv::gapi::cpu::backend(); }
+
+private:
+    cv::GKernelImpl impl_;
+};
+
+template<typename K, typename Callable>
+GCPUFunctor make_ocv_functor(Callable impl) {
+    using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
+    return GCPUFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, impl));
+}
 
 } // namespace cv
 
