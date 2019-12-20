@@ -130,12 +130,9 @@ TEST_P(Test_Torch_layers, run_pool_max)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    double l1 = 0.0, lInf = 0.0;
     if (target == DNN_TARGET_CUDA_FP16)
-    {
-        l1 = 0.2;
-        lInf = 121;
-    }
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    double l1 = 0.0, lInf = 0.0;
     runTorchNet("net_pool_max", "", true, false, true, l1, lInf);
 }
 
