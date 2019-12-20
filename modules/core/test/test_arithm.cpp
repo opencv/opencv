@@ -2021,6 +2021,15 @@ TEST(Compare, regression_8999)
     EXPECT_THROW(cv::compare(A, B, C, CMP_LT), cv::Exception);
 }
 
+TEST(Compare, regression_16F_do_not_crash)
+{
+    cv::Mat one_mat(2, 2, CV_16F, cv::Scalar(1));
+    cv::Mat two_mat(2, 2, CV_16F, cv::Scalar(2));
+    cv::Mat dst;
+
+    EXPECT_THROW(cv::compare(one_mat, two_mat, dst, cv::CMP_EQ), cv::Exception);
+}
+
 
 TEST(Core_minMaxIdx, regression_9207_1)
 {
