@@ -56,7 +56,7 @@ enum OCL_FFT_TYPE
     C2C = 3
 };
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ////////////////////////////////////////////////////////////////////////////
@@ -112,7 +112,7 @@ OCL_TEST_P(Dft, Mat)
     OCL_OFF(cv::dft(src, dst, dft_flags, nonzero_rows));
     OCL_ON(cv::dft(usrc, udst, dft_flags, nonzero_rows));
 
-    // In case forward R2C 1d tranform dst contains only half of output
+    // In case forward R2C 1d transform dst contains only half of output
     // without complex conjugate
     if (dft_type == R2C && is1d && (dft_flags & cv::DFT_INVERSE) == 0)
     {
@@ -185,6 +185,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(45, 72), cv::Size
                                                )
                             );
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

@@ -44,11 +44,10 @@
  */
 
 /* Includes */
-#include <precomp.hpp>
+#include "precomp.hpp"
 #include <opencv2/core.hpp>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 #include <stddef.h>
 #include <limits.h>
@@ -128,8 +127,8 @@ struct RHO_HEST{
      */
 
     virtual inline int    ensureCapacity(unsigned N, double beta){
-        (void)N;
-        (void)beta;
+        CV_UNUSED(N);
+        CV_UNUSED(beta);
 
         return 1;
     }
@@ -337,9 +336,9 @@ struct RHO_HEST_REFC : RHO_HEST{
     ~RHO_HEST_REFC();
 
     /* Methods to implement external interface */
-    inline int    initialize(void);
-    inline void   finalize(void);
-    inline int    ensureCapacity(unsigned N, double beta);
+    inline int    initialize(void) CV_OVERRIDE;
+    inline void   finalize(void) CV_OVERRIDE;
+    inline int    ensureCapacity(unsigned N, double beta) CV_OVERRIDE;
     unsigned      rhoHest(const float*   src,     /* Source points */
                           const float*   dst,     /* Destination points */
                           char*          inl,     /* Inlier mask */
@@ -352,7 +351,8 @@ struct RHO_HEST_REFC : RHO_HEST{
                           double         beta,    /* Works:    0.35 */
                           unsigned       flags,   /* Works:       0 */
                           const float*   guessH,  /* Extrinsic guess, NULL if none provided */
-                          float*         finalH); /* Final result. */
+                          float*         finalH   /* Final result. */
+    ) CV_OVERRIDE;
 
 
 
@@ -443,7 +443,7 @@ static inline void   sacSub8x1            (float*       Hout,
 /**
  * External access to context constructor.
  *
- * @return A pointer to the context if successful; NULL if an error occured.
+ * @return A pointer to the context if successful; NULL if an error occurred.
  */
 
 Ptr<RHO_HEST> rhoInit(void){
@@ -556,7 +556,55 @@ unsigned rhoHest(Ptr<RHO_HEST> p,       /* Homography estimation context. */
  */
 
 RHO_HEST_REFC::RHO_HEST_REFC() : initialized(0){
+    arg.src = 0;
+    arg.dst = 0;
+    arg.inl = 0;
+    arg.N = 0;
+    arg.maxD = 0;
+    arg.maxI = 0;
+    arg.rConvg = 0;
+    arg.cfd = 0;
+    arg.minInl = 0;
+    arg.beta = 0;
+    arg.flags = 0;
+    arg.guessH = 0;
+    arg.finalH = 0;
 
+    ctrl.i = 0;
+    ctrl.phNum = 0;
+    ctrl.phEndI = 0;
+    ctrl.phEndFpI = 0;
+    ctrl.phMax = 0;
+    ctrl.phNumInl = 0;
+    ctrl.numModels = 0;
+    ctrl.smpl = 0;
+
+    curr.pkdPts = 0;
+    curr.H = 0;
+    curr.inl = 0;
+    curr.numInl = 0;
+
+    best.H = 0;
+    best.inl = 0;
+    best.numInl = 0;
+
+    nr.size = 0;
+    nr.beta = 0;
+
+    eval.t_M = 0;
+    eval.m_S = 0;
+    eval.epsilon = 0;
+    eval.delta = 0;
+    eval.A = 0;
+    eval.Ntested = 0;
+    eval.Ntestedtotal = 0;
+    eval.good = 0;
+    eval.lambdaAccept = 0;
+    eval.lambdaReject = 0;
+
+    lm.JtJ = 0;
+    lm.tmp1 = 0;
+    lm.Jte = 0;
 }
 
 /**
@@ -1157,7 +1205,7 @@ inline void   RHO_HEST_REFC::PROSACGoToNextPhase(void){
 
 /**
  * Get a sample according to PROSAC rules. Namely:
- * - If we're past the phase end interation, select randomly 4 out of the first
+ * - If we're past the phase end interaction, select randomly 4 out of the first
  *   phNum matches.
  * - Otherwise, select match phNum-1 and select randomly the 3 others out of
  *   the first phNum-1 matches.
@@ -1200,11 +1248,11 @@ inline void   RHO_HEST_REFC::rndSmpl(unsigned  sampleSize,
         /**
          * Selection Sampling:
          *
-         * Algorithm S (Selection sampling technique). To select n records at random from a set of N, where 0 < n ≤ N.
-         * S1. [Initialize.] Set t ← 0, m ← 0. (During this algorithm, m represents the number of records selected so far,
+         * Algorithm S (Selection sampling technique). To select n records at random from a set of N, where 0 < n <= N.
+         * S1. [Initialize.] Set t = 0, m = 0. (During this algorithm, m represents the number of records selected so far,
          *                                      and t is the total number of input records that we have dealt with.)
          * S2. [Generate U.] Generate a random number U, uniformly distributed between zero and one.
-         * S3. [Test.] If (N – t)U ≥ n – m, go to step S5.
+         * S3. [Test.] If (N - t)U >= n - m, go to step S5.
          * S4. [Select.] Select the next record for the sample, and increase m and t by 1. If m < n, go to step S2;
          *               otherwise the sample is complete and the algorithm terminates.
          * S5. [Skip.] Skip the next record (do not include it in the sample), increase t by 1, and go back to step S2.
@@ -1694,7 +1742,7 @@ inline void   RHO_HEST_REFC::updateBounds(void){
 }
 
 /**
- * Ouput the best model so far to the output argument.
+ * Output the best model so far to the output argument.
  *
  * Reads    (direct): arg.finalH, best.H, arg.inl, best.inl, arg.N
  * Reads   (callees): arg.finalH, arg.inl, arg.N
@@ -1714,7 +1762,7 @@ inline void   RHO_HEST_REFC::outputModel(void){
 }
 
 /**
- * Ouput a zeroed H to the output argument.
+ * Output a zeroed H to the output argument.
  *
  * Reads    (direct): arg.finalH, arg.inl, arg.N
  * Reads   (callees): None.
@@ -2116,7 +2164,7 @@ inline void   RHO_HEST_REFC::refine(void){
          * order to compute a candidate homography (newH).
          *
          * The system above is solved by Cholesky decomposition of a
-         * sufficently-damped JtJ into a lower-triangular matrix (and its
+         * sufficiently-damped JtJ into a lower-triangular matrix (and its
          * transpose), whose inverse is then computed. This inverse (and its
          * transpose) then multiply Jte in order to find dH.
          */
@@ -2370,7 +2418,7 @@ static inline float  sacLMGain(const float*  dH,
 static inline int    sacChol8x8Damped(const float (*A)[8],
                                       float         lambda,
                                       float       (*L)[8]){
-    const register int N = 8;
+    const int N = 8;
     int i, j, k;
     float  lambdap1 = lambda + 1.0f;
     float  x;

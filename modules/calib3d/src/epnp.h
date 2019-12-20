@@ -17,6 +17,8 @@ class epnp {
 
   void compute_pose(cv::Mat& R, cv::Mat& t);
  private:
+  epnp(const epnp &); // copy disabled
+  epnp& operator=(const epnp &); // assign disabled
   template <typename T>
   void init_camera_parameters(const cv::Mat& cameraMatrix)
   {

@@ -72,7 +72,7 @@ set(generated_cubin_file_internal "@generated_cubin_file@") # path
 set(CUDA_NVCC_EXECUTABLE "@CUDA_NVCC_EXECUTABLE@") # path
 set(CUDA_NVCC_FLAGS @CUDA_NVCC_FLAGS@ ;; @CUDA_WRAP_OPTION_NVCC_FLAGS@) # list
 @CUDA_NVCC_FLAGS_CONFIG@
-set(nvcc_flags @nvcc_flags@) # list
+set(nvcc_flags "@nvcc_flags@") # list
 set(CUDA_NVCC_INCLUDE_ARGS "@CUDA_NVCC_INCLUDE_ARGS@") # list (needs to be in quotes to handle spaces properly).
 set(format_flag "@format_flag@") # string
 
@@ -107,7 +107,7 @@ list(APPEND CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS_${build_configuration}})
 list( FIND CUDA_NVCC_FLAGS "-ccbin" ccbin_found0 )
 list( FIND CUDA_NVCC_FLAGS "--compiler-bindir" ccbin_found1 )
 if( ccbin_found0 LESS 0 AND ccbin_found1 LESS 0 AND CUDA_HOST_COMPILER )
-  if (CUDA_HOST_COMPILER STREQUAL "$(VCInstallDir)bin" AND DEFINED CCBIN)
+  if (CUDA_HOST_COMPILER STREQUAL "@_CUDA_MSVC_HOST_COMPILER@" AND DEFINED CCBIN)
     set(CCBIN -ccbin "${CCBIN}")
   else()
     set(CCBIN -ccbin "${CUDA_HOST_COMPILER}")
@@ -136,7 +136,7 @@ macro(cuda_execute_process status command)
     # copy and paste a runnable command line.
     set(cuda_execute_process_string)
     foreach(arg ${ARGN})
-      # If there are quotes, excape them, so they come through.
+      # If there are quotes, escape them, so they come through.
       string(REPLACE "\"" "\\\"" arg ${arg})
       # Args with spaces need quotes around them to get them to be parsed as a single argument.
       if(arg MATCHES " ")
@@ -167,14 +167,14 @@ if(CUDA_VERSION VERSION_LESS "3.0")
   # CMake policy 0007 NEW states that empty list elements are not
   # ignored.  I'm just setting it to avoid the warning that's printed.
   cmake_policy(SET CMP0007 NEW)
-  # Note that this will remove all occurances of -G.
+  # Note that this will remove all occurrences of -G.
   list(REMOVE_ITEM depends_CUDA_NVCC_FLAGS "-G")
   cmake_policy(POP)
 endif()
 
 # nvcc doesn't define __CUDACC__ for some reason when generating dependency files.  This
 # can cause incorrect dependencies when #including files based on this macro which is
-# defined in the generating passes of nvcc invokation.  We will go ahead and manually
+# defined in the generating passes of nvcc invocation.  We will go ahead and manually
 # define this for now until a future version fixes this bug.
 set(CUDACC_DEFINE -D__CUDACC__)
 

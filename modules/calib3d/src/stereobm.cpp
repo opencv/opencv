@@ -49,6 +49,7 @@
 #include <stdio.h>
 #include <limits>
 #include "opencl_kernels_calib3d.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -86,6 +87,7 @@ struct StereoBMParams
     int dispType;
 };
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsize, int prefilterCap)
 {
     ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc, cv::format("-D WSZ=%d", winsize));
@@ -99,13 +101,14 @@ static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsi
     _output.create(input.size(), input.type());
     output = _output.getUMat();
 
-    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+    size_t globalThreads[3] = { (size_t)input.cols, (size_t)input.rows, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols,
         prefilterCap, scale_g, scale_s);
 
     return k.run(2, globalThreads, NULL, false);
 }
+#endif
 
 static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uchar* buf )
 {
@@ -170,6 +173,7 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
     }
 }
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int prefilterCap)
 {
     ocl::Kernel k("prefilter_xsobel", ocl::calib3d::stereobm_oclsrc);
@@ -180,28 +184,25 @@ static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int pre
     _output.create(input.size(), input.type());
     output = _output.getUMat();
 
-    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+    size_t globalThreads[3] = { (size_t)input.cols, (size_t)input.rows, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols, prefilterCap);
 
     return k.run(2, globalThreads, NULL, false);
 }
+#endif
 
 static void
 prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
 {
     int x, y;
     const int OFS = 256*4, TABSZ = OFS*2 + 256;
-    uchar tab[TABSZ];
+    uchar tab[TABSZ] = { 0 };
     Size size = src.size();
 
     for( x = 0; x < TABSZ; x++ )
         tab[x] = (uchar)(x - OFS < -ftzero ? 0 : x - OFS > ftzero ? ftzero*2 : x - OFS + ftzero);
     uchar val0 = tab[0 + OFS];
-
-#if CV_SSE2
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
-#endif
 
     for( y = 0; y < size.height-1; y += 2 )
     {
@@ -215,71 +216,33 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         dptr0[0] = dptr0[size.width-1] = dptr1[0] = dptr1[size.width-1] = val0;
         x = 1;
 
-#if CV_NEON
-        int16x8_t ftz = vdupq_n_s16 ((short) ftzero);
-        uint8x8_t ftz2 = vdup_n_u8 (cv::saturate_cast<uchar>(ftzero*2));
-
-        for(; x <=size.width-9; x += 8 )
+#if CV_SIMD
         {
-            uint8x8_t c0 = vld1_u8 (srow0 + x - 1);
-            uint8x8_t c1 = vld1_u8 (srow1 + x - 1);
-            uint8x8_t d0 = vld1_u8 (srow0 + x + 1);
-            uint8x8_t d1 = vld1_u8 (srow1 + x + 1);
+            v_int16 ftz = vx_setall_s16((short) ftzero);
+            v_int16 ftz2 = vx_setall_s16((short)(ftzero*2));
+            v_int16 z = vx_setzero_s16();
 
-            int16x8_t t0 = vreinterpretq_s16_u16 (vsubl_u8 (d0, c0));
-            int16x8_t t1 = vreinterpretq_s16_u16 (vsubl_u8 (d1, c1));
-
-            uint8x8_t c2 = vld1_u8 (srow2 + x - 1);
-            uint8x8_t c3 = vld1_u8 (srow3 + x - 1);
-            uint8x8_t d2 = vld1_u8 (srow2 + x + 1);
-            uint8x8_t d3 = vld1_u8 (srow3 + x + 1);
-
-            int16x8_t t2 = vreinterpretq_s16_u16 (vsubl_u8 (d2, c2));
-            int16x8_t t3 = vreinterpretq_s16_u16 (vsubl_u8 (d3, c3));
-
-            int16x8_t v0 = vaddq_s16 (vaddq_s16 (t2, t0), vaddq_s16 (t1, t1));
-            int16x8_t v1 = vaddq_s16 (vaddq_s16 (t3, t1), vaddq_s16 (t2, t2));
-
-
-            uint8x8_t v0_u8 = vqmovun_s16 (vaddq_s16 (v0, ftz));
-            uint8x8_t v1_u8 = vqmovun_s16 (vaddq_s16 (v1, ftz));
-            v0_u8 =  vmin_u8 (v0_u8, ftz2);
-            v1_u8 =  vmin_u8 (v1_u8, ftz2);
-            vqmovun_s16 (vaddq_s16 (v1, ftz));
-
-            vst1_u8 (dptr0 + x, v0_u8);
-            vst1_u8 (dptr1 + x, v1_u8);
-        }
-#elif CV_SSE2
-        if( useSIMD )
-        {
-            __m128i z = _mm_setzero_si128(), ftz = _mm_set1_epi16((short)ftzero),
-            ftz2 = _mm_set1_epi8(cv::saturate_cast<uchar>(ftzero*2));
-            for( ; x <= size.width-9; x += 8 )
+            for(; x <= (size.width - 1) - v_int16::nlanes; x += v_int16::nlanes)
             {
-                __m128i c0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow0 + x - 1)), z);
-                __m128i c1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow1 + x - 1)), z);
-                __m128i d0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow0 + x + 1)), z);
-                __m128i d1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow1 + x + 1)), z);
+                v_int16 s00 = v_reinterpret_as_s16(vx_load_expand(srow0 + x + 1));
+                v_int16 s01 = v_reinterpret_as_s16(vx_load_expand(srow0 + x - 1));
+                v_int16 s10 = v_reinterpret_as_s16(vx_load_expand(srow1 + x + 1));
+                v_int16 s11 = v_reinterpret_as_s16(vx_load_expand(srow1 + x - 1));
+                v_int16 s20 = v_reinterpret_as_s16(vx_load_expand(srow2 + x + 1));
+                v_int16 s21 = v_reinterpret_as_s16(vx_load_expand(srow2 + x - 1));
+                v_int16 s30 = v_reinterpret_as_s16(vx_load_expand(srow3 + x + 1));
+                v_int16 s31 = v_reinterpret_as_s16(vx_load_expand(srow3 + x - 1));
 
-                d0 = _mm_sub_epi16(d0, c0);
-                d1 = _mm_sub_epi16(d1, c1);
+                v_int16 d0 = s00 - s01;
+                v_int16 d1 = s10 - s11;
+                v_int16 d2 = s20 - s21;
+                v_int16 d3 = s30 - s31;
 
-                __m128i c2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x - 1)), z);
-                __m128i c3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow3 + x - 1)), z);
-                __m128i d2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x + 1)), z);
-                __m128i d3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow3 + x + 1)), z);
+                v_uint16 v0 = v_reinterpret_as_u16(v_max(v_min(d0 + d1 + d1 + d2 + ftz, ftz2), z));
+                v_uint16 v1 = v_reinterpret_as_u16(v_max(v_min(d1 + d2 + d2 + d3 + ftz, ftz2), z));
 
-                d2 = _mm_sub_epi16(d2, c2);
-                d3 = _mm_sub_epi16(d3, c3);
-
-                __m128i v0 = _mm_add_epi16(d0, _mm_add_epi16(d2, _mm_add_epi16(d1, d1)));
-                __m128i v1 = _mm_add_epi16(d1, _mm_add_epi16(d3, _mm_add_epi16(d2, d2)));
-                v0 = _mm_packus_epi16(_mm_add_epi16(v0, ftz), _mm_add_epi16(v1, ftz));
-                v0 = _mm_min_epu8(v0, ftz2);
-
-                _mm_storel_epi64((__m128i*)(dptr0 + x), v0);
-                _mm_storel_epi64((__m128i*)(dptr1 + x), _mm_unpackhi_epi64(v0, v0));
+                v_pack_store(dptr0 + x, v0);
+                v_pack_store(dptr1 + x, v1);
             }
         }
 #endif
@@ -295,32 +258,64 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         }
     }
 
-#if CV_NEON
-    uint8x16_t val0_16 = vdupq_n_u8 (val0);
-#endif
-
     for( ; y < size.height; y++ )
     {
         uchar* dptr = dst.ptr<uchar>(y);
         x = 0;
-    #if CV_NEON
-        for(; x <= size.width-16; x+=16 )
-            vst1q_u8 (dptr + x, val0_16);
-    #endif
+#if CV_SIMD
+        {
+            v_uint8 val0_16 = vx_setall_u8(val0);
+            for(; x <= size.width-v_uint8::nlanes; x+=v_uint8::nlanes)
+                v_store(dptr + x, val0_16);
+        }
+#endif
         for(; x < size.width; x++ )
             dptr[x] = val0;
     }
 }
 
 
-static const int DISPARITY_SHIFT = 4;
+static const int DISPARITY_SHIFT_16S = 4;
+static const int DISPARITY_SHIFT_32S = 8;
 
-#if CV_SSE2
-static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
+template <typename T>
+struct dispShiftTemplate
+{ };
+
+template<>
+struct dispShiftTemplate<short>
+{
+    enum { value = DISPARITY_SHIFT_16S };
+};
+
+template<>
+struct dispShiftTemplate<int>
+{
+    enum { value = DISPARITY_SHIFT_32S };
+};
+
+template <typename T>
+inline T dispDescale(int /*v1*/, int /*v2*/, int /*d*/);
+
+template<>
+inline short dispDescale(int v1, int v2, int d)
+{
+    return (short)((v1*256 + (d != 0 ? v2*256/d : 0) + 15) >> 4);
+}
+
+template <>
+inline int dispDescale(int v1, int v2, int d)
+{
+    return (int)(v1*256 + (d != 0 ? v2*256/d : 0)); // no need to add 127, this will be converted to float
+}
+
+#if CV_SIMD
+template <typename dType>
+static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                                             Mat& disp, Mat& cost, StereoBMParams& state,
                                             uchar* buf, int _dy0, int _dy1 )
 {
-    const int ALIGN = 16;
+    const int ALIGN = CV_SIMD_WIDTH;
     int x, y, d;
     int wsz = state.SADWindowSize, wsz2 = wsz/2;
     int dy0 = MIN(_dy0, wsz2+1), dy1 = MIN(_dy1, wsz2+1);
@@ -333,7 +328,8 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
-    short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT);
+    const int disp_shift = dispShiftTemplate<dType>::value;
+    dType FILTERED = (dType)((mindisp - 1) << disp_shift);
 
     ushort *sad, *hsad0, *hsad, *hsad_sub;
     int *htext;
@@ -341,7 +337,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     const uchar* lptr0 = left.ptr() + lofs;
     const uchar* rptr0 = right.ptr() + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
-    short* dptr = disp.ptr<short>();
+    dType* dptr = disp.ptr<dType>();
     int sstep = (int)left.step;
     int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height + dy0 + dy1)*ndisp;
@@ -349,7 +345,9 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     int coststep = cost.data ? (int)(cost.step/sizeof(costbuf)) : 0;
     const int TABSZ = 256;
     uchar tab[TABSZ];
-    const __m128i d0_8 = _mm_setr_epi16(0,1,2,3,4,5,6,7), dd_8 = _mm_set1_epi16(8);
+    short v_seq[v_int16::nlanes];
+    for (short i = 0; i < v_int16::nlanes; ++i)
+        v_seq[i] = i;
 
     sad = (ushort*)alignPtr(buf + sizeof(sad[0]), ALIGN);
     hsad0 = (ushort*)alignPtr(sad + ndisp + 1 + dy0*ndisp, ALIGN);
@@ -367,23 +365,31 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     {
         hsad = hsad0 - dy0*ndisp; cbuf = cbuf0 + (x + wsz2 + 1)*cstep - dy0*ndisp;
         lptr = lptr0 + MIN(MAX(x, -lofs), width-lofs-1) - dy0*sstep;
-        rptr = rptr0 + MIN(MAX(x, -rofs), width-rofs-1) - dy0*sstep;
+        rptr = rptr0 + MIN(MAX(x, -rofs), width-rofs-ndisp) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, hsad += ndisp, cbuf += ndisp, lptr += sstep, rptr += sstep )
         {
             int lval = lptr[0];
-            __m128i lv = _mm_set1_epi8((char)lval), z = _mm_setzero_si128();
-            for( d = 0; d < ndisp; d += 16 )
+            v_uint8 lv = vx_setall_u8((uchar)lval);
+            for( d = 0; d <= ndisp - v_uint8::nlanes; d += v_uint8::nlanes )
             {
-                __m128i rv = _mm_loadu_si128((const __m128i*)(rptr + d));
-                __m128i hsad_l = _mm_load_si128((__m128i*)(hsad + d));
-                __m128i hsad_h = _mm_load_si128((__m128i*)(hsad + d + 8));
-                __m128i diff = _mm_adds_epu8(_mm_subs_epu8(lv, rv), _mm_subs_epu8(rv, lv));
-                _mm_store_si128((__m128i*)(cbuf + d), diff);
-                hsad_l = _mm_add_epi16(hsad_l, _mm_unpacklo_epi8(diff,z));
-                hsad_h = _mm_add_epi16(hsad_h, _mm_unpackhi_epi8(diff,z));
-                _mm_store_si128((__m128i*)(hsad + d), hsad_l);
-                _mm_store_si128((__m128i*)(hsad + d + 8), hsad_h);
+                v_uint8 diff = v_absdiff(lv, vx_load(rptr + d));
+                v_store(cbuf + d, diff);
+                v_store(hsad + d, vx_load(hsad + d) + v_expand_low(diff));
+                v_store(hsad + d + v_uint16::nlanes, vx_load(hsad + d + v_uint16::nlanes) + v_expand_high(diff));
+            }
+            if( d <= ndisp - v_uint16::nlanes )
+            {
+                v_uint8 diff = v_absdiff(lv, vx_load_low(rptr + d));
+                v_store_low(cbuf + d, diff);
+                v_store(hsad + d, vx_load(hsad + d) + v_expand_low(diff));
+                d += v_uint16::nlanes;
+            }
+            for( ; d < ndisp; d++ )
+            {
+                int diff = abs(lval - rptr[d]);
+                cbuf[d] = (uchar)diff;
+                hsad[d] += (ushort)diff;
             }
             htext[y] += tab[lval];
         }
@@ -408,27 +414,33 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
         hsad = hsad0 - dy0*ndisp;
         lptr_sub = lptr0 + MIN(MAX(x0, -lofs), width-1-lofs) - dy0*sstep;
         lptr = lptr0 + MIN(MAX(x1, -lofs), width-1-lofs) - dy0*sstep;
-        rptr = rptr0 + MIN(MAX(x1, -rofs), width-1-rofs) - dy0*sstep;
+        rptr = rptr0 + MIN(MAX(x1, -rofs), width-ndisp-rofs) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, cbuf += ndisp, cbuf_sub += ndisp,
             hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
         {
             int lval = lptr[0];
-            __m128i lv = _mm_set1_epi8((char)lval), z = _mm_setzero_si128();
-            for( d = 0; d < ndisp; d += 16 )
+            v_uint8 lv = vx_setall_u8((uchar)lval);
+            for( d = 0; d <= ndisp - v_uint8::nlanes; d += v_uint8::nlanes )
             {
-                __m128i rv = _mm_loadu_si128((const __m128i*)(rptr + d));
-                __m128i hsad_l = _mm_load_si128((__m128i*)(hsad + d));
-                __m128i hsad_h = _mm_load_si128((__m128i*)(hsad + d + 8));
-                __m128i cbs = _mm_load_si128((const __m128i*)(cbuf_sub + d));
-                __m128i diff = _mm_adds_epu8(_mm_subs_epu8(lv, rv), _mm_subs_epu8(rv, lv));
-                __m128i diff_h = _mm_sub_epi16(_mm_unpackhi_epi8(diff, z), _mm_unpackhi_epi8(cbs, z));
-                _mm_store_si128((__m128i*)(cbuf + d), diff);
-                diff = _mm_sub_epi16(_mm_unpacklo_epi8(diff, z), _mm_unpacklo_epi8(cbs, z));
-                hsad_h = _mm_add_epi16(hsad_h, diff_h);
-                hsad_l = _mm_add_epi16(hsad_l, diff);
-                _mm_store_si128((__m128i*)(hsad + d), hsad_l);
-                _mm_store_si128((__m128i*)(hsad + d + 8), hsad_h);
+                v_uint8 diff = v_absdiff(lv, vx_load(rptr + d));
+                v_int8 cbs = v_reinterpret_as_s8(vx_load(cbuf_sub + d));
+                v_store(cbuf + d, diff);
+                v_store(hsad + d, v_reinterpret_as_u16(v_reinterpret_as_s16(vx_load(hsad + d) + v_expand_low(diff)) - v_expand_low(cbs)));
+                v_store(hsad + d + v_uint16::nlanes, v_reinterpret_as_u16(v_reinterpret_as_s16(vx_load(hsad + d + v_uint16::nlanes) + v_expand_high(diff)) - v_expand_high(cbs)));
+            }
+            if( d <= ndisp - v_uint16::nlanes)
+            {
+                v_uint8 diff = v_absdiff(lv, vx_load_low(rptr + d));
+                v_store_low(cbuf + d, diff);
+                v_store(hsad + d, v_reinterpret_as_u16(v_reinterpret_as_s16(vx_load(hsad + d) + v_expand_low(diff)) - vx_load_expand((schar*)cbuf_sub + d)));
+                d += v_uint16::nlanes;
+            }
+            for( ; d < ndisp; d++ )
+            {
+                int diff = abs(lval - rptr[d]);
+                cbuf[d] = (uchar)diff;
+                hsad[d] = hsad[d] + (ushort)diff - cbuf_sub[d];
             }
             htext[y] += tab[lval] - tab[lptr_sub[0]];
         }
@@ -445,17 +457,25 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
 
         hsad = hsad0 + (1 - dy0)*ndisp;
         for( y = 1 - dy0; y < wsz2; y++, hsad += ndisp )
-            for( d = 0; d < ndisp; d += 16 )
+        {
+            for( d = 0; d <= ndisp-2*v_uint16::nlanes; d += 2*v_uint16::nlanes )
             {
-                __m128i s0 = _mm_load_si128((__m128i*)(sad + d));
-                __m128i s1 = _mm_load_si128((__m128i*)(sad + d + 8));
-                __m128i t0 = _mm_load_si128((__m128i*)(hsad + d));
-                __m128i t1 = _mm_load_si128((__m128i*)(hsad + d + 8));
-                s0 = _mm_add_epi16(s0, t0);
-                s1 = _mm_add_epi16(s1, t1);
-                _mm_store_si128((__m128i*)(sad + d), s0);
-                _mm_store_si128((__m128i*)(sad + d + 8), s1);
+                v_store(sad + d, vx_load(sad + d) + vx_load(hsad + d));
+                v_store(sad + d + v_uint16::nlanes, vx_load(sad + d + v_uint16::nlanes) + vx_load(hsad + d + v_uint16::nlanes));
             }
+            if( d <= ndisp-v_uint16::nlanes )
+            {
+                v_store(sad + d, vx_load(sad + d) + vx_load(hsad + d));
+                d += v_uint16::nlanes;
+            }
+            if( d <= ndisp-v_uint16::nlanes/2 )
+            {
+                v_store_low(sad + d, vx_load_low(sad + d) + vx_load_low(hsad + d));
+                d += v_uint16::nlanes/2;
+            }
+            for( ; d < ndisp; d++ )
+                sad[d] = sad[d] + hsad[d];
+        }
         int tsum = 0;
         for( y = -wsz2-1; y < wsz2; y++ )
             tsum += htext[y];
@@ -466,38 +486,41 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
             int minsad = INT_MAX, mind = -1;
             hsad = hsad0 + MIN(y + wsz2, height+dy1-1)*ndisp;
             hsad_sub = hsad0 + MAX(y - wsz2 - 1, -dy0)*ndisp;
-            __m128i minsad8 = _mm_set1_epi16(SHRT_MAX);
-            __m128i mind8 = _mm_set1_epi16(0), d8 = d0_8, mask;
+            v_int16 minsad8 = vx_setall_s16(SHRT_MAX);
+            v_int16 mind8 = vx_setall_s16(0);
 
-            for( d = 0; d < ndisp; d += 16 )
+            for( d = 0; d <= ndisp - 2*v_int16::nlanes; d += 2*v_int16::nlanes )
             {
-                __m128i u0 = _mm_load_si128((__m128i*)(hsad_sub + d));
-                __m128i u1 = _mm_load_si128((__m128i*)(hsad + d));
+                v_int16 sad8 = v_reinterpret_as_s16(vx_load(hsad + d)) - v_reinterpret_as_s16(vx_load(hsad_sub + d)) + v_reinterpret_as_s16(vx_load(sad + d));
+                v_store(sad + d, v_reinterpret_as_u16(sad8));
+                mind8 = v_max(mind8, (minsad8 > sad8) & vx_setall_s16((short)d));
+                minsad8 = v_min(minsad8, sad8);
 
-                __m128i v0 = _mm_load_si128((__m128i*)(hsad_sub + d + 8));
-                __m128i v1 = _mm_load_si128((__m128i*)(hsad + d + 8));
-
-                __m128i usad8 = _mm_load_si128((__m128i*)(sad + d));
-                __m128i vsad8 = _mm_load_si128((__m128i*)(sad + d + 8));
-
-                u1 = _mm_sub_epi16(u1, u0);
-                v1 = _mm_sub_epi16(v1, v0);
-                usad8 = _mm_add_epi16(usad8, u1);
-                vsad8 = _mm_add_epi16(vsad8, v1);
-
-                mask = _mm_cmpgt_epi16(minsad8, usad8);
-                minsad8 = _mm_min_epi16(minsad8, usad8);
-                mind8 = _mm_max_epi16(mind8, _mm_and_si128(mask, d8));
-
-                _mm_store_si128((__m128i*)(sad + d), usad8);
-                _mm_store_si128((__m128i*)(sad + d + 8), vsad8);
-
-                mask = _mm_cmpgt_epi16(minsad8, vsad8);
-                minsad8 = _mm_min_epi16(minsad8, vsad8);
-
-                d8 = _mm_add_epi16(d8, dd_8);
-                mind8 = _mm_max_epi16(mind8, _mm_and_si128(mask, d8));
-                d8 = _mm_add_epi16(d8, dd_8);
+                sad8 = v_reinterpret_as_s16(vx_load(hsad + d + v_int16::nlanes)) - v_reinterpret_as_s16(vx_load(hsad_sub + d + v_int16::nlanes)) + v_reinterpret_as_s16(vx_load(sad + d + v_int16::nlanes));
+                v_store(sad + d + v_int16::nlanes, v_reinterpret_as_u16(sad8));
+                mind8 = v_max(mind8, (minsad8 > sad8) & vx_setall_s16((short)d+v_int16::nlanes));
+                minsad8 = v_min(minsad8, sad8);
+            }
+            if( d <= ndisp - v_int16::nlanes )
+            {
+                v_int16 sad8 = v_reinterpret_as_s16(vx_load(hsad + d)) - v_reinterpret_as_s16(vx_load(hsad_sub + d)) + v_reinterpret_as_s16(vx_load(sad + d));
+                v_store(sad + d, v_reinterpret_as_u16(sad8));
+                mind8 = v_max(mind8, (minsad8 > sad8) & vx_setall_s16((short)d));
+                minsad8 = v_min(minsad8, sad8);
+                d += v_int16::nlanes;
+            }
+            minsad = v_reduce_min(minsad8);
+            v_int16 v_mask = (vx_setall_s16((short)minsad) == minsad8);
+            mind = v_reduce_min(((mind8+vx_load(v_seq)) & v_mask) | (vx_setall_s16(SHRT_MAX) & ~v_mask));
+            for( ; d < ndisp; d++ )
+            {
+                int sad8 = (int)(hsad[d]) - hsad_sub[d] + sad[d];
+                sad[d] = (ushort)sad8;
+                if(minsad > sad8)
+                {
+                    mind = d;
+                    minsad = sad8;
+                }
             }
 
             tsum += htext[y + wsz2] - htext[y - wsz2 - 1];
@@ -507,40 +530,43 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
                 continue;
             }
 
-            ushort CV_DECL_ALIGNED(16) minsad_buf[8], mind_buf[8];
-            _mm_store_si128((__m128i*)minsad_buf, minsad8);
-            _mm_store_si128((__m128i*)mind_buf, mind8);
-            for( d = 0; d < 8; d++ )
-                if(minsad > (int)minsad_buf[d] || (minsad == (int)minsad_buf[d] && mind > mind_buf[d]))
-                {
-                    minsad = minsad_buf[d];
-                    mind = mind_buf[d];
-                }
-
             if( uniquenessRatio > 0 )
             {
                 int thresh = minsad + (minsad * uniquenessRatio/100);
-                __m128i thresh8 = _mm_set1_epi16((short)(thresh + 1));
-                __m128i d1 = _mm_set1_epi16((short)(mind-1)), d2 = _mm_set1_epi16((short)(mind+1));
-                __m128i dd_16 = _mm_add_epi16(dd_8, dd_8);
-                d8 = _mm_sub_epi16(d0_8, dd_16);
+                v_int32 thresh4 = vx_setall_s32(thresh + 1);
+                v_int32 d1 = vx_setall_s32(mind-1), d2 = vx_setall_s32(mind+1);
+                v_int32 dd_4 = vx_setall_s32(v_int32::nlanes);
+                v_int32 d4 = vx_load_expand(v_seq);
 
-                for( d = 0; d < ndisp; d += 16 )
+                for( d = 0; d <= ndisp - v_int16::nlanes; d += v_int16::nlanes )
                 {
-                    __m128i usad8 = _mm_load_si128((__m128i*)(sad + d));
-                    __m128i vsad8 = _mm_load_si128((__m128i*)(sad + d + 8));
-                    mask = _mm_cmpgt_epi16( thresh8, _mm_min_epi16(usad8,vsad8));
-                    d8 = _mm_add_epi16(d8, dd_16);
-                    if( !_mm_movemask_epi8(mask) )
-                        continue;
-                    mask = _mm_cmpgt_epi16( thresh8, usad8);
-                    mask = _mm_and_si128(mask, _mm_or_si128(_mm_cmpgt_epi16(d1,d8), _mm_cmpgt_epi16(d8,d2)));
-                    if( _mm_movemask_epi8(mask) )
+                    v_int32 sad4_l, sad4_h;
+                    v_expand(v_reinterpret_as_s16(vx_load(sad + d)), sad4_l, sad4_h);
+                    if( v_check_any((thresh4 > sad4_l) & ((d1 > d4) | (d4 > d2))) )
                         break;
-                    __m128i t8 = _mm_add_epi16(d8, dd_8);
-                    mask = _mm_cmpgt_epi16( thresh8, vsad8);
-                    mask = _mm_and_si128(mask, _mm_or_si128(_mm_cmpgt_epi16(d1,t8), _mm_cmpgt_epi16(t8,d2)));
-                    if( _mm_movemask_epi8(mask) )
+                    d4 += dd_4;
+                    if( v_check_any((thresh4 > sad4_h) & ((d1 > d4) | (d4 > d2))) )
+                        break;
+                    d4 += dd_4;
+                }
+                if( d <= ndisp - v_int16::nlanes )
+                {
+                    dptr[y*dstep] = FILTERED;
+                    continue;
+                }
+                if( d <= ndisp - v_int32::nlanes )
+                {
+                    v_int32 sad4_l = vx_load_expand((short*)sad + d);
+                    if (v_check_any((thresh4 > sad4_l) & ((d1 > d4) | (d4 > d2))))
+                    {
+                        dptr[y*dstep] = FILTERED;
+                        continue;
+                    }
+                    d += v_int16::nlanes;
+                }
+                for( ; d < ndisp; d++ )
+                {
+                    if( (thresh + 1) > sad[d] && ((mind - 1) > d || d > (mind + 1)) )
                         break;
                 }
                 if( d < ndisp )
@@ -554,23 +580,24 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
             {
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                dptr[y*dstep] = dispDescale<dType>(ndisp - mind - 1 + mindisp, p-n, d);
             }
             else
-                dptr[y*dstep] = (short)((ndisp - mind - 1 + mindisp)*16);
+                dptr[y*dstep] = dispDescale<dType>(ndisp - mind - 1 + mindisp, 0, 0);
             costptr[y*coststep] = sad[mind];
         }
     }
 }
 #endif
 
+template <typename mType>
 static void
 findStereoCorrespondenceBM( const Mat& left, const Mat& right,
-                           Mat& disp, Mat& cost, const StereoBMParams& state,
-                           uchar* buf, int _dy0, int _dy1 )
+                            Mat& disp, Mat& cost, const StereoBMParams& state,
+                            uchar* buf, int _dy0, int _dy1 )
 {
 
-    const int ALIGN = 16;
+    const int ALIGN = CV_SIMD_WIDTH;
     int x, y, d;
     int wsz = state.SADWindowSize, wsz2 = wsz/2;
     int dy0 = MIN(_dy0, wsz2+1), dy1 = MIN(_dy1, wsz2+1);
@@ -583,23 +610,15 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
-    short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT);
-
-#if CV_NEON
-    CV_Assert (ndisp % 8 == 0);
-    int32_t d0_4_temp [4];
-    for (int i = 0; i < 4; i ++)
-        d0_4_temp[i] = i;
-    int32x4_t d0_4 = vld1q_s32 (d0_4_temp);
-    int32x4_t dd_4 = vdupq_n_s32 (4);
-#endif
+    const int disp_shift = dispShiftTemplate<mType>::value;
+    mType FILTERED = (mType)((mindisp - 1) << disp_shift);
 
     int *sad, *hsad0, *hsad, *hsad_sub, *htext;
     uchar *cbuf0, *cbuf;
     const uchar* lptr0 = left.ptr() + lofs;
     const uchar* rptr0 = right.ptr() + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
-    short* dptr = disp.ptr<short>();
+    mType* dptr = disp.ptr<mType>();
     int sstep = (int)left.step;
     int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height+dy0+dy1)*ndisp;
@@ -607,6 +626,13 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     int coststep = cost.data ? (int)(cost.step/sizeof(costbuf)) : 0;
     const int TABSZ = 256;
     uchar tab[TABSZ];
+
+#if CV_SIMD
+    int v_seq[v_int32::nlanes];
+    for (int i = 0; i < v_int32::nlanes; ++i)
+        v_seq[i] = i;
+    v_int32 d0_4 = vx_load(v_seq), dd_4 = vx_setall_s32(v_int32::nlanes);
+#endif
 
     sad = (int*)alignPtr(buf + sizeof(sad[0]), ALIGN);
     hsad0 = (int*)alignPtr(sad + ndisp + 1 + dy0*ndisp, ALIGN);
@@ -624,33 +650,49 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     {
         hsad = hsad0 - dy0*ndisp; cbuf = cbuf0 + (x + wsz2 + 1)*cstep - dy0*ndisp;
         lptr = lptr0 + std::min(std::max(x, -lofs), width-lofs-1) - dy0*sstep;
-        rptr = rptr0 + std::min(std::max(x, -rofs), width-rofs-1) - dy0*sstep;
+        rptr = rptr0 + std::min(std::max(x, -rofs), width-rofs-ndisp) - dy0*sstep;
         for( y = -dy0; y < height + dy1; y++, hsad += ndisp, cbuf += ndisp, lptr += sstep, rptr += sstep )
         {
             int lval = lptr[0];
-        #if CV_NEON
-            int16x8_t lv = vdupq_n_s16 ((int16_t)lval);
-
-            for( d = 0; d < ndisp; d += 8 )
+            d = 0;
+#if CV_SIMD
             {
-                int16x8_t rv = vreinterpretq_s16_u16 (vmovl_u8 (vld1_u8 (rptr + d)));
-                int32x4_t hsad_l = vld1q_s32 (hsad + d);
-                int32x4_t hsad_h = vld1q_s32 (hsad + d + 4);
-                int16x8_t diff = vabdq_s16 (lv, rv);
-                vst1_u8 (cbuf + d, vmovn_u16(vreinterpretq_u16_s16(diff)));
-                hsad_l = vaddq_s32 (hsad_l, vmovl_s16(vget_low_s16 (diff)));
-                hsad_h = vaddq_s32 (hsad_h, vmovl_s16(vget_high_s16 (diff)));
-                vst1q_s32 ((hsad + d), hsad_l);
-                vst1q_s32 ((hsad + d + 4), hsad_h);
+                v_uint8 lv = vx_setall_u8((uchar)lval);
+
+                for( ; d <= ndisp - v_uint8::nlanes; d += v_uint8::nlanes )
+                {
+                    v_uint8 rv = vx_load(rptr + d);
+                    v_int32 hsad_0 = vx_load(hsad + d);
+                    v_int32 hsad_1 = vx_load(hsad + d + v_int32::nlanes);
+                    v_int32 hsad_2 = vx_load(hsad + d + 2*v_int32::nlanes);
+                    v_int32 hsad_3 = vx_load(hsad + d + 3*v_int32::nlanes);
+                    v_uint8 diff = v_absdiff(lv, rv);
+                    v_store(cbuf + d, diff);
+
+                    v_uint16 diff0, diff1;
+                    v_uint32 diff00, diff01, diff10, diff11;
+                    v_expand(diff, diff0, diff1);
+                    v_expand(diff0, diff00, diff01);
+                    v_expand(diff1, diff10, diff11);
+
+                    hsad_0 += v_reinterpret_as_s32(diff00);
+                    hsad_1 += v_reinterpret_as_s32(diff01);
+                    hsad_2 += v_reinterpret_as_s32(diff10);
+                    hsad_3 += v_reinterpret_as_s32(diff11);
+
+                    v_store(hsad + d, hsad_0);
+                    v_store(hsad + d + v_int32::nlanes, hsad_1);
+                    v_store(hsad + d + 2*v_int32::nlanes, hsad_2);
+                    v_store(hsad + d + 3*v_int32::nlanes, hsad_3);
+                }
             }
-        #else
-            for( d = 0; d < ndisp; d++ )
+#endif
+            for( ; d < ndisp; d++ )
             {
                 int diff = std::abs(lval - rptr[d]);
                 cbuf[d] = (uchar)diff;
                 hsad[d] = (int)(hsad[d] + diff);
             }
-        #endif
             htext[y] += tab[lval];
         }
     }
@@ -674,37 +716,58 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         hsad = hsad0 - dy0*ndisp;
         lptr_sub = lptr0 + MIN(MAX(x0, -lofs), width-1-lofs) - dy0*sstep;
         lptr = lptr0 + MIN(MAX(x1, -lofs), width-1-lofs) - dy0*sstep;
-        rptr = rptr0 + MIN(MAX(x1, -rofs), width-1-rofs) - dy0*sstep;
+        rptr = rptr0 + MIN(MAX(x1, -rofs), width-ndisp-rofs) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, cbuf += ndisp, cbuf_sub += ndisp,
             hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
         {
             int lval = lptr[0];
-        #if CV_NEON
-            int16x8_t lv = vdupq_n_s16 ((int16_t)lval);
-            for( d = 0; d < ndisp; d += 8 )
+            d = 0;
+#if CV_SIMD
             {
-                int16x8_t rv = vreinterpretq_s16_u16 (vmovl_u8 (vld1_u8 (rptr + d)));
-                int32x4_t hsad_l = vld1q_s32 (hsad + d);
-                int32x4_t hsad_h = vld1q_s32 (hsad + d + 4);
-                int16x8_t cbs = vreinterpretq_s16_u16 (vmovl_u8 (vld1_u8 (cbuf_sub + d)));
-                int16x8_t diff = vabdq_s16 (lv, rv);
-                int32x4_t diff_h = vsubl_s16 (vget_high_s16 (diff), vget_high_s16 (cbs));
-                int32x4_t diff_l = vsubl_s16 (vget_low_s16 (diff), vget_low_s16 (cbs));
-                vst1_u8 (cbuf + d, vmovn_u16(vreinterpretq_u16_s16(diff)));
-                hsad_h = vaddq_s32 (hsad_h, diff_h);
-                hsad_l = vaddq_s32 (hsad_l, diff_l);
-                vst1q_s32 ((hsad + d), hsad_l);
-                vst1q_s32 ((hsad + d + 4), hsad_h);
+                v_uint8 lv = vx_setall_u8((uchar)lval);
+                for( ; d <= ndisp - v_uint8::nlanes; d += v_uint8::nlanes )
+                {
+                    v_uint8 rv = vx_load(rptr + d);
+                    v_int32 hsad_0 = vx_load(hsad + d);
+                    v_int32 hsad_1 = vx_load(hsad + d + v_int32::nlanes);
+                    v_int32 hsad_2 = vx_load(hsad + d + 2*v_int32::nlanes);
+                    v_int32 hsad_3 = vx_load(hsad + d + 3*v_int32::nlanes);
+                    v_uint8 cbs = vx_load(cbuf_sub + d);
+                    v_uint8 diff = v_absdiff(lv, rv);
+                    v_store(cbuf + d, diff);
+
+                    v_uint16 diff0, diff1, cbs0, cbs1;
+                    v_int32 diff00, diff01, diff10, diff11, cbs00, cbs01, cbs10, cbs11;
+                    v_expand(diff, diff0, diff1);
+                    v_expand(cbs, cbs0, cbs1);
+                    v_expand(v_reinterpret_as_s16(diff0), diff00, diff01);
+                    v_expand(v_reinterpret_as_s16(diff1), diff10, diff11);
+                    v_expand(v_reinterpret_as_s16(cbs0), cbs00, cbs01);
+                    v_expand(v_reinterpret_as_s16(cbs1), cbs10, cbs11);
+
+                    v_int32 diff_0 = diff00 - cbs00;
+                    v_int32 diff_1 = diff01 - cbs01;
+                    v_int32 diff_2 = diff10 - cbs10;
+                    v_int32 diff_3 = diff11 - cbs11;
+                    hsad_0 += diff_0;
+                    hsad_1 += diff_1;
+                    hsad_2 += diff_2;
+                    hsad_3 += diff_3;
+
+                    v_store(hsad + d, hsad_0);
+                    v_store(hsad + d + v_int32::nlanes, hsad_1);
+                    v_store(hsad + d + 2*v_int32::nlanes, hsad_2);
+                    v_store(hsad + d + 3*v_int32::nlanes, hsad_3);
+                }
             }
-        #else
-            for( d = 0; d < ndisp; d++ )
+#endif
+            for( ; d < ndisp; d++ )
             {
                 int diff = std::abs(lval - rptr[d]);
                 cbuf[d] = (uchar)diff;
                 hsad[d] = hsad[d] + diff - cbuf_sub[d];
             }
-        #endif
             htext[y] += tab[lval] - tab[lptr_sub[0]];
         }
 
@@ -721,22 +784,24 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         hsad = hsad0 + (1 - dy0)*ndisp;
         for( y = 1 - dy0; y < wsz2; y++, hsad += ndisp )
         {
-        #if CV_NEON
-            for( d = 0; d <= ndisp-8; d += 8 )
+            d = 0;
+#if CV_SIMD
             {
-                int32x4_t s0 = vld1q_s32 (sad + d);
-                int32x4_t s1 = vld1q_s32 (sad + d + 4);
-                int32x4_t t0 = vld1q_s32 (hsad + d);
-                int32x4_t t1 = vld1q_s32 (hsad + d + 4);
-                s0 = vaddq_s32 (s0, t0);
-                s1 = vaddq_s32 (s1, t1);
-                vst1q_s32 (sad + d, s0);
-                vst1q_s32 (sad + d + 4, s1);
+                for( d = 0; d <= ndisp-2*v_int32::nlanes; d += 2*v_int32::nlanes )
+                {
+                    v_int32 s0 = vx_load(sad + d);
+                    v_int32 s1 = vx_load(sad + d + v_int32::nlanes);
+                    v_int32 t0 = vx_load(hsad + d);
+                    v_int32 t1 = vx_load(hsad + d + v_int32::nlanes);
+                    s0 += t0;
+                    s1 += t1;
+                    v_store(sad + d, s0);
+                    v_store(sad + d + v_int32::nlanes, s1);
+                }
             }
-        #else
-            for( d = 0; d < ndisp; d++ )
+#endif
+            for( ; d < ndisp; d++ )
                 sad[d] = (int)(sad[d] + hsad[d]);
-        #endif
         }
         int tsum = 0;
         for( y = -wsz2-1; y < wsz2; y++ )
@@ -748,62 +813,35 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             int minsad = INT_MAX, mind = -1;
             hsad = hsad0 + MIN(y + wsz2, height+dy1-1)*ndisp;
             hsad_sub = hsad0 + MAX(y - wsz2 - 1, -dy0)*ndisp;
-        #if CV_NEON
-            int32x4_t minsad4 = vdupq_n_s32 (INT_MAX);
-            int32x4_t mind4 = vdupq_n_s32(0), d4 = d0_4;
-
-            for( d = 0; d <= ndisp-8; d += 8 )
+            d = 0;
+#if CV_SIMD
             {
-                int32x4_t u0 = vld1q_s32 (hsad_sub + d);
-                int32x4_t u1 = vld1q_s32 (hsad + d);
+                v_int32 minsad4 = vx_setall_s32(INT_MAX);
+                v_int32 mind4 = vx_setall_s32(0), d4 = d0_4;
 
-                int32x4_t v0 = vld1q_s32 (hsad_sub + d + 4);
-                int32x4_t v1 = vld1q_s32 (hsad + d + 4);
+                for( ; d <= ndisp - 2*v_int32::nlanes; d += 2*v_int32::nlanes )
+                {
+                    v_int32 sad4 = vx_load(sad + d) + vx_load(hsad + d) - vx_load(hsad_sub + d);
+                    v_store(sad + d, sad4);
+                    mind4 = v_select(minsad4 > sad4, d4, mind4);
+                    minsad4 = v_min(minsad4, sad4);
+                    d4 += dd_4;
 
-                int32x4_t usad4 = vld1q_s32(sad + d);
-                int32x4_t vsad4 = vld1q_s32(sad + d + 4);
+                    sad4 = vx_load(sad + d + v_int32::nlanes) + vx_load(hsad + d + v_int32::nlanes) - vx_load(hsad_sub + d + v_int32::nlanes);
+                    v_store(sad + d + v_int32::nlanes, sad4);
+                    mind4 = v_select(minsad4 > sad4, d4, mind4);
+                    minsad4 = v_min(minsad4, sad4);
+                    d4 += dd_4;
+                }
 
-                u1 = vsubq_s32 (u1, u0);
-                v1 = vsubq_s32 (v1, v0);
-                usad4 = vaddq_s32 (usad4, u1);
-                vsad4 = vaddq_s32 (vsad4, v1);
-
-                uint32x4_t mask = vcgtq_s32 (minsad4, usad4);
-                minsad4 = vminq_s32 (minsad4, usad4);
-                mind4 = vbslq_s32(mask, d4, mind4);
-
-                vst1q_s32 (sad + d, usad4);
-                vst1q_s32 (sad + d + 4, vsad4);
-                d4 = vaddq_s32 (d4, dd_4);
-
-                mask = vcgtq_s32 (minsad4, vsad4);
-                minsad4 = vminq_s32 (minsad4, vsad4);
-                mind4 = vbslq_s32(mask, d4, mind4);
-
-                d4 = vaddq_s32 (d4, dd_4);
-
+                int CV_DECL_ALIGNED(CV_SIMD_WIDTH) minsad_buf[v_int32::nlanes], mind_buf[v_int32::nlanes];
+                v_store(minsad_buf, minsad4);
+                v_store(mind_buf, mind4);
+                for (int i = 0; i < v_int32::nlanes; ++i)
+                    if(minsad_buf[i] < minsad || (minsad == minsad_buf[i] && mind_buf[i] < mind)) { minsad = minsad_buf[i]; mind = mind_buf[i]; }
             }
-            int32x2_t mind4_h = vget_high_s32 (mind4);
-            int32x2_t mind4_l = vget_low_s32 (mind4);
-            int32x2_t minsad4_h = vget_high_s32 (minsad4);
-            int32x2_t minsad4_l = vget_low_s32 (minsad4);
-
-            uint32x2_t mask = vorr_u32 (vclt_s32 (minsad4_h, minsad4_l), vand_u32 (vceq_s32 (minsad4_h, minsad4_l), vclt_s32 (mind4_h, mind4_l)));
-            mind4_h = vbsl_s32 (mask, mind4_h, mind4_l);
-            minsad4_h = vbsl_s32 (mask, minsad4_h, minsad4_l);
-
-            mind4_l = vext_s32 (mind4_h,mind4_h,1);
-            minsad4_l = vext_s32 (minsad4_h,minsad4_h,1);
-
-            mask = vorr_u32 (vclt_s32 (minsad4_h, minsad4_l), vand_u32 (vceq_s32 (minsad4_h, minsad4_l), vclt_s32 (mind4_h, mind4_l)));
-            mind4_h = vbsl_s32 (mask, mind4_h, mind4_l);
-            minsad4_h = vbsl_s32 (mask, minsad4_h, minsad4_l);
-
-            mind = (int) vget_lane_s32 (mind4_h, 0);
-            minsad = sad[mind];
-
-        #else
-            for( d = 0; d < ndisp; d++ )
+#endif
+            for( ; d < ndisp; d++ )
             {
                 int currsad = sad[d] + hsad[d] - hsad_sub[d];
                 sad[d] = currsad;
@@ -813,7 +851,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                     mind = d;
                 }
             }
-        #endif
 
             tsum += htext[y + wsz2] - htext[y - wsz2 - 1];
             if( tsum < textureThreshold )
@@ -842,13 +879,15 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                 sad[ndisp] = sad[ndisp-2];
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                dptr[y*dstep] = dispDescale<mType>(ndisp - mind - 1 + mindisp, p-n, d);
+
                 costptr[y*coststep] = sad[mind];
             }
         }
     }
 }
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefiltering(InputArray left0, InputArray right0, OutputArray left, OutputArray right, StereoBMParams* state)
 {
     if( state->preFilterType == StereoBM::PREFILTER_NORMALIZED_RESPONSE )
@@ -867,6 +906,7 @@ static bool ocl_prefiltering(InputArray left0, InputArray right0, OutputArray le
     }
     return true;
 }
+#endif
 
 struct PrefilterInvoker : public ParallelLoopBody
 {
@@ -879,7 +919,7 @@ struct PrefilterInvoker : public ParallelLoopBody
         state = _state;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         for( int i = range.start; i < range.end; i++ )
         {
@@ -896,6 +936,7 @@ struct PrefilterInvoker : public ParallelLoopBody
     StereoBMParams* state;
 };
 
+#ifdef HAVE_OPENCL
 static bool ocl_stereobm( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
 {
@@ -927,8 +968,8 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
 
     int globalX = (disp.cols + sizeX - 1) / sizeX,
         globalY = (disp.rows + sizeY - 1) / sizeY;
-    size_t globalThreads[3] = {N, globalX, globalY};
-    size_t localThreads[3]  = {N, 1, 1};
+    size_t globalThreads[3] = {(size_t)N, (size_t)globalX, (size_t)globalY};
+    size_t localThreads[3]  = {(size_t)N, 1, 1};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
@@ -940,6 +981,7 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
     idx = k.set(idx, state->uniquenessRatio);
     return k.run(3, globalThreads, localThreads, false);
 }
+#endif
 
 struct FindStereoCorrespInvoker : public ParallelLoopBody
 {
@@ -949,6 +991,7 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
                              bool _useShorts, Rect _validDisparityRect,
                              Mat& _slidingSumBuf, Mat& _cost )
     {
+        CV_Assert( _disp.type() == CV_16S || _disp.type() == CV_32S );
         left = &_left; right = &_right;
         disp = &_disp; state = _state;
         nstripes = _nstripes; stripeBufSize = _stripeBufSize;
@@ -958,13 +1001,16 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         cost = &_cost;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int cols = left->cols, rows = left->rows;
         int _row0 = std::min(cvRound(range.start * rows / nstripes), rows);
         int _row1 = std::min(cvRound(range.end * rows / nstripes), rows);
         uchar *ptr = slidingSumBuf->ptr() + range.start * stripeBufSize;
-        int FILTERED = (state->minDisparity - 1)*16;
+
+        int dispShift = disp->type() == CV_16S ? DISPARITY_SHIFT_16S :
+                                                 DISPARITY_SHIFT_32S;
+        int FILTERED = (state->minDisparity - 1) << dispShift;
 
         Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
         if( roi.height == 0 )
@@ -989,12 +1035,22 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         Mat disp_i = disp->rowRange(row0, row1);
         Mat cost_i = state->disp12MaxDiff >= 0 ? cost->rowRange(row0, row1) : Mat();
 
-#if CV_SSE2
-        if( useShorts )
-            findStereoCorrespondenceBM_SSE2( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+#if CV_SIMD
+        if (useShorts)
+        {
+            if( disp_i.type() == CV_16S)
+                findStereoCorrespondenceBM_SIMD<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+            else
+                findStereoCorrespondenceBM_SIMD<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1);
+        }
         else
 #endif
-            findStereoCorrespondenceBM( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+        {
+            if( disp_i.type() == CV_16S )
+                findStereoCorrespondenceBM<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+            else
+                findStereoCorrespondenceBM<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+        }
 
         if( state->disp12MaxDiff >= 0 )
             validateDisparity( disp_i, cost_i, state->minDisparity, state->numDisparities, state->disp12MaxDiff );
@@ -1022,7 +1078,7 @@ protected:
     Rect validDisparityRect;
 };
 
-class StereoBMImpl : public StereoBM
+class StereoBMImpl CV_FINAL : public StereoBM
 {
 public:
     StereoBMImpl()
@@ -1035,8 +1091,10 @@ public:
         params = StereoBMParams(_numDisparities, _SADWindowSize);
     }
 
-    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
+    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
     {
+        CV_INSTRUMENT_REGION();
+
         int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
         Size leftsize = leftarr.size();
 
@@ -1064,7 +1122,7 @@ public:
             CV_Error( Error::StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
 
         if( params.numDisparities <= 0 || params.numDisparities % 16 != 0 )
-            CV_Error( Error::StsOutOfRange, "numDisparities must be positive and divisble by 16" );
+            CV_Error( Error::StsOutOfRange, "numDisparities must be positive and divisible by 16" );
 
         if( params.textureThreshold < 0 )
             CV_Error( Error::StsOutOfRange, "texture threshold must be non-negative" );
@@ -1072,24 +1130,35 @@ public:
         if( params.uniquenessRatio < 0 )
             CV_Error( Error::StsOutOfRange, "uniqueness ratio must be non-negative" );
 
-        int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
+        int disp_shift;
+        if (dtype == CV_16SC1)
+            disp_shift = DISPARITY_SHIFT_16S;
+        else
+            disp_shift = DISPARITY_SHIFT_32S;
 
-        if(ocl::useOpenCL() && disparr.isUMat() && params.textureThreshold == 0)
+        int FILTERED = (params.minDisparity - 1) << disp_shift;
+
+#ifdef HAVE_OPENCL
+        if(ocl::isOpenCLActivated() && disparr.isUMat() && params.textureThreshold == 0)
         {
             UMat left, right;
             if(ocl_prefiltering(leftarr, rightarr, left, right, &params))
             {
                 if(ocl_stereobm(left, right, disparr, &params))
                 {
+                    disp_shift = DISPARITY_SHIFT_16S;
+                    FILTERED = (params.minDisparity - 1) << disp_shift;
+
                     if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
                         filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
                     if (dtype == CV_32F)
-                        disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << DISPARITY_SHIFT), 0);
+                        disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << disp_shift), 0);
                     CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
                 }
             }
         }
+#endif
 
         Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
         disparr.create(left0.size(), dtype);
@@ -1112,14 +1181,14 @@ public:
 
         if( lofs >= width || rofs >= width || width1 < 1 )
         {
-            disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << DISPARITY_SHIFT) ) );
+            disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << disp_shift) ) );
             return;
         }
 
         Mat disp = disp0;
         if( dtype == CV_32F )
         {
-            dispbuf.create(disp0.size(), CV_16S);
+            dispbuf.create(disp0.size(), CV_32S);
             disp = dispbuf;
         }
 
@@ -1134,12 +1203,7 @@ public:
         if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
             bufSize2 = width*height*(sizeof(Point_<short>) + sizeof(int) + sizeof(uchar));
 
-#if CV_SSE2
-        bool useShorts = params.preFilterCap <= 31 && params.SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
-#else
-        const bool useShorts = false;
-#endif
-
+        bool useShorts = params.preFilterCap <= 31 && params.SADWindowSize <= 21;
         const double SAD_overhead_coeff = 10.0;
         double N0 = 8000000 / (useShorts ? 1 : 4);  // approx tbb's min number instructions reasonable for one thread
         double maxStripeSize = std::min(std::max(N0 / (width * ndisp), (wsz-1) * SAD_overhead_coeff), (double)height);
@@ -1154,8 +1218,8 @@ public:
         parallel_for_(Range(0, 2), PrefilterInvoker(left0, right0, left, right, _buf, _buf + bufSize1, &params), 1);
 
         Rect validDisparityRect(0, 0, width, height), R1 = params.roi1, R2 = params.roi2;
-        validDisparityRect = getValidDisparityROI(R1.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
-                                                  R2.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
+        validDisparityRect = getValidDisparityROI(!R1.empty() ? R1 : validDisparityRect,
+                                                  !R2.empty() ? R2 : validDisparityRect,
                                                   params.minDisparity, params.numDisparities,
                                                   params.SADWindowSize);
 
@@ -1168,53 +1232,54 @@ public:
             filterSpeckles(disp, FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
 
         if (disp0.data != disp.data)
-            disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);
+            disp.convertTo(disp0, disp0.type(), 1./(1 << disp_shift), 0);
     }
 
-    int getMinDisparity() const { return params.minDisparity; }
-    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
+    int getMinDisparity() const CV_OVERRIDE { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) CV_OVERRIDE { params.minDisparity = minDisparity; }
 
-    int getNumDisparities() const { return params.numDisparities; }
-    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
+    int getNumDisparities() const CV_OVERRIDE { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) CV_OVERRIDE { params.numDisparities = numDisparities; }
 
-    int getBlockSize() const { return params.SADWindowSize; }
-    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+    int getBlockSize() const CV_OVERRIDE { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) CV_OVERRIDE { params.SADWindowSize = blockSize; }
 
-    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
-    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+    int getSpeckleWindowSize() const CV_OVERRIDE { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) CV_OVERRIDE { params.speckleWindowSize = speckleWindowSize; }
 
-    int getSpeckleRange() const { return params.speckleRange; }
-    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+    int getSpeckleRange() const CV_OVERRIDE { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) CV_OVERRIDE { params.speckleRange = speckleRange; }
 
-    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
-    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+    int getDisp12MaxDiff() const CV_OVERRIDE { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) CV_OVERRIDE { params.disp12MaxDiff = disp12MaxDiff; }
 
-    int getPreFilterType() const { return params.preFilterType; }
-    void setPreFilterType(int preFilterType) { params.preFilterType = preFilterType; }
+    int getPreFilterType() const CV_OVERRIDE { return params.preFilterType; }
+    void setPreFilterType(int preFilterType) CV_OVERRIDE { params.preFilterType = preFilterType; }
 
-    int getPreFilterSize() const { return params.preFilterSize; }
-    void setPreFilterSize(int preFilterSize) { params.preFilterSize = preFilterSize; }
+    int getPreFilterSize() const CV_OVERRIDE { return params.preFilterSize; }
+    void setPreFilterSize(int preFilterSize) CV_OVERRIDE { params.preFilterSize = preFilterSize; }
 
-    int getPreFilterCap() const { return params.preFilterCap; }
-    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+    int getPreFilterCap() const CV_OVERRIDE { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) CV_OVERRIDE { params.preFilterCap = preFilterCap; }
 
-    int getTextureThreshold() const { return params.textureThreshold; }
-    void setTextureThreshold(int textureThreshold) { params.textureThreshold = textureThreshold; }
+    int getTextureThreshold() const CV_OVERRIDE { return params.textureThreshold; }
+    void setTextureThreshold(int textureThreshold) CV_OVERRIDE { params.textureThreshold = textureThreshold; }
 
-    int getUniquenessRatio() const { return params.uniquenessRatio; }
-    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+    int getUniquenessRatio() const CV_OVERRIDE { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) CV_OVERRIDE { params.uniquenessRatio = uniquenessRatio; }
 
-    int getSmallerBlockSize() const { return 0; }
-    void setSmallerBlockSize(int) {}
+    int getSmallerBlockSize() const CV_OVERRIDE { return 0; }
+    void setSmallerBlockSize(int) CV_OVERRIDE {}
 
-    Rect getROI1() const { return params.roi1; }
-    void setROI1(Rect roi1) { params.roi1 = roi1; }
+    Rect getROI1() const CV_OVERRIDE { return params.roi1; }
+    void setROI1(Rect roi1) CV_OVERRIDE { params.roi1 = roi1; }
 
-    Rect getROI2() const { return params.roi2; }
-    void setROI2(Rect roi2) { params.roi2 = roi2; }
+    Rect getROI2() const CV_OVERRIDE { return params.roi2; }
+    void setROI2(Rect roi2) CV_OVERRIDE { params.roi2 = roi2; }
 
-    void write(FileStorage& fs) const
+    void write(FileStorage& fs) const CV_OVERRIDE
     {
+        writeFormat(fs);
         fs << "name" << name_
         << "minDisparity" << params.minDisparity
         << "numDisparities" << params.numDisparities
@@ -1229,7 +1294,7 @@ public:
         << "uniquenessRatio" << params.uniquenessRatio;
     }
 
-    void read(const FileNode& fn)
+    void read(const FileNode& fn) CV_OVERRIDE
     {
         FileNode n = fn["name"];
         CV_Assert( n.isString() && String(n) == name_ );

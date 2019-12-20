@@ -48,7 +48,7 @@ namespace ml
 
 const double minEigenValue = DBL_EPSILON;
 
-class CV_EXPORTS EMImpl : public EM
+class CV_EXPORTS EMImpl CV_FINAL : public EM
 {
 public:
 
@@ -56,20 +56,21 @@ public:
     int covMatType;
     TermCriteria termCrit;
 
-    CV_IMPL_PROPERTY_S(TermCriteria, TermCriteria, termCrit)
+    inline TermCriteria getTermCriteria() const CV_OVERRIDE { return termCrit; }
+    inline void setTermCriteria(const TermCriteria& val) CV_OVERRIDE { termCrit = val; }
 
-    void setClustersNumber(int val)
+    void setClustersNumber(int val) CV_OVERRIDE
     {
         nclusters = val;
-        CV_Assert(nclusters > 1);
+        CV_Assert(nclusters >= 1);
     }
 
-    int getClustersNumber() const
+    int getClustersNumber() const CV_OVERRIDE
     {
         return nclusters;
     }
 
-    void setCovarianceMatrixType(int val)
+    void setCovarianceMatrixType(int val) CV_OVERRIDE
     {
         covMatType = val;
         CV_Assert(covMatType == COV_MAT_SPHERICAL ||
@@ -77,7 +78,7 @@ public:
                   covMatType == COV_MAT_GENERIC);
     }
 
-    int getCovarianceMatrixType() const
+    int getCovarianceMatrixType() const CV_OVERRIDE
     {
         return covMatType;
     }
@@ -91,7 +92,7 @@ public:
 
     virtual ~EMImpl() {}
 
-    void clear()
+    void clear() CV_OVERRIDE
     {
         trainSamples.release();
         trainProbs.release();
@@ -109,8 +110,9 @@ public:
         logWeightDivDet.release();
     }
 
-    bool train(const Ptr<TrainData>& data, int)
+    bool train(const Ptr<TrainData>& data, int) CV_OVERRIDE
     {
+        CV_Assert(!data.empty());
         Mat samples = data->getTrainSamples(), labels;
         return trainEM(samples, labels, noArray(), noArray());
     }
@@ -118,7 +120,7 @@ public:
     bool trainEM(InputArray samples,
                OutputArray logLikelihoods,
                OutputArray labels,
-               OutputArray probs)
+               OutputArray probs) CV_OVERRIDE
     {
         Mat samplesMat = samples.getMat();
         setTrainData(START_AUTO_STEP, samplesMat, 0, 0, 0, 0);
@@ -131,7 +133,7 @@ public:
                 InputArray _weights0,
                 OutputArray logLikelihoods,
                 OutputArray labels,
-                OutputArray probs)
+                OutputArray probs) CV_OVERRIDE
     {
         Mat samplesMat = samples.getMat();
         std::vector<Mat> covs0;
@@ -148,7 +150,7 @@ public:
                 InputArray _probs0,
                 OutputArray logLikelihoods,
                 OutputArray labels,
-                OutputArray probs)
+                OutputArray probs) CV_OVERRIDE
     {
         Mat samplesMat = samples.getMat();
         Mat probs0 = _probs0.getMat();
@@ -157,11 +159,11 @@ public:
         return doTrain(START_M_STEP, logLikelihoods, labels, probs);
     }
 
-    float predict(InputArray _inputs, OutputArray _outputs, int) const
+    float predict(InputArray _inputs, OutputArray _outputs, int) const CV_OVERRIDE
     {
         bool needprobs = _outputs.needed();
         Mat samples = _inputs.getMat(), probs, probsrow;
-        int ptype = CV_32F;
+        int ptype = CV_64F;
         float firstres = 0.f;
         int i, nsamples = samples.rows;
 
@@ -170,6 +172,7 @@ public:
             if( _outputs.fixedType() )
                 ptype = _outputs.type();
             _outputs.create(samples.rows, nclusters, ptype);
+            probs = _outputs.getMat();
         }
         else
             nsamples = std::min(nsamples, 1);
@@ -185,9 +188,9 @@ public:
         return firstres;
     }
 
-    Vec2d predict2(InputArray _sample, OutputArray _probs) const
+    Vec2d predict2(InputArray _sample, OutputArray _probs) const CV_OVERRIDE
     {
-        int ptype = CV_32F;
+        int ptype = CV_64F;
         Mat sample = _sample.getMat();
         CV_Assert(isTrained());
 
@@ -198,7 +201,7 @@ public:
             sample.convertTo(tmp, CV_64FC1);
             sample = tmp;
         }
-        sample.reshape(1, 1);
+        sample = sample.reshape(1, 1);
 
         Mat probs;
         if( _probs.needed() )
@@ -212,22 +215,22 @@ public:
         return computeProbabilities(sample, !probs.empty() ? &probs : 0, ptype);
     }
 
-    bool isTrained() const
+    bool isTrained() const CV_OVERRIDE
     {
         return !means.empty();
     }
 
-    bool isClassifier() const
+    bool isClassifier() const CV_OVERRIDE
     {
         return true;
     }
 
-    int getVarCount() const
+    int getVarCount() const CV_OVERRIDE
     {
         return means.cols;
     }
 
-    String getDefaultName() const
+    String getDefaultName() const CV_OVERRIDE
     {
         return "opencv_ml_em";
     }
@@ -342,7 +345,7 @@ public:
         if(weights0 && (startStep == START_E_STEP && covs0))
         {
             weights0->convertTo(weights, CV_64FC1);
-            weights.reshape(1,1);
+            weights = weights.reshape(1,1);
             preprocessProbability(weights);
         }
 
@@ -379,7 +382,7 @@ public:
             }
             else if(covMatType == COV_MAT_DIAGONAL)
             {
-                covsEigenValues[clusterIndex] = svd.w;
+                covsEigenValues[clusterIndex] = covs[clusterIndex].diag().clone(); //Preserve the original order of eigen values.
             }
             else //COV_MAT_GENERIC
             {
@@ -614,6 +617,7 @@ public:
             expDiffSum += v; // sum_j(exp(L_ij - L_iq))
         }
 
+        CV_Assert(expDiffSum > 0);
         if(probs)
             L.convertTo(*probs, ptype, 1./expDiffSum);
 
@@ -767,8 +771,9 @@ public:
         writeTermCrit(fs, termCrit);
     }
 
-    void write(FileStorage& fs) const
+    void write(FileStorage& fs) const CV_OVERRIDE
     {
+        writeFormat(fs);
         fs << "training_params" << "{";
         write_params(fs);
         fs << "}";
@@ -794,7 +799,7 @@ public:
         termCrit = readTermCrit(fn);
     }
 
-    void read(const FileNode& fn)
+    void read(const FileNode& fn) CV_OVERRIDE
     {
         clear();
         read_params(fn["training_params"]);
@@ -814,9 +819,9 @@ public:
         computeLogWeightDivDet();
     }
 
-    Mat getWeights() const { return weights; }
-    Mat getMeans() const { return means; }
-    void getCovs(std::vector<Mat>& _covs) const
+    Mat getWeights() const CV_OVERRIDE { return weights; }
+    Mat getMeans() const CV_OVERRIDE { return means; }
+    void getCovs(std::vector<Mat>& _covs) const CV_OVERRIDE
     {
         _covs.resize(covs.size());
         std::copy(covs.begin(), covs.end(), _covs.begin());
@@ -841,6 +846,11 @@ public:
 Ptr<EM> EM::create()
 {
     return makePtr<EMImpl>();
+}
+
+Ptr<EM> EM::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<EM>(filepath, nodeName);
 }
 
 }

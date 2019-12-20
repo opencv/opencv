@@ -45,6 +45,8 @@
 
 #include "grfmt_base.hpp"
 
+#ifdef HAVE_TIFF
+
 namespace cv
 {
 
@@ -87,55 +89,63 @@ enum TiffFieldType
 };
 
 
-#ifdef HAVE_TIFF
-
 // libtiff based TIFF codec
-
-class TiffDecoder : public BaseImageDecoder
+class TiffDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
     TiffDecoder();
-    virtual ~TiffDecoder();
+    virtual ~TiffDecoder() CV_OVERRIDE;
 
-    bool  readHeader();
-    bool  readData( Mat& img );
+    bool  readHeader() CV_OVERRIDE;
+    bool  readData( Mat& img ) CV_OVERRIDE;
     void  close();
-    bool  nextPage();
+    bool  nextPage() CV_OVERRIDE;
 
-    size_t signatureLength() const;
-    bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
+    size_t signatureLength() const CV_OVERRIDE;
+    bool checkSignature( const String& signature ) const CV_OVERRIDE;
+    ImageDecoder newDecoder() const CV_OVERRIDE;
 
 protected:
-    void* m_tif;
+    cv::Ptr<void> m_tif;
     int normalizeChannelsNumber(int channels) const;
-    bool readHdrData(Mat& img);
     bool m_hdr;
+    size_t m_buf_pos;
+
+private:
+    TiffDecoder(const TiffDecoder &); // copy disabled
+    TiffDecoder& operator=(const TiffDecoder &); // assign disabled
 };
 
-#endif
-
 // ... and writer
-class TiffEncoder : public BaseImageEncoder
+class TiffEncoder CV_FINAL : public BaseImageEncoder
 {
 public:
     TiffEncoder();
-    virtual ~TiffEncoder();
+    virtual ~TiffEncoder() CV_OVERRIDE;
 
-    bool isFormatSupported( int depth ) const;
+    bool isFormatSupported( int depth ) const CV_OVERRIDE;
 
-    bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+
+    bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params) CV_OVERRIDE;
+
+    ImageEncoder newEncoder() const CV_OVERRIDE;
 
 protected:
     void  writeTag( WLByteStream& strm, TiffTag tag,
                     TiffFieldType fieldType,
                     int count, int value );
 
-    bool writeLibTiff( const Mat& img, const std::vector<int>& params );
-    bool writeHdr( const Mat& img );
+    bool writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params );
+    bool write_32FC3_SGILOG(const Mat& img, void* tif);
+
+private:
+    TiffEncoder(const TiffEncoder &); // copy disabled
+    TiffEncoder& operator=(const TiffEncoder &); // assign disabled
 };
 
 }
+
+#endif // HAVE_TIFF
 
 #endif/*_GRFMT_TIFF_H_*/

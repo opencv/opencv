@@ -1,5 +1,5 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/ml/ml.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/ml.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -28,9 +28,9 @@ static void help()
     "and the remaining 4000 (10000 for boosting) - to test the classifier.\n"
     "======================================================\n");
     printf("\nThis is letter recognition sample.\n"
-            "The usage: letter_recog [-data <path to letter-recognition.data>] \\\n"
-            "  [-save <output XML file for the classifier>] \\\n"
-            "  [-load <XML file with the pre-trained classifier>] \\\n"
+            "The usage: letter_recog [-data=<path to letter-recognition.data>] \\\n"
+            "  [-save=<output XML file for the classifier>] \\\n"
+            "  [-load=<XML file with the pre-trained classifier>] \\\n"
             "  [-boost|-mlp|-knearest|-nbayes|-svm] # to use boost/mlp/knearest/SVM classifier instead of default Random Trees\n" );
 }
 
@@ -517,53 +517,30 @@ int main( int argc, char *argv[] )
 {
     string filename_to_save = "";
     string filename_to_load = "";
-    string data_filename = "../data/letter-recognition.data";
+    string data_filename;
     int method = 0;
 
-    int i;
-    for( i = 1; i < argc; i++ )
-    {
-        if( strcmp(argv[i],"-data") == 0 ) // flag "-data letter_recognition.xml"
-        {
-            i++;
-            data_filename = argv[i];
-        }
-        else if( strcmp(argv[i],"-save") == 0 ) // flag "-save filename.xml"
-        {
-            i++;
-            filename_to_save = argv[i];
-        }
-        else if( strcmp(argv[i],"-load") == 0) // flag "-load filename.xml"
-        {
-            i++;
-            filename_to_load = argv[i];
-        }
-        else if( strcmp(argv[i],"-boost") == 0)
-        {
-            method = 1;
-        }
-        else if( strcmp(argv[i],"-mlp") == 0 )
-        {
-            method = 2;
-        }
-        else if( strcmp(argv[i], "-knearest") == 0 || strcmp(argv[i], "-knn") == 0 )
-        {
-            method = 3;
-        }
-        else if( strcmp(argv[i], "-nbayes") == 0)
-        {
-            method = 4;
-        }
-        else if( strcmp(argv[i], "-svm") == 0)
-        {
-            method = 5;
-        }
-        else
-            break;
-    }
+    cv::CommandLineParser parser(argc, argv, "{data|letter-recognition.data|}{save||}{load||}{boost||}"
+            "{mlp||}{knn knearest||}{nbayes||}{svm||}");
+    data_filename = samples::findFile(parser.get<string>("data"));
+    if (parser.has("save"))
+        filename_to_save = parser.get<string>("save");
+    if (parser.has("load"))
+        filename_to_load = samples::findFile(parser.get<string>("load"));
+    if (parser.has("boost"))
+        method = 1;
+    else if (parser.has("mlp"))
+        method = 2;
+    else if (parser.has("knearest"))
+        method = 3;
+    else if (parser.has("nbayes"))
+        method = 4;
+    else if (parser.has("svm"))
+        method = 5;
 
-    if( i < argc ||
-        (method == 0 ?
+    help();
+
+    if( (method == 0 ?
         build_rtrees_classifier( data_filename, filename_to_save, filename_to_load ) :
         method == 1 ?
         build_boost_classifier( data_filename, filename_to_save, filename_to_load ) :
@@ -576,8 +553,6 @@ int main( int argc, char *argv[] )
         method == 5 ?
         build_svm_classifier( data_filename, filename_to_save, filename_to_load ):
         -1) < 0)
-    {
-        help();
-    }
+
     return 0;
 }

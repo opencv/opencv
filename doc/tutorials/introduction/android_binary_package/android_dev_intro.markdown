@@ -28,33 +28,8 @@ key topis:
 -#  [Android
     Activity](http://developer.android.com/training/basics/activity-lifecycle/starting.html) and its
     lifecycle, that is an essential Android API class.
--#  OpenCV development will certainly require some knowlege of the [Android
+-#  OpenCV development will certainly require some knowledge of the [Android
     Camera](http://developer.android.com/guide/topics/media/camera.html) specifics.
-
-Quick environment setup for Android development
------------------------------------------------
-
-If you are making a clean environment install, then you can try [Tegra Android Development
-Pack](https://developer.nvidia.com/tegra-android-development-pack) (**TADP**) released by
-**NVIDIA**.
-
-@note Starting the *version 2.0* the TADP package includes *OpenCV for Tegra* SDK that is a regular
-*OpenCV4Android SDK* extended with Tegra-specific stuff. When unpacked, TADP will cover all of the
-environment setup automatically and you can skip the rest of the guide.
-
-If you are a beginner in Android development then we also recommend you to start with TADP.
-
-@note *NVIDIA*'s Tegra Android Development Pack includes some special features for *NVIDIA*’s [Tegra
-platform](http://www.nvidia.com/object/tegra-3-processor.html)
-but its use is not limited to *Tegra* devices only. \* You need at least *1.6 Gb* free
-disk space for the install.
-
--   TADP will download Android SDK platforms and Android NDK from Google's server, so Internet
-    connection is required for the installation.
--   TADP may ask you to flash your development kit at the end of installation process. Just skip
-    this step if you have no [Tegra Development Kit](http://developer.nvidia.com/mobile/tegra-hardware-sales-inquiries).
--   (UNIX) TADP will ask you for *root* in the middle of installation, so you need to be a member of
-    *sudo* group.
 
 Manual environment setup for Android development
 ------------------------------------------------
@@ -261,7 +236,7 @@ Here is the standard way to compile C++ part of an Android application:
 
 **warning**
 
-We strongly reccomend using cmd.exe (standard Windows console) instead of Cygwin on
+We strongly recommend using cmd.exe (standard Windows console) instead of Cygwin on
    **Windows**. Use the latter if only you're absolutely sure about, what you're doing. Cygwin is
     not really supported and we are unlikely to help you in case you encounter some problems with
     it. So, use it only if you're capable of handling the consequences yourself.
@@ -397,7 +372,7 @@ application, but sure the most uncomplicated one to configure.
 
     ![](images/AVD_create.png)
 
--#  When you click the Create AVD button, your new AVD will be availible in AVD Manager.
+-#  When you click the Create AVD button, your new AVD will be available in AVD Manager.
 -#  Press Start to launch the device. Be aware that any AVD (a.k.a. Emulator) is usually much slower
     than a hardware Android device, so it may take up to several minutes to start.
 -#  Go Run -\> Run/Debug in Eclipse IDE to run your application in regular or debugging mode.

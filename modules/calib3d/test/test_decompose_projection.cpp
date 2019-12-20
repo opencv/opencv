@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+namespace opencv_test { namespace {
+
 class CV_DecomposeProjectionMatrixTest : public cvtest::BaseTest
 {
 public:
@@ -86,7 +88,7 @@ void CV_DecomposeProjectionMatrixTest::run(int start_from)
         rng.fill(rVec, cv::RNG::UNIFORM, -CV_PI, CV_PI);
 
         cv::Matx33d origR;
-        Rodrigues(rVec, origR);
+        cv::Rodrigues(rVec, origR); // TODO cvtest
 
         cv::Vec3d origT;
         rng.fill(origT, cv::RNG::NORMAL, 0, 1);
@@ -111,19 +113,19 @@ void CV_DecomposeProjectionMatrixTest::run(int start_from)
 
 
         const double thresh = 1e-6;
-        if ( norm(origK, K, cv::NORM_INF) > thresh )
+        if (cv::norm(origK, K, cv::NORM_INF) > thresh)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
             break;
         }
 
-        if ( norm(origR, R, cv::NORM_INF) > thresh )
+        if (cv::norm(origR, R, cv::NORM_INF) > thresh)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
             break;
         }
 
-        if ( norm(origT, t, cv::NORM_INF) > thresh )
+        if (cv::norm(origT, t, cv::NORM_INF) > thresh)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
             break;
@@ -138,3 +140,5 @@ TEST(Calib3d_DecomposeProjectionMatrix, accuracy)
     CV_DecomposeProjectionMatrixTest test;
     test.safe_run();
 }
+
+}} // namespace

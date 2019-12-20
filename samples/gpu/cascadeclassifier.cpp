@@ -6,14 +6,12 @@
 
 #include <iostream>
 #include <iomanip>
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/cudaobjdetect.hpp"
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/cudawarping.hpp"
-
-#include "tick_meter.hpp"
 
 using namespace std;
 using namespace cv;
@@ -22,7 +20,7 @@ using namespace cv::cuda;
 
 static void help()
 {
-    cout << "Usage: ./cascadeclassifier_gpu \n\t--cascade <cascade_file>\n\t(<image>|--video <video>|--camera <camera_id>)\n"
+    cout << "Usage: ./cascadeclassifier \n\t--cascade <cascade_file>\n\t(<image>|--video <video>|--camera <camera_id>)\n"
             "Using OpenCV version " << CV_VERSION << endl << endl;
 }
 

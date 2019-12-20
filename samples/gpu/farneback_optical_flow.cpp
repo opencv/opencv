@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <cmath>
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"

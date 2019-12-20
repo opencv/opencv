@@ -36,7 +36,7 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     You will learn how to setup OpenCV in your Windows Operating System!
 
--   @subpage tutorial_windows_visual_studio_Opencv
+-   @subpage tutorial_windows_visual_studio_opencv
 
     _Compatibility:_ \> OpenCV 2.0
 
@@ -102,11 +102,27 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     Development with OpenCV4Android SDK
 
+-   @subpage tutorial_android_ocl_intro
+
+    _Compatibility:_ \>= OpenCV 3.0
+
+    _Author:_ Andrey Pavlenko
+
+    Modify Android camera preview with OpenCL
+
+-   @subpage tutorial_macos_install
+
+    _Compatibility:_ \> OpenCV 3.4.x
+
+    _Author:_ [\@sajarindider](https://github.com/sajarindider)
+
+    We will learn how to setup OpenCV in MacOS.
+
 -   @subpage tutorial_ios_install
 
     _Compatibility:_ \> OpenCV 2.4.2
 
-    _Author:_ Artem Myagkov, Eduard Feicho
+    _Author:_ Artem Myagkov, Eduard Feicho, Steve Nicholson
 
     We will learn how to setup OpenCV for using it in iOS!
 
@@ -117,6 +133,14 @@ Additionally you can find very basic sample source code to introduce you to the 
     _Author:_ Alexander Smorkalov
 
     We will learn how to setup OpenCV cross compilation environment for ARM Linux.
+
+-   @subpage tutorial_building_tegra_cuda
+
+    _Compatibility:_ \>= OpenCV 3.1.0
+
+    _Author:_ Randy J. Ray
+
+    This tutorial will help you build OpenCV 3.1.0 for NVIDIA<sup>&reg;</sup> Tegra<sup>&reg;</sup> systems with CUDA 8.0.
 
 -   @subpage tutorial_display_image
 
@@ -134,14 +158,6 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     We will learn how to save an Image in OpenCV...plus a small conversion to grayscale
 
--   @subpage tutorial_biicode
-
-    _Compatibility:_ \> OpenCV 2.4
-
-    _Author:_ biicode
-
-    We will learn how to setup and use OpenCV in Mac OS X, Linux and Windows
-
 -   @subpage tutorial_documentation
 
     _Compatibility:_ \> OpenCV 3.0
@@ -155,3 +171,11 @@ Additionally you can find very basic sample source code to introduce you to the 
     _Author:_ Maksim Shabunin
 
     This document describes some aspects of 2.4 -> 3.0 transition process.
+
+-   @subpage tutorial_cross_referencing
+
+    _Compatibility:_ \> OpenCV 3.3.0
+
+    _Author:_ Sebastian Höffner
+
+    This document outlines how to create cross references to the OpenCV documentation from other Doxygen projects.

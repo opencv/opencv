@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_IMGPROC_TYPES_C_H__
-#define __OPENCV_IMGPROC_TYPES_C_H__
+#ifndef OPENCV_IMGPROC_TYPES_C_H
+#define OPENCV_IMGPROC_TYPES_C_H
 
 #include "opencv2/core/core_c.h"
 
@@ -349,7 +349,17 @@ enum
     CV_BayerRG2RGB_EA = CV_BayerBG2BGR_EA,
     CV_BayerGR2RGB_EA = CV_BayerGB2BGR_EA,
 
-    CV_COLORCVT_MAX  = 139
+    CV_BayerBG2BGRA =139,
+    CV_BayerGB2BGRA =140,
+    CV_BayerRG2BGRA =141,
+    CV_BayerGR2BGRA =142,
+
+    CV_BayerBG2RGBA =CV_BayerRG2BGRA,
+    CV_BayerGB2RGBA =CV_BayerGR2BGRA,
+    CV_BayerRG2RGBA =CV_BayerBG2BGRA,
+    CV_BayerGR2RGBA =CV_BayerGB2BGRA,
+
+    CV_COLORCVT_MAX  = 143
 };
 
 
@@ -400,7 +410,7 @@ typedef struct CvMoments
     double  mu20, mu11, mu02, mu30, mu21, mu12, mu03; /**< central moments */
     double  inv_sqrt_m00; /**< m00 != 0 ? 1/sqrt(m00) : 0 */
 
-#ifdef __cplusplus
+#if defined(CV__ENABLE_C_API_CTORS) && defined(__cplusplus)
     CvMoments(){}
     CvMoments(const cv::Moments& m)
     {
@@ -419,6 +429,36 @@ typedef struct CvMoments
 #endif
 }
 CvMoments;
+
+#ifdef __cplusplus
+} // extern "C"
+
+CV_INLINE CvMoments cvMoments()
+{
+#if !defined(CV__ENABLE_C_API_CTORS)
+    CvMoments self = CV_STRUCT_INITIALIZER; return self;
+#else
+    return CvMoments();
+#endif
+}
+
+CV_INLINE CvMoments cvMoments(const cv::Moments& m)
+{
+#if !defined(CV__ENABLE_C_API_CTORS)
+    double am00 = std::abs(m.m00);
+    CvMoments self = {
+        m.m00, m.m10, m.m01, m.m20, m.m11, m.m02, m.m30, m.m21, m.m12, m.m03,
+        m.mu20, m.mu11, m.mu02, m.mu30, m.mu21, m.mu12, m.mu03,
+        am00 > DBL_EPSILON ? 1./std::sqrt(am00) : 0
+    };
+    return self;
+#else
+    return CvMoments(m);
+#endif
+}
+
+extern "C" {
+#endif // __cplusplus
 
 /** Hu invariants */
 typedef struct CvHuMoments
@@ -491,15 +531,8 @@ enum
     CV_POLY_APPROX_DP = 0
 };
 
-/** @brief Shape matching methods
-
-\f$A\f$ denotes object1,\f$B\f$ denotes object2
-
-\f$\begin{array}{l} m^A_i =  \mathrm{sign} (h^A_i)  \cdot \log{h^A_i} \\ m^B_i =  \mathrm{sign} (h^B_i)  \cdot \log{h^B_i} \end{array}\f$
-
-and \f$h^A_i, h^B_i\f$ are the Hu moments of \f$A\f$ and \f$B\f$ , respectively.
-*/
-enum ShapeMatchModes
+/** Shape matching methods */
+enum
 {
     CV_CONTOURS_MATCH_I1  =1, //!< \f[I_1(A,B) =  \sum _{i=1...7}  \left |  \frac{1}{m^A_i} -  \frac{1}{m^B_i} \right |\f]
     CV_CONTOURS_MATCH_I2  =2, //!< \f[I_2(A,B) =  \sum _{i=1...7}  \left | m^A_i - m^B_i  \right |\f]

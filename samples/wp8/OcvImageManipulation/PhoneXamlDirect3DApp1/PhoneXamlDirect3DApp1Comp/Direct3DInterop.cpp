@@ -4,9 +4,9 @@
 #include <windows.storage.streams.h>
 #include <wrl.h>
 #include <robuffer.h>
-#include <opencv2\core\core.hpp>
-#include <opencv2\imgproc\imgproc.hpp>
-#include <opencv2\features2d\features2d.hpp>
+#include <opencv2\core.hpp>
+#include <opencv2\imgproc.hpp>
+#include <opencv2\features2d.hpp>
 #include <algorithm>
 
 using namespace Windows::Storage::Streams;
@@ -136,22 +136,22 @@ namespace PhoneXamlDirect3DApp1Comp
     void Direct3DInterop::ApplyGrayFilter(cv::Mat* mat)
     {
         cv::Mat intermediateMat;
-        cv::cvtColor(*mat, intermediateMat, CV_RGBA2GRAY);
-        cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
+        cv::cvtColor(*mat, intermediateMat, COLOR_RGBA2GRAY);
+        cv::cvtColor(intermediateMat, *mat, COLOR_GRAY2BGRA);
     }
 
     void Direct3DInterop::ApplyCannyFilter(cv::Mat* mat)
     {
         cv::Mat intermediateMat;
         cv::Canny(*mat, intermediateMat, 80, 90);
-        cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
+        cv::cvtColor(intermediateMat, *mat, COLOR_GRAY2BGRA);
     }
 
     void Direct3DInterop::ApplyBlurFilter(cv::Mat* mat)
     {
         cv::Mat intermediateMat;
         //	cv::Blur(image, intermediateMat, 80, 90);
-        cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
+        cv::cvtColor(intermediateMat, *mat, COLOR_GRAY2BGRA);
     }
 
     void Direct3DInterop::ApplyFindFeaturesFilter(cv::Mat* mat)
@@ -160,7 +160,7 @@ namespace PhoneXamlDirect3DApp1Comp
         cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(50);
         std::vector<cv::KeyPoint> features;
 
-        cv::cvtColor(*mat, intermediateMat, CV_RGBA2GRAY);
+        cv::cvtColor(*mat, intermediateMat, COLOR_RGBA2GRAY);
         detector->detect(intermediateMat, features);
 
         for( unsigned int i = 0; i < std::min(features.size(), (size_t)50); i++ )

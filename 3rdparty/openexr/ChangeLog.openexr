@@ -1,5 +1,43 @@
+Version 2.0.1
+	* Temporarily turning off optimisation code path
+	  (Piotr Stanczyk)
+	* Added additional tests for future optimisation refactoring
+	  (Piotr Stanczyk / Peter Hillman)
+	* Fixes for StringVectors
+	  (Peter Hillman)
+	* Additional checks for type mismatches
+	  (Peter Hillman)
+	* Fix for Composite Deep Scanline
+	  (Brendan Bolles)
+
+Version 2.0.0
+	* Updated Documentation
+	   (Peter Hillman)
+	* Updated Namespacing mechanism
+	   (Piotr Stanczyk)
+	* Fixes for succd & predd
+	   (Peter Hillman)
+	* Fixes for FPE control registers
+	   (Piotr Stanczyk)
+	* Additional checks and tests on DeepImages, scanlines and tiles
+	   (Peter Hillman)
+	* Folded in Autodesk read optimisations for RGB(A) files
+	  (Pascal Jette, Peter Hillman)
+	* Updated the bootstrap scripts to use libtoolize if glibtoolize isn't available on darwin. 
+	  (Nick Rasmussen)
+	* Numerous minor fixes, missing includes etc
+
+Version 2.0.0.beta.1:
+* Please read the separate file for v2 additions and changes.
+	* Added git specific files 
+	  (Piotr Stanczyk)
+	* Updated the so verison to 20
+	  (Piotr Stanczyk)
+	* Initial use of the CMake build system 
+	  (Nicholas Yue)
+
 Version 1.7.1:
-        * Updated the .so verison to 7.
+	* Updated the .so verison to 7.
 	  (Piotr Stanczyk)     
 
 Version 1.7.0:

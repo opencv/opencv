@@ -1,10 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
 #define LOG_TAG "org.opencv.utils.Converters"
 #include "common.h"
 
 using namespace cv;
-
-#define CHECK_MAT(cond) if(!(cond)){ LOGD("FAILED: " #cond); return; }
-
 
 // vector_int
 
@@ -92,6 +93,33 @@ void vector_Rect_to_Mat(std::vector<Rect>& v_rect, Mat& mat)
     mat = Mat(v_rect, true);
 }
 
+//vector_Rect2d
+
+void Mat_to_vector_Rect2d(Mat& mat, std::vector<Rect2d>& v_rect)
+{
+    v_rect.clear();
+    CHECK_MAT(mat.type()==CV_64FC4 && mat.cols==1);
+    v_rect = (std::vector<Rect2d>) mat;
+}
+
+void vector_Rect2d_to_Mat(std::vector<Rect2d>& v_rect, Mat& mat)
+{
+    mat = Mat(v_rect, true);
+}
+
+//vector_RotatedRect
+
+void Mat_to_vector_RotatedRect(Mat& mat, std::vector<RotatedRect>& v_rect)
+{
+    v_rect.clear();
+    CHECK_MAT(mat.type()==CV_32FC(5) && mat.cols==1);
+    v_rect = (std::vector<RotatedRect>) mat;
+}
+
+void vector_RotatedRect_to_Mat(std::vector<RotatedRect>& v_rect, Mat& mat)
+{
+    mat = Mat(v_rect, true);
+}
 
 //vector_Point
 void Mat_to_vector_Point(Mat& mat, std::vector<Point>& v_point)

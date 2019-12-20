@@ -33,7 +33,7 @@ Getting OpenCV Source Code
 --------------------------
 
 You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest
-snapshot from our [Git repository](https://github.com/Itseez/opencv.git).
+snapshot from our [Git repository](https://github.com/opencv/opencv.git).
 
 ### Getting the Latest Stable OpenCV Version
 
@@ -42,12 +42,12 @@ snapshot from our [Git repository](https://github.com/Itseez/opencv.git).
 
 ### Getting the Cutting-edge OpenCV from the Git Repository
 
-Launch Git client and clone [OpenCV repository](http://github.com/itseez/opencv)
+Launch Git client and clone [OpenCV repository](http://github.com/opencv/opencv)
 
 In Linux it can be achieved with the following command in Terminal:
 @code{.bash}
 cd ~/<my_working _directory>
-git clone https://github.com/Itseez/opencv.git
+git clone https://github.com/opencv/opencv.git
 @endcode
 
 Building OpenCV

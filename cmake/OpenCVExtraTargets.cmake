@@ -36,3 +36,18 @@ if(BUILD_PERF_TESTS)
     set_target_properties(opencv_perf_tests PROPERTIES FOLDER "extra")
   endif()
 endif()
+
+# Documentation
+if(BUILD_DOCS)
+  add_custom_target(opencv_docs)
+  add_custom_target(install_docs DEPENDS opencv_docs
+    COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=docs -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+endif()
+
+# Samples
+if(BUILD_EXAMPLES)
+  add_custom_target(opencv_samples)
+  if(ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(opencv_samples PROPERTIES FOLDER "extra")
+  endif()
+endif()

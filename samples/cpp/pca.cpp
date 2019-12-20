@@ -42,9 +42,9 @@
 #include <fstream>
 #include <sstream>
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include "opencv2/imgcodecs.hpp"
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui.hpp>
 
 using namespace cv;
 using namespace std;
@@ -121,13 +121,19 @@ static void onTrackbar(int pos, void* ptr)
 // Main
 int main(int argc, char** argv)
 {
-    if (argc != 2) {
-        cout << "usage: " << argv[0] << " <image_list.txt>" << endl;
+    cv::CommandLineParser parser(argc, argv, "{@input||image list}{help h||show help message}");
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        exit(0);
+    }
+    // Get the path to your CSV.
+    string imgList = parser.get<string>("@input");
+    if (imgList.empty())
+    {
+        parser.printMessage();
         exit(1);
     }
-
-    // Get the path to your CSV.
-    string imgList = string(argv[1]);
 
     // vector to hold the images
     vector<Mat> images;
@@ -135,7 +141,7 @@ int main(int argc, char** argv)
     // Read in the data. This can fail if not valid
     try {
         read_imgList(imgList, images);
-    } catch (cv::Exception& e) {
+    } catch (const cv::Exception& e) {
         cerr << "Error opening file \"" << imgList << "\". Reason: " << e.msg << endl;
         exit(1);
     }
@@ -177,9 +183,9 @@ int main(int argc, char** argv)
     // display until user presses q
     imshow(winName, reconstruction);
 
-    int key = 0;
+    char key = 0;
     while(key != 'q')
-        key = waitKey();
+        key = (char)waitKey();
 
    return 0;
 }

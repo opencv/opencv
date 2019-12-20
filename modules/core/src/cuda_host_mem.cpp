@@ -60,7 +60,7 @@ public:
 
     UMatData* allocate(int dims, const int* sizes, int type,
                        void* data0, size_t* step,
-                       int /*flags*/, UMatUsageFlags /*usageFlags*/) const
+                       AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         size_t total = CV_ELEM_SIZE(type);
         for (int i = dims-1; i >= 0; i--)
@@ -100,12 +100,12 @@ public:
         return u;
     }
 
-    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const
+    bool allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         return (u != NULL);
     }
 
-    void deallocate(UMatData* u) const
+    void deallocate(UMatData* u) const CV_OVERRIDE
     {
         if (!u)
             return;
@@ -136,9 +136,8 @@ private:
 MatAllocator* cv::cuda::HostMem::getAllocator(AllocType alloc_type)
 {
 #ifndef HAVE_CUDA
-    (void) alloc_type;
+    CV_UNUSED(alloc_type);
     throw_no_cuda();
-    return NULL;
 #else
     static std::map<unsigned int, Ptr<MatAllocator> > allocators;
 
@@ -179,9 +178,9 @@ namespace
 void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
 {
 #ifndef HAVE_CUDA
-    (void) rows_;
-    (void) cols_;
-    (void) type_;
+    CV_UNUSED(rows_);
+    CV_UNUSED(cols_);
+    CV_UNUSED(type_);
     throw_no_cuda();
 #else
     if (alloc_type == SHARED)
@@ -202,10 +201,13 @@ void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
 
     if (rows_ > 0 && cols_ > 0)
     {
-        flags = Mat::MAGIC_VAL + Mat::CONTINUOUS_FLAG + type_;
+        flags = Mat::MAGIC_VAL + type_;
         rows = rows_;
         cols = cols_;
         step = elemSize() * cols;
+        int sz[] = { rows, cols };
+        size_t steps[] = { step, (size_t)CV_ELEM_SIZE(type_) };
+        flags = updateContinuityFlag(flags, 2, sz, steps);
 
         if (alloc_type == SHARED)
         {
@@ -302,7 +304,6 @@ GpuMat cv::cuda::HostMem::createGpuMatHeader() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
-    return GpuMat();
 #else
     CV_Assert( alloc_type == SHARED );
 
@@ -316,7 +317,7 @@ GpuMat cv::cuda::HostMem::createGpuMatHeader() const
 void cv::cuda::registerPageLocked(Mat& m)
 {
 #ifndef HAVE_CUDA
-    (void) m;
+    CV_UNUSED(m);
     throw_no_cuda();
 #else
     CV_Assert( m.isContinuous() );
@@ -327,7 +328,7 @@ void cv::cuda::registerPageLocked(Mat& m)
 void cv::cuda::unregisterPageLocked(Mat& m)
 {
 #ifndef HAVE_CUDA
-    (void) m;
+    CV_UNUSED(m);
 #else
     cudaSafeCall( cudaHostUnregister(m.data) );
 #endif

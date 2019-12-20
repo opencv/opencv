@@ -47,7 +47,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ////////////////////////////////////////////////////////////////////////////
@@ -145,6 +145,21 @@ OCL_INSTANTIATE_TEST_CASE_P(Core, Gemm, ::testing::Combine(
                             testing::Values(CV_32FC1, CV_32FC2, CV_64FC1, CV_64FC2),
                             Bool(), Bool(), Bool(), Bool()));
 
-} } // namespace cvtest::ocl
+// Test for non-Intel GPUs to check CL_INVALID_WORK_GROUP_SIZE when localsize > globalsize
+OCL_TEST(Gemm, small)
+{
+    UMat A(2, 3, CV_32F), B(4, 3, CV_32F), uC(2, 4, CV_32F);
+    Mat C(2, 4, CV_32F);
+
+    randu(A, -1, 1);
+    randu(B, -1, 1);
+
+    OCL_OFF(cv::gemm(A, B, 1, noArray(), 0, C, GEMM_2_T));
+    OCL_ON(cv::gemm(A, B, 1, noArray(), 0, uC, GEMM_2_T));
+
+    EXPECT_LE(cvtest::norm(C, uC, cv::NORM_INF), 1e-5);
+}
+
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

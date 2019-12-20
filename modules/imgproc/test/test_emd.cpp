@@ -41,10 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-
-/*////////////////////// emd_test /////////////////////////*/
+namespace opencv_test { namespace {
 
 class CV_EMDTest : public cvtest::BaseTest
 {
@@ -92,4 +89,5 @@ void CV_EMDTest::run( int )
 
 TEST(Imgproc_EMD, regression) { CV_EMDTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

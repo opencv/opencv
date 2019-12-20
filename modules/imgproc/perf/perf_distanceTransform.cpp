@@ -1,42 +1,17 @@
-/*#include "perf_precomp.hpp"
-#include "distransform.cpp"
-
-using namespace std;
-using namespace cv;
-using namespace perf;
-
-typedef perf::TestBaseWithParam<Size> Size_DistanceTransform;
-
-PERF_TEST_P(Size_DistanceTransform, icvTrueDistTrans, testing::Values(TYPICAL_MAT_SIZES))
-{
-    Size size = GetParam();
-    Mat src(size, CV_8UC1);
-    Mat dst(size, CV_32FC1);
-    CvMat srcStub = src;
-    CvMat dstStub = dst;
-
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    TEST_CYCLE() icvTrueDistTrans(&srcStub, &dstStub);
-
-    SANITY_CHECK(dst, 1);
-}*/
-
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
 CV_ENUM(DistanceType, DIST_L1, DIST_L2 , DIST_C)
 CV_ENUM(MaskSize, DIST_MASK_3, DIST_MASK_5, DIST_MASK_PRECISE)
 CV_ENUM(DstType, CV_8U, CV_32F)
 CV_ENUM(LabelType, DIST_LABEL_CCOMP, DIST_LABEL_PIXEL)
 
-typedef std::tr1::tuple<Size, DistanceType, MaskSize, DstType> SrcSize_DistType_MaskSize_DstType;
-typedef std::tr1::tuple<Size, DistanceType, MaskSize, LabelType> SrcSize_DistType_MaskSize_LabelType;
+typedef tuple<Size, DistanceType, MaskSize, DstType> SrcSize_DistType_MaskSize_DstType;
+typedef tuple<Size, DistanceType, MaskSize, LabelType> SrcSize_DistType_MaskSize_LabelType;
 typedef perf::TestBaseWithParam<SrcSize_DistType_MaskSize_DstType> DistanceTransform_Test;
 typedef perf::TestBaseWithParam<SrcSize_DistType_MaskSize_LabelType> DistanceTransform_NeedLabels_Test;
 
@@ -100,3 +75,5 @@ PERF_TEST_P(DistanceTransform_NeedLabels_Test, distanceTransform_NeedLabels,
     SANITY_CHECK(label, eps);
     SANITY_CHECK(dst, eps);
 }
+
+} // namespace

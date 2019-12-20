@@ -1,10 +1,11 @@
-#ifndef __OPENCV_CORE_OCL_RUNTIME_OPENCL_CORE_HPP__
+#ifndef OPENCV_CORE_OCL_RUNTIME_OPENCL_CORE_HPP
 #error "Invalid usage"
 #endif
 
 @CL_REMAP_ORIGIN@
 
 #if defined __APPLE__
+#define CL_SILENCE_DEPRECATION
 #include <OpenCL/cl.h>
 #else
 #include <CL/cl.h>

@@ -39,12 +39,17 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_SSE_UTILS_HPP__
-#define __OPENCV_CORE_SSE_UTILS_HPP__
+#ifndef OPENCV_CORE_SSE_UTILS_HPP
+#define OPENCV_CORE_SSE_UTILS_HPP
 
 #ifndef __cplusplus
 #  error sse_utils.hpp header must be compiled as C++
 #endif
+
+#include "opencv2/core/cvdef.h"
+
+//! @addtogroup core_utils_sse
+//! @{
 
 #if CV_SSE2
 
@@ -562,7 +567,7 @@ inline void _mm_deinterleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0, __m
 
 inline void _mm_interleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0, __m128 & v_g1)
 {
-    const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1);
+    enum { mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1) };
 
     __m128 layer2_chunk0 = _mm_shuffle_ps(v_r0, v_r1, mask_lo);
     __m128 layer2_chunk2 = _mm_shuffle_ps(v_r0, v_r1, mask_hi);
@@ -583,7 +588,7 @@ inline void _mm_interleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0, __m12
 inline void _mm_interleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0,
                               __m128 & v_g1, __m128 & v_b0, __m128 & v_b1)
 {
-    const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1);
+    enum { mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1) };
 
     __m128 layer2_chunk0 = _mm_shuffle_ps(v_r0, v_r1, mask_lo);
     __m128 layer2_chunk3 = _mm_shuffle_ps(v_r0, v_r1, mask_hi);
@@ -610,7 +615,7 @@ inline void _mm_interleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0,
 inline void _mm_interleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0, __m128 & v_g1,
                               __m128 & v_b0, __m128 & v_b1, __m128 & v_a0, __m128 & v_a1)
 {
-    const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1);
+    enum { mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1) };
 
     __m128 layer2_chunk0 = _mm_shuffle_ps(v_r0, v_r1, mask_lo);
     __m128 layer2_chunk4 = _mm_shuffle_ps(v_r0, v_r1, mask_hi);
@@ -642,4 +647,6 @@ inline void _mm_interleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0, __m12
 
 #endif // CV_SSE2
 
-#endif //__OPENCV_CORE_SSE_UTILS_HPP__
+//! @}
+
+#endif //OPENCV_CORE_SSE_UTILS_HPP

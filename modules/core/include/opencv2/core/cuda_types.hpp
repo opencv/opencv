@@ -40,11 +40,18 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CUDA_TYPES_HPP__
-#define __OPENCV_CORE_CUDA_TYPES_HPP__
+#ifndef OPENCV_CORE_CUDA_TYPES_HPP
+#define OPENCV_CORE_CUDA_TYPES_HPP
 
 #ifndef __cplusplus
 #  error cuda_types.hpp header must be compiled as C++
+#endif
+
+#if defined(__OPENCV_BUILD) && defined(__clang__)
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
+#if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 
 /** @file
@@ -120,10 +127,12 @@ namespace cv
         };
 
         typedef PtrStepSz<unsigned char> PtrStepSzb;
+        typedef PtrStepSz<unsigned short> PtrStepSzus;
         typedef PtrStepSz<float> PtrStepSzf;
         typedef PtrStepSz<int> PtrStepSzi;
 
         typedef PtrStep<unsigned char> PtrStepb;
+        typedef PtrStep<unsigned short> PtrStepus;
         typedef PtrStep<float> PtrStepf;
         typedef PtrStep<int> PtrStepi;
 
@@ -132,4 +141,4 @@ namespace cv
 
 //! @endcond
 
-#endif /* __OPENCV_CORE_CUDA_TYPES_HPP__ */
+#endif /* OPENCV_CORE_CUDA_TYPES_HPP */

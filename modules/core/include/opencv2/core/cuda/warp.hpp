@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_DEVICE_WARP_HPP__
-#define __OPENCV_CUDA_DEVICE_WARP_HPP__
+#ifndef OPENCV_CUDA_DEVICE_WARP_HPP
+#define OPENCV_CUDA_DEVICE_WARP_HPP
 
 /** @file
  * @deprecated Use @ref cudev instead.
@@ -64,7 +64,7 @@ namespace cv { namespace cuda { namespace device
         static __device__ __forceinline__ unsigned int laneId()
         {
             unsigned int ret;
-            asm("mov.u32 %0, %laneid;" : "=r"(ret) );
+            asm("mov.u32 %0, %%laneid;" : "=r"(ret) );
             return ret;
         }
 
@@ -136,4 +136,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif /* __OPENCV_CUDA_DEVICE_WARP_HPP__ */
+#endif /* OPENCV_CUDA_DEVICE_WARP_HPP */

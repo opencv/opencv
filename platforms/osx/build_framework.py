@@ -1,124 +1,58 @@
 #!/usr/bin/env python
 """
-The script builds OpenCV.framework for iOS.
-The built framework is universal, it can be used to build app and run it on either iOS simulator or real device.
-
-Usage:
-    ./build_framework.py <outputdir>
-
-By cmake conventions (and especially if you work with OpenCV repository),
-the output dir should not be a subdirectory of OpenCV source tree.
-
-Script will create <outputdir>, if it's missing, and a few its subdirectories:
-
-    <outputdir>
-        build/
-            iPhoneOS-*/
-               [cmake-generated build tree for an iOS device target]
-            iPhoneSimulator/
-               [cmake-generated build tree for iOS simulator]
-        opencv2.framework/
-            [the framework content]
-
-The script should handle minor OpenCV updates efficiently
-- it does not recompile the library from scratch each time.
-However, opencv2.framework directory is erased and recreated on each run.
+The script builds OpenCV.framework for OSX.
 """
 
-import glob, re, os, os.path, shutil, string, sys
+from __future__ import print_function
+import os, os.path, sys, argparse, traceback, multiprocessing
 
-def build_opencv(srcroot, buildroot, target, arch):
-    "builds OpenCV for device or simulator"
+# import common code
+sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios'))
+from build_framework import Builder
 
-    builddir = os.path.join(buildroot, target + '-' + arch)
-    if not os.path.isdir(builddir):
-        os.makedirs(builddir)
-    currdir = os.getcwd()
-    os.chdir(builddir)
-    # for some reason, if you do not specify CMAKE_BUILD_TYPE, it puts libs to "RELEASE" rather than "Release"
-    cmakeargs = ("-GXcode " +
-                "-DCMAKE_BUILD_TYPE=Release " +
-                "-DBUILD_SHARED_LIBS=OFF " +
-                "-DBUILD_DOCS=OFF " +
-                "-DBUILD_EXAMPLES=OFF " +
-                "-DBUILD_TESTS=OFF " +
-                "-DBUILD_PERF_TESTS=OFF " +
-                "-DBUILD_opencv_apps=OFF " +
-                "-DBUILD_opencv_world=ON " +
-                "-DBUILD_opencv_matlab=OFF " +
-                "-DWITH_TIFF=OFF -DBUILD_TIFF=OFF " +
-                "-DWITH_JASPER=OFF -DBUILD_JASPER=OFF " +
-                "-DWITH_WEBP=OFF -DBUILD_WEBP=OFF " +
-                "-DWITH_OPENEXR=OFF -DBUILD_OPENEXR=OFF " +
-                "-DWITH_IPP=OFF -DWITH_IPP_A=OFF " +
-                "-DCMAKE_C_FLAGS=\"-Wno-implicit-function-declaration\" " +
-                "-DCMAKE_INSTALL_PREFIX=install")
-    # if cmake cache exists, just rerun cmake to update OpenCV.xproj if necessary
-    if os.path.isfile(os.path.join(builddir, "CMakeCache.txt")):
-        os.system("cmake %s ." % (cmakeargs,))
-    else:
-        os.system("cmake %s %s" % (cmakeargs, srcroot))
+MACOSX_DEPLOYMENT_TARGET='10.12'  # default, can be changed via command line options or environment variable
 
-    for wlib in [builddir + "/modules/world/UninstalledProducts/libopencv_world.a",
-                 builddir + "/lib/Release/libopencv_world.a"]:
-        if os.path.isfile(wlib):
-            os.remove(wlib)
+class OSXBuilder(Builder):
 
-    os.system("xcodebuild -parallelizeTargets ARCHS=%s -jobs 2 -sdk %s -configuration Release -target ALL_BUILD" % (arch, target.lower()))
-    os.system("xcodebuild ARCHS=%s -sdk %s -configuration Release -target install install" % (arch, target.lower()))
-    os.chdir(currdir)
+    def getToolchain(self, arch, target):
+        return None
 
-def put_framework_together(srcroot, dstroot):
-    "constructs the framework directory after all the targets are built"
+    def getBuildCommand(self, archs, target):
+        buildcmd = [
+            "xcodebuild",
+            "MACOSX_DEPLOYMENT_TARGET=" + os.environ['MACOSX_DEPLOYMENT_TARGET'],
+            "ARCHS=%s" % archs[0],
+            "-sdk", target.lower(),
+            "-configuration", "Debug" if self.debug else "Release",
+            "-parallelizeTargets",
+            "-jobs", str(multiprocessing.cpu_count())
+        ]
+        return buildcmd
 
-    # find the list of targets (basically, ["iPhoneOS", "iPhoneSimulator"])
-    targetlist = glob.glob(os.path.join(dstroot, "build", "*"))
-    targetlist = [os.path.basename(t) for t in targetlist]
-
-    # set the current dir to the dst root
-    currdir = os.getcwd()
-    framework_dir = dstroot + "/opencv2.framework"
-    if os.path.isdir(framework_dir):
-        shutil.rmtree(framework_dir)
-    os.makedirs(framework_dir)
-    os.chdir(framework_dir)
-
-    # form the directory tree
-    dstdir = "Versions/A"
-    os.makedirs(dstdir + "/Resources")
-
-    tdir0 = "../build/" + targetlist[0]
-    # copy headers
-    shutil.copytree(tdir0 + "/install/include/opencv2", dstdir + "/Headers")
-
-    # make universal static lib
-    wlist = " ".join(["../build/" + t + "/lib/Release/libopencv_world.a" for t in targetlist])
-    os.system("lipo -create " + wlist + " -o " + dstdir + "/opencv2")
-
-    # copy Info.plist
-    shutil.copyfile(tdir0 + "/osx/Info.plist", dstdir + "/Resources/Info.plist")
-
-    # make symbolic links
-    os.symlink("A", "Versions/Current")
-    os.symlink("Versions/Current/Headers", "Headers")
-    os.symlink("Versions/Current/Resources", "Resources")
-    os.symlink("Versions/Current/opencv2", "opencv2")
-
-
-def build_framework(srcroot, dstroot):
-    "main function to do all the work"
-
-    targets = ["MacOSX", "MacOSX" ]
-    archs   = ["x86_64", "i386"   ]
-    for i in range(len(targets)):
-        build_opencv(srcroot, os.path.join(dstroot, "build"), targets[i], archs[i])
-
-    put_framework_together(srcroot, dstroot)
+    def getInfoPlist(self, builddirs):
+        return os.path.join(builddirs[0], "osx", "Info.plist")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print "Usage:\n\t./build_framework.py <outputdir>\n\n"
-        sys.exit(0)
+    folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
+    parser = argparse.ArgumentParser(description='The script builds OpenCV.framework for OSX.')
+    parser.add_argument('out', metavar='OUTDIR', help='folder to put built framework')
+    parser.add_argument('--opencv', metavar='DIR', default=folder, help='folder with opencv repository (default is "../.." relative to script location)')
+    parser.add_argument('--contrib', metavar='DIR', default=None, help='folder with opencv_contrib repository (default is "None" - build only main framework)')
+    parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
+    parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF)')
+    parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
+    parser.add_argument('--macosx_deployment_target', default=os.environ.get('MACOSX_DEPLOYMENT_TARGET', MACOSX_DEPLOYMENT_TARGET), help='specify MACOSX_DEPLOYMENT_TARGET')
+    parser.add_argument('--debug', action='store_true', help='Build "Debug" binaries (CMAKE_BUILD_TYPE=Debug)')
+    parser.add_argument('--debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
 
-    build_framework(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../..")), os.path.abspath(sys.argv[1]))
+    args = parser.parse_args()
+
+    os.environ['MACOSX_DEPLOYMENT_TARGET'] = args.macosx_deployment_target
+    print('Using MACOSX_DEPLOYMENT_TARGET=' + os.environ['MACOSX_DEPLOYMENT_TARGET'])
+
+    b = OSXBuilder(args.opencv, args.contrib, False, False, args.without, args.disable, args.enablenonfree,
+        [
+            (["x86_64"], "MacOSX")
+        ], args.debug, args.debug_info)
+    b.build(args.out)

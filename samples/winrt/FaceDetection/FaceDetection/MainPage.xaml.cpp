@@ -7,9 +7,11 @@
 #include "MainPage.xaml.h"
 
 #include <opencv2\imgproc\types_c.h>
-#include <opencv2\imgcodecs\imgcodecs.hpp>
-#include <opencv2\core\core.hpp>
-#include <opencv2\imgproc\imgproc.hpp>
+#include <opencv2\imgcodecs.hpp>
+#include <opencv2\core.hpp>
+#include <opencv2\imgproc.hpp>
+#include <opencv2\highgui.hpp>
+#include <opencv2\highgui\highgui_winrt.hpp>
 
 #include <Robuffer.h>
 
@@ -33,6 +35,7 @@ using namespace Microsoft::WRL;
 
 // Name of the resource classifier used to detect human faces (frontal)
 cv::String face_cascade_name = "Assets/haarcascade_frontalface_alt.xml";
+cv::String window_name = "Faces";
 
 MainPage::MainPage()
 {
@@ -44,8 +47,9 @@ void FaceDetection::MainPage::InitBtn_Click(Platform::Object^ sender, Windows::U
     // load Image and Init recognizer
     cv::Mat image = cv::imread("Assets/group1.jpg");
     groupFaces = cv::Mat(image.rows, image.cols, CV_8UC4);
-    cv::cvtColor(image, groupFaces, CV_BGR2BGRA);
-    UpdateImage(groupFaces);
+    cv::cvtColor(image, groupFaces, COLOR_BGR2BGRA);
+    cv::winrt_initContainer(cvContainer);
+    cv::imshow(window_name, groupFaces);
 
     if (!face_cascade.load(face_cascade_name)) {
         Windows::UI::Popups::MessageDialog("Couldn't load face detector \n").ShowAsync();
@@ -59,7 +63,7 @@ void FaceDetection::MainPage::detectBtn_Click(Platform::Object^ sender, Windows:
         std::vector<cv::Rect> facesColl;
         cv::Mat frame_gray;
 
-        cvtColor(groupFaces, frame_gray, CV_BGR2GRAY);
+        cvtColor(groupFaces, frame_gray, COLOR_BGR2GRAY);
         cv::equalizeHist(frame_gray, frame_gray);
 
         // Detect faces
@@ -70,29 +74,8 @@ void FaceDetection::MainPage::detectBtn_Click(Platform::Object^ sender, Windows:
             cv::rectangle(groupFaces, face, cv::Scalar(0, 255, 255), 5);
         }
 
-        UpdateImage(groupFaces);
+        cv::imshow(window_name, groupFaces);
     } else {
         Windows::UI::Popups::MessageDialog("Initialize image before processing \n").ShowAsync();
     }
-}
-
-void FaceDetection::MainPage::UpdateImage(const cv::Mat& image) {
-    // Create the WriteableBitmap
-    WriteableBitmap^ bitmap = ref new WriteableBitmap(image.cols, image.rows);
-
-    // Get access to the pixels
-    IBuffer^ buffer = bitmap->PixelBuffer;
-    unsigned char* dstPixels;
-
-    // Obtain IBufferByteAccess
-    ComPtr<IBufferByteAccess> pBufferByteAccess;
-    ComPtr<IInspectable> pBuffer((IInspectable*)buffer);
-    pBuffer.As(&pBufferByteAccess);
-
-    // Get pointer to pixel bytes
-    pBufferByteAccess->Buffer(&dstPixels);
-    memcpy(dstPixels, image.data, image.step.buf[1] * image.cols*image.rows);
-
-    // Set the bitmap to the Image element
-    img1->Source = bitmap;
 }

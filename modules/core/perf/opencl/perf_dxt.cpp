@@ -49,7 +49,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// dft ////////////////////////
@@ -113,6 +113,6 @@ OCL_PERF_TEST_P(MulSpectrumsFixture, MulSpectrums,
     SANITY_CHECK(dst, 1e-3);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

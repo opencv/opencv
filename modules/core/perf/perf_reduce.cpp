@@ -1,14 +1,12 @@
 #include "perf_precomp.hpp"
 #include "opencv2/core/core_c.h"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
 CV_ENUM(ROp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
-typedef std::tr1::tuple<Size, MatType, ROp> Size_MatType_ROp_t;
+typedef tuple<Size, MatType, ROp> Size_MatType_ROp_t;
 typedef perf::TestBaseWithParam<Size_MatType_ROp_t> Size_MatType_ROp;
 
 
@@ -66,3 +64,5 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
 
     SANITY_CHECK(vec, 1);
 }
+
+} // namespace

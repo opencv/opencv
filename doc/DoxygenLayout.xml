@@ -17,7 +17,7 @@
       <tab type="globals" visible="yes" title="Global objects" intro=""/>
     </tab>
     <tab type="examples" visible="yes" title="" intro=""/>
-    <tab type="user" url="/3.0-last-rst" title="Sphinx Documentation"/>
+    @CMAKE_DOXYGEN_JAVADOC_NODE@
   </navindex>
 
   <!-- Layout definition for a class page -->

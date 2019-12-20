@@ -42,8 +42,8 @@
 //M*/
 
 
-#ifndef __OPENCV_CORE_C_H__
-#define __OPENCV_CORE_C_H__
+#ifndef OPENCV_CORE_C_H
+#define OPENCV_CORE_C_H
 
 #include "opencv2/core/types_c.h"
 
@@ -53,7 +53,7 @@
                           which is incompatible with C
 
    It is OK to disable it because we only extend few plain structures with
-   C++ construrtors for simpler interoperability with C++ API of the library
+   C++ constructors for simpler interoperability with C++ API of the library
 */
 #    pragma warning(disable:4190)
 #  elif defined __clang__ && __clang_major__ >= 3
@@ -359,7 +359,7 @@ CVAPI(CvMat*) cvGetSubRect( const CvArr* arr, CvMat* submat, CvRect rect );
 
 /** @brief Returns array row or row span.
 
-The functions return the header, corresponding to a specified row/row span of the input array.
+The function returns the header, corresponding to a specified row/row span of the input array.
 cvGetRow(arr, submat, row) is a shortcut for cvGetRows(arr, submat, row, row+1).
 @param arr Input array
 @param submat Pointer to the resulting sub-array header
@@ -385,7 +385,7 @@ CV_INLINE  CvMat*  cvGetRow( const CvArr* arr, CvMat* submat, int row )
 
 /** @brief Returns one of more array columns.
 
-The functions return the header, corresponding to a specified column span of the input array. That
+The function returns the header, corresponding to a specified column span of the input array. That
 
 is, no data is copied. Therefore, any modifications of the submatrix will affect the original array.
 If you need to copy the columns, use cvCloneMat. cvGetCol(arr, submat, col) is a shortcut for
@@ -579,7 +579,7 @@ CvNArrayIterator;
 #define CV_NO_CN_CHECK        2
 #define CV_NO_SIZE_CHECK      4
 
-/** initializes iterator that traverses through several arrays simulteneously
+/** initializes iterator that traverses through several arrays simultaneously
    (the function together with cvNextArraySlice is used for
     N-ari element-wise operations) */
 CVAPI(int) cvInitNArrayIterator( int count, CvArr** arrs,
@@ -1576,8 +1576,8 @@ CVAPI(void)  cvRestoreMemStoragePos( CvMemStorage* storage, CvMemStoragePos* pos
 CVAPI(void*) cvMemStorageAlloc( CvMemStorage* storage, size_t size );
 
 /** Allocates string in memory storage */
-CVAPI(CvString) cvMemStorageAllocString( CvMemStorage* storage, const char* ptr,
-                                         int len CV_DEFAULT(-1) );
+//CVAPI(CvString) cvMemStorageAllocString( CvMemStorage* storage, const char* ptr,
+//                                         int len CV_DEFAULT(-1) );
 
 /** Creates new empty sequence that will reside in the specified storage */
 CVAPI(CvSeq*)  cvCreateSeq( int seq_flags, size_t header_size,
@@ -1788,7 +1788,7 @@ CVAPI(int)  cvGraphRemoveVtx( CvGraph* graph, int index );
 CVAPI(int)  cvGraphRemoveVtxByPtr( CvGraph* graph, CvGraphVtx* vtx );
 
 
-/** Link two vertices specifed by indices or pointers if they
+/** Link two vertices specified by indices or pointers if they
    are not connected or return pointer to already existing edge
    connecting the vertices.
    Functions return 1 if a new edge was created, 0 otherwise */
@@ -1970,14 +1970,19 @@ CVAPI(void) cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,
 *                                    Data Persistence                                    *
 \****************************************************************************************/
 
+#if 0
 /********************************** High-level functions ********************************/
 
 /** @brief Opens file storage for reading or writing data.
 
 The function opens file storage for reading or writing data. In the latter case, a new file is
 created or an existing file is rewritten. The type of the read or written file is determined by the
-filename extension: .xml for XML and .yml or .yaml for YAML. The function returns a pointer to the
-CvFileStorage structure. If the file cannot be opened then the function returns NULL.
+filename extension: .xml for XML, .yml or .yaml for YAML and .json for JSON.
+
+At the same time, it also supports adding parameters like "example.xml?base64".
+
+The function returns a pointer to the CvFileStorage structure.
+If the file cannot be opened then the function returns NULL.
 @param filename Name of the file associated with the storage
 @param memstorage Memory storage used for temporary data and for
 :   storing dynamic structures, such as CvSeq or CvGraph . If it is NULL, a temporary memory
@@ -1985,6 +1990,7 @@ CvFileStorage structure. If the file cannot be opened then the function returns 
 @param flags Can be one of the following:
 > -   **CV_STORAGE_READ** the storage is open for reading
 > -   **CV_STORAGE_WRITE** the storage is open for writing
+      (use **CV_STORAGE_WRITE | CV_STORAGE_WRITE_BASE64** to write rawdata in Base64)
 @param encoding
  */
 CVAPI(CvFileStorage*)  cvOpenFileStorage( const char* filename, CvMemStorage* memstorage,
@@ -2022,7 +2028,8 @@ One and only one of the two above flags must be specified
 @param type_name Optional parameter - the object type name. In
     case of XML it is written as a type_id attribute of the structure opening tag. In the case of
     YAML it is written after a colon following the structure name (see the example in
-    CvFileStorage description). Mainly it is used with user objects. When the storage is read, the
+    CvFileStorage description). In case of JSON it is written as a name/value pair.
+    Mainly it is used with user objects. When the storage is read, the
     encoded type name is used to determine the object type (see CvTypeInfo and cvFindType ).
 @param attributes This parameter is not used in the current implementation
  */
@@ -2162,7 +2169,7 @@ the file with multiple streams looks like this:
 @endcode
 The YAML file will look like this:
 @code{.yaml}
-    %YAML:1.0
+    %YAML 1.0
     # stream #1 data
     ...
     ---
@@ -2186,6 +2193,23 @@ to a sequence rather than a map.
  */
 CVAPI(void) cvWriteRawData( CvFileStorage* fs, const void* src,
                                 int len, const char* dt );
+
+/** @brief Writes multiple numbers in Base64.
+
+If either CV_STORAGE_WRITE_BASE64 or cv::FileStorage::WRITE_BASE64 is used,
+this function will be the same as cvWriteRawData. If neither, the main
+difference is that it outputs a sequence in Base64 encoding rather than
+in plain text.
+
+This function can only be used to write a sequence with a type "binary".
+
+@param fs File storage
+@param src Pointer to the written array
+@param len Number of the array elements to write
+@param dt Specification of each array element, see @ref format_spec "format specification"
+*/
+CVAPI(void) cvWriteRawDataBase64( CvFileStorage* fs, const void* src,
+                                 int len, const char* dt );
 
 /** @brief Returns a unique pointer for a given name.
 
@@ -2468,7 +2492,7 @@ CVAPI(void) cvReadRawData( const CvFileStorage* fs, const CvFileNode* src,
 /** @brief Writes a file node to another file storage.
 
 The function writes a copy of a file node to file storage. Possible applications of the function are
-merging several file storages into one and conversion between XML and YAML formats.
+merging several file storages into one and conversion between XML, YAML and JSON formats.
 @param fs Destination file storage
 @param new_node_name New name of the file node in the destination file storage. To keep the
 existing name, use cvcvGetFileNodeName
@@ -2533,10 +2557,12 @@ returns NULL.
  */
 CVAPI(CvTypeInfo*) cvTypeOf( const void* struct_ptr );
 
+#endif
+
 /** @brief Releases an object.
 
-The function finds the type of a given object and calls release with the double pointer.
-@param struct_ptr Double pointer to the object
+ The function finds the type of a given object and calls release with the double pointer.
+ @param struct_ptr Double pointer to the object
  */
 CVAPI(void) cvRelease( void** struct_ptr );
 
@@ -2548,41 +2574,6 @@ function, like cvCloneMat.
 @param struct_ptr The object to clone
  */
 CVAPI(void*) cvClone( const void* struct_ptr );
-
-/** @brief Saves an object to a file.
-
-The function saves an object to a file. It provides a simple interface to cvWrite .
-@param filename File name
-@param struct_ptr Object to save
-@param name Optional object name. If it is NULL, the name will be formed from filename .
-@param comment Optional comment to put in the beginning of the file
-@param attributes Optional attributes passed to cvWrite
- */
-CVAPI(void) cvSave( const char* filename, const void* struct_ptr,
-                    const char* name CV_DEFAULT(NULL),
-                    const char* comment CV_DEFAULT(NULL),
-                    CvAttrList attributes CV_DEFAULT(cvAttrList()));
-
-/** @brief Loads an object from a file.
-
-The function loads an object from a file. It basically reads the specified file, find the first
-top-level node and calls cvRead for that node. If the file node does not have type information or
-the type information can not be found by the type name, the function returns NULL. After the object
-is loaded, the file storage is closed and all the temporary buffers are deleted. Thus, to load a
-dynamic structure, such as a sequence, contour, or graph, one should pass a valid memory storage
-destination to the function.
-@param filename File name
-@param memstorage Memory storage for dynamic structures, such as CvSeq or CvGraph . It is not used
-for matrices or images.
-@param name Optional object name. If it is NULL, the first top-level object in the storage will be
-loaded.
-@param real_name Optional output parameter that will contain the name of the loaded object
-(useful if name=NULL )
- */
-CVAPI(void*) cvLoad( const char* filename,
-                     CvMemStorage* memstorage CV_DEFAULT(NULL),
-                     const char* name CV_DEFAULT(NULL),
-                     const char** real_name CV_DEFAULT(NULL) );
 
 /*********************************** Measuring Execution Time ***************************/
 
@@ -2616,13 +2607,13 @@ CVAPI(void) cvSetErrStatus( int status );
 #define CV_ErrModeParent   1   /* Print error and continue */
 #define CV_ErrModeSilent   2   /* Don't print and continue */
 
-/** Retrives current error processing mode */
+/** Retrieves current error processing mode */
 CVAPI(int)  cvGetErrMode( void );
 
 /** Sets error processing mode, returns previously used mode */
 CVAPI(int) cvSetErrMode( int mode );
 
-/** Sets error status and performs some additonal actions (displaying message box,
+/** Sets error status and performs some additional actions (displaying message box,
  writing message to stderr, terminating application etc.)
  depending on the current error mode */
 CVAPI(void) cvError( int status, const char* func_name,
@@ -2631,7 +2622,7 @@ CVAPI(void) cvError( int status, const char* func_name,
 /** Retrieves textual description of the error given its code */
 CVAPI(const char*) cvErrorStr( int status );
 
-/** Retrieves detailed information about the last error occured */
+/** Retrieves detailed information about the last error occurred */
 CVAPI(int) cvGetErrInfo( const char** errcode_desc, const char** description,
                         const char** filename, int* line );
 
@@ -2706,7 +2697,7 @@ static char cvFuncName[] = Name
 /**
  CV_CALL macro calls CV (or IPL) function, checks error status and
  signals a error if the function failed. Useful in "parent node"
- error procesing mode
+ error processing mode
  */
 #define CV_CALL( Func )                                             \
 {                                                                   \
@@ -2733,24 +2724,6 @@ static char cvFuncName[] = Name
 #endif
 
 #ifdef __cplusplus
-
-//! @addtogroup core_c_glue
-//! @{
-
-//! class for automatic module/RTTI data registration/unregistration
-struct CV_EXPORTS CvType
-{
-    CvType( const char* type_name,
-            CvIsInstanceFunc is_instance, CvReleaseFunc release=0,
-            CvReadFunc read=0, CvWriteFunc write=0, CvCloneFunc clone=0 );
-    ~CvType();
-    CvTypeInfo* info;
-
-    static CvTypeInfo* first;
-    static CvTypeInfo* last;
-};
-
-//! @}
 
 #include "opencv2/core/utility.hpp"
 
@@ -2782,11 +2755,11 @@ CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);
 
 ////// specialized implementations of DefaultDeleter::operator() for classic OpenCV types //////
 
-template<> CV_EXPORTS void DefaultDeleter<CvMat>::operator ()(CvMat* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<IplImage>::operator ()(IplImage* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const;
+template<> struct DefaultDeleter<CvMat>{ CV_EXPORTS void operator ()(CvMat* obj) const; };
+template<> struct DefaultDeleter<IplImage>{ CV_EXPORTS void operator ()(IplImage* obj) const; };
+template<> struct DefaultDeleter<CvMatND>{ CV_EXPORTS void operator ()(CvMatND* obj) const; };
+template<> struct DefaultDeleter<CvSparseMat>{ CV_EXPORTS void operator ()(CvSparseMat* obj) const; };
+template<> struct DefaultDeleter<CvMemStorage>{ CV_EXPORTS void operator ()(CvMemStorage* obj) const; };
 
 ////////////// convenient wrappers for operating old-style dynamic structures //////////////
 
@@ -3041,7 +3014,7 @@ template<typename _Tp> inline void Seq<_Tp>::copyTo(std::vector<_Tp>& vec, const
     size_t len = !seq ? 0 : range == Range::all() ? seq->total : range.end - range.start;
     vec.resize(len);
     if( seq && len )
-        cvCvtSeqToArray(seq, &vec[0], range);
+        cvCvtSeqToArray(seq, &vec[0], cvSlice(range));
 }
 
 template<typename _Tp> inline Seq<_Tp>::operator std::vector<_Tp>() const

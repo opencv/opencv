@@ -42,15 +42,16 @@
 
 #include "test_precomp.hpp"
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <iterator>
-#include <limits>
-#include <numeric>
+// this is test for a deprecated function. let's ignore deprecated warnings in this file
+#if defined(__clang__)
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+    #pragma warning( disable : 4996)
+#endif
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_RigidTransform_Test : public cvtest::BaseTest
 {
@@ -101,7 +102,7 @@ bool CV_RigidTransform_Test::testNPoints(int from)
         Mat tpts(1, n, CV_32FC2);
 
         rng.fill(fpts, RNG::UNIFORM, Scalar(0,0), Scalar(10,10));
-        transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
+        std::transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
 
         Mat noise(1, n, CV_32FC2);
         rng.fill(noise, RNG::NORMAL, Scalar::all(0), Scalar::all(0.001*(n<=7 ? 0 : n <= 30 ? 1 : 10)));
@@ -179,3 +180,5 @@ void CV_RigidTransform_Test::run( int start_from )
 }
 
 TEST(Video_RigidFlow, accuracy) { CV_RigidTransform_Test test; test.safe_run(); }
+
+}} // namespace

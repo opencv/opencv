@@ -42,8 +42,9 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_video.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
-#if defined __APPLE__ || defined ANDROID
+#if defined __APPLE__ || defined __ANDROID__
 #define SMALL_LOCALSIZE
 #endif
 
@@ -121,10 +122,10 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     int width = src.cols;
     int height = src.rows;
     AutoBuffer<float> kbuf(n*6 + 3), _row((width + n*2)*3);
-    float* g = kbuf + n;
+    float* g = kbuf.data() + n;
     float* xg = g + n*2 + 1;
     float* xxg = xg + n*2 + 1;
-    float *row = (float*)_row + n*3;
+    float *row = _row.data() + n*3;
     double ig11, ig03, ig33, ig55;
 
     FarnebackPrepareGaussian(n, sigma, g, xg, xxg, ig11, ig03, ig33, ig55);
@@ -322,7 +323,7 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
     double scale = 1./(block_size*block_size);
 
     AutoBuffer<double> _vsum((width+m*2+2)*5);
-    double* vsum = _vsum + (m+1)*5;
+    double* vsum = _vsum.data() + (m+1)*5;
 
     // init vsum
     const float* srow0 = matM.ptr<float>();
@@ -416,10 +417,10 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
     AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
     AutoBuffer<float> _kernel((m+1)*5 + 16);
-    AutoBuffer<float*> _srow(m*2+1);
-    float *vsum = alignPtr((float*)_vsum + (m+1)*5, 16), *hsum = alignPtr((float*)_hsum, 16);
-    float* kernel = (float*)_kernel;
-    const float** srow = (const float**)&_srow[0];
+    AutoBuffer<const float*> _srow(m*2+1);
+    float *vsum = alignPtr(_vsum.data() + (m+1)*5, 16), *hsum = alignPtr(_hsum.data(), 16);
+    float* kernel = _kernel.data();
+    const float** srow = _srow.data();
     kernel[0] = (float)s;
 
     for( i = 1; i <= m; i++ )
@@ -433,13 +434,11 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     for( i = 0; i <= m; i++ )
         kernel[i] = (float)(kernel[i]*s);
 
-#if CV_SSE2
+#if CV_SIMD128
     float* simd_kernel = alignPtr(kernel + m+1, 16);
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
-    if( useSIMD )
     {
         for( i = 0; i <= m; i++ )
-            _mm_store_ps(simd_kernel + i*4, _mm_set1_ps(kernel[i]));
+            v_store(simd_kernel + i*4, v_setall_f32(kernel[i]));
     }
 #endif
 
@@ -457,54 +456,53 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         }
 
         x = 0;
-#if CV_SSE2
-        if( useSIMD )
+#if CV_SIMD128
         {
             for( ; x <= width*5 - 16; x += 16 )
             {
                 const float *sptr0 = srow[m], *sptr1;
-                __m128 g4 = _mm_load_ps(simd_kernel);
-                __m128 s0, s1, s2, s3;
-                s0 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x), g4);
-                s1 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 4), g4);
-                s2 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 8), g4);
-                s3 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 12), g4);
+                v_float32x4 g4 = v_load(simd_kernel);
+                v_float32x4 s0, s1, s2, s3;
+                s0 = v_load(sptr0 + x) * g4;
+                s1 = v_load(sptr0 + x + 4) * g4;
+                s2 = v_load(sptr0 + x + 8) * g4;
+                s3 = v_load(sptr0 + x + 12) * g4;
 
                 for( i = 1; i <= m; i++ )
                 {
-                    __m128 x0, x1;
+                    v_float32x4 x0, x1;
                     sptr0 = srow[m+i], sptr1 = srow[m-i];
-                    g4 = _mm_load_ps(simd_kernel + i*4);
-                    x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x), _mm_loadu_ps(sptr1 + x));
-                    x1 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 4), _mm_loadu_ps(sptr1 + x + 4));
-                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
-                    s1 = _mm_add_ps(s1, _mm_mul_ps(x1, g4));
-                    x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 8), _mm_loadu_ps(sptr1 + x + 8));
-                    x1 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 12), _mm_loadu_ps(sptr1 + x + 12));
-                    s2 = _mm_add_ps(s2, _mm_mul_ps(x0, g4));
-                    s3 = _mm_add_ps(s3, _mm_mul_ps(x1, g4));
+                    g4 = v_load(simd_kernel + i*4);
+                    x0 = v_load(sptr0 + x) + v_load(sptr1 + x);
+                    x1 = v_load(sptr0 + x + 4) + v_load(sptr1 + x + 4);
+                    s0 = v_muladd(x0, g4, s0);
+                    s1 = v_muladd(x1, g4, s1);
+                    x0 = v_load(sptr0 + x + 8) + v_load(sptr1 + x + 8);
+                    x1 = v_load(sptr0 + x + 12) + v_load(sptr1 + x + 12);
+                    s2 = v_muladd(x0, g4, s2);
+                    s3 = v_muladd(x1, g4, s3);
                 }
 
-                _mm_store_ps(vsum + x, s0);
-                _mm_store_ps(vsum + x + 4, s1);
-                _mm_store_ps(vsum + x + 8, s2);
-                _mm_store_ps(vsum + x + 12, s3);
+                v_store(vsum + x, s0);
+                v_store(vsum + x + 4, s1);
+                v_store(vsum + x + 8, s2);
+                v_store(vsum + x + 12, s3);
             }
 
             for( ; x <= width*5 - 4; x += 4 )
             {
                 const float *sptr0 = srow[m], *sptr1;
-                __m128 g4 = _mm_load_ps(simd_kernel);
-                __m128 s0 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x), g4);
+                v_float32x4 g4 = v_load(simd_kernel);
+                v_float32x4 s0 = v_load(sptr0 + x) * g4;
 
                 for( i = 1; i <= m; i++ )
                 {
                     sptr0 = srow[m+i], sptr1 = srow[m-i];
-                    g4 = _mm_load_ps(simd_kernel + i*4);
-                    __m128 x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x), _mm_loadu_ps(sptr1 + x));
-                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
+                    g4 = v_load(simd_kernel + i*4);
+                    v_float32x4 x0 = v_load(sptr0 + x) + v_load(sptr1 + x);
+                    s0 = v_muladd(x0, g4, s0);
                 }
-                _mm_store_ps(vsum + x, s0);
+                v_store(vsum + x, s0);
             }
         }
 #endif
@@ -525,28 +523,25 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         // horizontal blur
         x = 0;
-#if CV_SSE2
-        if( useSIMD )
+#if CV_SIMD128
         {
             for( ; x <= width*5 - 8; x += 8 )
             {
-                __m128 g4 = _mm_load_ps(simd_kernel);
-                __m128 s0 = _mm_mul_ps(_mm_loadu_ps(vsum + x), g4);
-                __m128 s1 = _mm_mul_ps(_mm_loadu_ps(vsum + x + 4), g4);
+                v_float32x4 g4 = v_load(simd_kernel);
+                v_float32x4 s0 = v_load(vsum + x) * g4;
+                v_float32x4 s1 = v_load(vsum + x + 4) * g4;
 
                 for( i = 1; i <= m; i++ )
                 {
-                    g4 = _mm_load_ps(simd_kernel + i*4);
-                    __m128 x0 = _mm_add_ps(_mm_loadu_ps(vsum + x - i*5),
-                                           _mm_loadu_ps(vsum + x + i*5));
-                    __m128 x1 = _mm_add_ps(_mm_loadu_ps(vsum + x - i*5 + 4),
-                                           _mm_loadu_ps(vsum + x + i*5 + 4));
-                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
-                    s1 = _mm_add_ps(s1, _mm_mul_ps(x1, g4));
+                    g4 = v_load(simd_kernel + i*4);
+                    v_float32x4 x0 = v_load(vsum + x - i*5) + v_load(vsum + x+ i*5);
+                    v_float32x4 x1 = v_load(vsum + x - i*5 + 4) + v_load(vsum + x+ i*5 + 4);
+                    s0 = v_muladd(x0, g4, s0);
+                    s1 = v_muladd(x1, g4, s1);
                 }
 
-                _mm_store_ps(hsum + x, s0);
-                _mm_store_ps(hsum + x + 4, s1);
+                v_store(hsum + x, s0);
+                v_store(hsum + x + 4, s1);
             }
         }
 #endif
@@ -585,53 +580,76 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
 namespace cv
 {
-class FarnebackOpticalFlow
+namespace
+{
+class FarnebackOpticalFlowImpl : public FarnebackOpticalFlow
 {
 public:
-    FarnebackOpticalFlow()
+    FarnebackOpticalFlowImpl(int numLevels=5, double pyrScale=0.5, bool fastPyramids=false, int winSize=13,
+                             int numIters=10, int polyN=5, double polySigma=1.1, int flags=0) :
+        numLevels_(numLevels), pyrScale_(pyrScale), fastPyramids_(fastPyramids), winSize_(winSize),
+        numIters_(numIters), polyN_(polyN), polySigma_(polySigma), flags_(flags)
     {
-        numLevels = 5;
-        pyrScale = 0.5;
-        fastPyramids = false;
-        winSize = 13;
-        numIters = 10;
-        polyN = 5;
-        polySigma = 1.1;
-        flags = 0;
     }
 
-    int numLevels;
-    double pyrScale;
-    bool fastPyramids;
-    int winSize;
-    int numIters;
-    int polyN;
-    double polySigma;
-    int flags;
+    virtual int getNumLevels() const CV_OVERRIDE { return numLevels_; }
+    virtual void setNumLevels(int numLevels) CV_OVERRIDE { numLevels_ = numLevels; }
 
+    virtual double getPyrScale() const CV_OVERRIDE { return pyrScale_; }
+    virtual void setPyrScale(double pyrScale) CV_OVERRIDE { pyrScale_ = pyrScale; }
+
+    virtual bool getFastPyramids() const CV_OVERRIDE { return fastPyramids_; }
+    virtual void setFastPyramids(bool fastPyramids) CV_OVERRIDE { fastPyramids_ = fastPyramids; }
+
+    virtual int getWinSize() const CV_OVERRIDE { return winSize_; }
+    virtual void setWinSize(int winSize) CV_OVERRIDE { winSize_ = winSize; }
+
+    virtual int getNumIters() const CV_OVERRIDE { return numIters_; }
+    virtual void setNumIters(int numIters) CV_OVERRIDE { numIters_ = numIters; }
+
+    virtual int getPolyN() const CV_OVERRIDE { return polyN_; }
+    virtual void setPolyN(int polyN) CV_OVERRIDE { polyN_ = polyN; }
+
+    virtual double getPolySigma() const CV_OVERRIDE { return polySigma_; }
+    virtual void setPolySigma(double polySigma) CV_OVERRIDE { polySigma_ = polySigma; }
+
+    virtual int getFlags() const CV_OVERRIDE { return flags_; }
+    virtual void setFlags(int flags) CV_OVERRIDE { flags_ = flags; }
+
+    virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow) CV_OVERRIDE;
+
+private:
+    int numLevels_;
+    double pyrScale_;
+    bool fastPyramids_;
+    int winSize_;
+    int numIters_;
+    int polyN_;
+    double polySigma_;
+    int flags_;
+
+#ifdef HAVE_OPENCL
     bool operator ()(const UMat &frame0, const UMat &frame1, UMat &flowx, UMat &flowy)
     {
         CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
         CV_Assert(frame0.size() == frame1.size());
-        CV_Assert(polyN == 5 || polyN == 7);
-        CV_Assert(!fastPyramids || std::abs(pyrScale - 0.5) < 1e-6);
+        CV_Assert(polyN_ == 5 || polyN_ == 7);
+        CV_Assert(!fastPyramids_ || std::abs(pyrScale_ - 0.5) < 1e-6);
 
         const int min_size = 32;
 
         Size size = frame0.size();
         UMat prevFlowX, prevFlowY, curFlowX, curFlowY;
 
-        flowx.create(size, CV_32F);
-        flowy.create(size, CV_32F);
         UMat flowx0 = flowx;
         UMat flowy0 = flowy;
 
         // Crop unnecessary levels
         double scale = 1;
         int numLevelsCropped = 0;
-        for (; numLevelsCropped < numLevels; numLevelsCropped++)
+        for (; numLevelsCropped < numLevels_; numLevelsCropped++)
         {
-            scale *= pyrScale;
+            scale *= pyrScale_;
             if (size.width*scale < min_size || size.height*scale < min_size)
                 break;
         }
@@ -639,7 +657,7 @@ public:
         frame0.convertTo(frames_[0], CV_32F);
         frame1.convertTo(frames_[1], CV_32F);
 
-        if (fastPyramids)
+        if (fastPyramids_)
         {
             // Build Gaussian pyramids using pyrDown()
             pyramid0_.resize(numLevelsCropped + 1);
@@ -653,13 +671,13 @@ public:
             }
         }
 
-        setPolynomialExpansionConsts(polyN, polySigma);
+        setPolynomialExpansionConsts(polyN_, polySigma_);
 
         for (int k = numLevelsCropped; k >= 0; k--)
         {
             scale = 1;
             for (int i = 0; i < k; i++)
-                scale *= pyrScale;
+                scale *= pyrScale_;
 
             double sigma = (1./scale - 1) * 0.5;
             int smoothSize = cvRound(sigma*5) | 1;
@@ -668,7 +686,7 @@ public:
             int width = cvRound(size.width*scale);
             int height = cvRound(size.height*scale);
 
-            if (fastPyramids)
+            if (fastPyramids_)
             {
                 width = pyramid0_[k].cols;
                 height = pyramid0_[k].rows;
@@ -687,7 +705,7 @@ public:
 
             if (prevFlowX.empty())
             {
-                if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
+                if (flags_ & cv::OPTFLOW_USE_INITIAL_FLOW)
                 {
                     resize(flowx0, curFlowX, Size(width, height), 0, 0, INTER_LINEAR);
                     resize(flowy0, curFlowY, Size(width, height), 0, 0, INTER_LINEAR);
@@ -704,8 +722,8 @@ public:
             {
                 resize(prevFlowX, curFlowX, Size(width, height), 0, 0, INTER_LINEAR);
                 resize(prevFlowY, curFlowY, Size(width, height), 0, 0, INTER_LINEAR);
-                multiply(1./pyrScale, curFlowX, curFlowX);
-                multiply(1./pyrScale, curFlowY, curFlowY);
+                multiply(1./pyrScale_, curFlowX, curFlowX);
+                multiply(1./pyrScale_, curFlowY, curFlowY);
             }
 
             UMat M = allocMatFromBuf(5*height, width, CV_32F, M_);
@@ -716,7 +734,7 @@ public:
                 allocMatFromBuf(5*height, width, CV_32F, R_[1])
             };
 
-            if (fastPyramids)
+            if (fastPyramids_)
             {
                 if (!polynomialExpansionOcl(pyramid0_[k], R[0]))
                     return false;
@@ -751,18 +769,18 @@ public:
             if (!updateMatricesOcl(curFlowX, curFlowY, R[0], R[1], M))
                 return false;
 
-            if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
-                setGaussianBlurKernel(winSize, winSize/2*0.3f);
-            for (int i = 0; i < numIters; i++)
+            if (flags_ & OPTFLOW_FARNEBACK_GAUSSIAN)
+                setGaussianBlurKernel(winSize_, winSize_/2*0.3f);
+            for (int i = 0; i < numIters_; i++)
             {
-                if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
+                if (flags_ & OPTFLOW_FARNEBACK_GAUSSIAN)
                 {
-                    if (!updateFlow_gaussianBlur(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize, i < numIters-1))
+                    if (!updateFlow_gaussianBlur(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize_, i < numIters_-1))
                         return false;
                 }
                 else
                 {
-                    if (!updateFlow_boxFilter(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize, i < numIters-1))
+                    if (!updateFlow_boxFilter(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize_, i < numIters_-1))
                         return false;
                 }
             }
@@ -775,7 +793,9 @@ public:
         flowy = curFlowY;
         return true;
     }
-
+    virtual void collectGarbage() CV_OVERRIDE {
+        releaseMemory();
+    }
     void releaseMemory()
     {
         frames_[0].release();
@@ -845,7 +865,7 @@ private:
 #else
         size_t localsize[2] = { 256, 1};
 #endif
-        size_t globalsize[2] = { src.cols, src.rows};
+        size_t globalsize[2] = { (size_t)src.cols, (size_t)src.rows};
         int smem_size = (int)((localsize[0] + 2*ksizeHalf) * sizeof(float));
         ocl::Kernel kernel;
         if (!kernel.create("gaussianBlur", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -872,7 +892,7 @@ private:
 #else
         size_t localsize[2] = { 256, 1};
 #endif
-        size_t globalsize[2] = { src.cols, height};
+        size_t globalsize[2] = { (size_t)src.cols, (size_t)height};
         int smem_size = (int)((localsize[0] + 2*ksizeHalf) * 5 * sizeof(float));
         ocl::Kernel kernel;
         if (!kernel.create("gaussianBlur5", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -897,15 +917,15 @@ private:
 #else
         size_t localsize[2] = { 256, 1};
 #endif
-        size_t globalsize[2] = { DIVUP(src.cols, localsize[0] - 2*polyN) * localsize[0], src.rows};
+        size_t globalsize[2] = { DIVUP((size_t)src.cols, localsize[0] - 2*polyN_) * localsize[0], (size_t)src.rows};
 
 #if 0
         const cv::ocl::Device &device = cv::ocl::Device::getDefault();
         bool useDouble = (0 != device.doubleFPConfig());
 
-        cv::String build_options = cv::format("-D polyN=%d -D USE_DOUBLE=%d", polyN, useDouble ? 1 : 0);
+        cv::String build_options = cv::format("-D polyN=%d -D USE_DOUBLE=%d", polyN_, useDouble ? 1 : 0);
 #else
-        cv::String build_options = cv::format("-D polyN=%d", polyN);
+        cv::String build_options = cv::format("-D polyN=%d", polyN_);
 #endif
         ocl::Kernel kernel;
         if (!kernel.create("polynomialExpansion", cv::ocl::video::optical_flow_farneback_oclsrc, build_options))
@@ -934,7 +954,7 @@ private:
 #else
         size_t localsize[2] = { 256, 1};
 #endif
-        size_t globalsize[2] = { src.cols, height};
+        size_t globalsize[2] = { (size_t)src.cols, (size_t)height};
 
         ocl::Kernel kernel;
         if (!kernel.create("boxFilter5", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -961,7 +981,7 @@ private:
 #else
         size_t localsize[2] = { 32, 8};
 #endif
-        size_t globalsize[2] = { flowx.cols, flowx.rows};
+        size_t globalsize[2] = { (size_t)flowx.cols, (size_t)flowx.rows};
 
         ocl::Kernel kernel;
         if (!kernel.create("updateFlow", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -985,7 +1005,7 @@ private:
 #else
         size_t localsize[2] = { 32, 8};
 #endif
-        size_t globalsize[2] = { flowx.cols, flowx.rows};
+        size_t globalsize[2] = { (size_t)flowx.cols, (size_t)flowx.rows};
 
         ocl::Kernel kernel;
         if (!kernel.create("updateMatrices", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
@@ -1035,57 +1055,52 @@ private:
                 return false;
         return true;
     }
+    bool calc_ocl( InputArray _prev0, InputArray _next0,
+                   InputOutputArray _flow0)
+    {
+        if ((5 != polyN_) && (7 != polyN_))
+            return false;
+        if (_next0.size() != _prev0.size())
+            return false;
+        int typePrev = _prev0.type();
+        int typeNext = _next0.type();
+        if ((1 != CV_MAT_CN(typePrev)) || (1 != CV_MAT_CN(typeNext)))
+            return false;
+
+        std::vector<UMat> flowar;
+
+        // If flag is set, check for integrity; if not set, allocate memory space
+        if (flags_ & OPTFLOW_USE_INITIAL_FLOW)
+        {
+            if (_flow0.empty() || _flow0.size() != _prev0.size() || _flow0.channels() != 2 ||
+                _flow0.depth() != CV_32F)
+                return false;
+            split(_flow0, flowar);
+        }
+        else
+        {
+            flowar.push_back(UMat(_prev0.size(), CV_32FC1));
+            flowar.push_back(UMat(_prev0.size(), CV_32FC1));
+        }
+        if(!this->operator()(_prev0.getUMat(), _next0.getUMat(), flowar[0], flowar[1])){
+            return false;
+        }
+        merge(flowar, _flow0);
+        return true;
+    }
+#else // HAVE_OPENCL
+    virtual void collectGarbage() CV_OVERRIDE {}
+#endif
 };
 
-static bool ocl_calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
-                            InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
-                            int iterations, int poly_n, double poly_sigma, int flags )
+void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
+                                    InputOutputArray _flow0)
 {
-    if ((5 != poly_n) && (7 != poly_n))
-        return false;
-    if (_next0.size() != _prev0.size())
-        return false;
-    int typePrev = _prev0.type();
-    int typeNext = _next0.type();
-    if ((1 != CV_MAT_CN(typePrev)) || (1 != CV_MAT_CN(typeNext)))
-        return false;
+    CV_INSTRUMENT_REGION();
 
-    FarnebackOpticalFlow opticalFlow;
-    opticalFlow.numLevels   = levels;
-    opticalFlow.pyrScale    = pyr_scale;
-    opticalFlow.fastPyramids= false;
-    opticalFlow.winSize     = winsize;
-    opticalFlow.numIters    = iterations;
-    opticalFlow.polyN       = poly_n;
-    opticalFlow.polySigma   = poly_sigma;
-    opticalFlow.flags       = flags;
-
-    std::vector<UMat> flowar;
-    if (!_flow0.empty())
-        split(_flow0, flowar);
-    else
-    {
-        flowar.push_back(UMat());
-        flowar.push_back(UMat());
-    }
-    if (!opticalFlow(_prev0.getUMat(), _next0.getUMat(), flowar[0], flowar[1]))
-        return false;
-    merge(flowar, _flow0);
-    return true;
-}
-}
-
-void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
-                               InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
-                               int iterations, int poly_n, double poly_sigma, int flags )
-{
-    bool use_opencl = ocl::useOpenCL() && _flow0.isUMat();
-    if( use_opencl && ocl_calcOpticalFlowFarneback(_prev0, _next0, _flow0, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags))
-    {
-        CV_IMPL_ADD(CV_IMPL_OCL);
-        return;
-    }
-
+    CV_OCL_RUN(_flow0.isUMat() &&
+               ocl::Image2D::isFormatSupported(CV_32F, 1, false),
+               calc_ocl(_prev0,_next0,_flow0))
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
     const int min_size = 32;
     const Mat* img[2] = { &prev0, &next0 };
@@ -1093,15 +1108,23 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
     int i, k;
     double scale;
     Mat prevFlow, flow, fimg;
+    int levels = numLevels_;
 
     CV_Assert( prev0.size() == next0.size() && prev0.channels() == next0.channels() &&
-        prev0.channels() == 1 && pyr_scale < 1 );
-    _flow0.create( prev0.size(), CV_32FC2 );
+               prev0.channels() == 1 && pyrScale_ < 1 );
+
+    // If flag is set, check for integrity; if not set, allocate memory space
+    if( flags_ & OPTFLOW_USE_INITIAL_FLOW )
+        CV_Assert( _flow0.size() == prev0.size() && _flow0.channels() == 2 &&
+                   _flow0.depth() == CV_32F );
+    else
+        _flow0.create( prev0.size(), CV_32FC2 );
+
     Mat flow0 = _flow0.getMat();
 
     for( k = 0, scale = 1; k < levels; k++ )
     {
-        scale *= pyr_scale;
+        scale *= pyrScale_;
         if( prev0.cols*scale < min_size || prev0.rows*scale < min_size )
             break;
     }
@@ -1111,7 +1134,7 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
     for( k = levels; k >= 0; k-- )
     {
         for( i = 0, scale = 1; i < k; i++ )
-            scale *= pyr_scale;
+            scale *= pyrScale_;
 
         double sigma = (1./scale-1)*0.5;
         int smooth_sz = cvRound(sigma*5)|1;
@@ -1127,7 +1150,7 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
 
         if( prevFlow.empty() )
         {
-            if( flags & OPTFLOW_USE_INITIAL_FLOW )
+            if( flags_ & OPTFLOW_USE_INITIAL_FLOW )
             {
                 resize( flow0, flow, Size(width, height), 0, 0, INTER_AREA );
                 flow *= scale;
@@ -1138,7 +1161,7 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
         else
         {
             resize( prevFlow, flow, Size(width, height), 0, 0, INTER_LINEAR );
-            flow *= 1./pyr_scale;
+            flow *= 1./pyrScale_;
         }
 
         Mat R[2], I, M;
@@ -1147,19 +1170,40 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
             img[i]->convertTo(fimg, CV_32F);
             GaussianBlur(fimg, fimg, Size(smooth_sz, smooth_sz), sigma, sigma);
             resize( fimg, I, Size(width, height), INTER_LINEAR );
-            FarnebackPolyExp( I, R[i], poly_n, poly_sigma );
+            FarnebackPolyExp( I, R[i], polyN_, polySigma_ );
         }
 
         FarnebackUpdateMatrices( R[0], R[1], flow, M, 0, flow.rows );
 
-        for( i = 0; i < iterations; i++ )
+        for( i = 0; i < numIters_; i++ )
         {
-            if( flags & OPTFLOW_FARNEBACK_GAUSSIAN )
-                FarnebackUpdateFlow_GaussianBlur( R[0], R[1], flow, M, winsize, i < iterations - 1 );
+            if( flags_ & OPTFLOW_FARNEBACK_GAUSSIAN )
+                FarnebackUpdateFlow_GaussianBlur( R[0], R[1], flow, M, winSize_, i < numIters_ - 1 );
             else
-                FarnebackUpdateFlow_Blur( R[0], R[1], flow, M, winsize, i < iterations - 1 );
+                FarnebackUpdateFlow_Blur( R[0], R[1], flow, M, winSize_, i < numIters_ - 1 );
         }
 
         prevFlow = flow;
     }
+}
+} // namespace
+} // namespace cv
+
+void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
+                               InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
+                               int iterations, int poly_n, double poly_sigma, int flags )
+{
+    CV_INSTRUMENT_REGION();
+
+    Ptr<cv::FarnebackOpticalFlow> optflow;
+    optflow = makePtr<FarnebackOpticalFlowImpl>(levels,pyr_scale,false,winsize,iterations,poly_n,poly_sigma,flags);
+    optflow->calc(_prev0,_next0,_flow0);
+}
+
+
+cv::Ptr<cv::FarnebackOpticalFlow> cv::FarnebackOpticalFlow::create(int numLevels, double pyrScale, bool fastPyramids, int winSize,
+                                                               int numIters, int polyN, double polySigma, int flags)
+{
+    return makePtr<FarnebackOpticalFlowImpl>(numLevels, pyrScale, fastPyramids, winSize,
+                                             numIters, polyN, polySigma, flags);
 }

@@ -52,7 +52,7 @@
   The code has been derived from libsvm library (version 2.6)
   (http://www.csie.ntu.edu.tw/~cjlin/libsvm).
 
-  Here is the orignal copyright:
+  Here is the original copyright:
 ------------------------------------------------------------------------------------------
     Copyright (c) 2000-2003 Chih-Chung Chang and Chih-Jen Lin
     All rights reserved.
@@ -99,7 +99,7 @@ static void checkParamGrid(const ParamGrid& pg)
     if( pg.minVal < DBL_EPSILON )
         CV_Error( CV_StsBadArg, "Lower bound of the grid must be positive" );
     if( pg.logStep < 1. + FLT_EPSILON )
-        CV_Error( CV_StsBadArg, "Grid step must greater then 1" );
+        CV_Error( CV_StsBadArg, "Grid step must greater than 1" );
 }
 
 // SVM training parameters
@@ -149,7 +149,7 @@ struct SvmParams
 };
 
 /////////////////////////////////////// SVM kernel ///////////////////////////////////////
-class SVMKernelImpl : public SVM::Kernel
+class SVMKernelImpl CV_FINAL : public SVM::Kernel
 {
 public:
     SVMKernelImpl( const SvmParams& _params = SvmParams() )
@@ -157,7 +157,7 @@ public:
         params = _params;
     }
 
-    int getType() const
+    int getType() const CV_OVERRIDE
     {
         return params.kernelType;
     }
@@ -200,19 +200,21 @@ public:
     {
         int j;
         calc_non_rbf_base( vcount, var_count, vecs, another, results,
-                          -2*params.gamma, -2*params.coef0 );
+                          2*params.gamma, 2*params.coef0 );
         // TODO: speedup this
         for( j = 0; j < vcount; j++ )
         {
             Qfloat t = results[j];
-            Qfloat e = std::exp(-std::abs(t));
-            if( t > 0 )
-                results[j] = (Qfloat)((1. - e)/(1. + e));
-            else
-                results[j] = (Qfloat)((e - 1.)/(e + 1.));
+            Qfloat e = std::exp(std::abs(t));          // Inf value is possible here
+            Qfloat r = (Qfloat)((e - 1.) / (e + 1.));  // NaN value is possible here (Inf/Inf or similar)
+            if (cvIsNaN(r))
+                r = std::numeric_limits<Qfloat>::infinity();
+            if (t < 0)
+                r = -r;
+            CV_DbgAssert(!cvIsNaN(r));
+            results[j] = r;
         }
     }
-
 
     void calc_rbf( int vcount, int var_count, const float* vecs,
                    const float* another, Qfloat* results )
@@ -287,7 +289,7 @@ public:
                 double d = sample[k]-another[k];
                 double devisor = sample[k]+another[k];
                 /// if devisor == 0, the Chi2 distance would be zero,
-                // but calculation would rise an error because of deviding by zero
+                // but calculation would rise an error because of dividing by zero
                 if (devisor != 0)
                 {
                     chi2 += d*d/devisor;
@@ -300,7 +302,7 @@ public:
     }
 
     void calc( int vcount, int var_count, const float* vecs,
-               const float* another, Qfloat* results )
+               const float* another, Qfloat* results ) CV_OVERRIDE
     {
         switch( params.kernelType )
         {
@@ -328,7 +330,7 @@ public:
         const Qfloat max_val = (Qfloat)(FLT_MAX*1e-3);
         for( int j = 0; j < vcount; j++ )
         {
-            if( results[j] > max_val )
+            if (!(results[j] <= max_val))  // handle NaNs too
                 results[j] = max_val;
         }
     }
@@ -361,6 +363,12 @@ static void sortSamplesByClasses( const Mat& _samples, const Mat& _responses,
 }
 
 //////////////////////// SVM implementation //////////////////////////////
+
+Ptr<ParamGrid> SVM::getDefaultGridPtr( int param_id)
+{
+  ParamGrid grid = getDefaultGrid(param_id); // this is not a nice solution..
+  return makePtr<ParamGrid>(grid.minVal, grid.maxVal, grid.logStep);
+}
 
 ParamGrid SVM::getDefaultGrid( int param_id )
 {
@@ -408,7 +416,7 @@ ParamGrid SVM::getDefaultGrid( int param_id )
 }
 
 
-class SVMImpl : public SVM
+class SVMImpl CV_FINAL : public SVM
 {
 public:
     struct DecisionFunc
@@ -1235,42 +1243,53 @@ public:
         clear();
     }
 
-    void clear()
+    void clear() CV_OVERRIDE
     {
         decision_func.clear();
         df_alpha.clear();
         df_index.clear();
         sv.release();
+        uncompressed_sv.release();
     }
 
-    Mat getSupportVectors() const
+    Mat getUncompressedSupportVectors() const CV_OVERRIDE
+    {
+        return uncompressed_sv;
+    }
+
+    Mat getSupportVectors() const CV_OVERRIDE
     {
         return sv;
     }
 
-    CV_IMPL_PROPERTY(int, Type, params.svmType)
-    CV_IMPL_PROPERTY(double, Gamma, params.gamma)
-    CV_IMPL_PROPERTY(double, Coef0, params.coef0)
-    CV_IMPL_PROPERTY(double, Degree, params.degree)
-    CV_IMPL_PROPERTY(double, C, params.C)
-    CV_IMPL_PROPERTY(double, Nu, params.nu)
-    CV_IMPL_PROPERTY(double, P, params.p)
-    CV_IMPL_PROPERTY_S(cv::Mat, ClassWeights, params.classWeights)
-    CV_IMPL_PROPERTY_S(cv::TermCriteria, TermCriteria, params.termCrit)
+    inline int getType() const CV_OVERRIDE { return params.svmType; }
+    inline void setType(int val) CV_OVERRIDE { params.svmType = val; }
+    inline double getGamma() const CV_OVERRIDE { return params.gamma; }
+    inline void setGamma(double val) CV_OVERRIDE { params.gamma = val; }
+    inline double getCoef0() const CV_OVERRIDE { return params.coef0; }
+    inline void setCoef0(double val) CV_OVERRIDE { params.coef0 = val; }
+    inline double getDegree() const CV_OVERRIDE { return params.degree; }
+    inline void setDegree(double val) CV_OVERRIDE { params.degree = val; }
+    inline double getC() const CV_OVERRIDE { return params.C; }
+    inline void setC(double val) CV_OVERRIDE { params.C = val; }
+    inline double getNu() const CV_OVERRIDE { return params.nu; }
+    inline void setNu(double val) CV_OVERRIDE { params.nu = val; }
+    inline double getP() const CV_OVERRIDE { return params.p; }
+    inline void setP(double val) CV_OVERRIDE { params.p = val; }
+    inline cv::Mat getClassWeights() const CV_OVERRIDE { return params.classWeights; }
+    inline void setClassWeights(const cv::Mat& val) CV_OVERRIDE { params.classWeights = val; }
+    inline cv::TermCriteria getTermCriteria() const CV_OVERRIDE { return params.termCrit; }
+    inline void setTermCriteria(const cv::TermCriteria& val) CV_OVERRIDE { params.termCrit = val; }
 
-    int getKernelType() const
-    {
-        return params.kernelType;
-    }
-
-    void setKernel(int kernelType)
+    int getKernelType() const CV_OVERRIDE { return params.kernelType; }
+    void setKernel(int kernelType) CV_OVERRIDE
     {
         params.kernelType = kernelType;
         if (kernelType != CUSTOM)
             kernel = makePtr<SVMKernelImpl>(params);
     }
 
-    void setCustomKernel(const Ptr<Kernel> &_kernel)
+    void setCustomKernel(const Ptr<Kernel> &_kernel) CV_OVERRIDE
     {
         params.kernelType = CUSTOM;
         kernel = _kernel;
@@ -1293,8 +1312,6 @@ public:
 
             if( kernelType != SIGMOID && kernelType != POLY )
                 params.coef0 = 0;
-            else if( params.coef0 < 0 )
-                CV_Error( CV_StsOutOfRange, "The kernel parameter <coef0> must be positive or zero" );
 
             if( kernelType != POLY )
                 params.degree = 0;
@@ -1434,9 +1451,9 @@ public:
             sortSamplesByClasses( _samples, _responses, sidx_all, class_ranges );
 
             //check that while cross-validation there were the samples from all the classes
-            if( class_ranges[class_count] <= 0 )
+            if ((int)class_ranges.size() < class_count + 1)
                 CV_Error( CV_StsBadArg, "While cross-validation one or more of the classes have "
-                "been fell out of the sample. Try to enlarge <Params::k_fold>" );
+                "been fell out of the sample. Try to reduce <Params::k_fold>" );
 
             if( svmType == NU_SVC )
             {
@@ -1538,6 +1555,7 @@ public:
         }
 
         optimize_linear_svm();
+
         return true;
     }
 
@@ -1561,7 +1579,7 @@ public:
             return;
 
         AutoBuffer<double> vbuf(var_count);
-        double* v = vbuf;
+        double* v = vbuf.data();
         Mat new_sv(df_count, var_count, CV_32F);
 
         vector<DecisionFunc> new_df;
@@ -1588,12 +1606,14 @@ public:
 
         setRangeVector(df_index, df_count);
         df_alpha.assign(df_count, 1.);
+        sv.copyTo(uncompressed_sv);
         std::swap(sv, new_sv);
         std::swap(decision_func, new_df);
     }
 
-    bool train( const Ptr<TrainData>& data, int )
+    bool train( const Ptr<TrainData>& data, int ) CV_OVERRIDE
     {
+        CV_Assert(!data.empty());
         clear();
 
         checkParams();
@@ -1622,11 +1642,105 @@ public:
         return true;
     }
 
+    class TrainAutoBody : public ParallelLoopBody
+    {
+    public:
+        TrainAutoBody(const vector<SvmParams>& _parameters,
+                      const cv::Mat& _samples,
+                      const cv::Mat& _responses,
+                      const cv::Mat& _labels,
+                      const vector<int>& _sidx,
+                      bool _is_classification,
+                      int _k_fold,
+                      std::vector<double>& _result) :
+        parameters(_parameters), samples(_samples), responses(_responses), labels(_labels),
+        sidx(_sidx), is_classification(_is_classification), k_fold(_k_fold), result(_result)
+        {}
+
+        void operator()( const cv::Range& range ) const CV_OVERRIDE
+        {
+            int sample_count = samples.rows;
+            int var_count_ = samples.cols;
+            size_t sample_size = var_count_*samples.elemSize();
+
+            int test_sample_count = (sample_count + k_fold/2)/k_fold;
+            int train_sample_count = sample_count - test_sample_count;
+
+            // Use a local instance
+            cv::Ptr<SVMImpl> svm = makePtr<SVMImpl>();
+            svm->class_labels = labels;
+
+            int rtype = responses.type();
+
+            Mat temp_train_samples(train_sample_count, var_count_, CV_32F);
+            Mat temp_test_samples(test_sample_count, var_count_, CV_32F);
+            Mat temp_train_responses(train_sample_count, 1, rtype);
+            Mat temp_test_responses;
+
+            for( int p = range.start; p < range.end; p++ )
+            {
+                svm->setParams(parameters[p]);
+
+                double error = 0;
+                for( int k = 0; k < k_fold; k++ )
+                {
+                    int start = (k*sample_count + k_fold/2)/k_fold;
+                    for( int i = 0; i < train_sample_count; i++ )
+                    {
+                        int j = sidx[(i+start)%sample_count];
+                        memcpy(temp_train_samples.ptr(i), samples.ptr(j), sample_size);
+                        if( is_classification )
+                            temp_train_responses.at<int>(i) = responses.at<int>(j);
+                        else if( !responses.empty() )
+                            temp_train_responses.at<float>(i) = responses.at<float>(j);
+                    }
+
+                    // Train SVM on <train_size> samples
+                    if( !svm->do_train( temp_train_samples, temp_train_responses ))
+                        continue;
+
+                    for( int i = 0; i < test_sample_count; i++ )
+                    {
+                        int j = sidx[(i+start+train_sample_count) % sample_count];
+                        memcpy(temp_test_samples.ptr(i), samples.ptr(j), sample_size);
+                    }
+
+                    svm->predict(temp_test_samples, temp_test_responses, 0);
+                    for( int i = 0; i < test_sample_count; i++ )
+                    {
+                        float val = temp_test_responses.at<float>(i);
+                        int j = sidx[(i+start+train_sample_count) % sample_count];
+                        if( is_classification )
+                            error += (float)(val != responses.at<int>(j));
+                        else
+                        {
+                            val -= responses.at<float>(j);
+                            error += val*val;
+                        }
+                    }
+                }
+
+                result[p] = error;
+            }
+        }
+
+    private:
+        const vector<SvmParams>& parameters;
+        const cv::Mat& samples;
+        const cv::Mat& responses;
+        const cv::Mat& labels;
+        const vector<int>& sidx;
+        bool is_classification;
+        int k_fold;
+        std::vector<double>& result;
+    };
+
     bool trainAuto( const Ptr<TrainData>& data, int k_fold,
                     ParamGrid C_grid, ParamGrid gamma_grid, ParamGrid p_grid,
                     ParamGrid nu_grid, ParamGrid coef_grid, ParamGrid degree_grid,
-                    bool balanced )
+                    bool balanced ) CV_OVERRIDE
     {
+        CV_Assert(!data.empty());
         checkParams();
 
         int svmType = params.svmType;
@@ -1675,6 +1789,7 @@ public:
         Mat samples = data->getTrainSamples();
         Mat responses;
         bool is_classification = false;
+        Mat class_labels0;
         int class_count = (int)class_labels.total();
 
         if( svmType == C_SVC || svmType == NU_SVC )
@@ -1688,7 +1803,8 @@ public:
             setRangeVector(temp_class_labels, class_count);
 
             // temporarily replace class labels with 0, 1, ..., NCLASSES-1
-            Mat(temp_class_labels).copyTo(class_labels);
+            class_labels0 = class_labels;
+            class_labels = Mat(temp_class_labels).clone();
         }
         else
             responses = data->getTrainResponses();
@@ -1697,15 +1813,12 @@ public:
 
         int sample_count = samples.rows;
         var_count = samples.cols;
-        size_t sample_size = var_count*samples.elemSize();
 
         vector<int> sidx;
         setRangeVector(sidx, sample_count);
 
-        int i, j, k;
-
         // randomly permute training samples
-        for( i = 0; i < sample_count; i++ )
+        for( int i = 0; i < sample_count; i++ )
         {
             int i1 = rng.uniform(0, sample_count);
             int i2 = rng.uniform(0, sample_count);
@@ -1719,7 +1832,7 @@ public:
             // between the k_fold parts.
             vector<int> sidx0, sidx1;
 
-            for( i = 0; i < sample_count; i++ )
+            for( int i = 0; i < sample_count; i++ )
             {
                 if( responses.at<int>(sidx[i]) == 0 )
                     sidx0.push_back(sidx[i]);
@@ -1730,15 +1843,15 @@ public:
             int n0 = (int)sidx0.size(), n1 = (int)sidx1.size();
             int a0 = 0, a1 = 0;
             sidx.clear();
-            for( k = 0; k < k_fold; k++ )
+            for( int k = 0; k < k_fold; k++ )
             {
                 int b0 = ((k+1)*n0 + k_fold/2)/k_fold, b1 = ((k+1)*n1 + k_fold/2)/k_fold;
                 int a = (int)sidx.size(), b = a + (b0 - a0) + (b1 - a1);
-                for( i = a0; i < b0; i++ )
+                for( int i = a0; i < b0; i++ )
                     sidx.push_back(sidx0[i]);
-                for( i = a1; i < b1; i++ )
+                for( int i = a1; i < b1; i++ )
                     sidx.push_back(sidx1[i]);
-                for( i = 0; i < (b - a); i++ )
+                for( int i = 0; i < (b - a); i++ )
                 {
                     int i1 = rng.uniform(a, b);
                     int i2 = rng.uniform(a, b);
@@ -1748,23 +1861,12 @@ public:
             }
         }
 
-        int test_sample_count = (sample_count + k_fold/2)/k_fold;
-        int train_sample_count = sample_count - test_sample_count;
-
-        SvmParams best_params = params;
-        double min_error = FLT_MAX;
-
-        int rtype = responses.type();
-
-        Mat temp_train_samples(train_sample_count, var_count, CV_32F);
-        Mat temp_test_samples(test_sample_count, var_count, CV_32F);
-        Mat temp_train_responses(train_sample_count, 1, rtype);
-        Mat temp_test_responses;
-
         // If grid.minVal == grid.maxVal, this will allow one and only one pass through the loop with params.var = grid.minVal.
         #define FOR_IN_GRID(var, grid) \
             for( params.var = grid.minVal; params.var == grid.minVal || params.var < grid.maxVal; params.var = (grid.minVal == grid.maxVal) ? grid.maxVal + 1 : params.var * grid.logStep )
 
+        // Create the list of parameters to test
+        std::vector<SvmParams> parameters;
         FOR_IN_GRID(C, C_grid)
         FOR_IN_GRID(gamma, gamma_grid)
         FOR_IN_GRID(p, p_grid)
@@ -1772,55 +1874,28 @@ public:
         FOR_IN_GRID(coef0, coef_grid)
         FOR_IN_GRID(degree, degree_grid)
         {
-            // make sure we updated the kernel and other parameters
-            setParams(params);
+            parameters.push_back(params);
+        }
 
-            double error = 0;
-            for( k = 0; k < k_fold; k++ )
+        std::vector<double> result(parameters.size());
+        TrainAutoBody invoker(parameters, samples, responses, class_labels, sidx,
+                              is_classification, k_fold, result);
+        parallel_for_(cv::Range(0,(int)parameters.size()), invoker);
+
+        // Extract the best parameters
+        SvmParams best_params = params;
+        double min_error = FLT_MAX;
+        for( int i = 0; i < (int)result.size(); i++ )
+        {
+            if( result[i] < min_error )
             {
-                int start = (k*sample_count + k_fold/2)/k_fold;
-                for( i = 0; i < train_sample_count; i++ )
-                {
-                    j = sidx[(i+start)%sample_count];
-                    memcpy(temp_train_samples.ptr(i), samples.ptr(j), sample_size);
-                    if( is_classification )
-                        temp_train_responses.at<int>(i) = responses.at<int>(j);
-                    else if( !responses.empty() )
-                        temp_train_responses.at<float>(i) = responses.at<float>(j);
-                }
-
-                // Train SVM on <train_size> samples
-                if( !do_train( temp_train_samples, temp_train_responses ))
-                    continue;
-
-                for( i = 0; i < train_sample_count; i++ )
-                {
-                    j = sidx[(i+start+train_sample_count) % sample_count];
-                    memcpy(temp_train_samples.ptr(i), samples.ptr(j), sample_size);
-                }
-
-                predict(temp_test_samples, temp_test_responses, 0);
-                for( i = 0; i < test_sample_count; i++ )
-                {
-                    float val = temp_test_responses.at<float>(i);
-                    j = sidx[(i+start+train_sample_count) % sample_count];
-                    if( is_classification )
-                        error += (float)(val != responses.at<int>(j));
-                    else
-                    {
-                        val -= responses.at<float>(j);
-                        error += val*val;
-                    }
-                }
-            }
-            if( min_error > error )
-            {
-                min_error   = error;
-                best_params = params;
+                min_error   = result[i];
+                best_params = parameters[i];
             }
         }
 
-        params = best_params;
+        class_labels = class_labels0;
+        setParams(best_params);
         return do_train( samples, responses );
     }
 
@@ -1834,14 +1909,14 @@ public:
             returnDFVal = _returnDFVal;
         }
 
-        void operator()( const Range& range ) const
+        void operator()(const Range& range) const CV_OVERRIDE
         {
             int svmType = svm->params.svmType;
             int sv_total = svm->sv.rows;
             int class_count = !svm->class_labels.empty() ? (int)svm->class_labels.total() : svmType == ONE_CLASS ? 1 : 0;
 
             AutoBuffer<float> _buffer(sv_total + (class_count+1)*2);
-            float* buffer = _buffer;
+            float* buffer = _buffer.data();
 
             int i, j, dfi, k, si;
 
@@ -1879,6 +1954,7 @@ public:
                             const DecisionFunc& df = svm->decision_func[dfi];
                             sum = -df.rho;
                             int sv_count = svm->getSVCount(dfi);
+                            CV_DbgAssert(sv_count > 0);
                             const double* alpha = &svm->df_alpha[df.ofs];
                             const int* sv_index = &svm->df_index[df.ofs];
                             for( k = 0; k < sv_count; k++ )
@@ -1909,7 +1985,25 @@ public:
         bool returnDFVal;
     };
 
-    float predict( InputArray _samples, OutputArray _results, int flags ) const
+    bool trainAuto(InputArray samples, int layout,
+            InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
+            Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
+            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced) CV_OVERRIDE
+    {
+        Ptr<TrainData> data = TrainData::create(samples, layout, responses);
+        return this->trainAuto(
+                data, kfold,
+                *Cgrid.get(),
+                *gammaGrid.get(),
+                *pGrid.get(),
+                *nuGrid.get(),
+                *coeffGrid.get(),
+                *degreeGrid.get(),
+                balanced);
+    }
+
+
+    float predict( InputArray _samples, OutputArray _results, int flags ) const CV_OVERRIDE
     {
         float result = 0;
         Mat samples = _samples.getMat(), results;
@@ -1937,7 +2031,7 @@ public:
         return result;
     }
 
-    double getDecisionFunction(int i, OutputArray _alpha, OutputArray _svidx ) const
+    double getDecisionFunction(int i, OutputArray _alpha, OutputArray _svidx ) const CV_OVERRIDE
     {
         CV_Assert( 0 <= i && i < (int)decision_func.size());
         const DecisionFunc& df = decision_func[i];
@@ -1957,7 +2051,7 @@ public:
             svmType == NU_SVC ? "NU_SVC" :
             svmType == ONE_CLASS ? "ONE_CLASS" :
             svmType == EPS_SVR ? "EPS_SVR" :
-            svmType == NU_SVR ? "NU_SVR" : format("Uknown_%d", svmType);
+            svmType == NU_SVR ? "NU_SVR" : format("Unknown_%d", svmType);
         String kernel_type_str =
             kernelType == LINEAR ? "LINEAR" :
             kernelType == POLY ? "POLY" :
@@ -1999,33 +2093,34 @@ public:
         fs << "}";
     }
 
-    bool isTrained() const
+    bool isTrained() const CV_OVERRIDE
     {
         return !sv.empty();
     }
 
-    bool isClassifier() const
+    bool isClassifier() const CV_OVERRIDE
     {
         return params.svmType == C_SVC || params.svmType == NU_SVC || params.svmType == ONE_CLASS;
     }
 
-    int getVarCount() const
+    int getVarCount() const CV_OVERRIDE
     {
         return var_count;
     }
 
-    String getDefaultName() const
+    String getDefaultName() const CV_OVERRIDE
     {
         return "opencv_ml_svm";
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         int class_count = !class_labels.empty() ? (int)class_labels.total() :
                           params.svmType == ONE_CLASS ? 1 : 0;
         if( !isTrained() )
             CV_Error( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
+        writeFormat(fs);
         write_params( fs );
 
         fs << "var_count" << var_count;
@@ -2053,6 +2148,21 @@ public:
         }
         fs << "]";
 
+        if ( !uncompressed_sv.empty() )
+        {
+            // write the joint collection of uncompressed support vectors
+            int uncompressed_sv_total = uncompressed_sv.rows;
+            fs << "uncompressed_sv_total" << uncompressed_sv_total;
+            fs << "uncompressed_support_vectors" << "[";
+            for( i = 0; i < uncompressed_sv_total; i++ )
+            {
+                fs << "[:";
+                fs.writeRaw("f", uncompressed_sv.ptr(i), uncompressed_sv.cols*uncompressed_sv.elemSize());
+                fs << "]";
+            }
+            fs << "]";
+        }
+
         // write decision functions
         int df_count = (int)decision_func.size();
 
@@ -2066,7 +2176,7 @@ public:
                << "alpha" << "[:";
             fs.writeRaw("d", (const uchar*)&df_alpha[df.ofs], sv_count*sizeof(df_alpha[0]));
             fs << "]";
-            if( class_count > 2 )
+            if( class_count >= 2 )
             {
                 fs << "index" << "[:";
                 fs.writeRaw("i", (const uchar*)&df_index[df.ofs], sv_count*sizeof(df_index[0]));
@@ -2093,7 +2203,7 @@ public:
             svm_type_str == "NU_SVR" ? NU_SVR : -1;
 
         if( svmType < 0 )
-            CV_Error( CV_StsParseError, "Missing of invalid SVM type" );
+            CV_Error( CV_StsParseError, "Missing or invalid SVM type" );
 
         FileNode kernel_node = fn["kernel"];
         if( kernel_node.empty() )
@@ -2136,7 +2246,7 @@ public:
         setParams( _params );
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         clear();
 
@@ -2165,12 +2275,29 @@ public:
         FileNode sv_node = fn["support_vectors"];
 
         CV_Assert((int)sv_node.size() == sv_total);
-        sv.create(sv_total, var_count, CV_32F);
 
+        sv.create(sv_total, var_count, CV_32F);
         FileNodeIterator sv_it = sv_node.begin();
         for( i = 0; i < sv_total; i++, ++sv_it )
         {
             (*sv_it).readRaw("f", sv.ptr(i), var_count*sv.elemSize());
+        }
+
+        int uncompressed_sv_total = (int)fn["uncompressed_sv_total"];
+
+        if( uncompressed_sv_total > 0 )
+        {
+            // read uncompressed support vectors
+            FileNode uncompressed_sv_node = fn["uncompressed_support_vectors"];
+
+            CV_Assert((int)uncompressed_sv_node.size() == uncompressed_sv_total);
+            uncompressed_sv.create(uncompressed_sv_total, var_count, CV_32F);
+
+            FileNodeIterator uncompressed_sv_it = uncompressed_sv_node.begin();
+            for( i = 0; i < uncompressed_sv_total; i++, ++uncompressed_sv_it )
+            {
+                (*uncompressed_sv_it).readRaw("f", uncompressed_sv.ptr(i), var_count*uncompressed_sv.elemSize());
+            }
         }
 
         // read decision functions
@@ -2191,11 +2318,11 @@ public:
             df_index.resize(ofs + sv_count);
             df_alpha.resize(ofs + sv_count);
             dfi["alpha"].readRaw("d", (uchar*)&df_alpha[ofs], sv_count*sizeof(df_alpha[0]));
-            if( class_count > 2 )
+            if( class_count >= 2 )
                 dfi["index"].readRaw("i", (uchar*)&df_index[ofs], sv_count*sizeof(df_index[0]));
             decision_func.push_back(df);
         }
-        if( class_count <= 2 )
+        if( class_count < 2 )
             setRangeVector(df_index, sv_total);
         if( (int)fn["optimize_linear"] != 0 )
             optimize_linear_svm();
@@ -2204,7 +2331,7 @@ public:
     SvmParams params;
     Mat class_labels;
     int var_count;
-    Mat sv;
+    Mat sv, uncompressed_sv;
     vector<DecisionFunc> decision_func;
     vector<double> df_alpha;
     vector<int> df_index;
@@ -2217,6 +2344,18 @@ Ptr<SVM> SVM::create()
 {
     return makePtr<SVMImpl>();
 }
+
+Ptr<SVM> SVM::load(const String& filepath)
+{
+    FileStorage fs;
+    fs.open(filepath, FileStorage::READ);
+
+    Ptr<SVM> svm = makePtr<SVMImpl>();
+
+    ((SVMImpl*)svm.get())->read(fs.getFirstTopLevelNode());
+    return svm;
+}
+
 
 }
 }

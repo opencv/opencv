@@ -29,8 +29,8 @@ $ yum install numpy opencv*
 @endcode
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 @code{.py}
->>> import cv2
->>> print cv2.__version__
+>>> import cv2 as cv
+>>> print( cv.__version__ )
 @endcode
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
@@ -41,7 +41,7 @@ version of OpenCV always. For example, at the time of writing this tutorial, yum
 contain much better support. Also, there may be chance of problems with camera support, video
 playback etc depending upon the drivers, ffmpeg, gstreamer packages present etc.
 
-So my personnel preference is next method, i.e. compiling from source. Also at some point of time,
+So my personal preference is next method, i.e. compiling from source. Also at some point in time,
 if you want to contribute to OpenCV, you will need this.
 
 Installing OpenCV from source
@@ -62,12 +62,11 @@ yum install cmake
 yum install python-devel numpy
 yum install gcc gcc-c++
 @endcode
-Next we need **GTK** support for GUI features, Camera support (libdc1394, libv4l), Media Support
+Next we need **GTK** support for GUI features, Camera support (libdc1394, v4l), Media Support
 (ffmpeg, gstreamer) etc.
 @code{.sh}
 yum install gtk2-devel
 yum install libdc1394-devel
-yum install libv4l-devel
 yum install ffmpeg-devel
 yum install gstreamer-plugins-base-devel
 @endcode
@@ -102,13 +101,10 @@ yum install eigen3-devel
 @endcode
 If you want to build **documentation** ( *Yes, you can create offline version of OpenCV's complete
 official documentation in your system in HTML with full search facility so that you need not access
-internet always if any question, and it is quite FAST!!!* ), you need to install **Sphinx** (a
-documentation generation tool) and **pdflatex** (if you want to create a PDF version of it). ( Also
-while configuring installation with CMake, don't forget to pass -D BUILD_DOCS=ON. More details
-below.)
+internet always if any question, and it is quite FAST!!!* ), you need to install **Doxygen** (a
+documentation generation tool).
 @code{.sh}
-yum install python-sphinx
-yum install texlive
+yum install doxygen
 @endcode
 ### Downloading OpenCV
 
@@ -119,7 +115,7 @@ Or you can download latest source from OpenCV's github repo. (If you want to con
 choose this. It always keeps your OpenCV up-to-date). For that, you need to install **Git** first.
 @code{.sh}
 yum install git
-git clone https://github.com/Itseez/opencv.git
+git clone https://github.com/opencv/opencv.git
 @endcode
 It will create a folder OpenCV in home directory (or the directory you specify). The cloning may
 take some time depending upon your internet connection.
@@ -163,7 +159,7 @@ understanding.)*
     @endcode
 -   Disable all GPU related modules.
     @code{.sh}
-    cmake -D WITH_OPENCL=OFF -D WITH_CUDA=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
+    cmake -D WITH_OPENCL=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
     @endcode
 -   Set installation path and build type
     @code{.sh}
@@ -174,6 +170,7 @@ setup you got, make sure that following fields are filled (below is the some imp
 configuration I got). These fields should be filled appropriately in your system also. Otherwise
 some problem has happened. So check if you have correctly performed above steps.
 @code{.sh}
+...
 --   GUI:
 --     GTK+ 2.x:                    YES (ver 2.24.19)
 --     GThread :                    YES (ver 2.36.3)
@@ -205,15 +202,7 @@ some problem has happened. So check if you have correctly performed above steps.
 --     numpy:                       /usr/lib/python2.7/site-packages/numpy/core/include (ver 1.7.1)
 --     packages path:               lib/python2.7/site-packages
 
---   Documentation:
---     Build Documentation:         YES
---     Sphinx:                      /usr/bin/sphinx-build (ver 1.1.3)
---     PdfLaTeX compiler:           /usr/bin/pdflatex
---
---   Tests and samples:
---     Tests:                       NO
---     Performance tests:           NO
---     C/C++ Examples:              NO
+...
 @endcode
 Many other flags and settings are there. It is left for you for further exploration.
 
@@ -228,7 +217,7 @@ Installation is over. All files are installed in /usr/local/ folder. But to use 
 should be able to find OpenCV module. You have two options for that.
 
 -#  **Move the module to any folder in Python Path** : Python path can be found out by entering
-    import sys;print sys.path in Python terminal. It will print out many locations. Move
+    `import sys; print(sys.path)` in Python terminal. It will print out many locations. Move
     /usr/local/lib/python2.7/site-packages/cv2.so to any of this folder. For example,
     @code{.sh}
     su mv /usr/local/lib/python2.7/site-packages/cv2.so /usr/lib/python2.7/site-packages
@@ -240,14 +229,13 @@ But you will have to do this every time you install OpenCV.
     @code{.sh}
     export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages
     @endcode
-Thus OpenCV installation is finished. Open a terminal and try import cv2.
+Thus OpenCV installation is finished. Open a terminal and try 'import cv2 as cv'.
 
 To build the documentation, just enter following commands:
 @code{.sh}
-make docs
-make html_docs
+make doxygen
 @endcode
-Then open opencv/build/doc/_html/index.html and bookmark it in the browser.
+Then open opencv/build/doc/doxygen/html/index.html and bookmark it in the browser.
 
 Additional Resources
 --------------------

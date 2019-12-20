@@ -10,7 +10,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////////// UMat Expressions /////////////////////////////////////////////////
@@ -78,8 +78,8 @@ OCL_TEST_P(UMatExpr, Ones)
 
 //////////////////////////////// Instantiation /////////////////////////////////////////////////
 
-OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, UMatExpr, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS));
+OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, UMatExpr, Combine(OCL_ALL_DEPTHS_16F, OCL_ALL_CHANNELS));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

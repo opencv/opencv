@@ -129,7 +129,7 @@ Additional Resources
 --------------------
 
 -#  [NPTEL notes on Statistical Pattern Recognition, Chapters
-    25-29](http://www.nptel.iitm.ac.in/courses/106108057/26).
+    25-29](http://www.nptel.ac.in/courses/106108057/26).
 
 Exercises
 ---------

@@ -41,10 +41,23 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/detail/gcgraph.hpp"
 #include <map>
 
 namespace cv {
 namespace detail {
+
+Ptr<SeamFinder> SeamFinder::createDefault(int type)
+{
+    if (type == NO)
+        return makePtr<NoSeamFinder>();
+    if (type == VORONOI_SEAM)
+        return makePtr<VoronoiSeamFinder>();
+    if (type == DP_SEAM)
+        return makePtr<DpSeamFinder>();
+    CV_Error(Error::StsBadArg, "unsupported seam finder method");
+}
+
 
 void PairwiseSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
                               std::vector<UMat> &masks)
@@ -115,7 +128,7 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
 
     Size img1 = sizes_[first], img2 = sizes_[second];
-    Mat mask1 = masks_[first].getMat(ACCESS_READ), mask2 = masks_[second].getMat(ACCESS_READ);
+    Mat mask1 = masks_[first].getMat(ACCESS_RW), mask2 = masks_[second].getMat(ACCESS_RW);
     Point tl1 = corners_[first], tl2 = corners_[second];
 
     // Cut submasks with some gap
@@ -162,8 +175,28 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
 }
 
 
-DpSeamFinder::DpSeamFinder(CostFunction costFunc) : costFunc_(costFunc) {}
+DpSeamFinder::DpSeamFinder(CostFunction costFunc) : costFunc_(costFunc), ncomps_(0) {}
 
+DpSeamFinder::DpSeamFinder(String costFunc)
+{
+    ncomps_ = 0;
+    if (costFunc == "COLOR")
+        costFunc_ = COLOR;
+    else if (costFunc == "COLOR_GRAD")
+        costFunc_ = COLOR_GRAD;
+    else
+        CV_Error(-1, "Unknown cost function");
+}
+
+void DpSeamFinder::setCostFunction(String costFunc)
+{
+    if (costFunc == "COLOR")
+        costFunc_ = COLOR;
+    else if (costFunc == "COLOR_GRAD")
+        costFunc_ = COLOR_GRAD;
+    else
+        CV_Error(-1, "Unknown cost function");
+}
 
 void DpSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks)
 {
@@ -203,6 +236,8 @@ void DpSeamFinder::process(
         const Mat &image1, const Mat &image2, Point tl1, Point tl2,
         Mat &mask1, Mat &mask2)
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(image1.size() == mask1.size());
     CV_Assert(image2.size() == mask2.size());
 
@@ -638,7 +673,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
         {
             double size1 = static_cast<double>(points[i].size()), size2 = static_cast<double>(points[j].size());
             double cx1 = cvRound(sum[i].x / size1), cy1 = cvRound(sum[i].y / size1);
-            double cx2 = cvRound(sum[j].x / size2), cy2 = cvRound(sum[j].y / size1);
+            double cx2 = cvRound(sum[j].x / size2), cy2 = cvRound(sum[j].y / size2);
 
             double dist = (cx1 - cx2) * (cx1 - cx2) + (cy1 - cy2) * (cy1 - cy2);
             if (dist > maxDist)
@@ -1045,7 +1080,16 @@ void DpSeamFinder::updateLabelsUsingSeam(
     for (std::map<int, int>::iterator itr = connect2.begin(); itr != connect2.end(); ++itr)
     {
         double len = static_cast<double>(contours_[comp1].size());
-        isAdjComp[itr->first] = itr->second / len > 0.05 && connectOther.find(itr->first)->second / len < 0.1;
+        int res = 0;
+        if (itr->second / len > 0.05)
+        {
+            std::map<int, int>::const_iterator sub = connectOther.find(itr->first);
+            if (sub != connectOther.end() && (sub->second / len < 0.1))
+            {
+                res = 1;
+            }
+        }
+        isAdjComp[itr->first] = res;
     }
 
     // update labels
@@ -1057,7 +1101,7 @@ void DpSeamFinder::updateLabelsUsingSeam(
 }
 
 
-class GraphCutSeamFinder::Impl : public PairwiseSeamFinder
+class GraphCutSeamFinder::Impl CV_FINAL : public PairwiseSeamFinder
 {
 public:
     Impl(int cost_type, float terminal_cost, float bad_region_penalty)
@@ -1065,8 +1109,8 @@ public:
 
     ~Impl() {}
 
-    void find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks);
-    void findInPair(size_t first, size_t second, Rect roi);
+    void find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks) CV_OVERRIDE;
+    void findInPair(size_t first, size_t second, Rect roi) CV_OVERRIDE;
 
 private:
     void setGraphWeightsColor(const Mat &img1, const Mat &img2,
@@ -1311,6 +1355,19 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
         }
     }
 }
+
+GraphCutSeamFinder::GraphCutSeamFinder(String cost_type, float terminal_cost, float bad_region_penalty)
+{
+    CostType t;
+    if (cost_type == "COST_COLOR")
+        t = COST_COLOR;
+    else if (cost_type == "COST_COLOR_GRAD")
+        t = COST_COLOR_GRAD;
+    else
+        CV_Error(Error::StsBadFunc, "Unknown cost type function");
+    impl_ = new Impl(t, terminal_cost, bad_region_penalty);
+}
+
 
 
 GraphCutSeamFinder::GraphCutSeamFinder(int cost_type, float terminal_cost, float bad_region_penalty)

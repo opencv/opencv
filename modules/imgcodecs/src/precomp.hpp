@@ -43,29 +43,20 @@
 #define __IMGCODECS_H_
 
 #include "opencv2/imgcodecs.hpp"
+#include "opencv2/imgcodecs/legacy/constants_c.h"
 
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/imgcodecs/imgcodecs_c.h"
+#include "opencv2/imgproc.hpp"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <assert.h>
 
-#if defined WIN32 || defined WINCE
-    #if !defined _WIN32_WINNT
-        #ifdef HAVE_MSMF
-            #define _WIN32_WINNT 0x0600 // Windows Vista
-        #else
-            #define _WIN32_WINNT 0x0500 // Windows 2000
-        #endif
-    #endif
-
+#if defined _WIN32 || defined WINCE
     #include <windows.h>
     #undef small
     #undef min

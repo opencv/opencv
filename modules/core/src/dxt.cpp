@@ -54,7 +54,7 @@ namespace cv
 # pragma warning(disable: 4748)
 #endif
 
-#if IPP_VERSION_X100 >= 701
+#if IPP_VERSION_X100 >= 710
 #define USE_IPP_DFT 1
 #else
 #undef USE_IPP_DFT
@@ -173,7 +173,7 @@ DFTFactorize( int n, int* factors )
 }
 
 static void
-DFTInit( int n0, int nf, int* factors, int* itab, int elem_size, void* _wave, int inv_itab )
+DFTInit( int n0, int nf, const int* factors, int* itab, int elem_size, void* _wave, int inv_itab )
 {
     int digits[34], radix[34];
     int n = factors[0], m = 0;
@@ -469,69 +469,109 @@ template<> struct DFT_VecR4<float>
 static IppStatus ippsDFTFwd_CToC( const Complex<float>* src, Complex<float>* dst,
                              const void* spec, uchar* buf)
 {
-    return ippsDFTFwd_CToC_32fc( (const Ipp32fc*)src, (Ipp32fc*)dst,
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTFwd_CToC_32fc, (const Ipp32fc*)src, (Ipp32fc*)dst,
                                  (const IppsDFTSpec_C_32fc*)spec, buf);
 }
 
 static IppStatus ippsDFTFwd_CToC( const Complex<double>* src, Complex<double>* dst,
                              const void* spec, uchar* buf)
 {
-    return ippsDFTFwd_CToC_64fc( (const Ipp64fc*)src, (Ipp64fc*)dst,
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTFwd_CToC_64fc, (const Ipp64fc*)src, (Ipp64fc*)dst,
                                  (const IppsDFTSpec_C_64fc*)spec, buf);
 }
 
 static IppStatus ippsDFTInv_CToC( const Complex<float>* src, Complex<float>* dst,
                              const void* spec, uchar* buf)
 {
-    return ippsDFTInv_CToC_32fc( (const Ipp32fc*)src, (Ipp32fc*)dst,
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTInv_CToC_32fc, (const Ipp32fc*)src, (Ipp32fc*)dst,
                                  (const IppsDFTSpec_C_32fc*)spec, buf);
 }
 
 static IppStatus ippsDFTInv_CToC( const Complex<double>* src, Complex<double>* dst,
                                   const void* spec, uchar* buf)
 {
-    return ippsDFTInv_CToC_64fc( (const Ipp64fc*)src, (Ipp64fc*)dst,
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTInv_CToC_64fc, (const Ipp64fc*)src, (Ipp64fc*)dst,
                                  (const IppsDFTSpec_C_64fc*)spec, buf);
 }
 
 static IppStatus ippsDFTFwd_RToPack( const float* src, float* dst,
                                      const void* spec, uchar* buf)
 {
-    return ippsDFTFwd_RToPack_32f( src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTFwd_RToPack_32f, src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
 }
 
 static IppStatus ippsDFTFwd_RToPack( const double* src, double* dst,
                                      const void* spec, uchar* buf)
 {
-    return ippsDFTFwd_RToPack_64f( src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTFwd_RToPack_64f, src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
 }
 
 static IppStatus ippsDFTInv_PackToR( const float* src, float* dst,
                                      const void* spec, uchar* buf)
 {
-    return ippsDFTInv_PackToR_32f( src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTInv_PackToR_32f, src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
 }
 
 static IppStatus ippsDFTInv_PackToR( const double* src, double* dst,
                                      const void* spec, uchar* buf)
 {
-    return ippsDFTInv_PackToR_64f( src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTInv_PackToR_64f, src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
 }
 #endif
 
-enum { DFT_NO_PERMUTE=256, DFT_COMPLEX_INPUT_OR_OUTPUT=512 };
+struct OcvDftOptions;
+
+typedef void (*DFTFunc)(const OcvDftOptions & c, const void* src, void* dst);
+
+struct OcvDftOptions {
+    int nf;
+    int *factors;
+    double scale;
+
+    int* itab;
+    void* wave;
+    int tab_size;
+    int n;
+
+    bool isInverse;
+    bool noPermute;
+    bool isComplex;
+
+    bool haveSSE3;
+
+    DFTFunc dft_func;
+    bool useIpp;
+
+#ifdef USE_IPP_DFT
+    uchar* ipp_spec;
+    uchar* ipp_work;
+#endif
+
+    OcvDftOptions()
+    {
+        nf = 0;
+        factors = 0;
+        scale = 0;
+        itab = 0;
+        wave = 0;
+        tab_size = 0;
+        n = 0;
+        isInverse = false;
+        noPermute = false;
+        isComplex = false;
+        useIpp = false;
+#ifdef USE_IPP_DFT
+        ipp_spec = 0;
+        ipp_work = 0;
+#endif
+        dft_func = 0;
+        haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+    }
+};
 
 // mixed-radix complex discrete Fourier transform: double-precision version
 template<typename T> static void
-DFT( const Complex<T>* src, Complex<T>* dst, int n,
-     int nf, const int* factors, const int* itab,
-     const Complex<T>* wave, int tab_size,
-     const void*
-#ifdef USE_IPP_DFT
-     spec
-#endif
-     , Complex<T>* buf,
-     int flags, double _scale )
+DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
 {
     static const T sin_120 = (T)0.86602540378443864676372317075294;
     static const T fft5_2 = (T)0.559016994374947424102293417182819;
@@ -539,20 +579,23 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
     static const T fft5_4 = (T)-1.538841768587626701285145288018455;
     static const T fft5_5 = (T)0.363271264002680442947733378740309;
 
-    int n0 = n, f_idx, nx;
-    int inv = flags & DFT_INVERSE;
-    int dw0 = tab_size, dw;
+    const Complex<T>* wave = (Complex<T>*)c.wave;
+    const int * itab = c.itab;
+
+    int n = c.n;
+    int f_idx, nx;
+    int inv = c.isInverse;
+    int dw0 = c.tab_size, dw;
     int i, j, k;
     Complex<T> t;
-    T scale = (T)_scale;
-    int tab_step;
+    T scale = (T)c.scale;
 
-#ifdef USE_IPP_DFT
-    if( spec )
+    if( c.useIpp )
     {
+#ifdef USE_IPP_DFT
         if( !inv )
         {
-            if (ippsDFTFwd_CToC( src, dst, spec, (uchar*)buf ) >= 0)
+            if (ippsDFTFwd_CToC( src, dst, c.ipp_spec, c.ipp_work ) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -560,22 +603,22 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
         }
         else
         {
-            if (ippsDFTInv_CToC( src, dst, spec, (uchar*)buf ) >= 0)
+            if (ippsDFTInv_CToC( src, dst, c.ipp_spec, c.ipp_work ) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
             }
         }
         setIppErrorStatus();
-    }
 #endif
+    }
 
-    tab_step = tab_size == n ? 1 : tab_size == n*2 ? 2 : tab_size/n;
+    int tab_step = c.tab_size == n ? 1 : c.tab_size == n*2 ? 2 : c.tab_size/n;
 
     // 0. shuffle data
     if( dst != src )
     {
-        assert( (flags & DFT_NO_PERMUTE) == 0 );
+        assert( !c.noPermute );
         if( !inv )
         {
             for( i = 0; i <= n - 2; i += 2, itab += 2*tab_step )
@@ -609,10 +652,10 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
     }
     else
     {
-        if( (flags & DFT_NO_PERMUTE) == 0 )
+        if( !c.noPermute )
         {
-            CV_Assert( factors[0] == factors[nf-1] );
-            if( nf == 1 )
+            CV_Assert( c.factors[0] == c.factors[c.nf-1] );
+            if( c.nf == 1 )
             {
                 if( (n & 3) == 0 )
                 {
@@ -662,22 +705,22 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
 
     n = 1;
     // 1. power-2 transforms
-    if( (factors[0] & 1) == 0 )
+    if( (c.factors[0] & 1) == 0 )
     {
-        if( factors[0] >= 4 && checkHardwareSupport(CV_CPU_SSE3))
+        if( c.factors[0] >= 4 && c.haveSSE3)
         {
             DFT_VecR4<T> vr4;
-            n = vr4(dst, factors[0], n0, dw0, wave);
+            n = vr4(dst, c.factors[0], c.n, dw0, wave);
         }
 
         // radix-4 transform
-        for( ; n*4 <= factors[0]; )
+        for( ; n*4 <= c.factors[0]; )
         {
             nx = n;
             n *= 4;
             dw0 /= 4;
 
-            for( i = 0; i < n0; i += n )
+            for( i = 0; i < c.n; i += n )
             {
                 Complex<T> *v0, *v1;
                 T r0, i0, r1, i1, r2, i2, r3, i3, r4, i4;
@@ -729,14 +772,14 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
             }
         }
 
-        for( ; n < factors[0]; )
+        for( ; n < c.factors[0]; )
         {
             // do the remaining radix-2 transform
             nx = n;
             n *= 2;
             dw0 /= 2;
 
-            for( i = 0; i < n0; i += n )
+            for( i = 0; i < c.n; i += n )
             {
                 Complex<T>* v = dst + i;
                 T r0 = v[0].re + v[nx].re;
@@ -761,9 +804,9 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
     }
 
     // 2. all the other transforms
-    for( f_idx = (factors[0]&1) ? 0 : 1; f_idx < nf; f_idx++ )
+    for( f_idx = (c.factors[0]&1) ? 0 : 1; f_idx < c.nf; f_idx++ )
     {
-        int factor = factors[f_idx];
+        int factor = c.factors[f_idx];
         nx = n;
         n *= factor;
         dw0 /= factor;
@@ -771,7 +814,7 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
         if( factor == 3 )
         {
             // radix-3
-            for( i = 0; i < n0; i += n )
+            for( i = 0; i < c.n; i += n )
             {
                 Complex<T>* v = dst + i;
 
@@ -807,7 +850,7 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
         else if( factor == 5 )
         {
             // radix-5
-            for( i = 0; i < n0; i += n )
+            for( i = 0; i < c.n; i += n )
             {
                 for( j = 0, dw = 0; j < nx; j++, dw += dw0 )
                 {
@@ -863,11 +906,12 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
         {
             // radix-"factor" - an odd number
             int p, q, factor2 = (factor - 1)/2;
-            int d, dd, dw_f = tab_size/factor;
-            Complex<T>* a = buf;
-            Complex<T>* b = buf + factor2;
+            int d, dd, dw_f = c.tab_size/factor;
+            AutoBuffer<Complex<T> > buf(factor2 * 2);
+            Complex<T>* a = buf.data();
+            Complex<T>* b = a + factor2;
 
-            for( i = 0; i < n0; i += n )
+            for( i = 0; i < c.n; i += n )
             {
                 for( j = 0, dw = 0; j < nx; j++, dw += dw0 )
                 {
@@ -931,7 +975,7 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
                             s1.im += r1 - i1; s0.im += r1 + i1;
 
                             d += dd;
-                            d -= -(d >= tab_size) & tab_size;
+                            d -= -(d >= c.tab_size) & c.tab_size;
                         }
 
                         v[k] = s0;
@@ -948,7 +992,7 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
         if( inv )
             im_scale = -im_scale;
 
-        for( i = 0; i < n0; i++ )
+        for( i = 0; i < c.n; i++ )
         {
             T t0 = dst[i].re*re_scale;
             T t1 = dst[i].im*im_scale;
@@ -958,7 +1002,7 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
     }
     else if( inv )
     {
-        for( i = 0; i <= n0 - 2; i += 2 )
+        for( i = 0; i <= c.n - 2; i += 2 )
         {
             T t0 = -dst[i].im;
             T t1 = -dst[i+1].im;
@@ -966,8 +1010,8 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
             dst[i+1].im = t1;
         }
 
-        if( i < n0 )
-            dst[n0-1].im = -dst[n0-1].im;
+        if( i < c.n )
+            dst[c.n-1].im = -dst[c.n-1].im;
     }
 }
 
@@ -977,23 +1021,18 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
      re(0), re(1), im(1), ... , re(n/2-1), im((n+1)/2-1) [, re((n+1)/2)] OR ...
      re(0), 0, re(1), im(1), ..., re(n/2-1), im((n+1)/2-1) [, re((n+1)/2), 0] */
 template<typename T> static void
-RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
-         const Complex<T>* wave, int tab_size, const void*
-#ifdef USE_IPP_DFT
-         spec
-#endif
-         ,
-         Complex<T>* buf, int flags, double _scale )
+RealDFT(const OcvDftOptions & c, const T* src, T* dst)
 {
-    int complex_output = (flags & DFT_COMPLEX_INPUT_OR_OUTPUT) != 0;
-    T scale = (T)_scale;
-    int j, n2 = n >> 1;
+    int n = c.n;
+    int complex_output = c.isComplex;
+    T scale = (T)c.scale;
+    int j;
     dst += complex_output;
 
-#ifdef USE_IPP_DFT
-    if( spec )
+    if( c.useIpp )
     {
-        if (ippsDFTFwd_RToPack( src, dst, spec, (uchar*)buf ) >=0)
+#ifdef USE_IPP_DFT
+        if (ippsDFTFwd_RToPack( src, dst, c.ipp_spec, c.ipp_work ) >=0)
         {
             if( complex_output )
             {
@@ -1006,9 +1045,9 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
             return;
         }
         setIppErrorStatus();
-    }
 #endif
-    assert( tab_size == n );
+    }
+    assert( c.tab_size == n );
 
     if( n == 1 )
     {
@@ -1028,15 +1067,19 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         _dst[0].im = 0;
         for( j = 1; j < n; j += 2 )
         {
-            T t0 = src[itab[j]]*scale;
-            T t1 = src[itab[j+1]]*scale;
+            T t0 = src[c.itab[j]]*scale;
+            T t1 = src[c.itab[j+1]]*scale;
             _dst[j].re = t0;
             _dst[j].im = 0;
             _dst[j+1].re = t1;
             _dst[j+1].im = 0;
         }
-        DFT( _dst, _dst, n, nf, factors, itab, wave,
-             tab_size, 0, buf, DFT_NO_PERMUTE, 1 );
+        OcvDftOptions sub_c = c;
+        sub_c.isComplex = false;
+        sub_c.isInverse = false;
+        sub_c.noPermute = true;
+        sub_c.scale = 1.;
+        DFT(sub_c, _dst, _dst);
         if( !complex_output )
             dst[1] = dst[0];
     }
@@ -1045,12 +1088,22 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         T t0, t;
         T h1_re, h1_im, h2_re, h2_im;
         T scale2 = scale*(T)0.5;
-        factors[0] >>= 1;
+        int n2 = n >> 1;
 
-        DFT( (Complex<T>*)src, (Complex<T>*)dst, n2, nf - (factors[0] == 1),
-             factors + (factors[0] == 1),
-             itab, wave, tab_size, 0, buf, 0, 1 );
-        factors[0] <<= 1;
+        c.factors[0] >>= 1;
+
+        OcvDftOptions sub_c = c;
+        sub_c.factors += (c.factors[0] == 1);
+        sub_c.nf -= (c.factors[0] == 1);
+        sub_c.isComplex = false;
+        sub_c.isInverse = false;
+        sub_c.noPermute = false;
+        sub_c.scale = 1.;
+        sub_c.n = n2;
+
+        DFT(sub_c, (Complex<T>*)src, (Complex<T>*)dst);
+
+        c.factors[0] <<= 1;
 
         t = dst[0] - dst[1];
         dst[0] = (dst[0] + dst[1])*scale;
@@ -1059,6 +1112,8 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         t0 = dst[n2];
         t = dst[n-1];
         dst[n-1] = dst[1];
+
+        const Complex<T> *wave = (const Complex<T>*)c.wave;
 
         for( j = 2, wave++; j < n2; j += 2, wave++ )
         {
@@ -1103,22 +1158,16 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
       re[0], re[1], im[1], ... , re[n/2-1], im[n/2-1], re[n/2] OR
       re(0), 0, re(1), im(1), ..., re(n/2-1), im((n+1)/2-1) [, re((n+1)/2), 0] */
 template<typename T> static void
-CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
-         const Complex<T>* wave, int tab_size,
-         const void*
-#ifdef USE_IPP_DFT
-         spec
-#endif
-         , Complex<T>* buf,
-         int flags, double _scale )
+CCSIDFT(const OcvDftOptions & c, const T* src, T* dst)
 {
-    int complex_input = (flags & DFT_COMPLEX_INPUT_OR_OUTPUT) != 0;
-    int j, k, n2 = (n+1) >> 1;
-    T scale = (T)_scale;
+    int n = c.n;
+    int complex_input = c.isComplex;
+    int j, k;
+    T scale = (T)c.scale;
     T save_s1 = 0.;
     T t0, t1, t2, t3, t;
 
-    assert( tab_size == n );
+    assert( c.tab_size == n );
 
     if( complex_input )
     {
@@ -1127,10 +1176,10 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         ((T*)src)[1] = src[0];
         src++;
     }
-#ifdef USE_IPP_DFT
-    if( spec )
+    if( c.useIpp )
     {
-        if (ippsDFTInv_PackToR( src, dst, spec, (uchar*)buf ) >=0)
+#ifdef USE_IPP_DFT
+        if (ippsDFTInv_PackToR( src, dst, c.ipp_spec, c.ipp_work ) >=0)
         {
             if( complex_input )
                 ((T*)src)[0] = (T)save_s1;
@@ -1139,8 +1188,8 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         }
 
         setIppErrorStatus();
-    }
 #endif
+    }
     if( n == 1 )
     {
         dst[0] = (T)(src[0]*scale);
@@ -1158,16 +1207,25 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
 
         _dst[0].re = src[0];
         _dst[0].im = 0;
+
+        int n2 = (n+1) >> 1;
+
         for( j = 1; j < n2; j++ )
         {
-            int k0 = itab[j], k1 = itab[n-j];
+            int k0 = c.itab[j], k1 = c.itab[n-j];
             t0 = _src[j].re; t1 = _src[j].im;
             _dst[k0].re = t0; _dst[k0].im = -t1;
             _dst[k1].re = t0; _dst[k1].im = t1;
         }
 
-        DFT( _dst, _dst, n, nf, factors, itab, wave,
-             tab_size, 0, buf, DFT_NO_PERMUTE, 1. );
+        OcvDftOptions sub_c = c;
+        sub_c.isComplex = false;
+        sub_c.isInverse = false;
+        sub_c.noPermute = true;
+        sub_c.scale = 1.;
+        sub_c.n = n;
+
+        DFT(sub_c, _dst, _dst);
         dst[0] *= scale;
         for( j = 1; j < n; j += 2 )
         {
@@ -1180,13 +1238,15 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
     else
     {
         int inplace = src == dst;
-        const Complex<T>* w = wave;
+        const Complex<T>* w = (const Complex<T>*)c.wave;
 
         t = src[1];
         t0 = (src[0] + src[n-1]);
         t1 = (src[n-1] - src[0]);
         dst[0] = t0;
         dst[1] = t1;
+
+        int n2 = (n+1) >> 1;
 
         for( j = 2, w++; j < n2; j += 2, w++ )
         {
@@ -1218,10 +1278,10 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
             else
             {
                 int j2 = j >> 1;
-                k = itab[j2];
+                k = c.itab[j2];
                 dst[k] = t0;
                 dst[k+1] = t1;
-                k = itab[n2-j2];
+                k = c.itab[n2-j2];
                 dst[k] = t2;
                 dst[k+1]= t3;
             }
@@ -1239,19 +1299,26 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
             }
             else
             {
-                k = itab[n2];
+                k = c.itab[n2];
                 dst[k*2] = t0;
                 dst[k*2+1] = t1;
             }
         }
 
-        factors[0] >>= 1;
-        DFT( (Complex<T>*)dst, (Complex<T>*)dst, n2,
-             nf - (factors[0] == 1),
-             factors + (factors[0] == 1), itab,
-             wave, tab_size, 0, buf,
-             inplace ? 0 : DFT_NO_PERMUTE, 1. );
-        factors[0] <<= 1;
+        c.factors[0] >>= 1;
+
+        OcvDftOptions sub_c = c;
+        sub_c.factors += (c.factors[0] == 1);
+        sub_c.nf -= (c.factors[0] == 1);
+        sub_c.isComplex = false;
+        sub_c.isInverse = false;
+        sub_c.noPermute = !inplace;
+        sub_c.scale = 1.;
+        sub_c.n = n2;
+
+        DFT(sub_c, (Complex<T>*)dst, (Complex<T>*)dst);
+
+        c.factors[0] <<= 1;
 
         for( j = 0; j < n; j += 2 )
         {
@@ -1436,57 +1503,35 @@ ExpandCCS( uchar* _ptr, int n, int elem_size )
     }
 }
 
-
-typedef void (*DFTFunc)(
-     const void* src, void* dst, int n, int nf, int* factors,
-     const int* itab, const void* wave, int tab_size,
-     const void* spec, void* buf, int inv, double scale );
-
-static void DFT_32f( const Complexf* src, Complexf* dst, int n,
-    int nf, const int* factors, const int* itab,
-    const Complexf* wave, int tab_size,
-    const void* spec, Complexf* buf,
-    int flags, double scale )
+static void DFT_32f(const OcvDftOptions & c, const Complexf* src, Complexf* dst)
 {
-    DFT(src, dst, n, nf, factors, itab, wave, tab_size, spec, buf, flags, scale);
+    DFT(c, src, dst);
 }
 
-static void DFT_64f( const Complexd* src, Complexd* dst, int n,
-    int nf, const int* factors, const int* itab,
-    const Complexd* wave, int tab_size,
-    const void* spec, Complexd* buf,
-    int flags, double scale )
+static void DFT_64f(const OcvDftOptions & c, const Complexd* src, Complexd* dst)
 {
-    DFT(src, dst, n, nf, factors, itab, wave, tab_size, spec, buf, flags, scale);
+    DFT(c, src, dst);
 }
 
 
-static void RealDFT_32f( const float* src, float* dst, int n, int nf, int* factors,
-        const int* itab,  const Complexf* wave, int tab_size, const void* spec,
-        Complexf* buf, int flags, double scale )
+static void RealDFT_32f(const OcvDftOptions & c, const float* src, float* dst)
 {
-    RealDFT( src, dst, n, nf, factors, itab, wave, tab_size, spec, buf, flags, scale);
+    RealDFT(c, src, dst);
 }
 
-static void RealDFT_64f( const double* src, double* dst, int n, int nf, int* factors,
-        const int* itab,  const Complexd* wave, int tab_size, const void* spec,
-        Complexd* buf, int flags, double scale )
+static void RealDFT_64f(const OcvDftOptions & c, const double* src, double* dst)
 {
-    RealDFT( src, dst, n, nf, factors, itab, wave, tab_size, spec, buf, flags, scale);
+    RealDFT(c, src, dst);
 }
 
-static void CCSIDFT_32f( const float* src, float* dst, int n, int nf, int* factors,
-                         const int* itab,  const Complexf* wave, int tab_size, const void* spec,
-                         Complexf* buf, int flags, double scale )
+static void CCSIDFT_32f(const OcvDftOptions & c, const float* src, float* dst)
 {
-    CCSIDFT( src, dst, n, nf, factors, itab, wave, tab_size, spec, buf, flags, scale);
+    CCSIDFT(c, src, dst);
 }
 
-static void CCSIDFT_64f( const double* src, double* dst, int n, int nf, int* factors,
-                         const int* itab,  const Complexd* wave, int tab_size, const void* spec,
-                         Complexd* buf, int flags, double scale )
+static void CCSIDFT_64f(const OcvDftOptions & c, const double* src, double* dst)
 {
-    CCSIDFT( src, dst, n, nf, factors, itab, wave, tab_size, spec, buf, flags, scale);
+    CCSIDFT(c, src, dst);
 }
 
 }
@@ -1508,13 +1553,16 @@ class Dft_C_IPPLoop_Invoker : public ParallelLoopBody
 {
 public:
 
-    Dft_C_IPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dft& _ippidft, int _norm_flag, bool *_ok) :
-        ParallelLoopBody(), src(_src), dst(_dst), ippidft(_ippidft), norm_flag(_norm_flag), ok(_ok)
+    Dft_C_IPPLoop_Invoker(const uchar * _src, size_t _src_step, uchar * _dst, size_t _dst_step, int _width,
+                          const Dft& _ippidft, int _norm_flag, bool *_ok) :
+        ParallelLoopBody(),
+        src(_src), src_step(_src_step), dst(_dst), dst_step(_dst_step), width(_width),
+        ippidft(_ippidft), norm_flag(_norm_flag), ok(_ok)
     {
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         IppStatus status;
         Ipp8u* pBuffer = 0;
@@ -1523,7 +1571,7 @@ public:
         int sizeSpec=0;
         int sizeInit=0;
 
-        IppiSize srcRoiSize = {src.cols, 1};
+        IppiSize srcRoiSize = {width, 1};
 
         status = ippiDFTGetSize_C_32fc(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
         if ( status < 0 )
@@ -1532,13 +1580,13 @@ public:
             return;
         }
 
-        IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)ippMalloc( sizeSpec );
+        IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)CV_IPP_MALLOC( sizeSpec );
 
         if ( sizeInit > 0 )
-            pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+            pMemInit = (Ipp8u*)CV_IPP_MALLOC( sizeInit );
 
         if ( sizeBuffer > 0 )
-            pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+            pBuffer = (Ipp8u*)CV_IPP_MALLOC( sizeBuffer );
 
         status = ippiDFTInit_C_32fc( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
 
@@ -1555,7 +1603,8 @@ public:
         }
 
         for( int i = range.start; i < range.end; ++i)
-            if(!ippidft(src.ptr<Ipp32fc>(i), (int)src.step,dst.ptr<Ipp32fc>(i), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
+            if(!ippidft((Ipp32fc*)(src + src_step * i), src_step, (Ipp32fc*)(dst + dst_step * i), dst_step,
+                        pDFTSpec, (Ipp8u*)pBuffer))
             {
                 *ok = false;
             }
@@ -1568,8 +1617,11 @@ public:
     }
 
 private:
-    const Mat& src;
-    Mat& dst;
+    const uchar * src;
+    size_t src_step;
+    uchar * dst;
+    size_t dst_step;
+    int width;
     const Dft& ippidft;
     int norm_flag;
     bool *ok;
@@ -1582,13 +1634,16 @@ class Dft_R_IPPLoop_Invoker : public ParallelLoopBody
 {
 public:
 
-    Dft_R_IPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dft& _ippidft, int _norm_flag, bool *_ok) :
-        ParallelLoopBody(), src(_src), dst(_dst), ippidft(_ippidft), norm_flag(_norm_flag), ok(_ok)
+    Dft_R_IPPLoop_Invoker(const uchar * _src, size_t _src_step, uchar * _dst, size_t _dst_step, int _width,
+                          const Dft& _ippidft, int _norm_flag, bool *_ok) :
+        ParallelLoopBody(),
+        src(_src), src_step(_src_step), dst(_dst), dst_step(_dst_step), width(_width),
+        ippidft(_ippidft), norm_flag(_norm_flag), ok(_ok)
     {
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         IppStatus status;
         Ipp8u* pBuffer = 0;
@@ -1597,7 +1652,7 @@ public:
         int sizeSpec=0;
         int sizeInit=0;
 
-        IppiSize srcRoiSize = {src.cols, 1};
+        IppiSize srcRoiSize = {width, 1};
 
         status = ippiDFTGetSize_R_32f(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
         if ( status < 0 )
@@ -1606,13 +1661,13 @@ public:
             return;
         }
 
-        IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)ippMalloc( sizeSpec );
+        IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)CV_IPP_MALLOC( sizeSpec );
 
         if ( sizeInit > 0 )
-            pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+            pMemInit = (Ipp8u*)CV_IPP_MALLOC( sizeInit );
 
         if ( sizeBuffer > 0 )
-            pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+            pBuffer = (Ipp8u*)CV_IPP_MALLOC( sizeBuffer );
 
         status = ippiDFTInit_R_32f( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
 
@@ -1629,7 +1684,8 @@ public:
         }
 
         for( int i = range.start; i < range.end; ++i)
-            if(!ippidft(src.ptr<float>(i), (int)src.step,dst.ptr<float>(i), (int)dst.step, pDFTSpec, (Ipp8u*)pBuffer))
+            if(!ippidft((float*)(src + src_step * i), src_step, (float*)(dst + dst_step * i), dst_step,
+                        pDFTSpec, (Ipp8u*)pBuffer))
             {
                 *ok = false;
             }
@@ -1642,8 +1698,11 @@ public:
     }
 
 private:
-    const Mat& src;
-    Mat& dst;
+    const uchar * src;
+    size_t src_step;
+    uchar * dst;
+    size_t dst_step;
+    int width;
     const Dft& ippidft;
     int norm_flag;
     bool *ok;
@@ -1652,47 +1711,49 @@ private:
 };
 
 template <typename Dft>
-bool Dft_C_IPPLoop(const Mat& src, Mat& dst, const Dft& ippidft, int norm_flag)
+bool Dft_C_IPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, const Dft& ippidft, int norm_flag)
 {
     bool ok;
-    parallel_for_(Range(0, src.rows), Dft_C_IPPLoop_Invoker<Dft>(src, dst, ippidft, norm_flag, &ok), src.total()/(double)(1<<16) );
+    parallel_for_(Range(0, height), Dft_C_IPPLoop_Invoker<Dft>(src, src_step, dst, dst_step, width, ippidft, norm_flag, &ok), (width * height)/(double)(1<<16) );
     return ok;
 }
 
 template <typename Dft>
-bool Dft_R_IPPLoop(const Mat& src, Mat& dst, const Dft& ippidft, int norm_flag)
+bool Dft_R_IPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, const Dft& ippidft, int norm_flag)
 {
     bool ok;
-    parallel_for_(Range(0, src.rows), Dft_R_IPPLoop_Invoker<Dft>(src, dst, ippidft, norm_flag, &ok), src.total()/(double)(1<<16) );
+    parallel_for_(Range(0, height), Dft_R_IPPLoop_Invoker<Dft>(src, src_step, dst, dst_step, width, ippidft, norm_flag, &ok), (width * height)/(double)(1<<16) );
     return ok;
 }
 
 struct IPPDFT_C_Functor
 {
-    IPPDFT_C_Functor(ippiDFT_C_Func _func) : func(_func){}
+    IPPDFT_C_Functor(ippiDFT_C_Func _func) : ippiDFT_CToC_32fc_C1R(_func){}
 
-    bool operator()(const Ipp32fc* src, int srcStep, Ipp32fc* dst, int dstStep, const IppiDFTSpec_C_32fc* pDFTSpec, Ipp8u* pBuffer) const
+    bool operator()(const Ipp32fc* src, size_t srcStep, Ipp32fc* dst, size_t dstStep, const IppiDFTSpec_C_32fc* pDFTSpec, Ipp8u* pBuffer) const
     {
-        return func ? func(src, srcStep, dst, dstStep, pDFTSpec, pBuffer) >= 0 : false;
+        return ippiDFT_CToC_32fc_C1R ? CV_INSTRUMENT_FUN_IPP(ippiDFT_CToC_32fc_C1R, src, static_cast<int>(srcStep), dst, static_cast<int>(dstStep), pDFTSpec, pBuffer) >= 0 : false;
     }
 private:
-    ippiDFT_C_Func func;
+    ippiDFT_C_Func ippiDFT_CToC_32fc_C1R;
 };
 
 struct IPPDFT_R_Functor
 {
-    IPPDFT_R_Functor(ippiDFT_R_Func _func) : func(_func){}
+    IPPDFT_R_Functor(ippiDFT_R_Func _func) : ippiDFT_PackToR_32f_C1R(_func){}
 
-    bool operator()(const Ipp32f* src, int srcStep, Ipp32f* dst, int dstStep, const IppiDFTSpec_R_32f* pDFTSpec, Ipp8u* pBuffer) const
+    bool operator()(const Ipp32f* src, size_t srcStep, Ipp32f* dst, size_t dstStep, const IppiDFTSpec_R_32f* pDFTSpec, Ipp8u* pBuffer) const
     {
-        return func ? func(src, srcStep, dst, dstStep, pDFTSpec, pBuffer) >= 0 : false;
+        return ippiDFT_PackToR_32f_C1R ? CV_INSTRUMENT_FUN_IPP(ippiDFT_PackToR_32f_C1R, src, static_cast<int>(srcStep), dst, static_cast<int>(dstStep), pDFTSpec, pBuffer) >= 0 : false;
     }
 private:
-    ippiDFT_R_Func func;
+    ippiDFT_R_Func ippiDFT_PackToR_32f_C1R;
 };
 
-static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
+static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
+    CV_INSTRUMENT_REGION_IPP();
+
     IppStatus status;
     Ipp8u* pBuffer = 0;
     Ipp8u* pMemInit= 0;
@@ -1700,19 +1761,19 @@ static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     int sizeSpec=0;
     int sizeInit=0;
 
-    IppiSize srcRoiSize = {src.cols, src.rows};
+    IppiSize srcRoiSize = {width, height};
 
     status = ippiDFTGetSize_C_32fc(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
     if ( status < 0 )
         return false;
 
-    IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)ippMalloc( sizeSpec );
+    IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)CV_IPP_MALLOC( sizeSpec );
 
     if ( sizeInit > 0 )
-        pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+        pMemInit = (Ipp8u*)CV_IPP_MALLOC( sizeInit );
 
     if ( sizeBuffer > 0 )
-        pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+        pBuffer = (Ipp8u*)CV_IPP_MALLOC( sizeBuffer );
 
     status = ippiDFTInit_C_32fc( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
 
@@ -1728,9 +1789,9 @@ static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     }
 
     if (!inv)
-        status = ippiDFTFwd_CToC_32fc_C1R( src.ptr<Ipp32fc>(), (int)src.step, dst.ptr<Ipp32fc>(), (int)dst.step, pDFTSpec, pBuffer );
+        status = CV_INSTRUMENT_FUN_IPP(ippiDFTFwd_CToC_32fc_C1R, (Ipp32fc*)src, static_cast<int>(src_step), (Ipp32fc*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer);
     else
-        status = ippiDFTInv_CToC_32fc_C1R( src.ptr<Ipp32fc>(), (int)src.step, dst.ptr<Ipp32fc>(), (int)dst.step, pDFTSpec, pBuffer );
+        status = CV_INSTRUMENT_FUN_IPP(ippiDFTInv_CToC_32fc_C1R, (Ipp32fc*)src, static_cast<int>(src_step), (Ipp32fc*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer);
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -1745,8 +1806,10 @@ static bool ippi_DFT_C_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     return false;
 }
 
-static bool ippi_DFT_R_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
+static bool ippi_DFT_R_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
+    CV_INSTRUMENT_REGION_IPP();
+
     IppStatus status;
     Ipp8u* pBuffer = 0;
     Ipp8u* pMemInit= 0;
@@ -1754,19 +1817,19 @@ static bool ippi_DFT_R_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     int sizeSpec=0;
     int sizeInit=0;
 
-    IppiSize srcRoiSize = {src.cols, src.rows};
+    IppiSize srcRoiSize = {width, height};
 
     status = ippiDFTGetSize_R_32f(srcRoiSize, norm_flag, ippAlgHintNone, &sizeSpec, &sizeInit, &sizeBuffer );
     if ( status < 0 )
         return false;
 
-    IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)ippMalloc( sizeSpec );
+    IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)CV_IPP_MALLOC( sizeSpec );
 
     if ( sizeInit > 0 )
-        pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+        pMemInit = (Ipp8u*)CV_IPP_MALLOC( sizeInit );
 
     if ( sizeBuffer > 0 )
-        pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+        pBuffer = (Ipp8u*)CV_IPP_MALLOC( sizeBuffer );
 
     status = ippiDFTInit_R_32f( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
 
@@ -1782,9 +1845,9 @@ static bool ippi_DFT_R_32F(const Mat& src, Mat& dst, bool inv, int norm_flag)
     }
 
     if (!inv)
-        status = ippiDFTFwd_RToPack_32f_C1R( src.ptr<float>(), (int)(src.step), dst.ptr<float>(), (int)dst.step, pDFTSpec, pBuffer );
+        status = CV_INSTRUMENT_FUN_IPP(ippiDFTFwd_RToPack_32f_C1R, (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer);
     else
-        status = ippiDFTInv_PackToR_32f_C1R( src.ptr<float>(), (int)src.step, dst.ptr<float>(), (int)dst.step, pDFTSpec, pBuffer );
+        status = CV_INSTRUMENT_FUN_IPP(ippiDFTInv_PackToR_32f_C1R, (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer);
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -2026,8 +2089,7 @@ class OCL_FftPlanCache
 public:
     static OCL_FftPlanCache & getInstance()
     {
-        static OCL_FftPlanCache planCache;
-        return planCache;
+        CV_SINGLETON_LAZY_INIT_REF(OCL_FftPlanCache, new OCL_FftPlanCache())
     }
 
     Ptr<OCL_FftPlan> getFftPlan(int dft_size, int depth)
@@ -2073,13 +2135,38 @@ static bool ocl_dft_cols(InputArray _src, OutputArray _dst, int nonzero_cols, in
     return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, fftType, false);
 }
 
+inline FftType determineFFTType(bool real_input, bool complex_input, bool real_output, bool complex_output, bool inv)
+{
+    // output format is not specified
+    if (!real_output && !complex_output)
+        complex_output = true;
+
+    // input or output format is ambiguous
+    if (real_input == complex_input || real_output == complex_output)
+        CV_Error(Error::StsBadArg, "Invalid FFT input or output format");
+
+    FftType result = real_input ? (real_output ? R2R : R2C) : (real_output ? C2R : C2C);
+
+    // Forward Complex to CCS not supported
+    if (result == C2R && !inv)
+        result = C2C;
+
+    // Inverse CCS to Complex not supported
+    if (result == R2C && inv)
+        result = R2R;
+
+    return result;
+}
+
 static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
 {
     int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
     Size ssize = _src.size();
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ( !((cn == 1 || cn == 2) && (depth == CV_32F || (depth == CV_64F && doubleSupport))) )
+    if (!(cn == 1 || cn == 2)
+        || !(depth == CV_32F || (depth == CV_64F && doubleSupport))
+        || ((flags & DFT_REAL_OUTPUT) && (flags & DFT_COMPLEX_OUTPUT)))
         return false;
 
     // if is not a multiplication of prime numbers { 2, 3, 5 }
@@ -2087,34 +2174,14 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         return false;
 
     UMat src = _src.getUMat();
-    int complex_input = cn == 2 ? 1 : 0;
-    int complex_output = (flags & DFT_COMPLEX_OUTPUT) != 0;
-    int real_input = cn == 1 ? 1 : 0;
-    int real_output = (flags & DFT_REAL_OUTPUT) != 0;
     bool inv = (flags & DFT_INVERSE) != 0 ? 1 : 0;
 
     if( nonzero_rows <= 0 || nonzero_rows > _src.rows() )
         nonzero_rows = _src.rows();
     bool is1d = (flags & DFT_ROWS) != 0 || nonzero_rows == 1;
 
-    // if output format is not specified
-    if (complex_output + real_output == 0)
-    {
-        if (real_input)
-            real_output = 1;
-        else
-            complex_output = 1;
-    }
-
-    FftType fftType = (FftType)(complex_input << 0 | complex_output << 1);
-
-    // Forward Complex to CCS not supported
-    if (fftType == C2R && !inv)
-        fftType = C2C;
-
-    // Inverse CCS to Complex not supported
-    if (fftType == R2C && inv)
-        fftType = R2R;
+    FftType fftType = determineFFTType(cn == 1, cn == 2,
+        (flags & DFT_REAL_OUTPUT) != 0, (flags & DFT_COMPLEX_OUTPUT) != 0, inv);
 
     UMat output;
     if (fftType == C2C || fftType == R2C)
@@ -2138,51 +2205,38 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         }
     }
 
+    bool result = false;
     if (!inv)
     {
-        if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
-            return false;
-
+        int nonzero_cols = fftType == R2R ? output.cols/2 + 1 : output.cols;
+        result = ocl_dft_rows(src, output, nonzero_rows, flags, fftType);
         if (!is1d)
-        {
-            int nonzero_cols = fftType == R2R ? output.cols/2 + 1 : output.cols;
-            if (!ocl_dft_cols(output, _dst, nonzero_cols, flags, fftType))
-                return false;
-        }
+            result = result && ocl_dft_cols(output, _dst, nonzero_cols, flags, fftType);
     }
     else
     {
         if (fftType == C2C)
         {
             // complex output
-            if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
-                return false;
-
+            result = ocl_dft_rows(src, output, nonzero_rows, flags, fftType);
             if (!is1d)
-            {
-                if (!ocl_dft_cols(output, output, output.cols, flags, fftType))
-                    return false;
-            }
+                result = result && ocl_dft_cols(output, output, output.cols, flags, fftType);
         }
         else
         {
             if (is1d)
             {
-                if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
-                    return false;
+                result = ocl_dft_rows(src, output, nonzero_rows, flags, fftType);
             }
             else
             {
                 int nonzero_cols = src.cols/2 + 1;
-                if (!ocl_dft_cols(src, output, nonzero_cols, flags, fftType))
-                    return false;
-
-                if (!ocl_dft_rows(output, _dst, nonzero_rows, flags, fftType))
-                    return false;
+                result = ocl_dft_cols(src, output, nonzero_cols, flags, fftType);
+                result = result && ocl_dft_rows(output, _dst, nonzero_rows, flags, fftType);
             }
         }
     }
-    return true;
+    return result;
 }
 
 } // namespace cv;
@@ -2216,7 +2270,7 @@ class PlanCache
             clAmdFftDim dim = dft_size.height == 1 || dft_rows ? CLFFT_1D : CLFFT_2D;
 
             size_t batchSize = dft_rows ? dft_size.height : 1;
-            size_t clLengthsIn[3] = { dft_size.width, dft_rows ? 1 : dft_size.height, 1 };
+            size_t clLengthsIn[3] = { (size_t)dft_size.width, dft_rows ? 1 : (size_t)dft_size.height, 1 };
             size_t clStridesIn[3] = { 1, 1, 1 };
             size_t clStridesOut[3]  = { 1, 1, 1 };
             int elemSize = doubleFP ? sizeof(double) : sizeof(float);
@@ -2291,8 +2345,7 @@ class PlanCache
 public:
     static PlanCache & getInstance()
     {
-        static PlanCache planCache;
-        return planCache;
+        CV_SINGLETON_LAZY_INIT_REF(PlanCache, new PlanCache())
     }
 
     clAmdFftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,
@@ -2428,111 +2481,324 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
 
 namespace cv
 {
-static void complementComplexOutput(Mat& dst, int len, int dft_dims)
-{
-    int i, n = dst.cols;
-    size_t elem_size = dst.elemSize1();
-    if( elem_size == sizeof(float) )
-    {
-        float* p0 = dst.ptr<float>();
-        size_t dstep = dst.step/sizeof(p0[0]);
-        for( i = 0; i < len; i++ )
-        {
-            float* p = p0 + dstep*i;
-            float* q = dft_dims == 1 || i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
 
-            for( int j = 1; j < (n+1)/2; j++ )
-            {
-                p[(n-j)*2] = q[j*2];
-                p[(n-j)*2+1] = -q[j*2+1];
-            }
+template <typename T>
+static void complementComplex(T * ptr, size_t step, int n, int len, int dft_dims)
+{
+    T* p0 = (T*)ptr;
+    size_t dstep = step/sizeof(p0[0]);
+    for(int i = 0; i < len; i++ )
+    {
+        T* p = p0 + dstep*i;
+        T* q = dft_dims == 1 || i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
+
+        for( int j = 1; j < (n+1)/2; j++ )
+        {
+            p[(n-j)*2] = q[j*2];
+            p[(n-j)*2+1] = -q[j*2+1];
         }
     }
+}
+
+static void complementComplexOutput(int depth, uchar * ptr, size_t step, int count, int len, int dft_dims)
+{
+    if( depth == CV_32F )
+        complementComplex((float*)ptr, step, count, len, dft_dims);
     else
-    {
-        double* p0 = dst.ptr<double>();
-        size_t dstep = dst.step/sizeof(p0[0]);
-        for( i = 0; i < len; i++ )
-        {
-            double* p = p0 + dstep*i;
-            double* q = dft_dims == 1 || i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
-
-            for( int j = 1; j < (n+1)/2; j++ )
-            {
-                p[(n-j)*2] = q[j*2];
-                p[(n-j)*2+1] = -q[j*2+1];
-            }
-        }
-    }
-}
+        complementComplex((double*)ptr, step, count, len, dft_dims);
 }
 
-void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
+enum DftMode {
+    InvalidDft = 0,
+    FwdRealToCCS,
+    FwdRealToComplex,
+    FwdComplexToComplex,
+    InvCCSToReal,
+    InvComplexToReal,
+    InvComplexToComplex,
+};
+
+enum DftDims {
+    InvalidDim = 0,
+    OneDim,
+    OneDimColWise,
+    TwoDims
+};
+
+inline const char * modeName(DftMode m)
 {
-#ifdef HAVE_CLAMDFFT
-    CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
-            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
-               ocl_dft_amdfft(_src0, _dst, flags))
-#endif
-
-#ifdef HAVE_OPENCL
-    CV_OCL_RUN(_dst.isUMat() && _src0.dims() <= 2,
-               ocl_dft(_src0, _dst, flags, nonzero_rows))
-#endif
-
-    static DFTFunc dft_tbl[6] =
+    switch (m)
     {
-        (DFTFunc)DFT_32f,
-        (DFTFunc)RealDFT_32f,
-        (DFTFunc)CCSIDFT_32f,
-        (DFTFunc)DFT_64f,
-        (DFTFunc)RealDFT_64f,
-        (DFTFunc)CCSIDFT_64f
+    case InvalidDft: return "InvalidDft";
+    case FwdRealToCCS: return "FwdRealToCCS";
+    case FwdRealToComplex: return "FwdRealToComplex";
+    case FwdComplexToComplex: return "FwdComplexToComplex";
+    case InvCCSToReal: return "InvCCSToReal";
+    case InvComplexToReal: return "InvComplexToReal";
+    case InvComplexToComplex: return "InvComplexToComplex";
+    }
+    return 0;
+}
+
+inline const char * dimsName(DftDims d)
+{
+    switch (d)
+    {
+    case InvalidDim: return "InvalidDim";
+    case OneDim: return "OneDim";
+    case OneDimColWise: return "OneDimColWise";
+    case TwoDims: return "TwoDims";
     };
-    AutoBuffer<uchar> buf;
-    Mat src0 = _src0.getMat(), src = src0;
-    int prev_len = 0, stage = 0;
-    bool inv = (flags & DFT_INVERSE) != 0;
-    int nf = 0, real_transform = src.channels() == 1 || (inv && (flags & DFT_REAL_OUTPUT)!=0);
-    int type = src.type(), depth = src.depth();
-    int elem_size = (int)src.elemSize1(), complex_elem_size = elem_size*2;
-    int factors[34];
-    bool inplace_transform = false;
-#ifdef USE_IPP_DFT
-    AutoBuffer<uchar> ippbuf;
-    int ipp_norm_flag = !(flags & DFT_SCALE) ? 8 : inv ? 2 : 1;
-#endif
+    return 0;
+}
 
-    CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+template <typename T>
+inline bool isInv(T mode)
+{
+    switch ((DftMode)mode)
+    {
+        case InvCCSToReal:
+        case InvComplexToReal:
+        case InvComplexToComplex: return true;
+        default: return false;
+    }
+}
 
-    if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
-        _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
-    else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
-        _dst.create( src.size(), depth );
+inline DftMode determineMode(bool inv, int cn1, int cn2)
+{
+    if (!inv)
+    {
+        if (cn1 == 1 && cn2 == 1)
+            return FwdRealToCCS;
+        else if (cn1 == 1 && cn2 == 2)
+            return FwdRealToComplex;
+        else if (cn1 == 2 && cn2 == 2)
+            return FwdComplexToComplex;
+    }
     else
-        _dst.create( src.size(), type );
+    {
+        if (cn1 == 1 && cn2 == 1)
+            return InvCCSToReal;
+        else if (cn1 == 2 && cn2 == 1)
+            return InvComplexToReal;
+        else if (cn1 == 2 && cn2 == 2)
+            return InvComplexToComplex;
+    }
+    return InvalidDft;
+}
 
-    Mat dst = _dst.getMat();
+
+inline DftDims determineDims(int rows, int cols, bool isRowWise, bool isContinuous)
+{
+    // printf("%d x %d (%d, %d)\n", rows, cols, isRowWise, isContinuous);
+    if (isRowWise)
+        return OneDim;
+    if (cols == 1 && rows > 1) // one-column-shaped input
+    {
+        if (isContinuous)
+            return OneDim;
+        else
+            return OneDimColWise;
+    }
+    if (rows == 1)
+        return OneDim;
+    if (cols > 1 && rows > 1)
+        return TwoDims;
+    return InvalidDim;
+}
+
+class OcvDftImpl CV_FINAL : public hal::DFT2D
+{
+protected:
+    Ptr<hal::DFT1D> contextA;
+    Ptr<hal::DFT1D> contextB;
+    bool needBufferA;
+    bool needBufferB;
+    bool inv;
+    int width;
+    int height;
+    DftMode mode;
+    int elem_size;
+    int complex_elem_size;
+    int depth;
+    bool real_transform;
+    int nonzero_rows;
+    bool isRowTransform;
+    bool isScaled;
+    std::vector<int> stages;
+    bool useIpp;
+    int src_channels;
+    int dst_channels;
+
+    AutoBuffer<uchar> tmp_bufA;
+    AutoBuffer<uchar> tmp_bufB;
+    AutoBuffer<uchar> buf0;
+    AutoBuffer<uchar> buf1;
+
+public:
+    OcvDftImpl()
+    {
+        needBufferA = false;
+        needBufferB = false;
+        inv = false;
+        width = 0;
+        height = 0;
+        mode = InvalidDft;
+        elem_size = 0;
+        complex_elem_size = 0;
+        depth = 0;
+        real_transform = false;
+        nonzero_rows = 0;
+        isRowTransform = false;
+        isScaled = false;
+        useIpp = false;
+        src_channels = 0;
+        dst_channels = 0;
+    }
+
+    void init(int _width, int _height, int _depth, int _src_channels, int _dst_channels, int flags, int _nonzero_rows)
+    {
+        bool isComplex = _src_channels != _dst_channels;
+        nonzero_rows = _nonzero_rows;
+        width = _width;
+        height = _height;
+        depth = _depth;
+        src_channels = _src_channels;
+        dst_channels = _dst_channels;
+        bool isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
+        bool isInplace = (flags & CV_HAL_DFT_IS_INPLACE) != 0;
+        bool isContinuous = (flags & CV_HAL_DFT_IS_CONTINUOUS) != 0;
+        mode = determineMode(isInverse, _src_channels, _dst_channels);
+        inv = isInverse;
+        isRowTransform = (flags & CV_HAL_DFT_ROWS) != 0;
+        isScaled = (flags & CV_HAL_DFT_SCALE) != 0;
+        needBufferA = false;
+        needBufferB = false;
+        real_transform = (mode != FwdComplexToComplex && mode != InvComplexToComplex);
+
+        elem_size = (depth == CV_32F) ? sizeof(float) : sizeof(double);
+        complex_elem_size = elem_size * 2;
+        if( !real_transform )
+            elem_size = complex_elem_size;
 
 #if defined USE_IPP_DFT
-    CV_IPP_CHECK()
-    {
-        if ((src.depth() == CV_32F) && (src.total()>(int)(1<<6)) && nonzero_rows == 0)
+        CV_IPP_CHECK()
         {
-            if ((flags & DFT_ROWS) == 0)
+            if (nonzero_rows == 0 && depth == CV_32F && ((width * height)>(int)(1<<6)))
             {
-                if (src.channels() == 2 && !(inv && (flags & DFT_REAL_OUTPUT)))
+                if (mode == FwdComplexToComplex || mode == InvComplexToComplex || mode == FwdRealToCCS || mode == InvCCSToReal)
                 {
-                    if (ippi_DFT_C_32F(src, dst, inv, ipp_norm_flag))
+                    useIpp = true;
+                    return;
+                }
+            }
+        }
+#endif
+
+        DftDims dims = determineDims(height, width, isRowTransform, isContinuous);
+        if (dims == TwoDims)
+        {
+            stages.resize(2);
+            if (mode == InvCCSToReal || mode == InvComplexToReal)
+            {
+                stages[0] = 1;
+                stages[1] = 0;
+            }
+            else
+            {
+                stages[0] = 0;
+                stages[1] = 1;
+            }
+        }
+        else
+        {
+            stages.resize(1);
+            if (dims == OneDimColWise)
+                stages[0] = 1;
+            else
+                stages[0] = 0;
+        }
+
+        for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
+        {
+            if (stageIndex == 1)
+            {
+                isInplace = true;
+                isComplex = false;
+            }
+
+            int stage = stages[stageIndex];
+            bool isLastStage = (stageIndex + 1 == stages.size());
+
+            int len, count;
+
+            int f = 0;
+            if (inv)
+                f |= CV_HAL_DFT_INVERSE;
+            if (isScaled)
+                f |= CV_HAL_DFT_SCALE;
+            if (isRowTransform)
+                f |= CV_HAL_DFT_ROWS;
+            if (isComplex)
+                f |= CV_HAL_DFT_COMPLEX_OUTPUT;
+            if (real_transform)
+                f |= CV_HAL_DFT_REAL_OUTPUT;
+            if (!isLastStage)
+                f |= CV_HAL_DFT_TWO_STAGE;
+
+            if( stage == 0 ) // row-wise transform
+            {
+                if (width == 1 && !isRowTransform )
+                {
+                    len = height;
+                    count = width;
+                }
+                else
+                {
+                    len = width;
+                    count = height;
+                }
+                needBufferA = isInplace;
+                contextA = hal::DFT1D::create(len, count, depth, f, &needBufferA);
+                if (needBufferA)
+                    tmp_bufA.allocate(len * complex_elem_size);
+            }
+            else
+            {
+                len = height;
+                count = width;
+                f |= CV_HAL_DFT_STAGE_COLS;
+                needBufferB = isInplace;
+                contextB = hal::DFT1D::create(len, count, depth, f, &needBufferB);
+                if (needBufferB)
+                    tmp_bufB.allocate(len * complex_elem_size);
+
+                buf0.allocate(len * complex_elem_size);
+                buf1.allocate(len * complex_elem_size);
+            }
+        }
+    }
+
+    void apply(const uchar * src, size_t src_step, uchar * dst, size_t dst_step) CV_OVERRIDE
+    {
+#if defined USE_IPP_DFT
+        if (useIpp)
+        {
+            int ipp_norm_flag = !isScaled ? 8 : inv ? 2 : 1;
+            if (!isRowTransform)
+            {
+                if (mode == FwdComplexToComplex || mode == InvComplexToComplex)
+                {
+                    if (ippi_DFT_C_32F(src, src_step, dst, dst_step, width, height, inv, ipp_norm_flag))
                     {
                         CV_IMPL_ADD(CV_IMPL_IPP);
                         return;
                     }
                     setIppErrorStatus();
                 }
-                if (src.channels() == 1 && (inv || !(flags & DFT_COMPLEX_OUTPUT)))
+                else if (mode == FwdRealToCCS || mode == InvCCSToReal)
                 {
-                    if (ippi_DFT_R_32F(src, dst, inv, ipp_norm_flag))
+                    if (ippi_DFT_R_32F(src, src_step, dst, dst_step, width, height, inv, ipp_norm_flag))
                     {
                         CV_IMPL_ADD(CV_IMPL_IPP);
                         return;
@@ -2542,20 +2808,20 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
             }
             else
             {
-                if (src.channels() == 2 && !(inv && (flags & DFT_REAL_OUTPUT)))
+                if (mode == FwdComplexToComplex || mode == InvComplexToComplex)
                 {
                     ippiDFT_C_Func ippiFunc = inv ? (ippiDFT_C_Func)ippiDFTInv_CToC_32fc_C1R : (ippiDFT_C_Func)ippiDFTFwd_CToC_32fc_C1R;
-                    if (Dft_C_IPPLoop(src, dst, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
+                    if (Dft_C_IPPLoop(src, src_step, dst, dst_step, width, height, IPPDFT_C_Functor(ippiFunc),ipp_norm_flag))
                     {
                         CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
                         return;
                     }
                     setIppErrorStatus();
                 }
-                if (src.channels() == 1 && (inv || !(flags & DFT_COMPLEX_OUTPUT)))
+                else if (mode == FwdRealToCCS || mode == InvCCSToReal)
                 {
                     ippiDFT_R_Func ippiFunc = inv ? (ippiDFT_R_Func)ippiDFTInv_PackToR_32f_C1R : (ippiDFT_R_Func)ippiDFTFwd_RToPack_32f_C1R;
-                    if (Dft_R_IPPLoop(src, dst, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
+                    if (Dft_R_IPPLoop(src, src_step, dst, dst_step, width, height, IPPDFT_R_Functor(ippiFunc),ipp_norm_flag))
                     {
                         CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
                         return;
@@ -2563,57 +2829,256 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
                     setIppErrorStatus();
                 }
             }
+            return;
         }
-    }
 #endif
 
-    if( !real_transform )
-        elem_size = complex_elem_size;
-
-    if( src.cols == 1 && nonzero_rows > 0 )
-        CV_Error( CV_StsNotImplemented,
-        "This mode (using nonzero_rows with a single-column matrix) breaks the function's logic, so it is prohibited.\n"
-        "For fast convolution/correlation use 2-column matrix or single-row matrix instead" );
-
-    // determine, which transform to do first - row-wise
-    // (stage 0) or column-wise (stage 1) transform
-    if( !(flags & DFT_ROWS) && src.rows > 1 &&
-        ((src.cols == 1 && (!src.isContinuous() || !dst.isContinuous())) ||
-         (src.cols > 1 && inv && real_transform)) )
-        stage = 1;
-
-    for(;;)
-    {
-        double scale = 1;
-        uchar* wave = 0;
-        int* itab = 0;
-        uchar* ptr;
-        int i, len, count, sz = 0;
-        int use_buf = 0, odd_real = 0;
-        DFTFunc dft_func;
-
-        if( stage == 0 ) // row-wise transform
+        for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
         {
-            len = !inv ? src.cols : dst.cols;
-            count = src.rows;
-            if( len == 1 && !(flags & DFT_ROWS) )
+            int stage_src_channels = src_channels;
+            int stage_dst_channels = dst_channels;
+
+            if (stageIndex == 1)
             {
-                len = !inv ? src.rows : dst.rows;
-                count = 1;
+                src = dst;
+                src_step = dst_step;
+                stage_src_channels = stage_dst_channels;
             }
-            odd_real = real_transform && (len & 1);
+
+            int stage = stages[stageIndex];
+            bool isLastStage = (stageIndex + 1 == stages.size());
+            bool isComplex = stage_src_channels != stage_dst_channels;
+
+            if( stage == 0 )
+                rowDft(src, src_step, dst, dst_step, isComplex, isLastStage);
+            else
+                colDft(src, src_step, dst, dst_step, stage_src_channels, stage_dst_channels, isLastStage);
+        }
+    }
+
+protected:
+
+    void rowDft(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, bool isComplex, bool isLastStage)
+    {
+        int len, count;
+        if (width == 1 && !isRowTransform )
+        {
+            len = height;
+            count = width;
         }
         else
         {
-            len = dst.rows;
-            count = !inv ? src0.cols : dst.cols;
-            sz = 2*len*complex_elem_size;
+            len = width;
+            count = height;
+        }
+        int dptr_offset = 0;
+        int dst_full_len = len*elem_size;
+
+        if( needBufferA )
+        {
+            if (mode == FwdRealToCCS && (len & 1) && len > 1)
+                dptr_offset = elem_size;
         }
 
-        void *spec = 0;
-#ifdef USE_IPP_DFT
-        if( CV_IPP_CHECK_COND && (len*count >= 64) ) // use IPP DFT if available
+        if( !inv && isComplex )
+            dst_full_len += (len & 1) ? elem_size : complex_elem_size;
+
+        int nz = nonzero_rows;
+        if( nz <= 0 || nz > count )
+            nz = count;
+
+        int i;
+        for( i = 0; i < nz; i++ )
         {
+            const uchar* sptr = src_data + src_step * i;
+            uchar* dptr0 = dst_data + dst_step * i;
+            uchar* dptr = dptr0;
+
+            if( needBufferA )
+                dptr = tmp_bufA.data();
+
+            contextA->apply(sptr, dptr);
+
+            if( needBufferA )
+                memcpy( dptr0, dptr + dptr_offset, dst_full_len );
+        }
+
+        for( ; i < count; i++ )
+        {
+            uchar* dptr0 = dst_data + dst_step * i;
+            memset( dptr0, 0, dst_full_len );
+        }
+        if(isLastStage &&  mode == FwdRealToComplex)
+            complementComplexOutput(depth, dst_data, dst_step, len, nz, 1);
+    }
+
+    void colDft(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int stage_src_channels, int stage_dst_channels, bool isLastStage)
+    {
+        int len = height;
+        int count = width;
+        int a = 0, b = count;
+        uchar *dbuf0, *dbuf1;
+        const uchar* sptr0 = src_data;
+        uchar* dptr0 = dst_data;
+
+        dbuf0 = buf0.data(), dbuf1 = buf1.data();
+
+        if( needBufferB )
+        {
+            dbuf1 = tmp_bufB.data();
+            dbuf0 = buf1.data();
+        }
+
+        if( real_transform )
+        {
+            int even;
+            a = 1;
+            even = (count & 1) == 0;
+            b = (count+1)/2;
+            if( !inv )
+            {
+                memset( buf0.data(), 0, len*complex_elem_size );
+                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, elem_size );
+                sptr0 += stage_dst_channels*elem_size;
+                if( even )
+                {
+                    memset( buf1.data(), 0, len*complex_elem_size );
+                    CopyColumn( sptr0 + (count-2)*elem_size, src_step,
+                                buf1.data(), complex_elem_size, len, elem_size );
+                }
+            }
+            else if( stage_src_channels == 1 )
+            {
+                CopyColumn( sptr0, src_step, buf0.data(), elem_size, len, elem_size );
+                ExpandCCS( buf0.data(), len, elem_size );
+                if( even )
+                {
+                    CopyColumn( sptr0 + (count-1)*elem_size, src_step,
+                                buf1.data(), elem_size, len, elem_size );
+                    ExpandCCS( buf1.data(), len, elem_size );
+                }
+                sptr0 += elem_size;
+            }
+            else
+            {
+                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
+                if( even )
+                {
+                    CopyColumn( sptr0 + b*complex_elem_size, src_step,
+                                   buf1.data(), complex_elem_size, len, complex_elem_size );
+                }
+                sptr0 += complex_elem_size;
+            }
+
+            if( even )
+                contextB->apply(buf1.data(), dbuf1);
+            contextB->apply(buf0.data(), dbuf0);
+
+            if( stage_dst_channels == 1 )
+            {
+                if( !inv )
+                {
+                    // copy the half of output vector to the first/last column.
+                    // before doing that, defgragment the vector
+                    memcpy( dbuf0 + elem_size, dbuf0, elem_size );
+                    CopyColumn( dbuf0 + elem_size, elem_size, dptr0,
+                                   dst_step, len, elem_size );
+                    if( even )
+                    {
+                        memcpy( dbuf1 + elem_size, dbuf1, elem_size );
+                        CopyColumn( dbuf1 + elem_size, elem_size,
+                                       dptr0 + (count-1)*elem_size,
+                                       dst_step, len, elem_size );
+                    }
+                    dptr0 += elem_size;
+                }
+                else
+                {
+                    // copy the real part of the complex vector to the first/last column
+                    CopyColumn( dbuf0, complex_elem_size, dptr0, dst_step, len, elem_size );
+                    if( even )
+                        CopyColumn( dbuf1, complex_elem_size, dptr0 + (count-1)*elem_size,
+                                       dst_step, len, elem_size );
+                    dptr0 += elem_size;
+                }
+            }
+            else
+            {
+                assert( !inv );
+                CopyColumn( dbuf0, complex_elem_size, dptr0,
+                               dst_step, len, complex_elem_size );
+                if( even )
+                    CopyColumn( dbuf1, complex_elem_size,
+                                   dptr0 + b*complex_elem_size,
+                                   dst_step, len, complex_elem_size );
+                dptr0 += complex_elem_size;
+            }
+        }
+
+        for(int i = a; i < b; i += 2 )
+        {
+            if( i+1 < b )
+            {
+                CopyFrom2Columns( sptr0, src_step, buf0.data(), buf1.data(), len, complex_elem_size );
+                contextB->apply(buf1.data(), dbuf1);
+            }
+            else
+                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
+
+            contextB->apply(buf0.data(), dbuf0);
+
+            if( i+1 < b )
+                CopyTo2Columns( dbuf0, dbuf1, dptr0, dst_step, len, complex_elem_size );
+            else
+                CopyColumn( dbuf0, complex_elem_size, dptr0, dst_step, len, complex_elem_size );
+            sptr0 += 2*complex_elem_size;
+            dptr0 += 2*complex_elem_size;
+        }
+        if(isLastStage && mode == FwdRealToComplex)
+            complementComplexOutput(depth, dst_data, dst_step, count, len, 2);
+    }
+};
+
+class OcvDftBasicImpl CV_FINAL : public hal::DFT1D
+{
+public:
+    OcvDftOptions opt;
+    int _factors[34];
+    AutoBuffer<uchar> wave_buf;
+    AutoBuffer<int> itab_buf;
+#ifdef USE_IPP_DFT
+    AutoBuffer<uchar> ippbuf;
+    AutoBuffer<uchar> ippworkbuf;
+#endif
+
+public:
+    OcvDftBasicImpl()
+    {
+        opt.factors = _factors;
+    }
+    void init(int len, int count, int depth, int flags, bool *needBuffer)
+    {
+        int prev_len = opt.n;
+
+        int stage = (flags & CV_HAL_DFT_STAGE_COLS) != 0 ? 1 : 0;
+        int complex_elem_size = depth == CV_32F ? sizeof(Complex<float>) : sizeof(Complex<double>);
+        opt.isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
+        bool real_transform = (flags & CV_HAL_DFT_REAL_OUTPUT) != 0;
+        opt.isComplex = (stage == 0) && (flags & CV_HAL_DFT_COMPLEX_OUTPUT) != 0;
+        bool needAnotherStage = (flags & CV_HAL_DFT_TWO_STAGE) != 0;
+
+        opt.scale = 1;
+        opt.tab_size = len;
+        opt.n = len;
+
+        opt.useIpp = false;
+    #ifdef USE_IPP_DFT
+        opt.ipp_spec = 0;
+        opt.ipp_work = 0;
+
+        if( CV_IPP_CHECK_COND && (opt.n*count >= 64) ) // use IPP DFT if available
+        {
+            int ipp_norm_flag = (flags & CV_HAL_DFT_SCALE) == 0 ? 8 : opt.isInverse ? 2 : 1;
             int specsize=0, initsize=0, worksize=0;
             IppDFTGetSizeFunc getSizeFunc = 0;
             IppDFTInitFunc initFunc = 0;
@@ -2644,265 +3109,263 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
                     initFunc = (IppDFTInitFunc)ippsDFTInit_C_64fc;
                 }
             }
-            if( getSizeFunc(len, ipp_norm_flag, ippAlgHintNone, &specsize, &initsize, &worksize) >= 0 )
+            if( getSizeFunc(opt.n, ipp_norm_flag, ippAlgHintNone, &specsize, &initsize, &worksize) >= 0 )
             {
                 ippbuf.allocate(specsize + initsize + 64);
-                spec = alignPtr(&ippbuf[0], 32);
-                uchar* initbuf = alignPtr((uchar*)spec + specsize, 32);
-                if( initFunc(len, ipp_norm_flag, ippAlgHintNone, spec, initbuf) < 0 )
-                    spec = 0;
-                sz += worksize;
+                opt.ipp_spec = alignPtr(&ippbuf[0], 32);
+                ippworkbuf.allocate(worksize + 32);
+                opt.ipp_work = alignPtr(&ippworkbuf[0], 32);
+                uchar* initbuf = alignPtr((uchar*)opt.ipp_spec + specsize, 32);
+                if( initFunc(opt.n, ipp_norm_flag, ippAlgHintNone, opt.ipp_spec, initbuf) >= 0 )
+                    opt.useIpp = true;
             }
             else
                 setIppErrorStatus();
         }
-        else
-#endif
+    #endif
+
+        if (!opt.useIpp)
         {
-            if( len != prev_len )
-                nf = DFTFactorize( len, factors );
-
-            inplace_transform = factors[0] == factors[nf-1];
-            sz += len*(complex_elem_size + sizeof(int));
-            i = nf > 1 && (factors[0] & 1) == 0;
-            if( (factors[i] & 1) != 0 && factors[i] > 5 )
-                sz += (factors[i]+1)*complex_elem_size;
-
-            if( (stage == 0 && ((src.data == dst.data && !inplace_transform) || odd_real)) ||
-                (stage == 1 && !inplace_transform) )
+            if (len != prev_len)
             {
-                use_buf = 1;
-                sz += len*complex_elem_size;
+                opt.nf = DFTFactorize( opt.n, opt.factors );
             }
-        }
-
-        ptr = (uchar*)buf;
-        buf.allocate( sz + 32 );
-        if( ptr != (uchar*)buf )
-            prev_len = 0; // because we release the buffer,
-                          // force recalculation of
-                          // twiddle factors and permutation table
-        ptr = (uchar*)buf;
-        if( !spec )
-        {
-            wave = ptr;
-            ptr += len*complex_elem_size;
-            itab = (int*)ptr;
-            ptr = (uchar*)cvAlignPtr( ptr + len*sizeof(int), 16 );
-
-            if( len != prev_len || (!inplace_transform && inv && real_transform))
-                DFTInit( len, nf, factors, itab, complex_elem_size,
-                            wave, stage == 0 && inv && real_transform );
+            bool inplace_transform = opt.factors[0] == opt.factors[opt.nf-1];
+            if (len != prev_len || (!inplace_transform && opt.isInverse && real_transform))
+            {
+                wave_buf.allocate(opt.n*complex_elem_size);
+                opt.wave = wave_buf.data();
+                itab_buf.allocate(opt.n);
+                opt.itab = itab_buf.data();
+                DFTInit( opt.n, opt.nf, opt.factors, opt.itab, complex_elem_size,
+                         opt.wave, stage == 0 && opt.isInverse && real_transform );
+            }
             // otherwise reuse the tables calculated on the previous stage
-        }
-
-        if( stage == 0 )
-        {
-            uchar* tmp_buf = 0;
-            int dptr_offset = 0;
-            int dst_full_len = len*elem_size;
-            int _flags = (int)inv + (src.channels() != dst.channels() ?
-                         DFT_COMPLEX_INPUT_OR_OUTPUT : 0);
-            if( use_buf )
+            if (needBuffer)
             {
-                tmp_buf = ptr;
-                ptr += len*complex_elem_size;
-                if( odd_real && !inv && len > 1 &&
-                    !(_flags & DFT_COMPLEX_INPUT_OR_OUTPUT))
-                    dptr_offset = elem_size;
+                if( (stage == 0 && ((*needBuffer && !inplace_transform) || (real_transform && (len & 1)))) ||
+                    (stage == 1 && !inplace_transform) )
+                {
+                    *needBuffer = true;
+                }
             }
-
-            if( !inv && (_flags & DFT_COMPLEX_INPUT_OR_OUTPUT) )
-                dst_full_len += (len & 1) ? elem_size : complex_elem_size;
-
-            dft_func = dft_tbl[(!real_transform ? 0 : !inv ? 1 : 2) + (depth == CV_64F)*3];
-
-            if( count > 1 && !(flags & DFT_ROWS) && (!inv || !real_transform) )
-                stage = 1;
-            else if( flags & CV_DXT_SCALE )
-                scale = 1./(len * (flags & DFT_ROWS ? 1 : count));
-
-            if( nonzero_rows <= 0 || nonzero_rows > count )
-                nonzero_rows = count;
-
-            for( i = 0; i < nonzero_rows; i++ )
-            {
-                const uchar* sptr = src.ptr(i);
-                uchar* dptr0 = dst.ptr(i);
-                uchar* dptr = dptr0;
-
-                if( tmp_buf )
-                    dptr = tmp_buf;
-
-                dft_func( sptr, dptr, len, nf, factors, itab, wave, len, spec, ptr, _flags, scale );
-                if( dptr != dptr0 )
-                    memcpy( dptr0, dptr + dptr_offset, dst_full_len );
-            }
-
-            for( ; i < count; i++ )
-            {
-                uchar* dptr0 = dst.ptr(i);
-                memset( dptr0, 0, dst_full_len );
-            }
-
-            if( stage != 1 )
-            {
-                if( !inv && real_transform && dst.channels() == 2 )
-                    complementComplexOutput(dst, nonzero_rows, 1);
-                break;
-            }
-            src = dst;
         }
         else
         {
-            int a = 0, b = count;
-            uchar *buf0, *buf1, *dbuf0, *dbuf1;
-            const uchar* sptr0 = src.ptr();
-            uchar* dptr0 = dst.ptr();
-            buf0 = ptr;
-            ptr += len*complex_elem_size;
-            buf1 = ptr;
-            ptr += len*complex_elem_size;
-            dbuf0 = buf0, dbuf1 = buf1;
-
-            if( use_buf )
+            if (needBuffer)
             {
-                dbuf1 = ptr;
-                dbuf0 = buf1;
-                ptr += len*complex_elem_size;
+                *needBuffer = false;
             }
+        }
 
-            dft_func = dft_tbl[(depth == CV_64F)*3];
-
-            if( real_transform && inv && src.cols > 1 )
-                stage = 0;
-            else if( flags & CV_DXT_SCALE )
-                scale = 1./(len * count);
-
-            if( real_transform )
+        {
+            static DFTFunc dft_tbl[6] =
             {
-                int even;
-                a = 1;
-                even = (count & 1) == 0;
-                b = (count+1)/2;
-                if( !inv )
+                (DFTFunc)DFT_32f,
+                (DFTFunc)RealDFT_32f,
+                (DFTFunc)CCSIDFT_32f,
+                (DFTFunc)DFT_64f,
+                (DFTFunc)RealDFT_64f,
+                (DFTFunc)CCSIDFT_64f
+            };
+            int idx = 0;
+            if (stage == 0)
+            {
+                if (real_transform)
                 {
-                    memset( buf0, 0, len*complex_elem_size );
-                    CopyColumn( sptr0, src.step, buf0, complex_elem_size, len, elem_size );
-                    sptr0 += dst.channels()*elem_size;
-                    if( even )
-                    {
-                        memset( buf1, 0, len*complex_elem_size );
-                        CopyColumn( sptr0 + (count-2)*elem_size, src.step,
-                                    buf1, complex_elem_size, len, elem_size );
-                    }
-                }
-                else if( src.channels() == 1 )
-                {
-                    CopyColumn( sptr0, src.step, buf0, elem_size, len, elem_size );
-                    ExpandCCS( buf0, len, elem_size );
-                    if( even )
-                    {
-                        CopyColumn( sptr0 + (count-1)*elem_size, src.step,
-                                    buf1, elem_size, len, elem_size );
-                        ExpandCCS( buf1, len, elem_size );
-                    }
-                    sptr0 += elem_size;
-                }
-                else
-                {
-                    CopyColumn( sptr0, src.step, buf0, complex_elem_size, len, complex_elem_size );
-                    if( even )
-                    {
-                        CopyColumn( sptr0 + b*complex_elem_size, src.step,
-                                       buf1, complex_elem_size, len, complex_elem_size );
-                    }
-                    sptr0 += complex_elem_size;
-                }
-
-                if( even )
-                    dft_func( buf1, dbuf1, len, nf, factors, itab,
-                              wave, len, spec, ptr, inv, scale );
-                dft_func( buf0, dbuf0, len, nf, factors, itab,
-                          wave, len, spec, ptr, inv, scale );
-
-                if( dst.channels() == 1 )
-                {
-                    if( !inv )
-                    {
-                        // copy the half of output vector to the first/last column.
-                        // before doing that, defgragment the vector
-                        memcpy( dbuf0 + elem_size, dbuf0, elem_size );
-                        CopyColumn( dbuf0 + elem_size, elem_size, dptr0,
-                                       dst.step, len, elem_size );
-                        if( even )
-                        {
-                            memcpy( dbuf1 + elem_size, dbuf1, elem_size );
-                            CopyColumn( dbuf1 + elem_size, elem_size,
-                                           dptr0 + (count-1)*elem_size,
-                                           dst.step, len, elem_size );
-                        }
-                        dptr0 += elem_size;
-                    }
+                    if (!opt.isInverse)
+                        idx = 1;
                     else
-                    {
-                        // copy the real part of the complex vector to the first/last column
-                        CopyColumn( dbuf0, complex_elem_size, dptr0, dst.step, len, elem_size );
-                        if( even )
-                            CopyColumn( dbuf1, complex_elem_size, dptr0 + (count-1)*elem_size,
-                                           dst.step, len, elem_size );
-                        dptr0 += elem_size;
-                    }
-                }
-                else
-                {
-                    assert( !inv );
-                    CopyColumn( dbuf0, complex_elem_size, dptr0,
-                                   dst.step, len, complex_elem_size );
-                    if( even )
-                        CopyColumn( dbuf1, complex_elem_size,
-                                       dptr0 + b*complex_elem_size,
-                                       dst.step, len, complex_elem_size );
-                    dptr0 += complex_elem_size;
+                        idx = 2;
                 }
             }
+            if (depth == CV_64F)
+                idx += 3;
 
-            for( i = a; i < b; i += 2 )
-            {
-                if( i+1 < b )
-                {
-                    CopyFrom2Columns( sptr0, src.step, buf0, buf1, len, complex_elem_size );
-                    dft_func( buf1, dbuf1, len, nf, factors, itab,
-                              wave, len, spec, ptr, inv, scale );
-                }
-                else
-                    CopyColumn( sptr0, src.step, buf0, complex_elem_size, len, complex_elem_size );
+            opt.dft_func = dft_tbl[idx];
+        }
 
-                dft_func( buf0, dbuf0, len, nf, factors, itab,
-                          wave, len, spec, ptr, inv, scale );
-
-                if( i+1 < b )
-                    CopyTo2Columns( dbuf0, dbuf1, dptr0, dst.step, len, complex_elem_size );
-                else
-                    CopyColumn( dbuf0, complex_elem_size, dptr0, dst.step, len, complex_elem_size );
-                sptr0 += 2*complex_elem_size;
-                dptr0 += 2*complex_elem_size;
-            }
-
-            if( stage != 0 )
-            {
-                if( !inv && real_transform && dst.channels() == 2 && len > 1 )
-                    complementComplexOutput(dst, len, 2);
-                break;
-            }
-            src = dst;
+        if(!needAnotherStage && (flags & CV_HAL_DFT_SCALE) != 0)
+        {
+            int rowCount = count;
+            if (stage == 0 && (flags & CV_HAL_DFT_ROWS) != 0)
+                rowCount = 1;
+            opt.scale = 1./(len * rowCount);
         }
     }
+
+    void apply(const uchar *src, uchar *dst) CV_OVERRIDE
+    {
+        opt.dft_func(opt, src, dst);
+    }
+
+    void free() {}
+};
+
+struct ReplacementDFT1D : public hal::DFT1D
+{
+    cvhalDFT *context;
+    bool isInitialized;
+
+    ReplacementDFT1D() : context(0), isInitialized(false) {}
+    bool init(int len, int count, int depth, int flags, bool *needBuffer)
+    {
+        int res = cv_hal_dftInit1D(&context, len, count, depth, flags, needBuffer);
+        isInitialized = (res == CV_HAL_ERROR_OK);
+        return isInitialized;
+    }
+    void apply(const uchar *src, uchar *dst) CV_OVERRIDE
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dft1D, cv_hal_dft1D, context, src, dst);
+        }
+    }
+    ~ReplacementDFT1D()
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dftFree1D, cv_hal_dftFree1D, context);
+        }
+    }
+};
+
+struct ReplacementDFT2D : public hal::DFT2D
+{
+    cvhalDFT *context;
+    bool isInitialized;
+
+    ReplacementDFT2D() : context(0), isInitialized(false) {}
+    bool init(int width, int height, int depth,
+              int src_channels, int dst_channels,
+              int flags, int nonzero_rows)
+    {
+        int res = cv_hal_dftInit2D(&context, width, height, depth, src_channels, dst_channels, flags, nonzero_rows);
+        isInitialized = (res == CV_HAL_ERROR_OK);
+        return isInitialized;
+    }
+    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step) CV_OVERRIDE
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dft2D, cv_hal_dft2D, context, src, src_step, dst, dst_step);
+        }
+    }
+    ~ReplacementDFT2D()
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dftFree2D, cv_hal_dftFree1D, context);
+        }
+    }
+};
+
+namespace hal {
+
+//================== 1D ======================
+
+Ptr<DFT1D> DFT1D::create(int len, int count, int depth, int flags, bool *needBuffer)
+{
+    {
+        ReplacementDFT1D *impl = new ReplacementDFT1D();
+        if (impl->init(len, count, depth, flags, needBuffer))
+        {
+            return Ptr<DFT1D>(impl);
+        }
+        delete impl;
+    }
+    {
+        OcvDftBasicImpl *impl = new OcvDftBasicImpl();
+        impl->init(len, count, depth, flags, needBuffer);
+        return Ptr<DFT1D>(impl);
+    }
+}
+
+//================== 2D ======================
+
+Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
+                         int src_channels, int dst_channels,
+                         int flags, int nonzero_rows)
+{
+    {
+        ReplacementDFT2D *impl = new ReplacementDFT2D();
+        if (impl->init(width, height, depth, src_channels, dst_channels, flags, nonzero_rows))
+        {
+            return Ptr<DFT2D>(impl);
+        }
+        delete impl;
+    }
+    {
+        if(width == 1 && nonzero_rows > 0 )
+        {
+            CV_Error( CV_StsNotImplemented,
+            "This mode (using nonzero_rows with a single-column matrix) breaks the function's logic, so it is prohibited.\n"
+            "For fast convolution/correlation use 2-column matrix or single-row matrix instead" );
+        }
+        OcvDftImpl *impl = new OcvDftImpl();
+        impl->init(width, height, depth, src_channels, dst_channels, flags, nonzero_rows);
+        return Ptr<DFT2D>(impl);
+    }
+}
+
+} // cv::hal::
+} // cv::
+
+
+void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
+{
+    CV_INSTRUMENT_REGION();
+
+#ifdef HAVE_CLAMDFFT
+    CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
+            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
+               ocl_dft_amdfft(_src0, _dst, flags))
+#endif
+
+#ifdef HAVE_OPENCL
+    CV_OCL_RUN(_dst.isUMat() && _src0.dims() <= 2,
+               ocl_dft(_src0, _dst, flags, nonzero_rows))
+#endif
+
+    Mat src0 = _src0.getMat(), src = src0;
+    bool inv = (flags & DFT_INVERSE) != 0;
+    int type = src.type();
+    int depth = src.depth();
+
+    CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+
+    // Fail if DFT_COMPLEX_INPUT is specified, but src is not 2 channels.
+    CV_Assert( !((flags & DFT_COMPLEX_INPUT) && src.channels() != 2) );
+
+    if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
+        _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
+    else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
+        _dst.create( src.size(), depth );
+    else
+        _dst.create( src.size(), type );
+
+    Mat dst = _dst.getMat();
+
+    int f = 0;
+    if (src.isContinuous() && dst.isContinuous())
+        f |= CV_HAL_DFT_IS_CONTINUOUS;
+    if (inv)
+        f |= CV_HAL_DFT_INVERSE;
+    if (flags & DFT_ROWS)
+        f |= CV_HAL_DFT_ROWS;
+    if (flags & DFT_SCALE)
+        f |= CV_HAL_DFT_SCALE;
+    if (src.data == dst.data)
+        f |= CV_HAL_DFT_IS_INPLACE;
+    Ptr<hal::DFT2D> c = hal::DFT2D::create(src.cols, src.rows, depth, src.channels(), dst.channels(), f, nonzero_rows);
+    c->apply(src.data, src.step, dst.data, dst.step);
 }
 
 
 void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
 {
+    CV_INSTRUMENT_REGION();
+
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
 
@@ -2936,7 +3399,7 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
     k.args(ocl::KernelArg::ReadOnlyNoSize(A), ocl::KernelArg::ReadOnlyNoSize(B),
            ocl::KernelArg::WriteOnly(dst), rowsPerWI);
 
-    size_t globalsize[2] = { asize.width, (asize.height + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)asize.width, ((size_t)asize.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2944,16 +3407,136 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
 
 #endif
 
+namespace {
+
+#define VAL(buf, elem) (((T*)((char*)data ## buf + (step ## buf * (elem))))[0])
+#define MUL_SPECTRUMS_COL(A, B, C) \
+    VAL(C, 0) = VAL(A, 0) * VAL(B, 0); \
+    for (size_t j = 1; j <= rows - 2; j += 2) \
+    { \
+        double a_re = VAL(A, j), a_im = VAL(A, j + 1); \
+        double b_re = VAL(B, j), b_im = VAL(B, j + 1); \
+        if (conjB) b_im = -b_im; \
+        double c_re = a_re * b_re - a_im * b_im; \
+        double c_im = a_re * b_im + a_im * b_re; \
+        VAL(C, j) = (T)c_re; VAL(C, j + 1) = (T)c_im; \
+    } \
+    if ((rows & 1) == 0) \
+        VAL(C, rows-1) = VAL(A, rows-1) * VAL(B, rows-1)
+
+template <typename T, bool conjB> static inline
+void mulSpectrums_processCol_noinplace(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows)
+{
+    MUL_SPECTRUMS_COL(A, B, C);
+}
+
+template <typename T, bool conjB> static inline
+void mulSpectrums_processCol_inplaceA(const T* dataB, T* dataAC, size_t stepB, size_t stepAC, size_t rows)
+{
+    MUL_SPECTRUMS_COL(AC, B, AC);
+}
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_processCol(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows)
+{
+    if (inplaceA)
+        mulSpectrums_processCol_inplaceA<T, conjB>(dataB, dataC, stepB, stepC, rows);
+    else
+        mulSpectrums_processCol_noinplace<T, conjB>(dataA, dataB, dataC, stepA, stepB, stepC, rows);
+}
+#undef MUL_SPECTRUMS_COL
+#undef VAL
+
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_processCols(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows, size_t cols)
+{
+    mulSpectrums_processCol<T, conjB, inplaceA>(dataA, dataB, dataC, stepA, stepB, stepC, rows);
+    if ((cols & 1) == 0)
+    {
+        mulSpectrums_processCol<T, conjB, inplaceA>(dataA + cols - 1, dataB + cols - 1, dataC + cols - 1, stepA, stepB, stepC, rows);
+    }
+}
+
+#define VAL(buf, elem) (data ## buf[(elem)])
+#define MUL_SPECTRUMS_ROW(A, B, C) \
+    for (size_t j = j0; j < j1; j += 2) \
+    { \
+        double a_re = VAL(A, j), a_im = VAL(A, j + 1); \
+        double b_re = VAL(B, j), b_im = VAL(B, j + 1); \
+        if (conjB) b_im = -b_im; \
+        double c_re = a_re * b_re - a_im * b_im; \
+        double c_im = a_re * b_im + a_im * b_re; \
+        VAL(C, j) = (T)c_re; VAL(C, j + 1) = (T)c_im; \
+    }
+template <typename T, bool conjB> static inline
+void mulSpectrums_processRow_noinplace(const T* dataA, const T* dataB, T* dataC, size_t j0, size_t j1)
+{
+    MUL_SPECTRUMS_ROW(A, B, C);
+}
+template <typename T, bool conjB> static inline
+void mulSpectrums_processRow_inplaceA(const T* dataB, T* dataAC, size_t j0, size_t j1)
+{
+    MUL_SPECTRUMS_ROW(AC, B, AC);
+}
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_processRow(const T* dataA, const T* dataB, T* dataC, size_t j0, size_t j1)
+{
+    if (inplaceA)
+        mulSpectrums_processRow_inplaceA<T, conjB>(dataB, dataC, j0, j1);
+    else
+        mulSpectrums_processRow_noinplace<T, conjB>(dataA, dataB, dataC, j0, j1);
+}
+#undef MUL_SPECTRUMS_ROW
+#undef VAL
+
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_processRows(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows, size_t cols, size_t j0, size_t j1, bool is_1d_CN1)
+{
+    while (rows-- > 0)
+    {
+        if (is_1d_CN1)
+            dataC[0] = dataA[0]*dataB[0];
+        mulSpectrums_processRow<T, conjB, inplaceA>(dataA, dataB, dataC, j0, j1);
+        if (is_1d_CN1 && (cols & 1) == 0)
+            dataC[j1] = dataA[j1]*dataB[j1];
+
+        dataA = (const T*)(((char*)dataA) + stepA);
+        dataB = (const T*)(((char*)dataB) + stepB);
+        dataC =       (T*)(((char*)dataC) + stepC);
+    }
+}
+
+
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_Impl_(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows, size_t cols, size_t j0, size_t j1, bool is_1d, bool isCN1)
+{
+    if (!is_1d && isCN1)
+    {
+        mulSpectrums_processCols<T, conjB, inplaceA>(dataA, dataB, dataC, stepA, stepB, stepC, rows, cols);
+    }
+    mulSpectrums_processRows<T, conjB, inplaceA>(dataA, dataB, dataC, stepA, stepB, stepC, rows, cols, j0, j1, is_1d && isCN1);
+}
+template <typename T, bool conjB> static inline
+void mulSpectrums_Impl(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows, size_t cols, size_t j0, size_t j1, bool is_1d, bool isCN1)
+{
+    if (dataA == dataC)
+        mulSpectrums_Impl_<T, conjB, true>(dataA, dataB, dataC, stepA, stepB, stepC, rows, cols, j0, j1, is_1d, isCN1);
+    else
+        mulSpectrums_Impl_<T, conjB, false>(dataA, dataB, dataC, stepA, stepB, stepC, rows, cols, j0, j1, is_1d, isCN1);
+}
+
+} // namespace
+
 void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
+    CV_INSTRUMENT_REGION();
+
     CV_OCL_RUN(_dst.isUMat() && _srcA.dims() <= 2 && _srcB.dims() <= 2,
             ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
 
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
-    int rows = srcA.rows, cols = srcA.cols;
-    int j, k;
+    size_t rows = srcA.rows, cols = srcA.cols;
 
     CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
@@ -2961,149 +3544,42 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
     _dst.create( srcA.rows, srcA.cols, type );
     Mat dst = _dst.getMat();
 
-    bool is_1d = (flags & DFT_ROWS) || (rows == 1 || (cols == 1 &&
-             srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous()));
+    // correct inplace support
+    // Case 'dst.data == srcA.data' is handled by implementation,
+    // because it is used frequently (filter2D, matchTemplate)
+    if (dst.data == srcB.data)
+        srcB = srcB.clone(); // workaround for B only
+
+    bool is_1d = (flags & DFT_ROWS)
+        || (rows == 1)
+        || (cols == 1 && srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous());
 
     if( is_1d && !(flags & DFT_ROWS) )
         cols = cols + rows - 1, rows = 1;
 
-    int ncols = cols*cn;
-    int j0 = cn == 1;
-    int j1 = ncols - (cols % 2 == 0 && cn == 1);
+    bool isCN1 = cn == 1;
+    size_t j0 = isCN1 ? 1 : 0;
+    size_t j1 = cols*cn - (((cols & 1) == 0 && cn == 1) ? 1 : 0);
 
-    if( depth == CV_32F )
+    if (depth == CV_32F)
     {
         const float* dataA = srcA.ptr<float>();
         const float* dataB = srcB.ptr<float>();
         float* dataC = dst.ptr<float>();
-
-        size_t stepA = srcA.step/sizeof(dataA[0]);
-        size_t stepB = srcB.step/sizeof(dataB[0]);
-        size_t stepC = dst.step/sizeof(dataC[0]);
-
-        if( !is_1d && cn == 1 )
-        {
-            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
-            {
-                if( k == 1 )
-                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
-                dataC[0] = dataA[0]*dataB[0];
-                if( rows % 2 == 0 )
-                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA]*dataB[(rows-1)*stepB];
-                if( !conjB )
-                    for( j = 1; j <= rows - 2; j += 2 )
-                    {
-                        double re = (double)dataA[j*stepA]*dataB[j*stepB] -
-                                    (double)dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
-                        double im = (double)dataA[j*stepA]*dataB[(j+1)*stepB] +
-                                    (double)dataA[(j+1)*stepA]*dataB[j*stepB];
-                        dataC[j*stepC] = (float)re; dataC[(j+1)*stepC] = (float)im;
-                    }
-                else
-                    for( j = 1; j <= rows - 2; j += 2 )
-                    {
-                        double re = (double)dataA[j*stepA]*dataB[j*stepB] +
-                                    (double)dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
-                        double im = (double)dataA[(j+1)*stepA]*dataB[j*stepB] -
-                                    (double)dataA[j*stepA]*dataB[(j+1)*stepB];
-                        dataC[j*stepC] = (float)re; dataC[(j+1)*stepC] = (float)im;
-                    }
-                if( k == 1 )
-                    dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
-            }
-        }
-
-        for( ; rows--; dataA += stepA, dataB += stepB, dataC += stepC )
-        {
-            if( is_1d && cn == 1 )
-            {
-                dataC[0] = dataA[0]*dataB[0];
-                if( cols % 2 == 0 )
-                    dataC[j1] = dataA[j1]*dataB[j1];
-            }
-
-            if( !conjB )
-                for( j = j0; j < j1; j += 2 )
-                {
-                    double re = (double)dataA[j]*dataB[j] - (double)dataA[j+1]*dataB[j+1];
-                    double im = (double)dataA[j+1]*dataB[j] + (double)dataA[j]*dataB[j+1];
-                    dataC[j] = (float)re; dataC[j+1] = (float)im;
-                }
-            else
-                for( j = j0; j < j1; j += 2 )
-                {
-                    double re = (double)dataA[j]*dataB[j] + (double)dataA[j+1]*dataB[j+1];
-                    double im = (double)dataA[j+1]*dataB[j] - (double)dataA[j]*dataB[j+1];
-                    dataC[j] = (float)re; dataC[j+1] = (float)im;
-                }
-        }
+        if (!conjB)
+            mulSpectrums_Impl<float, false>(dataA, dataB, dataC, srcA.step, srcB.step, dst.step, rows, cols, j0, j1, is_1d, isCN1);
+        else
+            mulSpectrums_Impl<float, true>(dataA, dataB, dataC, srcA.step, srcB.step, dst.step, rows, cols, j0, j1, is_1d, isCN1);
     }
     else
     {
         const double* dataA = srcA.ptr<double>();
         const double* dataB = srcB.ptr<double>();
         double* dataC = dst.ptr<double>();
-
-        size_t stepA = srcA.step/sizeof(dataA[0]);
-        size_t stepB = srcB.step/sizeof(dataB[0]);
-        size_t stepC = dst.step/sizeof(dataC[0]);
-
-        if( !is_1d && cn == 1 )
-        {
-            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
-            {
-                if( k == 1 )
-                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
-                dataC[0] = dataA[0]*dataB[0];
-                if( rows % 2 == 0 )
-                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA]*dataB[(rows-1)*stepB];
-                if( !conjB )
-                    for( j = 1; j <= rows - 2; j += 2 )
-                    {
-                        double re = dataA[j*stepA]*dataB[j*stepB] -
-                                    dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
-                        double im = dataA[j*stepA]*dataB[(j+1)*stepB] +
-                                    dataA[(j+1)*stepA]*dataB[j*stepB];
-                        dataC[j*stepC] = re; dataC[(j+1)*stepC] = im;
-                    }
-                else
-                    for( j = 1; j <= rows - 2; j += 2 )
-                    {
-                        double re = dataA[j*stepA]*dataB[j*stepB] +
-                                    dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
-                        double im = dataA[(j+1)*stepA]*dataB[j*stepB] -
-                                    dataA[j*stepA]*dataB[(j+1)*stepB];
-                        dataC[j*stepC] = re; dataC[(j+1)*stepC] = im;
-                    }
-                if( k == 1 )
-                    dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
-            }
-        }
-
-        for( ; rows--; dataA += stepA, dataB += stepB, dataC += stepC )
-        {
-            if( is_1d && cn == 1 )
-            {
-                dataC[0] = dataA[0]*dataB[0];
-                if( cols % 2 == 0 )
-                    dataC[j1] = dataA[j1]*dataB[j1];
-            }
-
-            if( !conjB )
-                for( j = j0; j < j1; j += 2 )
-                {
-                    double re = dataA[j]*dataB[j] - dataA[j+1]*dataB[j+1];
-                    double im = dataA[j+1]*dataB[j] + dataA[j]*dataB[j+1];
-                    dataC[j] = re; dataC[j+1] = im;
-                }
-            else
-                for( j = j0; j < j1; j += 2 )
-                {
-                    double re = dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1];
-                    double im = dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1];
-                    dataC[j] = re; dataC[j+1] = im;
-                }
-        }
+        if (!conjB)
+            mulSpectrums_Impl<double, false>(dataA, dataB, dataC, srcA.step, srcB.step, dst.step, rows, cols, j0, j1, is_1d, isCN1);
+        else
+            mulSpectrums_Impl<double, true>(dataA, dataB, dataC, srcA.step, srcB.step, dst.step, rows, cols, j0, j1, is_1d, isCN1);
     }
 }
 
@@ -3119,11 +3595,12 @@ namespace cv
    http://www.ece.utexas.edu/~bevans/courses/ee381k/lectures/09_DCT/lecture9/:
 */
 template<typename T> static void
-DCT( const T* src, int src_step, T* dft_src, T* dft_dst, T* dst, int dst_step,
-     int n, int nf, int* factors, const int* itab, const Complex<T>* dft_wave,
-     const Complex<T>* dct_wave, const void* spec, Complex<T>* buf )
+DCT( const OcvDftOptions & c, const T* src, size_t src_step, T* dft_src, T* dft_dst, T* dst, size_t dst_step,
+     const Complex<T>* dct_wave )
 {
     static const T sin_45 = (T)0.70710678118654752440084436210485;
+
+    int n = c.n;
     int j, n2 = n >> 1;
 
     src_step /= sizeof(src[0]);
@@ -3142,8 +3619,7 @@ DCT( const T* src, int src_step, T* dft_src, T* dft_dst, T* dst, int dst_step,
         dft_src[n-j-1] = src[src_step];
     }
 
-    RealDFT( dft_src, dft_dst, n, nf, factors,
-             itab, dft_wave, n, spec, buf, 0, 1.0 );
+    RealDFT(c, dft_src, dft_dst);
     src = dft_dst;
 
     dst[0] = (T)(src[0]*dct_wave->re*sin_45);
@@ -3162,11 +3638,11 @@ DCT( const T* src, int src_step, T* dft_src, T* dft_dst, T* dst, int dst_step,
 
 
 template<typename T> static void
-IDCT( const T* src, int src_step, T* dft_src, T* dft_dst, T* dst, int dst_step,
-      int n, int nf, int* factors, const int* itab, const Complex<T>* dft_wave,
-      const Complex<T>* dct_wave, const void* spec, Complex<T>* buf )
+IDCT( const OcvDftOptions & c, const T* src, size_t src_step, T* dft_src, T* dft_dst, T* dst, size_t dst_step,
+      const Complex<T>* dct_wave)
 {
     static const T sin_45 = (T)0.70710678118654752440084436210485;
+    int n = c.n;
     int j, n2 = n >> 1;
 
     src_step /= sizeof(src[0]);
@@ -3191,8 +3667,7 @@ IDCT( const T* src, int src_step, T* dft_src, T* dft_dst, T* dst, int dst_step,
     }
 
     dft_src[n-1] = (T)(src[0]*2*dct_wave->re);
-    CCSIDFT( dft_src, dft_dst, n, nf, factors, itab,
-             dft_wave, n, spec, buf, 0, 1.0 );
+    CCSIDFT(c, dft_src, dft_dst);
 
     for( j = 0; j < n2; j++, dst += dst_step*2 )
     {
@@ -3281,76 +3756,141 @@ DCTInit( int n, int elem_size, void* _wave, int inv )
 }
 
 
-typedef void (*DCTFunc)(const void* src, int src_step, void* dft_src,
-                        void* dft_dst, void* dst, int dst_step, int n,
-                        int nf, int* factors, const int* itab, const void* dft_wave,
-                        const void* dct_wave, const void* spec, void* buf );
+typedef void (*DCTFunc)(const OcvDftOptions & c, const void* src, size_t src_step, void* dft_src,
+                        void* dft_dst, void* dst, size_t dst_step, const void* dct_wave);
 
-static void DCT_32f(const float* src, int src_step, float* dft_src, float* dft_dst,
-                    float* dst, int dst_step, int n, int nf, int* factors, const int* itab,
-                    const Complexf* dft_wave, const Complexf* dct_wave, const void* spec, Complexf* buf )
+static void DCT_32f(const OcvDftOptions & c, const float* src, size_t src_step, float* dft_src, float* dft_dst,
+                    float* dst, size_t dst_step, const Complexf* dct_wave)
 {
-    DCT(src, src_step, dft_src, dft_dst, dst, dst_step,
-        n, nf, factors, itab, dft_wave, dct_wave, spec, buf);
+    DCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
 }
 
-static void IDCT_32f(const float* src, int src_step, float* dft_src, float* dft_dst,
-                    float* dst, int dst_step, int n, int nf, int* factors, const int* itab,
-                    const Complexf* dft_wave, const Complexf* dct_wave, const void* spec, Complexf* buf )
+static void IDCT_32f(const OcvDftOptions & c, const float* src, size_t src_step, float* dft_src, float* dft_dst,
+                    float* dst, size_t dst_step, const Complexf* dct_wave)
 {
-    IDCT(src, src_step, dft_src, dft_dst, dst, dst_step,
-         n, nf, factors, itab, dft_wave, dct_wave, spec, buf);
+    IDCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
 }
 
-static void DCT_64f(const double* src, int src_step, double* dft_src, double* dft_dst,
-                    double* dst, int dst_step, int n, int nf, int* factors, const int* itab,
-                    const Complexd* dft_wave, const Complexd* dct_wave, const void* spec, Complexd* buf )
+static void DCT_64f(const OcvDftOptions & c, const double* src, size_t src_step, double* dft_src, double* dft_dst,
+                    double* dst, size_t dst_step, const Complexd* dct_wave)
 {
-    DCT(src, src_step, dft_src, dft_dst, dst, dst_step,
-        n, nf, factors, itab, dft_wave, dct_wave, spec, buf);
+    DCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
 }
 
-static void IDCT_64f(const double* src, int src_step, double* dft_src, double* dft_dst,
-                     double* dst, int dst_step, int n, int nf, int* factors, const int* itab,
-                     const Complexd* dft_wave, const Complexd* dct_wave, const void* spec, Complexd* buf )
+static void IDCT_64f(const OcvDftOptions & c, const double* src, size_t src_step, double* dft_src, double* dft_dst,
+                     double* dst, size_t dst_step, const Complexd* dct_wave)
 {
-    IDCT(src, src_step, dft_src, dft_dst, dst, dst_step,
-         n, nf, factors, itab, dft_wave, dct_wave, spec, buf);
+    IDCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
 }
 
 }
 
+#ifdef HAVE_IPP
 namespace cv
 {
-#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7
 
+#if IPP_VERSION_X100 >= 900
+typedef IppStatus (CV_STDCALL * ippiDCTFunc)(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, const void* pDCTSpec, Ipp8u* pBuffer);
+typedef IppStatus (CV_STDCALL * ippiDCTInit)(void* pDCTSpec, IppiSize roiSize, Ipp8u* pMemInit );
+typedef IppStatus (CV_STDCALL * ippiDCTGetSize)(IppiSize roiSize, int* pSizeSpec, int* pSizeInit, int* pSizeBuf);
+#elif IPP_VERSION_X100 >= 700
 typedef IppStatus (CV_STDCALL * ippiDCTFunc)(const Ipp32f*, int, Ipp32f*, int, const void*, Ipp8u*);
 typedef IppStatus (CV_STDCALL * ippiDCTInitAlloc)(void**, IppiSize, IppHintAlgorithm);
 typedef IppStatus (CV_STDCALL * ippiDCTFree)(void* pDCTSpec);
 typedef IppStatus (CV_STDCALL * ippiDCTGetBufSize)(const void*, int*);
+#endif
 
-template <typename Dct>
 class DctIPPLoop_Invoker : public ParallelLoopBody
 {
 public:
-
-    DctIPPLoop_Invoker(const Mat& _src, Mat& _dst, const Dct* _ippidct, bool _inv, bool *_ok) :
-        ParallelLoopBody(), src(&_src), dst(&_dst), ippidct(_ippidct), inv(_inv), ok(_ok)
+    DctIPPLoop_Invoker(const uchar * _src, size_t _src_step, uchar * _dst, size_t _dst_step, int _width, bool _inv, bool *_ok) :
+        ParallelLoopBody(), src(_src), src_step(_src_step), dst(_dst), dst_step(_dst_step), width(_width), inv(_inv), ok(_ok)
     {
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
+        if(*ok == false)
+            return;
+
+#if IPP_VERSION_X100 >= 900
+        IppiSize srcRoiSize = {width, 1};
+
+        int specSize    = 0;
+        int initSize    = 0;
+        int bufferSize  = 0;
+
+        Ipp8u* pDCTSpec = NULL;
+        Ipp8u* pBuffer  = NULL;
+        Ipp8u* pInitBuf = NULL;
+
+        #define IPP_RETURN              \
+            if(pDCTSpec)                \
+                ippFree(pDCTSpec);      \
+            if(pBuffer)                 \
+                ippFree(pBuffer);       \
+            if(pInitBuf)                \
+                ippFree(pInitBuf);      \
+            return;
+
+        ippiDCTFunc     ippiDCT_32f_C1R   = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
+        ippiDCTInit     ippDctInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
+        ippiDCTGetSize  ippDctGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
+
+        if(ippDctGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
+        {
+            *ok = false;
+            return;
+        }
+
+        pDCTSpec = (Ipp8u*)CV_IPP_MALLOC(specSize);
+        if(!pDCTSpec && specSize)
+        {
+            *ok = false;
+            return;
+        }
+
+        pBuffer  = (Ipp8u*)CV_IPP_MALLOC(bufferSize);
+        if(!pBuffer && bufferSize)
+        {
+            *ok = false;
+            IPP_RETURN
+        }
+        pInitBuf = (Ipp8u*)CV_IPP_MALLOC(initSize);
+        if(!pInitBuf && initSize)
+        {
+            *ok = false;
+            IPP_RETURN
+        }
+
+        if(ippDctInit(pDCTSpec, srcRoiSize, pInitBuf) < 0)
+        {
+            *ok = false;
+            IPP_RETURN
+        }
+
+        for(int i = range.start; i < range.end; ++i)
+        {
+            if(CV_INSTRUMENT_FUN_IPP(ippiDCT_32f_C1R, (float*)(src + src_step * i), static_cast<int>(src_step), (float*)(dst + dst_step * i), static_cast<int>(dst_step), pDCTSpec, pBuffer) < 0)
+            {
+                *ok = false;
+                IPP_RETURN
+            }
+        }
+        IPP_RETURN
+#undef IPP_RETURN
+#elif IPP_VERSION_X100 >= 700
         void* pDCTSpec;
         AutoBuffer<uchar> buf;
         uchar* pBuffer = 0;
         int bufSize=0;
 
-        IppiSize srcRoiSize = {src->cols, 1};
+        IppiSize srcRoiSize = {width, 1};
 
         CV_SUPPRESS_DEPRECATED_START
 
+        ippiDCTFunc ippDctFun           = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R             : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
         ippiDCTInitAlloc ippInitAlloc   = inv ? (ippiDCTInitAlloc)ippiDCTInvInitAlloc_32f   : (ippiDCTInitAlloc)ippiDCTFwdInitAlloc_32f;
         ippiDCTFree ippFree             = inv ? (ippiDCTFree)ippiDCTInvFree_32f             : (ippiDCTFree)ippiDCTFwdFree_32f;
         ippiDCTGetBufSize ippGetBufSize = inv ? (ippiDCTGetBufSize)ippiDCTInvGetBufSize_32f : (ippiDCTGetBufSize)ippiDCTFwdGetBufSize_32f;
@@ -3361,8 +3901,13 @@ public:
             pBuffer = (uchar*)buf;
 
             for( int i = range.start; i < range.end; ++i)
-                if(!(*ippidct)(src->ptr<float>(i), (int)src->step,dst->ptr<float>(i), (int)dst->step, pDCTSpec, (Ipp8u*)pBuffer))
+            {
+                if(ippDctFun((float*)(src + src_step * i), static_cast<int>(src_step), (float*)(dst + dst_step * i), static_cast<int>(dst_step), pDCTSpec, (Ipp8u*)pBuffer) < 0)
+                {
                     *ok = false;
+                    break;
+                }
+            }
         }
         else
             *ok = false;
@@ -3371,54 +3916,107 @@ public:
             ippFree(pDCTSpec);
 
         CV_SUPPRESS_DEPRECATED_END
+#else
+        CV_UNUSED(range);
+        *ok = false;
+#endif
     }
 
 private:
-    const Mat* src;
-    Mat* dst;
-    const Dct* ippidct;
+    const uchar * src;
+    size_t src_step;
+    uchar * dst;
+    size_t dst_step;
+    int width;
     bool inv;
     bool *ok;
 };
 
-template <typename Dct>
-bool DctIPPLoop(const Mat& src, Mat& dst, const Dct& ippidct, bool inv)
+static bool DctIPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv)
 {
     bool ok;
-    parallel_for_(Range(0, src.rows), DctIPPLoop_Invoker<Dct>(src, dst, &ippidct, inv, &ok), src.rows/(double)(1<<4) );
+    parallel_for_(Range(0, height), DctIPPLoop_Invoker(src, src_step, dst, dst_step, width, inv, &ok), height/(double)(1<<4) );
     return ok;
 }
 
-struct IPPDCTFunctor
+static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, bool row)
 {
-    IPPDCTFunctor(ippiDCTFunc _func) : func(_func){}
+    CV_INSTRUMENT_REGION_IPP();
 
-    bool operator()(const Ipp32f* src, int srcStep, Ipp32f* dst, int dstStep, const void* pDCTSpec, Ipp8u* pBuffer) const
-    {
-        return func ? func(src, srcStep, dst, dstStep, pDCTSpec, pBuffer) >= 0 : false;
-    }
-private:
-    ippiDCTFunc func;
-};
-
-static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
-{
-    ippiDCTFunc ippFunc = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R : (ippiDCTFunc)ippiDCTFwd_32f_C1R ;
-
-    if (row)
-        return(DctIPPLoop(src,dst,IPPDCTFunctor(ippFunc),inv));
+    if(row)
+        return DctIPPLoop(src, src_step, dst, dst_step, width, height, inv);
     else
     {
+#if IPP_VERSION_X100 >= 900
+        IppiSize srcRoiSize = {width, height};
+
+        int specSize    = 0;
+        int initSize    = 0;
+        int bufferSize  = 0;
+
+        Ipp8u* pDCTSpec = NULL;
+        Ipp8u* pBuffer  = NULL;
+        Ipp8u* pInitBuf = NULL;
+
+        #define IPP_RELEASE             \
+            if(pDCTSpec)                \
+                ippFree(pDCTSpec);      \
+            if(pBuffer)                 \
+                ippFree(pBuffer);       \
+            if(pInitBuf)                \
+                ippFree(pInitBuf);      \
+
+        ippiDCTFunc     ippiDCT_32f_C1R      = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
+        ippiDCTInit     ippDctInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
+        ippiDCTGetSize  ippDctGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
+
+        if(ippDctGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
+            return false;
+
+        pDCTSpec = (Ipp8u*)CV_IPP_MALLOC(specSize);
+        if(!pDCTSpec && specSize)
+            return false;
+
+        pBuffer  = (Ipp8u*)CV_IPP_MALLOC(bufferSize);
+        if(!pBuffer && bufferSize)
+        {
+            IPP_RELEASE
+            return false;
+        }
+        pInitBuf = (Ipp8u*)CV_IPP_MALLOC(initSize);
+        if(!pInitBuf && initSize)
+        {
+            IPP_RELEASE
+            return false;
+        }
+
+        if(ippDctInit(pDCTSpec, srcRoiSize, pInitBuf) < 0)
+        {
+            IPP_RELEASE
+            return false;
+        }
+
+        if(CV_INSTRUMENT_FUN_IPP(ippiDCT_32f_C1R, (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDCTSpec, pBuffer) < 0)
+        {
+            IPP_RELEASE
+            return false;
+        }
+
+        IPP_RELEASE
+        return true;
+#undef IPP_RELEASE
+#elif IPP_VERSION_X100 >= 700
         IppStatus status;
         void* pDCTSpec;
         AutoBuffer<uchar> buf;
         uchar* pBuffer = 0;
         int bufSize=0;
 
-        IppiSize srcRoiSize = {src.cols, src.rows};
+        IppiSize srcRoiSize = {width, height};
 
         CV_SUPPRESS_DEPRECATED_START
 
+        ippiDCTFunc ippDctFun           = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R             : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
         ippiDCTInitAlloc ippInitAlloc   = inv ? (ippiDCTInitAlloc)ippiDCTInvInitAlloc_32f   : (ippiDCTInitAlloc)ippiDCTFwdInitAlloc_32f;
         ippiDCTFree ippFree             = inv ? (ippiDCTFree)ippiDCTInvFree_32f             : (ippiDCTFree)ippiDCTFwdFree_32f;
         ippiDCTGetBufSize ippGetBufSize = inv ? (ippiDCTGetBufSize)ippiDCTInvGetBufSize_32f : (ippiDCTGetBufSize)ippiDCTFwdGetBufSize_32f;
@@ -3430,7 +4028,7 @@ static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
             buf.allocate( bufSize );
             pBuffer = (uchar*)buf;
 
-            status = ippFunc(src.ptr<float>(), (int)src.step, dst.ptr<float>(), (int)dst.step, pDCTSpec, (Ipp8u*)pBuffer);
+            status = ippDctFun((float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDCTSpec, (Ipp8u*)pBuffer);
         }
 
         if (pDCTSpec)
@@ -3439,165 +4037,231 @@ static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
         CV_SUPPRESS_DEPRECATED_END
 
         return status >= 0;
+#else
+        CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(inv); CV_UNUSED(row);
+        return false;
+#endif
+    }
+}
+}
+#endif
+
+namespace cv {
+
+class OcvDctImpl CV_FINAL : public hal::DCT2D
+{
+public:
+    OcvDftOptions opt;
+
+    int _factors[34];
+    AutoBuffer<uint> wave_buf;
+    AutoBuffer<int> itab_buf;
+
+    DCTFunc dct_func;
+    bool isRowTransform;
+    bool isInverse;
+    bool isContinuous;
+    int start_stage;
+    int end_stage;
+    int width;
+    int height;
+    int depth;
+
+    void init(int _width, int _height, int _depth, int flags)
+    {
+        width = _width;
+        height = _height;
+        depth = _depth;
+        isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
+        isRowTransform = (flags & CV_HAL_DFT_ROWS) != 0;
+        isContinuous = (flags & CV_HAL_DFT_IS_CONTINUOUS) != 0;
+        static DCTFunc dct_tbl[4] =
+        {
+            (DCTFunc)DCT_32f,
+            (DCTFunc)IDCT_32f,
+            (DCTFunc)DCT_64f,
+            (DCTFunc)IDCT_64f
+        };
+        dct_func = dct_tbl[(int)isInverse + (depth == CV_64F)*2];
+        opt.nf = 0;
+        opt.isComplex = false;
+        opt.isInverse = false;
+        opt.noPermute = false;
+        opt.scale = 1.;
+        opt.factors = _factors;
+
+        if (isRowTransform || height == 1 || (width == 1 && isContinuous))
+        {
+            start_stage = end_stage = 0;
+        }
+        else
+        {
+            start_stage = (width == 1);
+            end_stage = 1;
+        }
+    }
+    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step) CV_OVERRIDE
+    {
+        CV_IPP_RUN(IPP_VERSION_X100 >= 700 && depth == CV_32F, ippi_DCT_32f(src, src_step, dst, dst_step, width, height, isInverse, isRowTransform))
+
+        AutoBuffer<uchar> dct_wave;
+        AutoBuffer<uchar> src_buf, dst_buf;
+        uchar *src_dft_buf = 0, *dst_dft_buf = 0;
+        int prev_len = 0;
+        int elem_size = (depth == CV_32F) ? sizeof(float) : sizeof(double);
+        int complex_elem_size = elem_size*2;
+
+        for(int stage = start_stage ; stage <= end_stage; stage++ )
+        {
+            const uchar* sptr = src;
+            uchar* dptr = dst;
+            size_t sstep0, sstep1, dstep0, dstep1;
+            int len, count;
+
+            if( stage == 0 )
+            {
+                len = width;
+                count = height;
+                if( len == 1 && !isRowTransform )
+                {
+                    len = height;
+                    count = 1;
+                }
+                sstep0 = src_step;
+                dstep0 = dst_step;
+                sstep1 = dstep1 = elem_size;
+            }
+            else
+            {
+                len = height;
+                count = width;
+                sstep1 = src_step;
+                dstep1 = dst_step;
+                sstep0 = dstep0 = elem_size;
+            }
+
+            opt.n = len;
+            opt.tab_size = len;
+
+            if( len != prev_len )
+            {
+                if( len > 1 && (len & 1) )
+                    CV_Error( CV_StsNotImplemented, "Odd-size DCT\'s are not implemented" );
+
+                opt.nf = DFTFactorize( len, opt.factors );
+                bool inplace_transform = opt.factors[0] == opt.factors[opt.nf-1];
+
+                wave_buf.allocate(len*complex_elem_size);
+                opt.wave = wave_buf.data();
+                itab_buf.allocate(len);
+                opt.itab = itab_buf.data();
+                DFTInit( len, opt.nf, opt.factors, opt.itab, complex_elem_size, opt.wave, isInverse );
+
+                dct_wave.allocate((len/2 + 1)*complex_elem_size);
+                src_buf.allocate(len*elem_size);
+                src_dft_buf = src_buf.data();
+                if(!inplace_transform)
+                {
+                    dst_buf.allocate(len*elem_size);
+                    dst_dft_buf = dst_buf.data();
+                }
+                else
+                {
+                    dst_dft_buf = src_buf.data();
+                }
+                DCTInit( len, complex_elem_size, dct_wave.data(), isInverse);
+                prev_len = len;
+            }
+            // otherwise reuse the tables calculated on the previous stage
+            for(unsigned i = 0; i < static_cast<unsigned>(count); i++ )
+            {
+                dct_func( opt, sptr + i*sstep0, sstep1, src_dft_buf, dst_dft_buf,
+                          dptr + i*dstep0, dstep1, dct_wave.data());
+            }
+            src = dst;
+            src_step = dst_step;
+        }
+    }
+};
+
+struct ReplacementDCT2D : public hal::DCT2D
+{
+    cvhalDFT *context;
+    bool isInitialized;
+
+    ReplacementDCT2D() : context(0), isInitialized(false) {}
+    bool init(int width, int height, int depth, int flags)
+    {
+        int res = hal_ni_dctInit2D(&context, width, height, depth, flags);
+        isInitialized = (res == CV_HAL_ERROR_OK);
+        return isInitialized;
+    }
+    void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) CV_OVERRIDE
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dct2D, cv_hal_dct2D, context, src_data, src_step, dst_data, dst_step);
+        }
+    }
+    ~ReplacementDCT2D()
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dctFree2D, cv_hal_dctFree2D, context);
+        }
+    }
+};
+
+namespace hal {
+
+Ptr<DCT2D> DCT2D::create(int width, int height, int depth, int flags)
+{
+    {
+        ReplacementDCT2D *impl = new ReplacementDCT2D();
+        if (impl->init(width, height, depth, flags))
+        {
+            return Ptr<DCT2D>(impl);
+        }
+        delete impl;
+    }
+    {
+        OcvDctImpl *impl = new OcvDctImpl();
+        impl->init(width, height, depth, flags);
+        return Ptr<DCT2D>(impl);
     }
 }
 
-#endif
-}
+} // cv::hal::
+} // cv::
 
 void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 {
-    static DCTFunc dct_tbl[4] =
-    {
-        (DCTFunc)DCT_32f,
-        (DCTFunc)IDCT_32f,
-        (DCTFunc)DCT_64f,
-        (DCTFunc)IDCT_64f
-    };
+    CV_INSTRUMENT_REGION();
 
-    bool inv = (flags & DCT_INVERSE) != 0;
     Mat src0 = _src0.getMat(), src = src0;
     int type = src.type(), depth = src.depth();
-    void *spec = 0;
-
-    double scale = 1.;
-    int prev_len = 0, nf = 0, stage, end_stage;
-    uchar *src_dft_buf = 0, *dst_dft_buf = 0;
-    uchar *dft_wave = 0, *dct_wave = 0;
-    int* itab = 0;
-    uchar* ptr = 0;
-    int elem_size = (int)src.elemSize(), complex_elem_size = elem_size*2;
-    int factors[34], inplace_transform;
-    int i, len, count;
-    AutoBuffer<uchar> buf;
 
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
     _dst.create( src.rows, src.cols, type );
     Mat dst = _dst.getMat();
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    CV_IPP_CHECK()
-    {
-        bool row = (flags & DCT_ROWS) != 0;
-        if (src.type() == CV_32F)
-        {
-            if(ippi_DCT_32f(src,dst,inv, row))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    int f = 0;
+    if ((flags & DFT_ROWS) != 0)
+        f |= CV_HAL_DFT_ROWS;
+    if ((flags & DCT_INVERSE) != 0)
+        f |= CV_HAL_DFT_INVERSE;
+    if (src.isContinuous() && dst.isContinuous())
+        f |= CV_HAL_DFT_IS_CONTINUOUS;
 
-    DCTFunc dct_func = dct_tbl[(int)inv + (depth == CV_64F)*2];
-
-    if( (flags & DCT_ROWS) || src.rows == 1 ||
-        (src.cols == 1 && (src.isContinuous() && dst.isContinuous())))
-    {
-        stage = end_stage = 0;
-    }
-    else
-    {
-        stage = src.cols == 1;
-        end_stage = 1;
-    }
-
-    for( ; stage <= end_stage; stage++ )
-    {
-        const uchar* sptr = src.ptr();
-        uchar* dptr = dst.ptr();
-        size_t sstep0, sstep1, dstep0, dstep1;
-
-        if( stage == 0 )
-        {
-            len = src.cols;
-            count = src.rows;
-            if( len == 1 && !(flags & DCT_ROWS) )
-            {
-                len = src.rows;
-                count = 1;
-            }
-            sstep0 = src.step;
-            dstep0 = dst.step;
-            sstep1 = dstep1 = elem_size;
-        }
-        else
-        {
-            len = dst.rows;
-            count = dst.cols;
-            sstep1 = src.step;
-            dstep1 = dst.step;
-            sstep0 = dstep0 = elem_size;
-        }
-
-        if( len != prev_len )
-        {
-            int sz;
-
-            if( len > 1 && (len & 1) )
-                CV_Error( CV_StsNotImplemented, "Odd-size DCT\'s are not implemented" );
-
-            sz = len*elem_size;
-            sz += (len/2 + 1)*complex_elem_size;
-
-            spec = 0;
-            inplace_transform = 1;
-            {
-                sz += len*(complex_elem_size + sizeof(int)) + complex_elem_size;
-
-                nf = DFTFactorize( len, factors );
-                inplace_transform = factors[0] == factors[nf-1];
-
-                i = nf > 1 && (factors[0] & 1) == 0;
-                if( (factors[i] & 1) != 0 && factors[i] > 5 )
-                    sz += (factors[i]+1)*complex_elem_size;
-
-                if( !inplace_transform )
-                    sz += len*elem_size;
-            }
-
-            buf.allocate( sz + 32 );
-            ptr = (uchar*)buf;
-
-            if( !spec )
-            {
-                dft_wave = ptr;
-                ptr += len*complex_elem_size;
-                itab = (int*)ptr;
-                ptr = (uchar*)cvAlignPtr( ptr + len*sizeof(int), 16 );
-                DFTInit( len, nf, factors, itab, complex_elem_size, dft_wave, inv );
-            }
-
-            dct_wave = ptr;
-            ptr += (len/2 + 1)*complex_elem_size;
-            src_dft_buf = dst_dft_buf = ptr;
-            ptr += len*elem_size;
-            if( !inplace_transform )
-            {
-                dst_dft_buf = ptr;
-                ptr += len*elem_size;
-            }
-            DCTInit( len, complex_elem_size, dct_wave, inv );
-            if( !inv )
-                scale += scale;
-            prev_len = len;
-        }
-        // otherwise reuse the tables calculated on the previous stage
-        for( i = 0; i < count; i++ )
-        {
-            dct_func( sptr + i*sstep0, (int)sstep1, src_dft_buf, dst_dft_buf,
-                      dptr + i*dstep0, (int)dstep1, len, nf, factors,
-                      itab, dft_wave, dct_wave, spec, ptr );
-        }
-        src = dst;
-    }
+    Ptr<hal::DCT2D> c = hal::DCT2D::create(src.cols, src.rows, depth, f);
+    c->apply(src.data, src.step, dst.data, dst.step);
 }
 
 
 void cv::idct( InputArray src, OutputArray dst, int flags )
 {
+    CV_INSTRUMENT_REGION();
+
     dct( src, dst, flags | DCT_INVERSE );
 }
 

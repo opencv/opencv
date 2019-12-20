@@ -1,4 +1,4 @@
-#ifndef __OPENCV_CORE_OCL_RUNTIME_CLAMDFFT_HPP__
+#ifndef OPENCV_CORE_OCL_RUNTIME_CLAMDFFT_HPP
 #error "Invalid usage"
 #endif
 

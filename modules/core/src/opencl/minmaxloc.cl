@@ -13,6 +13,11 @@
 #endif
 #endif
 
+static inline int align(int pos)
+{
+    return (pos + (MINMAX_STRUCT_ALIGNMENT - 1)) & (~(MINMAX_STRUCT_ALIGNMENT - 1));
+}
+
 #ifdef DEPTH_0
 #define MIN_VAL 0
 #define MAX_VAL UCHAR_MAX
@@ -366,19 +371,23 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 #ifdef NEED_MINVAL
         *(__global dstT1 *)(dstptr + mad24(gid, (int)sizeof(dstT1), pos)) = localmem_min[0];
         pos = mad24(groupnum, (int)sizeof(dstT1), pos);
+        pos = align(pos);
 #endif
 #ifdef NEED_MAXVAL
         *(__global dstT1 *)(dstptr + mad24(gid, (int)sizeof(dstT1), pos)) = localmem_max[0];
         pos = mad24(groupnum, (int)sizeof(dstT1), pos);
+        pos = align(pos);
 #endif
 #ifdef NEED_MINLOC
         *(__global uint *)(dstptr + mad24(gid, (int)sizeof(uint), pos)) = localmem_minloc[0];
         pos = mad24(groupnum, (int)sizeof(uint), pos);
+        pos = align(pos);
 #endif
 #ifdef NEED_MAXLOC
         *(__global uint *)(dstptr + mad24(gid, (int)sizeof(uint), pos)) = localmem_maxloc[0];
 #ifdef OP_CALC2
         pos = mad24(groupnum, (int)sizeof(uint), pos);
+        pos = align(pos);
 #endif
 #endif
 #ifdef OP_CALC2

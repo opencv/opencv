@@ -46,7 +46,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 /////////////////////////////////////////////medianFilter//////////////////////////////////////////////////////////
@@ -67,7 +67,7 @@ PARAM_TEST_CASE(MedianFilter, MatDepth, Channels, int, bool)
         use_roi = GET_PARAM(3);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -106,6 +106,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, MedianFilter, Combine(
                                 Values(3, 5),
                                 Bool())
                            );
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

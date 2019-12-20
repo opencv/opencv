@@ -44,7 +44,7 @@
 extern "C" {
 #endif
 
-#if !defined(WIN32) || defined(__MINGW32__)
+#if !defined(_WIN32) || defined(__MINGW32__)
 // some versions of FFMPEG assume a C99 compiler, and don't define INT64_C
 #include <stdint.h>
 
@@ -60,24 +60,7 @@ extern "C" {
 #include <errno.h>
 #endif
 
-// if the header path is not specified explicitly, let's deduce it
-#if !defined HAVE_FFMPEG_AVCODEC_H && !defined HAVE_LIBAVCODEC_AVCODEC_H
-
-#if defined(HAVE_GENTOO_FFMPEG)
-  #define HAVE_LIBAVFORMAT_AVFORMAT_H 1
-#elif defined HAVE_FFMPEG
-  #define HAVE_FFMPEG_AVFORMAT_H 1
-#endif
-
-#if defined(HAVE_FFMPEG_AVFORMAT_H)
-  #include <ffmpeg/avformat.h>
-#endif
-
-#if defined(HAVE_LIBAVFORMAT_AVFORMAT_H) || defined(WIN32)
-  #include <libavformat/avformat.h>
-#endif
-
-#endif
+#include <libavformat/avformat.h>
 
 #ifdef __cplusplus
 }

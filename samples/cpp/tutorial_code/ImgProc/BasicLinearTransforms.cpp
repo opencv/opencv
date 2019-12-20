@@ -5,54 +5,70 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <iostream>
 
+// we're NOT "using namespace std;" here, to avoid collisions between the beta variable and std::beta in c++17
+using std::cin;
+using std::cout;
+using std::endl;
 using namespace cv;
-
-double alpha; /**< Simple contrast control */
-int beta;  /**< Simple brightness control */
 
 /**
  * @function main
  * @brief Main function
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
-   /// Read image given by user
-   Mat image = imread( argv[1] );
-   Mat new_image = Mat::zeros( image.size(), image.type() );
+    /// Read image given by user
+    //! [basic-linear-transform-load]
+    CommandLineParser parser( argc, argv, "{@input | lena.jpg | input image}" );
+    Mat image = imread( samples::findFile( parser.get<String>( "@input" ) ) );
+    if( image.empty() )
+    {
+      cout << "Could not open or find the image!\n" << endl;
+      cout << "Usage: " << argv[0] << " <Input image>" << endl;
+      return -1;
+    }
+    //! [basic-linear-transform-load]
 
-   /// Initialize values
-   std::cout<<" Basic Linear Transforms "<<std::endl;
-   std::cout<<"-------------------------"<<std::endl;
-   std::cout<<"* Enter the alpha value [1.0-3.0]: ";std::cin>>alpha;
-   std::cout<<"* Enter the beta value [0-100]: "; std::cin>>beta;
+    //! [basic-linear-transform-output]
+    Mat new_image = Mat::zeros( image.size(), image.type() );
+    //! [basic-linear-transform-output]
 
+    //! [basic-linear-transform-parameters]
+    double alpha = 1.0; /*< Simple contrast control */
+    int beta = 0;       /*< Simple brightness control */
 
-   /// Do the operation new_image(i,j) = alpha*image(i,j) + beta
-   /// Instead of these 'for' loops we could have used simply:
-   /// image.convertTo(new_image, -1, alpha, beta);
-   /// but we wanted to show you how to access the pixels :)
-   for( int y = 0; y < image.rows; y++ )
-      { for( int x = 0; x < image.cols; x++ )
-           { for( int c = 0; c < 3; c++ )
-                {
-          new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
-                }
-       }
-      }
+    /// Initialize values
+    cout << " Basic Linear Transforms " << endl;
+    cout << "-------------------------" << endl;
+    cout << "* Enter the alpha value [1.0-3.0]: "; cin >> alpha;
+    cout << "* Enter the beta value [0-100]: ";    cin >> beta;
+    //! [basic-linear-transform-parameters]
 
-   /// Create Windows
-   namedWindow("Original Image", 1);
-   namedWindow("New Image", 1);
+    /// Do the operation new_image(i,j) = alpha*image(i,j) + beta
+    /// Instead of these 'for' loops we could have used simply:
+    /// image.convertTo(new_image, -1, alpha, beta);
+    /// but we wanted to show you how to access the pixels :)
+    //! [basic-linear-transform-operation]
+    for( int y = 0; y < image.rows; y++ ) {
+        for( int x = 0; x < image.cols; x++ ) {
+            for( int c = 0; c < image.channels(); c++ ) {
+                new_image.at<Vec3b>(y,x)[c] =
+                  saturate_cast<uchar>( alpha*image.at<Vec3b>(y,x)[c] + beta );
+            }
+        }
+    }
+    //! [basic-linear-transform-operation]
 
-   /// Show stuff
-   imshow("Original Image", image);
-   imshow("New Image", new_image);
+    //! [basic-linear-transform-display]
+    /// Show stuff
+    imshow("Original Image", image);
+    imshow("New Image", new_image);
 
-
-   /// Wait until user press some key
-   waitKey();
-   return 0;
+    /// Wait until the user press a key
+    waitKey();
+    //! [basic-linear-transform-display]
+    return 0;
 }

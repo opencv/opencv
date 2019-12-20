@@ -1,4 +1,9 @@
-if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+ocv_cmake_hook(INIT_CPACK)
+if(NOT EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+  message(STATUS "CPack is not found. SKIP")
+  return()
+endif()
+
 set(CPACK_set_DESTDIR "on")
 
 if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
@@ -20,21 +25,27 @@ endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 
 #arch
 if(X86)
-  set(CPACK_DEBIAN_ARCHITECTURE "i386")
+  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "i386")
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "i686")
 elseif(X86_64)
-  set(CPACK_DEBIAN_ARCHITECTURE "amd64")
+  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
 elseif(ARM)
-  set(CPACK_DEBIAN_ARCHITECTURE "armhf")
+  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "armhf")
+elseif(AARCH64)
+  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
+  set(CPACK_RPM_PACKAGE_ARCHITECTURE "aarch64")
+elseif(PPC64LE)
+  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "ppc64el")
+  set(CPACK_RPM_PACKAGE_ARCHITECTURE "ppc64le")
 else()
-  set(CPACK_DEBIAN_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
+  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
   set(CPACK_RPM_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 
 if(CPACK_GENERATOR STREQUAL "DEB")
-  set(OPENCV_PACKAGE_ARCH_SUFFIX ${CPACK_DEBIAN_ARCHITECTURE})
+  set(OPENCV_PACKAGE_ARCH_SUFFIX ${CPACK_DEBIAN_PACKAGE_ARCHITECTURE})
 elseif(CPACK_GENERATOR STREQUAL "RPM")
   set(OPENCV_PACKAGE_ARCH_SUFFIX ${CPACK_RPM_PACKAGE_ARCHITECTURE})
 else()
@@ -78,7 +89,7 @@ set(CPACK_COMPONENT_TESTS_DEPENDS libs)
 
 if(HAVE_CUDA)
   string(REPLACE "." "-" cuda_version_suffix ${CUDA_VERSION})
-  if(${CUDA_VERSION} VERSION_LESS "6.5")
+  if(CUDA_VERSION VERSION_LESS "6.5")
     set(CPACK_DEB_libs_PACKAGE_DEPENDS "cuda-core-libs-${cuda_version_suffix}, cuda-extra-libs-${cuda_version_suffix}")
     set(CPACK_DEB_dev_PACKAGE_DEPENDS "cuda-headers-${cuda_version_suffix}")
   else()
@@ -88,13 +99,58 @@ if(HAVE_CUDA)
       set(CPACK_DEB_libs_PACKAGE_DEPENDS "${CPACK_DEB_libs_PACKAGE_DEPENDS}, cuda-cufft-${cuda_version_suffix}")
       set(CPACK_DEB_dev_PACKAGE_DEPENDS "${CPACK_DEB_dev_PACKAGE_DEPENDS}, cuda-cufft-dev-${cuda_version_suffix}")
     endif()
-    if(HAVE_HAVE_CUBLAS)
+    if(HAVE_CUBLAS)
       set(CPACK_DEB_libs_PACKAGE_DEPENDS "${CPACK_DEB_libs_PACKAGE_DEPENDS}, cuda-cublas-${cuda_version_suffix}")
       set(CPACK_DEB_dev_PACKAGE_DEPENDS "${CPACK_DEB_dev_PACKAGE_DEPENDS}, cuda-cublas-dev-${cuda_version_suffix}")
+    endif()
+    if(HAVE_CUDNN)
+      # TODO
+      #ex: libcudnn7_7.5.1.10-1+cuda10.1_amd64
+      #ex: libcudnn7-dev_7.5.1.10-1+cuda10.1_amd64
     endif()
   endif()
   set(CPACK_COMPONENT_dev_DEPENDS libs)
 endif()
+
+if(HAVE_TBB AND NOT BUILD_TBB)
+  if(CPACK_DEB_DEV_PACKAGE_DEPENDS)
+    set(CPACK_DEB_DEV_PACKAGE_DEPENDS "${CPACK_DEB_DEV_PACKAGE_DEPENDS}, libtbb-dev")
+  else()
+    set(CPACK_DEB_DEV_PACKAGE_DEPENDS "libtbb-dev")
+  endif()
+endif()
+
+set(STD_OPENCV_LIBS opencv-data)
+set(STD_OPENCV_DEV libopencv-dev)
+
+foreach(module calib3d core cudaarithm cudabgsegm cudacodec cudafeatures2d cudafilters
+               cudaimgproc cudalegacy cudaobjdetect cudaoptflow cudastereo cudawarping
+               cudev features2d flann hal highgui imgcodecs imgproc ml objdetect ocl
+               photo shape stitching superres ts video videoio videostab viz)
+  if(HAVE_opencv_${module})
+    list(APPEND STD_OPENCV_LIBS "libopencv-${module}4.0")
+    list(APPEND STD_OPENCV_DEV "libopencv-${module}-dev")
+  endif()
+endforeach()
+
+string(REPLACE ";" ", " CPACK_COMPONENT_LIBS_CONFLICTS "${STD_OPENCV_LIBS}")
+string(REPLACE ";" ", " CPACK_COMPONENT_LIBS_PROVIDES "${STD_OPENCV_LIBS}")
+string(REPLACE ";" ", " CPACK_COMPONENT_LIBS_REPLACES "${STD_OPENCV_LIBS}")
+
+string(REPLACE ";" ", " CPACK_COMPONENT_DEV_CONFLICTS "${STD_OPENCV_DEV}")
+string(REPLACE ";" ", " CPACK_COMPONENT_DEV_PROVIDES "${STD_OPENCV_DEV}")
+string(REPLACE ";" ", " CPACK_COMPONENT_DEV_REPLACES "${STD_OPENCV_DEV}")
+
+set(CPACK_COMPONENT_PYTHON_CONFLICTS python-opencv)
+set(CPACK_COMPONENT_PYTHON_PROVIDES python-opencv)
+set(CPACK_COMPONENT_PYTHON_REPLACES python-opencv)
+
+set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv4.0-java, libopencv4.0-jni")
+set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv4.0-java, libopencv4.0-jni")
+set(CPACK_COMPONENT_JAVA_REPLACES "libopencv4.0-java, libopencv4.0-jni")
+
+set(CPACK_COMPONENT_DOCS_CONFLICTS opencv-doc)
+set(CPACK_COMPONENT_SAMPLES_CONFLICTS opencv-doc)
 
 if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
   set(CPACK_COMPONENT_LIBS_DESCRIPTION "Open Computer Vision Library")
@@ -119,6 +175,6 @@ if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
   set(CPACK_DEBIAN_COMPONENT_TESTS_NAME "lib${CMAKE_PROJECT_NAME}-tests")
 endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 
+ocv_cmake_hook(PRE_CPACK)
 include(CPack)
-
-ENDif(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+ocv_cmake_hook(POST_CPACK)

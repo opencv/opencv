@@ -49,7 +49,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// gemm ////////////////////////
@@ -79,6 +79,6 @@ OCL_PERF_TEST_P(GemmFixture, Gemm, ::testing::Combine(
     SANITY_CHECK(dst, 0.01);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

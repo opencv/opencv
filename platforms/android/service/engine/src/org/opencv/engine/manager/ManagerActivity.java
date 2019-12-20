@@ -44,7 +44,7 @@ public class ManagerActivity extends Activity {
             public void onClick(View v) {
                 if (!mMarket.InstallAppFromMarket(packageName)) {
                     Toast toast = Toast.makeText(getApplicationContext(),
-                            "Google Play is not avaliable", Toast.LENGTH_SHORT);
+                            "Google Play is not available", Toast.LENGTH_SHORT);
                     toast.show();
                 }
             }
@@ -70,7 +70,7 @@ public class ManagerActivity extends Activity {
         if (!bindService(new Intent(this, c),
                 new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE)) {
             Log.e(TAG, "Failed to bind to service:" + c.getName());
-            mVersionText.setText("not avaliable");
+            mVersionText.setText("not available");
         } else {
             Log.d(TAG, "Successfully bound to service:" + c.getName());
             mVersionText.setText("available");

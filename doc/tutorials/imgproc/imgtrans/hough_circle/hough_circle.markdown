@@ -1,12 +1,15 @@
 Hough Circle Transform {#tutorial_hough_circle}
 ======================
 
+@prev_tutorial{tutorial_hough_lines}
+@next_tutorial{tutorial_remap}
+
 Goal
 ----
 
 In this tutorial you will learn how to:
 
--   Use the OpenCV function @ref cv::HoughCircles to detect circles in an image.
+-   Use the OpenCV function **HoughCircles()** to detect circles in an image.
 
 Theory
 ------
@@ -31,84 +34,142 @@ Theory
     the best radius for each candidate center. For more details, please check the book *Learning
     OpenCV* or your favorite Computer Vision bibliography
 
+####  What does this program do?
+-   Loads an image and blur it to reduce the noise
+-   Applies the *Hough Circle Transform* to the blurred image .
+-   Display the detected circle in a window.
+
 Code
 ----
 
--#  **What does this program do?**
-    -   Loads an image and blur it to reduce the noise
-    -   Applies the *Hough Circle Transform* to the blurred image .
-    -   Display the detected circle in a window.
+@add_toggle_cpp
+The sample code that we will explain can be downloaded from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp).
+A slightly fancier version (which shows trackbars for changing the threshold values) can be found
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp).
+@include samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp
+@end_toggle
 
--#  The sample code that we will explain can be downloaded from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/houghcircles.cpp).
-    A slightly fancier version (which shows trackbars for
-    changing the threshold values) can be found [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp).
-    @include samples/cpp/houghcircles.cpp
+@add_toggle_java
+The sample code that we will explain can be downloaded from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java).
+@include samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java
+@end_toggle
+
+@add_toggle_python
+The sample code that we will explain can be downloaded from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py).
+@include samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Load an image
-    @code{.cpp}
-    src = imread( argv[1], 1 );
+The image we used can be found [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/smarties.png)
 
-    if( !src.data )
-      { return -1; }
-    @endcode
--#  Convert it to grayscale:
-    @code{.cpp}
-    cvtColor( src, src_gray, COLOR_BGR2GRAY );
-    @endcode
--#  Apply a Gaussian blur to reduce noise and avoid false circle detection:
-    @code{.cpp}
-    GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );
-    @endcode
--#  Proceed to apply Hough Circle Transform:
-    @code{.cpp}
-    vector<Vec3f> circles;
+####  Load an image:
 
-    HoughCircles( src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
-    @endcode
-    with the arguments:
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp load
+@end_toggle
 
-    -   *src_gray*: Input image (grayscale).
+@add_toggle_java
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py load
+@end_toggle
+
+@add_toggle_python
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java load
+@end_toggle
+
+####  Convert it to grayscale:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp convert_to_gray
+@end_toggle
+
+@add_toggle_java
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py convert_to_gray
+@end_toggle
+
+@add_toggle_python
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java convert_to_gray
+@end_toggle
+
+#### Apply a Median blur to reduce noise and avoid false circle detection:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp reduce_noise
+@end_toggle
+
+@add_toggle_java
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py reduce_noise
+@end_toggle
+
+@add_toggle_python
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java reduce_noise
+@end_toggle
+
+#### Proceed to apply Hough Circle Transform:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp houghcircles
+@end_toggle
+
+@add_toggle_java
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py houghcircles
+@end_toggle
+
+@add_toggle_python
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java houghcircles
+@end_toggle
+
+-   with the arguments:
+
+    -   *gray*: Input image (grayscale).
     -   *circles*: A vector that stores sets of 3 values: \f$x_{c}, y_{c}, r\f$ for each detected
         circle.
     -   *HOUGH_GRADIENT*: Define the detection method. Currently this is the only one available in
         OpenCV.
     -   *dp = 1*: The inverse ratio of resolution.
-    -   *min_dist = src_gray.rows/8*: Minimum distance between detected centers.
+    -   *min_dist = gray.rows/16*: Minimum distance between detected centers.
     -   *param_1 = 200*: Upper threshold for the internal Canny edge detector.
     -   *param_2* = 100\*: Threshold for center detection.
-    -   *min_radius = 0*: Minimum radio to be detected. If unknown, put zero as default.
+    -   *min_radius = 0*: Minimum radius to be detected. If unknown, put zero as default.
     -   *max_radius = 0*: Maximum radius to be detected. If unknown, put zero as default.
 
--#  Draw the detected circles:
-    @code{.cpp}
-    for( size_t i = 0; i < circles.size(); i++ )
-    {
-       Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-       int radius = cvRound(circles[i][2]);
-       // circle center
-       circle( src, center, 3, Scalar(0,255,0), -1, 8, 0 );
-       // circle outline
-       circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
-     }
-    @endcode
-    You can see that we will draw the circle(s) on red and the center(s) with a small green dot
+####  Draw the detected circles:
 
--#  Display the detected circle(s):
-    @code{.cpp}
-    namedWindow( "Hough Circle Transform Demo", WINDOW_AUTOSIZE );
-    imshow( "Hough Circle Transform Demo", src );
-    @endcode
--#  Wait for the user to exit the program
-    @code{.cpp}
-    waitKey(0);
-    @endcode
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp draw
+@end_toggle
+
+@add_toggle_java
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py draw
+@end_toggle
+
+@add_toggle_python
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java draw
+@end_toggle
+
+You can see that we will draw the circle(s) on red and the center(s) with a small green dot
+
+####  Display the detected circle(s) and wait for the user to exit the program:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp display
+@end_toggle
+
+@add_toggle_java
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py display
+@end_toggle
+
+@add_toggle_python
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java display
+@end_toggle
 
 Result
 ------
 
 The result of running the code above with a test image is shown below:
 
-![](images/Hough_Circle_Tutorial_Result.jpg)
+![](images/Hough_Circle_Tutorial_Result.png)

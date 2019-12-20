@@ -148,6 +148,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
 
     if (src_y >= 2 && src_y < src_rows - 4)
     {
+#undef EXTRAPOLATE_
 #define EXTRAPOLATE_(val, maxVal)   val
 #if kercn == 1
         col = EXTRAPOLATE(x, src_cols);
@@ -180,6 +181,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     }
     else // need extrapolate y
     {
+#undef EXTRAPOLATE_
 #define EXTRAPOLATE_(val, maxVal)   EXTRAPOLATE(val, maxVal)
 #if kercn == 1
         col = EXTRAPOLATE(x, src_cols);

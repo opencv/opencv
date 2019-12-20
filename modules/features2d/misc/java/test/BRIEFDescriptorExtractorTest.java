@@ -1,20 +1,19 @@
 package org.opencv.test.features2d;
 
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.features2d.Feature2D;
 
 public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
-    DescriptorExtractor extractor;
+    Feature2D extractor;
     int matSize;
 
     private Mat getTestImg() {
@@ -28,7 +27,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        extractor = DescriptorExtractor.create(DescriptorExtractor.BRIEF);
+        extractor = createClassInstance(XFEATURES2D+"BriefDescriptorExtractor", DEFAULT_FACTORY, null, null);
         matSize = 100;
     }
 
@@ -69,12 +68,13 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testEmpty() {
-        assertFalse(extractor.empty());
+//        assertFalse(extractor.empty());
+        fail("Not yet implemented"); // BRIEF does not override empty() method
     }
 
     public void testRead() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\ndescriptorSize: 64\n");
+        writeFile(filename, "%YAML:1.0\n---\ndescriptorSize: 64\n");
 
         extractor.read(filename);
 
@@ -95,7 +95,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "%YAML:1.0\ndescriptorSize: 32\n";
+        String truth = "%YAML:1.0\n---\ndescriptorSize: 32\n";
         assertEquals(truth, readFile(filename));
     }
 

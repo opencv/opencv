@@ -14,3 +14,7 @@ denoising etc.
     Do you have a old
     degraded photo with many black spots and strokes on it? Take it. Let's try to restore them with a
     technique called image inpainting.
+
+-   @subpage tutorial_py_hdr
+
+    Learn how to merge exposure sequence and process high dynamic range images.

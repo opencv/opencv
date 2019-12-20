@@ -3,7 +3,6 @@ package org.opencv.test.features2d;
 import java.util.Arrays;
 import java.util.List;
 
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDMatch;
@@ -11,12 +10,12 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.DMatch;
-import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
-import org.opencv.features2d.FeatureDetector;
+import org.opencv.features2d.FastFeatureDetector;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.features2d.Feature2D;
 
 public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
 
@@ -46,8 +45,8 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
         MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat descriptors = new Mat();
 
-        FeatureDetector detector = FeatureDetector.create(FeatureDetector.FAST);
-        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.BRIEF);
+        Feature2D detector = FastFeatureDetector.create();
+        Feature2D extractor = createClassInstance(XFEATURES2D+"BriefDescriptorExtractor", DEFAULT_FACTORY, null, null);
 
         detector.detect(img, keypoints);
         extractor.compute(img, keypoints, descriptors);
@@ -236,7 +235,7 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
 
     public void testRead() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\n");
+        writeFile(filename, "%YAML:1.0\n---\n");
 
         matcher.read(filename);
         assertTrue(true);// BruteforceMatcher has no settings
@@ -251,7 +250,7 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
 
         matcher.write(filename);
 
-        String truth = "%YAML:1.0\n";
+        String truth = "%YAML:1.0\n---\n";
         assertEquals(truth, readFile(filename));
     }
 

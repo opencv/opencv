@@ -41,8 +41,11 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <opencv2/ts/cuda_test.hpp>
+#include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 #include "../src/fisheye.hpp"
+#include "opencv2/videoio.hpp"
+
+namespace opencv_test { namespace {
 
 class fisheyeTest : public ::testing::Test {
 
@@ -60,7 +63,7 @@ protected:
 
 protected:
     std::string combine(const std::string& _item1, const std::string& _item2);
-    cv::Mat mergeRectification(const cv::Mat& l, const cv::Mat& r);
+    static void merge4(const cv::Mat& tl, const cv::Mat& tr, const cv::Mat& bl, const cv::Mat& br, cv::Mat& merged);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,15 +103,15 @@ TEST_F(fisheyeTest, projectPoints)
 
 TEST_F(fisheyeTest, DISABLED_undistortImage)
 {
-    cv::Matx33d K = this->K;
-    cv::Mat D = cv::Mat(this->D);
+    cv::Matx33d theK = this->K;
+    cv::Mat theD = cv::Mat(this->D);
     std::string file = combine(datasets_repository_path, "/calib-3_stereo_from_JY/left/stereo_pair_014.jpg");
-    cv::Matx33d newK = K;
+    cv::Matx33d newK = theK;
     cv::Mat distorted = cv::imread(file), undistorted;
     {
         newK(0, 0) = 100;
         newK(1, 1) = 100;
-        cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
+        cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "new_f_100.png"));
         if (correct.empty())
             CV_Assert(cv::imwrite(combine(datasets_repository_path, "new_f_100.png"), undistorted));
@@ -117,8 +120,8 @@ TEST_F(fisheyeTest, DISABLED_undistortImage)
     }
     {
         double balance = 1.0;
-        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, distorted.size(), cv::noArray(), newK, balance);
-        cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
+        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(theK, theD, distorted.size(), cv::noArray(), newK, balance);
+        cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_1.0.png"));
         if (correct.empty())
             CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_1.0.png"), undistorted));
@@ -128,8 +131,8 @@ TEST_F(fisheyeTest, DISABLED_undistortImage)
 
     {
         double balance = 0.0;
-        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, distorted.size(), cv::noArray(), newK, balance);
-        cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
+        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(theK, theD, distorted.size(), cv::noArray(), newK, balance);
+        cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_0.0.png"));
         if (correct.empty())
             CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_0.0.png"), undistorted));
@@ -142,7 +145,7 @@ TEST_F(fisheyeTest, jacobians)
 {
     int n = 10;
     cv::Mat X(1, n, CV_64FC3);
-    cv::Mat om(3, 1, CV_64F), T(3, 1, CV_64F);
+    cv::Mat om(3, 1, CV_64F), theT(3, 1, CV_64F);
     cv::Mat f(2, 1, CV_64F), c(2, 1, CV_64F);
     cv::Mat k(4, 1, CV_64F);
     double alpha;
@@ -155,8 +158,8 @@ TEST_F(fisheyeTest, jacobians)
     r.fill(om, cv::RNG::NORMAL, 0, 1);
     om = cv::abs(om);
 
-    r.fill(T, cv::RNG::NORMAL, 0, 1);
-    T = cv::abs(T); T.at<double>(2) = 4; T *= 10;
+    r.fill(theT, cv::RNG::NORMAL, 0, 1);
+    theT = cv::abs(theT); theT.at<double>(2) = 4; theT *= 10;
 
     r.fill(f, cv::RNG::NORMAL, 0, 1);
     f = cv::abs(f) * 1000;
@@ -170,19 +173,19 @@ TEST_F(fisheyeTest, jacobians)
     alpha = 0.01*r.gaussian(1);
 
     cv::Mat x1, x2, xpred;
-    cv::Matx33d K(f.at<double>(0), alpha * f.at<double>(0), c.at<double>(0),
+    cv::Matx33d theK(f.at<double>(0), alpha * f.at<double>(0), c.at<double>(0),
                      0,            f.at<double>(1), c.at<double>(1),
                      0,            0,    1);
 
     cv::Mat jacobians;
-    cv::fisheye::projectPoints(X, x1, om, T, K, k, alpha, jacobians);
+    cv::fisheye::projectPoints(X, x1, om, theT, theK, k, alpha, jacobians);
 
     //test on T:
     cv::Mat dT(3, 1, CV_64FC1);
     r.fill(dT, cv::RNG::NORMAL, 0, 1);
-    dT *= 1e-9*cv::norm(T);
-    cv::Mat T2 = T + dT;
-    cv::fisheye::projectPoints(X, x2, om, T2, K, k, alpha, cv::noArray());
+    dT *= 1e-9*cv::norm(theT);
+    cv::Mat T2 = theT + dT;
+    cv::fisheye::projectPoints(X, x2, om, T2, theK, k, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(11,14) * dT).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -191,7 +194,7 @@ TEST_F(fisheyeTest, jacobians)
     r.fill(dom, cv::RNG::NORMAL, 0, 1);
     dom *= 1e-9*cv::norm(om);
     cv::Mat om2 = om + dom;
-    cv::fisheye::projectPoints(X, x2, om2, T, K, k, alpha, cv::noArray());
+    cv::fisheye::projectPoints(X, x2, om2, theT, theK, k, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(8,11) * dom).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -199,8 +202,8 @@ TEST_F(fisheyeTest, jacobians)
     cv::Mat df(2, 1, CV_64FC1);
     r.fill(df, cv::RNG::NORMAL, 0, 1);
     df *= 1e-9*cv::norm(f);
-    cv::Matx33d K2 = K + cv::Matx33d(df.at<double>(0), df.at<double>(0) * alpha, 0, 0, df.at<double>(1), 0, 0, 0, 0);
-    cv::fisheye::projectPoints(X, x2, om, T, K2, k, alpha, cv::noArray());
+    cv::Matx33d K2 = theK + cv::Matx33d(df.at<double>(0), df.at<double>(0) * alpha, 0, 0, df.at<double>(1), 0, 0, 0, 0);
+    cv::fisheye::projectPoints(X, x2, om, theT, K2, k, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(0,2) * df).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -208,8 +211,8 @@ TEST_F(fisheyeTest, jacobians)
     cv::Mat dc(2, 1, CV_64FC1);
     r.fill(dc, cv::RNG::NORMAL, 0, 1);
     dc *= 1e-9*cv::norm(c);
-    K2 = K + cv::Matx33d(0, 0, dc.at<double>(0), 0, 0, dc.at<double>(1), 0, 0, 0);
-    cv::fisheye::projectPoints(X, x2, om, T, K2, k, alpha, cv::noArray());
+    K2 = theK + cv::Matx33d(0, 0, dc.at<double>(0), 0, 0, dc.at<double>(1), 0, 0, 0);
+    cv::fisheye::projectPoints(X, x2, om, theT, K2, k, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(2,4) * dc).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -218,7 +221,7 @@ TEST_F(fisheyeTest, jacobians)
     r.fill(dk, cv::RNG::NORMAL, 0, 1);
     dk *= 1e-9*cv::norm(k);
     cv::Mat k2 = k + dk;
-    cv::fisheye::projectPoints(X, x2, om, T, K, k2, alpha, cv::noArray());
+    cv::fisheye::projectPoints(X, x2, om, theT, theK, k2, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(4,8) * dk).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -227,8 +230,8 @@ TEST_F(fisheyeTest, jacobians)
     r.fill(dalpha, cv::RNG::NORMAL, 0, 1);
     dalpha *= 1e-9*cv::norm(f);
     double alpha2 = alpha + dalpha.at<double>(0);
-    K2 = K + cv::Matx33d(0, f.at<double>(0) * dalpha.at<double>(0), 0, 0, 0, 0, 0, 0, 0);
-    cv::fisheye::projectPoints(X, x2, om, T, K, k, alpha2, cv::noArray());
+    K2 = theK + cv::Matx33d(0, f.at<double>(0) * dalpha.at<double>(0), 0, 0, 0, 0, 0, 0, 0);
+    cv::fisheye::projectPoints(X, x2, om, theT, theK, k, alpha2, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.col(14) * dalpha).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 }
@@ -244,13 +247,13 @@ TEST_F(fisheyeTest, Calibration)
     cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
     CV_Assert(fs_left.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_left[cv::format("image_%d", i )] >> imagePoints[i];
+        fs_left[cv::format("image_%d", i )] >> imagePoints[i];
     fs_left.release();
 
     cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
     CV_Assert(fs_object.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
 
     int flag = 0;
@@ -258,14 +261,14 @@ TEST_F(fisheyeTest, Calibration)
     flag |= cv::fisheye::CALIB_CHECK_COND;
     flag |= cv::fisheye::CALIB_FIX_SKEW;
 
-    cv::Matx33d K;
-    cv::Vec4d D;
+    cv::Matx33d theK;
+    cv::Vec4d theD;
 
-    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, K, D,
+    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
                            cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 
-    EXPECT_MAT_NEAR(K, this->K, 1e-10);
-    EXPECT_MAT_NEAR(D, this->D, 1e-10);
+    EXPECT_MAT_NEAR(theK, this->K, 1e-10);
+    EXPECT_MAT_NEAR(theD, this->D, 1e-10);
 }
 
 TEST_F(fisheyeTest, Homography)
@@ -279,13 +282,13 @@ TEST_F(fisheyeTest, Homography)
     cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
     CV_Assert(fs_left.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_left[cv::format("image_%d", i )] >> imagePoints[i];
+        fs_left[cv::format("image_%d", i )] >> imagePoints[i];
     fs_left.release();
 
     cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
     CV_Assert(fs_object.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
 
     cv::internal::IntrinsicParams param;
@@ -302,15 +305,15 @@ TEST_F(fisheyeTest, Homography)
     int Np = imagePointsNormalized.cols;
     cv::calcCovarMatrix(_objectPoints, covObjectPoints, objectPointsMean, cv::COVAR_NORMAL | cv::COVAR_COLS);
     cv::SVD svd(covObjectPoints);
-    cv::Mat R(svd.vt);
+    cv::Mat theR(svd.vt);
 
-    if (cv::norm(R(cv::Rect(2, 0, 1, 2))) < 1e-6)
-        R = cv::Mat::eye(3,3, CV_64FC1);
-    if (cv::determinant(R) < 0)
-        R = -R;
+    if (cv::norm(theR(cv::Rect(2, 0, 1, 2))) < 1e-6)
+        theR = cv::Mat::eye(3,3, CV_64FC1);
+    if (cv::determinant(theR) < 0)
+        theR = -theR;
 
-    cv::Mat T = -R * objectPointsMean;
-    cv::Mat X_new = R * _objectPoints + T * cv::Mat::ones(1, Np, CV_64FC1);
+    cv::Mat theT = -theR * objectPointsMean;
+    cv::Mat X_new = theR * _objectPoints + theT * cv::Mat::ones(1, Np, CV_64FC1);
     cv::Mat H = cv::internal::ComputeHomography(imagePointsNormalized, X_new.rowRange(0, 2));
 
     cv::Mat M = cv::Mat::ones(3, X_new.cols, CV_64FC1);
@@ -329,7 +332,7 @@ TEST_F(fisheyeTest, Homography)
     EXPECT_MAT_NEAR(std_err, correct_std_err, 1e-12);
 }
 
-TEST_F(fisheyeTest, EtimateUncertainties)
+TEST_F(fisheyeTest, EstimateUncertainties)
 {
     const int n_images = 34;
 
@@ -340,13 +343,13 @@ TEST_F(fisheyeTest, EtimateUncertainties)
     cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
     CV_Assert(fs_left.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_left[cv::format("image_%d", i )] >> imagePoints[i];
+        fs_left[cv::format("image_%d", i )] >> imagePoints[i];
     fs_left.release();
 
     cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
     CV_Assert(fs_object.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
 
     int flag = 0;
@@ -354,20 +357,20 @@ TEST_F(fisheyeTest, EtimateUncertainties)
     flag |= cv::fisheye::CALIB_CHECK_COND;
     flag |= cv::fisheye::CALIB_FIX_SKEW;
 
-    cv::Matx33d K;
-    cv::Vec4d D;
+    cv::Matx33d theK;
+    cv::Vec4d theD;
     std::vector<cv::Vec3d> rvec;
     std::vector<cv::Vec3d> tvec;
 
-    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, K, D,
+    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
                            rvec, tvec, flag, cv::TermCriteria(3, 20, 1e-6));
 
     cv::internal::IntrinsicParams param, errors;
     cv::Vec2d err_std;
     double thresh_cond = 1e6;
     int check_cond = 1;
-    param.Init(cv::Vec2d(K(0,0), K(1,1)), cv::Vec2d(K(0,2), K(1, 2)), D);
-    param.isEstimate = std::vector<int>(9, 1);
+    param.Init(cv::Vec2d(theK(0,0), theK(1,1)), cv::Vec2d(theK(0,2), theK(1, 2)), theD);
+    param.isEstimate = std::vector<uchar>(9, 1);
     param.isEstimate[4] = 0;
 
     errors.isEstimate = param.isEstimate;
@@ -385,12 +388,7 @@ TEST_F(fisheyeTest, EtimateUncertainties)
     CV_Assert(errors.alpha == 0);
 }
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-// not passing accuracy constrains
-TEST_F(fisheyeTest, DISABLED_rectify)
-#else
-TEST_F(fisheyeTest, rectify)
-#endif
+TEST_F(fisheyeTest, stereoRectify)
 {
     const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
 
@@ -398,28 +396,73 @@ TEST_F(fisheyeTest, rectify)
     cv::Matx33d K1 = this->K, K2 = K1;
     cv::Mat D1 = cv::Mat(this->D), D2 = D1;
 
-    cv::Vec3d T = this->T;
-    cv::Matx33d R = this->R;
+    cv::Vec3d theT = this->T;
+    cv::Matx33d theR = this->R;
 
     double balance = 0.0, fov_scale = 1.1;
     cv::Mat R1, R2, P1, P2, Q;
-    cv::fisheye::stereoRectify(K1, D1, K2, D2, calibration_size, R, T, R1, R2, P1, P2, Q,
+    cv::fisheye::stereoRectify(K1, D1, K2, D2, calibration_size, theR, theT, R1, R2, P1, P2, Q,
                       cv::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
 
+    // Collected with these CMake flags: -DWITH_IPP=OFF -DCV_ENABLE_INTRINSICS=OFF -DCV_DISABLE_OPTIMIZATION=ON -DCMAKE_BUILD_TYPE=Debug
+    cv::Matx33d R1_ref(
+        0.9992853269091279, 0.03779164101000276, -0.0007920188690205426,
+        -0.03778569762983931, 0.9992646472015868, 0.006511981857667881,
+        0.001037534936357442, -0.006477400933964018, 0.9999784831677112
+    );
+    cv::Matx33d R2_ref(
+        0.9994868963898833, -0.03197579751378937, -0.001868774538573449,
+        0.03196298186616116, 0.9994677442608699, -0.0065265589947392,
+        0.002076471801477729, 0.006463478587068991, 0.9999769555891836
+    );
+    cv::Matx34d P1_ref(
+        420.8551870450913, 0, 586.501617798451, 0,
+        0, 420.8551870450913, 374.7667511986098, 0,
+        0, 0, 1, 0
+    );
+    cv::Matx34d P2_ref(
+        420.8551870450913, 0, 586.501617798451, -41.77758076597302,
+        0, 420.8551870450913, 374.7667511986098, 0,
+        0, 0, 1, 0
+    );
+    cv::Matx44d Q_ref(
+        1, 0, 0, -586.501617798451,
+        0, 1, 0, -374.7667511986098,
+        0, 0, 0, 420.8551870450913,
+        0, 0, 10.07370889670733, -0
+    );
+
+    const double eps = 1e-10;
+    EXPECT_MAT_NEAR(R1_ref, R1, eps);
+    EXPECT_MAT_NEAR(R2_ref, R2, eps);
+    EXPECT_MAT_NEAR(P1_ref, P1, eps);
+    EXPECT_MAT_NEAR(P2_ref, P2, eps);
+    EXPECT_MAT_NEAR(Q_ref, Q, eps);
+
+    if (::testing::Test::HasFailure())
+    {
+        std::cout << "Actual values are:" << std::endl
+            << "R1 =" << std::endl << R1 << std::endl
+            << "R2 =" << std::endl << R2 << std::endl
+            << "P1 =" << std::endl << P1 << std::endl
+            << "P2 =" << std::endl << P2 << std::endl
+            << "Q =" << std::endl << Q << std::endl;
+    }
+
+#if 1 // Debug code
     cv::Mat lmapx, lmapy, rmapx, rmapy;
     //rewrite for fisheye
     cv::fisheye::initUndistortRectifyMap(K1, D1, R1, P1, requested_size, CV_32F, lmapx, lmapy);
     cv::fisheye::initUndistortRectifyMap(K2, D2, R2, P2, requested_size, CV_32F, rmapx, rmapy);
 
     cv::Mat l, r, lundist, rundist;
-    cv::VideoCapture lcap(combine(folder, "left/stereo_pair_%03d.jpg")),
-                     rcap(combine(folder, "right/stereo_pair_%03d.jpg"));
-
-    for(int i = 0;; ++i)
+    for (int i = 0; i < 34; ++i)
     {
-        lcap >> l; rcap >> r;
-        if (l.empty() || r.empty())
-            break;
+        SCOPED_TRACE(cv::format("image %d", i));
+        l = imread(combine(folder, cv::format("left/stereo_pair_%03d.jpg", i)), cv::IMREAD_COLOR);
+        r = imread(combine(folder, cv::format("right/stereo_pair_%03d.jpg", i)), cv::IMREAD_COLOR);
+        ASSERT_FALSE(l.empty());
+        ASSERT_FALSE(r.empty());
 
         int ndisp = 128;
         cv::rectangle(l, cv::Rect(255,       0, 829,       l.rows-1), cv::Scalar(0, 0, 255));
@@ -428,15 +471,18 @@ TEST_F(fisheyeTest, rectify)
         cv::remap(l, lundist, lmapx, lmapy, cv::INTER_LINEAR);
         cv::remap(r, rundist, rmapx, rmapy, cv::INTER_LINEAR);
 
-        cv::Mat rectification = mergeRectification(lundist, rundist);
+        for (int ii = 0; ii < lundist.rows; ii += 20)
+        {
+            cv::line(lundist, cv::Point(0, ii), cv::Point(lundist.cols, ii), cv::Scalar(0, 255, 0));
+            cv::line(rundist, cv::Point(0, ii), cv::Point(lundist.cols, ii), cv::Scalar(0, 255, 0));
+        }
 
-        cv::Mat correct = cv::imread(combine(datasets_repository_path, cv::format("rectification_AB_%03d.png", i)));
+        cv::Mat rectification;
+        merge4(l, r, lundist, rundist, rectification);
 
-        if (correct.empty())
-            cv::imwrite(combine(datasets_repository_path, cv::format("rectification_AB_%03d.png", i)), rectification);
-         else
-             EXPECT_MAT_NEAR(correct, rectification, 1e-10);
-     }
+        cv::imwrite(cv::format("fisheye_rectification_AB_%03d.png", i), rectification);
+    }
+#endif
 }
 
 TEST_F(fisheyeTest, stereoCalibrate)
@@ -452,33 +498,32 @@ TEST_F(fisheyeTest, stereoCalibrate)
     cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
     CV_Assert(fs_left.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_left[cv::format("image_%d", i )] >> leftPoints[i];
+        fs_left[cv::format("image_%d", i )] >> leftPoints[i];
     fs_left.release();
 
     cv::FileStorage fs_right(combine(folder, "right.xml"), cv::FileStorage::READ);
     CV_Assert(fs_right.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_right[cv::format("image_%d", i )] >> rightPoints[i];
+        fs_right[cv::format("image_%d", i )] >> rightPoints[i];
     fs_right.release();
 
     cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
     CV_Assert(fs_object.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
 
-    cv::Matx33d K1, K2, R;
-    cv::Vec3d T;
+    cv::Matx33d K1, K2, theR;
+    cv::Vec3d theT;
     cv::Vec4d D1, D2;
 
     int flag = 0;
     flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
     flag |= cv::fisheye::CALIB_CHECK_COND;
     flag |= cv::fisheye::CALIB_FIX_SKEW;
-   // flag |= cv::fisheye::CALIB_FIX_INTRINSIC;
 
     cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
-                    K1, D1, K2, D2, imageSize, R, T, flag,
+                    K1, D1, K2, D2, imageSize, theR, theT, flag,
                     cv::TermCriteria(3, 12, 0));
 
     cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
@@ -496,8 +541,8 @@ TEST_F(fisheyeTest, stereoCalibrate)
     cv::Vec4d D1_correct (-7.44253716539556e-05, -0.00702662033932424, 0.00737569823650885, -0.00342230256441771);
     cv::Vec4d D2_correct (-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222);
 
-    EXPECT_MAT_NEAR(R, R_correct, 1e-10);
-    EXPECT_MAT_NEAR(T, T_correct, 1e-10);
+    EXPECT_MAT_NEAR(theR, R_correct, 1e-10);
+    EXPECT_MAT_NEAR(theT, T_correct, 1e-10);
 
     EXPECT_MAT_NEAR(K1, K1_correct, 1e-10);
     EXPECT_MAT_NEAR(K2, K2_correct, 1e-10);
@@ -520,23 +565,23 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
     CV_Assert(fs_left.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_left[cv::format("image_%d", i )] >> leftPoints[i];
+        fs_left[cv::format("image_%d", i )] >> leftPoints[i];
     fs_left.release();
 
     cv::FileStorage fs_right(combine(folder, "right.xml"), cv::FileStorage::READ);
     CV_Assert(fs_right.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_right[cv::format("image_%d", i )] >> rightPoints[i];
+        fs_right[cv::format("image_%d", i )] >> rightPoints[i];
     fs_right.release();
 
     cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
     CV_Assert(fs_object.isOpened());
     for(int i = 0; i < n_images; ++i)
-    fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
 
-    cv::Matx33d R;
-    cv::Vec3d T;
+    cv::Matx33d theR;
+    cv::Vec3d theT;
 
     int flag = 0;
     flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
@@ -556,7 +601,7 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::Vec4d D2 (-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222);
 
     cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
-                    K1, D1, K2, D2, imageSize, R, T, flag,
+                    K1, D1, K2, D2, imageSize, theR, theT, flag,
                     cv::TermCriteria(3, 12, 0));
 
     cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
@@ -565,8 +610,50 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::Vec3d T_correct(-0.099402724724121, 0.00270812139265413, 0.00129330292472699);
 
 
-    EXPECT_MAT_NEAR(R, R_correct, 1e-10);
-    EXPECT_MAT_NEAR(T, T_correct, 1e-10);
+    EXPECT_MAT_NEAR(theR, R_correct, 1e-10);
+    EXPECT_MAT_NEAR(theT, T_correct, 1e-10);
+}
+
+TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
+{
+    const int n_images = 2;
+
+    std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
+    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
+
+    std::vector<cv::Point2d> imgPoints1(10);
+    std::vector<cv::Point2d> imgPoints2(15);
+
+    std::vector<cv::Point3d> objectPoints1(imgPoints1.size());
+    std::vector<cv::Point3d> objectPoints2(imgPoints2.size());
+
+    for (size_t i = 0; i < imgPoints1.size(); i++)
+    {
+        imgPoints1[i] = cv::Point2d((double)i, (double)i);
+        objectPoints1[i] = cv::Point3d((double)i, (double)i, 10.0);
+    }
+
+    for (size_t i = 0; i < imgPoints2.size(); i++)
+    {
+        imgPoints2[i] = cv::Point2d(i + 0.5, i + 0.5);
+        objectPoints2[i] = cv::Point3d(i + 0.5, i + 0.5, 10.0);
+    }
+
+    imagePoints[0] = imgPoints1;
+    imagePoints[1] = imgPoints2;
+    objectPoints[0] = objectPoints1;
+    objectPoints[1] = objectPoints2;
+
+    cv::Matx33d theK = cv::Matx33d::eye();
+    cv::Vec4d theD;
+
+    int flag = 0;
+    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::fisheye::CALIB_USE_INTRINSIC_GUESS;
+    flag |= cv::fisheye::CALIB_FIX_SKEW;
+
+    cv::fisheye::calibrate(objectPoints, imagePoints, cv::Size(100, 100), theK, theD,
+        cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -602,17 +689,19 @@ std::string fisheyeTest::combine(const std::string& _item1, const std::string& _
     return item1 + (last != '/' ? "/" : "") + item2;
 }
 
-cv::Mat fisheyeTest::mergeRectification(const cv::Mat& l, const cv::Mat& r)
+void fisheyeTest::merge4(const cv::Mat& tl, const cv::Mat& tr, const cv::Mat& bl, const cv::Mat& br, cv::Mat& merged)
 {
-    CV_Assert(l.type() == r.type() && l.size() == r.size());
-    cv::Mat merged(l.rows, l.cols * 2, l.type());
-    cv::Mat lpart = merged.colRange(0, l.cols);
-    cv::Mat rpart = merged.colRange(l.cols, merged.cols);
-    l.copyTo(lpart);
-    r.copyTo(rpart);
+    int type = tl.type();
+    cv::Size sz = tl.size();
+    ASSERT_EQ(type, tr.type()); ASSERT_EQ(type, bl.type()); ASSERT_EQ(type, br.type());
+    ASSERT_EQ(sz.width, tr.cols); ASSERT_EQ(sz.width, bl.cols); ASSERT_EQ(sz.width, br.cols);
+    ASSERT_EQ(sz.height, tr.rows); ASSERT_EQ(sz.height, bl.rows); ASSERT_EQ(sz.height, br.rows);
 
-    for(int i = 0; i < l.rows; i+=20)
-        cv::line(merged, cv::Point(0, i), cv::Point(merged.cols, i), cv::Scalar(0, 255, 0));
-
-    return merged;
+    merged.create(cv::Size(sz.width * 2, sz.height * 2), type);
+    tl.copyTo(merged(cv::Rect(0, 0, sz.width, sz.height)));
+    tr.copyTo(merged(cv::Rect(sz.width, 0, sz.width, sz.height)));
+    bl.copyTo(merged(cv::Rect(0, sz.height, sz.width, sz.height)));
+    br.copyTo(merged(cv::Rect(sz.width, sz.height, sz.width, sz.height)));
 }
+
+}} // namespace

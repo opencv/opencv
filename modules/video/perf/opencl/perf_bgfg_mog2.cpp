@@ -1,23 +1,14 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
+#include "../perf_bgfg_utils.hpp"
 
-#if defined(HAVE_XINE)     || \
-defined(HAVE_GSTREAMER)    || \
-defined(HAVE_QUICKTIME)    || \
-defined(HAVE_AVFOUNDATION) || \
-defined(HAVE_FFMPEG)       || \
-defined(WIN32)
-
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
-
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
-
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////// Mog2//////////////////////////
@@ -26,31 +17,7 @@ typedef tuple<string, int> VideoMOG2ParamType;
 typedef TestBaseWithParam<VideoMOG2ParamType> MOG2_Apply;
 typedef TestBaseWithParam<VideoMOG2ParamType> MOG2_GetBackgroundImage;
 
-static void cvtFrameFmt(vector<Mat>& input, vector<Mat>& output)
-{
-    for(int i = 0; i< (int)(input.size()); i++)
-    {
-        cvtColor(input[i], output[i], COLOR_RGB2GRAY);
-    }
-}
-
-static void prepareData(VideoCapture& cap, int cn, vector<Mat>& frame_buffer)
-{
-    cv::Mat frame;
-    std::vector<Mat> frame_buffer_init;
-    int nFrame = (int)frame_buffer.size();
-    for(int i = 0; i < nFrame; i++)
-    {
-        cap >> frame;
-        ASSERT_FALSE(frame.empty());
-        frame_buffer_init.push_back(frame);
-    }
-
-    if(cn == 1)
-        cvtFrameFmt(frame_buffer_init, frame_buffer);
-    else
-        frame_buffer = frame_buffer_init;
-}
+using namespace opencv_test;
 
 OCL_PERF_TEST_P(MOG2_Apply, Mog2, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1,3)))
 {
@@ -64,7 +31,8 @@ OCL_PERF_TEST_P(MOG2_Apply, Mog2, Combine(Values("gpu/video/768x576.avi", "gpu/v
     vector<Mat> frame_buffer(nFrame);
 
     cv::VideoCapture cap(inputFile);
-    ASSERT_TRUE(cap.isOpened());
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
     prepareData(cap, cn, frame_buffer);
 
     UMat u_foreground;
@@ -79,23 +47,27 @@ OCL_PERF_TEST_P(MOG2_Apply, Mog2, Combine(Values("gpu/video/768x576.avi", "gpu/v
             mog2->apply(frame_buffer[i], u_foreground);
         }
     }
-    SANITY_CHECK(u_foreground);
+    SANITY_CHECK_NOTHING();
 }
 
-OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(3)))
+OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Values(
+        std::make_pair<string, int>("gpu/video/768x576.avi", 5),
+        std::make_pair<string, int>("gpu/video/1920x1080.avi", 5)))
 {
     VideoMOG2ParamType params = GetParam();
 
     const string inputFile = getDataPath(get<0>(params));
 
-    const int cn = get<1>(params);
-    int nFrame = 5;
+    const int cn = 3;
+    const int skipFrames = get<1>(params);
+    int nFrame = 10;
 
     vector<Mat> frame_buffer(nFrame);
 
     cv::VideoCapture cap(inputFile);
-    ASSERT_TRUE(cap.isOpened());
-    prepareData(cap, cn, frame_buffer);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+    prepareData(cap, cn, frame_buffer, skipFrames);
 
     UMat u_foreground, u_background;
 
@@ -111,10 +83,13 @@ OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Combine(Values("gpu/video/768x576
         }
         mog2->getBackgroundImage(u_background);
     }
-    SANITY_CHECK(u_background);
+#ifdef DEBUG_BGFG
+    imwrite(format("fg_%d_%d_mog2_ocl.png", frame_buffer[0].rows, cn), u_foreground.getMat(ACCESS_READ));
+    imwrite(format("bg_%d_%d_mog2_ocl.png", frame_buffer[0].rows, cn), u_background.getMat(ACCESS_READ));
+#endif
+    SANITY_CHECK_NOTHING();
 }
 
-}}// namespace cvtest::ocl
+}}// namespace opencv_test::ocl
 
-    #endif
 #endif

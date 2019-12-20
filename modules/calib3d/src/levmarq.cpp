@@ -44,7 +44,7 @@
 #include <stdio.h>
 
 /*
-   This is translation to C++ of the Matlab's LMSolve package by Miroslav Balda.
+   This is a translation to C++ from the Matlab's LMSolve package by Miroslav Balda.
    Here is the original copyright:
    ============================================================================
 
@@ -77,19 +77,16 @@
 namespace cv
 {
 
-class LMSolverImpl : public LMSolver
+class LMSolverImpl CV_FINAL : public LMSolver
 {
 public:
-    LMSolverImpl() : maxIters(100) { init(); }
-    LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters) : cb(_cb), maxIters(_maxIters) { init(); }
-
-    void init()
+    LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters, double _eps = FLT_EPSILON)
+        : cb(_cb), epsx(_eps), epsf(_eps), maxIters(_maxIters)
     {
-        epsx = epsf = FLT_EPSILON;
         printInterval = 0;
     }
 
-    int run(InputOutputArray _param0) const
+    int run(InputOutputArray _param0) const CV_OVERRIDE
     {
         Mat param0 = _param0.getMat(), x, xd, r, rd, J, A, Ap, v, temp_d, d;
         int ptype = param0.type();
@@ -198,7 +195,8 @@ public:
         return iter;
     }
 
-    void setCallback(const Ptr<LMSolver::Callback>& _cb) { cb = _cb; }
+    void setMaxIters(int iters) CV_OVERRIDE { CV_Assert(iters > 0); maxIters = iters; }
+    int getMaxIters() const CV_OVERRIDE { return maxIters; }
 
     Ptr<LMSolver::Callback> cb;
 
@@ -209,9 +207,14 @@ public:
 };
 
 
-Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
+Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
     return makePtr<LMSolverImpl>(cb, maxIters);
+}
+
+Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps)
+{
+    return makePtr<LMSolverImpl>(cb, maxIters, eps);
 }
 
 }

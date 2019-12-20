@@ -720,7 +720,7 @@ private:
 
 public:
     EigenvalueDecomposition()
-    : n(0) { }
+    : n(0), cdivr(0), cdivi(0), d(0), e(0), ort(0), V(0), H(0) {}
 
     // Initializes & computes the Eigenvalue Decomposition for a general matrix
     // given in src. This function is a port of the EigenvalueSolver in JAMA,

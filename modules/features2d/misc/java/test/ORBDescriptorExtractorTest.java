@@ -6,15 +6,15 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.core.KeyPoint;
+import org.opencv.features2d.ORB;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
 
 public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
-    DescriptorExtractor extractor;
+    ORB extractor;
     int matSize;
 
     public static void assertDescriptorsClose(Mat expected, Mat actual, int allowedDistance) {
@@ -33,7 +33,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        extractor = DescriptorExtractor.create(DescriptorExtractor.ORB);
+        extractor = ORB.create();
         matSize = 100;
     }
 
@@ -52,7 +52,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
         Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
             {
                 put(0, 0,
-                        6, 74, 6, 129, 2, 130, 56, 0, 36, 132, 66, 165, 172, 6, 3, 72, 102, 61, 163, 214, 0, 144, 65, 232, 4, 32, 138, 129, 4, 21, 37, 88);
+                        6, 74, 6, 129, 2, 130, 56, 0, 44, 132, 66, 165, 172, 6, 3, 72, 102, 61, 171, 214, 0, 144, 65, 232, 4, 32, 138, 131, 4, 21, 37, 217);
             }
         };
         assertDescriptorsClose(truth, descriptors, 1);
@@ -71,7 +71,8 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testEmpty() {
-        assertFalse(extractor.empty());
+//        assertFalse(extractor.empty());
+        fail("Not yet implemented"); // ORB does not override empty() method
     }
 
     public void testRead() {
@@ -80,16 +81,17 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
         Mat img = getTestImg();
         Mat descriptors = new Mat();
 
-        String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\nscaleFactor: 1.1\nnLevels: 3\nfirstLevel: 0\nedgeThreshold: 31\npatchSize: 31\n");
-        extractor.read(filename);
+//        String filename = OpenCVTestRunner.getTempFileName("yml");
+//        writeFile(filename, "%YAML:1.0\n---\nscaleFactor: 1.1\nnLevels: 3\nfirstLevel: 0\nedgeThreshold: 31\npatchSize: 31\n");
+//        extractor.read(filename);
+        extractor = ORB.create(500, 1.1f, 3, 31, 0, 2, ORB.HARRIS_SCORE, 31, 20);
 
         extractor.compute(img, keypoints, descriptors);
 
         Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
             {
                 put(0, 0,
-                        6, 10, 22, 5, 2, 130, 56, 0, 44, 164, 66, 165, 140, 6, 1, 72, 38, 61, 163, 210, 0, 208, 1, 104, 4, 32, 10, 131, 0, 37, 37, 67);
+                        6, 10, 22, 5, 2, 130, 56, 0, 44, 164, 66, 165, 140, 6, 1, 72, 38, 61, 163, 210, 0, 208, 1, 104, 4, 32, 74, 131, 0, 37, 37, 67);
             }
         };
         assertDescriptorsClose(truth, descriptors, 1);
@@ -100,7 +102,8 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.ORB</name>\n<WTA_K>2</WTA_K>\n<edgeThreshold>31</edgeThreshold>\n<firstLevel>0</firstLevel>\n<nFeatures>500</nFeatures>\n<nLevels>8</nLevels>\n<patchSize>31</patchSize>\n<scaleFactor>1.2000000476837158e+00</scaleFactor>\n<scoreType>0</scoreType>\n</opencv_storage>\n";
+//        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.ORB</name>\n<WTA_K>2</WTA_K>\n<edgeThreshold>31</edgeThreshold>\n<firstLevel>0</firstLevel>\n<nFeatures>500</nFeatures>\n<nLevels>8</nLevels>\n<patchSize>31</patchSize>\n<scaleFactor>1.2000000476837158e+00</scaleFactor>\n<scoreType>0</scoreType>\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n</opencv_storage>\n";
         String actual = readFile(filename);
         actual = actual.replaceAll("e\\+000", "e+00"); // NOTE: workaround for different platforms double representation
         assertEquals(truth, actual);
@@ -111,7 +114,8 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "%YAML:1.0\nname: \"Feature2D.ORB\"\nWTA_K: 2\nedgeThreshold: 31\nfirstLevel: 0\nnFeatures: 500\nnLevels: 8\npatchSize: 31\nscaleFactor: 1.2000000476837158e+00\nscoreType: 0\n";
+//        String truth = "%YAML:1.0\n---\nname: \"Feature2D.ORB\"\nWTA_K: 2\nedgeThreshold: 31\nfirstLevel: 0\nnFeatures: 500\nnLevels: 8\npatchSize: 31\nscaleFactor: 1.2000000476837158e+00\nscoreType: 0\n";
+        String truth = "%YAML:1.0\n---\n";
         String actual = readFile(filename);
         actual = actual.replaceAll("e\\+000", "e+00"); // NOTE: workaround for different platforms double representation
         assertEquals(truth, actual);

@@ -42,8 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_AccumBaseTest : public cvtest::ArrayTest
 {
@@ -72,11 +71,11 @@ void CV_AccumBaseTest::get_test_array_types_and_sizes( int test_case_idx,
                         vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng) % 3, cn = cvtest::randInt(rng) & 1 ? 3 : 1;
-    int accdepth = std::max((int)(cvtest::randInt(rng) % 2 + 1), depth);
+    int depth = cvtest::randInt(rng) % 4, cn = cvtest::randInt(rng) & 1 ? 3 : 1;
+    int accdepth = (int)(cvtest::randInt(rng) % 2 + 1);
     int i, input_count = (int)test_array[INPUT].size();
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    depth = depth == 0 ? CV_8U : depth == 1 ? CV_32F : CV_64F;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_32F : CV_64F;
     accdepth = accdepth == 1 ? CV_32F : CV_64F;
     accdepth = MAX(accdepth, depth);
 
@@ -246,3 +245,5 @@ TEST(Video_Acc, accuracy) { CV_AccTest test; test.safe_run(); }
 TEST(Video_AccSquared, accuracy) { CV_SquareAccTest test; test.safe_run(); }
 TEST(Video_AccProduct, accuracy) { CV_MultiplyAccTest test; test.safe_run(); }
 TEST(Video_RunningAvg, accuracy) { CV_RunningAvgTest test; test.safe_run(); }
+
+}} // namespace

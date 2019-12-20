@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_DIRECTX_HPP__
-#define __OPENCV_CORE_DIRECTX_HPP__
+#ifndef OPENCV_CORE_DIRECTX_HPP
+#define OPENCV_CORE_DIRECTX_HPP
 
 #include "mat.hpp"
 #include "ocl.hpp"
@@ -68,6 +68,13 @@ namespace ocl {
 using namespace cv::ocl;
 
 //! @addtogroup core_directx
+// This section describes OpenCL and DirectX interoperability.
+//
+// To enable DirectX support, configure OpenCV using CMake with WITH_DIRECTX=ON . Note, DirectX is
+// supported only on Windows.
+//
+// To use OpenCL functionality you should first initialize OpenCL context from DirectX resource.
+//
 //! @{
 
 // TODO static functions in the Context class
@@ -102,19 +109,21 @@ CV_EXPORTS Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDire
 //! @addtogroup core_directx
 //! @{
 
-//! @brief Converts InputArray to ID3D11Texture2D
+//! @brief Converts InputArray to ID3D11Texture2D. If destination texture format is DXGI_FORMAT_NV12 then
+//!        input UMat expected to be in BGR format and data will be downsampled and color-converted to NV12.
 //
-//! @note Note: function does memory copy from src to
+//! @note Note: Destination texture must be allocated by application. Function does memory copy from src to
 //!             pD3D11Texture2D
 //
 //! @param src - source InputArray
 //! @param pD3D11Texture2D - destination D3D11 texture
 CV_EXPORTS void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D);
 
-//! @brief Converts ID3D11Texture2D to OutputArray
+//! @brief Converts ID3D11Texture2D to OutputArray. If input texture format is DXGI_FORMAT_NV12 then
+//!        data will be upsampled and color-converted to BGR format.
 //
-//! @note Note: function does memory copy from pD3D11Texture2D
-//!             to dst
+//! @note Note: Destination matrix will be re-allocated if it has not enough memory to match texture size.
+//!             function does memory copy from pD3D11Texture2D to dst
 //
 //! @param pD3D11Texture2D - source D3D11 texture
 //! @param dst             - destination OutputArray
@@ -172,4 +181,4 @@ CV_EXPORTS int getTypeFromD3DFORMAT(const int iD3DFORMAT); // enum D3DTYPE for D
 
 } } // namespace cv::directx
 
-#endif // __OPENCV_CORE_DIRECTX_HPP__
+#endif // OPENCV_CORE_DIRECTX_HPP

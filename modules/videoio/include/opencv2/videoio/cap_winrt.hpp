@@ -28,8 +28,7 @@
 #include <functional>
 #include <concrt.h>
 #include <agile.h>
-
-using namespace Windows::UI::Xaml::Controls;
+#include "opencv2/core/cvdef.h"
 
 namespace cv
 {

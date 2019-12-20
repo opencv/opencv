@@ -7,7 +7,7 @@ Goal
 In this chapter, we will learn to:
 
 -   Find Image gradients, edges etc
--   We will see following functions : **cv2.Sobel()**, **cv2.Scharr()**, **cv2.Laplacian()** etc
+-   We will see following functions : **cv.Sobel()**, **cv.Scharr()**, **cv.Laplacian()** etc
 
 Theory
 ------
@@ -38,15 +38,15 @@ Code
 Below code shows all operators in a single diagram. All kernels are of 5x5 size. Depth of output
 image is passed -1 to get the result in np.uint8 type.
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('dave.jpg',0)
+img = cv.imread('dave.jpg',0)
 
-laplacian = cv2.Laplacian(img,cv2.CV_64F)
-sobelx = cv2.Sobel(img,cv2.CV_64F,1,0,ksize=5)
-sobely = cv2.Sobel(img,cv2.CV_64F,0,1,ksize=5)
+laplacian = cv.Laplacian(img,cv.CV_64F)
+sobelx = cv.Sobel(img,cv.CV_64F,1,0,ksize=5)
+sobely = cv.Sobel(img,cv.CV_64F,0,1,ksize=5)
 
 plt.subplot(2,2,1),plt.imshow(img,cmap = 'gray')
 plt.title('Original'), plt.xticks([]), plt.yticks([])
@@ -66,26 +66,26 @@ Result:
 One Important Matter!
 ---------------------
 
-In our last example, output datatype is cv2.CV_8U or np.uint8. But there is a slight problem with
+In our last example, output datatype is cv.CV_8U or np.uint8. But there is a slight problem with
 that. Black-to-White transition is taken as Positive slope (it has a positive value) while
 White-to-Black transition is taken as a Negative slope (It has negative value). So when you convert
 data to np.uint8, all negative slopes are made zero. In simple words, you miss that edge.
 
 If you want to detect both edges, better option is to keep the output datatype to some higher forms,
-like cv2.CV_16S, cv2.CV_64F etc, take its absolute value and then convert back to cv2.CV_8U.
+like cv.CV_16S, cv.CV_64F etc, take its absolute value and then convert back to cv.CV_8U.
 Below code demonstrates this procedure for a horizontal Sobel filter and difference in results.
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('box.png',0)
+img = cv.imread('box.png',0)
 
-# Output dtype = cv2.CV_8U
-sobelx8u = cv2.Sobel(img,cv2.CV_8U,1,0,ksize=5)
+# Output dtype = cv.CV_8U
+sobelx8u = cv.Sobel(img,cv.CV_8U,1,0,ksize=5)
 
-# Output dtype = cv2.CV_64F. Then take its absolute and convert to cv2.CV_8U
-sobelx64f = cv2.Sobel(img,cv2.CV_64F,1,0,ksize=5)
+# Output dtype = cv.CV_64F. Then take its absolute and convert to cv.CV_8U
+sobelx64f = cv.Sobel(img,cv.CV_64F,1,0,ksize=5)
 abs_sobel64f = np.absolute(sobelx64f)
 sobel_8u = np.uint8(abs_sobel64f)
 

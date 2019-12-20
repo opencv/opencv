@@ -1,6 +1,6 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/videoio/videoio.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include <stdio.h>
 #include <string>
@@ -63,12 +63,17 @@ int main(int argc, char** argv)
     VideoCapture cap;
     bool update_bg_model = true;
 
-    help();
-
-    if( argc < 2 )
+    CommandLineParser parser(argc, argv, "{help h||}{@input||}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string input = parser.get<std::string>("@input");
+    if (input.empty())
         cap.open(0);
     else
-        cap.open(std::string(argv[1]));
+        cap.open(samples::findFileOrKeep(input));
 
     if( !cap.isOpened() )
     {
@@ -100,7 +105,7 @@ int main(int argc, char** argv)
         refineSegments(tmp_frame, bgmask, out_frame);
         imshow("video", tmp_frame);
         imshow("segmented", out_frame);
-        int keycode = waitKey(30);
+        char keycode = (char)waitKey(30);
         if( keycode == 27 )
             break;
         if( keycode == ' ' )

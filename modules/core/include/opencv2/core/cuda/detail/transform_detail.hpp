@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_TRANSFORM_DETAIL_HPP__
-#define __OPENCV_CUDA_TRANSFORM_DETAIL_HPP__
+#ifndef OPENCV_CUDA_TRANSFORM_DETAIL_HPP
+#define OPENCV_CUDA_TRANSFORM_DETAIL_HPP
 
 #include "../common.hpp"
 #include "../vec_traits.hpp"
@@ -223,11 +223,7 @@ namespace cv { namespace cuda { namespace device
                 if (x_shifted + ft::smart_shift - 1 < src_.cols)
                 {
                     const read_type src_n_el = ((const read_type*)src)[x];
-                    write_type dst_n_el = ((const write_type*)dst)[x];
-
-                    OpUnroller<ft::smart_shift>::unroll(src_n_el, dst_n_el, mask, op, x_shifted, y);
-
-                    ((write_type*)dst)[x] = dst_n_el;
+                    OpUnroller<ft::smart_shift>::unroll(src_n_el, ((write_type*)dst)[x], mask, op, x_shifted, y);
                 }
                 else
                 {
@@ -275,11 +271,8 @@ namespace cv { namespace cuda { namespace device
                 {
                     const read_type1 src1_n_el = ((const read_type1*)src1)[x];
                     const read_type2 src2_n_el = ((const read_type2*)src2)[x];
-                    write_type dst_n_el = ((const write_type*)dst)[x];
 
-                    OpUnroller<ft::smart_shift>::unroll(src1_n_el, src2_n_el, dst_n_el, mask, op, x_shifted, y);
-
-                    ((write_type*)dst)[x] = dst_n_el;
+                    OpUnroller<ft::smart_shift>::unroll(src1_n_el, src2_n_el, ((write_type*)dst)[x], mask, op, x_shifted, y);
                 }
                 else
                 {
@@ -396,4 +389,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // __OPENCV_CUDA_TRANSFORM_DETAIL_HPP__
+#endif // OPENCV_CUDA_TRANSFORM_DETAIL_HPP

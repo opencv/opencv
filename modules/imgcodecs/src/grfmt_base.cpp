@@ -52,6 +52,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_width = m_height = 0;
     m_type = -1;
     m_buf_supported = false;
+    m_scale_denom = 1;
 }
 
 bool BaseImageDecoder::setSource( const String& filename )
@@ -81,6 +82,13 @@ bool BaseImageDecoder::checkSignature( const String& signature ) const
     return signature.size() >= len && memcmp( signature.c_str(), m_signature.c_str(), len ) == 0;
 }
 
+int BaseImageDecoder::setScale( const int& scale_denom )
+{
+    int temp = m_scale_denom;
+    m_scale_denom = scale_denom;
+    return temp;
+}
+
 ImageDecoder BaseImageDecoder::newDecoder() const
 {
     return ImageDecoder();
@@ -88,6 +96,7 @@ ImageDecoder BaseImageDecoder::newDecoder() const
 
 BaseImageEncoder::BaseImageEncoder()
 {
+    m_buf = 0;
     m_buf_supported = false;
 }
 
@@ -118,6 +127,11 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     return true;
 }
 
+bool BaseImageEncoder::writemulti(const std::vector<Mat>&, const std::vector<int>& )
+{
+    return false;
+}
+
 ImageEncoder BaseImageEncoder::newEncoder() const
 {
     return ImageEncoder();
@@ -128,7 +142,7 @@ void BaseImageEncoder::throwOnEror() const
     if(!m_last_error.empty())
     {
         String msg = "Raw image encoder error: " + m_last_error;
-        CV_Error( CV_BadImageSize, msg.c_str() );
+        CV_Error( Error::BadImageSize, msg.c_str() );
     }
 }
 

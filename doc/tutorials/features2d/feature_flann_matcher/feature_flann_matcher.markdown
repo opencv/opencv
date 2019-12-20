@@ -9,114 +9,57 @@ In this tutorial you will learn how to:
 -   Use the @ref cv::FlannBasedMatcher interface in order to perform a quick and efficient matching
     by using the @ref flann module
 
+\warning You need the <a href="https://github.com/opencv/opencv_contrib">OpenCV contrib modules</a> to be able to use the SURF features
+(alternatives are ORB, KAZE, ... features).
+
 Theory
 ------
+
+Classical feature descriptors (SIFT, SURF, ...) are usually compared and matched using the Euclidean distance (or L2-norm).
+Since SIFT and SURF descriptors represent the histogram of oriented gradient (of the Haar wavelet response for SURF)
+in a neighborhood, alternatives of the Euclidean distance are histogram-based metrics (\f$ \chi^{2} \f$, Earth Mover’s Distance (EMD), ...).
+
+Arandjelovic et al. proposed in @cite Arandjelovic:2012:TTE:2354409.2355123 to extend to the RootSIFT descriptor:
+> a square root (Hellinger) kernel instead of the standard Euclidean distance to measure the similarity between SIFT descriptors
+> leads to a dramatic performance boost in all stages of the pipeline.
+
+Binary descriptors (ORB, BRISK, ...) are matched using the <a href="https://en.wikipedia.org/wiki/Hamming_distance">Hamming distance</a>.
+This distance is equivalent to count the number of different elements for binary strings (population count after applying a XOR operation):
+\f[ d_{hamming} \left ( a,b \right ) = \sum_{i=0}^{n-1} \left ( a_i \oplus b_i \right ) \f]
+
+To filter the matches, Lowe proposed in @cite Lowe:2004:DIF:993451.996342 to use a distance ratio test to try to eliminate false matches.
+The distance ratio between the two nearest matches of a considered keypoint is computed and it is a good match when this value is below
+a threshold. Indeed, this ratio allows helping to discriminate between ambiguous matches (distance ratio between the two nearest neighbors
+is close to one) and well discriminated matches. The figure below from the SIFT paper illustrates the probability that a match is correct
+based on the nearest-neighbor distance ratio test.
+
+![](images/Feature_FlannMatcher_Lowe_ratio_test.png)
+
+Alternative or additional filterering tests are:
+-   cross check test (good match \f$ \left( f_a, f_b \right) \f$ if feature \f$ f_b \f$ is the best match for \f$ f_a \f$ in \f$ I_b \f$
+    and feature \f$ f_a \f$ is the best match for \f$ f_b \f$ in \f$ I_a \f$)
+-   geometric test (eliminate matches that do not fit to a geometric model, e.g. RANSAC or robust homography for planar objects)
 
 Code
 ----
 
-This tutorial code's is shown lines below.
-@code{.cpp}
-/*
- * @file SURF_FlannMatcher
- * @brief SURF detector + descriptor + FLANN Matcher
- * @author A. Huaman
- */
+@add_toggle_cpp
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/features2D/feature_flann_matcher/SURF_FLANN_matching_Demo.cpp)
+@include samples/cpp/tutorial_code/features2D/feature_flann_matcher/SURF_FLANN_matching_Demo.cpp
+@end_toggle
 
-#include <stdio.h>
-#include <iostream>
-#include <stdio.h>
-#include <iostream>
-#include "opencv2/core.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/xfeatures2d.hpp"
+@add_toggle_java
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/features2D/feature_flann_matcher/SURFFLANNMatchingDemo.java)
+@include samples/java/tutorial_code/features2D/feature_flann_matcher/SURFFLANNMatchingDemo.java
+@end_toggle
 
-using namespace std;
-using namespace cv;
-using namespace cv::xfeatures2d;
-
-void readme();
-
-/*
- * @function main
- * @brief Main function
- */
-int main( int argc, char** argv )
-{
-  if( argc != 3 )
-  { readme(); return -1; }
-
-  Mat img_1 = imread( argv[1], IMREAD_GRAYSCALE );
-  Mat img_2 = imread( argv[2], IMREAD_GRAYSCALE );
-
-  if( !img_1.data || !img_2.data )
-  { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
-
-  //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
-  int minHessian = 400;
-
-  Ptr<SURF> detector = SURF::create();
-  detector->setHessianThreshold(minHessian);
-
-  std::vector<KeyPoint> keypoints_1, keypoints_2;
-  Mat descriptors_1, descriptors_2;
-
-  detector->detectAndCompute( img_1, Mat(), keypoints_1, descriptors_1 );
-  detector->detectAndCompute( img_2, Mat(), keypoints_2, descriptors_2 );
-
-  //-- Step 2: Matching descriptor vectors using FLANN matcher
-  FlannBasedMatcher matcher;
-  std::vector< DMatch > matches;
-  matcher.match( descriptors_1, descriptors_2, matches );
-
-  double max_dist = 0; double min_dist = 100;
-
-  //-- Quick calculation of max and min distances between keypoints
-  for( int i = 0; i < descriptors_1.rows; i++ )
-  { double dist = matches[i].distance;
-    if( dist < min_dist ) min_dist = dist;
-    if( dist > max_dist ) max_dist = dist;
-  }
-
-  printf("-- Max dist : %f \n", max_dist );
-  printf("-- Min dist : %f \n", min_dist );
-
-  //-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist,
-  //-- or a small arbitary value ( 0.02 ) in the event that min_dist is very
-  //-- small)
-  //-- PS.- radiusMatch can also be used here.
-  std::vector< DMatch > good_matches;
-
-  for( int i = 0; i < descriptors_1.rows; i++ )
-  { if( matches[i].distance <= max(2*min_dist, 0.02) )
-    { good_matches.push_back( matches[i]); }
-  }
-
-  //-- Draw only "good" matches
-  Mat img_matches;
-  drawMatches( img_1, keypoints_1, img_2, keypoints_2,
-               good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-
-  //-- Show detected matches
-  imshow( "Good Matches", img_matches );
-
-  for( int i = 0; i < (int)good_matches.size(); i++ )
-  { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
-
-  waitKey(0);
-
-  return 0;
-}
-
-/*
- * @function readme
- */
-void readme()
-{ std::cout << " Usage: ./SURF_FlannMatcher <img1> <img2>" << std::endl; }
-@endcode
+@add_toggle_python
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/features2D/feature_flann_matcher/SURF_FLANN_matching_Demo.py)
+@include samples/python/tutorial_code/features2D/feature_flann_matcher/SURF_FLANN_matching_Demo.py
+@end_toggle
 
 Explanation
 -----------
@@ -124,10 +67,6 @@ Explanation
 Result
 ------
 
--#  Here is the result of the feature detection applied to the first image:
+-   Here is the result of the SURF feature matching using the distance ratio test:
 
-    ![](images/Featur_FlannMatcher_Result.jpg)
-
--#  Additionally, we get as console output the keypoints filtered:
-
-    ![](images/Feature_FlannMatcher_Keypoints_Result.jpg)
+    ![](images/Feature_FlannMatcher_Result_ratio_test.jpg)

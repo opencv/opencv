@@ -118,14 +118,14 @@ www.vision.ethz.ch/kruppa/
 
 KNOWN LIMITATIONS
 =================
-1) the detectors only support frontal and back views but not sideviews.
+1) The detectors only support frontal and back views but not sideviews.
    Sideviews are trickier and it makes a lot of sense to include additional
    modalities for their detection, e.g. motion information. I recommend
    Viola and Jones' ICCV 2003 paper if this further interests you.
 
-2) dont expect these detectors to be as accurate as a frontal face detector.
+2) Don't expect these detectors to be as accurate as a frontal face detector.
    A frontal face as a pattern is pretty distinct with respect to other
-   patterns occuring in the world (i.e. image "background"). This is not so
+   patterns occurring in the world (i.e. image "background"). This is not so
    for upper, lower and especially full bodies, because they have to rely
    on fragile silhouette information rather than internal (facial) features.
    Still, we found especially the upper body detector to perform amazingly well.

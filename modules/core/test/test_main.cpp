@@ -1,10 +1,10 @@
-#ifdef _MSC_VER
-# if _MSC_VER >= 1700
-#  pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
-# endif
-#endif
-
-
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+
+#if defined(HAVE_HPX)
+    #include <hpx/hpx_main.hpp>
+#endif
 
 CV_TEST_MAIN("cv")

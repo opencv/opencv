@@ -38,11 +38,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "test_precomp.hpp"
-#include "opencv2/hal.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 enum
 {
@@ -72,21 +70,21 @@ TEST(Core_HAL, mathfuncs)
             {
             case HAL_EXP:
                 if( depth == CV_32F )
-                    hal::exp(src.ptr<float>(), dst.ptr<float>(), n);
+                    hal::exp32f(src.ptr<float>(), dst.ptr<float>(), n);
                 else
-                    hal::exp(src.ptr<double>(), dst.ptr<double>(), n);
+                    hal::exp64f(src.ptr<double>(), dst.ptr<double>(), n);
                 break;
             case HAL_LOG:
                 if( depth == CV_32F )
-                    hal::log(src.ptr<float>(), dst.ptr<float>(), n);
+                    hal::log32f(src.ptr<float>(), dst.ptr<float>(), n);
                 else
-                    hal::log(src.ptr<double>(), dst.ptr<double>(), n);
+                    hal::log64f(src.ptr<double>(), dst.ptr<double>(), n);
                 break;
             case HAL_SQRT:
                 if( depth == CV_32F )
-                    hal::sqrt(src.ptr<float>(), dst.ptr<float>(), n);
+                    hal::sqrt32f(src.ptr<float>(), dst.ptr<float>(), n);
                 else
-                    hal::sqrt(src.ptr<double>(), dst.ptr<double>(), n);
+                    hal::sqrt64f(src.ptr<double>(), dst.ptr<double>(), n);
                 break;
             default:
                 CV_Error(Error::StsBadArg, "unknown function");
@@ -112,7 +110,7 @@ TEST(Core_HAL, mathfuncs)
             t = (double)getTickCount() - t;
             min_ocv_t = std::min(min_ocv_t, t);
         }
-        EXPECT_LE(norm(dst, dst0, NORM_INF | NORM_RELATIVE), eps);
+        EXPECT_LE(cvtest::norm(dst, dst0, NORM_INF | NORM_RELATIVE), eps);
 
         double freq = getTickFrequency();
         printf("%s (N=%d, %s): hal time=%.2fusec, ocv time=%.2fusec\n",
@@ -127,9 +125,12 @@ enum
     HAL_CHOL = 1
 };
 
-TEST(Core_HAL, mat_decomp)
+typedef testing::TestWithParam<int> HAL;
+
+TEST_P(HAL, mat_decomp)
 {
-    for( int hcase = 0; hcase < 16; hcase++ )
+    int hcase = GetParam();
+    SCOPED_TRACE(cv::format("hcase=%d", hcase));
     {
         int depth = hcase % 2 == 0 ? CV_32F : CV_64F;
         int size = (hcase / 2) % 4;
@@ -138,7 +139,7 @@ TEST(Core_HAL, mat_decomp)
         double eps = depth == CV_32F ? 1e-5 : 1e-10;
 
         if( size == 3 )
-            continue;
+            return; // TODO ???
 
         Mat a0(size, size, depth), a(size, size, depth), b(size, 1, depth), x(size, 1, depth), x0(size, 1, depth);
         randu(a0, -1, 1);
@@ -159,15 +160,15 @@ TEST(Core_HAL, mat_decomp)
             {
             case HAL_LU:
                 if( depth == CV_32F )
-                    hal::LU(a.ptr<float>(), a.step, size, x.ptr<float>(), x.step, 1);
+                    hal::LU32f(a.ptr<float>(), a.step, size, x.ptr<float>(), x.step, 1);
                 else
-                    hal::LU(a.ptr<double>(), a.step, size, x.ptr<double>(), x.step, 1);
+                    hal::LU64f(a.ptr<double>(), a.step, size, x.ptr<double>(), x.step, 1);
                 break;
             case HAL_CHOL:
                 if( depth == CV_32F )
-                    hal::Cholesky(a.ptr<float>(), a.step, size, x.ptr<float>(), x.step, 1);
+                    hal::Cholesky32f(a.ptr<float>(), a.step, size, x.ptr<float>(), x.step, 1);
                 else
-                    hal::Cholesky(a.ptr<double>(), a.step, size, x.ptr<double>(), x.step, 1);
+                    hal::Cholesky64f(a.ptr<double>(), a.step, size, x.ptr<double>(), x.step, 1);
                 break;
             default:
                 CV_Error(Error::StsBadArg, "unknown function");
@@ -176,14 +177,19 @@ TEST(Core_HAL, mat_decomp)
             min_hal_t = std::min(min_hal_t, t);
 
             t = (double)getTickCount();
-            solve(a0, b, x0, (nfunc == HAL_LU ? DECOMP_LU : DECOMP_CHOLESKY));
+            bool solveStatus = solve(a0, b, x0, (nfunc == HAL_LU ? DECOMP_LU : DECOMP_CHOLESKY));
             t = (double)getTickCount() - t;
+            EXPECT_TRUE(solveStatus);
             min_ocv_t = std::min(min_ocv_t, t);
         }
         //std::cout << "x: " << Mat(x.t()) << std::endl;
         //std::cout << "x0: " << Mat(x0.t()) << std::endl;
 
-        EXPECT_LE(norm(x, x0, NORM_INF | NORM_RELATIVE), eps);
+        EXPECT_LE(cvtest::norm(x, x0, NORM_INF | NORM_RELATIVE), eps)
+            << "x:  " << Mat(x.t())
+            << "\nx0: " << Mat(x0.t())
+            << "\na0: " << a0
+            << "\nb: " << b;
 
         double freq = getTickFrequency();
         printf("%s (%d x %d, %s): hal time=%.2fusec, ocv time=%.2fusec\n",
@@ -193,3 +199,7 @@ TEST(Core_HAL, mat_decomp)
                min_hal_t*1e6/freq, min_ocv_t*1e6/freq);
     }
 }
+
+INSTANTIATE_TEST_CASE_P(Core, HAL, testing::Range(0, 16));
+
+}} // namespace

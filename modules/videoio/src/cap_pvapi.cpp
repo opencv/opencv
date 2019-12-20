@@ -44,9 +44,10 @@
 //
 
 #include "precomp.hpp"
+#include "cap_interface.hpp"
 
 #ifdef HAVE_PVAPI
-#if !defined WIN32 && !defined _WIN32 && !defined _LINUX
+#if !defined _WIN32 && !defined _LINUX
 #define _LINUX
 #endif
 
@@ -57,7 +58,7 @@
 #endif
 
 #include <PvApi.h>
-#ifdef WIN32
+#ifdef _WIN32
 #  include <io.h>
 #else
 #  include <time.h>
@@ -81,17 +82,17 @@ public:
 
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual int getCaptureDomain()
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE
     {
         return CV_CAP_PVAPI;
     }
 
 protected:
-#ifndef WIN32
+#ifndef _WIN32
     virtual void Sleep(unsigned int time);
 #endif
 
@@ -118,7 +119,7 @@ CvCaptureCAM_PvAPI::CvCaptureCAM_PvAPI()
     memset(&this->Camera, 0, sizeof(this->Camera));
 }
 
-#ifndef WIN32
+#ifndef _WIN32
 void CvCaptureCAM_PvAPI::Sleep(unsigned int time)
 {
     struct timespec t,r;
@@ -599,12 +600,12 @@ bool CvCaptureCAM_PvAPI::resizeCaptureFrame (int frameWidth, int frameHeight)
     return true;
 }
 
-CvCapture* cvCreateCameraCapture_PvAPI( int index )
+cv::Ptr<cv::IVideoCapture> cv::create_PvAPI_capture( int index )
 {
     CvCaptureCAM_PvAPI* capture = new CvCaptureCAM_PvAPI;
 
     if ( capture->open( index ))
-        return capture;
+        return cv::makePtr<cv::LegacyCapture>(capture);
 
     delete capture;
     return NULL;

@@ -1,7 +1,7 @@
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/videoio/videoio.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 
@@ -12,7 +12,7 @@ static void help()
 {
     cout << "\nThis program demonstrated the floodFill() function\n"
             "Call:\n"
-            "./ffilldemo [image_name -- Default: ../data/fruits.jpg]\n" << endl;
+            "./ffilldemo [image_name -- Default: fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
             "\tESC - quit the program\n"
@@ -73,12 +73,21 @@ static void onMouse( int event, int x, int y, int, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"../data/fruits.jpg";
-    image0 = imread(filename, 1);
+    cv::CommandLineParser parser (argc, argv,
+        "{help h | | show help message}{@image|fruits.jpg| input image}"
+    );
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+    string filename = parser.get<string>("@image");
+    image0 = imread(samples::findFile(filename), 1);
 
     if( image0.empty() )
     {
-        cout << "Image empty. Usage: ffilldemo <image_name>\n";
+        cout << "Image empty\n";
+        parser.printMessage();
         return 0;
     }
     help();
@@ -96,13 +105,13 @@ int main( int argc, char** argv )
     {
         imshow("image", isColor ? image : gray);
 
-        int c = waitKey(0);
-        if( (c & 255) == 27 )
+        char c = (char)waitKey(0);
+        if( c == 27 )
         {
             cout << "Exiting ...\n";
             break;
         }
-        switch( (char)c )
+        switch( c )
         {
         case 'c':
             if( isColor )

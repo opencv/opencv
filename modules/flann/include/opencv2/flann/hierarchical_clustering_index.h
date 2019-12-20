@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_HIERARCHICAL_CLUSTERING_INDEX_H_
 #define OPENCV_FLANN_HIERARCHICAL_CLUSTERING_INDEX_H_
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <map>
 #include <cassert>
@@ -435,7 +437,7 @@ public:
     /**
      *  Returns size of index.
      */
-    size_t size() const
+    size_t size() const CV_OVERRIDE
     {
         return size_;
     }
@@ -443,7 +445,7 @@ public:
     /**
      * Returns the length of an index feature.
      */
-    size_t veclen() const
+    size_t veclen() const CV_OVERRIDE
     {
         return veclen_;
     }
@@ -453,7 +455,7 @@ public:
      * Computes the inde memory usage
      * Returns: memory used by the index
      */
-    int usedMemory() const
+    int usedMemory() const CV_OVERRIDE
     {
         return pool.usedMemory+pool.wastedMemory+memoryCounter;
     }
@@ -461,7 +463,7 @@ public:
     /**
      * Builds the index
      */
-    void buildIndex()
+    void buildIndex() CV_OVERRIDE
     {
         if (branching_<2) {
             throw FLANNException("Branching factor must be at least 2");
@@ -480,13 +482,13 @@ public:
     }
 
 
-    flann_algorithm_t getType() const
+    flann_algorithm_t getType() const CV_OVERRIDE
     {
         return FLANN_INDEX_HIERARCHICAL;
     }
 
 
-    void saveIndex(FILE* stream)
+    void saveIndex(FILE* stream) CV_OVERRIDE
     {
         save_value(stream, branching_);
         save_value(stream, trees_);
@@ -501,7 +503,7 @@ public:
     }
 
 
-    void loadIndex(FILE* stream)
+    void loadIndex(FILE* stream) CV_OVERRIDE
     {
         free_elements();
 
@@ -544,7 +546,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     searchParams = parameters that influence the search algorithm (checks)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
 
         int maxChecks = get_param(searchParams,"checks",32);
@@ -569,7 +571,7 @@ public:
 
     }
 
-    IndexParams getParameters() const
+    IndexParams getParameters() const CV_OVERRIDE
     {
         return params;
     }
@@ -578,7 +580,7 @@ public:
 private:
 
     /**
-     * Struture representing a node in the hierarchical k-means tree.
+     * Structure representing a node in the hierarchical k-means tree.
      */
     struct Node
     {
@@ -844,5 +846,7 @@ private:
 };
 
 }
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_HIERARCHICAL_CLUSTERING_INDEX_H_ */

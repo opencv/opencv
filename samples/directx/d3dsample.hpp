@@ -22,20 +22,20 @@ class D3DSample : public WinApp
 public:
     enum MODE
     {
-        MODE_NOP,
         MODE_CPU,
-        MODE_GPU
+        MODE_GPU_RGBA,
+        MODE_GPU_NV12
     };
 
     D3DSample(int width, int height, std::string& window_name, cv::VideoCapture& cap) :
         WinApp(width, height, window_name)
     {
         m_shutdown          = false;
-        m_mode              = MODE_NOP;
-        m_modeStr[0]        = cv::String("No processing");
-        m_modeStr[1]        = cv::String("Processing on CPU");
-        m_modeStr[2]        = cv::String("Processing on GPU");
-        m_disableProcessing = false;
+        m_mode              = MODE_CPU;
+        m_modeStr[0]        = cv::String("Processing on CPU");
+        m_modeStr[1]        = cv::String("Processing on GPU RGBA");
+        m_modeStr[2]        = cv::String("Processing on GPU NV12");
+        m_demo_processing   = false;
         m_cap               = cap;
     }
 
@@ -49,42 +49,31 @@ public:
         return WinApp::cleanup();
     }
 
-    static float getFps()
-    {
-        static std::queue<int64> time_queue;
-
-        int64 now = cv::getTickCount();
-        int64 then = 0;
-        time_queue.push(now);
-
-        if (time_queue.size() >= 2)
-            then = time_queue.front();
-
-        if (time_queue.size() >= 25)
-            time_queue.pop();
-
-        size_t sz = time_queue.size();
-
-        float fps = sz * (float)cv::getTickFrequency() / (now - then);
-
-        return fps;
-    }
-
 protected:
     virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         switch (message)
         {
         case WM_CHAR:
-            if (wParam >= '0' && wParam <= '2')
+            if (wParam == '1')
             {
-                m_mode = static_cast<MODE>((char)wParam - '0');
-                return 0;
+                m_mode = MODE_CPU;
+                return EXIT_SUCCESS;
+            }
+            if (wParam == '2')
+            {
+                m_mode = MODE_GPU_RGBA;
+                return EXIT_SUCCESS;
+            }
+            if (wParam == '3')
+            {
+                m_mode = MODE_GPU_NV12;
+                return EXIT_SUCCESS;
             }
             else if (wParam == VK_SPACE)
             {
-                m_disableProcessing = !m_disableProcessing;
-                return 0;
+                m_demo_processing = !m_demo_processing;
+                return EXIT_SUCCESS;
             }
             else if (wParam == VK_ESCAPE)
             {
@@ -97,7 +86,7 @@ protected:
 
         case WM_DESTROY:
             ::PostQuitMessage(0);
-            return 0;
+            return EXIT_SUCCESS;
         }
 
         return ::DefWindowProc(hWnd, message, wParam, lParam);
@@ -108,63 +97,56 @@ protected:
 
 protected:
     bool               m_shutdown;
-    bool               m_disableProcessing;
+    bool               m_demo_processing;
     MODE               m_mode;
     cv::String         m_modeStr[3];
     cv::VideoCapture   m_cap;
     cv::Mat            m_frame_bgr;
     cv::Mat            m_frame_rgba;
+    cv::TickMeter      m_timer;
 };
-
-
-static void help()
-{
-    printf(
-        "\nSample demonstrating interoperability of DirectX and OpenCL with OpenCV.\n"
-        "Hot keys: \n"
-        "    0 - no processing\n"
-        "    1 - blur DX surface on CPU through OpenCV\n"
-        "    2 - blur DX surface on GPU through OpenCV using OpenCL\n"
-        "  ESC - exit\n\n");
-}
 
 
 static const char* keys =
 {
-    "{c camera | true  | use camera or not}"
+    "{c camera | 0     | camera id  }"
     "{f file   |       | movie file name  }"
-    "{h help   | false | print help info  }"
 };
 
 
 template <typename TApp>
 int d3d_app(int argc, char** argv, std::string& title)
 {
-    cv::CommandLineParser parser(argc, argv, keys); \
-    bool   useCamera = parser.has("camera"); \
-    string file      = parser.get<string>("file"); \
-    bool   showHelp  = parser.get<bool>("help"); \
+    cv::CommandLineParser parser(argc, argv, keys);
+    std::string file = parser.get<std::string>("file");
+    int    camera_id = parser.get<int>("camera");
 
-    if (showHelp)
-        help();
+    parser.about(
+        "\nA sample program demonstrating interoperability of DirectX and OpenCL with OpenCV.\n\n"
+        "Hot keys: \n"
+        "  SPACE - turn processing on/off\n"
+        "    1   - process DX surface through OpenCV on CPU\n"
+        "    2   - process DX RGBA surface through OpenCV on GPU (via OpenCL)\n"
+        "    3   - process DX NV12 surface through OpenCV on GPU (via OpenCL)\n"
+        "   ESC  - exit\n\n");
 
     parser.printMessage();
 
     cv::VideoCapture cap;
 
-    if (useCamera)
-        cap.open(0);
+    if (file.empty())
+        cap.open(camera_id);
     else
         cap.open(file.c_str());
 
     if (!cap.isOpened())
     {
         printf("can not open camera or video file\n");
-        return -1;
+        return EXIT_FAILURE;
     }
 
-    int width  = (int)cap.get(CAP_PROP_FRAME_WIDTH);
-    int height = (int)cap.get(CAP_PROP_FRAME_HEIGHT);
+    int width  = (int)cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    int height = (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT);
 
     std::string wndname = title;
 
@@ -176,7 +158,7 @@ int d3d_app(int argc, char** argv, std::string& title)
         return app.run();
     }
 
-    catch (cv::Exception& e)
+    catch (const cv::Exception& e)
     {
         std::cerr << "Exception: " << e.what() << std::endl;
         return 10;

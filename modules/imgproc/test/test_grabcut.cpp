@@ -42,11 +42,7 @@
 
 #include "test_precomp.hpp"
 
-#include <string>
-#include <iostream>
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_GrabcutTest : public cvtest::BaseTest
 {
@@ -93,10 +89,11 @@ void CV_GrabcutTest::run( int /* start_from */)
     Mat exp_bgdModel, exp_fgdModel;
 
     Mat mask;
-    mask = Scalar(0);
     Mat bgdModel, fgdModel;
     grabCut( img, mask, rect, bgdModel, fgdModel, 0, GC_INIT_WITH_RECT );
-    grabCut( img, mask, rect, bgdModel, fgdModel, 2, GC_EVAL );
+    bgdModel.copyTo(exp_bgdModel);
+    fgdModel.copyTo(exp_fgdModel);
+    grabCut( img, mask, rect, bgdModel, fgdModel, 2, GC_EVAL_FREEZE_MODEL );
 
     // Multiply images by 255 for more visuality of test data.
     if( mask_prob.empty() )
@@ -109,9 +106,17 @@ void CV_GrabcutTest::run( int /* start_from */)
         exp_mask1 = (mask & 1) * 255;
         imwrite(string(ts->get_data_path()) + "grabcut/exp_mask1.png", exp_mask1);
     }
-
     if (!verify((mask & 1) * 255, exp_mask1))
     {
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        return;
+    }
+    // The model should not be changed after calling with GC_EVAL_FREEZE_MODEL
+    double sumBgdModel = cv::sum(cv::abs(bgdModel) - cv::abs(exp_bgdModel))[0];
+    double sumFgdModel = cv::sum(cv::abs(fgdModel) - cv::abs(exp_fgdModel))[0];
+    if (sumBgdModel >= 0.1 || sumFgdModel >= 0.1)
+    {
+        ts->printf(cvtest::TS::LOG, "sumBgdModel = %f, sumFgdModel = %f\n", sumBgdModel, sumFgdModel);
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return;
     }
@@ -128,7 +133,6 @@ void CV_GrabcutTest::run( int /* start_from */)
         exp_mask2 = (mask & 1) * 255;
         imwrite(string(ts->get_data_path()) + "grabcut/exp_mask2.png", exp_mask2);
     }
-
     if (!verify((mask & 1) * 255, exp_mask2))
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
@@ -170,3 +174,5 @@ TEST(Imgproc_GrabCut, repeatability)
     EXPECT_EQ(0, countNonZero(mask_1 != mask_3));
     EXPECT_EQ(0, countNonZero(mask_2 != mask_3));
 }
+
+}} // namespace

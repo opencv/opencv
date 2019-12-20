@@ -128,6 +128,9 @@ struct CHullCmpPoints
 
 void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(_points.getObj() != _hull.getObj());
     Mat points = _points.getMat();
     int i, total = points.checkVector(2), depth = points.depth(), nout = 0;
     int miny_ind = 0, maxy_ind = 0;
@@ -144,11 +147,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     bool is_float = depth == CV_32F;
     AutoBuffer<Point*> _pointer(total);
     AutoBuffer<int> _stack(total + 2), _hullbuf(total);
-    Point** pointer = _pointer;
+    Point** pointer = _pointer.data();
     Point2f** pointerf = (Point2f**)pointer;
     Point* data0 = points.ptr<Point>();
-    int* stack = _stack;
-    int* hullbuf = _hullbuf;
+    int* stack = _stack.data();
+    int* hullbuf = _hullbuf.data();
 
     CV_Assert(points.isContinuous());
 
@@ -264,6 +267,8 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
 void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defects )
 {
+    CV_INSTRUMENT_REGION();
+
     Mat points = _points.getMat();
     int i, j = 0, npoints = points.checkVector(2, CV_32S);
     CV_Assert( npoints >= 0 );
@@ -276,11 +281,16 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
 
     Mat hull = _hull.getMat();
     int hpoints = hull.checkVector(1, CV_32S);
-    CV_Assert( hpoints > 2 );
+    CV_Assert( hpoints > 0 );
 
     const Point* ptr = points.ptr<Point>();
     const int* hptr = hull.ptr<int>();
     std::vector<Vec4i> defects;
+    if ( hpoints < 3 ) //if hull consists of one or two points, contour is always convex
+    {
+        _defects.release();
+        return;
+    }
 
     // 1. recognize co-orientation of the contour and its hull
     bool rev_orientation = ((hptr[1] > hptr[0]) + (hptr[2] > hptr[1]) + (hptr[0] > hptr[2])) != 2;
@@ -302,7 +312,7 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
         int defect_deepest_point = -1;
         double defect_depth = 0;
         bool is_defect = false;
-
+        j=hcurr;
         for(;;)
         {
             // go through points to achieve next hull point
@@ -395,9 +405,6 @@ CV_IMPL CvSeq*
 cvConvexHull2( const CvArr* array, void* hull_storage,
                int orientation, int return_points )
 {
-    union { CvContour* c; CvSeq* s; } hull;
-    hull.s = 0;
-
     CvMat* mat = 0;
     CvContour contour_header;
     CvSeq hull_header;
@@ -418,7 +425,9 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
         ptseq = cvPointSeqFromMat( CV_SEQ_KIND_GENERIC, array, &contour_header, &block );
     }
 
-    if( CV_IS_STORAGE( hull_storage ))
+    bool isStorage = isStorageOrMat(hull_storage);
+
+    if(isStorage)
     {
         if( return_points )
         {
@@ -436,9 +445,6 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     }
     else
     {
-        if( !CV_IS_MAT( hull_storage ))
-            CV_Error(CV_StsBadArg, "Destination must be valid memory storage or matrix");
-
         mat = (CvMat*)hull_storage;
 
         if( (mat->cols != 1 && mat->rows != 1) || !CV_IS_MAT_CONT(mat->type))
@@ -464,10 +470,10 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     int total = ptseq->total;
     if( total == 0 )
     {
-        if( mat )
+        if( !isStorage )
             CV_Error( CV_StsBadSize,
                      "Point sequence can not be empty if the output is matrix" );
-        return hull.s;
+        return 0;
     }
 
     cv::AutoBuffer<double> _ptbuf;
@@ -489,22 +495,18 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     else
         cvSeqPushMulti(hullseq, h0.ptr(), (int)h0.total());
 
-    if( mat )
+    if (isStorage)
+    {
+        return hullseq;
+    }
+    else
     {
         if( mat->rows > mat->cols )
             mat->rows = hullseq->total;
         else
             mat->cols = hullseq->total;
+        return 0;
     }
-    else
-    {
-        hull.s = hullseq;
-        hull.c->rect = cvBoundingRect( ptseq,
-                                       ptseq->header_size < (int)sizeof(CvContour) ||
-                                       &ptseq->flags == &contour_header.flags );
-    }
-
-    return hull.s;
 }
 
 
@@ -575,7 +577,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
 
         hull = cvMakeSeqHeaderForArray(
                                        CV_SEQ_KIND_CURVE|CV_MAT_TYPE(mat->type)|CV_SEQ_FLAG_CLOSED,
-                                       sizeof(CvContour), CV_ELEM_SIZE(mat->type), mat->data.ptr,
+                                       sizeof(hull_header), CV_ELEM_SIZE(mat->type), mat->data.ptr,
                                        mat->cols + mat->rows - 1, &hull_header, &hullblock );
     }
 
@@ -655,6 +657,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
             int t = *(int*)hull_reader.ptr;
             hull_next = CV_GET_SEQ_ELEM( CvPoint, ptseq, t );
         }
+        CV_Assert(hull_next != NULL && hull_cur != NULL);
 
         dx0 = (double)hull_next->x - (double)hull_cur->x;
         dy0 = (double)hull_next->y - (double)hull_cur->y;

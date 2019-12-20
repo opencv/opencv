@@ -1,11 +1,11 @@
 Adding a Trackbar to our applications! {#tutorial_trackbar}
 ======================================
 
--   In the previous tutorials (about *linear blending* and the *brightness and contrast
-    adjustments*) you might have noted that we needed to give some **input** to our programs, such
-    as \f$\alpha\f$ and \f$beta\f$. We accomplished that by entering this data using the Terminal
--   Well, it is time to use some fancy GUI tools. OpenCV provides some GUI utilities (*highgui.h*)
-    for you. An example of this is a **Trackbar**
+-   In the previous tutorials (about @ref tutorial_adding_images and the @ref tutorial_basic_linear_transform)
+    you might have noted that we needed to give some **input** to our programs, such
+    as \f$\alpha\f$ and \f$beta\f$. We accomplished that by entering this data using the Terminal.
+-   Well, it is time to use some fancy GUI tools. OpenCV provides some GUI utilities (**highgui** module)
+    for you. An example of this is a **Trackbar**.
 
     ![](images/Adding_Trackbars_Tutorial_Trackbar.png)
 
@@ -24,105 +24,95 @@ Code
 
 Let's modify the program made in the tutorial @ref tutorial_adding_images. We will let the user enter the
 \f$\alpha\f$ value by using the Trackbar.
-@code{.cpp}
-#include <opencv2/opencv.hpp>
-using namespace cv;
 
-/// Global Variables
-const int alpha_slider_max = 100;
-int alpha_slider;
-double alpha;
-double beta;
+@add_toggle_cpp
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp)
+@include cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp
+@end_toggle
 
-/// Matrices to store images
-Mat src1;
-Mat src2;
-Mat dst;
+@add_toggle_java
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java)
+@include java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java
+@end_toggle
 
-/*
- * @function on_trackbar
- * @brief Callback for trackbar
- */
-void on_trackbar( int, void* )
-{
-  alpha = (double) alpha_slider/alpha_slider_max ;
-  beta = ( 1.0 - alpha );
-
-  addWeighted( src1, alpha, src2, beta, 0.0, dst);
-
-  imshow( "Linear Blend", dst );
-}
-
-int main( int argc, char** argv )
-{
-  /// Read image ( same size, same type )
-  src1 = imread("../../images/LinuxLogo.jpg");
-  src2 = imread("../../images/WindowsLogo.jpg");
-
-  if( !src1.data ) { printf("Error loading src1 \n"); return -1; }
-  if( !src2.data ) { printf("Error loading src2 \n"); return -1; }
-
-  /// Initialize values
-  alpha_slider = 0;
-
-  /// Create Windows
-  namedWindow("Linear Blend", 1);
-
-  /// Create Trackbars
-  char TrackbarName[50];
-  sprintf( TrackbarName, "Alpha x %d", alpha_slider_max );
-
-  createTrackbar( TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
-
-  /// Show some stuff
-  on_trackbar( alpha_slider, 0 );
-
-  /// Wait until user press some key
-  waitKey(0);
-  return 0;
-}
-@endcode
+@add_toggle_python
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py)
+@include python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py
+@end_toggle
 
 Explanation
 -----------
 
 We only analyze the code that is related to Trackbar:
 
--#  First, we load 02 images, which are going to be blended.
-    @code{.cpp}
-    src1 = imread("../../images/LinuxLogo.jpg");
-    src2 = imread("../../images/WindowsLogo.jpg");
-    @endcode
--#  To create a trackbar, first we have to create the window in which it is going to be located. So:
-    @code{.cpp}
-    namedWindow("Linear Blend", 1);
-    @endcode
--#  Now we can create the Trackbar:
-    @code{.cpp}
-    createTrackbar( TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
-    @endcode
-    Note the following:
+-  First, we load two images, which are going to be blended.
 
+@add_toggle_cpp
+@snippet cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp load
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java load
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py load
+@end_toggle
+
+-  To create a trackbar, first we have to create the window in which it is going to be located. So:
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp window
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java window
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py window
+@end_toggle
+
+-  Now we can create the Trackbar:
+
+@add_toggle_cpp
+@snippet cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp create_trackbar
+@end_toggle
+
+@add_toggle_java
+@snippet java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java create_trackbar
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py create_trackbar
+@end_toggle
+
+Note the following (C++ code):
     -   Our Trackbar has a label **TrackbarName**
-    -   The Trackbar is located in the window named **"Linear Blend"**
+    -   The Trackbar is located in the window named **Linear Blend**
     -   The Trackbar values will be in the range from \f$0\f$ to **alpha_slider_max** (the minimum
         limit is always **zero**).
     -   The numerical value of Trackbar is stored in **alpha_slider**
     -   Whenever the user moves the Trackbar, the callback function **on_trackbar** is called
 
--#  Finally, we have to define the callback function **on_trackbar**
-    @code{.cpp}
-    void on_trackbar( int, void* )
-    {
-     alpha = (double) alpha_slider/alpha_slider_max ;
-     beta = ( 1.0 - alpha );
+Finally, we have to define the callback function **on_trackbar** for C++ and Python code, using an anonymous inner class listener in Java
 
-     addWeighted( src1, alpha, src2, beta, 0.0, dst);
+@add_toggle_cpp
+@snippet cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp on_trackbar
+@end_toggle
 
-     imshow( "Linear Blend", dst );
-    }
-    @endcode
-    Note that:
+@add_toggle_java
+@snippet java/tutorial_code/highgui/trackbar/AddingImagesTrackbar.java on_trackbar
+@end_toggle
+
+@add_toggle_python
+@snippet python/tutorial_code/highgui/trackbar/AddingImagesTrackbar.py on_trackbar
+@end_toggle
+
+Note that (C++ code):
     -   We use the value of **alpha_slider** (integer) to get a double value for **alpha**.
     -   **alpha_slider** is updated each time the trackbar is displaced by the user.
     -   We define *src1*, *src2*, *dist*, *alpha*, *alpha_slider* and *beta* as global variables,
@@ -135,8 +125,8 @@ Result
 
     ![](images/Adding_Trackbars_Tutorial_Result_0.jpg)
 
--   As a manner of practice, you can also add 02 trackbars for the program made in
-    @ref tutorial_basic_linear_transform. One trackbar to set \f$\alpha\f$ and another for \f$\beta\f$. The output might
+-   As a manner of practice, you can also add two trackbars for the program made in
+    @ref tutorial_basic_linear_transform. One trackbar to set \f$\alpha\f$ and another for set \f$\beta\f$. The output might
     look like:
 
     ![](images/Adding_Trackbars_Tutorial_Result_1.jpg)

@@ -41,7 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_LshTableBadArgTest : public cvtest::BadArgTest
 {
@@ -89,3 +89,5 @@ void CV_LshTableBadArgTest::run( int /* start_from */ )
 }
 
 TEST(Flann_LshTable, badarg) { CV_LshTableBadArgTest test; test.safe_run(); }
+
+}} // namespace

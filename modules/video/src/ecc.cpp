@@ -90,7 +90,7 @@ static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2,
 
 
     //instead of dividing each block with den,
-    //just pre-devide the block of gradients (it's more efficient)
+    //just pre-divide the block of gradients (it's more efficient)
 
     Mat src1Divided_;
     Mat src2Divided_;
@@ -298,11 +298,7 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
     }
     if (motionType == MOTION_EUCLIDEAN) {
         double new_theta = updatePtr[0];
-        if (mapPtr[3]>0)
-            new_theta += acos(mapPtr[0]);
-
-        if (mapPtr[3]<0)
-            new_theta -= acos(mapPtr[0]);
+        new_theta += asin(mapPtr[3]);
 
         mapPtr[2] += updatePtr[1];
         mapPtr[5] += updatePtr[2];
@@ -313,22 +309,64 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
 }
 
 
+/** Function that computes enhanced corelation coefficient from Georgios et.al. 2008
+*   See https://github.com/opencv/opencv/issues/12432
+*/
+double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask)
+{
+    CV_Assert(!templateImage.empty());
+    CV_Assert(!inputImage.empty());
+
+    if( ! (templateImage.type()==inputImage.type()))
+        CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
+
+    Scalar meanTemplate, sdTemplate;
+
+    int active_pixels = inputMask.empty() ? templateImage.size().area() : countNonZero(inputMask);
+
+    meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
+    Mat templateImage_zeromean = Mat::zeros(templateImage.size(), templateImage.type());
+    subtract(templateImage, meanTemplate, templateImage_zeromean, inputMask);
+    double templateImagenorm = std::sqrt(active_pixels*sdTemplate.val[0]*sdTemplate.val[0]);
+
+    Scalar meanInput, sdInput;
+
+    Mat inputImage_zeromean = Mat::zeros(inputImage.size(), inputImage.type());
+    meanStdDev(inputImage, meanInput, sdInput, inputMask);
+    subtract(inputImage, meanInput, inputImage_zeromean, inputMask);
+    double inputImagenorm = std::sqrt(active_pixels*sdInput.val[0]*sdInput.val[0]);
+
+    return templateImage_zeromean.dot(inputImage_zeromean)/(templateImagenorm*inputImagenorm);
+}
+
+
 double cv::findTransformECC(InputArray templateImage,
                             InputArray inputImage,
                             InputOutputArray warpMatrix,
                             int motionType,
                             TermCriteria criteria,
-                            InputArray inputMask)
+                            InputArray inputMask,
+                            int gaussFiltSize)
 {
 
 
-    Mat src = templateImage.getMat();//template iamge
+    Mat src = templateImage.getMat();//template image
     Mat dst = inputImage.getMat(); //input image (to be warped)
     Mat map = warpMatrix.getMat(); //warp (transformation)
 
     CV_Assert(!src.empty());
     CV_Assert(!dst.empty());
 
+    // If the user passed an un-initialized warpMatrix, initialize to identity
+    if(map.empty()) {
+        int rowCount = 2;
+        if(motionType == MOTION_HOMOGRAPHY)
+            rowCount = 3;
+
+        warpMatrix.create(rowCount, 3, CV_32FC1);
+        map = warpMatrix.getMat();
+        map = Mat::eye(rowCount, 3, CV_32F);
+    }
 
     if( ! (src.type()==dst.type()))
         CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
@@ -398,7 +436,7 @@ double cv::findTransformECC(InputArray templateImage,
     Mat templateFloat = Mat(hs, ws, CV_32F);// to store the (smoothed) template
     Mat imageFloat    = Mat(hd, wd, CV_32F);// to store the (smoothed) input image
     Mat imageWarped   = Mat(hs, ws, CV_32F);// to store the warped zero-mean input image
-    Mat imageMask		= Mat(hs, ws, CV_8U); //to store the final mask
+    Mat imageMask     = Mat(hs, ws, CV_8U); // to store the final mask
 
     Mat inputMaskMat = inputMask.getMat();
     //to use it for mask warping
@@ -410,11 +448,11 @@ double cv::findTransformECC(InputArray templateImage,
 
     //gaussian filtering is optional
     src.convertTo(templateFloat, templateFloat.type());
-    GaussianBlur(templateFloat, templateFloat, Size(5, 5), 0, 0);
+    GaussianBlur(templateFloat, templateFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
 
     Mat preMaskFloat;
     preMask.convertTo(preMaskFloat, CV_32F);
-    GaussianBlur(preMaskFloat, preMaskFloat, Size(5, 5), 0, 0);
+    GaussianBlur(preMaskFloat, preMaskFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
     // Change threshold.
     preMaskFloat *= (0.5/0.95);
     // Rounding conversion.
@@ -422,7 +460,7 @@ double cv::findTransformECC(InputArray templateImage,
     preMask.convertTo(preMaskFloat, preMaskFloat.type());
 
     dst.convertTo(imageFloat, imageFloat.type());
-    GaussianBlur(imageFloat, imageFloat, Size(5, 5), 0, 0);
+    GaussianBlur(imageFloat, imageFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
 
     // needed matrices for gradients and warped gradients
     Mat gradientX = Mat::zeros(hd, wd, CV_32FC1);
@@ -512,7 +550,7 @@ double cv::findTransformECC(InputArray templateImage,
 
         const double correlation = templateZM.dot(imageWarped);
 
-        // calculate enhanced correlation coefficiont (ECC)->rho
+        // calculate enhanced correlation coefficient (ECC)->rho
         last_rho = rho;
         rho = correlation/(imgNorm*tmpNorm);
         if (cvIsNaN(rho)) {
@@ -551,5 +589,13 @@ double cv::findTransformECC(InputArray templateImage,
     return rho;
 }
 
+double cv::findTransformECC(InputArray templateImage, InputArray inputImage,
+    InputOutputArray warpMatrix, int motionType,
+    TermCriteria criteria,
+    InputArray inputMask)
+{
+    // Use default value of 5 for gaussFiltSize to maintain backward compatibility.
+    return findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria, inputMask, 5);
+}
 
 /* End of file. */

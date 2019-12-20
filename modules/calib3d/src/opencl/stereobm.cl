@@ -141,7 +141,7 @@ __kernel void stereoBM(__global const uchar * leftptr,
                        __global const uchar * rightptr,
                        __global uchar * dispptr, int disp_step, int disp_offset,
                        int rows, int cols,                                              // rows, cols of left and right images, not disp
-                       int textureTreshold, int uniquenessRatio)
+                       int textureThreshold, int uniquenessRatio)
 {
     int lz = get_local_id(0);
     int gx = get_global_id(1) * BLOCK_SIZE_X;

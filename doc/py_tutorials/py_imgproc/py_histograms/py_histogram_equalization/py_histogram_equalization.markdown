@@ -26,16 +26,16 @@ a very good explanation with worked out examples, so that you would understand a
 after reading that. Instead, here we will see its Numpy implementation. After that, we will see
 OpenCV function.
 @code{.py}
-import cv2
 import numpy as np
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('wiki.jpg',0)
+img = cv.imread('wiki.jpg',0)
 
 hist,bins = np.histogram(img.flatten(),256,[0,256])
 
 cdf = hist.cumsum()
-cdf_normalized = cdf * hist.max()/ cdf.max()
+cdf_normalized = cdf * float(hist.max()) / cdf.max()
 
 plt.plot(cdf_normalized, color = 'b')
 plt.hist(img.flatten(),256,[0,256], color = 'r')
@@ -76,15 +76,15 @@ histogram equalized to make them all with same lighting conditions.
 Histograms Equalization in OpenCV
 ---------------------------------
 
-OpenCV has a function to do this, **cv2.equalizeHist()**. Its input is just grayscale image and
+OpenCV has a function to do this, **cv.equalizeHist()**. Its input is just grayscale image and
 output is our histogram equalized image.
 
 Below is a simple code snippet showing its usage for same image we used :
 @code{.py}
-img = cv2.imread('wiki.jpg',0)
-equ = cv2.equalizeHist(img)
+img = cv.imread('wiki.jpg',0)
+equ = cv.equalizeHist(img)
 res = np.hstack((img,equ)) #stacking images side-by-side
-cv2.imwrite('res.png',res)
+cv.imwrite('res.png',res)
 @endcode
 ![image](images/equalization_opencv.jpg)
 
@@ -122,15 +122,15 @@ applied.
 Below code snippet shows how to apply CLAHE in OpenCV:
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 
-img = cv2.imread('tsukuba_l.png',0)
+img = cv.imread('tsukuba_l.png',0)
 
 # create a CLAHE object (Arguments are optional).
-clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
 cl1 = clahe.apply(img)
 
-cv2.imwrite('clahe_2.jpg',cl1)
+cv.imwrite('clahe_2.jpg',cl1)
 @endcode
 See the result below and compare it with results above, especially the statue region:
 

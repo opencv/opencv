@@ -47,6 +47,7 @@
 #include "grfmt_sunras.hpp"
 #include "grfmt_jpeg.hpp"
 #include "grfmt_pxm.hpp"
+#include "grfmt_pfm.hpp"
 #include "grfmt_tiff.hpp"
 #include "grfmt_png.hpp"
 #include "grfmt_jpeg2000.hpp"
@@ -54,5 +55,7 @@
 #include "grfmt_webp.hpp"
 #include "grfmt_hdr.hpp"
 #include "grfmt_gdal.hpp"
+#include "grfmt_gdcm.hpp"
+#include "grfmt_pam.hpp"
 
 #endif/*_GRFMTS_H_*/

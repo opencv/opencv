@@ -89,13 +89,11 @@ BOWKMeansTrainer::BOWKMeansTrainer( int _clusterCount, const TermCriteria& _term
 
 Mat BOWKMeansTrainer::cluster() const
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert( !descriptors.empty() );
 
-    int descCount = 0;
-    for( size_t i = 0; i < descriptors.size(); i++ )
-        descCount += descriptors[i].rows;
-
-    Mat mergedDescriptors( descCount, descriptors[0].cols, descriptors[0].type() );
+    Mat mergedDescriptors( descriptorsCount(), descriptors[0].cols, descriptors[0].type() );
     for( size_t i = 0, start = 0; i < descriptors.size(); i++ )
     {
         Mat submut = mergedDescriptors.rowRange((int)start, (int)(start + descriptors[i].rows));
@@ -110,6 +108,8 @@ BOWKMeansTrainer::~BOWKMeansTrainer()
 
 Mat BOWKMeansTrainer::cluster( const Mat& _descriptors ) const
 {
+    CV_INSTRUMENT_REGION();
+
     Mat labels, vocabulary;
     kmeans( _descriptors, clusterCount, labels, termcrit, attempts, flags, vocabulary );
     return vocabulary;
@@ -143,6 +143,8 @@ const Mat& BOWImgDescriptorExtractor::getVocabulary() const
 void BOWImgDescriptorExtractor::compute( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray imgDescriptor,
                                          std::vector<std::vector<int> >* pointIdxsOfClusters, Mat* descriptors )
 {
+    CV_INSTRUMENT_REGION();
+
     imgDescriptor.release();
 
     if( keypoints.empty() )
@@ -172,7 +174,10 @@ int BOWImgDescriptorExtractor::descriptorType() const
 
 void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, OutputArray _imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert( !vocabulary.empty() );
+    CV_Assert(!keypointDescriptors.empty());
 
     int clusterCount = descriptorSize(); // = vocabulary.rows
 

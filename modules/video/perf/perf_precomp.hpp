@@ -1,21 +1,16 @@
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
-
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #ifndef __OPENCV_VIDEO_PRECOMP_HPP__
 #define __OPENCV_VIDEO_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
-#include <opencv2/imgproc.hpp>
 #include <opencv2/video.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include "opencv2/ts/ts_perf.hpp"
 
-#ifdef GTEST_CREATE_SHARED_LIBRARY
-#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
-#endif
+namespace cvtest
+{
+using namespace perf;
+}
 
 #endif

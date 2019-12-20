@@ -2,8 +2,8 @@
 // The example of interoperability between OpenCL and OpenCV.
 // This will loop through frames of video either from input media file
 // or camera device and do processing of these data in OpenCL and then
-// in OpenCV. In OpenCL it does inversion of pixels in half of frame and
-// in OpenCV it does bluring the whole frame.
+// in OpenCV. In OpenCL it does inversion of pixels in left half of frame and
+// in OpenCV it does bluring in the right half of frame.
 */
 #include <cstdio>
 #include <cstdlib>
@@ -14,7 +14,12 @@
 #include <iomanip>
 #include <stdexcept>
 
-#if __APPLE__
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define CL_USE_DEPRECATED_OPENCL_2_0_APIS // eliminate build warning
+
+#ifdef __APPLE__
+#define CL_SILENCE_DEPRECATION
 #include <OpenCL/cl.h>
 #else
 #include <CL/cl.h>
@@ -432,7 +437,7 @@ protected:
     void handleKey(char key);
     void timerStart();
     void timerEnd();
-    std::string fpsStr() const;
+    std::string timeStr() const;
     std::string message() const;
 
 private:
@@ -442,7 +447,8 @@ private:
 
     int64                       m_t0;
     int64                       m_t1;
-    double                      m_fps;
+    float                       m_time;
+    float                       m_frequency;
 
     string                      m_file_name;
     int                         m_camera_id;
@@ -459,6 +465,7 @@ private:
     cl_program                  m_program;
     cl_kernel                   m_kernelBuf;
     cl_kernel                   m_kernelImg;
+    cl_mem                      m_img_src; // used as src in case processing of cl image
     cl_mem                      m_mem_obj;
     cl_event                    m_event;
 };
@@ -477,12 +484,18 @@ App::App(CommandLineParser& cmd)
     m_process    = false;
     m_use_buffer = false;
 
+    m_t0         = 0;
+    m_t1         = 0;
+    m_time       = 0.0;
+    m_frequency  = (float)cv::getTickFrequency();
+
     m_context    = 0;
     m_device_id  = 0;
     m_queue      = 0;
     m_program    = 0;
     m_kernelBuf  = 0;
     m_kernelImg  = 0;
+    m_img_src    = 0;
     m_mem_obj    = 0;
     m_event      = 0;
 } // ctor
@@ -501,6 +514,12 @@ App::~App()
     {
         clReleaseProgram(m_program);
         m_program = 0;
+    }
+
+    if (m_img_src)
+    {
+        clReleaseMemObject(m_img_src);
+        m_img_src = 0;
     }
 
     if (m_mem_obj)
@@ -658,7 +677,7 @@ int App::initVideoSource()
             throw std::runtime_error(std::string("specify video source"));
     }
 
-    catch (std::exception e)
+    catch (const std::exception e)
     {
         cerr << "ERROR: " << e.what() << std::endl;
         return -1;
@@ -681,16 +700,15 @@ int App::process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* mem
     cl_kernel kernel = 0;
     cl_mem mem = mem_obj[0];
 
-    if (0 == mem)
+    if (0 == mem || 0 == m_img_src)
     {
-        // first time initialization
+        // allocate/delete cl memory objects every frame for the simplicity.
+        // in real application more efficient pipeline can be built.
 
-        cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
         if (use_buffer)
         {
-            // allocate OpenCL memory to keep single frame,
-            // reuse this memory for subsecuent frames
-            // memory will be deallocated at dtor
+            cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
+
             mem = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
             if (0 == mem || CL_SUCCESS != res)
                 return -1;
@@ -716,26 +734,55 @@ int App::process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* mem
         }
         else
         {
+            cl_mem_flags flags_src = CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR;
+
             cl_image_format fmt;
             fmt.image_channel_order     = CL_R;
             fmt.image_channel_data_type = CL_UNSIGNED_INT8;
 
-            cl_image_desc desc;
-            desc.image_type        = CL_MEM_OBJECT_IMAGE2D;
-            desc.image_width       = frame.cols;
-            desc.image_height      = frame.rows;
-            desc.image_depth       = 0;
-            desc.image_array_size  = 0;
-            desc.image_row_pitch   = frame.step[0];
-            desc.image_slice_pitch = 0;
-            desc.num_mip_levels    = 0;
-            desc.num_samples       = 0;
-            desc.buffer            = 0;
-            mem = clCreateImage(m_context, flags, &fmt, &desc, frame.ptr(), &res);
+            cl_image_desc desc_src;
+            desc_src.image_type        = CL_MEM_OBJECT_IMAGE2D;
+            desc_src.image_width       = frame.cols;
+            desc_src.image_height      = frame.rows;
+            desc_src.image_depth       = 0;
+            desc_src.image_array_size  = 0;
+            desc_src.image_row_pitch   = frame.step[0];
+            desc_src.image_slice_pitch = 0;
+            desc_src.num_mip_levels    = 0;
+            desc_src.num_samples       = 0;
+            desc_src.buffer            = 0;
+            m_img_src = clCreateImage(m_context, flags_src, &fmt, &desc_src, frame.ptr(), &res);
+            if (0 == m_img_src || CL_SUCCESS != res)
+                return -1;
+
+            cl_mem_flags flags_dst = CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR;
+
+            cl_image_desc desc_dst;
+            desc_dst.image_type        = CL_MEM_OBJECT_IMAGE2D;
+            desc_dst.image_width       = frame.cols;
+            desc_dst.image_height      = frame.rows;
+            desc_dst.image_depth       = 0;
+            desc_dst.image_array_size  = 0;
+            desc_dst.image_row_pitch   = 0;
+            desc_dst.image_slice_pitch = 0;
+            desc_dst.num_mip_levels    = 0;
+            desc_dst.num_samples       = 0;
+            desc_dst.buffer            = 0;
+            mem = clCreateImage(m_context, flags_dst, &fmt, &desc_dst, 0, &res);
             if (0 == mem || CL_SUCCESS != res)
                 return -1;
 
-            res = clSetKernelArg(m_kernelImg, 0, sizeof(cl_mem), &mem);
+            size_t origin[] = { 0, 0, 0 };
+            size_t region[] = { (size_t)frame.cols, (size_t)frame.rows, 1 };
+            res = clEnqueueCopyImage(m_queue, m_img_src, mem, origin, origin, region, 0, 0, &m_event);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            res = clWaitForEvents(1, &m_event);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            res = clSetKernelArg(m_kernelImg, 0, sizeof(cl_mem), &m_img_src);
             if (CL_SUCCESS != res)
                 return -1;
 
@@ -752,7 +799,7 @@ int App::process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* mem
         return -1;
 
     // process left half of frame in OpenCL
-    size_t size[] = { frame.cols / 2, frame.rows };
+    size_t size[] = { (size_t)frame.cols / 2, (size_t)frame.rows };
     res = clEnqueueNDRangeKernel(m_queue, kernel, 2, 0, size, 0, 0, 0, &m_event);
     if (CL_SUCCESS != res)
         return -1;
@@ -806,6 +853,10 @@ int App::process_cl_image_with_opencv(cl_mem image, cv::UMat& u)
     if (image)
         clReleaseMemObject(image);
     m_mem_obj = 0;
+
+    if (m_img_src)
+        clReleaseMemObject(m_img_src);
+    m_img_src = 0;
 
     return 0;
 }
@@ -866,7 +917,7 @@ int App::run()
         putText(img_to_show, "Device : " + m_deviceInfo.Name(), Point(5, 90), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
         cv::String memtype = useBuffer() ? "buffer" : "image";
         putText(img_to_show, "interop with OpenCL " + memtype, Point(5, 120), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
-        putText(img_to_show, "FPS : " + fpsStr(), Point(5, 150), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+        putText(img_to_show, "Time : " + timeStr() + " msec", Point(5, 150), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
 
         imshow("opencl_interop", img_to_show);
 
@@ -910,15 +961,14 @@ inline void App::timerEnd()
 {
     m_t1 = getTickCount();
     int64 delta = m_t1 - m_t0;
-    double freq = getTickFrequency();
-    m_fps = freq / delta;
+    m_time = (delta / m_frequency) * 1000; // units msec
 }
 
 
-inline string App::fpsStr() const
+inline string App::timeStr() const
 {
     stringstream ss;
-    ss << std::fixed << std::setprecision(1) << m_fps;
+    ss << std::fixed << std::setprecision(1) << m_time;
     return ss.str();
 }
 

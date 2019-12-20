@@ -3,8 +3,8 @@
 #include "OpenCVComponent.h"
 
 #include <opencv2\imgproc\types_c.h>
-#include <opencv2\core\core.hpp>
-#include <opencv2\imgproc\imgproc.hpp>
+#include <opencv2\core.hpp>
+#include <opencv2\imgproc.hpp>
 #include <vector>
 #include <algorithm>
 
@@ -31,10 +31,10 @@ IAsyncOperation<IVectorView<int>^>^ OpenCVLib::ProcessAsync(IVector<int>^ input,
     {
         // convert to grayscale
         cv::Mat intermediateMat;
-        cv::cvtColor(mat, intermediateMat, CV_RGB2GRAY);
+        cv::cvtColor(mat, intermediateMat, COLOR_RGB2GRAY);
 
         // convert to BGRA
-        cv::cvtColor(intermediateMat, mat, CV_GRAY2BGRA);
+        cv::cvtColor(intermediateMat, mat, COLOR_GRAY2BGRA);
 
         std::vector<int> output;
         CopyMatrixToVector(mat, output, size);
@@ -63,5 +63,4 @@ void CopyMatrixToVector(const cv::Mat& mat, std::vector<int>& vector, int size)
     {
         vector.push_back(data[i]);
     }
-
 }

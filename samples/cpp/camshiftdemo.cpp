@@ -20,6 +20,7 @@ Point origin;
 Rect selection;
 int vmin = 10, vmax = 256, smin = 30;
 
+// User draws box around object to track. This triggers CAMShift to start tracking
 static void onMouse( int event, int x, int y, int, void* )
 {
     if( selectObject )
@@ -42,10 +43,19 @@ static void onMouse( int event, int x, int y, int, void* )
     case EVENT_LBUTTONUP:
         selectObject = false;
         if( selection.width > 0 && selection.height > 0 )
-            trackObject = -1;
+            trackObject = -1;   // Set up CAMShift properties in main() loop
         break;
     }
 }
+
+string hot_keys =
+    "\n\nHot keys: \n"
+    "\tESC - quit the program\n"
+    "\tc - stop the tracking\n"
+    "\tb - switch to/from backprojection view\n"
+    "\th - show/hide object histogram\n"
+    "\tp - pause video\n"
+    "To initialize tracking, select the object with mouse\n";
 
 static void help()
 {
@@ -54,33 +64,28 @@ static void help()
             "This reads from video camera (0 by default, or the camera number the user enters\n"
             "Usage: \n"
             "   ./camshiftdemo [camera number]\n";
-
-    cout << "\n\nHot keys: \n"
-            "\tESC - quit the program\n"
-            "\tc - stop the tracking\n"
-            "\tb - switch to/from backprojection view\n"
-            "\th - show/hide object histogram\n"
-            "\tp - pause video\n"
-            "To initialize tracking, select the object with mouse\n";
+    cout << hot_keys;
 }
 
 const char* keys =
 {
-    "{@camera_number| 0 | camera number}"
+    "{help h | | show help message}{@camera_number| 0 | camera number}"
 };
 
 int main( int argc, const char** argv )
 {
-    help();
-
     VideoCapture cap;
     Rect trackWindow;
     int hsize = 16;
     float hranges[] = {0,180};
     const float* phranges = hranges;
     CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     int camNum = parser.get<int>(0);
-
     cap.open(camNum);
 
     if( !cap.isOpened() )
@@ -91,7 +96,7 @@ int main( int argc, const char** argv )
         parser.printMessage();
         return -1;
     }
-
+    cout << hot_keys;
     namedWindow( "Histogram", 0 );
     namedWindow( "CamShift Demo", 0 );
     setMouseCallback( "CamShift Demo", onMouse, 0 );
@@ -129,12 +134,13 @@ int main( int argc, const char** argv )
 
                 if( trackObject < 0 )
                 {
+                    // Object has been selected by user, set up CAMShift search properties once
                     Mat roi(hue, selection), maskroi(mask, selection);
                     calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
                     normalize(hist, hist, 0, 255, NORM_MINMAX);
 
                     trackWindow = selection;
-                    trackObject = 1;
+                    trackObject = 1; // Don't set up again, unless user selects new ROI
 
                     histimg = Scalar::all(0);
                     int binW = histimg.cols / hsize;
@@ -152,6 +158,7 @@ int main( int argc, const char** argv )
                     }
                 }
 
+                // Perform CAMShift
                 calcBackProject(&hue, 1, 0, hist, backproj, &phranges);
                 backproj &= mask;
                 RotatedRect trackBox = CamShift(backproj, trackWindow,

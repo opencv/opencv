@@ -56,21 +56,8 @@ namespace cv{
             double _scale;
     };
 
-#ifndef OPENCV_NOSTL
     using std::transform;
-#else
-    template <class InputIterator, class InputIterator2, class OutputIterator, class BinaryOperator>
-    static OutputIterator transform (InputIterator first1, InputIterator last1, InputIterator2 first2,
-                                     OutputIterator result, BinaryOperator binary_op)
-    {
-        while (first1 != last1)
-        {
-            *result = binary_op(*first1, *first2);
-            ++result; ++first1; ++first2;
-        }
-        return result;
-    }
-#endif
+
     void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda, int niters){
 
         CV_Assert(observations.size()>0 && niters>0 && lambda>0);

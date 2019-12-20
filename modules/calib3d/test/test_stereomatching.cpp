@@ -41,17 +41,13 @@
 
 /*
   This is a regression test for stereo matching algorithms. This test gets some quality metrics
-  discribed in "A Taxonomy and Evaluation of Dense Two-Frame Stereo Correspondence Algorithms".
+  described in "A Taxonomy and Evaluation of Dense Two-Frame Stereo Correspondence Algorithms".
   Daniel Scharstein, Richard Szeliski
 */
 
 #include "test_precomp.hpp"
-#include <limits>
-#include <cstdio>
-#include <map>
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 const float EVAL_BAD_THRESH = 1.f;
 const int EVAL_TEXTURELESS_WIDTH = 3;
@@ -238,10 +234,10 @@ void computeDepthDiscontMask( const Mat& disp, Mat& depthDiscontMask, const Mat&
 
     Mat curDisp; disp.copyTo( curDisp );
     if( !unknDispMask.empty() )
-        curDisp.setTo( Scalar(numeric_limits<float>::min()), unknDispMask );
+        curDisp.setTo( Scalar(std::numeric_limits<float>::min()), unknDispMask );
     Mat maxNeighbDisp; dilate( curDisp, maxNeighbDisp, Mat(3, 3, CV_8UC1, Scalar(1)) );
     if( !unknDispMask.empty() )
-        curDisp.setTo( Scalar(numeric_limits<float>::max()), unknDispMask );
+        curDisp.setTo( Scalar(std::numeric_limits<float>::max()), unknDispMask );
     Mat minNeighbDisp; erode( curDisp, minNeighbDisp, Mat(3, 3, CV_8UC1, Scalar(1)) );
     depthDiscontMask = max( (Mat)(maxNeighbDisp-disp), (Mat)(disp-minNeighbDisp) ) > dispGap;
     if( !unknDispMask.empty() )
@@ -327,9 +323,15 @@ string ERROR_PREFIXES[] = { "borderedAll",
                             "borderedTextureless",
                             "borderedDepthDiscont" }; // size of ERROR_KINDS_COUNT
 
+string ROI_PREFIXES[] = {   "roiX",
+                            "roiY",
+                            "roiWidth",
+                            "roiHeight" };
+
 
 const string RMS_STR = "RMS";
 const string BAD_PXLS_FRACTION_STR = "BadPxlsFraction";
+const string ROI_STR = "ValidDisparityROI";
 
 class QualityEvalParams
 {
@@ -367,16 +369,20 @@ public:
 protected:
     // assumed that left image is a reference image
     virtual int runStereoMatchingAlgorithm( const Mat& leftImg, const Mat& rightImg,
-                   Mat& leftDisp, Mat& rightDisp, int caseIdx ) = 0; // return ignored border width
+                   Rect& calcROI, Mat& leftDisp, Mat& rightDisp, int caseIdx ) = 0; // return ignored border width
 
     int readDatasetsParams( FileStorage& fs );
     virtual int readRunParams( FileStorage& fs );
     void writeErrors( const string& errName, const vector<float>& errors, FileStorage* fs = 0 );
+    void writeROI( const Rect& calcROI, FileStorage* fs = 0 );
     void readErrors( FileNode& fn, const string& errName, vector<float>& errors );
+    void readROI( FileNode& fn, Rect& trueROI );
     int compareErrors( const vector<float>& calcErrors, const vector<float>& validErrors,
                        const vector<float>& eps, const string& errName );
+    int compareROI( const Rect& calcROI, const Rect& validROI );
     int processStereoMatchingResults( FileStorage& fs, int caseIdx, bool isWrite,
                   const Mat& leftImg, const Mat& rightImg,
+                  const Rect& calcROI,
                   const Mat& trueLeftDisp, const Mat& trueRightDisp,
                   const Mat& leftDisp, const Mat& rightDisp,
                   const QualityEvalParams& qualityEvalParams  );
@@ -452,6 +458,7 @@ void CV_StereoMatchingTest::run(int)
         Mat rightImg = imread(datasetFullDirName + RIGHT_IMG_NAME);
         Mat trueLeftDisp = imread(datasetFullDirName + TRUE_LEFT_DISP_NAME, 0);
         Mat trueRightDisp = imread(datasetFullDirName + TRUE_RIGHT_DISP_NAME, 0);
+        Rect calcROI;
 
         if( leftImg.empty() || rightImg.empty() || trueLeftDisp.empty() )
         {
@@ -474,7 +481,7 @@ void CV_StereoMatchingTest::run(int)
         }
 
         Mat leftDisp, rightDisp;
-        int ignBorder = max(runStereoMatchingAlgorithm(leftImg, rightImg, leftDisp, rightDisp, ci), EVAL_IGNORE_BORDER);
+        int ignBorder = max(runStereoMatchingAlgorithm(leftImg, rightImg, calcROI, leftDisp, rightDisp, ci), EVAL_IGNORE_BORDER);
 
         leftDisp.convertTo( tmp, CV_32FC1 );
         leftDisp = tmp;
@@ -485,7 +492,7 @@ void CV_StereoMatchingTest::run(int)
         tmp.release();
 
         int tempCode = processStereoMatchingResults( resFS, ci, isWrite,
-                   leftImg, rightImg, trueLeftDisp, trueRightDisp, leftDisp, rightDisp, QualityEvalParams(ignBorder));
+                   leftImg, rightImg, calcROI, trueLeftDisp, trueRightDisp, leftDisp, rightDisp, QualityEvalParams(ignBorder));
         code = tempCode==cvtest::TS::OK ? code : tempCode;
     }
 
@@ -539,6 +546,7 @@ void calcErrors( const Mat& leftImg, const Mat& /*rightImg*/,
 
 int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int caseIdx, bool isWrite,
               const Mat& leftImg, const Mat& rightImg,
+              const Rect& calcROI,
               const Mat& trueLeftDisp, const Mat& trueRightDisp,
               const Mat& leftDisp, const Mat& rightDisp,
               const QualityEvalParams& qualityEvalParams )
@@ -548,19 +556,19 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
     assert( fs.isOpened() );
     assert( trueLeftDisp.type() == CV_32FC1 );
     assert( trueRightDisp.empty() || trueRightDisp.type() == CV_32FC1 );
-    assert( leftDisp.type() == CV_32FC1 && rightDisp.type() == CV_32FC1 );
+    assert( leftDisp.type() == CV_32FC1 && (rightDisp.empty() || rightDisp.type() == CV_32FC1) );
 
     // get masks for unknown ground truth disparity values
     Mat leftUnknMask, rightUnknMask;
     DatasetParams params = datasetsParams[caseDatasets[caseIdx]];
     absdiff( trueLeftDisp, Scalar(params.dispUnknVal), leftUnknMask );
-    leftUnknMask = leftUnknMask < numeric_limits<float>::epsilon();
+    leftUnknMask = leftUnknMask < std::numeric_limits<float>::epsilon();
     assert(leftUnknMask.type() == CV_8UC1);
     if( !trueRightDisp.empty() )
     {
         absdiff( trueRightDisp, Scalar(params.dispUnknVal), rightUnknMask );
-        rightUnknMask = rightUnknMask < numeric_limits<float>::epsilon();
-        assert(leftUnknMask.type() == CV_8UC1);
+        rightUnknMask = rightUnknMask < std::numeric_limits<float>::epsilon();
+        assert(rightUnknMask.type() == CV_8UC1);
     }
 
     // calculate errors
@@ -571,10 +579,12 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
     if( isWrite )
     {
         fs << caseNames[caseIdx] << "{";
-        //cvWriteComment( fs.fs, RMS_STR.c_str(), 0 );
+        fs.writeComment( RMS_STR, 0 );
         writeErrors( RMS_STR, rmss, &fs );
-        //cvWriteComment( fs.fs, BAD_PXLS_FRACTION_STR.c_str(), 0 );
+        fs.writeComment( BAD_PXLS_FRACTION_STR, 0 );
         writeErrors( BAD_PXLS_FRACTION_STR, badPxlsFractions, &fs );
+        fs.writeComment( ROI_STR, 0 );
+        writeROI( calcROI, &fs );
         fs << "}"; // datasetName
     }
     else // compare
@@ -584,15 +594,21 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
         writeErrors( RMS_STR, rmss );
         ts->printf( cvtest::TS::LOG, "%s\n", BAD_PXLS_FRACTION_STR.c_str() );
         writeErrors( BAD_PXLS_FRACTION_STR, badPxlsFractions );
+        ts->printf( cvtest::TS::LOG, "%s\n", ROI_STR.c_str() );
+        writeROI( calcROI );
 
         FileNode fn = fs.getFirstTopLevelNode()[caseNames[caseIdx]];
         vector<float> validRmss, validBadPxlsFractions;
+        Rect validROI;
 
         readErrors( fn, RMS_STR, validRmss );
         readErrors( fn, BAD_PXLS_FRACTION_STR, validBadPxlsFractions );
+        readROI( fn, validROI );
         int tempCode = compareErrors( rmss, validRmss, rmsEps, RMS_STR );
         code = tempCode==cvtest::TS::OK ? code : tempCode;
         tempCode = compareErrors( badPxlsFractions, validBadPxlsFractions, fracEps, BAD_PXLS_FRACTION_STR );
+        code = tempCode==cvtest::TS::OK ? code : tempCode;
+        tempCode = compareROI( calcROI, validROI );
         code = tempCode==cvtest::TS::OK ? code : tempCode;
     }
     return code;
@@ -643,12 +659,38 @@ void CV_StereoMatchingTest::writeErrors( const string& errName, const vector<flo
             ts->printf( cvtest::TS::LOG, "%s = %f\n", string(ERROR_PREFIXES[i]+errName).c_str(), *it );
 }
 
+void CV_StereoMatchingTest::writeROI( const Rect& calcROI, FileStorage* fs )
+{
+    if( fs )
+    {
+        *fs << ROI_PREFIXES[0] << calcROI.x;
+        *fs << ROI_PREFIXES[1] << calcROI.y;
+        *fs << ROI_PREFIXES[2] << calcROI.width;
+        *fs << ROI_PREFIXES[3] << calcROI.height;
+    }
+    else
+    {
+        ts->printf( cvtest::TS::LOG, "%s = %d\n", ROI_PREFIXES[0].c_str(), calcROI.x );
+        ts->printf( cvtest::TS::LOG, "%s = %d\n", ROI_PREFIXES[1].c_str(), calcROI.y );
+        ts->printf( cvtest::TS::LOG, "%s = %d\n", ROI_PREFIXES[2].c_str(), calcROI.width );
+        ts->printf( cvtest::TS::LOG, "%s = %d\n", ROI_PREFIXES[3].c_str(), calcROI.height );
+    }
+}
+
 void CV_StereoMatchingTest::readErrors( FileNode& fn, const string& errName, vector<float>& errors )
 {
     errors.resize( ERROR_KINDS_COUNT );
     vector<float>::iterator it = errors.begin();
     for( int i = 0; i < ERROR_KINDS_COUNT; i++, ++it )
         fn[ERROR_PREFIXES[i]+errName] >> *it;
+}
+
+void CV_StereoMatchingTest::readROI( FileNode& fn, Rect& validROI )
+{
+    fn[ROI_PREFIXES[0]] >> validROI.x;
+    fn[ROI_PREFIXES[1]] >> validROI.y;
+    fn[ROI_PREFIXES[2]] >> validROI.width;
+    fn[ROI_PREFIXES[3]] >> validROI.height;
 }
 
 int CV_StereoMatchingTest::compareErrors( const vector<float>& calcErrors, const vector<float>& validErrors,
@@ -670,6 +712,26 @@ int CV_StereoMatchingTest::compareErrors( const vector<float>& calcErrors, const
     return ok ? cvtest::TS::OK : cvtest::TS::FAIL_BAD_ACCURACY;
 }
 
+int CV_StereoMatchingTest::compareROI( const Rect& calcROI, const Rect& validROI )
+{
+    int compare[4][2] = {
+        { calcROI.x, validROI.x },
+        { calcROI.y, validROI.y },
+        { calcROI.width, validROI.width },
+        { calcROI.height, validROI.height },
+    };
+    bool ok = true;
+    for (int i = 0; i < 4; i++)
+    {
+        if (compare[i][0] != compare[i][1])
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of %s (valid=%d; calc=%d)\n", ROI_PREFIXES[i].c_str(), compare[i][1], compare[i][0] );
+            ok = false;
+        }
+    }
+    return ok ? cvtest::TS::OK : cvtest::TS::FAIL_BAD_ACCURACY;
+}
+
 //----------------------------------- StereoBM test -----------------------------------------------------
 
 class CV_StereoBMTest : public CV_StereoMatchingTest
@@ -686,6 +748,7 @@ protected:
     struct RunParams
     {
         int ndisp;
+        int mindisp;
         int winSize;
     };
     vector<RunParams> caseRunParams;
@@ -695,12 +758,13 @@ protected:
         int code = CV_StereoMatchingTest::readRunParams( fs );
         FileNode fn = fs.getFirstTopLevelNode();
         assert(fn.isSeq());
-        for( int i = 0; i < (int)fn.size(); i+=4 )
+        for( int i = 0; i < (int)fn.size(); i+=5 )
         {
             String caseName = fn[i], datasetName = fn[i+1];
             RunParams params;
             String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
-            String winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
+            String mindisp = fn[i+3]; params.mindisp = atoi(mindisp.c_str());
+            String winSize = fn[i+4]; params.winSize = atoi(winSize.c_str());
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );
@@ -709,7 +773,7 @@ protected:
     }
 
     virtual int runStereoMatchingAlgorithm( const Mat& _leftImg, const Mat& _rightImg,
-                   Mat& leftDisp, Mat& /*rightDisp*/, int caseIdx )
+                   Rect& calcROI, Mat& leftDisp, Mat& /*rightDisp*/, int caseIdx )
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
@@ -719,8 +783,28 @@ protected:
 
         Ptr<StereoBM> bm = StereoBM::create( params.ndisp, params.winSize );
         Mat tempDisp;
+        bm->setMinDisparity(params.mindisp);
+
+        Rect cROI(0, 0, _leftImg.cols, _leftImg.rows);
+        calcROI = getValidDisparityROI(cROI, cROI, params.mindisp, params.ndisp, params.winSize);
+
         bm->compute( leftImg, rightImg, tempDisp );
         tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
+
+        //check for fixed-type disparity data type
+        Mat_<float> fixedFloatDisp;
+        bm->compute( leftImg, rightImg, fixedFloatDisp );
+        EXPECT_LT(cvtest::norm(fixedFloatDisp, leftDisp, cv::NORM_L2 | cv::NORM_RELATIVE),
+                  0.005 + DBL_EPSILON);
+
+        if (params.mindisp != 0)
+            for (int y = 0; y < leftDisp.rows; y++)
+                for (int x = 0; x < leftDisp.cols; x++)
+                {
+                    if (leftDisp.at<float>(y, x) < params.mindisp)
+                        leftDisp.at<float>(y, x) = -1./StereoMatcher::DISP_SCALE; // treat disparity < mindisp as no disparity
+                }
+
         return params.winSize/2;
     }
 };
@@ -742,7 +826,7 @@ protected:
     {
         int ndisp;
         int winSize;
-        bool fullDP;
+        int mode;
     };
     vector<RunParams> caseRunParams;
 
@@ -757,7 +841,7 @@ protected:
             RunParams params;
             String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
             String winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
-            String fullDP = fn[i+4]; params.fullDP = atoi(fullDP.c_str()) == 0 ? false : true;
+            String mode = fn[i+4]; params.mode = atoi(mode.c_str());
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );
@@ -766,15 +850,18 @@ protected:
     }
 
     virtual int runStereoMatchingAlgorithm( const Mat& leftImg, const Mat& rightImg,
-                   Mat& leftDisp, Mat& /*rightDisp*/, int caseIdx )
+                   Rect& calcROI, Mat& leftDisp, Mat& /*rightDisp*/, int caseIdx )
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
         Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, params.ndisp, params.winSize,
                                                  10*params.winSize*params.winSize,
                                                  40*params.winSize*params.winSize,
-                                                 1, 63, 10, 100, 32, params.fullDP ?
-                                                 StereoSGBM::MODE_HH : StereoSGBM::MODE_SGBM );
+                                                 1, 63, 10, 100, 32, params.mode );
+
+        Rect cROI(0, 0, leftImg.cols, leftImg.rows);
+        calcROI = getValidDisparityROI(cROI, cROI, 0, params.ndisp, params.winSize);
+
         sgbm->compute( leftImg, rightImg, leftDisp );
         CV_Assert( leftDisp.type() == CV_16SC1 );
         leftDisp/=16;
@@ -785,3 +872,27 @@ protected:
 
 TEST(Calib3d_StereoBM, regression) { CV_StereoBMTest test; test.safe_run(); }
 TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
+
+TEST(Calib3d_StereoSGBM_HH4, regression)
+{
+    String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
+    Mat leftImg = imread(path + "im2.png", 0);
+    ASSERT_FALSE(leftImg.empty());
+    Mat rightImg = imread(path + "im6.png", 0);
+    ASSERT_FALSE(rightImg.empty());
+    Mat testData = imread(path + "disp2_hh4.png",-1);
+    ASSERT_FALSE(testData.empty());
+    Mat leftDisp;
+    Mat toCheck;
+    {
+        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4);
+        sgbm->compute( leftImg, rightImg, leftDisp);
+        CV_Assert( leftDisp.type() == CV_16SC1 );
+        leftDisp.convertTo(toCheck, CV_16UC1,1,16);
+    }
+    Mat diff;
+    absdiff(toCheck, testData,diff);
+    CV_Assert( countNonZero(diff)==0);
+}
+
+}} // namespace

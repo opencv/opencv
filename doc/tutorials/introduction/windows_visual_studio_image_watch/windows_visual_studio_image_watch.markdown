@@ -13,7 +13,7 @@ This tutorial assumes that you have the following available:
 -#  Visual Studio 2012 Professional (or better) with Update 1 installed. Update 1 can be downloaded
     [here](http://www.microsoft.com/en-us/download/details.aspx?id=35774).
 -#  An OpenCV installation on your Windows machine (Tutorial: @ref tutorial_windows_install).
--#  Ability to create and build OpenCV projects in Visual Studio (Tutorial: @ref tutorial_windows_visual_studio_Opencv).
+-#  Ability to create and build OpenCV projects in Visual Studio (Tutorial: @ref tutorial_windows_visual_studio_opencv).
 
 Installation
 ------------

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_FILTERS_HPP__
-#define __OPENCV_CUDA_FILTERS_HPP__
+#ifndef OPENCV_CUDA_FILTERS_HPP
+#define OPENCV_CUDA_FILTERS_HPP
 
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
@@ -64,8 +64,8 @@ namespace cv { namespace cuda { namespace device
         explicit __host__ __device__ __forceinline__ PointFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
         : src(src_)
         {
-            (void)fx;
-            (void)fy;
+            CV_UNUSED(fx);
+            CV_UNUSED(fy);
         }
 
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
@@ -84,8 +84,8 @@ namespace cv { namespace cuda { namespace device
         explicit __host__ __device__ __forceinline__ LinearFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
         : src(src_)
         {
-            (void)fx;
-            (void)fy;
+            CV_UNUSED(fx);
+            CV_UNUSED(fy);
         }
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
         {
@@ -125,8 +125,8 @@ namespace cv { namespace cuda { namespace device
         explicit __host__ __device__ __forceinline__ CubicFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
         : src(src_)
         {
-            (void)fx;
-            (void)fy;
+            CV_UNUSED(fx);
+            CV_UNUSED(fy);
         }
 
         static __device__ __forceinline__ float bicubicCoeff(float x_)
@@ -283,4 +283,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // __OPENCV_CUDA_FILTERS_HPP__
+#endif // OPENCV_CUDA_FILTERS_HPP

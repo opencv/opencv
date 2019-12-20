@@ -9,10 +9,10 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
-typedef TestBaseWithParam<std::tr1::tuple<cv::Size, bool> > UsageFlagsBoolFixture;
+typedef TestBaseWithParam<tuple<cv::Size, bool> > UsageFlagsBoolFixture;
 
 OCL_PERF_TEST_P(UsageFlagsBoolFixture, UsageFlags_AllocHostMem, ::testing::Combine(OCL_TEST_SIZES, Bool()))
 {
@@ -37,6 +37,6 @@ OCL_PERF_TEST_P(UsageFlagsBoolFixture, UsageFlags_AllocHostMem, ::testing::Combi
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_IMGCODECS_HPP__
-#define __OPENCV_IMGCODECS_HPP__
+#ifndef OPENCV_IMGCODECS_HPP
+#define OPENCV_IMGCODECS_HPP
 
 #include "opencv2/core.hpp"
 
@@ -62,12 +62,19 @@ namespace cv
 
 //! Imread flags
 enum ImreadModes {
-       IMREAD_UNCHANGED  = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped).
-       IMREAD_GRAYSCALE  = 0,  //!< If set, always convert image to the single channel grayscale image.
-       IMREAD_COLOR      = 1,  //!< If set, always convert image to the 3 channel BGR color image.
-       IMREAD_ANYDEPTH   = 2,  //!< If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
-       IMREAD_ANYCOLOR   = 4,  //!< If set, the image is read in any possible color format.
-       IMREAD_LOAD_GDAL  = 8   //!< If set, use the gdal driver for loading the image.
+       IMREAD_UNCHANGED            = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped).
+       IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image (codec internal conversion).
+       IMREAD_COLOR                = 1,  //!< If set, always convert image to the 3 channel BGR color image.
+       IMREAD_ANYDEPTH             = 2,  //!< If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
+       IMREAD_ANYCOLOR             = 4,  //!< If set, the image is read in any possible color format.
+       IMREAD_LOAD_GDAL            = 8,  //!< If set, use the gdal driver for loading the image.
+       IMREAD_REDUCED_GRAYSCALE_2  = 16, //!< If set, always convert image to the single channel grayscale image and the image size reduced 1/2.
+       IMREAD_REDUCED_COLOR_2      = 17, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/2.
+       IMREAD_REDUCED_GRAYSCALE_4  = 32, //!< If set, always convert image to the single channel grayscale image and the image size reduced 1/4.
+       IMREAD_REDUCED_COLOR_4      = 33, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/4.
+       IMREAD_REDUCED_GRAYSCALE_8  = 64, //!< If set, always convert image to the single channel grayscale image and the image size reduced 1/8.
+       IMREAD_REDUCED_COLOR_8      = 65, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/8.
+       IMREAD_IGNORE_ORIENTATION   = 128 //!< If set, do not rotate the image according to EXIF's orientation flag.
      };
 
 //! Imwrite flags
@@ -78,45 +85,80 @@ enum ImwriteFlags {
        IMWRITE_JPEG_RST_INTERVAL   = 4,  //!< JPEG restart interval, 0 - 65535, default is 0 - no restart.
        IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is 0 - don't use.
        IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is 0 - don't use.
-       IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. Default value is 3.
-       IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_DEFAULT.
+       IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
+       IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
        IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
        IMWRITE_PXM_BINARY          = 32, //!< For PPM, PGM, or PBM, it can be a binary format flag, 0 or 1. Default value is 1.
-       IMWRITE_WEBP_QUALITY        = 64  //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
+       IMWRITE_EXR_TYPE            = (3 << 4) + 0, /* 48 */ //!< override EXR storage type (FLOAT (FP32) is default)
+       IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
+       IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
+       IMWRITE_TIFF_RESUNIT = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values
+       IMWRITE_TIFF_XDPI = 257,//!< For TIFF, use to specify the X direction DPI
+       IMWRITE_TIFF_YDPI = 258, //!< For TIFF, use to specify the Y direction DPI
+       IMWRITE_TIFF_COMPRESSION = 259, //!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_JPEG2000_COMPRESSION_X1000 = 272 //!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
      };
 
-//! Imwrite PNG specific flags
+enum ImwriteEXRTypeFlags {
+       /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
+       IMWRITE_EXR_TYPE_HALF = 1,   //!< store as HALF (FP16)
+       IMWRITE_EXR_TYPE_FLOAT = 2   //!< store as FP32 (default)
+     };
+
+//! Imwrite PNG specific flags used to tune the compression algorithm.
+/** These flags will be modify the way of PNG image compression and will be passed to the underlying zlib processing stage.
+
+-   The effect of IMWRITE_PNG_STRATEGY_FILTERED is to force more Huffman coding and less string matching; it is somewhat intermediate between IMWRITE_PNG_STRATEGY_DEFAULT and IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY.
+-   IMWRITE_PNG_STRATEGY_RLE is designed to be almost as fast as IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY, but give better compression for PNG image data.
+-   The strategy parameter only affects the compression ratio but not the correctness of the compressed output even if it is not set appropriately.
+-   IMWRITE_PNG_STRATEGY_FIXED prevents the use of dynamic Huffman codes, allowing for a simpler decoder for special applications.
+*/
 enum ImwritePNGFlags {
-       IMWRITE_PNG_STRATEGY_DEFAULT      = 0,
-       IMWRITE_PNG_STRATEGY_FILTERED     = 1,
-       IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY = 2,
-       IMWRITE_PNG_STRATEGY_RLE          = 3,
-       IMWRITE_PNG_STRATEGY_FIXED        = 4
+       IMWRITE_PNG_STRATEGY_DEFAULT      = 0, //!< Use this value for normal data.
+       IMWRITE_PNG_STRATEGY_FILTERED     = 1, //!< Use this value for data produced by a filter (or predictor).Filtered data consists mostly of small values with a somewhat random distribution. In this case, the compression algorithm is tuned to compress them better.
+       IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY = 2, //!< Use this value to force Huffman encoding only (no string match).
+       IMWRITE_PNG_STRATEGY_RLE          = 3, //!< Use this value to limit match distances to one (run-length encoding).
+       IMWRITE_PNG_STRATEGY_FIXED        = 4  //!< Using this value prevents the use of dynamic Huffman codes, allowing for a simpler decoder for special applications.
+     };
+
+//! Imwrite PAM specific tupletype flags used to define the 'TUPETYPE' field of a PAM file.
+enum ImwritePAMFlags {
+       IMWRITE_PAM_FORMAT_NULL = 0,
+       IMWRITE_PAM_FORMAT_BLACKANDWHITE = 1,
+       IMWRITE_PAM_FORMAT_GRAYSCALE = 2,
+       IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA = 3,
+       IMWRITE_PAM_FORMAT_RGB = 4,
+       IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
      };
 
 /** @brief Loads an image from a file.
 
 @anchor imread
 
-@param filename Name of file to be loaded.
-@param flags Flag that can take values of @ref cv::ImreadModes
-
 The function imread loads an image from the specified file and returns it. If the image cannot be
 read (because of missing file, improper permissions, unsupported or invalid format), the function
-returns an empty matrix ( Mat::data==NULL ). Currently, the following file formats are supported:
+returns an empty matrix ( Mat::data==NULL ).
+
+Currently, the following file formats are supported:
 
 -   Windows bitmaps - \*.bmp, \*.dib (always supported)
--   JPEG files - \*.jpeg, \*.jpg, \*.jpe (see the *Notes* section)
--   JPEG 2000 files - \*.jp2 (see the *Notes* section)
--   Portable Network Graphics - \*.png (see the *Notes* section)
--   WebP - \*.webp (see the *Notes* section)
--   Portable image format - \*.pbm, \*.pgm, \*.ppm (always supported)
+-   JPEG files - \*.jpeg, \*.jpg, \*.jpe (see the *Note* section)
+-   JPEG 2000 files - \*.jp2 (see the *Note* section)
+-   Portable Network Graphics - \*.png (see the *Note* section)
+-   WebP - \*.webp (see the *Note* section)
+-   Portable image format - \*.pbm, \*.pgm, \*.ppm \*.pxm, \*.pnm (always supported)
+-   PFM files - \*.pfm (see the *Note* section)
 -   Sun rasters - \*.sr, \*.ras (always supported)
--   TIFF files - \*.tiff, \*.tif (see the *Notes* section)
+-   TIFF files - \*.tiff, \*.tif (see the *Note* section)
+-   OpenEXR Image files - \*.exr (see the *Note* section)
+-   Radiance HDR - \*.hdr, \*.pic (always supported)
+-   Raster and Vector geospatial data supported by GDAL (see the *Note* section)
 
 @note
-
 -   The function determines the type of an image by the content, not by the file extension.
+-   In the case of color images, the decoded images will have the channels stored in **B G R** order.
+-   When using IMREAD_GRAYSCALE, the codec's internal grayscale conversion will be used, if available.
+    Results may differ to the output of cvtColor()
 -   On Microsoft Windows\* OS and MacOSX\*, the codecs shipped with an OpenCV image (libjpeg,
     libpng, libtiff, and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs,
     and TIFFs. On MacOSX, there is also an option to use native MacOSX image readers. But beware
@@ -126,125 +168,110 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
     codecs supplied with an OS image. Install the relevant packages (do not forget the development
     files, for example, "libjpeg-dev", in Debian\* and Ubuntu\*) to get the codec support or turn
     on the OPENCV_BUILD_3RDPARTY_LIBS flag in CMake.
-
-@note In the case of color images, the decoded images will have the channels stored in B G R order.
- */
-CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
-
-/** @brief Loads a multi-page image from a file. (see imread for details.)
+-   In the case you set *WITH_GDAL* flag to true in CMake and @ref IMREAD_LOAD_GDAL to load the image,
+    then the [GDAL](http://www.gdal.org) driver will be used in order to decode the image, supporting
+    the following formats: [Raster](http://www.gdal.org/formats_list.html),
+    [Vector](http://www.gdal.org/ogr_formats.html).
+-   If EXIF information are embedded in the image file, the EXIF orientation will be taken into account
+    and thus the image will be rotated accordingly except if the flag @ref IMREAD_IGNORE_ORIENTATION is passed.
+-   Use the IMREAD_UNCHANGED flag to keep the floating point values from PFM image.
+-   By default number of pixels must be less than 2^30. Limit can be set using system
+    variable OPENCV_IO_MAX_IMAGE_PIXELS
 
 @param filename Name of file to be loaded.
-@param flags Flag that can take values of @ref cv::ImreadModes, default with IMREAD_ANYCOLOR.
-@param mats A vector of Mat objects holding each page, if more than one.
-
+@param flags Flag that can take values of cv::ImreadModes
 */
-CV_EXPORTS_W bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
+CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
+
+/** @brief Loads a multi-page image from a file.
+
+The function imreadmulti loads a multi-page image from the specified file into a vector of Mat objects.
+@param filename Name of file to be loaded.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+@param mats A vector of Mat objects holding each page, if more than one.
+@sa cv::imread
+*/
+CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
 
 /** @brief Saves an image to a specified file.
 
-@param filename Name of the file.
-@param img Image to be saved.
-@param params Format-specific save parameters encoded as pairs, see @ref cv::ImwriteFlags
-paramId_1, paramValue_1, paramId_2, paramValue_2, ... .
-
 The function imwrite saves the image to the specified file. The image format is chosen based on the
-filename extension (see imread for the list of extensions). Only 8-bit (or 16-bit unsigned (CV_16U)
-in case of PNG, JPEG 2000, and TIFF) single-channel or 3-channel (with 'BGR' channel order) images
-can be saved using this function. If the format, depth or channel order is different, use
-Mat::convertTo , and cvtColor to convert it before saving. Or, use the universal FileStorage I/O
+filename extension (see cv::imread for the list of extensions). In general, only 8-bit
+single-channel or 3-channel (with 'BGR' channel order) images
+can be saved using this function, with these exceptions:
+
+- 16-bit unsigned (CV_16U) images can be saved in the case of PNG, JPEG 2000, and TIFF formats
+- 32-bit float (CV_32F) images can be saved in PFM, TIFF, OpenEXR, and Radiance HDR formats;
+  3-channel (CV_32FC3) TIFF images will be saved using the LogLuv high dynamic range encoding
+  (4 bytes per pixel)
+- PNG images with an alpha channel can be saved using this function. To do this, create
+8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
+should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
+
+If the format, depth or channel order is different, use
+Mat::convertTo and cv::cvtColor to convert it before saving. Or, use the universal FileStorage I/O
 functions to save the image to XML or YAML format.
 
-It is possible to store PNG images with an alpha channel using this function. To do this, create
-8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
-should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535. The sample below
-shows how to create such a BGRA image and store to PNG file. It also demonstrates how to set custom
-compression parameters :
-@code
-    #include <vector>
-    #include <stdio.h>
-    #include <opencv2/opencv.hpp>
-
-    using namespace cv;
-    using namespace std;
-
-    void createAlphaMat(Mat &mat)
-    {
-        CV_Assert(mat.channels() == 4);
-        for (int i = 0; i < mat.rows; ++i) {
-            for (int j = 0; j < mat.cols; ++j) {
-                Vec4b& bgra = mat.at<Vec4b>(i, j);
-                bgra[0] = UCHAR_MAX; // Blue
-                bgra[1] = saturate_cast<uchar>((float (mat.cols - j)) / ((float)mat.cols) * UCHAR_MAX); // Green
-                bgra[2] = saturate_cast<uchar>((float (mat.rows - i)) / ((float)mat.rows) * UCHAR_MAX); // Red
-                bgra[3] = saturate_cast<uchar>(0.5 * (bgra[1] + bgra[2])); // Alpha
-            }
-        }
-    }
-
-    int main(int argv, char **argc)
-    {
-        // Create mat with alpha channel
-        Mat mat(480, 640, CV_8UC4);
-        createAlphaMat(mat);
-
-        vector<int> compression_params;
-        compression_params.push_back(IMWRITE_PNG_COMPRESSION);
-        compression_params.push_back(9);
-
-        try {
-            imwrite("alpha.png", mat, compression_params);
-        }
-        catch (runtime_error& ex) {
-            fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-            return 1;
-        }
-
-        fprintf(stdout, "Saved PNG file with alpha data.\n");
-        return 0;
-    }
-@endcode
- */
+The sample below shows how to create a BGRA image and save it to a PNG file. It also demonstrates how to set custom
+compression parameters:
+@include snippets/imgcodecs_imwrite.cpp
+@param filename Name of the file.
+@param img Image to be saved.
+@param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
+*/
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
 
-/** @overload */
-CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
-
 /** @brief Reads an image from a buffer in memory.
 
+The function imdecode reads an image from the specified buffer in the memory. If the buffer is too short or
+contains invalid data, the function returns an empty matrix ( Mat::data==NULL ).
+
+See cv::imread for the list of supported formats and flags description.
+
+@note In the case of color images, the decoded images will have the channels stored in **B G R** order.
 @param buf Input array or vector of bytes.
-@param flags The same flags as in imread, see @ref cv::ImreadModes.
+@param flags The same flags as in cv::imread, see cv::ImreadModes.
+*/
+CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
+
+/** @overload
+@param buf
+@param flags
 @param dst The optional output placeholder for the decoded matrix. It can save the image
 reallocations when the function is called repeatedly for images of the same size.
-
-The function reads an image from the specified buffer in the memory. If the buffer is too short or
-contains invalid data, the empty matrix/image is returned.
-
-See imread for the list of supported formats and flags description.
-
-@note In the case of color images, the decoded images will have the channels stored in B G R order.
- */
+*/
 CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 
 /** @brief Encodes an image into a memory buffer.
 
+The function imencode compresses the image and stores it in the memory buffer that is resized to fit the
+result. See cv::imwrite for the list of supported formats and flags description.
+
 @param ext File extension that defines the output format.
 @param img Image to be written.
 @param buf Output buffer resized to fit the compressed image.
-@param params Format-specific parameters. See imwrite and @ref cv::ImwriteFlags.
-
-The function compresses the image and stores it in the memory buffer that is resized to fit the
-result. See imwrite for the list of supported formats and flags description.
-
-@note cvEncodeImage returns single-row matrix of type CV_8UC1 that contains encoded image as array
-of bytes.
- */
+@param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
+*/
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
+
+/** @brief Returns true if the specified image can be decoded by OpenCV
+
+@param filename File name of the image
+*/
+CV_EXPORTS_W bool haveImageReader( const String& filename );
+
+/** @brief Returns true if an image with the specified filename can be encoded by OpenCV
+
+ @param filename File name of the image
+ */
+CV_EXPORTS_W bool haveImageWriter( const String& filename );
+
 
 //! @} imgcodecs
 
 } // cv
 
-#endif //__OPENCV_IMGCODECS_HPP__
+#endif //OPENCV_IMGCODECS_HPP

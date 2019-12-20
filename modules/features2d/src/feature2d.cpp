@@ -60,6 +60,8 @@ void Feature2D::detect( InputArray image,
                         std::vector<KeyPoint>& keypoints,
                         InputArray mask )
 {
+    CV_INSTRUMENT_REGION();
+
     if( image.empty() )
     {
         keypoints.clear();
@@ -69,27 +71,38 @@ void Feature2D::detect( InputArray image,
 }
 
 
-void Feature2D::detect( InputArrayOfArrays _images,
+void Feature2D::detect( InputArrayOfArrays images,
                         std::vector<std::vector<KeyPoint> >& keypoints,
-                        InputArrayOfArrays _masks )
+                        InputArrayOfArrays masks )
 {
-    vector<Mat> images, masks;
+    CV_INSTRUMENT_REGION();
 
-    _images.getMatVector(images);
-    size_t i, nimages = images.size();
+    int nimages = (int)images.total();
 
-    if( !_masks.empty() )
+    if (!masks.empty())
     {
-        _masks.getMatVector(masks);
-        CV_Assert(masks.size() == nimages);
+        CV_Assert(masks.total() == (size_t)nimages);
     }
 
     keypoints.resize(nimages);
 
-    for( i = 0; i < nimages; i++ )
+    if (images.isMatVector())
     {
-        detect(images[i], keypoints[i], masks.empty() ? Mat() : masks[i] );
+       for (int i = 0; i < nimages; i++)
+       {
+           detect(images.getMat(i), keypoints[i], masks.empty() ? noArray() : masks.getMat(i));
+       }
     }
+    else
+    {
+        // assume UMats
+        for (int i = 0; i < nimages; i++)
+        {
+            detect(images.getUMat(i), keypoints[i], masks.empty() ? noArray() : masks.getUMat(i));
+        }
+    }
+
+
 }
 
 /*
@@ -102,6 +115,8 @@ void Feature2D::compute( InputArray image,
                          std::vector<KeyPoint>& keypoints,
                          OutputArray descriptors )
 {
+    CV_INSTRUMENT_REGION();
+
     if( image.empty() )
     {
         descriptors.release();
@@ -110,27 +125,40 @@ void Feature2D::compute( InputArray image,
     detectAndCompute(image, noArray(), keypoints, descriptors, true);
 }
 
-void Feature2D::compute( InputArrayOfArrays _images,
+void Feature2D::compute( InputArrayOfArrays images,
                          std::vector<std::vector<KeyPoint> >& keypoints,
-                         OutputArrayOfArrays _descriptors )
+                         OutputArrayOfArrays descriptors )
 {
-    if( !_descriptors.needed() )
+    CV_INSTRUMENT_REGION();
+
+    if( !descriptors.needed() )
         return;
 
-    vector<Mat> images;
+    int nimages = (int)images.total();
 
-    _images.getMatVector(images);
-    size_t i, nimages = images.size();
-
-    CV_Assert( keypoints.size() == nimages );
-    CV_Assert( _descriptors.kind() == _InputArray::STD_VECTOR_MAT );
-
-    vector<Mat>& descriptors = *(vector<Mat>*)_descriptors.getObj();
-    descriptors.resize(nimages);
-
-    for( i = 0; i < nimages; i++ )
+    CV_Assert( keypoints.size() == (size_t)nimages );
+    // resize descriptors to appropriate size and compute
+    if (descriptors.isMatVector())
     {
-        compute(images[i], keypoints[i], descriptors[i]);
+        vector<Mat>& vec = *(vector<Mat>*)descriptors.getObj();
+        vec.resize(nimages);
+        for (int i = 0; i < nimages; i++)
+        {
+            compute(images.getMat(i), keypoints[i], vec[i]);
+        }
+    }
+    else if (descriptors.isUMatVector())
+    {
+        vector<UMat>& vec = *(vector<UMat>*)descriptors.getObj();
+        vec.resize(nimages);
+        for (int i = 0; i < nimages; i++)
+        {
+            compute(images.getUMat(i), keypoints[i], vec[i]);
+        }
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "descriptors must be vector<Mat> or vector<UMat>");
     }
 }
 
@@ -141,7 +169,29 @@ void Feature2D::detectAndCompute( InputArray, InputArray,
                                   OutputArray,
                                   bool )
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Error(Error::StsNotImplemented, "");
+}
+
+void Feature2D::write( const String& fileName ) const
+{
+    FileStorage fs(fileName, FileStorage::WRITE);
+    write(fs);
+}
+
+void Feature2D::read( const String& fileName )
+{
+    FileStorage fs(fileName, FileStorage::READ);
+    read(fs.root());
+}
+
+void Feature2D::write( FileStorage&) const
+{
+}
+
+void Feature2D::read( const FileNode&)
+{
 }
 
 int Feature2D::descriptorSize() const
@@ -164,6 +214,11 @@ int Feature2D::defaultNorm() const
 bool Feature2D::empty() const
 {
     return true;
+}
+
+String Feature2D::getDefaultName() const
+{
+    return "Feature2D";
 }
 
 }

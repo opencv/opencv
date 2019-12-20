@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+/*M//////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -45,802 +45,311 @@
 //          Institute of Communications Engineering
 //          RWTH Aachen University
 
-
 #include "precomp.hpp"
 
 // required to enable some functions used here...
 #define XINE_ENABLE_EXPERIMENTAL_FEATURES
-
-#include <cassert>
-
-extern "C"
-{
 #include <xine.h>
-    //#include <xine/xineutils.h>
+#include <xine/xineutils.h>
 
-    // forward declaration from <xine/xineutils.h>
-    const char *xine_get_homedir( void );
-}
+using namespace cv;
 
-typedef struct CvCaptureAVI_XINE
+class XINECapture : public IVideoCapture
 {
-    /// method call table
-    xine_t * xine;
-    xine_stream_t * stream;
-    xine_video_port_t * vo_port;
-
-    /// frame returned by xine_get_next_video_frame()
+    // method call table
+    xine_t *xine;
+    xine_stream_t *stream;
+    xine_video_port_t *vo_port;
     xine_video_frame_t xine_frame;
+    Size size;
+    int frame_number;
+    double frame_rate; // fps
+    double frame_duration; // ms
+    bool seekable;
 
-    IplImage	* yuv_frame;
-    IplImage	* bgr_frame;
-
-    /// image dimansions of the input stream.
-    CvSize	size;
-
-    /// framenumber of the last frame received from xine_get_next_video_frame().
-    /// note: always keep this value updated !!!!
-    int	frame_number;
-
-    /// framerate of the opened stream
-    double	frame_rate;
-
-    /// duration of a frame in stream
-    double	frame_duration;
-
-    /// indicated if input is seekable
-    bool	seekable;
-
-}
-CvCaptureAVI_XINE;
-
-
-// 4:2:2 interleaved -> BGR
-static void icvYUY2toBGR( CvCaptureAVI_XINE * capture )
-{
-    uint8_t * v	= capture->xine_frame.data;
-    int offset;
-    for ( int y = 0; y < capture->yuv_frame->height; y++ )
+  public:
+    XINECapture()
+        : xine(0), stream(0), vo_port(0), frame_number(-1), frame_rate(0.), frame_duration(0.),
+          seekable(false)
     {
-        offset	= y * capture->yuv_frame->widthStep;
+        xine_video_frame_t z = {};
+        xine_frame = z;
+    }
 
-        for ( int x = 0; x < capture->yuv_frame->width; x++, offset += 3 )
+    ~XINECapture() { close(); }
+
+    bool isOpened() const CV_OVERRIDE { return xine && stream; }
+
+    int getCaptureDomain() CV_OVERRIDE { return CAP_XINE; }
+
+    void close()
+    {
+        if (vo_port && xine_frame.data)
         {
-            capture->yuv_frame->imageData[ offset + 1 ] = v[ 3 ];
-            capture->yuv_frame->imageData[ offset + 2 ] = v[ 1 ];
-            if ( x & 1 )
-            {
-                capture->yuv_frame->imageData[ offset ] = v[ 2 ];
-                v += 4;
-            }
-            else
-            {
-                capture->yuv_frame->imageData[ offset ] = v[ 0 ];
-            }
+            xine_free_video_frame(vo_port, &xine_frame);
+        }
+        if (stream)
+        {
+            xine_close(stream);
+            stream = 0;
+        }
+        if (vo_port)
+        {
+            xine_close_video_driver(xine, vo_port);
+            vo_port = 0;
+        }
+        if (xine)
+        {
+            xine_exit(xine);
+            xine = 0;
         }
     }
 
-    // convert to BGR
-    cvCvtColor( capture->yuv_frame, capture->bgr_frame, CV_YCrCb2BGR );
-}
-
-
-// 4:2:0 planary -> BGR
-static void icvYV12toBGR( CvCaptureAVI_XINE * capture )
-{
-    IplImage * yuv	= capture->yuv_frame;
-    int	w_Y	= capture->size.width;
-    int	h_Y	= capture->size.height;
-
-    int	w_UV	= w_Y >> 1;
-
-    int	size_Y	= w_Y * h_Y;
-    int	size_UV	= size_Y / 4;
-
-    int	line	= yuv->widthStep;
-
-    uint8_t * addr_Y = capture->xine_frame.data;
-    uint8_t * addr_U = addr_Y + size_Y;
-    uint8_t * addr_V = addr_U + size_UV;
-
-    // YYYY..UU.VV. -> BGRBGRBGR...
-    for ( int y = 0; y < h_Y; y++ )
+    bool open(const char *filename)
     {
-        int offset = y * line;
-        for ( int x = 0; x < w_Y; x++, offset += 3 )
-        {
-            /*
-            if ( x&1 )
-            {
-                addr_U++; addr_V++;
-            }
-            */
-            int one_zero = x & 1;
-            addr_U += one_zero;
-            addr_V += one_zero;
+        CV_Assert_N(!xine, !stream, !vo_port);
+        char configfile[2048] = {0};
 
-            yuv->imageData[ offset ] = *( addr_Y++ );
-            yuv->imageData[ offset + 1 ] = *addr_U;
-            yuv->imageData[ offset + 2 ] = *addr_V;
+        xine = xine_new();
+        sprintf(configfile, "%s%s", xine_get_homedir(), "/.xine/config");
+        xine_config_load(xine, configfile);
+        xine_init(xine);
+        xine_engine_set_param(xine, 0, 0);
+
+        vo_port = xine_new_framegrab_video_port(xine);
+        if (!vo_port)
+            return false;
+
+        stream = xine_stream_new(xine, NULL, vo_port);
+        if (!xine_open(stream, filename))
+            return false;
+
+        // reset stream...
+        if (!xine_play(stream, 0, 0))
+            return false;
+
+        // initialize some internals...
+        frame_number = 0;
+
+
+        if ( !xine_get_next_video_frame( vo_port, &xine_frame ) )
+            return false;
+
+        size = Size( xine_frame.width, xine_frame.height );
+
+        xine_free_video_frame( vo_port, &xine_frame );
+        xine_frame.data = 0;
+
+        {
+            xine_video_frame_t tmp;
+            if (!xine_play( stream, 0, 300 )) /* 300msec */
+                return false;
+            if (!xine_get_next_video_frame( vo_port, &tmp ))
+                return false;
+            seekable = ( tmp.frame_number != 0 );
+            xine_free_video_frame( vo_port, &tmp );
+            if (!xine_play( stream, 0, 0 ))
+                return false;
         }
 
-        if ( y & 1 )
+        frame_duration = xine_get_stream_info( stream, XINE_STREAM_INFO_FRAME_DURATION ) / 90.;
+        frame_rate = frame_duration > 0 ? 1000 / frame_duration : 0.;
+        return true;
+    }
+
+    bool grabFrame() CV_OVERRIDE
+    {
+        CV_Assert(vo_port);
+        bool res = xine_get_next_video_frame(vo_port, &xine_frame);
+        if (res)
+            frame_number++;
+        return res;
+    }
+
+    bool retrieveFrame(int, OutputArray out) CV_OVERRIDE
+    {
+        CV_Assert(stream);
+        CV_Assert(vo_port);
+
+        if (xine_frame.data == 0)
+            return false;
+
+        bool res = false;
+        Mat frame_bgr;
+
+        switch (xine_frame.colorspace)
         {
-            addr_U -= w_UV;
-            addr_V -= w_UV;
+        case XINE_IMGFMT_YV12: // actual format seems to be I420 (or IYUV)
+        {
+            Mat frame(Size(xine_frame.width, xine_frame.height * 3 / 2), CV_8UC1, xine_frame.data);
+            cv::cvtColor(frame, out, cv::COLOR_YUV2BGR_I420);
+            res = true;
         }
-    }
+        break;
 
-    /* convert to BGR */
-    cvCvtColor( capture->yuv_frame, capture->bgr_frame, CV_YCrCb2BGR );
-}
-
-static void icvCloseAVI_XINE( CvCaptureAVI_XINE* capture )
-{
-    xine_free_video_frame( capture->vo_port, &capture->xine_frame );
-
-    if ( capture->yuv_frame ) cvReleaseImage( &capture->yuv_frame );
-    if ( capture->bgr_frame ) cvReleaseImage( &capture->bgr_frame );
-
-    xine_close( capture->stream );
-    //	xine_dispose( capture->stream );
-
-    if ( capture->vo_port ) xine_close_video_driver( capture->xine, capture->vo_port );
-
-    xine_exit( capture->xine );
-}
-
-
-/**
- * CHECKS IF THE STREAM IN * capture IS SEEKABLE.
-**/
-static void icvCheckSeekAVI_XINE( CvCaptureAVI_XINE * capture )
-{
-    OPENCV_ASSERT ( capture,                        "icvCheckSeekAVI_XINE( CvCaptureAVI_XINE* )", "illegal capture");
-    OPENCV_ASSERT ( capture->stream,
-                        "icvCheckSeekAVI_XINE( CvCaptureAVI_XINE* )", "illegal capture->stream");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvCheckSeekAVI_XINE( CvCaptureAVI_XINE* )", "illegal capture->vo_port");
-
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvCheckSeekAVI_XINE ... start\n" );
-#endif
-
-    // temp. frame for testing.
-    xine_video_frame_t tmp;
-    // try to seek to a future frame...
-    xine_play( capture->stream, 0, 300 ); /* 300msec */
-    // try to receive the frame...
-    xine_get_next_video_frame( capture->vo_port, &tmp );
-    // if the framenumber is still 0, we can't use the xine seek functionality
-    capture->seekable = ( tmp.frame_number != 0 );
-    // reset stream
-    xine_play( capture->stream, 0, 0 );
-    // release xine_frame
-    xine_free_video_frame( capture->vo_port, &tmp );
-
-#ifndef NDEBUG
-    if ( capture->seekable )
-        fprintf( stderr, "(DEBUG) icvCheckSeekAVI_XINE: Input is seekable, using XINE seek implementation.\n" );
-    else
-        fprintf( stderr, "(DEBUG) icvCheckSeekAVI_XINE: Input is NOT seekable, using fallback function.\n" );
-
-    fprintf( stderr, "(DEBUG) icvCheckSeekAVI_XINE ... end\n" );
-#endif
-}
-
-
-static int icvOpenAVI_XINE( CvCaptureAVI_XINE* capture, const char* filename )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvOpenAVI_XINE ... start\n" );
-#endif
-
-    char configfile[ 2048 ];
-
-    capture->xine = xine_new();
-    sprintf( configfile, "%s%s", xine_get_homedir(), "/.xine/config" );
-
-    xine_config_load( capture->xine, configfile );
-    xine_init( capture->xine );
-
-    xine_engine_set_param( capture->xine, 0, 0 );
-    capture->vo_port = xine_new_framegrab_video_port( capture->xine );
-    if ( capture->vo_port == NULL )
-    {
-        printf( "(ERROR)icvOpenAVI_XINE(): Unable to initialize video driver.\n" );
-        return 0;
-    }
-
-    capture->stream = xine_stream_new( capture->xine, NULL, capture->vo_port );
-
-    if ( !xine_open( capture->stream, filename ) )
-    {
-        printf( "(ERROR)icvOpenAVI_XINE(): Unable to open source '%s'\n", filename );
-        return 0;
-    }
-    // reset stream...
-    xine_play( capture->stream, 0, 0 );
-
-
-    // initialize some internals...
-    capture->frame_number = 0;
-
-    if ( !xine_get_next_video_frame( capture->vo_port, &capture->xine_frame ) )
-    {
-#ifndef NDEBUG
-        fprintf( stderr, "(DEBUG) icvOpenAVI_XINE ... failed!\n" );
-#endif
-        return 0;
-    }
-
-    capture->size = cvSize( capture->xine_frame.width, capture->xine_frame.height );
-    capture->yuv_frame = cvCreateImage( capture->size, IPL_DEPTH_8U, 3 );
-    capture->bgr_frame = cvCreateImage( capture->size, IPL_DEPTH_8U, 3 );
-
-    xine_free_video_frame( capture->vo_port, &capture->xine_frame );
-    capture->xine_frame.data[ 0 ] = 0;
-
-    icvCheckSeekAVI_XINE( capture );
-
-    capture->frame_duration = xine_get_stream_info( capture->stream, XINE_STREAM_INFO_FRAME_DURATION ) / 90.;
-    capture->frame_rate = 1000 / capture->frame_duration;
-
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) frame_duration = %f, framerate = %f\n", capture->frame_duration, capture->frame_rate );
-#endif
-
-    OPENCV_ASSERT ( capture->yuv_frame,
-                        "icvOpenAVI_XINE( CvCaptureAVI_XINE *, const char *)", "couldn't create yuv frame");
-
-    OPENCV_ASSERT ( capture->bgr_frame,
-                        "icvOpenAVI_XINE( CvCaptureAVI_XINE *, const char *)", "couldn't create bgr frame");
-
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvOpenAVI_XINE ... end\n" );
-#endif
-    return 1;
-}
-
-
-static int icvGrabFrameAVI_XINE( CvCaptureAVI_XINE* capture )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvGrabFrameAVI_XINE ... start\n" );
-#endif
-
-    OPENCV_ASSERT ( capture,
-                        "icvGrabFrameAVI_XINE( CvCaptureAVI_XINE * )", "illegal capture");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvGrabFrameAVI_XINE( CvCaptureAVI_XINE * )", "illegal capture->vo_port");
-
-    int res = xine_get_next_video_frame( capture->vo_port, &capture->xine_frame );
-
-    /* always keep internal framenumber updated !!! */
-    if ( res ) capture->frame_number++;
-
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvGrabFrameAVI_XINE ... end\n" );
-#endif
-    return res;
-}
-
-
-static const IplImage* icvRetrieveFrameAVI_XINE( CvCaptureAVI_XINE* capture, int )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvRetrieveFrameAVI_XINE ... start\n" );
-#endif
-
-    OPENCV_ASSERT ( capture,
-                        "icvRetrieveFrameAVI_XINE( CvCaptureAVI_XINE * )", "illegal capture");
-    OPENCV_ASSERT ( capture->stream,
-                        "icvRetrieveFrameAVI_XINE( CvCaptureAVI_XINE * )", "illegal capture->stream");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvRetrieveFrameAVI_XINE( CvCaptureAVI_XINE * )", "illegal capture->vo_port");
-
-    /* no frame grabbed yet? so let's do it now! */
-    int res = 0;
-    if ( capture->xine_frame.data == 0 )
-    {
-        res = icvGrabFrameAVI_XINE( capture );
-    }
-    else
-    {
-        res = 1;
-    }
-
-    if ( res )
-    {
-        switch ( capture->xine_frame.colorspace )
+        case XINE_IMGFMT_YUY2:
         {
-                case XINE_IMGFMT_YV12: icvYV12toBGR( capture );
-#ifndef NDEBUG
-                printf( "(DEBUG)icvRetrieveFrameAVI_XINE: converted YV12 to BGR.\n" );
-#endif
-                break;
+            Mat frame(Size(xine_frame.width, xine_frame.height), CV_8UC2, xine_frame.data);
+            cv::cvtColor(frame, out, cv::COLOR_YUV2BGR_YUY2);
+            res = true;
+        }
+        break;
 
-                case XINE_IMGFMT_YUY2: icvYUY2toBGR( capture );
-#ifndef NDEBUG
-                printf( "(DEBUG)icvRetrieveFrameAVI_XINE: converted YUY2 to BGR.\n" );
-#endif
-                break;
-                case XINE_IMGFMT_XVMC: printf( "(ERROR)icvRetrieveFrameAVI_XINE: XVMC format not supported!\n" );
-                break;
-
-                case XINE_IMGFMT_XXMC: printf( "(ERROR)icvRetrieveFrameAVI_XINE: XXMC format not supported!\n" );
-                break;
-
-                default: printf( "(ERROR)icvRetrieveFrameAVI_XINE: unknown color/pixel format!\n" );
+        default:
+            break;
         }
 
-        /* always release last xine_frame, not needed anymore, but store its frame_number in *capture ! */
-        xine_free_video_frame( capture->vo_port, &capture->xine_frame );
-        capture->xine_frame.data = 0;
-
-#ifndef NDEBUG
-        fprintf( stderr, "(DEBUG) icvRetrieveFrameAVI_XINE ... end\n" );
-#endif
-        return capture->bgr_frame;
+        // always release last xine_frame, not needed anymore
+        xine_free_video_frame(vo_port, &xine_frame);
+        xine_frame.data = 0;
+        return res;
     }
 
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvRetrieveFrameAVI_XINE ... failed!\n" );
-#endif
-    return 0;
-}
-
-
-/**
- * THIS FUNCTION IS A FALLBACK FUNCTION FOR THE CASE THAT THE XINE SEEK IMPLEMENTATION
- * DOESN'T WORK WITH THE ACTUAL INPUT. THIS FUNCTION IS ONLY USED IN THE CASE OF AN EMERGENCY,
- * BECAUSE IT IS VERY SLOW !
-**/
-static int icvOldSeekFrameAVI_XINE( CvCaptureAVI_XINE* capture, int f )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvOldSeekFrameAVI_XINE ... start\n" );
-#endif
-
-    OPENCV_ASSERT ( capture,
-                        "icvRetricvOldSeekFrameAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture");
-    OPENCV_ASSERT ( capture->stream,
-                        "icvOldSeekFrameAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->stream");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvOldSeekFrameAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->vo_port");
-
-// not needed tnx to asserts...
-    // we need a valid capture context and it's stream to seek through
-//	if ( !capture || !capture->stream ) return 0;
-
-    // no need to seek if we are already there...
-    if ( f == capture->frame_number )
+    double getProperty(int property_id) const CV_OVERRIDE
     {
-#ifndef NDEBUG
-        fprintf( stderr, "(DEBUG) icvOldSeekFrameAVI_XINE ... end\n" );
-#endif
-        return 1;
-    }
-    // if the requested position is behind out actual position,
-    // we just need to read the remaining amount of frames until we are there.
-    else if ( f > capture->frame_number )
-    {
-        for ( ;capture->frame_number < f;capture->frame_number++ )
-            /// un-increment framenumber grabbing failed
-            if ( !xine_get_next_video_frame( capture->vo_port, &capture->xine_frame ) )
-            {
-                capture->frame_number--;
-                break;
-            }
-            else
-            {
-                xine_free_video_frame( capture->vo_port, &capture->xine_frame );
-            }
-    }
-    // otherwise we need to reset the stream and
-    // start reading frames from the beginning.
-    else // f < capture->frame_number
-    {
-        /// reset stream, should also work with non-seekable input
-        xine_play( capture->stream, 0, 0 );
-        /// read frames until we are at the requested frame
-        for ( capture->frame_number = 0; capture->frame_number < f; capture->frame_number++ )
-            /// un-increment last framenumber if grabbing failed
-            if ( !xine_get_next_video_frame( capture->vo_port, &capture->xine_frame ) )
-            {
-                capture->frame_number--;
-                break;
-            }
-            else
-            {
-                xine_free_video_frame( capture->vo_port, &capture->xine_frame );
-            }
-    }
-
-
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvOldSeekFrameAVI_XINE ... end\n" );
-#endif
-    return ( f == capture->frame_number ) ? 1 : 0;
-}
-
-
-static int icvSeekFrameAVI_XINE( CvCaptureAVI_XINE* capture, int f )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvSeekFrameAVI_XINE ... start\n" );
-#endif
-
-    OPENCV_ASSERT ( capture,
-                        "icvSeekFrameAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture");
-    OPENCV_ASSERT ( capture->stream,
-                        "icvSeekFrameAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->stream");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvSeekFrameAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->vo_port");
-
-// not needed tnx to asserts...
-    // we need a valid capture context and it's stream to seek through
-//	if ( !capture || !capture->stream ) return 0;
-
-    if ( capture->seekable )
-    {
-
-        /// use xinelib's seek functionality
-        int new_time = ( int ) ( ( f + 1 ) * ( float ) capture->frame_duration );
-
-#ifndef NDEBUG
-        fprintf( stderr, "(DEBUG) calling xine_play()" );
-#endif
-        if ( xine_play( capture->stream, 0, new_time ) )
-        {
-#ifndef NDEBUG
-            fprintf( stderr, "ok\n" );
-            fprintf( stderr, "(DEBUG) icvSeekFrameAVI_XINE ... end\n" );
-#endif
-            capture->frame_number = f;
-            return 1;
-        }
-        else
-        {
-#ifndef NDEBUG
-            fprintf( stderr, "failed\n" );
-            fprintf( stderr, "(DEBUG) icvSeekFrameAVI_XINE ... failed\n" );
-#endif
-            return 0;
-        }
-    }
-    else
-    {
-#ifndef NDEBUG
-        fprintf( stderr, "(DEBUG) icvSeekFrameAVI_XINE ... end\n" );
-#endif
-        return icvOldSeekFrameAVI_XINE( capture, f );
-    }
-}
-
-
-static int icvSeekTimeAVI_XINE( CvCaptureAVI_XINE* capture, int t )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvSeekTimeAVI_XINE ... start\n" );
-#endif
-
-    OPENCV_ASSERT ( capture,
-                        "icvSeekTimeAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture");
-    OPENCV_ASSERT ( capture->stream,
-                        "icvSeekTimeAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->stream");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvSeekTimeAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->vo_port");
-
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvSeekTimeAVI_XINE ... start\n" );
-#endif
-
-// not needed tnx to asserts...
-    // we need a valid capture context and it's stream to seek through
-//	if ( !capture || !capture->stream ) return 0;
-
-    if ( capture->seekable )
-    {
-        /// use xinelib's seek functionality
-        if ( xine_play( capture->stream, 0, t ) )
-        {
-            capture->frame_number = ( int ) ( ( float ) t * capture->frame_rate / 1000 );
-#ifndef NDEBUG
-            fprintf( stderr, "(DEBUG) icvSeekFrameAVI_XINE ... end\n" );
-#endif
-            return 1;
-        }
-        else
-        {
-#ifndef NDEBUG
-            fprintf( stderr, "(DEBUG) icvSeekFrameAVI_XINE ... failed!\n" );
-#endif
-            return 0;
-        }
-    }
-    else
-    {
-        int new_frame = ( int ) ( ( float ) t * capture->frame_rate / 1000 );
-#ifndef NDEBUG
-        fprintf( stderr, "(DEBUG) icvSeekFrameAVI_XINE ....end\n" );
-#endif
-        return icvOldSeekFrameAVI_XINE( capture, new_frame );
-    }
-}
-
-
-static int icvSeekRatioAVI_XINE( CvCaptureAVI_XINE* capture, double ratio )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvSeekRatioAVI_XINE ... start\n" );
-#endif
-
-    OPENCV_ASSERT ( capture,
-                        "icvSeekRatioAVI_XINE( CvCaptureAVI_XINE *, double )", "illegal capture");
-    OPENCV_ASSERT ( capture->stream,
-                        "icvSeekRatioAVI_XINE( CvCaptureAVI_XINE *, double )", "illegal capture->stream");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvSeekRatioAVI_XINE( CvCaptureAVI_XINE *, double )", "illegal capture->vo_port");
-
-// not needed tnx to asserts...
-    // we need a valid capture context and it's stream to seek through
-//	if ( !capture || !capture->stream ) return 0;
-
-    /// ratio must be [0..1]
-    if ( ratio > 1 || ratio < 0 ) return 0;
-
-    if ( capture->seekable )
-    {
-    // TODO: FIX IT, DOESN'T WORK PROPERLY, YET...!
+        CV_Assert_N(xine, vo_port, stream);
         int pos_t, pos_l, length;
-        xine_get_pos_length( capture->stream, &pos_l, &pos_t, &length );
-        fprintf( stderr, "ratio on GetProperty(): %d\n", pos_l );
+        bool res = (bool)xine_get_pos_length(stream, &pos_l, &pos_t, &length);
 
-        /// use xinelib's seek functionality
-        if ( xine_play( capture->stream, (int)(ratio*(float)length), 0 ) )
+        switch (property_id)
         {
-            capture->frame_number = ( int ) ( ratio*length / capture->frame_duration );
+        case CV_CAP_PROP_POS_MSEC: return res ? pos_t : 0;
+        case CV_CAP_PROP_POS_FRAMES: return frame_number;
+        case CV_CAP_PROP_POS_AVI_RATIO: return length && res ? pos_l / 65535.0 : 0.0;
+        case CV_CAP_PROP_FRAME_WIDTH: return size.width;
+        case CV_CAP_PROP_FRAME_HEIGHT: return size.height;
+        case CV_CAP_PROP_FPS: return frame_rate;
+        case CV_CAP_PROP_FOURCC: return (double)xine_get_stream_info(stream, XINE_STREAM_INFO_VIDEO_FOURCC);
+        }
+        return 0;
+    }
+
+    bool setProperty(int property_id, double value) CV_OVERRIDE
+    {
+        CV_Assert(stream);
+        CV_Assert(vo_port);
+        switch (property_id)
+        {
+        case CV_CAP_PROP_POS_MSEC: return seekTime((int)value);
+        case CV_CAP_PROP_POS_FRAMES: return seekFrame((int)value);
+        case CV_CAP_PROP_POS_AVI_RATIO: return seekRatio(value);
+        default: return false;
+        }
+    }
+
+protected:
+    bool oldSeekFrame(int f)
+    {
+        CV_Assert_N(xine, vo_port, stream);
+        // no need to seek if we are already there...
+        if (f == frame_number)
+        {
+            return true;
+        }
+        else if (f > frame_number)
+        {
+            // if the requested position is behind out actual position,
+            // we just need to read the remaining amount of frames until we are there.
+            for (; frame_number < f; frame_number++)
+            {
+                // un-increment framenumber grabbing failed
+                if (!xine_get_next_video_frame(vo_port, &xine_frame))
+                {
+                    frame_number--;
+                    break;
+                }
+                else
+                {
+                    xine_free_video_frame(vo_port, &xine_frame);
+                }
+            }
+        }
+        else // f < frame_number
+        {
+            // otherwise we need to reset the stream and
+            // start reading frames from the beginning.
+            // reset stream, should also work with non-seekable input
+            xine_play(stream, 0, 0);
+            // read frames until we are at the requested frame
+            for (frame_number = 0; frame_number < f; frame_number++)
+            {
+                // un-increment last framenumber if grabbing failed
+                if (!xine_get_next_video_frame(vo_port, &xine_frame))
+                {
+                    frame_number--;
+                    break;
+                }
+                else
+                {
+                    xine_free_video_frame(vo_port, &xine_frame);
+                }
+            }
+        }
+        return f == frame_number;
+    }
+
+    bool seekFrame(int f)
+    {
+        CV_Assert_N(xine, vo_port, stream);
+        if (seekable)
+        {
+            int new_time = (int)((f + 1) * (float)frame_duration);
+            if (xine_play(stream, 0, new_time))
+            {
+                frame_number = f;
+                return true;
+            }
         }
         else
         {
-#ifndef NDEBUG
-            fprintf( stderr, "(DEBUG) icvSeekRatioAVI_XINE ... failed!\n" );
-#endif
-            return 0;
+            return oldSeekFrame(f);
         }
+        return false;
     }
-    else
+
+    bool seekTime(int t)
     {
-        /// TODO: fill it !
-        fprintf( stderr, "icvSeekRatioAVI_XINE(): Seek not supported by stream !\n" );
-        fprintf( stderr, "icvSeekRatioAVI_XINE(): (seek in stream with NO seek support NOT implemented...yet!)\n" );
-#ifndef NDEBUG
-        fprintf( stderr, "(DEBUG) icvSeekRatioAVI_XINE ... failed!\n" );
-#endif
-        return 0;
+        CV_Assert_N(xine, vo_port, stream);
+        if (seekable)
+        {
+            if (xine_play(stream, 0, t))
+            {
+                frame_number = (int)((double)t * frame_rate / 1000);
+                return true;
+            }
+        }
+        else
+        {
+            int new_frame = (int)((double)t * frame_rate / 1000);
+            return oldSeekFrame(new_frame);
+        }
+        return false;
     }
 
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvSeekRatioAVI_XINE ... end!\n" );
-#endif
-    return 1;
-}
-
-
-static double icvGetPropertyAVI_XINE( CvCaptureAVI_XINE* capture, int property_id )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvGetPropertyAVI_XINE ... start\n" );
-#endif
-
-    OPENCV_ASSERT ( capture,
-                        "icvGetPropertyAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture");
-    OPENCV_ASSERT ( capture->stream,
-                        "icvGetPropertyAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->stream");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvGetPropertyAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->vo_port");
-    OPENCV_ASSERT ( capture->xine,
-                        "icvGetPropertyAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->xine");
-    OPENCV_ASSERT ( capture->bgr_frame,
-                        "icvGetPropertyAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->bgr_frame");
-
-// not needed tnx to asserts...
-    // we need a valid capture context and it's stream to seek through
-//	if ( !capture || !capture->stream || !capture->bgr_frame || !capture->xine || !capture->vo_port ) return 0
-
-    int pos_t, pos_l, length;
-    xine_get_pos_length( capture->stream, &pos_l, &pos_t, &length );
-    fprintf( stderr, "ratio on GetProperty(): %i\n", pos_l );
-
-    switch ( property_id )
+    bool seekRatio(double ratio)
     {
-            /// return actual position in msec
-            case CV_CAP_PROP_POS_MSEC:
-            if ( !capture->seekable )
+        CV_Assert_N(xine, vo_port, stream);
+        if (ratio > 1 || ratio < 0)
+            return false;
+        if (seekable)
+        {
+            // TODO: FIX IT, DOESN'T WORK PROPERLY, YET...!
+            int pos_t, pos_l, length;
+            bool res = (bool)xine_get_pos_length(stream, &pos_l, &pos_t, &length);
+            if (res && xine_play(stream, (int)(ratio * (double)length), 0))
             {
-                fprintf( stderr, "(ERROR) GetPropertyAVI_XINE(CV_CAP_PROP_POS_MSEC:\n" );
-                fprintf( stderr, "	Stream is NOT seekable, so position info may NOT be valid !!\n" );
+                frame_number = (int)(ratio * length / frame_duration);
+                return true;
             }
-            return pos_t;
-
-            /// return actual frame number
-            case CV_CAP_PROP_POS_FRAMES:
-            /// we insist the capture->frame_number to be remain updated !!!!
-            return capture->frame_number;
-
-            /// return actual position ratio in the range [0..1] depending on
-            /// the total length of the stream and the actual position
-            case CV_CAP_PROP_POS_AVI_RATIO:
-            if ( !capture->seekable )
-            {
-                fprintf( stderr, "(ERROR) GetPropertyAVI_XINE(CV_CAP_PROP_POS_AVI_RATIO:\n" );
-                fprintf( stderr, "	Stream is NOT seekable, so ratio info may NOT be valid !!\n" );
-            }
-            if ( length == 0 ) break;
-            else return pos_l / 65535;
-
-
-            /// return width of image source
-            case CV_CAP_PROP_FRAME_WIDTH:
-            return capture->size.width;
-
-            /// return height of image source
-            case CV_CAP_PROP_FRAME_HEIGHT:
-            return capture->size.height;
-
-            /// return framerate of stream
-            case CV_CAP_PROP_FPS:
-            if ( !capture->seekable )
-            {
-                fprintf( stderr, "(ERROR) GetPropertyAVI_XINE(CV_CAP_PROP_FPS:\n" );
-                fprintf( stderr, "	Stream is NOT seekable, so FPS info may NOT be valid !!\n" );
-            }
-            return capture->frame_rate;
-
-            /// return four-character-code (FOURCC) of source's codec
-            case CV_CAP_PROP_FOURCC:
-            return ( double ) xine_get_stream_info( capture->stream, XINE_STREAM_INFO_VIDEO_FOURCC );
+        }
+        return false;
     }
-
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvGetPropertyAVI_XINE ... failed!\n" );
-#endif
-
-    return 0;
-}
-
-
-static int icvSetPropertyAVI_XINE( CvCaptureAVI_XINE* capture,
-                                   int property_id, double value )
-{
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvSetPropertyAVI_XINE ... start\n" );
-#endif
-
-    OPENCV_ASSERT ( capture,
-                        "icvSetPropertyAVI_XINE( CvCaptureAVI_XINE *, int, double )", "illegal capture");
-    OPENCV_ASSERT ( capture->stream,
-                        "icvGetPropericvSetPropertyAVI_XINE( CvCaptureAVI_XINE *, int )", "illegal capture->stream");
-    OPENCV_ASSERT ( capture->vo_port,
-                        "icvSetPropertyAVI_XINE( CvCaptureAVI_XINE *, int, double )", "illegal capture->vo_port");
-
-// not needed tnx to asserts...
-    // we need a valid capture context and it's stream to seek through
-//	if ( !capture || !capture->stream || !capture->bgr_frame || !capture->xine || !capture->vo_port ) return 0
-
-#ifndef NDEBUG
-    fprintf( stderr, "(DEBUG) icvSetPropertyAVI_XINE: seeking to value %f ... ", value );
-#endif
-
-    switch ( property_id )
-    {
-            /// set (seek to) position in msec
-            case CV_CAP_PROP_POS_MSEC:
-            return icvSeekTimeAVI_XINE( capture, ( int ) value );
-
-            /// set (seek to) frame number
-            case CV_CAP_PROP_POS_FRAMES:
-            return icvSeekFrameAVI_XINE( capture, ( int ) value );
-
-            /// set (seek to) position ratio in the range [0..1] depending on
-            /// the total length of the stream and the actual position
-            case CV_CAP_PROP_POS_AVI_RATIO:
-            return icvSeekRatioAVI_XINE( capture, value );
-
-            default:
-#ifndef NDEBUG
-            fprintf( stderr, "(DEBUG) icvSetPropertyAVI_XINE ... failed!\n" );
-#endif
-
-            return 0;
-    }
-}
-
-
-static CvCaptureAVI_XINE* icvCaptureFromFile_XINE( const char* filename )
-{
-    // construct capture struct
-    CvCaptureAVI_XINE * capture = ( CvCaptureAVI_XINE* ) cvAlloc ( sizeof ( CvCaptureAVI_XINE ) );
-    memset( capture, 0, sizeof ( CvCaptureAVI_XINE ) );
-
-    // initialize XINE
-    if ( !icvOpenAVI_XINE( capture, filename ) )
-        return 0;
-
-    OPENCV_ASSERT ( capture,
-                        "cvCaptureFromFile_XINE( const char * )", "couldn't create capture");
-
-    return capture;
-
-}
-
-
-
-class CvCaptureAVI_XINE_CPP : public CvCapture
-{
-public:
-    CvCaptureAVI_XINE_CPP() { captureXINE = 0; }
-    virtual ~CvCaptureAVI_XINE_CPP() { close(); }
-
-    virtual bool open( const char* filename );
-    virtual void close();
-
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-protected:
-
-    CvCaptureAVI_XINE* captureXINE;
 };
 
-bool CvCaptureAVI_XINE_CPP::open( const char* filename )
+Ptr<IVideoCapture> cv::createXINECapture(const std::string &filename)
 {
-    close();
-    captureXINE = icvCaptureFromFile_XINE(filename);
-    return captureXINE != 0;
+    Ptr<XINECapture> res = makePtr<XINECapture>();
+    if (res && res->open(filename.c_str()))
+        return res;
+    return Ptr<IVideoCapture>();
 }
-
-void CvCaptureAVI_XINE_CPP::close()
-{
-    if( captureXINE )
-    {
-        icvCloseAVI_XINE( captureXINE );
-        cvFree( &captureXINE );
-    }
-}
-
-bool CvCaptureAVI_XINE_CPP::grabFrame()
-{
-    return captureXINE ? icvGrabFrameAVI_XINE( captureXINE ) != 0 : false;
-}
-
-IplImage* CvCaptureAVI_XINE_CPP::retrieveFrame(int)
-{
-    return captureXINE ? (IplImage*)icvRetrieveFrameAVI_XINE( captureXINE, 0 ) : 0;
-}
-
-double CvCaptureAVI_XINE_CPP::getProperty( int propId ) const
-{
-    return captureXINE ? icvGetPropertyAVI_XINE( captureXINE, propId ) : 0;
-}
-
-bool CvCaptureAVI_XINE_CPP::setProperty( int propId, double value )
-{
-    return captureXINE ? icvSetPropertyAVI_XINE( captureXINE, propId, value ) != 0 : false;
-}
-
-CvCapture* cvCreateFileCapture_XINE(const char* filename)
-{
-    CvCaptureAVI_XINE_CPP* capture = new CvCaptureAVI_XINE_CPP;
-
-    if( capture->open(filename))
-        return capture;
-
-    delete capture;
-    return 0;
-}
-
-
-#undef NDEBUG

@@ -2,10 +2,11 @@
  * 3calibration.cpp -- Calibrate 3 cameras in a horizontal line together.
  */
 
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgcodecs/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/core/utility.hpp"
 
 #include <stdio.h>
 #include <string.h>
@@ -20,12 +21,12 @@ static void help()
 {
         printf( "\nThis is a camera calibration sample that calibrates 3 horizontally placed cameras together.\n"
                "Usage: 3calibration\n"
-               "     -w <board_width>         # the number of inner corners per one of board dimension\n"
-               "     -h <board_height>        # the number of inner corners per another board dimension\n"
-               "     [-s <squareSize>]       # square size in some user-defined units (1 by default)\n"
-               "     [-o <out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
+               "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
+               "     -h=<board_height>        # the number of inner corners per another board dimension\n"
+               "     [-s=<squareSize>]       # square size in some user-defined units (1 by default)\n"
+               "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
                "     [-zt]                    # assume zero tangential distortion\n"
-               "     [-a <aspectRatio>]      # fix aspect ratio (fx/fy)\n"
+               "     [-a=<aspectRatio>]      # fix aspect ratio (fx/fy)\n"
                "     [-p]                     # fix the principal point at the center\n"
                "     [input_data]             # input data - text file with a list of the images of the board\n"
                "\n" );
@@ -42,7 +43,7 @@ static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point
                                       float(i*squareSize), 0));
 }
 
-static bool run3Calibration( vector<vector<Point2f> > imagePoints1,
+static bool run3Calibration(vector<vector<Point2f> > imagePoints1,
                             vector<vector<Point2f> > imagePoints2,
                             vector<vector<Point2f> > imagePoints3,
                             Size imageSize, Size boardSize,
@@ -177,65 +178,48 @@ int main( int argc, char** argv )
     int i, k;
     int flags = 0;
     Size boardSize, imageSize;
-    float squareSize = 1.f, aspectRatio = 1.f;
-    const char* outputFilename = "out_camera_data.yml";
-    const char* inputFilename = 0;
+    float squareSize, aspectRatio;
+    string outputFilename;
+    string inputFilename = "";
 
     vector<vector<Point2f> > imgpt[3];
     vector<string> imageList;
 
-    if(argc < 2)
+    cv::CommandLineParser parser(argc, argv,
+        "{help ||}{w||}{h||}{s|1|}{o|out_camera_data.yml|}"
+        "{zt||}{a|1|}{p||}{@input||}");
+    if (parser.has("help"))
     {
         help();
-        return 1;
+        return 0;
     }
-
-
-    for( i = 1; i < argc; i++ )
+    boardSize.width = parser.get<int>("w");
+    boardSize.height = parser.get<int>("h");
+    squareSize = parser.get<float>("s");
+    aspectRatio = parser.get<float>("a");
+    if (parser.has("a"))
+        flags |= CALIB_FIX_ASPECT_RATIO;
+    if (parser.has("zt"))
+        flags |= CALIB_ZERO_TANGENT_DIST;
+    if (parser.has("p"))
+        flags |= CALIB_FIX_PRINCIPAL_POINT;
+    outputFilename = parser.get<string>("o");
+    inputFilename = parser.get<string>("@input");
+    if (!parser.check())
     {
-        const char* s = argv[i];
-        if( strcmp( s, "-w" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%u", &boardSize.width ) != 1 || boardSize.width <= 0 )
-                return fprintf( stderr, "Invalid board width\n" ), -1;
-        }
-        else if( strcmp( s, "-h" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%u", &boardSize.height ) != 1 || boardSize.height <= 0 )
-                return fprintf( stderr, "Invalid board height\n" ), -1;
-        }
-        else if( strcmp( s, "-s" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%f", &squareSize ) != 1 || squareSize <= 0 )
-                return fprintf( stderr, "Invalid board square width\n" ), -1;
-        }
-        else if( strcmp( s, "-a" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%f", &aspectRatio ) != 1 || aspectRatio <= 0 )
-                return printf("Invalid aspect ratio\n" ), -1;
-            flags |= CALIB_FIX_ASPECT_RATIO;
-        }
-        else if( strcmp( s, "-zt" ) == 0 )
-        {
-            flags |= CALIB_ZERO_TANGENT_DIST;
-        }
-        else if( strcmp( s, "-p" ) == 0 )
-        {
-            flags |= CALIB_FIX_PRINCIPAL_POINT;
-        }
-        else if( strcmp( s, "-o" ) == 0 )
-        {
-            outputFilename = argv[++i];
-        }
-        else if( s[0] != '-' )
-        {
-            inputFilename = s;
-        }
-        else
-            return fprintf( stderr, "Unknown option %s", s ), -1;
+        help();
+        parser.printErrors();
+        return -1;
     }
-
-    if( !inputFilename ||
+    if (boardSize.width <= 0)
+        return fprintf( stderr, "Invalid board width\n" ), -1;
+    if (boardSize.height <= 0)
+        return fprintf( stderr, "Invalid board height\n" ), -1;
+    if (squareSize <= 0)
+        return fprintf( stderr, "Invalid board square width\n" ), -1;
+    if (aspectRatio <= 0)
+        return printf("Invalid aspect ratio\n" ), -1;
+    if( inputFilename.empty() ||
        !readStringList(inputFilename, imageList) ||
        imageList.size() == 0 || imageList.size() % 3 != 0 )
     {
@@ -363,11 +347,11 @@ int main( int argc, char** argv )
             remap(view, rview, map1[k1], map2[k1], INTER_LINEAR);
         }
         printf("%s %s %s\n", imageList[i*3].c_str(), imageList[i*3+1].c_str(), imageList[i*3+2].c_str());
-        resize( canvas, small_canvas, Size(1500, 1500/3) );
+        resize( canvas, small_canvas, Size(1500, 1500/3), 0, 0, INTER_LINEAR_EXACT );
         for( k = 0; k < small_canvas.rows; k += 16 )
             line(small_canvas, Point(0, k), Point(small_canvas.cols, k), Scalar(0,255,0), 1);
         imshow("rectified", small_canvas);
-        int c = waitKey(0);
+        char c = (char)waitKey(0);
         if( c == 27 || c == 'q' || c == 'Q' )
             break;
     }

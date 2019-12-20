@@ -9,11 +9,10 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help(char** argv)
 {
     cout << "\nThis program demonstrates the famous watershed segmentation algorithm in OpenCV: watershed()\n"
-            "Usage:\n"
-            "./watershed [image_name -- default is ../data/fruits.jpg]\n" << endl;
+            "Usage:\n" << argv[0] <<" [image_name -- default is fruits.jpg]\n" << endl;
 
 
     cout << "Hot keys: \n"
@@ -48,15 +47,22 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"../data/fruits.jpg";
+    cv::CommandLineParser parser(argc, argv, "{help h | | }{ @input | fruits.jpg | }");
+    if (parser.has("help"))
+    {
+        help(argv);
+        return 0;
+    }
+    string filename = samples::findFile(parser.get<string>("@input"));
     Mat img0 = imread(filename, 1), imgGray;
 
     if( img0.empty() )
     {
-        cout << "Couldn'g open image " << filename << ". Usage: watershed <image_name>\n";
+        cout << "Couldn't open image ";
+        help(argv);
         return 0;
     }
-    help();
+    help(argv);
     namedWindow( "image", 1 );
 
     img0.copyTo(img);
@@ -68,19 +74,19 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        int c = waitKey(0);
+        char c = (char)waitKey(0);
 
-        if( (char)c == 27 )
+        if( c == 27 )
             break;
 
-        if( (char)c == 'r' )
+        if( c == 'r' )
         {
             markerMask = Scalar::all(0);
             img0.copyTo(img);
             imshow( "image", img );
         }
 
-        if( (char)c == 'w' || (char)c == ' ' )
+        if( c == 'w' || c == ' ' )
         {
             int i, j, compCount = 0;
             vector<vector<Point> > contours;

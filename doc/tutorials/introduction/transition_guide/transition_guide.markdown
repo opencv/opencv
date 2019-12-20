@@ -12,7 +12,7 @@ OpenCV 3.0 introduced many new algorithms and features comparing to version 2.4.
 This section describes most notable changes in general, all details and examples of transition actions are in the next part of the document.
 
 ##### Contrib repository
-<https://github.com/Itseez/opencv_contrib>
+<https://github.com/opencv/opencv_contrib>
 
 This is a place for all new, experimental and non-free algorithms. It does not receive so much attention from the support team comparing to main repository, but the community makes an effort to keep it in a good shape.
 
@@ -61,8 +61,6 @@ Changes intended to ease the migration have been made in OpenCV 3.0, thus the fo
 // new header
 #include "opencv2/<module>.hpp"
 @endcode
-
-2. If your code is using C API (`cv*` functions, `Cv*` structures or `CV_*` enumerations), include corresponding `*_c.h` headers. Although it is recommended to use C++ API, most of C-functions are still accessible in separate header files (opencv2/core/core_c.h, opencv2/core/types_c.h, opencv2/imgproc/imgproc_c.h, etc.).
 
 Modern way to use algorithm {#tutorial_transition_algorithm}
 ---------------------------
@@ -191,9 +189,9 @@ brief->compute(gray, query_kpts, query_desc); //Compute brief descriptors at eac
 
 OpenCL {#tutorial_transition_hints_opencl}
 ------
-All specialized `ocl` implemetations has been hidden behind general C++ algorithm interface. Now the function execution path can be selected dynamically at runtime: CPU or OpenCL; this mechanism is also called "Transparent API".
+All specialized `ocl` implementations has been hidden behind general C++ algorithm interface. Now the function execution path can be selected dynamically at runtime: CPU or OpenCL; this mechanism is also called "Transparent API".
 
-New class cv::UMat is intended to hide data exchange with OpenCL device in a convinient way.
+New class cv::UMat is intended to hide data exchange with OpenCL device in a convenient way.
 
 Following example illustrate API modifications (from [OpenCV site](http://opencv.org/platforms/opencl.html)):
 
@@ -236,7 +234,10 @@ for(;;){
 
 CUDA {#tutorial_transition_hints_cuda}
 ----
-_cuda_ module has been split into several smaller pieces:
+
+CUDA modules has been moved into opencv_contrib repository.
+
+@cond CUDA_MODULES
 - _cuda_ - @ref cuda
 - _cudaarithm_ - @ref cudaarithm
 - _cudabgsegm_ - @ref cudabgsegm
@@ -249,10 +250,7 @@ _cuda_ module has been split into several smaller pieces:
 - _cudastereo_ - @ref cudastereo
 - _cudawarping_ - @ref cudawarping
 - _cudev_ - @ref cudev
-
-`gpu` namespace has been removed, use cv::cuda namespace instead. Many classes has also been renamed, for example:
-- `gpu::FAST_GPU` -> cv::cuda::FastFeatureDetector
-- `gpu::createBoxFilter_GPU` -> cv::cuda::createBoxFilter
+@endcond
 
 Documentation format {#tutorial_transition_docs}
 --------------------

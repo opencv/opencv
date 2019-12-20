@@ -39,7 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "calib3d_c_api.h"
 
 /* POSIT structure */
 struct CvPOSITObject
@@ -115,7 +115,8 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
                             float* rotation, float* translation )
 {
     int i, j, k;
-    int count = 0, converged = 0;
+    int count = 0;
+    bool converged = false;
     float scale = 0, inv_Z = 0;
     float diff = (float)criteria.epsilon;
 
@@ -233,8 +234,8 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         inv_Z = scale * inv_focalLength;
 
         count++;
-        converged = ((criteria.type & CV_TERMCRIT_EPS) && (diff < criteria.epsilon));
-        converged |= ((criteria.type & CV_TERMCRIT_ITER) && (count == criteria.max_iter));
+        converged = ((criteria.type & CV_TERMCRIT_EPS) && (diff < criteria.epsilon))
+                    || ((criteria.type & CV_TERMCRIT_ITER) && (count == criteria.max_iter));
     }
     const float invScale = 1 / scale;
     translation[0] = imagePoints[0].x * invScale;

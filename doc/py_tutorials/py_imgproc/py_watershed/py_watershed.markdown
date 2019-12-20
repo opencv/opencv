@@ -6,7 +6,7 @@ Goal
 
 In this chapter,
     -   We will learn to use marker-based image segmentation using watershed algorithm
-    -   We will see: **cv2.watershed()**
+    -   We will see: **cv.watershed()**
 
 Theory
 ------
@@ -45,12 +45,12 @@ We start with finding an approximate estimate of the coins. For that, we can use
 binarization.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('coins.png')
-gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+img = cv.imread('coins.png')
+gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+ret, thresh = cv.threshold(gray,0,255,cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
 @endcode
 Result:
 
@@ -78,18 +78,18 @@ obtained from subtracting sure_fg area from sure_bg area.
 @code{.py}
 # noise removal
 kernel = np.ones((3,3),np.uint8)
-opening = cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel, iterations = 2)
+opening = cv.morphologyEx(thresh,cv.MORPH_OPEN,kernel, iterations = 2)
 
 # sure background area
-sure_bg = cv2.dilate(opening,kernel,iterations=3)
+sure_bg = cv.dilate(opening,kernel,iterations=3)
 
 # Finding sure foreground area
-dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,5)
-ret, sure_fg = cv2.threshold(dist_transform,0.7*dist_transform.max(),255,0)
+dist_transform = cv.distanceTransform(opening,cv.DIST_L2,5)
+ret, sure_fg = cv.threshold(dist_transform,0.7*dist_transform.max(),255,0)
 
 # Finding unknown region
 sure_fg = np.uint8(sure_fg)
-unknown = cv2.subtract(sure_bg,sure_fg)
+unknown = cv.subtract(sure_bg,sure_fg)
 @endcode
 See the result. In the thresholded image, we get some regions of coins which we are sure of coins
 and they are detached now. (In some cases, you may be interested in only foreground segmentation,
@@ -103,7 +103,7 @@ Now we know for sure which are region of coins, which are background and all. So
 (it is an array of same size as that of original image, but with int32 datatype) and label the
 regions inside it. The regions we know for sure (whether foreground or background) are labelled with
 any positive integers, but different integers, and the area we don't know for sure are just left as
-zero. For this we use **cv2.connectedComponents()**. It labels background of the image with 0, then
+zero. For this we use **cv.connectedComponents()**. It labels background of the image with 0, then
 other objects are labelled with integers starting from 1.
 
 But we know that if background is marked with 0, watershed will consider it as unknown area. So we
@@ -111,7 +111,7 @@ want to mark it with different integer. Instead, we will mark unknown region, de
 with 0.
 @code{.py}
 # Marker labelling
-ret, markers = cv2.connectedComponents(sure_fg)
+ret, markers = cv.connectedComponents(sure_fg)
 
 # Add one to all labels so that sure background is not 0, but 1
 markers = markers+1
@@ -128,7 +128,7 @@ compared to unknown region.
 Now our marker is ready. It is time for final step, apply watershed. Then marker image will be
 modified. The boundary region will be marked with -1.
 @code{.py}
-markers = cv2.watershed(img,markers)
+markers = cv.watershed(img,markers)
 img[markers == -1] = [255,0,0]
 @endcode
 See the result below. For some coins, the region where they touch are segmented properly and for
@@ -139,7 +139,7 @@ some, they are not.
 Additional Resources
 --------------------
 
--#  CMM page on [Watershed Tranformation](http://cmm.ensmp.fr/~beucher/wtshed.html)
+-#  CMM page on [Watershed Transformation](http://cmm.ensmp.fr/~beucher/wtshed.html)
 
 Exercises
 ---------

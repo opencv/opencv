@@ -41,19 +41,21 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CVSTDINL_HPP__
-#define __OPENCV_CORE_CVSTDINL_HPP__
+#ifndef OPENCV_CORE_CVSTDINL_HPP
+#define OPENCV_CORE_CVSTDINL_HPP
 
-#ifndef OPENCV_NOSTL
-#  include <complex>
-#  include <ostream>
-#endif
+#include <complex>
+#include <ostream>
 
 //! @cond IGNORED
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable: 4127 )
+#endif
+
 namespace cv
 {
-#ifndef OPENCV_NOSTL
 
 template<typename _Tp> class DataType< std::complex<_Tp> >
 {
@@ -71,103 +73,6 @@ public:
     typedef Vec<channel_type, channels> vec_type;
 };
 
-inline
-String::String(const std::string& str)
-    : cstr_(0), len_(0)
-{
-    if (!str.empty())
-    {
-        size_t len = str.size();
-        memcpy(allocate(len), str.c_str(), len);
-    }
-}
-
-inline
-String::String(const std::string& str, size_t pos, size_t len)
-    : cstr_(0), len_(0)
-{
-    size_t strlen = str.size();
-    pos = max(pos, strlen);
-    len = min(strlen - pos, len);
-    if (!len) return;
-    memcpy(allocate(len), str.c_str() + pos, len);
-}
-
-inline
-String& String::operator = (const std::string& str)
-{
-    deallocate();
-    if (!str.empty())
-    {
-        size_t len = str.size();
-        memcpy(allocate(len), str.c_str(), len);
-    }
-    return *this;
-}
-
-inline
-String& String::operator += (const std::string& str)
-{
-    *this = *this + str;
-    return *this;
-}
-
-inline
-String::operator std::string() const
-{
-    return std::string(cstr_, len_);
-}
-
-inline
-String operator + (const String& lhs, const std::string& rhs)
-{
-    String s;
-    size_t rhslen = rhs.size();
-    s.allocate(lhs.len_ + rhslen);
-    memcpy(s.cstr_, lhs.cstr_, lhs.len_);
-    memcpy(s.cstr_ + lhs.len_, rhs.c_str(), rhslen);
-    return s;
-}
-
-inline
-String operator + (const std::string& lhs, const String& rhs)
-{
-    String s;
-    size_t lhslen = lhs.size();
-    s.allocate(lhslen + rhs.len_);
-    memcpy(s.cstr_, lhs.c_str(), lhslen);
-    memcpy(s.cstr_ + lhslen, rhs.cstr_, rhs.len_);
-    return s;
-}
-
-inline
-FileNode::operator std::string() const
-{
-    String value;
-    read(*this, value, value);
-    return value;
-}
-
-template<> inline
-void operator >> (const FileNode& n, std::string& value)
-{
-    String val;
-    read(n, val, val);
-    value = val;
-}
-
-template<> inline
-FileStorage& operator << (FileStorage& fs, const std::string& value)
-{
-    return fs << cv::String(value);
-}
-
-static inline
-std::ostream& operator << (std::ostream& os, const String& str)
-{
-    return os << str.c_str();
-}
-
 static inline
 std::ostream& operator << (std::ostream& out, Ptr<Formatted> fmtd)
 {
@@ -181,6 +86,18 @@ static inline
 std::ostream& operator << (std::ostream& out, const Mat& mtx)
 {
     return out << Formatter::get()->format(mtx);
+}
+
+static inline
+std::ostream& operator << (std::ostream& out, const UMat& m)
+{
+    return out << m.getMat(ACCESS_READ);
+}
+
+template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const Complex<_Tp>& c)
+{
+    return out << "(" << c.re << "," << c.im << ")";
 }
 
 template<typename _Tp> static inline
@@ -221,14 +138,7 @@ template<typename _Tp, int n> static inline
 std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable: 4127 )
-#endif
-    if(Vec<_Tp, n>::depth < CV_32F)
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
+    if (cv::traits::Depth<_Tp>::value <= CV_32S)
     {
         for (int i = 0; i < n - 1; ++i) {
             out << (int)vec[i] << ", ";
@@ -258,10 +168,29 @@ std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
     return out << "[" << rect.width << " x " << rect.height << " from (" << rect.x << ", " << rect.y << ")]";
 }
 
+static inline std::ostream& operator << (std::ostream& out, const MatSize& msize)
+{
+    int i, dims = msize.dims();
+    for( i = 0; i < dims; i++ )
+    {
+        out << msize[i];
+        if( i < dims-1 )
+            out << " x ";
+    }
+    return out;
+}
 
-#endif // OPENCV_NOSTL
+static inline std::ostream &operator<< (std::ostream &s, cv::Range &r)
+{
+    return s << "[" << r.start << " : " << r.end << ")";
+}
+
 } // cv
+
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 
 //! @endcond
 
-#endif // __OPENCV_CORE_CVSTDINL_HPP__
+#endif // OPENCV_CORE_CVSTDINL_HPP

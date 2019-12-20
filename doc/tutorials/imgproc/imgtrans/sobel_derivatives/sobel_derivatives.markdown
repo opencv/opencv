@@ -1,13 +1,16 @@
 Sobel Derivatives {#tutorial_sobel_derivatives}
 =================
 
+@prev_tutorial{tutorial_copyMakeBorder}
+@next_tutorial{tutorial_laplace_operator}
+
 Goal
 ----
 
 In this tutorial you will learn how to:
 
--   Use the OpenCV function @ref cv::Sobel to calculate the derivatives from an image.
--   Use the OpenCV function @ref cv::Scharr to calculate a more accurate derivative for a kernel of
+-   Use the OpenCV function **Sobel()** to calculate the derivatives from an image.
+-   Use the OpenCV function **Scharr()** to calculate a more accurate derivative for a kernel of
     size \f$3 \cdot 3\f$
 
 Theory
@@ -83,8 +86,8 @@ Assuming that the image to be operated is \f$I\f$:
 @note
     When the size of the kernel is `3`, the Sobel kernel shown above may produce noticeable
     inaccuracies (after all, Sobel is only an approximation of the derivative). OpenCV addresses
-    this inaccuracy for kernels of size 3 by using the @ref cv::Scharr function. This is as fast
-    but more accurate than the standar Sobel function. It implements the following kernels:
+    this inaccuracy for kernels of size 3 by using the **Scharr()** function. This is as fast
+    but more accurate than the standard Sobel function. It implements the following kernels:
     \f[G_{x} = \begin{bmatrix}
     -3 & 0 & +3  \\
     -10 & 0 & +10  \\
@@ -95,9 +98,9 @@ Assuming that the image to be operated is \f$I\f$:
     +3 & +10 & +3
     \end{bmatrix}\f]
 @note
-    You can check out more information of this function in the OpenCV reference (@ref cv::Scharr ).
-    Also, in the sample code below, you will notice that above the code for @ref cv::Sobel function
-    there is also code for the @ref cv::Scharr function commented. Uncommenting it (and obviously
+    You can check out more information of this function in the OpenCV reference - **Scharr()** .
+    Also, in the sample code below, you will notice that above the code for **Sobel()** function
+    there is also code for the **Scharr()** function commented. Uncommenting it (and obviously
     commenting the Sobel stuff) should give you an idea of how this function works.
 
 Code
@@ -107,52 +110,55 @@ Code
     -   Applies the *Sobel Operator* and generates as output an image with the detected *edges*
         bright on a darker background.
 
--#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp)
-    @include samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
+-#  The tutorial code's is shown lines below.
+
+@add_toggle_cpp
+You can also download it from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp)
+@include samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
+@end_toggle
+
+@add_toggle_java
+You can also download it from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/SobelDemo/SobelDemo.java)
+@include samples/java/tutorial_code/ImgTrans/SobelDemo/SobelDemo.java
+@end_toggle
+
+@add_toggle_python
+You can also download it from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/SobelDemo/sobel_demo.py)
+@include samples/python/tutorial_code/ImgTrans/SobelDemo/sobel_demo.py
+@end_toggle
 
 Explanation
 -----------
 
--#  First we declare the variables we are going to use:
-    @code{.cpp}
-    Mat src, src_gray;
-    Mat grad;
-    char* window_name = "Sobel Demo - Simple Edge Detector";
-    int scale = 1;
-    int delta = 0;
-    int ddepth = CV_16S;
-    @endcode
--#  As usual we load our source image *src*:
-    @code{.cpp}
-    src = imread( argv[1] );
+#### Declare variables
 
-    if( !src.data )
-    { return -1; }
-    @endcode
--#  First, we apply a @ref cv::GaussianBlur to our image to reduce the noise ( kernel size = 3 )
-    @code{.cpp}
-    GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
-    @endcode
--#  Now we convert our filtered image to grayscale:
-    @code{.cpp}
-    cvtColor( src, src_gray, COLOR_RGB2GRAY );
-    @endcode
--#  Second, we calculate the "*derivatives*" in *x* and *y* directions. For this, we use the
-    function @ref cv::Sobel as shown below:
-    @code{.cpp}
-    Mat grad_x, grad_y;
-    Mat abs_grad_x, abs_grad_y;
+@snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp variables
 
-    /// Gradient X
-    Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
-    /// Gradient Y
-    Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
-    @endcode
+#### Load source image
+
+@snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp load
+
+#### Reduce noise
+
+@snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp reduce_noise
+
+#### Grayscale
+
+@snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp convert_to_gray
+
+#### Sobel Operator
+
+@snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp sobel
+
+-   We calculate the "derivatives" in *x* and *y* directions. For this, we use the
+    function **Sobel()** as shown below:
     The function takes the following arguments:
 
     -   *src_gray*: In our example, the input image. Here it is *CV_8U*
-    -   *grad_x*/*grad_y*: The output image.
+    -   *grad_x* / *grad_y* : The output image.
     -   *ddepth*: The depth of the output image. We set it to *CV_16S* to avoid overflow.
     -   *x_order*: The order of the derivative in **x** direction.
     -   *y_order*: The order of the derivative in **y** direction.
@@ -161,20 +167,20 @@ Explanation
     Notice that to calculate the gradient in *x* direction we use: \f$x_{order}= 1\f$ and
     \f$y_{order} = 0\f$. We do analogously for the *y* direction.
 
--#  We convert our partial results back to *CV_8U*:
-    @code{.cpp}
-    convertScaleAbs( grad_x, abs_grad_x );
-    convertScaleAbs( grad_y, abs_grad_y );
-    @endcode
--#  Finally, we try to approximate the *gradient* by adding both directional gradients (note that
-    this is not an exact calculation at all! but it is good for our purposes).
-    @code{.cpp}
-    addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
-    @endcode
--#  Finally, we show our result:
-    @code{.cpp}
-    imshow( window_name, grad );
-    @endcode
+#### Convert output to a CV_8U image
+
+@snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp convert
+
+#### Gradient
+
+@snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp blend
+
+We try to approximate the *gradient* by adding both directional gradients (note that
+this is not an exact calculation at all! but it is good for our purposes).
+
+#### Show results
+
+@snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp display
 
 Results
 -------

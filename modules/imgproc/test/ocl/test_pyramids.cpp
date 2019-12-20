@@ -49,7 +49,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 PARAM_TEST_CASE(PyrTestBase, MatDepth, Channels, BorderType, bool)
@@ -97,7 +97,7 @@ OCL_TEST_P(PyrDown, Mat)
         Size src_roiSize = randomSize(1, MAX_VALUE);
         Size dst_roiSize = Size(randomInt((src_roiSize.width - 1) / 2, (src_roiSize.width + 3) / 2),
                                 randomInt((src_roiSize.height - 1) / 2, (src_roiSize.height + 3) / 2));
-        dst_roiSize = dst_roiSize.area() == 0 ? Size((src_roiSize.width + 1) / 2, (src_roiSize.height + 1) / 2) : dst_roiSize;
+        dst_roiSize = dst_roiSize.empty() ? Size((src_roiSize.width + 1) / 2, (src_roiSize.height + 1) / 2) : dst_roiSize;
         generateTestData(src_roiSize, dst_roiSize);
 
         OCL_OFF(pyrDown(src_roi, dst_roi, dst_roiSize, borderType));
@@ -134,6 +134,24 @@ OCL_TEST_P(PyrUp, Mat)
     }
 }
 
+typedef PyrTestBase PyrUp_cols2;
+
+OCL_TEST_P(PyrUp_cols2, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        Size src_roiSize = randomSize(1, MAX_VALUE);
+        src_roiSize.width += (src_roiSize.width % 2);
+        Size dst_roiSize = Size(2 * src_roiSize.width, 2 * src_roiSize.height);
+        generateTestData(src_roiSize, dst_roiSize);
+
+        OCL_OFF(pyrUp(src_roi, dst_roi, dst_roiSize, borderType));
+        OCL_ON(pyrUp(usrc_roi, udst_roi, dst_roiSize, borderType));
+
+        Near(depth == CV_32F ? 1e-4f : 1.0f);
+    }
+}
+
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp, Combine(
                             Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
                             Values(1, 2, 3, 4),
@@ -141,6 +159,13 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp, Combine(
                             Bool()
                             ));
 
-} } // namespace cvtest::ocl
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp_cols2, Combine(
+                            Values((MatDepth)CV_8U),
+                            Values((Channels)1),
+                            Values((BorderType)BORDER_REFLECT_101),
+                            Bool()
+                            ));
+
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

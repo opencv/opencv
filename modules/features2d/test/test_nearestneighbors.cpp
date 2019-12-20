@@ -43,13 +43,11 @@
 
 #include "test_precomp.hpp"
 
-#include <algorithm>
-#include <vector>
-#include <iostream>
+namespace opencv_test { namespace {
 
-using namespace std;
-using namespace cv;
+#ifdef HAVE_OPENCV_FLANN
 using namespace cv::flann;
+#endif
 
 //--------------------------------------------------------------------------------
 class NearestNeighborTest : public cvtest::BaseTest
@@ -67,13 +65,13 @@ protected:
     virtual void run( int start_from );
     virtual void createModel( const Mat& data ) = 0;
     virtual int findNeighbors( Mat& points, Mat& neighbors ) = 0;
-    virtual int checkGetPoins( const Mat& data );
+    virtual int checkGetPoints( const Mat& data );
     virtual int checkFindBoxed();
     virtual int checkFind( const Mat& data );
     virtual void releaseModel() = 0;
 };
 
-int NearestNeighborTest::checkGetPoins( const Mat& )
+int NearestNeighborTest::checkGetPoints( const Mat& )
 {
    return cvtest::TS::OK;
 }
@@ -114,11 +112,7 @@ int NearestNeighborTest::checkFind( const Mat& data )
         }
 
         double correctPerc = correctMatches / (double)pointsCount;
-        if (correctPerc < .75)
-        {
-            ts->printf( cvtest::TS::LOG, "correct_perc = %d\n", correctPerc );
-            code = cvtest::TS::FAIL_BAD_ACCURACY;
-        }
+        EXPECT_GE(correctPerc, .75) << "correctMatches=" << correctMatches << " pointsCount=" << pointsCount;
     }
 
     return code;
@@ -127,11 +121,11 @@ int NearestNeighborTest::checkFind( const Mat& data )
 void NearestNeighborTest::run( int /*start_from*/ ) {
     int code = cvtest::TS::OK, tempCode;
     Mat desc( featuresCount, dims, CV_32FC1 );
-    randu( desc, Scalar(minValue), Scalar(maxValue) );
+    ts->get_rng().fill( desc, RNG::UNIFORM, minValue, maxValue );
 
     createModel( desc );
 
-    tempCode = checkGetPoins( desc );
+    tempCode = checkGetPoints( desc );
     if( tempCode != cvtest::TS::OK )
     {
         ts->printf( cvtest::TS::LOG, "bad accuracy of GetPoints \n" );
@@ -154,14 +148,17 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
 
     releaseModel();
 
+    if (::testing::Test::HasFailure()) code = cvtest::TS::FAIL_BAD_ACCURACY;
     ts->set_failed_test_info( code );
 }
 
 //--------------------------------------------------------------------------------
+#ifdef HAVE_OPENCV_FLANN
+
 class CV_FlannTest : public NearestNeighborTest
 {
 public:
-    CV_FlannTest() {}
+    CV_FlannTest() : NearestNeighborTest(), index(NULL) { }
 protected:
     void createIndex( const Mat& data, const IndexParams& params );
     int knnSearch( Mat& points, Mat& neighbors );
@@ -172,6 +169,9 @@ protected:
 
 void CV_FlannTest::createIndex( const Mat& data, const IndexParams& params )
 {
+    // release previously allocated index
+    releaseModel();
+
     index = new Index( data, params );
 }
 
@@ -198,10 +198,9 @@ int CV_FlannTest::knnSearch( Mat& points, Mat& neighbors )
     }
 
     // compare results
-    if( cvtest::norm( neighbors, neighbors1, NORM_L1 ) != 0 )
-        return cvtest::TS::FAIL_BAD_ACCURACY;
+    EXPECT_LE(cvtest::norm(neighbors, neighbors1, NORM_L1), 0);
 
-    return cvtest::TS::OK;
+    return ::testing::Test::HasFailure() ? cvtest::TS::FAIL_BAD_ACCURACY : cvtest::TS::OK;
 }
 
 int CV_FlannTest::radiusSearch( Mat& points, Mat& neighbors )
@@ -229,16 +228,20 @@ int CV_FlannTest::radiusSearch( Mat& points, Mat& neighbors )
         for( j = 0; it != indices.end(); ++it, j++ )
             neighbors1.at<int>(i,j) = *it;
     }
-    // compare results
-    if( cvtest::norm( neighbors, neighbors1, NORM_L1 ) != 0 )
-        return cvtest::TS::FAIL_BAD_ACCURACY;
 
-    return cvtest::TS::OK;
+    // compare results
+    EXPECT_LE(cvtest::norm(neighbors, neighbors1, NORM_L1), 0);
+
+    return ::testing::Test::HasFailure() ? cvtest::TS::FAIL_BAD_ACCURACY : cvtest::TS::OK;
 }
 
 void CV_FlannTest::releaseModel()
 {
-    delete index;
+    if (index)
+    {
+        delete index;
+        index = NULL;
+    }
 }
 
 //---------------------------------------
@@ -324,3 +327,7 @@ TEST(Features2d_FLANN_KDTree, regression) { CV_FlannKDTreeIndexTest test; test.s
 TEST(Features2d_FLANN_Composite, regression) { CV_FlannCompositeIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_Auto, regression) { CV_FlannAutotunedIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_Saved, regression) { CV_FlannSavedIndexTest test; test.safe_run(); }
+
+#endif
+
+}} // namespace

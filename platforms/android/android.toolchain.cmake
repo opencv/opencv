@@ -65,6 +65,7 @@
 #        "armeabi" - ARMv5TE based CPU with software floating point operations
 #        "armeabi-v7a" - ARMv7 based devices with hardware FPU instructions
 #            this ABI target is used by default
+#        "armeabi-v7a-hard with NEON" - ARMv7 based devices with hardware FPU instructions and hardfp
 #        "armeabi-v7a with NEON" - same as armeabi-v7a, but
 #            sets NEON as floating-point unit
 #        "armeabi-v7a with VFPV3" - same as armeabi-v7a, but
@@ -154,6 +155,10 @@
 #                          Implies -frtti -fno-exceptions.
 #                          Available for NDK r7b and newer.
 #                          Silently degrades to gnustl_static if not available.
+#        c++_static     -> Use the LLVM libc++ runtime as a static library.
+#                          Implies -frtti -fexceptions.
+#        c++_shared     -> Use the LLVM libc++ runtime as a shared library.
+#                          Implies -frtti -fno-exceptions.
 #
 #    ANDROID_STL_FORCE_FEATURES=ON - turn rtti and exceptions support based on
 #      chosen runtime. If disabled, then the user is responsible for settings
@@ -178,7 +183,7 @@
 #    ANDROID and BUILD_ANDROID will be set to true, you may test any of these
 #    variables to make necessary Android-specific configuration changes.
 #
-#    Also ARMEABI or ARMEABI_V7A or X86 or MIPS or ARM64_V8A or X86_64 or MIPS64
+#    Also ARMEABI or ARMEABI_V7A or ARMEABI_V7A_HARD or X86 or MIPS or ARM64_V8A or X86_64 or MIPS64
 #    will be set true, mutually exclusive. NEON option will be set true
 #    if VFP is set to NEON.
 #
@@ -231,7 +236,7 @@ if( NOT DEFINED ANDROID_STANDALONE_TOOLCHAIN_SEARCH_PATH )
 endif()
 
 # known ABIs
-set( ANDROID_SUPPORTED_ABIS_arm "armeabi-v7a;armeabi;armeabi-v7a with NEON;armeabi-v7a with VFPV3;armeabi-v6 with VFP" )
+set( ANDROID_SUPPORTED_ABIS_arm "armeabi-v7a;armeabi;armeabi-v7a with NEON;armeabi-v7a-hard with NEON;armeabi-v7a with VFPV3;armeabi-v6 with VFP" )
 set( ANDROID_SUPPORTED_ABIS_arm64 "arm64-v8a" )
 set( ANDROID_SUPPORTED_ABIS_x86 "x86" )
 set( ANDROID_SUPPORTED_ABIS_x86_64 "x86_64" )
@@ -239,7 +244,7 @@ set( ANDROID_SUPPORTED_ABIS_mips "mips" )
 set( ANDROID_SUPPORTED_ABIS_mips64 "mips64" )
 
 # API level defaults
-set( ANDROID_DEFAULT_NDK_API_LEVEL 8 )
+set( ANDROID_DEFAULT_NDK_API_LEVEL 9 )
 set( ANDROID_DEFAULT_NDK_API_LEVEL_arm64 21 )
 set( ANDROID_DEFAULT_NDK_API_LEVEL_x86 9 )
 set( ANDROID_DEFAULT_NDK_API_LEVEL_x86_64 21 )
@@ -307,9 +312,16 @@ macro( __DETECT_NATIVE_API_LEVEL _var _path )
   set( __ndkApiLevelRegex "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+([0-9]+)[\t ]*.*$" )
   file( STRINGS ${_path} __apiFileContent REGEX "${__ndkApiLevelRegex}" )
   if( NOT __apiFileContent )
-    message( SEND_ERROR "Could not get Android native API level. Probably you have specified invalid level value, or your copy of NDK/toolchain is broken." )
+    set( __ndkApiLevelRegex "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+__ANDROID_API_FUTURE__[\t ]*$" )
+    file( STRINGS ${_path} __apiFileContent REGEX "${__ndkApiLevelRegex}" )
+    if( __apiFileContent )
+      set(${_var} 10000)
+    else()
+      message( SEND_ERROR "Could not get Android native API level. Probably you have specified invalid level value, or your copy of NDK/toolchain is broken." )
+    endif()
+  else()
+    string( REGEX REPLACE "${__ndkApiLevelRegex}" "\\1" ${_var} "${__apiFileContent}" )
   endif()
-  string( REGEX REPLACE "${__ndkApiLevelRegex}" "\\1" ${_var} "${__apiFileContent}" )
   unset( __apiFileContent )
   unset( __ndkApiLevelRegex )
 endmacro()
@@ -711,6 +723,14 @@ elseif( ANDROID_ABI STREQUAL "armeabi-v7a with NEON" )
  set( CMAKE_SYSTEM_PROCESSOR "armv7-a" )
  set( VFPV3 true )
  set( NEON true )
+elseif( ANDROID_ABI STREQUAL "armeabi-v7a-hard with NEON" )
+ set( ARMEABI_V7A_HARD true )
+ set( ANDROID_NDK_ABI_NAME "armeabi-v7a-hard" )
+ set( ANDROID_ARCH_NAME "arm" )
+ set( ANDROID_LLVM_TRIPLE "armv7-none-linux-androideabi" )
+ set( CMAKE_SYSTEM_PROCESSOR "armv7-a" )
+ set( VFPV3 true )
+ set( NEON true )
 else()
  message( SEND_ERROR "Unknown ANDROID_ABI=\"${ANDROID_ABI}\" is specified." )
 endif()
@@ -797,10 +817,15 @@ unset(__real_api_level)
 # validate
 list( FIND ANDROID_SUPPORTED_NATIVE_API_LEVELS "${ANDROID_NATIVE_API_LEVEL}" __levelIdx )
 if( __levelIdx EQUAL -1 )
- message( SEND_ERROR "Specified Android native API level 'android-${ANDROID_NATIVE_API_LEVEL}' is not supported by your NDK/toolchain." )
+ message( SEND_ERROR "Specified Android native API level 'android-${ANDROID_NATIVE_API_LEVEL}' is not supported by your NDK/toolchain.\nSupported values of ANDROID_NATIVE_API_LEVEL: ${ANDROID_SUPPORTED_NATIVE_API_LEVELS}" )
 else()
  if( BUILD_WITH_ANDROID_NDK )
-  __DETECT_NATIVE_API_LEVEL( __realApiLevel "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include/android/api-level.h" )
+  if(EXISTS "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include/android/api-level.h")
+    __DETECT_NATIVE_API_LEVEL( __realApiLevel "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include/android/api-level.h" )
+  else()
+    __DETECT_NATIVE_API_LEVEL( __realApiLevel "${ANDROID_NDK}/sysroot/usr/include/android/api-level.h")
+  endif()
+
   if( NOT __realApiLevel EQUAL ANDROID_NATIVE_API_LEVEL AND NOT __realApiLevel GREATER 9000 )
    message( SEND_ERROR "Specified Android API level (${ANDROID_NATIVE_API_LEVEL}) does not match to the level found (${__realApiLevel}). Probably your copy of NDK is broken." )
   endif()
@@ -833,7 +858,7 @@ set( ANDROID_STL_FORCE_FEATURES ON CACHE BOOL "automatically configure rtti and 
 mark_as_advanced( ANDROID_STL ANDROID_STL_FORCE_FEATURES )
 
 if( BUILD_WITH_ANDROID_NDK )
- if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared)$")
+ if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared|c\\+\\+_static|c\\+\\+_shared)$")
   message( FATAL_ERROR "ANDROID_STL is set to invalid value \"${ANDROID_STL}\".
 The possible values are:
   none           -> Do not configure the runtime.
@@ -845,15 +870,19 @@ The possible values are:
   stlport_shared -> Use the STLport runtime as a shared library.
   gnustl_static  -> (default) Use the GNU STL as a static library.
   gnustl_shared  -> Use the GNU STL as a shared library.
+  c++_shared     -> Use the LLVM libc++ runtime as a shared library.
+  c++_static     -> Use the LLVM libc++ runtime as a static library.
 " )
  endif()
 elseif( BUILD_WITH_STANDALONE_TOOLCHAIN )
- if( NOT "${ANDROID_STL}" MATCHES "^(none|gnustl_static|gnustl_shared)$")
+ if( NOT "${ANDROID_STL}" MATCHES "^(none|gnustl_static|gnustl_shared|c\\+\\+_static|c\\+\\+_shared)$")
   message( FATAL_ERROR "ANDROID_STL is set to invalid value \"${ANDROID_STL}\".
 The possible values are:
   none           -> Do not configure the runtime.
   gnustl_static  -> (default) Use the GNU STL as a static library.
   gnustl_shared  -> Use the GNU STL as a shared library.
+  c++_shared     -> Use the LLVM libc++ runtime as a shared library.
+  c++_static     -> Use the LLVM libc++ runtime as a static library.
 " )
  endif()
 endif()
@@ -897,6 +926,7 @@ if( BUILD_WITH_STANDALONE_TOOLCHAIN )
  set( ANDROID_TOOLCHAIN_ROOT "${ANDROID_STANDALONE_TOOLCHAIN}" )
  set( ANDROID_CLANG_TOOLCHAIN_ROOT "${ANDROID_STANDALONE_TOOLCHAIN}" )
  set( ANDROID_SYSROOT "${ANDROID_STANDALONE_TOOLCHAIN}/sysroot" )
+ set( ANDROID_SYSROOT_INCLUDE "${ANDROID_STANDALONE_TOOLCHAIN}/sysroot/usr/include" )
 
  if( NOT ANDROID_STL STREQUAL "none" )
   set( ANDROID_STL_INCLUDE_DIRS "${ANDROID_STANDALONE_TOOLCHAIN}/include/c++/${ANDROID_COMPILER_VERSION}" )
@@ -904,7 +934,7 @@ if( BUILD_WITH_STANDALONE_TOOLCHAIN )
    # old location ( pre r8c )
    set( ANDROID_STL_INCLUDE_DIRS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}" )
   endif()
-  if( ARMEABI_V7A AND EXISTS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}/bits" )
+  if( (ARMEABI_V7A OR ARMEABI_V7A_HARD) AND EXISTS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}/bits" )
    list( APPEND ANDROID_STL_INCLUDE_DIRS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}" )
   elseif( ARMEABI AND NOT ANDROID_FORCE_ARM_BUILD AND EXISTS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/thumb/bits" )
    list( APPEND ANDROID_STL_INCLUDE_DIRS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/thumb" )
@@ -912,9 +942,9 @@ if( BUILD_WITH_STANDALONE_TOOLCHAIN )
    list( APPEND ANDROID_STL_INCLUDE_DIRS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}" )
   endif()
   # always search static GNU STL to get the location of libsupc++.a
-  if( ARMEABI_V7A AND NOT ANDROID_FORCE_ARM_BUILD AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" )
+  if( (ARMEABI_V7A OR ARMEABI_V7A_HARD) AND NOT ANDROID_FORCE_ARM_BUILD AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" )
    set( __libstl "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb" )
-  elseif( ARMEABI_V7A AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" )
+  elseif( (ARMEABI_V7A OR ARMEABI_V7A_HARD) AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" )
    set( __libstl "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}" )
   elseif( ARMEABI AND NOT ANDROID_FORCE_ARM_BUILD AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libstdc++.a" )
    set( __libstl "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb" )
@@ -935,7 +965,7 @@ if( BUILD_WITH_STANDALONE_TOOLCHAIN )
    " )
   endif()
   if( ANDROID_STL STREQUAL "gnustl_shared" )
-   if( ARMEABI_V7A AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libgnustl_shared.so" )
+   if( (ARMEABI_V7A OR ARMEABI_V7A_HARD) AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libgnustl_shared.so" )
     set( __libstl "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libgnustl_shared.so" )
    elseif( ARMEABI AND NOT ANDROID_FORCE_ARM_BUILD AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libgnustl_shared.so" )
     set( __libstl "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libgnustl_shared.so" )
@@ -974,6 +1004,11 @@ endif()
 if( BUILD_WITH_ANDROID_NDK )
  set( ANDROID_TOOLCHAIN_ROOT "${ANDROID_NDK_TOOLCHAINS_PATH}/${ANDROID_GCC_TOOLCHAIN_NAME}${ANDROID_NDK_TOOLCHAINS_SUBPATH}" )
  set( ANDROID_SYSROOT "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}" )
+ if( EXISTS "${ANDROID_SYSROOT}/usr/include" )
+   set( ANDROID_SYSROOT_INCLUDE "${ANDROID_SYSROOT}/usr/include" )
+ else()
+   set( ANDROID_SYSROOT_INCLUDE "${ANDROID_NDK}/sysroot/usr/include" "${ANDROID_NDK}/sysroot/usr/include/${ANDROID_TOOLCHAIN_MACHINE_NAME}" )
+ endif()
 
  if( ANDROID_STL STREQUAL "none" )
   # do nothing
@@ -1026,9 +1061,16 @@ if( BUILD_WITH_ANDROID_NDK )
   else()
    set( __libstl                "${__libstl}/libs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
   endif()
+ elseif( ANDROID_STL MATCHES "c\\+\\+" )
+  set( ANDROID_EXCEPTIONS       ON )
+  set( ANDROID_RTTI             ON )
+  set( __libstl                "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++" )
+  set( __libstl                "${__libstl}/libs/${ANDROID_NDK_ABI_NAME}/libc++_static.a" )
+  set( ANDROID_STL_INCLUDE_DIRS "${ANDROID_NDK}/sources/android/support/include" "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++/libcxx/include" "${ANDROID_NDK}/sources/cxx-stl/llvm-libc++abi/libcxxabi/include" )
  else()
   message( FATAL_ERROR "Unknown runtime: ${ANDROID_STL}" )
  endif()
+
  # find libsupc++.a - rtti & exceptions
  if( ANDROID_STL STREQUAL "system_re" OR ANDROID_STL MATCHES "gnustl" )
   set( __libsupcxx "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/${ANDROID_COMPILER_VERSION}/libs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" ) # r8b or newer
@@ -1058,7 +1100,9 @@ endif()
 # case of shared STL linkage
 if( ANDROID_STL MATCHES "shared" AND DEFINED __libstl )
  string( REPLACE "_static.a" "_shared.so" __libstl "${__libstl}" )
- # TODO: check if .so file exists before the renaming
+ if( NOT EXISTS "${__libstl}" )
+   message( FATAL_ERROR "Unable to find shared library ${__libstl}" )
+ endif()
 endif()
 
 
@@ -1124,8 +1168,10 @@ if( APPLE )
 endif()
 
 # Force set compilers because standard identification works badly for us
-include( CMakeForceCompiler )
-CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
+if( CMAKE_VERSION VERSION_LESS 3.5.0 )
+  include( CMakeForceCompiler )
+  CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
+endif()
 if( ANDROID_COMPILER_IS_CLANG )
  set( CMAKE_C_COMPILER_ID Clang )
 endif()
@@ -1137,7 +1183,9 @@ else()
 endif()
 set( CMAKE_C_HAS_ISYSROOT 1 )
 set( CMAKE_C_COMPILER_ABI ELF )
-CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
+if( CMAKE_VERSION VERSION_LESS 3.5.0 )
+  CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
+endif()
 if( ANDROID_COMPILER_IS_CLANG )
  set( CMAKE_CXX_COMPILER_ID Clang)
 endif()
@@ -1198,7 +1246,7 @@ if (ARM64_V8A )
  if( NOT ANDROID_COMPILER_IS_CLANG )
   set( ANDROID_CXX_FLAGS_RELEASE "${ANDROID_CXX_FLAGS_RELEASE} -funswitch-loops -finline-limit=300" )
  endif()
-elseif( ARMEABI OR ARMEABI_V7A)
+elseif( ARMEABI OR ARMEABI_V7A OR ARMEABI_V7A_HARD)
  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -funwind-tables" )
  if( NOT ANDROID_FORCE_ARM_BUILD AND NOT ARMEABI_V6 )
   set( ANDROID_CXX_FLAGS_RELEASE "-mthumb -fomit-frame-pointer -fno-strict-aliasing" )
@@ -1245,7 +1293,16 @@ if( NOT ANDROID_COMPILER_VERSION VERSION_LESS "4.6" )
 endif()
 
 # ABI-specific flags
-if( ARMEABI_V7A )
+if( ARMEABI_V7A_HARD )
+ set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv7-a -mfloat-abi=hard -mhard-float -D_NDK_MATH_NO_SOFTFP=1" )
+ if( NEON )
+  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=neon" )
+ elseif( VFPV3 )
+  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=vfpv3" )
+ else()
+  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=vfpv3-d16" )
+ endif()
+elseif( ARMEABI_V7A )
  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv7-a -mfloat-abi=softfp" )
  if( NEON )
   set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=neon" )
@@ -1254,6 +1311,7 @@ if( ARMEABI_V7A )
  else()
   set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=vfpv3-d16" )
  endif()
+
 elseif( ARMEABI_V6 )
  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv6 -mfloat-abi=softfp -mfpu=vfp" ) # vfp == vfpv2
 elseif( ARMEABI )
@@ -1330,6 +1388,10 @@ if( ARMEABI_V7A )
  set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,--fix-cortex-a8" )
 endif()
 
+if( ARMEABI_V7A_HARD )
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,--no-warn-mismatch -lm_hard" )
+endif()
+
 if( ANDROID_NO_UNDEFINED )
  if( MIPS )
   # there is some sysroot-related problem in mips linker...
@@ -1351,7 +1413,7 @@ if( ANDROID_FUNCTION_LEVEL_LINKING )
 endif()
 
 if( ANDROID_COMPILER_VERSION VERSION_EQUAL "4.6" )
- if( ANDROID_GOLD_LINKER AND (CMAKE_HOST_UNIX OR ANDROID_NDK_RELEASE_NUM GREATER 8002) AND (ARMEABI OR ARMEABI_V7A OR X86) )
+ if( ANDROID_GOLD_LINKER AND (CMAKE_HOST_UNIX OR ANDROID_NDK_RELEASE_NUM GREATER 8002) AND (ARMEABI OR ARMEABI_V7A OR ARMEABI_V7A_HARD OR X86) )
   set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -fuse-ld=gold" )
  elseif( ANDROID_NDK_RELEASE_NUM GREATER 8002 ) # after r8b
   set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -fuse-ld=bfd" )
@@ -1436,7 +1498,7 @@ if( DEFINED ANDROID_RTTI AND ANDROID_STL_FORCE_FEATURES )
  endif()
 endif()
 
-# configure exceptios
+# configure exceptions
 if( DEFINED ANDROID_EXCEPTIONS AND ANDROID_STL_FORCE_FEATURES )
  if( ANDROID_EXCEPTIONS )
   set( CMAKE_CXX_FLAGS "-fexceptions ${CMAKE_CXX_FLAGS}" )
@@ -1448,9 +1510,11 @@ if( DEFINED ANDROID_EXCEPTIONS AND ANDROID_STL_FORCE_FEATURES )
 endif()
 
 # global includes and link directories
-include_directories( SYSTEM "${ANDROID_SYSROOT}/usr/include" ${ANDROID_STL_INCLUDE_DIRS} )
+include_directories( SYSTEM "${ANDROID_SYSROOT_INCLUDE}" ${ANDROID_STL_INCLUDE_DIRS} )
 get_filename_component(__android_install_path "${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}" ABSOLUTE) # avoid CMP0015 policy warning
 link_directories( "${__android_install_path}" )
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DANDROID -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}" )
+set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DANDROID -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL}" )
 
 # detect if need link crtbegin_so.o explicitly
 if( NOT DEFINED ANDROID_EXPLICIT_CRT_LINK )
@@ -1490,6 +1554,9 @@ if( ANDROID_EXPLICIT_CRT_LINK )
 endif()
 
 # setup output directories
+if(NOT DEFINED CMAKE_INSTALL_PREFIX)
+  set(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT 1)
+endif()
 set( CMAKE_INSTALL_PREFIX "${ANDROID_TOOLCHAIN_ROOT}/user" CACHE STRING "path for installing" )
 
 if( DEFINED LIBRARY_OUTPUT_PATH_ROOT
@@ -1523,19 +1590,58 @@ set( ANDROID True )
 set( BUILD_ANDROID True )
 
 # where is the target environment
-set( CMAKE_FIND_ROOT_PATH "${ANDROID_TOOLCHAIN_ROOT}/bin" "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}" "${ANDROID_SYSROOT}" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_PREFIX}/share" )
+set( CMAKE_FIND_ROOT_PATH
+    "${ANDROID_TOOLCHAIN_ROOT}/bin"
+    "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}"
+    "${ANDROID_SYSROOT}"
+    "${ANDROID_NDK}/sysroot"  # NDK16+
+    "${CMAKE_INSTALL_PREFIX}"
+    "${CMAKE_INSTALL_PREFIX}/share" )
 
 # only search for libraries and includes in the ndk toolchain
-set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
-set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
-set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_LIBRARY)
+  set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+endif()
 
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_INCLUDE)
+  set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+endif()
+
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_PACKAGE)
+  set( CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY )
+endif()
+
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
+  set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+endif()
+
+macro(__cmake_find_root_save_and_reset)
+  foreach(v
+      CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
+      CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
+      CMAKE_FIND_ROOT_PATH_MODE_PACKAGE
+      CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
+  )
+    set(__save_${v} ${${v}})
+    set(${v} NEVER)
+  endforeach()
+endmacro()
+
+macro(__cmake_find_root_restore)
+  foreach(v
+      CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
+      CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
+      CMAKE_FIND_ROOT_PATH_MODE_PACKAGE
+      CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
+  )
+    set(${v} ${__save_${v}})
+    unset(__save_${v})
+  endforeach()
+endmacro()
 
 # macro to find packages on the host OS
 macro( find_host_package )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ __cmake_find_root_save_and_reset()
  if( CMAKE_HOST_WIN32 )
   SET( WIN32 1 )
   SET( UNIX )
@@ -1547,17 +1653,13 @@ macro( find_host_package )
  SET( WIN32 )
  SET( APPLE )
  SET( UNIX 1 )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+ __cmake_find_root_restore()
 endmacro()
 
 
 # macro to find programs on the host OS
 macro( find_host_program )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ __cmake_find_root_save_and_reset()
  if( CMAKE_HOST_WIN32 )
   SET( WIN32 1 )
   SET( UNIX )
@@ -1569,9 +1671,7 @@ macro( find_host_program )
  SET( WIN32 )
  SET( APPLE )
  SET( UNIX 1 )
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+ __cmake_find_root_restore()
 endmacro()
 
 
@@ -1626,7 +1726,7 @@ endif()
 
 
 # Variables controlling behavior or set by cmake toolchain:
-#   ANDROID_ABI : "armeabi-v7a" (default), "armeabi", "armeabi-v7a with NEON", "armeabi-v7a with VFPV3", "armeabi-v6 with VFP", "x86", "mips", "arm64-v8a", "x86_64", "mips64"
+#   ANDROID_ABI : "armeabi-v7a" (default), "armeabi", "armeabi-v7a with NEON", "armeabi-v7a-hard with NEON", "armeabi-v7a with VFPV3", "armeabi-v6 with VFP", "x86", "mips", "arm64-v8a", "x86_64", "mips64"
 #   ANDROID_NATIVE_API_LEVEL : 3,4,5,8,9,14,15,16,17,18,19,21 (depends on NDK version)
 #   ANDROID_STL : gnustl_static/gnustl_shared/stlport_static/stlport_shared/gabi++_static/gabi++_shared/system_re/system/none
 #   ANDROID_FORBID_SYGWIN : ON/OFF
@@ -1653,6 +1753,7 @@ endif()
 #   ARMEABI : TRUE for arm v6 and older devices
 #   ARMEABI_V6 : TRUE for arm v6
 #   ARMEABI_V7A : TRUE for arm v7a
+#   ARMEABI_V7A_HARD : TRUE for arm v7a with hardfp
 #   ARM64_V8A : TRUE for arm64-v8a
 #   NEON : TRUE if NEON unit is enabled
 #   VFPV3 : TRUE if VFP version 3 is enabled
@@ -1663,11 +1764,12 @@ endif()
 #   BUILD_WITH_ANDROID_NDK : TRUE if NDK is used
 #   BUILD_WITH_STANDALONE_TOOLCHAIN : TRUE if standalone toolchain is used
 #   ANDROID_NDK_HOST_SYSTEM_NAME : "windows", "linux-x86" or "darwin-x86" depending on host platform
-#   ANDROID_NDK_ABI_NAME : "armeabi", "armeabi-v7a", "x86", "mips", "arm64-v8a", "x86_64", "mips64" depending on ANDROID_ABI
+#   ANDROID_NDK_ABI_NAME : "armeabi", "armeabi-v7a", "armeabi-v7a-hard", "x86", "mips", "arm64-v8a", "x86_64", "mips64" depending on ANDROID_ABI
 #   ANDROID_NDK_RELEASE : from r5 to r10d; set only for NDK
 #   ANDROID_NDK_RELEASE_NUM : numeric ANDROID_NDK_RELEASE version (1000*major+minor)
 #   ANDROID_ARCH_NAME : "arm", "x86", "mips", "arm64", "x86_64", "mips64" depending on ANDROID_ABI
 #   ANDROID_SYSROOT : path to the compiler sysroot
+#   ANDROID_SYSROOT_INCLUDE : paths to system include paths
 #   TOOL_OS_SUFFIX : "" or ".exe" depending on host platform
 #   ANDROID_COMPILER_IS_CLANG : TRUE if clang compiler is used
 #

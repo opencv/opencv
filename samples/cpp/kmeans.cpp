@@ -37,7 +37,7 @@ int main( int /*argc*/, char** /*argv*/ )
         Mat points(sampleCount, 1, CV_32FC2), labels;
 
         clusterCount = MIN(clusterCount, sampleCount);
-        Mat centers;
+        std::vector<Point2f> centers;
 
         /* generate random sample from multigaussian distribution */
         for( k = 0; k < clusterCount; k++ )
@@ -53,7 +53,7 @@ int main( int /*argc*/, char** /*argv*/ )
 
         randShuffle(points, 1, &rng);
 
-        kmeans(points, clusterCount, labels,
+        double compactness = kmeans(points, clusterCount, labels,
             TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 10, 1.0),
                3, KMEANS_PP_CENTERS, centers);
 
@@ -65,6 +65,12 @@ int main( int /*argc*/, char** /*argv*/ )
             Point ipt = points.at<Point2f>(i);
             circle( img, ipt, 2, colorTab[clusterIdx], FILLED, LINE_AA );
         }
+        for (i = 0; i < (int)centers.size(); ++i)
+        {
+            Point2f c = centers[i];
+            circle( img, c, 40, colorTab[i], 1, LINE_AA );
+        }
+        cout << "Compactness: " << compactness << endl;
 
         imshow("clusters", img);
 

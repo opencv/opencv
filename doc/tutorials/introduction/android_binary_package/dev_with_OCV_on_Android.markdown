@@ -307,7 +307,7 @@ application. It will be capable of accessing camera output, processing it and di
     @endcode
 -#  Defines that your activity implements CvCameraViewListener2 interface and fix activity related
     errors by defining missed methods. For this activity define onCreate, onDestroy and onPause and
-    implement them according code snippet bellow. Fix errors by adding required imports.
+    implement them according to the code snippet below. Fix errors by adding required imports.
     @code{.java}
     private CameraBridgeViewBase mOpenCvCameraView;
 

@@ -1,11 +1,10 @@
 /*
-// Sample demonstrating interoperability of OpenCV UMat with Direct X surface
-// At first, the data obtained from video file or camera and
-// placed onto Direct X surface,
-// following mapping of this Direct X surface to OpenCV UMat and call cv::Blur
-// function. The result is mapped back to Direct X surface and rendered through
-// Direct X API.
+// A sample program demonstrating interoperability of OpenCV cv::UMat with Direct X surface
+// At first, the data obtained from video file or camera and placed onto Direct X surface,
+// following mapping of this Direct X surface to OpenCV cv::UMat and call cv::Blur function.
+// The result is mapped back to Direct X surface and rendered through Direct X API.
 */
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d10.h>
@@ -19,10 +18,6 @@
 #include "d3dsample.hpp"
 
 #pragma comment (lib, "d3d10.lib")
-
-
-using namespace std;
-using namespace cv;
 
 class D3D10WinApp : public D3DSample
 {
@@ -67,19 +62,19 @@ public:
                 &m_pD3D10Dev);
         if (FAILED(r))
         {
-            return -1;
+            return EXIT_FAILURE;
         }
 
         r = m_pD3D10SwapChain->GetBuffer(0, __uuidof(ID3D10Texture2D), (LPVOID*)&m_pBackBuffer);
         if (FAILED(r))
         {
-            return -1;
+            return EXIT_FAILURE;
         }
 
         r = m_pD3D10Dev->CreateRenderTargetView(m_pBackBuffer, NULL, &m_pRenderTarget);
         if (FAILED(r))
         {
-            return -1;
+            return EXIT_FAILURE;
         }
 
         m_pD3D10Dev->OMSetRenderTargets(1, &m_pRenderTarget, NULL);
@@ -110,7 +105,7 @@ public:
         if (FAILED(r))
         {
             std::cerr << "Can't create texture with input image" << std::endl;
-            return -1;
+            return EXIT_FAILURE;
         }
 
         // initialize OpenCL context of OpenCV lib from DirectX
@@ -123,7 +118,7 @@ public:
             cv::ocl::Context::getDefault().device(0).name() :
             "No OpenCL device";
 
-        return 0;
+        return EXIT_SUCCESS;
     } // create()
 
 
@@ -133,9 +128,9 @@ public:
         HRESULT r;
 
         if (!m_cap.read(m_frame_bgr))
-            return -1;
+            return EXIT_FAILURE;
 
-        cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_RGB2BGRA);
+        cv::cvtColor(m_frame_bgr, m_frame_rgba, cv::COLOR_BGR2RGBA);
 
         UINT subResource = ::D3D10CalcSubresource(0, 0, 1);
 
@@ -154,7 +149,7 @@ public:
 
         *ppSurface = m_pSurface;
 
-        return 0;
+        return EXIT_SUCCESS;
     } // get_surface()
 
 
@@ -164,7 +159,10 @@ public:
         try
         {
             if (m_shutdown)
-                return 0;
+                return EXIT_SUCCESS;
+
+            // capture user input once
+            MODE mode = (m_mode == MODE_GPU_NV12) ? MODE_GPU_RGBA : m_mode;
 
             HRESULT r;
             ID3D10Texture2D* pSurface;
@@ -172,22 +170,21 @@ public:
             r = get_surface(&pSurface);
             if (FAILED(r))
             {
-                return -1;
+                return EXIT_FAILURE;
             }
 
-            switch (m_mode)
-            {
-                case MODE_NOP:
-                    // no processing
-                    break;
+            m_timer.reset();
+            m_timer.start();
 
+            switch (mode)
+            {
                 case MODE_CPU:
                 {
                     // process video frame on CPU
                     UINT subResource = ::D3D10CalcSubresource(0, 0, 1);
 
                     D3D10_MAPPED_TEXTURE2D mappedTex;
-                    r = m_pSurface->Map(subResource, D3D10_MAP_WRITE_DISCARD, 0, &mappedTex);
+                    r = pSurface->Map(subResource, D3D10_MAP_WRITE_DISCARD, 0, &mappedTex);
                     if (FAILED(r))
                     {
                         return r;
@@ -195,29 +192,53 @@ public:
 
                     cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, (int)mappedTex.RowPitch);
 
-                    if (!m_disableProcessing)
+                    if (m_demo_processing)
                     {
                         // blur D3D10 surface with OpenCV on CPU
-                        cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
+                        cv::blur(m, m, cv::Size(15, 15));
                     }
 
-                    m_pSurface->Unmap(subResource);
+                    m_timer.stop();
+
+                    cv::String strMode = cv::format("mode: %s", m_modeStr[MODE_CPU].c_str());
+                    cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
+                    cv::String strTime = cv::format("time: %4.3f msec", m_timer.getTimeMilli());
+                    cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
+
+                    cv::putText(m, strMode, cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                    cv::putText(m, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                    cv::putText(m, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                    cv::putText(m, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+
+                    pSurface->Unmap(subResource);
 
                     break;
                 }
 
-                case MODE_GPU:
+                case MODE_GPU_RGBA:
                 {
                     // process video frame on GPU
                     cv::UMat u;
 
                     cv::directx::convertFromD3D10Texture2D(pSurface, u);
 
-                    if (!m_disableProcessing)
+                    if (m_demo_processing)
                     {
-                        // blur D3D9 surface with OpenCV on GPU with OpenCL
-                        cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
+                        // blur D3D10 surface with OpenCV on GPU with OpenCL
+                        cv::blur(u, u, cv::Size(15, 15));
                     }
+
+                    m_timer.stop();
+
+                    cv::String strMode = cv::format("mode: %s", m_modeStr[MODE_GPU_RGBA].c_str());
+                    cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
+                    cv::String strTime = cv::format("time: %4.3f msec", m_timer.getTimeMilli());
+                    cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
+
+                    cv::putText(u, strMode, cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                    cv::putText(u, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                    cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                    cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
 
                     cv::directx::convertToD3D10Texture2D(u, pSurface);
 
@@ -225,8 +246,6 @@ public:
                 }
 
             } // switch
-
-            print_info(pSurface, m_mode, getFps(), m_oclDevName);
 
             // traditional DX render pipeline:
             //   BitBlt surface to backBuffer and flip backBuffer to frontBuffer
@@ -237,47 +256,18 @@ public:
             r = m_pD3D10SwapChain->Present(0, 0);
             if (FAILED(r))
             {
-                return -1;
+                return EXIT_FAILURE;
             }
         } // try
 
-        catch (cv::Exception& e)
+        catch (const cv::Exception& e)
         {
             std::cerr << "Exception: " << e.what() << std::endl;
             return 10;
         }
 
-        return 0;
+        return EXIT_SUCCESS;
     } // render()
-
-
-    void print_info(ID3D10Texture2D* pSurface, int mode, float fps, cv::String oclDevName)
-    {
-        HRESULT r;
-
-        UINT subResource = ::D3D10CalcSubresource(0, 0, 1);
-
-        D3D10_MAPPED_TEXTURE2D mappedTex;
-        r = pSurface->Map(subResource, D3D10_MAP_WRITE_DISCARD, 0, &mappedTex);
-        if (FAILED(r))
-        {
-            return;
-        }
-
-        cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, (int)mappedTex.RowPitch);
-
-        cv::String strMode    = cv::format("%s", m_modeStr[mode].c_str());
-        cv::String strFPS     = cv::format("%2.1f", fps);
-        cv::String strDevName = cv::format("%s", oclDevName.c_str());
-
-        cv::putText(m, strMode, cv::Point(0, 16), 1, 0.8, cv::Scalar(0, 0, 0));
-        cv::putText(m, strFPS, cv::Point(0, 32), 1, 0.8, cv::Scalar(0, 0, 0));
-        cv::putText(m, strDevName, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
-
-        m_pSurface->Unmap(subResource);
-
-        return;
-    } // print_info()
 
 
     int cleanup(void)
@@ -288,7 +278,7 @@ public:
         SAFE_RELEASE(m_pRenderTarget);
         SAFE_RELEASE(m_pD3D10Dev);
         D3DSample::cleanup();
-        return 0;
+        return EXIT_SUCCESS;
     } // cleanup()
 
 private:

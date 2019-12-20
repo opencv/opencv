@@ -31,6 +31,8 @@
 *.py           text
 *.qrc          text
 *.qss          text
+*.rc           text
+*.rc.in        text
 *.S            text
 *.sbt          text
 *.scala        text
@@ -41,6 +43,8 @@
 
 # reST underlines/overlines can look like conflict markers
 *.rst          text conflict-marker-size=80
+# Markdown heading markers can look like conflict markers
+*.md           text conflict-marker-size=200
 
 *.cmake         text whitespace=tabwidth=2
 *.cmakein       text whitespace=tabwidth=2
@@ -77,6 +81,8 @@ org.eclipse.jdt.core.prefs -text whitespace=cr-at-eol merge=union
 *.cmd       text eol=crlf
 *.cmd.tmpl  text eol=crlf
 *.dsp       text eol=crlf -whitespace
+*.ps1       text eol=crlf
+*.ps1.in    text eol=crlf
 *.sln       text eol=crlf -whitespace
 *.vcproj    text eol=crlf -whitespace merge=union
 *.vcxproj   text eol=crlf -whitespace merge=union

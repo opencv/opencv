@@ -69,7 +69,7 @@ namespace cv { namespace cuda { namespace device
 static void buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, InputArray _T,
                                float scale, OutputArray _map_x, OutputArray _map_y, Stream& stream = Stream::Null())
 {
-    (void) src_size;
+    CV_UNUSED(src_size);
 
     Mat K = _K.getMat();
     Mat R = _R.getMat();
@@ -97,7 +97,7 @@ static void buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray _K, Input
 static void buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
                                    OutputArray _map_x, OutputArray _map_y, Stream& stream = Stream::Null())
 {
-    (void) src_size;
+    CV_UNUSED(src_size);
 
     Mat K = _K.getMat();
     Mat R = _R.getMat();
@@ -122,7 +122,7 @@ static void buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray _K, I
 static void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
                                      OutputArray _map_x, OutputArray _map_y, Stream& stream = Stream::Null())
 {
-    (void) src_size;
+    CV_UNUSED(src_size);
 
     Mat K = _K.getMat();
     Mat R = _R.getMat();
@@ -156,14 +156,13 @@ Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArr
                                            cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
 #ifndef HAVE_CUDA
-    (void)src_size;
-    (void)K;
-    (void)R;
-    (void)T;
-    (void)xmap;
-    (void)ymap;
+    CV_UNUSED(src_size);
+    CV_UNUSED(K);
+    CV_UNUSED(R);
+    CV_UNUSED(T);
+    CV_UNUSED(xmap);
+    CV_UNUSED(ymap);
     throw_no_cuda();
-    return Rect();
 #else
     projector_.setCameraParams(K, R, T);
 
@@ -190,15 +189,14 @@ Point cv::detail::PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, I
                                        cuda::GpuMat & dst)
 {
 #ifndef HAVE_OPENCV_CUDAWARPING
-    (void)src;
-    (void)K;
-    (void)R;
-    (void)T;
-    (void)interp_mode;
-    (void)border_mode;
-    (void)dst;
+    CV_UNUSED(src);
+    CV_UNUSED(K);
+    CV_UNUSED(R);
+    CV_UNUSED(T);
+    CV_UNUSED(interp_mode);
+    CV_UNUSED(border_mode);
+    CV_UNUSED(dst);
     throw_no_cuda();
-    return Point();
 #else
     Rect dst_roi = buildMaps(src.size(), K, R, T, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
@@ -210,13 +208,12 @@ Point cv::detail::PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, I
 Rect cv::detail::SphericalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
 #ifndef HAVE_CUDA
-    (void)src_size;
-    (void)K;
-    (void)R;
-    (void)xmap;
-    (void)ymap;
+    CV_UNUSED(src_size);
+    CV_UNUSED(K);
+    CV_UNUSED(R);
+    CV_UNUSED(xmap);
+    CV_UNUSED(ymap);
     throw_no_cuda();
-    return Rect();
 #else
     projector_.setCameraParams(K, R);
 
@@ -235,14 +232,13 @@ Point cv::detail::SphericalWarperGpu::warp(const cuda::GpuMat & src, InputArray 
                                            cuda::GpuMat & dst)
 {
 #ifndef HAVE_OPENCV_CUDAWARPING
-    (void)src;
-    (void)K;
-    (void)R;
-    (void)interp_mode;
-    (void)border_mode;
-    (void)dst;
+    CV_UNUSED(src);
+    CV_UNUSED(K);
+    CV_UNUSED(R);
+    CV_UNUSED(interp_mode);
+    CV_UNUSED(border_mode);
+    CV_UNUSED(dst);
     throw_no_cuda();
-    return Point();
 #else
     Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
@@ -256,13 +252,12 @@ Rect cv::detail::CylindricalWarperGpu::buildMaps(Size src_size, InputArray K, In
                                                  cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
 #ifndef HAVE_CUDA
-    (void)src_size;
-    (void)K;
-    (void)R;
-    (void)xmap;
-    (void)ymap;
+    CV_UNUSED(src_size);
+    CV_UNUSED(K);
+    CV_UNUSED(R);
+    CV_UNUSED(xmap);
+    CV_UNUSED(ymap);
     throw_no_cuda();
-    return Rect();
 #else
     projector_.setCameraParams(K, R);
 
@@ -281,14 +276,13 @@ Point cv::detail::CylindricalWarperGpu::warp(const cuda::GpuMat & src, InputArra
                                              cuda::GpuMat & dst)
 {
 #ifndef HAVE_OPENCV_CUDAWARPING
-    (void)src;
-    (void)K;
-    (void)R;
-    (void)interp_mode;
-    (void)border_mode;
-    (void)dst;
+    CV_UNUSED(src);
+    CV_UNUSED(K);
+    CV_UNUSED(R);
+    CV_UNUSED(interp_mode);
+    CV_UNUSED(border_mode);
+    CV_UNUSED(dst);
     throw_no_cuda();
-    return Point();
 #else
     Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());

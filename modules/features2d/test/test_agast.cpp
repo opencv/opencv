@@ -42,8 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_AgastTest : public cvtest::BaseTest
 {
@@ -76,8 +75,8 @@ void CV_AgastTest::run( int )
 
     vector<KeyPoint> keypoints1;
     vector<KeyPoint> keypoints2;
-    AGAST(gray1, keypoints1, 30, true, type);
-    AGAST(gray2, keypoints2, (type > 0 ? 30 : 20), true, type);
+    AGAST(gray1, keypoints1, 30, true, static_cast<AgastFeatureDetector::DetectorType>(type));
+    AGAST(gray2, keypoints2, (type > 0 ? 30 : 20), true, static_cast<AgastFeatureDetector::DetectorType>(type));
 
     for(size_t i = 0; i < keypoints1.size(); ++i)
     {
@@ -135,3 +134,5 @@ void CV_AgastTest::run( int )
 }
 
 TEST(Features2d_AGAST, regression) { CV_AgastTest test; test.safe_run(); }
+
+}} // namespace

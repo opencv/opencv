@@ -1,6 +1,5 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <fstream>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include <iostream>
 
 using namespace cv;
@@ -13,16 +12,19 @@ static void help()
          << "./convexhull\n" << endl;
 }
 
-int main( int /*argc*/, char** /*argv*/ )
+int main( int argc, char** argv )
 {
+    CommandLineParser parser(argc, argv, "{help h||}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     Mat img(500, 500, CV_8UC3);
     RNG& rng = theRNG();
 
-    help();
-
     for(;;)
     {
-        char key;
         int i, count = (unsigned)rng%100 + 1;
 
         vector<Point> points;
@@ -55,7 +57,7 @@ int main( int /*argc*/, char** /*argv*/ )
 
         imshow("hull", img);
 
-        key = (char)waitKey();
+        char key = (char)waitKey();
         if( key == 27 || key == 'q' || key == 'Q' ) // 'ESC'
             break;
     }

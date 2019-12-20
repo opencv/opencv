@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_UTIL_INL_HPP__
-#define __OPENCV_STITCHING_UTIL_INL_HPP__
+#ifndef OPENCV_STITCHING_UTIL_INL_HPP
+#define OPENCV_STITCHING_UTIL_INL_HPP
 
 #include <queue>
 #include "opencv2/core.hpp"
@@ -128,4 +128,4 @@ static inline double sqr(double x) { return x * x; }
 
 //! @endcond
 
-#endif // __OPENCV_STITCHING_UTIL_INL_HPP__
+#endif // OPENCV_STITCHING_UTIL_INL_HPP

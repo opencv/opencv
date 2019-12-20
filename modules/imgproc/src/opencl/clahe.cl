@@ -43,10 +43,6 @@
 //
 //M*/
 
-#ifndef WAVE_SIZE
-#define WAVE_SIZE 1
-#endif
-
 inline int calc_lut(__local int* smem, int val, int tid)
 {
     smem[tid] = val;
@@ -60,8 +56,7 @@ inline int calc_lut(__local int* smem, int val, int tid)
     return smem[tid];
 }
 
-#ifdef CPU
-inline void reduce(volatile __local int* smem, int val, int tid)
+inline int reduce(__local volatile int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -75,69 +70,39 @@ inline void reduce(volatile __local int* smem, int val, int tid)
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 32)
+    {
         smem[tid] += smem[tid + 32];
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 16)
+    {
         smem[tid] += smem[tid + 16];
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 8)
+    {
         smem[tid] += smem[tid + 8];
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 4)
+    {
         smem[tid] += smem[tid + 4];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (tid < 2)
-        smem[tid] += smem[tid + 2];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (tid < 1)
-        smem[256] = smem[tid] + smem[tid + 1];
-    barrier(CLK_LOCAL_MEM_FENCE);
-}
-
-#else
-
-inline void reduce(__local volatile int* smem, int val, int tid)
-{
-    smem[tid] = val;
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (tid < 128)
-        smem[tid] = val += smem[tid + 128];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (tid < 64)
-        smem[tid] = val += smem[tid + 64];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (tid < 32)
-    {
-        smem[tid] += smem[tid + 32];
-#if WAVE_SIZE < 32
-    } barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (tid < 16)
-    {
-#endif
-        smem[tid] += smem[tid + 16];
-#if WAVE_SIZE < 16
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (tid < 8)
+    if (tid == 0)
     {
-#endif
-        smem[tid] += smem[tid + 8];
-        smem[tid] += smem[tid + 4];
-        smem[tid] += smem[tid + 2];
-        smem[tid] += smem[tid + 1];
+        smem[0] = (smem[0] + smem[1]) + (smem[2] + smem[3]);
     }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    val = smem[0];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    return val;
 }
-#endif
 
 __kernel void calcLut(__global __const uchar * src, const int srcStep,
                       const int src_offset, __global uchar * lut,
@@ -179,29 +144,17 @@ __kernel void calcLut(__global __const uchar * src, const int srcStep,
         }
 
         // find number of overall clipped samples
-        reduce(smem, clipped, tid);
-        barrier(CLK_LOCAL_MEM_FENCE);
-#ifdef CPU
-        clipped = smem[256];
-#else
-        clipped = smem[0];
-#endif
-
-        // broadcast evaluated value
-
-        __local int totalClipped;
-
-        if (tid == 0)
-            totalClipped = clipped;
-        barrier(CLK_LOCAL_MEM_FENCE);
+        clipped = reduce(smem, clipped, tid);
 
         // redistribute clipped samples evenly
-
-        int redistBatch = totalClipped / 256;
+        int redistBatch = clipped / 256;
         tHistVal += redistBatch;
 
-        int residual = totalClipped - redistBatch * 256;
-        if (tid < residual)
+        int residual = clipped - redistBatch * 256;
+        int rStep = 256 / residual;
+        if (rStep < 1)
+            rStep = 1;
+        if (tid%rStep == 0 && (tid/rStep)<residual)
             ++tHistVal;
     }
 
