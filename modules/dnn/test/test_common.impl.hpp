@@ -239,9 +239,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #ifdef HAVE_CUDA
     if(withCUDA)
     {
-        //for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
-        //    targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
-        targets.push_back(make_tuple(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
+        for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
+            targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
     }
 #endif
 
