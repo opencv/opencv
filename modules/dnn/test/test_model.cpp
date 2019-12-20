@@ -157,9 +157,13 @@ TEST_P(Test_Model, DetectRegion)
     bool swapRB = true;
 
     double confThreshold = 0.24;
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 1.6e-2 : 1e-5;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
+    double scoreDiff = 8e-5, iouDiff = 1e-5;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 1e-2;
+        iouDiff = 1.6e-2;
+    }
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
                     refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
@@ -188,11 +192,15 @@ TEST_P(Test_Model, DetectionOutput)
     Scalar mean = Scalar(102.9801, 115.9465, 122.7717);
     Size size{800, 600};
 
-    double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
-                        4e-3 : default_l1;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16) ? 1.8e-1 : 1e-5;
+    double scoreDiff = default_l1, iouDiff = 1e-5;
     float confThreshold = 0.8;
     double nmsThreshold = 0.0;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16)
+    {
+        if (backend == DNN_BACKEND_OPENCV)
+            scoreDiff = 4e-3;
+        iouDiff = 1.8e-1;
+    }
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
@@ -232,10 +240,22 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     double scale = 1.0 / 127.5;
     Size size{300, 300};
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.7e-2 : 1e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || (target == DNN_TARGET_MYRIAD &&
-                      getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)) ? 6.91e-2 : 1e-5;
-
+    double scoreDiff = 1e-5, iouDiff = 1e-5;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        scoreDiff = 1.7e-2;
+        iouDiff = 6.91e-2;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        scoreDiff = 1.7e-2;
+        if (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+            iouDiff = 6.91e-2;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 4e-4;
+    }
     float confThreshold = FLT_MIN;
     double nmsThreshold = 0.0;
 
@@ -263,6 +283,10 @@ TEST_P(Test_Model, Keypoints_pose)
     Scalar mean = Scalar(128, 128, 128);
     bool swapRB = false;
 
+    // Ref. Range: [58.6875, 508.625]
+    if (target == DNN_TARGET_CUDA_FP16)
+        norm = 20; // l1 = 1.5, lInf = 20
+
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
 }
 
@@ -283,8 +307,11 @@ TEST_P(Test_Model, Keypoints_face)
     Scalar mean = Scalar();
     bool swapRB = false;
 
-    testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
+    // Ref. Range: [-1.1784188, 1.7758257]
+    if (target == DNN_TARGET_CUDA_FP16)
+        norm = 0.004; // l1 = 0.0006, lInf = 0.004
 
+    testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
 }
 
 TEST_P(Test_Model, Detection_normalized)
@@ -301,10 +328,14 @@ TEST_P(Test_Model, Detection_normalized)
     double scale = 1.0 / 127.5;
     Size size{300, 300};
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5e-3 : 1e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : 1e-5;
+    double scoreDiff = 1e-5, iouDiff = 1e-5;
     float confThreshold = FLT_MIN;
     double nmsThreshold = 0.0;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 5e-3;
+        iouDiff = 0.09;
+    }
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
