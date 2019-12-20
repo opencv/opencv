@@ -1229,7 +1229,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
 
     int depth1 = src1.depth(), depth2 = src2.depth();
-    if( depth1 == CV_16F || depth2 == CV_16F )
+    if( depth1 == CV_16F )
         CV_Error(Error::StsNotImplemented, "Unsupported depth value CV_16F");
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
@@ -1238,7 +1238,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         _dst.create(src1.size(), CV_8UC(cn));
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        getCmpFunc(src1.depth())(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
+        getCmpFunc(depth1)(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
         return;
     }
 
