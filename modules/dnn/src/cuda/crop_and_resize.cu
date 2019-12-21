@@ -162,7 +162,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void crop_and_resize<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, View<__half> boxes);
+#endif
     template void crop_and_resize<float>(const Stream&, TensorSpan<float>, TensorView<float>, View<float> boxes);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

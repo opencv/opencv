@@ -63,7 +63,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void fill(const Stream&, Span<__half>, __half);
+#endif
     template void fill(const Stream&, Span<float>, float);
 
     template <class T, std::size_t N> static

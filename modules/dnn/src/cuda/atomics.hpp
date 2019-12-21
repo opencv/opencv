@@ -8,7 +8,7 @@
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 700
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ < 530
 #else
 inline __device__ void atomicAdd(__half* address, __half val) {
     unsigned int* address_as_ui = (unsigned int *)((char *)address - ((size_t)address & 2));
