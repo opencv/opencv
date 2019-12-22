@@ -600,6 +600,11 @@ TEST_P(Test_Caffe_layers, ROIPooling_Accuracy)
 
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-5;
     double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 2e-4;
+        lInf = 9e-4;
+    }
     normAssert(out, ref, "", l1, lInf);
 }
 
