@@ -336,6 +336,40 @@ template<typename R> struct TheTest
         v_float64 vf64 = v_reinterpret_as_f64(r1); out.a.clear(); v_store((double*)out.a.d, vf64); EXPECT_EQ(data.a, out.a);
 #endif
 
+#if CV_SIMD_WIDTH == 16
+        R setall_res1 = v_setall((LaneType)5);
+        R setall_res2 = v_setall<LaneType>(6);
+#elif CV_SIMD_WIDTH == 32
+        R setall_res1 = v256_setall((LaneType)5);
+        R setall_res2 = v256_setall<LaneType>(6);
+#elif CV_SIMD_WIDTH == 64
+        R setall_res1 = v512_setall((LaneType)5);
+        R setall_res2 = v512_setall<LaneType>(6);
+#else
+#error "Configuration error"
+#endif
+#if CV_SIMD_WIDTH > 0
+        Data<R> setall_res1_; v_store(setall_res1_.d, setall_res1);
+        Data<R> setall_res2_; v_store(setall_res2_.d, setall_res2);
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ((LaneType)5, setall_res1_[i]);
+            EXPECT_EQ((LaneType)6, setall_res2_[i]);
+        }
+#endif
+
+        R vx_setall_res1 = vx_setall((LaneType)11);
+        R vx_setall_res2 = vx_setall<LaneType>(12);
+        Data<R> vx_setall_res1_; v_store(vx_setall_res1_.d, vx_setall_res1);
+        Data<R> vx_setall_res2_; v_store(vx_setall_res2_.d, vx_setall_res2);
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ((LaneType)11, vx_setall_res1_[i]);
+            EXPECT_EQ((LaneType)12, vx_setall_res2_[i]);
+        }
+
         return *this;
     }
 

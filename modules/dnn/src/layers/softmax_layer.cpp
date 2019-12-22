@@ -44,6 +44,8 @@
 #include "layers_common.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 #include <algorithm>
 #include <stdlib.h>
 using std::max;
@@ -90,7 +92,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !logSoftMax);
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && !logSoftMax);
     }
 
 #ifdef HAVE_OPENCL
@@ -320,6 +322,17 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        int axis = clamp(axisRaw, ieInpNode->get_shape().size());
+        auto softmax = std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(softmax));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     int64 getFLOPS(const std::vector<MatShape> &inputs,
                   const std::vector<MatShape> &outputs) const CV_OVERRIDE

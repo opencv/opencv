@@ -462,6 +462,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<TanHLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS SwishLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SwishLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS MishLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<MishLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS SigmoidLayer : public ActivationLayer
     {
     public:
@@ -496,6 +508,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<Layer> create(const LayerParams &params);
     };
 
+    /** @brief Element wise operation on inputs
+
+    Extra optional parameters:
+    - "operation" as string. Values are "sum" (default), "prod", "max", "div"
+    - "coeff" as float array. Specify weights of inputs for SUM operation
+    - "output_channels_mode" as string. Values are "same" (default, all input must have the same layout), "input_0", "input_0_truncate", "max_input_channels"
+    */
     class CV_EXPORTS EltwiseLayer : public Layer
     {
     public:

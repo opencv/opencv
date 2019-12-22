@@ -270,7 +270,7 @@ void CV_UndistortPointsBadArgTest::run(int)
     cvReleaseMat(&temp);
 
     src_points = cv::Mat();
-    errcount += run_test_case( CV_StsAssert, "Input data matrix is not continuous" );
+    errcount += run_test_case( CV_StsBadArg, "Input data matrix is not continuous" );
     src_points = cv::cvarrToMat(&_src_points_orig);
     cvReleaseMat(&temp);
 
