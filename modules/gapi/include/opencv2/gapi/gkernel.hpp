@@ -264,10 +264,29 @@ public:
  *    return type is a tuple of multiple values.
  * @param Id string identifier for the operation. Must be unique.
  */
-#define G_TYPED_KERNEL_M(Class, API, Id)                                    \
+
+#define GET_HELPER(_1, _2, _3, _4, _5, NAME, ...) NAME
+#define API(...) __VA_ARGS__
+
+#define G_TYPED_KERNEL_M_HELPER(Class, API, Id) \
     G_ID_HELPER_BODY(Class, Id)                                             \
     struct Class final: public cv::GKernelTypeM<Class, std::function API >, \
                         public G_ID_HELPER_CLASS(Class)
+
+#define G_TYPED_KERNEL_M_HELPER_2(Class, _1, _2, Id) \
+    G_TYPED_KERNEL_M_HELPER(Class, API(_1, _2), Id)
+
+#define G_TYPED_KERNEL_M_HELPER_3(Class, _1, _2, _3, Id) \
+    G_TYPED_KERNEL_M_HELPER(Class, API(_1, _2, _3), Id)
+
+#define G_TYPED_KERNEL_M_HELPER_4(Class, _1, _2, _3, _4, Id) \
+    static_assert(false, "Please use using or typedef if tuple contains more than 3 types");
+
+#define G_TYPED_KERNEL_M(Class, ...) GET_HELPER(__VA_ARGS__, G_TYPED_KERNEL_M_HELPER_4, \
+                                                             G_TYPED_KERNEL_M_HELPER_3, \
+                                                             G_TYPED_KERNEL_M_HELPER_2, \
+                                                             G_TYPED_KERNEL_M_HELPER)(Class, __VA_ARGS__) \
+
 // {body} is to be defined by user
 
 #define G_API_OP   G_TYPED_KERNEL
