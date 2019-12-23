@@ -5,15 +5,18 @@ import cv2 as cv
 import sys
 
 def help(filename):
-    print (filename, 'shows the usage of the OpenCV serialization functionality.',
-            '\n\nusage: ',
-            '\n    python3', filename, 'outputfile.yml.gz',
-            '\n\nThe output file may be either in XML, YAML or JSON. You can even compress it',
-            '\nby specifying this in its extension like xml.gz yaml.gz etc... With',
-            '\nFileStorage you can serialize objects in OpenCV.',
-            '\n\nFor example: - create a class and have it serialized',
-            '\n             - use it to read and write matrices.\n'
-            )
+    print (
+        '''
+        {0} shows the usage of the OpenCV serialization functionality. \n\n
+        usage:\n
+            python3 {0} outputfile.yml.gz\n\n
+        The output file may be either in XML, YAML or JSON. You can even compress it\n
+        by specifying this in its extension like xml.gz yaml.gz etc... With\n
+        FileStorage you can serialize objects in OpenCV.\n\n
+        For example: - create a class and have it serialized\n
+                     - use it to read and write matrices.\n
+        '''.format(filename)
+    )
 
 class MyData:
     A = 97
