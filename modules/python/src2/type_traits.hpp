@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #ifndef OPENCV_TYPE_TRAITS_HPP
 #define OPENCV_TYPE_TRAITS_HPP
 
@@ -128,7 +132,7 @@ struct is_signed<T, false> : false_type
 
 
 template<class T>
-struct is_signed : conditional<is_floating_point<T>::value, true_type, detail::is_signed<T> >::type
+struct is_signed : conditional<is_floating_point<T>::value, true_type, detail::is_signed<T>>::type
 {
 };
 
