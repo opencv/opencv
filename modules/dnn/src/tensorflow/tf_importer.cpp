@@ -1935,33 +1935,113 @@ void TFImporter::populateNet(Net dstNet)
             Mat indices = getTensorContent(getConstBlob(layer, value_id, 1));
             CV_Assert(indices.type() == CV_32SC1);
 
-            if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
-                CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
-
-            layerParams.set("pool", "ave");
-            layerParams.set("global_pooling", true);
-
-            int id = dstNet.addLayer(name, "Pooling", layerParams);
-            layer_id[name] = id;
-
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
-
-            // There are two attributes, "keepdims" and a deprecated "keep_dims".
-            bool keepDims = false;
-            if (hasLayerAttr(layer, "keepdims"))
-                keepDims = getLayerAttr(layer, "keepdims").b();
-            else if (hasLayerAttr(layer, "keep_dims"))
-                keepDims = getLayerAttr(layer, "keep_dims").b();
-
-            if (!keepDims)
+            if (indices.total() == 1 && indices.at<int>(0) == 0)
             {
                 LayerParams flattenLp;
                 std::string flattenName = name + "/flatten";
                 CV_Assert(layer_id.find(flattenName) == layer_id.end());
                 int flattenId = dstNet.addLayer(flattenName, "Flatten", flattenLp);
                 layer_id[flattenName] = flattenId;
-                connect(layer_id, dstNet, Pin(name), flattenId, 0);
+                connect(layer_id, dstNet, parsePin(layer.input(0)), flattenId, 0);
+
+
+                LayerParams reshapeLp;
+                std::string reshapeName = name + "/reshape";
+                CV_Assert(layer_id.find(reshapeName) == layer_id.end());
+                reshapeLp.set("axis", 0);
+                reshapeLp.set("num_axes", 1);
+                std::vector<int> newShape = {1, 1, -1};
+                reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], newShape.size()));
+
+                int reshapeId = dstNet.addLayer(reshapeName, "Reshape", reshapeLp);
+                layer_id[reshapeName] = reshapeId;
+                connect(layer_id, dstNet, Pin(flattenName), reshapeId, 0);
+
+                LayerParams avgLp;
+                std::string avgName = name + "/avg";
+                CV_Assert(layer_id.find(avgName) == layer_id.end());
+                avgLp.set("pool", "ave");
+                avgLp.set("kernel_h", 3); // TODO: node.shape[0]
+                avgLp.set("kernel_w", 1);
+                int avgId = dstNet.addLayer(avgName, "Pooling", avgLp);
+                layer_id[avgName] = avgId;
+                // one input only
+                connect(layer_id, dstNet, Pin(reshapeName), avgId, 0);
+
+                LayerParams reshapeLp2;
+                std::string reshapeName2 = name;
+                CV_Assert(layer_id.find(reshapeName2) == layer_id.end());
+                newShape = {2, 20, 314, 253}; // TODO: remove out shapes
+
+                reshapeLp2.set("dim", DictValue::arrayInt<int*>(&newShape[0], newShape.size()));
+
+                int reshapeId2 = dstNet.addLayer(reshapeName2, "Reshape", reshapeLp2);
+                layer_id[reshapeName2] = reshapeId2;
+                connect(layer_id, dstNet, Pin(avgName), reshapeId2, 0);
+            } else {
+                if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
+                    CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
+
+                layerParams.set("pool", "ave");
+                layerParams.set("global_pooling", true);
+
+                int id = dstNet.addLayer(name, "Pooling", layerParams);
+                layer_id[name] = id;
+
+                connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
+                // There are two attributes, "keepdims" and a deprecated "keep_dims".
+                bool keepDims = false;
+                if (hasLayerAttr(layer, "keepdims"))
+                    keepDims = getLayerAttr(layer, "keepdims").b();
+                else if (hasLayerAttr(layer, "keep_dims"))
+                    keepDims = getLayerAttr(layer, "keep_dims").b();
+
+                if (!keepDims)
+                {
+                    LayerParams flattenLp;
+                    std::string flattenName = name + "/flatten";
+                    CV_Assert(layer_id.find(flattenName) == layer_id.end());
+                    int flattenId = dstNet.addLayer(flattenName, "Flatten", flattenLp);
+                    layer_id[flattenName] = flattenId;
+                    connect(layer_id, dstNet, Pin(name), flattenId, 0);
+                }
             }
+        }
+        else if (type == "Pack")
+        {
+            CV_Assert(hasLayerAttr(layer, "axis"));
+            int dim = (int)getLayerAttr(layer, "axis").i();
+            if (dim != 0)
+                CV_Error(Error::StsNotImplemented, "Unsupported mode of pack operation.");
+
+            CV_Assert(hasLayerAttr(layer, "N"));
+            int num = (int)getLayerAttr(layer, "N").i();
+            CV_Assert(layer.input_size() == num);
+            std::string base_name = name + "/reshape_";
+            std::vector<std::string> reshape_names;
+            for (int i = 0; i < num; i++) {
+                std::string reshape_name = base_name + std::to_string(i);
+                reshape_names.push_back(reshape_name);
+                LayerParams reshapeLP;
+                reshapeLP.set("axis", dim);
+                reshapeLP.set("num_axes", 1);
+                std::vector<int> outShape = {1, -1};
+                reshapeLP.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
+                int id = dstNet.addLayer(reshape_name, "Reshape", reshapeLP);
+                layer_id[reshape_name] = id;
+                connect(layer_id, dstNet, parsePin(layer.input(i)), id, 0);
+            }
+
+            layerParams.set("axis", dim);
+            int id = dstNet.addLayer(name, "Concat", layerParams);
+            layer_id[name] = id;
+
+            for (int li = 0; li < num; li++) {
+                Pin inp = parsePin(reshape_names[li]);
+                connect(layer_id, dstNet, inp, id, li);
+            }
+
         }
         else if (type == "ClipByValue")
         {
