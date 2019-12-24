@@ -95,6 +95,8 @@ public:
             else
                 CV_Error(Error::StsBadArg, "Unknown pooling type \"" + pool + "\"");
 
+            global_axis =  params.has("global_axis") ? params.get<int>("global_axis") : -1;
+
             getPoolingKernelParams(params, kernel_size, globalPooling, pads_begin, pads_end, strides, padMode);
             if (kernel_size.size() == 2) {
                 kernel = Size(kernel_size[1], kernel_size[0]);
@@ -149,6 +151,9 @@ public:
         if (globalPooling) {
             kernel = Size(inp[1], inp[0]);
             kernel_size = std::vector<size_t>(inp.begin(), inp.end());
+        } else if (global_axis != -1) {
+            kernel_size[global_axis] = inp[global_axis];
+            kernel = Size(kernel_size[1], kernel_size[0]);
         }
 
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
@@ -1037,6 +1042,12 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             outShape[0] = inputs[1][0];  // Number of proposals;
             outShape[1] = psRoiOutChannels;
         }
+        else if (global_axis != -1)
+        {
+            CV_Assert(global_axis >= 0 && global_axis < inpShape.size());
+            outShape[2 + global_axis] = 1;
+        }
+
         int numOutputs = requiredOutputs ? requiredOutputs : (type == MAX ? 2 : 1);
         CV_Assert(numOutputs == 1 || (numOutputs == 2 && type == MAX));
 

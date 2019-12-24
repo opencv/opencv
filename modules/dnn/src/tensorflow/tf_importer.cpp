@@ -1944,14 +1944,13 @@ void TFImporter::populateNet(Net dstNet)
                 layer_id[flattenName] = flattenId;
                 connect(layer_id, dstNet, parsePin(layer.input(0)), flattenId, 0);
 
-
                 LayerParams reshapeLp;
                 std::string reshapeName = name + "/reshape";
                 CV_Assert(layer_id.find(reshapeName) == layer_id.end());
-                reshapeLp.set("axis", 0);
+                reshapeLp.set("axis", indices.at<int>(0));
                 reshapeLp.set("num_axes", 1);
-                std::vector<int> newShape = {1, 1, -1};
-                reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], newShape.size()));
+                int newShape[] = {1, 1, -1};
+                reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], 3));
 
                 int reshapeId = dstNet.addLayer(reshapeName, "Reshape", reshapeLp);
                 layer_id[reshapeName] = reshapeId;
@@ -1961,23 +1960,38 @@ void TFImporter::populateNet(Net dstNet)
                 std::string avgName = name + "/avg";
                 CV_Assert(layer_id.find(avgName) == layer_id.end());
                 avgLp.set("pool", "ave");
-                avgLp.set("kernel_h", 3); // TODO: node.shape[0]
-                avgLp.set("kernel_w", 1);
+                // pooling kernel H x 1
+                avgLp.set("global_axis", 0);
+                avgLp.set("kernel_size", 1);
                 int avgId = dstNet.addLayer(avgName, "Pooling", avgLp);
                 layer_id[avgName] = avgId;
-                // one input only
                 connect(layer_id, dstNet, Pin(reshapeName), avgId, 0);
 
-                LayerParams reshapeLp2;
-                std::string reshapeName2 = name;
-                CV_Assert(layer_id.find(reshapeName2) == layer_id.end());
-                newShape = {2, 20, 314, 253}; // TODO: remove out shapes
+                LayerParams sliceLp;
+                std::string sliceName = name + "/slice";
+                CV_Assert(layer_id.find(sliceName) == layer_id.end());
+                sliceLp.set("axis", indices.at<int>(0));
+                int begin[] = {0};
+                int size[] = {1};
+                sliceLp.set("begin", DictValue::arrayInt(&begin[0], 1));
+                sliceLp.set("size", DictValue::arrayInt(&size[0], 1));
+                int sliceId = dstNet.addLayer(sliceName, "Slice", sliceLp);
+                layer_id[sliceName] = sliceId;
+                connect(layer_id, dstNet, Pin(layer.input(0)), sliceId, 0);
 
-                reshapeLp2.set("dim", DictValue::arrayInt<int*>(&newShape[0], newShape.size()));
+                LayerParams squeezeLp;
+                std::string squeezeName = name + "/squeeze";
+                CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                squeezeLp.set("axis", indices.at<int>(0));
+                squeezeLp.set("end_axis", indices.at<int>(0) + 1);
+                int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
+                layer_id[squeezeName] = squeezeId;
+                connect(layer_id, dstNet, Pin(sliceName), squeezeId, 0);
 
-                int reshapeId2 = dstNet.addLayer(reshapeName2, "Reshape", reshapeLp2);
-                layer_id[reshapeName2] = reshapeId2;
-                connect(layer_id, dstNet, Pin(avgName), reshapeId2, 0);
+                int id = dstNet.addLayer(name, "Reshape", layerParams);
+                layer_id[name] = id;
+                connect(layer_id, dstNet, Pin(avgName), id, 0);
+                connect(layer_id, dstNet, Pin(squeezeName), id, 1);
             } else {
                 if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
                     CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
@@ -2021,13 +2035,15 @@ void TFImporter::populateNet(Net dstNet)
             std::string base_name = name + "/reshape_";
             std::vector<std::string> reshape_names;
             for (int i = 0; i < num; i++) {
-                std::string reshape_name = base_name + std::to_string(i);
+                std::ostringstream ss;
+                ss << i;
+                std::string reshape_name = base_name + ss.str();
                 reshape_names.push_back(reshape_name);
                 LayerParams reshapeLP;
                 reshapeLP.set("axis", dim);
                 reshapeLP.set("num_axes", 1);
-                std::vector<int> outShape = {1, -1};
-                reshapeLP.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
+                int outShape[] = {1, -1};
+                reshapeLP.set("dim", DictValue::arrayInt(&outShape[0], 2));
                 int id = dstNet.addLayer(reshape_name, "Reshape", reshapeLP);
                 layer_id[reshape_name] = id;
                 connect(layer_id, dstNet, parsePin(layer.input(i)), id, 0);
