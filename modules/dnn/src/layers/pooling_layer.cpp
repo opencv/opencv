@@ -95,8 +95,6 @@ public:
             else
                 CV_Error(Error::StsBadArg, "Unknown pooling type \"" + pool + "\"");
 
-            global_axis =  params.has("global_axis") ? params.get<int>("global_axis") : -1;
-
             getPoolingKernelParams(params, kernel_size, globalPooling, pads_begin, pads_end, strides, padMode);
             if (kernel_size.size() == 2) {
                 kernel = Size(kernel_size[1], kernel_size[0]);
@@ -126,6 +124,7 @@ public:
             CV_Error(Error::StsBadArg, "Cannot determine pooling type");
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
+        global_axis = params.get<int>("global_axis", -1);
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }
