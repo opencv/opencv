@@ -117,8 +117,7 @@ def postprocess(out):
     tail_list_rev.extend([tail_list[15], tail_list[14], tail_list[17], tail_list[16], tail_list[19], tail_list[18]])
     tail_output_rev = np.stack(tail_list_rev, axis=0)
     tail_output_rev = np.flip(tail_output_rev, axis=2)
-    raw_output_all = np.mean(np.stack([head_output, tail_output_rev], axis=0), axis=0, keepdims=False)
-    raw_output_all = np.expand_dims(raw_output_all, axis=0)
+    raw_output_all = np.mean(np.stack([head_output, tail_output_rev], axis=0), axis=0, keepdims=True)
     raw_output_all = np.argmax(raw_output_all, axis=1)
     raw_output_all = raw_output_all.transpose(1, 2, 0)
     return raw_output_all
