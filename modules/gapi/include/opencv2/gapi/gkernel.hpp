@@ -255,8 +255,13 @@ public:
                         public G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
+#define GET_HELPER(_1, _2, _3, _4, _5, _6, NAME, ...) NAME
+#define API(...) __VA_ARGS__
+// Ensure correct __VA_ARGS__ expansion on Windows
+#define __WRAP_VAARGS(x) x
+
 /**
- * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
+ * Helper for G_TYPED_KERNEL_M declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
  * for more details.
  *
  * @param Class type name for this operation.
@@ -264,14 +269,11 @@ public:
  *    return type is a tuple of multiple values.
  * @param Id string identifier for the operation. Must be unique.
  */
-
-#define GET_HELPER(_1, _2, _3, _4, _5, NAME, ...) NAME
-#define API(...) __VA_ARGS__
-
 #define G_TYPED_KERNEL_M_HELPER(Class, API, Id) \
     G_ID_HELPER_BODY(Class, Id)                                             \
     struct Class final: public cv::GKernelTypeM<Class, std::function API >, \
                         public G_ID_HELPER_CLASS(Class)
+// {body} is to be defined by user
 
 #define G_TYPED_KERNEL_M_HELPER_2(Class, _1, _2, Id) \
     G_TYPED_KERNEL_M_HELPER(Class, API(_1, _2), Id)
@@ -280,13 +282,23 @@ public:
     G_TYPED_KERNEL_M_HELPER(Class, API(_1, _2, _3), Id)
 
 #define G_TYPED_KERNEL_M_HELPER_4(Class, _1, _2, _3, _4, Id) \
-    static_assert(false, "Please use using or typedef if tuple contains more than 3 types");
+    G_TYPED_KERNEL_M_HELPER(Class, API(_1, _2, _3, _4), Id)
 
-#define G_TYPED_KERNEL_M(Class, ...) GET_HELPER(__VA_ARGS__, G_TYPED_KERNEL_M_HELPER_4, \
-                                                             G_TYPED_KERNEL_M_HELPER_3, \
-                                                             G_TYPED_KERNEL_M_HELPER_2, \
-                                                             G_TYPED_KERNEL_M_HELPER)(Class, __VA_ARGS__) \
+#define G_TYPED_KERNEL_M_HELPER_5(Class, _1, _2, _3, _4, _5, Id) \
+    static_assert(false, "Please use using or typedef if tuple contains more than 4 types");
 
+/**
+ * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
+ * for more details.
+ *
+ * @param Class type name for this operation.
+ */
+#define G_TYPED_KERNEL_M(Class, ...) __WRAP_VAARGS(GET_HELPER(__VA_ARGS__, \
+                                                   G_TYPED_KERNEL_M_HELPER_5, \
+                                                   G_TYPED_KERNEL_M_HELPER_4, \
+                                                   G_TYPED_KERNEL_M_HELPER_3, \
+                                                   G_TYPED_KERNEL_M_HELPER_2, \
+                                                   G_TYPED_KERNEL_M_HELPER)(Class, __VA_ARGS__)) \
 // {body} is to be defined by user
 
 #define G_API_OP   G_TYPED_KERNEL
