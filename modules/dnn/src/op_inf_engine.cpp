@@ -574,6 +574,21 @@ InferenceEngine::Core& getCore()
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 static bool detectMyriadX_()
 {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R3)
+    // Lightweight detection
+    InferenceEngine::Core& ie = getCore();
+    const std::vector<std::string> devices = ie.GetAvailableDevices();
+    for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
+    {
+        if (i->find("MYRIAD") != std::string::npos)
+        {
+            const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
+            CV_LOG_INFO(NULL, "Myriad device: " << name);
+            return name.find("MyriadX") != std::string::npos  || name.find("Myriad X") != std::string::npos;
+        }
+    }
+    return false;
+#else
     InferenceEngine::Builder::Network builder("");
     InferenceEngine::idx_t inpId = builder.addLayer(
                                    InferenceEngine::Builder::InputLayer().setPort(InferenceEngine::Port({1})));
@@ -634,6 +649,7 @@ static bool detectMyriadX_()
         return false;
     }
     return true;
+#endif
 }
 #endif  // !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 
