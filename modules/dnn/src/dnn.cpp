@@ -103,6 +103,22 @@ public:
 #ifdef HAVE_INF_ENGINE
     static inline bool checkIETarget(Target target)
     {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R3)
+        // Lightweight detection
+        const std::vector<std::string> devices = getCore().GetAvailableDevices();
+        for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
+        {
+            if (std::string::npos != i->find("MYRIAD") && target == DNN_TARGET_MYRIAD)
+                return true;
+            else if (std::string::npos != i->find("FPGA") && target == DNN_TARGET_FPGA)
+                return true;
+            else if (std::string::npos != i->find("CPU") && target == DNN_TARGET_CPU)
+                return true;
+            else if (std::string::npos != i->find("GPU") && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+                return true;
+        }
+        return false;
+#else
         cv::dnn::Net net;
         cv::dnn::LayerParams lp;
         lp.set("kernel_size", 1);
@@ -126,6 +142,7 @@ public:
             return false;
         }
         return true;
+#endif
     }
 #endif
 

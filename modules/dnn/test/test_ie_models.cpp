@@ -134,12 +134,13 @@ static const std::vector<std::string> getOpenVINOTestModelsList()
     return result;
 }
 
-static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& dataPtr)
+static inline void genData(const InferenceEngine::TensorDesc& desc, Mat& m, Blob::Ptr& dataPtr)
 {
+    const std::vector<size_t>& dims = desc.getDims();
     m.create(std::vector<int>(dims.begin(), dims.end()), CV_32F);
     randu(m, -1, 1);
 
-    dataPtr = make_shared_blob<float>({Precision::FP32, dims, Layout::ANY}, (float*)m.data);
+    dataPtr = make_shared_blob<float>(desc, (float*)m.data);
 }
 
 void runIE(Target target, const std::string& xmlPath, const std::string& binPath,
@@ -238,7 +239,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap inputBlobs;
     for (auto& it : net.getInputsInfo())
     {
-        genData(it.second->getTensorDesc().getDims(), inputsMap[it.first], inputBlobs[it.first]);
+        genData(it.second->getTensorDesc(), inputsMap[it.first], inputBlobs[it.first]);
     }
     infRequest.SetInput(inputBlobs);
 
@@ -247,7 +248,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap outputBlobs;
     for (auto& it : net.getOutputsInfo())
     {
-        genData(it.second->getTensorDesc().getDims(), outputsMap[it.first], outputBlobs[it.first]);
+        genData(it.second->getTensorDesc(), outputsMap[it.first], outputBlobs[it.first]);
     }
     infRequest.SetOutput(outputBlobs);
 

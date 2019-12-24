@@ -189,7 +189,7 @@ public:
 #endif
         }
         else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
-            return type != STOCHASTIC;
+            return !computeMaxIdx && type != STOCHASTIC;
         }
         else
             return (kernel_size.size() == 3 && backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU) ||
