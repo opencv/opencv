@@ -50,6 +50,14 @@
 #include <algorithm>
 #include "opencv2/core/saturate.hpp"
 
+//! @cond IGNORED
+#define CV_SIMD128_CPP 1
+#if defined(CV_FORCE_SIMD128_CPP) || defined(CV_DOXYGEN)
+#define CV_SIMD128 1
+#define CV_SIMD128_64F 1
+#endif
+//! @endcond
+
 namespace cv
 {
 
@@ -503,6 +511,25 @@ template<typename _Tp, int n> inline v_reg<_Tp2, n> func(const v_reg<_Tp, n>& a)
     return c; \
 }
 
+#define OPENCV_HAL_IMPL_MATH_FUNC_FLOAT(func, cfunc) \
+inline v_reg<int, 4> func(const v_reg<float, 4>& a) \
+{ \
+    v_reg<int, 4> c; \
+    for( int i = 0; i < 4; i++ ) \
+        c.s[i] = cfunc(a.s[i]); \
+    return c; \
+} \
+inline v_reg<int, 4> func(const v_reg<double, 2>& a) \
+{ \
+    v_reg<int, 4> c; \
+    for( int i = 0; i < 2; i++ ) \
+    { \
+        c.s[i] = cfunc(a.s[i]); \
+        c.s[i + 2] = 0; \
+    } \
+    return c; \
+}
+
 /** @brief Square root of elements
 
 Only for floating point types.*/
@@ -524,22 +551,22 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_abs, (typename V_TypeTraits<_Tp>::abs_type)std::abs,
 /** @brief Round elements
 
 Only for floating point types.*/
-OPENCV_HAL_IMPL_MATH_FUNC(v_round, cvRound, int)
+OPENCV_HAL_IMPL_MATH_FUNC_FLOAT(v_round, cvRound)
 
 /** @brief Floor elements
 
 Only for floating point types.*/
-OPENCV_HAL_IMPL_MATH_FUNC(v_floor, cvFloor, int)
+OPENCV_HAL_IMPL_MATH_FUNC_FLOAT(v_floor, cvFloor)
 
 /** @brief Ceil elements
 
 Only for floating point types.*/
-OPENCV_HAL_IMPL_MATH_FUNC(v_ceil, cvCeil, int)
+OPENCV_HAL_IMPL_MATH_FUNC_FLOAT(v_ceil, cvCeil)
 
 /** @brief Truncate elements
 
 Only for floating point types.*/
-OPENCV_HAL_IMPL_MATH_FUNC(v_trunc, int, int)
+OPENCV_HAL_IMPL_MATH_FUNC_FLOAT(v_trunc, int)
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
@@ -1620,6 +1647,12 @@ inline void v_store(_Tp* ptr, const v_reg<_Tp, n>& a)
         ptr[i] = a.s[i];
 }
 
+template<typename _Tp, int n>
+inline void v_store(_Tp* ptr, const v_reg<_Tp, n>& a, hal::StoreMode /*mode*/)
+{
+    v_store(ptr, a);
+}
+
 /** @brief Store data to memory (lower half)
 
 Store lower half of register contents to memory.
@@ -1659,22 +1692,19 @@ Pointer __should__ be aligned by 16-byte boundary. */
 template<typename _Tp, int n>
 inline void v_store_aligned(_Tp* ptr, const v_reg<_Tp, n>& a)
 {
-    for( int i = 0; i < n; i++ )
-        ptr[i] = a.s[i];
+    v_store(ptr, a);
 }
 
 template<typename _Tp, int n>
 inline void v_store_aligned_nocache(_Tp* ptr, const v_reg<_Tp, n>& a)
 {
-    for( int i = 0; i < n; i++ )
-        ptr[i] = a.s[i];
+    v_store(ptr, a);
 }
 
 template<typename _Tp, int n>
 inline void v_store_aligned(_Tp* ptr, const v_reg<_Tp, n>& a, hal::StoreMode /*mode*/)
 {
-    for( int i = 0; i < n; i++ )
-        ptr[i] = a.s[i];
+    v_store(ptr, a);
 }
 
 /** @brief Combine vector from first elements of two vectors
@@ -1940,6 +1970,17 @@ template<int n> inline v_reg<float, n> v_cvt_f32(const v_reg<int, n>& a)
     return c;
 }
 
+template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a)
+{
+    v_reg<float, n*2> c;
+    for( int i = 0; i < n; i++ )
+    {
+        c.s[i] = (float)a.s[i];
+        c.s[i+n] = 0;
+    }
+    return c;
+}
+
 template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a, const v_reg<double, n>& b)
 {
     v_reg<float, n*2> c;
@@ -1954,35 +1995,75 @@ template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a, co
 /** @brief Convert to double
 
 Supported input type is cv::v_int32x4. */
-template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<int, n*2>& a)
+static inline v_reg<double, 2> v_cvt_f64(const v_reg<int, 4>& a)
 {
+    enum { n = 2 };
     v_reg<double, n> c;
     for( int i = 0; i < n; i++ )
         c.s[i] = (double)a.s[i];
+    return c;
+}
+
+/** @brief Convert to double high part of vector
+
+Supported input type is cv::v_int32x4. */
+static inline v_reg<double, 2> v_cvt_f64_high(const v_reg<int, 4>& a)
+{
+    enum { n = 2 };
+    v_reg<double, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = (double)a.s[i + 2];
     return c;
 }
 
 /** @brief Convert to double
 
 Supported input type is cv::v_float32x4. */
-template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<float, n*2>& a)
+static inline v_reg<double, 2> v_cvt_f64(const v_reg<float, 4>& a)
 {
+    enum { n = 2 };
     v_reg<double, n> c;
     for( int i = 0; i < n; i++ )
         c.s[i] = (double)a.s[i];
+    return c;
+}
+
+/** @brief Convert to double high part of vector
+
+Supported input type is cv::v_float32x4. */
+static inline v_reg<double, 2> v_cvt_f64_high(const v_reg<float, 4>& a)
+{
+    enum { n = 2 };
+    v_reg<double, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = (double)a.s[i + 2];
     return c;
 }
 
 /** @brief Convert to double
 
 Supported input type is cv::v_int64x2. */
-template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<int64, n>& a)
+static inline v_reg<double, 2> v_cvt_f64(const v_reg<int64, 2>& a)
 {
+    enum { n = 2 };
     v_reg<double, n> c;
     for( int i = 0; i < n; i++ )
         c.s[i] = (double)a.s[i];
     return c;
 }
+
+/** @brief Convert to double high part of vector
+
+Supported input type is cv::v_int64x2. */
+static inline v_reg<double, 2> v_cvt_f64_high(const v_reg<int64, 2>& a)
+{
+    enum { n = 2 };
+    v_reg<double, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = (double)a.s[i];
+    return c;
+}
+
 
 template<typename _Tp> inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_lut(const _Tp* tab, const int* idx)
 {
@@ -2038,6 +2119,28 @@ template<int n> inline v_reg<double, n> v_lut(const double* tab, const v_reg<int
     return c;
 }
 
+
+inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
+{
+    return v_lut(tab, idxvec.s);
+}
+
+inline v_uint32x4 v_lut(const unsigned* tab, const v_int32x4& idxvec)
+{
+    return v_lut(tab, idxvec.s);
+}
+
+inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
+{
+    return v_lut(tab, idxvec.s);
+}
+
+inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
+{
+    return v_lut(tab, idxvec.s);
+}
+
+
 template<int n> inline void v_lut_deinterleave(const float* tab, const v_reg<int, n>& idx,
                                                v_reg<float, n>& x, v_reg<float, n>& y)
 {
@@ -2062,7 +2165,7 @@ template<int n> inline void v_lut_deinterleave(const double* tab, const v_reg<in
 
 template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_pairs(const v_reg<_Tp, n>& vec)
 {
-    v_reg<float, n> c;
+    v_reg<_Tp, n> c;
     for (int i = 0; i < n/4; i++)
     {
         c.s[4*i  ] = vec.s[4*i  ];
@@ -2075,7 +2178,7 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_pairs(const v_re
 
 template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_quads(const v_reg<_Tp, n>& vec)
 {
-    v_reg<float, n> c;
+    v_reg<_Tp, n> c;
     for (int i = 0; i < n/8; i++)
     {
         c.s[8*i  ] = vec.s[8*i  ];
@@ -2092,7 +2195,7 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_quads(const v_re
 
 template<typename _Tp, int n> inline v_reg<_Tp, n> v_pack_triplets(const v_reg<_Tp, n>& vec)
 {
-    v_reg<float, n> c;
+    v_reg<_Tp, n> c;
     for (int i = 0; i < n/4; i++)
     {
         c.s[3*i  ] = vec.s[4*i  ];
@@ -2523,6 +2626,17 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
 }
 
+
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_fma(v_cvt_f64(a), v_cvt_f64(b), v_cvt_f64_high(a) * v_cvt_f64_high(b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_fma(v_cvt_f64(a), v_cvt_f64(b), v_fma(v_cvt_f64_high(a), v_cvt_f64_high(b), c)); }
+
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod_expand(a, b); }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+
 ////// FP16 support ///////
 
 inline v_reg<float, V_TypeTraits<float>::nlanes128>
@@ -2537,7 +2651,7 @@ v_load_expand(const float16_t* ptr)
 }
 
 inline void
-v_pack_store(float16_t* ptr, v_reg<float, V_TypeTraits<float>::nlanes128>& v)
+v_pack_store(float16_t* ptr, const v_reg<float, V_TypeTraits<float>::nlanes128>& v)
 {
     for( int i = 0; i < v.nlanes; i++ )
     {
