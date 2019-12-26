@@ -266,7 +266,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         /** page-locks \p size_in_bytes bytes of memory starting from \p ptr_
          *
-         * Pre-conditons:
+         * Pre-conditions:
          * - host memory should be unregistered
          */
         MemoryLockGuard(void* ptr_, std::size_t size_in_bytes) {

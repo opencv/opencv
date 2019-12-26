@@ -630,7 +630,7 @@ approxPolyDP_( const Point_<T>* src_contour, int count0, Point_<T>* dst_contour,
         WRITE_PT( src_contour[count-1] );
 
     // last stage: do final clean-up of the approximated contour -
-    // remove extra points on the [almost] stright lines.
+    // remove extra points on the [almost] straight lines.
     is_closed = is_closed0;
     count = new_count;
     pos = is_closed ? count - 1 : 0;

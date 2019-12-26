@@ -381,7 +381,7 @@ Here is explained in detail the code for the real time application:
     as not, there are false correspondences or also called *outliers*. The [Random Sample
     Consensus](http://en.wikipedia.org/wiki/RANSAC) or *Ransac* is a non-deterministic iterative
     method which estimate parameters of a mathematical model from observed data producing an
-    approximate result as the number of iterations increase. After appyling *Ransac* all the *outliers*
+    approximate result as the number of iterations increase. After applying *Ransac* all the *outliers*
     will be eliminated to then estimate the camera pose with a certain probability to obtain a good
     solution.
 

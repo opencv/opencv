@@ -181,7 +181,7 @@ class cuda_test(NewOpenCVTests):
             self.assertTrue('GpuMat' in str(type(gpu_mat)), msg=type(gpu_mat))
             #TODO: print(cv.utils.dumpInputArray(gpu_mat)) # - no support for GpuMat
 
-            # not checking output, therefore sepearate tests for different signatures is unecessary
+            # not checking output, therefore sepearate tests for different signatures is unnecessary
             ret, _gpu_mat2 = reader.nextFrame(gpu_mat)
             #TODO: self.assertTrue(gpu_mat == gpu_mat2)
             self.assertTrue(ret)
