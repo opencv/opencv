@@ -54,6 +54,9 @@ namespace detail
     class OpaqueRef;
     using ConstructOpaque = std::function<void(OpaqueRef&)>;
 
+    // FIXME: garray.hpp already contains commented hint classes below,
+    // need to think where it can be moved (currently opaque uses it from garray)
+
     // This is the base struct for GOpaqueU type holder
     //struct TypeHintBaseOp{virtual ~TypeHintBaseOp() = default;};
 
