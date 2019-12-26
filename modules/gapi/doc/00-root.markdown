@@ -95,7 +95,7 @@ Internally, cv::GComputation::apply() compiles the captured graph for
 the given input parameters and executes the compiled graph on data
 immediately.
 
-There is a number important concepts can be outlines with this examle:
+There is a number important concepts can be outlines with this example:
 * Graph declaration and graph execution are distinct steps;
 * Graph is built implicitly from a sequence of G-API expressions;
 * G-API supports function-like calls -- e.g. cv::gapi::resize(), and
