@@ -134,7 +134,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual void setOutShape(const MatShape &outTailShape = MatShape()) = 0;
 
         /** @deprecated Use flag `produce_cell_output` in LayerParams.
-          * @brief Specifies either interpret first dimension of input blob as timestamp dimenion either as sample.
+          * @brief Specifies either interpret first dimension of input blob as timestamp dimension either as sample.
           *
           * If flag is set to true then shape of input blob will be interpreted as [`T`, `N`, `[data dims]`] where `T` specifies number of timestamps, `N` is number of independent streams.
           * In this case each forward() call will iterate through `T` timestamps and update layer's state `T` times.

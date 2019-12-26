@@ -58,7 +58,7 @@ foreach(sample_filename ${cpp_samples})
     target_compile_definitions(${tgt} PRIVATE HAVE_OPENGL)
   endif()
   if(sample_filename MATCHES "simd_")
-    # disabled intentionally - demonstation purposes only
+    # disabled intentionally - demonstration purposes only
     #target_include_directories(${tgt} PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
     #target_compile_definitions(${tgt} PRIVATE OPENCV_SIMD_CONFIG_HEADER=opencv_simd_config_custom.hpp)
     #target_compile_definitions(${tgt} PRIVATE OPENCV_SIMD_CONFIG_INCLUDE_DIR=1)

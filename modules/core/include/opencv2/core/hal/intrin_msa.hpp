@@ -1805,7 +1805,7 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& a)
     return v_setall_f32(v_extract_n<i>(a));
 }
 
-////// FP16 suport ///////
+////// FP16 support ///////
 #if CV_FP16
 inline v_float32x4 v_load_expand(const float16_t* ptr)
 {

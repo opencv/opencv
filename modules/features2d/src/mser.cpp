@@ -983,7 +983,7 @@ extractMSER_8uC3( const Mat& src,
                     double s = (double)(lr->size-lr->sizei)/(lr->dt-lr->di);
                     if ( s < lr->s )
                     {
-                        // skip the first one and check stablity
+                        // skip the first one and check stability
                         if ( i > lr->reinit+1 && MSCRStableCheck( lr, params ) )
                         {
                             if ( lr->tmsr == NULL )

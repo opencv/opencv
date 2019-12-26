@@ -1218,7 +1218,7 @@ struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters2 : public CirclesGridFind
     CV_WRAP CirclesGridFinderParameters2();
 
     CV_PROP_RW float squareSize; //!< Distance between two adjacent points. Used by CALIB_CB_CLUSTERING.
-    CV_PROP_RW float maxRectifiedDistance; //!< Max deviation from predicion. Used by CALIB_CB_CLUSTERING.
+    CV_PROP_RW float maxRectifiedDistance; //!< Max deviation from prediction. Used by CALIB_CB_CLUSTERING.
 };
 
 /** @brief Finds centers in the grid of circles.

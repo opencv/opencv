@@ -776,7 +776,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 namespace cv
 {
 
-// Calculates bounding rectagnle of a point set or retrieves already calculated
+// Calculates bounding rectangle of a point set or retrieves already calculated
 static Rect pointSetBoundingRect( const Mat& points )
 {
     int npoints = points.checkVector(2);
@@ -1392,7 +1392,7 @@ cvFitEllipse2( const CvArr* array )
     return cvBox2D(cv::fitEllipse(points));
 }
 
-/* Calculates bounding rectagnle of a point set or retrieves already calculated */
+/* Calculates bounding rectangle of a point set or retrieves already calculated */
 CV_IMPL  CvRect
 cvBoundingRect( CvArr* array, int update )
 {
