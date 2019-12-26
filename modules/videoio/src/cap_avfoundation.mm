@@ -1293,7 +1293,7 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
             colorSpace, kCGImageAlphaLast|kCGBitmapByteOrderDefault,
             provider, NULL, false, kCGRenderingIntentDefault);
 
-    //CGImage -> CVPixelBufferRef coversion
+    //CGImage -> CVPixelBufferRef conversion
     CVPixelBufferRef pixelBuffer = NULL;
     CFDataRef cfData = CGDataProviderCopyData(CGImageGetDataProvider(cgImage));
     int status = CVPixelBufferCreateWithBytes(NULL,

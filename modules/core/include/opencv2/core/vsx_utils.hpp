@@ -317,7 +317,7 @@ VSX_IMPL_1RG(vec_udword2, wi, vec_float4,  wf, xvcvspuxds, vec_ctulo)
  * Also there's already an open bug https://bugs.llvm.org/show_bug.cgi?id=31837
  *
  * So we're not able to use inline asm and only use built-in functions that CLANG supports
- * and use __builtin_convertvector if clang missng any of vector conversions built-in functions
+ * and use __builtin_convertvector if clang missing any of vector conversions built-in functions
  *
  * todo: clang asm template bug is fixed, need to reconsider the current workarounds.
 */
@@ -491,7 +491,7 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
 // Only for Eigen!
 /*
  * changing behavior of conversion intrinsics for gcc has effect on Eigen
- * so we redfine old behavior again only on gcc, clang
+ * so we redefine old behavior again only on gcc, clang
 */
 #if !defined(__clang__) || __clang_major__ > 4
     // ignoring second arg since Eigen only truncates toward zero
