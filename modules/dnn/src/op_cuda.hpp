@@ -350,7 +350,7 @@ namespace cv { namespace dnn {
 
     private:
         /* The same tensor memory can be reused by different layers whenever possible.
-         * Hence, it is possible for different backend warppers to point to the same memory.
+         * Hence, it is possible for different backend wrappers to point to the same memory.
          * However, it may use only a part of that memory and have a different shape.
          *
          * We store the common information such as device tensor and its corresponding host memory in

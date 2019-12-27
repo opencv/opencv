@@ -198,7 +198,7 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
 // "Stop" is received.
 //
 // Queue reader is the class which encapsulates all this logic and
-// provies threads with a managed storage and an easy API to obtain
+// provides threads with a managed storage and an easy API to obtain
 // data.
 class QueueReader
 {

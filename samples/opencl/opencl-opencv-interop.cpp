@@ -3,7 +3,7 @@
 // This will loop through frames of video either from input media file
 // or camera device and do processing of these data in OpenCL and then
 // in OpenCV. In OpenCL it does inversion of pixels in left half of frame and
-// in OpenCV it does bluring in the right half of frame.
+// in OpenCV it does blurring in the right half of frame.
 */
 #include <cstdio>
 #include <cstdlib>

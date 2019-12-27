@@ -145,7 +145,7 @@ description requires three parameters:
    regular "functions" which take and return data. Here network
    `Faces` (a detector) takes a cv::GMat and returns a cv::GMat, while
    network `AgeGender` is known to provide two outputs (age and gender
-   blobs, respecitvely) -- so its has a `std::tuple<>` as a return
+   blobs, respectively) -- so its has a `std::tuple<>` as a return
    type.
 3. A topology name -- can be any non-empty string, G-API is using
    these names to distinguish networks inside. Names should be unique

@@ -35,7 +35,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Pre-conditions:
          * - \p dest and \p src must have the same shape
          *
-         * Exception Gaurantee: Basic
+         * Exception Guarantee: Basic
          */
         template <class T> inline
         void copy(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
@@ -50,7 +50,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - \p A and \p B must meet the mathematical requirements for matrix multiplication
          * - \p result must be large enough to hold the result
          *
-         * Exception Gaurantee: Basic
+         * Exception Guarantee: Basic
          */
         template <class T> inline
         void gemm(const cublas::Handle& handle, T beta, TensorSpan<T> result, T alpha, bool transa, TensorView<T> A, bool transb, TensorView<T> B) {
@@ -108,7 +108,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Pre-conditions:
          * - \p A and \p result must be compatible tensors
          *
-         * Exception Gaurantee: Basic
+         * Exception Guarantee: Basic
          */
         template <class T> inline
         void softmax(const cudnn::Handle& handle, TensorSpan<T> output, TensorView<T> input, int channel_axis, bool log) {

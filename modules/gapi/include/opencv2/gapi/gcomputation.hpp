@@ -314,7 +314,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      *
-     * Numbers of elements in ins/outs vectos must match numbers of
+     * Numbers of elements in ins/outs vectors must match numbers of
      * inputs/outputs which were used to define this GComputation.
      */
     void apply(const std::vector<cv::Mat>& ins,         // Compatibility overload
@@ -373,7 +373,7 @@ public:
     //     template<typename... Ts>
     //     GCompiled compile(const Ts&... metas, GCompileArgs &&args)
     //
-    // But not all compilers can hande this (and seems they shouldn't be able to).
+    // But not all compilers can handle this (and seems they shouldn't be able to).
     // FIXME: SFINAE looks ugly in the generated documentation
     /**
      * @overload

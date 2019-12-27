@@ -45,7 +45,7 @@ protected:
     };
     std::vector<Feature> features;
 
-    cv::Mat normSum; //for nomalization calculation (L1 or L2)
+    cv::Mat normSum; //for normalization calculation (L1 or L2)
     std::vector<cv::Mat> hist;
 };
 
@@ -70,7 +70,7 @@ inline float CvHOGEvaluator::Feature::calc( const std::vector<cv::Mat>& _hists, 
 
     const float *pnormSum = _normSum.ptr<float>((int)y);
     normFactor = (float)(pnormSum[fastRect[0].p0] - pnormSum[fastRect[1].p1] - pnormSum[fastRect[2].p2] + pnormSum[fastRect[3].p3]);
-    res = (res > 0.001f) ? ( res / (normFactor + 0.001f) ) : 0.f; //for cutting negative values, which apper due to floating precision
+    res = (res > 0.001f) ? ( res / (normFactor + 0.001f) ) : 0.f; //for cutting negative values, which appear due to floating precision
 
     return res;
 }

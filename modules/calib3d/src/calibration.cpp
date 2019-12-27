@@ -48,7 +48,7 @@
 #include <iterator>
 
 /*
-    This is stright-forward port v3 of Matlab calibration engine by Jean-Yves Bouguet
+    This is straight-forward port v3 of Matlab calibration engine by Jean-Yves Bouguet
     that is (in a large extent) based on the paper:
     Z. Zhang. "A flexible new technique for camera calibration".
     IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
