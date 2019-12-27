@@ -13,6 +13,11 @@ import os
 
 from tests_common import NewOpenCVTests, unittest
 
+def create_affine_transform_matrix(size,angle):
+    return np.array([[np.cos(angle), -np.sin(angle), size[1]/2], [np.sin(angle), np.cos(angle), 0]])
+def create_perspective_transform_matrix(size,angle):
+    return np.vstack([create_affine_transform_matrix(size,angle),[0, 0, 1]])
+
 class cuda_test(NewOpenCVTests):
     def setUp(self):
         super(cuda_test, self).setUp()
@@ -25,6 +30,30 @@ class cuda_test(NewOpenCVTests):
         cuMat.upload(npMat)
 
         self.assertTrue(np.allclose(cuMat.download(), npMat))
+
+    def test_cudaarithm(self):
+        npMat = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+
+        cuMat = cv.cuda_GpuMat(npMat)
+        cuMatDst = cv.cuda_GpuMat(cuMat.size(),cuMat.type())
+        cuMatB = cv.cuda_GpuMat(cuMat.size(),cv.CV_8UC1)
+        cuMatG = cv.cuda_GpuMat(cuMat.size(),cv.CV_8UC1)
+        cuMatR = cv.cuda_GpuMat(cuMat.size(),cv.CV_8UC1)
+
+        self.assertTrue(np.allclose(cv.cuda.merge(cv.cuda.split(cuMat)),npMat))
+
+        cv.cuda.split(cuMat,[cuMatB,cuMatG,cuMatR])
+        cv.cuda.merge([cuMatB,cuMatG,cuMatR],cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),npMat))
+
+        shift = (np.random.random((cuMat.channels(),)) * 8).astype(np.uint8).tolist()
+        self.assertTrue(np.allclose(cv.cuda.rshift(cuMat,shift).download(),npMat  >> shift))
+        cv.cuda.rshift(cuMat,shift,cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),npMat >> shift))
+
+        self.assertTrue(np.allclose(cv.cuda.lshift(cuMat,shift).download(),(npMat << shift).astype('uint8')))
+        cv.cuda.lshift(cuMat,shift,cuMatDst)
+        self.assertTrue(np.allclose(cuMatDst.download(),(npMat << shift).astype('uint8')))
 
     def test_cudaarithm_arithmetic(self):
         npMat1 = np.random.random((128, 128, 3)) - 0.5
@@ -145,20 +174,25 @@ class cuda_test(NewOpenCVTests):
         cv.cuda.max(cuMat1, cuMat2, cuMatDst)
         self.assertTrue(np.allclose(cuMatDst.download(),cv.max(npMat1, npMat2)))
 
-    def test_cudaarithm_arithmetic(self):
-        npMat1 = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+    def test_cudaarithm_convolution(self):
+        npMat = (np.random.random((128, 128)) * 255).astype(np.float32)
+        npDims = np.array(npMat.shape)
+        kernel = (np.random.random((3, 3)) * 1).astype(np.float32)
+        kernelDims = np.array(kernel.shape)
+        iS = (kernelDims/2).astype(int)
+        iE = npDims - kernelDims + iS
 
-        cuMat1 = cv.cuda_GpuMat(npMat1)
-        cuMatDst = cv.cuda_GpuMat(cuMat1.size(),cuMat1.type())
-        cuMatB = cv.cuda_GpuMat(cuMat1.size(),cv.CV_8UC1)
-        cuMatG = cv.cuda_GpuMat(cuMat1.size(),cv.CV_8UC1)
-        cuMatR = cv.cuda_GpuMat(cuMat1.size(),cv.CV_8UC1)
+        cuMat = cv.cuda_GpuMat(npMat)
+        cuKernel= cv.cuda_GpuMat(kernel)
+        cuMatDst = cv.cuda_GpuMat(tuple(npDims - kernelDims + 1), cuMat.type())
+        conv = cv.cuda.createConvolution()
 
-        self.assertTrue(np.allclose(cv.cuda.merge(cv.cuda.split(cuMat1)),npMat1))
+        self.assertTrue(np.allclose(conv.convolve(cuMat,cuKernel,ccorr=True).download(),
+                    cv.filter2D(npMat,-1,kernel,anchor=(-1,-1))[iS[0]:iE[0]+1,iS[1]:iE[1]+1]))
 
-        cv.cuda.split(cuMat1,[cuMatB,cuMatG,cuMatR])
-        cv.cuda.merge([cuMatB,cuMatG,cuMatR],cuMatDst)
-        self.assertTrue(np.allclose(cuMatDst.download(),npMat1))
+        conv.convolve(cuMat,cuKernel,cuMatDst,True)
+        self.assertTrue(np.allclose(cuMatDst.download(),
+                    cv.filter2D(npMat,-1,kernel,anchor=(-1,-1))[iS[0]:iE[0]+1,iS[1]:iE[1]+1]))
 
     def test_cudabgsegm_existence(self):
         #Test at least the existence of wrapped functions for now
@@ -339,6 +373,71 @@ class cuda_test(NewOpenCVTests):
 
         self.assertTrue(np.allclose(cv.cuda.cvtColor(cuMat, cv.COLOR_BGR2HSV).download(),
                                          cv.cvtColor(npMat, cv.COLOR_BGR2HSV)))
+
+    @unittest.skipIf('OPENCV_TEST_DATA_PATH' not in os.environ,
+                     "OPENCV_TEST_DATA_PATH is not defined")
+    def test_cudaobjectdetect(self):
+        img_path = os.environ['OPENCV_TEST_DATA_PATH'] + '/gpu/caltech/image_00000009_0.png'
+        npMat = cv.cvtColor(cv.imread(img_path),cv.COLOR_BGR2BGRA)
+
+        cuMat = cv.cuda_GpuMat(npMat)
+        cuHog = cv.cuda.HOG_create()
+        cuHog.setSVMDetector(cuHog.getDefaultPeopleDetector())
+
+        loc, conf = cuHog.detect(cuMat)
+        self.assertTrue(len(loc) == len(conf) and len(loc) > 0 and len(loc[0]) == 2)
+
+        loc = cuHog.detectWithoutConf(cuMat)
+        self.assertTrue(len(loc) > 0 and len(loc[0]) == 2)
+
+        loc = cuHog.detectMultiScaleWithoutConf(cuMat)
+        self.assertTrue(len(loc) > 0 and len(loc[0]) == 4)
+
+        cuHog.setGroupThreshold(0)
+        loc, conf = cuHog.detectMultiScale(cuMat)
+        self.assertTrue(len(loc) == len(conf) and len(loc) > 0 and len(loc[0]) == 4)
+
+    def test_cudawarping(self):
+        npMat = (np.random.random((128,128,3))*255).astype(np.uint8)
+        size = npMat.shape[:2]
+        M1 = create_affine_transform_matrix(size,np.pi/2)
+
+        cuMat = cv.cuda_GpuMat(npMat)
+        cuMatDst = cv.cuda_GpuMat(size,cuMat.type())
+
+        borderType = cv.BORDER_REFLECT101
+        self.assertTrue(np.allclose(cv.cuda.warpAffine(cuMat,M1,size,borderMode=borderType).download(),
+            cv.warpAffine(npMat,M1,size, borderMode=borderType)))
+        cv.cuda.warpAffine(cuMat,M1,size,cuMatDst,borderMode=borderType)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.warpAffine(npMat,M1,size,borderMode=borderType)))
+
+        interpolation = cv.INTER_NEAREST
+        flags = interpolation | cv.WARP_INVERSE_MAP
+        dst_gold = cv.warpAffine(npMat, M1, size, flags = flags)
+        cuMaps = cv.cuda.buildWarpAffineMaps(M1,True,size)
+        dst = cv.remap(npMat, cuMaps[0].download(), cuMaps[1].download(),interpolation)
+        self.assertTrue(np.allclose(dst,dst_gold))
+
+        xmap = cv.cuda_GpuMat(size,cv.CV_32FC1)
+        ymap = cv.cuda_GpuMat(size,cv.CV_32FC1)
+        cv.cuda.buildWarpAffineMaps(M1,True,size,xmap,ymap)
+        dst = cv.remap(npMat, xmap.download(), ymap.download(),interpolation)
+        self.assertTrue(np.allclose(dst,dst_gold))
+
+        M2 = create_perspective_transform_matrix(size,np.pi/2)
+        np.allclose(cv.cuda.warpPerspective(cuMat,M2,size,borderMode=borderType).download(),
+                    cv.warpPerspective(npMat,M2,size,borderMode=borderType))
+        cv.cuda.warpPerspective(cuMat,M2,size,cuMatDst,borderMode=borderType)
+        self.assertTrue(np.allclose(cuMatDst.download(),cv.warpPerspective(npMat,M2,size,borderMode=borderType)))
+
+        dst_gold = cv.warpPerspective(npMat, M2, size, flags = flags)
+        cuMaps = cv.cuda.buildWarpPerspectiveMaps(M2,True,size)
+        dst = cv.remap(npMat, cuMaps[0].download(), cuMaps[1].download(),interpolation)
+        self.assertTrue(np.allclose(dst,dst_gold))
+
+        cv.cuda.buildWarpPerspectiveMaps(M2,True,size,xmap,ymap)
+        dst = cv.remap(npMat, xmap.download(), ymap.download(),interpolation)
+        self.assertTrue(np.allclose(dst,dst_gold))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
