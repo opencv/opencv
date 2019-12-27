@@ -112,7 +112,7 @@ namespace detail
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
-    template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>; }; // fixme: howto differ from line 119???
+    template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>; };
     // FIXME: This is not quite correct since IStreamSource may produce not only Mat but also Scalar
     // and vector data. TODO: Extend the type dispatchig on these types too.
     template<>           struct GTypeOf<cv::gapi::wip::IStreamSource::Ptr> { using type = cv::GMat;};
@@ -177,12 +177,6 @@ namespace detail
 
     template<typename T> using wrap_gapi_helper = WrapValue<typename std::decay<T>::type>;
     template<typename T> using wrap_host_helper = WrapValue<typename std::decay<g_type_of_t<T> >::type>;
-
-    //if (std::is_same(wrap_gapi_helper, wrap_host_helper))
-    //{
-    //    // fix gopaque
-    //}
-
 } // namespace detail
 } // namespace cv
 

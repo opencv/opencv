@@ -230,15 +230,13 @@ TEST(GOpaque_OpaqueRef, TestMov)
 
     // compare 2 instances of Foo
     auto foo_are_eq = [](const Foo& a, const Foo& b, std::size_t n){
-        for(std::size_t i = 0; i < n; ++i)
-            if(a.cstring[i] != b.cstring[i])
-                return false;
-        return true;
+        return strncmp(a.cstring, b.cstring, n);
     };
 
     using I = Foo;
 
     const char *word = "a word";
+    const int len = 7; // size of the string above
     const I gold(word);
 
     I test = gold;
@@ -248,12 +246,12 @@ TEST(GOpaque_OpaqueRef, TestMov)
     cv::detail::OpaqueRef mov;
     mov.reset<I>();
 
-    EXPECT_EQ(foo_are_eq(gold, ref.rref<I>(), 7), true);  // ref = gold
+    EXPECT_EQ(foo_are_eq(gold, ref.rref<I>(), len), 0);  // ref = gold
 
     mov.mov(ref);
-    EXPECT_EQ(foo_are_eq(gold, mov.rref<I>(), 7), true);  // mov obtained the data
+    EXPECT_EQ(foo_are_eq(gold, mov.rref<I>(), len), 0);  // mov obtained the data
     EXPECT_EQ(ptr, mov.rref<I>().cstring);                // pointer is unchanged (same data)
-    EXPECT_EQ(foo_are_eq(test, ref.rref<I>(), 7), true);  // ref = test
-    EXPECT_EQ(foo_are_eq(test, mov.rref<I>(), 7), false); // ref lost the data
+    EXPECT_EQ(foo_are_eq(test, ref.rref<I>(), len), 0);  // ref = test
+    EXPECT_NE(foo_are_eq(test, mov.rref<I>(), len), 0);  // ref lost the data
 }
 } // namespace opencv_test
