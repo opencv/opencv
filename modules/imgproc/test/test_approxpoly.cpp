@@ -325,7 +325,7 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
             if( DstSeq == NULL )
             {
                 ts->printf( cvtest::TS::LOG,
-                    "cvApproxPoly returned NULL for contour #%d, espilon = %g\n", i, Eps );
+                    "cvApproxPoly returned NULL for contour #%d, epsilon = %g\n", i, Eps );
                 code = cvtest::TS::FAIL_INVALID_OUTPUT;
                 goto _exit_;
             } // if( DstSeq == NULL )
