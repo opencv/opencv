@@ -128,7 +128,7 @@ TEST(GOpaque, TestOpaqueIn)
     int depth = CV_8U;
     int chan = 1;
     cv::Mat mat = cv::Mat(sz, CV_MAKETYPE(depth, chan));
-    int fill;
+    int fill = 0;
 
     cv::GOpaque<int> in;
     auto out = ThisTest::FillMat::on(in, depth, chan, sz);
