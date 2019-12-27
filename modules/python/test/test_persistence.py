@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""""Core serializaion tests."""
+""""Core serialization tests."""
 import tempfile
 import os
 import cv2 as cv

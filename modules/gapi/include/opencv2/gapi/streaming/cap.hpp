@@ -35,7 +35,7 @@ namespace wip {
  * This class implements IStreamSource interface.
  * Its constructor takes the same parameters as cv::VideoCapture does.
  *
- * Please make sure that videoio OpenCV module is avaiable before using
+ * Please make sure that videoio OpenCV module is available before using
  * this in your application (G-API doesn't depend on it directly).
  *
  * @note stream sources are passed to G-API via shared pointers, so

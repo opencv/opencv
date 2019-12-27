@@ -452,7 +452,7 @@ int BadArgTest::run_test_case( int expected_code, const string& _descr )
     {
         thrown = true;
         if (e.code != expected_code &&
-            e.code != cv::Error::StsError && e.code != cv::Error::StsAssert  // Exact error codes support will be dropped. Checks should provide proper text messages intead.
+            e.code != cv::Error::StsError && e.code != cv::Error::StsAssert  // Exact error codes support will be dropped. Checks should provide proper text messages instead.
         )
         {
             ts->printf(TS::LOG, "%s (test case #%d): the error code %d is different from the expected %d\n",
