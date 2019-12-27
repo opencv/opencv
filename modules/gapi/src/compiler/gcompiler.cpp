@@ -46,8 +46,6 @@
 
 #include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
 
-#include <opencv2/gapi/cpu/gcpukernel.hpp>
-
 #include "logger.hpp"
 
 namespace
@@ -78,7 +76,6 @@ namespace
 
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
         auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
-
         return combine(ocv_pkg, user_pkg_with_aux);
     }
 

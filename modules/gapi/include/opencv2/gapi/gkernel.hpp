@@ -322,9 +322,9 @@ namespace gapi {
     class GFunctor
     {
     public:
-        virtual cv::GKernelImpl impl()       = 0;
-        virtual cv::gapi::GBackend backend() = 0;
-        const char* id() { return m_id; }
+        virtual cv::GKernelImpl impl()       const = 0;
+        virtual cv::gapi::GBackend backend() const = 0;
+        const char* id()                     const { return m_id; }
 
         virtual ~GFunctor() = default;
     protected:
@@ -410,7 +410,7 @@ namespace gapi {
         }
 
     public:
-        void include(GFunctor& functor)
+        void include(const GFunctor& functor)
         {
             m_id_kernels[functor.id()] = std::make_pair(functor.backend(), functor.impl());
         }
