@@ -1592,7 +1592,7 @@ public:
     {
         TlsAbstraction* tls = getTlsAbstraction();
         if (NULL == tls)
-            return;  // TLS signleton is not available (terminated)
+            return;  // TLS singleton is not available (terminated)
         ThreadData *pTD = tlsValue == NULL ? (ThreadData*)tls->getData() : (ThreadData*)tlsValue;
         if (pTD == NULL)
             return;  // no OpenCV TLS data for this thread
@@ -1683,7 +1683,7 @@ public:
 
         TlsAbstraction* tls = getTlsAbstraction();
         if (NULL == tls)
-            return NULL;  // TLS signleton is not available (terminated)
+            return NULL;  // TLS singleton is not available (terminated)
 
         ThreadData* threadData = (ThreadData*)tls->getData();
         if(threadData && threadData->slots.size() > slotIdx)
@@ -1719,7 +1719,7 @@ public:
 
         TlsAbstraction* tls = getTlsAbstraction();
         if (NULL == tls)
-            return;  // TLS signleton is not available (terminated)
+            return;  // TLS singleton is not available (terminated)
 
         ThreadData* threadData = (ThreadData*)tls->getData();
         if(!threadData)

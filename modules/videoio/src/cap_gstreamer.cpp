@@ -1045,7 +1045,7 @@ bool GStreamerCapture::open(const String &filename_)
  * \return property value
  *
  * There are two ways the properties can be retrieved. For seek-based properties we can query the pipeline.
- * For frame-based properties, we use the caps of the lasst receivef sample. This means that some properties
+ * For frame-based properties, we use the caps of the last receivef sample. This means that some properties
  * are not available until a first frame was received
  */
 double GStreamerCapture::getProperty(int propId) const
