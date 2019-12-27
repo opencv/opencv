@@ -15,7 +15,7 @@
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
-#include "../cuda4dnn/kernels/fill.hpp"
+#include "../cuda4dnn/kernels/fill_copy.hpp"
 #include "../cuda4dnn/kernels/scale_shift.hpp"
 
 #include <opencv2/core.hpp>
