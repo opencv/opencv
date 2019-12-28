@@ -4,6 +4,9 @@
     This program demonstrates Laplace point/edge detection using
     OpenCV function Laplacian()
     It captures from the camera of your choice: 0, 1, ... default 0
+    Usage:
+        python laplace.py <ddepth> <smoothType> <sigma>
+
     Keyboard Shortcuts:
     Press space bar to exit the program.
     '''
@@ -21,6 +24,11 @@ if __name__ == "__main__":
     ddepth = cv.CV_16S
     smoothType = "MedianBlur"
     sigma = 3
+    if len(sys.argv)==4:
+        ddepth = sys.argv[1]           
+        smoothType = sys.argv[2]
+        sigma = sys.argv[3]
+    
     # Taking input from the camera
     cap=cv.VideoCapture(0)
     # Create Window and Trackbar
@@ -29,7 +37,7 @@ if __name__ == "__main__":
     # Printing frame width, height and FPS
     print("=="*40)
     print("Frame Width: ", cap.get(cv.CAP_PROP_FRAME_WIDTH), "Frame Height: ", cap.get(cv.CAP_PROP_FRAME_HEIGHT), "FPS: ", cap.get(cv.CAP_PROP_FPS))
-    while(1):
+    while True:
         # Reading input from the camera
         ret, frame = cap.read()
         if ret == False:
@@ -53,8 +61,8 @@ if __name__ == "__main__":
         result = cv.convertScaleAbs(laplace, (sigma+1)*0.25)
         # Display Output
         cv.imshow("Laplace of Image", result)
-        k = cv.waitKey(30) & 0xFF
-        if k == 32:
+        k = cv.waitKey(30)
+        if k == 27:
             break
 
     cv.destroyAllWindows()
