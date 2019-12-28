@@ -251,7 +251,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         CV_DEPRECATED_EXTERNAL Size kernel, stride, pad;
         CV_DEPRECATED_EXTERNAL int pad_l, pad_t, pad_r, pad_b;
         bool globalPooling;
-        int global_axis;
+        std::vector<bool> isGlobalPooling;
         bool computeMaxIdx;
         String padMode;
         bool ceilMode;

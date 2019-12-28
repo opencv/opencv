@@ -122,9 +122,17 @@ public:
         }
         else
             CV_Error(Error::StsBadArg, "Cannot determine pooling type");
+
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
-        global_axis = params.get<int>("global_axis", -1);
+        if (params.has("is_global_pooling"))
+        {
+            const DictValue &global_axis = params.get("is_global_pooling");
+            int size = global_axis.size();
+            isGlobalPooling.resize(size);
+            for (int i = 0; i < size; i++)
+                isGlobalPooling[i] = global_axis.get<bool>(i);
+        }
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }
@@ -150,8 +158,12 @@ public:
         if (globalPooling) {
             kernel = Size(inp[1], inp[0]);
             kernel_size = std::vector<size_t>(inp.begin(), inp.end());
-        } else if (global_axis != -1) {
-            kernel_size[global_axis] = inp[global_axis];
+        } else if (!isGlobalPooling.empty()) {
+            for (int i = 0; i < isGlobalPooling.size(); i++)
+            {
+                if (isGlobalPooling[i])
+                    kernel_size[i] = inp[i];
+            }
             kernel = Size(kernel_size[1], kernel_size[0]);
         }
 
@@ -1041,10 +1053,14 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             outShape[0] = inputs[1][0];  // Number of proposals;
             outShape[1] = psRoiOutChannels;
         }
-        else if (global_axis != -1)
+        else if (!isGlobalPooling.empty())
         {
-            CV_Assert(global_axis >= 0 && global_axis < inpShape.size());
-            outShape[2 + global_axis] = 1;
+            CV_Assert(isGlobalPooling.size() == inpShape.size());
+            for (int i = 0; i < isGlobalPooling.size(); i++)
+            {
+                if (isGlobalPooling[i])
+                    outShape[2 + i] = 1;
+            }
         }
 
         int numOutputs = requiredOutputs ? requiredOutputs : (type == MAX ? 2 : 1);
