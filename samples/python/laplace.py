@@ -18,8 +18,7 @@ import numpy as np
 import cv2 as cv
 import sys
 
-if __name__ == "__main__":
-    print(__doc__)
+def main():
     # Declare the variables we are going to use
     ddepth = cv.CV_16S
     smoothType = "MedianBlur"
@@ -63,6 +62,9 @@ if __name__ == "__main__":
         cv.imshow("Laplace of Image", result)
         k = cv.waitKey(30)
         if k == 27:
-            break
-
+            return
+    
+if __name__ == "__main__":
+    print(__doc__)
+    main()
     cv.destroyAllWindows()
