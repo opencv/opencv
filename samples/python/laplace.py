@@ -26,8 +26,7 @@ def main():
     if len(sys.argv)==4:
         ddepth = sys.argv[1]           
         smoothType = sys.argv[2]
-        sigma = sys.argv[3]
-    
+        sigma = sys.argv[3] 
     # Taking input from the camera
     cap=cv.VideoCapture(0)
     # Create Window and Trackbar
@@ -63,7 +62,6 @@ def main():
         k = cv.waitKey(30)
         if k == 27:
             return
-    
 if __name__ == "__main__":
     print(__doc__)
     main()
