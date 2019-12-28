@@ -13,7 +13,7 @@ import cv2 as cv
 if __name__ == '__main__':
     print(__doc__)
 
-    wndname = "Drwaing Demo"
+    wndname = "Drawing Demo"
     NUMBER = 100
     DELAY = 5
     width, height = 1000, 700
