@@ -165,8 +165,7 @@ def string1():
         cv.imshow(wndname, image2)
         if cv.waitKey(DELAY) >= 0:
             return
- 
-    
+        
 if __name__ == '__main__':
     print(__doc__)
     wndname = "Drawing Demo"
@@ -189,4 +188,3 @@ if __name__ == '__main__':
     cv.waitKey(0)
     cv.destroyAllWindows()
     
-
