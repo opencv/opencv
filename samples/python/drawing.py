@@ -10,7 +10,6 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 
-
 # Drawing Lines
 def lines():
     for i in range(NUMBER*2):
@@ -65,9 +64,7 @@ def ellipse():
         color = "%06x" % np.random.randint(0, 0xFFFFFF)
         color = tuple(int(color[i:i+2], 16) for i in (0, 2 ,4))
         thickness = np.random.randint(-1, 9)
-
         cv.ellipse(image, tuple(center), tuple(axes), angle, angle-100, angle + 200, color, thickness, lineType)
-
         cv.imshow(wndname, image)
         if cv.waitKey(DELAY)>=0:
             return
@@ -172,14 +169,12 @@ def string1():
     
 if __name__ == '__main__':
     print(__doc__)
-
     wndname = "Drawing Demo"
     NUMBER = 100
     DELAY = 5
     width, height = 1000, 700
     lineType = cv.LINE_AA  # change it to LINE_8 to see non-antialiased graphics
     x1, x2, y1, y2 = -width/2, width*3/2, -height/2, height*3/2
-
     image = np.zeros((height, width, 3), dtype = np.uint8)
     cv.imshow(wndname, image)
     cv.waitKey(DELAY)
@@ -191,7 +186,6 @@ if __name__ == '__main__':
     circles()
     string()
     string1() 
-    
     cv.waitKey(0)
     cv.destroyAllWindows()
     
