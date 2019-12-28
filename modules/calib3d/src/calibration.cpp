@@ -3221,8 +3221,10 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
-    CV_Check(src.rows, (src.rows == 1 && src.cols == 3) || (src.rows == 3 && src.cols == 1) ||
-            (src.rows == 1 && src.cols == 1 && src.channels() == 3) || (src.rows == 3 && src.cols == 3),
+    const Size srcSz = src.size();
+    CV_Check(srcSz, srcSz == Size(3, 1) || srcSz == Size(1, 3) ||
+             (srcSz == Size(1, 1) && src.channels() == 3) ||
+             srcSz == Size(3, 3),
              "Input matrix must be 1x3 or 3x1 for a rotation vector, or 3x3 for a rotation matrix");
 
     bool v2m = src.cols == 1 || src.rows == 1;
