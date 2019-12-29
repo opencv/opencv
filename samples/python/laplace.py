@@ -6,6 +6,7 @@
     It captures from the camera of your choice: 0, 1, ... default 0
     Usage:
         python laplace.py <ddepth> <smoothType> <sigma>
+        If no arguments given default arguments will be used.
 
     Keyboard Shortcuts:
     Press space bar to exit the program.
