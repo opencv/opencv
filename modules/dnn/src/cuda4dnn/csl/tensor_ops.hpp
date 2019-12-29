@@ -135,17 +135,23 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         using FilterDescriptor = cudnn::FilterDescriptor<T>;
         using ConvolutionDescriptor = cudnn::ConvolutionDescriptor<T>;
         using ConvolutionAlgorithm = cudnn::ConvolutionAlgorithm<T>;
+        using ActivationDescriptor = cudnn::ActivationDescriptor;
 
     public:
+        using ActivationType = ActivationDescriptor::ActivationType;
+
         struct params_type {
+            /* convolution */
             std::vector<std::size_t> input_shape;
             std::vector<std::size_t> filter_shape;
-
             std::vector<std::size_t> padding;
             std::vector<std::size_t> stride;
             std::vector<std::size_t> dilation;
-
             std::size_t groups;
+
+            /* bias and activation (only RELU supported) */
+            std::vector<std::size_t> bias_shape;
+            ActivationType activation_type; /* MUST BE identity if there is no bias and ReLU if there is bias */
         };
 
         Convolution() = default;
@@ -157,6 +163,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             inputTensorDesc = TensorDescriptor(params.input_shape);
             filterDesc = FilterDescriptor(params.filter_shape);
             convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups);
+
+            if (!params.bias_shape.empty()) {
+                CV_Assert(params.activation_type == ActivationType::RELU);
+                biasTensorDesc = TensorDescriptor(params.bias_shape);
+                activationDesc = ActivationDescriptor(params.activation_type, 0.0);
+            } else {
+                CV_Assert(params.activation_type == ActivationType::IDENTITY);
+            }
 
             std::vector<int> output_dims;
             getConvolutionForwardOutputDim(convDesc, filterDesc, inputTensorDesc, output_dims);
@@ -182,12 +196,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             );
         }
 
+        void convolve_with_bias_activation(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, TensorView<T> bias, WorkspaceInstance scratchpad) {
+            cudnn::convolve_with_bias_activation<T>(
+                cudnnHandle,
+                1.0, convDesc, algo, scratchpad,
+                filterDesc, filters.get(),
+                inputTensorDesc, input.get(),
+                biasTensorDesc, bias.get(),
+                activationDesc,
+                outputTensorDesc, output.get()
+            );
+        }
+
     private:
         cudnn::Handle cudnnHandle;
         TensorDescriptor inputTensorDesc, outputTensorDesc;
         FilterDescriptor filterDesc;
         ConvolutionDescriptor convDesc;
         ConvolutionAlgorithm algo;
+        TensorDescriptor biasTensorDesc;
+        ActivationDescriptor activationDesc;
     };
 
     template <class T>
