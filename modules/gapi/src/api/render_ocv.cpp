@@ -1,99 +1,83 @@
-#include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/gapi/render.hpp> // Kernel API's
+#include <opencv2/gapi/render/render.hpp> // Kernel API's
 
 #include "api/render_ocv.hpp"
+#include "api/ft_render.hpp"
 
 namespace cv
 {
 namespace gapi
 {
-
-namespace ocv
-{
-
-GAPI_OCV_KERNEL(GOCVRenderNV12, cv::gapi::wip::draw::GRenderNV12)
-{
-    static void run(const cv::Mat& y, const cv::Mat& uv, const cv::gapi::wip::draw::Prims& prims,
-                    cv::Mat& out_y, cv::Mat& out_uv)
-    {
-        /* FIXME How to render correctly on NV12 format ?
-         *
-         * Rendering on NV12 via OpenCV looks like this:
-         *
-         * y --------> 1)(NV12 -> YUV) -> yuv -> 2)draw -> yuv -> 3)split -------> out_y
-         *                  ^                                         |
-         *                  |                                         |
-         * uv --------------                                          `----------> out_uv
-         *
-         *
-         * 1) Collect yuv mat from two planes, uv plain in two times less than y plane
-         *    so, upsample uv in tow times, with bilinear interpolation
-         *
-         * 2) Render primitives on YUV
-         *
-         * 3) Convert yuv to NV12 (using bilinear interpolation)
-         *
-         */
-
-        // NV12 -> YUV
-        cv::Mat upsample_uv, yuv;
-        cv::resize(uv, upsample_uv, uv.size() * 2, cv::INTER_LINEAR);
-        cv::merge(std::vector<cv::Mat>{y, upsample_uv}, yuv);
-
-        cv::gapi::wip::draw::drawPrimitivesOCVYUV(yuv, prims);
-
-        // YUV -> NV12
-        cv::Mat out_u, out_v, uv_plane;
-        std::vector<cv::Mat> chs = {out_y, out_u, out_v};
-        cv::split(yuv, chs);
-        cv::merge(std::vector<cv::Mat>{chs[1], chs[2]}, uv_plane);
-        cv::resize(uv_plane, out_uv, uv_plane.size() / 2, cv::INTER_LINEAR);
-    }
-};
-
-GAPI_OCV_KERNEL(GOCVRenderBGR, cv::gapi::wip::draw::GRenderBGR)
-{
-    static void run(const cv::Mat&, const cv::gapi::wip::draw::Prims& prims, cv::Mat& out)
-    {
-        cv::gapi::wip::draw::drawPrimitivesOCVBGR(out, prims);
-    }
-};
-
-cv::gapi::GKernelPackage kernels()
-{
-    static const auto pkg = cv::gapi::kernels<GOCVRenderNV12, GOCVRenderBGR>();
-    return pkg;
-}
-
-} // namespace ocv
-
 namespace wip
 {
 namespace draw
 {
 
-void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz);
-void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha);
-void poly(cv::Mat mat, std::vector<cv::Point>, cv::Scalar color, int lt, int shift);
-
-void mosaic(cv::Mat mat, const cv::Rect &rect, int cellSz)
+// FIXME Support `decim` mosaic parameter
+inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
 {
-    cv::Mat msc_roi = mat(rect);
-    int crop_x = msc_roi.cols - msc_roi.cols % cellSz;
-    int crop_y = msc_roi.rows - msc_roi.rows % cellSz;
+    cv::Rect mat_rect(0, 0, mat.cols, mat.rows);
+    auto intersection = mat_rect & rect;
 
-    for(int i = 0; i < crop_y; i += cellSz )
-        for(int j = 0; j < crop_x; j += cellSz) {
-            auto cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
+    cv::Mat msc_roi = mat(intersection);
+
+    bool has_crop_x = false;
+    bool has_crop_y = false;
+
+    int cols = msc_roi.cols;
+    int rows = msc_roi.rows;
+
+    if (msc_roi.cols % cellSz != 0)
+    {
+        has_crop_x = true;
+        cols -= msc_roi.cols % cellSz;
+    }
+
+    if (msc_roi.rows % cellSz != 0)
+    {
+        has_crop_y = true;
+        rows -= msc_roi.rows % cellSz;
+    }
+
+    cv::Mat cell_roi;
+    for(int i = 0; i < rows; i += cellSz )
+    {
+        for(int j = 0; j < cols; j += cellSz)
+        {
+            cell_roi = msc_roi(cv::Rect(j, i, cellSz, cellSz));
             cell_roi = cv::mean(cell_roi);
         }
+        if (has_crop_x)
+        {
+            cell_roi = msc_roi(cv::Rect(cols, i, msc_roi.cols - cols, cellSz));
+            cell_roi = cv::mean(cell_roi);
+        }
+    }
 
+    if (has_crop_y)
+    {
+        for(int j = 0; j < cols; j += cellSz)
+        {
+            cell_roi = msc_roi(cv::Rect(j, rows, cellSz, msc_roi.rows - rows));
+            cell_roi = cv::mean(cell_roi);
+        }
+        if (has_crop_x)
+        {
+            cell_roi = msc_roi(cv::Rect(cols, rows, msc_roi.cols - cols, msc_roi.rows - rows));
+            cell_roi = cv::mean(cell_roi);
+        }
+    }
 };
 
-void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha)
+inline void blendImage(const cv::Mat& img,
+                       const cv::Mat& alpha,
+                       const cv::Point& org,
+                       cv::Mat background)
 {
-    auto roi = mat(cv::Rect(org.x, org.y, img.size().width, img.size().height));
+    GAPI_Assert(alpha.type() == CV_32FC1);
+    GAPI_Assert(background.channels() == 3u);
+
+    cv::Mat roi = background(cv::Rect(org, img.size()));
     cv::Mat img32f_w;
     cv::merge(std::vector<cv::Mat>(3, alpha), img32f_w);
 
@@ -101,7 +85,12 @@ void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha)
     roi32f_w -= img32f_w;
 
     cv::Mat img32f, roi32f;
-    img.convertTo(img32f, CV_32F, 1.0/255);
+    if (img.type() == CV_32FC3) {
+        img.copyTo(img32f);
+    } else {
+        img.convertTo(img32f, CV_32F, 1.0/255);
+    }
+
     roi.convertTo(roi32f, CV_32F, 1.0/255);
 
     cv::multiply(img32f, img32f_w, img32f);
@@ -109,12 +98,28 @@ void image(cv::Mat mat, cv::Point org, cv::Mat img, cv::Mat alpha)
     roi32f += img32f;
 
     roi32f.convertTo(roi, CV_8U, 255.0);
-};
+}
 
-void poly(cv::Mat mat, std::vector<cv::Point> points, cv::Scalar color, int lt, int shift)
+inline void blendTextMask(cv::Mat& img,
+                          cv::Mat& mask,
+                          const cv::Point& tl,
+                          const cv::Scalar& color)
 {
-    std::vector<std::vector<cv::Point>> pp{points};
-    cv::fillPoly(mat, pp, color, lt, shift);
+    mask.convertTo(mask, CV_32FC1, 1 / 255.0);
+    cv::Mat color_mask;
+
+    cv::merge(std::vector<cv::Mat>(3, mask), color_mask);
+    cv::Scalar color32f = color / 255.0;
+    cv::multiply(color_mask, color32f, color_mask);
+
+    blendImage(color_mask, mask, tl, img);
+}
+
+inline void poly(cv::Mat& mat,
+                 const cv::gapi::wip::draw::Poly& pp)
+{
+    std::vector<std::vector<cv::Point>> points{pp.points};
+    cv::fillPoly(mat, points, pp.color, pp.lt, pp.shift);
 };
 
 struct BGR2YUVConverter
@@ -139,8 +144,16 @@ struct EmptyConverter
 
 // FIXME util::visitor ?
 template <typename ColorConverter>
-void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
+void drawPrimitivesOCV(cv::Mat& in,
+                       const cv::gapi::wip::draw::Prims& prims,
+                       cv::gapi::wip::draw::FTTextRender* ftpr)
 {
+#ifndef HAVE_FREETYPE
+    cv::util::suppress_unused_warning(ftpr);
+#endif
+
+    using namespace cv::gapi::wip::draw;
+
     ColorConverter converter;
     for (const auto &p : prims)
     {
@@ -148,60 +161,104 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
         {
             case Prim::index_of<Rect>():
             {
-                const auto& t_p = cv::util::get<Rect>(p);
-                const auto color = converter.cvtColor(t_p.color);
-                cv::rectangle(in, t_p.rect, color , t_p.thick, t_p.lt, t_p.shift);
+                const auto& rp = cv::util::get<Rect>(p);
+                const auto color = converter.cvtColor(rp.color);
+                cv::rectangle(in, rp.rect, color , rp.thick);
                 break;
             }
 
+            // FIXME avoid code duplicate for Text and FText
             case Prim::index_of<Text>():
             {
-                const auto& t_p = cv::util::get<Text>(p);
-                const auto color = converter.cvtColor(t_p.color);
-                cv::putText(in, t_p.text, t_p.org, t_p.ff, t_p.fs,
-                            color, t_p.thick, t_p.lt, t_p.bottom_left_origin);
+                auto tp = cv::util::get<Text>(p);
+                tp.color = converter.cvtColor(tp.color);
+
+                int baseline = 0;
+                auto size    = cv::getTextSize(tp.text, tp.ff, tp.fs, tp.thick, &baseline);
+                baseline    += tp.thick;
+                size.height += baseline;
+
+                // Allocate mask outside
+                cv::Mat mask(size, CV_8UC1, cv::Scalar::all(0));
+                // Org it's bottom left position for baseline
+                cv::Point org(0, mask.rows - baseline);
+                cv::putText(mask, tp.text, org, tp.ff, tp.fs, 255, tp.thick);
+
+                // Org is bottom left point, transform it to top left point for blendImage
+                cv::Point tl(tp.org.x, tp.org.y - mask.size().height + baseline);
+
+                blendTextMask(in, mask, tl, tp.color);
+                break;
+            }
+
+            case Prim::index_of<FText>():
+            {
+#ifdef HAVE_FREETYPE
+                const auto& ftp  = cv::util::get<FText>(p);
+                const auto color = converter.cvtColor(ftp.color);
+
+                GAPI_Assert(ftpr && "You must pass cv::gapi::wip::draw::freetype_font"
+                                    " to the graph compile arguments");
+                int baseline = 0;
+                auto size    = ftpr->getTextSize(ftp.text, ftp.fh, &baseline);
+
+                // Allocate mask outside
+                cv::Mat mask(size, CV_8UC1, cv::Scalar::all(0));
+                // Org it's bottom left position for baseline
+                cv::Point org(0, mask.rows - baseline);
+                ftpr->putText(mask, ftp.text, org, ftp.fh);
+
+                // Org is bottom left point, transform it to top left point for blendImage
+                cv::Point tl(ftp.org.x, ftp.org.y - mask.size().height + baseline);
+
+                blendTextMask(in, mask, tl, color);
+#else
+                cv::util::throw_error(std::runtime_error("FreeType not found !"));
+#endif
                 break;
             }
 
             case Prim::index_of<Circle>():
             {
-                const auto& c_p = cv::util::get<Circle>(p);
-                const auto color = converter.cvtColor(c_p.color);
-                cv::circle(in, c_p.center, c_p.radius, color, c_p.thick, c_p.lt, c_p.shift);
+                const auto& cp = cv::util::get<Circle>(p);
+                const auto color = converter.cvtColor(cp.color);
+                cv::circle(in, cp.center, cp.radius, color, cp.thick);
                 break;
             }
 
             case Prim::index_of<Line>():
             {
-                const auto& l_p = cv::util::get<Line>(p);
-                const auto color = converter.cvtColor(l_p.color);
-                cv::line(in, l_p.pt1, l_p.pt2, color, l_p.thick, l_p.lt, l_p.shift);
+                const auto& lp = cv::util::get<Line>(p);
+                const auto color = converter.cvtColor(lp.color);
+                cv::line(in, lp.pt1, lp.pt2, color, lp.thick);
                 break;
             }
 
             case Prim::index_of<Mosaic>():
             {
-                const auto& l_p = cv::util::get<Mosaic>(p);
-                mosaic(in, l_p.mos, l_p.cellSz);
+                const auto& mp = cv::util::get<Mosaic>(p);
+                GAPI_Assert(mp.decim == 0 && "Only decim = 0 supported now");
+                mosaic(in, mp.mos, mp.cellSz);
                 break;
             }
 
             case Prim::index_of<Image>():
             {
-                const auto& i_p = cv::util::get<Image>(p);
+                const auto& ip = cv::util::get<Image>(p);
 
                 cv::Mat img;
-                converter.cvtImg(i_p.img, img);
+                converter.cvtImg(ip.img, img);
 
-                image(in, i_p.org, img, i_p.alpha);
+                img.convertTo(img, CV_32FC1, 1.0 / 255);
+                blendImage(img, ip.alpha, ip.org, in);
                 break;
             }
 
             case Prim::index_of<Poly>():
             {
-                const auto& p_p = cv::util::get<Poly>(p);
-                const auto color = converter.cvtColor(p_p.color);
-                poly(in, p_p.points, color, p_p.lt, p_p.shift);
+                auto pp = cv::util::get<Poly>(p);
+                pp.color = converter.cvtColor(pp.color);
+                poly(in, pp);
                 break;
             }
 
@@ -210,14 +267,18 @@ void drawPrimitivesOCV(cv::Mat &in, const Prims &prims)
     }
 }
 
-void drawPrimitivesOCVBGR(cv::Mat &in, const Prims &prims)
+void drawPrimitivesOCVBGR(cv::Mat &in,
+                          const cv::gapi::wip::draw::Prims &prims,
+                          cv::gapi::wip::draw::FTTextRender* ftpr)
 {
-    drawPrimitivesOCV<EmptyConverter>(in, prims);
+    drawPrimitivesOCV<EmptyConverter>(in, prims, ftpr);
 }
 
-void drawPrimitivesOCVYUV(cv::Mat &in, const Prims &prims)
+void drawPrimitivesOCVYUV(cv::Mat &in,
+                          const cv::gapi::wip::draw::Prims &prims,
+                          cv::gapi::wip::draw::FTTextRender* ftpr)
 {
-    drawPrimitivesOCV<BGR2YUVConverter>(in, prims);
+    drawPrimitivesOCV<BGR2YUVConverter>(in, prims, ftpr);
 }
 
 } // namespace draw

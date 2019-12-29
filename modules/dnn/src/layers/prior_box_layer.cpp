@@ -42,14 +42,28 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
+#include <ngraph/op/experimental/layers/prior_box.hpp>
+#include <ngraph/op/experimental/layers/prior_box_clustered.hpp>
+#endif
+
 #include "../op_vkcom.hpp"
+
 #include <float.h>
 #include <algorithm>
 #include <cmath>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/prior_box.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -273,8 +287,13 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_DNN_NGRAPH
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return _explicitSizes || _stepX == _stepY;
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
+               backendId == DNN_BACKEND_CUDA ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() &&
                    ( _explicitSizes || (_minSize.size() == 1 && _maxSize.size() <= 1)))
                || (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
@@ -485,6 +504,44 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto feature_map_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto feature_map_shape = feature_map_wrapper->getShape();
+
+        auto image_wrapper = inputs[1].dynamicCast<CUDABackendWrapper>();
+        auto image_shape = image_wrapper->getShape();
+
+        PriorBoxConfiguration config;
+        config.feature_map_width = feature_map_shape.rbegin()[0];
+        config.feature_map_height = feature_map_shape.rbegin()[1];
+        config.image_width = image_shape.rbegin()[0];
+        config.image_height = image_shape.rbegin()[1];
+
+        config.num_priors = _numPriors;
+        config.box_widths = _boxWidths;
+        config.box_heights = _boxHeights;
+        config.offsets_x = _offsetsX;
+        config.offsets_y = _offsetsY;
+        config.stepX = _stepX;
+        config.stepY = _stepY;
+
+        config.variance = _variance;
+
+        config.clip = _clip;
+        config.normalize = _bboxesNormalized;
+
+        return make_cuda_node<cuda4dnn::PriorBoxOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
+
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
@@ -559,6 +616,68 @@ public:
         }
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(nodes.size() == 2);
+        auto layer = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto image = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto layer_shape = std::make_shared<ngraph::op::ShapeOf>(layer);
+        auto image_shape = std::make_shared<ngraph::op::ShapeOf>(image);
+
+        auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{2});
+        auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{4});
+        auto strides      = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{1});
+
+        auto slice_layer = std::make_shared<ngraph::op::v1::StridedSlice>(layer_shape,
+                                            lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
+        auto slice_image = std::make_shared<ngraph::op::v1::StridedSlice>(image_shape,
+                                            lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
+
+        if (_explicitSizes)
+        {
+            CV_Assert_N(!_boxWidths.empty(), !_boxHeights.empty(), !_variance.empty());
+            CV_Assert(_boxWidths.size() == _boxHeights.size());
+            ngraph::op::PriorBoxClusteredAttrs attrs;
+            attrs.widths = _boxWidths;
+            attrs.heights = _boxHeights;
+            attrs.clip = _clip;
+            CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
+            attrs.offset = _offsetsX[0];
+            attrs.step_heights = _stepY;
+            attrs.step_widths = _stepX;
+            attrs.variances = _variance;
+
+            auto priorBox = std::make_shared<ngraph::op::PriorBoxClustered>(slice_layer, slice_image, attrs);
+            auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
+            auto unsqueeze = std::make_shared<ngraph::op::Unsqueeze>(priorBox, axis);
+            return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
+        }
+        else
+        {
+            ngraph::op::PriorBoxAttrs attrs;
+            attrs.min_size = _minSize;
+            attrs.max_size = _maxSize;
+            // doesn't work with empty aspectRatio
+            attrs.aspect_ratio = !_aspectRatios.empty()? _aspectRatios : std::vector<float>{1.0f};
+            attrs.clip = _clip;
+            attrs.flip = false;
+            attrs.variance = _variance;
+            CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
+            attrs.offset = _offsetsX[0];
+
+            attrs.step = _stepX;
+            attrs.scale_all_sizes = !_aspectRatios.empty();
+
+            auto priorBox = std::make_shared<ngraph::op::PriorBox>(slice_layer, slice_image, attrs);
+            auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
+            auto unsqueeze = std::make_shared<ngraph::op::Unsqueeze>(priorBox, axis);
+            return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
+        }
+    }
+#endif  // HAVE_DNN_NGRAPH
+
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

@@ -153,11 +153,11 @@ file name before running the application, e.g.:
 
     $ GRAPH_DUMP_PATH=segm.dot ./bin/example_tutorial_porting_anisotropic_image_segmentation_gapi
 
-Now this file can be visalized with a `dot` command like this:
+Now this file can be visualized with a `dot` command like this:
 
     $ dot segm.dot -Tpng -o segm.png
 
-or viewed instantly with `xdot` command (please refer to your
+or viewed interactively with `xdot` (please refer to your
 distribution/operating system documentation on how to install these
 packages).
 
@@ -368,7 +368,7 @@ visualization like this:
 
 ![Anisotropic image segmentation graph with OpenCV & Fluid kernels](pics/segm_fluid.gif)
 
-This graph doesn't differ structually from its previous version (in
+This graph doesn't differ structurally from its previous version (in
 terms of operations and data objects), though a changed layout (on the
 left side of the dump) is easily noticeable.
 

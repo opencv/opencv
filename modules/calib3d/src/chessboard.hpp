@@ -111,8 +111,6 @@ class Ellipse
     public:
         Ellipse();
         Ellipse(const cv::Point2f &center, const cv::Size2f &axes, float angle);
-        Ellipse(const Ellipse &other);
-
 
         void draw(cv::InputOutputArray img,const cv::Scalar &color = cv::Scalar::all(120))const;
         bool contains(const cv::Point2f &pt)const;
@@ -652,7 +650,7 @@ class Chessboard: public cv::Feature2D
                         bool top(bool check_empty=false);     // moves one corner to the top or returns false
                         bool checkCorner()const;              // returns true if the current corner belongs to at least one
                                                               // none empty cell
-                        bool isNaN()const;                    // returns true if the currnet corner is NaN
+                        bool isNaN()const;                    // returns true if the current corner is NaN
 
                         const cv::Point2f* operator*() const;  // current corner coordinate
                         cv::Point2f* operator*();              // current corner coordinate

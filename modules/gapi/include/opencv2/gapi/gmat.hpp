@@ -29,10 +29,24 @@ struct GOrigin;
 /** \addtogroup gapi_data_objects
  * @{
  *
- * @brief Data-representing objects which can be used to build G-API
- * expressions.
+ * @brief G-API data objects used to build G-API expressions.
+ *
+ * These objects do not own any particular data (except compile-time
+ * associated values like with cv::GScalar) and are used to construct
+ * graphs.
+ *
+ * Every graph in G-API starts and ends with data objects.
+ *
+ * Once constructed and compiled, G-API operates with regular host-side
+ * data instead. Refer to the below table to find the mapping between
+ * G-API and regular data types.
+ *
+ *    G-API data type    | I/O data type
+ *    ------------------ | -------------
+ *    cv::GMat           | cv::Mat
+ *    cv::GScalar        | cv::Scalar
+ *    `cv::GArray<T>`    | std::vector<T>
  */
-
 class GAPI_EXPORTS GMat
 {
 public:
@@ -211,6 +225,7 @@ GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 
 /** @} */
 
+// FIXME: WHY??? WHY it is under different namespace?
 namespace gapi { namespace own {
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own

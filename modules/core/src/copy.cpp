@@ -563,25 +563,242 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     return *this;
 }
 
+#if CV_NEON && !defined(__aarch64__)
+#define CV_CHECK_ALIGNMENT 1
+#else
+#define CV_CHECK_ALIGNMENT 0
+#endif
+
+#if CV_SIMD128
+template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
+{
+    typedef typename V::lane_type T;
+    int end = (int)(size.width*esz);
+    int width = (end + 1)/2;
+    int width_1 = width & -v_uint8x16::nlanes;
+    int i, j;
+
+#if CV_CHECK_ALIGNMENT
+    CV_Assert(isAligned<sizeof(T)>(src, dst));
+#endif
+
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        for( i = 0, j = end; i < width_1; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+        {
+            V t0, t1;
+
+            t0 = v_load((T*)((uchar*)src + i));
+            t1 = v_load((T*)((uchar*)src + j - v_uint8x16::nlanes));
+            t0 = v_reverse(t0);
+            t1 = v_reverse(t1);
+            v_store((T*)(dst + j - v_uint8x16::nlanes), t0);
+            v_store((T*)(dst + i), t1);
+        }
+        if (isAligned<sizeof(T)>(src, dst))
+        {
+            for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
+            {
+                T t0, t1;
+
+                t0 = *((T*)((uchar*)src + i));
+                t1 = *((T*)((uchar*)src + j - sizeof(T)));
+                *((T*)(dst + j - sizeof(T))) = t0;
+                *((T*)(dst + i)) = t1;
+            }
+        }
+        else
+        {
+            for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
+            {
+                for (int k = 0; k < (int)sizeof(T); k++)
+                {
+                    uchar t0, t1;
+
+                    t0 = *((uchar*)src + i + k);
+                    t1 = *((uchar*)src + j + k - sizeof(T));
+                    *(dst + j + k - sizeof(T)) = t0;
+                    *(dst + i + k) = t1;
+                }
+            }
+        }
+    }
+}
+
+template<typename T1, typename T2> CV_ALWAYS_INLINE void flipHoriz_double( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
+{
+    int end = (int)(size.width*esz);
+    int width = (end + 1)/2;
+
+#if CV_CHECK_ALIGNMENT
+    CV_Assert(isAligned<sizeof(T1)>(src, dst));
+    CV_Assert(isAligned<sizeof(T2)>(src, dst));
+#endif
+
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        for ( int i = 0, j = end; i < width; i += sizeof(T1) + sizeof(T2), j -= sizeof(T1) + sizeof(T2) )
+        {
+            T1 t0, t1;
+            T2 t2, t3;
+
+            t0 = *((T1*)((uchar*)src + i));
+            t2 = *((T2*)((uchar*)src + i + sizeof(T1)));
+            t1 = *((T1*)((uchar*)src + j - sizeof(T1) - sizeof(T2)));
+            t3 = *((T2*)((uchar*)src + j - sizeof(T2)));
+            *((T1*)(dst + j - sizeof(T1) - sizeof(T2))) = t0;
+            *((T2*)(dst + j - sizeof(T2))) = t2;
+            *((T1*)(dst + i)) = t1;
+            *((T2*)(dst + i + sizeof(T1))) = t3;
+        }
+    }
+}
+#endif
 
 static void
 flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-    int i, j, limit = (int)(((size.width + 1)/2)*esz);
-    AutoBuffer<int> _tab(size.width*esz);
-    int* tab = _tab.data();
-
-    for( i = 0; i < size.width; i++ )
-        for( size_t k = 0; k < esz; k++ )
-            tab[i*esz + k] = (int)((size.width - i - 1)*esz + k);
-
-    for( ; size.height--; src += sstep, dst += dstep )
+#if CV_SIMD
+#if CV_CHECK_ALIGNMENT
+    size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
+#endif
+    if (esz == 2 * v_uint8x16::nlanes)
     {
-        for( i = 0; i < limit; i++ )
+        int end = (int)(size.width*esz);
+        int width = end/2;
+
+        for( ; size.height--; src += sstep, dst += dstep )
         {
-            j = tab[i];
-            uchar t0 = src[i], t1 = src[j];
-            dst[i] = t1; dst[j] = t0;
+            for( int i = 0, j = end - 2 * v_uint8x16::nlanes; i < width; i += 2 * v_uint8x16::nlanes, j -= 2 * v_uint8x16::nlanes )
+            {
+#if CV_SIMD256
+                v_uint8x32 t0, t1;
+
+                t0 = v256_load((uchar*)src + i);
+                t1 = v256_load((uchar*)src + j);
+                v_store(dst + j, t0);
+                v_store(dst + i, t1);
+#else
+                v_uint8x16 t0, t1, t2, t3;
+
+                t0 = v_load((uchar*)src + i);
+                t1 = v_load((uchar*)src + i + v_uint8x16::nlanes);
+                t2 = v_load((uchar*)src + j);
+                t3 = v_load((uchar*)src + j + v_uint8x16::nlanes);
+                v_store(dst + j, t0);
+                v_store(dst + j + v_uint8x16::nlanes, t1);
+                v_store(dst + i, t2);
+                v_store(dst + i + v_uint8x16::nlanes, t3);
+#endif
+            }
+        }
+    }
+    else if (esz == v_uint8x16::nlanes)
+    {
+        int end = (int)(size.width*esz);
+        int width = end/2;
+
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            for( int i = 0, j = end - v_uint8x16::nlanes; i < width; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+            {
+                v_uint8x16 t0, t1;
+
+                t0 = v_load((uchar*)src + i);
+                t1 = v_load((uchar*)src + j);
+                v_store(dst + j, t0);
+                v_store(dst + i, t1);
+            }
+        }
+    }
+    else if (esz == 8
+#if CV_CHECK_ALIGNMENT
+            && isAligned<sizeof(uint64)>(alignmentMark)
+#endif
+    )
+    {
+        flipHoriz_single<v_uint64x2>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 4
+#if CV_CHECK_ALIGNMENT
+            && isAligned<sizeof(unsigned)>(alignmentMark)
+#endif
+    )
+    {
+        flipHoriz_single<v_uint32x4>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 2
+#if CV_CHECK_ALIGNMENT
+            && isAligned<sizeof(ushort)>(alignmentMark)
+#endif
+    )
+    {
+        flipHoriz_single<v_uint16x8>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 1)
+    {
+        flipHoriz_single<v_uint8x16>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 24
+#if CV_CHECK_ALIGNMENT
+            && isAligned<sizeof(uint64_t)>(alignmentMark)
+#endif
+    )
+    {
+        int end = (int)(size.width*esz);
+        int width = (end + 1)/2;
+
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            for ( int i = 0, j = end; i < width; i += v_uint8x16::nlanes + sizeof(uint64_t), j -= v_uint8x16::nlanes + sizeof(uint64_t) )
+            {
+                v_uint8x16 t0, t1;
+                uint64_t t2, t3;
+
+                t0 = v_load((uchar*)src + i);
+                t2 = *((uint64_t*)((uchar*)src + i + v_uint8x16::nlanes));
+                t1 = v_load((uchar*)src + j - v_uint8x16::nlanes - sizeof(uint64_t));
+                t3 = *((uint64_t*)((uchar*)src + j - sizeof(uint64_t)));
+                v_store(dst + j - v_uint8x16::nlanes - sizeof(uint64_t), t0);
+                *((uint64_t*)(dst + j - sizeof(uint64_t))) = t2;
+                v_store(dst + i, t1);
+                *((uint64_t*)(dst + i + v_uint8x16::nlanes)) = t3;
+            }
+        }
+    }
+#if !CV_CHECK_ALIGNMENT
+    else if (esz == 12)
+    {
+        flipHoriz_double<uint64_t,uint>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 6)
+    {
+        flipHoriz_double<uint,ushort>(src, sstep, dst, dstep, size, esz);
+    }
+    else if (esz == 3)
+    {
+        flipHoriz_double<ushort,uchar>(src, sstep, dst, dstep, size, esz);
+    }
+#endif
+    else
+#endif // CV_SIMD
+    {
+        int i, j, limit = (int)(((size.width + 1)/2)*esz);
+        AutoBuffer<int> _tab(size.width*esz);
+        int* tab = _tab.data();
+
+        for( i = 0; i < size.width; i++ )
+            for( size_t k = 0; k < esz; k++ )
+                tab[i*esz + k] = (int)((size.width - i - 1)*esz + k);
+
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            for( i = 0; i < limit; i++ )
+            {
+                j = tab[i];
+                uchar t0 = src[i], t1 = src[j];
+                dst[i] = t1; dst[j] = t0;
+            }
         }
     }
 }
@@ -597,7 +814,34 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
                                                   dst0 += dstep, dst1 -= dstep )
     {
         int i = 0;
-        if( ((size_t)src0|(size_t)dst0|(size_t)src1|(size_t)dst1) % sizeof(int) == 0 )
+#if CV_SIMD
+#if CV_CHECK_ALIGNMENT
+        if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
+#endif
+        {
+            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            {
+                v_int32 t0 = vx_load((int*)(src0 + i));
+                v_int32 t1 = vx_load((int*)(src1 + i));
+                vx_store((int*)(dst0 + i), t1);
+                vx_store((int*)(dst1 + i), t0);
+            }
+        }
+#if CV_CHECK_ALIGNMENT
+        else
+        {
+            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            {
+                v_uint8 t0 = vx_load(src0 + i);
+                v_uint8 t1 = vx_load(src1 + i);
+                vx_store(dst0 + i, t1);
+                vx_store(dst1 + i, t0);
+            }
+        }
+#endif
+#endif
+
+        if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
         {
             for( ; i <= size.width - 16; i += 16 )
             {
@@ -711,6 +955,13 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
 
+    // Details: https://github.com/opencv/opencv/issues/12943
+    if (flip_mode <= 0 /* swap rows */
+        && cv::ipp::getIppTopFeatures() != ippCPUID_SSE42
+        && (int64_t)(src.total()) * src.elemSize() >= CV_BIG_INT(0x80000000)/*2Gb*/
+    )
+        return false;
+
     IppiAxis ippMode;
     if(flip_mode < 0)
         ippMode = ippAxsBoth;
@@ -782,35 +1033,9 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
-#ifdef HAVE_OPENCL
-
-static bool ocl_rotate(InputArray _src, OutputArray _dst, int rotateMode)
-{
-    switch (rotateMode)
-    {
-    case ROTATE_90_CLOCKWISE:
-        transpose(_src, _dst);
-        flip(_dst, _dst, 1);
-        break;
-    case ROTATE_180:
-        flip(_src, _dst, -1);
-        break;
-    case ROTATE_90_COUNTERCLOCKWISE:
-        transpose(_src, _dst);
-        flip(_dst, _dst, 0);
-        break;
-    default:
-        break;
-    }
-    return true;
-}
-#endif
-
 void rotate(InputArray _src, OutputArray _dst, int rotateMode)
 {
     CV_Assert(_src.dims() <= 2);
-
-    CV_OCL_RUN(_dst.isUMat(), ocl_rotate(_src, _dst, rotateMode))
 
     switch (rotateMode)
     {

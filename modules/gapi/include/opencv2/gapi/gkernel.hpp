@@ -230,27 +230,44 @@ public:
 // The problem is that every typed kernel should have ::id() but body
 // of the class is defined by user (with outMeta, other stuff)
 
+//! @cond IGNORED
 #define G_ID_HELPER_CLASS(Class)  Class##IdHelper
 
 #define G_ID_HELPER_BODY(Class, Id)                                         \
-    namespace detail                                                        \
+    struct G_ID_HELPER_CLASS(Class)                                         \
     {                                                                       \
-        struct G_ID_HELPER_CLASS(Class)                                     \
-        {                                                                   \
-            static constexpr const char * id() {return Id;};                \
-        };                                                                  \
-    }
+        static constexpr const char * id() {return Id;}                     \
+    };                                                                      \
+//! @endcond
 
+/**
+ * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
+ * for more details.
+ *
+ * @param Class type name for this operation.
+ * @param API an `std::function<>`-like signature for the operation;
+ *    return type is a single value.
+ * @param Id string identifier for the operation. Must be unique.
+ */
 #define G_TYPED_KERNEL(Class, API, Id)                                      \
     G_ID_HELPER_BODY(Class, Id)                                             \
     struct Class final: public cv::GKernelType<Class, std::function API >,  \
-                        public detail::G_ID_HELPER_CLASS(Class)
+                        public G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
+/**
+ * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
+ * for more details.
+ *
+ * @param Class type name for this operation.
+ * @param API an `std::function<>`-like signature for the operation;
+ *    return type is a tuple of multiple values.
+ * @param Id string identifier for the operation. Must be unique.
+ */
 #define G_TYPED_KERNEL_M(Class, API, Id)                                    \
     G_ID_HELPER_BODY(Class, Id)                                             \
     struct Class final: public cv::GKernelTypeM<Class, std::function API >, \
-                        public detail::G_ID_HELPER_CLASS(Class)
+                        public G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
 #define G_API_OP   G_TYPED_KERNEL
@@ -539,8 +556,29 @@ namespace gapi {
 
     /** @} */
 
+    // FYI - this function is already commented above
     GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
                                         const GKernelPackage  &rhs);
+
+    /**
+     * @brief Combines multiple G-API kernel packages into one
+     *
+     * @overload
+     *
+     * This function successively combines the passed kernel packages using a right fold.
+     * Calling `combine(a, b, c)` is equal to `combine(a, combine(b, c))`.
+     *
+     * @return The resulting kernel package
+     */
+    template<typename... Ps>
+    GKernelPackage combine(const GKernelPackage &a, const GKernelPackage &b, Ps&&... rest)
+    {
+        return combine(a, combine(b, rest...));
+    }
+
+    /** \addtogroup gapi_compile_args
+     * @{
+     */
     /**
      * @brief cv::use_only() is a special combinator which hints G-API to use only
      * kernels specified in cv::GComputation::compile() (and not to extend kernels available by
@@ -550,6 +588,7 @@ namespace gapi {
     {
         GKernelPackage pkg;
     };
+    /** @} */
 
 } // namespace gapi
 

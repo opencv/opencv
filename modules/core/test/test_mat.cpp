@@ -2025,4 +2025,17 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
 }
 #endif // HAVE_EIGEN
 
+TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+
+    const int width = 0x8000;
+    const int height = 0x10001;
+
+    cv::Mat src(height, width, CV_8UC1, Scalar::all(128));
+
+    cv::Mat dst;
+    cv::flip(src, dst, 0);
+}
+
 }} // namespace

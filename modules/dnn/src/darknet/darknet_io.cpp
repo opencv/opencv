@@ -128,7 +128,7 @@ namespace cv {
 
 
                 void setConvolution(int kernel, int pad, int stride,
-                    int filters_num, int channels_num, int use_batch_normalize, int use_relu)
+                    int filters_num, int channels_num, int use_batch_normalize)
                 {
                     cv::dnn::LayerParams conv_param =
                         getParamConvolution(kernel, pad, stride, filters_num);
@@ -168,25 +168,27 @@ namespace cv {
                         net->layers.push_back(lp);
                     }
 
-                    if (use_relu)
-                    {
-                        cv::dnn::LayerParams activation_param;
-                        activation_param.set<float>("negative_slope", 0.1f);
-                        activation_param.name = "ReLU-name";
-                        activation_param.type = "ReLU";
-
-                        darknet::LayerParameter lp;
-                        std::string layer_name = cv::format("relu_%d", layer_id);
-                        lp.layer_name = layer_name;
-                        lp.layer_type = activation_param.type;
-                        lp.layerParams = activation_param;
-                        lp.bottom_indexes.push_back(last_layer);
-                        last_layer = layer_name;
-                        net->layers.push_back(lp);
-                    }
-
                     layer_id++;
                     fused_layer_names.push_back(last_layer);
+                }
+
+                void setReLU()
+                {
+                    cv::dnn::LayerParams activation_param;
+                    activation_param.set<float>("negative_slope", 0.1f);
+                    activation_param.name = "ReLU-name";
+                    activation_param.type = "ReLU";
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("relu_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = activation_param.type;
+                    lp.layerParams = activation_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    fused_layer_names.back() = last_layer;
                 }
 
                 void setMaxpool(size_t kernel, size_t pad, size_t stride)
@@ -409,21 +411,29 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
-                void setShortcut(int from)
+                void setShortcut(int from, float alpha)
                 {
                     cv::dnn::LayerParams shortcut_param;
                     shortcut_param.name = "Shortcut-name";
                     shortcut_param.type = "Eltwise";
 
+                    if (alpha != 1)
+                    {
+                        std::vector<float> coeffs(2, 1);
+                        coeffs[0] = alpha;
+                        shortcut_param.set("coeff", DictValue::arrayReal<float*>(&coeffs[0], coeffs.size()));
+                    }
+
                     shortcut_param.set<std::string>("op", "sum");
+                    shortcut_param.set<std::string>("output_channels_mode", "input_0_truncate");
 
                     darknet::LayerParameter lp;
                     std::string layer_name = cv::format("shortcut_%d", layer_id);
                     lp.layer_name = layer_name;
                     lp.layer_type = shortcut_param.type;
                     lp.layerParams = shortcut_param;
-                    lp.bottom_indexes.push_back(fused_layer_names.at(from));
                     lp.bottom_indexes.push_back(last_layer);
+                    lp.bottom_indexes.push_back(fused_layer_names.at(from));
                     last_layer = layer_name;
                     net->layers.push_back(lp);
 
@@ -548,10 +558,7 @@ namespace cv {
                         int pad = getParam<int>(layer_params, "pad", 0);
                         int stride = getParam<int>(layer_params, "stride", 1);
                         int filters = getParam<int>(layer_params, "filters", -1);
-                        std::string activation = getParam<std::string>(layer_params, "activation", "linear");
                         bool batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
-                        if(activation != "linear" && activation != "leaky")
-                            CV_Error(cv::Error::StsParseError, "Unsupported activation: " + activation);
                         int flipped = getParam<int>(layer_params, "flipped", 0);
                         if (flipped == 1)
                             CV_Error(cv::Error::StsNotImplemented, "Transpose the convolutional weights is not implemented");
@@ -563,7 +570,7 @@ namespace cv {
                         CV_Assert(current_channels > 0);
 
                         setParams.setConvolution(kernel_size, pad, stride, filters, current_channels,
-                            batch_normalize, activation == "leaky");
+                            batch_normalize);
 
                         current_channels = filters;
                     }
@@ -593,7 +600,7 @@ namespace cv {
 
                         current_channels = 0;
                         for (size_t k = 0; k < layers_vec.size(); ++k) {
-                            layers_vec[k] = layers_vec[k] > 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
+                            layers_vec[k] = layers_vec[k] >= 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
                             current_channels += net->out_channels_vec[layers_vec[k]];
                         }
 
@@ -631,13 +638,15 @@ namespace cv {
                     else if (layer_type == "shortcut")
                     {
                         std::string bottom_layer = getParam<std::string>(layer_params, "from", "");
+                        float alpha = getParam<float>(layer_params, "alpha", 1);
+                        float beta = getParam<float>(layer_params, "beta", 0);
+                        if (beta != 0)
+                            CV_Error(Error::StsNotImplemented, "Non-zero beta");
                         CV_Assert(!bottom_layer.empty());
                         int from = std::atoi(bottom_layer.c_str());
 
-                        from += layers_counter;
-                        current_channels = net->out_channels_vec[from];
-
-                        setParams.setShortcut(from);
+                        from = from < 0 ? from + layers_counter : from;
+                        setParams.setShortcut(from, alpha);
                     }
                     else if (layer_type == "upsample")
                     {
@@ -667,6 +676,15 @@ namespace cv {
                     else {
                         CV_Error(cv::Error::StsParseError, "Unknown layer type: " + layer_type);
                     }
+
+                    std::string activation = getParam<std::string>(layer_params, "activation", "linear");
+                    if (activation == "leaky")
+                    {
+                        setParams.setReLU();
+                    }
+                    else if (activation != "linear")
+                        CV_Error(cv::Error::StsParseError, "Unsupported activation: " + activation);
+
                     net->out_channels_vec[layers_counter] = current_channels;
                 }
 
@@ -710,7 +728,6 @@ namespace cv {
                     {
                         int kernel_size = getParam<int>(layer_params, "size", -1);
                         int filters = getParam<int>(layer_params, "filters", -1);
-                        std::string activation = getParam<std::string>(layer_params, "activation", "linear");
                         bool use_batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
 
                         CV_Assert(kernel_size > 0 && filters > 0);
@@ -754,14 +771,16 @@ namespace cv {
                             bn_blobs.push_back(biasData_mat);
                             setParams.setLayerBlobs(cv_layers_counter, bn_blobs);
                         }
-
-                        if(activation == "leaky")
-                            ++cv_layers_counter;
                     }
                     if (layer_type == "region" || layer_type == "yolo")
                     {
                         ++cv_layers_counter;  // For permute.
                     }
+
+                    std::string activation = getParam<std::string>(layer_params, "activation", "linear");
+                    if(activation == "leaky")
+                        ++cv_layers_counter;  // For ReLU
+
                     current_channels = net->out_channels_vec[darknet_layers_counter];
                 }
                 return true;

@@ -76,6 +76,18 @@ cv::GCompiled cv::GComputation::compile(GMetaArgs &&metas, GCompileArgs &&args)
     return comp.compile();
 }
 
+cv::GStreamingCompiled cv::GComputation::compileStreaming(GMetaArgs &&metas, GCompileArgs &&args)
+{
+    cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args));
+    return comp.compileStreaming();
+}
+
+cv::GStreamingCompiled cv::GComputation::compileStreaming(GCompileArgs &&args)
+{
+    cv::gimpl::GCompiler comp(*this, {}, std::move(args));
+    return comp.compileStreaming();
+}
+
 // FIXME: Introduce similar query/test method for GMetaArgs as a building block
 // for functions like this?
 static bool formats_are_same(const cv::GMetaArgs& metas1, const cv::GMetaArgs& metas2)

@@ -520,19 +520,27 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Div")
         {
-            Mat blob = getBlob(node_proto, constBlobs, 1);
-            CV_Assert_N(blob.type() == CV_32F, blob.total());
-            if (blob.total() == 1)
+            if (constBlobs.find(node_proto.input(1)) == constBlobs.end())
             {
-                layerParams.set("scale", 1.0f / blob.at<float>(0));
-                layerParams.type = "Power";
+                layerParams.type = "Eltwise";
+                layerParams.set("operation", "div");
             }
             else
             {
-                layerParams.type = "Scale";
-                divide(1.0, blob, blob);
-                layerParams.blobs.push_back(blob);
-                layerParams.set("bias_term", false);
+                Mat blob = getBlob(node_proto, constBlobs, 1);
+                CV_Assert_N(blob.type() == CV_32F, blob.total());
+                if (blob.total() == 1)
+                {
+                    layerParams.set("scale", 1.0f / blob.at<float>(0));
+                    layerParams.type = "Power";
+                }
+                else
+                {
+                    layerParams.type = "Scale";
+                    divide(1.0, blob, blob);
+                    layerParams.blobs.push_back(blob);
+                    layerParams.set("bias_term", false);
+                }
             }
         }
         else if (layer_type == "Neg")
@@ -770,6 +778,34 @@ void ONNXImporter::populateNet(Net dstNet)
                 constBlobs.insert(std::make_pair(layerParams.name, transposed[0]));
                 continue;
             }
+        }
+        else if (layer_type == "ReduceL2")
+        {
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
+            CV_Assert(graph_proto.node_size() > li + 1 && graph_proto.node(li + 1).op_type() == "Div");
+            ++li;
+            node_proto = graph_proto.node(li);
+            layerParams.name = node_proto.output(0);
+            layerParams.type = "Normalize";
+
+            DictValue axes_dict = layerParams.get("axes");
+            if (axes_dict.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional reduceL2");
+            int axis = axes_dict.getIntValue(0);
+            layerParams.set("axis",axis);
+            layerParams.set("end_axis", axis);
+        }
+        else if (layer_type == "Squeeze")
+        {
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
+            DictValue axes_dict = layerParams.get("axes");
+            if (axes_dict.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional squeeze");
+
+            int axis = axes_dict.getIntValue(0);
+            layerParams.set("axis", axis - 1);
+            layerParams.set("end_axis", axis);
+            layerParams.type = "Flatten";
         }
         else if (layer_type == "Unsqueeze")
         {

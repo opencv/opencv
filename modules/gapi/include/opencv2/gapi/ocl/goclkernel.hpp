@@ -32,7 +32,7 @@ namespace gapi
 namespace ocl
 {
     /**
-     * \addtogroup gapi_std_backends G-API Standard backends
+     * \addtogroup gapi_std_backends G-API Standard Backends
      * @{
      */
     /**
@@ -94,7 +94,7 @@ protected:
     F m_f;
 };
 
-// FIXME: This is an ugly ad-hoc imlpementation. TODO: refactor
+// FIXME: This is an ugly ad-hoc implementation. TODO: refactor
 
 namespace detail
 {
@@ -119,8 +119,9 @@ template<class T> struct ocl_get_in
 struct tracked_cv_umat{
     //TODO Think if T - API could reallocate UMat to a proper size - how do we handle this ?
     //tracked_cv_umat(cv::UMat& m) : r{(m)}, original_data{m.getMat(ACCESS_RW).data} {}
-    tracked_cv_umat(cv::UMat& m) : r{ (m) }, original_data{ nullptr } {}
-    cv::UMat r;
+    tracked_cv_umat(cv::UMat& m) : r(m), original_data{ nullptr } {}
+    cv::UMat &r; // FIXME: It was a value (not a reference) before.
+                 // Actually OCL backend should allocate its internal data!
     uchar* original_data;
 
     operator cv::UMat& (){ return r;}

@@ -21,6 +21,18 @@ namespace cv
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
+#if (__EMSCRIPTEN_major__ * 1000000 + __EMSCRIPTEN_minor__ * 1000 + __EMSCRIPTEN_tiny__) < (1038046)
+// handle renames: https://github.com/emscripten-core/emscripten/pull/9440 (https://github.com/emscripten-core/emscripten/commit/755d5b46cb84d0aa120c10981b11d05646c29673)
+#define wasm_i32x4_trunc_saturate_f32x4 wasm_trunc_saturate_i32x4_f32x4
+#define wasm_u32x4_trunc_saturate_f32x4 wasm_trunc_saturate_u32x4_f32x4
+#define wasm_i64x2_trunc_saturate_f64x2 wasm_trunc_saturate_i64x2_f64x2
+#define wasm_u64x2_trunc_saturate_f64x2 wasm_trunc_saturate_u64x2_f64x2
+#define wasm_f32x4_convert_i32x4 wasm_convert_f32x4_i32x4
+#define wasm_f32x4_convert_u32x4 wasm_convert_f32x4_u32x4
+#define wasm_f64x2_convert_i64x2 wasm_convert_f64x2_i64x2
+#define wasm_f64x2_convert_u64x2 wasm_convert_f64x2_u64x2
+#endif // COMPATIBILITY: <1.38.46
+
 ///////// Types ///////////
 
 struct v_uint8x16
@@ -82,7 +94,7 @@ struct v_uint16x8
     }
     ushort get0() const
     {
-        return (ushort)wasm_i16x8_extract_lane(val, 0);    // wasm_u16x8_extract_lane() unimplemeted yet
+        return (ushort)wasm_i16x8_extract_lane(val, 0);    // wasm_u16x8_extract_lane() unimplemented yet
     }
 
     v128_t val;
@@ -679,6 +691,29 @@ template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::w_type, n
     v_reg<w_type, n/2> s;
     for( int i = 0; i < (n/2); i++ )
         s.s[i] = (w_type)a.s[i*2]*b.s[i*2] + (w_type)a.s[i*2+1]*b.s[i*2+1] + c.s[i];
+    return s;
+}
+
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+    v_dotprod_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{
+    typedef typename V_TypeTraits<_Tp>::q_type q_type;
+    v_reg<q_type, n/4> s;
+    for( int i = 0; i < (n/4); i++ )
+        s.s[i] = (q_type)a.s[i*4    ]*b.s[i*4    ] + (q_type)a.s[i*4 + 1]*b.s[i*4 + 1] +
+                 (q_type)a.s[i*4 + 2]*b.s[i*4 + 2] + (q_type)a.s[i*4 + 3]*b.s[i*4 + 3];
+    return s;
+}
+
+template<typename _Tp, int n> inline v_reg<typename V_TypeTraits<_Tp>::q_type, n/4>
+    v_dotprod_expand(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                     const v_reg<typename V_TypeTraits<_Tp>::q_type, n / 4>& c)
+{
+    typedef typename V_TypeTraits<_Tp>::q_type q_type;
+    v_reg<q_type, n/4> s;
+    for( int i = 0; i < (n/4); i++ )
+        s.s[i] = (q_type)a.s[i*4    ]*b.s[i*4    ] + (q_type)a.s[i*4 + 1]*b.s[i*4 + 1] +
+                 (q_type)a.s[i*4 + 2]*b.s[i*4 + 2] + (q_type)a.s[i*4 + 3]*b.s[i*4 + 3] + c.s[i];
     return s;
 }
 
@@ -1279,6 +1314,14 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
     v_float64x2 c;
     for( int i = 0; i < 2; i++ )
         c.s[i] = (double)a.s[i+2];
+    return c;
+}
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+    v_float64x2 c;
+    for( int i = 0; i < 2; i++ )
+        c.s[i] = (double)a.s[i];
     return c;
 }
 
@@ -2398,6 +2441,8 @@ inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
     return v_uint16x8(wasm_v8x16_shuffle(c, d, 2,3,6,7,10,11,14,15,18,19,22,23,26,27,30,31));
 }
 
+//////// Dot Product ////////
+
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 {
     v128_t a0 = wasm_i32x4_shr(wasm_i32x4_shl(a.val, 16), 16);
@@ -2410,15 +2455,140 @@ inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 }
 
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_dotprod(a, b) + c; }
+
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
 {
-    v128_t a0 = wasm_i32x4_shr(wasm_i32x4_shl(a.val, 16), 16);
-    v128_t a1 = wasm_i32x4_shr(a.val, 16);
-    v128_t b0 = wasm_i32x4_shr(wasm_i32x4_shl(b.val, 16), 16);
-    v128_t b1 = wasm_i32x4_shr(b.val, 16);
-    v128_t d = wasm_i32x4_mul(a0, b0);
-    v128_t e = wasm_i32x4_mul(a1, b1);
-    return v_int32x4(wasm_i32x4_add(wasm_i32x4_add(d, e), c.val));
+#ifdef __wasm_unimplemented_simd128__
+    v128_t a0 = wasm_i64x2_shr(wasm_i64x2_shl(a.val, 32), 32);
+    v128_t a1 = wasm_i64x2_shr(a.val, 32);
+    v128_t b0 = wasm_i64x2_shr(wasm_i64x2_shl(b.val, 32), 32);
+    v128_t b1 = wasm_i64x2_shr(b.val, 32);
+    v128_t c = (v128_t)((__i64x2)a0 * (__i64x2)b0);
+    v128_t d = (v128_t)((__i64x2)a1 * (__i64x2)b1);
+    return v_int64x2(wasm_i64x2_add(c, d));
+#else
+    fallback::v_int32x4 a_(a);
+    fallback::v_int32x4 b_(b);
+    return fallback::v_dotprod(a_, b_);
+#endif
 }
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{
+#ifdef __wasm_unimplemented_simd128__
+    return v_dotprod(a, b) + c;
+#else
+    fallback::v_int32x4 a_(a);
+    fallback::v_int32x4 b_(b);
+    fallback::v_int64x2 c_(c);
+    return fallback::v_dotprod(a_, b_, c_);
+#endif
+}
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
+{
+    v128_t a0 = wasm_u16x8_shr(wasm_i16x8_shl(a.val, 8), 8);
+    v128_t a1 = wasm_u16x8_shr(a.val, 8);
+    v128_t b0 = wasm_u16x8_shr(wasm_i16x8_shl(b.val, 8), 8);
+    v128_t b1 = wasm_u16x8_shr(b.val, 8);
+    return v_uint32x4((
+        v_dotprod(v_int16x8(a0), v_int16x8(b0)) +
+        v_dotprod(v_int16x8(a1), v_int16x8(b1))).val
+    );
+}
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
+{
+    v128_t a0 = wasm_i16x8_shr(wasm_i16x8_shl(a.val, 8), 8);
+    v128_t a1 = wasm_i16x8_shr(a.val, 8);
+    v128_t b0 = wasm_i16x8_shr(wasm_i16x8_shl(b.val, 8), 8);
+    v128_t b1 = wasm_i16x8_shr(b.val, 8);
+    return v_int32x4(
+        v_dotprod(v_int16x8(a0), v_int16x8(b0)) +
+        v_dotprod(v_int16x8(a1), v_int16x8(b1))
+    );
+}
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
+{
+    fallback::v_uint16x8 a_(a);
+    fallback::v_uint16x8 b_(b);
+    return fallback::v_dotprod_expand(a_, b_);
+}
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{
+    fallback::v_uint16x8 a_(a);
+    fallback::v_uint16x8 b_(b);
+    fallback::v_uint64x2 c_(c);
+    return fallback::v_dotprod_expand(a_, b_, c_);
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
+{
+    fallback::v_int16x8 a_(a);
+    fallback::v_int16x8 b_(b);
+    return fallback::v_dotprod_expand(a_, b_);
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{
+    fallback::v_int16x8 a_(a);
+    fallback::v_int16x8 b_(b);
+    fallback::v_int64x2 c_(c);
+    return fallback::v_dotprod_expand(a_, b_, c_);
+}
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+//////// Fast Dot Product ////////
+
+// 16 >> 32
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
+{ return v_dotprod(a, b); }
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_dotprod(a, b, c); }
+
+// 32 >> 64
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod(a, b); }
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{ return v_dotprod(a, b, c); }
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_dotprod_expand(a, b, c); }
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{ return v_dotprod_expand(a, b, c); }
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b)
+{ return v_dotprod_expand(a, b); }
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod_expand(a, b); }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b, c); }
 
 #define OPENCV_HAL_IMPL_WASM_LOGIC_OP(_Tpvec) \
 OPENCV_HAL_IMPL_WASM_BIN_OP(&, _Tpvec, wasm_v128_and) \
@@ -2953,6 +3123,38 @@ OPENCV_HAL_IMPL_WASM_LOADSTORE_INT_OP(v_float32x4, float)
 OPENCV_HAL_IMPL_WASM_LOADSTORE_INT_OP(v_float64x2, double)
 
 
+/** Reverse **/
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{ return v_uint8x16(wasm_v8x16_shuffle(a.val, a.val, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)); }
+
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{ return v_uint16x8(wasm_v8x16_shuffle(a.val, a.val, 14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1)); }
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{ return v_uint32x4(wasm_v8x16_shuffle(a.val, a.val, 12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3)); }
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{ return v_uint64x2(wasm_v8x16_shuffle(a.val, a.val, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7)); }
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
+
+
 #define OPENCV_HAL_IMPL_WASM_REDUCE_OP_4_SUM(_Tpvec, scalartype, regtype, suffix, esuffix) \
 inline scalartype v_reduce_sum(const _Tpvec& a) \
 { \
@@ -3242,25 +3444,25 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 inline v_int32x4 v_round(const v_float32x4& a)
 {
     v128_t h = wasm_f32x4_splat(0.5);
-    return v_int32x4(wasm_trunc_saturate_i32x4_f32x4(wasm_f32x4_add(a.val, h)));
+    return v_int32x4(wasm_i32x4_trunc_saturate_f32x4(wasm_f32x4_add(a.val, h)));
 }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
-    v128_t a1 = wasm_trunc_saturate_i32x4_f32x4(a.val);
-    v128_t mask = wasm_f32x4_lt(a.val, wasm_convert_f32x4_i32x4(a1));
+    v128_t a1 = wasm_i32x4_trunc_saturate_f32x4(a.val);
+    v128_t mask = wasm_f32x4_lt(a.val, wasm_f32x4_convert_i32x4(a1));
     return v_int32x4(wasm_i32x4_add(a1, mask));
 }
 
 inline v_int32x4 v_ceil(const v_float32x4& a)
 {
-    v128_t a1 = wasm_trunc_saturate_i32x4_f32x4(a.val);
-    v128_t mask = wasm_f32x4_gt(a.val, wasm_convert_f32x4_i32x4(a1));
+    v128_t a1 = wasm_i32x4_trunc_saturate_f32x4(a.val);
+    v128_t mask = wasm_f32x4_gt(a.val, wasm_f32x4_convert_i32x4(a1));
     return v_int32x4(wasm_i32x4_sub(a1, mask));
 }
 
 inline v_int32x4 v_trunc(const v_float32x4& a)
-{ return v_int32x4(wasm_trunc_saturate_i32x4_f32x4(a.val)); }
+{ return v_int32x4(wasm_i32x4_trunc_saturate_f32x4(a.val)); }
 
 #define OPENCV_HAL_IMPL_WASM_MATH_FUNC(func, cfunc, _Tpvec, _Tpnvec, _Tp, _Tpn) \
 inline _Tpnvec func(const _Tpvec& a) \
@@ -3766,7 +3968,7 @@ OPENCV_HAL_IMPL_WASM_LOADSTORE_INTERLEAVE(v_float64x2, double, f64, v_uint64x2, 
 
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
-    return v_float32x4(wasm_convert_f32x4_i32x4(a.val));
+    return v_float32x4(wasm_f32x4_convert_i32x4(a.val));
 }
 
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
@@ -3785,7 +3987,7 @@ inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 {
 #ifdef __wasm_unimplemented_simd128__
     v128_t p = v128_cvti32x4_i64x2(a.val);
-    return v_float64x2(wasm_convert_f64x2_i64x2(p));
+    return v_float64x2(wasm_f64x2_convert_i64x2(p));
 #else
     fallback::v_int32x4 a_(a);
     return fallback::v_cvt_f64(a_);
@@ -3796,7 +3998,7 @@ inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
 {
 #ifdef __wasm_unimplemented_simd128__
     v128_t p = v128_cvti32x4_i64x2_high(a.val);
-    return v_float64x2(wasm_convert_f64x2_i64x2(p));
+    return v_float64x2(wasm_f64x2_convert_i64x2(p));
 #else
     fallback::v_int32x4 a_(a);
     return fallback::v_cvt_f64_high(a_);
@@ -3813,6 +4015,16 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 {
     fallback::v_float32x4 a_(a);
     return fallback::v_cvt_f64_high(a_);
+}
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+#ifdef __wasm_unimplemented_simd128__
+    return v_float64x2(wasm_f64x2_convert_i64x2(a.val));
+#else
+    fallback::v_int64x2 a_(a);
+    return fallback::v_cvt_f64(a_);
+#endif
 }
 
 ////////////// Lookup table access ////////////////////
@@ -4000,6 +4212,29 @@ inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_
 inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+
+template<int i, typename _Tp>
+inline typename _Tp::lane_type v_extract_n(const _Tp& a)
+{
+    return v_rotate_right<i>(a).get0();
+}
+
+template<int i>
+inline v_uint32x4 v_broadcast_element(const v_uint32x4& a)
+{
+    return v_setall_u32(v_extract_n<i>(a));
+}
+template<int i>
+inline v_int32x4 v_broadcast_element(const v_int32x4& a)
+{
+    return v_setall_s32(v_extract_n<i>(a));
+}
+template<int i>
+inline v_float32x4 v_broadcast_element(const v_float32x4& a)
+{
+    return v_setall_f32(v_extract_n<i>(a));
+}
+
 
 ////////////// FP16 support ///////////////////////////
 

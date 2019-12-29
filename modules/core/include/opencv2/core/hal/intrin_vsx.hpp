@@ -206,6 +206,20 @@ struct v_float64x2
     { return vec_extract(val, 0); }
 };
 
+#define OPENCV_HAL_IMPL_VSX_EXTRACT_N(_Tpvec, _Tp) \
+template<int i> inline _Tp v_extract_n(VSX_UNUSED(_Tpvec v)) { return vec_extract(v.val, i); }
+
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint8x16, uchar)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int8x16, schar)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint16x8, ushort)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int16x8, short)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint32x4, uint)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int32x4, int)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint64x2, uint64)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int64x2, int64)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float32x4, float)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float64x2, double)
+
 //////////////// Load and store operations ///////////////
 
 /*
@@ -332,11 +346,37 @@ OPENCV_HAL_IMPL_VSX_EXPAND(v_int16x8, v_int32x4, short, vec_unpackl, vec_unpackh
 OPENCV_HAL_IMPL_VSX_EXPAND(v_uint32x4, v_uint64x2, uint, vec_unpacklu, vec_unpackhu)
 OPENCV_HAL_IMPL_VSX_EXPAND(v_int32x4, v_int64x2, int, vec_unpackl, vec_unpackh)
 
+/* Load and zero expand a 4 byte value into the second dword, first is don't care. */
+#if !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    #define _LXSIWZX(out, ptr, T) __asm__ ("lxsiwzx %x0, 0, %1\r\n" : "=wa"(out) : "r" (ptr) : "memory");
+#else
+    /* This is compiler-agnostic, but will introduce an unneeded splat on the critical path. */
+    #define _LXSIWZX(out, ptr, T) out = (T)vec_udword2_sp(*(uint32_t*)(ptr));
+#endif
+
 inline v_uint32x4 v_load_expand_q(const uchar* ptr)
-{ return v_uint32x4(vec_uint4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
+{
+    // Zero-extend the extra 24B instead of unpacking. Usually faster in small kernel
+    // Likewise note, value is zero extended and upper 4 bytes are zero'ed.
+    vec_uchar16 pmu = {8, 12, 12, 12, 9, 12, 12, 12, 10, 12, 12, 12, 11, 12, 12, 12};
+    vec_uchar16 out;
+
+    _LXSIWZX(out, ptr, vec_uchar16);
+    out = vec_perm(out, out, pmu);
+    return v_uint32x4((vec_uint4)out);
+}
 
 inline v_int32x4 v_load_expand_q(const schar* ptr)
-{ return v_int32x4(vec_int4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
+{
+    vec_char16 out;
+    vec_short8 outs;
+    vec_int4 outw;
+
+    _LXSIWZX(out, ptr, vec_char16);
+    outs = vec_unpackl(out);
+    outw = vec_unpackh(outs);
+    return v_int32x4(outw);
+}
 
 /* pack */
 #define OPENCV_HAL_IMPL_VSX_PACK(_Tpvec, _Tp, _Tpwvec, _Tpvn, _Tpdel, sfnc, pkfnc, addfnc, pack)    \
@@ -497,12 +537,6 @@ inline void v_mul_expand(const Tvec& a, const Tvec& b, Twvec& c, Twvec& d)
     Twvec p0 = Twvec(vec_mule(a.val, b.val));
     Twvec p1 = Twvec(vec_mulo(a.val, b.val));
     v_zip(p0, p1, c, d);
-}
-
-inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b, v_uint64x2& c, v_uint64x2& d)
-{
-    c.val = vec_mul(vec_unpackhu(a.val), vec_unpackhu(b.val));
-    d.val = vec_mul(vec_unpacklu(a.val), vec_unpacklu(b.val));
 }
 
 inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b)
@@ -683,6 +717,53 @@ OPENCV_IMPL_VSX_ROTATE_64_2RG(_Tpvec, right, a, b)
 OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_float64x2)
 OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_uint64x2)
 OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_int64x2)
+
+/* Reverse */
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{
+    static const vec_uchar16 perm = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_uint8x16(vec_perm(vec, vec, perm));
+}
+
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{ return v_reinterpret_as_s8(v_reverse(v_reinterpret_as_u8(a))); }
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{
+    static const vec_uchar16 perm = {14, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u16(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{ return v_reinterpret_as_s16(v_reverse(v_reinterpret_as_u16(a))); }
+
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{
+    static const vec_uchar16 perm = {12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u32(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{ return v_reinterpret_as_s32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{
+    static const vec_uchar16 perm = {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7};
+    vec_uchar16 vec = (vec_uchar16)a.val;
+    return v_reinterpret_as_u64(v_uint8x16(vec_perm(vec, vec, perm)));
+}
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{ return v_reinterpret_as_s64(v_reverse(v_reinterpret_as_u64(a))); }
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{ return v_reinterpret_as_f64(v_reverse(v_reinterpret_as_u64(a))); }
 
 /* Extract */
 template<int s, typename _Tpvec>
@@ -1043,14 +1124,8 @@ inline v_float64x2 v_cvt_f64(const v_float32x4& a)
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 { return v_float64x2(vec_cvfo(vec_mergel(a.val, a.val))); }
 
-// The altivec intrinsic is missing for this 2.06 insn
 inline v_float64x2 v_cvt_f64(const v_int64x2& a)
-{
-vec_double2 out;
-
-__asm__ ("xvcvsxddp %x0,%x1" : "=wa"(out) : "wa"(a.val));
-return v_float64x2(out);
-}
+{ return v_float64x2(vec_ctd(a.val)); }
 
 ////////////// Lookup table access ////////////////////
 
@@ -1322,11 +1397,133 @@ inline void v_cleanup() {}
 
 ////////// Matrix operations /////////
 
+//////// Dot Product ////////
+// 16 >> 32
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 { return v_int32x4(vec_msum(a.val, b.val, vec_int4_z)); }
-
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
 { return v_int32x4(vec_msum(a.val, b.val, c.val)); }
+
+// 32 >> 64
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
+{
+    vec_dword2 even = vec_mule(a.val, b.val);
+    vec_dword2 odd = vec_mulo(a.val, b.val);
+    return v_int64x2(vec_add(even, odd));
+}
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{ return v_dotprod(a, b) + c; }
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_uint32x4(vec_msum(a.val, b.val, c.val)); }
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
+{ return v_uint32x4(vec_msum(a.val, b.val, vec_uint4_z)); }
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
+{
+    const vec_ushort8 eight = vec_ushort8_sp(8);
+    vec_short8 a0 = vec_sra((vec_short8)vec_sld(a.val, a.val, 1), eight); // even
+    vec_short8 a1 = vec_sra((vec_short8)a.val, eight); // odd
+    vec_short8 b0 = vec_sra((vec_short8)vec_sld(b.val, b.val, 1), eight);
+    vec_short8 b1 = vec_sra((vec_short8)b.val, eight);
+    return v_int32x4(vec_msum(a0, b0, vec_msum(a1, b1, vec_int4_z)));
+}
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{
+    const vec_ushort8 eight = vec_ushort8_sp(8);
+    vec_short8 a0 = vec_sra((vec_short8)vec_sld(a.val, a.val, 1), eight); // even
+    vec_short8 a1 = vec_sra((vec_short8)a.val, eight); // odd
+    vec_short8 b0 = vec_sra((vec_short8)vec_sld(b.val, b.val, 1), eight);
+    vec_short8 b1 = vec_sra((vec_short8)b.val, eight);
+    return v_int32x4(vec_msum(a0, b0, vec_msum(a1, b1, c.val)));
+}
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
+{
+    const vec_uint4 zero = vec_uint4_z;
+    vec_uint4 even = vec_mule(a.val, b.val);
+    vec_uint4 odd  = vec_mulo(a.val, b.val);
+    vec_udword2 e0 = (vec_udword2)vec_mergee(even, zero);
+    vec_udword2 e1 = (vec_udword2)vec_mergeo(even, zero);
+    vec_udword2 o0 = (vec_udword2)vec_mergee(odd, zero);
+    vec_udword2 o1 = (vec_udword2)vec_mergeo(odd, zero);
+    vec_udword2 s0 = vec_add(e0, o0);
+    vec_udword2 s1 = vec_add(e1, o1);
+    return v_uint64x2(vec_add(s0, s1));
+}
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
+{
+    v_int32x4 prod = v_dotprod(a, b);
+    v_int64x2 c, d;
+    v_expand(prod, c, d);
+    return v_int64x2(vec_add(vec_mergeh(c.val, d.val), vec_mergel(c.val, d.val)));
+}
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+
+//////// Fast Dot Product ////////
+
+// 16 >> 32
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
+{ return v_dotprod(a, b); }
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{ return v_int32x4(vec_msum(a.val, b.val, vec_int4_z)) + c; }
+// 32 >> 64
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod(a, b); }
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{ return v_dotprod(a, b, c); }
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{ return v_uint32x4(vec_msum(a.val, b.val, vec_uint4_z)) + c; }
+
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
+{
+    vec_short8 a0 = vec_unpackh(a.val);
+    vec_short8 a1 = vec_unpackl(a.val);
+    vec_short8 b0 = vec_unpackh(b.val);
+    vec_short8 b1 = vec_unpackl(b.val);
+    return v_int32x4(vec_msum(a0, b0, vec_msum(a1, b1, vec_int4_z)));
+}
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{ return v_dotprod_expand_fast(a, b) + c; }
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
+{ return v_dotprod_expand(a, b); }
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{ return v_dotprod_expand(a, b, c); }
+
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b)
+{
+    v_int32x4 prod = v_dotprod(a, b);
+    v_int64x2 c, d;
+    v_expand(prod, c, d);
+    return c + d;
+}
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{ return v_dotprod_expand_fast(a, b) + c; }
+
+// 32 >> 64f
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{ return v_dotprod_expand(a, b); }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ return v_dotprod_expand(a, b, c); }
 
 inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
                             const v_float32x4& m1, const v_float32x4& m2,
@@ -1366,6 +1563,82 @@ inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1,                  
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_uint32x4, vec_uint4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_int32x4, vec_int4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_float32x4, vec_float4)
+
+template<int i>
+inline v_int8x16 v_broadcast_element(v_int8x16 v)
+{
+    return v_int8x16(vec_perm(v.val, v.val, vec_splats((unsigned char)i)));
+}
+
+template<int i>
+inline v_uint8x16 v_broadcast_element(v_uint8x16 v)
+{
+    return v_uint8x16(vec_perm(v.val, v.val, vec_splats((unsigned char)i)));
+}
+
+template<int i>
+inline v_int16x8 v_broadcast_element(v_int16x8 v)
+{
+    unsigned char t0 = 2*i, t1 = 2*i + 1;
+    vec_uchar16 p = {t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1};
+    return v_int16x8(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_uint16x8 v_broadcast_element(v_uint16x8 v)
+{
+    unsigned char t0 = 2*i, t1 = 2*i + 1;
+    vec_uchar16 p = {t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1};
+    return v_uint16x8(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_int32x4 v_broadcast_element(v_int32x4 v)
+{
+    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
+    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
+    return v_int32x4(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_uint32x4 v_broadcast_element(v_uint32x4 v)
+{
+    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
+    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
+    return v_uint32x4(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_int64x2 v_broadcast_element(v_int64x2 v)
+{
+    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
+    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
+    return v_int64x2(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_uint64x2 v_broadcast_element(v_uint64x2 v)
+{
+    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
+    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
+    return v_uint64x2(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_float32x4 v_broadcast_element(v_float32x4 v)
+{
+    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
+    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
+    return v_float32x4(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_float64x2 v_broadcast_element(v_float64x2 v)
+{
+    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
+    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
+    return v_float64x2(vec_perm(v.val, v.val, p));
+}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

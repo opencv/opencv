@@ -1085,6 +1085,87 @@ int CV_MinCircleTest2::validate_test_results( int test_case_idx )
 }
 
 /****************************************************************************************\
+*                                 minEnclosingCircle Test 3                              *
+\****************************************************************************************/
+
+TEST(Imgproc_minEnclosingCircle, basic_test)
+{
+    vector<Point2f> pts;
+    pts.push_back(Point2f(0, 0));
+    pts.push_back(Point2f(10, 0));
+    pts.push_back(Point2f(5, 1));
+    const float EPS = 1.0e-3f;
+    Point2f center;
+    float radius;
+
+    // pts[2] is within the circle with diameter pts[0] - pts[1].
+    //        2
+    // 0             1
+    // NB: The triangle is obtuse, so the only pts[0] and pts[1] are on the circle.
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(5, radius, EPS);
+
+    // pts[2] is on the circle with diameter pts[0] - pts[1].
+    //  2
+    // 0 1
+    pts[2] = Point2f(5, 5);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(5, radius, EPS);
+
+    // pts[2] is outside the circle with diameter pts[0] - pts[1].
+    //   2
+    //
+    //
+    // 0   1
+    // NB: The triangle is acute, so all 3 points are on the circle.
+    pts[2] = Point2f(5, 10);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 3.75, EPS);
+    EXPECT_NEAR(6.25f, radius, EPS);
+
+    // The 3 points are colinear.
+    pts[2] = Point2f(3, 0);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(5, radius, EPS);
+
+    // 2 points are the same.
+    pts[2] = pts[1];
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(5, radius, EPS);
+
+    // 3 points are the same.
+    pts[0] = pts[1];
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 10, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(0, radius, EPS);
+}
+
+TEST(Imgproc_minEnclosingCircle, regression_16051) {
+    vector<Point2f> pts;
+    pts.push_back(Point2f(85, 1415));
+    pts.push_back(Point2f(87, 1415));
+    pts.push_back(Point2f(89, 1414));
+    pts.push_back(Point2f(89, 1414));
+    pts.push_back(Point2f(87, 1412));
+    Point2f center;
+    float radius;
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 86.9f, 1e-3);
+    EXPECT_NEAR(center.y, 1414.1f, 1e-3);
+    EXPECT_NEAR(2.1024551f, radius, 1e-3);
+}
+
+/****************************************************************************************\
 *                                   Perimeter Test                                     *
 \****************************************************************************************/
 
@@ -1609,6 +1690,8 @@ int CV_FitLineTest::validate_test_results( int test_case_idx )
     int k, max_k = 0;
     double vec_diff = 0, t;
 
+    //std::cout << dims << " " << Mat(1, dims*2, CV_32FC1, line.data()) << " " << Mat(1, dims, CV_32FC1, line0.data()) << std::endl;
+
     for( k = 0; k < dims*2; k++ )
     {
         if( cvIsNaN(line[k]) || cvIsInf(line[k]) )
@@ -2037,6 +2120,39 @@ INSTANTIATE_TEST_CASE_P(Imgproc, ConvexityDefects_regression_5908,
                 testing::Bool(),
                 testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
         ));
+
+TEST(Imgproc_FitLine, regression_15083)
+{
+    int points2i_[] = {
+        432, 654,
+        370, 656,
+        390, 656,
+        410, 656,
+        348, 658
+    };
+    Mat points(5, 1, CV_32SC2, points2i_);
+
+    Vec4f lineParam;
+    fitLine(points, lineParam, DIST_L1, 0, 0.01, 0.01);
+    EXPECT_GE(fabs(lineParam[0]), fabs(lineParam[1]) * 4) << lineParam;
+}
+
+TEST(Imgproc_FitLine, regression_4903)
+{
+    float points2f_[] = {
+        1224.0, 576.0,
+        1234.0, 683.0,
+        1215.0, 471.0,
+        1184.0, 137.0,
+        1079.0, 377.0,
+        1239.0, 788.0,
+    };
+    Mat points(6, 1, CV_32FC2, points2f_);
+
+    Vec4f lineParam;
+    fitLine(points, lineParam, DIST_WELSCH, 0, 0.01, 0.01);
+    EXPECT_GE(fabs(lineParam[1]), fabs(lineParam[0]) * 4) << lineParam;
+}
 
 }} // namespace
 /* End of file. */

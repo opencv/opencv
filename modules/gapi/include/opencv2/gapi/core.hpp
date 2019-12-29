@@ -18,12 +18,12 @@
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
 
-/** \defgroup gapi_core G-API core (basic) functionality
+/** \defgroup gapi_core G-API Core functionality
 @{
     @defgroup gapi_math Graph API: Math operations
     @defgroup gapi_pixelwise Graph API: Pixelwise operations
     @defgroup gapi_matrixop Graph API: Operations on matrices
-    @defgroup gapi_transform Graph API: Geometric, depth and LUT-like image transformations
+    @defgroup gapi_transform Graph API: Image and channel composition functions
 @}
  */
 namespace cv { namespace gapi {
@@ -436,6 +436,7 @@ namespace core {
         }
     };
 
+    // TODO: eliminate the need in this kernel (streaming)
     G_TYPED_KERNEL(GCrop, <GMat(GMat, Rect)>, "org.opencv.core.transform.crop") {
         static GMatDesc outMeta(GMatDesc in, Rect rc) {
             return in.withSize(Size(rc.width, rc.height));
@@ -1505,11 +1506,11 @@ Output matrix must be of the same depth as input one, size is specified by given
 */
 GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
 
-/** @brief Copies a 2D matrix.
+/** @brief Copies a matrix.
 
-The function copies the matrix.
-
-Output matrix must be of the same size and depth as input one.
+Copies an input array. Works as a regular Mat::clone but happens in-graph.
+Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
+in the streaming mode). Will be deprecated and removed in the future.
 
 @note Function textual ID is "org.opencv.core.transform.copy"
 

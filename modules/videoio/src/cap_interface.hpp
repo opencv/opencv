@@ -61,6 +61,15 @@ public:
     virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
 };
 
+namespace internal {
+class VideoCapturePrivateAccessor
+{
+public:
+    static
+    IVideoCapture* getIVideoCapture(const VideoCapture& cap) { return cap.icap.get(); }
+};
+} // namespace
+
 //===================================================
 
 // Wrapper
@@ -116,6 +125,8 @@ public:
     {
         return cap ? cap->getCaptureDomain() : 0;
     }
+
+    CvCapture* getCvCapture() const { return cap; }
 };
 
 class LegacyWriter : public IVideoWriter
@@ -207,6 +218,11 @@ Ptr<IVideoCapture> createGPhoto2Capture(const std::string& deviceName);
 Ptr<IVideoCapture> createXINECapture(const std::string &filename);
 
 Ptr<IVideoCapture> createAndroidCapture_file(const std::string &filename);
+
+bool VideoCapture_V4L_waitAny(
+        const std::vector<VideoCapture>& streams,
+        CV_OUT std::vector<int>& ready,
+        int64 timeoutNs);
 
 } // cv::
 

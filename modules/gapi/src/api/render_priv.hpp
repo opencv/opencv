@@ -8,7 +8,7 @@
 #ifndef OPENCV_RENDER_PRIV_HPP
 #define OPENCV_RENDER_PRIV_HPP
 
-#include <opencv2/gapi/render.hpp>
+#include <opencv2/gapi/render/render.hpp>
 
 namespace cv
 {
@@ -20,7 +20,8 @@ namespace draw
 {
 
 // FIXME only for tests
-GAPI_EXPORTS void BGR2NV12(const cv::Mat& bgr, cv::Mat& y_plane, cv::Mat& uv_plane);
+GAPI_EXPORTS void cvtNV12ToYUV(const cv::Mat& y, const cv::Mat& uv, cv::Mat& yuv);
+GAPI_EXPORTS void cvtYUVToNV12(const cv::Mat& yuv, cv::Mat& y, cv::Mat& uv);
 
 } // namespace draw
 } // namespace wip

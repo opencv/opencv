@@ -42,9 +42,12 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
 #include "opencv2/core/hal/hal.hpp"
@@ -53,6 +56,11 @@
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/lrn.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -91,9 +99,14 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) {
             return bias == (int)bias;
+        }
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+            return type == CHANNEL_NRM && bias == (int)bias;
+        }
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM));
     }
@@ -309,6 +322,46 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        cuda4dnn::LRNType type_;
+        if (type == CHANNEL_NRM)
+            type_ = cuda4dnn::LRNType::ACROSS_CHANNELS;
+        else if (type == SPATIAL_NRM)
+            type_ = cuda4dnn::LRNType::WITHIN_CHANNEL;
+        else
+            CV_Error(Error::StsNotImplemented, "Unknown normalization region");
+
+        float alphaSize = alpha;
+        if (!normBySize) {
+            switch (type) {
+            case CHANNEL_NRM: alphaSize = alpha * size; break;
+            case SPATIAL_NRM: alphaSize = alpha * size * size; break;
+            }
+        }
+
+        std::size_t largestInputSize = 0;
+        for(auto& wrapper : inputs) {
+            auto input_wrapper = wrapper.dynamicCast<CUDABackendWrapper>();
+            auto shape = input_wrapper->getShape();
+            largestInputSize = std::max<std::size_t>(
+                largestInputSize,
+                std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<int>())
+            );
+        }
+
+        return make_cuda_node<cuda4dnn::LRNOp>(preferableTarget,
+            std::move(context->cudnn_handle), type_, size, alphaSize, beta, bias, largestInputSize);
+    }
+#endif
+
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
@@ -409,6 +462,19 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        float alphaSize = alpha;
+        if (!normBySize)
+            alphaSize *= (type == SPATIAL_NRM ? size*size : size);
+
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto lrn = std::make_shared<ngraph::op::LRN>(ieInpNode, (double)alphaSize, (double)beta, (double)bias, (size_t)size);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(lrn));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

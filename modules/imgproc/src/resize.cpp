@@ -920,20 +920,23 @@ static inline void interpolateLanczos4( float x, float* coeffs )
     static const double cs[][2]=
     {{1, 0}, {-s45, -s45}, {0, 1}, {s45, -s45}, {-1, 0}, {s45, s45}, {0, -1}, {-s45, s45}};
 
-    if( x < FLT_EPSILON )
-    {
-        for( int i = 0; i < 8; i++ )
-            coeffs[i] = 0;
-        coeffs[3] = 1;
-        return;
-    }
-
     float sum = 0;
     double y0=-(x+3)*CV_PI*0.25, s0 = std::sin(y0), c0= std::cos(y0);
     for(int i = 0; i < 8; i++ )
     {
-        double y = -(x+3-i)*CV_PI*0.25;
-        coeffs[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
+        float y0_ = (x+3-i);
+        if (fabs(y0_) >= 1e-6f)
+        {
+            double y = -y0_*CV_PI*0.25;
+            coeffs[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
+        }
+        else
+        {
+            // special handling for 'x' values:
+            // - ~0.0: 0 0 0 1 0 0 0 0
+            // - ~1.0: 0 0 0 0 1 0 0 0
+            coeffs[i] = 1e30f;
+        }
         sum += coeffs[i];
     }
 
@@ -1481,10 +1484,332 @@ typedef VResizeNoVec VResizeLanczos4Vec_32f;
 
 #endif
 
+#if CV_SIMD128
+
+template<typename ST, typename DT, typename AT, typename DVT>
+struct HResizeLinearVec_X4
+{
+    int operator()(const uchar** _src, uchar** _dst, int count, const int* xofs,
+        const uchar* _alpha, int, int, int cn, int, int xmax) const
+    {
+        const ST **src = (const ST**)_src;
+        const AT *alpha = (const AT*)_alpha;
+        DT **dst = (DT**)_dst;
+        const int nlanes = 4;
+        const int len0 = xmax & -nlanes;
+        int dx = 0, k = 0;
+
+        for( ; k <= (count - 2); k+=2 )
+        {
+            const ST *S0 = src[k];
+            DT *D0 = dst[k];
+            const ST *S1 = src[k+1];
+            DT *D1 = dst[k+1];
+
+            for( dx = 0; dx < len0; dx += nlanes )
+            {
+                int sx0 = xofs[dx+0];
+                int sx1 = xofs[dx+1];
+                int sx2 = xofs[dx+2];
+                int sx3 = xofs[dx+3];
+                DVT a_even;
+                DVT a_odd;
+
+                v_load_deinterleave(&alpha[dx*2], a_even, a_odd);
+                DVT s0(S0[sx0], S0[sx1], S0[sx2], S0[sx3]);
+                DVT s1(S0[sx0+cn], S0[sx1+cn], S0[sx2+cn], S0[sx3+cn]);
+                DVT s0_u(S1[sx0], S1[sx1], S1[sx2], S1[sx3]);
+                DVT s1_u(S1[sx0+cn], S1[sx1+cn], S1[sx2+cn], S1[sx3+cn]);
+                v_store(&D1[dx], s0_u * a_even + s1_u * a_odd);
+                v_store(&D0[dx], s0 * a_even + s1 * a_odd);
+            }
+        }
+        for( ; k < count; k++ )
+        {
+            const ST *S = src[k];
+            DT *D = dst[k];
+            for( dx = 0; dx < len0; dx += nlanes )
+            {
+                int sx0 = xofs[dx+0];
+                int sx1 = xofs[dx+1];
+                int sx2 = xofs[dx+2];
+                int sx3 = xofs[dx+3];
+                DVT a_even;
+                DVT a_odd;
+
+                v_load_deinterleave(&alpha[dx*2], a_even, a_odd);
+                DVT s0(S[sx0], S[sx1], S[sx2], S[sx3]);
+                DVT s1(S[sx0+cn], S[sx1+cn], S[sx2+cn], S[sx3+cn]);
+                v_store(&D[dx], s0 * a_even + s1 * a_odd);
+            }
+        }
+        return dx;
+    }
+};
+
+struct HResizeLinearVecU8_X4
+{
+    int operator()(const uchar** src, uchar** _dst, int count, const int* xofs,
+        const uchar* _alpha, int smax, int, int cn, int, int xmax) const
+    {
+        const short *alpha = (const short*)_alpha;
+        int **dst = (int**)_dst;
+        int dx = 0, k = 0;
+
+        if(cn == 1)
+        {
+            const int step = 8;
+            const int len0 = xmax & -step;
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 al = v_load(alpha+dx*2);
+                    v_int16x8 ah = v_load(alpha+dx*2+8);
+                    v_uint16x8 sl, sh;
+                    v_expand(v_lut_pairs(S0, xofs+dx), sl, sh);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                    v_expand(v_lut_pairs(S1, xofs+dx), sl, sh);
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 al = v_load(alpha+dx*2);
+                    v_int16x8 ah = v_load(alpha+dx*2+8);
+                    v_uint16x8 sl, sh;
+                    v_expand(v_lut_pairs(S, xofs+dx), sl, sh);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                }
+            }
+        }
+        else if(cn == 2)
+        {
+            const int step = 8;
+            const int len0 = xmax & -step;
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    int ofs[4] = { xofs[dx], xofs[dx + 2], xofs[dx + 4], xofs[dx + 6] };
+                    v_int16x8 al = v_load(alpha+dx*2);
+                    v_int16x8 ah = v_load(alpha+dx*2+8);
+                    v_uint16x8 sl, sh;
+                    v_expand(v_interleave_pairs(v_lut_quads(S0, ofs)), sl, sh);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                    v_expand(v_interleave_pairs(v_lut_quads(S1, ofs)), sl, sh);
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    int ofs[4] = { xofs[dx], xofs[dx + 2], xofs[dx + 4], xofs[dx + 6] };
+                    v_int16x8 al = v_load(alpha+dx*2);
+                    v_int16x8 ah = v_load(alpha+dx*2+8);
+                    v_uint16x8 sl, sh;
+                    v_expand(v_interleave_pairs(v_lut_quads(S, ofs)), sl, sh);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                }
+            }
+        }
+        else if(cn == 3)
+        {
+            int len0 = xmax - cn;
+
+            /* This may need to trim 1 or more extra units depending on the amount of
+               scaling. Test until we find the first value which we know cannot overrun. */
+            while (len0 >= cn &&
+                xofs[len0 - cn] + cn >= smax - cn  // check access: v_load_expand_q(S+xofs[dx]+cn)
+            )
+            {
+                len0 -= cn;
+            }
+            CV_DbgAssert(len0 <= 0 || len0 >= cn);
+
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += cn )
+                {
+                    v_int16x8 a = v_load(alpha+dx*2);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S0+xofs[dx]) | (v_load_expand_q(S0+xofs[dx]+cn)<<16)), a));
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S1+xofs[dx]) | (v_load_expand_q(S1+xofs[dx]+cn)<<16)), a));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += cn )
+                {
+                    v_int16x8 a = v_load(alpha+dx*2);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S+xofs[dx]) | (v_load_expand_q(S+xofs[dx]+cn)<<16)), a));
+                }
+            }
+        }
+        else if(cn == 4)
+        {
+            const int step = 4;
+            const int len0 = xmax & -step;
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 a = v_load(alpha+dx*2);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S0+xofs[dx]))), a));
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S1+xofs[dx]))), a));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 a = v_load(alpha+dx*2);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S+xofs[dx]))), a));
+                }
+            }
+        }
+        else if(cn < 9)
+        {
+            const int step = 8;
+            const int len0 = xmax & -step;
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += cn )
+                {
+                    v_int16x8 a0 = v_load(alpha+dx*2);
+                    v_int16x8 a1 = v_load(alpha+dx*2 + 8);
+                    v_uint16x8 s0, s1;
+                    v_zip(v_load_expand(S0+xofs[dx]), v_load_expand(S0+xofs[dx]+cn), s0, s1);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(s0), a0));
+                    v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(s1), a1));
+                    v_zip(v_load_expand(S1+xofs[dx]), v_load_expand(S1+xofs[dx]+cn), s0, s1);
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(s0), a0));
+                    v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(s1), a1));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += cn )
+                {
+                    v_int16x8 a0 = v_load(alpha+dx*2);
+                    v_int16x8 a1 = v_load(alpha+dx*2 + 8);
+                    v_uint16x8 s0, s1;
+                    v_zip(v_load_expand(S+xofs[dx]), v_load_expand(S+xofs[dx]+cn), s0, s1);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(s0), a0));
+                    v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(s1), a1));
+                }
+            }
+        }
+        else
+        {
+            const int step = 16;
+            const int len0 = (xmax - cn) & -step;
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 a0 = v_load(alpha+dx*2);
+                    v_int16x8 a1 = v_load(alpha+dx*2 + 8);
+                    v_int16x8 a2 = v_load(alpha+dx*2 + 16);
+                    v_int16x8 a3 = v_load(alpha+dx*2 + 24);
+                    v_uint8x16 s01, s23;
+                    v_zip(v_lut(S0, xofs+dx), v_lut(S0+cn, xofs+dx), s01, s23);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_expand_low(s01)), a0));
+                    v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(v_expand_high(s01)), a1));
+                    v_store(&D0[dx+8], v_dotprod(v_reinterpret_as_s16(v_expand_low(s23)), a2));
+                    v_store(&D0[dx+12], v_dotprod(v_reinterpret_as_s16(v_expand_high(s23)), a3));
+                    v_zip(v_lut(S1, xofs+dx), v_lut(S1+cn, xofs+dx), s01, s23);
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(v_expand_low(s01)), a0));
+                    v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(v_expand_high(s01)), a1));
+                    v_store(&D1[dx+8], v_dotprod(v_reinterpret_as_s16(v_expand_low(s23)), a2));
+                    v_store(&D1[dx+12], v_dotprod(v_reinterpret_as_s16(v_expand_high(s23)), a3));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 a0 = v_load(alpha+dx*2);
+                    v_int16x8 a1 = v_load(alpha+dx*2 + 8);
+                    v_int16x8 a2 = v_load(alpha+dx*2 + 16);
+                    v_int16x8 a3 = v_load(alpha+dx*2 + 24);
+                    v_uint8x16 s01, s23;
+                    v_zip(v_lut(S, xofs+dx), v_lut(S+cn, xofs+dx), s01, s23);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_expand_low(s01)), a0));
+                    v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(v_expand_high(s01)), a1));
+                    v_store(&D[dx+8], v_dotprod(v_reinterpret_as_s16(v_expand_low(s23)), a2));
+                    v_store(&D[dx+12], v_dotprod(v_reinterpret_as_s16(v_expand_high(s23)), a3));
+                }
+            }
+        }
+        return dx;
+    }
+};
+
+typedef HResizeLinearVec_X4<float,float,float,v_float32x4> HResizeLinearVec_32f;
+typedef HResizeLinearVec_X4<ushort,float,float,v_float32x4> HResizeLinearVec_16u32f;
+typedef HResizeLinearVec_X4<short,float,float,v_float32x4> HResizeLinearVec_16s32f;
+typedef HResizeLinearVecU8_X4 HResizeLinearVec_8u32s;
+
+#else
+
 typedef HResizeNoVec HResizeLinearVec_8u32s;
 typedef HResizeNoVec HResizeLinearVec_16u32f;
 typedef HResizeNoVec HResizeLinearVec_16s32f;
 typedef HResizeNoVec HResizeLinearVec_32f;
+
+#endif
+
 typedef HResizeNoVec HResizeLinearVec_64f;
 
 
@@ -1505,7 +1830,7 @@ struct HResizeLinear
         int dx0 = vecOp((const uchar**)src, (uchar**)dst, count,
             xofs, (const uchar*)alpha, swidth, dwidth, cn, xmin, xmax );
 
-        for( k = 0; k <= count - 2; k++ )
+        for( k = 0; k <= count - 2; k+=2 )
         {
             const T *S0 = src[k], *S1 = src[k+1];
             WT *D0 = dst[k], *D1 = dst[k+1];
@@ -1529,7 +1854,7 @@ struct HResizeLinear
         {
             const T *S = src[k];
             WT *D = dst[k];
-            for( dx = 0; dx < xmax; dx++ )
+            for( dx = dx0; dx < xmax; dx++ )
             {
                 int sx = xofs[dx];
                 D[dx] = S[sx]*alpha[dx*2] + S[sx+cn]*alpha[dx*2+1];
@@ -3737,6 +4062,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
+
+    // Fake reference to source. Resolves issue 13577 in case of src == dst.
+    UMat srcUMat;
+    if (_src.isUMat())
+        srcUMat = _src.getUMat();
 
     Mat src = _src.getMat();
     _dst.create(dsize, src.type());

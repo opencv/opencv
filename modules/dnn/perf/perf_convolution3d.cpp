@@ -111,8 +111,8 @@ PERF_TEST_P_(Conv3D, conv3d)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
 
-    if (targetId != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
+    if (targetId != DNN_TARGET_CPU && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("Only CPU and CUDA is supported");
 
     int inChannels = inputShape[1];
 

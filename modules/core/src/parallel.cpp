@@ -134,6 +134,10 @@
 #  define CV_PARALLEL_FRAMEWORK "pthreads"
 #endif
 
+#ifdef CV_PARALLEL_FRAMEWORK
+#include <atomic>
+#endif
+
 #include "parallel_impl.hpp"
 
 #include "opencv2/core/detail/exception_ptr.hpp"  // CV__EXCEPTION_PTR = 1 if std::exception_ptr is available
@@ -487,20 +491,20 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
         return;
 
 #ifdef CV_PARALLEL_FRAMEWORK
-    static volatile int flagNestedParallelFor = 0;
-    bool isNotNestedRegion = flagNestedParallelFor == 0;
+    static std::atomic<bool> flagNestedParallelFor(false);
+    bool isNotNestedRegion = !flagNestedParallelFor.load();
     if (isNotNestedRegion)
-      isNotNestedRegion = CV_XADD(&flagNestedParallelFor, 1) == 0;
+      isNotNestedRegion = !flagNestedParallelFor.exchange(true);
     if (isNotNestedRegion)
     {
         try
         {
             parallel_for_impl(range, body, nstripes);
-            flagNestedParallelFor = 0;
+            flagNestedParallelFor = false;
         }
         catch (...)
         {
-            flagNestedParallelFor = 0;
+            flagNestedParallelFor = false;
             throw;
         }
     }
@@ -798,7 +802,7 @@ int cv::getNumberOfCPUs(void)
 {
 #if defined _WIN32
     SYSTEM_INFO sysinfo;
-#if (defined(_M_ARM) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
+#if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );
 #else
     GetSystemInfo( &sysinfo );

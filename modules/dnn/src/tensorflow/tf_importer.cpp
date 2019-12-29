@@ -1350,6 +1350,8 @@ void TFImporter::populateNet(Net dstNet)
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
+            // Test_TensorFlow_nets.EAST_text_detection/1, NGRAPH/CPU
+            layerParams.set("ceil_mode", false);
 
             int id = dstNet.addLayer(name, "Pooling", layerParams);
             layer_id[name] = id;
@@ -1585,7 +1587,7 @@ void TFImporter::populateNet(Net dstNet)
                 }
             }
         }
-        else if (type == "FusedBatchNorm")
+        else if (type == "FusedBatchNorm" || type == "FusedBatchNormV3")
         {
             // op: "FusedBatchNorm"
             // input: "input"

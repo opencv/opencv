@@ -275,6 +275,9 @@ OCV_OPTION(WITH_VULKAN "Include Vulkan support" OFF
 OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
   VISIBLE_IF TRUE
   VERIFY INF_ENGINE_TARGET)
+OCV_OPTION(WITH_NGRAPH "Include nGraph support" WITH_INF_ENGINE
+  VISIBLE_IF TRUE
+  VERIFY TARGET ngraph::ngraph)
 OCV_OPTION(WITH_JASPER "Include JPEG2K support" ON
   VISIBLE_IF NOT IOS
   VERIFY HAVE_JASPER)
@@ -477,6 +480,7 @@ OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatch
 OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 OCV_OPTION(OPENCV_GENERATE_SETUPVARS  "Generate setup_vars* scripts" ON IF (NOT ANDROID AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn't match requested (WITH_XXX != HAVE_XXX)" OFF)
+OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
@@ -625,10 +629,15 @@ if(UNIX)
     set(HAVE_PTHREAD 1)
   endif()
 
-  CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN)
-  CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
-  if(HAVE_MALLOC_H)
-    CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
+  if(OPENCV_ENABLE_MEMALIGN)
+    CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN)
+    CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
+    if(HAVE_MALLOC_H)
+      CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
+    endif()
+    # TODO:
+    # - _aligned_malloc() on Win32
+    # - std::aligned_alloc() C++17 / C11
   endif()
 endif()
 
@@ -1417,10 +1426,35 @@ if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
     )
     get_target_property(_inc ${ie_target} INTERFACE_INCLUDE_DIRECTORIES)
     status("    Inference Engine:" "${__msg}")
-    status("                libs:" "${_lib}")
-    status("            includes:" "${_inc}")
+    status("        * libs:" "${_lib}")
+    status("        * includes:" "${_inc}")
   else()
     status("    Inference Engine:"     "NO")
+  endif()
+endif()
+if(WITH_NGRAPH OR HAVE_NGRAPH)
+  if(HAVE_NGRAPH)
+    set(__target ngraph::ngraph)
+    set(__msg "YES (${ngraph_VERSION})")
+    get_target_property(_lib ${__target} IMPORTED_LOCATION)
+    get_target_property(_lib_imp_rel ${__target} IMPORTED_IMPLIB_RELEASE)
+    get_target_property(_lib_imp_dbg ${__target} IMPORTED_IMPLIB_DEBUG)
+    get_target_property(_lib_rel ${__target} IMPORTED_LOCATION_RELEASE)
+    get_target_property(_lib_dbg ${__target} IMPORTED_LOCATION_DEBUG)
+    ocv_build_features_string(_lib
+      IF _lib THEN "${_lib}"
+      IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
+      IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+      IF _lib_rel  THEN "${_lib_rel}"
+      IF _lib_dbg  THEN "${_lib_dbg}"
+      ELSE "unknown"
+    )
+    get_target_property(_inc ${__target} INTERFACE_INCLUDE_DIRECTORIES)
+    status("    nGraph:" "${__msg}")
+    status("        * libs:" "${_lib}")
+    status("        * includes:" "${_inc}")
+  else()
+    status("    nGraph:"     "NO")
   endif()
 endif()
 
