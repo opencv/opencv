@@ -3,7 +3,8 @@
     This program demonstrates OpenCV drawing and text output functions by drawing different shapes and text strings
     Usage :
         python3 drawing.py
-    Press any button to exit '''
+    Press any button to exit
+    '''
 
 # Python 2/3 compatibility
 from __future__ import print_function
