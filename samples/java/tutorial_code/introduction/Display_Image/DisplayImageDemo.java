@@ -29,6 +29,7 @@ class DisplayImage{
         System.exit(0);
     }
 }
+
 public class DisplayImageDemo {
     public static void main(String args[]){
         // Load the native OpenCV library
