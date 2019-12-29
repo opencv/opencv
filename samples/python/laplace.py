@@ -25,9 +25,9 @@ def main():
     smoothType = "MedianBlur"
     sigma = 3
     if len(sys.argv)==4:
-        ddepth = sys.argv[1]           
+        ddepth = sys.argv[1]
         smoothType = sys.argv[2]
-        sigma = sys.argv[3] 
+        sigma = sys.argv[3]
     # Taking input from the camera
     cap=cv.VideoCapture(0)
     # Create Window and Trackbar
