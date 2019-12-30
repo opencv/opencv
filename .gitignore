@@ -23,4 +23,3 @@ bin/
 *.tlog
 build
 node_modules
-*.iml
