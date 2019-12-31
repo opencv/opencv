@@ -950,6 +950,7 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
     for (int i = 0; i < net.node_size(); ++i)
     {
         const tensorflow::NodeDef& node = net.node(i);
+        int numInputsInGraph = 0;
         for (int j = 0; j < node.input_size(); ++j)
         {
             std::string inpName = node.input(j);
@@ -957,22 +958,25 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
             inpName = inpName.substr(inpName.find('^') + 1);
 
             nodesMapIt = nodesMap.find(inpName);
-            CV_Assert(nodesMapIt != nodesMap.end());
-            edges[nodesMapIt->second].push_back(i);
+            if (nodesMapIt != nodesMap.end())
+            {
+                edges[nodesMapIt->second].push_back(i);
+                numInputsInGraph += 1;
+            }
         }
-        if (node.input_size() == 0)
+        if (numInputsInGraph == 0)
             nodesToAdd.push_back(i);
         else
         {
             if (node.op() == "Merge" || node.op() == "RefMerge")
             {
                 int numControlEdges = 0;
-                for (int j = 0; j < node.input_size(); ++j)
+                for (int j = 0; j < numInputsInGraph; ++j)
                     numControlEdges += node.input(j)[0] == '^';
                 numRefsToAdd[i] = numControlEdges + 1;
             }
             else
-                numRefsToAdd[i] = node.input_size();
+                numRefsToAdd[i] = numInputsInGraph;
         }
     }
 
