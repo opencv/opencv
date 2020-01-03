@@ -6,11 +6,11 @@ import org.opencv.video.Video;
 import org.opencv.videoio.VideoCapture;
 
 
-class OptFlowDense{
-    public void run(){
+class OptFlowDense {
+    public void run() {
         String filename = "../data/vtest.avi";
         VideoCapture capture = new VideoCapture(filename);
-        if(!capture.isOpened()){
+        if(!capture.isOpened()) {
             //error in opening the video input
             System.out.println("Unable to open file!");
             System.exit(-1);
@@ -20,15 +20,15 @@ class OptFlowDense{
         capture.read(frame1);
         Imgproc.cvtColor(frame1, prvs, Imgproc.COLOR_BGR2GRAY);
 
-        while (true){
+        while (true) {
             Mat frame2 = new Mat(), next = new Mat();
             capture.read(frame2);
-            if(frame2.empty()){
+            if(frame2.empty()) {
                 break;
             }
-            Imgproc.cvtColor(frame2,next,Imgproc.COLOR_BGR2GRAY);
+            Imgproc.cvtColor(frame2, next, Imgproc.COLOR_BGR2GRAY);
 
-            Mat flow = new Mat(prvs.size(),CvType.CV_32FC2);
+            Mat flow = new Mat(prvs.size(), CvType.CV_32FC2);
             Video.calcOpticalFlowFarneback(prvs, next, flow,0.5,3,15,3,5,1.2,0);
 
             // visualization
@@ -46,7 +46,7 @@ class OptFlowDense{
             Mat hsv = new Mat(), hsv8 = new Mat(), bgr = new Mat();
 
             _hsv.add(new_angle);
-            _hsv.add(Mat.ones(angle.size(),CvType.CV_32F));
+            _hsv.add(Mat.ones(angle.size(), CvType.CV_32F));
             _hsv.add(magn_norm);
             Core.merge(_hsv, hsv);
             hsv.convertTo(hsv8, CvType.CV_8U, 255.0);
