@@ -1,5 +1,5 @@
 import java.util.ArrayList;
-import org.opencv.core.*;;
+import org.opencv.core.*;
 import org.opencv.highgui.HighGui;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.video.Video;
@@ -7,8 +7,8 @@ import org.opencv.videoio.VideoCapture;
 
 
 class OptFlowDense {
-    public void run() {
-        String filename = "../data/vtest.avi";
+    public void run(String[] args) {
+        String filename = args[0];
         VideoCapture capture = new VideoCapture(filename);
         if(!capture.isOpened()) {
             //error in opening the video input
@@ -67,6 +67,6 @@ class OptFlowDense {
 public class OpticalFlowDenseDemo {
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        new OptFlowDense().run();
+        new OptFlowDense().run(args);
     }
 }
