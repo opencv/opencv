@@ -10,7 +10,7 @@ class Meanshift {
     public void run(String[] args) {
         String filename = args[0];
         VideoCapture capture = new VideoCapture(filename);
-        if(!capture.isOpened()) {
+        if (!capture.isOpened()) {
             System.out.println("Unable to open file!");
             System.exit(-1);
         }
@@ -40,7 +40,7 @@ class Meanshift {
         while (true) {
             Mat hsv = new Mat() , dst = new Mat();
             capture.read(frame);
-            if(frame.empty()) {
+            if (frame.empty()) {
                 break;
             }
             Imgproc.cvtColor(frame, hsv, Imgproc.COLOR_BGR2HSV);
@@ -54,7 +54,7 @@ class Meanshift {
             HighGui.imshow("img2", frame);
 
             int keyboard = HighGui.waitKey(30);
-            if(keyboard == 'q' || keyboard == 27) {
+            if (keyboard == 'q' || keyboard == 27) {
                 break;
             }
         }

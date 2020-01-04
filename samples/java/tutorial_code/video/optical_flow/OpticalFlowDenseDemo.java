@@ -10,7 +10,7 @@ class OptFlowDense {
     public void run(String[] args) {
         String filename = args[0];
         VideoCapture capture = new VideoCapture(filename);
-        if(!capture.isOpened()) {
+        if (!capture.isOpened()) {
             //error in opening the video input
             System.out.println("Unable to open file!");
             System.exit(-1);
@@ -23,7 +23,7 @@ class OptFlowDense {
         while (true) {
             Mat frame2 = new Mat(), next = new Mat();
             capture.read(frame2);
-            if(frame2.empty()) {
+            if (frame2.empty()) {
                 break;
             }
             Imgproc.cvtColor(frame2, next, Imgproc.COLOR_BGR2GRAY);
@@ -55,7 +55,7 @@ class OptFlowDense {
             HighGui.imshow("frame2", bgr);
 
             int keyboard = HighGui.waitKey(30);
-            if(keyboard == 'q' || keyboard == 27){
+            if (keyboard == 'q' || keyboard == 27) {
                 break;
             }
             prvs = next;

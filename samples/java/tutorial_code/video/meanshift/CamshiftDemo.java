@@ -10,7 +10,7 @@ class Camshift {
     public void run(String[] args) {
         String filename = args[0];
         VideoCapture capture = new VideoCapture(filename);
-        if(!capture.isOpened()) {
+        if (!capture.isOpened()) {
             System.out.println("Unable to open file!");
             System.exit(-1);
         }
@@ -41,7 +41,7 @@ class Camshift {
         while (true) {
             Mat hsv = new Mat() , dst = new Mat();
             capture.read(frame);
-            if(frame.empty()) {
+            if (frame.empty()) {
                 break;
             }
             Imgproc.cvtColor(frame, hsv, Imgproc.COLOR_BGR2HSV);
@@ -53,13 +53,13 @@ class Camshift {
             // Draw it on image
             Point[] points = new Point[4];
             rot_rect.points(points);
-            for(int i = 0; i < 4 ;i++) {
+            for (int i = 0; i < 4 ;i++) {
                 Imgproc.line(frame, points[i], points[(i+1)%4], new Scalar(255, 0, 0),2);
             }
 
             HighGui.imshow("img2", frame);
             int keyboard = HighGui.waitKey(30);
-            if(keyboard =='q'|| keyboard == 27) {
+            if (keyboard == 'q'|| keyboard == 27) {
                 break;
             }
         }
