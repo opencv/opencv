@@ -58,10 +58,9 @@ void Cloning::computeGradientX( const Mat &img, Mat &gx)
     else if (img.channels() == 1)
     {
         Mat tmp[3];
-        for(int chan = 0 ; chan < 3 ; ++chan)
-        {
-            filter2D(img, tmp[chan], CV_32F, kernel);
-        }
+        filter2D(img, tmp[0], CV_32F, kernel);
+        tmp[1]=tmp[0];
+        tmp[2]=tmp[0];
         merge(tmp, 3, gx);
     }
 }
@@ -79,10 +78,9 @@ void Cloning::computeGradientY( const Mat &img, Mat &gy)
     else if (img.channels() == 1)
     {
         Mat tmp[3];
-        for(int chan = 0 ; chan < 3 ; ++chan)
-        {
-            filter2D(img, tmp[chan], CV_32F, kernel);
-        }
+        filter2D(img, tmp[0], CV_32F, kernel);
+        tmp[1]=tmp[0];
+        tmp[2]=tmp[0];
         merge(tmp, 3, gy);
     }
 }
