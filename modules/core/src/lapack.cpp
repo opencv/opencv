@@ -916,8 +916,9 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                     result = true;
                     d = 1./d;
                 #if CV_SIMD128
-                    static const float CV_DECL_ALIGNED(16) inv[4] = { 0.f,-0.f,-0.f,0.f };
-                    v_float32x4 s0 = (v_load_halves((const float*)srcdata, (const float*)(srcdata + srcstep)) * v_setall_f32((float)d)) ^ v_load((const float *)inv);//0123//3120
+                    const float d_32f = (float)d;
+                    const v_float32x4 d_vec(d_32f, -d_32f, -d_32f, d_32f);
+                    v_float32x4 s0 = v_load_halves((const float*)srcdata, (const float*)(srcdata + srcstep)) * d_vec;//0123//3120
                     s0 = v_extract<3>(s0, v_combine_low(v_rotate_right<1>(s0), s0));
                     v_store_low((float*)dstdata, s0);
                     v_store_high((float*)(dstdata + dststep), s0);
@@ -946,7 +947,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                     v_float64x2 s0 = v_load((const double*)srcdata) * det;
                     v_float64x2 s1 = v_load((const double*)(srcdata+srcstep)) * det;
                     v_float64x2 sm = v_extract<1>(s1, s0);//30
-                    v_float64x2 ss = v_extract<1>(s0, s1) ^ v_setall_f64(-0.);//12
+                    v_float64x2 ss = v_setall<double>(0) - v_extract<1>(s0, s1);//12
                     v_store((double*)dstdata, v_combine_low(sm, ss));//31
                     v_store((double*)(dstdata + dststep), v_combine_high(ss, sm));//20
                 #else

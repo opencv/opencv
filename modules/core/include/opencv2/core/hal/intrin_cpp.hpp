@@ -143,7 +143,7 @@ Element-wise binary and unary operations.
 @ref v_shl, @ref v_shr
 
 - Bitwise logic:
-@ref operator&(const v_reg &a, const v_reg &b) "&",
+@ref operator &(const v_reg &a, const v_reg &b) "&",
 @ref operator |(const v_reg &a, const v_reg &b) "|",
 @ref operator ^(const v_reg &a, const v_reg &b) "^",
 @ref operator ~(const v_reg &a) "~"
@@ -410,50 +410,102 @@ typedef v_reg<uint64, 2> v_uint64x2;
 /** @brief Two 64-bit signed integer values */
 typedef v_reg<int64, 2> v_int64x2;
 
-//! @brief Helper macro
-//! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_BIN_OP(bin_op) \
-template<typename _Tp, int n> inline v_reg<_Tp, n> \
-    operator bin_op (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+/** @brief Add values
+
+For all types. */
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator+(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator+=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+
+/** @brief Subtract values
+
+For all types. */
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator-(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator-=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+
+/** @brief Multiply values
+
+For 16- and 32-bit integer types and floating types. */
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator*(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator*=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+
+/** @brief Divide values
+
+For floating types only. */
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator/(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator/=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+
+
+/** @brief Bitwise AND
+
+Only for integer types. */
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator&(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator&=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+
+/** @brief Bitwise OR
+
+Only for integer types. */
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator|(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator|=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+
+/** @brief Bitwise XOR
+
+Only for integer types.*/
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator^(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator^=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+
+/** @brief Bitwise NOT
+
+Only for integer types.*/
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator~(const v_reg<_Tp, n>& a);
+
+
+#ifndef CV_DOXYGEN
+
+#define CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(macro_name, ...) \
+__CV_EXPAND(macro_name(uchar, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(schar, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(ushort, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(short, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(unsigned, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(int, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(uint64, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(int64, __VA_ARGS__)) \
+
+#define CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(macro_name, ...) \
+__CV_EXPAND(macro_name(float, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(double, __VA_ARGS__)) \
+
+#define CV__HAL_INTRIN_EXPAND_WITH_ALL_TYPES(macro_name, ...) \
+CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(macro_name, __VA_ARGS__) \
+CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(macro_name, __VA_ARGS__) \
+
+#define CV__HAL_INTRIN_IMPL_BIN_OP_(_Tp, bin_op) \
+template<int n> inline \
+v_reg<_Tp, n> operator bin_op (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     v_reg<_Tp, n> c; \
     for( int i = 0; i < n; i++ ) \
         c.s[i] = saturate_cast<_Tp>(a.s[i] bin_op b.s[i]); \
     return c; \
 } \
-template<typename _Tp, int n> inline v_reg<_Tp, n>& \
-    operator bin_op##= (v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+template<int n> inline \
+v_reg<_Tp, n>& operator bin_op##= (v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     for( int i = 0; i < n; i++ ) \
         a.s[i] = saturate_cast<_Tp>(a.s[i] bin_op b.s[i]); \
     return a; \
 }
 
-/** @brief Add values
+#define CV__HAL_INTRIN_IMPL_BIN_OP(bin_op) CV__HAL_INTRIN_EXPAND_WITH_ALL_TYPES(CV__HAL_INTRIN_IMPL_BIN_OP_, bin_op)
 
-For all types. */
-OPENCV_HAL_IMPL_BIN_OP(+)
+CV__HAL_INTRIN_IMPL_BIN_OP(+)
+CV__HAL_INTRIN_IMPL_BIN_OP(-)
+CV__HAL_INTRIN_IMPL_BIN_OP(*)
+CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BIN_OP_, /)
 
-/** @brief Subtract values
-
-For all types. */
-OPENCV_HAL_IMPL_BIN_OP(-)
-
-/** @brief Multiply values
-
-For 16- and 32-bit integer types and floating types. */
-OPENCV_HAL_IMPL_BIN_OP(*)
-
-/** @brief Divide values
-
-For floating types only. */
-OPENCV_HAL_IMPL_BIN_OP(/)
-
-//! @brief Helper macro
-//! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_BIT_OP(bit_op) \
-template<typename _Tp, int n> inline v_reg<_Tp, n> operator bit_op \
-    (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+#define CV__HAL_INTRIN_IMPL_BIT_OP_(_Tp, bit_op) \
+template<int n> CV_INLINE \
+v_reg<_Tp, n> operator bit_op (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     v_reg<_Tp, n> c; \
     typedef typename V_TypeTraits<_Tp>::int_type itype; \
@@ -462,8 +514,8 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> operator bit_op \
                                                         V_TypeTraits<_Tp>::reinterpret_int(b.s[i]))); \
     return c; \
 } \
-template<typename _Tp, int n> inline v_reg<_Tp, n>& operator \
-    bit_op##= (v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+template<int n> CV_INLINE \
+v_reg<_Tp, n>& operator bit_op##= (v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     typedef typename V_TypeTraits<_Tp>::int_type itype; \
     for( int i = 0; i < n; i++ ) \
@@ -472,33 +524,29 @@ template<typename _Tp, int n> inline v_reg<_Tp, n>& operator \
     return a; \
 }
 
-/** @brief Bitwise AND
+#define CV__HAL_INTRIN_IMPL_BIT_OP(bit_op) \
+CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(CV__HAL_INTRIN_IMPL_BIT_OP_, bit_op) \
+CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BIT_OP_, bit_op) /* TODO: FIXIT remove this after masks refactoring */
 
-Only for integer types. */
-OPENCV_HAL_IMPL_BIT_OP(&)
 
-/** @brief Bitwise OR
+CV__HAL_INTRIN_IMPL_BIT_OP(&)
+CV__HAL_INTRIN_IMPL_BIT_OP(|)
+CV__HAL_INTRIN_IMPL_BIT_OP(^)
 
-Only for integer types. */
-OPENCV_HAL_IMPL_BIT_OP(|)
+#define CV__HAL_INTRIN_IMPL_BITWISE_NOT_(_Tp, dummy) \
+template<int n> CV_INLINE \
+v_reg<_Tp, n> operator ~ (const v_reg<_Tp, n>& a) \
+{ \
+    v_reg<_Tp, n> c; \
+    for( int i = 0; i < n; i++ ) \
+        c.s[i] = V_TypeTraits<_Tp>::reinterpret_from_int(~V_TypeTraits<_Tp>::reinterpret_int(a.s[i])); \
+    return c; \
+} \
 
-/** @brief Bitwise XOR
+CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(CV__HAL_INTRIN_IMPL_BITWISE_NOT_, ~)
 
-Only for integer types.*/
-OPENCV_HAL_IMPL_BIT_OP(^)
+#endif  // !CV_DOXYGEN
 
-/** @brief Bitwise NOT
-
-Only for integer types.*/
-template<typename _Tp, int n> inline v_reg<_Tp, n> operator ~ (const v_reg<_Tp, n>& a)
-{
-    v_reg<_Tp, n> c;
-    for( int i = 0; i < n; i++ )
-    {
-        c.s[i] = V_TypeTraits<_Tp>::reinterpret_from_int(~V_TypeTraits<_Tp>::reinterpret_int(a.s[i]));
-    }
-    return c;
-}
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
@@ -511,6 +559,8 @@ template<typename _Tp, int n> inline v_reg<_Tp2, n> func(const v_reg<_Tp, n>& a)
     return c; \
 }
 
+//! @brief Helper macro
+//! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_MATH_FUNC_FLOAT(func, cfunc) \
 inline v_reg<int, 4> func(const v_reg<float, 4>& a) \
 { \
@@ -1110,9 +1160,8 @@ OPENCV_HAL_IMPL_SHIFT_OP(<< )
 For 16-, 32- and 64-bit integer values. */
 OPENCV_HAL_IMPL_SHIFT_OP(>> )
 
-/** @brief Element shift left among vector
-
-For all type */
+//! @brief Helper macro
+//! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(suffix,opA,opB) \
 template<int imm, typename _Tp, int n> inline v_reg<_Tp, n> v_rotate_##suffix(const v_reg<_Tp, n>& a) \
 { \
@@ -1154,7 +1203,14 @@ template<int imm, typename _Tp, int n> inline v_reg<_Tp, n> v_rotate_##suffix(co
     return c; \
 }
 
+/** @brief Element shift left among vector
+
+For all type */
 OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(left,  -, +)
+
+/** @brief Element shift right among vector
+
+For all type */
 OPENCV_HAL_IMPL_ROTATE_SHIFT_OP(right, +, -)
 
 /** @brief Sum packed values
@@ -1995,7 +2051,7 @@ template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a, co
 /** @brief Convert to double
 
 Supported input type is cv::v_int32x4. */
-static inline v_reg<double, 2> v_cvt_f64(const v_reg<int, 4>& a)
+CV_INLINE v_reg<double, 2> v_cvt_f64(const v_reg<int, 4>& a)
 {
     enum { n = 2 };
     v_reg<double, n> c;
@@ -2007,7 +2063,7 @@ static inline v_reg<double, 2> v_cvt_f64(const v_reg<int, 4>& a)
 /** @brief Convert to double high part of vector
 
 Supported input type is cv::v_int32x4. */
-static inline v_reg<double, 2> v_cvt_f64_high(const v_reg<int, 4>& a)
+CV_INLINE v_reg<double, 2> v_cvt_f64_high(const v_reg<int, 4>& a)
 {
     enum { n = 2 };
     v_reg<double, n> c;
@@ -2019,7 +2075,7 @@ static inline v_reg<double, 2> v_cvt_f64_high(const v_reg<int, 4>& a)
 /** @brief Convert to double
 
 Supported input type is cv::v_float32x4. */
-static inline v_reg<double, 2> v_cvt_f64(const v_reg<float, 4>& a)
+CV_INLINE v_reg<double, 2> v_cvt_f64(const v_reg<float, 4>& a)
 {
     enum { n = 2 };
     v_reg<double, n> c;
@@ -2031,7 +2087,7 @@ static inline v_reg<double, 2> v_cvt_f64(const v_reg<float, 4>& a)
 /** @brief Convert to double high part of vector
 
 Supported input type is cv::v_float32x4. */
-static inline v_reg<double, 2> v_cvt_f64_high(const v_reg<float, 4>& a)
+CV_INLINE v_reg<double, 2> v_cvt_f64_high(const v_reg<float, 4>& a)
 {
     enum { n = 2 };
     v_reg<double, n> c;
@@ -2043,7 +2099,7 @@ static inline v_reg<double, 2> v_cvt_f64_high(const v_reg<float, 4>& a)
 /** @brief Convert to double
 
 Supported input type is cv::v_int64x2. */
-static inline v_reg<double, 2> v_cvt_f64(const v_reg<int64, 2>& a)
+CV_INLINE v_reg<double, 2> v_cvt_f64(const v_reg<int64, 2>& a)
 {
     enum { n = 2 };
     v_reg<double, n> c;
@@ -2055,7 +2111,7 @@ static inline v_reg<double, 2> v_cvt_f64(const v_reg<int64, 2>& a)
 /** @brief Convert to double high part of vector
 
 Supported input type is cv::v_int64x2. */
-static inline v_reg<double, 2> v_cvt_f64_high(const v_reg<int64, 2>& a)
+CV_INLINE v_reg<double, 2> v_cvt_f64_high(const v_reg<int64, 2>& a)
 {
     enum { n = 2 };
     v_reg<double, n> c;
