@@ -396,6 +396,7 @@ TEST_P(Test_ONNX_layers, Softmax)
 {
     testONNXModels("softmax");
     testONNXModels("log_softmax", npy, 0, 0, false, false);
+    testONNXModels("softmax_unfused");
 }
 
 TEST_P(Test_ONNX_layers, Split_EltwiseMax)
