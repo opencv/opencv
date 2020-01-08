@@ -5,6 +5,91 @@
 
 namespace opencv_test { namespace {
 
+/* Flag_Resize_Data = <file_name, resize_flag_and_dims> */
+typedef tuple< string, tuple < int, int, int > > Flag_Resize_Data;
+
+typedef testing::TestWithParam< Flag_Resize_Data > Imgcodecs_Resize;
+
+/* resize_flag_and_dims = <imread_flag, expected_cols, expected_rows>*/
+const tuple < int, int, int > resize_flag_and_dims[] =
+{
+    make_tuple(IMREAD_UNCHANGED, 640, 480),
+    make_tuple(IMREAD_REDUCED_GRAYSCALE_2, 320, 240),
+    make_tuple(IMREAD_REDUCED_GRAYSCALE_4, 160, 120),
+    make_tuple(IMREAD_REDUCED_GRAYSCALE_8, 80, 60),
+    make_tuple(IMREAD_REDUCED_COLOR_2, 320, 240),
+    make_tuple(IMREAD_REDUCED_COLOR_4, 160, 120),
+    make_tuple(IMREAD_REDUCED_COLOR_8, 80, 60)
+};
+
+const string images[] =
+{
+#ifdef HAVE_JPEG
+    "../cv/imgproc/stuff.jpg",
+#endif
+    "../cv/shared/1_itseez-0002524.png"
+};
+
+TEST_P(Imgcodecs_Resize, imread_reduce_flags)
+{
+    const string file_name = TS::ptr()->get_data_path() + get<0>(GetParam());
+    const tuple< int, int, int > resize_flag_and_dim = get<1>(GetParam());
+    const int imread_flag = get<0>(resize_flag_and_dim);
+    const int cols = get<1>(resize_flag_and_dim);
+    const int rows = get<2>(resize_flag_and_dim);
+    {
+        Mat img = imread(file_name, imread_flag);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cols, img.cols);
+        EXPECT_EQ(rows, img.rows);
+    }
+}
+
+//==================================================================================================
+
+TEST_P(Imgcodecs_Resize, imdecode_reduce_flags)
+{
+    const string file_name = TS::ptr()->get_data_path() + get<0>(GetParam());
+
+    std::vector<char> content;
+
+    const std::ios::openmode mode = std::ios::in | std::ios::binary;
+    std::ifstream ifs(file_name.c_str(), mode);
+    ASSERT_TRUE(ifs.is_open());
+
+    content.clear();
+
+    ifs.seekg(0, std::ios::end);
+    const size_t sz = static_cast<size_t>(ifs.tellg());
+    content.resize(sz);
+    ifs.seekg(0, std::ios::beg);
+
+    ifs.read((char*)content.data(), sz);
+    ASSERT_FALSE(ifs.fail());
+
+    const tuple< int, int, int > resize_flag_and_dim = get<1>(GetParam());
+    const int imread_flag = get<0>(resize_flag_and_dim);
+    const int cols = get<1>(resize_flag_and_dim);
+    const int rows = get<2>(resize_flag_and_dim);
+    {
+        Mat img = imdecode(Mat(content), imread_flag);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cols, img.cols);
+        EXPECT_EQ(rows, img.rows);
+    }
+}
+
+//==================================================================================================
+
+INSTANTIATE_TEST_CASE_P(Imread_Imdecode_Resize, Imgcodecs_Resize,
+        testing::Combine(
+            testing::ValuesIn(images),
+            testing::ValuesIn(resize_flag_and_dims)
+            )
+        );
+
+//==================================================================================================
+
 TEST(Imgcodecs_Image, read_write_bmp)
 {
     const size_t IMAGE_COUNT = 10;
