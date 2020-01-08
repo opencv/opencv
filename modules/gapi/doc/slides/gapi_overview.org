@@ -242,7 +242,7 @@ Graph *protocol* defines what arguments a computation was defined on
 - A type name (every operation is a C++ type);
 - Operation signature (similar to ~std::function<>~);
 - Operation identifier (a string);
-- Metadata callback -- desribe what is the output value format(s),
+- Metadata callback -- describe what is the output value format(s),
   given the input and arguments.
 - Use ~OpType::on(...)~ to use a new kernel ~OpType~ to construct graphs.
 #+LaTeX: {\footnotesize

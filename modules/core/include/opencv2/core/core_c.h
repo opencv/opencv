@@ -1309,7 +1309,7 @@ CVAPI(void) cvMulTransposed( const CvArr* src, CvArr* dst, int order,
                              const CvArr* delta CV_DEFAULT(NULL),
                              double scale CV_DEFAULT(1.) );
 
-/** Tranposes matrix. Square matrices can be transposed in-place */
+/** Transposes matrix. Square matrices can be transposed in-place */
 CVAPI(void)  cvTranspose( const CvArr* src, CvArr* dst );
 #define cvT cvTranspose
 

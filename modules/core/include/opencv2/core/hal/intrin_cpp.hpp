@@ -73,7 +73,7 @@ implemented as a structure based on a one SIMD register.
 
 - cv::v_uint8x16 and cv::v_int8x16: sixteen 8-bit integer values (unsigned/signed) - char
 - cv::v_uint16x8 and cv::v_int16x8: eight 16-bit integer values (unsigned/signed) - short
-- cv::v_uint32x4 and cv::v_int32x4: four 32-bit integer values (unsgined/signed) - int
+- cv::v_uint32x4 and cv::v_int32x4: four 32-bit integer values (unsigned/signed) - int
 - cv::v_uint64x2 and cv::v_int64x2: two 64-bit integer values (unsigned/signed) - int64
 - cv::v_float32x4: four 32-bit floating point values (signed) - float
 - cv::v_float64x2: two 64-bit floating point values (signed) - double
