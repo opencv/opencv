@@ -1961,8 +1961,7 @@ void TFImporter::populateNet(Net dstNet)
                 CV_Assert(layer_id.find(avgName) == layer_id.end());
                 avgLp.set("pool", "ave");
                 // pooling kernel H x 1
-                bool isGlobalPooling[] = {true, false};
-                avgLp.set("is_global_pooling", DictValue::arrayInt(&isGlobalPooling[0], 2));
+                avgLp.set("global_h", true);
                 avgLp.set("kernel_size", 1);
                 int avgId = dstNet.addLayer(avgName, "Pooling", avgLp);
                 layer_id[avgName] = avgId;
@@ -2025,6 +2024,12 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Pack")
         {
+            // op: tf.stack(list of tensors, axis=0)
+            // Join a list of inputs along a new axis.
+            // The "axis" specifies the index of the new axis in the dimensions of the output.
+            // Example: given a list with "N" tensors of shape (C, H, W):
+            // if axis == 0 then the output tensor will have the shape (N, C, H, W),
+            // if axis == 1 then the output tensor will have the shape (C, N, H, W).
             CV_Assert(hasLayerAttr(layer, "axis"));
             int dim = (int)getLayerAttr(layer, "axis").i();
             if (dim != 0)
@@ -2054,11 +2059,8 @@ void TFImporter::populateNet(Net dstNet)
             int id = dstNet.addLayer(name, "Concat", layerParams);
             layer_id[name] = id;
 
-            for (int li = 0; li < num; li++) {
-                Pin inp = parsePin(reshape_names[li]);
-                connect(layer_id, dstNet, inp, id, li);
-            }
-
+            for (int li = 0; li < num; li++)
+                connect(layer_id, dstNet, Pin(reshape_names[li]), id, li);
         }
         else if (type == "ClipByValue")
         {
