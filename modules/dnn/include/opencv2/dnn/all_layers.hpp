@@ -250,7 +250,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         std::vector<size_t> pads_begin, pads_end;
         CV_DEPRECATED_EXTERNAL Size kernel, stride, pad;
         CV_DEPRECATED_EXTERNAL int pad_l, pad_t, pad_r, pad_b;
-        bool globalPooling;
+        CV_DEPRECATED_EXTERNAL bool globalPooling;
         std::vector<bool> isGlobalPooling;
         bool computeMaxIdx;
         String padMode;

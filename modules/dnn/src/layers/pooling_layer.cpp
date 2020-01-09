@@ -79,6 +79,7 @@ public:
     {
         computeMaxIdx = true;
         globalPooling = false;
+        isGlobalPooling = std::vector<bool>(3, false);
         stride = Size(1, 1);
         pad_t = pad_l = pad_b = pad_r = 0;
 
@@ -95,7 +96,8 @@ public:
             else
                 CV_Error(Error::StsBadArg, "Unknown pooling type \"" + pool + "\"");
 
-            getPoolingKernelParams(params, kernel_size, globalPooling, pads_begin, pads_end, strides, padMode);
+            getPoolingKernelParams(params, kernel_size, isGlobalPooling, pads_begin, pads_end, strides, padMode);
+            globalPooling = std::accumulate(isGlobalPooling.begin(), isGlobalPooling.end(), 0) == 3;
             if (kernel_size.size() == 2) {
                 kernel = Size(kernel_size[1], kernel_size[0]);
                 stride = Size(strides[1], strides[0]);
@@ -125,14 +127,7 @@ public:
 
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
-        if (params.has("is_global_pooling"))
-        {
-            const DictValue &global_axis = params.get("is_global_pooling");
-            int size = global_axis.size();
-            isGlobalPooling.resize(size);
-            for (int i = 0; i < size; i++)
-                isGlobalPooling[i] = global_axis.get<bool>(i);
-        }
+
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }
@@ -155,17 +150,14 @@ public:
             inp.push_back(inputs[0].size[i]);
             out.push_back(outputs[0].size[i]);
         }
-        if (globalPooling) {
-            kernel = Size(inp[1], inp[0]);
-            kernel_size = std::vector<size_t>(inp.begin(), inp.end());
-        } else if (!isGlobalPooling.empty()) {
-            for (int i = 0; i < isGlobalPooling.size(); i++)
-            {
-                if (isGlobalPooling[i])
-                    kernel_size[i] = inp[i];
-            }
-            kernel = Size(kernel_size[1], kernel_size[0]);
+        kernel_size.resize(out.size());
+        int diff_size = isGlobalPooling.size() - kernel_size.size();
+        for (int i = 0; i < kernel_size.size(); i++)
+        {
+            if (isGlobalPooling[i + diff_size])
+                kernel_size[i] = inp[i];
         }
+        kernel = Size(kernel_size[1], kernel_size[0]);
 
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
         if (pads_begin.size() == 2) {
@@ -1053,14 +1045,12 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             outShape[0] = inputs[1][0];  // Number of proposals;
             outShape[1] = psRoiOutChannels;
         }
-        else if (!isGlobalPooling.empty())
+
+        int diff_size = isGlobalPooling.size() - (outShape.size() - 2);
+        for (int i = 2; i < outShape.size(); i++)
         {
-            CV_Assert(isGlobalPooling.size() == inpShape.size());
-            for (int i = 0; i < isGlobalPooling.size(); i++)
-            {
-                if (isGlobalPooling[i])
-                    outShape[2 + i] = 1;
-            }
+            if (isGlobalPooling[i - 2 + diff_size])
+                outShape[i] = 1;
         }
 
         int numOutputs = requiredOutputs ? requiredOutputs : (type == MAX ? 2 : 1);
