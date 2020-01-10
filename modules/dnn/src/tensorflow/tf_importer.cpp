@@ -1961,7 +1961,7 @@ void TFImporter::populateNet(Net dstNet)
                 CV_Assert(layer_id.find(avgName) == layer_id.end());
                 avgLp.set("pool", "ave");
                 // pooling kernel H x 1
-                avgLp.set("global_h", true);
+                avgLp.set("global_pooling_h", true);
                 avgLp.set("kernel_size", 1);
                 int avgId = dstNet.addLayer(avgName, "Pooling", avgLp);
                 layer_id[avgName] = avgId;
