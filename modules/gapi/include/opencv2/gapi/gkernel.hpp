@@ -255,8 +255,8 @@ public:
                         public G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
-#define GET_HELPER(_1, _2, _3, _4, _5, _6, NAME, ...) NAME
-#define API(...) __VA_ARGS__
+#define GET_G_TYPED_KERNEL_M(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, NAME, ...) NAME
+#define COMBINE_SIGNATURE(...) __VA_ARGS__
 // Ensure correct __VA_ARGS__ expansion on Windows
 #define __WRAP_VAARGS(x) x
 
@@ -276,16 +276,31 @@ public:
 // {body} is to be defined by user
 
 #define G_TYPED_KERNEL_M_HELPER_2(Class, _1, _2, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, API(_1, _2), Id)
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2), Id)
 
 #define G_TYPED_KERNEL_M_HELPER_3(Class, _1, _2, _3, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, API(_1, _2, _3), Id)
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3), Id)
 
 #define G_TYPED_KERNEL_M_HELPER_4(Class, _1, _2, _3, _4, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, API(_1, _2, _3, _4), Id)
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4), Id)
 
 #define G_TYPED_KERNEL_M_HELPER_5(Class, _1, _2, _3, _4, _5, Id) \
-    static_assert(false, "Please use using or typedef if tuple contains more than 4 types");
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5), Id)
+
+#define G_TYPED_KERNEL_M_HELPER_6(Class, _1, _2, _3, _4, _5, _6, Id) \
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6), Id)
+
+#define G_TYPED_KERNEL_M_HELPER_7(Class, _1, _2, _3, _4, _5, _6, _7, Id) \
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7), Id)
+
+#define G_TYPED_KERNEL_M_HELPER_8(Class, _1, _2, _3, _4, _5, _6, _7, _8, Id) \
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8), Id)
+
+#define G_TYPED_KERNEL_M_HELPER_9(Class, _1, _2, _3, _4, _5, _6, _7, _8, _9, Id) \
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8, _9), Id)
+
+#define G_TYPED_KERNEL_M_HELPER_10(Class, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, Id) \
+    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10), Id)
 
 /**
  * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
@@ -293,7 +308,12 @@ public:
  *
  * @param Class type name for this operation.
  */
-#define G_TYPED_KERNEL_M(Class, ...) __WRAP_VAARGS(GET_HELPER(__VA_ARGS__, \
+#define G_TYPED_KERNEL_M(Class, ...) __WRAP_VAARGS(GET_G_TYPED_KERNEL_M(__VA_ARGS__, \
+                                                   G_TYPED_KERNEL_M_HELPER_10, \
+                                                   G_TYPED_KERNEL_M_HELPER_9, \
+                                                   G_TYPED_KERNEL_M_HELPER_8, \
+                                                   G_TYPED_KERNEL_M_HELPER_7, \
+                                                   G_TYPED_KERNEL_M_HELPER_6, \
                                                    G_TYPED_KERNEL_M_HELPER_5, \
                                                    G_TYPED_KERNEL_M_HELPER_4, \
                                                    G_TYPED_KERNEL_M_HELPER_3, \
