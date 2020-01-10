@@ -3,8 +3,8 @@ import numpy as np
 import argparse
 
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE,
-            cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,
+            cv.dnn.DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, cv.dnn.DNN_BACKEND_OPENCV)
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
 parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
@@ -36,26 +36,27 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
 # 2. Create input
 #     image = cv2.imread(path/to/image)
 #     image_rev = np.flip(image, axis=1)
-#     image_h, image_w = image.shape[:2]
 #     input = np.stack([image, image_rev], axis=0)
 #
-# 3. Hardcode image_h and image_w shapes to determine output shapes
-# -   parsing_out1 = tf.reduce_mean(tf.stack([tf.image.resize_images(parsing_out1_100, [image_h, image_w]),
-#                                        tf.image.resize_images(parsing_out1_075, [image_h, image_w]),
-#                                        tf.image.resize_images(parsing_out1_125, [image_h, image_w])]), axis=0)
-#     Do similarly with parsing_out2, parsing_out3
-# 4. Remove postprocessing
-# -    parsing_ = sess.run(raw_output, feed_dict={'input:0': input})
+# 3. Hardcode image_h and image_w shapes to determine output shapes.
+#    We use default INPUT_SIZE = (384, 384) from evaluate_parsing_JPPNet-s2.py.
+# -  parsing_out1 = tf.reduce_mean(tf.stack([tf.image.resize_images(parsing_out1_100, INPUT_SIZE),
+#                                            tf.image.resize_images(parsing_out1_075, INPUT_SIZE),
+#                                            tf.image.resize_images(parsing_out1_125, INPUT_SIZE)]), axis=0)
+#    Do similarly with parsing_out2, parsing_out3
+# 4. Remove postprocessing. Last net operation:
+#      raw_output = tf.reduce_mean(tf.stack([parsing_out1, parsing_out2, parsing_out3]), axis=0)
+#    Change:
+#      parsing_ = sess.run(raw_output, feed_dict={'input:0': input})
 #
 # 5. To save model after sess.run(...) add:
-# -    input_graph_def = tf.get_default_graph().as_graph_def()
-# -    output_node = "Mean_3"
-# -    output_graph_def = tf.graph_util.convert_variables_to_constants(sess, input_graph_def, output_node)
-# -
-# -    output_graph = "LIP_JPPNet.pb"
-# -    with tf.gfile.GFile(output_graph, "wb") as f:
-# -        f.write(output_graph_def.SerializeToString())
-
+#     input_graph_def = tf.get_default_graph().as_graph_def()
+#     output_node = "Mean_3"
+#     output_graph_def = tf.graph_util.convert_variables_to_constants(sess, input_graph_def, output_node)
+#
+#     output_graph = "LIP_JPPNet.pb"
+#     with tf.gfile.GFile(output_graph, "wb") as f:
+#         f.write(output_graph_def.SerializeToString())
 
 
 def preprocess(image_path):
@@ -73,6 +74,8 @@ def run_net(input, model_path, backend, target):
     """
     Read network and infer model
     :param model_path: path to JPPNet model
+    :param backend: computation backend
+    :param target: computation device
     """
     net = cv.dnn.readNet(model_path)
     net.setPreferableBackend(backend)
@@ -82,10 +85,11 @@ def run_net(input, model_path, backend, target):
     return out
 
 
-def postprocess(out):
+def postprocess(out, input_shape):
     """
     Create a grayscale human segmentation
     :param out: network output
+    :param input_shape: input image width and height
     """
     # LIP classes
     # 0 Background
@@ -111,6 +115,10 @@ def postprocess(out):
     head_output, tail_output = np.split(out, indices_or_sections=[1], axis=0)
     head_output = head_output.squeeze(0)
     tail_output = tail_output.squeeze(0)
+
+    head_output = np.stack([cv.resize(img, dsize=input_shape) for img in head_output[:, ...]])
+    tail_output = np.stack([cv.resize(img, dsize=input_shape) for img in tail_output[:, ...]])
+
     tail_list = np.split(tail_output, indices_or_sections=list(range(1, 20)), axis=0)
     tail_list = [arr.squeeze(0) for arr in tail_list]
     tail_list_rev = [tail_list[i] for i in range(14)]
@@ -149,8 +157,9 @@ def parse_human(image_path, model_path, backend, target):
     :param target: name of computation target
     """
     input = preprocess(image_path)
+    input_h, input_w = input.shape[2:]
     output = run_net(input, model_path, backend, target)
-    grayscale_out = postprocess(output)
+    grayscale_out = postprocess(output, (input_w, input_h))
     segmentation = decode_labels(grayscale_out)
     return segmentation
 
