@@ -133,7 +133,7 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     // Note: .at() is intentional for GArray and GOpaque as objects MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
-    case GShape::GOPAQUE:  return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GOPAQUE: return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;

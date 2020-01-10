@@ -95,19 +95,6 @@ GAPI_OCV_KERNEL(OCVGenerateOpaque, ThisTest::GenerateOpaque)
 };
 } // (anonymous namespace)
 
-namespace
-{
-    // copypasted to be used later
-    // a possible implementation from c++14 standart
-    template<class T, class U = T>
-    T exchange(T& obj, U&& new_value)
-    {
-        T old_value = std::move(obj);
-        obj = std::forward<U>(new_value);
-        return old_value;
-    }
-} // (anonymous namespace)
-
 TEST(GOpaque, TestOpaqueOut)
 {
     cv::Mat input = cv::Mat(52, 52, CV_8U);
@@ -167,7 +154,6 @@ TEST(GOpaque, TestOpaqueCustomOut2)
     std::string str2 = str;
     std::reverse(str2.begin(), str2.end());
 
-
     ThisTest::MyCustomType out1, out2;
 
     cv::GMat in1, in2;
@@ -188,70 +174,24 @@ TEST(GOpaque_OpaqueRef, TestMov)
     // Warning: this test is testing some not-very-public APIs
     // Test how OpaqueRef's mov() (aka poor man's move()) is working.
 
-    // a helper class to verify move semantics in GOpaque
-    struct Foo
-    {
-        char* cstring;
+    using I = std::string;
 
-        Foo(const char* s = "")
-        : cstring(nullptr)
-        {
-            if (s) {
-                std::size_t n = std::strlen(s) + 1;
-                cstring = new char[n];
-                std::memcpy(cstring, s, n);
-            }
-        }
-
-        ~Foo()
-        {
-            delete[] cstring;
-        }
-
-        Foo(const Foo& other)
-        : Foo(other.cstring)
-        {}
-
-        Foo(Foo&& other) noexcept
-        : cstring(exchange(other.cstring, nullptr))
-        {}
-
-        Foo& operator=(const Foo& other)
-        {
-             return *this = Foo(other);
-        }
-
-        Foo& operator=(Foo&& other) noexcept
-        {
-            std::swap(cstring, other.cstring);
-            return *this;
-        }
-    };
-
-    // compare 2 instances of Foo
-    auto foo_are_eq = [](const Foo& a, const Foo& b, std::size_t n){
-        return strncmp(a.cstring, b.cstring, n);
-    };
-
-    using I = Foo;
-
-    const char *word = "a word";
-    const int len = 7; // size of the string above
-    const I gold(word);
+    std::string str = "this string must be long due to short string optimization";
+    const I gold(str);
 
     I test = gold;
-    const char* ptr = test.cstring;
+    const char* ptr = test.data();
 
     cv::detail::OpaqueRef ref(test);
     cv::detail::OpaqueRef mov;
     mov.reset<I>();
 
-    EXPECT_EQ(foo_are_eq(gold, ref.rref<I>(), len), 0);  // ref = gold
+    EXPECT_EQ(gold, ref.rref<I>());         // ref = gold
 
     mov.mov(ref);
-    EXPECT_EQ(foo_are_eq(gold, mov.rref<I>(), len), 0);  // mov obtained the data
-    EXPECT_EQ(ptr, mov.rref<I>().cstring);                // pointer is unchanged (same data)
-    EXPECT_EQ(foo_are_eq(test, ref.rref<I>(), len), 0);  // ref = test
-    EXPECT_NE(foo_are_eq(test, mov.rref<I>(), len), 0);  // ref lost the data
+    EXPECT_EQ(gold, mov.rref<I>());         // mov obtained the data
+    EXPECT_EQ(ptr,  mov.rref<I>().data());  // pointer is unchanged (same data)
+    EXPECT_EQ(test, ref.rref<I>());         // ref = test
+    EXPECT_NE(test, mov.rref<I>());         // ref lost the data
 }
 } // namespace opencv_test

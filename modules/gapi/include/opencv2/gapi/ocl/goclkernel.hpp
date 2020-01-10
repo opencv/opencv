@@ -68,14 +68,14 @@ public:
     {
         return outVecRef(output).wref<T>();
     }
-    template<typename T> T& outOpR(int output) // FIXME: the same issue
+    template<typename T> T& outOpaqueR(int output) // FIXME: the same issue
     {
-        return outOpRef(output).wref<T>();
+        return outOpaqueRef(output).wref<T>();
     }
 
 protected:
     detail::VectorRef& outVecRef(int output);
-    detail::VectorRef& outOpRef(int output);
+    detail::VectorRef& outOpaqueRef(int output);
 
     std::vector<GArg> m_args;
     std::unordered_map<std::size_t, GRunArgP> m_results;
@@ -195,7 +195,7 @@ template<typename U> struct ocl_get_out<cv::GArray<U> >
 };
 template<typename U> struct ocl_get_out<cv::GOpaque<U> >
 {
-    static U& get(GOCLContext &ctx, int idx) { return ctx.outOpR<U>(idx);  }
+    static U& get(GOCLContext &ctx, int idx) { return ctx.outOpaqueR<U>(idx);  }
 };
 
 template<typename, typename, typename>

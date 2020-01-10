@@ -94,14 +94,14 @@ public:
     {
         return outVecRef(output).wref<T>();
     }
-    template<typename T> T& outOpR(int output) // FIXME: the same issue
+    template<typename T> T& outOpaqueR(int output) // FIXME: the same issue
     {
-        return outOpRef(output).wref<T>();
+        return outOpaqueRef(output).wref<T>();
     }
 
 protected:
     detail::VectorRef& outVecRef(int output);
-    detail::OpaqueRef& outOpRef(int output);
+    detail::OpaqueRef& outOpaqueRef(int output);
 
     std::vector<GArg> m_args;
 
@@ -257,7 +257,7 @@ template<typename U> struct get_out<cv::GOpaque<U>>
 {
     static U& get(GCPUContext &ctx, int idx)
     {
-        return ctx.outOpR<U>(idx);
+        return ctx.outOpaqueR<U>(idx);
     }
 };
 

@@ -12,7 +12,7 @@
 #include <opencv2/gapi/gmat.hpp>      // GMat
 #include <opencv2/gapi/gscalar.hpp>   // GScalar
 #include <opencv2/gapi/garray.hpp>    // GArray<T>
-#include <opencv2/gapi/gopaque.hpp>    // GOpaque<T>
+#include <opencv2/gapi/gopaque.hpp>   // GOpaque<T>
 
 namespace cv {
 
@@ -61,9 +61,8 @@ protected:
 
     void setArgs(std::vector<GArg> &&args);
 
-    // Public version returns a typed array, this one is implementation detail
+    // Public versions return a typed array or opaque, those are implementation details
     detail::GArrayU yieldArray(int output = 0);
-    // Public version returns a typed opaque, this one is implementation detail
     detail::GOpaqueU yieldOpaque(int output = 0);
 };
 

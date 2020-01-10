@@ -54,7 +54,7 @@ namespace detail
     template<> struct is_meta_descr<GMatDesc>    : std::true_type {};
     template<> struct is_meta_descr<GScalarDesc> : std::true_type {};
     template<> struct is_meta_descr<GArrayDesc>  : std::true_type {};
-    template<> struct is_meta_descr<GOpaqueDesc>  : std::true_type {};
+    template<> struct is_meta_descr<GOpaqueDesc> : std::true_type {};
 
     template<typename... Ts>
     using are_meta_descrs = all_satisfy<is_meta_descr, Ts...>;

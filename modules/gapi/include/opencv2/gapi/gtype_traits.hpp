@@ -112,7 +112,7 @@ namespace detail
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
-    template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>; };
+    template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>;};
     // FIXME: This is not quite correct since IStreamSource may produce not only Mat but also Scalar
     // and vector data. TODO: Extend the type dispatchig on these types too.
     template<>           struct GTypeOf<cv::gapi::wip::IStreamSource::Ptr> { using type = cv::GMat;};

@@ -91,7 +91,7 @@ namespace detail
     template<> struct MetaType<cv::GMat>    { using type = GMatDesc; };
     template<> struct MetaType<cv::GMatP>   { using type = GMatDesc; };
     template<> struct MetaType<cv::GScalar> { using type = GScalarDesc; };
-    template<typename U> struct MetaType<cv::GArray<U> > { using type = GArrayDesc; };
+    template<typename U> struct MetaType<cv::GArray<U> >  { using type = GArrayDesc; };
     template<typename U> struct MetaType<cv::GOpaque<U> > { using type = GOpaqueDesc; };
     template<typename T> struct MetaType    { using type = T; }; // opaque args passed as-is
 

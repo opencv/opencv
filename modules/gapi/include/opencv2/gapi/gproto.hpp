@@ -37,7 +37,7 @@ using GProtoArg = util::variant
     < GMat
     , GMatP
     , GScalar
-    , detail::GArrayU // instead of GArray<T>
+    , detail::GArrayU  // instead of GArray<T>
     , detail::GOpaqueU // instead of GOpaque<T>
     >;
 

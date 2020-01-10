@@ -54,15 +54,8 @@ namespace detail
     class OpaqueRef;
     using ConstructOpaque = std::function<void(OpaqueRef&)>;
 
-    // FIXME: garray.hpp already contains commented hint classes below,
+    // FIXME: garray.hpp already contains hint classes (for actual T type verification),
     // need to think where it can be moved (currently opaque uses it from garray)
-
-    // This is the base struct for GOpaqueU type holder
-    //struct TypeHintBaseOp{virtual ~TypeHintBaseOp() = default;};
-
-    // This class holds type of initial GOpaque to be checked from GOpaqueU
-    //template <typename T>
-    //struct TypeHintOp final : public TypeHintBaseOp{};
 
     // This class strips type information from GOpaque<T> and makes it usable
     // in the G-API graph compiler (expression unrolling, graph generation, etc).
@@ -80,7 +73,7 @@ namespace detail
 
     protected:
         GOpaqueU();                                // Default constructor
-        template<class> friend class cv::GOpaque;  //  (available to GOpaque<T> only)
+        template<class> friend class cv::GOpaque;  // (available for GOpaque<T> only)
 
         void setConstructFcn(ConstructOpaque &&cv);  // Store T-aware constructor
 
@@ -159,8 +152,6 @@ namespace detail
             }
             else if (isRWOwn())
             {
-                //util::get<rw_own_t>(m_ref).clear();
-                // fixme
                 util::get<rw_own_t>(m_ref) = {};
             }
             else GAPI_Assert(false); // shouldn't be called in *EXT modes

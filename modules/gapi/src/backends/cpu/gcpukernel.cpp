@@ -36,7 +36,7 @@ cv::detail::VectorRef& cv::GCPUContext::outVecRef(int output)
     return util::get<cv::detail::VectorRef>(m_results.at(output));
 }
 
-cv::detail::OpaqueRef& cv::GCPUContext::outOpRef(int output)
+cv::detail::OpaqueRef& cv::GCPUContext::outOpaqueRef(int output)
 {
     return util::get<cv::detail::OpaqueRef>(m_results.at(output));
 }
