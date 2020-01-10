@@ -116,7 +116,9 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && sliceRanges.size() == 1) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 &&
-
+#ifdef HAVE_INF_ENGINE
+                INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
+#endif
                 sliceRanges.size() == 1 && sliceRanges[0].size() == 4);
     }
 
