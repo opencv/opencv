@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        std::cerr << "Filename requried" << std::endl;
+        std::cerr << "Filename required" << std::endl;
         return 1;
     }
 

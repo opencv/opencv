@@ -184,7 +184,7 @@ void drawPrimitivesOCV(cv::Mat& in,
                 cv::Point org(0, mask.rows - baseline);
                 cv::putText(mask, tp.text, org, tp.ff, tp.fs, 255, tp.thick);
 
-                // Org is bottom left point, trasform it to top left point for blendImage
+                // Org is bottom left point, transform it to top left point for blendImage
                 cv::Point tl(tp.org.x, tp.org.y - mask.size().height + baseline);
 
                 blendTextMask(in, mask, tl, tp.color);
@@ -208,7 +208,7 @@ void drawPrimitivesOCV(cv::Mat& in,
                 cv::Point org(0, mask.rows - baseline);
                 ftpr->putText(mask, ftp.text, org, ftp.fh);
 
-                // Org is bottom left point, trasform it to top left point for blendImage
+                // Org is bottom left point, transform it to top left point for blendImage
                 cv::Point tl(ftp.org.x, ftp.org.y - mask.size().height + baseline);
 
                 blendTextMask(in, mask, tl, color);
