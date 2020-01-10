@@ -124,10 +124,8 @@ public:
         }
         else
             CV_Error(Error::StsBadArg, "Cannot determine pooling type");
-
         setParamsFrom(params);
         ceilMode = params.get<bool>("ceil_mode", true);
-
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }

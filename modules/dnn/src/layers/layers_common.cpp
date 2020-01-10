@@ -152,9 +152,9 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
     globalPooling = std::vector<bool>(3, is_global);
     if (params.has("global_pooling_d"))
         globalPooling[0] = params.get<bool>("global_pooling_d");
-    else if (params.has("global_pooling_h"))
+    if (params.has("global_pooling_h"))
         globalPooling[1] = params.get<bool>("global_pooling_h");
-    else if (params.has("global_pooling_w"))
+    if (params.has("global_pooling_w"))
         globalPooling[2] = params.get<bool>("global_pooling_w");
 
     if (is_global)

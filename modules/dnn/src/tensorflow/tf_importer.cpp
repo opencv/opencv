@@ -1932,8 +1932,28 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Mean")
         {
+            // Computes the mean of elements across dimensions of a tensor.
+            // If keepdims is false (default) reduces input_tensor along the dimensions given in axis,
+            // else the reduced dimensions are retained with length 1.
+            // if indices = [1, 2] in NHWC layout we use global pooling: NxCxHxW --Pooling--> NxCx1x1
+            // if keepdims is false we use Flatten after Pooling: out_shape = NxC
+            // if indices = [0] we use a global pooling by indices.
+            // To return correct shape, we use Reshape after Pooling. To determine input shape use Slice for input,
+            // if keepdims is false we use Flatten after Slice.
+            // Example: input_shape = NxCxHxW
+            // determine out shape: NxCxHxW --Slice--> 1xCxHxW
+            //                      out_shape = 1xCxHxW if keepDims else (1xCxHxW --Flatten--> CxHxW)
+            // global pool: NxCxHxW --Flatten--> Nx(C*H*W) --Reshape--> 1x1xNx(C*H*W) --Pooling--> 1x1x1x(C*H*W) --Reshape--> out_shape
+
             Mat indices = getTensorContent(getConstBlob(layer, value_id, 1));
             CV_Assert(indices.type() == CV_32SC1);
+
+            // There are two attributes, "keepdims" and a deprecated "keep_dims".
+            bool keepDims = false;
+            if (hasLayerAttr(layer, "keepdims"))
+                keepDims = getLayerAttr(layer, "keepdims").b();
+            else if (hasLayerAttr(layer, "keep_dims"))
+                keepDims = getLayerAttr(layer, "keep_dims").b();
 
             if (indices.total() == 1 && indices.at<int>(0) == 0)
             {
@@ -1968,48 +1988,43 @@ void TFImporter::populateNet(Net dstNet)
                 connect(layer_id, dstNet, Pin(reshapeName), avgId, 0);
 
                 LayerParams sliceLp;
-                std::string sliceName = name + "/slice";
-                CV_Assert(layer_id.find(sliceName) == layer_id.end());
+                std::string layerShapeName = name + "/slice";
+                CV_Assert(layer_id.find(layerShapeName) == layer_id.end());
                 sliceLp.set("axis", indices.at<int>(0));
                 int begin[] = {0};
                 int size[] = {1};
                 sliceLp.set("begin", DictValue::arrayInt(&begin[0], 1));
                 sliceLp.set("size", DictValue::arrayInt(&size[0], 1));
-                int sliceId = dstNet.addLayer(sliceName, "Slice", sliceLp);
-                layer_id[sliceName] = sliceId;
+                int sliceId = dstNet.addLayer(layerShapeName, "Slice", sliceLp);
+                layer_id[layerShapeName] = sliceId;
                 connect(layer_id, dstNet, Pin(layer.input(0)), sliceId, 0);
 
-                LayerParams squeezeLp;
-                std::string squeezeName = name + "/squeeze";
-                CV_Assert(layer_id.find(squeezeName) == layer_id.end());
-                squeezeLp.set("axis", indices.at<int>(0));
-                squeezeLp.set("end_axis", indices.at<int>(0) + 1);
-                int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
-                layer_id[squeezeName] = squeezeId;
-                connect(layer_id, dstNet, Pin(sliceName), squeezeId, 0);
+                if (!keepDims)
+                {
+                    LayerParams squeezeLp;
+                    std::string squeezeName = name + "/squeeze";
+                    CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                    squeezeLp.set("axis", indices.at<int>(0));
+                    squeezeLp.set("end_axis", indices.at<int>(0) + 1);
+                    int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
+                    layer_id[squeezeName] = squeezeId;
+                    connect(layer_id, dstNet, Pin(layerShapeName), squeezeId, 0);
+                    layerShapeName = squeezeName;
+                }
 
                 int id = dstNet.addLayer(name, "Reshape", layerParams);
                 layer_id[name] = id;
                 connect(layer_id, dstNet, Pin(avgName), id, 0);
-                connect(layer_id, dstNet, Pin(squeezeName), id, 1);
+                connect(layer_id, dstNet, Pin(layerShapeName), id, 1);
             } else {
                 if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
                     CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
 
                 layerParams.set("pool", "ave");
                 layerParams.set("global_pooling", true);
-
                 int id = dstNet.addLayer(name, "Pooling", layerParams);
                 layer_id[name] = id;
-
                 connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
-
-                // There are two attributes, "keepdims" and a deprecated "keep_dims".
-                bool keepDims = false;
-                if (hasLayerAttr(layer, "keepdims"))
-                    keepDims = getLayerAttr(layer, "keepdims").b();
-                else if (hasLayerAttr(layer, "keep_dims"))
-                    keepDims = getLayerAttr(layer, "keep_dims").b();
 
                 if (!keepDims)
                 {
