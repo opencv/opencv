@@ -121,6 +121,13 @@ public:
     }
 };
 
+TEST_P(Test_TensorFlow_layers, reduce_mean)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    runTensorFlowNet("global_pool_by_axis");
+}
+
 TEST_P(Test_TensorFlow_layers, conv)
 {
     runTensorFlowNet("single_conv");
