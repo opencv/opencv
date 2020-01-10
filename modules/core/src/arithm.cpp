@@ -1522,7 +1522,8 @@ struct InRange_SIMD<float>
             v_float32 low2 = vx_load(src2 + x + v_float32::nlanes);
             v_float32 high2 = vx_load(src3 + x + v_float32::nlanes);
 
-            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32((values1 >= low1) & (high1 >= values1)), v_reinterpret_as_u32((values2 >= low2) & (high2 >= values2))));
+            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32(values1 >= low1) & v_reinterpret_as_u32(high1 >= values1),
+                                         v_reinterpret_as_u32(values2 >= low2) & v_reinterpret_as_u32(high2 >= values2)));
         }
         vx_cleanup();
         return x;
