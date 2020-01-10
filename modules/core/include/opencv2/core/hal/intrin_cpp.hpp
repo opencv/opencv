@@ -1472,6 +1472,7 @@ similar to cv::v_load, but source memory block should be aligned (to 16-byte bou
 template<typename _Tp>
 inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load_aligned(const _Tp* ptr)
 {
+    CV_Assert(isAligned<sizeof(v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128>)>(ptr));
     return v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128>(ptr);
 }
 
@@ -1748,18 +1749,21 @@ Pointer __should__ be aligned by 16-byte boundary. */
 template<typename _Tp, int n>
 inline void v_store_aligned(_Tp* ptr, const v_reg<_Tp, n>& a)
 {
+    CV_Assert(isAligned<sizeof(v_reg<_Tp, n>)>(ptr));
     v_store(ptr, a);
 }
 
 template<typename _Tp, int n>
 inline void v_store_aligned_nocache(_Tp* ptr, const v_reg<_Tp, n>& a)
 {
+    CV_Assert(isAligned<sizeof(v_reg<_Tp, n>)>(ptr));
     v_store(ptr, a);
 }
 
 template<typename _Tp, int n>
 inline void v_store_aligned(_Tp* ptr, const v_reg<_Tp, n>& a, hal::StoreMode /*mode*/)
 {
+    CV_Assert(isAligned<sizeof(v_reg<_Tp, n>)>(ptr));
     v_store(ptr, a);
 }
 
