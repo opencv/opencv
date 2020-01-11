@@ -2129,10 +2129,12 @@ inline v_float32x4 v_lut(const float* tab, const int* idx)
 }
 inline v_float32x4 v_lut_pairs(const float* tab, const int* idx)
 {
+    typedef uint64 CV_DECL_ALIGNED(1) unaligned_uint64;
+
     uint64 CV_DECL_ALIGNED(32) elems[2] =
     {
-        *(uint64*)(tab + idx[0]),
-        *(uint64*)(tab + idx[1])
+        *(unaligned_uint64*)(tab + idx[0]),
+        *(unaligned_uint64*)(tab + idx[1])
     };
     return v_float32x4(vreinterpretq_f32_u64(vld1q_u64(elems)));
 }
