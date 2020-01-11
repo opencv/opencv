@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>libopencv-dev</name>
+  <version>4.2.0</version>
+  <description>
+    Open Source Computer Vision Library.
+  </description>
+  <maintainer email="opencv@opencv.org">opencv</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  
+  <build_depend>eigen</build_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
