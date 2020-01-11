@@ -6,6 +6,7 @@
 
 using namespace std;
 using namespace cv;
+/* Add some lines in a text game */
 
 int main( int argc, char* argv[] )
 {
