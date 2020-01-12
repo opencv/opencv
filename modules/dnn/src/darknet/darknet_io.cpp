@@ -149,7 +149,7 @@ namespace cv {
 
 
                 void setConvolution(int kernel, int pad, int stride,
-                    int filters_num, int channels_num, int use_batch_normalize)
+                    int filters_num, int channels_num, int groups, int use_batch_normalize)
                 {
                     cv::dnn::LayerParams conv_param =
                         getParamConvolution(kernel, pad, stride, filters_num);
@@ -161,6 +161,8 @@ namespace cv {
                     if (!use_batch_normalize) {
                         conv_param.set<bool>("bias_term", true);
                     }
+
+                    conv_param.set<int>("group", groups);
 
                     lp.layer_name = layer_name;
                     lp.layer_type = conv_param.type;
@@ -215,6 +217,24 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
+                void setDropout()
+                {
+                    cv::dnn::LayerParams dropout_param;
+                    dropout_param.name = "Dropout-name";
+                    dropout_param.type = "Dropout";
+                    darknet::LayerParameter lp;
+
+                    std::string layer_name = cv::format("dropout_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = dropout_param.type;
+                    lp.layerParams = dropout_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
                 void setReLU()
                 {
                     cv::dnn::LayerParams activation_param;
@@ -224,6 +244,42 @@ namespace cv {
 
                     darknet::LayerParameter lp;
                     std::string layer_name = cv::format("relu_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = activation_param.type;
+                    lp.layerParams = activation_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    fused_layer_names.back() = last_layer;
+                }
+
+                void setSwish()
+                {
+                    cv::dnn::LayerParams activation_param;
+                    activation_param.name = "Swish-name";
+                    activation_param.type = "Swish";
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("swish_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = activation_param.type;
+                    lp.layerParams = activation_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    fused_layer_names.back() = last_layer;
+                }
+
+                void setLogistic()
+                {
+                    cv::dnn::LayerParams activation_param;
+                    activation_param.name = "Sigmoid-name";
+                    activation_param.type = "Sigmoid";
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("logistic_%d", layer_id);
                     lp.layer_name = layer_name;
                     lp.layer_type = activation_param.type;
                     lp.layerParams = activation_param;
@@ -487,6 +543,26 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
+                void setScaleChannels(int from)
+                {
+                    cv::dnn::LayerParams shortcut_param;
+                    shortcut_param.name = "Scale-name";
+                    shortcut_param.type = "Scale";
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("scale_channels_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = shortcut_param.type;
+                    lp.layerParams = shortcut_param;
+                    lp.bottom_indexes.push_back(fused_layer_names.at(from));
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
                 void setUpsample(int scaleFactor)
                 {
                     cv::dnn::LayerParams param;
@@ -608,6 +684,7 @@ namespace cv {
                         int padding = getParam<int>(layer_params, "padding", 0);
                         int stride = getParam<int>(layer_params, "stride", 1);
                         int filters = getParam<int>(layer_params, "filters", -1);
+                        int groups = getParam<int>(layer_params, "groups", 1);
                         bool batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
                         int flipped = getParam<int>(layer_params, "flipped", 0);
                         if (flipped == 1)
@@ -620,7 +697,7 @@ namespace cv {
                         CV_Assert(tensor_shape[0] > 0);
 
                         setParams.setConvolution(kernel_size, padding, stride, filters, tensor_shape[0],
-                            batch_normalize);
+                            groups, batch_normalize);
 
                         tensor_shape[0] = filters;
                         tensor_shape[1] = (tensor_shape[1] - kernel_size + 2 * padding) / stride + 1;
@@ -641,6 +718,10 @@ namespace cv {
                         tensor_shape[0] = output;
                         tensor_shape[1] = 1;
                         tensor_shape[2] = 1;
+                    }
+                    else if (layer_type == "dropout")
+                    {
+                        setParams.setDropout();
                     }
                     else if (layer_type == "maxpool")
                     {
@@ -727,6 +808,14 @@ namespace cv {
                         from = from < 0 ? from + layers_counter : from;
                         setParams.setShortcut(from, alpha);
                     }
+                    else if (layer_type == "scale_channels")
+                    {
+                        std::string bottom_layer = getParam<std::string>(layer_params, "from", "");
+                        CV_Assert(!bottom_layer.empty());
+                        int from = std::atoi(bottom_layer.c_str());
+                        from = from < 0 ? from + layers_counter : from;
+                        setParams.setScaleChannels(from);
+                    }
                     else if (layer_type == "upsample")
                     {
                         int scaleFactor = getParam<int>(layer_params, "stride", 1);
@@ -762,6 +851,14 @@ namespace cv {
                     if (activation == "leaky")
                     {
                         setParams.setReLU();
+                    }
+                    else if (activation == "swish")
+                    {
+                        setParams.setSwish();
+                    }
+                    else if (activation == "logistic")
+                    {
+                        setParams.setLogistic();
                     }
                     else if (activation != "linear")
                         CV_Error(cv::Error::StsParseError, "Unsupported activation: " + activation);
@@ -818,13 +915,15 @@ namespace cv {
                         {
                             int kernel_size = getParam<int>(layer_params, "size", -1);
                             filters = getParam<int>(layer_params, "filters", -1);
+                            int groups = getParam<int>(layer_params, "groups", 1);
                             use_batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
 
                             CV_Assert(kernel_size > 0 && filters > 0);
                             CV_Assert(tensor_shape[0] > 0);
+                            CV_Assert(tensor_shape[0] % groups == 0);
 
-                            weights_size = filters * tensor_shape[0] * kernel_size * kernel_size;
-                            int sizes_weights[] = { filters, tensor_shape[0], kernel_size, kernel_size };
+                            weights_size = filters * (tensor_shape[0] / groups) * kernel_size * kernel_size;
+                            int sizes_weights[] = { filters, tensor_shape[0] / groups, kernel_size, kernel_size };
                             weightsBlob.create(4, sizes_weights, CV_32F);
                         }
                         else
@@ -838,6 +937,7 @@ namespace cv {
                             int sizes_weights[] = { filters, total(tensor_shape) };
                             weightsBlob.create(2, sizes_weights, CV_32F);
                         }
+
                         CV_Assert(weightsBlob.isContinuous());
 
                         cv::Mat meanData_mat(1, filters, CV_32F);	// mean
@@ -879,8 +979,8 @@ namespace cv {
                     }
 
                     std::string activation = getParam<std::string>(layer_params, "activation", "linear");
-                    if(activation == "leaky")
-                        ++cv_layers_counter;  // For ReLU
+                    if(activation == "leaky" || activation == "swish" || activation == "logistic")
+                        ++cv_layers_counter;  // For ReLU, Swish, Sigmoid
 
                     if(!darknet_layers_counter)
                         tensor_shape.resize(1);
