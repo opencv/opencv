@@ -1109,23 +1109,29 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 
 struct VResizeNoVec
 {
-    int operator()(const uchar**, uchar*, const uchar*, int ) const { return 0; }
+    template<typename WT, typename T, typename BT>
+    int operator()(const WT**, T*, const BT*, int ) const
+    {
+        return 0;
+    }
 };
 
 struct HResizeNoVec
 {
-    int operator()(const uchar**, uchar**, int, const int*,
-        const uchar*, int, int, int, int, int) const { return 0; }
+    template<typename T, typename WT, typename AT> inline
+    int operator()(const T**, WT**, int, const int*,
+        const AT*, int, int, int, int, int) const
+    {
+        return 0;
+    }
 };
 
 #if CV_SIMD
 
 struct VResizeLinearVec_32s8u
 {
-    int operator()(const uchar** _src, uchar* dst, const uchar* _beta, int width ) const
+    int operator()(const int** src, uchar* dst, const short* beta, int width) const
     {
-        const int** src = (const int**)_src;
-        const short* beta = (const short*)_beta;
         const int *S0 = src[0], *S1 = src[1];
         int x = 0;
         v_int16 b0 = vx_setall_s16(beta[0]), b1 = vx_setall_s16(beta[1]);
@@ -1153,12 +1159,9 @@ struct VResizeLinearVec_32s8u
 
 struct VResizeLinearVec_32f16u
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, ushort* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        ushort* dst = (ushort*)_dst;
         int x = 0;
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
@@ -1183,12 +1186,9 @@ struct VResizeLinearVec_32f16u
 
 struct VResizeLinearVec_32f16s
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, short* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        short* dst = (short*)_dst;
         int x = 0;
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
@@ -1213,12 +1213,9 @@ struct VResizeLinearVec_32f16s
 
 struct VResizeLinearVec_32f
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, float* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        float* dst = (float*)_dst;
         int x = 0;
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
@@ -1237,10 +1234,8 @@ struct VResizeLinearVec_32f
 
 struct VResizeCubicVec_32s8u
 {
-    int operator()(const uchar** _src, uchar* dst, const uchar* _beta, int width ) const
+    int operator()(const int** src, uchar* dst, const short* beta, int width) const
     {
-        const int** src = (const int**)_src;
-        const short* beta = (const short*)_beta;
         const int *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
         int x = 0;
         float scale = 1.f/(INTER_RESIZE_COEF_SCALE*INTER_RESIZE_COEF_SCALE);
@@ -1274,12 +1269,9 @@ struct VResizeCubicVec_32s8u
 
 struct VResizeCubicVec_32f16u
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, ushort* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        ushort* dst = (ushort*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
@@ -1300,12 +1292,9 @@ struct VResizeCubicVec_32f16u
 
 struct VResizeCubicVec_32f16s
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, short* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        short* dst = (short*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
@@ -1326,12 +1315,9 @@ struct VResizeCubicVec_32f16s
 
 struct VResizeCubicVec_32f
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, float* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        float* dst = (float*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
@@ -1351,10 +1337,12 @@ struct VResizeCubicVec_32f
 
 struct VResizeLanczos4Vec_32f16u
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, ushort* dst, const float* beta, int width) const
     {
-        if (CV_CPU_HAS_SUPPORT_SSE4_1) return opt_SSE4_1::VResizeLanczos4Vec_32f16u_SSE41(_src, _dst, _beta, width);
-        else return 0;
+        if (CV_CPU_HAS_SUPPORT_SSE4_1)
+            return opt_SSE4_1::VResizeLanczos4Vec_32f16u_SSE41(src, dst, beta, width);
+        else
+            return 0;
     }
 };
 
@@ -1362,13 +1350,10 @@ struct VResizeLanczos4Vec_32f16u
 
 struct VResizeLanczos4Vec_32f16u
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, ushort* dst, const float* beta, int width ) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        ushort * dst = (ushort*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
@@ -1401,13 +1386,10 @@ struct VResizeLanczos4Vec_32f16u
 
 struct VResizeLanczos4Vec_32f16s
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, short* dst, const float* beta, int width ) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        short * dst = (short*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
@@ -1438,13 +1420,10 @@ struct VResizeLanczos4Vec_32f16s
 
 struct VResizeLanczos4Vec_32f
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, float* dst, const float* beta, int width ) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        float* dst = (float*)_dst;
         int x = 0;
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
@@ -1489,12 +1468,9 @@ typedef VResizeNoVec VResizeLanczos4Vec_32f;
 template<typename ST, typename DT, typename AT, typename DVT>
 struct HResizeLinearVec_X4
 {
-    int operator()(const uchar** _src, uchar** _dst, int count, const int* xofs,
-        const uchar* _alpha, int, int, int cn, int, int xmax) const
+    int operator()(const ST** src, DT** dst, int count, const int* xofs,
+        const AT* alpha, int, int, int cn, int, int xmax) const
     {
-        const ST **src = (const ST**)_src;
-        const AT *alpha = (const AT*)_alpha;
-        DT **dst = (DT**)_dst;
         const int nlanes = 4;
         const int len0 = xmax & -nlanes;
         int dx = 0, k = 0;
@@ -1549,11 +1525,9 @@ struct HResizeLinearVec_X4
 
 struct HResizeLinearVecU8_X4
 {
-    int operator()(const uchar** src, uchar** _dst, int count, const int* xofs,
-        const uchar* _alpha, int smax, int, int cn, int, int xmax) const
+    int operator()(const uchar** src, int** dst, int count, const int* xofs,
+        const short* alpha/*[xmax]*/, int smax, int /*dmax*/, int cn, int /*xmin*/, int xmax) const
     {
-        const short *alpha = (const short*)_alpha;
-        int **dst = (int**)_dst;
         int dx = 0, k = 0;
 
         if(cn == 1)
@@ -1827,8 +1801,8 @@ struct HResizeLinear
         int dx, k;
         VecOp vecOp;
 
-        int dx0 = vecOp((const uchar**)src, (uchar**)dst, count,
-            xofs, (const uchar*)alpha, swidth, dwidth, cn, xmin, xmax );
+        int dx0 = vecOp(src, dst, count,
+            xofs, alpha, swidth, dwidth, cn, xmin, xmax );
 
         for( k = 0; k <= count - 2; k+=2 )
         {
@@ -1881,7 +1855,7 @@ struct VResizeLinear
         CastOp castOp;
         VecOp vecOp;
 
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp(src, dst, beta, width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
@@ -1912,7 +1886,7 @@ struct VResizeLinear<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COE
         const buf_type *S0 = src[0], *S1 = src[1];
         VResizeLinearVec_32s8u vecOp;
 
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp(src, dst, beta, width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
@@ -1994,7 +1968,7 @@ struct VResizeCubic
         CastOp castOp;
         VecOp vecOp;
 
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp(src, dst, beta, width);
         for( ; x < width; x++ )
             dst[x] = castOp(S0[x]*b0 + S1[x]*b1 + S2[x]*b2 + S3[x]*b3);
     }
@@ -2066,7 +2040,7 @@ struct VResizeLanczos4
     {
         CastOp castOp;
         VecOp vecOp;
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp(src, dst, beta, width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
