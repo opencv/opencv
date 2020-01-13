@@ -11,8 +11,8 @@
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
 
-#include <opencv2/gapi/plaidml/core.hpp>
-
+#include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/tracking/tracker.hpp>
 
 namespace opencv_test
 {
@@ -315,6 +315,40 @@ TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
 
     // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
     EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
+}
+
+TEST(GAPI_Pipeline, ObjectTrackingDemo)
+{
+    std::vector<cv::Rect> bboxes;
+    cv::GMat in;
+    auto out = in + 1;
+    // auto out = cv::gapi::imgproc::GRGB2HSV::on(in);
+
+    cv::GComputation c(in, out);
+    auto sc = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{1280, 720}});
+
+    cv::Mat in_frame;
+    cv::Mat out_mat_gapi;
+
+    sc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>("video.mp4"));
+    sc.start();
+
+    if (!sc.pull(cv::gout(out_mat_gapi))) {
+        throw std::logic_error("Video is empty");
+    }
+
+    cv::selectROIs("Tracker", out_mat_gapi, bboxes, true, false);
+    cv::Rect2d bbox(bboxes[0].x, bboxes[0].y, bboxes[0].width, bboxes[0].height);
+
+    auto tracker = cv::TrackerBoosting::create();
+    tracker->init(out_mat_gapi, bbox);
+
+    while (sc.pull(cv::gout(out_mat_gapi))) {
+        tracker->update(out_mat_gapi, bbox);
+        cv::rectangle(out_mat_gapi, bbox, cv::Scalar(0, 255, 0), 2, 1);
+        cv::imshow("frame", out_mat_gapi);
+        cv::waitKey(1);
+    }
 }
 
 } // namespace opencv_test
