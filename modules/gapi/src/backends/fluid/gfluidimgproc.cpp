@@ -1823,7 +1823,7 @@ GAPI_FLUID_KERNEL(GFluidBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB, false)
     }
 };
 
-} // namespace fliud
+} // namespace fluid
 } // namespace gapi
 } // namespace cv
 

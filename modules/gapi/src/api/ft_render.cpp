@@ -61,13 +61,13 @@ cv::Size cv::gapi::wip::draw::FTTextRender::Priv::getTextSize(const std::wstring
     //                                              or decrement (for right-to-left writing) the pen position after a
     //                                              glyph has been rendered when processing text
     //
-    //   widht (bitmap->width)                   - The width of glyph
+    //   width (bitmap->width)                   - The width of glyph
     //
     //
-    //   Algorihm to compute size of the text bounding box:
+    //   Algorithm to compute size of the text bounding box:
     //
     //   1) Go through all symbols and shift pen position and save glyph parameters (left, advance, width)
-    //      If left + pen postion < 0 set left to 0. For example it's maybe happened
+    //      If left + pen position < 0 set left to 0. For example it's maybe happened
     //      if we print first letter 'J' or any other letter with negative 'left'
     //      We want to render glyph in pen position + left, so we must't allow it to be negative
     //

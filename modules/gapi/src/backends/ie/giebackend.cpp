@@ -185,7 +185,7 @@ struct IEUnit {
         // The practice shows that not all inputs and not all outputs
         // are mandatory to specify in IE model.
         // So what we're concerned here about is:
-        // if opeation's (not topology's) input/output number is
+        // if operation's (not topology's) input/output number is
         // greater than 1, then we do care about input/output layer
         // names. Otherwise, names are picked up automatically.
         // TODO: Probably this check could be done at the API entry point? (gnet)

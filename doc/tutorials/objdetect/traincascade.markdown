@@ -168,7 +168,7 @@ Command line arguments of opencv_traincascade application grouped by purposes:
   - `-w <sampleWidth>` :  Width of training samples (in pixels). Must have exactly the same value as used during training samples creation (opencv_createsamples utility).
   - `-h <sampleHeight>` : Height of training samples (in pixels). Must have exactly the same value as used during training samples creation (opencv_createsamples utility).
 
-- Boosted classifer parameters:
+- Boosted classifier parameters:
   - `-bt <{DAB, RAB, LB, GAB(default)}>` : Type of boosted classifiers: DAB - Discrete AdaBoost, RAB - Real AdaBoost, LB - LogitBoost, GAB - Gentle AdaBoost.
   - `-minHitRate <min_hit_rate>` : Minimal desired hit rate for each stage of the classifier. Overall hit rate may be estimated as (min_hit_rate ^ number_of_stages), @cite Viola04 §4.1.
   - `-maxFalseAlarmRate <max_false_alarm_rate>` : Maximal desired false alarm rate for each stage of the classifier. Overall false alarm rate may be estimated as (max_false_alarm_rate ^ number_of_stages), @cite Viola04 §4.1.

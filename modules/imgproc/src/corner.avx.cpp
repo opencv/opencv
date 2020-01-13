@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#undef CV_FORCE_SIMD128_CPP  // expected AVX implementation only
 #include "opencv2/core/hal/intrin.hpp"
 #include "corner.hpp"
 

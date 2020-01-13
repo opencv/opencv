@@ -1151,7 +1151,7 @@ CVAPI(CvScalar)  cvColorToScalar( double packed_color, int arrtype );
 /** @brief Returns the polygon points which make up the given ellipse.
 
 The ellipse is define by the box of size 'axes' rotated 'angle' around the 'center'. A partial
-sweep of the ellipse arc can be done by spcifying arc_start and arc_end to be something other than
+sweep of the ellipse arc can be done by specifying arc_start and arc_end to be something other than
 0 and 360, respectively. The input array 'pts' must be large enough to hold the result. The total
 number of points stored into 'pts' is returned by this function.
 @see cv::ellipse2Poly

@@ -650,7 +650,7 @@ class Chessboard: public cv::Feature2D
                         bool top(bool check_empty=false);     // moves one corner to the top or returns false
                         bool checkCorner()const;              // returns true if the current corner belongs to at least one
                                                               // none empty cell
-                        bool isNaN()const;                    // returns true if the currnet corner is NaN
+                        bool isNaN()const;                    // returns true if the current corner is NaN
 
                         const cv::Point2f* operator*() const;  // current corner coordinate
                         cv::Point2f* operator*();              // current corner coordinate

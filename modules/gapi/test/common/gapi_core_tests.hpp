@@ -67,7 +67,7 @@ inline std::ostream& operator<<(std::ostream& os, bitwiseOp op)
 // initMatsRandU - function that is used to initialize input/output data
 // FIXTURE_API(mathOp,bool,double,bool) - test-specific parameters (types)
 // 4 - number of test-specific parameters
-// opType, testWithScalar, scale, doReverseOp - test-spcific parameters (names)
+// opType, testWithScalar, scale, doReverseOp - test-specific parameters (names)
 //
 // We get:
 // 1. Default parameters: int type, cv::Size sz, int dtype, getCompileArgs() function

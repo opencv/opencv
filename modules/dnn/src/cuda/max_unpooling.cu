@@ -16,7 +16,7 @@
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
-#include "../cuda4dnn/kernels/fill.hpp"
+#include "../cuda4dnn/kernels/fill_copy.hpp"
 
 #include <opencv2/core.hpp>
 

@@ -715,6 +715,10 @@ void TFImporter::populateNet(Net dstNet)
         simplifySubgraphs(netBin);
         sortByExecutionOrder(netBin);
     }
+    else
+    {
+        sortByExecutionOrder(netTxt);
+    }
 
     std::set<String> layers_to_ignore;
 
@@ -996,7 +1000,7 @@ void TFImporter::populateNet(Net dstNet)
             if (getDataLayout(name, data_layouts) == DATA_LAYOUT_UNKNOWN)
                 data_layouts[name] = DATA_LAYOUT_NHWC;
         }
-        else if (type == "BiasAdd" || type == "Add" || type == "Sub" || type=="AddN")
+        else if (type == "BiasAdd" || type == "Add" || type == "AddV2" || type == "Sub" || type=="AddN")
         {
             bool haveConst = false;
             for(int ii = 0; !haveConst && ii < layer.input_size(); ++ii)

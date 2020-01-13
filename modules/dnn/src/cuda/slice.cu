@@ -84,7 +84,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
          * Reasoning:
          * ----------
          * Suppose an item's indices in the output tensor is [o1, o2, ...]. The indices in the input
-         * tensor will be [o1 + off1, o2 + off2, ...]. The rest of the elements in the input are igored.
+         * tensor will be [o1 + off1, o2 + off2, ...]. The rest of the elements in the input are ignored.
          *
          * If the size of the first axis of the input and output tensor is unity, the input and output indices
          * for all the elements will be of the form be [0, o2 + off2, ...] and [0, o2, ...] respectively. Note that
