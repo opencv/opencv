@@ -14,6 +14,8 @@
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/tracking/tracker.hpp>
 
+#include <opencv2/gapi/core.hpp>
+
 namespace opencv_test
 {
 
@@ -44,6 +46,33 @@ namespace
             out = in.clone();
         }
     };
+
+
+    G_TYPED_KERNEL(GCustom, <GMat(GMat)>, "org.opencv.test.custom")
+    {
+         static GMatDesc outMeta(GMatDesc in) { return in; }
+    };
+
+    // These definitons test the correct macro work if the kernel has multiple output values
+    G_TYPED_KERNEL(GRetGArrayTupleOfGMat2Kernel,  <GArray<std::tuple<GMat, GMat>>(GMat, Scalar)>,                                         "org.opencv.test.retarrayoftupleofgmat2kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat3Kernel,  <GArray<std::tuple<GMat, GMat, GMat>>(GMat)>,                                           "org.opencv.test.retarrayoftupleofgmat3kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat4Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat>>(GMat)>,                                     "org.opencv.test.retarrayoftupleofgmat4kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat5Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat>>(GMat)>,                               "org.opencv.test.retarrayoftupleofgmat5kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat6Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>,                         "org.opencv.test.retarrayoftupleofgmat6kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat7Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>,                   "org.opencv.test.retarrayoftupleofgmat7kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat8Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>,             "org.opencv.test.retarrayoftupleofgmat8kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat9Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>,       "org.opencv.test.retarrayoftupleofgmat9kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat10Kernel, <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>, "org.opencv.test.retarrayoftupleofgmat10kernel") {};
+
+    G_TYPED_KERNEL_M(GRetGMat2Kernel,     <std::tuple<GMat, GMat>(GMat, GMat, GMat)>,                                     "org.opencv.test.retgmat2kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat3Kernel,     <std::tuple<GMat, GMat, GMat>(GMat, GScalar)>,                                  "org.opencv.test.retgmat3kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat4Kernel,     <std::tuple<GMat, GMat, GMat, GMat>(GMat, GArray<int>, GScalar)>,               "org.opencv.test.retgmat4kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat5Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat>(GMat)>,                               "org.opencv.test.retgmat5kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat6Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,                         "org.opencv.test.retgmat6kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat7Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,                   "org.opencv.test.retgmat7kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat8Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,             "org.opencv.test.retgmat8kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat9Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,       "org.opencv.test.retgmat9kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat10Kernel,    <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>, "org.opencv.test.retgmat10kernel")     {};
 }
 
 TEST(GAPI_Pipeline, OverloadUnary_MatMat)
@@ -349,6 +378,68 @@ TEST(GAPI_Pipeline, ObjectTrackingDemo)
         cv::imshow("frame", out_mat_gapi);
         cv::waitKey(1);
     }
+}
+
+TEST(GAPI_Pipeline, CreateKernelImplFromLambda)
+{
+    cv::Size size(300, 300);
+    int type = CV_8UC3;
+    cv::Mat in_mat(size, type);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    int value = 5;
+
+    cv::GMat in;
+    cv::GMat out = GCustom::on(in);
+    cv::GComputation comp(in, out);
+
+    // OpenCV //////////////////////////////////////////////////////////////////////////
+    auto ref_mat = in_mat + value;
+
+    // G-API //////////////////////////////////////////////////////////////////////////
+    auto impl = cv::make_ocv_functor<GCustom>([&value](const cv::Mat& src, cv::Mat& dst)
+                {
+                    dst = src + value;
+                });
+
+    cv::Mat out_mat;
+    auto pkg = cv::gapi::kernels(impl);
+    comp.apply(in_mat, out_mat, cv::compile_args(pkg));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+}
+
+TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
+{
+    cv::Size size(300, 300);
+    int type = CV_8UC3;
+    cv::Mat in_mat1(size, type);
+    cv::Mat in_mat2(size, type);
+    cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::GMat in1, in2;
+    cv::GMat out = cv::gapi::add(in1, in2);
+    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
+
+    // OpenCV //////////////////////////////////////////////////////////////////////////
+    cv::Mat ref_mat = in_mat1 + in_mat2;
+
+
+    // G-API //////////////////////////////////////////////////////////////////////////
+    bool is_called = false;
+    auto impl = cv::make_ocv_functor<cv::gapi::core::GAdd>([&is_called]
+                (const cv::Mat& src1, const cv::Mat& src2, int, cv::Mat& dst)
+                {
+                    is_called = true;
+                    dst = src1 + src2;
+                });
+
+    cv::Mat out_mat;
+    auto pkg = cv::gapi::kernels(impl);
+    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+    EXPECT_TRUE(is_called);
 }
 
 } // namespace opencv_test
