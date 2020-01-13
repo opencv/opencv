@@ -22,9 +22,26 @@ using GMat2 = std::tuple<GMat, GMat>;
 using GMat3 = std::tuple<GMat, GMat, GMat>;
 using GScalar = cv::GScalar;
 template <typename T> using GArray = cv::GArray<T>;
+template <typename T> using GOpaque = cv::GOpaque<T>;
 
 using ArrayT = int;
 using WrongArrayT = char;
+
+struct CustomType{
+    cv::Mat mat;
+    int i;
+    void *v;
+    CustomType* next;
+};
+
+struct AnotherCustomType{
+    cv::Mat mat;
+    int i;
+    void *v;
+};
+
+using OpaqueT = CustomType;
+using WrongOpaqueT = AnotherCustomType;
 
 GAPI_TRANSFORM(gmat_in_gmat_out, <GMat(GMat)>, "gmat_in_gmat_out")
 {
@@ -92,6 +109,36 @@ GAPI_TRANSFORM(gmat_gsc_garray_in_gmat2_out, <GMat2(GMat, GScalar, GArray<ArrayT
     static GMat2 substitute(GMat, GScalar, GArray<ArrayT>) { return {}; }
 };
 
+GAPI_TRANSFORM(gop_in_gmat_out, <GMat(GOpaque<OpaqueT>)>, "gop_in_gmat_out")
+{
+    static GMat pattern(GOpaque<OpaqueT>) { return {}; }
+    static GMat substitute(GOpaque<OpaqueT>) { return {}; }
+};
+
+GAPI_TRANSFORM(gmat_in_gop_out, <GOpaque<OpaqueT>(GMat)>, "gmat_in_gop_out")
+{
+    static GOpaque<OpaqueT> pattern(GMat) { return {}; }
+    static GOpaque<OpaqueT> substitute(GMat) { return {}; }
+};
+
+GAPI_TRANSFORM(gop_in_gscalar_out, <GScalar(GOpaque<OpaqueT>)>, "gop_in_gscalar_out")
+{
+    static GScalar pattern(GOpaque<OpaqueT>) { return {}; }
+    static GScalar substitute(GOpaque<OpaqueT>) { return {}; }
+};
+
+GAPI_TRANSFORM(gscalar_in_gop_out, <GOpaque<OpaqueT>(GScalar)>, "gscalar_in_gop_out")
+{
+    static GOpaque<OpaqueT> pattern(GScalar) { return {}; }
+    static GOpaque<OpaqueT> substitute(GScalar) { return {}; }
+};
+
+GAPI_TRANSFORM(gmat_gsc_gopaque_in_gmat2_out, <GMat2(GMat, GScalar, GOpaque<OpaqueT>)>, "gmat_gsc_gopaque_in_gmat2_out")
+{
+    static GMat2 pattern(GMat, GScalar, GOpaque<OpaqueT>) { return {}; }
+    static GMat2 substitute(GMat, GScalar, GOpaque<OpaqueT>) { return {}; }
+};
+
 } // anonymous namespace
 
 TEST(KernelPackageTransform, CreatePackage)
@@ -108,10 +155,15 @@ TEST(KernelPackageTransform, CreatePackage)
         , garr_in_gscalar_out
         , gscalar_in_garr_out
         , gmat_gsc_garray_in_gmat2_out
+        , gop_in_gmat_out
+        , gmat_in_gop_out
+        , gop_in_gscalar_out
+        , gscalar_in_gop_out
+        , gmat_gsc_gopaque_in_gmat2_out
         >();
 
     auto tr = pkg.get_transformations();
-    EXPECT_EQ(11u, tr.size());
+    EXPECT_EQ(16u, tr.size());
 }
 
 TEST(KernelPackageTransform, Include)
@@ -164,6 +216,29 @@ TEST(KernelPackageTransform, gmat_gsc_garray_in_gmat2_out)
     check(tr.substitute());
 }
 
+TEST(KernelPackageTransform, gmat_gsc_gopaque_in_gmat2_out)
+{
+    auto tr = gmat_gsc_gopaque_in_gmat2_out::transformation();
+
+    auto check = [](const cv::GComputation &comp){
+        const auto &p = comp.priv();
+        EXPECT_EQ(3u, p.m_ins.size());
+        EXPECT_EQ(2u, p.m_outs.size());
+
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_ins[0]));
+        EXPECT_TRUE(ProtoContainsT<GScalar>(p.m_ins[1]));
+        EXPECT_TRUE(ProtoContainsT<cv::detail::GOpaqueU>(p.m_ins[2]));
+        EXPECT_TRUE(cv::util::get<cv::detail::GOpaqueU>(p.m_ins[2]).holds<OpaqueT>());
+        EXPECT_FALSE(cv::util::get<cv::detail::GOpaqueU>(p.m_ins[2]).holds<WrongOpaqueT>());
+
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_outs[0]));
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_outs[1]));
+    };
+
+    check(tr.pattern());
+    check(tr.substitute());
+}
+
 namespace
 {
     template<typename ArgT>
@@ -176,7 +251,17 @@ namespace
     }
 
     template<typename ArgT>
-    typename std::enable_if<(cv::detail::GTypeTraits<ArgT>::kind != cv::detail::ArgKind::GARRAY), void>::type
+    typename std::enable_if<(cv::detail::GTypeTraits<ArgT>::kind == cv::detail::ArgKind::GOPAQUE), void>::type
+    arg_check(const cv::GProtoArg &arg)
+    {
+        EXPECT_TRUE(ProtoContainsT<cv::detail::GOpaqueU>(arg));
+        EXPECT_TRUE(cv::util::get<cv::detail::GOpaqueU>(arg).holds<OpaqueT>());
+        EXPECT_FALSE(cv::util::get<cv::detail::GOpaqueU>(arg).holds<WrongOpaqueT>());
+    }
+
+    template<typename ArgT>
+    typename std::enable_if<(cv::detail::GTypeTraits<ArgT>::kind != cv::detail::ArgKind::GARRAY &&
+                             cv::detail::GTypeTraits<ArgT>::kind != cv::detail::ArgKind::GOPAQUE), void>::type
     arg_check(const cv::GProtoArg &arg)
     {
         EXPECT_TRUE(ProtoContainsT<ArgT>(arg));
@@ -240,6 +325,26 @@ TEST(KernelPackageTransform, garr_in_gscalar_out)
 TEST(KernelPackageTransform, gscalar_in_garr_out)
 {
     transformTest<gscalar_in_garr_out, GScalar, GArray<ArrayT>>();
+}
+
+TEST(KernelPackageTransform, gop_in_gmat_out)
+{
+    transformTest<gop_in_gmat_out, GOpaque<OpaqueT>, GMat>();
+}
+
+TEST(KernelPackageTransform, gmat_in_gop_out)
+{
+    transformTest<gmat_in_gop_out, GMat, GOpaque<OpaqueT>>();
+}
+
+TEST(KernelPackageTransform, gop_in_gscalar_out)
+{
+    transformTest<gop_in_gscalar_out, GOpaque<OpaqueT>, GScalar>();
+}
+
+TEST(KernelPackageTransform, gscalar_in_gop_out)
+{
+    transformTest<gscalar_in_gop_out, GScalar, GOpaque<OpaqueT>>();
 }
 
 } // namespace opencv_test

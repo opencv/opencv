@@ -332,6 +332,9 @@ void cv::gimpl::GCompiler::validateInputMeta()
         case GProtoArg::index_of<cv::detail::GArrayU>():
             return util::holds_alternative<cv::GArrayDesc>(meta);
 
+        case GProtoArg::index_of<cv::detail::GOpaqueU>():
+            return util::holds_alternative<cv::GOpaqueDesc>(meta);
+
         default:
             GAPI_Assert(false);
         }
