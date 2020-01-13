@@ -2,6 +2,8 @@ if (NOT GENERATE_ABI_DESCRIPTOR)
   return()
 endif()
 
+set(OPENCV_ABI_SKIP_MODULES_LIST "" CACHE STRING "List of modules to exclude from ABI checker")
+
 set(filename "opencv_abi.xml")
 set(path1 "${CMAKE_BINARY_DIR}/${filename}")
 
@@ -26,6 +28,7 @@ foreach(mod ${OPENCV_MODULES_BUILD})
   string(REGEX REPLACE "^opencv_" "" mod "${mod}")
   if(NOT OPENCV_MODULE_opencv_${mod}_CLASS STREQUAL "PUBLIC"
       OR NOT "${OPENCV_MODULE_opencv_${mod}_LOCATION}" STREQUAL "${OpenCV_SOURCE_DIR}/modules/${mod}" # opencv_contrib
+      OR ";${mod};" MATCHES ";${OPENCV_ABI_SKIP_MODULES_LIST};"
   )
     # headers
     foreach(h ${OPENCV_MODULE_opencv_${mod}_HEADERS})
