@@ -38,11 +38,9 @@
 #include "opencv2/core/types_c.h"
 #include "opencv2/opencv_modules.hpp"
 #include "pycompat.hpp"
-#include "type_traits.hpp"
 #include <map>
 
 #define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
-
 
 
 class ArgInfo
@@ -237,35 +235,14 @@ bool isRepresentable(U value) {
 }
 
 template<class T>
-typename stdx::enable_if<stdx::is_floating_point<T>::value, bool>::type
-canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
+bool canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
 {
     return PyArray_CanCastTo(PyArray_DescrFromScalar(obj), to) != 0;
 }
 
 
-template<class T>
-typename stdx::enable_if<stdx::is_integral<T>::value && stdx::is_signed<T>::value, bool>::type
-canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
-{
-    PyArray_Descr* from = PyArray_DescrFromScalar(obj);
-    if (PyArray_CanCastTo(from, to))
-    {
-        return true;
-    }
-    else
-    {
-        // False negative scenarios:
-        // - Input has wider limits but value is representable within output limits
-        int64_t input = 0;
-        PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<int64_t>());
-        return isRepresentable<T>(static_cast<int64_t>(input));
-    }
-}
-
-template<class T>
-typename stdx::enable_if<stdx::is_integral<T>::value && stdx::is_unsigned<T>::value, bool>::type
-canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
+template<>
+bool canBeSafelyCasted<size_t>(PyObject* obj, PyArray_Descr* to)
 {
     PyArray_Descr* from = PyArray_DescrFromScalar(obj);
     if (PyArray_CanCastTo(from, to))
@@ -282,13 +259,13 @@ canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
         {
             int64_t input = 0;
             PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<int64_t>());
-            return (input >= 0) && isRepresentable<T>(static_cast<uint64_t>(input));
+            return (input >= 0) && isRepresentable<size_t>(static_cast<uint64_t>(input));
         }
         else
         {
             uint64_t input = 0;
             PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<uint64_t>());
-            return isRepresentable<T>(input);
+            return isRepresentable<size_t>(input);
         }
         return false;
     }
@@ -302,6 +279,7 @@ bool parseNumpyScalar(PyObject* obj, T& value)
     {
         // According to the numpy documentation:
         // There are 21 statically-defined PyArray_Descr objects for the built-in data-types
+        // So descriptor pointer is not owning.
         PyArray_Descr* to = getNumpyTypeDescriptor<T>();
         if (canBeSafelyCasted<T>(obj, to))
         {
