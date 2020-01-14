@@ -481,3 +481,17 @@ input = Variable(torch.randn(1, 3, 2, 4))
 model = ReduceL2()
 model.eval()
 save_data_and_model("reduceL2", input, model)
+
+class SoftMaxUnfused(nn.Module):
+
+    def __init__(self):
+        super(SoftMaxUnfused, self).__init__()
+
+    def forward(self, x):
+        exp = torch.exp(x)
+        sum = torch.sum(exp, dim=2, keepdim=True)
+        return exp / sum
+
+input = Variable(torch.randn(1, 2, 4, 3))
+model = SoftMaxUnfused()
+save_data_and_model("softmax_unfused", input, model)
