@@ -271,7 +271,7 @@ LineVirtualIterator::LineVirtualIterator(const Size& boundingAreaSize, const Poi
 
 LineVirtualIterator::LineVirtualIterator(const Rect& boundingAreaRect, const Point& pt1, const Point& pt2,
                                          int connectivity, bool forceLeftToRight)
-                    :currentPosOffset(boundingAreaRect.tl()), size(boundingAreaRect.size())
+                    :size(boundingAreaRect.size()),currentPosOffset(boundingAreaRect.tl())
 {
     CV_Assert( connectivity == 8 || connectivity == 4 );
 
