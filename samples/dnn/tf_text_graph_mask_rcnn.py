@@ -10,7 +10,7 @@ parser.add_argument('--output', required=True, help='Path to output text graph.'
 parser.add_argument('--config', required=True, help='Path to a *.config file is used for training.')
 args = parser.parse_args()
 
-scopesToKeep = ('FirstStageFeatureExtractor', 'Conv',
+scopesToKeep = ('FirstStageFeatureExtractor', 'Conv', 'FusedBatchNormV3'
                 'FirstStageBoxPredictor/BoxEncodingPredictor',
                 'FirstStageBoxPredictor/ClassPredictor',
                 'CropAndResize',
