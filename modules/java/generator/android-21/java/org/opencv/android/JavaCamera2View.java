@@ -230,7 +230,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
     @Override
     protected void disconnectCamera() {
-        Log.i(LOGTAG, "closeCamera");
+        Log.i(LOGTAG, "close camera");
         try {
             CameraDevice c = mCameraDevice;
             mCameraDevice = null;
@@ -241,13 +241,14 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             if (null != c) {
                 c.close();
             }
+        } finally {
+            stopBackgroundThread();
             if (null != mImageReader) {
                 mImageReader.close();
                 mImageReader = null;
             }
-        } finally {
-            stopBackgroundThread();
         }
+        Log.i(LOGTAG, "camera closed!");
     }
 
     public static class JavaCameraSizeAccessor implements ListItemAccessor {

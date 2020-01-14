@@ -58,6 +58,7 @@ void resolveKernels(ade::passes::PassContext   &ctx,
 
 void fuseIslands(ade::passes::PassContext &ctx);
 void syncIslandTags(ade::passes::PassContext &ctx);
+void topoSortIslands(ade::passes::PassContext &ctx);
 
 void applyTransformations(ade::passes::PassContext &ctx,
                           const gapi::GKernelPackage &pkg,

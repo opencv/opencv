@@ -73,7 +73,7 @@ implemented as a structure based on a one SIMD register.
 
 - cv::v_uint8x16 and cv::v_int8x16: sixteen 8-bit integer values (unsigned/signed) - char
 - cv::v_uint16x8 and cv::v_int16x8: eight 16-bit integer values (unsigned/signed) - short
-- cv::v_uint32x4 and cv::v_int32x4: four 32-bit integer values (unsgined/signed) - int
+- cv::v_uint32x4 and cv::v_int32x4: four 32-bit integer values (unsigned/signed) - int
 - cv::v_uint64x2 and cv::v_int64x2: two 64-bit integer values (unsigned/signed) - int64
 - cv::v_float32x4: four 32-bit floating point values (signed) - float
 - cv::v_float64x2: two 64-bit floating point values (signed) - double
@@ -217,6 +217,8 @@ Regular integers:
 |cvt_flt64          |   |   |   |   |   | x |
 |transpose4x4       |   |   |   |   | x | x |
 |reverse            | x | x | x | x | x | x |
+|extract_n          | x | x | x | x | x | x |
+|broadcast_element  |   |   |   |   | x | x |
 
 Big integers:
 
@@ -230,6 +232,7 @@ Big integers:
 |extract            | x | x |
 |rotate (lanes)     | x | x |
 |cvt_flt64          |   | x |
+|extract_n          | x | x |
 
 Floating point:
 
@@ -254,6 +257,8 @@ Floating point:
 |extract            | x | x |
 |rotate (lanes)     | x | x |
 |reverse            | x | x |
+|extract_n          | x | x |
+|broadcast_element  | x |   |
 
  @{ */
 
@@ -363,6 +368,13 @@ template<typename _Tp, int n> struct v_reg
         v_reg<_Tp2, n2> c;
         std::memcpy(&c.s[0], &s[0], bytes);
         return c;
+    }
+
+    v_reg& operator=(const v_reg<_Tp, n> & r)
+    {
+        for( int i = 0; i < n; i++ )
+            s[i] = r.s[i];
+        return *this;
     }
 
     _Tp s[n];
@@ -623,7 +635,7 @@ template<typename _Tp, int n>
 inline v_reg<typename V_TypeTraits<_Tp>::abs_type, n> v_popcount(const v_reg<_Tp, n>& a)
 {
     v_reg<typename V_TypeTraits<_Tp>::abs_type, n> b = v_reg<typename V_TypeTraits<_Tp>::abs_type, n>::zero();
-    for (int i = 0; i < (int)(n*sizeof(_Tp)); i++)
+    for (int i = 0; i < n*(int)sizeof(_Tp); i++)
         b.s[i/sizeof(_Tp)] += popCountTable[v_reinterpret_as_u8(a).s[i]];
     return b;
 }
@@ -1775,6 +1787,42 @@ inline v_reg<_Tp, n> v_extract(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
     for (; i < n; ++i)
         r.s[i] = b.s[i-shift];
     return r;
+}
+
+/** @brief Vector extract
+
+Scheme:
+Return the s-th element of v.
+Restriction: 0 <= s < nlanes
+
+Usage:
+@code
+v_int32x4 a;
+int r;
+r = v_extract_n<2>(a);
+@endcode
+For all types. */
+template<int s, typename _Tp, int n>
+inline _Tp v_extract_n(const v_reg<_Tp, n>& v)
+{
+    CV_DbgAssert(s >= 0 && s < n);
+    return v.s[s];
+}
+
+/** @brief Broadcast i-th element of vector
+
+Scheme:
+@code
+{ v[0] v[1] v[2] ... v[SZ] } => { v[i], v[i], v[i] ... v[i] }
+@endcode
+Restriction: 0 <= i < nlanes
+Supported types: 32-bit integers and floats (s32/u32/f32)
+ */
+template<int i, typename _Tp, int n>
+inline v_reg<_Tp, n> v_broadcast_element(const v_reg<_Tp, n>& a)
+{
+    CV_DbgAssert(i >= 0 && i < n);
+    return v_reg<_Tp, n>::all(a.s[i]);
 }
 
 /** @brief Round

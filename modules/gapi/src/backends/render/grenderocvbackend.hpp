@@ -38,6 +38,7 @@ class GRenderExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
+    std::unique_ptr<cv::gapi::wip::draw::FTTextRender> m_ftpr;
 
     // The only executable stuff in this graph
     // (assuming it is always single-op)
@@ -51,7 +52,8 @@ class GRenderExecutable final: public GIslandExecutable
 
 public:
     GRenderExecutable(const ade::Graph                   &graph,
-                      const std::vector<ade::NodeHandle> &nodes);
+                      const std::vector<ade::NodeHandle> &nodes,
+                      std::unique_ptr<cv::gapi::wip::draw::FTTextRender>&& ftpr);
 
     virtual inline bool canReshape() const override { return false; }
 

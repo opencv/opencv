@@ -32,7 +32,7 @@ namespace gapi
 namespace ocl
 {
     /**
-     * \addtogroup gapi_std_backends G-API Standard backends
+     * \addtogroup gapi_std_backends G-API Standard Backends
      * @{
      */
     /**
@@ -94,7 +94,7 @@ protected:
     F m_f;
 };
 
-// FIXME: This is an ugly ad-hoc imlpementation. TODO: refactor
+// FIXME: This is an ugly ad-hoc implementation. TODO: refactor
 
 namespace detail
 {

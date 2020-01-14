@@ -56,7 +56,7 @@ namespace cv
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD128 1
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(_M_ARM64)
 #define CV_SIMD128_64F 1
 #else
 #define CV_SIMD128_64F 0
@@ -1531,7 +1531,7 @@ inline v_int32x4 v_load_expand_q(const schar* ptr)
     return v_int32x4(vmovl_s16(v1));
 }
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(_M_ARM64)
 #define OPENCV_HAL_IMPL_NEON_UNPACKS(_Tpvec, suffix) \
 inline void v_zip(const v_##_Tpvec& a0, const v_##_Tpvec& a1, v_##_Tpvec& b0, v_##_Tpvec& b1) \
 { \
@@ -1649,6 +1649,38 @@ OPENCV_HAL_IMPL_NEON_EXTRACT(int64x2, s64)
 OPENCV_HAL_IMPL_NEON_EXTRACT(float32x4, f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_EXTRACT(float64x2, f64)
+#endif
+
+#define OPENCV_HAL_IMPL_NEON_EXTRACT_N(_Tpvec, _Tp, suffix) \
+template<int i> inline _Tp v_extract_n(_Tpvec v) { return vgetq_lane_##suffix(v.val, i); }
+
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint8x16, uchar, u8)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int8x16, schar, s8)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint16x8, ushort, u16)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int16x8, short, s16)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint32x4, uint, u32)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int32x4, int, s32)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_int64x2, int64, s64)
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float32x4, float, f32)
+#if CV_SIMD128_64F
+OPENCV_HAL_IMPL_NEON_EXTRACT_N(v_float64x2, double, f64)
+#endif
+
+#define OPENCV_HAL_IMPL_NEON_BROADCAST(_Tpvec, _Tp, suffix) \
+template<int i> inline _Tpvec v_broadcast_element(_Tpvec v) { _Tp t = v_extract_n<i>(v); return v_setall_##suffix(t); }
+
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint8x16, uchar, u8)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_int8x16, schar, s8)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint16x8, ushort, u16)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_int16x8, short, s16)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint32x4, uint, u32)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_int32x4, int, s32)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_int64x2, int64, s64)
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_float32x4, float, f32)
+#if CV_SIMD128_64F
+OPENCV_HAL_IMPL_NEON_BROADCAST(v_float64x2, double, f64)
 #endif
 
 #if CV_SIMD128_64F

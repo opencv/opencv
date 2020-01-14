@@ -398,7 +398,7 @@ code which is distributed under GPL.
 class CV_EXPORTS_W MSER : public Feature2D
 {
 public:
-    /** @brief Full consturctor for %MSER detector
+    /** @brief Full constructor for %MSER detector
 
     @param _delta it compares \f$(size_{i}-size_{i-delta})/size_{i-delta}\f$
     @param _min_area prune the area which smaller than minArea

@@ -3,7 +3,7 @@
 // This will loop through frames of video either from input media file
 // or camera device and do processing of these data in OpenCL and then
 // in OpenCV. In OpenCL it does inversion of pixels in left half of frame and
-// in OpenCV it does bluring in the right half of frame.
+// in OpenCV it does blurring in the right half of frame.
 */
 #include <cstdio>
 #include <cstdlib>
@@ -17,6 +17,7 @@
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS // eliminate build warning
+#define CL_TARGET_OPENCL_VERSION 200  // 2.0
 
 #ifdef __APPLE__
 #define CL_SILENCE_DEPRECATION
@@ -677,7 +678,7 @@ int App::initVideoSource()
             throw std::runtime_error(std::string("specify video source"));
     }
 
-    catch (const std::exception e)
+    catch (const std::exception& e)
     {
         cerr << "ERROR: " << e.what() << std::endl;
         return -1;

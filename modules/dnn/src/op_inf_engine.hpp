@@ -71,6 +71,8 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
+Backend& getInferenceEngineBackendTypeParam();
+
 class InfEngineBackendNet
 {
 public:
@@ -88,7 +90,7 @@ public:
 
     bool isInitialized();
 
-    void init(int targetId);
+    void init(Target targetId);
 
     void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                  bool isAsync);
@@ -130,7 +132,7 @@ private:
     std::map<std::string, int> layers;
     std::vector<std::string> requestedOutputs;
 
-    std::set<int> unconnectedLayersIds;
+    std::set<std::pair<int, int> > unconnectedPorts;
 };
 
 class InfEngineBackendNode : public BackendNode
@@ -210,11 +212,44 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
+
+class InfEngineExtension : public InferenceEngine::IExtension
+{
+public:
+    virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
+    virtual void Unload() noexcept {}
+    virtual void Release() noexcept {}
+    virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
+
+    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
+                                                          InferenceEngine::ResponseDesc*) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode getFactoryFor(InferenceEngine::ILayerImplFactory*& factory,
+                                              const InferenceEngine::CNNLayer* cnnLayer,
+                                              InferenceEngine::ResponseDesc* resp) noexcept;
+};
+
+
 CV__DNN_INLINE_NS_BEGIN
 
 bool isMyriadX();
 
 CV__DNN_INLINE_NS_END
+
+InferenceEngine::Core& getCore();
+
+template<typename T = size_t>
+static inline std::vector<T> getShape(const Mat& mat)
+{
+    std::vector<T> result(mat.dims);
+    for (int i = 0; i < mat.dims; i++)
+        result[i] = (T)mat.size[i];
+    return result;
+}
+
 
 #endif  // HAVE_INF_ENGINE
 

@@ -63,6 +63,43 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
 
         template <class T, std::size_t N>
+        __global__ void swish_vec(Span<T> output, View<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::sigmoid;
+                    vec.data[j] = vec.data[j] * sigmoid(vec.data[j]);
+                }
+                v_store(output_vPtr[i], vec);
+            }
+        }
+
+        template <class T, std::size_t N>
+        __global__ void mish_vec(Span<T> output, View<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::tanh;
+                    using device::log1pexp;
+                    vec.data[j] = vec.data[j] * tanh(log1pexp(vec.data[j]));
+                }
+                v_store(output_vPtr[i], vec);
+            }
+        }
+
+        template <class T, std::size_t N>
         __global__ void sigmoid_vec(Span<T> output, View<T> input) {
             using vector_type = get_vector_type_t<T, N>;
 
@@ -239,6 +276,58 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
 
     template void tanh<__half>(const Stream&, Span<__half>, View<__half>);
     template void tanh<float>(const Stream&, Span<float>, View<float>);
+
+    template <class T, std::size_t N>
+    void launch_vectorized_swish(const Stream& stream, Span<T> output, View<T> input) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::swish_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input);
+    }
+
+    template <class T>
+    void swish(const Stream& stream, Span<T> output, View<T> input) {
+        CV_Assert(input.size() == output.size());
+
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_vectorized_swish<T, 4>(stream, output, input);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_vectorized_swish<T, 2>(stream, output, input);
+        } else {
+            launch_vectorized_swish<T, 1>(stream, output, input);
+        }
+    }
+
+    template void swish<__half>(const Stream&, Span<__half>, View<__half>);
+    template void swish<float>(const Stream&, Span<float>, View<float>);
+
+    template <class T, std::size_t N>
+    void launch_vectorized_mish(const Stream& stream, Span<T> output, View<T> input) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::mish_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input);
+    }
+
+    template <class T>
+    void mish(const Stream& stream, Span<T> output, View<T> input) {
+        CV_Assert(input.size() == output.size());
+
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_vectorized_mish<T, 4>(stream, output, input);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_vectorized_mish<T, 2>(stream, output, input);
+        } else {
+            launch_vectorized_mish<T, 1>(stream, output, input);
+        }
+    }
+
+    template void mish<__half>(const Stream&, Span<__half>, View<__half>);
+    template void mish<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
     void launch_vectorized_sigmoid(const Stream& stream, Span<T> output, View<T> input) {

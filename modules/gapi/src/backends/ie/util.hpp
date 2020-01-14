@@ -23,8 +23,9 @@ namespace gapi {
 namespace ie {
 namespace util {
 
+// NB: These functions are EXPORTed to make them accessible by the
+// test suite only.
 GAPI_EXPORTS std::vector<int> to_ocv(const InferenceEngine::SizeVector &dims);
-
 GAPI_EXPORTS cv::Mat to_ocv(InferenceEngine::Blob::Ptr blob);
 GAPI_EXPORTS InferenceEngine::Blob::Ptr to_ie(cv::Mat &blob);
 

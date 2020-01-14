@@ -41,7 +41,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         /* 1 for L1 norm, 2 for L2 norm */
         std::size_t norm;
 
-        /* epsilon to use to avoid divison by zero */
+        /* epsilon to use to avoid division by zero */
         T eps;
     };
 

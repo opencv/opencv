@@ -28,7 +28,7 @@ If it is a greater than a threshold value, it is considered as a corner. If we p
 ![image](images/shitomasi_space.png)
 
 From the figure, you can see that only when \f$\lambda_1\f$ and \f$\lambda_2\f$ are above a minimum value,
-\f$\lambda_{min}\f$, it is conidered as a corner(green region).
+\f$\lambda_{min}\f$, it is considered as a corner(green region).
 
 Code
 ----

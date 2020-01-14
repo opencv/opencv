@@ -16,6 +16,8 @@
 #include "api/gbackend_priv.hpp" // GBackend::Priv().compile()
 #include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
+#include "compiler/gmodel.hpp"
+
 #include "logger.hpp"    // GAPI_LOG
 
 namespace cv { namespace gimpl {
@@ -257,6 +259,20 @@ void GIslandModel::compileIslands(Graph &g, const ade::Graph &orig_g, const GCom
     {
         if (NodeKind::ISLAND == g.metadata(nh).get<NodeKind>().k)
         {
+            auto nodes_to_data = [&](const ade::NodeHandle& dnh)
+            {
+                GAPI_Assert(g.metadata(dnh).get<NodeKind>().k == NodeKind::SLOT);
+                const auto& orig_data_nh = g.metadata(dnh).get<DataSlot>().original_data_node;
+                const auto& data = gm.metadata(orig_data_nh).get<Data>();
+                return data;
+            };
+
+            std::vector<cv::gimpl::Data> ins_data;
+            ade::util::transform(nh->inNodes(), std::back_inserter(ins_data), nodes_to_data);
+
+            std::vector<cv::gimpl::Data> outs_data;
+            ade::util::transform(nh->outNodes(), std::back_inserter(outs_data), nodes_to_data);
+
             auto island_obj = g.metadata(nh).get<FusedIsland>().object;
             auto island_ops = island_obj->contents();
 
@@ -268,11 +284,13 @@ void GIslandModel::compileIslands(Graph &g, const ade::Graph &orig_g, const GCom
                                });
 
             auto island_exe = island_obj->backend().priv()
-                .compile(orig_g, args, topo_sorted_list);
+                .compile(orig_g, args, topo_sorted_list, ins_data, outs_data);
             GAPI_Assert(nullptr != island_exe);
+
             g.metadata(nh).set(IslandExec{std::move(island_exe)});
         }
     }
+    g.metadata().set(IslandsCompiled{});
 }
 
 ade::NodeHandle GIslandModel::producerOf(const ConstGraph &g, ade::NodeHandle &data_nh)

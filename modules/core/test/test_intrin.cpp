@@ -4,6 +4,19 @@
 #include "test_precomp.hpp"
 
 #include "test_intrin128.simd.hpp"
+
+// see "test_intrin_emulator.cpp"
+// see "opencv2/core/private/cv_cpu_include_simd_declarations.hpp"
+#define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+#undef CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+#undef CV_CPU_OPTIMIZATION_NAMESPACE_END
+#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace opt_EMULATOR_CPP {
+#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#include "test_intrin128.simd.hpp"
+#undef CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+#undef CV_CPU_OPTIMIZATION_NAMESPACE_END
+#undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
 #include "test_intrin128.simd_declarations.hpp"
 
 #undef CV_CPU_DISPATCH_MODES_ALL
@@ -21,6 +34,8 @@
 #endif
 
 namespace opencv_test { namespace hal {
+
+#define CV_CPU_CALL_CPP_EMULATOR_(fn, args) return (opt_EMULATOR_CPP::fn args)
 
 #define CV_CPU_CALL_BASELINE_(fn, args)  CV_CPU_CALL_BASELINE(fn, args)
 
@@ -52,6 +67,8 @@ TEST(hal_intrin ## simd_size, float32x4_ ## cpu_opt) { DISPATCH_SIMD ## simd_siz
 TEST(hal_intrin ## simd_size, float64x2_ ## cpu_opt) { DISPATCH_SIMD ## simd_size(test_hal_intrin_float64, cpu_opt); } \
 
 namespace intrin128 {
+
+DEFINE_SIMD_TESTS(128, CPP_EMULATOR)
 
 DEFINE_SIMD_TESTS(128, BASELINE)
 
