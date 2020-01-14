@@ -4785,23 +4785,16 @@ public:
     creates iterators for the line connecting pt1 and pt2
     the line will be clipped on the image boundaries
     the line is 8-connected or 4-connected
-    If leftToRight=true, then the iteration is always done
+    If forceLeftToRight=true, then the iteration is always done
     from the left-most point to the right most,
     not to depend on the ordering of pt1 and pt2 parameters
     */
-    LineVirtualIterator(const Rect& aRect, const Point& pt1, const Point& pt2,
-                        int connectivity = 8, bool forceLeftToRight = false ) {
-      currentPosOffset = Point(aRect.x, aRect.y);
-      init(aRect.size(), pt1, pt2, connectivity, forceLeftToRight);
-    }
-    LineVirtualIterator(const Size& aSize, const Point& pt1, const Point& pt2,
-                        int connectivity = 8, bool forceLeftToRight = false ) {
-      init(aSize, pt1, pt2, connectivity, forceLeftToRight);
-    }
     LineVirtualIterator(const Point& pt1, const Point& pt2,
                         int connectivity = 8, bool forceLeftToRight = false );
-    void init(const Size& size, const Point& pt1, const Point& pt2,
-              int connectivity = 8, bool forceLeftToRight = false );
+    LineVirtualIterator(const Size& boundingAreaSize, const Point& pt1, const Point& pt2,
+                        int connectivity = 8, bool forceLeftToRight = false );
+    LineVirtualIterator(const Rect& boundingAreaRect, const Point& pt1, const Point& pt2,
+                        int connectivity = 8, bool forceLeftToRight = false );
 
     /** @brief alias of pos(), returns coordinates of the current pixel
     */
@@ -4833,12 +4826,12 @@ LineVirtualIterator& LineVirtualIterator::operator ++()
 {
     if (size.width)
     {
-      int mask = err < 0 ? -1 : 0;
+      const int mask = err < 0 ? -1 : 0;
       err += minusDelta + (plusDelta & mask);
-      int offset = minusStep + (plusStep & mask);
-      size_t flattenedCoord = (currentPos.y-currentPosOffset.y)*size.width+(currentPos.x-currentPosOffset.x)+offset;
-      currentPos.y = static_cast<int>((flattenedCoord/size.width)+currentPosOffset.y);
-      currentPos.x = static_cast<int>((flattenedCoord%size.width)+currentPosOffset.x);
+      const int offset = minusStep + (plusStep & mask);
+      const size_t flattenedCoord = (currentPos.y - currentPosOffset.y) * size.width + (currentPos.x - currentPosOffset.x) + offset;
+      currentPos.y = static_cast<int>((flattenedCoord / size.width) + currentPosOffset.y);
+      currentPos.x = static_cast<int>((flattenedCoord % size.width) + currentPosOffset.x);
     }//end if (size.width)
     return *this;
 }
