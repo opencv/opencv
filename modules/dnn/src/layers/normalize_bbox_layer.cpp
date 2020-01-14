@@ -69,7 +69,10 @@ public:
             if (pnorm != 2)
                 return false;
 
-            return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
+            if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && preferableTarget == DNN_TARGET_MYRIAD)
+                return !acrossSpatial;
+
+            return startAxis == 1;
         }
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -339,7 +342,6 @@ public:
         }
         else
         {
-            // weight->get_shape().size() > 1 ~> channel_shared = false
             weight = std::make_shared<ngraph::op::Constant>(
                                       ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
         }
