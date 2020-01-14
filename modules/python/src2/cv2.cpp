@@ -13,11 +13,14 @@
 #   define Py_LIMITED_API 0x03030000
 #endif
 
-#include <math.h>
+#include <cmath>
 #include <Python.h>
+#include <limits>
 
 #if PY_MAJOR_VERSION < 3
 #undef CVPY_DYNAMIC_INIT
+#else
+#define CV_PYTHON_3 1
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER > 1800)
@@ -40,16 +43,17 @@
 
 #include <type_traits>  // std::enable_if
 
+#define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
+
+
 class ArgInfo
 {
 public:
-    const char * name;
+    const char* name;
     bool outputarg;
     // more fields may be added if necessary
 
-    ArgInfo(const char * name_, bool outputarg_)
-        : name(name_)
-        , outputarg(outputarg_) {}
+    ArgInfo(const char* name_, bool outputarg_) : name(name_), outputarg(outputarg_) {}
 
 private:
     ArgInfo(const ArgInfo&) = delete;
@@ -162,6 +166,135 @@ catch (const cv::Exception &e) \
 
 using namespace cv;
 
+
+namespace {
+template<class T>
+NPY_TYPES asNumpyType()
+{
+    return NPY_OBJECT;
+}
+
+template<>
+NPY_TYPES asNumpyType<bool>()
+{
+    return NPY_BOOL;
+}
+
+#define CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(src, dst) \
+    template<>                                             \
+    NPY_TYPES asNumpyType<src>()                           \
+    {                                                      \
+        return NPY_##dst;                                  \
+    }                                                      \
+    template<>                                             \
+    NPY_TYPES asNumpyType<u##src>()                        \
+    {                                                      \
+        return NPY_U##dst;                                 \
+    }
+
+CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(int8_t, INT8);
+
+CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(int16_t, INT16);
+
+CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(int32_t, INT32);
+
+CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION(int64_t, INT64);
+
+#undef CV_GENERATE_INTEGRAL_TYPE_NPY_CONVERSION
+
+template<>
+NPY_TYPES asNumpyType<float>()
+{
+    return NPY_FLOAT;
+}
+
+template<>
+NPY_TYPES asNumpyType<double>()
+{
+    return NPY_DOUBLE;
+}
+
+template <class T>
+PyArray_Descr* getNumpyTypeDescriptor()
+{
+    return PyArray_DescrFromType(asNumpyType<T>());
+}
+
+template <>
+PyArray_Descr* getNumpyTypeDescriptor<size_t>()
+{
+#if SIZE_MAX == ULONG_MAX
+    return PyArray_DescrFromType(NPY_ULONG);
+#elif SIZE_MAX == ULLONG_MAX
+    return PyArray_DescrFromType(NPY_ULONGLONG);
+#else
+    return PyArray_DescrFromType(NPY_UINT);
+#endif
+}
+
+template <class T, class U>
+bool isRepresentable(U value) {
+    return (std::numeric_limits<T>::min() <= value) && (value <= std::numeric_limits<T>::max());
+}
+
+template<class T>
+bool canBeSafelyCasted(PyObject* obj, PyArray_Descr* to)
+{
+    return PyArray_CanCastTo(PyArray_DescrFromScalar(obj), to) != 0;
+}
+
+
+template<>
+bool canBeSafelyCasted<size_t>(PyObject* obj, PyArray_Descr* to)
+{
+    PyArray_Descr* from = PyArray_DescrFromScalar(obj);
+    if (PyArray_CanCastTo(from, to))
+    {
+        return true;
+    }
+    else
+    {
+        // False negative scenarios:
+        // - Signed input is positive so it can be safely cast to unsigned output
+        // - Input has wider limits but value is representable within output limits
+        // - All the above
+        if (PyDataType_ISSIGNED(from))
+        {
+            int64_t input = 0;
+            PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<int64_t>());
+            return (input >= 0) && isRepresentable<size_t>(static_cast<uint64_t>(input));
+        }
+        else
+        {
+            uint64_t input = 0;
+            PyArray_CastScalarToCtype(obj, &input, getNumpyTypeDescriptor<uint64_t>());
+            return isRepresentable<size_t>(input);
+        }
+        return false;
+    }
+}
+
+
+template<class T>
+bool parseNumpyScalar(PyObject* obj, T& value)
+{
+    if (PyArray_CheckScalar(obj))
+    {
+        // According to the numpy documentation:
+        // There are 21 statically-defined PyArray_Descr objects for the built-in data-types
+        // So descriptor pointer is not owning.
+        PyArray_Descr* to = getNumpyTypeDescriptor<T>();
+        if (canBeSafelyCasted<T>(obj, to))
+        {
+            PyArray_CastScalarToCtype(obj, &value, to);
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
 typedef std::vector<uchar> vector_uchar;
 typedef std::vector<char> vector_char;
 typedef std::vector<int> vector_int;
@@ -270,6 +403,11 @@ NumpyAllocator g_numpyAllocator;
 
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
+
+static bool isBool(PyObject* obj) CV_NOEXCEPT
+{
+    return PyArray_IsScalar(obj, Bool) || PyBool_Check(obj);
+}
 
 // special case, when the converter needs full ArgInfo structure
 static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
@@ -581,14 +719,22 @@ PyObject* pyopencv_from(const bool& value)
 template<>
 bool pyopencv_to(PyObject* obj, bool& value, const ArgInfo& info)
 {
-    CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    int _val = PyObject_IsTrue(obj);
-    if(_val < 0)
-        return false;
-    value = _val > 0;
-    return true;
+    }
+    if (isBool(obj) || PyArray_IsIntegerScalar(obj))
+    {
+        npy_bool npy_value = NPY_FALSE;
+        const int ret_code = PyArray_BoolConverter(obj, &npy_value);
+        if (ret_code >= 0)
+        {
+            value = (npy_value == NPY_TRUE);
+            return true;
+        }
+    }
+    failmsg("Argument '%s' is not convertable to bool", info.name);
+    return false;
 }
 
 template<>
@@ -600,11 +746,62 @@ PyObject* pyopencv_from(const size_t& value)
 template<>
 bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo& info)
 {
-    CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    value = (int)PyLong_AsUnsignedLong(obj);
-    return value != (size_t)-1 || !PyErr_Occurred();
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer type, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        if (PyLong_Check(obj))
+        {
+#if defined(CV_PYTHON_3)
+            value = PyLong_AsSize_t(obj);
+#else
+    #if ULONG_MAX == SIZE_MAX
+            value = PyLong_AsUnsignedLong(obj);
+    #else
+            value = PyLong_AsUnsignedLongLong(obj);
+    #endif
+#endif
+        }
+#if !defined(CV_PYTHON_3)
+        // Python 2.x has PyIntObject which is not a subtype of PyLongObject
+        // Overflow check here is unnecessary because object will be converted to long on the
+        // interpreter side
+        else if (PyInt_Check(obj))
+        {
+            const long res = PyInt_AsLong(obj);
+            if (res < 0) {
+                failmsg("Argument '%s' can not be safely parsed to 'size_t'", info.name);
+                return false;
+            }
+    #if ULONG_MAX == SIZE_MAX
+            value = PyInt_AsUnsignedLongMask(obj);
+    #else
+            value = PyInt_AsUnsignedLongLongMask(obj);
+    #endif
+        }
+#endif
+        else
+        {
+            const bool isParsed = parseNumpyScalar<size_t>(obj, value);
+            if (!isParsed) {
+                failmsg("Argument '%s' can not be safely parsed to 'size_t'", info.name);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !PyErr_Occurred();
 }
 
 template<>
@@ -616,16 +813,25 @@ PyObject* pyopencv_from(const int& value)
 template<>
 bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info)
 {
-    CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    if(PyInt_Check(obj))
-        value = (int)PyInt_AsLong(obj);
-    else if(PyLong_Check(obj))
-        value = (int)PyLong_AsLong(obj);
-    else
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer, not bool", info.name);
         return false;
-    return value != -1 || !PyErr_Occurred();
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        value = PyArray_PyIntAsInt(obj);
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !CV_HAS_CONVERSION_ERROR(value);
 }
 
 // There is conflict between "size_t" and "unsigned int".
@@ -680,13 +886,39 @@ PyObject* pyopencv_from(const double& value)
 template<>
 bool pyopencv_to(PyObject* obj, double& value, const ArgInfo& info)
 {
-    CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    if(!!PyInt_CheckExact(obj))
-        value = (double)PyInt_AS_LONG(obj);
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be double, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsPythonNumber(obj))
+    {
+        if (PyLong_Check(obj))
+        {
+            value = PyLong_AsDouble(obj);
+        }
+        else
+        {
+            value = PyFloat_AsDouble(obj);
+        }
+    }
+    else if (PyArray_CheckScalar(obj))
+    {
+        const bool isParsed = parseNumpyScalar<double>(obj, value);
+        if (!isParsed) {
+            failmsg("Argument '%s' can not be safely parsed to 'double'", info.name);
+            return false;
+        }
+    }
     else
-        value = PyFloat_AsDouble(obj);
+    {
+        failmsg("Argument '%s' can not be treated as a double", info.name);
+        return false;
+    }
     return !PyErr_Occurred();
 }
 
@@ -699,13 +931,41 @@ PyObject* pyopencv_from(const float& value)
 template<>
 bool pyopencv_to(PyObject* obj, float& value, const ArgInfo& info)
 {
-    CV_UNUSED(info);
-    if(!obj || obj == Py_None)
+    if (!obj || obj == Py_None)
+    {
         return true;
-    if(!!PyInt_CheckExact(obj))
-        value = (float)PyInt_AS_LONG(obj);
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be float, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsPythonNumber(obj))
+    {
+        if (PyLong_Check(obj))
+        {
+            double res = PyLong_AsDouble(obj);
+            value = static_cast<float>(res);
+        }
+        else
+        {
+            double res = PyFloat_AsDouble(obj);
+            value = static_cast<float>(res);
+        }
+    }
+    else if (PyArray_CheckScalar(obj))
+    {
+       const bool isParsed = parseNumpyScalar<float>(obj, value);
+        if (!isParsed) {
+            failmsg("Argument '%s' can not be safely parsed to 'float'", info.name);
+            return false;
+        }
+    }
     else
-        value = (float)PyFloat_AsDouble(obj);
+    {
+        failmsg("Argument '%s' can't be treated as a float", info.name);
+        return false;
+    }
     return !PyErr_Occurred();
 }
 
@@ -1781,7 +2041,7 @@ static bool init_body(PyObject * m)
 #pragma GCC visibility push(default)
 #endif
 
-#if PY_MAJOR_VERSION >= 3
+#if defined(CV_PYTHON_3)
 // === Python 3
 
 static struct PyModuleDef cv2_moduledef =

@@ -864,6 +864,8 @@ TEST_P(Test_Caffe_layers, PriorBox_squares)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     LayerParams lp;
     lp.name = "testPriorBox";
     lp.type = "PriorBox";
@@ -1301,7 +1303,7 @@ static void test_dldt_fused_output(Backend backend, Target target)
     }
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
-    net.setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
+    net.setInput(Mat({1, 1, 2, 3}, CV_32FC1, Scalar(1)));
     net.forward();
 }
 
@@ -1340,7 +1342,7 @@ TEST_P(Test_DLDT_layers, multiple_networks)
         nets[i].addLayerToPrev(lp.name, lp.type, lp);
         nets[i].setPreferableBackend(backend);
         nets[i].setPreferableTarget(target);
-        nets[i].setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
+        nets[i].setInput(Mat({1, 1, 2, 3}, CV_32FC1, Scalar(1)));
     }
     Mat out_1 = nets[0].forward();
     Mat out_2 = nets[1].forward();
