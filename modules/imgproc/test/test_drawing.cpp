@@ -259,13 +259,18 @@ int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
         int y1 = randomGenerator.uniform(-512, 1024+1);
         int x2 = randomGenerator.uniform(-512, 1024+1);
         int y2 = randomGenerator.uniform(-512, 1024+1);
+        int x3 = randomGenerator.uniform(-512, 1024+1);
+        int y3 = randomGenerator.uniform(-512, 1024+1);
         int channels = randomGenerator.uniform(1, 3+1);
         Mat m(cv::Size(width, height), CV_MAKETYPE(8U, channels));
-        LineIterator it( m, Point(x1,y1), Point(x2, y2) );
-        LineVirtualIterator vit(Rect(0, 0, width, height), Point(x1,y1), Point(x2, y2) );
+        Point p1(x1, y1);
+        Point p2(x2, y2);
+        Point offset(x3, y3);
+        LineIterator it( m, p1, p2 );
+        LineVirtualIterator vit(Rect(offset.x, offset.y, width, height), p1 + offset, p2 + offset);
         if (it.count != vit.count)
         {
-           ts->printf( ts->LOG, "LineVirtualIterator works incorrect" );
+           ts->printf( ts->LOG, "LineVirtualIterator works incorrectly" );
            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
            break;
         }
@@ -274,10 +279,10 @@ int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
             for(int i = 0; i < it.count; ++it, ++vit, i++ )
             {
                 Point pIt = it.pos();
-                Point pVit = vit.pos();
+                Point pVit = vit.pos() - offset;
                 if (pIt != pVit)
                 {
-                    ts->printf( ts->LOG, "LineVirtualIterator works incorrect" );
+                    ts->printf( ts->LOG, "LineVirtualIterator works incorrectly" );
                     ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
                     break;
                 }
