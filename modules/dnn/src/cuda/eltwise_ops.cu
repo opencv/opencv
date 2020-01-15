@@ -149,7 +149,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void eltwise_max_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
+#endif
     template void eltwise_max_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
 
     template <class T, std::size_t N>
@@ -177,7 +179,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void eltwise_sum_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
+#endif
     template void eltwise_sum_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
 
     template <class T, std::size_t N>
@@ -210,7 +214,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void eltwise_sum_coeff_2(const Stream&, Span<__half>, __half, View<__half>, __half, View<__half>);
+#endif
     template void eltwise_sum_coeff_2(const Stream&, Span<float>, float, View<float>, float, View<float>);
 
     template <class T, std::size_t N>
@@ -238,7 +244,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void eltwise_prod_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
+#endif
     template void eltwise_prod_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
 
     template <class T, std::size_t N>
@@ -266,7 +274,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void eltwise_div_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
+#endif
     template void eltwise_div_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
