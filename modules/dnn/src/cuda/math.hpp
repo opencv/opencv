@@ -133,8 +133,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template <> inline __device__ __half rsqrt(__half val) { return hrsqrt(val); }
     template <> inline __device__ __half2 rsqrt(__half2 val) { return h2rsqrt(val); }
-    template <> inline __device__ float rsqrt(float val) { return rsqrtf(val); }
 #endif
+    template <> inline __device__ float rsqrt(float val) { return rsqrtf(val); }
     template <> inline __device__ double rsqrt(double val) { return ::rsqrt(val); }
 
     template <class T> __device__ T sigmoid(T val) { return T(1) / (T(1) + exp(-val)); }
