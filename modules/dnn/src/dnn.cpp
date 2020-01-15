@@ -103,7 +103,7 @@ public:
 #ifdef HAVE_INF_ENGINE
     static inline bool checkIETarget(Target target)
     {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R3)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R3)
         // Lightweight detection
         const std::vector<std::string> devices = getCore().GetAvailableDevices();
         for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
