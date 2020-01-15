@@ -573,7 +573,7 @@ InferenceEngine::Core& getCore()
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 static bool detectMyriadX_()
 {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R3)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R3)
     // Lightweight detection
     InferenceEngine::Core& ie = getCore();
     const std::vector<std::string> devices = ie.GetAvailableDevices();
@@ -1067,8 +1067,14 @@ void resetMyriadDevice()
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     getSharedPlugins().erase("MYRIAD");
 #else
-    // To unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
-    getCore() = InferenceEngine::Core();
+    // Unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
+    InferenceEngine::Core& ie = getCore();
+    try
+    {
+        ie.UnregisterPlugin("MYRIAD");
+        ie.UnregisterPlugin("HETERO");
+    }
+    catch (...) {}
 #endif
 #endif  // HAVE_INF_ENGINE
 }
