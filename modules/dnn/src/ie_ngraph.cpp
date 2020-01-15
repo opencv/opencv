@@ -323,7 +323,14 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
             }
             // Some of networks can work without a library of extra layers.
             // OpenCV fallbacks as extensions.
-            ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
+            try
+            {
+                ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
+            }
+            catch(const std::exception& e)
+            {
+                CV_LOG_INFO(NULL, "DNN-IE: Can't register OpenCV custom layers extension: " << e.what());
+            }
 #ifndef _WIN32
             // Limit the number of CPU threads.
             if (device_name == "CPU")
