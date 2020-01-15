@@ -98,7 +98,7 @@ private:
 class SoftMaxSubgraph : public Subgraph
 {
 public:
-    SoftMaxSubgraph()
+    SoftMaxSubgraph() : axis(1)
     {
         int input = addNodeToMatch("");
         int inpExp = addNodeToMatch("Exp", input);
