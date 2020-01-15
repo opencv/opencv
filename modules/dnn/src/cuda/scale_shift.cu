@@ -156,7 +156,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void bias1<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, __half);
+#endif
     template void bias1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
 
     template <class T, std::size_t N> static
@@ -188,7 +190,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void biasN<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, std::size_t, TensorView<__half>);
+#endif
     template void biasN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>);
 
     template <class T, std::size_t N> static
@@ -214,7 +218,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void scale1<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, __half);
+#endif
     template void scale1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
 
     template <class T, std::size_t N> static
@@ -246,7 +252,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void scaleN<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, std::size_t, TensorView<__half>);
+#endif
     template void scaleN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>);
 
     template <class T, std::size_t N> static
@@ -272,7 +280,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void scale1_with_bias1<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
+#endif
     template void scale1_with_bias1<float>(const Stream&, Span<float>, View<float>, float, float);
 
     template <class T, std::size_t N> static
@@ -305,7 +315,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void scaleN_with_biasN<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, std::size_t, TensorView<__half>, TensorView<__half>);
+#endif
     template void scaleN_with_biasN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>, TensorView<float>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
