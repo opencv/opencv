@@ -15,6 +15,7 @@
 #include <opencv2/tracking/tracker.hpp>
 
 #include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/render/render.hpp>
 
 namespace opencv_test
 {
@@ -47,7 +48,6 @@ namespace
         }
     };
 
-
     G_TYPED_KERNEL(GCustom, <GMat(GMat)>, "org.opencv.test.custom")
     {
          static GMatDesc outMeta(GMatDesc in) { return in; }
@@ -73,6 +73,28 @@ namespace
     G_TYPED_KERNEL_M(GRetGMat8Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,             "org.opencv.test.retgmat8kernel")      {};
     G_TYPED_KERNEL_M(GRetGMat9Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,       "org.opencv.test.retgmat9kernel")      {};
     G_TYPED_KERNEL_M(GRetGMat10Kernel,    <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>, "org.opencv.test.retgmat10kernel")     {};
+
+    G_TYPED_KERNEL(GObjectTracking, <GArray<cv::Rect2d>(GMat)>, "org.opencv.test.object.tracking")
+    {
+        static GArrayDesc outMeta(GMatDesc) { return cv::empty_array_desc(); }
+    };
+
+    class Tracker {
+    public:
+        Tracker(const std::string& type, const cv::Mat& mat, const cv::Rect2d& bbox) {
+            (void)type;
+            _tracker = cv::TrackerBoosting::create();
+            _tracker->init(mat, bbox);
+        }
+
+        void operator()(const cv::Mat& in, std::vector<cv::Rect2d>& bboxes) const {
+            bboxes.resize(1);
+            _tracker->update(in, bboxes[0]);
+        }
+
+    private:
+        cv::Ptr<cv::Tracker> _tracker;
+    };
 }
 
 TEST(GAPI_Pipeline, OverloadUnary_MatMat)
@@ -350,31 +372,24 @@ TEST(GAPI_Pipeline, ObjectTrackingDemo)
 {
     std::vector<cv::Rect> bboxes;
     cv::GMat in;
-    auto out = in + 1;
-    // auto out = cv::gapi::imgproc::GRGB2HSV::on(in);
+    auto out1 = in + 1;
+    auto out2 = GObjectTracking::on(in);
 
-    cv::GComputation c(in, out);
-    auto sc = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{1280, 720}});
+    cv::GComputation c(cv::GIn(in), cv::GOut(out1, out2));
+
+    cv::Rect2d bbox(100, 100, 300, 300);
 
     cv::Mat in_frame;
-    cv::Mat out_mat_gapi;
+    cv::Mat out_mat_gapi(1280, 720, CV_8UC3);
+    std::vector<cv::Rect2d> rects;
+    auto tracker = cv::make_ocv_functor<GObjectTracking>(Tracker("Boosting", out_mat_gapi, bbox));
+    auto sc = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{1280, 720}}, cv::compile_args(cv::gapi::kernels(tracker)));
 
     sc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>("video.mp4"));
     sc.start();
 
-    if (!sc.pull(cv::gout(out_mat_gapi))) {
-        throw std::logic_error("Video is empty");
-    }
-
-    cv::selectROIs("Tracker", out_mat_gapi, bboxes, true, false);
-    cv::Rect2d bbox(bboxes[0].x, bboxes[0].y, bboxes[0].width, bboxes[0].height);
-
-    auto tracker = cv::TrackerBoosting::create();
-    tracker->init(out_mat_gapi, bbox);
-
-    while (sc.pull(cv::gout(out_mat_gapi))) {
-        tracker->update(out_mat_gapi, bbox);
-        cv::rectangle(out_mat_gapi, bbox, cv::Scalar(0, 255, 0), 2, 1);
+    while (sc.pull(cv::gout(out_mat_gapi, rects))) {
+        cv::rectangle(out_mat_gapi, rects[0], cv::Scalar(0, 255, 0), 2, 1);
         cv::imshow("frame", out_mat_gapi);
         cv::waitKey(1);
     }
@@ -440,6 +455,24 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
 
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
     EXPECT_TRUE(is_called);
+}
+
+TEST(GAPI_Pipeline, RenderUnicodeExample)
+{
+    cv::Mat img{300, 640, CV_8UC3, cv::Scalar::all(255)};
+    std::wstring text = L"你好，世界";
+    cv::Point org{120, 200};
+    int fh = 80; // Height of text in pixels
+    auto black = cv::Scalar::all(0);
+    std::string font = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc";
+
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, black});
+
+    // Rendering on BGR
+    cv::gapi::wip::draw::render(img, prims, cv::compile_args(cv::gapi::wip::draw::freetype_font{font}));
+
+    cv::imwrite("chinese.jpg", img);
 }
 
 } // namespace opencv_test
