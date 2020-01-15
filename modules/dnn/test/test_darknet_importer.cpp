@@ -528,6 +528,11 @@ TEST_P(Test_Darknet_layers, reorg)
     testDarknetLayer("reorg");
 }
 
+TEST_P(Test_Darknet_layers, convolutional)
+{
+    testDarknetLayer("convolutional");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
 
 }} // namespace

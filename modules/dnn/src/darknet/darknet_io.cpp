@@ -565,7 +565,7 @@ namespace cv {
                             CV_Error(cv::Error::StsNotImplemented, "Transpose the convolutional weights is not implemented");
 
                         if (pad)
-                            padding = kernel_size/2;
+                            padding = kernel_size / 2;
 
                         CV_Assert(kernel_size > 0 && filters > 0);
                         CV_Assert(current_channels > 0);
