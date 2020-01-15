@@ -22,7 +22,7 @@ import java.util.List;
 
 public class Puzzle15Activity extends CameraActivity implements CvCameraViewListener, View.OnTouchListener {
 
-    private static final String  TAG = "Sample::Puzzle15::Activity";
+    private static final String  TAG = "Puzzle15::Activity";
 
     private CameraBridgeViewBase mOpenCvCameraView;
     private Puzzle15Processor    mPuzzle15;
