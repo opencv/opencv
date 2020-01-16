@@ -39,7 +39,7 @@ namespace fluid
      */
     GAPI_EXPORTS cv::gapi::GBackend backend();
     /** @} */
-} // namespace flud
+} // namespace fluid
 } // namespace gapi
 
 

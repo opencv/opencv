@@ -19,7 +19,7 @@ namespace opencv_test
 // initMatrixRandN - function that is used to initialize input/output data
 // FIXTURE_API(CompareMats,int,int) - test-specific parameters (types)
 // 3 - number of test-specific parameters
-// cmpF, kernSize, borderType - test-spcific parameters (names)
+// cmpF, kernSize, borderType - test-specific parameters (names)
 //
 // We get:
 // 1. Default parameters: int type, cv::Size sz, int dtype, getCompileArgs() function

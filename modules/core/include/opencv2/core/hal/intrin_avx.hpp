@@ -569,7 +569,7 @@ inline v_int64x4 v256_blend(const v_int64x4& a, const v_int64x4& b)
 { return v_int64x4(v256_blend<m>(v_uint64x4(a.val), v_uint64x4(b.val)).val); }
 
 // shuffle
-// todo: emluate 64bit
+// todo: emulate 64bit
 #define OPENCV_HAL_IMPL_AVX_SHUFFLE(_Tpvec, intrin)  \
     template<int m>                                  \
     inline _Tpvec v256_shuffle(const _Tpvec& a)      \

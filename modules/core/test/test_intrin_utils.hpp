@@ -222,7 +222,10 @@ template <typename R> std::ostream & operator<<(std::ostream & out, const Data<R
     return out;
 }
 
-template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b);
+template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b)
+{
+    EXPECT_EQ(a, b);
+}
 template<> inline void EXPECT_COMPARE_EQ_<float>(const float a, const float b)
 {
     EXPECT_FLOAT_EQ( a, b );
@@ -742,12 +745,12 @@ template<typename R> struct TheTest
         for (int i = 0; i < n; ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ((double)dataA[i*2]     * (double)dataA[i*2] +
-                      (double)dataA[i*2 + 1] * (double)dataA[i*2  + 1], resA[i]);
-            EXPECT_EQ((double)dataB[i*2]     * (double)dataB[i*2] +
-                      (double)dataB[i*2 + 1] * (double)dataB[i*2  + 1], resB[i]);
-            EXPECT_EQ((double)dataA[i*2]     * (double)dataB[i*2] +
-                      (double)dataA[i*2 + 1] * (double)dataB[i*2  + 1] + dataC[i], resC[i]);
+            EXPECT_COMPARE_EQ((double)dataA[i*2]     * (double)dataA[i*2] +
+                              (double)dataA[i*2 + 1] * (double)dataA[i*2  + 1], resA[i]);
+            EXPECT_COMPARE_EQ((double)dataB[i*2]     * (double)dataB[i*2] +
+                              (double)dataB[i*2 + 1] * (double)dataB[i*2  + 1], resB[i]);
+            EXPECT_COMPARE_EQ((double)dataA[i*2]     * (double)dataB[i*2] +
+                              (double)dataA[i*2 + 1] * (double)dataB[i*2  + 1] + dataC[i], resC[i]);
         }
     #endif
         return *this;

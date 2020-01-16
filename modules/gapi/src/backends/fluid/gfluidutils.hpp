@@ -25,7 +25,7 @@ using cv::gapi::own::rintd;
 
 //--------------------------------
 //
-// Macros for mappig of data types
+// Macros for mapping of data types
 //
 //--------------------------------
 

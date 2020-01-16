@@ -294,7 +294,7 @@ TEST_P(Polar2CartTest, AccuracyTest)
         // expect of single-precision elementary functions implementation.
         //
         // However, good idea is making such threshold configurable: parameter
-        // of this test - which a specific test istantiation could setup.
+        // of this test - which a specific test instantiation could setup.
         //
         // Note that test instantiation for the OpenCV back-end could even let
         // the threshold equal to zero, as CV back-end calls the same kernel.
@@ -340,7 +340,7 @@ TEST_P(Cart2PolarTest, AccuracyTest)
         // expect of single-precision elementary functions implementation.
         //
         // However, good idea is making such threshold configurable: parameter
-        // of this test - which a specific test istantiation could setup.
+        // of this test - which a specific test instantiation could setup.
         //
         // Note that test instantiation for the OpenCV back-end could even let
         // the threshold equal to zero, as CV back-end calls the same kernel.

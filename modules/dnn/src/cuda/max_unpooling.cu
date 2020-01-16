@@ -16,7 +16,7 @@
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
-#include "../cuda4dnn/kernels/fill.hpp"
+#include "../cuda4dnn/kernels/fill_copy.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -218,10 +218,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void max_pooling_with_indices(const Stream&,
         TensorSpan<__half>, TensorSpan<__half>, TensorView<__half>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
+#endif
 
     template void max_pooling_with_indices(const Stream&,
         TensorSpan<float>, TensorSpan<float>, TensorView<float>,
@@ -294,10 +296,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void max_unpooling(const Stream&,
         TensorSpan<__half>, TensorView<__half>, TensorView<__half>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
+#endif
 
     template void max_unpooling(const Stream&,
         TensorSpan<float>, TensorView<float>, TensorView<float>,

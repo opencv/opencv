@@ -1576,7 +1576,7 @@ struct op_div_scale
     }
     static inline Tvec pre(const Tvec& denom, const Tvec& res)
     {
-        const Tvec v_zero = Tvec();
+        const Tvec v_zero = vx_setall<typename Tvec::lane_type>(0);
         return v_select(denom == v_zero, v_zero, res);
     }
     static inline T1 r(T1 a, T1 denom, const T2* scalar)
@@ -1826,7 +1826,7 @@ struct op_recip
     }
     static inline Tvec pre(const Tvec& denom, const Tvec& res)
     {
-        const Tvec v_zero = Tvec();
+        const Tvec v_zero = vx_setall<typename Tvec::lane_type>(0);
         return v_select(denom == v_zero, v_zero, res);
     }
     static inline T1 r(T1 denom, const T2* scalar)
