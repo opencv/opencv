@@ -528,8 +528,6 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets, dnnBackendsAndTargets());
 
 TEST_P(Test_Darknet_layers, shortcut)
 {
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testDarknetLayer("shortcut");
     testDarknetLayer("shortcut_leaky");
     testDarknetLayer("shortcut_unequal");
