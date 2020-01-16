@@ -71,6 +71,10 @@ namespace cpu
      * @sa gapi_std_backends
      */
     GAPI_EXPORTS cv::gapi::GBackend backend();
+
+    class GOCVFunctor;
+    template<typename K, typename Callable>
+    GAPI_EXPORTS GOCVFunctor ocv_kernel(const Callable& c);
     /** @} */
 } // namespace cpu
 } // namespace gapi
@@ -307,12 +311,12 @@ public:
 
 #define GAPI_OCV_KERNEL(Name, API) struct Name: public cv::GCPUKernelImpl<Name, API>
 
-class GCPUFunctor : public cv::gapi::GFunctor
+class cv::gapi::cpu::GOCVFunctor : public cv::gapi::GFunctor
 {
 public:
     using Impl = std::function<void(cv::GCPUContext &)>;
 
-    GCPUFunctor(const char* id, const Impl& impl)
+    GOCVFunctor(const char* id, const Impl& impl)
         : cv::gapi::GFunctor(id), impl_{cv::GCPUKernel(impl)}
     {
     }
@@ -325,9 +329,9 @@ private:
 };
 
 template<typename K, typename Callable>
-GCPUFunctor make_ocv_functor(const Callable& c) {
+cv::gapi::cpu::GOCVFunctor cv::gapi::cpu::ocv_kernel(const Callable& c) {
     using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-    return GCPUFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
+    return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
 }
 
 } // namespace cv
