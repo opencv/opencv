@@ -1624,7 +1624,7 @@ TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
     int backendId = get<0>(get<1>(GetParam()));
     int targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId == DNN_BACKEND_CUDA)
+    if (backendId == DNN_BACKEND_CUDA && weighted)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
 
     Net net;
@@ -1690,14 +1690,14 @@ TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0)
     int backendId = get<0>(get<1>(GetParam()));
     int targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
-
     Net net;
     LayerParams lp;
     lp.type = "Eltwise";
     lp.name = "testLayer";
     lp.set<std::string>("output_channels_mode", "input_0");
+
+    if (backendId == DNN_BACKEND_CUDA && weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
 
     const int inpShapes[][4] = {{1, 4, 2, 2}, {1, 2, 2, 2}, {1, 3, 2, 2}};
     const int out_channels = inpShapes[0][1];
