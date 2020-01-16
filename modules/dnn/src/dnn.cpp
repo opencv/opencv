@@ -2839,7 +2839,9 @@ struct Net::Impl
         catch (const cv::Exception& e)
         {
             CV_LOG_ERROR(NULL, "OPENCV/DNN: [" << l->type << "]:(" << l->name << "): getMemoryShapes() throws exception." <<
-                    " inputs=" << is.size() << " outputs=" << os.size() << "/" << requiredOutputs);
+                    " inputs=" << is.size() <<
+                    " outputs=" << os.size() << "/" << requiredOutputs <<
+                    " blobs=" << l->blobs.size());
             for (size_t i = 0; i < is.size(); ++i)
             {
                 CV_LOG_ERROR(NULL, "    input[" << i << "] = " << toString(is[i]));
@@ -2847,6 +2849,10 @@ struct Net::Impl
             for (size_t i = 0; i < os.size(); ++i)
             {
                 CV_LOG_ERROR(NULL, "    output[" << i << "] = " << toString(os[i]));
+            }
+            for (size_t i = 0; i < l->blobs.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    blobs[" << i << "] = " << typeToString(l->blobs[i].type()) << " " << toString(shape(l->blobs[i])));
             }
             CV_LOG_ERROR(NULL, "Exception message: " << e.what());
             throw;
