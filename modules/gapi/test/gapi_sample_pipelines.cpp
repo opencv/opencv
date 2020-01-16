@@ -337,7 +337,7 @@ TEST(GAPI_Pipeline, CreateKernelImplFromLambda)
     auto ref_mat = in_mat + value;
 
     // G-API //////////////////////////////////////////////////////////////////////////
-    auto impl = cv::make_ocv_functor<GCustom>([&value](const cv::Mat& src, cv::Mat& dst)
+    auto impl = cv::ocv_kernel<GCustom>([&value](const cv::Mat& src, cv::Mat& dst)
                 {
                     dst = src + value;
                 });
@@ -368,7 +368,7 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
 
     // G-API //////////////////////////////////////////////////////////////////////////
     bool is_called = false;
-    auto impl = cv::make_ocv_functor<cv::gapi::core::GAdd>([&is_called]
+    auto impl = cv::ocv_kernel<cv::gapi::core::GAdd>([&is_called]
                 (const cv::Mat& src1, const cv::Mat& src2, int, cv::Mat& dst)
                 {
                     is_called = true;
