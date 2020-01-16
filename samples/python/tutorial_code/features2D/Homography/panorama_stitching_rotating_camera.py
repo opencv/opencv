@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 
+
 def basicPanoramaStitching(img1Path, img2Path):
     img1 = cv.imread(cv.samples.findFile(img1Path))
     img2 = cv.imread(cv.samples.findFile(img2Path))
@@ -26,10 +27,8 @@ def basicPanoramaStitching(img1Path, img2Path):
     H = cameraMatrix.dot(R_2to1).dot(np.linalg.inv(cameraMatrix))
     H = H / H[2][2]
 
-
     img_stitch = cv.warpPerspective(img2, H, (img2.shape[1]*2, img2.shape[0]))
     img_stitch[0:img1.shape[0], 0:img1.shape[1]] = img1
-
 
     img_space = np.zeros((img1.shape[0],50,3), dtype=np.uint8)
     img_compare = cv.hconcat([img1,img_space, img2])
