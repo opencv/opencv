@@ -102,7 +102,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
-    CV_EXPORTS_W std::vector<Target> getAvailableTargets(Backend be);
+    CV_EXPORTS_W std::vector<Target> getAvailableTargets(dnn::Backend be);
 
     /** @brief This class provides all data needed to initialize layer.
      *
