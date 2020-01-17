@@ -2044,15 +2044,15 @@ MahalanobisImplFunc getMahalanobisImplFunc(int depth)
 
 #ifdef CV_SIMD_64F
 template<typename T, typename U>
-struct is_same 
+struct is_same
 {
-    static const bool value = false; 
+    static const bool value = false;
 };
 
 template<typename T>
 struct is_same<T,T>  //specialization
-{ 
-   static const bool value = true; 
+{
+   static const bool value = true;
 };
 #endif
 
