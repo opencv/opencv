@@ -103,7 +103,9 @@ void input_shortcut(const csl::Stream& stream, csl::TensorSpan<T> output, csl::T
     }
 }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void input_shortcut(const Stream&, TensorSpan<__half>, TensorView<__half>, TensorView<__half>);
+#endif
 template void input_shortcut(const Stream&, TensorSpan<float>, TensorView<float>, TensorView<float>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
