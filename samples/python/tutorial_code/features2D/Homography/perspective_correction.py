@@ -11,19 +11,23 @@ def  perspectiveCorrection(img1Path, img2Path ,patternSize ):
     img1 = cv.imread(cv.samples.findFile(img1Path))
     img2 = cv.imread(cv.samples.findFile(img2Path))
 
-
+    # [find-corners]
     ret1, corners1 = cv.findChessboardCorners(img1, patternSize)
     ret2, corners2 = cv.findChessboardCorners(img2, patternSize)
+    # [find-corners]
 
     if not ret1 or not ret2:
         print("Error, cannot find the chessboard corners in both images.")
         sys.exit(-1)
 
-
+    # [estimate-homography]
     H, _ = cv.findHomography(corners1, corners2)
+    print(H)
+    # [estimate-homography]
 
-
+    # [warp - chessboard]
     img1_warp = cv.warpPerspective(img1, H, (img1.shape[1], img1.shape[0]))
+    # [warp - chessboard]
 
     img_draw_warp = cv.hconcat([img2, img1_warp])
     cv.imshow("Desired chessboard view / Warped source chessboard view", img_draw_warp )
@@ -31,6 +35,7 @@ def  perspectiveCorrection(img1Path, img2Path ,patternSize ):
     corners1 = corners1.tolist()
     corners1 = [a[0] for a in corners1]
 
+    # [compute - transformed - corners]
     img_draw_matches = cv.hconcat([img1, img2])
     for i in range(len(corners1)):
         pt1 = np.array([corners1[i][0], corners1[i][1], 1])
@@ -42,6 +47,7 @@ def  perspectiveCorrection(img1Path, img2Path ,patternSize ):
 
     cv.imshow("Draw matches", img_draw_matches)
     cv.waitKey(0)
+    # [compute - transformed - corners]
 
 def main():
     import argparse
