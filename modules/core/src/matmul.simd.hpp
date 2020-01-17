@@ -2042,6 +2042,20 @@ MahalanobisImplFunc getMahalanobisImplFunc(int depth)
 *                                        MulTransposed                                   *
 \****************************************************************************************/
 
+#ifdef CV_SIMD_64F
+template<typename T, typename U>
+struct is_same 
+{
+    static const bool value = false; 
+};
+
+template<typename T>
+struct is_same<T,T>  //specialization
+{ 
+   static const bool value = true; 
+};
+#endif
+
 template<typename sT, typename dT> static void
 MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double scale)
 {
@@ -2091,7 +2105,7 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
             for( j = i; j <= size.width - 4; j += 4 )
             {
 #if CV_SIMD_64F
-                if (std::is_same<sT, double>::value && std::is_same<dT, double>::value)
+                if (is_same<sT, double>::value && is_same<dT, double>::value)
                 {
                     v_float64x2 s0 = v_setzero_f64(), s1 = v_setzero_f64();
                     const double *tsrc = (double*)(src + j);
@@ -2151,7 +2165,7 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
             for( j = i; j <= size.width - 4; j += 4 )
             {
 #if CV_SIMD_64F
-                if (std::is_same<sT, double>::value && std::is_same<dT, double>::value)
+                if (is_same<sT, double>::value && is_same<dT, double>::value)
                 {
                     v_float64x2 s0 = v_setzero_f64(), s1 = v_setzero_f64();
                     const double *tsrc = (double*)(src + j);
@@ -2228,7 +2242,7 @@ MulTransposedL(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                 const sT *tsrc1 = src + i*srcstep;
                 const sT *tsrc2 = src + j*srcstep;
 #if CV_SIMD_64F
-                if (std::is_same<sT, double>::value && std::is_same<dT, double>::value)
+                if (is_same<sT, double>::value && is_same<dT, double>::value)
                 {
                     const double *v_tsrc1 = (double *)(tsrc1);
                     const double *v_tsrc2 = (double *)(tsrc2);
@@ -2281,7 +2295,7 @@ MulTransposedL(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                     tdelta2 = delta_buf;
                 }
 #if CV_SIMD_64F
-                if (std::is_same<sT, double>::value && std::is_same<dT, double>::value)
+                if (is_same<sT, double>::value && is_same<dT, double>::value)
                 {
                     const double *v_tsrc2 = (double *)(tsrc2);
                     const double *v_tdelta2 = (double *)(tdelta2);
