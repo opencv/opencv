@@ -426,28 +426,28 @@ TEST_P(Objdetect_QRCode_Multi, regression)
             std::string name_test_image = config["image_name"];
             if (name_test_image == name_current_image)
             {
-              for(int j = 0; j < int(corners.size()); j++)
-              {
-                  bool ok = false;
-                  for(int k = 0; k < int(corners.size()); k++)
-                  {
+                for(int j = 0; j < int(corners.size()); j++)
+                {
+                    bool ok = false;
+                    for(int k = 0; k < int(corners.size()); k++)
+                    {
 
-                      int count_eq_points = 0;
-                      for (int i = 0; i < int(corners[j].size()); i++)
-                      {
-                          int x = config["x"][k][i];
-                          int y = config["y"][k][i];
-                          if(((abs(corners[j][i].x - x)) <= pixels_error) && ((abs(corners[j][i].y - y)) <= pixels_error))
+                        int count_eq_points = 0;
+                        for (int i = 0; i < int(corners[j].size()); i++)
+                        {
+                            int x = config["x"][k][i];
+                            int y = config["y"][k][i];
+                            if(((abs(corners[j][i].x - x)) <= pixels_error) && ((abs(corners[j][i].y - y)) <= pixels_error))
                               count_eq_points++;
+                          }
+                          if(count_eq_points == 4)
+                          {
+                              ok = true;
+                              break;
+                          }
                       }
-                      if(count_eq_points == 4)
-                      {
-                        ok = true;
-                        break;
-                      }
+                      EXPECT_EQ(ok, true);
                   }
-                  EXPECT_EQ(ok, true);
-              }
 
 #ifdef HAVE_QUIRC
                   size_t count_eq_info = 0;

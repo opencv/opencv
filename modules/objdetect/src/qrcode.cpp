@@ -1253,6 +1253,11 @@ protected:
     vector<Point2f> not_resized_loc_points;
     vector<Point2f> resized_loc_points;
     vector< vector< Point2f > > localization_points, transformation_points;
+    struct compareDistanse_y
+    {
+        vector<Point2f> points;
+        bool operator()(const Point2f& a, const Point2f& b) const;
+    } comparator_y;
     struct compareSquare
     {
         vector<Point2f> points;
@@ -1574,33 +1579,57 @@ void QRDetectMulti::fixationPoints(vector<Point2f> &local_point)
     }
 }
 
+bool QRDetectMulti::compareDistanse_y::operator()(const Point2f& a, const Point2f& b) const
+{
+    return a.y < b.y;
+}
+
 bool QRDetectMulti::checkPoints(const vector<Point2f>& quadrangle_points)
 {
     if(quadrangle_points.size() != 4)
         return false;
-    vector<Point> points;
-    for(size_t i = 0; i < quadrangle_points.size(); i++)
-        points.push_back(Point(quadrangle_points[i]));
-    Mat lineMask = Mat::zeros(bin_barcode_fullsize.size(), bin_barcode_fullsize.type());
-    fillConvexPoly(lineMask, points, int(points.size()), 255);
-    vector<Point> indices;
-    findNonZero(lineMask, indices);
+    vector<Point2f> quadrangle = quadrangle_points;
+    comparator_y.points = quadrangle;
+    std::sort(quadrangle.begin(), quadrangle.end(), comparator_y);
+    LineIterator it1(bin_barcode_fullsize, quadrangle[1], quadrangle[0]);
+    LineIterator it2(bin_barcode_fullsize, quadrangle[2], quadrangle[0]);
+    LineIterator it3(bin_barcode_fullsize, quadrangle[1], quadrangle[3]);
+    LineIterator it4(bin_barcode_fullsize, quadrangle[2], quadrangle[3]);
+    vector<LineIterator> list_line_iter;
+    list_line_iter.push_back(it1);
+    list_line_iter.push_back(it2);
+    list_line_iter.push_back(it3);
+    list_line_iter.push_back(it4);
     int count_w = 0;
     int count_b = 0;
-    for (size_t r = 0; r < indices.size(); r++)
+    for (int j = 0; j < 3; j+=2)
     {
-        int pixel = bin_barcode.at<uchar>(indices[r].y , indices[r].x);
-        if(pixel == 255)
+        for(int i = 0; i < list_line_iter[j].count; i++)
         {
-            count_w++;
-        }
-        if(pixel == 0)
-        {
-            count_b++;
+
+            Point pt1 = list_line_iter[j].pos();
+            Point pt2 = list_line_iter[j + 1].pos();
+            LineIterator it0(bin_barcode_fullsize, pt1, pt2);
+            for (int r = 0; r < it0.count; r++)
+            {
+                int pixel = bin_barcode.at<uchar>(it0.pos().y , it0.pos().x);
+                if(pixel == 255)
+                {
+                    count_w++;
+                }
+                if(pixel == 0)
+                {
+                    count_b++;
+                }
+                it0++;
+            }
+            list_line_iter[j]++;
+            list_line_iter[j + 1]++;
         }
     }
+
     double frac = double(count_b) / double(count_w);
-    double bottom_bound = 0.83;
+    double bottom_bound = 0.76;
     double upper_bound = 1.24;
     if ((frac <= bottom_bound) || (frac >= upper_bound))
         return false;
@@ -1611,42 +1640,33 @@ bool QRDetectMulti::checkPointsInsideQuadrangle(const vector<Point2f>& quadrangl
 {
     if(quadrangle_points.size() != 4)
       return false;
-    vector<Point> points;
-    for(size_t i = 0; i < quadrangle_points.size(); i++)
-      points.push_back(Point(quadrangle_points[i]));
-    Mat lineMask = Mat::zeros(bin_barcode_fullsize.size(), bin_barcode_fullsize.type());
-    fillConvexPoly(lineMask, points, int(points.size()), 255);
+
     int count = 0;
     for(size_t i = 0; i < not_resized_loc_points.size(); i++)
     {
-        int pixel = lineMask.at<uchar>(int(not_resized_loc_points[i].y), int(not_resized_loc_points[i].x));
-        if(pixel != 0)
+        if(pointPolygonTest(quadrangle_points, not_resized_loc_points[i], true) > 0)
         {
             count++;
         }
     }
-    if (count == 3) return true;
-    else return false;
+    if (count == 3)
+        return true;
+    else
+        return false;
 }
 
 bool QRDetectMulti::checkPointsInsideTriangle(const vector<Point2f>& triangle_points)
 {
     if(triangle_points.size() != 3)
       return false;
-    vector<Point> points;
-    for(size_t i = 0; i < triangle_points.size(); i++)
-      points.push_back(Point(triangle_points[i]));
-    Mat lineMask = Mat::zeros(bin_barcode_temp.size(), bin_barcode_temp.type());
-    fillConvexPoly(lineMask, points, int(points.size()), 255);
     double eps = 3;
     for(size_t i = 0; i < resized_loc_points.size(); i++)
     {
-        int pixel = lineMask.at<uchar>(int(resized_loc_points[i].y), int(resized_loc_points[i].x));
-        if(pixel != 0)
+        if(pointPolygonTest( triangle_points, resized_loc_points[i], true ) > 0)
         {
-            if((abs(resized_loc_points[i].x - points[0].x) > eps)
-            && (abs(resized_loc_points[i].x - points[1].x) > eps)
-            && (abs(resized_loc_points[i].x - points[2].x) > eps))
+            if((abs(resized_loc_points[i].x - triangle_points[0].x) > eps)
+            && (abs(resized_loc_points[i].x - triangle_points[1].x) > eps)
+            && (abs(resized_loc_points[i].x - triangle_points[2].x) > eps))
             {
                 return false;
             }
@@ -1837,7 +1857,6 @@ void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
     for(size_t i = 0; i < contours.size(); i ++)
         for(size_t j = 0; j < contours[i].size(); j++)
             all_contours_points.push_back(contours[i][j]);
-
     Mat qrcode_labels;
     vector<Point2f> clustered_localization_points;
     int count_contours = num_qrcodes;
@@ -1880,15 +1899,9 @@ void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
 
     for(size_t j = 0; j < hull.size(); j++)
     {
-        vector<Point> hull_int;
-        for(size_t k = 0; k < hull[j].size(); k++)
-            hull_int.push_back(Point(hull[j][k]));
-        Mat lineMask = Mat::zeros(bar.size(), threshold_output.type());
-        fillConvexPoly(lineMask, hull_int, int(hull_int.size()), 255);
         for(size_t i = 0; i < not_resized_loc_points.size(); i++)
         {
-            int pixel = lineMask.at<uchar>(int(not_resized_loc_points[i].y), int(not_resized_loc_points[i].x));
-            if(pixel != 0)
+            if(pointPolygonTest(hull[j], not_resized_loc_points[i], true) > 0)
             {
                 true_points_group[j].push_back(tmp_localization_points[i]);
                 tmp_localization_points[i].x = -1;
