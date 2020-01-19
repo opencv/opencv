@@ -58,7 +58,7 @@
 - (BOOL)isEqual:(id)other{
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[CVPoint class]]) {
+    } else if (![super isEqual:other] || ![other isKindOfClass:[CVRect class]]) {
         return NO;
     } else {
         CVRect* rect = (CVRect*)other;
@@ -77,7 +77,7 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"{%d,%d,%d,%d}", self.x, self.y, self.width, self.height];
+    return [NSString stringWithFormat:@"CVRect2d {%d,%d,%d,%d}", self.x, self.y, self.width, self.height];
 }
 
 @end

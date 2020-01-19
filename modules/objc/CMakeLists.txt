@@ -3,7 +3,7 @@ if(OPENCV_INITIAL_PASS)
   add_subdirectory(generator)
 endif()
 
-if(NOT PYTHON_DEFAULT_AVAILABLE")
+if(NOT APPLE_FRAMEWORK OR NOT BUILD_OBJC OR NOT PYTHON_DEFAULT_AVAILABLE)
   ocv_module_disable(objc)
 endif()
 

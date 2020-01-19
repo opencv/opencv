@@ -1,0 +1,36 @@
+//
+// This file is auto-generated. Please don't modify it!
+//
+
+#import "$objcName.h"
+#import "CVObjcUtil.h"
+
+$imports
+
+@implementation $objcName
+
+- (cv::$cName&)nativeRef {
+    return *(cv::$cName*)_nativePtr;
+}
+
+- (void)dealloc {
+    if (_nativePtr != NULL) {
+        delete _nativePtr;
+    }
+}
+
+- (instancetype)initWithNativePtr:(cv::$cName*)nativePtr {
+    self = [super init];
+    if (self) {
+        _nativePtr = nativePtr;
+    }
+    return self;
+}
+
++ (instancetype)fromNative:(cv::$cName*)nativePtr {
+    return [[$objcName alloc] initWithNativePtr:nativePtr];
+}
+
+$methodImplementations
+
+@end

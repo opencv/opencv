@@ -1,0 +1,27 @@
+//
+// This file is auto-generated. Please don't modify it!
+//
+#pragma once
+
+#ifdef __cplusplus
+#import "opencv2/opencv.hpp"
+#import "opencv2/opencv_modules.hpp"
+#endif
+
+#import <Foundation/Foundation.h>
+
+$forwardDeclarations
+
+$enumDeclarations
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface $module : $base
+
+$moduleHeaderCode
+
+$methodDeclarations
+
+@end 
+
+NS_ASSUME_NONNULL_END

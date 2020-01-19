@@ -1,6 +1,5 @@
 //
-//  OMat.m
-//  StitchApp
+//  Mat.m
 //
 //  Created by Giles Payne on 2019/10/06.
 //  Copyright © 2019 Xtravision. All rights reserved.
@@ -13,6 +12,7 @@
 #import "CVRect.h"
 #import "CVPoint.h"
 #import "CVType.h"
+#import "CVObjcUtil.h"
 
 // returns true if final index was reached
 static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
@@ -26,32 +26,40 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 
 @implementation Mat
 
+- (cv::Mat&)nativeRef {
+    return *(cv::Mat*)_nativePtr;
+}
+
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _nativeMat = new cv::Mat();
+        _nativePtr = new cv::Mat();
     }
     return self;
 }
 
 - (void)dealloc {
-    if (_nativeMat != NULL) {
-        _nativeMat->release();
+    if (_nativePtr != NULL) {
+        _nativePtr->release();
     }
 }
 
-- (instancetype)initWithNativeMat:(cv::Mat*)nativeMat {
+- (instancetype)initWithNativeMat:(cv::Mat*)nativePtr {
     self = [super init];
     if (self) {
-        _nativeMat = nativeMat;
+        _nativePtr = nativePtr;
     }
     return self;
+}
+
++ (instancetype)fromNative:(cv::Mat*)nativePtr {
+    return [[Mat alloc] initWithNativeMat:nativePtr];
 }
 
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type {
     self = [super init];
     if (self) {
-        _nativeMat = new cv::Mat(rows, cols, type);
+        _nativePtr = new cv::Mat(rows, cols, type);
     }
     return self;
 }
@@ -59,7 +67,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type data:(NSData*)data {
     self = [super init];
     if (self) {
-        _nativeMat = new cv::Mat(rows, cols, type, (void*)data.bytes);
+        _nativePtr = new cv::Mat(rows, cols, type, (void*)data.bytes);
     }
     return self;
 }
@@ -67,7 +75,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 - (instancetype)initWithSize:(CVSize *)size type:(int)type {
     self = [super init];
     if (self) {
-        _nativeMat = new cv::Mat(size.width, size.height, type);
+        _nativePtr = new cv::Mat(size.width, size.height, type);
     }
     return self;
 }
@@ -79,7 +87,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
         for (NSNumber* size in sizes) {
             vSizes.push_back(size.intValue);
         }
-        _nativeMat = new cv::Mat((int)sizes.count, vSizes.data(), type);
+        _nativePtr = new cv::Mat((int)sizes.count, vSizes.data(), type);
     }
     return self;
 }
@@ -88,7 +96,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     self = [super init];
     if (self) {
         cv::Scalar scalerTemp(scalar.val[0].doubleValue, scalar.val[1].doubleValue, scalar.val[2].doubleValue, scalar.val[3].doubleValue);
-        _nativeMat = new cv::Mat(rows, cols, type, scalerTemp);
+        _nativePtr = new cv::Mat(rows, cols, type, scalerTemp);
     }
     return self;
 }
@@ -97,7 +105,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     self = [super init];
     if (self) {
         cv::Scalar scalerTemp(scalar.val[0].doubleValue, scalar.val[1].doubleValue, scalar.val[2].doubleValue, scalar.val[3].doubleValue);
-        _nativeMat = new cv::Mat(size.width, size.height, type, scalerTemp);
+        _nativePtr = new cv::Mat(size.width, size.height, type, scalerTemp);
     }
     return self;
 }
@@ -110,7 +118,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
         for (NSNumber* size in sizes) {
             vSizes.push_back(size.intValue);
         }
-        _nativeMat = new cv::Mat((int)sizes.count, vSizes.data(), type, scalerTemp);
+        _nativePtr = new cv::Mat((int)sizes.count, vSizes.data(), type, scalerTemp);
     }
     return self;
 }
@@ -120,7 +128,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     if (self) {
         cv::Range rows(rowRange.start, rowRange.end);
         cv::Range cols(colRange.start, colRange.end);
-        _nativeMat = new cv::Mat(*(cv::Mat*)mat.nativeMat, rows, cols);
+        _nativePtr = new cv::Mat(*(cv::Mat*)mat.nativePtr, rows, cols);
     }
     return self;
 }
@@ -129,7 +137,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     self = [super init];
     if (self) {
         cv::Range rows(rowRange.start, rowRange.end);
-        _nativeMat = new cv::Mat(*(cv::Mat*)mat.nativeMat, rows);
+        _nativePtr = new cv::Mat(*(cv::Mat*)mat.nativePtr, rows);
     }
     return self;
 }
@@ -141,7 +149,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
         for (Range* range in ranges) {
             tempRanges.push_back(cv::Range(range.start, range.end));
         }
-        _nativeMat = new cv::Mat(_nativeMat->operator()(tempRanges));
+        _nativePtr = new cv::Mat(_nativePtr->operator()(tempRanges));
     }
     return self;
 }
@@ -151,91 +159,91 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     if (self) {
         cv::Range rows(roi.y, roi.y + roi.height);
         cv::Range cols(roi.x, roi.x + roi.width);
-        _nativeMat = new cv::Mat(*(cv::Mat*)mat.nativeMat, rows, cols);
+        _nativePtr = new cv::Mat(*(cv::Mat*)mat.nativePtr, rows, cols);
     }
     return self;
 }
 
 - (Mat*)adjustRoiTop:(int)dtop bottom:(int)dbottom left:(int)dleft right:(int)dright {
-    cv::Mat adjusted = _nativeMat->adjustROI(dtop, dbottom, dleft, dright);
+    cv::Mat adjusted = _nativePtr->adjustROI(dtop, dbottom, dleft, dright);
     return [[Mat alloc] initWithNativeMat:new cv::Mat(adjusted)];
 }
 
 - (void)assignTo:(Mat*)mat type:(int)type {
-    _nativeMat->assignTo(*(cv::Mat*)mat.nativeMat, type);
+    _nativePtr->assignTo(*(cv::Mat*)mat.nativePtr, type);
 }
 
 - (void)assignTo:(Mat*)mat {
-    _nativeMat->assignTo(*(cv::Mat*)mat.nativeMat);
+    _nativePtr->assignTo(*(cv::Mat*)mat.nativePtr);
 }
 
 - (int)channels {
-    return _nativeMat->channels();
+    return _nativePtr->channels();
 }
 
 - (int)checkVector:(int)elemChannels depth:(int)depth requireContinuous:(BOOL) requireContinuous {
-    return _nativeMat->checkVector(elemChannels, depth, requireContinuous);
+    return _nativePtr->checkVector(elemChannels, depth, requireContinuous);
 }
 
 - (int)checkVector:(int)elemChannels depth:(int)depth {
-    return _nativeMat->checkVector(elemChannels, depth);
+    return _nativePtr->checkVector(elemChannels, depth);
 }
 
 - (int)checkVector:(int)elemChannels {
-    return _nativeMat->checkVector(elemChannels);
+    return _nativePtr->checkVector(elemChannels);
 }
 
 - (Mat*)clone {
-    return [[Mat alloc] initWithNativeMat:(new cv::Mat(_nativeMat->clone()))];
+    return [[Mat alloc] initWithNativeMat:(new cv::Mat(_nativePtr->clone()))];
 }
 
 - (Mat*)col:(int)x {
-    return [[Mat alloc] initWithNativeMat:(new cv::Mat(_nativeMat->col(x)))];
+    return [[Mat alloc] initWithNativeMat:(new cv::Mat(_nativePtr->col(x)))];
 }
 
 - (Mat*)colRange:(int)start end:(int)end {
-    return [[Mat alloc] initWithNativeMat:(new cv::Mat(_nativeMat->colRange(start, end)))];
+    return [[Mat alloc] initWithNativeMat:(new cv::Mat(_nativePtr->colRange(start, end)))];
 }
 
 - (Mat*)colRange:(Range*)range {
-    return [[Mat alloc] initWithNativeMat:(new cv::Mat(_nativeMat->colRange(range.start, range.end)))];
+    return [[Mat alloc] initWithNativeMat:(new cv::Mat(_nativePtr->colRange(range.start, range.end)))];
 }
 
 - (int)dims {
-    return _nativeMat->dims;
+    return _nativePtr->dims;
 }
 
 - (int)cols {
-    return _nativeMat->cols;
+    return _nativePtr->cols;
 }
 
 - (void)convertTo:(Mat*)mat rtype:(int)rtype alpha:(double)alpha beta:(double)beta {
-    _nativeMat->convertTo(*(cv::Mat*)mat->_nativeMat, rtype, alpha, beta);
+    _nativePtr->convertTo(*(cv::Mat*)mat->_nativePtr, rtype, alpha, beta);
 }
 
 - (void)convertTo:(Mat*)mat rtype:(int)rtype alpha:(double)alpha {
-    _nativeMat->convertTo(*(cv::Mat*)mat->_nativeMat, rtype, alpha);
+    _nativePtr->convertTo(*(cv::Mat*)mat->_nativePtr, rtype, alpha);
 }
 
 - (void)convertTo:(Mat*)mat rtype:(int)rtype {
-    _nativeMat->convertTo(*(cv::Mat*)mat->_nativeMat, rtype);
+    _nativePtr->convertTo(*(cv::Mat*)mat->_nativePtr, rtype);
 }
 
 - (void)copyTo:(Mat*)mat {
-    _nativeMat->copyTo(*(cv::Mat*)mat->_nativeMat);
+    _nativePtr->copyTo(*(cv::Mat*)mat->_nativePtr);
 }
 
 - (void)copyTo:(Mat*)mat mask:(Mat*)mask {
-    _nativeMat->copyTo(*(cv::Mat*)mat->_nativeMat, *(cv::Mat*)mask->_nativeMat);
+    _nativePtr->copyTo(*(cv::Mat*)mat->_nativePtr, *(cv::Mat*)mask->_nativePtr);
 }
 
 - (void)create:(int)rows cols:(int)cols type:(int)type {
-    _nativeMat->create(rows, cols, type);
+    _nativePtr->create(rows, cols, type);
 }
 
 - (void)create:(CVSize*)size type:(int)type {
     cv::Size tempSize(size.width, size.height);
-    _nativeMat->create(tempSize, type);
+    _nativePtr->create(tempSize, type);
 }
 
 - (void)createEx:(NSArray<NSNumber*>*)sizes type:(int)type {
@@ -243,23 +251,23 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     for (NSNumber* size in sizes) {
         tempSizes.push_back(size.intValue);
     }
-    _nativeMat->create((int)tempSizes.size(), tempSizes.data(), type);
+    _nativePtr->create((int)tempSizes.size(), tempSizes.data(), type);
 }
 
 - (void)copySize:(Mat*)mat {
-    _nativeMat->copySize(*(cv::Mat*)mat.nativeMat);
+    _nativePtr->copySize(*(cv::Mat*)mat.nativePtr);
 }
 
 - (Mat*)cross:(Mat*)mat {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->cross(*(cv::Mat*)mat.nativeMat))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->cross(*(cv::Mat*)mat.nativePtr))];
 }
 
 - (int)depth {
-    return _nativeMat->depth();
+    return _nativePtr->depth();
 }
 
 - (Mat*)diag:(int)diagonal {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->diag(diagonal))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->diag(diagonal))];
 }
 
 - (Mat*)diag {
@@ -267,23 +275,23 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 }
 
 + (Mat*)diag:(Mat*)diagonal {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::diag(*(cv::Mat*)diagonal.nativeMat))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::diag(*(cv::Mat*)diagonal.nativePtr))];
 }
 
 - (double)dot:(Mat*)mat {
-    return _nativeMat->dot(*(cv::Mat*)mat.nativeMat);
+    return _nativePtr->dot(*(cv::Mat*)mat.nativePtr);
 }
 
 - (long)elemSize {
-    return _nativeMat->elemSize();
+    return _nativePtr->elemSize();
 }
 
 - (long)elemSize1 {
-    return _nativeMat->elemSize1();
+    return _nativePtr->elemSize1();
 }
 
 - (BOOL)empty {
-    return _nativeMat->empty();
+    return _nativePtr->empty();
 }
 
 + (Mat*)eye:(int)rows cols:(int)cols type:(int)type {
@@ -296,25 +304,25 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 }
 
 - (Mat*)inv:(int)method {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->inv(method))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->inv(method))];
 }
 
 - (Mat*)inv {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->inv())];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->inv())];
 }
 
 - (BOOL)isContinuous {
-    return _nativeMat->isContinuous();
+    return _nativePtr->isContinuous();
 }
 
 - (BOOL)isSubmatrix {
-    return _nativeMat->isSubmatrix();
+    return _nativePtr->isSubmatrix();
 }
 
 - (void)locateROI:(CVSize*)wholeSize ofs:(CVPoint*)ofs {
     cv::Size tempWholeSize;
     cv::Point tempOfs;
-    _nativeMat->locateROI(tempWholeSize, tempOfs);
+    _nativePtr->locateROI(tempWholeSize, tempOfs);
     if (wholeSize != nil) {
         wholeSize.width = tempWholeSize.width;
         wholeSize.height = tempWholeSize.height;
@@ -326,11 +334,11 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 }
 
 - (Mat*)mul:(Mat*)mat scale:(double)scale {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->mul(*(cv::Mat*)mat.nativeMat, scale))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->mul(*(cv::Mat*)mat.nativePtr, scale))];
 }
 
 - (Mat*)mul:(Mat*)mat {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->mul(*(cv::Mat*)mat.nativeMat))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->mul(*(cv::Mat*)mat.nativePtr))];
 }
 
 + (Mat*)ones:(int)rows cols:(int)cols type:(int)type {
@@ -351,15 +359,15 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 }
 
 - (void)push_back:(Mat*)mat {
-    _nativeMat->push_back(*(cv::Mat*)mat.nativeMat);
+    _nativePtr->push_back(*(cv::Mat*)mat.nativePtr);
 }
 
 - (Mat*)reshape:(int)channels rows:(int)rows {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->reshape(channels, rows))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->reshape(channels, rows))];
 }
 
 - (Mat*)reshape:(int)channels {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->reshape(channels))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->reshape(channels))];
 }
 
 - (Mat*)reshape:(int)channels newshape:(NSArray<NSNumber*>*)newshape {
@@ -367,57 +375,57 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     for (NSNumber* size in newshape) {
         tempNewshape.push_back(size.intValue);
     }
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->reshape(channels, tempNewshape))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->reshape(channels, tempNewshape))];
 }
 
 - (Mat*)row:(int)y {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->row(y))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->row(y))];
 }
 
 - (Mat*)rowRange:(int)start end:(int)end {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->rowRange(start, end))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->rowRange(start, end))];
 }
 
 - (Mat*)rowRange:(Range*)range {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->rowRange(range.start, range.end))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->rowRange(range.start, range.end))];
 }
 
 - (int)rows {
-    return _nativeMat->rows;
+    return _nativePtr->rows;
 }
 
 - (Mat*)setToScalar:(Scalar*)scalar {
     cv::Scalar tempScalar(scalar.val[0].doubleValue, scalar.val[1].doubleValue, scalar.val[2].doubleValue, scalar.val[3].doubleValue);
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->operator=(tempScalar))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->operator=(tempScalar))];
 }
 
 - (Mat*)setToScalar:(Scalar*)scalar mask:(Mat*)mask {
     cv::Scalar tempScalar(scalar.val[0].doubleValue, scalar.val[1].doubleValue, scalar.val[2].doubleValue, scalar.val[3].doubleValue);
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->setTo(tempScalar, *(cv::Mat*)mask.nativeMat))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->setTo(tempScalar, *(cv::Mat*)mask.nativePtr))];
 }
 
 - (Mat*)setToValue:(Mat*)value mask:(Mat*)mask {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->setTo(*(cv::Mat*)value.nativeMat, *(cv::Mat*)mask.nativeMat))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->setTo(*(cv::Mat*)value.nativePtr, *(cv::Mat*)mask.nativePtr))];
 }
 
 - (Mat*)setToValue:(Mat*)value {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->setTo(*(cv::Mat*)value.nativeMat))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->setTo(*(cv::Mat*)value.nativePtr))];
 }
 
 - (CVSize*)size {
-    return [[CVSize alloc] initWithWidth:_nativeMat->size().width height:_nativeMat->size().height];
+    return [[CVSize alloc] initWithWidth:_nativePtr->size().width height:_nativePtr->size().height];
 }
 
 - (int)size:(int)dimIndex {
-    return _nativeMat->size[dimIndex];
+    return _nativePtr->size[dimIndex];
 }
 
 - (long)step1:(int)dimIndex {
-    return _nativeMat->step1(dimIndex);
+    return _nativePtr->step1(dimIndex);
 }
 
 - (long)step1 {
-    return _nativeMat->step1();
+    return _nativePtr->step1();
 }
 
 - (Mat*)submat:(int)rowStart rowEnd:(int)rowEnd colStart:(int)colStart colEnd:(int)colEnd {
@@ -429,7 +437,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 - (Mat*)submat:(Range*)rowRange colRange:(Range*)colRange {
     cv::Range tempRowRange(rowRange.start, rowRange.end);
     cv::Range tempColRange(colRange.start, colRange.end);
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->operator()(tempRowRange, tempColRange))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->operator()(tempRowRange, tempColRange))];
 }
 
 - (Mat*)submat:(NSArray<Range*>*)ranges {
@@ -437,24 +445,24 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     for (Range* range in ranges) {
         tempRanges.push_back(cv::Range(range.start, range.end));
     }
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->operator()(tempRanges))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->operator()(tempRanges))];
 }
 
 - (Mat*)submatRoi:(CVRect*)roi {
     cv::Rect tempRoi(roi.x, roi.y, roi.width, roi.height);
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->operator()(tempRoi))];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->operator()(tempRoi))];
 }
 
 - (Mat*)t {
-    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativeMat->t())];
+    return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->t())];
 }
 
 - (long)total {
-    return _nativeMat->total();
+    return _nativePtr->total();
 }
 
 - (int)type {
-    return _nativeMat->type();
+    return _nativePtr->type();
 }
 
 + (Mat*)zeros:(int)rows cols:(int)cols type:(int)type {
@@ -475,12 +483,12 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 }
 
 - (NSString*)dimsDescription {
-    if (_nativeMat->dims <= 0) {
+    if (_nativePtr->dims <= 0) {
         return @"-1*-1*";
     } else {
         NSMutableString* ret = [NSMutableString string];
-        for (int index=0; index<_nativeMat->dims; index++) {
-            [ret appendFormat:@"%d*", _nativeMat->size[index]];
+        for (int index=0; index<_nativePtr->dims; index++) {
+            [ret appendFormat:@"%d*", _nativePtr->size[index]];
         }
         return ret;
     }
@@ -488,12 +496,12 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 
 - (NSString*)description {
     NSString* dimDesc = [self dimsDescription];
-    return [NSString stringWithFormat:@"Mat [ %@%@, isCont=%s, isSubmat=%s, nativeObj=0x%p, dataAddr=0x%p ]", dimDesc, [CVType typeToString:_nativeMat->type()], _nativeMat->isContinuous()?"YES":"NO", _nativeMat->isSubmatrix()?"YES":"NO", (void*)_nativeMat, (void*)_nativeMat->data];
+    return [NSString stringWithFormat:@"Mat [ %@%@, isCont=%s, isSubmat=%s, nativeObj=0x%p, dataAddr=0x%p ]", dimDesc, [CVType typeToString:_nativePtr->type()], _nativePtr->isContinuous()?"YES":"NO", _nativePtr->isSubmatrix()?"YES":"NO", (void*)_nativePtr, (void*)_nativePtr->data];
 }
 
 - (NSString*)dump {
     NSMutableString* ret = [NSMutableString string];
-    cv::Ptr<cv::Formatted> formatted = cv::Formatter::get()->format(*_nativeMat);
+    cv::Ptr<cv::Formatted> formatted = cv::Formatter::get()->format(*_nativePtr);
     for(const char* format = formatted->next(); format; format = formatted->next()) {
         [ret appendFormat:@"%s", format];
     }
@@ -508,7 +516,7 @@ template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)
 }
 
 - (void)put:(uchar*)dest data:(NSArray<NSNumber*>*)data dataOffset:(int)dataOffset dataLength:(int)dataLength {
-    int depth = _nativeMat->depth();
+    int depth = _nativePtr->depth();
     if (depth == CV_8U) {
         putData(dest, dataLength, ^uchar (int index) { return data[dataOffset + index].unsignedCharValue;} );
     } else if (depth == CV_8S) {
@@ -527,7 +535,7 @@ template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)
 }
 
 - (int)put:(NSArray<NSNumber*>*)indices data:(NSArray<NSNumber*>*)data {
-    int type = _nativeMat->type();
+    int type = _nativePtr->type();
     if (data == nil || data.count % [CVType channels:type] != 0) {
         NSException* exception = [NSException
                 exceptionWithName:@"UnsupportedOperationException"
@@ -539,33 +547,33 @@ template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)
     for (NSNumber* index in indices) {
         tempIndices.push_back(index.intValue);
     }
-    for (int index = 0; index < _nativeMat->dims; index++) {
-        if (_nativeMat->size[index]<=tempIndices[index]) {
+    for (int index = 0; index < _nativePtr->dims; index++) {
+        if (_nativePtr->size[index]<=tempIndices[index]) {
             return 0; // indexes out of range
         }
     }
 
     int available = (int)data.count;
     int copyOffset = 0;
-    int copyCount = _nativeMat->channels();
-    for (int index = 0; index < _nativeMat->dims; index++) {
-        copyCount *= (_nativeMat->size[index] - tempIndices[index]);
+    int copyCount = _nativePtr->channels();
+    for (int index = 0; index < _nativePtr->dims; index++) {
+        copyCount *= (_nativePtr->size[index] - tempIndices[index]);
     }
     if (available < copyCount) {
         copyCount = available;
     }
     int result = copyCount;
-    uchar* dest = _nativeMat->ptr(tempIndices.data());
+    uchar* dest = _nativePtr->ptr(tempIndices.data());
     while (available > 0) {
         [self put:dest data:data dataOffset:(int)copyOffset dataLength:copyCount];
-        updateIdx(_nativeMat, tempIndices, copyCount / (int)_nativeMat->elemSize());
+        updateIdx(_nativePtr, tempIndices, copyCount / (int)_nativePtr->elemSize());
         available -= copyCount;
         copyOffset += copyCount;
-        copyCount = _nativeMat->size[_nativeMat->dims-1] * (int)_nativeMat->elemSize();
+        copyCount = _nativePtr->size[_nativePtr->dims-1] * (int)_nativePtr->elemSize();
         if (available < copyCount) {
             copyCount = available;
         }
-        dest = _nativeMat->ptr(tempIndices.data());
+        dest = _nativePtr->ptr(tempIndices.data());
     }
     return result;
 }
@@ -583,7 +591,7 @@ template<typename T> void getData(uchar* dataSource, int dataLength, void (^writ
 }
 
 - (void)get:(uchar*)source data:(NSMutableArray<NSNumber*>*)data dataOffset:(int)dataOffset dataLength:(int)dataLength {
-    int depth = _nativeMat->depth();
+    int depth = _nativePtr->depth();
     if (depth == CV_8U) {
         getData(source, dataLength, ^void (int index, uchar value) { data[dataOffset + index] = [[NSNumber alloc] initWithUnsignedChar:value]; } );
     } else if (depth == CV_8S) {
@@ -602,7 +610,7 @@ template<typename T> void getData(uchar* dataSource, int dataLength, void (^writ
 }
 
 - (int)get:(NSArray<NSNumber*>*)indices data:(NSMutableArray<NSNumber*>*)data {
-    int type = _nativeMat->type();
+    int type = _nativePtr->type();
     if (data == nil || data.count % [CVType channels:type] != 0) {
         NSException* exception = [NSException
                 exceptionWithName:@"UnsupportedOperationException"
@@ -614,33 +622,33 @@ template<typename T> void getData(uchar* dataSource, int dataLength, void (^writ
     for (NSNumber* index in indices) {
         tempIndices.push_back(index.intValue);
     }
-    for (int index = 0; index < _nativeMat->dims; index++) {
-        if (_nativeMat->size[index]<=tempIndices[index]) {
+    for (int index = 0; index < _nativePtr->dims; index++) {
+        if (_nativePtr->size[index]<=tempIndices[index]) {
             return 0; // indexes out of range
         }
     }
 
     int available = (int)data.count;
     int copyOffset = 0;
-    int copyCount = _nativeMat->channels();
-    for (int index = 0; index < _nativeMat->dims; index++) {
-        copyCount *= (_nativeMat->size[index] - tempIndices[index]);
+    int copyCount = _nativePtr->channels();
+    for (int index = 0; index < _nativePtr->dims; index++) {
+        copyCount *= (_nativePtr->size[index] - tempIndices[index]);
     }
     if (available < copyCount) {
         copyCount = available;
     }
     int result = copyCount;
-    uchar* source = _nativeMat->ptr(tempIndices.data());
+    uchar* source = _nativePtr->ptr(tempIndices.data());
     while (available > 0) {
         [self get:source data:data dataOffset:(int)copyOffset dataLength:copyCount];
-        updateIdx(_nativeMat, tempIndices, copyCount / (int)_nativeMat->elemSize());
+        updateIdx(_nativePtr, tempIndices, copyCount / (int)_nativePtr->elemSize());
         available -= copyCount;
         copyOffset += copyCount;
-        copyCount = _nativeMat->size[_nativeMat->dims-1] * (int)_nativeMat->elemSize();
+        copyCount = _nativePtr->size[_nativePtr->dims-1] * (int)_nativePtr->elemSize();
         if (available < copyCount) {
             copyCount = available;
         }
-        source = _nativeMat->ptr(tempIndices.data());
+        source = _nativePtr->ptr(tempIndices.data());
     }
     return result;
 }

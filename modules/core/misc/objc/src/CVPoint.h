@@ -1,39 +1,56 @@
 //
 //  Point.h
-//  StitchApp
 //
 //  Created by Giles Payne on 2019/10/09.
 //  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#ifndef CVPoint_h
-#define CVPoint_h
+#pragma once
 
 #ifdef __cplusplus
 #import <opencv2/opencv.hpp>
-#import <opencv2/imgcodecs/ios.h>
-#import <opencv2/videoio/cap_ios.h>
-#import <opencv2/xfeatures2d.hpp>
 #endif
 
 #import <Foundation/Foundation.h>
+#import "ObjectVector.h"
 
 @class CVRect;
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface CVPoint : NSObject
 
 @property double x;
 @property double y;
+#ifdef __cplusplus
+@property(readonly) cv::Point& nativeRef;
+#endif
 
-- (instancetype)initWithX:(double)x y:(double)y;
 - (instancetype)init;
+- (instancetype)initWithX:(double)x y:(double)y;
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::Point*)point;
+#endif
 - (CVPoint*)clone;
 - (double)dot:(CVPoint*)point;
 - (BOOL)inside:(CVRect*)rect;
 
-- (BOOL)isEqual:(id)other;
+- (BOOL)isEqual:(nullable id)other;
 - (NSUInteger)hash;
 - (NSString *)description;
 @end
 
-#endif /* CVPoint_h */
+NS_ASSUME_NONNULL_END
+
+#ifdef __cplusplus
+#import <vector>
+
+
+template <typename T> std::vector<cv::Point> arrayToVector(ObjectVector<CVPoint*>* _Nonnull objectVector) {
+    std::vector<cv::Point> ret;
+    for (CVPoint* point in objectVector) {
+        ret.push_back(point.nativeRef);
+    }
+    return ret;
+}
+#endif

@@ -1,22 +1,19 @@
 //
 //  Range.h
-//  StitchApp
 //
 //  Created by Giles Payne on 2019/10/08.
 //  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#ifndef Range_h
-#define Range_h
+#pragma once
 
 #ifdef __cplusplus
 #import <opencv2/opencv.hpp>
-#import <opencv2/imgcodecs/ios.h>
-#import <opencv2/videoio/cap_ios.h>
-#import <opencv2/xfeatures2d.hpp>
 #endif
 
 #import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface Range : NSObject
 
@@ -36,10 +33,10 @@
 - (Range*)shift:(int)delta;
 - (Range*)clone;
 
-- (BOOL)isEqual:(id)object;
+- (BOOL)isEqual:(nullable id)object;
 - (NSUInteger)hash;
 - (NSString*)description;
 
 @end
 
-#endif /* Range_h */
+NS_ASSUME_NONNULL_END

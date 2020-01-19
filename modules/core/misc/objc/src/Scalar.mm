@@ -8,7 +8,19 @@
 
 #import "Scalar.h"
 
-@implementation Scalar
+@implementation Scalar {
+    cv::Scalar native;
+}
+
+#ifdef __cplusplus
+- (cv::Scalar*)nativeScalar {
+    native.val[0] = self.val[0].doubleValue;
+    native.val[1] = self.val[1].doubleValue;
+    native.val[2] = self.val[2].doubleValue;
+    native.val[3] = self.val[3].doubleValue;
+    return &native;
+}
+#endif
 
 - (instancetype)initWithVals:(NSArray<NSNumber*> *)vals {
     self = [super init];
@@ -49,6 +61,12 @@
     }
     return self;
 }
+
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::Scalar&)nativeScalar {
+    return [[Scalar alloc] initWithV0:nativeScalar.val[0] v1:nativeScalar.val[1] v2:nativeScalar.val[2] v3:nativeScalar.val[3]];
+}
+#endif
 
 - (void)set:(NSArray<NSNumber*> *)vals {
     if (vals != nil) {

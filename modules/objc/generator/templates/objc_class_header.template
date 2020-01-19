@@ -1,0 +1,38 @@
+//
+// This file is auto-generated. Please don't modify it!
+//
+#pragma once
+
+#ifdef __cplusplus
+#import "opencv2/opencv.hpp"
+#import "opencv2/opencv_modules.hpp"
+#endif
+
+#import <Foundation/Foundation.h>
+
+$forwardDeclarations
+
+$enumDeclarations
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface $objcName : $base
+
+#ifdef __cplusplus
+@property(readonly) cv::$cName* nativePtr;
+@property(readonly) cv::$cName& nativeRef;
+#endif
+
+- (void)dealloc;
+
+#ifdef __cplusplus
+- (instancetype)initWithNativePtr:(cv::$cName*)nativePtr;
++ (instancetype)fromNative:(cv::$cName*)nativePtr;
+#endif
+
+$methodDeclarations
+
+@end
+
+NS_ASSUME_NONNULL_END
+

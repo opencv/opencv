@@ -6,27 +6,31 @@
 //  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#ifndef Scalar_h
-#define Scalar_h
+#pragma once
 
 #ifdef __cplusplus
 #import <opencv2/opencv.hpp>
-#import <opencv2/imgcodecs/ios.h>
-#import <opencv2/videoio/cap_ios.h>
-#import <opencv2/xfeatures2d.hpp>
 #endif
 
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface Scalar : NSObject
 
 @property NSMutableArray<NSNumber*>* val;
+#ifdef __cplusplus
+@property(readonly) cv::Scalar& nativeRef;
+#endif
 
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
 - (instancetype)initWithV0:(double)v0 v1:(double)v1 v2:(double)v2 v3:(double)v3;
 - (instancetype)initWithV0:(double)v0 v1:(double)v1 v2:(double)v2;
 - (instancetype)initWithV0:(double)v0 v1:(double)v1;
 - (instancetype)initWithV0:(double)v0;
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::Scalar&)nativeScalar;
+#endif
 
 - (void)set:(NSArray<NSNumber*>*)vals;
 + (Scalar*)all:(double)v;
@@ -36,10 +40,10 @@
 - (Scalar*)conj;
 - (BOOL)isReal;
 
-- (BOOL)isEqual:(id)object;
+- (BOOL)isEqual:(nullable id)object;
 - (NSUInteger)hash;
 - (NSString *)description;
 
 @end
 
-#endif /* Scalar_h */
+NS_ASSUME_NONNULL_END

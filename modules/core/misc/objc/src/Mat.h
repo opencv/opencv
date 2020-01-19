@@ -1,19 +1,14 @@
 //
-//  OMat.h
-//  StitchApp
+//  Mat.h
 //
 //  Created by Giles Payne on 2019/10/06.
 //  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#ifndef Mat_h
-#define Mat_h
+#pragma once
 
 #ifdef __cplusplus
 #import <opencv2/opencv.hpp>
-#import <opencv2/imgcodecs/ios.h>
-#import <opencv2/videoio/cap_ios.h>
-#import <opencv2/xfeatures2d.hpp>
 #endif
 
 #import <Foundation/Foundation.h>
@@ -24,16 +19,19 @@
 @class CVRect;
 @class CVPoint;
 
+NS_ASSUME_NONNULL_BEGIN
 @interface Mat : NSObject
 
 #ifdef __cplusplus
-@property(readonly) cv::Mat* nativeMat;
+@property(readonly) cv::Mat* nativePtr;
+@property(readonly) cv::Mat& nativeRef;
 #endif
 
 - (instancetype)init;
 - (void)dealloc;
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat;
++ (instancetype)fromNative:(cv::Mat*)nativeMat;
 #endif
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type;
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type data:(NSData*)data;
@@ -124,4 +122,4 @@
 
 @end
 
-#endif /* Mat_h */
+NS_ASSUME_NONNULL_END

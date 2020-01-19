@@ -1,21 +1,17 @@
 project(${the_module})
 
-glob_more_specific_sources(H "${CMAKE_CURRENT_SOURCE_DIR}/../generator/src" handwritten_h_sources)
-glob_more_specific_sources(CPP "${CMAKE_CURRENT_SOURCE_DIR}/../generator/src" handwritten_cpp_sources)
-
-# grab C++ files from misc/objc
+# grab files from misc/objc
 foreach(m ${OPENCV_MODULES_BUILD})
   if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";objc;" AND HAVE_${m})
     set(module_objc_dir "${OPENCV_MODULE_${m}_LOCATION}/misc/objc")
-    include_directories("${module_objc_dir}/src/cpp")
-    file(GLOB _result "${module_objc_dir}/src/cpp/*.h" "${module_objc_dir}/src/cpp/*.hpp" "${module_objc_dir}/src/cpp/*.cpp")
-    list(APPEND handwritten_cpp_sources ${_result})
+    file(GLOB _result "${module_objc_dir}/src/*.h" "${module_objc_dir}/src/*.m" "${module_objc_dir}/src/*.mm" "${module_objc_dir}/src/*.swift")
+    list(APPEND handwritten_objc_sources ${_result})
   endif()
 endforeach()
 
 set(__type MODULE)
 ocv_add_library(${the_module} ${__type}
-    ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
+    ${handwritten_objc_sources}
     ${copied_files}
 )
 add_dependencies(${the_module} gen_opencv_objc_source)

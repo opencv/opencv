@@ -1,0 +1,7 @@
+
+@property (class, nonatomic, assign, readonly) NSString* version;
+@property (class, nonatomic, assign, readonly) NSString* frameworkVersion;
+@property (class, nonatomic, assign, readonly) NSInteger versionMajor;
+@property (class, nonatomic, assign, readonly) NSInteger versionMinor;
+@property (class, nonatomic, assign, readonly) NSInteger versionRevision;
+@property (class, nonatomic, assign, readonly) NSString* versionStatus;

@@ -7,6 +7,7 @@
 //
 
 #import "CVSize.h"
+#import "CVObjcUtil.h"
 
 @implementation CVSize
 
@@ -47,18 +48,13 @@
     }
 }
 
-static int64_t doubleToBits(double x) {
-    const union { double d; int64_t l; } xUnion = { .d = x };
-    return xUnion.l;
-}
-
 - (NSUInteger)hash
 {
     int prime = 31;
     uint32_t result = 1;
-    int64_t temp = doubleToBits(self.height);
+    int64_t temp = DOUBLE_TO_BITS(self.height);
     result = prime * result + (int32_t) (temp ^ (temp >> 32));
-    temp = doubleToBits(self.width);
+    temp = DOUBLE_TO_BITS(self.width);
     result = prime * result + (int32_t) (temp ^ (temp >> 32));
     return result;
 }

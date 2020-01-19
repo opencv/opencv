@@ -1,6 +1,5 @@
 //
 //  CVPoint.m
-//  StitchApp
 //
 //  Created by Giles Payne on 2019/10/09.
 //  Copyright © 2019 Xtravision. All rights reserved.
@@ -8,8 +7,37 @@
 
 #import "CVPoint.h"
 #import "CVRect.h"
+#import "CVObjcUtil.h"
 
-@implementation CVPoint
+@implementation CVPoint {
+    cv::Point native;
+}
+
+- (double)x {
+    return native.x;
+}
+
+- (void)setX:(double)val {
+    native.x = val;
+}
+
+- (double)y {
+    return native.y;
+}
+
+- (void)setY:(double)val {
+    native.y = val;
+}
+
+#ifdef __cplusplus
+- (cv::Point&)nativeRef {
+    return native;
+}
+#endif
+
+- (instancetype)init {
+    return [self initWithX:0 y:0];
+}
 
 - (instancetype)initWithX:(double)x y:(double)y {
     self = [super init];
@@ -20,9 +48,11 @@
     return self;
 }
 
-- (instancetype)init {
-    return [self initWithX:0 y:0];
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::Point*)point {
+    return [[CVPoint alloc] initWithX:point->x y:point->y];
 }
+#endif
 
 - (CVPoint*) clone {
     return [[CVPoint alloc] initWithX:self.x y:self.y];
@@ -47,24 +77,18 @@
     return [rect contains:self];
 }
 
-static int64_t doubleToBits(double x) {
-    const union { double d; int64_t l; } xUnion = { .d = x };
-    return xUnion.l;
-}
-
-- (NSUInteger)hash
-{
+- (NSUInteger)hash {
     int prime = 31;
     uint32_t result = 1;
-    int64_t temp = doubleToBits(self.x);
+    int64_t temp = DOUBLE_TO_BITS(self.x);
     result = prime * result + (int32_t) (temp ^ (temp >> 32));
-    temp = doubleToBits(self.y);
+    temp = DOUBLE_TO_BITS(self.y);
     result = prime * result + (int32_t) (temp ^ (temp >> 32));
     return result;
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"[%f,%f]", self.x, self.y];
+    return [NSString stringWithFormat:@"Point {%lf,%lf}", self.x, self.y];
 }
 
 @end

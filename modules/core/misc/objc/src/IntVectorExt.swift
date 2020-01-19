@@ -1,0 +1,55 @@
+//
+//  DoubleVectorExt.swift
+//  InteropTest
+//
+//  Created by Giles Payne on 2020/01/04.
+//  Copyright © 2020 Xtravision. All rights reserved.
+//
+
+import Foundation
+
+extension IntVector {
+    convenience init(_ array:[Int32]) {
+        let data = Data(buffer: UnsafeBufferPointer(start: array, count: array.count))
+        self.init(data:data);
+    }
+
+    subscript(index: Int) -> Int32 {
+        get {
+            self.get(index)
+        }
+    }
+    
+    var array: [Int32] {
+        get {
+            var ret = Array<Int32>(repeating: 0, count: data.count/MemoryLayout<Int32>.stride)
+            _ = ret.withUnsafeMutableBytes { data.copyBytes(to: $0) }
+            return ret
+        }
+    }
+}
+
+extension IntVector : Sequence {
+    public typealias Iterator = IntVectorIterator
+    public func makeIterator() -> IntVectorIterator {
+        return IntVectorIterator(self)
+    }
+}
+
+public struct IntVectorIterator: IteratorProtocol {
+    public typealias Element = Int32
+    let intVector: IntVector
+    var pos = 0
+
+    init(_ intVector: IntVector) {
+        self.intVector = intVector
+    }
+    
+    mutating public func next() -> Int32? {
+        guard pos >= 0 && pos < intVector.length
+            else { return nil }
+
+        pos += 1
+        return intVector.get(pos - 1)
+    }
+}

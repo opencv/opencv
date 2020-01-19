@@ -6,17 +6,13 @@
 //  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#ifndef CVType_h
-#define CVType_h
-
 #ifdef __cplusplus
 #import <opencv2/opencv.hpp>
-#import <opencv2/imgcodecs/ios.h>
-#import <opencv2/videoio/cap_ios.h>
-#import <opencv2/xfeatures2d.hpp>
 #endif
 
 #import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface CVType : NSObject
 
@@ -89,4 +85,4 @@
 
 @end
 
-#endif /* CVType_h */
+NS_ASSUME_NONNULL_END

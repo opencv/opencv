@@ -1,6 +1,5 @@
 //
 //  Range.m
-//  StitchApp
 //
 //  Created by Giles Payne on 2019/10/08.
 //  Copyright © 2019 Xtravision. All rights reserved.
@@ -24,7 +23,7 @@
 }
 
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals {
-    self = [super init];
+    self = [self init];
     if (self != nil) {
         [self set:vals];
     }
@@ -87,7 +86,7 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"[%d, %d]", self.start, self.end];
+    return [NSString stringWithFormat:@"Range {%d, %d}", self.start, self.end];
 }
 
 @end

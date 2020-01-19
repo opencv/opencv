@@ -1,25 +1,22 @@
 //
 //  Rect.h
-//  StitchApp
 //
 //  Created by Giles Payne on 2019/10/09.
 //  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#ifndef CVRect_h
-#define CVRect_h
+#pragma once
 
 #ifdef __cplusplus
 #import <opencv2/opencv.hpp>
-#import <opencv2/imgcodecs/ios.h>
-#import <opencv2/videoio/cap_ios.h>
-#import <opencv2/xfeatures2d.hpp>
 #endif
 
 @class CVPoint;
 @class CVSize;
 
 #import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface CVRect : NSObject
 
@@ -28,8 +25,8 @@
 @property int width;
 @property int height;
 
-- (instancetype)initWithX:(int)x y:(int)y width:(int)width height:(int)height;
 - (instancetype)init;
+- (instancetype)initWithX:(int)x y:(int)y width:(int)width height:(int)height;
 
 - (CVRect*)clone;
 - (CVPoint*)tl;
@@ -38,6 +35,11 @@
 - (double)area;
 - (BOOL)empty;
 - (BOOL)contains:(CVPoint*)point;
+
+- (BOOL)isEqual:(nullable id)other;
+- (NSUInteger)hash;
+- (NSString *)description;
+
 @end
 
-#endif /* CVRect_h */
+NS_ASSUME_NONNULL_END
