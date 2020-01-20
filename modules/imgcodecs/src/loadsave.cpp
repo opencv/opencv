@@ -423,12 +423,12 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     int scale_denom = 1;
     if( flags > IMREAD_LOAD_GDAL )
     {
-    if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
-        scale_denom = 2;
-    else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
-        scale_denom = 4;
-    else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
-        scale_denom = 8;
+        if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
+            scale_denom = 2;
+        else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
+            scale_denom = 4;
+        else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
+            scale_denom = 8;
     }
 
     /// set the scale_denom in the driver
@@ -766,6 +766,20 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     if( !decoder )
         return 0;
 
+    int scale_denom = 1;
+    if( flags > IMREAD_LOAD_GDAL )
+    {
+        if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
+            scale_denom = 2;
+        else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
+            scale_denom = 4;
+        else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
+            scale_denom = 8;
+    }
+
+    /// set the scale_denom in the driver
+    decoder->setScale( scale_denom );
+
     if( !decoder->setSource(buf_row) )
     {
         filename = tempfile();
@@ -861,7 +875,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     {
         std::cerr << "imdecode_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
     }
-    decoder.release();
+
     if (!filename.empty())
     {
         if (0 != remove(filename.c_str()))
@@ -878,6 +892,13 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
             mat->release();
         return 0;
     }
+
+    if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    {
+        resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
+    }
+
+    decoder.release();
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
