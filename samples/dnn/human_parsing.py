@@ -3,8 +3,7 @@ import numpy as np
 import argparse
 
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,
-            cv.dnn.DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, cv.dnn.DNN_BACKEND_OPENCV)
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
 parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
@@ -14,7 +13,6 @@ parser.add_argument('--model', '-m', required=True, help='Path to pb model.')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                     help="Choose one of computation backends: "
                          "%d: automatically (by default), "
-                         "%d: Halide language (http://halide-lang.org/), "
                          "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
                          "%d: OpenCV implementation" % backends)
 parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
@@ -23,6 +21,7 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: OpenCL, '
                          '%d: OpenCL fp16 (half-float precision), '
                          '%d: VPU' % targets)
+args, _ = parser.parse_known_args()
 
 # To get pre-trained model download https://drive.google.com/file/d/1BFVXgeln-bek8TCbRjN6utPAgRE0LJZg/view
 # For correct convert .meta to .pb model download original repository https://github.com/Engineering-Course/LIP_JPPNet
@@ -165,7 +164,6 @@ def parse_human(image_path, model_path, backend, target):
 
 
 if __name__ == '__main__':
-    args, _ = parser.parse_known_args()
     output = parse_human(args.input, args.model, args.backend, args.target)
     winName = 'Deep learning human parsing in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
