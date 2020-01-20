@@ -149,13 +149,10 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
                             std::vector<size_t>& strides, cv::String &padMode)
 {
     bool is_global = params.get<bool>("global_pooling", false);
-    globalPooling = std::vector<bool>(3, is_global);
-    if (params.has("global_pooling_d"))
-        globalPooling[0] = params.get<bool>("global_pooling_d");
-    if (params.has("global_pooling_h"))
-        globalPooling[1] = params.get<bool>("global_pooling_h");
-    if (params.has("global_pooling_w"))
-        globalPooling[2] = params.get<bool>("global_pooling_w");
+    globalPooling.resize(3);
+    globalPooling[0] = params.get<bool>("global_pooling_d", is_global);
+    globalPooling[1] = params.get<bool>("global_pooling_h", is_global);
+    globalPooling[2] = params.get<bool>("global_pooling_w", is_global);
 
     is_global = globalPooling[0] || globalPooling[1] || globalPooling[2];
     if (!is_global)
@@ -172,25 +169,18 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
             CV_Error(cv::Error::StsBadArg, "In global_pooling mode, kernel_size (or kernel_h and kernel_w) cannot be specified");
         }
 
-        kernel.resize(3, 1);
+        kernel.resize(3);
         pads_begin.resize(3, 0);
         pads_end.resize(3, 0);
         strides.resize(3, 1);
-        if (params.has("kernel_d"))
-            kernel[0] = params.get<int>("kernel_d");
-        if (params.has("kernel_h"))
-            kernel[1] = params.get<int>("kernel_h");
-        if (params.has("kernel_w"))
-            kernel[2] = params.get<int>("kernel_w");
+        kernel[0] = params.get<int>("kernel_d", 1);
+        kernel[1] = params.get<int>("kernel_h", 1);
+        kernel[2] = params.get<int>("kernel_w", 1);
 
-        if (params.has("pad_t"))
-            pads_begin[1] = params.get<int>("pad_t");
-        if (params.has("pad_l"))
-            pads_begin[2] = params.get<int>("pad_l");
-        if (params.has("pad_b"))
-            pads_end[1] = params.get<int>("pad_b");
-        if (params.has("pad_r"))
-            pads_end[2] = params.get<int>("pad_r");
+        pads_begin[1] = params.get<int>("pad_t", 0);
+        pads_begin[2] = params.get<int>("pad_l", 0);
+        pads_end[1] = params.get<int>("pad_b", 0);
+        pads_end[2] = params.get<int>("pad_r", 0);
         if (params.has("pad_h")) {
             pads_begin[1] = params.get<int>("pad_h");
             pads_end[1] = params.get<int>("pad_h");
@@ -219,10 +209,8 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
             }
         }
 
-        if (params.has("stride_h"))
-            strides[1] = params.get<int>("stride_h");
-        if (params.has("stride_w"))
-            strides[2] = params.get<int>("stride_w");
+        strides[1] = params.get<int>("stride_h", 1);
+        strides[2] = params.get<int>("stride_w", 1);
         if (params.has("stride")) {
             DictValue param = params.get("stride");
             for (int i = param.size() - 1, j = strides.size() - 1; i >= 0; i--, j--) {
