@@ -397,15 +397,14 @@ TEST_P(Objdetect_QRCode_Multi, regression)
     const std::string root = "qrcode/multiple/";
     const int pixels_error = 3;
 
-    std::string image_path =
-     findDataFile(root + name_current_image);
+    std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
-    std::vector<Mat> straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-    std::vector< std::vector< Point > > corners;
-    std::vector<cv::String> decoded_info;
     QRCodeDetector qrcode;
+    std::vector< std::vector< Point > > corners;
 #ifdef HAVE_QUIRC
+    std::vector<cv::String> decoded_info;
+    std::vector<Mat> straight_barcode;
     EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
@@ -429,7 +428,7 @@ TEST_P(Objdetect_QRCode_Multi, regression)
                 for(int j = 0; j < int(corners.size()); j++)
                 {
                     bool ok = false;
-                    for(int k = 0; k < int(corners.size()); k++)
+                    for (int k = 0; k < int(corners.size()); k++)
                     {
 
                         int count_eq_points = 0;
@@ -439,15 +438,15 @@ TEST_P(Objdetect_QRCode_Multi, regression)
                             int y = config["y"][k][i];
                             if(((abs(corners[j][i].x - x)) <= pixels_error) && ((abs(corners[j][i].y - y)) <= pixels_error))
                               count_eq_points++;
-                          }
-                          if(count_eq_points == 4)
-                          {
-                              ok = true;
-                              break;
-                          }
-                      }
-                      EXPECT_EQ(ok, true);
-                  }
+                        }
+                        if (count_eq_points == 4)
+                        {
+                            ok = true;
+                            break;
+                        }
+                    }
+                    EXPECT_TRUE(ok);
+                }
 
 #ifdef HAVE_QUIRC
                   size_t count_eq_info = 0;
