@@ -53,6 +53,8 @@ static Mat checkMask(InputArray _mask, Size size)
     Mat gray;
     if (mask.channels() == 3)
         cvtColor(mask, gray, COLOR_BGR2GRAY);
+    else if(mask.channels() == 4)
+        cvtColor(mask, gray, COLOR_BGRA2GRAY);
     else
     {
         if (mask.empty())
