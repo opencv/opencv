@@ -148,17 +148,24 @@ public:
             inp.push_back(inputs[0].size[i]);
             out.push_back(outputs[0].size[i]);
         }
-        kernel_size.resize(out.size());
-        for (int i = 0; i < kernel_size.size(); i++)
-        {
-            int pool_idx = isGlobalPooling.size() - 1 - i;
-            int kernel_idx = kernel_size.size() - 1 - i;
-            if (isGlobalPooling[pool_idx])
-                kernel_size[kernel_idx] = inp[kernel_idx];
-        }
-        kernel = Size(kernel_size[1], kernel_size[0]);
 
+        if (kernel_size.size() > inp.size()) {
+            kernel_size.erase(kernel_size.begin());
+            strides.erase(strides.begin());
+            pads_begin.erase(pads_begin.begin());
+            pads_end.erase(pads_end.begin());
+        }
+        kernel_size.resize(out.size());
+
+        for (int i = 0; i < inp.size(); i++)
+        {
+            int idx = isGlobalPooling.size() - inp.size() + i;
+            if (isGlobalPooling[idx])
+                kernel_size[i] = inp[i];
+        }
+        kernel = Size(kernel_size.back(), kernel_size[kernel_size.size() - 2]);
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
+
         if (pads_begin.size() == 2) {
             pad_t = pads_begin[0];
             pad_l = pads_begin[1];
@@ -1005,14 +1012,10 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         std::vector<size_t> local_kernel = kernel_size.empty() ?
                                            std::vector<size_t>(inpShape.begin(), inpShape.end()) : kernel_size;
 
-        for (int i = 0; i < local_kernel.size(); i++)
-        {
-            int pool_idx = isGlobalPooling.size() - 1 - i;
-            int kernel_idx = local_kernel.size() - 1 - i;
-            if (isGlobalPooling[pool_idx])
-                local_kernel[kernel_idx] = inpShape[kernel_idx];
+        for (int i = 0, j = local_kernel.size() - inpShape.size(); i < inpShape.size(); i++, j++) {
+            if (isGlobalPooling[j])
+                local_kernel[j] = inpShape[i];
         }
-
 
         if (type == ROI || type == PSROI)
         {
@@ -1021,17 +1024,17 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         }
         else if (padMode.empty())
         {
-            for (int i = 0; i < local_kernel.size(); i++) {
-                float dst = (float)(inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
+            for (int i = 0, j = local_kernel.size() - inpShape.size(); i < inpShape.size(); i++, j++) {
+                float dst = (float)(inpShape[i] + pads_begin[j] + pads_end[j] - local_kernel[j]) / strides[j];
                 outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
             }
 
             // If we have padding, ensure that the last pooling starts strictly
             // inside the image (instead of at the padding); otherwise clip the last.
-            for (int i = 0; i < pads_end.size(); i++) {
-                if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
+            for (int i = 0, j = local_kernel.size() - inpShape.size(); i < inpShape.size(); i++, j++) {
+                if (pads_end[j] && (outShape[2 + i] - 1) * strides[j] >= inpShape[i] + pads_end[j]) {
                     --outShape[2 + i];
-                    CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
+                    CV_Assert((outShape[2 + i] - 1) * strides[j] < inpShape[i] + pads_end[j]);
                 }
             }
         }
