@@ -153,8 +153,24 @@ if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
   endif()
 endif()
 
+# --- libopenjp2 (optional, check before libjasper) ---
+if(WITH_OPENJPEG)
+  find_package(OpenJPEG QUIET)
+
+  if(OpenJPEG_FOUND)
+    message(STATUS "Found OpenJPEG: ${OPENJPEG_LIBRARIES} (found version \"${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION}\")")
+    if(${OPENJPEG_MAJOR_VERSION} LESS 2)
+      message(STATUS "OpenJPEG version too old, at least 2.0 is required (2.3.1 or later recommended)")
+    else()
+      set(HAVE_OPENJPEG YES)
+    endif()
+  else()
+    message(STATUS "Could NOT find OpenJPEG")
+  endif()
+endif()
+
 # --- libjasper (optional, should be searched after libjpeg) ---
-if(WITH_JASPER)
+if(WITH_JASPER AND NOT HAVE_OPENJPEG)
   if(BUILD_JASPER)
     ocv_clear_vars(JASPER_FOUND)
   else()
