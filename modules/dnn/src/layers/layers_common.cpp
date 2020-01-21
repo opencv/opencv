@@ -155,12 +155,7 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
     globalPooling[2] = params.get<bool>("global_pooling_w", is_global);
 
     is_global = globalPooling[0] || globalPooling[1] || globalPooling[2];
-    if (!is_global)
-    {
-        util::getKernelSize(params, kernel);
-        util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, kernel.size());
-    }
-    else
+    if (is_global)
     {
         util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
         if ((globalPooling[0] && params.has("kernel_d")) ||
@@ -183,6 +178,11 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
             if (strides[i] != 1 && globalPooling[j])
                 CV_Error(cv::Error::StsBadArg, "In global_pooling mode, strides must be = 1");
         }
+    }
+    else
+    {
+        util::getKernelSize(params, kernel);
+        util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, kernel.size());
     }
 }
 
