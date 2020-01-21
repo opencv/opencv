@@ -151,9 +151,6 @@ public:
 
         if (kernel_size.size() > inp.size()) {
             kernel_size.erase(kernel_size.begin());
-            strides.erase(strides.begin());
-            pads_begin.erase(pads_begin.begin());
-            pads_end.erase(pads_end.begin());
         }
         kernel_size.resize(out.size());
 
@@ -1025,16 +1022,16 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         else if (padMode.empty())
         {
             for (int i = 0, j = local_kernel.size() - inpShape.size(); i < inpShape.size(); i++, j++) {
-                float dst = (float)(inpShape[i] + pads_begin[j] + pads_end[j] - local_kernel[j]) / strides[j];
+                float dst = (float)(inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[j]) / strides[i];
                 outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
             }
 
             // If we have padding, ensure that the last pooling starts strictly
             // inside the image (instead of at the padding); otherwise clip the last.
             for (int i = 0, j = local_kernel.size() - inpShape.size(); i < inpShape.size(); i++, j++) {
-                if (pads_end[j] && (outShape[2 + i] - 1) * strides[j] >= inpShape[i] + pads_end[j]) {
+                if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
                     --outShape[2 + i];
-                    CV_Assert((outShape[2 + i] - 1) * strides[j] < inpShape[i] + pads_end[j]);
+                    CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
                 }
             }
         }
