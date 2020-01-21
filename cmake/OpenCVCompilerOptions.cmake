@@ -316,6 +316,21 @@ if(PPC64LE)
   endif()
 endif()
 
+# Apply "-Wl,--as-needed" linker flags: https://github.com/opencv/opencv/issues/7001
+if(NOT OPENCV_SKIP_LINK_AS_NEEDED)
+  if(UNIX AND (NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2"))
+    set(_option "-Wl,--as-needed")
+    set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")  # requires CMake 3.2+ and CMP0056
+    ocv_check_compiler_flag(CXX "" HAVE_LINK_AS_NEEDED)
+    set(CMAKE_EXE_LINKER_FLAGS "${_saved_CMAKE_EXE_LINKER_FLAGS}")
+    if(HAVE_LINK_AS_NEEDED)
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} ${_option}")
+      set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} ${_option}")
+    endif()
+  endif()
+endif()
+
 # combine all "extra" options
 if(NOT OPENCV_SKIP_EXTRA_COMPILER_FLAGS)
   set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
