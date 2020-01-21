@@ -162,6 +162,7 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
     }
     else
     {
+        util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
         if ((globalPooling[0] && params.has("kernel_d")) ||
             (globalPooling[1] && params.has("kernel_h")) ||
             (globalPooling[2] && params.has("kernel_w")) ||
@@ -170,60 +171,18 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
         }
 
         kernel.resize(3);
-        pads_begin.resize(3, 0);
-        pads_end.resize(3, 0);
-        strides.resize(3, 1);
         kernel[0] = params.get<int>("kernel_d", 1);
         kernel[1] = params.get<int>("kernel_h", 1);
         kernel[2] = params.get<int>("kernel_w", 1);
 
-        pads_begin[1] = params.get<int>("pad_t", 0);
-        pads_begin[2] = params.get<int>("pad_l", 0);
-        pads_end[1] = params.get<int>("pad_b", 0);
-        pads_end[2] = params.get<int>("pad_r", 0);
-        if (params.has("pad_h")) {
-            pads_begin[1] = params.get<int>("pad_h");
-            pads_end[1] = params.get<int>("pad_h");
+        for (int i = 0, j = globalPooling.size() - pads_begin.size(); i < pads_begin.size(); i++, j++) {
+            if ((pads_begin[i] != 0 || pads_end[i] != 0) && globalPooling[j])
+                CV_Error(cv::Error::StsBadArg, "In global_pooling mode, pads must be = 0");
         }
-        if (params.has("pad_w")) {
-            pads_begin[2] = params.get<int>("pad_w");
-            pads_end[2] = params.get<int>("pad_w");
+        for (int i = 0, j = globalPooling.size() - strides.size(); i < strides.size(); i++, j++) {
+            if (strides[i] != 1 && globalPooling[j])
+                CV_Error(cv::Error::StsBadArg, "In global_pooling mode, strides must be = 1");
         }
-        if (params.has("pad")) {
-            DictValue param = params.get("pad");
-            if (param.size() == 1) {
-                std::fill(pads_begin.begin(), pads_begin.end(), param.get<int>(0));
-                pads_end = pads_begin;
-            } else if (param.size() <= pads_begin.size()) {
-                for (int i = param.size() - 1, j = pads_begin.size() - 1; i >= 0; i--, j--) {
-                    pads_begin[j] = param.get<int>(i);
-                }
-                pads_end = pads_begin;
-            } else {
-                for (int i = param.size() - 1, j = pads_begin.size() - 1; i >= param.size() / 2; i--, j--) {
-                    pads_begin[j] = param.get<int>(i);
-                }
-                for (int i = param.size() / 2 - 1, j = pads_end.size() / 2 - 1; i >= 0; i--, j--) {
-                    pads_end[j] = param.get<int>(i);
-                }
-            }
-        }
-
-        strides[1] = params.get<int>("stride_h", 1);
-        strides[2] = params.get<int>("stride_w", 1);
-        if (params.has("stride")) {
-            DictValue param = params.get("stride");
-            for (int i = param.size() - 1, j = strides.size() - 1; i >= 0; i--, j--) {
-                strides[j] = param.get<int>(i);
-            }
-            if (param.size() == 1)
-                std::fill(strides.begin() + 1, strides.end(), strides[0]);
-        }
-
-       for (int i = 0; i < pads_begin.size(); i++) {
-           if ((pads_begin[i] != 0 || pads_end[i] != 0 || strides[i] != 1) && globalPooling[i])
-               CV_Error(cv::Error::StsBadArg, "In global_pooling mode, pads must be = 0 and strides must be = 1");
-       }
     }
 }
 
