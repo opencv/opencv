@@ -2054,12 +2054,11 @@ void TFImporter::populateNet(Net dstNet)
             int num = (int)getLayerAttr(layer, "N").i();
             CV_Assert(layer.input_size() == num);
             std::string base_name = name + "/reshape_";
-            std::vector<std::string> reshape_names;
+            std::vector<int> reshape_ids;
             for (int i = 0; i < num; i++) {
                 std::ostringstream ss;
                 ss << i;
                 std::string reshape_name = base_name + ss.str();
-                reshape_names.push_back(reshape_name);
                 LayerParams reshapeLP;
                 reshapeLP.set("axis", dim);
                 reshapeLP.set("num_axes", 1);
@@ -2067,6 +2066,7 @@ void TFImporter::populateNet(Net dstNet)
                 reshapeLP.set("dim", DictValue::arrayInt(&outShape[0], 2));
                 int id = dstNet.addLayer(reshape_name, "Reshape", reshapeLP);
                 layer_id[reshape_name] = id;
+                reshape_ids.push_back(id);
                 connect(layer_id, dstNet, parsePin(layer.input(i)), id, 0);
             }
 
@@ -2075,7 +2075,7 @@ void TFImporter::populateNet(Net dstNet)
             layer_id[name] = id;
 
             for (int li = 0; li < num; li++)
-                connect(layer_id, dstNet, Pin(reshape_names[li]), id, li);
+                dstNet.connect(reshape_ids[li], 0, id, li);
         }
         else if (type == "ClipByValue")
         {
