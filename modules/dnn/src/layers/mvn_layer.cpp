@@ -119,8 +119,10 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
             return !zeroDev && (preferableTarget != DNN_TARGET_MYRIAD || eps <= 1e-7f);
+        else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
         else
 #endif  // HAVE_INF_ENGINE
             return backendId == DNN_BACKEND_OPENCV;

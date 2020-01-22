@@ -71,6 +71,12 @@ PyObject* pyopencv_from(const dnn::LayerParams& lp)
     return dict;
 }
 
+template<>
+PyObject* pyopencv_from(const std::vector<dnn::Target> &t)
+{
+    return pyopencv_from(std::vector<int>(t.begin(), t.end()));
+}
+
 class pycvLayer CV_FINAL : public dnn::Layer
 {
 public:

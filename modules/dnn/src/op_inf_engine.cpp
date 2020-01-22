@@ -574,7 +574,7 @@ InferenceEngine::Core& getCore()
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 static bool detectMyriadX_()
 {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R3)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R3)
     // Lightweight detection
     InferenceEngine::Core& ie = getCore();
     const std::vector<std::string> devices = ie.GetAvailableDevices();
@@ -739,7 +739,14 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
             // Some of networks can work without a library of extra layers.
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R1)
             // OpenCV fallbacks as extensions.
-            ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
+            try
+            {
+                ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
+            }
+            catch(const std::exception& e)
+            {
+                CV_LOG_INFO(NULL, "DNN-IE: Can't register OpenCV custom layers extension: " << e.what());
+            }
 #endif
 #ifndef _WIN32
             // Limit the number of CPU threads.
@@ -1068,8 +1075,14 @@ void resetMyriadDevice()
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     getSharedPlugins().erase("MYRIAD");
 #else
-    // To unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
-    getCore() = InferenceEngine::Core();
+    // Unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
+    InferenceEngine::Core& ie = getCore();
+    try
+    {
+        ie.UnregisterPlugin("MYRIAD");
+        ie.UnregisterPlugin("HETERO");
+    }
+    catch (...) {}
 #endif
 #endif  // HAVE_INF_ENGINE
 }
