@@ -1526,7 +1526,7 @@ struct HResizeLinearVec_X4
 struct HResizeLinearVecU8_X4
 {
     int operator()(const uchar** src, int** dst, int count, const int* xofs,
-        const short* alpha/*[xmax]*/, int smax, int /*dmax*/, int cn, int /*xmin*/, int xmax) const
+        const short* alpha/*[xmax]*/, int /*smax*/, int dmax, int cn, int /*xmin*/, int xmax) const
     {
         int dx = 0, k = 0;
 
@@ -1612,17 +1612,11 @@ struct HResizeLinearVecU8_X4
         }
         else if(cn == 3)
         {
-            int len0 = xmax - cn;
-
-            /* This may need to trim 1 or more extra units depending on the amount of
-               scaling. Test until we find the first value which we know cannot overrun. */
-            while (len0 >= cn &&
-                xofs[len0 - cn] + cn >= smax - cn  // check access: v_load_expand_q(S+xofs[dx]+cn)
-            )
-            {
-                len0 -= cn;
-            }
-            CV_DbgAssert(len0 <= 0 || len0 >= cn);
+            /* Peek at the last x offset to find the maximal s offset.  We know the loop
+               will terminate prior to value which may be 1 or more elements prior to the
+               final valid offset. xofs[] is constucted to be an array of increasingly
+               large offsets (i.e xofs[x] <= xofs[x+1] for x < xmax). */
+            int smax = xofs[dmax-cn];
 
             for( ; k <= (count - 2); k+=2 )
             {
@@ -1631,7 +1625,7 @@ struct HResizeLinearVecU8_X4
                 const uchar *S1 = src[k+1];
                 int *D1 = dst[k+1];
 
-                for( dx = 0; dx < len0; dx += cn )
+                for( dx = 0; (xofs[dx] + cn) < smax; dx += cn )
                 {
                     v_int16x8 a = v_load(alpha+dx*2);
                     v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S0+xofs[dx]) | (v_load_expand_q(S0+xofs[dx]+cn)<<16)), a));
@@ -1642,12 +1636,14 @@ struct HResizeLinearVecU8_X4
             {
                 const uchar *S = src[k];
                 int *D = dst[k];
-                for( dx = 0; dx < len0; dx += cn )
+                for( dx = 0; (xofs[dx] + cn) < smax; dx += cn )
                 {
                     v_int16x8 a = v_load(alpha+dx*2);
                     v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S+xofs[dx]) | (v_load_expand_q(S+xofs[dx]+cn)<<16)), a));
                 }
             }
+            /* Debug check to ensure truthiness that we never vector the final value. */
+            CV_DbgAssert(dx < dmax);
         }
         else if(cn == 4)
         {
