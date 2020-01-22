@@ -109,7 +109,7 @@ public:
 #ifdef HAVE_INF_ENGINE
     static inline bool checkIETarget(Target target)
     {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R3)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R3)
         // Lightweight detection
         const std::vector<std::string> devices = getCore().GetAvailableDevices();
         for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
@@ -3098,7 +3098,9 @@ struct Net::Impl
         catch (const cv::Exception& e)
         {
             CV_LOG_ERROR(NULL, "OPENCV/DNN: [" << l->type << "]:(" << l->name << "): getMemoryShapes() throws exception." <<
-                    " inputs=" << is.size() << " outputs=" << os.size() << "/" << requiredOutputs);
+                    " inputs=" << is.size() <<
+                    " outputs=" << os.size() << "/" << requiredOutputs <<
+                    " blobs=" << l->blobs.size());
             for (size_t i = 0; i < is.size(); ++i)
             {
                 CV_LOG_ERROR(NULL, "    input[" << i << "] = " << toString(is[i]));
@@ -3106,6 +3108,10 @@ struct Net::Impl
             for (size_t i = 0; i < os.size(); ++i)
             {
                 CV_LOG_ERROR(NULL, "    output[" << i << "] = " << toString(os[i]));
+            }
+            for (size_t i = 0; i < l->blobs.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    blobs[" << i << "] = " << typeToString(l->blobs[i].type()) << " " << toString(shape(l->blobs[i])));
             }
             CV_LOG_ERROR(NULL, "Exception message: " << e.what());
             throw;
