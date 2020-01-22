@@ -97,7 +97,7 @@ public:
                 CV_Error(Error::StsBadArg, "Unknown pooling type \"" + pool + "\"");
 
             getPoolingKernelParams(params, kernel_size, isGlobalPooling, pads_begin, pads_end, strides, padMode);
-            globalPooling = std::accumulate(isGlobalPooling.begin(), isGlobalPooling.end(), 0) == 3;
+            globalPooling = isGlobalPooling[0] || isGlobalPooling[1] || isGlobalPooling[2];
             if (kernel_size.size() == 2) {
                 kernel = Size(kernel_size[1], kernel_size[0]);
                 stride = Size(strides[1], strides[0]);
@@ -149,18 +149,16 @@ public:
             out.push_back(outputs[0].size[i]);
         }
 
-        if (kernel_size.size() > inp.size()) {
-            kernel_size.erase(kernel_size.begin());
-        }
-        kernel_size.resize(out.size());
+        if (globalPooling) {
+            std::vector<size_t> finalKernel;
+            for (int i = 0; i < inp.size(); i++) {
+                int idx = isGlobalPooling.size() - inp.size() + i;
+                finalKernel.push_back(isGlobalPooling[idx] ? inp[i] : kernel_size[idx]);
+             }
+             kernel_size = finalKernel;
+             kernel = Size(kernel_size[1], kernel_size[0]);
+         }
 
-        for (int i = 0; i < inp.size(); i++)
-        {
-            int idx = isGlobalPooling.size() - inp.size() + i;
-            if (isGlobalPooling[idx])
-                kernel_size[i] = inp[i];
-        }
-        kernel = Size(kernel_size.back(), kernel_size[kernel_size.size() - 2]);
         getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
 
         if (pads_begin.size() == 2) {
