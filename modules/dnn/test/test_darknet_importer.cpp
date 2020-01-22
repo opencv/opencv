@@ -106,7 +106,7 @@ public:
         std::string cfg = findDataFile("dnn/darknet/" + name + ".cfg");
         std::string model = "";
         if (hasWeights)
-            model = findDataFile("dnn/darknet/" + name + ".weights", false);
+            model = findDataFile("dnn/darknet/" + name + ".weights");
 
         checkBackend(&inp, &ref);
 
@@ -526,6 +526,11 @@ TEST_P(Test_Darknet_layers, region)
 TEST_P(Test_Darknet_layers, reorg)
 {
     testDarknetLayer("reorg");
+}
+
+TEST_P(Test_Darknet_layers, convolutional )
+{
+    testDarknetLayer("convolutional", true);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
