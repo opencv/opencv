@@ -49,6 +49,8 @@ class GCPUExecutable final: public GIslandExecutable
     Mag m_res;
     GArg packArg(const GArg &arg);
 
+    bool is_first_exec = true;
+
 public:
     GCPUExecutable(const ade::Graph                   &graph,
                    const std::vector<ade::NodeHandle> &nodes);

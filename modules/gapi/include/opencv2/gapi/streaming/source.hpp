@@ -43,6 +43,7 @@ public:
     Ptr ptr() { return shared_from_this(); }
     virtual bool pull(Data &data) = 0;
     virtual GMetaArg descr_of() const = 0;
+    virtual void getFrame(cv::Mat& frame) = 0;
     virtual ~IStreamSource() = default;
 };
 

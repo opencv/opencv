@@ -356,7 +356,7 @@ private:
 };
 
 template<typename K, typename Callable>
-GCPUFunctor make_ocv_functor(const Callable& c) {
+GCPUFunctor ocv_kernel(const Callable& c) {
     using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
     return GCPUFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
 }
