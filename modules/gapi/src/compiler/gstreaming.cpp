@@ -7,8 +7,6 @@
 
 #include "precomp.hpp"
 
-#if !defined(GAPI_STANDALONE)
-
 #include <ade/graph.hpp>
 
 #include <opencv2/gapi/gproto.hpp> // can_describe
@@ -147,5 +145,3 @@ cv::GStreamingCompiled::Priv& cv::GStreamingCompiled::priv()
 {
     return *m_priv;
 }
-
-#endif // GAPI_STANDALONE
