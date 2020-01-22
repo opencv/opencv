@@ -528,8 +528,12 @@ TEST_P(Test_Darknet_layers, reorg)
     testDarknetLayer("reorg");
 }
 
-TEST_P(Test_Darknet_layers, convolutional )
+TEST_P(Test_Darknet_layers, convolutional)
 {
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.01f;
+    }
     testDarknetLayer("convolutional", true);
 }
 
