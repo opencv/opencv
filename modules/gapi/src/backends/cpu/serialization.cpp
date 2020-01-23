@@ -15,7 +15,7 @@
 namespace cv {
 namespace gimpl {
 namespace serialization {
-namespace {
+//namespace {
 
 // FIXME? make a method of GSerialized?
 void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh)
@@ -36,7 +36,7 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
 {
     const auto& op = cg.metadata(nh).get<gimpl::Op>();
 
-    serialization::Op sop{Kernel{op.k.name, op.k.tag}, {}, {}};
+    serialization::Op sop{Kernel{op.k.name, op.k.tag}, {}, {}, {}, {}, {}};
     sop.args.resize(op.args.size());
     sop.outs.resize(op.outs.size());
 
@@ -50,6 +50,24 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
         }
         else if(op.args[i].kind == detail::ArgKind::OPAQUE)
         {
+            switch (op.args[i].opaque_kind)
+            {
+            case detail::OpaqueKind::INT:
+                std::cout << "    int " << op.args[i].get<int>() << std::endl;
+                sop.opaque_ints.push_back(op.args[i].get<int>());
+                break;
+            case detail::OpaqueKind::DOUBLE:
+                std::cout << "    double " << op.args[i].get<double>() << std::endl;
+                sop.opaque_doubles.push_back(op.args[i].get<double>());
+                break;
+            case detail::OpaqueKind::CV_SIZE:
+                std::cout << "    cv::Size " << op.args[i].get<cv::Size>().width << "x" << op.args[i].get<cv::Size>().height << std::endl;
+                sop.opaque_cvsizes.push_back(op.args[i].get<cv::Size>());
+                break;
+            default:
+                std::cout << "    OpaqueKind::UNSUPPORTED" << std::endl;
+            }
+            sop.args[i].opaque_kind = op.args[i].opaque_kind;
             sop.args[i] = op.args[i];
         }
         else
@@ -172,18 +190,48 @@ void mkOpNode(ade::Graph& g, const Op& op)
     }
 
     GArgs args(op.args.size());
+    size_t i_int = 0;
+    size_t i_double = 0;
+    size_t i_size = 0;
     for (size_t i = 0; i < args.size(); i++)
     {
-        switch (op.args[i].kind)
-        {
-        case detail::ArgKind::OPAQUE: args[i] = op.args[i]; break;
-        case detail::ArgKind::GOBJREF:
+        if(op.args[i].kind == detail::ArgKind::GOBJREF)
         {
             const auto rc = op.args[i].get<serialization::RcDesc>();
             args[i] = GArg(gimpl::RcDesc{rc.id, rc.shape, {}});
-        } break;
-        default:
-            GAPI_Assert(false);
+        }
+        else if(op.args[i].kind == detail::ArgKind::OPAQUE)
+        {
+            switch (op.args[i].opaque_kind)
+            {
+            case detail::OpaqueKind::INT:
+            {
+                auto opaque_int = op.opaque_ints[i_int]; i_int++;
+                args[i] = GArg(opaque_int);
+                std::cout << "    int " << args[i].get<int>() << std::endl;
+                break;
+            }
+            case detail::OpaqueKind::DOUBLE:
+            {
+                auto opaque_double = op.opaque_doubles[i_double]; i_double++;
+                args[i] = GArg(opaque_double);
+                std::cout << "    double " << args[i].get<double>() << std::endl;
+                break;
+            }
+            case detail::OpaqueKind::CV_SIZE:
+            {
+                auto opaque_cvsize = op.opaque_cvsizes[i_size]; i_size++;
+                args[i] = GArg(opaque_cvsize);
+                std::cout << "    cv::Size " << args[i].get<cv::Size>().width << "x" << args[i].get<cv::Size>().height << std::endl;
+                break;
+            }
+            default:
+                std::cout << "    OpaqueKind::UNSUPPORTED" << std::endl;
+            }
+        }
+        else
+        {
+            util::throw_error(std::logic_error("Unexpected ArgKind: expected GOBJREF or OPAQUE"));
         }
     }
 
@@ -239,7 +287,7 @@ void linkNodes(ade::Graph& g)
         }
     }
 }
-} // anonymous namespace
+//} // anonymous namespace
 
 GSerialized serialize(const gimpl::GModel::ConstGraph& cg, const std::vector<ade::NodeHandle>& nodes)
 {

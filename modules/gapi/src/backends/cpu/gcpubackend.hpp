@@ -33,6 +33,8 @@ class GCPUExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
+    const ade::Graph &m_g_s;
+    GModel::ConstGraph m_gm_s;
 
     struct OperationInfo
     {

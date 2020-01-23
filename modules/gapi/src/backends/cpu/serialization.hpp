@@ -35,6 +35,10 @@ struct Op
     // FIXME: GArg needs to be serialized properly
     std::vector<GArg>   args;
     std::vector<RcDesc> outs;
+    //opaque args
+    std::vector<int> opaque_ints;
+    std::vector<double> opaque_doubles;
+    std::vector<cv::Size> opaque_cvsizes;
 };
 
 struct Data
@@ -57,6 +61,14 @@ struct GSerialized
 
 GSerialized serialize(const gimpl::GModel::ConstGraph& m_gm, const std::vector<ade::NodeHandle>& nodes);
 void deserialize(const GSerialized& gs);
+void mkDataNode(ade::Graph& g, const Data& data);
+void mkOpNode(ade::Graph& g, const Op& op);
+void linkNodes(ade::Graph& g);
+void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh);
+void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh);
+void printOp(const Op& op);
+void printData(const Data& data);
+void printGSerialized(const GSerialized s);
 
 } // namespace serialization
 } // namespace gimpl

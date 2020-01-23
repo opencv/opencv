@@ -62,7 +62,29 @@ namespace
                              const cv::GCompileArgs &,
                              const std::vector<ade::NodeHandle> &nodes) const override
         {
+#if 0
+            const auto s = cv::gimpl::serialization::serialize(graph, nodes);
+            ade::Graph g_s;
+
+            for (const auto& data : s.m_datas)
+            {
+                cv::gimpl::serialization::mkDataNode(g_s, data);
+            }
+
+            for (const auto& op : s.m_ops)
+            {
+                cv::gimpl::serialization::mkOpNode(g_s, op);
+            }
+
+            cv::gimpl::serialization::linkNodes(g_s);
+            //const ade::Graph &g_s_ref = g_s;
+            //m_g(g_s_ref);
+            //m_g(const_cast<const ade::Graph> (&g_s));
+            //m_gm(m_g);
+            return EPtr{new cv::gimpl::GCPUExecutable(g_s, nodes)};
+#else
             return EPtr{new cv::gimpl::GCPUExecutable(graph, nodes)};
+#endif
         }
    };
 }
@@ -76,10 +98,16 @@ cv::gapi::GBackend cv::gapi::cpu::backend()
 // GCPUExecutable implementation //////////////////////////////////////////////
 cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
                                           const std::vector<ade::NodeHandle> &nodes)
-    : m_g(g), m_gm(m_g)
+    : m_g(g), m_gm(m_g), m_g_s(g), m_gm_s(m_g_s)
 {
-    const auto s = serialization::serialize(m_gm, nodes);
-    serialization::deserialize(s);
+    //const auto s = serialization::serialize(m_gm, nodes);
+    //serialization::deserialize(s);
+    //serialization::printGSerialized(s);
+
+    // FIXME: reuse code from GModelBuilder/GModel!
+    // ObjectCounter?? (But seems we need existing mapping by shape+id)
+
+
 
     // Convert list of operations (which is topologically sorted already)
     // into an execution script.
