@@ -151,34 +151,34 @@ TEST(Objdetect_QRCode_Multi, generate_test_data)
     {
         file_config << "{:" << "image_name" << qrcode_images_multiple[i];
         std::string image_path = findDataFile(root + qrcode_images_multiple[i]);
-        std::vector< std::vector< Point > > corners;
         Mat src = imread(image_path);
-        std::vector<Mat> straight_barcode;
-        std::vector<cv::String> decoded_info;
 
         ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+        std::vector<Point> corners;
         EXPECT_TRUE(detectQRCodeMulti(src, corners));
 #ifdef HAVE_QUIRC
+        std::vector<cv::String> decoded_info;
+        std::vector<Mat> straight_barcode;
         EXPECT_TRUE(decodeQRCodeMulti(src, corners, decoded_info, straight_barcode));
 #endif
         file_config << "x" << "[:";
-        for(size_t j = 0; j < corners.size(); j++)
+        for(size_t j = 0; j < corners.size(); j += 4)
         {
             file_config << "[:";
-            for (size_t k = 0; k < corners[j].size(); k++)
+            for (size_t k = 0; k < 4; k++)
             {
-                file_config << corners[j][k].x;
+                file_config << corners[j + k].x;
             }
             file_config << "]";
         }
         file_config << "]";
         file_config << "y" << "[:";
-        for(size_t j = 0; j < corners.size(); j++)
+        for(size_t j = 0; j < corners.size(); j += 4)
         {
             file_config << "[:";
-            for (size_t k = 0; k < corners[j].size(); k++)
+            for (size_t k = 0; k < 4; k++)
             {
-                file_config << corners[j][k].y;
+                file_config << corners[j + k].y;
             }
             file_config << "]";
         }
@@ -401,7 +401,7 @@ TEST_P(Objdetect_QRCode_Multi, regression)
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
     QRCodeDetector qrcode;
-    std::vector< std::vector< Point > > corners;
+    std::vector<Point> corners;
 #ifdef HAVE_QUIRC
     std::vector<cv::String> decoded_info;
     std::vector<Mat> straight_barcode;
@@ -425,18 +425,17 @@ TEST_P(Objdetect_QRCode_Multi, regression)
             std::string name_test_image = config["image_name"];
             if (name_test_image == name_current_image)
             {
-                for(int j = 0; j < int(corners.size()); j++)
+                for(int j = 0; j < int(corners.size()); j += 4)
                 {
                     bool ok = false;
-                    for (int k = 0; k < int(corners.size()); k++)
+                    for (int k = 0; k < int(corners.size() / 4); k++)
                     {
-
                         int count_eq_points = 0;
-                        for (int i = 0; i < int(corners[j].size()); i++)
+                        for (int i = 0; i < 4; i++)
                         {
                             int x = config["x"][k][i];
                             int y = config["y"][k][i];
-                            if(((abs(corners[j][i].x - x)) <= pixels_error) && ((abs(corners[j][i].y - y)) <= pixels_error))
+                            if(((abs(corners[j + i].x - x)) <= pixels_error) && ((abs(corners[j + i].y - y)) <= pixels_error))
                               count_eq_points++;
                         }
                         if (count_eq_points == 4)

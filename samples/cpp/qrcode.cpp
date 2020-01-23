@@ -10,7 +10,7 @@ using namespace cv;
 
 static void drawQRCodeContour(Mat &color_image, vector<Point> transform);
 static void drawFPS(Mat &color_image, double fps);
-static int  liveQRCodeDetect(const string& out_file);
+static int  liveQRCodeDetect(const string& out_file, const string& out_origin_file);
 static int  imageQRCodeDetect(const string& in_file, const string& out_file);
 static int  imageQRCodeDetectMulti(const string& in_file, const string& out_file);
 
@@ -20,7 +20,8 @@ int main(int argc, char *argv[])
         "{h help ? |        | print help messages }"
         "{i in     |        | input  path to file for detect (with parameter - show image, otherwise - camera)}"
         "{m multi  |        | use detect for multiple qr-codes }"
-        "{o out    |        | output path to file (save image, work with -i parameter) }";
+        "{o out    |        | output path to file (save image, work with -i parameter) }"
+        "{s save   |        | output path to file for detect (save original image from camera) }";
     CommandLineParser cmd_parser(argc, argv, keys);
 
     cmd_parser.about("This program detects the QR-codes from camera or images using the OpenCV library.");
@@ -34,7 +35,9 @@ int main(int argc, char *argv[])
     string out_file_name;
     if (cmd_parser.has("out"))
         out_file_name = cmd_parser.get<string>("out");   // output path to image
-
+    string out_origin_file_name;
+    if (cmd_parser.has("save"))
+        out_origin_file_name = cmd_parser.get<string>("save");   // output path to original image from camera
     if (!cmd_parser.check())
     {
         cmd_parser.printErrors();
@@ -44,7 +47,7 @@ int main(int argc, char *argv[])
     int return_code = 0;
     if (in_file_name.empty())
     {
-        return_code = liveQRCodeDetect(out_file_name);
+        return_code = liveQRCodeDetect(out_file_name, out_origin_file_name);
     }
     else if (!in_file_name.empty() && (cmd_parser.has("multi")))
     {
@@ -86,7 +89,7 @@ void drawFPS(Mat &color_image, double fps)
     putText(color_image, convert.str(), Point(25, 25), FONT_HERSHEY_DUPLEX, 1, Scalar(0, 0, 255), 2);
 }
 
-int liveQRCodeDetect(const string& out_file)
+int liveQRCodeDetect(const string& out_file, const string& out_origin_file)
 {
     VideoCapture cap(0);
     if(!cap.isOpened())
@@ -109,6 +112,8 @@ int liveQRCodeDetect(const string& out_file)
             cout << "End of video stream" << endl;
             break;
         }
+        if (!out_origin_file.empty())
+            imwrite(out_origin_file, frame); // write original frame
         cvtColor(frame, src, COLOR_BGR2GRAY);
         if (!switch_mode)
         {
@@ -129,7 +134,7 @@ int liveQRCodeDetect(const string& out_file)
         {
             vector<Mat> straight_barcode;
             vector<cv::String> decode_info;
-            vector<vector<Point> > transform;
+            vector<Point> transform;
             total.start();
             bool result_detection = qrcode.detectMulti(src, transform);
             if (result_detection)
@@ -143,8 +148,14 @@ int liveQRCodeDetect(const string& out_file)
             total.stop();
             if (result_detection)
             {
-               for(size_t i = 0; i < transform.size(); i++)
-                  drawQRCodeContour(frame, transform[i]);
+               for(size_t i = 0; i < transform.size(); i += 4)
+               {
+                   vector<Point> qrcode_contour;
+                   for(size_t j = i; j < i + 4; j++)
+                       qrcode_contour.push_back(transform[j]);
+                   drawQRCodeContour(frame, qrcode_contour);
+               }
+
             }
        }
        double fps = 1 / total.getTimeSec();
@@ -153,13 +164,13 @@ int liveQRCodeDetect(const string& out_file)
        imshow("Live QR code detector", frame);
        c = (char)waitKey(30);
        if (c == 27)
-          break;
-       if (c == ' ' && !out_file.empty())
-          imwrite(out_file, frame); // TODO write original frame too
+           break;
+       if (!out_file.empty())
+           imwrite(out_file, frame);
        if ((c == 'm') && (switch_mode != true)) //switch between detectAndDecode and detectAndDecodeMulti
-          switch_mode = true;
+           switch_mode = true;
        else if (c == 'm')
-          switch_mode = false;
+           switch_mode = false;
     }
     return 0;
 }
@@ -178,8 +189,8 @@ int imageQRCodeDetect(const string& in_file, const string& out_file)
     QRCodeDetector qrcode;
     for (size_t i = 0; i < count_experiments; i++)
     {
-        total.start();
         transform.clear();
+        total.start();
         result_detection = qrcode.detect(src, transform);
         total.stop();
         transform_time += total.getTimeSec();
@@ -228,7 +239,7 @@ int imageQRCodeDetectMulti(const string& in_file, const string& out_file)
     cvtColor(color_src, src, COLOR_BGR2GRAY);
     vector<Mat> straight_barcode;
     vector<cv::String> decoded_info;
-    vector<vector<Point> > transform;
+    vector<Point> transform;
     const int count_experiments = 10;
     double transform_time = 0.0;
     bool result_detection = false;
@@ -259,8 +270,7 @@ int imageQRCodeDetectMulti(const string& in_file, const string& out_file)
         if (decoded_info[i].empty())
             cout << "QR code cannot be decoded" << endl;
     }
-    for(size_t j = 0; j < transform.size(); j++)
-        drawQRCodeContour(color_src, transform[j]);
+    drawQRCodeContour(color_src, transform);
     drawFPS(color_src, fps);
 
     cout << "Input  image file path: " << in_file  << endl;

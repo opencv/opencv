@@ -710,11 +710,11 @@ public:
      */
     CV_WRAP cv::String detectAndDecode(InputArray img, OutputArray points=noArray(),
                                         OutputArray straight_qrcode = noArray());
-    /** @brief Detects QR codes in image and returns the vector of the quadrangle containing the codes.
+    /** @brief Detects QR codes in image and returns the vector of the quadrangles containing the codes.
      @param img grayscale or color (BGR) image containing (or not) QR codes.
      @param points Output vector of vector of vertices of the minimum-area quadrangle containing the codes.
      */
-    CV_WRAP bool detectMulti(InputArray img, OutputArrayOfArrays points) const;
+    CV_WRAP bool detectMulti(InputArray img, OutputArray points) const;
 
     /** @brief Decodes QR codes in image once it's found by the detect() method.
      @param img grayscale or color (BGR) image containing QR codes.
@@ -723,17 +723,17 @@ public:
      @param straight_qrcode The optional output vector of images containing rectified and binarized QR codes
      */
     CV_WRAP bool decodeMulti(InputArray img, CV_OUT std::vector<cv::String>& decoded_info,
-                                       InputArrayOfArrays points,
+                                       InputArray points,
                                        OutputArrayOfArrays straight_qrcode = noArray());
 
     /** @brief Both detects and decodes QR codes
     @param img grayscale or color (BGR) image containing QR codes.
     @param decoded_info UTF8-encoded output vector of string or empty vector of string if the codes cannot be decoded.
-    @param points optional output vector of arrays of vertices of the found QR code quadrangle. Will be empty if not found.
+    @param points optional output vector of vertices of the found QR code quadrangles. Will be empty if not found.
     @param straight_qrcode The optional output vector of images containing rectified and binarized QR codes
     */
     CV_WRAP bool detectAndDecodeMulti(InputArray img, CV_OUT std::vector<cv::String>& decoded_info,
-                                                         OutputArrayOfArrays points = noArray(),
+                                                         OutputArray points = noArray(),
                                                          OutputArrayOfArrays straight_qrcode = noArray());
 protected:
     struct Impl;
@@ -758,20 +758,20 @@ CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &deco
 
 /** @brief Detect QR codes in image and return vector of minimum area of quadrangle that describes QR codes.
     @param in  Matrix of the type CV_8UC1 containing an image where QR codes are detected.
-    @param points Output vector of vector of vertices of a quadrangle of minimal area that describes QR codes.
+    @param points Output vector of vertices of quadrangles of minimal area that describes QR codes.
     @param eps_x Epsilon neighborhood, which allows you to determine the horizontal pattern of the scheme 1:1:3:1:1 according to QR code standard.
     @param eps_y Epsilon neighborhood, which allows you to determine the vertical pattern of the scheme 1:1:3:1:1 according to QR code standard.
     */
-CV_EXPORTS bool detectQRCodeMulti(InputArray in, std::vector< std::vector< Point > > &points,
+CV_EXPORTS bool detectQRCodeMulti(InputArray in, std::vector<Point> &points,
                                      double eps_x = 0.2, double eps_y = 0.1);
 
 /** @brief Decode QR codes in image and return text that is encrypted in QR code.
     @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
-    @param points Input vector of vector of vertices of a quadrangle of minimal area that describes QR codes.
+    @param points Input vector of vertices of quadrangles of minimal area that describes QR codes.
     @param decoded_info vector of String information that is encrypted in QR codes.
     @param straight_qrcode vector of Matrixes of the type CV_8UC1 containing an binary straight QR codes.
     */
-CV_EXPORTS bool decodeQRCodeMulti(InputArray in, InputArrayOfArrays points, std::vector<std::string> &decoded_info,
+CV_EXPORTS bool decodeQRCodeMulti(InputArray in, InputArray points, std::vector<std::string> &decoded_info,
                              OutputArrayOfArrays straight_qrcode = noArray());
 
 //! @} objdetect
