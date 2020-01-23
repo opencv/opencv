@@ -2203,7 +2203,7 @@ bool QRCodeDetector::detectMulti(InputArray in, OutputArray points) const
             trans_points.push_back(pnts2f[i][j]);
 
     int points_type = points.fixedType() ? points.type() : CV_32FC2;
-    Mat m_p(trans_points.size() / 4, 4, CV_32FC2);
+    Mat m_p(int(trans_points.size() / 4), 4, CV_32FC2);
     for (int i = 0; i < (int)trans_points.size(); i += 4)
         for (int j = 0; j < 4; j++)
             m_p.ptr<Point2f>(i / 4)[j] = trans_points[i + j];
@@ -2351,7 +2351,7 @@ bool QRCodeDetector::detectAndDecodeMulti(
     if (points_.needed())
     {
         int points_type = points_.fixedType() ? points_.type() : CV_32FC2;
-        Mat m_p(points.size() / 4, 4, CV_32FC2);
+        Mat m_p(int(points.size() / 4), 4, CV_32FC2);
         for (int i = 0; i < (int)points.size(); i += 4)
             for (int j = 0; j < 4; j++)
                 m_p.ptr<Point2f>(i / 4)[j] = Point2f(points[i + j]);
