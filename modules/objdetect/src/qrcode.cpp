@@ -2357,6 +2357,7 @@ bool QRCodeDetector::detectAndDecodeMulti(
                 m_p.ptr<Point2f>(i / 4)[j] = Point2f(points[i + j]);
         m_p.reshape(2, points_.rows()).convertTo(points_, points_type);
     }
+    
     ok = decodeMulti(inarr, decoded_info, points, straight_qrcode);
     return ok;
 }
