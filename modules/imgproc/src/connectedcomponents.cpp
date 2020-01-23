@@ -271,6 +271,11 @@ namespace cv{
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingWuParallel{
 
+        template <typename LT>
+        static LT stripeFirstLabel8Connectivity(int y, int w) {
+            return LT((y+2)/2) * LT((w+1)/2) + 1;
+        }
+
         class FirstScan8Connectivity : public cv::ParallelLoopBody{
             const cv::Mat& img_;
             cv::Mat& imgLabels_;
@@ -288,7 +293,7 @@ namespace cv{
                 int r = range.start;
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
+                LabelT label = stripeFirstLabel8Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -615,7 +620,7 @@ namespace cv{
                 mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels);
 
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                    flattenL(P, int((i + 1) / 2) * int((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
+                    flattenL(P, stripeFirstLabel8Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
                 }
             }
             else{
