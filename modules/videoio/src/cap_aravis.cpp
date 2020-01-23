@@ -149,6 +149,7 @@ protected:
     bool            autoGain;
     double          targetGrey;             // Target grey value (mid grey))
     bool            softwareTriggered;      // Flag if the camera is software triggered
+    bool            allowAutoTrigger;       // Flag that user allowed to trigger software triggered cameras automatically
 
     gint64          *pixelFormats;
     guint           pixelFormatsCnt;
@@ -190,6 +191,7 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     exposureCompensation = 0;
     targetGrey = 0;
     frameID = prevFrameID = 0;
+    allowAutoTrigger = false;
 
     num_buffers = 10;
     frame = NULL;
@@ -292,7 +294,7 @@ bool CvCaptureCAM_Aravis::grabFrame()
         ArvBuffer *arv_buffer = NULL;
         int max_tries = 10;
         int tries = 0;
-        if (softwareTriggered) {
+        if (softwareTriggered && allowAutoTrigger) {
             arv_camera_software_trigger (camera);
         }
         for(; tries < max_tries; tries ++) {
@@ -499,6 +501,12 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                 return out;
             }
             break;
+
+        case CAP_PROP_ARAVIS_AUTOTRIGGER:
+        {
+            return allowAutoTrigger ? 1. : 0.;
+        }
+        break;
     }
     return -1.0;
 }
@@ -583,6 +591,11 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
             }
             break;
 
+        case CAP_PROP_ARAVIS_AUTOTRIGGER:
+            {
+                allowAutoTrigger = (bool) value;
+            }
+            break;
 
         default:
             return false;
