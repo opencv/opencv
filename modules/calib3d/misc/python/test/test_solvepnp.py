@@ -52,6 +52,12 @@ class solvepnp_test(NewOpenCVTests):
         x, r, t, e = cv.solvePnPGeneric(
             obj_points, img_points, cameraMatrix, distCoeffs
         )
+        if e is None:
+            # noArray() is supported, see https://github.com/opencv/opencv/issues/16049
+            pass
+        else:
+            eDump = cv.utils.dumpInputArray(e)
+            self.assertEqual(eDump, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=1 dims(-1)=2 size(-1)=1x1 type(-1)=CV_32FC1")
 
 
 if __name__ == '__main__':

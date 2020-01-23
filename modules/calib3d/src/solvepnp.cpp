@@ -1009,11 +1009,9 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
 
     if (reprojectionError.needed())
     {
-        int type = reprojectionError.type();
-
-        if (reprojectionError.empty() == true && reprojectionError.fixedType() == false) {
-            type = max(_ipoints.depth(), _opoints.depth()) == CV_64F ? CV_64F : CV_32F;
-        }
+        int type = (reprojectionError.fixedType() || !reprojectionError.empty())
+                ? reprojectionError.type()
+                : (max(_ipoints.depth(), _opoints.depth()) == CV_64F ? CV_64F : CV_32F);
 
         reprojectionError.create(solutions, 1, type);
         CV_CheckType(reprojectionError.type(), type == CV_32FC1 || type == CV_64FC1,
