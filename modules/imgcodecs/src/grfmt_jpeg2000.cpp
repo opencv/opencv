@@ -194,7 +194,7 @@ bool  Jpeg2KDecoder::readHeader(std::map<String, String> *properties)
 
             if( cntcmpts )
             {
-                CV_Assert(depth == 8 || depth == 16);
+                CV_Assert(depth == 8 || depth == 12 || depth == 16);
                 CV_Assert(cntcmpts == 1 || cntcmpts == 3);
                 m_type = CV_MAKETYPE(depth <= 8 ? CV_8U : CV_16U, cntcmpts > 1 ? 3 : 1);
                 result = true;
