@@ -719,29 +719,45 @@ template <> int PyrUpVecV<float, float>(float** src, float** dst, int width)
 
 #endif
 
+template<class CastOp>
+struct PyrDownInvoker : ParallelLoopBody
+{
+    PyrDownInvoker(const Mat& src, const Mat& dst, int borderType, int **tabR, int **tabM, int **tabL)
+    {
+        _src = &src;
+        _dst = &dst;
+        _borderType = borderType;
+        _tabR = tabR;
+        _tabM = tabM;
+        _tabL = tabL;
+    }
+
+    void operator()(const Range& range) const CV_OVERRIDE;
+
+    int **_tabR;
+    int **_tabM;
+    int **_tabL;
+    const Mat *_src;
+    const Mat *_dst;
+    int _borderType;
+};
+
 template<class CastOp> void
 pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 {
     const int PD_SZ = 5;
-    typedef typename CastOp::type1 WT;
-    typedef typename CastOp::rtype T;
-
     CV_Assert( !_src.empty() );
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
-    int bufstep = (int)alignSize(dsize.width*cn, 16);
-    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf.data(), 16);
+
     int tabL[CV_CN_MAX*(PD_SZ+2)], tabR[CV_CN_MAX*(PD_SZ+2)];
     AutoBuffer<int> _tabM(dsize.width*cn);
     int* tabM = _tabM.data();
-    WT* rows[PD_SZ];
-    CastOp castOp;
 
     CV_Assert( ssize.width > 0 && ssize.height > 0 &&
                std::abs(dsize.width*2 - ssize.width) <= 2 &&
                std::abs(dsize.height*2 - ssize.height) <= 2 );
-    int sy0 = -PD_SZ/2, sy = sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+    int width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
 
     for (int x = 0; x <= PD_SZ+1; x++)
     {
@@ -754,27 +770,51 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
         }
     }
 
+    for (int x = 0; x < dsize.width*cn; x++)
+        tabM[x] = (x/cn)*2*cn + x % cn;
+
+    int *tabLPtr = tabL;
+    int *tabRPtr = tabR;
+
+    cv::parallel_for_(Range(0,dsize.height), cv::PyrDownInvoker<CastOp>(_src, _dst, borderType, &tabRPtr, &tabM, &tabLPtr), cv::getNumThreads());
+}
+
+template<class CastOp>
+void PyrDownInvoker<CastOp>::operator()(const Range& range) const
+{
+    const int PD_SZ = 5;
+    typedef typename CastOp::type1 WT;
+    typedef typename CastOp::rtype T;
+    Size ssize = _src->size(), dsize = _dst->size();
+    int cn = _src->channels();
+    int bufstep = (int)alignSize(dsize.width*cn, 16);
+    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
+    WT* rows[PD_SZ];
+    CastOp castOp;
+
+    int sy0 = -PD_SZ/2, sy = range.start * 2 + sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+
     ssize.width *= cn;
     dsize.width *= cn;
     width0 *= cn;
 
-    for (int x = 0; x < dsize.width; x++)
-        tabM[x] = (x/cn)*2*cn + x % cn;
-
-    for (int y = 0; y < dsize.height; y++)
+    for (int y = range.start; y < range.end; y++)
     {
-        T* dst = _dst.ptr<T>(y);
+        T* dst = (T*)_dst->ptr<T>(y);
         WT *row0, *row1, *row2, *row3, *row4;
 
         // fill the ring buffer (horizontal convolution and decimation)
-        for( ; sy <= y*2 + 2; sy++ )
+        int sy_limit = y*2 + 2;
+        for( ; sy <= sy_limit; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
-            int _sy = borderInterpolate(sy, ssize.height, borderType);
-            const T* src = _src.ptr<T>(_sy);
+            int _sy = borderInterpolate(sy, ssize.height, _borderType);
+            const T* src = _src->ptr<T>(_sy);
 
             do {
                 int x = 0;
+                const int* tabL = *_tabL;
                 for( ; x < cn; x++ )
                 {
                     row[x] = src[tabL[x+cn*2]]*6 + (src[tabL[x+cn]] + src[tabL[x+cn*3]])*4 +
@@ -832,13 +872,14 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
                 {
                     for( ; x < width0; x++ )
                     {
-                        int sx = tabM[x];
+                        int sx = (*_tabM)[x];
                         row[x] = src[sx]*6 + (src[sx - cn] + src[sx + cn])*4 +
                             src[sx - cn*2] + src[sx + cn*2];
                     }
                 }
 
                 // tabR
+                const int* tabR = *_tabR;
                 for (int x_ = 0; x < dsize.width; x++, x_++)
                 {
                     row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +

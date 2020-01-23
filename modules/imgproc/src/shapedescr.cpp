@@ -60,6 +60,29 @@ static void findCircle3pts(Point2f *pts, Point2f &center, float &radius)
     Point2f midPoint2 = (pts[0] + pts[2]) / 2.0f;
     float c2 = midPoint2.x * v2.x + midPoint2.y * v2.y;
     float det = v1.x * v2.y - v1.y * v2.x;
+    if (fabs(det) <= EPS)
+    {
+        // v1 and v2 are colinear, so the longest distance between any 2 points
+        // is the diameter of the minimum enclosing circle.
+        float d1 = normL2Sqr<float>(pts[0] - pts[1]);
+        float d2 = normL2Sqr<float>(pts[0] - pts[2]);
+        float d3 = normL2Sqr<float>(pts[1] - pts[2]);
+        radius = sqrt(std::max(d1, std::max(d2, d3))) * 0.5f + EPS;
+        if (d1 >= d2 && d1 >= d3)
+        {
+            center = (pts[0] + pts[1]) * 0.5f;
+        }
+        else if (d2 >= d1 && d2 >= d3)
+        {
+            center = (pts[0] + pts[2]) * 0.5f;
+        }
+        else
+        {
+            CV_DbgAssert(d3 >= d1 && d3 >= d2);
+            center = (pts[1] + pts[2]) * 0.5f;
+        }
+        return;
+    }
     float cx = (c1 * v2.y - c2 * v1.y) / det;
     float cy = (v1.x * c2 - v2.x * c1) / det;
     center.x = (float)cx;
@@ -92,7 +115,13 @@ static void findThirdPoint(const PT *pts, int i, int j, Point2f &center, float &
             ptsf[0] = (Point2f)pts[i];
             ptsf[1] = (Point2f)pts[j];
             ptsf[2] = (Point2f)pts[k];
-            findCircle3pts(ptsf, center, radius);
+            Point2f new_center; float new_radius = 0;
+            findCircle3pts(ptsf, new_center, new_radius);
+            if (new_radius > 0)
+            {
+                radius = new_radius;
+                center = new_center;
+            }
         }
     }
 }
@@ -117,7 +146,13 @@ void findSecondPoint(const PT *pts, int i, Point2f &center, float &radius)
         }
         else
         {
-            findThirdPoint(pts, i, j, center, radius);
+            Point2f new_center; float new_radius = 0;
+            findThirdPoint(pts, i, j, new_center, new_radius);
+            if (new_radius > 0)
+            {
+                radius = new_radius;
+                center = new_center;
+            }
         }
     }
 }
@@ -143,7 +178,13 @@ static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, fl
         }
         else
         {
-            findSecondPoint(pts, i, center, radius);
+            Point2f new_center; float new_radius = 0;
+            findSecondPoint(pts, i, new_center, new_radius);
+            if (new_radius > 0)
+            {
+                radius = new_radius;
+                center = new_center;
+            }
         }
     }
 }
@@ -735,7 +776,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 namespace cv
 {
 
-// Calculates bounding rectagnle of a point set or retrieves already calculated
+// Calculates bounding rectangle of a point set or retrieves already calculated
 static Rect pointSetBoundingRect( const Mat& points )
 {
     int npoints = points.checkVector(2);
@@ -1351,7 +1392,7 @@ cvFitEllipse2( const CvArr* array )
     return cvBox2D(cv::fitEllipse(points));
 }
 
-/* Calculates bounding rectagnle of a point set or retrieves already calculated */
+/* Calculates bounding rectangle of a point set or retrieves already calculated */
 CV_IMPL  CvRect
 cvBoundingRect( CvArr* array, int update )
 {

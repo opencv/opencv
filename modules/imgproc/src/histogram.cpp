@@ -45,6 +45,8 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
+#include "opencv2/core/utils/tls.hpp"
+
 namespace cv
 {
 
@@ -73,8 +75,8 @@ calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
             int sz = !issparse ? hist.size[i] : shist.size(i);
             size_t step = !issparse ? hist.step[i] : 1;
 
-            double v_lo = ranges[i][0];
-            double v_hi = ranges[i][1];
+            double v_lo = ranges ? ranges[i][0] : 0;
+            double v_hi = ranges ? ranges[i][1] : 256;
 
             for( j = low; j < high; j++ )
             {
@@ -181,7 +183,7 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
         imsize.height = 1;
     }
 
-    if( !ranges )
+    if( !ranges ) // implicit uniform ranges for 8U
     {
         CV_Assert( depth == CV_8U );
 
@@ -949,6 +951,8 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(images && nimages > 0);
+
     CV_OVX_RUN(
         images && histSize &&
         nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && _mask.getMat().empty() &&
@@ -1258,6 +1262,8 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
                const float** ranges, bool uniform, bool accumulate )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(images && nimages > 0);
 
     Mat mask = _mask.getMat();
     calcHist( images, nimages, channels, mask, hist, dims, histSize,
@@ -1606,6 +1612,8 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(images && nimages > 0);
+
     Mat hist = _hist.getMat();
     std::vector<uchar*> ptrs;
     std::vector<int> deltas;
@@ -1774,6 +1782,8 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           const float** ranges, double scale, bool uniform )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(images && nimages > 0);
 
     std::vector<uchar*> ptrs;
     std::vector<int> deltas;

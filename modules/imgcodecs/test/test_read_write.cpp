@@ -5,6 +5,95 @@
 
 namespace opencv_test { namespace {
 
+/* < <file_name, image_size>, <imread mode, scale> > */
+typedef tuple< tuple<string, Size>, tuple<ImreadModes, int> > Imgcodecs_Resize_t;
+
+typedef testing::TestWithParam< Imgcodecs_Resize_t > Imgcodecs_Resize;
+
+/* resize_flag_and_dims = <imread_flag, scale>*/
+const tuple <ImreadModes, int> resize_flag_and_dims[] =
+{
+    make_tuple(IMREAD_UNCHANGED, 1),
+    make_tuple(IMREAD_REDUCED_GRAYSCALE_2, 2),
+    make_tuple(IMREAD_REDUCED_GRAYSCALE_4, 4),
+    make_tuple(IMREAD_REDUCED_GRAYSCALE_8, 8),
+    make_tuple(IMREAD_REDUCED_COLOR_2, 2),
+    make_tuple(IMREAD_REDUCED_COLOR_4, 4),
+    make_tuple(IMREAD_REDUCED_COLOR_8, 8)
+};
+
+const tuple<string, Size> images[] =
+{
+#ifdef HAVE_JPEG
+    make_tuple<string, Size>("../cv/imgproc/stuff.jpg", Size(640, 480)),
+#endif
+#ifdef HAVE_PNG
+    make_tuple<string, Size>("../cv/shared/pic1.png", Size(400, 300)),
+#endif
+};
+
+TEST_P(Imgcodecs_Resize, imread_reduce_flags)
+{
+    const string file_name = findDataFile(get<0>(get<0>(GetParam())));
+    const Size imageSize = get<1>(get<0>(GetParam()));
+
+    const int imread_flag = get<0>(get<1>(GetParam()));
+    const int scale = get<1>(get<1>(GetParam()));
+
+    const int cols = imageSize.width / scale;
+    const int rows = imageSize.height / scale;
+    {
+        Mat img = imread(file_name, imread_flag);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cols, img.cols);
+        EXPECT_EQ(rows, img.rows);
+    }
+}
+
+//==================================================================================================
+
+TEST_P(Imgcodecs_Resize, imdecode_reduce_flags)
+{
+    const string file_name = findDataFile(get<0>(get<0>(GetParam())));
+    const Size imageSize = get<1>(get<0>(GetParam()));
+
+    const int imread_flag = get<0>(get<1>(GetParam()));
+    const int scale = get<1>(get<1>(GetParam()));
+
+    const int cols = imageSize.width / scale;
+    const int rows = imageSize.height / scale;
+
+    const std::ios::openmode mode = std::ios::in | std::ios::binary;
+    std::ifstream ifs(file_name.c_str(), mode);
+    ASSERT_TRUE(ifs.is_open());
+
+    ifs.seekg(0, std::ios::end);
+    const size_t sz = static_cast<size_t>(ifs.tellg());
+    ifs.seekg(0, std::ios::beg);
+
+    std::vector<char> content(sz);
+    ifs.read((char*)content.data(), sz);
+    ASSERT_FALSE(ifs.fail());
+
+    {
+        Mat img = imdecode(Mat(content), imread_flag);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cols, img.cols);
+        EXPECT_EQ(rows, img.rows);
+    }
+}
+
+//==================================================================================================
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Resize,
+        testing::Combine(
+            testing::ValuesIn(images),
+            testing::ValuesIn(resize_flag_and_dims)
+            )
+        );
+
+//==================================================================================================
+
 TEST(Imgcodecs_Image, read_write_bmp)
 {
     const size_t IMAGE_COUNT = 10;

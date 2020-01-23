@@ -44,11 +44,16 @@
 #include "layers_common.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
 #endif
 
 namespace cv
@@ -124,7 +129,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && axis == 1);
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -455,6 +460,31 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
 #endif  // HAVE_INF_ENGINE
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        int batch = ieInpNode->get_shape()[0];
+
+        std::vector<size_t> data = {(size_t)batch, (size_t)blobs[0].size[1]};
+        auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
+        auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
+
+        std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+        auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
+        auto matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, false, true);
+        if (bias) {
+            auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                              ngraph::Shape{(size_t)blobs[1].size[1]}, blobs[1].data);
+            auto fc = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node, ngraph::op::AutoBroadcastType::NUMPY);
+            return Ptr<BackendNode>(new InfEngineNgraphNode(fc));
+        }
+        return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

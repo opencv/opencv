@@ -4,6 +4,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
+#include "test_utils_tls.impl.hpp"
+
 namespace opencv_test { namespace {
 
 static const char * const keys =

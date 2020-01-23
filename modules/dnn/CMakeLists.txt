@@ -58,6 +58,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     /wd4456 /wd4510 /wd4610 /wd4800
     /wd4701 /wd4703                    # potentially uninitialized local/pointer variable 'value' used
     /wd4505                            # unreferenced local function has been removed
+    /wd4458                            # declaration of 'x' hides class member. GCC still works, MSVC bug is here: https://developercommunity.visualstudio.com/content/problem/219311/c-c4458-declaration-hides-class-member-warning-iss.html
     -wd858 -wd2196
     -Winvalid-offsetof                 # Apple Clang (attr_value.pb.cc)
 )
@@ -74,6 +75,7 @@ endif()
 
 set(include_dirs ${fw_inc})
 set(sources_options "")
+
 set(libs libprotobuf ${LAPACK_LIBRARIES})
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   list(APPEND include_dirs ${OPENCL_INCLUDE_DIRS})
@@ -87,10 +89,20 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-inconsistent-missing-override")  # Clang
 endif()
+
+set(dnn_runtime_libs "")
+if(INF_ENGINE_TARGET)
+  list(APPEND dnn_runtime_libs ${INF_ENGINE_TARGET})
+endif()
+if(HAVE_NGRAPH)
+  add_definitions(-DHAVE_DNN_NGRAPH)
+  list(APPEND dnn_runtime_libs ngraph::ngraph)
+endif()
+
 ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
-ocv_create_module(${libs} ${INF_ENGINE_TARGET})
+ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
-ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
+ocv_add_accuracy_tests(${dnn_runtime_libs})
 
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")

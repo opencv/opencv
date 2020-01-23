@@ -36,6 +36,14 @@
             "v_type": "vector_Layer",
             "j_import": "org.opencv.dnn.Layer"
         },
+        "vector_Target": {
+            "j_type": "List<Integer>",
+            "jn_type": "List<Integer>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector< cv::dnn::Target > %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "vector_Target"
+        },
         "LayerId": {
             "j_type": "DictValue",
             "jn_type": "long",

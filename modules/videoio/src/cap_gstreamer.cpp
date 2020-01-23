@@ -748,18 +748,20 @@ bool GStreamerCapture::open(const String &filename_)
     // else, we might have a file or a manual pipeline.
     // if gstreamer cannot parse the manual pipeline, we assume we were given and
     // ordinary file path.
+    CV_LOG_INFO(NULL, "OpenCV | GStreamer: " << filename);
     if (!gst_uri_is_valid(filename))
     {
         if (utils::fs::exists(filename_))
         {
-            uri.attach(g_filename_to_uri(filename, NULL, NULL));
+            GSafePtr<GError> err;
+            uri.attach(gst_filename_to_uri(filename, err.getRef()));
             if (uri)
             {
                 file = true;
             }
             else
             {
-                CV_WARN("Error opening file: " << filename << " (" << uri.get() << ")");
+                CV_WARN("Error opening file: " << filename << " (" << err->message << ")");
                 return false;
             }
         }
@@ -779,7 +781,7 @@ bool GStreamerCapture::open(const String &filename_)
     {
         uri.attach(g_strdup(filename));
     }
-
+    CV_LOG_INFO(NULL, "OpenCV | GStreamer: mode - " << (file ? "FILE" : manualpipeline ? "MANUAL" : "URI"));
     bool element_from_uri = false;
     if (!uridecodebin)
     {
@@ -1043,7 +1045,7 @@ bool GStreamerCapture::open(const String &filename_)
  * \return property value
  *
  * There are two ways the properties can be retrieved. For seek-based properties we can query the pipeline.
- * For frame-based properties, we use the caps of the lasst receivef sample. This means that some properties
+ * For frame-based properties, we use the caps of the last receivef sample. This means that some properties
  * are not available until a first frame was received
  */
 double GStreamerCapture::getProperty(int propId) const

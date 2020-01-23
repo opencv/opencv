@@ -15,9 +15,9 @@ PyObject* pyopencv_from(const cvflann_flann_distance_t& value)
 }
 
 template<>
-bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
+bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     bool ok = true;
     PyObject* key = NULL;
     PyObject* item = NULL;
@@ -71,16 +71,16 @@ bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, cv::flann::SearchParams & value, const char * name)
+bool pyopencv_to(PyObject* obj, cv::flann::SearchParams & value, const ArgInfo& info)
 {
-    return pyopencv_to<cv::flann::IndexParams>(obj, value, name);
+    return pyopencv_to<cv::flann::IndexParams>(obj, value, info);
 }
 
 template<>
-bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char *name)
+bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const ArgInfo& info)
 {
     int d = (int)dist;
-    bool ok = pyopencv_to(o, d, name);
+    bool ok = pyopencv_to(o, d, info);
     dist = (cvflann::flann_distance_t)d;
     return ok;
 }

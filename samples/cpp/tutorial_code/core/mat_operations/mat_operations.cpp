@@ -131,8 +131,8 @@ int main(int,char**)
     {
         //! [C-API conversion]
         Mat img = imread("image.jpg");
-        IplImage img1 = img;
-        CvMat m = img;
+        IplImage img1 = cvIplImage(img);
+        CvMat m = cvMat(img);
         //! [C-API conversion]
         CV_UNUSED(img1);
         CV_UNUSED(m);
