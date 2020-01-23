@@ -39,6 +39,20 @@ class solvepnp_test(NewOpenCVTests):
             obj_points, img_points, cameraMatrix, distCoeffs, reprojectionError=r
         )
 
+    def test_regression_16049(self):
+        obj_points = np.array([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]], dtype=np.float32)
+        img_points = np.array(
+            [[[700, 400], [700, 600], [900, 600], [900, 400]]], dtype=np.float32
+        )
+
+        cameraMatrix = np.array(
+            [[712.0634, 0, 800], [0, 712.540, 500], [0, 0, 1]], dtype=np.float32
+        )
+        distCoeffs = np.array([[0, 0, 0, 0]], dtype=np.float32)
+        x, r, t, e = cv.solvePnPGeneric(
+            obj_points, img_points, cameraMatrix, distCoeffs
+        )
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
