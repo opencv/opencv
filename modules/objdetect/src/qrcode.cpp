@@ -2284,7 +2284,7 @@ bool QRCodeDetector::decodeMulti(
     Mat inarr;
     if (!checkQRInputImage(img, inarr))
         return false;
-
+    CV_Assert(points.size().width > 0);
     CV_Assert((points.size().width % 4) == 0);
     vector< vector< Point2f > > src_points ;
     Mat qr_points = points.getMat();
@@ -2355,8 +2355,13 @@ bool QRCodeDetector::detectAndDecodeMulti(
                 m_p.ptr<Point2f>(i / 4)[j] = Point2f(points[i + j]);
         m_p.reshape(2, points_.rows()).convertTo(points_, points_type);
     }
-    decoded_info.clear();
-    ok = decodeMulti(inarr, decoded_info, points, straight_qrcode);
+    if(ok)
+    {
+        decoded_info.clear();
+        ok = decodeMulti(inarr, decoded_info, points, straight_qrcode);
+    }
+    else
+        ok = false;
     return ok;
 }
 
