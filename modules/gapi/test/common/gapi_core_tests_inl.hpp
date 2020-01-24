@@ -120,9 +120,13 @@ TEST_P(MathOpTest, MatricesAccuracyTest)
             CV_MAT_DEPTH(out_mat_ocv.type()) != CV_64F)
         {
             // integral: allow 1% of differences, and no diffs by >1 unit
-            EXPECT_LE(countNonZeroPixels(cv::abs(out_mat_gapi - out_mat_ocv) > 0),
-                                                           0.01*out_mat_ocv.total());
-            EXPECT_LE(countNonZeroPixels(cv::abs(out_mat_gapi - out_mat_ocv) > 1), 0);
+            EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF), 1);  // check: abs(a[i] - b[i]) <= 1
+            float tolerance = 0.01f;
+#if defined(__arm__) || defined(__aarch64__)
+            if (opType == DIV)
+                tolerance = 0.05f;
+#endif
+            EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_L1), tolerance*out_mat_ocv.total());
         }
         else
         {
