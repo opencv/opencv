@@ -1002,15 +1002,16 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
         std::vector<int> outShape(inputs[0].begin(), inputs[0].begin() + 2);
 
-        std::vector<size_t> local_kernel = kernel_size.size() > inpShape.size() ?
-                                           std::vector<size_t>(kernel_size.begin() + 1, kernel_size.end()) : kernel_size;
-
+        std::vector<size_t> local_kernel;
         if (globalPooling) {
-            for (int i = 0, j = kernel_size.size() - inpShape.size(); i < inpShape.size(); i++, j++) {
-                if (isGlobalPooling[j])
-                    local_kernel[i] = inpShape[i];
+            for (int i = 0; i < inpShape.size(); i++) {
+                int idx = isGlobalPooling.size() - inpShape.size() + i;
+                local_kernel.push_back(isGlobalPooling[idx] ? inpShape[i] : kernel_size[idx]);
             }
+        } else {
+            local_kernel = kernel_size;
         }
+
         if (type == ROI || type == PSROI)
         {
             outShape.push_back(pooledSize.height);
@@ -1018,14 +1019,14 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         }
         else if (padMode.empty())
         {
-            for (int i = 0; i < pads_end.size(); i++) {
+            for (int i = 0; i < local_kernel.size(); i++) {
                 float dst = (float)(inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
                 outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
             }
 
             // If we have padding, ensure that the last pooling starts strictly
             // inside the image (instead of at the padding); otherwise clip the last.
-            for (int i = 0; i < inpShape.size(); i++) {
+            for (int i = 0; i < pads_end.size(); i++) {
                 if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
                     --outShape[2 + i];
                     CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
