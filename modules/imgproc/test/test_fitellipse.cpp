@@ -21,7 +21,7 @@ static bool check_pt_in_ellipse(const Point2f& pt, const RotatedRect& el) {
 
 // Return true if mass center of fitted points lies inside ellipse
 static bool fit_and_check_ellipse(const vector<Point2f>& pts) {
-    RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
+    RotatedRect ellipse = fitEllipseAMS(pts); // it seems fitEllipseDirect() should have worked.
 
     Point2f mass_center;
     for (size_t i = 0; i < pts.size(); i++) {
