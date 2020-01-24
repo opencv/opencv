@@ -105,15 +105,14 @@ int liveQRCodeDetect(const string& out_file, const string& out_origin_file)
     char c = (char)waitKey(30);
     for(;;)
     {
-        Mat frame, src;
+        Mat frame, origin_frame, src;
         cap >> frame;
         if (frame.empty())
         {
             cout << "End of video stream" << endl;
             break;
         }
-        if (!out_origin_file.empty())
-            imwrite(out_origin_file, frame); // write original frame
+        origin_frame = frame;
         cvtColor(frame, src, COLOR_BGR2GRAY);
         if (!switch_mode)
         {
@@ -165,9 +164,11 @@ int liveQRCodeDetect(const string& out_file, const string& out_origin_file)
        c = (char)waitKey(30);
        if (c == 27)
            break;
-       if (!out_file.empty())
-           imwrite(out_file, frame);
-       if ((c == 'm') && (switch_mode != true)) //switch between detectAndDecode and detectAndDecodeMulti
+       if (c == ' ' && !out_origin_file.empty())
+           imwrite(out_origin_file, frame); // write original frame
+       if (c == ' ' && !out_file.empty())
+           imwrite(out_file, frame); // write frame
+       if ((c == 'm') && (!switch_mode)) //switch between detectAndDecode and detectAndDecodeMulti
            switch_mode = true;
        else if (c == 'm')
            switch_mode = false;
