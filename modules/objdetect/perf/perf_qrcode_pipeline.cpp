@@ -85,7 +85,7 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
     std::vector< cv::String > decoded_info;
     TEST_CYCLE()
     {
-        ASSERT_TRUE(qrcode.decodeMulti(src, decoded_info, corners, straight_barcode));
+        ASSERT_TRUE(qrcode.decodeMulti(src, corners, decoded_info, straight_barcode));
         for(size_t i = 0; i < decoded_info.size(); i++)
         {
             ASSERT_FALSE(decoded_info[i].empty());

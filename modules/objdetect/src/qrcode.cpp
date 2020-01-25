@@ -2307,9 +2307,10 @@ private:
 
 bool QRCodeDetector::decodeMulti(
         InputArray img,
-        CV_OUT std::vector<cv::String>& decoded_info,
         InputArray points,
-        OutputArrayOfArrays straight_qrcode)
+        CV_OUT std::vector<cv::String>& decoded_info,
+        OutputArrayOfArrays straight_qrcode
+    ) const
 {
     Mat inarr;
     if (!checkQRInputImage(img, inarr))
@@ -2368,7 +2369,8 @@ bool QRCodeDetector::detectAndDecodeMulti(
         InputArray img,
         CV_OUT std::vector<cv::String>& decoded_info,
         OutputArray points_,
-        OutputArrayOfArrays straight_qrcode)
+        OutputArrayOfArrays straight_qrcode
+    ) const
 {
     Mat inarr;
     if (!checkQRInputImage(img, inarr))
@@ -2386,16 +2388,17 @@ bool QRCodeDetector::detectAndDecodeMulti(
     }
     updatePointsResult(points_, points);
     decoded_info.clear();
-    ok = decodeMulti(inarr, decoded_info, points, straight_qrcode);
+    ok = decodeMulti(inarr, points, decoded_info, straight_qrcode);
     return ok;
 }
 
-bool decodeQRCodeMulti(InputArray in, InputArray points,
-                  vector<std::string> &decoded_info, OutputArrayOfArrays straight_qrcode)
+bool decodeQRCodeMulti(
+        InputArray in, InputArray points,
+        vector<std::string> &decoded_info, OutputArrayOfArrays straight_qrcode)
 {
     QRCodeDetector qrcode;
     vector<cv::String> info;
-    bool ok = qrcode.decodeMulti(in, info, points, straight_qrcode);
+    bool ok = qrcode.decodeMulti(in, points, info, straight_qrcode);
     for (size_t i = 0; i < info.size(); i++)
         decoded_info.push_back(info[i]);
     return ok;
