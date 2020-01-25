@@ -44,23 +44,16 @@ static bool checkQRInputImage(InputArray img, Mat& gray)
     return true;
 }
 
-static void updatePointsResult(OutputArray points_, vector<Point2f>& points)
+static void updatePointsResult(OutputArray points_, const vector<Point2f>& points)
 {
     if (points_.needed())
     {
         int N = int(points.size() / 4);
         if (N > 0)
         {
-            Mat m_p(N, 4, CV_32FC2);
-            for (int i = 0; i < N; i++)
-            {
-                m_p.at<Point2f>(i, 0) = Point2f(points[i * 4 + 0]);
-                m_p.at<Point2f>(i, 1) = Point2f(points[i * 4 + 1]);
-                m_p.at<Point2f>(i, 2) = Point2f(points[i * 4 + 2]);
-                m_p.at<Point2f>(i, 3) = Point2f(points[i * 4 + 3]);
-            }
+            Mat m_p(N, 4, CV_32FC2, (void*)&points[0]);
             int points_type = points_.fixedType() ? points_.type() : CV_32FC2;
-            m_p.reshape(2, points_.rows()).convertTo(points_, points_type);  // TODO Mat layout: Nx4x2cn
+            m_p.reshape(2, points_.rows()).convertTo(points_, points_type);  // Mat layout: N x 4 x 2cn
         }
         else
         {
@@ -953,7 +946,7 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
     if (!qrdet.localization()) { return false; }
     if (!qrdet.computeTransformationPoints()) { return false; }
     vector<Point2f> pnts2f = qrdet.getTransformationPoints();
-    Mat(pnts2f).convertTo(points, points.fixedType() ? points.type() : CV_32FC2);
+    updatePointsResult(points, pnts2f);
     return true;
 }
 
@@ -1260,20 +1253,20 @@ cv::String QRCodeDetector::detectAndDecode(InputArray in,
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
+    {
+        points_.release();
         return std::string();
+    }
 
     vector<Point2f> points;
     bool ok = detect(inarr, points);
-    if( points_.needed() )
+    if (!ok)
     {
-        if( ok )
-            Mat(points).copyTo(points_);
-        else
-            points_.release();
+        points_.release();
+        return std::string();
     }
-    std::string decoded_info;
-    if( ok )
-        decoded_info = decode(inarr, points, straight_qrcode);
+    updatePointsResult(points_, points);
+    std::string decoded_info = decode(inarr, points, straight_qrcode);
     return decoded_info;
 }
 
