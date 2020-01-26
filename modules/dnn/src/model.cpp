@@ -374,4 +374,33 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
 }
 
+
+Mat DetectionModel::blobFromImages(InputArray images_, double scalefactor=1.0, Size size = Size() ,const Scalar& mean = Scalar(), bool swapRB=false, Rect crop=Rect(),int ddepth=CV_32F)
+{
+  std::vector<Mat> images;
+  images_.getMatVector(images);
+  for (size_t i = 0; i < images.size(); i++)
+  {
+    Size imgSize = images[i].size();
+    if (size == Size())
+        size = imgSize;
+
+    resize(images[i], images[i], size, 0, 0, INTER_LINEAR);
+    if (crop == Rect())
+        crop = Rect(0, 0, imgSize.width, imgSize.height);
+    images[i] = images[i](crop);
+  }
+
+  Size sz = Size(crop.width, crop.height);
+  return cv::dnn::blobFromImages(images, scalefactor, sz, mean, swapRB, false, ddepth);
+}
+
+
+Mat DetectionModel::blobFromImage(InputArray image, double scalefactor=1.0, Size size = Size() ,const Scalar& mean = Scalar(), bool swapRB=false, Rect crop=Rect(),int ddepth=CV_32F)
+{
+    std::vector<Mat> images(1, image.getMat());
+    return blobFromImages(images, scalefactor, size, mean, swapRB, crop, ddepth);
+}
+
+
 }} // namespace
