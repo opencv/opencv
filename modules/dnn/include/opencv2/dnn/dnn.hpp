@@ -86,7 +86,7 @@ CV__DNN_INLINE_NS_BEGIN
      */
     enum Target
     {
-        DNN_TARGET_CPU = 0,
+        DNN_TARGET_CPU,
         DNN_TARGET_OPENCL,
         DNN_TARGET_OPENCL_FP16,
         DNN_TARGET_MYRIAD,
@@ -97,7 +97,7 @@ CV__DNN_INLINE_NS_BEGIN
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
-    CV_EXPORTS_W std::vector<Target> getAvailableTargets(dnn::Backend be);
+    CV_EXPORTS std::vector<Target> getAvailableTargets(Backend be);
 
     /** @brief This class provides all data needed to initialize layer.
      *
@@ -1037,6 +1037,7 @@ CV__DNN_INLINE_NS_BEGIN
     CV_EXPORTS_W void writeTextGraph(const String& model, const String& output);
 
     /** @brief Performs non maximum suppression given boxes and corresponding scores.
+
      * @param bboxes a set of bounding boxes to apply NMS.
      * @param scores a set of corresponding confidences.
      * @param score_threshold a threshold used to filter boxes by score.
