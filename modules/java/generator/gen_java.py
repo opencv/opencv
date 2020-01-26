@@ -914,7 +914,10 @@ class JavaWrapperGenerator(object):
                     c_epilogue.append("Mat* _retval_ = new Mat();")
                     c_epilogue.append(fi.ctype+"_to_Mat(_ret_val_vector_, *_retval_);")
                 else:
-                    c_epilogue.append("return " + fi.ctype + "_to_List(env, _ret_val_vector_);")
+                    if ret:
+                        c_epilogue.append("jobject _retval_ = " + fi.ctype + "_to_List(env, _ret_val_vector_);")
+                    else:
+                        c_epilogue.append("return " + fi.ctype + "_to_List(env, _ret_val_vector_);")
             if fi.classname:
                 if not fi.ctype: # c-tor
                     retval = fi.fullClass(isCPP=True) + "* _retval_ = "
