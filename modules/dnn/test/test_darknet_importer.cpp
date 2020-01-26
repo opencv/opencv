@@ -528,6 +528,11 @@ TEST_P(Test_Darknet_layers, reorg)
     testDarknetLayer("reorg");
 }
 
+TEST_P(Test_Darknet_layers, maxpool)
+{
+    testDarknetLayer("maxpool");
+}
+
 TEST_P(Test_Darknet_layers, convolutional)
 {
     if (target == DNN_TARGET_MYRIAD)
@@ -535,6 +540,13 @@ TEST_P(Test_Darknet_layers, convolutional)
         default_l1 = 0.01f;
     }
     testDarknetLayer("convolutional", true);
+}
+
+TEST_P(Test_Darknet_layers, connected)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testDarknetLayer("connected", true);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
