@@ -2678,17 +2678,10 @@ struct Net::Impl
                             break;
 #ifdef HAVE_CUDA
                         if (preferableBackend == DNN_BACKEND_CUDA &&
-                            (inp_i_data->layerInstance->supportBackend(DNN_BACKEND_CUDA) == false || inp_i_data->layerInstance->type == "Region"))
+                            (inp_i_data->layerInstance->supportBackend(DNN_BACKEND_CUDA) == false ||
+                             (inp_i_data->layerInstance->type != "Convolution" &&
+                              inp_i_data->layerInstance->type != "Pooling")))
                         {
-                            /* If any of the inputs are computed on host, we cannot continue with the fusion because we
-                             * cannot store the dirty state information for each part of the of memory separately.
-                             *
-                             * Consider input_0 uses a CPU fallback and input_1 runs on GPU. After the CPU completes executing,
-                             * the output on the GPU will be overwritten (and hence input_1) by the contents of the host data.
-                             *
-                             * Region layer performs NMS on CPU. For the same reasons, we cannot eliminate concat if one of the
-                             * inputs comes from a region layer.
-                             */
                             break;
                         }
 #endif
