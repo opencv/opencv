@@ -41,16 +41,3 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
-
-#ifdef __cplusplus
-#import <vector>
-
-
-template <typename T> std::vector<cv::Point> arrayToVector(ObjectVector<CVPoint*>* _Nonnull objectVector) {
-    std::vector<cv::Point> ret;
-    for (CVPoint* point in objectVector) {
-        ret.push_back(point.nativeRef);
-    }
-    return ret;
-}
-#endif

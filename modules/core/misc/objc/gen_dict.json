@@ -97,7 +97,7 @@
         "Mat": {
             "objc_type": "Mat*",
             "to_cpp": "%(n)s.nativeRef",
-            "from_cpp": "[Mat fromNative:%(n)s]"
+            "from_cpp": "[Mat fromNativeRef:%(n)s]"
         },
         "Moments": {
             "objc_type": "Moments*"

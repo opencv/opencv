@@ -82,7 +82,7 @@
 - (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[TermCriteria class]]) {
+    } else if (![other isKindOfClass:[TermCriteria class]]) {
         return NO;
     } else {
         TermCriteria* it = (TermCriteria*)other;

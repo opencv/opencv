@@ -36,7 +36,7 @@ macro(ocv_remap_files files_list_var)
 endmacro()
 
 # common files
-file(GLOB_RECURSE deps "${CMAKE_CURRENT_SOURCE_DIR}/src/*" "${CMAKE_CURRENT_SOURCE_DIR}/android*/*" "${CMAKE_CURRENT_SOURCE_DIR}/templates/*")
+file(GLOB_RECURSE deps "${CMAKE_CURRENT_SOURCE_DIR}/templates/*")
 ocv_remap_files(deps)
 
 set(__modules_config "") # list of OpenCV modules

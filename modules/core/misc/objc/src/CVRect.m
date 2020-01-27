@@ -58,7 +58,7 @@
 - (BOOL)isEqual:(id)other{
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[CVRect class]]) {
+    } else if (![other isKindOfClass:[CVRect class]]) {
         return NO;
     } else {
         CVRect* rect = (CVRect*)other;

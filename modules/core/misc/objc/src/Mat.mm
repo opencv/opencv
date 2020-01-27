@@ -11,7 +11,7 @@
 #import "Range.h"
 #import "CVRect.h"
 #import "CVPoint.h"
-#import "CVType.h"
+#import "CvType.h"
 #import "CVObjcUtil.h"
 
 // returns true if final index was reached
@@ -24,7 +24,9 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return true;
 }
 
-@implementation Mat
+@implementation Mat {
+    NSData* _nsdata;
+}
 
 - (cv::Mat&)nativeRef {
     return *(cv::Mat*)_nativePtr;
@@ -41,19 +43,25 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 - (void)dealloc {
     if (_nativePtr != NULL) {
         _nativePtr->release();
+        delete _nativePtr;
     }
+    _nsdata = NULL;
 }
 
 - (instancetype)initWithNativeMat:(cv::Mat*)nativePtr {
     self = [super init];
     if (self) {
-        _nativePtr = nativePtr;
+        _nativePtr = new cv::Mat(*nativePtr);
     }
     return self;
 }
 
 + (instancetype)fromNative:(cv::Mat*)nativePtr {
     return [[Mat alloc] initWithNativeMat:nativePtr];
+}
+
++ (instancetype)fromNativeRef:(cv::Mat&)nativeRef {
+    return [[Mat alloc] initWithNativeMat:&nativeRef];
 }
 
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type {
@@ -68,6 +76,16 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     self = [super init];
     if (self) {
         _nativePtr = new cv::Mat(rows, cols, type, (void*)data.bytes);
+        _nsdata = data; // hold onto a reference otherwise this object might be deallocated
+    }
+    return self;
+}
+
+- (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type data:(NSData*)data step:(long)step {
+    self = [super init];
+    if (self) {
+        _nativePtr = new cv::Mat(rows, cols, type, (void*)data.bytes, step);
+        _nsdata = data; // hold onto a reference otherwise this object might be deallocated
     }
     return self;
 }
@@ -149,7 +167,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
         for (Range* range in ranges) {
             tempRanges.push_back(cv::Range(range.start, range.end));
         }
-        _nativePtr = new cv::Mat(_nativePtr->operator()(tempRanges));
+        _nativePtr = new cv::Mat(mat.nativePtr->operator()(tempRanges));
     }
     return self;
 }
@@ -162,6 +180,10 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
         _nativePtr = new cv::Mat(*(cv::Mat*)mat.nativePtr, rows, cols);
     }
     return self;
+}
+
+- (BOOL)isSameMat:(Mat*)mat {
+    return self.nativePtr == mat.nativePtr;
 }
 
 - (Mat*)adjustRoiTop:(int)dtop bottom:(int)dbottom left:(int)dleft right:(int)dright {
@@ -496,7 +518,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 
 - (NSString*)description {
     NSString* dimDesc = [self dimsDescription];
-    return [NSString stringWithFormat:@"Mat [ %@%@, isCont=%s, isSubmat=%s, nativeObj=0x%p, dataAddr=0x%p ]", dimDesc, [CVType typeToString:_nativePtr->type()], _nativePtr->isContinuous()?"YES":"NO", _nativePtr->isSubmatrix()?"YES":"NO", (void*)_nativePtr, (void*)_nativePtr->data];
+    return [NSString stringWithFormat:@"Mat [ %@%@, isCont=%s, isSubmat=%s, nativeObj=0x%p, dataAddr=0x%p ]", dimDesc, [CvType typeToString:_nativePtr->type()], _nativePtr->isContinuous()?"YES":"NO", _nativePtr->isSubmatrix()?"YES":"NO", (void*)_nativePtr, (void*)_nativePtr->data];
 }
 
 - (NSString*)dump {
@@ -518,17 +540,17 @@ template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)
 - (void)put:(uchar*)dest data:(NSArray<NSNumber*>*)data dataOffset:(int)dataOffset dataLength:(int)dataLength {
     int depth = _nativePtr->depth();
     if (depth == CV_8U) {
-        putData(dest, dataLength, ^uchar (int index) { return data[dataOffset + index].unsignedCharValue;} );
+        putData(dest, dataLength, ^uchar (int index) { return cv::saturate_cast<uchar>(data[dataOffset + index].doubleValue);} );
     } else if (depth == CV_8S) {
-        putData(dest, dataLength, ^char (int index) { return data[dataOffset + index].charValue;} );
+        putData(dest, dataLength, ^char (int index) { return cv::saturate_cast<char>(data[dataOffset + index].doubleValue);} );
     } else if (depth == CV_16U) {
-        putData(dest, dataLength, ^ushort (int index) { return data[dataOffset + index].unsignedShortValue;} );
+        putData(dest, dataLength, ^ushort (int index) { return cv::saturate_cast<ushort>(data[dataOffset + index].doubleValue);} );
     } else if (depth == CV_16S || depth == CV_16F) {
-        putData(dest, dataLength, ^short (int index) { return data[dataOffset + index].shortValue;} );
+        putData(dest, dataLength, ^short (int index) { return cv::saturate_cast<short>(data[dataOffset + index].doubleValue);} );
     } else if (depth == CV_32S) {
-        putData(dest, dataLength, ^int32_t (int index) { return data[dataOffset + index].intValue;} );
+        putData(dest, dataLength, ^int32_t (int index) { return cv::saturate_cast<int32_t>(data[dataOffset + index].doubleValue);} );
     } else if (depth == CV_32F) {
-        putData(dest, dataLength, ^float (int index) { return data[dataOffset + index].floatValue;} );
+        putData(dest, dataLength, ^float (int index) { return cv::saturate_cast<float>(data[dataOffset + index].doubleValue);} );
     } else if (depth == CV_64F) {
         putData(dest, dataLength, ^double (int index) { return data[dataOffset + index].doubleValue;} );
     }
@@ -536,10 +558,10 @@ template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)
 
 - (int)put:(NSArray<NSNumber*>*)indices data:(NSArray<NSNumber*>*)data {
     int type = _nativePtr->type();
-    if (data == nil || data.count % [CVType channels:type] != 0) {
+    if (data == nil || data.count % [CvType channels:type] != 0) {
         NSException* exception = [NSException
                 exceptionWithName:@"UnsupportedOperationException"
-                                  reason:[NSString stringWithFormat:@"Provided data element number (%lu) should be multiple of the Mat channels count (%d)", (unsigned long)(data == nil ? 0 : data.count), [CVType channels:type]]
+                                  reason:[NSString stringWithFormat:@"Provided data element number (%lu) should be multiple of the Mat channels count (%d)", (unsigned long)(data == nil ? 0 : data.count), [CvType channels:type]]
                 userInfo:nil];
         @throw exception;
     }
@@ -562,11 +584,14 @@ template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)
     if (available < copyCount) {
         copyCount = available;
     }
-    int result = copyCount;
+    int result = 0;
     uchar* dest = _nativePtr->ptr(tempIndices.data());
     while (available > 0) {
         [self put:dest data:data dataOffset:(int)copyOffset dataLength:copyCount];
-        updateIdx(_nativePtr, tempIndices, copyCount / (int)_nativePtr->elemSize());
+        result += copyCount * (int)(_nativePtr->elemSize()/_nativePtr->channels());
+        if (!updateIdx(_nativePtr, tempIndices, copyCount / (int)_nativePtr->elemSize())) {
+            break;
+        }
         available -= copyCount;
         copyOffset += copyCount;
         copyCount = _nativePtr->size[_nativePtr->dims-1] * (int)_nativePtr->elemSize();
@@ -611,10 +636,10 @@ template<typename T> void getData(uchar* dataSource, int dataLength, void (^writ
 
 - (int)get:(NSArray<NSNumber*>*)indices data:(NSMutableArray<NSNumber*>*)data {
     int type = _nativePtr->type();
-    if (data == nil || data.count % [CVType channels:type] != 0) {
+    if (data == nil || data.count % [CvType channels:type] != 0) {
         NSException* exception = [NSException
                 exceptionWithName:@"UnsupportedOperationException"
-                                  reason:[NSString stringWithFormat:@"Provided data element number (%lu) should be multiple of the Mat channels count (%d)", (unsigned long)(data == nil ? 0 : data.count), [CVType channels:type]]
+                                  reason:[NSString stringWithFormat:@"Provided data element number (%lu) should be multiple of the Mat channels count (%d)", (unsigned long)(data == nil ? 0 : data.count), [CvType channels:type]]
                 userInfo:nil];
         @throw exception;
     }
@@ -637,11 +662,14 @@ template<typename T> void getData(uchar* dataSource, int dataLength, void (^writ
     if (available < copyCount) {
         copyCount = available;
     }
-    int result = copyCount;
+    int result = 0;
     uchar* source = _nativePtr->ptr(tempIndices.data());
     while (available > 0) {
         [self get:source data:data dataOffset:(int)copyOffset dataLength:copyCount];
-        updateIdx(_nativePtr, tempIndices, copyCount / (int)_nativePtr->elemSize());
+        result += copyCount * (int)(_nativePtr->elemSize()/_nativePtr->channels());
+        if (!updateIdx(_nativePtr, tempIndices, copyCount / (int)_nativePtr->elemSize())) {
+            break;
+        }
         available -= copyCount;
         copyOffset += copyCount;
         copyCount = _nativePtr->size[_nativePtr->dims-1] * (int)_nativePtr->elemSize();
@@ -656,6 +684,32 @@ template<typename T> void getData(uchar* dataSource, int dataLength, void (^writ
 - (int)get:(int)row col:(int)col data:(NSMutableArray<NSNumber*>*)data {
     NSArray<NSNumber*>* indices = @[[NSNumber numberWithInt:row], [NSNumber numberWithInt:col]];
     return [self get:indices data:data];
+}
+
+- (NSArray<NSNumber*>*)get:(int)row col:(int)col {
+    NSMutableArray<NSNumber*>* result = [NSMutableArray new];
+    for (int index = 0; index<_nativePtr->channels(); index++) {
+        [result addObject:@0];
+    }
+    [self get:row col:col data:result];
+    return result;
+}
+
+- (NSArray<NSNumber*>*)get:(NSArray<NSNumber*>*)indices {
+    NSMutableArray<NSNumber*>* result = [NSMutableArray new];
+    for (int index = 0; index<_nativePtr->channels(); index++) {
+        [result addObject:@0];
+    }
+    [self get:indices data:result];
+    return result;
+}
+
+- (int)height {
+    return [self rows];
+}
+
+- (int)width {
+    return [self cols];
 }
 
 @end

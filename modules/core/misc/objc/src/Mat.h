@@ -31,10 +31,12 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)dealloc;
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat;
-+ (instancetype)fromNative:(cv::Mat*)nativeMat;
++ (instancetype)fromNative:(cv::Mat*)nativePtr;
++ (instancetype)fromNativeRef:(cv::Mat&)nativeRef;
 #endif
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type;
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type data:(NSData*)data;
+- (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type data:(NSData*)data step:(long)step;
 - (instancetype)initWithSize:(CVSize*)size type:(int)type;
 - (instancetype)initWithSizes:(NSArray<NSNumber*>*)sizes type:(int)type;
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type scalar:(Scalar*)scalar;
@@ -44,16 +46,17 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithMat:(Mat*)mat rowRange:(Range*)rowRange;
 - (instancetype)initWithMat:(Mat*)mat ranges:(NSArray<Range*>*)ranges;
 - (instancetype)initWithMat:(Mat*)mat rect:(CVRect*)roi;
-- (Mat*)adjustRoiTop:(int)dtop bottom:(int)dbottom left:(int)dleft right:(int)dright;
+- (Mat*)adjustRoiTop:(int)dtop bottom:(int)dbottom left:(int)dleft right:(int)dright NS_SWIFT_NAME(adjustRoi(top:bottom:left:right:));
 - (void)assignTo:(Mat*)mat type:(int)type;
 - (void)assignTo:(Mat*)mat;
+- (BOOL)isSameMat:(Mat*)mat;
 - (int)channels;
-- (int)checkVector:(int)elemChannels depth:(int)depth requireContinuous:(BOOL) requireContinuous;
-- (int)checkVector:(int)elemChannels depth:(int)depth;
-- (int)checkVector:(int)elemChannels;
+- (int)checkVector:(int)elemChannels depth:(int)depth requireContinuous:(BOOL) requireContinuous NS_SWIFT_NAME(checkVector(elemChannels:depth:requireContinuous:));
+- (int)checkVector:(int)elemChannels depth:(int)depth NS_SWIFT_NAME(checkVector(elemChannels:depth:));
+- (int)checkVector:(int)elemChannels NS_SWIFT_NAME(checkVector(elemChannels:));
 - (Mat*)clone;
 - (Mat*)col:(int)x;
-- (Mat*)colRange:(int)start end:(int)end;
+- (Mat*)colRange:(int)start end:(int)end NS_SWIFT_NAME(colRange(start:end:));
 - (Mat*)colRange:(Range*)range;
 - (int)dims;
 - (int)cols;
@@ -81,18 +84,18 @@ NS_ASSUME_NONNULL_BEGIN
 - (Mat*)inv;
 - (BOOL)isContinuous;
 - (BOOL)isSubmatrix;
-- (void)locateROI:(CVSize*)wholeSize ofs:(CVPoint*)ofs;
+- (void)locateROI:(CVSize*)wholeSize ofs:(CVPoint*)offset NS_SWIFT_NAME(locateROI(wholeSize:offset:));
 - (Mat*)mul:(Mat*)mat scale:(double)scale;
 - (Mat*)mul:(Mat*)mat;
 + (Mat*)ones:(int)rows cols:(int)cols type:(int)type NS_SWIFT_NAME(ones(rows:cols:type:));
 + (Mat*)ones:(CVSize*)size type:(int)type NS_SWIFT_NAME(ones(size:type:));
 + (Mat*)onesEx:(NSArray<NSNumber*>*)sizes type:(int)type NS_SWIFT_NAME(ones(sizes:type:));
 - (void)push_back:(Mat*)mat;
-- (Mat*)reshape:(int)channels rows:(int)rows;
-- (Mat*)reshape:(int)channels;
-- (Mat*)reshape:(int)channels newshape:(NSArray<NSNumber*>*)newshape;
+- (Mat*)reshape:(int)channels rows:(int)rows NS_SWIFT_NAME(reshape(channels:rows:));
+- (Mat*)reshape:(int)channels NS_SWIFT_NAME(reshape(channels:));
+- (Mat*)reshape:(int)channels newshape:(NSArray<NSNumber*>*)newshape NS_SWIFT_NAME(reshape(channels:newshape:));
 - (Mat*)row:(int)y;
-- (Mat*)rowRange:(int)start end:(int)end;
+- (Mat*)rowRange:(int)start end:(int)end NS_SWIFT_NAME(rowRange(start:end:));
 - (Mat*)rowRange:(Range*)range;
 - (int)rows;
 - (Mat*)setToScalar:(Scalar*)scalar NS_SWIFT_NAME(setTo(scalar:));
@@ -112,13 +115,19 @@ NS_ASSUME_NONNULL_BEGIN
 - (int)type;
 + (Mat*)zeros:(int)rows cols:(int)cols type:(int)type;
 + (Mat*)zeros:(CVSize*)size type:(int)type;
-+ (Mat*)zerosEx:(NSArray<NSNumber*>*)sizes type:(int)type;
++ (Mat*)zerosEx:(NSArray<NSNumber*>*)sizes type:(int)type NS_SWIFT_NAME(zeros(sizes:type:));
 - (NSString*)description;
 - (NSString*)dump;
-- (int)put:(int)row col:(int)col data:(NSArray<NSNumber*>*)data;
-- (int)put:(NSArray<NSNumber*>*)sizes data:(NSArray<NSNumber*>*)data;
-- (int)get:(int)row col:(int)col data:(NSMutableArray<NSNumber*>*)data;
-- (int)get:(NSArray<NSNumber*>*)sizes data:(NSMutableArray<NSNumber*>*)data;
+- (int)put:(int)row col:(int)col data:(NSArray<NSNumber*>*)data NS_SWIFT_NAME(put(row:col:data:));
+- (int)put:(NSArray<NSNumber*>*)indices data:(NSArray<NSNumber*>*)data NS_SWIFT_NAME(put(indices:data:));
+- (int)get:(int)row col:(int)col data:(NSMutableArray<NSNumber*>*)data NS_SWIFT_NAME(get(row:col:data:));
+- (int)get:(NSArray<NSNumber*>*)indices data:(NSMutableArray<NSNumber*>*)data NS_SWIFT_NAME(get(indices:data:));
+
+- (NSArray<NSNumber*>*)get:(int)row col:(int)col NS_SWIFT_NAME(get(row:col:));
+- (NSArray<NSNumber*>*)get:(NSArray<NSNumber*>*)indices NS_SWIFT_NAME(get(indices:));
+
+- (int)height;
+- (int)width;
 
 @end
 

@@ -18,8 +18,8 @@
 - (instancetype)initWithWidth:(double)width height:(double)height {
     self = [super init];
     if (self) {
-        self.width = 0;
-        self.height = 0;
+        self.width = width;
+        self.height = height;
     }
     return self;
 }
@@ -36,11 +36,10 @@
     return [[CVSize alloc] initWithWidth:self.width height:self.height];
 }
 
-- (BOOL)isEqual:(id)other
-{
+- (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[CVSize class]]) {
+    } else if (![other isKindOfClass:[CVSize class]]) {
         return NO;
     } else {
         CVSize* it = (CVSize*)other;

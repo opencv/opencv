@@ -1,14 +1,12 @@
 //
-//  CVType.m
-//  StitchApp
+//  CvType.m
 //
 //  Created by Giles Payne on 2019/10/13.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#import "CVType.h"
+#import "CvType.h"
 
-@implementation CVType
+@implementation CvType
 
 + (int)makeType:(int)depth channels:(int)channels {
     if (channels <= 0 || channels >= CV_CN_MAX) {
@@ -37,11 +35,11 @@
 }
 
 + (BOOL)isInteger:(int)type {
-    return [CVType depth:type] < CV_32F;
+    return [CvType depth:type] < CV_32F;
 }
 
 + (int)typeSizeBits:(int)type {
-    int depth = [CVType depth:type];
+    int depth = [CvType depth:type];
     switch (depth) {
         case CV_8U:
         case CV_8S:
@@ -65,11 +63,11 @@
 }
 
 + (int)rawTypeSize:(int)type {
-    return [CVType typeSizeBits:type] << 3;
+    return [CvType typeSizeBits:type] << 3;
 }
 
 + (char)typeMnenomic:(int)type {
-    int depth = [CVType depth:type];
+    int depth = [CvType depth:type];
     switch (depth) {
         case CV_8U:
         case CV_16U:
@@ -92,14 +90,14 @@
 }
 
 + (int)ELEM_SIZE:(int)type {
-    int typeSizeBytes = [CVType rawTypeSize:type];
-    return typeSizeBytes * [CVType channels:type];
+    int typeSizeBytes = [CvType rawTypeSize:type];
+    return typeSizeBytes * [CvType channels:type];
 }
 
 + (NSString*)typeToString:(int)type {
-    int typeSizeBits = [CVType typeSizeBits:type];
-    char typeMnenomic = [CVType typeMnenomic:type];
-    int channels = [CVType channels:type];
+    int typeSizeBits = [CvType typeSizeBits:type];
+    char typeMnenomic = [CvType typeMnenomic:type];
+    int channels = [CvType channels:type];
     NSString* channelsSuffix = [NSString stringWithFormat:(channels <= 4)?@"%d":@"(%d)", channels];
     return [NSString stringWithFormat:@"CV_%d%cC%@", typeSizeBits, typeMnenomic, channelsSuffix];
 }

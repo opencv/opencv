@@ -13,12 +13,12 @@
 }
 
 #ifdef __cplusplus
-- (cv::Scalar*)nativeScalar {
+- (cv::Scalar&)nativeRef {
     native.val[0] = self.val[0].doubleValue;
     native.val[1] = self.val[1].doubleValue;
     native.val[2] = self.val[2].doubleValue;
     native.val[3] = self.val[3].doubleValue;
-    return &native;
+    return native;
 }
 #endif
 
@@ -26,6 +26,9 @@
     self = [super init];
     if (self != nil) {
         self.val = [NSMutableArray arrayWithArray:vals];
+        while (self.val.count < 4) {
+            [self.val addObject:@0];
+        }
     }
     return self;
 }
@@ -39,27 +42,15 @@
 }
 
 - (instancetype)initWithV0:(double)v0 v1:(double)v1 v2:(double)v2 {
-    self = [super init];
-    if (self != nil) {
-        self.val =  [NSMutableArray arrayWithObjects:[NSNumber numberWithDouble:v0], [NSNumber numberWithDouble:v1], [NSNumber numberWithDouble:v2], @0, nil];
-    }
-    return self;
+    return [self initWithV0:v0 v1:v1 v2:v2 v3:0];
 }
 
 - (instancetype)initWithV0:(double)v0 v1:(double)v1 {
-    self = [super init];
-    if (self != nil) {
-        self.val = [NSMutableArray arrayWithObjects:[NSNumber numberWithDouble:v0], [NSNumber numberWithDouble:v1], @0, @0, nil];
-    }
-    return self;
+    return [self initWithV0:v0 v1:v1 v2:0 v3:0];
 }
 
 - (instancetype)initWithV0:(double)v0 {
-    self = [super init];
-    if (self != nil) {
-        self.val = [NSMutableArray arrayWithObjects:[NSNumber numberWithDouble:v0], @0, @0, @0, nil];
-    }
-    return self;
+    return [self initWithV0:v0 v1:0 v2:0 v3:0];
 }
 
 #ifdef __cplusplus
@@ -107,7 +98,7 @@
 {
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[Scalar class]]) {
+    } else if (![other isKindOfClass:[Scalar class]]) {
         return NO;
     } else {
         Scalar* it = (Scalar*) other;

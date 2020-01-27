@@ -81,7 +81,7 @@
 - (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[RotatedRect class]]) {
+    } else if (![other isKindOfClass:[RotatedRect class]]) {
         return NO;
     } else {
         RotatedRect* rect = (RotatedRect*)other;

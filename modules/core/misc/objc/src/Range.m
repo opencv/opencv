@@ -69,7 +69,7 @@
 - (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[Range class]]) {
+    } else if (![other isKindOfClass:[Range class]]) {
         return NO;
     } else {
         Range* it = (Range*)other;

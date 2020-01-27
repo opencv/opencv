@@ -81,7 +81,7 @@
 - (BOOL)isEqual:(id)other{
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[Rect2d class]]) {
+    } else if (![other isKindOfClass:[Rect2d class]]) {
         return NO;
     } else {
         Rect2d* rect = (Rect2d*)other;

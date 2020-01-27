@@ -65,7 +65,7 @@
 - (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[CVPoint class]]) {
+    } else if (![other isKindOfClass:[CVPoint class]]) {
         return NO;
     } else {
         CVPoint* point = (CVPoint*)other;

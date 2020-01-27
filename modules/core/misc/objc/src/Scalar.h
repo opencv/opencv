@@ -24,10 +24,10 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
-- (instancetype)initWithV0:(double)v0 v1:(double)v1 v2:(double)v2 v3:(double)v3;
-- (instancetype)initWithV0:(double)v0 v1:(double)v1 v2:(double)v2;
-- (instancetype)initWithV0:(double)v0 v1:(double)v1;
-- (instancetype)initWithV0:(double)v0;
+- (instancetype)initWithV0:(double)v0 v1:(double)v1 v2:(double)v2 v3:(double)v3 NS_SWIFT_NAME(init(_:_:_:_:));
+- (instancetype)initWithV0:(double)v0 v1:(double)v1 v2:(double)v2 NS_SWIFT_NAME(init(_:_:_:));
+- (instancetype)initWithV0:(double)v0 v1:(double)v1 NS_SWIFT_NAME(init(_:_:));
+- (instancetype)initWithV0:(double)v0 NS_SWIFT_NAME(init(_:));
 #ifdef __cplusplus
 + (instancetype)fromNative:(cv::Scalar&)nativeScalar;
 #endif

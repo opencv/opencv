@@ -64,7 +64,7 @@
 - (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![super isEqual:other] || ![other isKindOfClass:[Point3 class]]) {
+    } else if (![other isKindOfClass:[Point3 class]]) {
         return NO;
     } else {
         Point3* point = (Point3*)other;
