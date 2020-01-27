@@ -1,42 +1,42 @@
 #!/usr/bin/env python
 '''
-    You can download the converted pb model from https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0
-    or convert the model yourself.
+You can download the converted pb model from https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0
+or convert the model yourself.
 
-    Follow these steps if you want to convert the original model yourself:
-        To get original .meta pre-trained model download https://drive.google.com/file/d/1BFVXgeln-bek8TCbRjN6utPAgRE0LJZg/view
-        For correct convert .meta to .pb model download original repository https://github.com/Engineering-Course/LIP_JPPNet
-        Change script evaluate_parsing_JPPNet-s2.py for human parsing
-        1. Remove preprocessing to create image_batch_origin:
-            with tf.name_scope("create_inputs"):
-            ...
-        Add
-            image_batch_origin = tf.placeholder(tf.float32, shape=(2, None, None, 3), name='input')
+Follow these steps if you want to convert the original model yourself:
+    To get original .meta pre-trained model download https://drive.google.com/file/d/1BFVXgeln-bek8TCbRjN6utPAgRE0LJZg/view
+    For correct convert .meta to .pb model download original repository https://github.com/Engineering-Course/LIP_JPPNet
+    Change script evaluate_parsing_JPPNet-s2.py for human parsing
+    1. Remove preprocessing to create image_batch_origin:
+        with tf.name_scope("create_inputs"):
+        ...
+    Add
+        image_batch_origin = tf.placeholder(tf.float32, shape=(2, None, None, 3), name='input')
 
-        2. Create input
-            image = cv2.imread(path/to/image)
-            image_rev = np.flip(image, axis=1)
-            input = np.stack([image, image_rev], axis=0)
+    2. Create input
+        image = cv2.imread(path/to/image)
+        image_rev = np.flip(image, axis=1)
+        input = np.stack([image, image_rev], axis=0)
 
-        3. Hardcode image_h and image_w shapes to determine output shapes.
-           We use default INPUT_SIZE = (384, 384) from evaluate_parsing_JPPNet-s2.py.
-            parsing_out1 = tf.reduce_mean(tf.stack([tf.image.resize_images(parsing_out1_100, INPUT_SIZE),
-                                                    tf.image.resize_images(parsing_out1_075, INPUT_SIZE),
-                                                    tf.image.resize_images(parsing_out1_125, INPUT_SIZE)]), axis=0)
-           Do similarly with parsing_out2, parsing_out3
-        4. Remove postprocessing. Last net operation:
-            raw_output = tf.reduce_mean(tf.stack([parsing_out1, parsing_out2, parsing_out3]), axis=0)
-           Change:
-            parsing_ = sess.run(raw_output, feed_dict={'input:0': input})
+    3. Hardcode image_h and image_w shapes to determine output shapes.
+       We use default INPUT_SIZE = (384, 384) from evaluate_parsing_JPPNet-s2.py.
+        parsing_out1 = tf.reduce_mean(tf.stack([tf.image.resize_images(parsing_out1_100, INPUT_SIZE),
+                                                tf.image.resize_images(parsing_out1_075, INPUT_SIZE),
+                                                tf.image.resize_images(parsing_out1_125, INPUT_SIZE)]), axis=0)
+       Do similarly with parsing_out2, parsing_out3
+    4. Remove postprocessing. Last net operation:
+        raw_output = tf.reduce_mean(tf.stack([parsing_out1, parsing_out2, parsing_out3]), axis=0)
+       Change:
+        parsing_ = sess.run(raw_output, feed_dict={'input:0': input})
 
-        5. To save model after sess.run(...) add:
-            input_graph_def = tf.get_default_graph().as_graph_def()
-            output_node = "Mean_3"
-            output_graph_def = tf.graph_util.convert_variables_to_constants(sess, input_graph_def, output_node)
+    5. To save model after sess.run(...) add:
+        input_graph_def = tf.get_default_graph().as_graph_def()
+        output_node = "Mean_3"
+        output_graph_def = tf.graph_util.convert_variables_to_constants(sess, input_graph_def, output_node)
 
-            output_graph = "LIP_JPPNet.pb"
-            with tf.gfile.GFile(output_graph, "wb") as f:
-                f.write(output_graph_def.SerializeToString())'
+        output_graph = "LIP_JPPNet.pb"
+        with tf.gfile.GFile(output_graph, "wb") as f:
+            f.write(output_graph_def.SerializeToString())'
 '''
 
 import argparse
