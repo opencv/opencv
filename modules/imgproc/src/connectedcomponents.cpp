@@ -615,7 +615,7 @@ namespace cv{
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            std::vector<int> chunksSizeAndLabels(h);
+            std::vector<int> chunksSizeAndLabels(roundUp(h, 2));
 
             //Tree of labels
             std::vector<LabelT> P_(Plength, 0);
@@ -2559,7 +2559,7 @@ namespace cv{
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            const int chunksSizeAndLabelsSize = h + 1;
+            const int chunksSizeAndLabelsSize = roundUp(h, 2);
             std::vector<int> chunksSizeAndLabels(chunksSizeAndLabelsSize);
 
             //Tree of labels
