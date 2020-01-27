@@ -272,8 +272,10 @@ namespace cv{
     struct LabelingWuParallel{
 
         template <typename LT>
-        static LT stripeFirstLabel8Connectivity(int y, int w) {
-            return LT((y+2)/2) * LT((w+1)/2) + 1;
+        static LT stripeFirstLabel8Connectivity(int y, int w)
+        {
+            CV_DbgAssert((y & 1) == 0);
+            return LT(y/2) * LT((w+1)/2) + 1;
         }
 
         class FirstScan8Connectivity : public cv::ParallelLoopBody{
@@ -288,9 +290,11 @@ namespace cv{
 
             FirstScan8Connectivity&  operator=(const FirstScan8Connectivity& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
+
                 chunksSizeAndLabels_[r] = range.end;
 
                 LabelT label = stripeFirstLabel8Connectivity<LabelT>(r, imgLabels_.cols);
@@ -390,9 +394,11 @@ namespace cv{
 
             FirstScan4Connectivity&  operator=(const FirstScan4Connectivity& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
+
                 chunksSizeAndLabels_[r] = range.end;
 
                 LabelT label = LabelT((r * imgLabels_.cols + 1) / 2 + 1);
@@ -467,8 +473,9 @@ namespace cv{
 
             SecondScan&  operator=(const SecondScan& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, imgLabels_.rows));
                 int r = range.start;
                 const int rowBegin = r;
                 const int rowEnd = range.end;
@@ -608,14 +615,14 @@ namespace cv{
             //First label is for background
             //P[0] = 0;
 
-            cv::Range range(0, h);
+            cv::Range range2(0, divUp(h, 2));
             const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads()*4));
 
             LabelT nLabels = 1;
 
             if (connectivity == 8){
                 //First scan
-                cv::parallel_for_(range, FirstScan8Connectivity(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
+                cv::parallel_for_(range2, FirstScan8Connectivity(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
 
                 //merge labels of different chunks
                 mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels.data());
@@ -626,7 +633,7 @@ namespace cv{
             }
             else{
                 //First scan
-                cv::parallel_for_(range, FirstScan4Connectivity(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
+                cv::parallel_for_(range2, FirstScan4Connectivity(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
 
                 //merge labels of different chunks
                 mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels.data());
@@ -641,7 +648,7 @@ namespace cv{
 
             sop.init(nLabels);
             //Second scan
-            cv::parallel_for_(range, SecondScan(imgLabels, P, sop, sopArray.data(), nLabels), nParallelStripes);
+            cv::parallel_for_(range2, SecondScan(imgLabels, P, sop, sopArray.data(), nLabels), nParallelStripes);
             StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
             sop.finish();
 
@@ -839,12 +846,12 @@ namespace cv{
 
             FirstScan&  operator=(const FirstScan&) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
-                r += (r % 2);
 
-                chunksSizeAndLabels_[r] = range.end + (range.end % 2);
+                chunksSizeAndLabels_[r] = range.end;
 
                 LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
 
@@ -1905,14 +1912,13 @@ namespace cv{
             SecondScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT *P, StatsOp& sop, StatsOp *sopArray, LabelT& nLabels)
                 : img_(img), imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels){}
 
-            SecondScan&  operator=(const SecondScan& ) { return *this; }
-
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
-                r += (r % 2);
+
                 const int rowBegin = r;
-                const int rowEnd = range.end + range.end % 2;
+                const int rowEnd = range.end;
 
                 if (rowBegin > 0){
                     sopArray_[rowBegin].initElement(nLabels_);
@@ -2553,12 +2559,11 @@ namespace cv{
             //First label is for background
             //P[0] = 0;
 
-            cv::Range range(0, h);
+            cv::Range range2(0, divUp(h, 2));
             const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads()*4));
 
-            //First scan, each thread works with chunk of img.rows/nThreads rows
-            //e.g. 300 rows, 4 threads -> each chunks is composed of 75 rows
-            cv::parallel_for_(range, FirstScan(img, imgLabels, P.data(), chunksSizeAndLabels.data()), nParallelStripes);
+            //First scan
+            cv::parallel_for_(range2, FirstScan(img, imgLabels, P.data(), chunksSizeAndLabels.data()), nParallelStripes);
 
             //merge labels of different chunks
             mergeLabels(img, imgLabels, P.data(), chunksSizeAndLabels.data());
@@ -2574,7 +2579,7 @@ namespace cv{
             sop.init(nLabels);
 
             //Second scan
-            cv::parallel_for_(range, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
+            cv::parallel_for_(range2, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
 
             StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
             sop.finish();
