@@ -115,9 +115,8 @@ def parse_human(image_path, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, targe
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--input', '-i', help='Path to input image.')
-    parser.add_argument('--model', '-m', required=True, help='Path to pb model
-                        (https://drive.google.com/open?id=1XHvo111Gj1ZGoNUJt4Y4OsShrt_eUT34).')
+    parser.add_argument('--input', '-i', required=True, help='Path to input image.')
+    parser.add_argument('--model', '-m', required=True, help='Path to pb model(https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0).')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
