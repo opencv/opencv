@@ -814,6 +814,10 @@ mm = tf.matmul(flatten, weights)
 reshape = tf.reshape(mm, [-1, 1, 1, 4], 'reshaped')  # NHWC
 save(inp, reshape, 'matmul_layout')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 2, 4], 'ReduceMean')
+out = tf.reduce_mean([inp, inp * 2], axis=0)
+save(inp, out, 'global_pool_by_axis')
+################################################################################
 # issue https://github.com/opencv/opencv/issues/15141
 inp_node = 'mobilenetv2_1.00_96_input'
 out_node = 'mobilenetv2_1.00_96/Conv1_relu/Relu6'
