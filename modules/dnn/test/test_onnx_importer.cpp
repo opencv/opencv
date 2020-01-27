@@ -386,6 +386,11 @@ TEST_P(Test_ONNX_layers, ReduceL2)
     testONNXModels("reduceL2");
 }
 
+TEST_P(Test_ONNX_layers, Split)
+{
+    testONNXModels("split");
+}
+
 TEST_P(Test_ONNX_layers, Slice)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
