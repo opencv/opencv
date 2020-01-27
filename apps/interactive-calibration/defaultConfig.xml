@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <opencv_storage>
 <charuco_dict>0</charuco_dict>
-<charuco_square_lenght>200</charuco_square_lenght>
+<charuco_square_length>200</charuco_square_length>
 <charuco_marker_size>100</charuco_marker_size>
 <calibration_step>1</calibration_step>
 <max_frames_num>30</max_frames_num>

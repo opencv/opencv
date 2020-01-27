@@ -181,7 +181,7 @@ int main(int argc, char** argv)
                             cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
                     cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
                                 cv::aruco::CharucoBoard::create(capParams.boardSize.width, capParams.boardSize.height,
-                                                                capParams.charucoSquareLenght, capParams.charucoMarkerSize, dictionary);
+                                                                capParams.charucoSquareLength, capParams.charucoMarkerSize, dictionary);
                     globalData->totalAvgErr =
                             cv::aruco::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds,
                                                            charucoboard, globalData->imageSize,
