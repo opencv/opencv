@@ -265,18 +265,26 @@ namespace cv{
         }
     }
 
+    template <typename LT> static inline
+    LT stripeFirstLabel4Connectivity(int y, int w)
+    {
+        CV_DbgAssert((y & 1) == 0);
+        return (LT(y) * LT(w) /*+ 1*/) / 2 + 1;
+    }
+
+    template <typename LT> static inline
+    LT stripeFirstLabel8Connectivity(int y, int w)
+    {
+        CV_DbgAssert((y & 1) == 0);
+        return LT((y /*+ 1*/) / 2) * LT((w + 1) / 2) + 1;
+    }
+
+
     //Based on "Two Strategies to Speed up Connected Components Algorithms", the SAUF (Scan array union find) variant
         //using decision trees
         //Kesheng Wu, et al
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingWuParallel{
-
-        template <typename LT>
-        static LT stripeFirstLabel8Connectivity(int y, int w)
-        {
-            CV_DbgAssert((y & 1) == 0);
-            return LT(y/2) * LT((w+1)/2) + 1;
-        }
 
         class FirstScan8Connectivity : public cv::ParallelLoopBody{
             const cv::Mat& img_;
@@ -401,7 +409,7 @@ namespace cv{
 
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r * imgLabels_.cols + 1) / 2 + 1);
+                LabelT label = stripeFirstLabel4Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -639,7 +647,7 @@ namespace cv{
                 mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels.data());
 
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                    flattenL(P, int(i * w + 1) / 2 + 1, chunksSizeAndLabels[i + 1], nLabels);
+                    flattenL(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
                 }
             }
 
@@ -853,7 +861,7 @@ namespace cv{
 
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
+                LabelT label = stripeFirstLabel8Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int h = img_.rows, w = img_.cols;
@@ -2570,8 +2578,8 @@ namespace cv{
 
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                CV_Assert(i + 1 < chunksSizeAndLabelsSize);
-                flattenL(P.data(), LabelT((i + 1) / 2) * LabelT((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
+                CV_DbgAssert(i + 1 < chunksSizeAndLabelsSize);
+                flattenL(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics data
