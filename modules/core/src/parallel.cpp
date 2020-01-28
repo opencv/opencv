@@ -65,6 +65,10 @@
     #endif
 #endif
 
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
+    #include <thread>
+#endif
+
 #ifdef _OPENMP
     #define HAVE_OPENMP
 #endif
@@ -739,19 +743,9 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#ifdef __ANDROID__
-static inline int getNumberOfCPUsImpl()
+#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+static inline int getNumberOfCPUsImplFromFileStr(char *pbuf)
 {
-   FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
-   if(!cpuPossible)
-       return 1;
-
-   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
-   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
-   fclose(cpuPossible);
-   if(!pbuf)
-      return 1;
-
    //parse string of form "0-1,3,5-7,10,13-15"
    int cpusAvailable = 0;
 
@@ -779,8 +773,51 @@ static inline int getNumberOfCPUsImpl()
 }
 #endif
 
+#ifdef __ANDROID__
+static inline int getNumberOfCPUsImpl()
+{
+   FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
+   if(!cpuPossible)
+       return 1;
+
+   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
+   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
+   fclose(cpuPossible);
+   if(!pbuf)
+      return 1;
+
+   return getNumberOfCPUsImplFromFileStr(pbuf);
+}
+#endif
+
+#if (defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__) && !defined __ANDROID__
+static inline unsigned getNumberOfCPUsImplLinux()
+{
+   FILE* cpuPossible = fopen("/sys/fs/cgroup/cpuset/cpuset.cpus", "r");
+   if(!cpuPossible)
+       return 0;
+
+   char buf[2000]; /* big enough for 1000 CPUs in worst possible configuration */
+   char *contents = fgets(buf, sizeof(buf), cpuPossible);
+   fclose(cpuPossible);
+
+   int cpusAvailable = strchr(contents, '-') == NULL ? atoi(contents) : getNumberOfCPUsImplFromFileStr(contents); /* In dockers, this file is a single number, can be (, -) seperated as well*/
+   return cpusAvailable;
+}
+#endif
+
 int cv::getNumberOfCPUs(void)
 {
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
+    /* Check for this standard C++11 way, we do not return directly because
+       running in a docker or K8s environment will mean this is the host
+       machines config not the containers or pods and as per docs this value
+       must be "considered only a hint" */
+    static unsigned concurentThreadsSupported = std::thread::hardware_concurrency(); /* If the value is not well defined or not computable, returns 0 */
+#else
+    static unsigned concurentThreadsSupported = 0; /* 0 means we have to find out some other way */
+#endif
+
 #if defined _WIN32
     SYSTEM_INFO sysinfo;
 #if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
@@ -789,12 +826,31 @@ int cv::getNumberOfCPUs(void)
     GetSystemInfo( &sysinfo );
 #endif
 
-    return (int)sysinfo.dwNumberOfProcessors;
+    return concurentThreadsSupported == 0 ? (unsigned)sysinfo.dwNumberOfProcessors : (concurentThreadsSupported < (unsigned)sysinfo.dwNumberOfProcessors ? concurentThreadsSupported : (unsigned)sysinfo.dwNumberOfProcessors);
 #elif defined __ANDROID__
-    static int ncpus = getNumberOfCPUsImpl();
+    static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl();
+    static unsigned ncpus = concurentThreadsSupported == 0 ? ncpus_impl : (concurentThreadsSupported < ncpus_impl ? concurentThreadsSupported : ncpus_impl);
     return ncpus;
-#elif defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__
-    return (int)sysconf( _SC_NPROCESSORS_ONLN );
+#elif (defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__) && !defined __ANDROID__
+    static unsigned ncpus_cgroup = getNumberOfCPUsImplLinux();
+
+    unsigned ncpus_cpu_set = concurentThreadsSupported;
+    if(concurentThreadsSupported == 0) { /* somehow hardware_concurrency failed or c++ version < 11 */
+        cpu_set_t cpu_set;
+        sched_getaffinity(0, sizeof(cpu_set), &cpu_set);
+        ncpus_cpu_set = CPU_COUNT(&cpu_set);
+    }
+
+    /* Cases:
+     * 1. Both are zero return 1
+     * 2. Logical xor of ncpus_cgroup and ncpus_cpu_set is True:
+     *  2.1. ncpus_cgroup is 0, return ncpus_cpu_set
+     *  2.2. ncpus_cpu_set is 0, return ncpus_cgroup
+     * 3. Return min of zoth
+     */
+    static unsigned ncpus = ncpus_cgroup == 0 && ncpus_cpu_set == 0 ? 1 : (!ncpus_cgroup != !ncpus_cpu_set ? ncpus_cgroup | ncpus_cpu_set : (ncpus_cgroup < ncpus_cpu_set ? ncpus_cgroup : ncpus_cpu_set));
+
+    return ncpus;
 #elif defined __APPLE__
     int numCPU=0;
     int mib[4];
@@ -816,7 +872,7 @@ int cv::getNumberOfCPUs(void)
             numCPU = 1;
     }
 
-    return (int)numCPU;
+    return  concurentThreadsSupported == 0 ? (unsigned)numCPU : (concurentThreadsSupported < (unsigned)numCPU ? concurentThreadsSupported : (unsigned)numCPU);
 #else
     return 1;
 #endif
