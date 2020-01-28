@@ -426,9 +426,7 @@ GAPI_OCV_KERNEL(GOCVObjectTracker,
                      const std::vector<cv::Rect2d>& rois,
                      TrackerState& state)
     {
-        // How can the user pass a tracker type (It is std::string)
-        auto tracker = cv::TrackerBoosting::create();
-        state = TrackerState{std::move(tracker)};
+        state._tracker->init(in, rois);
     }
 
     static void run(const cv::Mat& in,
@@ -444,16 +442,17 @@ TEST(GAPI_Pipeline, ObjectTrackingDemo2)
 {
     cv::GMat in;
     // Just imagine that we have detections
-    auto rois = /* Get detections */;
-    auto tracked_rois = GObjectTracker::on(in, rois);
+    auto old_rois = /* Get detections */;
+    auto new_rois = GObjectTracker::on(in, old_rois);
 
-    cv::GComputation c(cv::GIn(in), cv::GOut(tracked_rois));
+    cv::GComputation c(cv::GIn(in), cv::GOut(new_rois));
 
     cv::Mat out_mat_gapi(1280, 720, CV_8UC3);
     std::vector<cv::Rect2d> rects;
 
     auto src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>("video.mp4");
 
+    // GOCVObjectTracker::setState(state);
     auto pkg = cv::gapi::kernels<GOCVObjectTracker>();
     auto sc = c.compileStreaming(cv::compile_args(pkg));
 
