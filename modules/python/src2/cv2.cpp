@@ -319,6 +319,7 @@ typedef std::vector<std::vector<Mat> > vector_vector_Mat;
 typedef std::vector<UMat> vector_UMat;
 typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
+typedef std::vector<std::string> vector_string;
 typedef std::vector<Scalar> vector_Scalar;
 
 typedef std::vector<std::vector<char> > vector_vector_char;
