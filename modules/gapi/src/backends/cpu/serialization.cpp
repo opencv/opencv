@@ -53,19 +53,19 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
             switch (op.args[i].opaque_kind)
             {
             case detail::OpaqueKind::INT:
-                std::cout << "    int " << op.args[i].get<int>() << std::endl;
+                std::cout << "putOp    int " << op.args[i].get<int>() << std::endl;
                 sop.opaque_ints.push_back(op.args[i].get<int>());
                 break;
             case detail::OpaqueKind::DOUBLE:
-                std::cout << "    double " << op.args[i].get<double>() << std::endl;
+                std::cout << "putOp    double " << op.args[i].get<double>() << std::endl;
                 sop.opaque_doubles.push_back(op.args[i].get<double>());
                 break;
             case detail::OpaqueKind::CV_SIZE:
-                std::cout << "    cv::Size " << op.args[i].get<cv::Size>().width << "x" << op.args[i].get<cv::Size>().height << std::endl;
+                std::cout << "putOp    cv::Size " << op.args[i].get<cv::Size>().width << "x" << op.args[i].get<cv::Size>().height << std::endl;
                 sop.opaque_cvsizes.push_back(op.args[i].get<cv::Size>());
                 break;
             default:
-                std::cout << "    OpaqueKind::UNSUPPORTED" << std::endl;
+                std::cout << "putOp    OpaqueKind::UNSUPPORTED" << std::endl;
             }
             sop.args[i].opaque_kind = op.args[i].opaque_kind;
             sop.args[i] = op.args[i];
@@ -208,21 +208,21 @@ void mkOpNode(ade::Graph& g, const Op& op)
             {
                 auto opaque_int = op.opaque_ints[i_int]; i_int++;
                 args[i] = GArg(opaque_int);
-                std::cout << "    int " << args[i].get<int>() << std::endl;
+                std::cout << "mkOpNode    int " << args[i].get<int>() << std::endl;
                 break;
             }
             case detail::OpaqueKind::DOUBLE:
             {
                 auto opaque_double = op.opaque_doubles[i_double]; i_double++;
                 args[i] = GArg(opaque_double);
-                std::cout << "    double " << args[i].get<double>() << std::endl;
+                std::cout << "mkOpNode    double " << args[i].get<double>() << std::endl;
                 break;
             }
             case detail::OpaqueKind::CV_SIZE:
             {
                 auto opaque_cvsize = op.opaque_cvsizes[i_size]; i_size++;
                 args[i] = GArg(opaque_cvsize);
-                std::cout << "    cv::Size " << args[i].get<cv::Size>().width << "x" << args[i].get<cv::Size>().height << std::endl;
+                std::cout << "mkOpNode    cv::Size " << args[i].get<cv::Size>().width << "x" << args[i].get<cv::Size>().height << std::endl;
                 break;
             }
             default:
@@ -238,13 +238,14 @@ void mkOpNode(ade::Graph& g, const Op& op)
     gm.metadata(nh).set(gimpl::Op{cv::GKernel{op.k.name, op.k.tag, {},{}}, std::move(args), std::move(outs), {}});
 }
 
-void linkNodes(ade::Graph& g)
+std::vector<ade::NodeHandle> linkNodes(ade::Graph& g)
 {
     GModel::Graph gm(g);
     GModel::ConstGraph cgm(g);
 
     using nodeMap = std::unordered_map<int, ade::NodeHandle>;
     std::unordered_map<cv::GShape, nodeMap> dataNodes;
+    std::vector<ade::NodeHandle> nodes;
 
     for (const auto& nh : g.nodes())
     {
@@ -253,6 +254,7 @@ void linkNodes(ade::Graph& g)
             auto d = cgm.metadata(nh).get<gimpl::Data>();
             dataNodes[d.shape][d.rc] = nh;
         }
+        nodes.push_back(nh);
     }
 
     for (const auto& nh : g.nodes())
@@ -286,6 +288,7 @@ void linkNodes(ade::Graph& g)
             }
         }
     }
+    return nodes;
 }
 //} // anonymous namespace
 

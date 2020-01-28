@@ -63,7 +63,7 @@ GSerialized serialize(const gimpl::GModel::ConstGraph& m_gm, const std::vector<a
 void deserialize(const GSerialized& gs);
 void mkDataNode(ade::Graph& g, const Data& data);
 void mkOpNode(ade::Graph& g, const Op& op);
-void linkNodes(ade::Graph& g);
+std::vector<ade::NodeHandle> linkNodes(ade::Graph& g);
 void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh);
 void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh);
 void printOp(const Op& op);
