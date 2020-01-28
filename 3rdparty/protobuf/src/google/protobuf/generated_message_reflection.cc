@@ -995,7 +995,7 @@ void GeneratedMessageReflection::ListFields(
 
   // Optimization: Avoid calling GetHasBits() and HasOneofField() many times
   // within the field loop.  We allow this violation of ReflectionSchema
-  // encapsulation because this function takes a noticable about of CPU
+  // encapsulation because this function takes a noticeable about of CPU
   // fleetwide and properly allowing this optimization through public interfaces
   // seems more trouble than it is worth.
   const uint32* const has_bits =

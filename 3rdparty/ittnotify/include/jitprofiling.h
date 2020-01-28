@@ -316,7 +316,7 @@ typedef enum _iJIT_IsProfilingActiveFlags
  */
 typedef struct _LineNumberInfo
 {
-    unsigned int Offset;     /**<\brief Offset from the begining of the code region. */
+    unsigned int Offset;     /**<\brief Offset from the beginning of the code region. */
     unsigned int LineNumber; /**<\brief Matching source line number offset (from beginning of source file). */
 
 } *pLineNumberInfo, LineNumberInfo;

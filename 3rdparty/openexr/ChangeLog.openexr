@@ -246,7 +246,7 @@ Version 1.3.0:
 	  (Drew Hess, Nick Porcino)
 	* Support for building universal binaries on OS X 10.4.
 	  (Drew Hess, Paul Schneider)
-	* Minor configure.ac fix to accomodate OS X's automake.
+	* Minor configure.ac fix to accommodate OS X's automake.
 	  (Drew Hess)
 	* Removed CPU-specific optimizations from configure.ac,
 	  autoconf's guess at the CPU type isn't very useful,
@@ -278,7 +278,7 @@ Version 1.3.0:
 	  by any OpenEXR source files that need these macros.  This
 	  method of specifying HAVE_* macros guarantees that projects
 	  will get the proper settings without needing to add compile-
-	  time flags to accomodate OpenEXR.  Note that this isn't
+	  time flags to accommodate OpenEXR.  Note that this isn't
 	  implemented properly for Windows yet.
 	  (Drew Hess)
 	* Platform cleanups:
