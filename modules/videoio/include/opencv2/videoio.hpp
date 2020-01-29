@@ -485,6 +485,16 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Chan
 
 //! @} XIMEA
 
+/** @name XIMEA Camera API
+*  @{
+*/
+
+//! Properties of cameras available through ARAVIS backend
+enum { CAP_PROP_ARAVIS_AUTOTRIGGER                              = 600 //!< Automatically trigger frame capture if camera is configured with software trigger
+};
+
+//! @} ARAVIS
+
 /** @name AVFoundation framework for iOS
     OS X Lion will have the same API
     @{
