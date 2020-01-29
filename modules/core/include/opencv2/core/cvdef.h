@@ -181,7 +181,12 @@ namespace cv {
 #undef abs
 #undef Complex
 
+#if defined __cplusplus
+#include <limits>
+#else
 #include <limits.h>
+#endif
+
 #include "opencv2/core/hal/interface.h"
 
 #if defined __ICL
