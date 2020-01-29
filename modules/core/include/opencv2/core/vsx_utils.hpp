@@ -233,6 +233,10 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
 #if __GNUG__ < 5
 // vec_xxpermdi in gcc4 missing little-endian supports just like clang
 #   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ (((c) & 1) << 1 | (c) >> 1)))
+// same as vec_xxpermdi
+#   undef vec_vbpermq
+    VSX_IMPL_2VRG(vec_udword2, vec_uchar16, vbpermq, vec_vbpermq)
+    VSX_IMPL_2VRG(vec_dword2,  vec_char16, vbpermq, vec_vbpermq)
 #else
 #   define vec_permi vec_xxpermdi
 #endif // __GNUG__ < 5
