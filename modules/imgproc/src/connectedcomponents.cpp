@@ -265,6 +265,21 @@ namespace cv{
         }
     }
 
+    template <typename LT> static inline
+    LT stripeFirstLabel4Connectivity(int y, int w)
+    {
+        CV_DbgAssert((y & 1) == 0);
+        return (LT(y) * LT(w) /*+ 1*/) / 2 + 1;
+    }
+
+    template <typename LT> static inline
+    LT stripeFirstLabel8Connectivity(int y, int w)
+    {
+        CV_DbgAssert((y & 1) == 0);
+        return LT((y /*+ 1*/) / 2) * LT((w + 1) / 2) + 1;
+    }
+
+
     //Based on "Two Strategies to Speed up Connected Components Algorithms", the SAUF (Scan array union find) variant
         //using decision trees
         //Kesheng Wu, et al
@@ -283,12 +298,14 @@ namespace cv{
 
             FirstScan8Connectivity&  operator=(const FirstScan8Connectivity& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
+
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
+                LabelT label = stripeFirstLabel8Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -385,12 +402,14 @@ namespace cv{
 
             FirstScan4Connectivity&  operator=(const FirstScan4Connectivity& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
+
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r * imgLabels_.cols + 1) / 2 + 1);
+                LabelT label = stripeFirstLabel4Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -462,8 +481,9 @@ namespace cv{
 
             SecondScan&  operator=(const SecondScan& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, imgLabels_.rows));
                 int r = range.start;
                 const int rowBegin = r;
                 const int rowEnd = range.end;
@@ -595,53 +615,51 @@ namespace cv{
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            int *chunksSizeAndLabels = (int *)cv::fastMalloc(h * sizeof(int));
+            std::vector<int> chunksSizeAndLabels(roundUp(h, 2));
 
             //Tree of labels
-            LabelT *P = (LabelT *)cv::fastMalloc(Plength * sizeof(LabelT));
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT *P = P_.data();
             //First label is for background
-            P[0] = 0;
+            //P[0] = 0;
 
-            cv::Range range(0, h);
+            cv::Range range2(0, divUp(h, 2));
             const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads()*4));
 
             LabelT nLabels = 1;
 
             if (connectivity == 8){
                 //First scan
-                cv::parallel_for_(range, FirstScan8Connectivity(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
+                cv::parallel_for_(range2, FirstScan8Connectivity(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
 
                 //merge labels of different chunks
-                mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels);
+                mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels.data());
 
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                    flattenL(P, int((i + 1) / 2) * int((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
+                    flattenL(P, stripeFirstLabel8Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
                 }
             }
             else{
                 //First scan
-                cv::parallel_for_(range, FirstScan4Connectivity(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
+                cv::parallel_for_(range2, FirstScan4Connectivity(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
 
                 //merge labels of different chunks
-                mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels);
+                mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels.data());
 
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                    flattenL(P, int(i * w + 1) / 2 + 1, chunksSizeAndLabels[i + 1], nLabels);
+                    flattenL(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
                 }
             }
 
             //Array for statistics dataof threads
-            StatsOp *sopArray = new StatsOp[h];
+            std::vector<StatsOp> sopArray(h);
 
             sop.init(nLabels);
             //Second scan
-            cv::parallel_for_(range, SecondScan(imgLabels, P, sop, sopArray, nLabels), nParallelStripes);
-            StatsOp::mergeStats(imgLabels, sopArray, sop, nLabels);
+            cv::parallel_for_(range2, SecondScan(imgLabels, P, sop, sopArray.data(), nLabels), nParallelStripes);
+            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
             sop.finish();
 
-            delete[] sopArray;
-            cv::fastFree(chunksSizeAndLabels);
-            cv::fastFree(P);
             return nLabels;
         }
     };//End struct LabelingWuParallel
@@ -671,9 +689,10 @@ namespace cv{
             //Obviously, 4-way connectivity upper bound is also good for 8-way connectivity labeling
             const size_t Plength = (size_t(h) * size_t(w) + 1) / 2 + 1;
             //array P for equivalences resolution
-            LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT) *Plength);
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT *P = P_.data();
             //first label is for background pixels
-            P[0] = 0;
+            //P[0] = 0;
             LabelT lunique = 1;
 
             if (connectivity == 8){
@@ -811,7 +830,6 @@ namespace cv{
             }
 
             sop.finish();
-            fastFree(P);
 
             return nLabels;
         }//End function LabelingWu operator()
@@ -836,14 +854,14 @@ namespace cv{
 
             FirstScan&  operator=(const FirstScan&) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
-                r += (r % 2);
 
-                chunksSizeAndLabels_[r] = range.end + (range.end % 2);
+                chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
+                LabelT label = stripeFirstLabel8Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int h = img_.rows, w = img_.cols;
@@ -1902,14 +1920,13 @@ namespace cv{
             SecondScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT *P, StatsOp& sop, StatsOp *sopArray, LabelT& nLabels)
                 : img_(img), imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels){}
 
-            SecondScan&  operator=(const SecondScan& ) { return *this; }
-
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
-                r += (r % 2);
+
                 const int rowBegin = r;
-                const int rowEnd = range.end + range.end % 2;
+                const int rowEnd = range.end;
 
                 if (rowBegin > 0){
                     sopArray_[rowBegin].initElement(nLabels_);
@@ -2542,36 +2559,35 @@ namespace cv{
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            const int chunksSizeAndLabelsSize = h + 1;
-            cv::AutoBuffer<int, 0> chunksSizeAndLabels(chunksSizeAndLabelsSize);
+            const int chunksSizeAndLabelsSize = roundUp(h, 2);
+            std::vector<int> chunksSizeAndLabels(chunksSizeAndLabelsSize);
 
             //Tree of labels
-            cv::AutoBuffer<LabelT, 0> P(Plength);
+            std::vector<LabelT> P(Plength, 0);
             //First label is for background
-            P[0] = 0;
+            //P[0] = 0;
 
-            cv::Range range(0, h);
+            cv::Range range2(0, divUp(h, 2));
             const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads()*4));
 
-            //First scan, each thread works with chunk of img.rows/nThreads rows
-            //e.g. 300 rows, 4 threads -> each chunks is composed of 75 rows
-            cv::parallel_for_(range, FirstScan(img, imgLabels, P.data(), chunksSizeAndLabels.data()), nParallelStripes);
+            //First scan
+            cv::parallel_for_(range2, FirstScan(img, imgLabels, P.data(), chunksSizeAndLabels.data()), nParallelStripes);
 
             //merge labels of different chunks
             mergeLabels(img, imgLabels, P.data(), chunksSizeAndLabels.data());
 
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                CV_Assert(i + 1 < chunksSizeAndLabelsSize);
-                flattenL(P.data(), LabelT((i + 1) / 2) * LabelT((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
+                CV_DbgAssert(i + 1 < chunksSizeAndLabelsSize);
+                flattenL(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics data
-            cv::AutoBuffer<StatsOp, 0> sopArray(h);
+            std::vector<StatsOp> sopArray(h);
             sop.init(nLabels);
 
             //Second scan
-            cv::parallel_for_(range, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
+            cv::parallel_for_(range2, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
 
             StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
             sop.finish();
@@ -2602,8 +2618,9 @@ namespace cv{
             //............
             const size_t Plength = size_t(((h + 1) / 2) * size_t((w + 1) / 2)) + 1;
 
-            LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT) *Plength);
-            P[0] = 0;
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT *P = P_.data();
+            //P[0] = 0;
             LabelT lunique = 1;
 
             // First scan
@@ -3911,7 +3928,6 @@ namespace cv{
             }
 
             sop.finish();
-            fastFree(P);
 
             return nLabels;
 
