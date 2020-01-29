@@ -2234,14 +2234,6 @@ bool QRCodeDetector::detectMulti(InputArray in, OutputArray points) const
     return true;
 }
 
-bool detectQRCodeMulti(InputArray in, vector< Point > &points, double eps_x, double eps_y)
-{
-    QRCodeDetector qrdetector;
-    qrdetector.setEpsX(eps_x);
-    qrdetector.setEpsY(eps_y);
-    return qrdetector.detectMulti(in, points);
-}
-
 class ParallelDecodeProcess : public ParallelLoopBody
 {
 public:
@@ -2382,18 +2374,6 @@ bool QRCodeDetector::detectAndDecodeMulti(
     updatePointsResult(points_, points);
     decoded_info.clear();
     ok = decodeMulti(inarr, points, decoded_info, straight_qrcode);
-    return ok;
-}
-
-bool decodeQRCodeMulti(
-        InputArray in, InputArray points,
-        vector<std::string> &decoded_info, OutputArrayOfArrays straight_qrcode)
-{
-    QRCodeDetector qrcode;
-    vector<cv::String> info;
-    bool ok = qrcode.decodeMulti(in, points, info, straight_qrcode);
-    for (size_t i = 0; i < info.size(); i++)
-        decoded_info.push_back(info[i]);
     return ok;
 }
 
