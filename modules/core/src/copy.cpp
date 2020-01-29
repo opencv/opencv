@@ -563,12 +563,6 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     return *this;
 }
 
-#if CV_NEON && !defined(__aarch64__)
-#define CV_CHECK_ALIGNMENT 1
-#else
-#define CV_CHECK_ALIGNMENT 0
-#endif
-
 #if CV_SIMD128
 template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
@@ -578,7 +572,7 @@ template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, s
     int width_1 = width & -v_uint8x16::nlanes;
     int i, j;
 
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
     CV_Assert(isAligned<sizeof(T)>(src, dst));
 #endif
 
@@ -630,7 +624,7 @@ template<typename T1, typename T2> CV_ALWAYS_INLINE void flipHoriz_double( const
     int end = (int)(size.width*esz);
     int width = (end + 1)/2;
 
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
     CV_Assert(isAligned<sizeof(T1)>(src, dst));
     CV_Assert(isAligned<sizeof(T2)>(src, dst));
 #endif
@@ -659,7 +653,7 @@ static void
 flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
 #if CV_SIMD
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
     size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
 #endif
     if (esz == 2 * v_uint8x16::nlanes)
@@ -712,7 +706,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
         }
     }
     else if (esz == 8
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
             && isAligned<sizeof(uint64)>(alignmentMark)
 #endif
     )
@@ -720,7 +714,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
         flipHoriz_single<v_uint64x2>(src, sstep, dst, dstep, size, esz);
     }
     else if (esz == 4
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
             && isAligned<sizeof(unsigned)>(alignmentMark)
 #endif
     )
@@ -728,7 +722,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
         flipHoriz_single<v_uint32x4>(src, sstep, dst, dstep, size, esz);
     }
     else if (esz == 2
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
             && isAligned<sizeof(ushort)>(alignmentMark)
 #endif
     )
@@ -740,7 +734,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
         flipHoriz_single<v_uint8x16>(src, sstep, dst, dstep, size, esz);
     }
     else if (esz == 24
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
             && isAligned<sizeof(uint64_t)>(alignmentMark)
 #endif
     )
@@ -766,7 +760,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
             }
         }
     }
-#if !CV_CHECK_ALIGNMENT
+#if !CV_STRONG_ALIGNMENT
     else if (esz == 12)
     {
         flipHoriz_double<uint64_t,uint>(src, sstep, dst, dstep, size, esz);
@@ -815,7 +809,7 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
     {
         int i = 0;
 #if CV_SIMD
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
         if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
 #endif
         {
@@ -827,7 +821,7 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
                 vx_store((int*)(dst1 + i), t0);
             }
         }
-#if CV_CHECK_ALIGNMENT
+#if CV_STRONG_ALIGNMENT
         else
         {
             for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
