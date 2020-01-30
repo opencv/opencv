@@ -31,6 +31,7 @@
 
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/util/any.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/infer.hpp>
@@ -395,6 +396,10 @@ cv::GArg cv::gimpl::ie::GIEExecutable::packArg(const cv::GArg &arg) {
     // Note: .at() is intentional for GArray as object MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
+
+    // Note: .at() is intentional for GOpaque as object MUST be already there
+    //   (and constructed by either bindIn/Out or resetInternal)
+    case GShape::GOPAQUE:  return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
 
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));

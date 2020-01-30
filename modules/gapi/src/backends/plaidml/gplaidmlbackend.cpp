@@ -276,7 +276,8 @@ cv::GArg cv::gimpl::GPlaidMLExecutable::packArg(const GArg &arg)
 {
     GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
               && arg.kind != cv::detail::ArgKind::GSCALAR
-              && arg.kind != cv::detail::ArgKind::GARRAY);
+              && arg.kind != cv::detail::ArgKind::GARRAY
+              && arg.kind != cv::detail::ArgKind::GOPAQUE);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF)
     {

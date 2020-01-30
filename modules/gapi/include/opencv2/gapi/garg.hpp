@@ -20,6 +20,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/gmetaarg.hpp>
 #include <opencv2/gapi/own/scalar.hpp>
@@ -96,7 +97,8 @@ using GRunArg  = util::variant<
     cv::gapi::wip::IStreamSource::Ptr,
     cv::gapi::own::Mat,
     cv::gapi::own::Scalar,
-    cv::detail::VectorRef
+    cv::detail::VectorRef,
+    cv::detail::OpaqueRef
     >;
 using GRunArgs = std::vector<GRunArg>;
 
@@ -128,7 +130,8 @@ using GRunArgP = util::variant<
 #endif // !defined(GAPI_STANDALONE)
     cv::gapi::own::Mat*,
     cv::gapi::own::Scalar*,
-    cv::detail::VectorRef
+    cv::detail::VectorRef,
+    cv::detail::OpaqueRef
     >;
 using GRunArgsP = std::vector<GRunArgP>;
 
