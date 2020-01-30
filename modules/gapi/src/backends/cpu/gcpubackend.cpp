@@ -65,7 +65,7 @@ namespace
 #if 1
             const auto s = cv::gimpl::serialization::serialize(graph, nodes);
             static ade::Graph g_s;
-            static std::vector<ade::NodeHandle> nh;
+            std::vector<ade::NodeHandle> nh;
 
             for (const auto& data : s.m_datas)
             {
@@ -78,12 +78,14 @@ namespace
             }
 
             nh = cv::gimpl::serialization::linkNodes(g_s);
-            //const ade::Graph &g_s_ref = g_s;
-            //m_g(g_s_ref);
-            //m_g(const_cast<const ade::Graph> (&g_s));
-            //m_gm(m_g);
-            //return EPtr{new cv::gimpl::GCPUExecutable(graph, nodes)};
             std::cout << "nh Size " << nh.size() << std::endl;
+
+            //Use CPU kernels package to test
+            cv::gapi::GKernelPackage cpu_kernels = combine(cv::gapi::core::cpu::kernels(), cv::gapi::imgproc::cpu::kernels());
+            //Compiler pass one more time
+            auto pass_ctx = ade::passes::PassContext{g_s};
+            cv::gimpl::passes::resolveKernels(pass_ctx, cpu_kernels);
+
             return EPtr{new cv::gimpl::GCPUExecutable(g_s, nh)};
 #else
             return EPtr{new cv::gimpl::GCPUExecutable(graph, nodes)};

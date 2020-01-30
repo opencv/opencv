@@ -16,10 +16,13 @@
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gproto.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
+#include <opencv2/gapi/cpu/core.hpp>
+#include <opencv2/gapi/cpu/imgproc.hpp>
 
 #include "api/gorigin.hpp"
 #include "backends/common/gbackend.hpp"
 #include "compiler/gislandmodel.hpp"
+#include "compiler/passes/passes.hpp"
 
 namespace cv { namespace gimpl {
 

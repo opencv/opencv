@@ -235,6 +235,8 @@ void mkOpNode(ade::Graph& g, const Op& op)
         }
     }
 
+    //auto cpu_impl = cv::util::any_cast<cv::GCPUKernel>(op.k.Kernel.impl.opaque);
+    //gm.metadata(nh).set(cv::gimpl::Unit{cpu_impl});
     gm.metadata(nh).set(gimpl::Op{cv::GKernel{op.k.name, op.k.tag, {},{}}, std::move(args), std::move(outs), {}});
 }
 
