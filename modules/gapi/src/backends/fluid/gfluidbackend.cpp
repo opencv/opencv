@@ -1250,6 +1250,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
     case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
     case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
     case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
+    case GShape::GOPAQUE: m_res.slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg); break;
     }
 }
 
@@ -1292,7 +1293,8 @@ void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_a
 {
     GAPI_Assert(op_arg.kind != cv::detail::ArgKind::GMAT
            && op_arg.kind != cv::detail::ArgKind::GSCALAR
-           && op_arg.kind != cv::detail::ArgKind::GARRAY);
+           && op_arg.kind != cv::detail::ArgKind::GARRAY
+           && op_arg.kind != cv::detail::ArgKind::GOPAQUE);
 
     if (op_arg.kind == cv::detail::ArgKind::GOBJREF)
     {
@@ -1304,6 +1306,10 @@ void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_a
         else if (ref.shape == GShape::GARRAY)
         {
             in_arg = GArg(m_res.slot<cv::detail::VectorRef>()[ref.id]);
+        }
+        else if (ref.shape == GShape::GOPAQUE)
+        {
+            in_arg = GArg(m_res.slot<cv::detail::OpaqueRef>()[ref.id]);
         }
     }
 }

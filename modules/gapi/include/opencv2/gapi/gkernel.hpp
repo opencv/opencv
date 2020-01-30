@@ -74,6 +74,10 @@ namespace detail
         {
             static inline cv::GArray<U> yield(cv::GCall &call, int i) { return call.yieldArray<U>(i); }
         };
+        template<typename U> struct Yield<cv::GOpaque<U> >
+        {
+            static inline cv::GOpaque<U> yield(cv::GCall &call, int i) { return call.yieldOpaque<U>(i); }
+        };
     } // anonymous namespace
 
     ////////////////////////////////////////////////////////////////////////////
@@ -87,7 +91,8 @@ namespace detail
     template<> struct MetaType<cv::GMat>    { using type = GMatDesc; };
     template<> struct MetaType<cv::GMatP>   { using type = GMatDesc; };
     template<> struct MetaType<cv::GScalar> { using type = GScalarDesc; };
-    template<typename U> struct MetaType<cv::GArray<U> > { using type = GArrayDesc; };
+    template<typename U> struct MetaType<cv::GArray<U> >  { using type = GArrayDesc; };
+    template<typename U> struct MetaType<cv::GOpaque<U> > { using type = GOpaqueDesc; };
     template<typename T> struct MetaType    { using type = T; }; // opaque args passed as-is
 
     // 2. Hacky test based on MetaType to check if we operate on G-* type or not

@@ -65,6 +65,16 @@ template<typename U> struct get_compound_in<cv::GArray<U>>
     }
 };
 
+template<typename U> struct get_compound_in<cv::GOpaque<U>>
+{
+    static cv::GOpaque<U> get(GCompoundContext &ctx, int idx)
+    {
+        auto opaq = cv::GOpaque<U>();
+        ctx.m_args[idx] = GArg(opaq);
+        return opaq;
+    }
+};
+
 template<typename, typename, typename>
 struct GCompoundCallHelper;
 
