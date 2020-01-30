@@ -13,7 +13,7 @@ class PerspectiveCorrectionRun {
     void perspectiveCorrection (String[] args) {
         String img1Path = args[0], img2Path = args[1];
         Mat img1 = Imgcodecs.imread(img1Path);
-        Mat img2 =Imgcodecs.imread(img2Path);
+        Mat img2 = Imgcodecs.imread(img2Path);
 
         //! [find-corners]
         MatOfPoint2f corners1 = new MatOfPoint2f(), corners2 = new MatOfPoint2f();
@@ -51,7 +51,7 @@ class PerspectiveCorrectionRun {
         Core.hconcat(list2, img_draw_matches);
         Point []corners1Arr = corners1.toArray();
 
-        for (int i=0 ; i<corners1Arr.length; i++) {
+        for (int i = 0 ; i < corners1Arr.length; i++) {
             Mat pt1 = new Mat(3, 1, CvType.CV_64FC1), pt2 = new Mat();
             pt1.put(0, 0, corners1Arr[i].x, corners1Arr[i].y, 1 );
 
