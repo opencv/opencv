@@ -756,6 +756,8 @@ TEST_P(Test_TensorFlow_layers, slice)
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
                      CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    double l1 = target == DNN_TARGET_MYRIAD ? 4.9e-3 : default_l1;
+    runTensorFlowNet("crop2d", false, l1);
     runTensorFlowNet("slice_4d");
     runTensorFlowNet("strided_slice");
 }
