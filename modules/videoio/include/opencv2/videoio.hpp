@@ -638,7 +638,7 @@ public:
     implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
     @sa The list of supported API backends cv::VideoCaptureAPIs
     */
-    CV_WRAP VideoCapture(const String& filename, int apiPreference = CAP_ANY);
+    CV_WRAP explicit VideoCapture(const String& filename, int apiPreference = CAP_ANY);
 
     /** @overload
     @brief  Opens a camera for video capturing
@@ -650,7 +650,7 @@ public:
 
     @sa The list of supported API backends cv::VideoCaptureAPIs
     */
-    CV_WRAP VideoCapture(int index, int apiPreference = CAP_ANY);
+    CV_WRAP explicit VideoCapture(int index, int apiPreference = CAP_ANY);
 
     /** @brief Default destructor
 
