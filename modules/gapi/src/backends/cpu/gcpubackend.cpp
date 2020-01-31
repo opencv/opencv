@@ -64,7 +64,8 @@ namespace
         {
 #if 1
             const auto s = cv::gimpl::serialization::serialize(graph, nodes);
-            static ade::Graph g_s;
+            auto gp = std::make_shared<ade::Graph>();
+            auto& g_s = *gp.get();
             std::vector<ade::NodeHandle> nh;
 
             for (const auto& data : s.m_datas)
@@ -86,7 +87,7 @@ namespace
             auto pass_ctx = ade::passes::PassContext{g_s};
             cv::gimpl::passes::resolveKernels(pass_ctx, cpu_kernels);
 
-            return EPtr{new cv::gimpl::GCPUExecutable(g_s, nh)};
+            return EPtr{new cv::gimpl::GCPUExecutable(g_s, nh, gp)};
 #else
             return EPtr{new cv::gimpl::GCPUExecutable(graph, nodes)};
 #endif
@@ -102,11 +103,12 @@ cv::gapi::GBackend cv::gapi::cpu::backend()
 
 // GCPUExecutable implementation //////////////////////////////////////////////
 cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
-                                          const std::vector<ade::NodeHandle> &nodes)
-    : m_g(g), m_gm(m_g), m_g_s(g), m_gm_s(m_g_s)
+                                          const std::vector<ade::NodeHandle> &nodes,
+                                          std::shared_ptr<ade::Graph> gp)
+    : m_g(g), m_gm(m_g), m_g_s(g), m_gm_s(m_g_s), m_gp(gp)
 {
-    //const auto s = serialization::serialize(m_gm, nodes);
-    //serialization::deserialize(s);
+    const auto s = serialization::serialize(m_gm, nodes);
+    serialization::deserialize(s);
     //serialization::printGSerialized(s);
 
     // FIXME: reuse code from GModelBuilder/GModel!

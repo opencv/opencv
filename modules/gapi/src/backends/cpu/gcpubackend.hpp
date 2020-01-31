@@ -39,6 +39,8 @@ class GCPUExecutable final: public GIslandExecutable
     const ade::Graph &m_g_s;
     GModel::ConstGraph m_gm_s;
 
+    std::shared_ptr<ade::Graph> m_gp;
+
     struct OperationInfo
     {
         ade::NodeHandle nh;
@@ -56,7 +58,8 @@ class GCPUExecutable final: public GIslandExecutable
 
 public:
     GCPUExecutable(const ade::Graph                   &graph,
-                   const std::vector<ade::NodeHandle> &nodes);
+                   const std::vector<ade::NodeHandle> &nodes,
+                   std::shared_ptr<ade::Graph> gp);
 
     virtual inline bool canReshape() const override { return false; }
     virtual inline void reshape(ade::Graph&, const GCompileArgs&) override
