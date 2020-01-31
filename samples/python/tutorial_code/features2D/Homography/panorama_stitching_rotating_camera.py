@@ -1,6 +1,11 @@
-import cv2 as cv
-import numpy as np
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
+import numpy as np
+import cv2 as cv
 
 def basicPanoramaStitching(img1Path, img2Path):
     img1 = cv.imread(cv.samples.findFile(img1Path))
@@ -9,7 +14,7 @@ def basicPanoramaStitching(img1Path, img2Path):
     # [camera-pose-from-Blender-at-location-1]
     c1Mo = np.array([[0.9659258723258972, 0.2588190734386444, 0.0, 1.5529145002365112],
                      [ 0.08852133899927139, -0.3303661346435547, -0.9396926164627075, -0.10281121730804443],
-                    [-0.24321036040782928, 0.9076734185218811, -0.342020183801651, 6.130080699920654],
+                     [-0.24321036040782928, 0.9076734185218811, -0.342020183801651, 6.130080699920654],
                      [0, 0, 0, 1]],dtype=np.float64)
     # [camera-pose-from-Blender-at-location-1]
 

@@ -178,7 +178,7 @@ The first step consists to detect the chessboard corners in the source and desir
 @end_toggle
 
 @add_toggle_python
-@snippet  samples/python/tutorial_code/features2D/Homography/perspective_correction.py find-corners
+@snippet samples/python/tutorial_code/features2D/Homography/perspective_correction.py find-corners
 @end_toggle
 
 @add_toggle_java
@@ -187,8 +187,17 @@ The first step consists to detect the chessboard corners in the source and desir
 
 The homography is estimated easily with:
 
+@add_toggle_cpp
 @snippet perspective_correction.cpp estimate-homography
+@end_toggle
+
+@add_toggle_python
 @snippet samples/python/tutorial_code/features2D/Homography/perspective_correction.py estimate-homography
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PerspectiveCorrection.java estimate-homography
+@end_toggle
 
 To warp the source chessboard view into the desired chessboard view, we use @ref cv::warpPerspective
 
@@ -197,7 +206,7 @@ To warp the source chessboard view into the desired chessboard view, we use @ref
 @end_toggle
 
 @add_toggle_python
-@snippet  samples/python/tutorial_code/features2D/Homography/perspective_correction.py warp-chessboard
+@snippet samples/python/tutorial_code/features2D/Homography/perspective_correction.py warp-chessboard
 @end_toggle
 
 @add_toggle_java
@@ -215,7 +224,7 @@ To compute the coordinates of the source corners transformed by the homography:
 @end_toggle
 
 @add_toggle_python
-@snippet  samples/python/tutorial_code/features2D/Homography/perspective_correction.py compute-transformed-corners
+@snippet samples/python/tutorial_code/features2D/Homography/perspective_correction.py compute-transformed-corners
 @end_toggle
 
 @add_toggle_java
