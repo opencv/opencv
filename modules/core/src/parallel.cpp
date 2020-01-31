@@ -793,15 +793,17 @@ static inline int getNumberOfCPUsImpl()
 #if (defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__) && !defined __ANDROID__
 static inline unsigned getNumberOfCPUsImplLinux()
 {
-   FILE* cpuPossible = fopen("/sys/fs/cgroup/cpuset/cpuset.cpus", "r");
-   if(!cpuPossible)
+   FILE* cpuPossible = fopen("/sys/fs/cgroup/cpuset/cpuset.cpus", "r"); /* Try v1 API */
+   if(!cpuPossible) { 
+       /* [TODO] Ideally try v2 here */
        return 0;
+   }
 
    char buf[2000]; /* big enough for 1000 CPUs in worst possible configuration */
    char *contents = fgets(buf, sizeof(buf), cpuPossible);
    fclose(cpuPossible);
 
-   int cpusAvailable = strchr(contents, '-') == NULL ? atoi(contents) : getNumberOfCPUsImplFromFileStr(contents); /* In dockers, this file is a single number, can be (, -) seperated as well*/
+   int cpusAvailable = strpbrk(contents, ",-") == NULL ? atoi(contents) : getNumberOfCPUsImplFromFileStr(contents); /* In dockers, this file is a single number, can be (, -) seperated as well*/
    return cpusAvailable;
 }
 #endif
@@ -848,7 +850,13 @@ int cv::getNumberOfCPUs(void)
      *  2.2. ncpus_cpu_set is 0, return ncpus_cgroup
      * 3. Return min of zoth
      */
-    static unsigned ncpus = ncpus_cgroup == 0 && ncpus_cpu_set == 0 ? 1 : (!ncpus_cgroup != !ncpus_cpu_set ? ncpus_cgroup | ncpus_cpu_set : (ncpus_cgroup < ncpus_cpu_set ? ncpus_cgroup : ncpus_cpu_set));
+    static unsigned ncpus;
+     if(ncpus_cgroup == 0 && ncpus_cpu_set == 0)
+         ncpus = 1;
+     else if(!ncpus_cgroup != !ncpus_cpu_set)      /* One of them is zero */
+         ncpus = ncpus_cgroup | ncpus_cpu_set;     /* Take non zero value */
+     else                                          /* Both non zero, so take min*/
+         ncpus = ncpus_cgroup < ncpus_cpu_set ? ncpus_cgroup : ncpus_cpu_set;
 
     return ncpus;
 #elif defined __APPLE__
