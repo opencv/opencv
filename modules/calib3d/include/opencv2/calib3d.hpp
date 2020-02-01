@@ -118,7 +118,18 @@ v = f_y \times y'' + c_y
 tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
 coefficients. Higher-order coefficients are not considered in OpenCV.
 
-The next figures show two common types of radial distortion: barrel distortion (typically \f$ k_1 < 0 \f$) and pincushion distortion (typically \f$ k_1 > 0 \f$).
+The next figures show two common types of radial distortion: barrel distortion
+(\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically decreasing)
+and pincushion distortion (\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically increasing).
+Radial distortion is always monotonic for real lenses,
+and if the estimator produces a non monotonic result,
+this should be considered a calibration failure.
+More generally, radial distortion must be monotonic and the distortion function, must be bijective.
+A failed estimation result may look deceptively good near the image center
+but will work poorly in e.g. AR/SFM applications.
+The optimization method used in OpenCV camera calibration does not include these constraints as
+the framework does not support the required integer programming and polynomial inequalities.
+See [issue #15992](https://github.com/opencv/opencv/issues/15992) for additional information.
 
 ![](pics/distortion_examples.png)
 ![](pics/distortion_examples2.png)
