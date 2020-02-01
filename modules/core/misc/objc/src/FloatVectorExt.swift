@@ -6,7 +6,7 @@
 
 import Foundation
 
-extension FloatVector {
+public extension FloatVector {
     convenience init(_ array:[Float]) {
         let data = Data(buffer: UnsafeBufferPointer(start: array, count: array.count))
         self.init(data:data);

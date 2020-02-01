@@ -1,5 +1,5 @@
 set(the_description "Image I/O")
-ocv_add_module(imgcodecs opencv_imgproc WRAP java python)
+ocv_add_module(imgcodecs opencv_imgproc WRAP java objc python)
 
 # ----------------------------------------------------------------------------
 #  CMake file for imgcodecs. See root CMakeLists.txt

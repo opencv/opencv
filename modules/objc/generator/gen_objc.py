@@ -414,6 +414,21 @@ def build_objc_args(args):
             objc_args.append((a.name if len(objc_args) > 0 else '') + ':(' + objc_type + ')' + a.name)
     return objc_args
 
+def build_swift_signature(args):
+    swift_signature = ""
+    if type_complete(args):
+        for a in args:
+            if a.ctype not in type_dict:
+                if not a.defval and a.ctype.endswith("*"):
+                    a.defval = 0
+                if a.defval:
+                    a.ctype = ''
+                    continue
+            if not a.ctype:  # hidden
+                continue
+            swift_signature += a.name + ":"
+    return swift_signature
+
 class ObjectiveCWrapperGenerator(object):
     def __init__(self):
         self.cpp_files = []
@@ -773,11 +788,12 @@ class ObjectiveCWrapperGenerator(object):
                 )
 
             method_declarations.write( Template(
-"""$prototype;
+"""$prototype$swift_name;
 
 """
                 ).substitute(
-                    prototype = prototype
+                    prototype = prototype,
+                    swift_name = " NS_SWIFT_NAME(" + fi.objc_name + "(" + build_swift_signature(args) + "))" if not constructor else ""
                 )
             )
 
@@ -820,12 +836,6 @@ class ObjectiveCWrapperGenerator(object):
                 assert target.value != v
                 return const_value(target.value)
             return v
-        if ci.private_consts:
-            logging.info("%s", ci.private_consts)
-            ci.method_declarations.write("""
-    private static final int
-            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in ci.private_consts])
-            )
         if ci.consts:
             enumTypes = set(map(lambda c: c.enumType, ci.consts))
             grouped_consts = {enumType: [c for c in ci.consts if c.enumType == enumType] for enumType in enumTypes}
@@ -840,10 +850,10 @@ typedef NS_ENUM(int, {2}) {{
                     )
                 else:
                     ci.method_declarations.write("""
-{0}\n\n""".format("\n".join(["@property (class, readonly) NSInteger %s;" % c.name for c in consts]))
+{0}\n\n""".format("\n".join(["@property (class, readonly) int %s NS_SWIFT_NAME(%s);" % (c.name, c.name) for c in consts]))
                     )
                     ci.method_implementations.write("""
-{0}\n\n""".format("\n".join(["+ (NSInteger)%s {\n    return %s;\n}\n" % (c.name, c.value) for c in consts]))
+{0}\n\n""".format("\n".join(["+ (int)%s {\n    return %s;\n}\n" % (c.name, c.value) for c in consts]))
                     )
         # methods
         for fi in ci.getAllMethods():

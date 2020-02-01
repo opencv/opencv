@@ -56,11 +56,11 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return self;
 }
 
-+ (instancetype)fromNative:(cv::Mat*)nativePtr {
++ (instancetype)fromNativePtr:(cv::Mat*)nativePtr {
     return [[Mat alloc] initWithNativeMat:nativePtr];
 }
 
-+ (instancetype)fromNativeRef:(cv::Mat&)nativeRef {
++ (instancetype)fromNative:(cv::Mat&)nativeRef {
     return [[Mat alloc] initWithNativeMat:&nativeRef];
 }
 

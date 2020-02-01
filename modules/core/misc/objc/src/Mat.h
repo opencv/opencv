@@ -31,8 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)dealloc;
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat;
-+ (instancetype)fromNative:(cv::Mat*)nativePtr;
-+ (instancetype)fromNativeRef:(cv::Mat&)nativeRef;
++ (instancetype)fromNativePtr:(cv::Mat*)nativePtr;
++ (instancetype)fromNative:(cv::Mat&)nativeRef;
 #endif
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type;
 - (instancetype)initWithRows:(int)rows cols:(int)cols type:(int)type data:(NSData*)data;

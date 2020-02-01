@@ -24,14 +24,14 @@
             "minMaxLoc" : {
                 "declaration" : [
                     "// C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())",
-                    "+ (MinMaxLocResult*)minMacLoc:(Mat*)src mask:(nullable Mat*)mask;",
+                    "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src mask:(nullable Mat*)mask;",
                     "\n",
-                    "+ (MinMaxLocResult*)minMacLoc:(Mat*)src;",
+                    "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src;",
                     "\n"
                 ],
                 "implementation" : [
                     "// C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())",
-                    "+ (MinMaxLocResult*)minMacLoc:(Mat*)src mask:(nullable Mat*)mask {",
+                    "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src mask:(nullable Mat*)mask {",
                     "    double minVal, maxVal;",
                     "    cv::Point minLoc, maxLoc;",
                     "    cv::Mat& rSrc = src.nativeRef;",
@@ -41,11 +41,11 @@
                     "    } else {",
                     "        cv::minMaxLoc(rSrc, &minVal, &maxVal, &minLoc, &maxLoc);",
                     "    }",
-                    "    return [[MinMaxLocResult alloc] initWithMinval:minVal maxVal:maxVal minLoc:[CVPoint fromNative:&minLoc] maxLoc:[CVPoint fromNative:&minLoc]];",
+                    "    return [[MinMaxLocResult alloc] initWithMinval:minVal maxVal:maxVal minLoc:[[CVPoint alloc] initWithX:minLoc.x y:minLoc.y] maxLoc:[[CVPoint alloc] initWithX:maxLoc.x y:maxLoc.y]];",
                     "}",
                     "\n",
-                    "+ (MinMaxLocResult*)minMacLoc:(Mat*)src {",
-                    "    return [self minMacLoc:src mask:nil];",
+                    "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src {",
+                    "    return [self minMaxLoc:src mask:nil];",
                     "}",
                     "\n"
                 ]
@@ -97,16 +97,18 @@
         "Mat": {
             "objc_type": "Mat*",
             "to_cpp": "%(n)s.nativeRef",
-            "from_cpp": "[Mat fromNativeRef:%(n)s]"
+            "from_cpp": "[Mat fromNative:%(n)s]"
         },
         "Moments": {
             "objc_type": "Moments*"
         },
         "Point": {
-            "objc_type": "CVPoint*"
+            "objc_type": "CVPoint*",
+            "to_cpp": "cv::Point(%(n)s.nativeRef)"
         },
         "Point2d": {
-            "objc_type": "CVPoint*"
+            "objc_type": "CVPoint*",
+            "to_cpp": "%(n)s.nativeRef"
         },
         "Point2f": {
             "objc_type": "CVPoint*"
@@ -115,7 +117,7 @@
             "objc_type": "Point3*"
         },
         "Point3f": {
-            "j_type": "Point3*"
+            "objc_type": "Point3*"
         },
         "Point3i": {
             "objc_type": "Point3*"
@@ -183,23 +185,23 @@
         },
         "vector_Point2f": {
             "objc_type": "CVPoint",
-            "v_type": "Point"
+            "v_type": "Point2f"
         },
         "vector_Point3f": {
             "objc_type": "Point3",
-            "v_type": "Point3"
+            "v_type": "Point3f"
         },
         "vector_Point2d": {
             "objc_type": "CVPoint",
-            "v_type": "Point"
+            "v_type": "Point2d"
         },
         "vector_Point3d": {
             "objc_type": "Point3",
-            "v_type": "Point3"
+            "v_type": "Point3d"
         },
         "vector_Point3i": {
             "objc_type": "Point3",
-            "v_type": "Point3"
+            "v_type": "Point3i"
         },
         "vector_Rect": {
             "objc_type": "CVRect",

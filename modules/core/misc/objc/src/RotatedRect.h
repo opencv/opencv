@@ -29,7 +29,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithCenter:(CVPoint*)center size:(CVSize*)size angle:(double)angle;
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
 
-- (void)set:(NSArray<NSNumber*>*)vals;
+- (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
 
 - (NSArray<CVPoint*>*)points;
 - (CVRect*)boundingRect;

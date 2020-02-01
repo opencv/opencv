@@ -250,7 +250,7 @@ class MatTests: OpenCVTestCase {
     func testEyeSizeInt() {
         let size = CVSize(width: 5, height: 5)
         let eye = Mat.eye(size: size, type: CvType.CV_32S)
-        XCTAssertEqual(5, Core.countNonZero(src: eye))
+        XCTAssertEqual(5, Core.countNonZero(eye))
     }
 
     func getTestMat(size:Int32, type:Int32) -> Mat {
@@ -971,9 +971,9 @@ class MatTests: OpenCVTestCase {
         let mask = gray0.clone()
         mask.put(row: 1, col: 1, data: [1, 2, 3])
         gray0.setTo(scalar: Scalar(1), mask: mask)
-        XCTAssertEqual(3, Core.countNonZero(src: gray0))
-        Core.subtract(src1: gray0, src2: mask, dst: gray0)
-        XCTAssertEqual(0, Core.countNonZero(src: gray0))
+        XCTAssertEqual(3, Core.countNonZero(gray0))
+        Core.subtract(gray0, src2: mask, dst: gray0)
+        XCTAssertEqual(0, Core.countNonZero(gray0))
     }
 
     func testSize() {
@@ -1102,13 +1102,13 @@ class MatTests: OpenCVTestCase {
         bufferIn[2] = 1;
         bufferIn[3] = 1;
         var m: Mat? = Mat(rows:64, cols:64, type:CvType.CV_8UC1, buffer:bufferIn)
-        XCTAssertEqual(4, Core.countNonZero(src: m!))
-        Core.add(src1: m!, srcScalar: Scalar(1), dst: m!)
-        XCTAssertEqual(4096, Core.countNonZero(src: m!))
+        XCTAssertEqual(4, Core.countNonZero(m!))
+        Core.add(m!, srcScalar: Scalar(1), dst: m!)
+        XCTAssertEqual(4096, Core.countNonZero(m!))
         m = nil
         let data = Data(buffer: UnsafeBufferPointer(start: bufferIn, count: bufferIn.count))
         m = Mat(rows:64, cols:64, type:CvType.CV_8UC1, data:data)
-        Core.add(src1: m!, srcScalar: Scalar(1), dst: m!)
+        Core.add(m!, srcScalar: Scalar(1), dst: m!)
         m = nil
         let bufferOut = [UInt8](data as Data)
         XCTAssertEqual(2, bufferOut[0])
@@ -1130,13 +1130,13 @@ class MatTests: OpenCVTestCase {
         bufferIn[82] = 3
         bufferIn[83] = 3
         var m:Mat? = Mat(rows:64, cols:64, type:CvType.CV_8UC1, buffer:bufferIn, step:80)
-        XCTAssertEqual(8, Core.countNonZero(src: m!))
-        Core.add(src1: m!, srcScalar: Scalar(5), dst: m!);
-        XCTAssertEqual(4096, Core.countNonZero(src: m!))
+        XCTAssertEqual(8, Core.countNonZero(m!))
+        Core.add(m!, srcScalar: Scalar(5), dst: m!);
+        XCTAssertEqual(4096, Core.countNonZero(m!))
         m = nil
         let data = Data(buffer: UnsafeBufferPointer(start:bufferIn, count:bufferIn.count))
         m = Mat(rows:64, cols:64, type:CvType.CV_8UC1, data:data, step:80)
-        Core.add(src1: m!, srcScalar: Scalar(5), dst: m!)
+        Core.add(m!, srcScalar: Scalar(5), dst: m!)
         m = nil
         let bufferOut = [UInt8](data as Data)
         XCTAssertEqual(6, bufferOut[0])

@@ -17,6 +17,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface TermCriteria : NSObject
 
+@property(class, readonly) int COUNT;
+@property(class, readonly) int EPS;
+@property(class, readonly) int MAX_ITER;
+
 @property int type;
 @property int maxCount;
 @property double epsilon;
@@ -26,11 +30,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)init;
 - (instancetype)initWithType:(int)type maxCount:(int)maxCount epsilon:(double)epsilon;
+- (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
 #ifdef __cplusplus
 + (instancetype)fromNative:(cv::TermCriteria&)nativeTermCriteria;
 #endif
 
-- (void)set:(NSArray<NSNumber*>*)vals;
+- (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
 - (TermCriteria*)clone;
 
 - (BOOL)isEqual:(nullable id)object;

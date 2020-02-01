@@ -25,10 +25,7 @@
 - (instancetype)initWithVals:(NSArray<NSNumber*> *)vals {
     self = [super init];
     if (self != nil) {
-        self.val = [NSMutableArray arrayWithArray:vals];
-        while (self.val.count < 4) {
-            [self.val addObject:@0];
-        }
+        [self set:vals];
     }
     return self;
 }
@@ -60,14 +57,11 @@
 #endif
 
 - (void)set:(NSArray<NSNumber*> *)vals {
-    if (vals != nil) {
-        self.val[0] = [vals count] > 0 ? vals[0] : @0;
-        self.val[1] = [vals count] > 1 ? vals[1] : @0;
-        self.val[2] = [vals count] > 2 ? vals[2] : @0;
-        self.val[3] = [vals count] > 3 ? vals[3] : @0;
-    } else {
-        self.val[0] = self.val[1] = self.val[2] = self.val[3] = @0;
+    NSMutableArray* tmp = [NSMutableArray arrayWithArray:vals];
+    while (tmp.count < 4) {
+        [tmp addObject:@0];
     }
+    self.val = tmp;
 }
 
 + (Scalar*)all:(double)v {
@@ -113,7 +107,7 @@
 
 - (NSString *)description
 {
-    return [NSString stringWithFormat:@"[%f-%f-%f-%f]", self.val[0].doubleValue, self.val[0].doubleValue, self.val[0].doubleValue, self.val[0].doubleValue];
+    return [NSString stringWithFormat:@"Scalar [%lf, %lf, %lf, %lf]", self.val[0].doubleValue, self.val[0].doubleValue, self.val[0].doubleValue, self.val[0].doubleValue];
 }
 
 @end

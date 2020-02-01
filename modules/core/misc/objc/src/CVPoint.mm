@@ -10,7 +10,7 @@
 #import "CVObjcUtil.h"
 
 @implementation CVPoint {
-    cv::Point native;
+    cv::Point2d native;
 }
 
 - (double)x {
@@ -29,11 +29,9 @@
     native.y = val;
 }
 
-#ifdef __cplusplus
-- (cv::Point&)nativeRef {
+- (cv::Point2d&)nativeRef {
     return native;
 }
-#endif
 
 - (instancetype)init {
     return [self initWithX:0 y:0];
@@ -48,11 +46,17 @@
     return self;
 }
 
-#ifdef __cplusplus
-+ (instancetype)fromNative:(cv::Point*)point {
-    return [[CVPoint alloc] initWithX:point->x y:point->y];
+- (instancetype)initWithVals:(NSArray<NSNumber*>*)vals {
+    self = [super init];
+    if (self) {
+        [self set:vals];
+    }
+    return self;
 }
-#endif
+
++ (instancetype)fromNative:(cv::Point2d&)point {
+    return [[CVPoint alloc] initWithX:point.x y:point.y];
+}
 
 - (CVPoint*) clone {
     return [[CVPoint alloc] initWithX:self.x y:self.y];
@@ -60,6 +64,11 @@
 
 - (double)dot:(CVPoint*)point {
     return self.x * point.x + self.y * point.y;
+}
+
+- (void)set:(NSArray<NSNumber*>*)vals {
+    self.x = (vals != nil && vals.count > 0) ? vals[0].doubleValue : 0;
+    self.y = (vals != nil && vals.count > 1) ? vals[1].doubleValue : 0;
 }
 
 - (BOOL)isEqual:(id)other {

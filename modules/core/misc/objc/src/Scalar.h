@@ -18,7 +18,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface Scalar : NSObject
 
-@property NSMutableArray<NSNumber*>* val;
+@property NSArray<NSNumber*>* val;
 #ifdef __cplusplus
 @property(readonly) cv::Scalar& nativeRef;
 #endif
@@ -32,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)fromNative:(cv::Scalar&)nativeScalar;
 #endif
 
-- (void)set:(NSArray<NSNumber*>*)vals;
+- (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
 + (Scalar*)all:(double)v;
 - (Scalar*)clone;
 - (Scalar*)mul:(Scalar*)it scale:(double)scale;

@@ -12,6 +12,17 @@
     cv::TermCriteria native;
 }
 
++ (int)COUNT {
+    return 1;
+}
+
++ (int)EPS {
+    return 2;
+}
+
++ (int)MAX_ITER {
+    return 1;
+}
 
 - (int)type {
     return native.type;
@@ -49,10 +60,18 @@
 
 - (instancetype)initWithType:(int)type maxCount:(int)maxCount epsilon:(double)epsilon {
     self = [super init];
-    if (self != nil) {
+    if (self) {
         self.type = type;
         self.maxCount = maxCount;
         self.epsilon = epsilon;
+    }
+    return self;
+}
+
+- (instancetype)initWithVals:(NSArray<NSNumber*>*)vals {
+    self = [super init];
+    if (self) {
+        [self set:vals];
     }
     return self;
 }

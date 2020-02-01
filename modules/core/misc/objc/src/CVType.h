@@ -19,7 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (int)depth:(int)type;
 + (int)rawTypeSize:(int)type;
 + (BOOL)isInteger:(int)type;
-+ (int)ELEM_SIZE:(int)type;
++ (int)ELEM_SIZE:(int)type NS_SWIFT_NAME(elemSize(_:));
 + (NSString*)typeToString:(int)type;
 
 @end

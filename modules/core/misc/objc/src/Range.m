@@ -31,13 +31,8 @@
 }
 
 - (void)set:(NSArray<NSNumber*>*)vals {
-    if (vals != nil) {
-        self.start = vals[0].intValue;
-        self.end = vals[1].intValue;
-    } else {
-        self.start = 0;
-        self.end = 0;
-    }
+    self.start = (vals != nil && vals.count > 0) ? vals[0].intValue : 0;
+    self.end = (vals != nil && vals.count > 1 ) ? vals[1].intValue : 0;
 }
 
 - (int)size {

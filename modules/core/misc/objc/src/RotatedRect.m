@@ -31,7 +31,7 @@
 }
 
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals {
-    self = [super init];
+    self = [self init];
     if (self) {
         [self set:vals];
     }
@@ -39,19 +39,11 @@
 }
 
 - (void)set:(NSArray<NSNumber*>*)vals {
-    if (vals != nil) {
-        self.center.x = vals.count > 0 ? vals[0].doubleValue : 0.0;
-        self.center.y = vals.count > 1 ? vals[1].doubleValue : 0.0;
-        self.size.width = vals.count > 2 ? vals[2].doubleValue : 0.0;
-        self.size.height = vals.count > 3 ? vals[3].doubleValue : 0.0;
-        self.angle = vals.count > 4 ? vals[4].doubleValue : 0.0;
-    } else {
-        self.center.x = 0.0;
-        self.center.y = 0.0;
-        self.size.width = 0.0;
-        self.size.height = 0.0;
-        self.angle = 0.0;
-    }
+    self.center.x = (vals != nil && vals.count > 0) ? vals[0].doubleValue : 0.0;
+    self.center.y = (vals != nil && vals.count > 1) ? vals[1].doubleValue : 0.0;
+    self.size.width = (vals != nil && vals.count > 2) ? vals[2].doubleValue : 0.0;
+    self.size.height = (vals != nil && vals.count > 3) ? vals[3].doubleValue : 0.0;
+    self.angle = (vals != nil && vals.count > 4) ? vals[4].doubleValue : 0.0;
 }
 
 - (NSArray<CVPoint*>*)points {
@@ -75,7 +67,7 @@
 }
 
 - (RotatedRect*)clone {
-    return [[RotatedRect alloc] initWithCenter:self.center size:self.size angle:self.angle];
+    return [[RotatedRect alloc] initWithCenter:[self.center clone] size:[self.size clone] angle:self.angle];
 }
 
 - (BOOL)isEqual:(id)other {

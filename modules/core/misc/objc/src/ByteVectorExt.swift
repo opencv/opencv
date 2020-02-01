@@ -6,7 +6,7 @@
 
 import Foundation
 
-extension ByteVector {
+public extension ByteVector {
     convenience init(_ array:[Int8]) {
         let data = Data(buffer: UnsafeBufferPointer(start: array, count: array.count))
         self.init(data:data);

@@ -8,7 +8,7 @@
 
 import Foundation
 
-extension IntVector {
+public extension IntVector {
     convenience init(_ array:[Int32]) {
         let data = Data(buffer: UnsafeBufferPointer(start: array, count: array.count))
         self.init(data:data);

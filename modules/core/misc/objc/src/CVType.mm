@@ -63,7 +63,7 @@
 }
 
 + (int)rawTypeSize:(int)type {
-    return [CvType typeSizeBits:type] << 3;
+    return [CvType typeSizeBits:type] >> 3;
 }
 
 + (char)typeMnenomic:(int)type {

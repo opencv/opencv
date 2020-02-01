@@ -23,18 +23,21 @@ NS_ASSUME_NONNULL_BEGIN
 @property double x;
 @property double y;
 #ifdef __cplusplus
-@property(readonly) cv::Point& nativeRef;
+@property(readonly) cv::Point2d& nativeRef;
 #endif
 
 - (instancetype)init;
 - (instancetype)initWithX:(double)x y:(double)y;
+- (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
+
 #ifdef __cplusplus
-+ (instancetype)fromNative:(cv::Point*)point;
++ (instancetype)fromNative:(cv::Point2d&)point;
 #endif
 - (CVPoint*)clone;
 - (double)dot:(CVPoint*)point;
 - (BOOL)inside:(CVRect*)rect;
 
+- (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
 - (BOOL)isEqual:(nullable id)other;
 - (NSUInteger)hash;
 - (NSString *)description;
