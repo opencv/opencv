@@ -57,8 +57,8 @@ const String colorspaceName(int colorspace) {
 }
 
 
-template<typename OutT, typename InT, int N>
-void copy_data_(Mat& out, const InT* (&data)[N]) {
+template<typename OutT, bool doShift, typename InT, int N>
+void copy_data_(Mat& out, const InT* (&data)[N], uint8_t shift) {
     Size size = out.size();
     if (out.isContinuous()) {
         size.width *= size.height;
@@ -75,18 +75,25 @@ void copy_data_(Mat& out, const InT* (&data)[N]) {
         // the outer loop is executed only once
         for( int j = 0; j < size.width; j++) {
             for (int c = 0; c < N; c++) {
-                *dptr++ = *(sptr[c])++;
+                InT in = *(sptr[c])++;
+                if (doShift) {
+                    *dptr++ = in >> shift;
+                } else {
+                    *dptr++ = in;
+                }
             }
         }
     }
 }
 
 template<typename InT, int N>
-void copy_data(Mat& out, const InT* (&data)[N]) {
-    if (out.depth() == CV_8U)
-        copy_data_<uint8_t>(out, data);
+void copy_data(Mat& out, const InT* (&data)[N], uint8_t shift) {
+    if (out.depth() == CV_8U && shift == 0)
+        copy_data_<uint8_t, false>(out, data, 0);
+    else if (out.depth() == CV_8U)
+        copy_data_<uint8_t, true>(out, data, shift);
     else if (out.depth() == CV_16U)
-        copy_data_<uint16_t>(out, data);
+        copy_data_<uint16_t, false>(out, data, 0);
     else
         CV_Error(Error::StsNotImplemented, "only depth CV_8U and CV16_U are supported");
 }
@@ -173,7 +180,6 @@ bool Jpeg2KOpjDecoder::readHeader()
     /* Different components may have different precision,
      * so check all.
      */
-    int maxPrec = 0;
     bool hasAlpha = false;
     int numcomps = image->numcomps;
     CV_Assert(numcomps >= 1);
@@ -187,14 +193,16 @@ bool Jpeg2KOpjDecoder::readHeader()
             CV_Error(Error::StsNotImplemented, msgprefix() + " is duplicate alpha channel");
         hasAlpha |= comp.alpha;
 
-        maxPrec = std::max<int>(maxPrec, comp.prec);
+        m_maxPrec = std::max(m_maxPrec, comp.prec);
     }
 
-    if (maxPrec <= 8) {
+    if (m_maxPrec < 8) {
+        CV_Error(Error::StsNotImplemented, "precision < 8 not supported");
+    } else if (m_maxPrec == 8) {
         m_type = CV_MAKETYPE(CV_8U, numcomps);
-    } else if (maxPrec <= 16) {
+    } else if (m_maxPrec <= 16) {
         m_type = CV_MAKETYPE(CV_16U, numcomps);
-    } else if (maxPrec <= 23) {
+    } else if (m_maxPrec <= 23) {
         m_type = CV_MAKETYPE(CV_32F, numcomps);
     } else {
         m_type = CV_MAKETYPE(CV_64F, numcomps);
@@ -222,29 +230,37 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
         CV_Error(Error::StsNotImplemented, "image has unspecified color space");
 
     // file format
-    int numcomps = image->numcomps;
+    const int numcomps = image->numcomps;
+
     // requested format
-    int channels = CV_MAT_CN(img.type());
+    const int channels = CV_MAT_CN(img.type());
+    const int depth = CV_MAT_DEPTH(img.type());
+    const OPJ_UINT32 outPrec = [depth]() {
+        if (depth == CV_8U) return 8;
+        if (depth == CV_16U) return 16;
+        CV_Error(Error::StsNotImplemented, "output precision > 16 not supported");
+    }();
+    const uint8_t shift = outPrec > m_maxPrec ? 0 : m_maxPrec - outPrec;
 
     if (m_image->color_space == OPJ_CLRSPC_SRGB || m_image->color_space == OPJ_CLRSPC_UNKNOWN) {
         // Assume gray (+ alpha) for 1 channels -> gray
         if (channels == 1 && numcomps <= 2) {
             const OPJ_INT32* incomps[] = {image->comps[0].data};
-            copy_data(img, incomps);
+            copy_data(img, incomps, shift);
             return true;
         }
 
         // Assume RGB (+ alpha) for 3 channels -> BGR
         if (channels == 3 && (numcomps == 3 || numcomps == 4)) {
             const OPJ_INT32* incomps[] = {image->comps[2].data, image->comps[1].data, image->comps[0].data};
-            copy_data(img, incomps);
+            copy_data(img, incomps, shift);
             return true;
         }
 
         // Assume RGBA for 4 channels -> BGRA
         if (channels == 4 && numcomps == 4) {
             const OPJ_INT32* incomps[] = {image->comps[2].data, image->comps[1].data, image->comps[0].data, image->comps[3].data};
-            copy_data(img, incomps);
+            copy_data(img, incomps, shift);
             return true;
         }
 
@@ -255,12 +271,12 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
     } else if (m_image->color_space == OPJ_CLRSPC_GRAY) {
         if (channels == 3) {
             const OPJ_INT32* incomps[] = {image->comps[0].data, image->comps[0].data, image->comps[0].data};
-            copy_data(img, incomps);
+            copy_data(img, incomps, shift);
             return true;
 
         } else if (channels == 1) {
             const OPJ_INT32* incomps[] = {image->comps[0].data};
-            copy_data(img, incomps);
+            copy_data(img, incomps, shift);
             return true;
         }
 
@@ -271,7 +287,7 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
     } else if (m_image->color_space == OPJ_CLRSPC_SYCC) {
         if (channels == 1) {
             const OPJ_INT32* incomps[] = {image->comps[0].data};
-            copy_data(img, incomps);
+            copy_data(img, incomps, shift);
             return true;
         }
 

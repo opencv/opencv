@@ -36,6 +36,7 @@ private:
     opj_image_t* m_image = nullptr;
 
     String m_errorMessage;
+    OPJ_UINT32 m_maxPrec = 0;
 };
 
 }
