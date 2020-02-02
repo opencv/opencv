@@ -743,9 +743,19 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __ANDROID__
-static inline int getNumberOfCPUsImplFromFileStr(char *pbuf)
+#ifdef __ANDROID__
+static inline int getNumberOfCPUsImpl(const char *filename)
 {
+   FILE* cpuPossible = fopen(filename, "r");
+   if(!cpuPossible)
+       return 1;
+
+   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
+   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
+   fclose(cpuPossible);
+   if(!pbuf)
+      return 0;
+
    //parse string of form "0-1,3,5-7,10,13-15"
    int cpusAvailable = 0;
 
@@ -769,41 +779,6 @@ static inline int getNumberOfCPUsImplFromFileStr(char *pbuf)
       }
 
    }
-   return cpusAvailable ? cpusAvailable : 1;
-}
-#endif
-
-#ifdef __ANDROID__
-static inline int getNumberOfCPUsImpl()
-{
-   FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
-   if(!cpuPossible)
-       return 1;
-
-   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
-   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
-   fclose(cpuPossible);
-   if(!pbuf)
-      return 1;
-
-   return getNumberOfCPUsImplFromFileStr(pbuf);
-}
-#endif
-
-#if (defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__) && !defined __ANDROID__
-static inline unsigned getNumberOfCPUsImplLinux()
-{
-   FILE* cpuPossible = fopen("/sys/fs/cgroup/cpuset/cpuset.cpus", "r"); /* Try v1 API */
-   if(!cpuPossible) { 
-       /* [TODO] Ideally try v2 here */
-       return 0;
-   }
-
-   char buf[2000]; /* big enough for 1000 CPUs in worst possible configuration */
-   char *contents = fgets(buf, sizeof(buf), cpuPossible);
-   fclose(cpuPossible);
-
-   int cpusAvailable = strpbrk(contents, ",-") == NULL ? atoi(contents) : getNumberOfCPUsImplFromFileStr(contents); /* In dockers, this file is a single number, can be (, -) seperated as well*/
    return cpusAvailable;
 }
 #endif
@@ -829,34 +804,25 @@ int cv::getNumberOfCPUs(void)
 #endif
 
     return concurentThreadsSupported == 0 ? (unsigned)sysinfo.dwNumberOfProcessors : (concurentThreadsSupported < (unsigned)sysinfo.dwNumberOfProcessors ? concurentThreadsSupported : (unsigned)sysinfo.dwNumberOfProcessors);
-#elif defined __ANDROID__
-    static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl();
-    static unsigned ncpus = concurentThreadsSupported == 0 ? ncpus_impl : (concurentThreadsSupported < ncpus_impl ? concurentThreadsSupported : ncpus_impl);
-    return ncpus;
-#elif (defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__) && !defined __ANDROID__
-    static unsigned ncpus_cgroup = getNumberOfCPUsImplLinux();
+#elif defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+    #if defined __ANDROID__
+        static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
+    #else /* Linux */
+        static unsigned ncpus_impl = getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
 
-    unsigned ncpus_cpu_set = concurentThreadsSupported;
-    if(concurentThreadsSupported == 0) { /* somehow hardware_concurrency failed or c++ version < 11 */
-        cpu_set_t cpu_set;
-        sched_getaffinity(0, sizeof(cpu_set), &cpu_set);
-        ncpus_cpu_set = CPU_COUNT(&cpu_set);
-    }
+        if(concurentThreadsSupported == 0) { /* somehow hardware_concurrency failed or c++ version < 11 */
+            sched_getaffinity(0, sizeof(cpu_set), &cpu_set);
+            concurentThreadsSupported = CPU_COUNT(&cpu_set);
+        }
+    #endif
 
-    /* Cases:
-     * 1. Both are zero return 1
-     * 2. Logical xor of ncpus_cgroup and ncpus_cpu_set is True:
-     *  2.1. ncpus_cgroup is 0, return ncpus_cpu_set
-     *  2.2. ncpus_cpu_set is 0, return ncpus_cgroup
-     * 3. Return min of zoth
-     */
     static unsigned ncpus;
-     if(ncpus_cgroup == 0 && ncpus_cpu_set == 0)
+     if(ncpus_impl == 0 && concurentThreadsSupported == 0)
          ncpus = 1;
-     else if(!ncpus_cgroup != !ncpus_cpu_set)      /* One of them is zero */
-         ncpus = ncpus_cgroup | ncpus_cpu_set;     /* Take non zero value */
-     else                                          /* Both non zero, so take min*/
-         ncpus = ncpus_cgroup < ncpus_cpu_set ? ncpus_cgroup : ncpus_cpu_set;
+     else if(!ncpus_impl != !concurentThreadsSupported)      /* One of them is zero */
+         ncpus = ncpus_impl | concurentThreadsSupported;     /* Take non zero value */
+     else                                                    /* Both non zero, so take min*/
+         ncpus = ncpus_impl < concurentThreadsSupported ? ncpus_impl : concurentThreadsSupported;
 
     return ncpus;
 #elif defined __APPLE__
