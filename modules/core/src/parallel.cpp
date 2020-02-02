@@ -743,7 +743,7 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#ifdef __ANDROID__
+#if defined __ANDROID__ || defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__
 static inline int getNumberOfCPUsImpl(const char *filename)
 {
    FILE* cpuPossible = fopen(filename, "r");
@@ -808,9 +808,10 @@ int cv::getNumberOfCPUs(void)
     #if defined __ANDROID__
         static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
     #else /* Linux */
-        static unsigned ncpus_impl = getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
+        static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
 
         if(concurentThreadsSupported == 0) { /* somehow hardware_concurrency failed or c++ version < 11 */
+            cpu_set_t cpu_set;
             sched_getaffinity(0, sizeof(cpu_set), &cpu_set);
             concurentThreadsSupported = CPU_COUNT(&cpu_set);
         }
