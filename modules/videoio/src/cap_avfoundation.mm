@@ -1052,7 +1052,9 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
             return 0;
         }
     } else {
-        fprintf(stderr, "OpenCV: unsupported pixel format '%s'\n", pixelFormat);
+        char pfBuf[] = { (char)pixelFormat, (char)(pixelFormat >> 8),
+                         (char)(pixelFormat >> 16), (char)(pixelFormat >> 24), '\0' };
+        fprintf(stderr, "OpenCV: unsupported pixel format '%s'\n", pfBuf);
         CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
         CVBufferRelease(mGrabbedPixels);
         mGrabbedPixels = NULL;
