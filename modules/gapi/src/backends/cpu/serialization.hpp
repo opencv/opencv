@@ -39,6 +39,11 @@ struct Op
     std::vector<int> opaque_ints;
     std::vector<double> opaque_doubles;
     std::vector<cv::Size> opaque_cvsizes;
+    std::vector<bool> opaque_bools;
+    std::vector<cv::Scalar> opaque_cvscalars;
+    std::vector<cv::Point> opaque_cvpoints;
+    std::vector<cv::Mat> opaque_cvmats;
+    std::vector<cv::Rect> opaque_cvrects;
 };
 
 struct Data

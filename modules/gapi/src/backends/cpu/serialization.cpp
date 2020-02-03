@@ -36,7 +36,7 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
 {
     const auto& op = cg.metadata(nh).get<gimpl::Op>();
 
-    serialization::Op sop{Kernel{op.k.name, op.k.tag}, {}, {}, {}, {}, {}};
+    serialization::Op sop{Kernel{op.k.name, op.k.tag}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
     sop.args.resize(op.args.size());
     sop.outs.resize(op.outs.size());
 
@@ -64,6 +64,40 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
                 std::cout << "putOp    cv::Size " << op.args[i].get<cv::Size>().width << "x" << op.args[i].get<cv::Size>().height << std::endl;
                 sop.opaque_cvsizes.push_back(op.args[i].get<cv::Size>());
                 break;
+            case detail::OpaqueKind::BOOL:
+                std::cout << "putOp    bool " << op.args[i].get<bool>() << std::endl;
+                sop.opaque_bools.push_back(op.args[i].get<bool>());
+                break;
+            case detail::OpaqueKind::CV_SCALAR:
+                std::cout << "putOp    cv::Scalar " << op.args[i].get<cv::Scalar>()[0] << " "
+                          << op.args[i].get<cv::Scalar>()[1] << " "
+                          << op.args[i].get<cv::Scalar>()[2] << " "
+                          << op.args[i].get<cv::Scalar>()[3] << " "
+                          << std::endl;
+                sop.opaque_cvscalars.push_back(op.args[i].get<cv::Scalar>());
+                break;
+            case detail::OpaqueKind::CV_POINT:
+                std::cout << "putOp    cv::Point " << op.args[i].get<cv::Point>().x << " "
+                          << op.args[i].get<cv::Point>().y << " "
+                          << std::endl;
+                sop.opaque_cvpoints.push_back(op.args[i].get<cv::Point>());
+                break;
+            case detail::OpaqueKind::CV_MAT:
+                std::cout << "putOp    cv::Mat " << op.args[i].get<cv::Mat>().rows << " "
+                          << op.args[i].get<cv::Mat>().cols << " "
+                          << op.args[i].get<cv::Mat>().type() << " "
+                          << std::endl;
+                sop.opaque_cvmats.push_back(op.args[i].get<cv::Mat>());
+                break;
+            case detail::OpaqueKind::CV_RECT:
+                std::cout << "putOp    cv::Rect " << op.args[i].get<cv::Rect>().x << " "
+                          << op.args[i].get<cv::Rect>().y << " "
+                          << op.args[i].get<cv::Rect>().width << " "
+                          << op.args[i].get<cv::Rect>().height << " "
+                          << std::endl;
+                sop.opaque_cvrects.push_back(op.args[i].get<cv::Rect>());
+                break;               break;
+
             default:
                 std::cout << "putOp    OpaqueKind::UNSUPPORTED" << std::endl;
             }
@@ -126,6 +160,34 @@ void printOp(const Op& op)
                 break;
             case detail::OpaqueKind::CV_SIZE:
                 std::cout << "    cv::Size " << arg.get<cv::Size>().width << "x" << arg.get<cv::Size>().height << std::endl;
+                break;
+            case detail::OpaqueKind::BOOL:
+                std::cout << "    bool " << arg.get<bool>() << std::endl;
+                break;
+            case detail::OpaqueKind::CV_SCALAR:
+                std::cout << "    cv::Scalar " << arg.get<cv::Scalar>()[0] << " "
+                          << arg.get<cv::Scalar>()[1] << " "
+                          << arg.get<cv::Scalar>()[2] << " "
+                          << arg.get<cv::Scalar>()[3] << " "
+                          << std::endl;
+                break;
+            case detail::OpaqueKind::CV_POINT:
+                std::cout << "    cv::Point " << arg.get<cv::Point>().x << " "
+                          << arg.get<cv::Point>().y << " "
+                          << std::endl;
+                break;
+            case detail::OpaqueKind::CV_MAT:
+                std::cout << "    cv::Mat " << arg.get<cv::Mat>().rows << " "
+                          << arg.get<cv::Mat>().cols << " "
+                          << arg.get<cv::Mat>().type() << " "
+                          << std::endl;
+                break;
+            case detail::OpaqueKind::CV_RECT:
+                std::cout << "     cv::Rect " << arg.get<cv::Rect>().x << " "
+                          << arg.get<cv::Rect>().y << " "
+                          << arg.get<cv::Rect>().width << " "
+                          << arg.get<cv::Rect>().height << " "
+                          << std::endl;
                 break;
             default:
                 std::cout << "    OpaqueKind::UNSUPPORTED" << std::endl;
@@ -193,6 +255,11 @@ void mkOpNode(ade::Graph& g, const Op& op)
     size_t i_int = 0;
     size_t i_double = 0;
     size_t i_size = 0;
+    size_t i_bool = 0;
+    size_t i_scalar = 0;
+    size_t i_point = 0;
+    size_t i_mat = 0;
+    size_t i_rect = 0;
     for (size_t i = 0; i < args.size(); i++)
     {
         if(op.args[i].kind == detail::ArgKind::GOBJREF)
@@ -223,6 +290,54 @@ void mkOpNode(ade::Graph& g, const Op& op)
                 auto opaque_cvsize = op.opaque_cvsizes[i_size]; i_size++;
                 args[i] = GArg(opaque_cvsize);
                 std::cout << "mkOpNode    cv::Size " << args[i].get<cv::Size>().width << "x" << args[i].get<cv::Size>().height << std::endl;
+                break;
+            }
+            case detail::OpaqueKind::BOOL:
+            {
+                auto opaque_bool = op.opaque_bools[i_bool]; i_bool++;
+                args[i] = GArg(opaque_bool);
+                std::cout << "mkOpNode    bool " << args[i].get<bool>() << std::endl;
+                break;
+            }
+            case detail::OpaqueKind::CV_SCALAR:
+            {
+                auto opaque_cvscalar = op.opaque_cvscalars[i_scalar]; i_scalar++;
+                args[i] = GArg(opaque_cvscalar);
+                std::cout << "mkOpNode    cv::Scalar " << args[i].get<cv::Scalar>()[0] << " "
+                          << args[i].get<cv::Scalar>()[1] << " "
+                          << args[i].get<cv::Scalar>()[2] << " "
+                          << args[i].get<cv::Scalar>()[3] << " "
+                          << std::endl;
+                break;
+            }
+            case detail::OpaqueKind::CV_POINT:
+            {
+                auto opaque_cvpoint = op.opaque_cvpoints[i_point]; i_point++;
+                args[i] = GArg(opaque_cvpoint);
+                std::cout << "mkOpNode    cv::Point " << args[i].get<cv::Point>().x << " "
+                          << args[i].get<cv::Point>().y << " "
+                          << std::endl;
+                break;
+            }
+            case detail::OpaqueKind::CV_MAT:
+            {
+                auto opaque_cvmat = op.opaque_cvmats[i_mat]; i_mat++;
+                args[i] = GArg(opaque_cvmat);
+                std::cout << "mkOpNode    cv::Mat " << args[i].get<cv::Mat>().rows << " "
+                          << args[i].get<cv::Mat>().cols << " "
+                          << args[i].get<cv::Mat>().type() << " "
+                          << std::endl;
+                break;
+            }
+            case detail::OpaqueKind::CV_RECT:
+            {
+                auto opaque_cvrect = op.opaque_cvrects[i_rect]; i_rect++;
+                args[i] = GArg(opaque_cvrect);
+                std::cout << "mkOpNode     cv::Rect " << args[i].get<cv::Rect>().x << " "
+                          << args[i].get<cv::Rect>().y << " "
+                          << args[i].get<cv::Rect>().width << " "
+                          << args[i].get<cv::Rect>().height << " "
+                          << std::endl;
                 break;
             }
             default:

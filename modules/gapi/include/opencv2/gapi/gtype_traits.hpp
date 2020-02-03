@@ -45,6 +45,11 @@ namespace detail
         INT,      // int user G-API opaque data
         DOUBLE,            // double user G-API opaque data
         CV_SIZE,           // cv::Size user G-API opaque data
+        BOOL,           // bool user G-API opaque data
+        CV_SCALAR, // cv::Scalar user G-API opaque data
+        CV_POINT, // cv::Point user G-API opaque data
+        CV_MAT, // cv::Mat user G-API opaque data
+        CV_RECT, // cv::Rect user G-API opaque data
     };
 
     template<typename T> struct GOpaqueTraits;
@@ -52,6 +57,11 @@ namespace detail
     template<> struct GOpaqueTraits<int> { static constexpr const OpaqueKind kind = OpaqueKind::INT; };
     template<> struct GOpaqueTraits<double> { static constexpr const OpaqueKind kind = OpaqueKind::DOUBLE; };
     template<> struct GOpaqueTraits<cv::Size> { static constexpr const OpaqueKind kind = OpaqueKind::CV_SIZE; };
+    template<> struct GOpaqueTraits<bool> { static constexpr const OpaqueKind kind = OpaqueKind::BOOL; };
+    template<> struct GOpaqueTraits<cv::Scalar> { static constexpr const OpaqueKind kind = OpaqueKind::CV_SCALAR; };
+    template<> struct GOpaqueTraits<cv::Point> { static constexpr const OpaqueKind kind = OpaqueKind::CV_POINT; };
+    template<> struct GOpaqueTraits<cv::Mat> { static constexpr const OpaqueKind kind = OpaqueKind::CV_MAT; };
+    template<> struct GOpaqueTraits<cv::Rect> { static constexpr const OpaqueKind kind = OpaqueKind::CV_RECT; };
 
     // Describe G-API types (G-types) with traits.  Mostly used by
     // cv::GArg to store meta information about types passed into
