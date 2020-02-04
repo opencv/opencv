@@ -414,13 +414,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         if( ax > ay )
         {
-            int x = pt1.x >> XY_SHIFT;
+            int x = (int)(pt1.x >> XY_SHIFT);
 
             for( ; ecount >= 0; x++, pt1.y += y_step, scount++, ecount-- )
             {
                 if( (unsigned)x >= (unsigned)size0.width )
                     continue;
-                int y = (pt1.y >> XY_SHIFT) - 1;
+                int y = (int)((pt1.y >> XY_SHIFT) - 1);
 
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
@@ -441,13 +441,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         else
         {
-            int y = pt1.y >> XY_SHIFT;
+            int y = (int)(pt1.y >> XY_SHIFT);
 
             for( ; ecount >= 0; y++, pt1.x += x_step, scount++, ecount-- )
             {
                 if( (unsigned)y >= (unsigned)size0.height )
                     continue;
-                int x = (pt1.x >> XY_SHIFT) - 1;
+                int x = (int)((pt1.x >> XY_SHIFT) - 1);
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
                 int a, dist = (pt1.x >> (XY_SHIFT - 5)) & 31;
@@ -480,13 +480,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
 
         if( ax > ay )
         {
-            int x = pt1.x >> XY_SHIFT;
+            int x = (int)(pt1.x >> XY_SHIFT);
 
             for( ; ecount >= 0; x++, pt1.y += y_step, scount++, ecount-- )
             {
                 if( (unsigned)x >= (unsigned)size0.width )
                     continue;
-                int y = (pt1.y >> XY_SHIFT) - 1;
+                int y = (int)((pt1.y >> XY_SHIFT) - 1);
 
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
@@ -507,13 +507,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         else
         {
-            int y = pt1.y >> XY_SHIFT;
+            int y = (int)(pt1.y >> XY_SHIFT);
 
             for( ; ecount >= 0; y++, pt1.x += x_step, scount++, ecount-- )
             {
                 if( (unsigned)y >= (unsigned)size0.height )
                     continue;
-                int x = (pt1.x >> XY_SHIFT) - 1;
+                int x = (int)((pt1.x >> XY_SHIFT) - 1);
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
                 int a, dist = (pt1.x >> (XY_SHIFT - 5)) & 31;
@@ -557,13 +557,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         if( ax > ay )
         {
-            int x = pt1.x >> XY_SHIFT;
+            int x = (int)(pt1.x >> XY_SHIFT);
 
             for( ; ecount >= 0; x++, pt1.y += y_step, scount++, ecount-- )
             {
                 if( (unsigned)x >= (unsigned)size0.width )
                     continue;
-                int y = (pt1.y >> XY_SHIFT) - 1;
+                int y = (int)((pt1.y >> XY_SHIFT) - 1);
 
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
@@ -584,13 +584,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         else
         {
-            int y = pt1.y >> XY_SHIFT;
+            int y = (int)(pt1.y >> XY_SHIFT);
 
             for( ; ecount >= 0; y++, pt1.x += x_step, scount++, ecount-- )
             {
                 if( (unsigned)y >= (unsigned)size0.height )
                     continue;
-                int x = (pt1.x >> XY_SHIFT) - 1;
+                int x = (int)((pt1.x >> XY_SHIFT) - 1);
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
                 int a, dist = (pt1.x >> (XY_SHIFT - 5)) & 31;
