@@ -481,6 +481,26 @@ INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Close, testing::ValuesIn(qrcode_i
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Monitor, testing::ValuesIn(qrcode_images_monitor));
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Multi, testing::ValuesIn(qrcode_images_multiple));
 
+TEST(Objdetect_QRCode_decodeMulti, decode_regression_16491)
+{
+#ifdef HAVE_QUIRC
+    Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
+    Point corners_[] = {Point(16, 16), Point(128, 16), Point(128, 128), Point(16, 128),
+                        Point(16, 16), Point(128, 16), Point(128, 128), Point(16, 128)};
+    std::vector<Point> vec_corners;
+    int array_size = 8;
+    vec_corners.assign(corners_, corners_ + array_size);
+    std::vector<cv::String> decoded_info;
+    std::vector<Mat> straight_barcode;
+    QRCodeDetector vec_qrcode;
+    EXPECT_NO_THROW(vec_qrcode.decodeMulti(zero_image, vec_corners, decoded_info, straight_barcode));
+
+    Mat mat_corners(2, 4, CV_32SC2, (void*)&vec_corners[0]);
+    QRCodeDetector mat_qrcode;
+    EXPECT_NO_THROW(mat_qrcode.decodeMulti(zero_image, mat_corners, decoded_info, straight_barcode));
+#endif
+}
+
 TEST(Objdetect_QRCode_basic, not_found_qrcode)
 {
     std::vector<Point> corners;
