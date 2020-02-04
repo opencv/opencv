@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+'''
+You can download the Geometric Matching Module model from https://drive.google.com/file/d/1oBnM9R-LgH0APkwxOiEUbFqbKArh0ZcR/view?usp=sharing
+You can download the Try-On Module model from https://drive.google.com/file/d/1oBnM9R-LgH0APkwxOiEUbFqbKArh0ZcR/view?usp=sharing
+You can download the cloth segmentation model from https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0
+You can find the OpenPose proto in opencv_extra/testdata/dnn/openpose_pose_coco.prototxt
+and get .caffemodel using opencv_extra/testdata/dnn/download_models.py
+'''
+
 import argparse
 import math
 import numpy as np
@@ -13,9 +22,9 @@ parser = argparse.ArgumentParser(description='Use this script to run virtial try
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--input_image', '-i', help='Path to image with person. Skip this argument to capture frames from a camera.')
 parser.add_argument('--input_cloth', '-c', help='Path to target cloth image')
-parser.add_argument('--gmm_model', '-gmm', required=True, help='Path to .onnx model.')
-parser.add_argument('--tom_model', '-tom', required=True, help='Path to .onnx model.')
-parser.add_argument('--segmentation_model', required=True, help='Path to cloth segmentation pb model.')
+parser.add_argument('--gmm_model', '-gmm', required=True, help='Path to Geometric Matching Module .onnx model.')
+parser.add_argument('--tom_model', '-tom', required=True, help='Path to Try-On Module .onnx model.')
+parser.add_argument('--segmentation_model', required=True, help='Path to cloth segmentation .pb model.')
 parser.add_argument('--openpose_proto', required=True, help='Path to .prototxt model was trained on COCO dataset.')
 parser.add_argument('--openpose_model', required=True, help='Path to .caffemodel model was trained on COCO dataset.')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
