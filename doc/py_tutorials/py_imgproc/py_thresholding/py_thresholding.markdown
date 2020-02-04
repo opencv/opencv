@@ -200,7 +200,7 @@ for i in xrange(1,256):
     p1,p2 = np.hsplit(hist_norm,[i]) # probabilities
     q1,q2 = Q[i],Q[255]-Q[i] # cum sum of classes
     if q1 < 1.e-6 or q2 < 1.e-6:
-      continue
+        continue
     b1,b2 = np.hsplit(bins,[i]) # weights
 
     # finding means and variances
