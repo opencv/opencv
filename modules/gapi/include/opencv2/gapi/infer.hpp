@@ -23,23 +23,6 @@
 
 namespace cv {
 
-namespace detail {
-    // This tiny class eliminates the semantic difference between
-    // GKernelType and GKernelTypeM.
-    // FIXME: Something similar can be reused for regular kernels
-    template<typename, typename>
-    struct KernelTypeMedium;
-
-    template<class K, typename... R, typename... Args>
-    struct KernelTypeMedium<K, std::function<std::tuple<R...>(Args...)> >:
-        public GKernelTypeM<K, std::function<std::tuple<R...>(Args...)> > {};
-
-    template<class K, typename R, typename... Args>
-    struct KernelTypeMedium<K, std::function<R(Args...)> >:
-        public GKernelType<K, std::function<R(Args...)> > {};
-
-} // namespace detail
-
 template<typename, typename> class GNetworkType;
 
 // TODO: maybe tuple_wrap_helper from util.hpp may help with this.
