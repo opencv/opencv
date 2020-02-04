@@ -273,6 +273,10 @@ input = Variable(torch.randn(1, 2, 3, 4))
 resize = nn.Upsample(scale_factor=2, mode='nearest')
 save_data_and_model("resize_nearest", input, resize)
 
+input = Variable(torch.randn(1, 2, 3, 4))
+resize = nn.Upsample(size=[6, 8], mode='bilinear')
+save_data_and_model("resize_bilinear", input, resize)
+
 class Unsqueeze(nn.Module):
 
     def __init__(self):
