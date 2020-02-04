@@ -402,8 +402,8 @@ endmacro()
 
 set(OCV_COMPILER_FAIL_REGEX
     "argument .* is not valid"                  # GCC 9+ (including support of unicode quotes)
-    "command line option .* is valid for .* but not for C\\+\\+" # GNU
-    "command line option .* is valid for .* but not for C" # GNU
+    "command[- ]line option .* is valid for .* but not for C\\+\\+" # GNU
+    "command[- ]line option .* is valid for .* but not for C" # GNU
     "unrecognized .*option"                     # GNU
     "unknown .*option"                          # Clang
     "ignoring unknown option"                   # MSVC

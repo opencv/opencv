@@ -39,6 +39,11 @@
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/NSException.h>
 
+#define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
+
 /********************** Declaration of class headers ************************/
 
 /*****************************************************************************
@@ -128,37 +133,36 @@ class CvCaptureCAM : public CvCapture {
  *****************************************************************************/
 
 class CvCaptureFile : public CvCapture {
-    public:
+public:
+    CvCaptureFile(const char* filename) ;
+    ~CvCaptureFile();
+    virtual bool grabFrame();
+    virtual IplImage* retrieveFrame(int);
+    virtual double getProperty(int property_id) const;
+    virtual bool setProperty(int property_id, double value);
+    virtual int didStart();
+private:
+    AVAsset                  *mAsset;
+    AVAssetTrack             *mAssetTrack;
+    AVAssetReader            *mAssetReader;
+    AVAssetReaderTrackOutput *mTrackOutput;
 
-        CvCaptureFile(const char* filename) ;
-        ~CvCaptureFile();
-        virtual bool grabFrame();
-        virtual IplImage* retrieveFrame(int);
-        virtual IplImage* queryFrame();
-        virtual double getProperty(int property_id) const;
-        virtual bool setProperty(int property_id, double value);
-        virtual int didStart();
+    CMSampleBufferRef mCurrentSampleBuffer;
+    CVImageBufferRef  mGrabbedPixels;
+    IplImage *mDeviceImage;
+    uint8_t  *mOutImagedata;
+    IplImage *mOutImage;
+    size_t    currSize;
+    uint32_t  mMode;
+    int       mFormat;
 
-    private:
+    bool setupReadingAt(CMTime position);
+    IplImage* retrieveFramePixelBuffer();
 
-        AVAssetReader *mMovieReader;
-        char* imagedata;
-        IplImage* image;
-        char* bgr_imagedata;
-        IplImage* bgr_image;
-        size_t currSize;
+    CMTime mFrameTimestamp;
+    size_t mFrameNum;
 
-        IplImage* retrieveFramePixelBuffer();
-        double getFPS();
-
-        int movieWidth;
-        int movieHeight;
-        double movieFPS;
-        double currentFPS;
-        double movieDuration;
-        int changedPos;
-
-        int started;
+    int started;
 };
 
 
@@ -771,114 +775,128 @@ fromConnection:(AVCaptureConnection *)connection{
  *****************************************************************************/
 
 CvCaptureFile::CvCaptureFile(const char* filename) {
+    NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-
-    mMovieReader = nil;
-    image = NULL;
-    bgr_image = NULL;
-    imagedata = NULL;
-    bgr_imagedata = NULL;
+    mAsset = nil;
+    mAssetTrack = nil;
+    mAssetReader = nil;
+    mTrackOutput = nil;
+    mDeviceImage = NULL;
+    mOutImage = NULL;
+    mOutImagedata = NULL;
     currSize = 0;
-
-    movieWidth = 0;
-    movieHeight = 0;
-    movieFPS = 0;
-    currentFPS = 0;
-    movieDuration = 0;
-    changedPos = 0;
+    mMode = CV_CAP_MODE_BGR;
+    mFormat = CV_8UC3;
+    mCurrentSampleBuffer = NULL;
+    mGrabbedPixels = NULL;
+    mFrameTimestamp = kCMTimeZero;
+    mFrameNum = 0;
 
     started = 0;
 
-    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:
-        [NSURL fileURLWithPath: [NSString stringWithUTF8String:filename]]
-        options:nil];
+    mAsset = [[AVAsset assetWithURL:[NSURL fileURLWithPath: @(filename)]] retain];
 
-    AVAssetTrack* videoTrack = nil;
-    NSArray* tracks = [asset tracksWithMediaType:AVMediaTypeVideo];
-    if ([tracks count] == 1)
-    {
-        videoTrack = [tracks objectAtIndex:0];
-
-        movieWidth = videoTrack.naturalSize.width;
-        movieHeight = videoTrack.naturalSize.height;
-        movieFPS = videoTrack.nominalFrameRate;
-
-        currentFPS = movieFPS; //Debugging !! should be getFPS();
-        //Debugging. need to be checked
-
-        // In ms
-        movieDuration = videoTrack.timeRange.duration.value/videoTrack.timeRange.duration.timescale * 1000;
-
-        started = 1;
-        NSError* error = nil;
-        mMovieReader = [[AVAssetReader alloc] initWithAsset:asset error:&error];
-        if (error)
-            NSLog(@"%@", [error localizedDescription]);
-
-        NSDictionary* videoSettings =
-            [NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedInt:kCVPixelFormatType_32BGRA]
-            forKey:(NSString*)kCVPixelBufferPixelFormatTypeKey];
-
-        [mMovieReader addOutput:[AVAssetReaderTrackOutput
-            assetReaderTrackOutputWithTrack:videoTrack
-            outputSettings:videoSettings]];
-        [mMovieReader startReading];
+    if ( mAsset == nil ) {
+        fprintf(stderr, "OpenCV: Couldn't read movie file \"%s\"\n", filename);
+        [localpool drain];
+        started = 0;
+        return;
     }
 
-    /*
-    // Asynchronously open the video in another thread. Always fail.
-    [asset loadValuesAsynchronouslyForKeys:[NSArray arrayWithObject:@"tracks"] completionHandler:
-    ^{
-    // The completion block goes here.
-    dispatch_async(dispatch_get_main_queue(),
-    ^{
-    AVAssetTrack* ::videoTrack = nil;
-    NSArray* ::tracks = [asset tracksWithMediaType:AVMediaTypeVideo];
-    if ([tracks count] == 1)
-    {
-    videoTrack = [tracks objectAtIndex:0];
+    NSArray *tracks = [mAsset tracksWithMediaType:AVMediaTypeVideo];
+    if ([tracks count] == 0) {
+        fprintf(stderr, "OpenCV: Couldn't read video stream from file \"%s\"\n", filename);
+        [localpool drain];
+        started = 0;
+        return;
+    }
 
-    movieWidth = videoTrack.naturalSize.width;
-    movieHeight = videoTrack.naturalSize.height;
-    movieFPS = videoTrack.nominalFrameRate;
-    currentFPS = movieFPS; //Debugging !! should be getFPS();
-    //Debugging. need to be checked
-    movieDuration = videoTrack.timeRange.duration.value/videoTrack.timeRange.duration.timescale * 1000;
+    mAssetTrack = [tracks[0] retain];
+
+    if ( ! setupReadingAt(kCMTimeZero) ) {
+        fprintf(stderr, "OpenCV: Couldn't read movie file \"%s\"\n", filename);
+        [localpool drain];
+        started = 0;
+        return;
+    }
+
     started = 1;
-
-    NSError* ::error = nil;
-    // mMovieReader is a member variable
-    mMovieReader = [[AVAssetReader alloc] initWithAsset:asset error:&error];
-    if (error)
-    NSLog(@"%@", [error localizedDescription]);
-
-    NSDictionary* ::videoSettings =
-    [NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedInt:kCVPixelFormatType_32BGRA]
-forKey:(NSString*)kCVPixelBufferPixelFormatTypeKey];
-
-[mMovieReader addOutput:[AVAssetReaderTrackOutput
-assetReaderTrackOutputWithTrack:videoTrack
-outputSettings:videoSettings]];
-[mMovieReader startReading];
-}
-});
-
-}];
-     */
-
-[localpool drain];
+    [localpool drain];
 }
 
 CvCaptureFile::~CvCaptureFile() {
+    NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    if (imagedata != NULL) free(imagedata);
-    if (bgr_imagedata != NULL) free(bgr_imagedata);
-    cvReleaseImage(&image);
-    cvReleaseImage(&bgr_image);
-    [mMovieReader release];
+    free(mOutImagedata);
+    cvReleaseImage(&mOutImage);
+    cvReleaseImage(&mDeviceImage);
+    [mAssetReader release];
+    [mTrackOutput release];
+    [mAssetTrack release];
+    [mAsset release];
+    CVBufferRelease(mGrabbedPixels);
+    if ( mCurrentSampleBuffer ) {
+        CFRelease(mCurrentSampleBuffer);
+    }
+
     [localpool drain];
+}
+
+bool CvCaptureFile::setupReadingAt(CMTime position) {
+    if (mAssetReader) {
+        if (mAssetReader.status == AVAssetReaderStatusReading) {
+            [mAssetReader cancelReading];
+        }
+        [mAssetReader release];
+        mAssetReader = nil;
+    }
+    if (mTrackOutput) {
+        [mTrackOutput release];
+        mTrackOutput = nil;
+    }
+
+    // Capture in a pixel format that can be converted efficiently to the output mode.
+    OSType pixelFormat;
+    if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
+        pixelFormat = kCVPixelFormatType_32BGRA;
+        mFormat = CV_8UC3;
+    } else if (mMode == CV_CAP_MODE_GRAY) {
+        pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
+        mFormat = CV_8UC1;
+    } else if (mMode == CV_CAP_MODE_YUYV) {
+        pixelFormat = kCVPixelFormatType_422YpCbCr8;
+        mFormat = CV_8UC2;
+    } else {
+        fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mMode);
+        return false;
+    }
+
+    NSDictionary *settings =
+    @{
+      (id)kCVPixelBufferPixelFormatTypeKey: @(pixelFormat)
+      };
+    mTrackOutput = [[AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack: mAssetTrack
+                                                               outputSettings: settings] retain];
+
+    if ( !mTrackOutput ) {
+        fprintf(stderr, "OpenCV: error in [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:outputSettings:]\n");
+        return false;
+    }
+
+    NSError *error = nil;
+    mAssetReader = [[AVAssetReader assetReaderWithAsset: mAsset
+                                                  error: &error] retain];
+    if ( error ) {
+        fprintf(stderr, "OpenCV: error in [AVAssetReader assetReaderWithAsset:error:]\n");
+        NSLog(@"OpenCV: %@", error.localizedDescription);
+        return false;
+    }
+
+    mAssetReader.timeRange = CMTimeRangeMake(position, kCMTimePositiveInfinity);
+    mFrameTimestamp = position;
+    mFrameNum = round((mFrameTimestamp.value * mAssetTrack.nominalFrameRate) / double(mFrameTimestamp.timescale));
+    [mAssetReader addOutput: mTrackOutput];
+    return [mAssetReader startReading];
 }
 
 int CvCaptureFile::didStart() {
@@ -886,101 +904,191 @@ int CvCaptureFile::didStart() {
 }
 
 bool CvCaptureFile::grabFrame() {
+    NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
-    //everything is done in queryFrame;
-    currentFPS = movieFPS;
-    return 1;
+    CVBufferRelease(mGrabbedPixels);
+    if ( mCurrentSampleBuffer ) {
+        CFRelease(mCurrentSampleBuffer);
+    }
+    mCurrentSampleBuffer = [mTrackOutput copyNextSampleBuffer];
+    mGrabbedPixels = CMSampleBufferGetImageBuffer(mCurrentSampleBuffer);
+    CVBufferRetain(mGrabbedPixels);
+    mFrameTimestamp = CMSampleBufferGetOutputPresentationTimeStamp(mCurrentSampleBuffer);
+    mFrameNum++;
 
-
-    /*
-            double t1 = getProperty(CV_CAP_PROP_POS_MSEC);
-            [mCaptureSession stepForward];
-            double t2 = getProperty(CV_CAP_PROP_POS_MSEC);
-            if (t2>t1 && !changedPos) {
-            currentFPS = 1000.0/(t2-t1);
-            } else {
-            currentFPS = movieFPS;
-            }
-            changedPos = 0;
-
-     */
-
+    bool isReading = (mAssetReader.status == AVAssetReaderStatusReading);
+    [localpool drain];
+    return isReading;
 }
 
-
 IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-
-    if (mMovieReader.status != AVAssetReaderStatusReading){
-
-        return NULL;
+    if ( ! mGrabbedPixels ) {
+        return 0;
     }
 
+    NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
-    AVAssetReaderOutput * output = [mMovieReader.outputs objectAtIndex:0];
-    CMSampleBufferRef sampleBuffer = [output copyNextSampleBuffer];
-    if (!sampleBuffer) {
-        [localpool drain];
-        return NULL;
-    }
-    CVPixelBufferRef frame = CMSampleBufferGetImageBuffer(sampleBuffer);
-    CVPixelBufferRef pixels = CVBufferRetain(frame);
+    CVPixelBufferLockBaseAddress(mGrabbedPixels, 0);
+    void *baseaddress;
+    size_t width, height, rowBytes;
 
-    CVPixelBufferLockBaseAddress(pixels, 0);
+    OSType pixelFormat = CVPixelBufferGetPixelFormatType(mGrabbedPixels);
 
-    uint32_t* baseaddress = (uint32_t*)CVPixelBufferGetBaseAddress(pixels);
-    size_t width = CVPixelBufferGetWidth(pixels);
-    size_t height = CVPixelBufferGetHeight(pixels);
-    size_t rowBytes = CVPixelBufferGetBytesPerRow(pixels);
-
-    if (rowBytes != 0) {
-
-        if (currSize != rowBytes*height*sizeof(char)) {
-            currSize = rowBytes*height*sizeof(char);
-            if (imagedata != NULL) free(imagedata);
-            if (bgr_imagedata != NULL) free(bgr_imagedata);
-            imagedata = (char*)malloc(currSize);
-            bgr_imagedata = (char*)malloc(currSize);
-        }
-
-        memcpy(imagedata, baseaddress, currSize);
-
-        if (image == NULL) {
-            image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 4);
-        }
-
-        image->width = (int)width;
-        image->height = (int)height;
-        image->nChannels = 4;
-        image->depth = IPL_DEPTH_8U;
-        image->widthStep = (int)rowBytes;
-        image->imageData = imagedata;
-        image->imageSize = (int)currSize;
-
-
-        if (bgr_image == NULL) {
-            bgr_image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 3);
-        }
-
-        bgr_image->width = (int)width;
-        bgr_image->height = (int)height;
-        bgr_image->nChannels = 3;
-        bgr_image->depth = IPL_DEPTH_8U;
-        bgr_image->widthStep = (int)rowBytes;
-        bgr_image->imageData = bgr_imagedata;
-        bgr_image->imageSize = (int)currSize;
-
-        cvCvtColor(image, bgr_image,CV_BGRA2BGR);
-
+    if (CVPixelBufferIsPlanar(mGrabbedPixels)) {
+        baseaddress = CVPixelBufferGetBaseAddressOfPlane(mGrabbedPixels, 0);
+        width = CVPixelBufferGetWidthOfPlane(mGrabbedPixels, 0);
+        height = CVPixelBufferGetHeightOfPlane(mGrabbedPixels, 0);
+        rowBytes = CVPixelBufferGetBytesPerRowOfPlane(mGrabbedPixels, 0);
+    } else {
+        baseaddress = CVPixelBufferGetBaseAddress(mGrabbedPixels);
+        width = CVPixelBufferGetWidth(mGrabbedPixels);
+        height = CVPixelBufferGetHeight(mGrabbedPixels);
+        rowBytes = CVPixelBufferGetBytesPerRow(mGrabbedPixels);
     }
 
-    CVPixelBufferUnlockBaseAddress(pixels, 0);
-    CVBufferRelease(pixels);
-    CMSampleBufferInvalidate(sampleBuffer);
-    CFRelease(sampleBuffer);
+    if ( rowBytes == 0 ) {
+        fprintf(stderr, "OpenCV: error: rowBytes == 0\n");
+        CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+        CVBufferRelease(mGrabbedPixels);
+        mGrabbedPixels = NULL;
+        return 0;
+    }
+
+    int outChannels;
+    if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
+        outChannels = 3;
+    } else if (mMode == CV_CAP_MODE_GRAY) {
+        outChannels = 1;
+    } else if (mMode == CV_CAP_MODE_YUYV) {
+        outChannels = 2;
+    } else {
+        fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mMode);
+        CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+        CVBufferRelease(mGrabbedPixels);
+        mGrabbedPixels = NULL;
+        return 0;
+    }
+
+    if ( currSize != width*outChannels*height ) {
+        currSize = width*outChannels*height;
+        free(mOutImagedata);
+        mOutImagedata = reinterpret_cast<uint8_t*>(malloc(currSize));
+    }
+
+    if (mOutImage == NULL) {
+        mOutImage = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, outChannels);
+    }
+    mOutImage->width = int(width);
+    mOutImage->height = int(height);
+    mOutImage->nChannels = outChannels;
+    mOutImage->depth = IPL_DEPTH_8U;
+    mOutImage->widthStep = int(width*outChannels);
+    mOutImage->imageData = reinterpret_cast<char *>(mOutImagedata);
+    mOutImage->imageSize = int(currSize);
+
+    int deviceChannels;
+    int cvtCode;
+
+    if ( pixelFormat == kCVPixelFormatType_32BGRA ) {
+        deviceChannels = 4;
+
+        if (mMode == CV_CAP_MODE_BGR) {
+            cvtCode = CV_BGRA2BGR;
+        } else if (mMode == CV_CAP_MODE_RGB) {
+            cvtCode = CV_BGRA2RGB;
+        } else if (mMode == CV_CAP_MODE_GRAY) {
+            cvtCode = CV_BGRA2GRAY;
+        } else {
+            CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+            CVBufferRelease(mGrabbedPixels);
+            mGrabbedPixels = NULL;
+            fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
+            return 0;
+        }
+    } else if ( pixelFormat == kCVPixelFormatType_24RGB ) {
+        deviceChannels = 3;
+
+        if (mMode == CV_CAP_MODE_BGR) {
+            cvtCode = CV_RGB2BGR;
+        } else if (mMode == CV_CAP_MODE_RGB) {
+            cvtCode = 0;
+        } else if (mMode == CV_CAP_MODE_GRAY) {
+            cvtCode = CV_RGB2GRAY;
+        } else {
+            CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+            CVBufferRelease(mGrabbedPixels);
+            mGrabbedPixels = NULL;
+            fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
+            return 0;
+        }
+    } else if ( pixelFormat == kCVPixelFormatType_422YpCbCr8 ) {    // 422 (2vuy, UYVY)
+        deviceChannels = 2;
+
+        if (mMode == CV_CAP_MODE_BGR) {
+            cvtCode = CV_YUV2BGR_UYVY;
+        } else if (mMode == CV_CAP_MODE_RGB) {
+            cvtCode = CV_YUV2RGB_UYVY;
+        } else if (mMode == CV_CAP_MODE_GRAY) {
+            cvtCode = CV_YUV2GRAY_UYVY;
+        } else if (mMode == CV_CAP_MODE_YUYV) {
+            cvtCode = -1;    // Copy
+        } else {
+            CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+            CVBufferRelease(mGrabbedPixels);
+            mGrabbedPixels = NULL;
+            fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
+            return 0;
+        }
+    } else if ( pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange ||   // 420v
+               pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ) {   // 420f
+        height = height * 3 / 2;
+        deviceChannels = 1;
+
+        if (mMode == CV_CAP_MODE_BGR) {
+            cvtCode = CV_YUV2BGR_YV12;
+        } else if (mMode == CV_CAP_MODE_RGB) {
+            cvtCode = CV_YUV2RGB_YV12;
+        } else if (mMode == CV_CAP_MODE_GRAY) {
+            cvtCode = CV_YUV2GRAY_420;
+        } else {
+            CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+            CVBufferRelease(mGrabbedPixels);
+            mGrabbedPixels = NULL;
+            fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
+            return 0;
+        }
+    } else {
+        char pfBuf[] = { (char)pixelFormat, (char)(pixelFormat >> 8),
+                         (char)(pixelFormat >> 16), (char)(pixelFormat >> 24), '\0' };
+        fprintf(stderr, "OpenCV: unsupported pixel format '%s'\n", pfBuf);
+        CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+        CVBufferRelease(mGrabbedPixels);
+        mGrabbedPixels = NULL;
+        return 0;
+    }
+
+    if (mDeviceImage == NULL) {
+        mDeviceImage = cvCreateImageHeader(cvSize(int(width),int(height)), IPL_DEPTH_8U, deviceChannels);
+    }
+    mDeviceImage->width = int(width);
+    mDeviceImage->height = int(height);
+    mDeviceImage->nChannels = deviceChannels;
+    mDeviceImage->depth = IPL_DEPTH_8U;
+    mDeviceImage->widthStep = int(rowBytes);
+    mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
+    mDeviceImage->imageSize = int(rowBytes*height);
+
+    if (cvtCode == -1) {
+        cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
+    } else {
+        cvCvtColor(mDeviceImage, mOutImage, cvtCode);
+    }
+
+    CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
 
     [localpool drain];
-    return bgr_image;
+
+    return mOutImage;
 }
 
 
@@ -988,123 +1096,88 @@ IplImage* CvCaptureFile::retrieveFrame(int) {
     return retrieveFramePixelBuffer();
 }
 
-IplImage* CvCaptureFile::queryFrame() {
-    grabFrame();
-    return retrieveFrame(0);
+double CvCaptureFile::getProperty(int property_id) const{
+    if (mAsset == nil) return 0;
+
+    CMTime t;
+
+    switch (property_id) {
+        case CV_CAP_PROP_POS_MSEC:
+            return mFrameTimestamp.value * 1000.0 / mFrameTimestamp.timescale;
+        case CV_CAP_PROP_POS_FRAMES:
+            return mAssetTrack.nominalFrameRate > 0 ? mFrameNum : 0;
+        case CV_CAP_PROP_POS_AVI_RATIO:
+            t = [mAsset duration];
+            return (mFrameTimestamp.value * t.timescale) / double(mFrameTimestamp.timescale * t.value);
+        case CV_CAP_PROP_FRAME_WIDTH:
+            return mAssetTrack.naturalSize.width;
+        case CV_CAP_PROP_FRAME_HEIGHT:
+            return mAssetTrack.naturalSize.height;
+        case CV_CAP_PROP_FPS:
+            return mAssetTrack.nominalFrameRate;
+        case CV_CAP_PROP_FRAME_COUNT:
+            t = [mAsset duration];
+            return round((t.value * mAssetTrack.nominalFrameRate) / double(t.timescale));
+        case CV_CAP_PROP_FORMAT:
+            return mFormat;
+        case CV_CAP_PROP_FOURCC:
+            return mMode;
+        default:
+            break;
+    }
+
+    return 0;
 }
 
-double CvCaptureFile::getFPS() {
+bool CvCaptureFile::setProperty(int property_id, double value) {
+    if (mAsset == nil) return false;
 
-    /*
-         if (mCaptureSession == nil) return 0;
-         NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-         double now = getProperty(CV_CAP_PROP_POS_MSEC);
-         double retval = 0;
-         if (now == 0) {
-         [mCaptureSession stepForward];
-         double t2 =  getProperty(CV_CAP_PROP_POS_MSEC);
-         [mCaptureSession stepBackward];
-         retval = 1000.0 / (t2-now);
-         } else {
-         [mCaptureSession stepBackward];
-         double t2 = getProperty(CV_CAP_PROP_POS_MSEC);
-         [mCaptureSession stepForward];
-         retval = 1000.0 / (now-t2);
-         }
-         [localpool drain];
-         return retval;
-     */
-    return 30.0; //TODO: Debugging
-}
+    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-double CvCaptureFile::getProperty(int /*property_id*/) const{
+    bool retval = false;
+    CMTime t;
 
-    /*
-         if (mCaptureSession == nil) return 0;
-
-         NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-
-         double retval;
-         QTTime t;
-
-         switch (property_id) {
-         case CV_CAP_PROP_POS_MSEC:
-         [[mCaptureSession attributeForKey:QTMovieCurrentTimeAttribute] getValue:&t];
-         retval = t.timeValue * 1000.0 / t.timeScale;
-         break;
-         case CV_CAP_PROP_POS_FRAMES:
-         retval = movieFPS * getProperty(CV_CAP_PROP_POS_MSEC) / 1000;
-         break;
-         case CV_CAP_PROP_POS_AVI_RATIO:
-         retval = (getProperty(CV_CAP_PROP_POS_MSEC)) / (movieDuration );
-         break;
-         case CV_CAP_PROP_FRAME_WIDTH:
-         retval = movieWidth;
-         break;
-         case CV_CAP_PROP_FRAME_HEIGHT:
-         retval = movieHeight;
-         break;
-         case CV_CAP_PROP_FPS:
-         retval = currentFPS;
-         break;
-         case CV_CAP_PROP_FOURCC:
-         default:
-         retval = 0;
-         }
-
-         [localpool drain];
-         return retval;
-     */
-    return 1.0; //Debugging
-}
-
-bool CvCaptureFile::setProperty(int /*property_id*/, double /*value*/) {
-
-    /*
-         if (mCaptureSession == nil) return false;
-
-         NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-
-         bool retval = false;
-         QTTime t;
-
-         double ms;
-
-         switch (property_id) {
-         case CV_CAP_PROP_POS_MSEC:
-         [[mCaptureSession attributeForKey:QTMovieCurrentTimeAttribute] getValue:&t];
-         t.timeValue = value * t.timeScale / 1000;
-         [mCaptureSession setCurrentTime:t];
-         changedPos = 1;
-         retval = true;
-         break;
-         case CV_CAP_PROP_POS_FRAMES:
-         ms = (value*1000.0 -5)/ currentFPS;
-         retval = setProperty(CV_CAP_PROP_POS_MSEC, ms);
-         break;
-         case CV_CAP_PROP_POS_AVI_RATIO:
-         ms = value * movieDuration;
-         retval = setProperty(CV_CAP_PROP_POS_MSEC, ms);
-         break;
-         case CV_CAP_PROP_FRAME_WIDTH:
-    //retval = movieWidth;
-    break;
-    case CV_CAP_PROP_FRAME_HEIGHT:
-    //retval = movieHeight;
-    break;
-    case CV_CAP_PROP_FPS:
-    //etval = currentFPS;
-    break;
-    case CV_CAP_PROP_FOURCC:
-    default:
-    retval = false;
+    switch (property_id) {
+        case CV_CAP_PROP_POS_MSEC:
+            t = mAsset.duration;
+            t.value = value * t.timescale / 1000;
+            retval = setupReadingAt(t);
+            break;
+        case CV_CAP_PROP_POS_FRAMES:
+            retval = mAssetTrack.nominalFrameRate > 0 ? setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate)) : false;
+            break;
+        case CV_CAP_PROP_POS_AVI_RATIO:
+            t = mAsset.duration;
+            t.value = round(t.value * value);
+            retval = setupReadingAt(t);
+            break;
+        case CV_CAP_PROP_FOURCC:
+            uint32_t mode;
+            mode = cvRound(value);
+            if (mMode == mode) {
+                retval = true;
+            } else {
+                switch (mode) {
+                    case CV_CAP_MODE_BGR:
+                    case CV_CAP_MODE_RGB:
+                    case CV_CAP_MODE_GRAY:
+                    case CV_CAP_MODE_YUYV:
+                        mMode = mode;
+                        retval = setupReadingAt(mFrameTimestamp);
+                        break;
+                    default:
+                        fprintf(stderr, "VIDEOIO ERROR: AVF iOS: Unsupported mode: %d\n", mode);
+                        retval=false;
+                        break;
+                }
+            }
+            break;
+        default:
+            break;
     }
 
     [localpool drain];
-
     return retval;
-     */
-    return true;
 }
 
 

@@ -1760,4 +1760,35 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Eltwise_unequal, Combine(
     dnnBackendsAndTargets()
 ));
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Resize;
+TEST_P(Layer_Test_Resize, change_input)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Resize";
+    lp.name = "testLayer";
+    lp.set("zoom_factor", 2);
+    lp.set("interpolation", "nearest");
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat inp(4 + i, 5 + i, CV_8UC3), ref;
+        randu(inp, 0, 255);
+        resize(inp, ref, Size(0, 0), 2, 2, INTER_NEAREST);
+        ref = blobFromImage(ref);
+
+        net.setInput(blobFromImage(inp));
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+        normAssert(out, ref);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
+
 }} // namespace

@@ -2388,7 +2388,7 @@ CV_EXPORTS_W void filterSpeckles( InputOutputArray img, double newVal,
 //! computes valid disparity ROI from the valid ROIs of the rectified images (that are returned by cv::stereoRectify())
 CV_EXPORTS_W Rect getValidDisparityROI( Rect roi1, Rect roi2,
                                         int minDisparity, int numberOfDisparities,
-                                        int SADWindowSize );
+                                        int blockSize );
 
 //! validates disparity using the left-right check. The matrix "cost" should be computed by the stereo correspondence algorithm
 CV_EXPORTS_W void validateDisparity( InputOutputArray disparity, InputArray cost,
@@ -2813,8 +2813,8 @@ public:
     the smoother the disparity is. P1 is the penalty on the disparity change by plus or minus 1
     between neighbor pixels. P2 is the penalty on the disparity change by more than 1 between neighbor
     pixels. The algorithm requires P2 \> P1 . See stereo_match.cpp sample where some reasonably good
-    P1 and P2 values are shown (like 8\*number_of_image_channels\*SADWindowSize\*SADWindowSize and
-    32\*number_of_image_channels\*SADWindowSize\*SADWindowSize , respectively).
+    P1 and P2 values are shown (like 8\*number_of_image_channels\*blockSize\*blockSize and
+    32\*number_of_image_channels\*blockSize\*blockSize , respectively).
     @param disp12MaxDiff Maximum allowed difference (in integer pixel units) in the left-right
     disparity check. Set it to a non-positive value to disable the check.
     @param preFilterCap Truncation value for the prefiltered image pixels. The algorithm first
