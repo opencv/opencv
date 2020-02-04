@@ -485,8 +485,11 @@ TEST(Objdetect_QRCode_decodeMulti, decode_regression_16491)
 {
 #ifdef HAVE_QUIRC
     Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
-    std::vector<Point> vec_corners{Point(16, 16), Point(128, 16), Point(128, 128), Point(16, 128),
-                                   Point(16, 16), Point(128, 16), Point(128, 128), Point(16, 128)};
+    Point corners_[] = {Point(16, 16), Point(128, 16), Point(128, 128), Point(16, 128),
+                        Point(16, 16), Point(128, 16), Point(128, 128), Point(16, 128)};
+    std::vector<Point> vec_corners;
+    int array_size = 8;
+    vec_corners.assign(corners_, corners_ + array_size);
     std::vector<cv::String> decoded_info;
     std::vector<Mat> straight_barcode;
     QRCodeDetector vec_qrcode;
