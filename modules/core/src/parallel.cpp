@@ -743,19 +743,29 @@ int cv::getThreadNum(void)
 #endif
 }
 
+static inline char* getFileContents(const char *filename)
+{
+   FILE* fd = fopen(filename, "r");
+   if(!fd)
+       return (char*)NULL;
+
+   const off_t fsize = fseek(fd, 0, SEEK_END);
+   fseek(fd, 0, SEEK_SET);
+   char* buf = new char[fsize];
+   const char* pbuf = fgets(buf, sizeof(buf), fd);
+   fclose(fd);
+
+   return (char*)pbuf; /* Typecast if NULL */
+}
+
 #if defined __ANDROID__ || defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__
 static inline int getNumberOfCPUsImpl(const char *filename)
 {
-   FILE* cpuPossible = fopen(filename, "r");
-   if(!cpuPossible)
-       return 1;
+   char *file_contents = getFileContents(filename);
+   if(!file_contents)
+       return 0;
 
-   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
-   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
-   fclose(cpuPossible);
-   if(!pbuf)
-      return 0;
-
+   char *pbuf = file_contents;
    //parse string of form "0-1,3,5-7,10,13-15"
    int cpusAvailable = 0;
 
@@ -779,7 +789,30 @@ static inline int getNumberOfCPUsImpl(const char *filename)
       }
 
    }
+   delete[] file_contents;
    return cpusAvailable;
+}
+#endif
+
+#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__
+static inline unsigned getNumberOfCPUsCFS(void)
+{
+    char *file_contents = getFileContents("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
+    std::stringstream ss_period(file_contents);
+    static int cfs_quota;
+    ss_period >> cfs_quota;
+    delete[] file_contents;
+
+    if(cfs_quota < 1) /* cfs_quota must not be 0 or negative */
+        return 0;
+
+    file_contents = getFileContents("/sys/fs/cgroup/cpu/cpu.cfs_period_us");
+    std::stringstream ss_quota(file_contents);
+    static int cfs_period;
+    ss_quota >> cfs_period;
+    delete[] file_contents;
+
+    return (unsigned) cfs_quota/cfs_period;
 }
 #endif
 
@@ -808,7 +841,15 @@ int cv::getNumberOfCPUs(void)
     #if defined __ANDROID__
         static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
     #else /* Linux */
-        static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
+        unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
+        unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
+        static unsigned ncpus_impl;
+        if(ncpus_impl_cpuset == 0 && ncpus_impl_cfs == 0)
+            ncpus_impl = 1;
+        else if(!ncpus_impl_cpuset != !ncpus_impl_cfs)          /* One of them is zero */
+            ncpus_impl = ncpus_impl_cpuset | ncpus_impl_cfs;    /* Take non zero value */
+        else                                                    /* Both non zero, so take min*/
+            ncpus_impl = ncpus_impl_cpuset < ncpus_impl_cfs ? ncpus_impl_cpuset : ncpus_impl_cfs;
 
         if(concurentThreadsSupported == 0) { /* somehow hardware_concurrency failed or c++ version < 11 */
             cpu_set_t cpu_set;
@@ -818,12 +859,12 @@ int cv::getNumberOfCPUs(void)
     #endif
 
     static unsigned ncpus;
-     if(ncpus_impl == 0 && concurentThreadsSupported == 0)
-         ncpus = 1;
-     else if(!ncpus_impl != !concurentThreadsSupported)      /* One of them is zero */
-         ncpus = ncpus_impl | concurentThreadsSupported;     /* Take non zero value */
-     else                                                    /* Both non zero, so take min*/
-         ncpus = ncpus_impl < concurentThreadsSupported ? ncpus_impl : concurentThreadsSupported;
+    if(ncpus_impl == 0 && concurentThreadsSupported == 0)
+        ncpus = 1;
+    else if(!ncpus_impl != !concurentThreadsSupported)      /* One of them is zero */
+        ncpus = ncpus_impl | concurentThreadsSupported;     /* Take non zero value */
+    else                                                    /* Both non zero, so take min*/
+        ncpus = ncpus_impl < concurentThreadsSupported ? ncpus_impl : concurentThreadsSupported;
 
     return ncpus;
 #elif defined __APPLE__
