@@ -26,5 +26,13 @@ class cuda_test(NewOpenCVTests):
 
         self.assertTrue(np.allclose(cuMat.download(), npMat))
 
+    def test_cuda_interop(self):
+        npMat = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+        cuMat = cv.cuda_GpuMat()
+        cuMat.upload(npMat)
+        self.assertTrue(cuMat.cudaPtr() != 0)
+        stream = cv.cuda_Stream()
+        self.assertTrue(stream.cudaPtr() != 0)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

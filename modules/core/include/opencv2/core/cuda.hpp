@@ -305,6 +305,9 @@ public:
     //! returns true if GpuMat data is NULL
     CV_WRAP bool empty() const;
 
+    // returns pointer to cuda memory
+    CV_WRAP void* cudaPtr() const;
+
     //! internal use method: updates the continuity flag
     CV_WRAP void updateContinuityFlag();
 
@@ -680,6 +683,9 @@ public:
 
     //! returns true if stream object is not default (!= 0)
     operator bool_type() const;
+
+    //! return Pointer to CUDA stream
+    CV_WRAP void* cudaPtr() const;
 
     class Impl;
 
