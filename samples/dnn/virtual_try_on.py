@@ -1,9 +1,9 @@
 import argparse
-import cv2 as cv
+import math
 import numpy as np
+import cv2 as cv
 
 from numpy import linalg
-from scipy.special import expit as sigmoid
 from human_parsing import parse_human
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
@@ -32,14 +32,13 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
 args, _ = parser.parse_known_args()
 
 
-def get_pose_map(image_path, proto_path, model_path, backend, target):
-    height = 256
-    width = 192
+def get_pose_map(image_path, proto_path, model_path, backend, target, height=256, width=192):
     radius = 5
     net = cv.dnn.readNet(proto_path, model_path)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
     img = cv.imread(image_path)
+
     inp = cv.dnn.blobFromImage(img, 1.0 / 255, (width, height))
     net.setInput(inp)
     out = net.forward()
@@ -63,7 +62,89 @@ def get_pose_map(image_path, proto_path, model_path, backend, target):
     return pose_map
 
 
-def prepare_agnostic(segm_image, image_name, pose_map):
+class BilinearFilter(object):
+    def __init__(self):
+        pass
+
+    def bilinear_filter(self, x):
+        if x < 0.0:
+            x = -x
+        if x < 1.0:
+            return 1.0 - x
+        return 0.0
+
+    def precompute_coeffs(self, inSize, in0, in1, outSize):
+        filterscale = max(1.0, (in1 - in0) / outSize)
+        ksize = math.ceil(filterscale) * 2 + 1
+
+        kk = np.zeros(shape=(outSize * ksize, ), dtype=np.float32)
+        bounds = np.empty(shape=(outSize * 2, ), dtype=np.int32)
+        for xx in range(0, outSize):
+            center = in0 + (xx + 0.5) * filterscale + 0.5
+            ss = 1.0 / filterscale
+            xmin = max(0, int(center - filterscale))
+            xmax = min(inSize, int(center + filterscale))
+            xmax -= xmin
+            ww = 0.0
+            k = kk[xx * ksize:]
+            for x in range(0, xmax):
+                w = self.bilinear_filter((x + xmin - center) * ss)
+                k[x] = w
+                ww += w
+            for x in range(0, xmax):
+                if ww != 0.0:
+                    k[x] /= ww
+
+            bounds[xx * 2 + 0] = xmin
+            bounds[xx * 2 + 1] = xmax
+        return bounds, kk, ksize
+
+    def ResampleHorizontal(self, out, img, offset, ksize, bounds, kk):
+        for yy in range(0, out.shape[0]):
+            for xx in range(0, out.shape[1]):
+                xmin = bounds[xx * 2 + 0]
+                xmax = bounds[xx * 2 + 1]
+                k = kk[xx * ksize:]
+                ss0 = 0
+                for x in range(0, xmax):
+                    ss0 += img[yy + offset][x + xmin] * k[x]
+                out[yy][xx] = np.round(ss0)
+        return out
+
+    def ResampleVertical(self, img, offset, ksize, bounds, kk, ysize):
+        out = np.empty(shape=(ysize, img.shape[1]), dtype=np.uint8)
+
+        for yy in range(0, ysize):
+            k = kk[yy * ksize:]
+            ymin = bounds[yy * 2 + 0]
+            ymax = bounds[yy * 2 + 1]
+            for xx in range(0, img.shape[1]):
+                ss0 = 0
+                for y in range(0, ymax):
+                    ss0 += img[y + ymin][xx] * k[y]
+                out[yy][xx] = np.round(ss0)
+        return out
+
+
+    def ImagingResample(self, img, xsize, ysize):
+        height, width, *args = img.shape
+
+        bounds_horiz, kk_horiz, ksize_horiz = self.precompute_coeffs(width, 0, width, xsize)
+        bounds_vert, kk_vert, ksize_vert    = self.precompute_coeffs(height, 0, height, ysize)
+
+        ybox_first = bounds_vert[0]
+        ybox_last = bounds_vert[ysize * 2 - 2] + bounds_vert[ysize * 2 - 1]
+
+        for i in range(0, ysize):
+            bounds_vert[i * 2] -= ybox_first
+
+        out_hor = np.empty((ybox_last - ybox_first, xsize), dtype=np.uint8)
+        out_hor = self.ResampleHorizontal(out_hor, img, ybox_first, ksize_horiz, bounds_horiz, kk_horiz)
+        out = self.ResampleVertical(out_hor, 0, ksize_vert, bounds_vert, kk_vert, ysize)
+        return out
+
+
+def prepare_agnostic(segm_image, image_name, pose_map, height=256, width=192):
     palette = {
         'Background'   : (0, 0, 0),
         'Hat'          : (128, 0, 0),
@@ -87,12 +168,9 @@ def prepare_agnostic(segm_image, image_name, pose_map):
         'Right-shoe'   : (255, 170, 0)
     }
     color2label = {val: key for key, val in palette.items()}
-    head_labels = ['Hat', 'Hair', 'Sunglasses', 'Face']
+    head_labels = ['Hat', 'Hair', 'Sunglasses', 'Face', 'Pants', 'Skirt']
 
     segm_image = cv.cvtColor(segm_image, cv.COLOR_BGR2RGB)
-
-    width = segm_image.shape[1]
-    height = segm_image.shape[0]
 
     phead = np.zeros((1, height, width))
     pose_shape = np.zeros((height, width, 1))
@@ -108,18 +186,16 @@ def prepare_agnostic(segm_image, image_name, pose_map):
     phead = phead.astype(np.float32)
 
     input_image = cv.imread(image_name)
+    input_image = cv.resize(input_image, (width, height), cv.INTER_LINEAR)
     input_image = cv.cvtColor(input_image, cv.COLOR_BGR2RGB)
     input_image = (input_image - 127.5) / 127.5
     input_image = input_image.transpose(2, 0, 1)
 
     img_head = input_image * phead - (1 - phead)
 
-    from PIL import Image
-    pose_shape = pose_shape.astype(np.uint8).reshape(height, width)
-    parse_shape = Image.fromarray(pose_shape)
-    parse_shape = parse_shape.resize((width // 16, height // 16), Image.BILINEAR)
-    parse_shape = parse_shape.resize((width, height), Image.BILINEAR)
-    res_shape = np.array(parse_shape)
+    downsample = BilinearFilter()
+    pose_shape = downsample.ImagingResample(pose_shape, width // 16, height // 16)
+    res_shape = cv.resize(pose_shape, (width, height), cv.INTER_LINEAR)
 
     res_shape = cv.dnn.blobFromImage(res_shape, 1.0 / 127.5, mean=(127.5, 127.5, 127.5), swapRB=True)
     res_shape = res_shape.squeeze(0)
@@ -129,9 +205,9 @@ def prepare_agnostic(segm_image, image_name, pose_map):
     return agnostic
 
 
-def get_warped_cloth(cloth_path, agnostic, model, backend, target):
+def get_warped_cloth(cloth_path, agnostic, model, backend, target, height=256, width=192):
     cloth_img = cv.imread(cloth_path)
-    cloth = cv.dnn.blobFromImage(cloth_img, 1.0 / 127.5, mean=(127.5, 127.5, 127.5), swapRB=True)
+    cloth = cv.dnn.blobFromImage(cloth_img, 1.0 / 127.5, (width, height), mean=(127.5, 127.5, 127.5), swapRB=True)
 
     theta = run_gmm(agnostic, cloth, model, backend, target)
     grid = postprocess(theta)
@@ -186,10 +262,11 @@ def get_tryon(agnostic, warp_cloth, model, backend, target):
 
     p_rendered, m_composite = np.split(out, [3], axis=1)
     p_rendered = np.tanh(p_rendered)
-    m_composite = sigmoid(m_composite)
+    m_composite = 1 / (1 + np.exp(-m_composite))
 
     p_tryon = warp_cloth * m_composite + p_rendered * (1 - m_composite)
     rgb_p_tryon = cv.cvtColor(p_tryon.squeeze(0).transpose(1, 2, 0), cv.COLOR_BGR2RGB)
+    rgb_p_tryon = (rgb_p_tryon + 1) / 2
     return rgb_p_tryon
 
 
@@ -375,12 +452,13 @@ def bilinear_sampler(img, grid):
 if __name__ == "__main__":
     pose = get_pose_map(args.input_image, args.openpose_proto, args.openpose_model, args.backend, args.target)
     segm_image = parse_human(args.input_image, args.segmentation_model)
+    segm_image = cv.resize(segm_image, (192, 256), cv.INTER_LINEAR)
 
     agnostic = prepare_agnostic(segm_image, args.input_image, pose)
     warped_cloth = get_warped_cloth(args.input_cloth, agnostic, args.gmm_model, args.backend, args.target)
     output = get_tryon(agnostic, warped_cloth, args.tom_model, args.backend, args.target)
 
-    winName = 'Deep learning virtual try-on in OpenCV'
+    winName = 'Virtual Try-On'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
     cv.imshow(winName, output)
     cv.waitKey()
