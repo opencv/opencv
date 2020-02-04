@@ -107,8 +107,8 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
                                           std::shared_ptr<ade::Graph> gp)
     : m_g(g), m_gm(m_g), m_g_s(g), m_gm_s(m_g_s), m_gp(gp)
 {
-    const auto s = serialization::serialize(m_gm, nodes);
-    serialization::deserialize(s);
+    //const auto s = serialization::serialize(m_gm, nodes);
+    //serialization::deserialize(s);
     //serialization::printGSerialized(s);
 
     // FIXME: reuse code from GModelBuilder/GModel!

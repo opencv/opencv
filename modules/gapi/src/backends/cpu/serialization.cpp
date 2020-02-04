@@ -36,8 +36,7 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
 {
     const auto& op = cg.metadata(nh).get<gimpl::Op>();
 
-    serialization::Op sop{Kernel{op.k.name, op.k.tag}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
-    sop.args.resize(op.args.size());
+    serialization::Op sop{Kernel{op.k.name, op.k.tag}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
     sop.outs.resize(op.outs.size());
 
     for(size_t i=0; i < op.args.size(); ++i)
@@ -46,10 +45,14 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
         {
             const gimpl::RcDesc &rc = op.args[i].get<gimpl::RcDesc>();
             RcDesc src = {rc.shape, rc.id};
-            sop.args[i] = GArg(src);
+            sop.kind.push_back((int)detail::ArgKind::GOBJREF);
+            sop.opaque_kind.push_back((int)detail::OpaqueKind::UNSUPPORTED);
+            sop.ins.push_back(src);
         }
         else if(op.args[i].kind == detail::ArgKind::OPAQUE)
         {
+            sop.kind.push_back((int)detail::ArgKind::OPAQUE);
+            sop.opaque_kind.push_back((int)op.args[i].opaque_kind);
             switch (op.args[i].opaque_kind)
             {
             case detail::OpaqueKind::INT:
@@ -61,7 +64,8 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
                 sop.opaque_doubles.push_back(op.args[i].get<double>());
                 break;
             case detail::OpaqueKind::CV_SIZE:
-                std::cout << "putOp    cv::Size " << op.args[i].get<cv::Size>().width << "x" << op.args[i].get<cv::Size>().height << std::endl;
+                std::cout << "putOp    cv::Size " << op.args[i].get<cv::Size>().width << "x"
+                          << op.args[i].get<cv::Size>().height << std::endl;
                 sop.opaque_cvsizes.push_back(op.args[i].get<cv::Size>());
                 break;
             case detail::OpaqueKind::BOOL:
@@ -96,13 +100,10 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
                           << op.args[i].get<cv::Rect>().height << " "
                           << std::endl;
                 sop.opaque_cvrects.push_back(op.args[i].get<cv::Rect>());
-                break;               break;
-
+                break;
             default:
                 std::cout << "putOp    OpaqueKind::UNSUPPORTED" << std::endl;
             }
-            sop.args[i].opaque_kind = op.args[i].opaque_kind;
-            sop.args[i] = op.args[i];
         }
         else
         {
@@ -132,83 +133,96 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
 
 void printOp(const Op& op)
 {
-    std::cout << "Op" << std::endl;
-    std::cout << "  Kernel" << std::endl;
+    std::cout << "printOp Op" << std::endl;
+    std::cout << "printOp  Kernel" << std::endl;
     std::cout << "    " << op.k.name << std::endl;
     if (!op.k.tag.empty())
     {
         std::cout << op.k.tag << std::endl;
     }
 
-    std::cout << "  Args" << std::endl;
-    for (const auto& arg : op.args)
+    std::cout << "printOp  Args" << std::endl;
+    size_t i_int = 0; size_t i_double = 0; size_t i_size = 0; size_t i_bool = 0;
+    size_t i_scalar = 0; size_t i_point = 0; size_t i_mat = 0; size_t i_rect = 0;
+    size_t i_objref = 0; size_t i_opaque = 0;
+    for (const auto& kind : op.kind)
     {
-        if(arg.kind == detail::ArgKind::GOBJREF)
+        if(kind == (int)detail::ArgKind::GOBJREF)
         {
-            const auto& rc = arg.get<RcDesc>();
-            std::cout << "    rc.shape " << (int)rc.shape << ", rc.id " << rc.id  << std::endl;
+            const auto& rc = op.ins[i_objref]; i_objref++;
+            std::cout << "printOp    rc.shape " << (int)rc.shape << ", rc.id " << rc.id  << std::endl;
         }
-        else if(arg.kind == detail::ArgKind::OPAQUE)
+        else if(kind == (int)detail::ArgKind::OPAQUE)
         {
-            switch (arg.opaque_kind)
+            switch ((detail::OpaqueKind)op.opaque_kind[i_opaque])
             {
             case detail::OpaqueKind::INT:
-                std::cout << "    int " << arg.get<int>() << std::endl;
+                std::cout << "printOp    int " << op.opaque_ints[i_int] << std::endl;
+                i_int++;
                 break;
             case detail::OpaqueKind::DOUBLE:
-                std::cout << "    double " << arg.get<double>() << std::endl;
+                std::cout << "printOp    double " << op.opaque_doubles[i_double] << std::endl;
+                i_double++;
                 break;
             case detail::OpaqueKind::CV_SIZE:
-                std::cout << "    cv::Size " << arg.get<cv::Size>().width << "x" << arg.get<cv::Size>().height << std::endl;
+                std::cout << "printOp    cv::Size " << op.opaque_cvsizes[i_size].width << "x"
+                          << op.opaque_cvsizes[i_size].height << std::endl;
+                i_size++;
                 break;
             case detail::OpaqueKind::BOOL:
-                std::cout << "    bool " << arg.get<bool>() << std::endl;
+                std::cout << "printOp    bool " << op.opaque_bools[i_bool] << std::endl;
+                i_bool++;
                 break;
             case detail::OpaqueKind::CV_SCALAR:
-                std::cout << "    cv::Scalar " << arg.get<cv::Scalar>()[0] << " "
-                          << arg.get<cv::Scalar>()[1] << " "
-                          << arg.get<cv::Scalar>()[2] << " "
-                          << arg.get<cv::Scalar>()[3] << " "
+                std::cout << "printOp    cv::Scalar " << op.opaque_cvscalars[i_scalar][0] << " "
+                          << op.opaque_cvscalars[i_scalar][1] << " "
+                          << op.opaque_cvscalars[i_scalar][2] << " "
+                          << op.opaque_cvscalars[i_scalar][3] << " "
                           << std::endl;
+                i_scalar++;
                 break;
             case detail::OpaqueKind::CV_POINT:
-                std::cout << "    cv::Point " << arg.get<cv::Point>().x << " "
-                          << arg.get<cv::Point>().y << " "
+                std::cout << "printOp    cv::Point " << op.opaque_cvpoints[i_point].x << " "
+                          << op.opaque_cvpoints[i_point].y << " "
                           << std::endl;
+                i_point++;
                 break;
             case detail::OpaqueKind::CV_MAT:
-                std::cout << "    cv::Mat " << arg.get<cv::Mat>().rows << " "
-                          << arg.get<cv::Mat>().cols << " "
-                          << arg.get<cv::Mat>().type() << " "
+                std::cout << "printOp    cv::Mat " << op.opaque_cvmats[i_mat].rows << " "
+                          << op.opaque_cvmats[i_mat].cols << " "
+                          << op.opaque_cvmats[i_mat].type() << " "
                           << std::endl;
+                i_mat++;
                 break;
             case detail::OpaqueKind::CV_RECT:
-                std::cout << "     cv::Rect " << arg.get<cv::Rect>().x << " "
-                          << arg.get<cv::Rect>().y << " "
-                          << arg.get<cv::Rect>().width << " "
-                          << arg.get<cv::Rect>().height << " "
+                std::cout << "printOp     cv::Rect " << op.opaque_cvrects[i_rect].x << " "
+                          << op.opaque_cvrects[i_rect].y << " "
+                          << op.opaque_cvrects[i_rect].width << " "
+                          << op.opaque_cvrects[i_rect].height << " "
                           << std::endl;
+                i_rect++;
                 break;
             default:
-                std::cout << "    OpaqueKind::UNSUPPORTED" << std::endl;
+                std::cout << "printOp    OpaqueKind::UNSUPPORTED" << std::endl;
             }
         }
         else
         {
             util::throw_error(std::logic_error("Unexpected ArgKind: expected GOBJREF or OPAQUE"));
         }
+        i_opaque++;
     }
-    std::cout << "  Outs" << std::endl;
+    std::cout << "printOp  Outs" << std::endl;
     for (const auto& out : op.outs)
     {
-        std::cout << "    rc.shape " << (int)out.shape << ", rc.id " << out.id  << std::endl;
+        std::cout << "printOp    rc.shape " << (int)out.shape << ", rc.id " << out.id  << std::endl;
     }
 }
 
 void printData(const Data& data)
 {
-    std::cout << "Data" << std::endl;
-    std::cout << "  rc.shape " << (int)data.rc.shape << ", rc.id = " << data.rc.id << std::endl;
+    std::cout << "printData Data" << std::endl;
+    std::cout << "printData  rc.shape " << (int)data.rc.shape << ", rc.id = " << data.rc.id << std::endl;
     std::cout << "  " << data.meta << std::endl;
 }
 
@@ -251,25 +265,20 @@ void mkOpNode(ade::Graph& g, const Op& op)
         outs[i] = gimpl::RcDesc{op.outs[i].id, op.outs[i].shape, {}};
     }
 
-    GArgs args(op.args.size());
-    size_t i_int = 0;
-    size_t i_double = 0;
-    size_t i_size = 0;
-    size_t i_bool = 0;
-    size_t i_scalar = 0;
-    size_t i_point = 0;
-    size_t i_mat = 0;
-    size_t i_rect = 0;
+    GArgs args(op.kind.size());
+    size_t i_int = 0; size_t i_double = 0; size_t i_size = 0; size_t i_bool = 0;
+    size_t i_scalar = 0; size_t i_point = 0; size_t i_mat = 0; size_t i_rect = 0;
+    size_t i_objref = 0;
     for (size_t i = 0; i < args.size(); i++)
     {
-        if(op.args[i].kind == detail::ArgKind::GOBJREF)
+        if(op.kind[i] == (int)detail::ArgKind::GOBJREF)
         {
-            const auto rc = op.args[i].get<serialization::RcDesc>();
+            auto rc = op.ins[i_objref]; i_objref++;
             args[i] = GArg(gimpl::RcDesc{rc.id, rc.shape, {}});
         }
-        else if(op.args[i].kind == detail::ArgKind::OPAQUE)
+        else if(op.kind[i] == (int)detail::ArgKind::OPAQUE)
         {
-            switch (op.args[i].opaque_kind)
+            switch ((detail::OpaqueKind)op.opaque_kind[i])
             {
             case detail::OpaqueKind::INT:
             {
@@ -289,7 +298,8 @@ void mkOpNode(ade::Graph& g, const Op& op)
             {
                 auto opaque_cvsize = op.opaque_cvsizes[i_size]; i_size++;
                 args[i] = GArg(opaque_cvsize);
-                std::cout << "mkOpNode    cv::Size " << args[i].get<cv::Size>().width << "x" << args[i].get<cv::Size>().height << std::endl;
+                std::cout << "mkOpNode    cv::Size " << args[i].get<cv::Size>().width << "x"
+                          << args[i].get<cv::Size>().height << std::endl;
                 break;
             }
             case detail::OpaqueKind::BOOL:

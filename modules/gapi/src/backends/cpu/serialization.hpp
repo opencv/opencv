@@ -33,8 +33,11 @@ struct Op
 {
     Kernel k;
     // FIXME: GArg needs to be serialized properly
-    std::vector<GArg>   args;
+    //GArg data
+    std::vector<int>   kind;
+    std::vector<int>   opaque_kind;
     std::vector<RcDesc> outs;
+    std::vector<RcDesc> ins;
     //opaque args
     std::vector<int> opaque_ints;
     std::vector<double> opaque_doubles;
