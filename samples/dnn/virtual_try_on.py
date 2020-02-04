@@ -13,6 +13,7 @@ import numpy as np
 import cv2 as cv
 
 from numpy import linalg
+from common import findFile
 from human_parsing import parse_human
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
@@ -21,12 +22,12 @@ targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OP
 parser = argparse.ArgumentParser(description='Use this script to run virtial try-on using CP-VTON',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--input_image', '-i', help='Path to image with person. Skip this argument to capture frames from a camera.')
-parser.add_argument('--input_cloth', '-c', help='Path to target cloth image')
-parser.add_argument('--gmm_model', '-gmm', required=True, help='Path to Geometric Matching Module .onnx model.')
-parser.add_argument('--tom_model', '-tom', required=True, help='Path to Try-On Module .onnx model.')
-parser.add_argument('--segmentation_model', required=True, help='Path to cloth segmentation .pb model.')
-parser.add_argument('--openpose_proto', required=True, help='Path to .prototxt model was trained on COCO dataset.')
-parser.add_argument('--openpose_model', required=True, help='Path to .caffemodel model was trained on COCO dataset.')
+parser.add_argument('--input_cloth', '-c', required=True, help='Path to target cloth image')
+parser.add_argument('--gmm_model', '-gmm', default='gmm.onnx', help='Path to Geometric Matching Module .onnx model.')
+parser.add_argument('--tom_model', '-tom', default='tom.onnx', help='Path to Try-On Module .onnx model.')
+parser.add_argument('--segmentation_model', default='lip_jppnet_384.pb', help='Path to cloth segmentation .pb model.')
+parser.add_argument('--openpose_proto', required=True, help='Path to OpenPose .prototxt model was trained on COCO dataset.')
+parser.add_argument('--openpose_model', required=True, help='Path to OpenPose .caffemodel model was trained on COCO dataset.')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                     help="Choose one of computation backends: "
                             "%d: automatically (by default), "
@@ -43,12 +44,12 @@ args, _ = parser.parse_known_args()
 
 def get_pose_map(image_path, proto_path, model_path, backend, target, height=256, width=192):
     radius = 5
+    img = cv.imread(image_path)
+    inp = cv.dnn.blobFromImage(img, 1.0 / 255, (width, height))
+
     net = cv.dnn.readNet(proto_path, model_path)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
-    img = cv.imread(image_path)
-
-    inp = cv.dnn.blobFromImage(img, 1.0 / 255, (width, height))
     net.setInput(inp)
     out = net.forward()
 
@@ -82,18 +83,18 @@ class BilinearFilter(object):
             return 1.0 - x
         return 0.0
 
-    def precompute_coeffs(self, inSize, in0, in1, outSize):
-        filterscale = max(1.0, (in1 - in0) / outSize)
+    def precompute_coeffs(self, inSize, outSize):
+        filterscale = max(1.0, inSize / outSize)
         ksize = math.ceil(filterscale) * 2 + 1
 
         kk = np.zeros(shape=(outSize * ksize, ), dtype=np.float32)
         bounds = np.empty(shape=(outSize * 2, ), dtype=np.int32)
         for xx in range(0, outSize):
-            center = in0 + (xx + 0.5) * filterscale + 0.5
+            center = (xx + 0.5) * filterscale + 0.5
             ss = 1.0 / filterscale
-            xmin = max(0, int(center - filterscale))
+            bounds[xx * 2 + 0] = xmin = max(0, int(center - filterscale))
             xmax = min(inSize, int(center + filterscale))
-            xmax -= xmin
+            bounds[xx * 2 + 1] = xmax = xmax - xmin
             ww = 0.0
             k = kk[xx * ksize:]
             for x in range(0, xmax):
@@ -103,53 +104,33 @@ class BilinearFilter(object):
             for x in range(0, xmax):
                 if ww != 0.0:
                     k[x] /= ww
-
-            bounds[xx * 2 + 0] = xmin
-            bounds[xx * 2 + 1] = xmax
         return bounds, kk, ksize
 
-    def ResampleHorizontal(self, out, img, offset, ksize, bounds, kk):
+    def ResampleHorizontal(self, out, img, ksize, bounds, kk):
         for yy in range(0, out.shape[0]):
             for xx in range(0, out.shape[1]):
                 xmin = bounds[xx * 2 + 0]
                 xmax = bounds[xx * 2 + 1]
                 k = kk[xx * ksize:]
-                ss0 = 0
-                for x in range(0, xmax):
-                    ss0 += img[yy + offset][x + xmin] * k[x]
-                out[yy][xx] = np.round(ss0)
-        return out
+                out[yy][xx] = np.round(np.sum([img[yy][x + xmin] * k[x] for x in range(0, xmax)]))
 
-    def ResampleVertical(self, img, offset, ksize, bounds, kk, ysize):
-        out = np.empty(shape=(ysize, img.shape[1]), dtype=np.uint8)
-
-        for yy in range(0, ysize):
+    def ResampleVertical(self, out, img, ksize, bounds, kk):
+        for yy in range(0, out.shape[0]):
             k = kk[yy * ksize:]
             ymin = bounds[yy * 2 + 0]
             ymax = bounds[yy * 2 + 1]
-            for xx in range(0, img.shape[1]):
-                ss0 = 0
-                for y in range(0, ymax):
-                    ss0 += img[y + ymin][xx] * k[y]
-                out[yy][xx] = np.round(ss0)
-        return out
-
+            for xx in range(0, out.shape[1]):
+                out[yy][xx] = np.round(np.sum([img[y + ymin][xx] * k[y] for y in range(0, ymax)]))
 
     def ImagingResample(self, img, xsize, ysize):
         height, width, *args = img.shape
+        bounds_horiz, kk_horiz, ksize_horiz = self.precompute_coeffs(width, xsize)
+        bounds_vert, kk_vert, ksize_vert    = self.precompute_coeffs(height, ysize)
 
-        bounds_horiz, kk_horiz, ksize_horiz = self.precompute_coeffs(width, 0, width, xsize)
-        bounds_vert, kk_vert, ksize_vert    = self.precompute_coeffs(height, 0, height, ysize)
-
-        ybox_first = bounds_vert[0]
-        ybox_last = bounds_vert[ysize * 2 - 2] + bounds_vert[ysize * 2 - 1]
-
-        for i in range(0, ysize):
-            bounds_vert[i * 2] -= ybox_first
-
-        out_hor = np.empty((ybox_last - ybox_first, xsize), dtype=np.uint8)
-        out_hor = self.ResampleHorizontal(out_hor, img, ybox_first, ksize_horiz, bounds_horiz, kk_horiz)
-        out = self.ResampleVertical(out_hor, 0, ksize_vert, bounds_vert, kk_vert, ysize)
+        out_hor = np.empty((img.shape[0], xsize), dtype=np.uint8)
+        self.ResampleHorizontal(out_hor, img, ksize_horiz, bounds_horiz, kk_horiz)
+        out = np.empty((ysize, xsize), dtype=np.uint8)
+        self.ResampleVertical(out, out_hor, ksize_vert, bounds_vert, kk_vert)
         return out
 
 
@@ -249,12 +230,12 @@ def run_gmm(agnostic, c, model, backend, target):
             return [correlation_tensor]
 
     cv.dnn_registerLayer('Correlation', CorrelationLayer)
-    net = cv.dnn.readNet(model)
 
-    net.setInput(agnostic, "input.1")
-    net.setInput(c, "input.18")
+    net = cv.dnn.readNet(model)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
+    net.setInput(agnostic, "input.1")
+    net.setInput(c, "input.18")
     theta = net.forward()
 
     cv.dnn_unregisterLayer('Correlation')
@@ -262,11 +243,12 @@ def run_gmm(agnostic, c, model, backend, target):
 
 
 def get_tryon(agnostic, warp_cloth, model, backend, target):
-    net = cv.dnn.readNet(model)
     inp = np.concatenate([agnostic, warp_cloth], axis=1)
-    net.setInput(inp)
+
+    net = cv.dnn.readNet(model)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
+    net.setInput(inp)
     out = net.forward()
 
     p_rendered, m_composite = np.split(out, [3], axis=1)
@@ -459,7 +441,8 @@ def bilinear_sampler(img, grid):
 
 
 if __name__ == "__main__":
-    pose = get_pose_map(args.input_image, args.openpose_proto, args.openpose_model, args.backend, args.target)
+    pose = get_pose_map(args.input_image, findFile(args.openpose_proto),
+                        findFile(args.openpose_model), args.backend, args.target)
     segm_image = parse_human(args.input_image, args.segmentation_model)
     segm_image = cv.resize(segm_image, (192, 256), cv.INTER_LINEAR)
 
