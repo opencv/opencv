@@ -2304,7 +2304,8 @@ bool QRCodeDetector::decodeMulti(
     CV_Assert((points.size().width % 4) == 0);
     vector< vector< Point2f > > src_points ;
     Mat qr_points = points.getMat();
-    for (int i = 0; i < points.size().width ; i += 4)
+    qr_points = qr_points.reshape(2, 1);
+    for (int i = 0; i < qr_points.size().width ; i += 4)
     {
         vector<Point2f> tempMat = qr_points.colRange(i, i + 4);
         if (contourArea(tempMat) > 0.0)
