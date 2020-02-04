@@ -743,7 +743,7 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#if (defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__) && !defined __ANDROID__
+#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __ANDROID__
 static inline char* getFileContents(const char *filename)
 {
    FILE* fd = fopen(filename, "r");
