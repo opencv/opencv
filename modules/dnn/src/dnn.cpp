@@ -62,6 +62,8 @@ namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
+static size_t DNN_NETWORK_DUMP = utils::getConfigurationParameterSizeT("OPENCV_DNN_NETWORK_DUMP", 0);
+
 // this option is useful to run valgrind memory errors detection
 static bool DNN_DISABLE_MEMORY_OPTIMIZATIONS = utils::getConfigurationParameterBool("OPENCV_DNN_DISABLE_MEMORY_OPTIMIZATIONS", false);
 
@@ -1055,12 +1057,19 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
     return Ptr<BackendWrapper>();  // TODO Error?
 }
 
+static int g_networkId = 0;
+
 struct Net::Impl
 {
     typedef std::map<int, LayerShapes> LayersShapesMap;
     typedef std::map<int, LayerData> MapIdToLayerData;
 
+    const int networkId; // network global identifier
+    int networkDumpCounter; // dump counter
+
     Impl()
+        : networkId(CV_XADD(&g_networkId, 1))
+        , networkDumpCounter(0)
     {
         //allocate fake net input layer
         netInputLayer = Ptr<DataLayer>(new DataLayer());
@@ -1224,6 +1233,11 @@ struct Net::Impl
     {
         CV_TRACE_FUNCTION();
 
+        if (DNN_NETWORK_DUMP > 0 && networkDumpCounter == 0)
+        {
+            dumpNetworkToFile();
+        }
+
         if (preferableBackend == DNN_BACKEND_DEFAULT)
             preferableBackend = (Backend)PARAM_DNN_BACKEND_DEFAULT;
 #ifdef HAVE_INF_ENGINE
@@ -1300,6 +1314,11 @@ struct Net::Impl
 
             netWasAllocated = true;
             this->blobsToKeep = blobsToKeep_;
+
+            if (DNN_NETWORK_DUMP > 0)
+            {
+                dumpNetworkToFile();
+            }
         }
     }
 
@@ -2980,6 +2999,31 @@ struct Net::Impl
     static
     Net createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNet);
 #endif
+
+    string dump();
+
+    void dumpNetworkToFile()
+    {
+#ifndef OPENCV_DNN_DISABLE_NETWORK_AUTO_DUMP
+        String dumpFileName = cv::format("ocv_dnn_net_%05d_%02d.dot", networkId, networkDumpCounter++);
+        try
+        {
+            string dumpStr = dump();
+            std::ofstream out(dumpFileName.c_str(), std::ios::out | std::ios::binary);
+            out << dumpStr;
+        }
+        catch (const std::exception& e)
+        {
+            std::ofstream out((dumpFileName + ".error").c_str(), std::ios::out);
+            out << "Exception: " << e.what() << std::endl;
+        }
+        catch (...)
+        {
+            std::ofstream out((dumpFileName + ".error").c_str(), std::ios::out);
+            out << "Can't dump: unknown exception" << std::endl;
+        }
+#endif
+    }
 };
 
 Net::Net() : impl(new Net::Impl)
@@ -3532,10 +3576,17 @@ String Net::dump()
             impl->setUpNet();
     }
 
-    std::ostringstream out;
-    const std::map<int, LayerData>& map = impl->layers;
+    return impl->dump();
+}
 
-    Backend prefBackend = (Backend)impl->preferableBackend;
+string Net::Impl::dump()
+{
+    bool hasInput = !netInputLayer->inputsData.empty();
+
+    std::ostringstream out;
+    const std::map<int, LayerData>& map = layers;
+
+    Backend prefBackend = (Backend)preferableBackend;
     std::vector<std::vector<int> > skippedLayers;
     std::vector<int> skipId;
     std::vector<int> allLayers(map.size(), -1);
@@ -3736,7 +3787,7 @@ String Net::dump()
     }
     out << '\n';
     // Add edges
-    int inputsSize = hasInput ? impl->netInputLayer->outNames.size() : 0;
+    int inputsSize = hasInput ? netInputLayer->outNames.size() : 0;
     for (std::map<int, LayerData>::const_iterator it = map.begin(); it != map.end(); ++it)
     {
         const LayerData& ld = it->second;
