@@ -73,37 +73,24 @@ def get_pose_map(image_path, proto_path, model_path, backend, target, height=256
 
 
 class BilinearFilter(object):
-    def __init__(self):
-        pass
-
-    def bilinear_filter(self, x):
-        if x < 0.0:
-            x = -x
-        if x < 1.0:
-            return 1.0 - x
-        return 0.0
-
     def precompute_coeffs(self, inSize, outSize):
         filterscale = max(1.0, inSize / outSize)
         ksize = math.ceil(filterscale) * 2 + 1
 
         kk = np.zeros(shape=(outSize * ksize, ), dtype=np.float32)
         bounds = np.empty(shape=(outSize * 2, ), dtype=np.int32)
+
+        centers = (np.arange(outSize) + 0.5) * filterscale + 0.5
+        bounds[::2] = np.where(centers - filterscale < 0, 0, centers - filterscale)
+        bounds[1::2] = np.where(centers + filterscale > inSize, inSize, centers + filterscale) - bounds[::2]
+        xmins = bounds[::2] - centers + 1
+
+        points = np.array([np.arange(row) + xmins[i] for i, row in enumerate(bounds[1::2])]) / filterscale
         for xx in range(0, outSize):
-            center = (xx + 0.5) * filterscale + 0.5
-            ss = 1.0 / filterscale
-            bounds[xx * 2 + 0] = xmin = max(0, int(center - filterscale))
-            xmax = min(inSize, int(center + filterscale))
-            bounds[xx * 2 + 1] = xmax = xmax - xmin
-            ww = 0.0
-            k = kk[xx * ksize:]
-            for x in range(0, xmax):
-                w = self.bilinear_filter((x + xmin - center) * ss)
-                k[x] = w
-                ww += w
-            for x in range(0, xmax):
-                if ww != 0.0:
-                    k[x] /= ww
+            point = points[xx]
+            bilinear = np.where(point < 1.0, 1.0 - abs(point), 0.0)
+            ww = np.sum(bilinear)
+            kk[xx * ksize : xx * ksize + bilinear.size] = np.where(ww == 0.0, bilinear, bilinear / ww)
         return bounds, kk, ksize
 
     def ResampleHorizontal(self, out, img, ksize, bounds, kk):
@@ -111,16 +98,15 @@ class BilinearFilter(object):
             for xx in range(0, out.shape[1]):
                 xmin = bounds[xx * 2 + 0]
                 xmax = bounds[xx * 2 + 1]
-                k = kk[xx * ksize:]
-                out[yy][xx] = np.round(np.sum([img[yy][x + xmin] * k[x] for x in range(0, xmax)]))
+                k = kk[xx * ksize : xx * ksize + xmax]
+                out[yy, xx] = np.round(np.sum(img[yy, xmin : xmin + xmax] * k))
 
     def ResampleVertical(self, out, img, ksize, bounds, kk):
         for yy in range(0, out.shape[0]):
-            k = kk[yy * ksize:]
             ymin = bounds[yy * 2 + 0]
             ymax = bounds[yy * 2 + 1]
-            for xx in range(0, out.shape[1]):
-                out[yy][xx] = np.round(np.sum([img[y + ymin][xx] * k[y] for y in range(0, ymax)]))
+            k = kk[yy * ksize: yy * ksize + ymax]
+            out[yy] = np.round(np.sum(img[ymin : ymin + ymax, 0:out.shape[1]] * k[:, np.newaxis], axis=0))
 
     def ImagingResample(self, img, xsize, ysize):
         height, width, *args = img.shape
@@ -161,19 +147,16 @@ def prepare_agnostic(segm_image, image_name, pose_map, height=256, width=192):
     head_labels = ['Hat', 'Hair', 'Sunglasses', 'Face', 'Pants', 'Skirt']
 
     segm_image = cv.cvtColor(segm_image, cv.COLOR_BGR2RGB)
-
-    phead = np.zeros((1, height, width))
-    pose_shape = np.zeros((height, width, 1))
+    phead = np.zeros((1, height, width), dtype=np.float32)
+    pose_shape = np.zeros((height, width), dtype=np.uint8)
     for r in range(height):
         for c in range(width):
-            pixel = segm_image[r, c]
+            pixel = tuple(segm_image[r, c])
             if tuple(pixel) in color2label:
-                if color2label[tuple(pixel)] in head_labels:
+                if color2label[pixel] in head_labels:
                     phead[0, r, c] = 1
-                if color2label[tuple(pixel)] != 'Background':
-                    pose_shape[r, c, 0] = 255
-
-    phead = phead.astype(np.float32)
+                if color2label[pixel] != 'Background':
+                    pose_shape[r, c] = 255
 
     input_image = cv.imread(image_name)
     input_image = cv.resize(input_image, (width, height), cv.INTER_LINEAR)
@@ -184,8 +167,8 @@ def prepare_agnostic(segm_image, image_name, pose_map, height=256, width=192):
     img_head = input_image * phead - (1 - phead)
 
     downsample = BilinearFilter()
-    pose_shape = downsample.ImagingResample(pose_shape, width // 16, height // 16)
-    res_shape = cv.resize(pose_shape, (width, height), cv.INTER_LINEAR)
+    down = downsample.ImagingResample(pose_shape, width // 16, height // 16)
+    res_shape = cv.resize(down, (width, height), cv.INTER_LINEAR)
 
     res_shape = cv.dnn.blobFromImage(res_shape, 1.0 / 127.5, mean=(127.5, 127.5, 127.5), swapRB=True)
     res_shape = res_shape.squeeze(0)
