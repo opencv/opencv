@@ -469,4 +469,3 @@ void deserialize(const serialization::GSerialized& s)
 } // namespace serialization
 } // namespace gimpl
 } // namespace cv
-
