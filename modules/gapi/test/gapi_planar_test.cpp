@@ -106,7 +106,7 @@ GAPI_OCV_KERNEL(OCVNV12toRGBp, GNV12toRGBp)
         toPlanar(rgb, out);
     }
 };
-
+#if 0
 struct PlanarTest : public TestWithParam <std::pair<cv::Size, cv::Size>> {};
 TEST_P(PlanarTest, Resize3c3p)
 {
@@ -201,5 +201,5 @@ INSTANTIATE_TEST_CASE_P(Sanity, PlanarTest,
                               ,std::make_pair(cv::Size{960, 540}, cv::Size{224, 224})
                               ,std::make_pair(cv::Size{64, 64}, cv::Size{224, 224})
                               ));
-
+#endif
 } // namespace opencv_test

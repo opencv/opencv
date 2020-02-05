@@ -312,7 +312,7 @@ TEST(KernelPackage, Return_Unique_Backends)
     auto pkg = cv::gapi::kernels<cpu::GClone, fluid::BGR2Gray, fluid::GAdd>();
     EXPECT_EQ(2u, pkg.backends().size());
 }
-
+#if 0
 TEST(KernelPackage, Can_Use_Custom_Kernel)
 {
     cv::GMat in[2];
@@ -324,7 +324,7 @@ TEST(KernelPackage, Can_Use_Custom_Kernel)
     EXPECT_NO_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
                         compile({in_meta, in_meta}, cv::compile_args(pkg)));
 }
-
+#endif
 TEST(KernelPackage, CombineMultiple)
 {
     namespace J = Jupiter;
@@ -357,7 +357,7 @@ TEST_F(HeteroGraph, Call_Custom_Kernel_Default_Backend)
 
     EXPECT_TRUE(checkCallKernel(KernelTags::CPU_CUSTOM_CLONE));
 }
-
+#if 0
 TEST_F(HeteroGraph, Call_Custom_Kernel_Not_Default_Backend)
 {
     // in0 -> GCPUAdd -> tmp -> fluid::GClone -> GCPUBGR2Gray -> out
@@ -451,7 +451,7 @@ TEST_F(HeteroGraph, Use_Only_Another_Backend)
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_BGR2GRAY));
 }
-
+#endif
 TEST_F(HeteroGraph, Use_Only_Hetero_Backend)
 {
     //in0 -> cpu::GAdd -> tmp -> fluid::GClone -> fluid::BGR2Gray -> out

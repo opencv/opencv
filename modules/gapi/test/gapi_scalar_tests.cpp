@@ -62,7 +62,7 @@ TEST(GAPI_Scalar, TmpScalar)
     cv::Mat reference = cv::Mat(sz, CV_8U, cv::Scalar(4));
     EXPECT_EQ(0, cv::countNonZero(cv::abs(out_mat - reference)));
 }
-
+#if 0
 TEST(GAPI_ScalarWithValue, Simple_Arithmetic_Pipeline)
 {
     GMat in;
@@ -113,5 +113,5 @@ TEST(GAPI_ScalarWithValue, Constant_GScalar_In_Middle_Graph)
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
-
+#endif
 } // namespace opencv_test

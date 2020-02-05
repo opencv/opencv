@@ -448,7 +448,7 @@ GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
         }
     }
 };
-
+#if 0
 GAPI_FLUID_KERNEL(FEqualizeHist, TEqualizeHist, false)
 {
     static const int Window = 1;
@@ -470,7 +470,7 @@ GAPI_FLUID_KERNEL(FEqualizeHist, TEqualizeHist, false)
         }
     }
 };
-
+#endif
 GAPI_OCV_KERNEL(OCVCalcHist, TCalcHist)
 {
     static void run(const cv::Mat& in, std::vector<int>& out)
@@ -620,7 +620,7 @@ cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         ,FSum2MatsAndScalar
         ,FTestSplit3
         ,FTestSplit3_4lpi
-        ,FEqualizeHist
+//        ,FEqualizeHist
         ,OCVCalcHist
         >();
 } // namespace gapi_test_kernels

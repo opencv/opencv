@@ -576,7 +576,7 @@ namespace
 
     struct IslandsWithGArray: public ::testing::Test, public IslandStructureWithGArray {};
 } // namespace
-
+#if 0
 TEST_F(IslandsWithGArray, IslandWithGArrayAsInput)
 {
     cv::gapi::island("isl0", cv::GIn(in), cv::GOut(tmp));
@@ -616,6 +616,7 @@ TEST_F(IslandsWithGArray, IslandWithGArrayAsOutput)
     EXPECT_FALSE(gm.metadata(out_nh) .contains<cv::gimpl::Island>());
     EXPECT_FALSE(gm.metadata(tmp_nh) .contains<cv::gimpl::Island>());
 }
+#endif
 ////////////////////////////////////////////////////////////////////////////////
 // Wrong input tests on island name
 //

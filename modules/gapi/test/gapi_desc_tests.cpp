@@ -186,7 +186,7 @@ TEST(GAPI_MetaDesc, Compile_MatchMetaType_Mat)
     // FIXME: custom exception type?
     EXPECT_THROW(cc.compile(cv::empty_scalar_desc()), std::logic_error);
 }
-
+#if 0
 TEST(GAPI_MetaDesc, Compile_MatchMetaType_Scalar)
 {
     cv::GScalar in;
@@ -200,7 +200,7 @@ TEST(GAPI_MetaDesc, Compile_MatchMetaType_Scalar)
     // FIXME: custom exception type?
     EXPECT_THROW(cc.compile(desc2, cv::compile_args(pkg)), std::logic_error);
 }
-
+#endif
 TEST(GAPI_MetaDesc, Compile_MatchMetaType_Mixed)
 {
     cv::GMat a;
@@ -257,7 +257,7 @@ TEST(GAPI_MetaDesc, Typed_Compile_MatchMetaType_Mat)
 
     EXPECT_NO_THROW(cc.compile(cv::GMatDesc{CV_8U,1,{64,64}}));
 }
-
+#if 0
 TEST(GAPI_MetaDesc, Typed_Compile_MatchMetaType_Scalar)
 {
     cv::GComputationT<cv::GScalar(cv::GScalar)> cc([](cv::GScalar in)
@@ -270,7 +270,7 @@ TEST(GAPI_MetaDesc, Typed_Compile_MatchMetaType_Scalar)
     //     EXPECT_NO_THROW(cc.compile(desc1, cv::compile_args(pkg)));
     cc.compile(desc1, cv::compile_args(pkg));
 }
-
+#endif
 TEST(GAPI_MetaDesc, Typed_Compile_MatchMetaType_Mixed)
 {
     cv::GComputationT<cv::GMat(cv::GMat,cv::GScalar)> cc([](cv::GMat a, cv::GScalar v)

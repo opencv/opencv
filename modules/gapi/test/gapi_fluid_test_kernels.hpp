@@ -112,14 +112,14 @@ G_TYPED_KERNEL_M(TSplit3_4lpi, <GMat3(GMat)>, "test.fluid.split3_4lpi") {
         return std::make_tuple(out_desc, out_desc, out_desc);
     }
 };
-
+#if 0
 G_TYPED_KERNEL(TEqualizeHist, <GMat(GMat, GArray<int>)>, "test.fluid.equalize_hist")
 {
     static GMatDesc outMeta(GMatDesc in, const cv::GArrayDesc&) {
         return in;
     }
 };
-
+#endif
 G_TYPED_KERNEL(TCalcHist, <GArray<int>(GMat)>, "test.ocv.calc_hist")
 {
     static GArrayDesc outMeta(GMatDesc) {

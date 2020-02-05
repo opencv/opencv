@@ -246,7 +246,7 @@ GAPI_TRANSFORM(Merge4Split4Transform, <GMat4(GMat, GMat, GMat, GMat)>,
 
 // --------------------------------------------------------------------------------------
 // Integration tests
-
+#if 0
 TEST(PatternMatchingIntegrationBasic, OneTransformationApplied)
 {
     cv::Size in_sz(640, 480);
@@ -604,7 +604,7 @@ TEST_F(PatternMatchingIntegrationBadArgTests, WrongTransformation)
     ASSERT_NE(listener.counts.cend(), listener.counts.find(MySplit4::id()));
     ASSERT_EQ(1u, listener.counts.at(MySplit4::id()));
 }
-
+#endif
 // --------------------------------------------------------------------------------------
 // Bad arg integration tests (GCompiler-level) - Endless Loops
 

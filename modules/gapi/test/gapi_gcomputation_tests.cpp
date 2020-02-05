@@ -93,14 +93,14 @@ namespace opencv_test
   {
       EXPECT_THROW(m_c.apply(in_mat, out_mat), std::logic_error);
   }
-
+#if 0
   TEST_F(GComputationApplyTest, NoThrowPassCustomKernel)
   {
       const auto pkg = cv::gapi::kernels<CustomResizeImpl>();
 
       ASSERT_NO_THROW(m_c.apply(in_mat, out_mat, cv::compile_args(pkg)));
   }
-
+#endif
   TEST_F(GComputationVectorMatsAsOutput, OutputAllocated)
   {
       std::vector<cv::Mat> out_mats(3);

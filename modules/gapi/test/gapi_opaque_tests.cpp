@@ -94,7 +94,7 @@ GAPI_OCV_KERNEL(OCVGenerateOpaque, ThisTest::GenerateOpaque)
     }
 };
 } // (anonymous namespace)
-
+#if 0
 TEST(GOpaque, TestOpaqueOut)
 {
     cv::Mat input = cv::Mat(52, 52, CV_8U);
@@ -168,7 +168,7 @@ TEST(GOpaque, TestOpaqueCustomOut2)
     EXPECT_EQ(out2.num, input2.size().width * input2.size().height);
     EXPECT_EQ(out2.s, str2);
 }
-
+#endif
 TEST(GOpaque_OpaqueRef, TestMov)
 {
     // Warning: this test is testing some not-very-public APIs

@@ -56,7 +56,7 @@ GAPI_OCV_KERNEL(OCVCountCorners, ThisTest::CountCorners)
         out[0] = static_cast<double>(in.size());
     }
 };
-
+#if 0
 cv::Mat cross(int w, int h)
 {
     cv::Mat mat = cv::Mat::eye(h, w, CV_8UC1)*255;
@@ -65,8 +65,9 @@ cv::Mat cross(int w, int h)
     mat |= yee;            // make an "X" matrix;
     return mat;
 }
+#endif
 } // (anonymous namespace)
-
+#if 0
 TEST(GArray, TestReturnValue)
 {
     // FIXME: Make .apply() able to take compile arguments
@@ -163,7 +164,7 @@ TEST(GArray, TestIntermediateOutput)
     EXPECT_EQ(10u, out_points.size());
     EXPECT_EQ(10,  out_count[0]);
 }
-
+#endif
 TEST(GArray_VectorRef, TestMov)
 {
     // Warning: this test is testing some not-very-public APIs

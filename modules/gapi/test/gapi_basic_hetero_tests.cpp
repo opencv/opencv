@@ -176,7 +176,7 @@ GAPIHeteroTest::GAPIHeteroTest()
     , m_in_mat(cv::Mat::eye(cv::Size(64, 64), CV_8UC1))
 {
 }
-
+#if 0
 TEST_F(GAPIHeteroTest, TestOCV)
 {
     EXPECT_TRUE(cv::gapi::cpu::backend() == m_ocv_kernels.lookup<I::Foo>());
@@ -186,7 +186,7 @@ TEST_F(GAPIHeteroTest, TestOCV)
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_ocv_kernels)));
     EXPECT_EQ(0, cv::countNonZero(ref != m_out_mat));
 }
-
+#endif
 TEST_F(GAPIHeteroTest, TestFluid)
 {
     EXPECT_TRUE(cv::gapi::fluid::backend() == m_fluid_kernels.lookup<I::Foo>());
@@ -196,7 +196,7 @@ TEST_F(GAPIHeteroTest, TestFluid)
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_fluid_kernels)));
     EXPECT_EQ(0, cv::countNonZero(ref != m_out_mat));
 }
-
+#if 0
 TEST_F(GAPIHeteroTest, TestBoth)
 {
     EXPECT_TRUE(cv::gapi::cpu::backend()   == m_hetero_kernels.lookup<I::Foo>());
@@ -206,7 +206,7 @@ TEST_F(GAPIHeteroTest, TestBoth)
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_hetero_kernels)));
     EXPECT_EQ(0, cv::countNonZero(ref != m_out_mat));
 }
-
+#endif
 struct GAPIBigHeteroTest : public ::testing::TestWithParam<std::array<int, 9>>
 {
     cv::GComputation m_comp;
@@ -267,14 +267,14 @@ GAPIBigHeteroTest::GAPIBigHeteroTest()
 
     m_ref_mat2 = foos[7](foo3OutMat);
 }
-
+#if 0
 TEST_P(GAPIBigHeteroTest, Test)
 {
     EXPECT_NO_THROW(m_comp.apply(gin(m_in_mat), gout(m_out_mat1, m_out_mat2), cv::compile_args(m_kernels)));
     EXPECT_EQ(0, cv::countNonZero(m_ref_mat1 != m_out_mat1));
     EXPECT_EQ(0, cv::countNonZero(m_ref_mat2 != m_out_mat2));
 }
-
+#endif
 static auto configurations = []()
 {
     // Fill all possible configurations
@@ -290,8 +290,8 @@ static auto configurations = []()
     return arr;
 }();
 
-INSTANTIATE_TEST_CASE_P(GAPIBigHeteroTest, GAPIBigHeteroTest,
-                        ::testing::ValuesIn(configurations));
+//INSTANTIATE_TEST_CASE_P(GAPIBigHeteroTest, GAPIBigHeteroTest,
+//                        ::testing::ValuesIn(configurations));
 
 TEST(GAPIHeteroTestLPI, Test)
 {

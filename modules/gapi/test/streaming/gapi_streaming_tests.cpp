@@ -548,7 +548,7 @@ TEST(GAPI_Streaming_Types, InputScalar)
         EXPECT_EQ(0., cv::norm(out, in_mat.mul(in_scl), cv::NORM_INF));
     }
 }
-
+#if 0
 TEST(GAPI_Streaming_Types, InputVector)
 {
     // This test verifies if Streaming works with Vector data @ input.
@@ -587,7 +587,7 @@ TEST(GAPI_Streaming_Types, InputVector)
         EXPECT_EQ(0., cv::norm(ref_mat, out_mat, cv::NORM_INF));
     }
 }
-
+#endif
 TEST(GAPI_Streaming_Types, XChangeScalar)
 {
     // This test verifies if Streaming works when pipeline steps
@@ -650,7 +650,7 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
     }
     EXPECT_LT(0u, num_frames);
 }
-
+#if 0
 TEST(GAPI_Streaming_Types, XChangeVector)
 {
     // This test verifies if Streaming works when pipeline steps
@@ -711,7 +711,7 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     }
     EXPECT_LT(0u, num_frames);
 }
-
+#endif
 TEST(GAPI_Streaming_Types, OutputScalar)
 {
     // This test verifies if Streaming works when pipeline
@@ -743,7 +743,7 @@ TEST(GAPI_Streaming_Types, OutputScalar)
     }
     EXPECT_LT(0u, num_frames);
 }
-
+#if 0
 TEST(GAPI_Streaming_Types, OutputVector)
 {
     // This test verifies if Streaming works when pipeline
@@ -789,7 +789,7 @@ TEST(GAPI_Streaming_Types, OutputVector)
     }
     EXPECT_LT(0u, num_frames);
 }
-
+#endif
 struct GAPI_Streaming_Unit: public ::testing::Test {
     cv::Mat m;
 

@@ -243,7 +243,7 @@ TEST(Fluid, Sum_2_Mats_And_Scalar)
     ref_mat = in_mat1 + in_mat2 + in_s;
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
-
+#if 0
 TEST(Fluid, EqualizeHist)
 {
     cv::GMat in, out;
@@ -263,7 +263,7 @@ TEST(Fluid, EqualizeHist)
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
-
+#endif
 TEST(Fluid, Split3)
 {
     cv::GMat bgr;

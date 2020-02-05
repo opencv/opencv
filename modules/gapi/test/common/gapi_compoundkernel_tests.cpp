@@ -443,7 +443,7 @@ TEST(GCompoundKernel, CompoundExpandedToCompound)
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
-
+#if 0
 TEST(GCompoundKernel, MaxInArray)
 {
     GDoubleArray in;
@@ -497,4 +497,5 @@ TEST(GCompoundKernel, RightGArrayHandle)
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 
 }
+#endif
 } // opencv_test
