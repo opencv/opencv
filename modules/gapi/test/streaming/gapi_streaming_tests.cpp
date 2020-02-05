@@ -490,7 +490,7 @@ namespace TypesTest
         }
     };
 } // namespace TypesTest
-
+#if 0
 TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoArray)
 {
     cv::GMat in_m;
@@ -522,7 +522,7 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoArray)
     while (testc.pull(cv::gout(tmp))) test_frames++;
     EXPECT_EQ(165u, test_frames);
 }
-
+#endif
 TEST(GAPI_Streaming_Types, InputScalar)
 {
     // This test verifies if Streaming works with Scalar data @ input.

@@ -339,7 +339,7 @@ TEST(KernelPackage, CombineMultiple)
     EXPECT_TRUE(pkg.includes<J::Bar>());
     EXPECT_TRUE(pkg.includes<S::Qux>());
 }
-
+#if 0
 TEST_F(HeteroGraph, Call_Custom_Kernel_Default_Backend)
 {
     // in0 -> GCPUAdd -> tmp -> cpu::GClone -> GCPUBGR2Gray -> out
@@ -357,7 +357,7 @@ TEST_F(HeteroGraph, Call_Custom_Kernel_Default_Backend)
 
     EXPECT_TRUE(checkCallKernel(KernelTags::CPU_CUSTOM_CLONE));
 }
-#if 0
+
 TEST_F(HeteroGraph, Call_Custom_Kernel_Not_Default_Backend)
 {
     // in0 -> GCPUAdd -> tmp -> fluid::GClone -> GCPUBGR2Gray -> out
@@ -451,7 +451,7 @@ TEST_F(HeteroGraph, Use_Only_Another_Backend)
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_BGR2GRAY));
 }
-#endif
+
 TEST_F(HeteroGraph, Use_Only_Hetero_Backend)
 {
     //in0 -> cpu::GAdd -> tmp -> fluid::GClone -> fluid::BGR2Gray -> out
@@ -471,7 +471,7 @@ TEST_F(HeteroGraph, Use_Only_Hetero_Backend)
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_BGR2GRAY));
 }
-
+#endif
 TEST_F(HeteroGraph, Use_Only_Not_Found_Default)
 {
     //in0 -> GCPUAdd -> tmp -> fluid::GClone -> fluid::BGR2Gray -> out
