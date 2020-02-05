@@ -16,6 +16,8 @@
 //#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/trace.private.hpp>
+
 //#define CV_PROFILE_THREADS 64
 //#define getTickCount getCPUTickCount  // use this if getTickCount() calls are expensive (and getCPUTickCount() is accurate)
 
@@ -38,7 +40,7 @@ DECLARE_CV_PAUSE
 #endif
 #ifndef CV_PAUSE
 # if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
-#   if !defined(__SSE__)
+#   if !defined(__SSE2__)
       static inline void cv_non_sse_mm_pause() { __asm__ __volatile__ ("rep; nop"); }
 #     define _mm_pause cv_non_sse_mm_pause
 #   endif
@@ -264,6 +266,9 @@ public:
     void thread_body();
     static void* thread_loop_wrapper(void* thread_object)
     {
+#ifdef OPENCV_WITH_ITT
+        __itt_thread_set_name(cv::format("OpenCVThread-%03d", cv::utils::getThreadID()).c_str());
+#endif
         ((WorkerThread*)thread_object)->thread_body();
         return 0;
     }

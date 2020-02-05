@@ -24,6 +24,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T>
     void eltwise_prod_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
 
+    template <class T>
+    void eltwise_div_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
+
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_KERNELS_ELTWISE_OPS_HPP */

@@ -325,6 +325,21 @@ TEST(KernelPackage, Can_Use_Custom_Kernel)
                         compile({in_meta, in_meta}, cv::compile_args(pkg)));
 }
 
+TEST(KernelPackage, CombineMultiple)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+    auto a = cv::gapi::kernels<J::Foo>();
+    auto b = cv::gapi::kernels<J::Bar>();
+    auto c = cv::gapi::kernels<S::Qux>();
+    auto pkg = cv::gapi::combine(a, b, c);
+
+    EXPECT_EQ(3u, pkg.size());
+    EXPECT_TRUE(pkg.includes<J::Foo>());
+    EXPECT_TRUE(pkg.includes<J::Bar>());
+    EXPECT_TRUE(pkg.includes<S::Qux>());
+}
+
 TEST_F(HeteroGraph, Call_Custom_Kernel_Default_Backend)
 {
     // in0 -> GCPUAdd -> tmp -> cpu::GClone -> GCPUBGR2Gray -> out

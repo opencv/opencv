@@ -247,10 +247,19 @@ int main(int argc, char** argv)
     //copyMakeBorder(img2, img2p, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
 
     int64 t = getTickCount();
+    float disparity_multiplier = 1.0f;
     if( alg == STEREO_BM )
+    {
         bm->compute(img1, img2, disp);
+        if (disp.type() == CV_16S)
+            disparity_multiplier = 16.0f;
+    }
     else if( alg == STEREO_SGBM || alg == STEREO_HH || alg == STEREO_3WAY )
+    {
         sgbm->compute(img1, img2, disp);
+        if (disp.type() == CV_16S)
+            disparity_multiplier = 16.0f;
+    }
     t = getTickCount() - t;
     printf("Time elapsed: %fms\n", t*1000/getTickFrequency());
 
@@ -281,7 +290,9 @@ int main(int argc, char** argv)
         printf("storing the point cloud...");
         fflush(stdout);
         Mat xyz;
-        reprojectImageTo3D(disp, xyz, Q, true);
+        Mat floatDisp;
+        disp.convertTo(floatDisp, CV_32F, 1.0f / disparity_multiplier);
+        reprojectImageTo3D(floatDisp, xyz, Q, true);
         saveXYZ(point_cloud_filename.c_str(), xyz);
         printf("\n");
     }

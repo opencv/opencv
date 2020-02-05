@@ -102,21 +102,21 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            csl::memcpy<T>(output.get(), input.get(), output.size(), stream);
-
             auto rows = input.get_axis_size(1);
             auto cols = input.get_axis_size(2);
 
             auto cell_box_size = classes + 4 + 1;
 
             /* we squash class scores into probabilities using softmax or sigmoid */
-            if (squash_type == SquashMethod::SOFTMAX)
-                kernels::softmax_strided<T>(stream, output, input, classes, cell_box_size, 5);
-            else if (squash_type == SquashMethod::SIGMOID)
-                kernels::sigmoid_strided<T>(stream, output, input, classes, cell_box_size, 5);
+            bool if_true_sigmoid_else_softmax = (squash_type == SquashMethod::SIGMOID);
 
-            kernels::region_finalize<T>(stream, output, input, biasTensor, object_prob_cutoff, class_prob_cutoff,
-                height_norm, width_norm, rows, cols, boxes_per_cell, cell_box_size, classes);
+            kernels::region<T>(stream, output, input, biasTensor,
+                object_prob_cutoff, class_prob_cutoff,
+                boxes_per_cell, cell_box_size,
+                rows, cols,
+                height_norm, width_norm,
+                if_true_sigmoid_else_softmax
+            );
 
             if (nms_iou_threshold > 0) {
                 auto output_mat = output_wrapper->getMutableHostMat();

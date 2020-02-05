@@ -59,9 +59,18 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 {
     using namespace cv;
     using cv::detail::deriv_type;
-    int rows = src.rows, cols = src.cols, cn = src.channels(), colsn = cols*cn, depth = src.depth();
+    int rows = src.rows, cols = src.cols, cn = src.channels(), depth = src.depth();
     CV_Assert(depth == CV_8U);
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
+    parallel_for_(Range(0, rows), cv::detail::SharrDerivInvoker(src, dst), cv::getNumThreads());
+}
+
+}//namespace
+
+void cv::detail::SharrDerivInvoker::operator()(const Range& range) const
+{
+    using cv::detail::deriv_type;
+    int rows = src.rows, cols = src.cols, cn = src.channels(), colsn = cols*cn;
 
     int x, y, delta = (int)alignSize((cols + 2)*cn, 16);
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
@@ -71,12 +80,12 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
     v_int16x8 c3 = v_setall_s16(3), c10 = v_setall_s16(10);
 #endif
 
-    for( y = 0; y < rows; y++ )
+    for( y = range.start; y < range.end; y++ )
     {
         const uchar* srow0 = src.ptr<uchar>(y > 0 ? y-1 : rows > 1 ? 1 : 0);
         const uchar* srow1 = src.ptr<uchar>(y);
         const uchar* srow2 = src.ptr<uchar>(y < rows-1 ? y+1 : rows > 1 ? rows-2 : 0);
-        deriv_type* drow = dst.ptr<deriv_type>(y);
+        deriv_type* drow = (deriv_type *)dst.ptr<deriv_type>(y);
 
         // do vertical convolution
         x = 0;
@@ -140,8 +149,6 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
         }
     }
 }
-
-}//namespace
 
 cv::detail::LKTrackerInvoker::LKTrackerInvoker(
                       const Mat& _prevImg, const Mat& _prevDeriv, const Mat& _nextImg,

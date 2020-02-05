@@ -61,7 +61,9 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
 {
     int scn = (int)sc.total(), cn = CV_MAT_CN(buftype);
     size_t esz = CV_ELEM_SIZE(buftype);
-    getConvertFunc(sc.depth(), buftype)(sc.ptr(), 1, 0, 1, scbuf, 1, Size(std::min(cn, scn), 1), 0);
+    BinaryFunc cvtFn = getConvertFunc(sc.depth(), buftype);
+    CV_Assert(cvtFn);
+    cvtFn(sc.ptr(), 1, 0, 1, scbuf, 1, Size(std::min(cn, scn), 1), 0);
     // unroll the scalar
     if( scn < cn )
     {
@@ -196,7 +198,10 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
             cn = (int)CV_ELEM_SIZE(type1);
         }
         else
+        {
             func = tab[depth1];
+        }
+        CV_Assert(func);
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst);
@@ -270,6 +275,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     }
     else
         func = tab[depth1];
+    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -745,6 +751,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                     (cvtdst ? wsz : 0) +
                     (haveMask ? dsz : 0);
     BinaryFuncC func = tab[CV_MAT_DEPTH(wtype)];
+    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -1228,17 +1235,23 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     _InputArray::KindFlag kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
 
+    int depth1 = src1.depth(), depth2 = src2.depth();
+    if (depth1 == CV_16F || depth2 == CV_16F)
+        CV_Error(Error::StsNotImplemented, "Unsupported depth value CV_16F");
+
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
     {
         int cn = src1.channels();
         _dst.create(src1.size(), CV_8UC(cn));
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        getCmpFunc(src1.depth())(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
+        BinaryFuncC cmpFn = getCmpFunc(depth1);
+        CV_Assert(cmpFn);
+        cmpFn(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
         return;
     }
 
-    int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth();
+    int cn = src1.channels();
 
     _dst.create(src1.dims, src1.size, CV_8UC(cn));
     src1 = src1.reshape(1); src2 = src2.reshape(1);
@@ -1247,6 +1260,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     size_t esz = std::max(src1.elemSize(), (size_t)1);
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
     BinaryFuncC func = getCmpFunc(depth1);
+    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -1275,7 +1289,9 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         else
         {
             double fval=0;
-            getConvertFunc(depth2, CV_64F)(src2.ptr(), 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
+            BinaryFunc cvtFn = getConvertFunc(depth2, CV_64F);
+            CV_Assert(cvtFn);
+            cvtFn(src2.ptr(), 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
             if( fval < getMinVal(depth1) )
             {
                 dst = Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0);
@@ -1476,7 +1492,8 @@ struct InRange_SIMD<float>
             v_float32 low2 = vx_load(src2 + x + v_float32::nlanes);
             v_float32 high2 = vx_load(src3 + x + v_float32::nlanes);
 
-            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32((values1 >= low1) & (high1 >= values1)), v_reinterpret_as_u32((values2 >= low2) & (high2 >= values2))));
+            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32(values1 >= low1) & v_reinterpret_as_u32(high1 >= values1),
+                                         v_reinterpret_as_u32(values2 >= low2) & v_reinterpret_as_u32(high2 >= values2)));
         }
         vx_cleanup();
         return x;

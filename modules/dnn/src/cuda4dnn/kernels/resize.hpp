@@ -8,8 +8,6 @@
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
 
-#include <cstddef>
-
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T>

@@ -29,7 +29,7 @@ namespace gapi
 namespace fluid
 {
     /**
-     * \addtogroup gapi_std_backends G-API Standard backends
+     * \addtogroup gapi_std_backends G-API Standard Backends
      * @{
      */
     /**
@@ -39,7 +39,7 @@ namespace fluid
      */
     GAPI_EXPORTS cv::gapi::GBackend backend();
     /** @} */
-} // namespace flud
+} // namespace fluid
 } // namespace gapi
 
 
@@ -50,7 +50,7 @@ public:
     {
         Filter,
         Resize,
-        NV12toRGB
+        YUV420toRGB //Color conversion of 4:2:0 chroma sub-sampling formats (NV12, I420 ..etc) to RGB
     };
 
     // This function is a generic "doWork" callback
@@ -97,16 +97,46 @@ public:
 // FIXME!!!
 // This is the temporary and experimental API
 // which should be replaced by runtime roi-based scheduling
+/** \addtogroup gapi_compile_args
+ * @{
+ */
+/**
+ * @brief This structure allows to control the output image region
+ * which Fluid backend will produce in the graph.
+ *
+ * This feature is useful for external tiling and parallelism, but
+ * will be deprecated in the future releases.
+ */
 struct GFluidOutputRois
 {
     std::vector<cv::gapi::own::Rect> rois;
 };
 
+/**
+ * @brief This structure forces Fluid backend to generate multiple
+ * parallel output regions in the graph. These regions execute in parallel.
+ *
+ * This feature may be deprecated in the future releases.
+ */
 struct GFluidParallelOutputRois
 {
     std::vector<GFluidOutputRois> parallel_rois;
 };
 
+/**
+ * @brief This structure allows to customize the way how Fluid executes
+ * parallel regions.
+ *
+ * For example, user can utilize his own threading runtime via this parameter.
+ * The `parallel_for` member functor is called by the Fluid runtime with the
+ * following arguments:
+ *
+ * @param size Size of the parallel range to process
+ * @param f A function which should be called for every integer index
+ *   in this range by the specified parallel_for implementation.
+ *
+ * This feature may be deprecated in the future releases.
+ */
 struct GFluidParallelFor
 {
     //this function accepts:
@@ -114,6 +144,7 @@ struct GFluidParallelFor
     // - and a function to be called on the range items, designated by item index
     std::function<void(std::size_t size, std::function<void(std::size_t index)>)> parallel_for;
 };
+/** @} gapi_compile_args */
 
 namespace detail
 {
@@ -166,6 +197,14 @@ template<typename U> struct fluid_get_in<cv::GArray<U>>
     static const std::vector<U>& get(const cv::GArgs &in_args, int idx)
     {
         return in_args.at(idx).unsafe_get<cv::detail::VectorRef>().rref<U>();
+    }
+};
+
+template<typename U> struct fluid_get_in<cv::GOpaque<U>>
+{
+    static const U& get(const cv::GArgs &in_args, int idx)
+    {
+        return in_args.at(idx).unsafe_get<cv::detail::OpaqueRef>().rref<U>();
     }
 };
 

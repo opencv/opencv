@@ -426,7 +426,7 @@ struct output_args_lifetime : ::testing::Test{
     static constexpr const int num_of_requests = 20;
 };
 TYPED_TEST_CASE_P(output_args_lifetime);
-//There are intentionaly no actual checks (asserts and verify) in output_args_lifetime tests.
+//There are intentionally no actual checks (asserts and verify) in output_args_lifetime tests.
 //They are more of example use-cases than real tests. (ASAN/valgrind can still catch issues here)
 TYPED_TEST_P(output_args_lifetime, callback){
 

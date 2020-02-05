@@ -33,7 +33,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      *
      * A `DevicePtr<T>` can implicitly convert to `DevicePtr<const T>`.
      *
-     * Specalizations:
+     * Specializations:
      * - DevicePtr<void>/DevicePtr<const void> do not support pointer arithmetic (but relational operators are provided)
      * - any device pointer pointing to mutable memory is implicitly convertible to DevicePtr<void>
      * - any device pointer is implicitly convertible to DevicePtr<const void>

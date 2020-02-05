@@ -12,25 +12,29 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace device {
 
     namespace detail {
-        template <int>  __device__ auto getGridDim()->decltype(dim3::x);
-        template <> inline __device__ auto getGridDim<0>()->decltype(dim3::x) { return gridDim.x; }
-        template <> inline __device__ auto getGridDim<1>()->decltype(dim3::x) { return gridDim.y; }
-        template <> inline __device__ auto getGridDim<2>()->decltype(dim3::x) { return gridDim.z; }
+        using dim3_member_type = decltype(dim3::x);
 
-        template <int> __device__ auto getBlockDim()->decltype(dim3::x);
-        template <> inline __device__ auto getBlockDim<0>()->decltype(dim3::x) { return blockDim.x; }
-        template <> inline __device__ auto getBlockDim<1>()->decltype(dim3::x) { return blockDim.y; }
-        template <> inline __device__ auto getBlockDim<2>()->decltype(dim3::x) { return blockDim.z; }
+        template <int>  __device__ dim3_member_type getGridDim();
+        template <> inline __device__ dim3_member_type getGridDim<0>() { return gridDim.x; }
+        template <> inline __device__ dim3_member_type getGridDim<1>() { return gridDim.y; }
+        template <> inline __device__ dim3_member_type getGridDim<2>() { return gridDim.z; }
 
-        template <int> __device__ auto getBlockIdx()->decltype(uint3::x);
-        template <> inline __device__ auto getBlockIdx<0>()->decltype(uint3::x) { return blockIdx.x; }
-        template <> inline __device__ auto getBlockIdx<1>()->decltype(uint3::x) { return blockIdx.y; }
-        template <> inline __device__ auto getBlockIdx<2>()->decltype(uint3::x) { return blockIdx.z; }
+        template <int> __device__ dim3_member_type getBlockDim();
+        template <> inline __device__ dim3_member_type getBlockDim<0>() { return blockDim.x; }
+        template <> inline __device__ dim3_member_type getBlockDim<1>() { return blockDim.y; }
+        template <> inline __device__ dim3_member_type getBlockDim<2>() { return blockDim.z; }
 
-        template <int> __device__ auto getThreadIdx()->decltype(uint3::x);
-        template <> inline __device__ auto getThreadIdx<0>()->decltype(uint3::x) { return threadIdx.x; }
-        template <> inline __device__ auto getThreadIdx<1>()->decltype(uint3::x) { return threadIdx.y; }
-        template <> inline __device__ auto getThreadIdx<2>()->decltype(uint3::x) { return threadIdx.z; }
+        using uint3_member_type = decltype(uint3::x);
+
+        template <int> __device__ uint3_member_type getBlockIdx();
+        template <> inline __device__ uint3_member_type getBlockIdx<0>() { return blockIdx.x; }
+        template <> inline __device__ uint3_member_type getBlockIdx<1>() { return blockIdx.y; }
+        template <> inline __device__ uint3_member_type getBlockIdx<2>() { return blockIdx.z; }
+
+        template <int> __device__ uint3_member_type getThreadIdx();
+        template <> inline __device__ uint3_member_type getThreadIdx<0>() { return threadIdx.x; }
+        template <> inline __device__ uint3_member_type getThreadIdx<1>() { return threadIdx.y; }
+        template <> inline __device__ uint3_member_type getThreadIdx<2>() { return threadIdx.z; }
     }
 
     template <int dim, class index_type = device::index_type, class size_type = device::size_type>

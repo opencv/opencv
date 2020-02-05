@@ -17,7 +17,7 @@
 #include <opencv2/gapi/gscalar.hpp>
 
 
-/** \defgroup gapi_imgproc G-API image processing functionality
+/** \defgroup gapi_imgproc G-API Image processing functionality
 @{
     @defgroup gapi_filters Graph API: Image filters
     @defgroup gapi_colorconvert Graph API: Converting image from one color space to another

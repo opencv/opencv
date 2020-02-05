@@ -82,7 +82,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
-        /* more assertions are required to fully check for vectorization possiblity; check concat() */
+        /* more assertions are required to fully check for vectorization possibility; check concat() */
 
         auto kernel = raw::concat_vec<T, N>;
         auto policy = make_policy(kernel, input.size() / N, 0, stream);
@@ -132,7 +132,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void concat<__half>(const Stream&, TensorSpan<__half>, std::size_t, TensorView<__half>, std::size_t);
+#endif
     template void concat<float>(const Stream&, TensorSpan<float>, std::size_t, TensorView<float>,  std::size_t);
 
     template <class T, std::size_t Rank> static
@@ -168,7 +170,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(output.rank() == input.rank());
         CV_Assert(output.rank() == offsets.size());
 
-        /* squeezable axes at the begining of both tensors can be eliminated
+        /* squeezable axes at the beginning of both tensors can be eliminated
          *
          * Reasoning:
          * ----------

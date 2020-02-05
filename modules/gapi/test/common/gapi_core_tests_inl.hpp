@@ -120,9 +120,13 @@ TEST_P(MathOpTest, MatricesAccuracyTest)
             CV_MAT_DEPTH(out_mat_ocv.type()) != CV_64F)
         {
             // integral: allow 1% of differences, and no diffs by >1 unit
-            EXPECT_LE(countNonZeroPixels(cv::abs(out_mat_gapi - out_mat_ocv) > 0),
-                                                           0.01*out_mat_ocv.total());
-            EXPECT_LE(countNonZeroPixels(cv::abs(out_mat_gapi - out_mat_ocv) > 1), 0);
+            EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF), 1);  // check: abs(a[i] - b[i]) <= 1
+            float tolerance = 0.01f;
+#if defined(__arm__) || defined(__aarch64__)
+            if (opType == DIV)
+                tolerance = 0.05f;
+#endif
+            EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_L1), tolerance*out_mat_ocv.total());
         }
         else
         {
@@ -294,7 +298,7 @@ TEST_P(Polar2CartTest, AccuracyTest)
         // expect of single-precision elementary functions implementation.
         //
         // However, good idea is making such threshold configurable: parameter
-        // of this test - which a specific test istantiation could setup.
+        // of this test - which a specific test instantiation could setup.
         //
         // Note that test instantiation for the OpenCV back-end could even let
         // the threshold equal to zero, as CV back-end calls the same kernel.
@@ -340,7 +344,7 @@ TEST_P(Cart2PolarTest, AccuracyTest)
         // expect of single-precision elementary functions implementation.
         //
         // However, good idea is making such threshold configurable: parameter
-        // of this test - which a specific test istantiation could setup.
+        // of this test - which a specific test instantiation could setup.
         //
         // Note that test instantiation for the OpenCV back-end could even let
         // the threshold equal to zero, as CV back-end calls the same kernel.

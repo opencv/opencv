@@ -109,6 +109,17 @@ struct Protocol
     std::vector<ade::NodeHandle> out_nhs;
 };
 
+// The original metadata the graph has been compiled for.
+// - For regular GCompiled, this information always present and
+//   is NOT updated on reshape()
+// - For GStreamingCompiled, this information may be missing.
+//   It means that compileStreaming() was called without meta.
+struct OriginalInputMeta
+{
+    static const char *name() { return "OriginalInputMeta"; }
+    GMetaArgs inputMeta;
+};
+
 struct OutputMeta
 {
     static const char *name() { return "OutputMeta"; }
@@ -193,6 +204,7 @@ namespace GModel
         , ConstValue
         , Island
         , Protocol
+        , OriginalInputMeta
         , OutputMeta
         , Journal
         , ade::passes::TopologicalSortData
@@ -213,6 +225,7 @@ namespace GModel
         , ConstValue
         , Island
         , Protocol
+        , OriginalInputMeta
         , OutputMeta
         , Journal
         , ade::passes::TopologicalSortData
@@ -247,15 +260,15 @@ namespace GModel
     GAPI_EXPORTS void redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
     GAPI_EXPORTS void redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
 
-    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedInputs (const ConstGraph &g, const ade::NodeHandle nh);
-    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedOutputs(const ConstGraph &g, const ade::NodeHandle nh);
+    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedInputs (const ConstGraph &g, ade::NodeHandle nh);
+    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedOutputs(const ConstGraph &g, ade::NodeHandle nh);
 
     // Returns input meta array for given op node
     // Array is sparse, as metadata for non-gapi input objects is empty
     // TODO:
     // Cover with tests!!
-    GAPI_EXPORTS GMetaArgs collectInputMeta(GModel::ConstGraph cg, ade::NodeHandle node);
-    GAPI_EXPORTS GMetaArgs collectOutputMeta(GModel::ConstGraph cg, ade::NodeHandle node);
+    GAPI_EXPORTS GMetaArgs collectInputMeta(const GModel::ConstGraph &cg, ade::NodeHandle node);
+    GAPI_EXPORTS GMetaArgs collectOutputMeta(const GModel::ConstGraph &cg, ade::NodeHandle node);
 
     GAPI_EXPORTS ade::EdgeHandle getInEdgeByPort(const GModel::ConstGraph& cg, const ade::NodeHandle& nh, std::size_t in_port);
 

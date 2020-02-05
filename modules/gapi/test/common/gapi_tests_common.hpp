@@ -74,7 +74,7 @@ public:
     cv::Scalar initScalarRandU(unsigned upper)
     {
         auto& rng = cv::theRNG();
-        double s1 = rng(upper);
+        double s1 = rng(upper);  // FIXIT: RNG result is 'int', not double
         double s2 = rng(upper);
         double s3 = rng(upper);
         double s4 = rng(upper);
@@ -96,8 +96,24 @@ public:
         in_mat2 = cv::Mat(sz_in, type);
 
         sc = initScalarRandU(100);
-        cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
-        cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+
+        // Details: https://github.com/opencv/opencv/pull/16083
+        //if (CV_MAT_DEPTH(type) < CV_32F)
+        if (1)
+        {
+            cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+            cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+        }
+        else
+        {
+            const int fscale = 256;  // avoid bits near ULP, generate stable test input
+            Mat in_mat32s(in_mat1.size(), CV_MAKE_TYPE(CV_32S, CV_MAT_CN(type)));
+            cv::randu(in_mat32s, cv::Scalar::all(0), cv::Scalar::all(255 * fscale));
+            in_mat32s.convertTo(in_mat1, type, 1.0f / fscale, 0);
+
+            cv::randu(in_mat32s, cv::Scalar::all(0), cv::Scalar::all(255 * fscale));
+            in_mat32s.convertTo(in_mat2, type, 1.0f / fscale, 0);
+        }
 
         if (createOutputMatrices)
         {
@@ -110,7 +126,17 @@ public:
         in_mat1 = cv::Mat(sz_in, type);
 
         sc = initScalarRandU(100);
-        cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+        if (CV_MAT_DEPTH(type) < CV_32F)
+        {
+            cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+        }
+        else
+        {
+            const int fscale = 256;  // avoid bits near ULP, generate stable test input
+            Mat in_mat32s(in_mat1.size(), CV_MAKE_TYPE(CV_32S, CV_MAT_CN(type)));
+            cv::randu(in_mat32s, cv::Scalar::all(0), cv::Scalar::all(255 * fscale));
+            in_mat32s.convertTo(in_mat1, type, 1.0f / fscale, 0);
+        }
 
         if (createOutputMatrices)
         {

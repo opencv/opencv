@@ -117,6 +117,10 @@ class dnn_test(NewOpenCVTests):
             return False
         return True
 
+    def test_getAvailableTargets(self):
+        targets = cv.dnn.getAvailableTargets(cv.dnn.DNN_BACKEND_OPENCV)
+        self.assertTrue(cv.dnn.DNN_TARGET_CPU in targets)
+
     def test_blobFromImage(self):
         np.random.seed(324)
 
@@ -275,6 +279,74 @@ class dnn_test(NewOpenCVTests):
                 self.assertTrue(ret)
                 normAssert(self, refs[i], result, 'Index: %d' % i, 1e-10)
 
+    def test_custom_layer(self):
+        class CropLayer(object):
+            def __init__(self, params, blobs):
+                self.xstart = 0
+                self.xend = 0
+                self.ystart = 0
+                self.yend = 0
+            # Our layer receives two inputs. We need to crop the first input blob
+            # to match a shape of the second one (keeping batch size and number of channels)
+            def getMemoryShapes(self, inputs):
+                inputShape, targetShape = inputs[0], inputs[1]
+                batchSize, numChannels = inputShape[0], inputShape[1]
+                height, width = targetShape[2], targetShape[3]
+                self.ystart = (inputShape[2] - targetShape[2]) // 2
+                self.xstart = (inputShape[3] - targetShape[3]) // 2
+                self.yend = self.ystart + height
+                self.xend = self.xstart + width
+                return [[batchSize, numChannels, height, width]]
+            def forward(self, inputs):
+                return [inputs[0][:,:,self.ystart:self.yend,self.xstart:self.xend]]
+
+        cv.dnn_registerLayer('CropCaffe', CropLayer)
+        proto = '''
+        name: "TestCrop"
+        input: "input"
+        input_shape
+        {
+            dim: 1
+            dim: 2
+            dim: 5
+            dim: 5
+        }
+        input: "roi"
+        input_shape
+        {
+            dim: 1
+            dim: 2
+            dim: 3
+            dim: 3
+        }
+        layer {
+          name: "Crop"
+          type: "CropCaffe"
+          bottom: "input"
+          bottom: "roi"
+          top: "Crop"
+        }'''
+
+        net = cv.dnn.readNetFromCaffe(bytearray(proto.encode()))
+        for backend, target in self.dnnBackendsAndTargets:
+            if backend != cv.dnn.DNN_BACKEND_OPENCV:
+                continue
+
+            printParams(backend, target)
+
+            net.setPreferableBackend(backend)
+            net.setPreferableTarget(target)
+            src_shape = [1, 2, 5, 5]
+            dst_shape = [1, 2, 3, 3]
+            inp = np.arange(0, np.prod(src_shape), dtype=np.float32).reshape(src_shape)
+            roi = np.empty(dst_shape, dtype=np.float32)
+            net.setInput(inp, "input")
+            net.setInput(roi, "roi")
+            out = net.forward()
+            ref = inp[:, :, 1:4, 1:4]
+            normAssert(self, out, ref)
+
+        cv.dnn_unregisterLayer('CropCaffe')
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

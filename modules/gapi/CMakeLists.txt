@@ -1,15 +1,13 @@
 # FIXME: Rework standalone build in more generic maner
 # (Restructure directories, add common pass, etc)
-if (NOT DEFINED OPENCV_INITIAL_PASS)
+if(NOT DEFINED OPENCV_INITIAL_PASS)
     cmake_minimum_required(VERSION 3.3)
     project(gapi_standalone)
     include("cmake/standalone.cmake")
     return()
 endif()
 
-# FIXME: Remove CXX11 check after complete switch to OpenCV 4 branch
-# (CI, bundle, workloads, etc)
-if (NOT HAVE_CXX11 OR NOT TARGET ade)
+if(NOT TARGET ade)
   # can't build G-API because of the above reasons
   ocv_module_disable(gapi)
   return()
@@ -29,14 +27,16 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cpu/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/gpu/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/fluid/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/gpu/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/render/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
     )
 
 set(gapi_srcs
@@ -44,6 +44,7 @@ set(gapi_srcs
     src/api/gorigin.cpp
     src/api/gmat.cpp
     src/api/garray.cpp
+    src/api/gopaque.cpp
     src/api/gscalar.cpp
     src/api/gkernel.cpp
     src/api/gbackend.cpp
@@ -57,6 +58,7 @@ set(gapi_srcs
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
+    src/api/ft_render.cpp
 
     # Compiler part
     src/compiler/gmodel.cpp
@@ -109,6 +111,10 @@ set(gapi_srcs
     src/backends/render/grenderocvbackend.cpp
     src/backends/render/grenderocv.cpp
 
+    #PlaidML Backend
+    src/backends/plaidml/gplaidmlcore.cpp
+    src/backends/plaidml/gplaidmlbackend.cpp
+
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
@@ -125,9 +131,13 @@ ocv_source_group("Include" FILES ${gapi_ext_hdrs})
 ocv_set_module_sources(HEADERS ${gapi_ext_hdrs} SOURCES ${gapi_srcs})
 ocv_module_include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
 
-# Note `ade` is not a module name but link dependency for ${the_module}
-# (which is opencv_gapi)
-ocv_create_module(ade ${INF_ENGINE_TARGET})
+ocv_create_module()
+
+ocv_target_link_libraries(${the_module} PRIVATE ade ${INF_ENGINE_TARGET})
+if(HAVE_TBB)
+  ocv_target_link_libraries(${the_module} PRIVATE tbb)
+endif()
+
 ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 # FIXME: test binary is linked with ADE directly since ADE symbols
 # are not exported from libopencv_gapi.so in any form - thus
@@ -136,6 +146,24 @@ ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+endif()
+
+if(HAVE_FREETYPE)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_FREETYPE)
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_FREETYPE)
+  endif()
+  ocv_target_link_libraries(${the_module} PRIVATE ${FREETYPE_LIBRARIES})
+  ocv_target_include_directories(${the_module} PRIVATE ${FREETYPE_INCLUDE_DIRS})
+endif()
+
+if(HAVE_PLAIDML)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_PLAIDML)
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_PLAIDML)
+  endif()
+  ocv_target_link_libraries(${the_module} PRIVATE ${PLAIDML_LIBRARIES})
+  ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
 endif()
 
 ocv_add_perf_tests()

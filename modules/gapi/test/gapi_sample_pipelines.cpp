@@ -11,8 +11,6 @@
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
 
-#include <opencv2/gapi/render/render.hpp>
-
 namespace opencv_test
 {
 
@@ -43,6 +41,27 @@ namespace
             out = in.clone();
         }
     };
+
+    // These definitons test the correct macro work if the kernel has multiple output values
+    G_TYPED_KERNEL(GRetGArrayTupleOfGMat2Kernel,  <GArray<std::tuple<GMat, GMat>>(GMat, Scalar)>,                                         "org.opencv.test.retarrayoftupleofgmat2kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat3Kernel,  <GArray<std::tuple<GMat, GMat, GMat>>(GMat)>,                                           "org.opencv.test.retarrayoftupleofgmat3kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat4Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat>>(GMat)>,                                     "org.opencv.test.retarrayoftupleofgmat4kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat5Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat>>(GMat)>,                               "org.opencv.test.retarrayoftupleofgmat5kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat6Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>,                         "org.opencv.test.retarrayoftupleofgmat6kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat7Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>,                   "org.opencv.test.retarrayoftupleofgmat7kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat8Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>,             "org.opencv.test.retarrayoftupleofgmat8kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat9Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>,       "org.opencv.test.retarrayoftupleofgmat9kernel")  {};
+    G_TYPED_KERNEL(GRetGArraTupleyOfGMat10Kernel, <GArray<std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>>(GMat)>, "org.opencv.test.retarrayoftupleofgmat10kernel") {};
+
+    G_TYPED_KERNEL_M(GRetGMat2Kernel,     <std::tuple<GMat, GMat>(GMat, GMat, GMat)>,                                     "org.opencv.test.retgmat2kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat3Kernel,     <std::tuple<GMat, GMat, GMat>(GMat, GScalar)>,                                  "org.opencv.test.retgmat3kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat4Kernel,     <std::tuple<GMat, GMat, GMat, GMat>(GMat, GArray<int>, GScalar)>,               "org.opencv.test.retgmat4kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat5Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat>(GMat)>,                               "org.opencv.test.retgmat5kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat6Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,                         "org.opencv.test.retgmat6kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat7Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,                   "org.opencv.test.retgmat7kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat8Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,             "org.opencv.test.retgmat8kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat9Kernel,     <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>,       "org.opencv.test.retgmat9kernel")      {};
+    G_TYPED_KERNEL_M(GRetGMat10Kernel,    <std::tuple<GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat, GMat>(GMat)>, "org.opencv.test.retgmat10kernel")     {};
 }
 
 TEST(GAPI_Pipeline, OverloadUnary_MatMat)
@@ -315,4 +334,5 @@ TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
     // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
     EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
 }
+
 } // namespace opencv_test

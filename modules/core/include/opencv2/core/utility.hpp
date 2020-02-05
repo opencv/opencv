@@ -516,6 +516,43 @@ static inline size_t roundUp(size_t a, unsigned int b)
     return a + b - 1 - (a + b - 1) % b;
 }
 
+/** @brief Alignment check of passed values
+
+Usage: `isAligned<sizeof(int)>(...)`
+
+@note Alignment(N) must be a power of 2 (2**k, 2^k)
+*/
+template<int N, typename T> static inline
+bool isAligned(const T& data)
+{
+    CV_StaticAssert((N & (N - 1)) == 0, "");  // power of 2
+    return (((size_t)data) & (N - 1)) == 0;
+}
+/** @overload */
+template<int N> static inline
+bool isAligned(const void* p1)
+{
+    return isAligned<N>((size_t)p1);
+}
+/** @overload */
+template<int N> static inline
+bool isAligned(const void* p1, const void* p2)
+{
+    return isAligned<N>(((size_t)p1)|((size_t)p2));
+}
+/** @overload */
+template<int N> static inline
+bool isAligned(const void* p1, const void* p2, const void* p3)
+{
+    return isAligned<N>(((size_t)p1)|((size_t)p2)|((size_t)p3));
+}
+/** @overload */
+template<int N> static inline
+bool isAligned(const void* p1, const void* p2, const void* p3, const void* p4)
+{
+    return isAligned<N>(((size_t)p1)|((size_t)p2)|((size_t)p3)|((size_t)p4));
+}
+
 /** @brief Enables or disables the optimized code.
 
 The function can be used to dynamically turn on and off optimized dispatched code (code that uses SSE4.2, AVX/AVX2,

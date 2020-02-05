@@ -150,7 +150,7 @@ We observe that @ref cv::Mat::zeros returns a Matlab-style zero initializer base
 
 Notice the following (**C++ code only**):
 -   To access each pixel in the images we are using this syntax: *image.at\<Vec3b\>(y,x)[c]*
-    where *y* is the row, *x* is the column and *c* is R, G or B (0, 1 or 2).
+    where *y* is the row, *x* is the column and *c* is B, G or R (0, 1 or 2).
 -   Since the operation \f$\alpha \cdot p(i,j) + \beta\f$ can give values out of range or not
     integers (if \f$\alpha\f$ is float), we use cv::saturate_cast to make sure the
     values are valid.
@@ -220,12 +220,12 @@ gamma correction.
 ### Brightness and contrast adjustments
 
 Increasing (/ decreasing) the \f$\beta\f$ value will add (/ subtract) a constant value to every pixel. Pixel values outside of the [0 ; 255]
-range will be saturated (i.e. a pixel value higher (/ lesser) than 255 (/ 0) will be clamp to 255 (/ 0)).
+range will be saturated (i.e. a pixel value higher (/ lesser) than 255 (/ 0) will be clamped to 255 (/ 0)).
 
 ![In light gray, histogram of the original image, in dark gray when brightness = 80 in Gimp](images/Basic_Linear_Transform_Tutorial_hist_beta.png)
 
 The histogram represents for each color level the number of pixels with that color level. A dark image will have many pixels with
-low color value and thus the histogram will present a peak in his left part. When adding a constant bias, the histogram is shifted to the
+low color value and thus the histogram will present a peak in its left part. When adding a constant bias, the histogram is shifted to the
 right as we have added a constant bias to all the pixels.
 
 The \f$\alpha\f$ parameter will modify how the levels spread. If \f$ \alpha < 1 \f$, the color levels will be compressed and the result

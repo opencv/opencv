@@ -599,6 +599,7 @@ static void run_sepfilter(Buffer& dst, const View& src,
 {
     constexpr int kMax = 11;
     GAPI_Assert(kxLen <= kMax && kyLen <= kMax);
+    GAPI_Assert(kxLen == kyLen);
 
     const SRC *in[kMax];
           DST *out;
@@ -625,10 +626,17 @@ static void run_sepfilter(Buffer& dst, const View& src,
         int border = xborder;
         run_sepfilter3x3_impl(out, in, width, chan, kx, ky, border, scale, delta, buf, y, y0);
     }
+    else if (kxLen == 5 && kyLen == 5)
+    {
+        int y = dst.y();
+        int y0 = dst.priv().writeStart();
+
+        run_sepfilter5x5_impl(out, in, width, chan, kx, ky, xborder, scale, delta, buf, y, y0);
+    }
     else
     {
         int length = chan * width;
-        int xshift = chan * xborder;
+        int xshift = chan;
 
         // horizontal pass
 
@@ -788,9 +796,9 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
                               Buffer&    dst,
                               Buffer&    scratch)
     {
-        GAPI_Assert(ksize.height == 3);
-
-        int kxsize = ksize.width;
+        GAPI_Assert(ksize.height == ksize.width);
+        GAPI_Assert((ksize.height == 3) || (ksize.height == 5));
+        const int kxsize = ksize.width;
         int kysize = ksize.height;
 
         auto *kx = scratch.OutLine<float>(); // cached kernX data
@@ -800,10 +808,16 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         int chan  = src.meta().chan;
         int length = width * chan;
 
-        float *buf[3];
+        constexpr int buffSize = 5;
+        GAPI_Assert(ksize.height <= buffSize);
+
+        float *buf[buffSize] = { nullptr };
+
         buf[0] = ky + kysize;
-        buf[1] = buf[0] + length;
-        buf[2] = buf[1] + length;
+        for (int i = 1; i < ksize.height; ++i)
+        {
+            buf[i] = buf[i - 1] + length;
+        }
 
         auto  anchor = cv::Point(-1, -1);
 
@@ -1809,7 +1823,7 @@ GAPI_FLUID_KERNEL(GFluidBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB, false)
     }
 };
 
-} // namespace fliud
+} // namespace fluid
 } // namespace gapi
 } // namespace cv
 

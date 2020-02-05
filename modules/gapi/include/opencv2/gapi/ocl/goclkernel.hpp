@@ -32,7 +32,7 @@ namespace gapi
 namespace ocl
 {
     /**
-     * \addtogroup gapi_std_backends G-API Standard backends
+     * \addtogroup gapi_std_backends G-API Standard Backends
      * @{
      */
     /**
@@ -68,9 +68,14 @@ public:
     {
         return outVecRef(output).wref<T>();
     }
+    template<typename T> T& outOpaqueR(int output) // FIXME: the same issue
+    {
+        return outOpaqueRef(output).wref<T>();
+    }
 
 protected:
     detail::VectorRef& outVecRef(int output);
+    detail::VectorRef& outOpaqueRef(int output);
 
     std::vector<GArg> m_args;
     std::unordered_map<std::size_t, GRunArgP> m_results;
@@ -94,7 +99,7 @@ protected:
     F m_f;
 };
 
-// FIXME: This is an ugly ad-hoc imlpementation. TODO: refactor
+// FIXME: This is an ugly ad-hoc implementation. TODO: refactor
 
 namespace detail
 {
@@ -110,6 +115,10 @@ template<> struct ocl_get_in<cv::GScalar>
 template<typename U> struct ocl_get_in<cv::GArray<U> >
 {
     static const std::vector<U>& get(GOCLContext &ctx, int idx) { return ctx.inArg<VectorRef>(idx).rref<U>(); }
+};
+template<typename U> struct ocl_get_in<cv::GOpaque<U> >
+{
+    static const U& get(GOCLContext &ctx, int idx) { return ctx.inArg<OpaqueRef>(idx).rref<U>(); }
 };
 template<class T> struct ocl_get_in
 {
@@ -183,6 +192,10 @@ template<> struct ocl_get_out<cv::GScalar>
 template<typename U> struct ocl_get_out<cv::GArray<U> >
 {
     static std::vector<U>& get(GOCLContext &ctx, int idx) { return ctx.outVecR<U>(idx);  }
+};
+template<typename U> struct ocl_get_out<cv::GOpaque<U> >
+{
+    static U& get(GOCLContext &ctx, int idx) { return ctx.outOpaqueR<U>(idx);  }
 };
 
 template<typename, typename, typename>

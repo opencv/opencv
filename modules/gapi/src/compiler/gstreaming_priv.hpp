@@ -32,6 +32,7 @@ public:
     void setup(const GMetaArgs &metaArgs,
                const GMetaArgs &outMetas,
                std::unique_ptr<cv::gimpl::GStreamingExecutor> &&pE);
+    void setup(std::unique_ptr<cv::gimpl::GStreamingExecutor> &&pE);
     bool isEmpty() const;
 
     const GMetaArgs& metas() const;

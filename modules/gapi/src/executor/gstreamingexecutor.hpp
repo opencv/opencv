@@ -32,7 +32,13 @@ namespace gimpl {
 
 namespace stream {
 struct Start {};
-struct Stop {};
+struct Stop {
+    enum class Kind {
+        HARD, // a hard-stop: end-of-pipeline reached or stop() called
+        CNST, // a soft-stop emitted for/by constant sources (see QueueReader)
+    } kind = Kind::HARD;
+    cv::GRunArg cdata; // const data for CNST stop
+};
 
 using Cmd = cv::util::variant
     < cv::util::monostate
@@ -76,6 +82,9 @@ protected:
 
     std::unique_ptr<ade::Graph> m_orig_graph;
     std::shared_ptr<ade::Graph> m_island_graph;
+    cv::GCompileArgs m_comp_args;
+    cv::GMetaArgs m_last_metas;
+    util::optional<bool> m_reshapable;
 
     cv::gimpl::GIslandModel::Graph m_gim; // FIXME: make const?
 
@@ -88,9 +97,8 @@ protected:
         cv::GMetaArgs       out_metas;
         ade::NodeHandle     nh;
 
-        std::vector<GRunArg> in_constants;
+        cv::GRunArgs in_constants;
 
-        // FIXME: remove it as unused
         std::shared_ptr<GIslandExecutable> isl_exec;
     };
     std::vector<OpDesc> m_ops;
@@ -101,6 +109,8 @@ protected:
         ade::NodeHandle data_nh;
     };
     std::vector<DataDesc> m_slots;
+
+    cv::GRunArgs m_const_vals;
 
     // Order in these vectors follows the GComputaion's protocol
     std::vector<ade::NodeHandle> m_emitters;

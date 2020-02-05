@@ -3,15 +3,14 @@
 # - CV_CLANG - Clang-compatible compiler (CMAKE_CXX_COMPILER_ID MATCHES "Clang" - Clang or AppleClang, see CMP0025)
 # - CV_ICC - Intel compiler
 # - MSVC - Microsoft Visual Compiler (CMake variable)
-# - MSVC64 - additional flag, 64-bit
 # - MINGW / CYGWIN / CMAKE_COMPILER_IS_MINGW / CMAKE_COMPILER_IS_CYGWIN (CMake original variables)
-# - MINGW64 - 64-bit
 #
 # CPU Platforms:
 # - X86 / X86_64
 # - ARM - ARM CPU, not defined for AArch64
 # - AARCH64 - ARMv8+ (64-bit)
 # - PPC64 / PPC64LE - PowerPC
+# - MIPS
 #
 # OS:
 # - WIN32 - Windows | MINGW
@@ -21,9 +20,8 @@
 # - APPLE - MacOSX | iOS
 # ----------------------------------------------------------------------------
 
-if(CMAKE_CL_64)
-    set(MSVC64 1)
-endif()
+ocv_declare_removed_variables(MINGW64 MSVC64)
+# do not use (CMake variables): CMAKE_CL_64
 
 if(NOT DEFINED CV_GCC AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   set(CV_GCC 1)
@@ -51,7 +49,7 @@ variable_watch(CMAKE_COMPILER_IS_CLANGCC access_CMAKE_COMPILER_IS_CLANGCXX)
 # Detect Intel ICC compiler
 # ----------------------------------------------------------------------------
 if(UNIX)
-  if  (__ICL)
+  if(__ICL)
     set(CV_ICC   __ICL)
   elseif(__ICC)
     set(CV_ICC   __ICC)
@@ -70,52 +68,64 @@ if(MSVC AND CMAKE_C_COMPILER MATCHES "icc|icl")
   set(CV_ICC   __INTEL_COMPILER_FOR_WINDOWS)
 endif()
 
-if(NOT DEFINED CMAKE_CXX_COMPILER_VERSION)
-  message(WARNING "Compiler version is not available: CMAKE_CXX_COMPILER_VERSION is not set")
+if(NOT DEFINED CMAKE_CXX_COMPILER_VERSION
+    AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_COMPILER_VERSION)
+  message(WARNING "OpenCV: Compiler version is not available: CMAKE_CXX_COMPILER_VERSION is not set")
 endif()
-
-if(WIN32 AND CV_GCC)
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
-                  OUTPUT_VARIABLE OPENCV_GCC_TARGET_MACHINE
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(OPENCV_GCC_TARGET_MACHINE MATCHES "amd64|x86_64|AMD64")
-    set(MINGW64 1)
-  endif()
+if((NOT DEFINED CMAKE_SYSTEM_PROCESSOR OR CMAKE_SYSTEM_PROCESSOR STREQUAL "")
+    AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_CMAKE_SYSTEM_PROCESSOR)
+  message(WARNING "OpenCV: CMAKE_SYSTEM_PROCESSOR is not defined. Perhaps CMake toolchain is broken")
+endif()
+if(NOT DEFINED CMAKE_SIZEOF_VOID_P
+    AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_CMAKE_SIZEOF_VOID_P)
+  message(WARNING "OpenCV: CMAKE_SIZEOF_VOID_P is not defined. Perhaps CMake toolchain is broken")
 endif()
 
 message(STATUS "Detected processor: ${CMAKE_SYSTEM_PROCESSOR}")
-if(MSVC64 OR MINGW64)
-  set(X86_64 1)
-elseif(MINGW OR (MSVC AND NOT CMAKE_CROSSCOMPILING))
-  set(X86 1)
+if(OPENCV_SKIP_SYSTEM_PROCESSOR_DETECTION)
+  # custom setup: required variables are passed through cache / CMake's command-line
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "amd64.*|x86_64.*|AMD64.*")
   set(X86_64 1)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*|amd64.*|AMD64.*")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*")
   set(X86 1)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64.*|AARCH64.*|arm64.*|ARM64.*)")
+  set(AARCH64 1)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm.*|ARM.*)")
   set(ARM 1)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64.*|AARCH64.*)")
-  set(AARCH64 1)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)64le")
   set(PPC64LE 1)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)64")
   set(PPC64 1)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(mips.*|MIPS.*)")
   set(MIPS 1)
+else()
+  if(NOT OPENCV_SUPPRESS_MESSAGE_UNRECOGNIZED_SYSTEM_PROCESSOR)
+    message(WARNING "OpenCV: unrecognized target processor configuration")
+  endif()
 endif()
 
-# Workaround for 32-bit operating systems on x86_64/aarch64 processor
-if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT FORCE_X86_64)
+# Workaround for 32-bit operating systems on x86_64
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND X86_64
+    AND NOT FORCE_X86_64  # deprecated (2019-12)
+    AND NOT OPENCV_FORCE_X86_64
+)
   message(STATUS "sizeof(void) = 4 on 64 bit processor. Assume 32-bit compilation mode")
-  if (X86_64)
+  if(X86_64)
     unset(X86_64)
     set(X86 1)
   endif()
-  if (AARCH64)
+endif()
+# Workaround for 32-bit operating systems on aarch64 processor
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND AARCH64
+    AND NOT OPENCV_FORCE_AARCH64
+)
+  message(STATUS "sizeof(void) = 4 on 64 bit processor. Assume 32-bit compilation mode")
+  if(AARCH64)
     unset(AARCH64)
     set(ARM 1)
   endif()
 endif()
+
 
 # Similar code exists in OpenCVConfig.cmake
 if(NOT DEFINED OpenCV_STATIC)
@@ -130,14 +140,19 @@ endif()
 if(DEFINED OpenCV_ARCH AND DEFINED OpenCV_RUNTIME)
   # custom overridden values
 elseif(MSVC)
-  if(CMAKE_CL_64)
-    set(OpenCV_ARCH x64)
-  elseif((CMAKE_GENERATOR MATCHES "ARM") OR ("${arch_hint}" STREQUAL "ARM") OR (CMAKE_VS_EFFECTIVE_PLATFORMS MATCHES "ARM|arm"))
-    # see Modules/CmakeGenericSystem.cmake
-    set(OpenCV_ARCH ARM)
+  # see Modules/CMakeGenericSystem.cmake
+  if("${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+    set(OpenCV_ARCH "x64")
+  elseif("${CMAKE_GENERATOR_PLATFORM}" MATCHES "ARM64")
+    set(OpenCV_ARCH "ARM64")
+  elseif("${CMAKE_GENERATOR}" MATCHES "ARM")
+    set(OpenCV_ARCH "ARM")
+  elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+    set(OpenCV_ARCH "x64")
   else()
     set(OpenCV_ARCH x86)
   endif()
+
   if(MSVC_VERSION EQUAL 1400)
     set(OpenCV_RUNTIME vc8)
   elseif(MSVC_VERSION EQUAL 1500)
@@ -160,7 +175,7 @@ elseif(MSVC)
 elseif(MINGW)
   set(OpenCV_RUNTIME mingw)
 
-  if(MINGW64)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "amd64.*|x86_64.*|AMD64.*")
     set(OpenCV_ARCH x64)
   else()
     set(OpenCV_ARCH x86)

@@ -206,6 +206,20 @@ struct v_float64x2
     { return vec_extract(val, 0); }
 };
 
+#define OPENCV_HAL_IMPL_VSX_EXTRACT_N(_Tpvec, _Tp) \
+template<int i> inline _Tp v_extract_n(VSX_UNUSED(_Tpvec v)) { return vec_extract(v.val, i); }
+
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint8x16, uchar)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int8x16, schar)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint16x8, ushort)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int16x8, short)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint32x4, uint)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int32x4, int)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_uint64x2, uint64)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_int64x2, int64)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float32x4, float)
+OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float64x2, double)
+
 //////////////// Load and store operations ///////////////
 
 /*
@@ -332,11 +346,37 @@ OPENCV_HAL_IMPL_VSX_EXPAND(v_int16x8, v_int32x4, short, vec_unpackl, vec_unpackh
 OPENCV_HAL_IMPL_VSX_EXPAND(v_uint32x4, v_uint64x2, uint, vec_unpacklu, vec_unpackhu)
 OPENCV_HAL_IMPL_VSX_EXPAND(v_int32x4, v_int64x2, int, vec_unpackl, vec_unpackh)
 
+/* Load and zero expand a 4 byte value into the second dword, first is don't care. */
+#if !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    #define _LXSIWZX(out, ptr, T) __asm__ ("lxsiwzx %x0, 0, %1\r\n" : "=wa"(out) : "r" (ptr) : "memory");
+#else
+    /* This is compiler-agnostic, but will introduce an unneeded splat on the critical path. */
+    #define _LXSIWZX(out, ptr, T) out = (T)vec_udword2_sp(*(uint32_t*)(ptr));
+#endif
+
 inline v_uint32x4 v_load_expand_q(const uchar* ptr)
-{ return v_uint32x4(vec_uint4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
+{
+    // Zero-extend the extra 24B instead of unpacking. Usually faster in small kernel
+    // Likewise note, value is zero extended and upper 4 bytes are zero'ed.
+    vec_uchar16 pmu = {8, 12, 12, 12, 9, 12, 12, 12, 10, 12, 12, 12, 11, 12, 12, 12};
+    vec_uchar16 out;
+
+    _LXSIWZX(out, ptr, vec_uchar16);
+    out = vec_perm(out, out, pmu);
+    return v_uint32x4((vec_uint4)out);
+}
 
 inline v_int32x4 v_load_expand_q(const schar* ptr)
-{ return v_int32x4(vec_int4_set(ptr[0], ptr[1], ptr[2], ptr[3])); }
+{
+    vec_char16 out;
+    vec_short8 outs;
+    vec_int4 outw;
+
+    _LXSIWZX(out, ptr, vec_char16);
+    outs = vec_unpackl(out);
+    outw = vec_unpackh(outs);
+    return v_int32x4(outw);
+}
 
 /* pack */
 #define OPENCV_HAL_IMPL_VSX_PACK(_Tpvec, _Tp, _Tpwvec, _Tpvn, _Tpdel, sfnc, pkfnc, addfnc, pack)    \
@@ -1298,7 +1338,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(vec_extract_fp_from_shorth(vf16));
 #elif CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
     vec_float4 vf32;
-    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wf" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
+    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wa" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
     return v_float32x4(vf32);
 #else
     const vec_int4 z = vec_int4_z, delta = vec_int4_sp(0x38000000);
@@ -1323,7 +1363,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 // fixme: Is there any builtin op or intrinsic that cover "xvcvsphp"?
 #if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
     vec_ushort8 vf16;
-    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wf" (v.val));
+    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wa" (v.val));
     vec_st_l8(vec_mergesqe(vf16, vf16), ptr);
 #else
     const vec_int4 signmask = vec_int4_sp(0x80000000);
@@ -1523,6 +1563,82 @@ inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1,                  
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_uint32x4, vec_uint4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_int32x4, vec_int4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_float32x4, vec_float4)
+
+template<int i>
+inline v_int8x16 v_broadcast_element(v_int8x16 v)
+{
+    return v_int8x16(vec_perm(v.val, v.val, vec_splats((unsigned char)i)));
+}
+
+template<int i>
+inline v_uint8x16 v_broadcast_element(v_uint8x16 v)
+{
+    return v_uint8x16(vec_perm(v.val, v.val, vec_splats((unsigned char)i)));
+}
+
+template<int i>
+inline v_int16x8 v_broadcast_element(v_int16x8 v)
+{
+    unsigned char t0 = 2*i, t1 = 2*i + 1;
+    vec_uchar16 p = {t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1};
+    return v_int16x8(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_uint16x8 v_broadcast_element(v_uint16x8 v)
+{
+    unsigned char t0 = 2*i, t1 = 2*i + 1;
+    vec_uchar16 p = {t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1};
+    return v_uint16x8(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_int32x4 v_broadcast_element(v_int32x4 v)
+{
+    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
+    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
+    return v_int32x4(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_uint32x4 v_broadcast_element(v_uint32x4 v)
+{
+    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
+    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
+    return v_uint32x4(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_int64x2 v_broadcast_element(v_int64x2 v)
+{
+    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
+    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
+    return v_int64x2(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_uint64x2 v_broadcast_element(v_uint64x2 v)
+{
+    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
+    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
+    return v_uint64x2(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_float32x4 v_broadcast_element(v_float32x4 v)
+{
+    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
+    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
+    return v_float32x4(vec_perm(v.val, v.val, p));
+}
+
+template<int i>
+inline v_float64x2 v_broadcast_element(v_float64x2 v)
+{
+    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
+    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
+    return v_float64x2(vec_perm(v.val, v.val, p));
+}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

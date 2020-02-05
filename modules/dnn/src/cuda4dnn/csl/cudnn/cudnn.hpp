@@ -37,9 +37,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         }
 
         /** get_data_type<T> returns the equivalent cudnn enumeration constant for type T */
-        template <class> auto get_data_type()->decltype(CUDNN_DATA_FLOAT);
-        template <> inline auto get_data_type<half>()->decltype(CUDNN_DATA_HALF) { return CUDNN_DATA_HALF; }
-        template <> inline auto get_data_type<float>()->decltype(CUDNN_DATA_FLOAT) { return CUDNN_DATA_FLOAT; }
+        using cudnn_data_enum_type = decltype(CUDNN_DATA_FLOAT);
+        template <class> cudnn_data_enum_type get_data_type();
+        template <> inline cudnn_data_enum_type get_data_type<half>() { return CUDNN_DATA_HALF; }
+        template <> inline cudnn_data_enum_type get_data_type<float>() { return CUDNN_DATA_FLOAT; }
     }
 
     /** @brief noncopyable cuDNN smart handle
@@ -218,7 +219,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                      *
                      * cuDNN frequently assumes that the first axis is the batch axis and the
                      * second axis is the channel axis; hence, we copy the shape of a lower rank
-                     * tensor to the begining of `dims`
+                     * tensor to the beginning of `dims`
                      */
                     std::copy(start, end, std::begin(dims));
 

@@ -425,6 +425,7 @@ namespace cv {
                     }
 
                     shortcut_param.set<std::string>("op", "sum");
+                    shortcut_param.set<std::string>("output_channels_mode", "input_0_truncate");
 
                     darknet::LayerParameter lp;
                     std::string layer_name = cv::format("shortcut_%d", layer_id);
@@ -555,6 +556,7 @@ namespace cv {
                     {
                         int kernel_size = getParam<int>(layer_params, "size", -1);
                         int pad = getParam<int>(layer_params, "pad", 0);
+                        int padding = getParam<int>(layer_params, "padding", 0);
                         int stride = getParam<int>(layer_params, "stride", 1);
                         int filters = getParam<int>(layer_params, "filters", -1);
                         bool batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
@@ -562,13 +564,13 @@ namespace cv {
                         if (flipped == 1)
                             CV_Error(cv::Error::StsNotImplemented, "Transpose the convolutional weights is not implemented");
 
-                        // correct the strange value of pad=1 for kernel_size=1 in the Darknet cfg-file
-                        if (kernel_size < 3) pad = 0;
+                        if (pad)
+                            padding = kernel_size / 2;
 
                         CV_Assert(kernel_size > 0 && filters > 0);
                         CV_Assert(current_channels > 0);
 
-                        setParams.setConvolution(kernel_size, pad, stride, filters, current_channels,
+                        setParams.setConvolution(kernel_size, padding, stride, filters, current_channels,
                             batch_normalize);
 
                         current_channels = filters;

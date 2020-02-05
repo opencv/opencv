@@ -627,6 +627,8 @@ public:
                                         c = '\"';
                                     else
                                     {
+                                        if (len + 2 + i >= CV_FS_MAX_LEN)
+                                            CV_PARSE_ERROR_CPP("string is too long");
                                         memcpy( strbuf + i, ptr-1, len + 2 );
                                         i += len + 2;
                                     }
@@ -635,9 +637,9 @@ public:
                                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
                             }
                         }
+                        if (i + 1 >= CV_FS_MAX_LEN)
+                            CV_PARSE_ERROR_CPP("Too long string literal");
                         strbuf[i++] = c;
-                        if( i >= CV_FS_MAX_LEN )
-                            CV_PARSE_ERROR_CPP( "Too long string literal" );
                     }
                     elem->setValue(FileNode::STRING, strbuf, i);
                 }

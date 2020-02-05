@@ -57,6 +57,14 @@ namespace cv
 
 //! @cond IGNORED
 
+//
+// Compilation troubleshooting:
+// - MSVC: error C2719: 'a': formal parameter with requested alignment of 16 won't be aligned
+//   Replace parameter declaration to const reference:
+//   -v_int32x4 a
+//   +const v_int32x4& a
+//
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 ///////// Types ////////////
@@ -3269,6 +3277,100 @@ inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_
 inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+
+template<int i>
+inline uchar v_extract_n(const v_uint8x16& v)
+{
+#if CV_SSE4_1
+    return (uchar)_mm_extract_epi8(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline schar v_extract_n(const v_int8x16& v)
+{
+    return (schar)v_extract_n<i>(v_reinterpret_as_u8(v));
+}
+
+template<int i>
+inline ushort v_extract_n(const v_uint16x8& v)
+{
+    return (ushort)_mm_extract_epi16(v.val, i);
+}
+
+template<int i>
+inline short v_extract_n(const v_int16x8& v)
+{
+    return (short)v_extract_n<i>(v_reinterpret_as_u16(v));
+}
+
+template<int i>
+inline uint v_extract_n(const v_uint32x4& v)
+{
+#if CV_SSE4_1
+    return (uint)_mm_extract_epi32(v.val, i);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline int v_extract_n(const v_int32x4& v)
+{
+    return (int)v_extract_n<i>(v_reinterpret_as_u32(v));
+}
+
+template<int i>
+inline uint64 v_extract_n(const v_uint64x2& v)
+{
+#ifdef CV__SIMD_NATIVE_mm_extract_epi64
+    return (uint64)_v128_extract_epi64<i>(v.val);
+#else
+    return v_rotate_right<i>(v).get0();
+#endif
+}
+
+template<int i>
+inline int64 v_extract_n(const v_int64x2& v)
+{
+    return (int64)v_extract_n<i>(v_reinterpret_as_u64(v));
+}
+
+template<int i>
+inline float v_extract_n(const v_float32x4& v)
+{
+    union { uint iv; float fv; } d;
+    d.iv = v_extract_n<i>(v_reinterpret_as_u32(v));
+    return d.fv;
+}
+
+template<int i>
+inline double v_extract_n(const v_float64x2& v)
+{
+    union { uint64 iv; double dv; } d;
+    d.iv = v_extract_n<i>(v_reinterpret_as_u64(v));
+    return d.dv;
+}
+
+template<int i>
+inline v_int32x4 v_broadcast_element(const v_int32x4& v)
+{
+    return v_int32x4(_mm_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
+}
+
+template<int i>
+inline v_uint32x4 v_broadcast_element(const v_uint32x4& v)
+{
+    return v_uint32x4(_mm_shuffle_epi32(v.val, _MM_SHUFFLE(i,i,i,i)));
+}
+
+template<int i>
+inline v_float32x4 v_broadcast_element(const v_float32x4& v)
+{
+    return v_float32x4(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
+}
 
 ////////////// FP16 support ///////////////////////////
 

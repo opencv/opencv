@@ -31,7 +31,7 @@ INSTANTIATE_TEST_CASE_P(Filter2DTestGPU, Filter2DTest,
                                        cv::Size(7, 7)),
                                 Values(cv::BORDER_DEFAULT)));
 
-INSTANTIATE_TEST_CASE_P(BoxFilterTestCPU, BoxFilterTest,
+INSTANTIATE_TEST_CASE_P(BoxFilterTestGPU, BoxFilterTest,
                         Combine(Values(/*CV_8UC1,*/ CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),

@@ -94,11 +94,11 @@ class Aapt(Tool):
         # get test instrumentation info
         instrumentation_tag = [t for t in tags if t.startswith("instrumentation ")]
         if not instrumentation_tag:
-            raise Err("Can not find instrumentation detials in: %s", exe)
+            raise Err("Can not find instrumentation details in: %s", exe)
         res.pkg_runner = re.search(r"^[ ]+A: android:name\(0x[0-9a-f]{8}\)=\"(?P<runner>.*?)\" \(Raw: \"(?P=runner)\"\)\r?$", instrumentation_tag[0], flags=re.MULTILINE).group("runner")
         res.pkg_target = re.search(r"^[ ]+A: android:targetPackage\(0x[0-9a-f]{8}\)=\"(?P<pkg>.*?)\" \(Raw: \"(?P=pkg)\"\)\r?$", instrumentation_tag[0], flags=re.MULTILINE).group("pkg")
         if not res.pkg_name or not res.pkg_runner or not res.pkg_target:
-            raise Err("Can not find instrumentation detials in: %s", exe)
+            raise Err("Can not find instrumentation details in: %s", exe)
         return res
 
 

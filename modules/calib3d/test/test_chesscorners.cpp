@@ -395,7 +395,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 
     Mat bg(Size(800, 600), CV_8UC3, Scalar::all(255));
     randu(bg, Scalar::all(0), Scalar::all(255));
-    GaussianBlur(bg, bg, Size(7,7), 3.0);
+    GaussianBlur(bg, bg, Size(5, 5), 0.0);
 
     Mat_<float> camMat(3, 3);
     camMat << 300.f, 0.f, bg.cols/2.f, 0, 300.f, bg.rows/2.f, 0.f, 0.f, 1.f;

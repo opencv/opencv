@@ -94,9 +94,14 @@ public:
     {
         return outVecRef(output).wref<T>();
     }
+    template<typename T> T& outOpaqueR(int output) // FIXME: the same issue
+    {
+        return outOpaqueRef(output).wref<T>();
+    }
 
 protected:
     detail::VectorRef& outVecRef(int output);
+    detail::OpaqueRef& outOpaqueRef(int output);
 
     std::vector<GArg> m_args;
 
@@ -124,7 +129,7 @@ protected:
     F m_f;
 };
 
-// FIXME: This is an ugly ad-hoc imlpementation. TODO: refactor
+// FIXME: This is an ugly ad-hoc implementation. TODO: refactor
 
 namespace detail
 {
@@ -145,6 +150,31 @@ template<typename U> struct get_in<cv::GArray<U> >
 {
     static const std::vector<U>& get(GCPUContext &ctx, int idx) { return ctx.inArg<VectorRef>(idx).rref<U>(); }
 };
+template<typename U> struct get_in<cv::GOpaque<U> >
+{
+    static const U& get(GCPUContext &ctx, int idx) { return ctx.inArg<OpaqueRef>(idx).rref<U>(); }
+};
+
+//FIXME(dm): GArray<Mat>/GArray<GMat> conversion should be done more gracefully in the system
+template<> struct get_in<cv::GArray<cv::GMat> >: public get_in<cv::GArray<cv::Mat> >
+{
+};
+
+//FIXME(dm): GArray<Scalar>/GArray<GScalar> conversion should be done more gracefully in the system
+template<> struct get_in<cv::GArray<cv::GScalar> >: public get_in<cv::GArray<cv::Scalar> >
+{
+};
+
+//FIXME(dm): GOpaque<Mat>/GOpaque<GMat> conversion should be done more gracefully in the system
+template<> struct get_in<cv::GOpaque<cv::GMat> >: public get_in<cv::GOpaque<cv::Mat> >
+{
+};
+
+//FIXME(dm): GOpaque<Scalar>/GOpaque<GScalar> conversion should be done more gracefully in the system
+template<> struct get_in<cv::GOpaque<cv::GScalar> >: public get_in<cv::GOpaque<cv::Mat> >
+{
+};
+
 template<class T> struct get_in
 {
     static T get(GCPUContext &ctx, int idx) { return ctx.inArg<T>(idx); }
@@ -223,6 +253,13 @@ template<typename U> struct get_out<cv::GArray<U>>
         return ctx.outVecR<U>(idx);
     }
 };
+template<typename U> struct get_out<cv::GOpaque<U>>
+{
+    static U& get(GCPUContext &ctx, int idx)
+    {
+        return ctx.outOpaqueR<U>(idx);
+    }
+};
 
 template<typename, typename, typename>
 struct OCVCallHelper;
@@ -240,7 +277,6 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
             //not using a std::forward on outs is deliberate in order to
             //cause compilation error, by trying to bind rvalue references to lvalue references
             Impl::run(std::forward<Inputs>(ins)..., outs...);
-
             postprocess(outs...);
         }
     };

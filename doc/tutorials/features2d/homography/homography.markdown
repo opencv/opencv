@@ -12,7 +12,9 @@ For detailed explanations about the theory, please refer to a computer vision co
 *   An Invitation to 3-D Vision: From Images to Geometric Models, @cite Ma:2003:IVI
 *   Computer Vision: Algorithms and Applications, @cite RS10
 
-The tutorial code can be found [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/features2D/Homography).
+The tutorial code can be found here [C++](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/features2D/Homography),
+[Python](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/features2D/Homography),
+[Java](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/features2D/Homography).
 The images used in this tutorial can be found [here](https://github.com/opencv/opencv/tree/master/samples/data) (`left*.jpg`).
 
 Basic theory {#tutorial_homography_Basic_theory}
@@ -171,15 +173,45 @@ The following image shows the source image (left) and the chessboard view that w
 
 The first step consists to detect the chessboard corners in the source and desired images:
 
+@add_toggle_cpp
 @snippet perspective_correction.cpp find-corners
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/features2D/Homography/perspective_correction.py find-corners
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PerspectiveCorrection.java find-corners
+@end_toggle
 
 The homography is estimated easily with:
 
+@add_toggle_cpp
 @snippet perspective_correction.cpp estimate-homography
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/features2D/Homography/perspective_correction.py estimate-homography
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PerspectiveCorrection.java estimate-homography
+@end_toggle
 
 To warp the source chessboard view into the desired chessboard view, we use @ref cv::warpPerspective
 
+@add_toggle_cpp
 @snippet perspective_correction.cpp warp-chessboard
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/features2D/Homography/perspective_correction.py warp-chessboard
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PerspectiveCorrection.java warp-chessboard
+@end_toggle
 
 The result image is:
 
@@ -187,7 +219,17 @@ The result image is:
 
 To compute the coordinates of the source corners transformed by the homography:
 
+@add_toggle_cpp
 @snippet perspective_correction.cpp compute-transformed-corners
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/features2D/Homography/perspective_correction.py compute-transformed-corners
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PerspectiveCorrection.java compute-transformed-corners
+@end_toggle
 
 To check the correctness of the calculation, the matching lines are displayed:
 
@@ -499,17 +541,57 @@ The figure below shows the two generated views of the Suzanne model, with only a
 
 With the known associated camera poses and the intrinsic parameters, the relative rotation between the two views can be computed:
 
+@add_toggle_cpp
 @snippet panorama_stitching_rotating_camera.cpp extract-rotation
+@end_toggle
 
+@add_toggle_python
+@snippet samples/python/tutorial_code/features2D/Homography/panorama_stitching_rotating_camera.py extract-rotation
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PanoramaStitchingRotatingCamera.java extract-rotation
+@end_toggle
+
+@add_toggle_cpp
 @snippet panorama_stitching_rotating_camera.cpp compute-rotation-displacement
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/features2D/Homography/panorama_stitching_rotating_camera.py compute-rotation-displacement
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PanoramaStitchingRotatingCamera.java compute-rotation-displacement
+@end_toggle
 
 Here, the second image will be stitched with respect to the first image. The homography can be calculated using the formula above:
 
+@add_toggle_cpp
 @snippet panorama_stitching_rotating_camera.cpp compute-homography
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/features2D/Homography/panorama_stitching_rotating_camera.py compute-homography
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PanoramaStitchingRotatingCamera.java compute-homography
+@end_toggle
 
 The stitching is made simply with:
 
+@add_toggle_cpp
 @snippet panorama_stitching_rotating_camera.cpp stitch
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/features2D/Homography/panorama_stitching_rotating_camera.py stitch
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/features2D/Homography/PanoramaStitchingRotatingCamera.java stitch
+@end_toggle
 
 The resulting image is:
 

@@ -19,6 +19,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void tanh(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
 
     template <class T>
+    void swish(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void mish(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
     void sigmoid(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
 
     template <class T>

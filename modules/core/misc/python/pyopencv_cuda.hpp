@@ -9,7 +9,7 @@ typedef cuda::Event::CreateFlags Event_CreateFlags;
 
 template<> struct pyopencvVecConverter<cuda::GpuMat>
 {
-    static bool to(PyObject* obj, std::vector<cuda::GpuMat>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<cuda::GpuMat>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }

@@ -134,12 +134,13 @@ static const std::vector<std::string> getOpenVINOTestModelsList()
     return result;
 }
 
-static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& dataPtr)
+static inline void genData(const InferenceEngine::TensorDesc& desc, Mat& m, Blob::Ptr& dataPtr)
 {
+    const std::vector<size_t>& dims = desc.getDims();
     m.create(std::vector<int>(dims.begin(), dims.end()), CV_32F);
     randu(m, -1, 1);
 
-    dataPtr = make_shared_blob<float>({Precision::FP32, dims, Layout::ANY}, (float*)m.data);
+    dataPtr = make_shared_blob<float>(desc, (float*)m.data);
 }
 
 void runIE(Target target, const std::string& xmlPath, const std::string& binPath,
@@ -238,7 +239,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap inputBlobs;
     for (auto& it : net.getInputsInfo())
     {
-        genData(it.second->getTensorDesc().getDims(), inputsMap[it.first], inputBlobs[it.first]);
+        genData(it.second->getTensorDesc(), inputsMap[it.first], inputBlobs[it.first]);
     }
     infRequest.SetInput(inputBlobs);
 
@@ -247,21 +248,23 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap outputBlobs;
     for (auto& it : net.getOutputsInfo())
     {
-        genData(it.second->getTensorDesc().getDims(), outputsMap[it.first], outputBlobs[it.first]);
+        genData(it.second->getTensorDesc(), outputsMap[it.first], outputBlobs[it.first]);
     }
     infRequest.SetOutput(outputBlobs);
 
     infRequest.Infer();
 }
 
-void runCV(Target target, const std::string& xmlPath, const std::string& binPath,
+void runCV(Backend backendId, Target targetId, const std::string& xmlPath, const std::string& binPath,
            const std::map<std::string, cv::Mat>& inputsMap,
            std::map<std::string, cv::Mat>& outputsMap)
 {
     Net net = readNet(xmlPath, binPath);
     for (auto& it : inputsMap)
         net.setInput(it.second, it.first);
-    net.setPreferableTarget(target);
+
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
 
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
     std::vector<Mat> outs;
@@ -275,14 +278,26 @@ void runCV(Target target, const std::string& xmlPath, const std::string& binPath
     }
 }
 
-typedef TestWithParam<tuple<Target, std::string> > DNNTestOpenVINO;
+typedef TestWithParam<tuple< tuple<Backend, Target>, std::string> > DNNTestOpenVINO;
 TEST_P(DNNTestOpenVINO, models)
 {
     initDLDTDataPath();
 
-    Target target = (dnn::Target)(int)get<0>(GetParam());
+    const Backend backendId = get<0>(get<0>(GetParam()));
+    const Target targetId = get<1>(get<0>(GetParam()));
+
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        throw SkipTestException("No support for async forward");
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    else
+        FAIL() << "Unknown backendId";
+
     std::string modelName = get<1>(GetParam());
-    bool isFP16 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD);
+    bool isFP16 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD);
 
     const std::map<std::string, OpenVINOModelTestCaseInfo>& models = getOpenVINOTestModels();
     const auto it = models.find(modelName);
@@ -296,10 +311,10 @@ TEST_P(DNNTestOpenVINO, models)
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
     // Single Myriad device cannot be shared across multiple processes.
-    if (target == DNN_TARGET_MYRIAD)
+    if (targetId == DNN_TARGET_MYRIAD)
         resetMyriadDevice();
-    runIE(target, xmlPath, binPath, inputsMap, ieOutputsMap);
-    runCV(target, xmlPath, binPath, inputsMap, cvOutputsMap);
+    runIE(targetId, xmlPath, binPath, inputsMap, ieOutputsMap);
+    runCV(backendId, targetId, xmlPath, binPath, inputsMap, cvOutputsMap);
 
     EXPECT_EQ(ieOutputsMap.size(), cvOutputsMap.size());
     for (auto& srcIt : ieOutputsMap)
@@ -314,7 +329,7 @@ TEST_P(DNNTestOpenVINO, models)
 
 INSTANTIATE_TEST_CASE_P(/**/,
     DNNTestOpenVINO,
-    Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
+    Combine(dnnBackendsAndTargetsIE(),
             testing::ValuesIn(getOpenVINOTestModelsList())
     )
 );

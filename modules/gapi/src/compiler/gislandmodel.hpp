@@ -96,6 +96,7 @@ protected:
 // * Is instantiated by the last step of the Islands fusion procedure;
 // * Is orchestrated by a GExecutor instance.
 //
+
 class GIslandExecutable
 {
 public:
@@ -165,6 +166,12 @@ struct Sink
     std::size_t proto_index;
 };
 
+// This flag is set in graph's own metadata if compileIsland was successful
+struct IslandsCompiled
+{
+    static const char *name() { return "IslandsCompiled"; }
+};
+
 namespace GIslandModel
 {
     using Graph = ade::TypedGraph
@@ -174,6 +181,7 @@ namespace GIslandModel
         , IslandExec
         , Emitter
         , Sink
+        , IslandsCompiled
         , ade::passes::TopologicalSortData
         >;
 
@@ -185,6 +193,7 @@ namespace GIslandModel
         , IslandExec
         , Emitter
         , Sink
+        , IslandsCompiled
         , ade::passes::TopologicalSortData
         >;
 

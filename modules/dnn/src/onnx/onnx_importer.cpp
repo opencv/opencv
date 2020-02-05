@@ -26,6 +26,8 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include "onnx_graph_simplifier.hpp"
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -145,8 +147,18 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         }
         else
         {
-            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
-            int64_t* src = reinterpret_cast<int64_t*>(val);
+            const char* val = tensor_proto.raw_data().c_str();
+            // Aligned pointer is required: https://github.com/opencv/opencv/issues/16373
+            // this doesn't work: typedef int64_t CV_DECL_ALIGNED(1) unaligned_int64_t;
+            AutoBuffer<int64_t, 16> aligned_val;
+            if (!isAligned<sizeof(int64_t)>(val))
+            {
+                size_t sz = tensor_proto.raw_data().size();
+                aligned_val.allocate(divUp(sz, sizeof(int64_t)));
+                memcpy(aligned_val.data(), val, sz);
+                val = (const char*)aligned_val.data();
+            }
+            const int64_t* src = reinterpret_cast<const int64_t*>(val);
             convertInt64ToInt32(src, dst, blob.total());
         }
     }
@@ -326,6 +338,9 @@ void ONNXImporter::populateNet(Net dstNet)
 {
     CV_Assert(model_proto.has_graph());
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
+
+    simplifySubgraphs(graph_proto);
+
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
     // List of internal blobs shapes.
     std::map<std::string, MatShape> outShapes;
@@ -520,19 +535,27 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Div")
         {
-            Mat blob = getBlob(node_proto, constBlobs, 1);
-            CV_Assert_N(blob.type() == CV_32F, blob.total());
-            if (blob.total() == 1)
+            if (constBlobs.find(node_proto.input(1)) == constBlobs.end())
             {
-                layerParams.set("scale", 1.0f / blob.at<float>(0));
-                layerParams.type = "Power";
+                layerParams.type = "Eltwise";
+                layerParams.set("operation", "div");
             }
             else
             {
-                layerParams.type = "Scale";
-                divide(1.0, blob, blob);
-                layerParams.blobs.push_back(blob);
-                layerParams.set("bias_term", false);
+                Mat blob = getBlob(node_proto, constBlobs, 1);
+                CV_Assert_N(blob.type() == CV_32F, blob.total());
+                if (blob.total() == 1)
+                {
+                    layerParams.set("scale", 1.0f / blob.at<float>(0));
+                    layerParams.type = "Power";
+                }
+                else
+                {
+                    layerParams.type = "Scale";
+                    divide(1.0, blob, blob);
+                    layerParams.blobs.push_back(blob);
+                    layerParams.set("bias_term", false);
+                }
             }
         }
         else if (layer_type == "Neg")
@@ -770,6 +793,34 @@ void ONNXImporter::populateNet(Net dstNet)
                 constBlobs.insert(std::make_pair(layerParams.name, transposed[0]));
                 continue;
             }
+        }
+        else if (layer_type == "ReduceL2")
+        {
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
+            CV_Assert(graph_proto.node_size() > li + 1 && graph_proto.node(li + 1).op_type() == "Div");
+            ++li;
+            node_proto = graph_proto.node(li);
+            layerParams.name = node_proto.output(0);
+            layerParams.type = "Normalize";
+
+            DictValue axes_dict = layerParams.get("axes");
+            if (axes_dict.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional reduceL2");
+            int axis = axes_dict.getIntValue(0);
+            layerParams.set("axis",axis);
+            layerParams.set("end_axis", axis);
+        }
+        else if (layer_type == "Squeeze")
+        {
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
+            DictValue axes_dict = layerParams.get("axes");
+            if (axes_dict.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional squeeze");
+
+            int axis = axes_dict.getIntValue(0);
+            layerParams.set("axis", axis - 1);
+            layerParams.set("end_axis", axis);
+            layerParams.type = "Flatten";
         }
         else if (layer_type == "Unsqueeze")
         {

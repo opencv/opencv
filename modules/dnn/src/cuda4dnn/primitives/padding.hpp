@@ -10,7 +10,7 @@
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
 
-#include "../kernels/fill.hpp"
+#include "../kernels/fill_copy.hpp"
 #include "../kernels/concat.hpp"
 #include "../kernels/padding.hpp"
 

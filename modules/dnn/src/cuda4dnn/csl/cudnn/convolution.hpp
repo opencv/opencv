@@ -6,6 +6,7 @@
 #define OPENCV_DNN_CUDA4DNN_CSL_CUDNN_CONVOLUTION_HPP
 
 #include "cudnn.hpp"
+#include "activation.hpp"
 
 #include "../pointer.hpp"
 #include "../workspace.hpp"
@@ -224,8 +225,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                     );
                 }
                 CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionGroupCount(descriptor, group_count));
+                if (std::is_same<T, half>::value)
+                    CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionMathType(descriptor, CUDNN_TENSOR_OP_MATH));
             } catch (...) {
-                /* cudnnDestroyConvolutionDescriptor will not fail for a valid desriptor object */
+                /* cudnnDestroyConvolutionDescriptor will not fail for a valid descriptor object */
                 CUDA4DNN_CHECK_CUDNN(cudnnDestroyConvolutionDescriptor(descriptor));
                 throw;
             }
@@ -401,6 +404,93 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 &beta_, outputDesc.get(), outputPtr.get()
             )
         );
+    }
+
+    /** @brief performs convolution, bias addition and activation simultaneously
+     *
+     * dstValue = act(alpha * conv(input) + bias)
+     *
+     * @tparam          T           convolution element type (must be `half` or `float`)
+     *
+     * @param           handle      valid cuDNN Handle
+     * @param           convDesc    convolution description
+     * @param           convAlgo    algorithm to use for convolution
+     * @param           workspace   workspace memory which meets the requirements of \p convAlgo
+     * @param           filterDesc  filter descriptor
+     * @param[in]       filterPtr   pointer to device memory containing the filters
+     * @param           alpha       convolution scale factor
+     * @param           inputDesc   tensor descriptor describing the input
+     * @param[in]       inputPtr    pointer to input tensor in device memory
+     * @param           biasDesc    tensor descriptor describing the bias
+     * @param[in]       biasPtr     pointer to bias tensor in device memory
+     * @param           actDesc     activation descriptor
+     * @param           outputDesc  tensor descriptor describing the output
+     * @param[out]      outputPtr   pointer to output tensor in device memory
+     *
+     * Exception Guarantee: Basic
+     */
+    template <class T>
+    void convolve_with_bias_activation(
+        const Handle& handle,
+        T alpha,
+        const ConvolutionDescriptor<T>& convDesc,
+        const ConvolutionAlgorithm<T>& convAlgo,
+        WorkspaceInstance workspace,
+        const FilterDescriptor<T>& filterDesc,
+        DevicePtr<const T> filterPtr,
+        const TensorDescriptor<T>& inputDesc,
+        DevicePtr<const T> inputPtr,
+        const TensorDescriptor<T>& biasDesc,
+        DevicePtr<const T> biasPtr,
+        const ActivationDescriptor& actDesc,
+        const TensorDescriptor<T>& outputDesc,
+        DevicePtr<T> outputPtr)
+    {
+        CV_Assert(handle);
+
+        T alpha2 = 0.0;
+        CUDA4DNN_CHECK_CUDNN(cudnnConvolutionBiasActivationForward(
+            handle.get(),
+            &alpha, inputDesc.get(), inputPtr.get(),
+            filterDesc.get(), filterPtr.get(),
+            convDesc.get(), convAlgo.get(),
+            static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
+            &alpha2, outputDesc.get(), outputPtr.get(),
+            biasDesc.get(), biasPtr.get(),
+            actDesc.get(),
+            outputDesc.get(), outputPtr.get()));
+    }
+
+    template <> inline
+    void convolve_with_bias_activation(
+        const Handle& handle,
+        half alpha,
+        const ConvolutionDescriptor<half>& convDesc,
+        const ConvolutionAlgorithm<half>& convAlgo,
+        WorkspaceInstance workspace,
+        const FilterDescriptor<half>& filterDesc,
+        DevicePtr<const half> filterPtr,
+        const TensorDescriptor<half>& inputDesc,
+        DevicePtr<const half> inputPtr,
+        const TensorDescriptor<half>& biasDesc,
+        DevicePtr<const half> biasPtr,
+        const ActivationDescriptor& actDesc,
+        const TensorDescriptor<half>& outputDesc,
+        DevicePtr<half> outputPtr)
+    {
+        CV_Assert(handle);
+
+        float alpha_ = alpha, alpha2 = 0.0;
+        CUDA4DNN_CHECK_CUDNN(cudnnConvolutionBiasActivationForward(
+            handle.get(),
+            &alpha_, inputDesc.get(), inputPtr.get(),
+            filterDesc.get(), filterPtr.get(),
+            convDesc.get(), convAlgo.get(),
+            static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
+            &alpha2, outputDesc.get(), outputPtr.get(),
+            biasDesc.get(), biasPtr.get(),
+            actDesc.get(),
+            outputDesc.get(), outputPtr.get()));
     }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */

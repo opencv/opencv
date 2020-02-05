@@ -802,7 +802,7 @@ int cv::getNumberOfCPUs(void)
 {
 #if defined _WIN32
     SYSTEM_INFO sysinfo;
-#if (defined(_M_ARM) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
+#if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );
 #else
     GetSystemInfo( &sysinfo );

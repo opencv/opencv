@@ -1400,6 +1400,19 @@ TEST(Resize, Area_half)
     }
 }
 
+TEST(Resize, lanczos4_regression_16192)
+{
+    Size src_size(11, 17);
+    Size dst_size(11, 153);
+    Mat src(src_size, CV_8UC3, Scalar::all(128));
+    Mat dst(dst_size, CV_8UC3, Scalar::all(255));
+
+    cv::resize(src, dst, dst_size, 0, 0, INTER_LANCZOS4);
+
+    Mat expected(dst_size, CV_8UC3, Scalar::all(128));
+    EXPECT_EQ(cvtest::norm(dst, expected, NORM_INF), 0) << dst(Rect(0,0,8,8));
+}
+
 TEST(Imgproc_Warp, multichannel)
 {
     static const int inter_types[] = {INTER_NEAREST, INTER_AREA, INTER_CUBIC,

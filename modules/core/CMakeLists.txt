@@ -42,7 +42,7 @@ if(HAVE_CUDA)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
-if(CV_TRACE AND HAVE_ITT AND BUILD_ITT)
+if(CV_TRACE AND HAVE_ITT)
   add_definitions(-DOPENCV_WITH_ITT=1)
 endif()
 
@@ -83,7 +83,7 @@ endif()
 
 ocv_create_module(${extra_libs})
 
-ocv_target_link_libraries(${the_module} LINK_PRIVATE
+ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"

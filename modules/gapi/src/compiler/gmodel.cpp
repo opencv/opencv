@@ -118,7 +118,7 @@ void GModel::linkOut(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::s
     op.outs[out_port] = RcDesc{gm.rc, gm.shape, {}};
 }
 
-std::vector<ade::NodeHandle> GModel::orderedInputs(const ConstGraph &g, const ade::NodeHandle nh)
+std::vector<ade::NodeHandle> GModel::orderedInputs(const ConstGraph &g, ade::NodeHandle nh)
 {
     std::vector<ade::NodeHandle> sorted_in_nhs(nh->inEdges().size());
     for (const auto& in_eh : nh->inEdges())
@@ -130,7 +130,7 @@ std::vector<ade::NodeHandle> GModel::orderedInputs(const ConstGraph &g, const ad
     return sorted_in_nhs;
 }
 
-std::vector<ade::NodeHandle> GModel::orderedOutputs(const ConstGraph &g, const ade::NodeHandle nh)
+std::vector<ade::NodeHandle> GModel::orderedOutputs(const ConstGraph &g, ade::NodeHandle nh)
 {
     std::vector<ade::NodeHandle> sorted_out_nhs(nh->outEdges().size());
     for (const auto& out_eh : nh->outEdges())
@@ -227,7 +227,7 @@ void GModel::redirectWriter(Graph &g, ade::NodeHandle from, ade::NodeHandle to)
     linkOut(g, op, to, output.port);
 }
 
-GMetaArgs GModel::collectInputMeta(GModel::ConstGraph cg, ade::NodeHandle node)
+GMetaArgs GModel::collectInputMeta(const GModel::ConstGraph &cg, ade::NodeHandle node)
 {
     GAPI_Assert(cg.metadata(node).get<NodeType>().t == NodeType::OP);
     GMetaArgs in_meta_args(cg.metadata(node).get<Op>().args.size());
@@ -254,7 +254,7 @@ ade::EdgeHandle GModel::getInEdgeByPort(const GModel::ConstGraph& cg,
     return *edge;
 }
 
-GMetaArgs GModel::collectOutputMeta(GModel::ConstGraph cg, ade::NodeHandle node)
+GMetaArgs GModel::collectOutputMeta(const GModel::ConstGraph &cg, ade::NodeHandle node)
 {
     GAPI_Assert(cg.metadata(node).get<NodeType>().t == NodeType::OP);
     GMetaArgs out_meta_args(cg.metadata(node).get<Op>().outs.size());

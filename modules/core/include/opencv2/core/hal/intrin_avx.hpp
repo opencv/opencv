@@ -90,6 +90,50 @@ inline __m256i _v256_packs_epu32(const __m256i& a, const __m256i& b)
     return _mm256_packus_epi32(am, bm);
 }
 
+template<int i>
+inline int _v256_extract_epi8(const __m256i& a)
+{
+#if defined(CV__SIMD_HAVE_mm256_extract_epi8) || (CV_AVX2 && (!defined(_MSC_VER) || _MSC_VER >= 1910/*MSVS 2017*/))
+    return _mm256_extract_epi8(a, i);
+#else
+    __m128i b = _mm256_extractf128_si256(a, ((i) >> 4));
+    return _mm_extract_epi8(b, i & 15);  // SSE4.1
+#endif
+}
+
+template<int i>
+inline int _v256_extract_epi16(const __m256i& a)
+{
+#if defined(CV__SIMD_HAVE_mm256_extract_epi8) || (CV_AVX2 && (!defined(_MSC_VER) || _MSC_VER >= 1910/*MSVS 2017*/))
+    return _mm256_extract_epi16(a, i);
+#else
+    __m128i b = _mm256_extractf128_si256(a, ((i) >> 3));
+    return _mm_extract_epi16(b, i & 7);  // SSE2
+#endif
+}
+
+template<int i>
+inline int _v256_extract_epi32(const __m256i& a)
+{
+#if defined(CV__SIMD_HAVE_mm256_extract_epi8) || (CV_AVX2 && (!defined(_MSC_VER) || _MSC_VER >= 1910/*MSVS 2017*/))
+    return _mm256_extract_epi32(a, i);
+#else
+    __m128i b = _mm256_extractf128_si256(a, ((i) >> 2));
+    return _mm_extract_epi32(b, i & 3);  // SSE4.1
+#endif
+}
+
+template<int i>
+inline int64 _v256_extract_epi64(const __m256i& a)
+{
+#if defined(CV__SIMD_HAVE_mm256_extract_epi8) || (CV_AVX2 && (!defined(_MSC_VER) || _MSC_VER >= 1910/*MSVS 2017*/))
+    return _mm256_extract_epi64(a, i);
+#else
+    __m128i b = _mm256_extractf128_si256(a, ((i) >> 1));
+    return _mm_extract_epi64(b, i & 1);  // SSE4.1
+#endif
+}
+
 ///////// Types ////////////
 
 struct v_uint8x32
@@ -525,7 +569,7 @@ inline v_int64x4 v256_blend(const v_int64x4& a, const v_int64x4& b)
 { return v_int64x4(v256_blend<m>(v_uint64x4(a.val), v_uint64x4(b.val)).val); }
 
 // shuffle
-// todo: emluate 64bit
+// todo: emulate 64bit
 #define OPENCV_HAL_IMPL_AVX_SHUFFLE(_Tpvec, intrin)  \
     template<int m>                                  \
     inline _Tpvec v256_shuffle(const _Tpvec& a)      \
@@ -2194,6 +2238,85 @@ OPENCV_HAL_IMPL_AVX_EXTRACT(v_uint64x4)
 OPENCV_HAL_IMPL_AVX_EXTRACT(v_int64x4)
 OPENCV_HAL_IMPL_AVX_EXTRACT(v_float32x8)
 OPENCV_HAL_IMPL_AVX_EXTRACT(v_float64x4)
+
+template<int i>
+inline uchar v_extract_n(v_uint8x32 a)
+{
+    return (uchar)_v256_extract_epi8<i>(a.val);
+}
+
+template<int i>
+inline schar v_extract_n(v_int8x32 a)
+{
+    return (schar)v_extract_n<i>(v_reinterpret_as_u8(a));
+}
+
+template<int i>
+inline ushort v_extract_n(v_uint16x16 a)
+{
+    return (ushort)_v256_extract_epi16<i>(a.val);
+}
+
+template<int i>
+inline short v_extract_n(v_int16x16 a)
+{
+    return (short)v_extract_n<i>(v_reinterpret_as_u16(a));
+}
+
+template<int i>
+inline uint v_extract_n(v_uint32x8 a)
+{
+    return (uint)_v256_extract_epi32<i>(a.val);
+}
+
+template<int i>
+inline int v_extract_n(v_int32x8 a)
+{
+    return (int)v_extract_n<i>(v_reinterpret_as_u32(a));
+}
+
+template<int i>
+inline uint64 v_extract_n(v_uint64x4 a)
+{
+    return (uint64)_v256_extract_epi64<i>(a.val);
+}
+
+template<int i>
+inline int64 v_extract_n(v_int64x4 v)
+{
+    return (int64)v_extract_n<i>(v_reinterpret_as_u64(v));
+}
+
+template<int i>
+inline float v_extract_n(v_float32x8 v)
+{
+    union { uint iv; float fv; } d;
+    d.iv = v_extract_n<i>(v_reinterpret_as_u32(v));
+    return d.fv;
+}
+
+template<int i>
+inline double v_extract_n(v_float64x4 v)
+{
+    union { uint64 iv; double dv; } d;
+    d.iv = v_extract_n<i>(v_reinterpret_as_u64(v));
+    return d.dv;
+}
+
+template<int i>
+inline v_uint32x8 v_broadcast_element(v_uint32x8 a)
+{
+    static const __m256i perm = _mm256_set1_epi32((char)i);
+    return v_uint32x8(_mm256_permutevar8x32_epi32(a.val, perm));
+}
+
+template<int i>
+inline v_int32x8 v_broadcast_element(const v_int32x8 &a)
+{ return v_reinterpret_as_s32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
+
+template<int i>
+inline v_float32x8 v_broadcast_element(const v_float32x8 &a)
+{ return v_reinterpret_as_f32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
 
 
 ///////////////////// load deinterleave /////////////////////////////

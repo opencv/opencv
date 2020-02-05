@@ -286,7 +286,7 @@ namespace cv { namespace gapi { namespace own {
          */
         bool empty() const
         {
-            return data == 0 || total() == 0 || dims.empty();
+            return data == 0 || total() == 0;
         }
 
         /** @brief Returns the total number of array elements.

@@ -24,7 +24,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     enum class EltwiseOpType {
         MAX,
         SUM,
-        PRODUCT
+        PRODUCT,
+        DIV
     };
 
     template <class T>
@@ -64,6 +65,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 {
                 case EltwiseOpType::MAX: kernels::eltwise_max_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::PRODUCT: kernels::eltwise_prod_2<T>(stream, output, input_x, input_y); break;
+                case EltwiseOpType::DIV: kernels::eltwise_div_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::SUM:
                     if (coeffs.empty() || (coeffs[0] == 1 && coeffs[1] == 1))
                         kernels::eltwise_sum_2<T>(stream, output, input_x, input_y);
@@ -89,6 +91,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     {
                     case EltwiseOpType::MAX: kernels::eltwise_max_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::PRODUCT: kernels::eltwise_prod_2<T>(stream, output, output, input); break;
+                    case EltwiseOpType::DIV: kernels::eltwise_div_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::SUM:
                         if (coeffs.empty() || coeffs[i] == 1)
                             kernels::eltwise_sum_2<T>(stream, output, output, input);

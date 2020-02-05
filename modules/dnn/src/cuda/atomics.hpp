@@ -8,7 +8,12 @@
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 
+// The 16-bit __half floating-point version of atomicAdd() is only supported by devices of compute capability 7.x and higher.
+// https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#atomicadd
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 700
+// And half-precision floating-point operations are not supported by devices of compute capability strictly lower than 5.3
+// https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#features-and-technical-specifications
+#elif __CUDA_ARCH__ < 530
 #else
 inline __device__ void atomicAdd(__half* address, __half val) {
     unsigned int* address_as_ui = (unsigned int *)((char *)address - ((size_t)address & 2));

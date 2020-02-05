@@ -95,6 +95,140 @@ TEST(videoio_ffmpeg, image)
 
 //==========================================================================
 
+typedef tuple<VideoCaptureAPIs, string, string, string, string, string> videoio_container_params_t;
+typedef testing::TestWithParam< videoio_container_params_t > videoio_container;
+
+TEST_P(videoio_container, read)
+{
+    const VideoCaptureAPIs api = get<0>(GetParam());
+
+    if (!videoio_registry::hasBackend(api))
+        throw SkipTestException("Backend was not found");
+
+    const string path = get<1>(GetParam());
+    const string ext = get<2>(GetParam());
+    const string ext_raw = get<3>(GetParam());
+    const string codec = get<4>(GetParam());
+    const string pixelFormat = get<5>(GetParam());
+    const string fileName = path + "." + ext;
+    const string fileNameOut = tempfile(cv::format("test_container_stream.%s", ext_raw.c_str()).c_str());
+
+    // Write encoded video read using VideoContainer to tmp file
+    size_t totalBytes = 0;
+    {
+        VideoCapture container(findDataFile(fileName), api);
+        if (!container.isOpened())
+            throw SkipTestException("Video stream is not supported");
+        if (!container.set(CAP_PROP_FORMAT, -1))  // turn off video decoder (extract stream)
+            throw SkipTestException("Fetching of RAW video streams is not supported");
+        ASSERT_EQ(-1.f, container.get(CAP_PROP_FORMAT));  // check
+        EXPECT_EQ(codec, fourccToString((int)container.get(CAP_PROP_FOURCC)));
+        EXPECT_EQ(pixelFormat, fourccToString((int)container.get(CAP_PROP_CODEC_PIXEL_FORMAT)));
+
+        std::ofstream file(fileNameOut.c_str(), ios::out | ios::trunc | std::ios::binary);
+        Mat raw_data;
+        while (true)
+        {
+            container >> raw_data;
+            size_t size = raw_data.total();
+            if (raw_data.empty())
+                break;
+            ASSERT_EQ(CV_8UC1, raw_data.type());
+            ASSERT_LE(raw_data.dims, 2);
+            ASSERT_EQ(raw_data.rows, 1);
+            ASSERT_EQ((size_t)raw_data.cols, raw_data.total());
+            ASSERT_TRUE(raw_data.isContinuous());
+            totalBytes += size;
+            file.write(reinterpret_cast<char*>(raw_data.data), size);
+            ASSERT_FALSE(file.fail());
+        }
+        ASSERT_GE(totalBytes, (size_t)65536) << "Encoded stream is too small";
+    }
+
+    std::cout << "Checking extracted video stream: " << fileNameOut << " (size: " << totalBytes << " bytes)" << std::endl;
+
+    // Check decoded frames read from original media are equal to frames decoded from tmp file
+    {
+        VideoCapture capReference(findDataFile(fileName), api);
+        ASSERT_TRUE(capReference.isOpened());
+        VideoCapture capActual(fileNameOut.c_str(), api);
+        ASSERT_TRUE(capActual.isOpened());
+        Mat reference, actual;
+        int nframes = 0, n_err = 0;
+        while (capReference.read(reference) && n_err < 3)
+        {
+            nframes++;
+            ASSERT_TRUE(capActual.read(actual)) << nframes;
+            EXPECT_EQ(0, cvtest::norm(actual, reference, NORM_INF)) << "frame=" << nframes << " err=" << ++n_err;
+        }
+        ASSERT_GT(nframes, 0);
+    }
+
+    ASSERT_EQ(0, remove(fileNameOut.c_str()));
+}
+
+const videoio_container_params_t videoio_container_params[] =
+{
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", "h264", "h264", "I420"),
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", "h265", "hevc", "I420"),
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "mjpg.avi", "mjpg", "MJPG", "I420"),
+    //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264.mkv", "mkv.h264", "h264", "I420"),
+    //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265.mkv", "mkv.h265", "hevc", "I420"),
+    //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264.mp4", "mp4.avc1", "avc1", "I420"),
+    //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265.mp4", "mp4.hev1", "hev1", "I420"),
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_container, testing::ValuesIn(videoio_container_params));
+
+typedef tuple<string, string, int> videoio_skip_params_t;
+typedef testing::TestWithParam< videoio_skip_params_t > videoio_skip;
+
+TEST_P(videoio_skip, DISABLED_read)  // optional test, may fail in some configurations
+{
+#if CV_VERSION_MAJOR >= 4
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("Backend was not found");
+#endif
+
+    const string path = get<0>(GetParam());
+    const string env = get<1>(GetParam());
+    const int expectedFrameNumber = get<2>(GetParam());
+
+    #ifdef _WIN32
+        _putenv_s("OPENCV_FFMPEG_CAPTURE_OPTIONS", env.c_str());
+    #else
+        setenv("OPENCV_FFMPEG_CAPTURE_OPTIONS", env.c_str(), 1);
+    #endif
+    VideoCapture container(findDataFile(path), CAP_FFMPEG);
+    #ifdef _WIN32
+        _putenv_s("OPENCV_FFMPEG_CAPTURE_OPTIONS", "");
+    #else
+        setenv("OPENCV_FFMPEG_CAPTURE_OPTIONS", "", 1);
+    #endif
+
+    ASSERT_TRUE(container.isOpened());
+
+    Mat reference;
+    int nframes = 0, n_err = 0;
+    while (container.isOpened())
+    {
+        if (container.read(reference))
+            nframes++;
+        else if (++n_err > 3)
+            break;
+    }
+    EXPECT_EQ(expectedFrameNumber, nframes);
+}
+
+const videoio_skip_params_t videoio_skip_params[] =
+{
+    videoio_skip_params_t("video/big_buck_bunny.mp4", "", 125),
+    videoio_skip_params_t("video/big_buck_bunny.mp4", "avdiscard;nonkey", 11)
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_skip, testing::ValuesIn(videoio_skip_params));
+
+//==========================================================================
 
 static void generateFrame(Mat &frame, unsigned int i, const Point &center, const Scalar &color)
 {

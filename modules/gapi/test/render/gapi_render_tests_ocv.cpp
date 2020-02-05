@@ -5,6 +5,10 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#ifdef HAVE_FREETYPE
+#include <codecvt>
+#endif // HAVE_FREETYPE
+
 #include "../test_precomp.hpp"
 #include "../common/gapi_render_tests.hpp"
 
@@ -12,6 +16,10 @@
 
 namespace opencv_test
 {
+
+#ifdef HAVE_FREETYPE
+GAPI_RENDER_TEST_FIXTURES(OCVTestFTexts,    FIXTURE_API(std::wstring, cv::Point, int, cv::Scalar),                        4, text, org, fh, color)
+#endif // HAVE_FREETYPE
 
 GAPI_RENDER_TEST_FIXTURES(OCVTestTexts,     FIXTURE_API(std::string, cv::Point, int, double, cv::Scalar, int, int, bool), 8, text, org, ff, fs, color, thick, lt, blo)
 GAPI_RENDER_TEST_FIXTURES(OCVTestRects,     FIXTURE_API(cv::Rect, cv::Scalar, int, int, int),                             5, rect, color, thick, lt, shift)
@@ -64,6 +72,54 @@ TEST_P(RenderNV12OCVTestTexts, AccuracyTest)
         EXPECT_EQ(0, cv::norm(uv_gapi_mat, uv_ref_mat));
     }
 }
+
+# ifdef HAVE_FREETYPE
+
+TEST_P(RenderBGROCVTestFTexts, AccuracyTest)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
+    EXPECT_NO_THROW(cv::gapi::wip::draw::render(gapi_mat, prims,
+                                cv::compile_args(cv::gapi::wip::draw::freetype_font{
+                                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+                                })));
+}
+
+TEST_P(RenderNV12OCVTestFTexts, AccuracyTest)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
+    EXPECT_NO_THROW(cv::gapi::wip::draw::render(y_gapi_mat, uv_gapi_mat, prims,
+                                cv::compile_args(cv::gapi::wip::draw::freetype_font{
+                                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+                                })));
+
+}
+
+static std::wstring to_wstring(const char* bytes)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    return converter.from_bytes(bytes);
+}
+
+TEST(RenderFText, FontsNotPassedToCompileArgs)
+{
+    cv::Mat in_mat(640, 480, CV_8UC3, cv::Scalar::all(0));
+
+    std::wstring text = to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd");
+    cv::Point org(100, 100);
+    int fh = 60;
+    cv::Scalar color(200, 100, 25);
+
+    cv::gapi::wip::draw::Prims prims;
+    prims.emplace_back(cv::gapi::wip::draw::FText{text, org, fh, color});
+
+    EXPECT_ANY_THROW(cv::gapi::wip::draw::render(in_mat, prims));
+}
+
+#endif // HAVE_FREETYPE
 
 TEST_P(RenderBGROCVTestRects, AccuracyTest)
 {
@@ -418,15 +474,60 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestTextsImpl, RenderNV12OCVTestTexts,
                                 Values(LINE_8),
                                 Values(false)));
 
+#ifdef HAVE_FREETYPE
+
+INSTANTIATE_TEST_CASE_P(RenderBGROCVTestFTextsImpl, RenderBGROCVTestFTexts,
+                        Combine(Values(cv::Size(1280, 720)),
+                            Values(to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c"),
+                                   to_wstring("\xe3\x80\xa4\xe3\x80\xa5\xe3\x80\xa6\xe3\x80\xa7\xe3\x80\xa8\xe3\x80\x85\xe3\x80\x86")),
+                            Values(cv::Point(200, 200)),
+                            Values(64),
+                            Values(cv::Scalar(0, 255, 0))));
+
+INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestFTextsImpl, RenderNV12OCVTestFTexts,
+                        Combine(Values(cv::Size(1280, 720)),
+                            Values(to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c"),
+                                   to_wstring("\xe3\x80\xa4\xe3\x80\xa5\xe3\x80\xa6\xe3\x80\xa7\xe3\x80\xa8\xe3\x80\x85\xe3\x80\x86")),
+                            Values(cv::Point(200, 200)),
+                            Values(64),
+                            Values(cv::Scalar(0, 255, 0))));
+#endif // HAVE_FREETYPE
+
+// FIXME Implement a macros to instantiate the tests because BGR and NV12 have the same parameters
+
 INSTANTIATE_TEST_CASE_P(RenderBGROCVTestMosaicsImpl, RenderBGROCVTestMosaics,
                         Combine(Values(cv::Size(1280, 720)),
-                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(cv::Rect(100, 100, 200, 200),      // Normal case
+                                       cv::Rect(-50, -50, 200, 200),      // Intersection with left-top corner
+                                       cv::Rect(-50, 100, 200, 200),      // Intersection with left side
+                                       cv::Rect(-50, 600, 200, 200),      // Intersection with left-bottom corner
+                                       cv::Rect(100, 600, 200, 200),      // Intersection with bottom side
+                                       cv::Rect(1200, 700, 200, 200),     // Intersection with right-bottom corner
+                                       cv::Rect(1200, 400, 200, 200),     // Intersection with right side
+                                       cv::Rect(1200, -50, 200, 200),     // Intersection with right-top corner
+                                       cv::Rect(500, -50, 200, 200),      // Intersection with top side
+                                       cv::Rect(-100, 300, 1480, 300),    // From left to right side with intersection
+                                       cv::Rect(5000, 2000, 100, 100),    // Outside image
+                                       cv::Rect(-300, -300, 3000, 3000),  // Cover all image
+                                       cv::Rect(100, 100, -500, -500)),   // Negative width and height
                                 Values(25),
                                 Values(0)));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestMosaicsImpl, RenderNV12OCVTestMosaics,
                         Combine(Values(cv::Size(1280, 720)),
-                                Values(cv::Rect(100, 100, 200, 200)),
+                                Values(cv::Rect(100, 100, 200, 200),      // Normal case
+                                       cv::Rect(-50, -50, 200, 200),      // Intersection with left-top corner
+                                       cv::Rect(-50, 100, 200, 200),      // Intersection with left side
+                                       cv::Rect(-50, 600, 200, 200),      // Intersection with left-bottom corner
+                                       cv::Rect(100, 600, 200, 200),      // Intersection with bottom side
+                                       cv::Rect(1200, 700, 200, 200),     // Intersection with right-bottom corner
+                                       cv::Rect(1200, 400, 200, 200),     // Intersection with right side
+                                       cv::Rect(1200, -50, 200, 200),     // Intersection with right-top corner
+                                       cv::Rect(500, -50, 200, 200),      // Intersection with top side
+                                       cv::Rect(-100, 300, 1480, 300),    // From left to right side with intersection
+                                       cv::Rect(5000, 2000, 100, 100),    // Outside image
+                                       cv::Rect(-300, -300, 3000, 3000),  // Cover all image
+                                       cv::Rect(100, 100, -500, -500)),   // Negative width and height
                                 Values(25),
                                 Values(0)));
 

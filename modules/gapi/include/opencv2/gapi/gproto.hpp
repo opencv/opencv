@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gmetaarg.hpp>
 
@@ -36,7 +37,8 @@ using GProtoArg = util::variant
     < GMat
     , GMatP
     , GScalar
-    , detail::GArrayU // instead of GArray<T>
+    , detail::GArrayU  // instead of GArray<T>
+    , detail::GOpaqueU // instead of GOpaque<T>
     >;
 
 using GProtoArgs = std::vector<GProtoArg>;

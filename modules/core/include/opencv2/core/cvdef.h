@@ -48,6 +48,10 @@
 //! @addtogroup core_utils
 //! @{
 
+#ifdef OPENCV_INCLUDE_PORT_FILE  // User-provided header file with custom platform configuration
+#include OPENCV_INCLUDE_PORT_FILE
+#endif
+
 #if !defined CV_DOXYGEN && !defined CV_IGNORE_DEBUG_BUILD_GUARD
 #if (defined(_MSC_VER) && (defined(DEBUG) || defined(_DEBUG))) || \
     (defined(_GLIBCXX_DEBUG) || defined(_GLIBCXX_DEBUG_PEDANTIC))
@@ -118,9 +122,11 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
 #    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
 #  else
+namespace cv {
      template <bool x> struct CV_StaticAssert_failed;
      template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
      template<int x> struct CV_StaticAssert_test {};
+}
 #    define CV_StaticAssert(condition, reason)\
        typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
 #  endif
@@ -161,7 +167,12 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #undef abs
 #undef Complex
 
+#if defined __cplusplus
+#include <limits>
+#else
 #include <limits.h>
+#endif
+
 #include "opencv2/core/hal/interface.h"
 
 #if defined __ICL
@@ -641,7 +652,11 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  include <intrin.h>
 #  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
 #else
-   CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
+  #ifdef OPENCV_FORCE_UNSAFE_XADD
+    CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
+  #else
+    #error "OpenCV: can't define safe CV_XADD macro for current platform (unsupported). Define CV_XADD macro through custom port header (see OPENCV_INCLUDE_PORT_FILE)"
+  #endif
 #endif
 
 

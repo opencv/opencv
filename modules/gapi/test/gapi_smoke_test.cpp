@@ -64,7 +64,7 @@ TEST(GAPI, Mat_Recreate)
     EXPECT_EQ(m3.at<uchar>(0, 0), m4.at<uchar>(0, 0));
 
     // cv::Mat::create must be NOOP if we don't change the meta,
-    // even if the origianl mat is created from handle.
+    // even if the original mat is created from handle.
     m4.create(3, 3, CV_8U);
     EXPECT_EQ(m3.rows, m4.rows);
     EXPECT_EQ(m3.cols, m4.cols);

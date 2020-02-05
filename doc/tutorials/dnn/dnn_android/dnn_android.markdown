@@ -12,7 +12,7 @@ Tutorial was written for the following versions of corresponding software:
 
 - Download and install Android Studio from https://developer.android.com/studio.
 
-- Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases and unpack it (for example, `opencv-4.1.2-android-sdk.zip`).
+- Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases and unpack it (for example, `opencv-4.2.0-android-sdk.zip`).
 
 - Download MobileNet object detection model from https://github.com/chuanqi305/MobileNet-SSD. We need a configuration file `MobileNetSSD_deploy.prototxt` and weights `MobileNetSSD_deploy.caffemodel`.
 
@@ -88,7 +88,7 @@ into `app/build/intermediates/assets/debug` folder.
 
 - Modify `/app/src/main/AndroidManifest.xml` to enable full-screen mode, set up
 a correct screen orientation and allow to use a camera.
-@include android/mobilenet-objdetect/AndroidManifest.xml
+@include android/mobilenet-objdetect/gradle/AndroidManifest.xml
 
 - Replace content of `app/src/main/java/org/opencv/samples/opencv_mobilenet/MainActivity.java`:
 @include android/mobilenet-objdetect/src/org/opencv/samples/opencv_mobilenet/MainActivity.java

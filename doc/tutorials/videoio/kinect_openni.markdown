@@ -43,7 +43,7 @@ VideoCapture can retrieve the following data:
     -   CAP_OPENNI_POINT_CLOUD_MAP - XYZ in meters (CV_32FC3)
     -   CAP_OPENNI_DISPARITY_MAP - disparity in pixels (CV_8UC1)
     -   CAP_OPENNI_DISPARITY_MAP_32F - disparity in pixels (CV_32FC1)
-    -   CAP_OPENNI_VALID_DEPTH_MASK - mask of valid pixels (not ocluded, not shaded etc.)
+    -   CAP_OPENNI_VALID_DEPTH_MASK - mask of valid pixels (not occluded, not shaded etc.)
         (CV_8UC1)
 
 -#  data given from BGR image generator:

@@ -1078,7 +1078,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
+    CV_CheckTypeEQ(_src1.type(), _src2.type(), "Input type mismatch");
+    CV_Assert(_src1.sameSize(_src2));
 
 #if defined HAVE_OPENCL || defined HAVE_IPP
     double _result = 0;

@@ -128,7 +128,7 @@ namespace
             ;
         }
 
-        virtual void addBackendPasses(ade::ExecutionEngineSetupContext &ectx) override;
+        virtual void addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupContext &ectx) override;
 
     };
 }
@@ -198,7 +198,7 @@ public:
     using FluidAgent::FluidAgent;
 };
 
-struct FluidNV12toRGBAgent : public FluidAgent
+struct Fluid420toRGBAgent : public FluidAgent
 {
 private:
     virtual int firstWindow(std::size_t inPort) const override;
@@ -313,7 +313,7 @@ static int maxLineConsumption(const cv::GFluidKernel::Kind kind, int window, int
             return (inH == 1) ? 1 : 2 + lpi - 1;
         }
     } break;
-    case cv::GFluidKernel::Kind::NV12toRGB: return inPort == 0 ? 2 : 1; break;
+    case cv::GFluidKernel::Kind::YUV420toRGB: return inPort == 0 ? 2 : 1; break;
     default: GAPI_Assert(false); return 0;
     }
 }
@@ -325,7 +325,7 @@ static int borderSize(const cv::GFluidKernel::Kind kind, int window)
     case cv::GFluidKernel::Kind::Filter: return (window - 1) / 2; break;
     // Resize never reads from border pixels
     case cv::GFluidKernel::Kind::Resize: return 0; break;
-    case cv::GFluidKernel::Kind::NV12toRGB: return 0; break;
+    case cv::GFluidKernel::Kind::YUV420toRGB: return 0; break;
     default: GAPI_Assert(false); return 0;
     }
 }
@@ -435,13 +435,13 @@ std::pair<int,int> cv::gimpl::FluidResizeAgent::linesReadAndnextWindow(std::size
     return m_mapper->linesReadAndNextWindow(outIdx, lpi);
 }
 
-int cv::gimpl::FluidNV12toRGBAgent::firstWindow(std::size_t inPort) const
+int cv::gimpl::Fluid420toRGBAgent::firstWindow(std::size_t inPort) const
 {
     // 2 lines for Y, 1 for UV
     return inPort == 0 ? 2 : 1;
 }
 
-std::pair<int,int> cv::gimpl::FluidNV12toRGBAgent::linesReadAndnextWindow(std::size_t inPort) const
+std::pair<int,int> cv::gimpl::Fluid420toRGBAgent::linesReadAndnextWindow(std::size_t inPort) const
 {
     // 2 lines for Y, 1 for UV
     return inPort == 0 ? std::make_pair(2, 2) : std::make_pair(1, 1);
@@ -675,7 +675,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                         return roi;
                     };
 
-                    auto adjNV12Roi = [&](cv::gapi::own::Rect produced, std::size_t port) {
+                    auto adj420Roi = [&](cv::gapi::own::Rect produced, std::size_t port) {
                         GAPI_Assert(produced.x % 2 == 0);
                         GAPI_Assert(produced.y % 2 == 0);
                         GAPI_Assert(produced.width % 2 == 0);
@@ -684,7 +684,8 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                         cv::gapi::own::Rect roi;
                         switch (port) {
                         case 0: roi = produced; break;
-                        case 1: roi = cv::gapi::own::Rect{ produced.x/2, produced.y/2, produced.width/2, produced.height/2 }; break;
+                        case 1:
+                        case 2: roi = cv::gapi::own::Rect{ produced.x/2, produced.y/2, produced.width/2, produced.height/2 }; break;
                         default: GAPI_Assert(false);
                         }
                         return roi;
@@ -696,19 +697,19 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                     cv::gapi::own::Rect resized;
                     switch (fg.metadata(oh).get<FluidUnit>().k.m_kind)
                     {
-                    case GFluidKernel::Kind::Filter:    resized = produced; break;
-                    case GFluidKernel::Kind::Resize:    resized = adjResizeRoi(produced, in_meta.size, meta.size); break;
-                    case GFluidKernel::Kind::NV12toRGB: resized = adjNV12Roi(produced, m_gm.metadata(in_edge).get<Input>().port); break;
+                    case GFluidKernel::Kind::Filter:      resized = produced; break;
+                    case GFluidKernel::Kind::Resize:      resized = adjResizeRoi(produced, in_meta.size, meta.size); break;
+                    case GFluidKernel::Kind::YUV420toRGB: resized = adj420Roi(produced, m_gm.metadata(in_edge).get<Input>().port); break;
                     default: GAPI_Assert(false);
                     }
 
                     // All below transformations affect roi of the writer, preserve read start position here
                     int readStart = resized.y;
 
-                    // Extend required input roi (both y and height) to be even if it's produced by NV12toRGB
+                    // Extend required input roi (both y and height) to be even if it's produced by CS420toRGB
                     if (!in_node->inNodes().empty()) {
                         auto in_data_producer = in_node->inNodes().front();
-                        if (fg.metadata(in_data_producer).get<FluidUnit>().k.m_kind == GFluidKernel::Kind::NV12toRGB) {
+                        if (fg.metadata(in_data_producer).get<FluidUnit>().k.m_kind == GFluidKernel::Kind::YUV420toRGB) {
                             if (resized.y % 2 != 0) {
                                 resized.y--;
                                 resized.height++;
@@ -840,9 +841,9 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                  
         std::unique_ptr<FluidAgent> agent_ptr;
         switch (agent_data.kind)
         {
-            case GFluidKernel::Kind::Filter:    agent_ptr.reset(new FluidFilterAgent(g, agent_data.nh));      break;
-            case GFluidKernel::Kind::Resize:    agent_ptr.reset(new FluidResizeAgent(g, agent_data.nh));      break;
-            case GFluidKernel::Kind::NV12toRGB: agent_ptr.reset(new FluidNV12toRGBAgent(g, agent_data.nh));   break;
+            case GFluidKernel::Kind::Filter:      agent_ptr.reset(new FluidFilterAgent(g, agent_data.nh));      break;
+            case GFluidKernel::Kind::Resize:      agent_ptr.reset(new FluidResizeAgent(g, agent_data.nh));      break;
+            case GFluidKernel::Kind::YUV420toRGB: agent_ptr.reset(new Fluid420toRGBAgent(g, agent_data.nh));    break;
             default: GAPI_Assert(false);
         }
         std::tie(agent_ptr->in_buffer_ids, agent_ptr->out_buffer_ids) = std::tie(agent_data.in_buffer_ids, agent_data.out_buffer_ids);
@@ -1005,7 +1006,7 @@ namespace
 
                 GAPI_Assert((out_ws.size() == 1 && out_hs.size() == 1) &&
                             ((in_hs.size() == 1) ||
-                            ((in_hs.size() == 2) && fu.k.m_kind == cv::GFluidKernel::Kind::NV12toRGB)));
+                            ((in_hs.size() == 2) && fu.k.m_kind == cv::GFluidKernel::Kind::YUV420toRGB)));
 
                 const auto &op = g.metadata(node).get<Op>();
                 fu.line_consumption.resize(op.args.size(), 0);
@@ -1249,6 +1250,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
     case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
     case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
     case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
+    case GShape::GOPAQUE: m_res.slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg); break;
     }
 }
 
@@ -1291,7 +1293,8 @@ void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_a
 {
     GAPI_Assert(op_arg.kind != cv::detail::ArgKind::GMAT
            && op_arg.kind != cv::detail::ArgKind::GSCALAR
-           && op_arg.kind != cv::detail::ArgKind::GARRAY);
+           && op_arg.kind != cv::detail::ArgKind::GARRAY
+           && op_arg.kind != cv::detail::ArgKind::GOPAQUE);
 
     if (op_arg.kind == cv::detail::ArgKind::GOBJREF)
     {
@@ -1303,6 +1306,10 @@ void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_a
         else if (ref.shape == GShape::GARRAY)
         {
             in_arg = GArg(m_res.slot<cv::detail::VectorRef>()[ref.id]);
+        }
+        else if (ref.shape == GShape::GOPAQUE)
+        {
+            in_arg = GArg(m_res.slot<cv::detail::OpaqueRef>()[ref.id]);
         }
     }
 }
@@ -1417,7 +1424,7 @@ void cv::gimpl::GParallelFluidExecutable::run(std::vector<InObj>  &&input_objs,
 
 // FIXME: these passes operate on graph global level!!!
 // Need to fix this for heterogeneous (island-based) processing
-void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
+void GFluidBackendImpl::addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupContext &ectx)
 {
     using namespace cv::gimpl;
 

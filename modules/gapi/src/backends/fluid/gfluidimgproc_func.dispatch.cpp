@@ -119,6 +119,28 @@ RUN_SEPFILTER3X3_IMPL( float,  float)
 
 #undef RUN_SEPFILTER3X3_IMPL
 
+#define RUN_SEPFILTER5x5_IMPL(DST, SRC)                                     \
+void run_sepfilter5x5_impl(DST out[], const SRC *in[], int width, int chan, \
+                           const float kx[], const float ky[], int border,  \
+                           float scale, float delta,                        \
+                           float *buf[], int y, int y0)                     \
+{                                                                           \
+    CV_CPU_DISPATCH(run_sepfilter5x5_impl,                                  \
+        (out, in, width, chan, kx, ky, border, scale, delta, buf,y, y0),    \
+        CV_CPU_DISPATCH_MODES_ALL);                                         \
+}
+
+RUN_SEPFILTER5x5_IMPL(uchar, uchar)
+RUN_SEPFILTER5x5_IMPL(short, uchar)
+RUN_SEPFILTER5x5_IMPL(float, uchar)
+RUN_SEPFILTER5x5_IMPL(ushort, ushort)
+RUN_SEPFILTER5x5_IMPL(short, ushort)
+RUN_SEPFILTER5x5_IMPL(float, ushort)
+RUN_SEPFILTER5x5_IMPL(short, short)
+RUN_SEPFILTER5x5_IMPL(float, short)
+RUN_SEPFILTER5x5_IMPL(float, float)
+
+#undef RUN_SEPFILTER5x5_IMPL
 //-------------------------
 //
 // Fluid kernels: Filter 2D
@@ -187,7 +209,7 @@ RUN_MEDBLUR3X3_IMPL( float)
 
 #undef RUN_MEDBLUR3X3_IMPL
 
-} // namespace fliud
+} // namespace fluid
 } // namespace gapi
 } // namespace cv
 

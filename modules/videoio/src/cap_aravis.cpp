@@ -148,6 +148,8 @@ protected:
     double          exposureCompensation;
     bool            autoGain;
     double          targetGrey;             // Target grey value (mid grey))
+    bool            softwareTriggered;      // Flag if the camera is software triggered
+    bool            allowAutoTrigger;       // Flag that user allowed to trigger software triggered cameras automatically
 
     gint64          *pixelFormats;
     guint           pixelFormatsCnt;
@@ -189,6 +191,7 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     exposureCompensation = 0;
     targetGrey = 0;
     frameID = prevFrameID = 0;
+    allowAutoTrigger = false;
 
     num_buffers = 10;
     frame = NULL;
@@ -275,6 +278,7 @@ bool CvCaptureCAM_Aravis::open( int index )
         exposure = exposureAvailable ? arv_camera_get_exposure_time(camera) : 0;
         gain = gainAvailable ? arv_camera_get_gain(camera) : 0;
         fps = arv_camera_get_frame_rate(camera);
+        softwareTriggered = (strcmp(arv_camera_get_trigger_source(camera), "Software") == 0);
 
         return startCapture();
     }
@@ -290,6 +294,9 @@ bool CvCaptureCAM_Aravis::grabFrame()
         ArvBuffer *arv_buffer = NULL;
         int max_tries = 10;
         int tries = 0;
+        if (softwareTriggered && allowAutoTrigger) {
+            arv_camera_software_trigger (camera);
+        }
         for(; tries < max_tries; tries ++) {
             arv_buffer = arv_stream_timeout_pop_buffer (stream, 200000);
             if (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
@@ -300,7 +307,7 @@ bool CvCaptureCAM_Aravis::grabFrame()
             size_t buffer_size;
             framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 
-            // retrieve image size properites
+            // retrieve image size properties
             arv_buffer_get_image_region (arv_buffer, &xoffset, &yoffset, &width, &height);
 
             // retrieve image ID set by camera
@@ -494,6 +501,12 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                 return out;
             }
             break;
+
+        case CAP_PROP_ARAVIS_AUTOTRIGGER:
+        {
+            return allowAutoTrigger ? 1. : 0.;
+        }
+        break;
     }
     return -1.0;
 }
@@ -578,6 +591,11 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
             }
             break;
 
+        case CAP_PROP_ARAVIS_AUTOTRIGGER:
+            {
+                allowAutoTrigger = (bool) value;
+            }
+            break;
 
         default:
             return false;

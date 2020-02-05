@@ -318,6 +318,21 @@ if(PPC64LE)
   endif()
 endif()
 
+# Apply "-Wl,--as-needed" linker flags: https://github.com/opencv/opencv/issues/7001
+if(NOT OPENCV_SKIP_LINK_AS_NEEDED)
+  if(UNIX AND (NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2"))
+    set(_option "-Wl,--as-needed")
+    set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")  # requires CMake 3.2+ and CMP0056
+    ocv_check_compiler_flag(CXX "" HAVE_LINK_AS_NEEDED)
+    set(CMAKE_EXE_LINKER_FLAGS "${_saved_CMAKE_EXE_LINKER_FLAGS}")
+    if(HAVE_LINK_AS_NEEDED)
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} ${_option}")
+      set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} ${_option}")
+    endif()
+  endif()
+endif()
+
 # combine all "extra" options
 if(NOT OPENCV_SKIP_EXTRA_COMPILER_FLAGS)
   set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
@@ -383,6 +398,19 @@ endif()
 if(MSVC)
   include(cmake/OpenCVCRTLinkage.cmake)
   add_definitions(-D_VARIADIC_MAX=10)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  get_directory_property(__DIRECTORY_COMPILE_DEFINITIONS COMPILE_DEFINITIONS)
+  if((NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS_RELEASE} ${__DIRECTORY_COMPILE_DEFINITIONS}" MATCHES "_WIN32_WINNT"
+      AND NOT OPENCV_CMAKE_SKIP_MACRO_WIN32_WINNT)
+      OR OPENCV_CMAKE_FORCE_MACRO_WIN32_WINNT
+  )
+    # https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt
+    # Target Windows 7 API
+    set(OPENCV_CMAKE_MACRO_WIN32_WINNT "0x0601" CACHE STRING "Value of _WIN32_WINNT macro")
+    add_definitions(-D_WIN32_WINNT=${OPENCV_CMAKE_MACRO_WIN32_WINNT})
+  endif()
 endif()
 
 # Enable compiler options for OpenCV modules/apps/samples only (ignore 3rdparty)

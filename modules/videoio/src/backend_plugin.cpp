@@ -21,7 +21,7 @@ using namespace std;
 
 #if defined(_WIN32)
 #include <windows.h>
-#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__GLIBC__)
 #include <dlfcn.h>
 #endif
 
@@ -77,7 +77,7 @@ void* getSymbol_(LibHandle_t h, const char* symbolName)
 {
 #if defined(_WIN32)
     return (void*)GetProcAddress(h, symbolName);
-#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__GLIBC__)
     return dlsym(h, symbolName);
 #endif
 }
@@ -91,7 +91,7 @@ LibHandle_t libraryLoad_(const FileSystemPath_t& filename)
 # else
     return LoadLibraryW(filename.c_str());
 #endif
-#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__GLIBC__)
     return dlopen(filename.c_str(), RTLD_LAZY);
 #endif
 }
@@ -101,7 +101,7 @@ void libraryRelease_(LibHandle_t h)
 {
 #if defined(_WIN32)
     FreeLibrary(h);
-#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__GLIBC__)
     dlclose(h);
 #endif
 }
@@ -208,10 +208,23 @@ public:
                 CV_LOG_INFO(NULL, "Video I/O: plugin is incompatible: " << lib->getName());
                 return;
             }
-            if (plugin_api_->api_header.opencv_version_major != CV_VERSION_MAJOR ||
-                plugin_api_->api_header.opencv_version_minor != CV_VERSION_MINOR)
+            if (plugin_api_->api_header.opencv_version_major != CV_VERSION_MAJOR)
             {
-                CV_LOG_ERROR(NULL, "Video I/O: wrong OpenCV version used by plugin '" << plugin_api_->api_header.api_description << "': " <<
+                CV_LOG_ERROR(NULL, "Video I/O: wrong OpenCV major version used by plugin '" << plugin_api_->api_header.api_description << "': " <<
+                    cv::format("%d.%d, OpenCV version is '" CV_VERSION "'", plugin_api_->api_header.opencv_version_major, plugin_api_->api_header.opencv_version_minor))
+                plugin_api_ = NULL;
+                return;
+            }
+#ifdef HAVE_FFMPEG_WRAPPER
+            if (plugin_api_->captureAPI == CAP_FFMPEG)
+            {
+                // no checks for OpenCV minor version
+            }
+            else
+#endif
+            if (plugin_api_->api_header.opencv_version_minor != CV_VERSION_MINOR)
+            {
+                CV_LOG_ERROR(NULL, "Video I/O: wrong OpenCV minor version used by plugin '" << plugin_api_->api_header.api_description << "': " <<
                     cv::format("%d.%d, OpenCV version is '" CV_VERSION "'", plugin_api_->api_header.opencv_version_major, plugin_api_->api_header.opencv_version_minor))
                 plugin_api_ = NULL;
                 return;

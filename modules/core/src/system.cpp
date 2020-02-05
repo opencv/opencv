@@ -55,11 +55,26 @@
 
 namespace cv {
 
+static void _initSystem()
+{
+#ifdef __ANDROID__
+    // https://github.com/opencv/opencv/issues/14906
+    // "ios_base::Init" object is not a part of Android's "iostream" header (in case of clang toolchain, NDK 20).
+    // Ref1: https://en.cppreference.com/w/cpp/io/ios_base/Init
+    //       The header <iostream> behaves as if it defines (directly or indirectly) an instance of std::ios_base::Init with static storage duration
+    // Ref2: https://github.com/gcc-mirror/gcc/blob/gcc-8-branch/libstdc%2B%2B-v3/include/std/iostream#L73-L74
+    static std::ios_base::Init s_iostream_initializer;
+#endif
+}
+
 static Mutex* __initialization_mutex = NULL;
 Mutex& getInitializationMutex()
 {
     if (__initialization_mutex == NULL)
+    {
+        (void)_initSystem();
         __initialization_mutex = new Mutex();
+    }
     return *__initialization_mutex;
 }
 // force initialization (single-threaded environment)
@@ -131,6 +146,10 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #if (_WIN32_WINNT >= 0x0602)
   #include <synchapi.h>
 #endif
+#if ((_WIN32_WINNT >= 0x0600) && !defined(CV_DISABLE_FLS)) || defined(CV_FORCE_FLS)
+  #include <fibersapi.h>
+  #define CV_USE_FLS
+#endif
 #undef small
 #undef min
 #undef max
@@ -142,7 +161,7 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #ifndef __cplusplus_winrt
 #include <windows.storage.h>
 #pragma comment(lib, "runtimeobject.lib")
-#endif
+#endif // WINRT
 
 std::wstring GetTempPathWinRT()
 {
@@ -1326,16 +1345,44 @@ namespace details {
 #endif
 #endif
 
+template <class T>
+class DisposedSingletonMark
+{
+private:
+    static bool mark;
+protected:
+    DisposedSingletonMark() {}
+    ~DisposedSingletonMark()
+    {
+        mark = true;
+    }
+public:
+    static bool isDisposed() { return mark; }
+};
+
 // TLS platform abstraction layer
-class TlsAbstraction
+class TlsAbstraction : public DisposedSingletonMark<TlsAbstraction>
 {
 public:
     TlsAbstraction();
     ~TlsAbstraction();
-    void* GetData() const;
-    void  SetData(void *pData);
+    void* getData() const
+    {
+        if (isDisposed())  // guard: static initialization order fiasco
+            return NULL;
+        return getData_();
+    }
+    void setData(void *pData)
+    {
+        if (isDisposed())  // guard: static initialization order fiasco
+            return;
+        return setData_(pData);
+    }
 
 private:
+    void* getData_() const;
+    void setData_(void *pData);
+
 #ifdef _WIN32
 #ifndef WINRT
     DWORD tlsKey;
@@ -1345,38 +1392,72 @@ private:
 #endif
 };
 
+template<> bool DisposedSingletonMark<TlsAbstraction>::mark = false;
+
+static TlsAbstraction& getTlsAbstraction_()
+{
+    static TlsAbstraction g_tls;  // disposed in atexit() handlers (required for unregistering our callbacks)
+    return g_tls;
+}
+static TlsAbstraction* getTlsAbstraction()
+{
+    static TlsAbstraction* instance = &getTlsAbstraction_();
+    return DisposedSingletonMark<TlsAbstraction>::isDisposed() ? NULL : instance;
+}
+
+
 #ifdef _WIN32
 #ifdef WINRT
 static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
 TlsAbstraction::~TlsAbstraction() {}
-void* TlsAbstraction::GetData() const
+void* TlsAbstraction::getData_() const
 {
     return tlsData;
 }
-void  TlsAbstraction::SetData(void *pData)
+void TlsAbstraction::setData_(void *pData)
 {
     tlsData = pData;
 }
 #else //WINRT
+#ifdef CV_USE_FLS
+static void NTAPI opencv_fls_destructor(void* pData);
+#endif // CV_USE_FLS
 TlsAbstraction::TlsAbstraction()
 {
+#ifndef CV_USE_FLS
     tlsKey = TlsAlloc();
+#else // CV_USE_FLS
+    tlsKey = FlsAlloc(opencv_fls_destructor);
+#endif // CV_USE_FLS
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
 TlsAbstraction::~TlsAbstraction()
 {
+#ifndef CV_USE_FLS
     TlsFree(tlsKey);
+#else // CV_USE_FLS
+    FlsFree(tlsKey);
+#endif // CV_USE_FLS
+    tlsKey = TLS_OUT_OF_INDEXES;
 }
-void* TlsAbstraction::GetData() const
+void* TlsAbstraction::getData_() const
 {
+#ifndef CV_USE_FLS
     return TlsGetValue(tlsKey);
+#else // CV_USE_FLS
+    return FlsGetValue(tlsKey);
+#endif // CV_USE_FLS
 }
-void  TlsAbstraction::SetData(void *pData)
+void TlsAbstraction::setData_(void *pData)
 {
+#ifndef CV_USE_FLS
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
+#else // CV_USE_FLS
+    CV_Assert(FlsSetValue(tlsKey, pData) == TRUE);
+#endif // CV_USE_FLS
 }
-#endif
+#endif // WINRT
 #else // _WIN32
 static void opencv_tls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
@@ -1385,13 +1466,18 @@ TlsAbstraction::TlsAbstraction()
 }
 TlsAbstraction::~TlsAbstraction()
 {
-    CV_Assert(pthread_key_delete(tlsKey) == 0);
+    if (pthread_key_delete(tlsKey) != 0)
+    {
+        // Don't use logging here
+        fprintf(stderr, "OpenCV ERROR: TlsAbstraction::~TlsAbstraction(): pthread_key_delete() call failed\n");
+        fflush(stderr);
+    }
 }
-void* TlsAbstraction::GetData() const
+void* TlsAbstraction::getData_() const
 {
     return pthread_getspecific(tlsKey);
 }
-void  TlsAbstraction::SetData(void *pData)
+void TlsAbstraction::setData_(void *pData)
 {
     CV_Assert(pthread_setspecific(tlsKey, pData) == 0);
 }
@@ -1424,12 +1510,17 @@ public:
     {
         // TlsStorage object should not be released
         // There is no reliable way to avoid problems caused by static initialization order fiasco
-        CV_LOG_FATAL(NULL, "TlsStorage::~TlsStorage() call is not expected");
+        // Don't use logging here
+        fprintf(stderr, "OpenCV FATAL: TlsStorage::~TlsStorage() call is not expected\n");
+        fflush(stderr);
     }
 
     void releaseThread(void* tlsValue = NULL)
     {
-        ThreadData *pTD = tlsValue == NULL ? (ThreadData*)tls.GetData() : (ThreadData*)tlsValue;
+        TlsAbstraction* tls = getTlsAbstraction();
+        if (NULL == tls)
+            return;  // TLS singleton is not available (terminated)
+        ThreadData *pTD = tlsValue == NULL ? (ThreadData*)tls->getData() : (ThreadData*)tlsValue;
         if (pTD == NULL)
             return;  // no OpenCV TLS data for this thread
         AutoLock guard(mtxGlobalAccess);
@@ -1439,7 +1530,7 @@ public:
             {
                 threads[i] = NULL;
                 if (tlsValue == NULL)
-                    tls.SetData(0);
+                    tls->setData(0);
                 std::vector<void*>& thread_slots = pTD->slots;
                 for (size_t slotIdx = 0; slotIdx < thread_slots.size(); slotIdx++)
                 {
@@ -1451,13 +1542,16 @@ public:
                     if (container)
                         container->deleteDataInstance(pData);
                     else
-                        CV_LOG_ERROR(NULL, "TLS: container for slotIdx=" << slotIdx << " is NULL. Can't release thread data");
+                    {
+                        fprintf(stderr, "OpenCV ERROR: TLS: container for slotIdx=%d is NULL. Can't release thread data\n", (int)slotIdx);
+                        fflush(stderr);
+                    }
                 }
                 delete pTD;
                 return;
             }
         }
-        CV_LOG_WARNING(NULL, "TLS: Can't release thread TLS data (unknown pointer or data race): " << (void*)pTD);
+        fprintf(stderr, "OpenCV WARNING: TLS: Can't release thread TLS data (unknown pointer or data race): %p\n", (void*)pTD); fflush(stderr);
     }
 
     // Reserve TLS storage index
@@ -1514,7 +1608,11 @@ public:
         CV_Assert(tlsSlotsSize > slotIdx);
 #endif
 
-        ThreadData* threadData = (ThreadData*)tls.GetData();
+        TlsAbstraction* tls = getTlsAbstraction();
+        if (NULL == tls)
+            return NULL;  // TLS singleton is not available (terminated)
+
+        ThreadData* threadData = (ThreadData*)tls->getData();
         if(threadData && threadData->slots.size() > slotIdx)
             return threadData->slots[slotIdx];
 
@@ -1546,11 +1644,15 @@ public:
         CV_Assert(tlsSlotsSize > slotIdx);
 #endif
 
-        ThreadData* threadData = (ThreadData*)tls.GetData();
+        TlsAbstraction* tls = getTlsAbstraction();
+        if (NULL == tls)
+            return;  // TLS singleton is not available (terminated)
+
+        ThreadData* threadData = (ThreadData*)tls->getData();
         if(!threadData)
         {
             threadData = new ThreadData;
-            tls.SetData((void*)threadData);
+            tls->setData((void*)threadData);
             {
                 AutoLock guard(mtxGlobalAccess);
 
@@ -1585,8 +1687,6 @@ public:
     }
 
 private:
-    TlsAbstraction tls; // TLS abstraction layer instance
-
     Mutex  mtxGlobalAccess;           // Shared objects operation guard
     size_t tlsSlotsSize;              // equal to tlsSlots.size() in synchronized sections
                                       // without synchronization this counter doesn't decrease - it is used for slotIdx sanity checks
@@ -1611,7 +1711,14 @@ static void opencv_tls_destructor(void* pData)
 {
     getTlsStorage().releaseThread(pData);
 }
-#endif
+#else // _WIN32
+#ifdef CV_USE_FLS
+static void WINAPI opencv_fls_destructor(void* pData)
+{
+    getTlsStorage().releaseThread(pData);
+}
+#endif // CV_USE_FLS
+#endif // _WIN32
 
 } // namespace details
 using namespace details;
@@ -1708,6 +1815,15 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
 
 
 namespace {
+
+#ifdef OPENCV_WITH_ITT
+bool overrideThreadName()
+{
+    static bool param = utils::getConfigurationParameterBool("OPENCV_TRACE_ITT_SET_THREAD_NAME", false);
+    return param;
+}
+#endif
+
 static int g_threadNum = 0;
 class ThreadID {
 public:
@@ -1716,7 +1832,8 @@ public:
         id(CV_XADD(&g_threadNum, 1))
     {
 #ifdef OPENCV_WITH_ITT
-        __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
+        if (overrideThreadName())
+            __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
 #endif
     }
 };

@@ -7,8 +7,6 @@
 
 #include "precomp.hpp"
 
-#if !defined(GAPI_STANDALONE)
-
 #include <ade/graph.hpp>
 
 #include <opencv2/gapi/gproto.hpp> // can_describe
@@ -25,6 +23,11 @@ void cv::GStreamingCompiled::Priv::setup(const GMetaArgs &_metaArgs,
     m_metas    = _metaArgs;
     m_outMetas = _outMetas;
     m_exec     = std::move(_pE);
+}
+
+void cv::GStreamingCompiled::Priv::setup(std::unique_ptr<cv::gimpl::GStreamingExecutor> &&_pE)
+{
+    m_exec = std::move(_pE);
 }
 
 bool cv::GStreamingCompiled::Priv::isEmpty() const
@@ -47,9 +50,7 @@ const cv::GMetaArgs& cv::GStreamingCompiled::Priv::outMetas() const
 // the G*Compiled's priv?
 void cv::GStreamingCompiled::Priv::setSource(cv::GRunArgs &&args)
 {
-    // FIXME: This metadata checking should be removed at all
-    // for the streaming case.
-    if (!can_describe(m_metas, args))
+    if (!m_metas.empty() && !can_describe(m_metas, args))
     {
         util::throw_error(std::logic_error("This object was compiled "
                                            "for different metadata!"));
@@ -144,5 +145,3 @@ cv::GStreamingCompiled::Priv& cv::GStreamingCompiled::priv()
 {
     return *m_priv;
 }
-
-#endif // GAPI_STANDALONE

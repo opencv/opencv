@@ -53,7 +53,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      * "TensorType" is used when only meta-information such as the size or shape is required, i.e. the data won't be touched
      */
 
-    /** if the \p axis is a negative index, the equivalent postive index is returned; otherwise, returns \p axis */
+    /** if the \p axis is a negative index, the equivalent positive index is returned; otherwise, returns \p axis */
     CUDA4DNN_HOST_DEVICE constexpr std::size_t clamp_axis(int axis, std::size_t rank) {
         return axis < 0 ? axis + rank : axis;
     }
@@ -67,7 +67,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      */
     template <class T>
     class Tensor {
-        static_assert(std::is_standard_layout<T>::value, "T must staisfy StandardLayoutType");
+        static_assert(std::is_standard_layout<T>::value, "T must satisfy StandardLayoutType");
 
     public:
         using value_type    = typename ManagedPtr<T>::element_type;
@@ -553,7 +553,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - [start, end) represents a forward range containing the length of the axes in order
          * - the number of axis lengths must be less than or equal to the rank
          * - at most one axis length is allowed for length deduction
-         * - the lengths provided must ensure that the total number of elements remains unchnged
+         * - the lengths provided must ensure that the total number of elements remains unchanged
          *
          * Exception Guarantee: Strong
          */
@@ -898,7 +898,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - [start, end) represents a forward range containing length of the axes in order starting from axis zero
          * - the number of axis lengths must be less than or equal to the tensor rank
          * - at most one axis length is allowed for length deduction
-         * - the lengths provided must ensure that the total number of elements remains unchnged
+         * - the lengths provided must ensure that the total number of elements remains unchanged
          *
          * Exception Guarantee: Strong
          */

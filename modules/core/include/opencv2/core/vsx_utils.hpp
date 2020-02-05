@@ -110,9 +110,9 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b) { return fn2(a, b); }
 #if defined(__GNUG__) && !defined(__clang__)
 
 // inline asm helper
-#define VSX_IMPL_1RG(rt, rto, rg, rgo, opc, fnm) \
-VSX_FINLINE(rt) fnm(const rg& a)                 \
-{ rt rs; __asm__ __volatile__(#opc" %x0,%x1" : "="#rto (rs) : #rgo (a)); return rs; }
+#define VSX_IMPL_1RG(rt, rg, opc, fnm) \
+VSX_FINLINE(rt) fnm(const rg& a)       \
+{ rt rs; __asm__ __volatile__(#opc" %x0,%x1" : "=wa" (rs) : "wa" (a)); return rs; }
 
 #define VSX_IMPL_1VRG(rt, rg, opc, fnm) \
 VSX_FINLINE(rt) fnm(const rg& a)        \
@@ -233,6 +233,10 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
 #if __GNUG__ < 5
 // vec_xxpermdi in gcc4 missing little-endian supports just like clang
 #   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ (((c) & 1) << 1 | (c) >> 1)))
+// same as vec_xxpermdi
+#   undef vec_vbpermq
+    VSX_IMPL_2VRG(vec_udword2, vec_uchar16, vbpermq, vec_vbpermq)
+    VSX_IMPL_2VRG(vec_dword2,  vec_char16, vbpermq, vec_vbpermq)
 #else
 #   define vec_permi vec_xxpermdi
 #endif // __GNUG__ < 5
@@ -257,44 +261,38 @@ VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvfo, __builtin_vsx_xvcvdpsp)
 VSX_REDIRECT_1RG(vec_double2, vec_float4,  vec_cvfo, __builtin_vsx_xvcvspdp)
 
 // converts word and doubleword to double-precision
-#ifdef vec_ctd
-#   undef vec_ctd
-#endif
-VSX_IMPL_1RG(vec_double2, wd, vec_int4,    wa, xvcvsxwdp, vec_ctdo)
-VSX_IMPL_1RG(vec_double2, wd, vec_uint4,   wa, xvcvuxwdp, vec_ctdo)
-VSX_IMPL_1RG(vec_double2, wd, vec_dword2,  wi, xvcvsxddp, vec_ctd)
-VSX_IMPL_1RG(vec_double2, wd, vec_udword2, wi, xvcvuxddp, vec_ctd)
+#undef vec_ctd
+VSX_IMPL_1RG(vec_double2, vec_int4,    xvcvsxwdp, vec_ctdo)
+VSX_IMPL_1RG(vec_double2, vec_uint4,   xvcvuxwdp, vec_ctdo)
+VSX_IMPL_1RG(vec_double2, vec_dword2,  xvcvsxddp, vec_ctd)
+VSX_IMPL_1RG(vec_double2, vec_udword2, xvcvuxddp, vec_ctd)
 
 // converts word and doubleword to single-precision
 #undef vec_ctf
-VSX_IMPL_1RG(vec_float4, wf, vec_int4,    wa, xvcvsxwsp, vec_ctf)
-VSX_IMPL_1RG(vec_float4, wf, vec_uint4,   wa, xvcvuxwsp, vec_ctf)
-VSX_IMPL_1RG(vec_float4, wf, vec_dword2,  wi, xvcvsxdsp, vec_ctfo)
-VSX_IMPL_1RG(vec_float4, wf, vec_udword2, wi, xvcvuxdsp, vec_ctfo)
+VSX_IMPL_1RG(vec_float4, vec_int4,    xvcvsxwsp, vec_ctf)
+VSX_IMPL_1RG(vec_float4, vec_uint4,   xvcvuxwsp, vec_ctf)
+VSX_IMPL_1RG(vec_float4, vec_dword2,  xvcvsxdsp, vec_ctfo)
+VSX_IMPL_1RG(vec_float4, vec_udword2, xvcvuxdsp, vec_ctfo)
 
 // converts single and double precision to signed word
 #undef vec_cts
-VSX_IMPL_1RG(vec_int4,  wa, vec_double2, wd, xvcvdpsxws, vec_ctso)
-VSX_IMPL_1RG(vec_int4,  wa, vec_float4,  wf, xvcvspsxws, vec_cts)
+VSX_IMPL_1RG(vec_int4,  vec_double2, xvcvdpsxws, vec_ctso)
+VSX_IMPL_1RG(vec_int4,  vec_float4,  xvcvspsxws, vec_cts)
 
 // converts single and double precision to unsigned word
 #undef vec_ctu
-VSX_IMPL_1RG(vec_uint4, wa, vec_double2, wd, xvcvdpuxws, vec_ctuo)
-VSX_IMPL_1RG(vec_uint4, wa, vec_float4,  wf, xvcvspuxws, vec_ctu)
+VSX_IMPL_1RG(vec_uint4, vec_double2, xvcvdpuxws, vec_ctuo)
+VSX_IMPL_1RG(vec_uint4, vec_float4,  xvcvspuxws, vec_ctu)
 
 // converts single and double precision to signed doubleword
-#ifdef vec_ctsl
-#   undef vec_ctsl
-#endif
-VSX_IMPL_1RG(vec_dword2, wi, vec_double2, wd, xvcvdpsxds, vec_ctsl)
-VSX_IMPL_1RG(vec_dword2, wi, vec_float4,  wf, xvcvspsxds, vec_ctslo)
+#undef vec_ctsl
+VSX_IMPL_1RG(vec_dword2, vec_double2, xvcvdpsxds, vec_ctsl)
+VSX_IMPL_1RG(vec_dword2, vec_float4,  xvcvspsxds, vec_ctslo)
 
 // converts single and double precision to unsigned doubleword
-#ifdef vec_ctul
-#   undef vec_ctul
-#endif
-VSX_IMPL_1RG(vec_udword2, wi, vec_double2, wd, xvcvdpuxds, vec_ctul)
-VSX_IMPL_1RG(vec_udword2, wi, vec_float4,  wf, xvcvspuxds, vec_ctulo)
+#undef vec_ctul
+VSX_IMPL_1RG(vec_udword2, vec_double2, xvcvdpuxds, vec_ctul)
+VSX_IMPL_1RG(vec_udword2, vec_float4,  xvcvspuxds, vec_ctulo)
 
 // just in case if GCC doesn't define it
 #ifndef vec_xl
@@ -317,7 +315,7 @@ VSX_IMPL_1RG(vec_udword2, wi, vec_float4,  wf, xvcvspuxds, vec_ctulo)
  * Also there's already an open bug https://bugs.llvm.org/show_bug.cgi?id=31837
  *
  * So we're not able to use inline asm and only use built-in functions that CLANG supports
- * and use __builtin_convertvector if clang missng any of vector conversions built-in functions
+ * and use __builtin_convertvector if clang missing any of vector conversions built-in functions
  *
  * todo: clang asm template bug is fixed, need to reconsider the current workarounds.
 */
@@ -491,7 +489,7 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
 // Only for Eigen!
 /*
  * changing behavior of conversion intrinsics for gcc has effect on Eigen
- * so we redfine old behavior again only on gcc, clang
+ * so we redefine old behavior again only on gcc, clang
 */
 #if !defined(__clang__) || __clang_major__ > 4
     // ignoring second arg since Eigen only truncates toward zero

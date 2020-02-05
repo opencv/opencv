@@ -1537,7 +1537,7 @@ transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, in
 static void
 transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD && !defined(__aarch64__)
+#if CV_SIMD && !defined(__aarch64__) && !defined(_M_ARM64)
     if( scn == 3 && dcn == 3 )
     {
         int x = 0;
@@ -1606,7 +1606,7 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
 static void
 transform_32f( const float* src, float* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD && !defined(__aarch64__)
+#if CV_SIMD && !defined(__aarch64__) && !defined(_M_ARM64)
     int x = 0;
     if( scn == 3 && dcn == 3 )
     {
@@ -2078,6 +2078,10 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
         deltastep = deltastep ? 4 : 0;
     }
 
+#if CV_SIMD_64F
+    v_float64x2 v_scale = v_setall_f64(scale);
+#endif
+
     if( !delta )
         for( i = 0; i < size.width; i++, tdst += dststep )
         {
@@ -2086,22 +2090,41 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
 
             for( j = i; j <= size.width - 4; j += 4 )
             {
-                double s0 = 0, s1 = 0, s2 = 0, s3 = 0;
-                const sT *tsrc = src + j;
-
-                for( k = 0; k < size.height; k++, tsrc += srcstep )
+#if CV_SIMD_64F
+                if (DataType<sT>::depth == CV_64F && DataType<dT>::depth == CV_64F)
                 {
-                    double a = col_buf[k];
-                    s0 += a * tsrc[0];
-                    s1 += a * tsrc[1];
-                    s2 += a * tsrc[2];
-                    s3 += a * tsrc[3];
-                }
+                    v_float64x2 s0 = v_setzero_f64(), s1 = v_setzero_f64();
+                    const double *tsrc = (double*)(src + j);
 
-                tdst[j] = (dT)(s0*scale);
-                tdst[j+1] = (dT)(s1*scale);
-                tdst[j+2] = (dT)(s2*scale);
-                tdst[j+3] = (dT)(s3*scale);
+                    for( k = 0; k < size.height; k++, tsrc += srcstep )
+                    {
+                        v_float64x2 a = v_setall_f64((double)col_buf[k]);
+                        s0 += a * v_load(tsrc+0);
+                        s1 += a * v_load(tsrc+2);
+                    }
+
+                    v_store((double*)(tdst+j), s0*v_scale);
+                    v_store((double*)(tdst+j+2), s1*v_scale);
+                } else
+#endif
+                {
+                    double s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+                    const sT *tsrc = src + j;
+
+                    for( k = 0; k < size.height; k++, tsrc += srcstep )
+                    {
+                        double a = col_buf[k];
+                        s0 += a * tsrc[0];
+                        s1 += a * tsrc[1];
+                        s2 += a * tsrc[2];
+                        s3 += a * tsrc[3];
+                    }
+
+                    tdst[j] = (dT)(s0*scale);
+                    tdst[j+1] = (dT)(s1*scale);
+                    tdst[j+2] = (dT)(s2*scale);
+                    tdst[j+3] = (dT)(s3*scale);
+                }
             }
 
             for( ; j < size.width; j++ )
@@ -2127,23 +2150,45 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
 
             for( j = i; j <= size.width - 4; j += 4 )
             {
-                double s0 = 0, s1 = 0, s2 = 0, s3 = 0;
-                const sT *tsrc = src + j;
-                const dT *d = delta_buf ? delta_buf : delta + j;
-
-                for( k = 0; k < size.height; k++, tsrc+=srcstep, d+=deltastep )
+#if CV_SIMD_64F
+                if (DataType<sT>::depth == CV_64F && DataType<dT>::depth == CV_64F)
                 {
-                    double a = col_buf[k];
-                    s0 += a * (tsrc[0] - d[0]);
-                    s1 += a * (tsrc[1] - d[1]);
-                    s2 += a * (tsrc[2] - d[2]);
-                    s3 += a * (tsrc[3] - d[3]);
-                }
+                    v_float64x2 s0 = v_setzero_f64(), s1 = v_setzero_f64();
+                    const double *tsrc = (double*)(src + j);
+                    const double *d = (double*)(delta_buf ? delta_buf : delta + j);
 
-                tdst[j] = (dT)(s0*scale);
-                tdst[j+1] = (dT)(s1*scale);
-                tdst[j+2] = (dT)(s2*scale);
-                tdst[j+3] = (dT)(s3*scale);
+                    for( k = 0; k < size.height; k++, tsrc+=srcstep, d+=deltastep )
+                    {
+                        v_float64x2 a = v_setall_f64((double)col_buf[k]);
+                        s0 += a * (v_load(tsrc+0) - v_load(d+0));
+                        s1 += a * (v_load(tsrc+2) - v_load(d+2));
+                    }
+
+                    v_store((double*)(tdst+j), s0*v_scale);
+                    v_store((double*)(tdst+j+2), s1*v_scale);
+                }
+                else
+#endif
+
+                {
+                    double s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+                    const sT *tsrc = src + j;
+                    const dT *d = delta_buf ? delta_buf : delta + j;
+
+                    for( k = 0; k < size.height; k++, tsrc+=srcstep, d+=deltastep )
+                    {
+                        double a = col_buf[k];
+                        s0 += a * (tsrc[0] - d[0]);
+                        s1 += a * (tsrc[1] - d[1]);
+                        s2 += a * (tsrc[2] - d[2]);
+                        s3 += a * (tsrc[3] - d[3]);
+                    }
+
+                    tdst[j] = (dT)(s0*scale);
+                    tdst[j+1] = (dT)(s1*scale);
+                    tdst[j+2] = (dT)(s2*scale);
+                    tdst[j+3] = (dT)(s3*scale);
+                }
             }
 
             for( ; j < size.width; j++ )
@@ -2182,10 +2227,25 @@ MulTransposedL(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                 double s = 0;
                 const sT *tsrc1 = src + i*srcstep;
                 const sT *tsrc2 = src + j*srcstep;
+#if CV_SIMD_64F
+                if (DataType<sT>::depth == CV_64F && DataType<dT>::depth == CV_64F)
+                {
+                    const double *v_tsrc1 = (double *)(tsrc1);
+                    const double *v_tsrc2 = (double *)(tsrc2);
+                    v_float64x2 v_s = v_setzero_f64();
 
-                for( k = 0; k <= size.width - 4; k += 4 )
-                    s += (double)tsrc1[k]*tsrc2[k] + (double)tsrc1[k+1]*tsrc2[k+1] +
-                         (double)tsrc1[k+2]*tsrc2[k+2] + (double)tsrc1[k+3]*tsrc2[k+3];
+                    for( k = 0; k <= size.width - 4; k += 4 )
+                        v_s += (v_load(v_tsrc1+k) * v_load(v_tsrc2+k)) +
+                               (v_load(v_tsrc1+k+2) * v_load(v_tsrc2+k+2));
+                    s += v_reduce_sum(v_s);
+                }
+                else
+#endif
+                {
+                    for( k = 0; k <= size.width - 4; k += 4 )
+                        s += (double)tsrc1[k]*tsrc2[k] + (double)tsrc1[k+1]*tsrc2[k+1] +
+                             (double)tsrc1[k+2]*tsrc2[k+2] + (double)tsrc1[k+3]*tsrc2[k+3];
+                }
                 for( ; k < size.width; k++ )
                     s += (double)tsrc1[k] * tsrc2[k];
                 tdst[j] = (dT)(s*scale);
@@ -2220,11 +2280,30 @@ MulTransposedL(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                         delta_buf[2] = delta_buf[3] = tdelta2[0];
                     tdelta2 = delta_buf;
                 }
-                for( k = 0; k <= size.width-4; k += 4, tdelta2 += delta_shift )
-                    s += (double)row_buf[k]*(tsrc2[k] - tdelta2[0]) +
-                         (double)row_buf[k+1]*(tsrc2[k+1] - tdelta2[1]) +
-                         (double)row_buf[k+2]*(tsrc2[k+2] - tdelta2[2]) +
-                         (double)row_buf[k+3]*(tsrc2[k+3] - tdelta2[3]);
+#if CV_SIMD_64F
+                if (DataType<sT>::depth == CV_64F && DataType<dT>::depth == CV_64F)
+                {
+                    const double *v_tsrc2 = (double *)(tsrc2);
+                    const double *v_tdelta2 = (double *)(tdelta2);
+                    const double *v_row_buf = (double *)(row_buf);
+                    v_float64x2 v_s = v_setzero_f64();
+
+                    for( k = 0; k <= size.width - 4; k += 4, v_tdelta2 += delta_shift )
+                        v_s += ((v_load(v_tsrc2+k) - v_load(v_tdelta2)) * v_load(v_row_buf+k)) +
+                               ((v_load(v_tsrc2+k+2) - v_load(v_tdelta2+2)) * v_load(v_row_buf+k+2));
+                    s += v_reduce_sum(v_s);
+
+                    tdelta2 = (const dT *)(v_tdelta2);
+                }
+                else
+#endif
+                {
+                    for( k = 0; k <= size.width-4; k += 4, tdelta2 += delta_shift )
+                        s += (double)row_buf[k]*(tsrc2[k] - tdelta2[0]) +
+                             (double)row_buf[k+1]*(tsrc2[k+1] - tdelta2[1]) +
+                             (double)row_buf[k+2]*(tsrc2[k+2] - tdelta2[2]) +
+                             (double)row_buf[k+3]*(tsrc2[k+3] - tdelta2[3]);
+                }
                 for( ; k < size.width; k++, tdelta2++ )
                     s += (double)row_buf[k]*(tsrc2[k] - tdelta2[0]);
                 tdst[j] = (dT)(s*scale);

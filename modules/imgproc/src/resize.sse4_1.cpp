@@ -186,13 +186,10 @@ void resizeNN4_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, 
     parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
 }
 
-int VResizeLanczos4Vec_32f16u_SSE41(const uchar** _src, uchar* _dst, const uchar* _beta, int width)
+int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float* beta, int width)
 {
-    const float** src = (const float**)_src;
-    const float* beta = (const float*)_beta;
     const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
         *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-    short * dst = (short*)_dst;
     int x = 0;
     __m128 v_b0 = _mm_set1_ps(beta[0]), v_b1 = _mm_set1_ps(beta[1]),
         v_b2 = _mm_set1_ps(beta[2]), v_b3 = _mm_set1_ps(beta[3]),

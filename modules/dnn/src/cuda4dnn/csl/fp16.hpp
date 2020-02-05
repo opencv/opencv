@@ -31,6 +31,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     CUDA4DNN_HOST bool operator>=(half lhs, half rhs) noexcept { return static_cast<float>(lhs) >= static_cast<float>(rhs); }
     */
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template <class T> CUDA4DNN_HOST
     typename std::enable_if<detail::is_half_convertible<T>::value, bool>
     ::type operator==(half lhs, T rhs) noexcept { return static_cast<float>(lhs) == static_cast<float>(rhs); }
@@ -78,6 +79,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     template <class T> CUDA4DNN_HOST
     typename std::enable_if<detail::is_half_convertible<T>::value, bool>
     ::type operator>=(T lhs, half rhs) noexcept { return static_cast<float>(lhs) >= static_cast<float>(rhs); }
+#endif
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */
 

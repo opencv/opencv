@@ -62,7 +62,8 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
 
                 m_ops.emplace_back(OpDesc{ std::move(input_rcs)
                                          , std::move(output_rcs)
-                                         , m_gim.metadata(nh).get<IslandExec>().object});
+                                         , m_gim.metadata(nh).get<IslandExec>().object
+                                         });
             }
             break;
 

@@ -29,6 +29,10 @@
 
 #include "backends/render/grenderocvbackend.hpp"
 
+#include <opencv2/gapi/render/render.hpp>
+#include "api/ocv_mask_creator.hpp"
+#include "api/ft_render.hpp"
+
 
 using GRenderModel = ade::TypedGraph
     < cv::gimpl::render::ocv::RenderUnit
@@ -40,8 +44,9 @@ using GConstRenderModel = ade::ConstTypedGraph
     >;
 
 cv::gimpl::render::ocv::GRenderExecutable::GRenderExecutable(const ade::Graph &g,
-                                                             const std::vector<ade::NodeHandle> &nodes)
-    : m_g(g), m_gm(m_g) {
+                                                             const std::vector<ade::NodeHandle> &nodes,
+                                                             std::unique_ptr<cv::gapi::wip::draw::FTTextRender>&& ftpr)
+    : m_g(g), m_gm(m_g), m_ftpr(std::move(ftpr)) {
         GConstRenderModel gcm(m_g);
 
         auto is_op = [&](ade::NodeHandle nh) {
@@ -86,6 +91,8 @@ void cv::gimpl::render::ocv::GRenderExecutable::run(std::vector<InObj>  &&input_
 
     auto k = gcm.metadata(this_nh).get<RenderUnit>().k;
 
+    context.m_args.emplace_back(m_ftpr.get());
+
     k.apply(context);
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
@@ -125,12 +132,22 @@ namespace {
         }
 
         virtual EPtr compile(const ade::Graph &graph,
-                             const cv::GCompileArgs&,
+                             const cv::GCompileArgs& args,
                              const std::vector<ade::NodeHandle> &nodes) const override {
 
-            return EPtr{new cv::gimpl::render::ocv::GRenderExecutable(graph, nodes)};
+            using namespace cv::gapi::wip::draw;
+            auto has_freetype_font = cv::gimpl::getCompileArg<freetype_font>(args);
+            std::unique_ptr<FTTextRender> ftpr;
+            if (has_freetype_font)
+            {
+#ifndef HAVE_FREETYPE
+                throw std::runtime_error("Freetype not found");
+#else
+                ftpr.reset(new FTTextRender(has_freetype_font.value().path));
+#endif
+            }
+            return EPtr{new cv::gimpl::render::ocv::GRenderExecutable(graph, nodes, std::move(ftpr))};
         }
-
     };
 }
 

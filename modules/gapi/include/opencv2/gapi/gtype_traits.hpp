@@ -14,6 +14,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/own/convert.hpp>
@@ -36,7 +37,8 @@ namespace detail
         GMAT,         // a cv::GMat
         GMATP,        // a cv::GMatP
         GSCALAR,      // a cv::GScalar
-        GARRAY,       // a cv::GArrayU (note - exactly GArrayU, not GArray<T>!)
+        GARRAY,       // a cv::GArrayU  (note - exactly GArrayU,  not GArray<T>!)
+        GOPAQUE,      // a cv::GOpaqueU (note - exactly GOpaqueU, not GOpaque<T>!)
     };
 
     enum class OpaqueKind: int
@@ -97,6 +99,16 @@ namespace detail
         static cv::detail::VectorRef wrap_in   (const std::vector<T> &t) { return detail::VectorRef(t); }
         static cv::detail::VectorRef wrap_out  (      std::vector<T> &t) { return detail::VectorRef(t); }
     };
+    template<class T> struct GTypeTraits<cv::GOpaque<T> >
+    {
+        static constexpr const ArgKind kind = ArgKind::GOPAQUE;
+        static constexpr const GShape shape = GShape::GOPAQUE;
+        using host_type  = T;
+        using strip_type = cv::detail::OpaqueRef;
+        static cv::detail::GOpaqueU  wrap_value(const cv::GOpaque<T>  &t) { return t.strip();}
+        static cv::detail::OpaqueRef wrap_in   (const T &t) { return detail::OpaqueRef(t); }
+        static cv::detail::OpaqueRef wrap_out  (      T &t) { return detail::OpaqueRef(t); }
+    };
 
     // Tests if Trait for type T requires extra marshalling ("custom wrap") or not.
     // If Traits<T> has wrap_value() defined, it does.
@@ -124,8 +136,9 @@ namespace detail
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
+    template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>;};
     // FIXME: This is not quite correct since IStreamSource may produce not only Mat but also Scalar
-    // and vector data. TODO: Extend the type dispatchig on these types too.
+    // and vector data. TODO: Extend the type dispatching on these types too.
     template<>           struct GTypeOf<cv::gapi::wip::IStreamSource::Ptr> { using type = cv::GMat;};
     template<class T> using g_type_of_t = typename GTypeOf<T>::type;
 
@@ -188,7 +201,6 @@ namespace detail
 
     template<typename T> using wrap_gapi_helper = WrapValue<typename std::decay<T>::type>;
     template<typename T> using wrap_host_helper = WrapValue<typename std::decay<g_type_of_t<T> >::type>;
-
 } // namespace detail
 } // namespace cv
 

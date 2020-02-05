@@ -6,9 +6,13 @@
 
 #include "precomp.hpp"
 
+// needs to be included regardless if IE is present or not
+// (cv::gapi::ie::backend() is still there and is defined always)
+#include "backends/ie/giebackend.hpp"
+
 #ifdef HAVE_INF_ENGINE
 
-#if INF_ENGINE_RELEASE <= 2018050000
+#if INF_ENGINE_RELEASE <= 2019010000
 #   error G-API IE module supports only OpenVINO IE >= 2019 R1
 #endif
 
@@ -22,17 +26,19 @@
 #include <ade/util/chain_range.hpp>
 #include <ade/typed_graph.hpp>
 
+#include <opencv2/core/utility.hpp>
+#include <opencv2/core/utils/logger.hpp>
+
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/util/any.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
-
 #include <opencv2/gapi/infer.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
 
-#include "backends/ie/giebackend.hpp"
 #include "backends/ie/util.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
@@ -63,6 +69,21 @@ inline std::vector<int> toCV(const IE::SizeVector &vsz) {
     return result;
 }
 
+inline IE::Layout toIELayout(const std::size_t ndims) {
+    static const IE::Layout lts[] = {
+        IE::Layout::SCALAR,
+        IE::Layout::C,
+        IE::Layout::NC,
+        IE::Layout::CHW,
+        IE::Layout::NCHW,
+        IE::Layout::NCDHW,
+    };
+    // FIXME: This is not really a good conversion,
+    // since it may also stand for NHWC/HW/CN/NDHWC data
+    CV_Assert(ndims < sizeof(lts) / sizeof(lts[0]));
+    return lts[ndims];
+}
+
 inline IE::Precision toIE(int depth) {
     switch (depth) {
     case CV_8U:  return IE::Precision::U8;
@@ -80,13 +101,16 @@ inline int toCV(IE::Precision prec) {
     return -1;
 }
 
-inline IE::TensorDesc toIE(const cv::Mat &mat) {
+inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
     const auto &sz = mat.size;
 
     // NB: For some reason RGB image is 2D image
     // (since channel component is not counted here).
-    if (sz.dims() == 2) {
+    // Note: regular 2D vectors also fall into this category
+    if (sz.dims() == 2 && hint == cv::gapi::ie::TraitAs::IMAGE)
+    {
         // NB: This logic is mainly taken from IE samples
+        const size_t pixsz    = CV_ELEM_SIZE1(mat.type());
         const size_t channels = mat.channels();
         const size_t height   = mat.size().height;
         const size_t width    = mat.size().width;
@@ -95,8 +119,8 @@ inline IE::TensorDesc toIE(const cv::Mat &mat) {
         const size_t strideW  = mat.step.buf[1];
 
         const bool is_dense =
-            strideW == channels &&
-            strideH == channels * width;
+            strideW == pixsz * channels &&
+            strideH == strideW * width;
 
         if (!is_dense)
             cv::util::throw_error(std::logic_error("Doesn't support conversion"
@@ -107,12 +131,11 @@ inline IE::TensorDesc toIE(const cv::Mat &mat) {
                               IE::Layout::NHWC);
     }
 
-    GAPI_Assert(sz.dims() == 4); // NB: Will relax when needed (to known use)
-    return IE::TensorDesc(toIE(mat.depth()), toIE(sz), IE::Layout::NCHW);
+    return IE::TensorDesc(toIE(mat.depth()), toIE(sz), toIELayout(sz.dims()));
 }
 
-inline IE::Blob::Ptr wrapIE(const cv::Mat &mat) {
-    const auto tDesc = toIE(mat);
+inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
+    const auto tDesc = toIE(mat, hint);
     switch (mat.depth()) {
         // NB: Seems there's no way to create an untyped (T-less) Blob::Ptr
         // in IE given only precision via TensorDesc. So we have to do this:
@@ -163,7 +186,7 @@ struct IEUnit {
         // The practice shows that not all inputs and not all outputs
         // are mandatory to specify in IE model.
         // So what we're concerned here about is:
-        // if opeation's (not topology's) input/output number is
+        // if operation's (not topology's) input/output number is
         // greater than 1, then we do care about input/output layer
         // names. Otherwise, names are picked up automatically.
         // TODO: Probably this check could be done at the API entry point? (gnet)
@@ -184,15 +207,62 @@ struct IEUnit {
     }
 
     // This method is [supposed to be] called at Island compilation stage
+    // TODO: Move to a new OpenVINO Core API!
     cv::gimpl::ie::IECompiled compile() const {
         auto this_plugin = IE::PluginDispatcher().getPluginByDevice(params.device_id);
+
+        // Load extensions (taken from DNN module)
+        if (params.device_id == "CPU" || params.device_id == "FPGA")
+        {
+            const std::string suffixes[] = { "_avx2", "_sse4", ""};
+            const bool haveFeature[] = {
+                cv::checkHardwareSupport(CPU_AVX2),
+                cv::checkHardwareSupport(CPU_SSE4_2),
+                true
+            };
+            std::vector<std::string> candidates;
+            for (auto &&it : ade::util::zip(ade::util::toRange(suffixes),
+                                            ade::util::toRange(haveFeature)))
+            {
+                std::string suffix;
+                bool available = false;
+                std::tie(suffix, available) = it;
+                if (!available) continue;
+#ifdef _WIN32
+                candidates.push_back("cpu_extension" + suffix + ".dll");
+#elif defined(__APPLE__)
+                candidates.push_back("libcpu_extension" + suffix + ".so");  // built as loadable module
+                candidates.push_back("libcpu_extension" + suffix + ".dylib");  // built as shared library
+#else
+                candidates.push_back("libcpu_extension" + suffix + ".so");
+#endif  // _WIN32
+            }
+            for (auto &&extlib : candidates)
+            {
+                try
+                {
+                    this_plugin.AddExtension(IE::make_so_pointer<IE::IExtension>(extlib));
+                    CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
+                    break;
+                }
+                catch(...)
+                {
+                    CV_LOG_WARNING(NULL, "Failed to load IE extension " << extlib);
+                }
+            }
+        }
+
         auto this_network = this_plugin.LoadNetwork(net, {}); // FIXME: 2nd parameter to be
                                                               // configurable via the API
         auto this_request = this_network.CreateInferRequest();
 
         // Bind const data to infer request
         for (auto &&p : params.const_inputs) {
-            this_request.SetBlob(p.first, wrapIE(p.second));
+            // FIXME: SetBlob is known to be inefficient,
+            // it is worth to make a customizable "initializer" and pass the
+            // cv::Mat-wrapped blob there to support IE's optimal "GetBlob idiom"
+            // Still, constant data is to set only once.
+            this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
         }
 
         return {this_plugin, this_network, this_request};
@@ -327,6 +397,10 @@ cv::GArg cv::gimpl::ie::GIEExecutable::packArg(const cv::GArg &arg) {
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
 
+    // Note: .at() is intentional for GOpaque as object MUST be already there
+    //   (and constructed by either bindIn/Out or resetInternal)
+    case GShape::GOPAQUE:  return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -441,7 +515,9 @@ struct Infer: public cv::detail::KernelTag {
             // (A memory dialog comes to the picture again)
 
             const cv::Mat this_mat = to_ocv(ctx.inMat(i));
-            IE::Blob::Ptr this_blob = wrapIE(this_mat);
+            // FIXME: By default here we trait our inputs as images.
+            // May be we need to make some more intelligence here about it
+            IE::Blob::Ptr this_blob = wrapIE(this_mat, cv::gapi::ie::TraitAs::IMAGE);
             iec.this_request.SetBlob(uu.params.input_names[i], this_blob);
         }
         iec.this_request.Infer();
@@ -511,7 +587,8 @@ struct InferList: public cv::detail::KernelTag {
 
         const auto& in_roi_vec = ctx.inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
         const cv::Mat this_mat = to_ocv(ctx.inMat(1u));
-        IE::Blob::Ptr this_blob = wrapIE(this_mat);
+        // Since we do a ROI list inference, always assume our input buffer is image
+        IE::Blob::Ptr this_blob = wrapIE(this_mat, cv::gapi::ie::TraitAs::IMAGE);
 
         // FIXME: This could be done ONCE at graph compile stage!
         std::vector< std::vector<int> > cached_dims(uu.params.num_out);
@@ -598,7 +675,13 @@ std::vector<int> cv::gapi::ie::util::to_ocv(const InferenceEngine::SizeVector &d
 }
 
 InferenceEngine::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
-    return wrapIE(blob);
+    return wrapIE(blob, cv::gapi::ie::TraitAs::IMAGE);
 }
 
+#else // HAVE_INF_ENGINE
+
+cv::gapi::GBackend cv::gapi::ie::backend() {
+    // Still provide this symbol to avoid linking issues
+    util::throw_error(std::runtime_error("G-API has been compiled without OpenVINO IE support"));
+}
 #endif // HAVE_INF_ENGINE

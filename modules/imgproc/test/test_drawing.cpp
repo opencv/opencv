@@ -583,4 +583,14 @@ TEST(Drawing, line)
     ASSERT_THROW(line(mat, Point(1,1),Point(99,99),Scalar(255),0), cv::Exception);
 }
 
+TEST(Drawing, regression_16308)
+{
+    Mat_<uchar> img(Size(100, 100), (uchar)0);
+    circle(img, Point(50, 50), 50, 255, 1, LINE_AA);
+    EXPECT_NE(0, (int)img.at<uchar>(0, 50));
+    EXPECT_NE(0, (int)img.at<uchar>(50, 0));
+    EXPECT_NE(0, (int)img.at<uchar>(50, 99));
+    EXPECT_NE(0, (int)img.at<uchar>(99, 50));
+}
+
 }} // namespace

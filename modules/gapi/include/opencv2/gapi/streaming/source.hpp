@@ -7,8 +7,11 @@
 #ifndef OPENCV_GAPI_STREAMING_SOURCE_HPP
 #define OPENCV_GAPI_STREAMING_SOURCE_HPP
 
-#include <memory> // shared_ptr
-#include <type_traits> // is_base_of
+#include <memory>                      // shared_ptr
+#include <type_traits>                 // is_base_of
+
+#include <opencv2/gapi/gmetaarg.hpp>   // GMetaArg
+
 
 namespace cv {
 namespace gapi {
@@ -21,12 +24,13 @@ namespace wip {
  * Implement this interface if you want customize the way how data is
  * streaming into GStreamingCompiled.
  *
- * Objects implementing this interface can be passes to
- * GStreamingCompiled via setSource()/cv::gin(). Regular compiled
- * graphs (GCompiled) don't support input objects of this type.
+ * Objects implementing this interface can be passed to
+ * GStreamingCompiled using setSource() with cv::gin(). Regular
+ * compiled graphs (GCompiled) don't support input objects of this
+ * type.
  *
  * Default cv::VideoCapture-based implementation is available, see
- * cv::gapi::GCaptureSource.
+ * cv::gapi::wip::GCaptureSource.
  *
  * @note stream sources are passed to G-API via shared pointers, so
  *  please use ptr() when passing a IStreamSource implementation to
@@ -38,6 +42,7 @@ public:
     using Ptr = std::shared_ptr<IStreamSource>;
     Ptr ptr() { return shared_from_this(); }
     virtual bool pull(Data &data) = 0;
+    virtual GMetaArg descr_of() const = 0;
     virtual ~IStreamSource() = default;
 };
 

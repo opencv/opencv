@@ -79,12 +79,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(output.rank() == input.rank());
         CV_Assert(output.rank() == offsets.size());
 
-        /* squeezable axes at the begining of both tensors can be eliminated
+        /* squeezable axes at the beginning of both tensors can be eliminated
          *
          * Reasoning:
          * ----------
          * Suppose an item's indices in the output tensor is [o1, o2, ...]. The indices in the input
-         * tensor will be [o1 + off1, o2 + off2, ...]. The rest of the elements in the input are igored.
+         * tensor will be [o1 + off1, o2 + off2, ...]. The rest of the elements in the input are ignored.
          *
          * If the size of the first axis of the input and output tensor is unity, the input and output indices
          * for all the elements will be of the form be [0, o2 + off2, ...] and [0, o2, ...] respectively. Note that
@@ -163,7 +163,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         slice_dispatcher<T, 1, CSL_MAX_TENSOR_RANK>(rank, stream, output, outStride, input, inStride, offsets);
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void slice(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
+#endif
     template void slice(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
