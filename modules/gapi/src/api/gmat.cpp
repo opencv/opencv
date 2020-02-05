@@ -99,6 +99,11 @@ cv::GMetaArgs cv::gapi::own::descrs_of(const std::vector<Mat> &vec)
     return vec_descr_of(vec);
 }
 
+cv::GMatDesc cv::gapi::own::descr_of(const cv::gapi::own::RMat &mat)
+{
+    return mat.desc();
+}
+
 namespace cv {
 std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc)
 {
@@ -139,6 +144,11 @@ template<typename M> inline bool canDescribeHelper(const GMatDesc& desc, const M
 bool GMatDesc::canDescribe(const cv::Mat& mat) const
 {
     return canDescribeHelper(*this, mat);
+}
+
+bool GMatDesc::canDescribe(const cv::gapi::own::RMat& mat) const
+{
+    return *this == mat.desc();
 }
 
 }// namespace cv

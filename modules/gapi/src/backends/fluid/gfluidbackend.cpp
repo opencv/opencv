@@ -1245,7 +1245,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
 {
     switch (rc.shape)
     {
-    case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::Mat>(arg), true); break;
+    case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::RMat>(arg).access(), true); break;
     case GShape::GSCALAR: m_res.slot<cv::Scalar>()[rc.id] = util::get<cv::Scalar>(arg); break;
     case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
     case GShape::GOPAQUE: m_res.slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg); break;
@@ -1265,11 +1265,12 @@ void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const 
 
             switch (arg.index()) {
             // FIXME: See the bindInArg comment on Streaming-related changes
-            case T::index_of<cv::Mat*>(): {
-                auto &outMat = *util::get<cv::Mat*>(arg);
-                GAPI_Assert(outMat.data != nullptr);
-                GAPI_Assert(cv::descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");
-                bref.bindTo(outMat, false);
+            case T::index_of<cv::gapi::own::RMat*>(): {
+                auto &rmat = *util::get<cv::gapi::own::RMat*>(arg);
+                auto mat = rmat.access();
+                GAPI_Assert(mat.data != nullptr);
+                GAPI_Assert(cv::descr_of(mat) == desc && "Output argument was not preallocated as it should be ?");
+                bref.bindTo(mat, false);
             } break;
             default: GAPI_Assert(false);
             } // switch(arg.index())

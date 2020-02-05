@@ -169,8 +169,26 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
     // RAII wrapper to clean-up m_res
     std::unique_ptr<cv::gimpl::Mag, decltype(clean_up)> cleaner(&m_res, clean_up);
 
-    for (auto& it : input_objs)   magazine::bindInArg (m_res, it.first, it.second, true);
-    for (auto& it : output_objs)  magazine::bindOutArg(m_res, it.first, it.second, true);
+    const auto bindUMat = [this](const RcDesc& rc) {
+        if (rc.shape == GShape::GMAT)
+        {
+            auto& mag_umat = m_res.template slot<cv::UMat>()[rc.id];
+            mag_umat = m_res.template slot<cv::Mat>()[rc.id].getUMat(ACCESS_READ);
+        }
+    };
+
+    for (auto& it : input_objs)
+    {
+        auto& rc = it.first;
+        magazine::bindInArg (m_res, rc, it.second);
+        bindUMat(rc);
+    }
+    for (auto& it : output_objs)
+    {
+        auto& rc = it.first;
+        magazine::bindOutArg(m_res, rc, it.second);
+        bindUMat(rc);
+    }
 
     // Initialize (reset) internal data nodes with user structures
     // before processing a frame (no need to do it for external data structures)
@@ -241,5 +259,16 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
         }
     } // for(m_script)
 
-    for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second, true);
+    for (auto &it : output_objs)
+    {
+        auto& rc = it.first;
+        auto& g_arg = it.second;
+        magazine::writeBack(m_res, rc, g_arg, false);
+        if (rc.shape == GShape::GMAT)
+        {
+            uchar* out_arg_data = m_res.template slot<cv::Mat>()[rc.id].data;
+            auto& mag_mat = m_res.template slot<cv::UMat>().at(rc.id);
+            GAPI_Assert((out_arg_data == (mag_mat.getMat(ACCESS_RW).data)) && " data for output parameters was reallocated ?");
+        }
+    }
 }

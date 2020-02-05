@@ -253,6 +253,14 @@ namespace cv { namespace gapi { namespace own {
             *this = std::move(tmp);
         }
 
+        // TODO: documentation
+        Mat clone() const
+        {
+            Mat m;
+            copyTo(m);
+            return m;
+        }
+
         /** @brief Copies the matrix to another one.
 
         The method copies the matrix data to another matrix. Before copying the data, the method invokes :

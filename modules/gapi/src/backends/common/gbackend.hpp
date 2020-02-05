@@ -22,6 +22,16 @@
 namespace cv {
 namespace gimpl {
 
+    class RMatAdapter : public cv::gapi::own::RMat::Adapter
+    {
+    public:
+        cv::Mat m_mat;
+        RMatAdapter(cv::Mat m) : m_mat(m) {}
+        virtual cv::Mat access() const override { return m_mat; }
+        virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
+        virtual void flush() const override {}
+    };
+
     // Forward declarations
     struct Data;
     struct RcDesc;
@@ -44,20 +54,28 @@ namespace magazine {
 
 } // namespace magazine
 #if !defined(GAPI_STANDALONE)
-using Mag = magazine::Class<cv::Mat, cv::UMat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
+using Mag = magazine::Class<cv::Mat, cv::UMat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef, cv::gapi::own::RMat>;
 #else
-using Mag = magazine::Class<cv::Mat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
+using Mag = magazine::Class<cv::Mat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef, cv::gapi::own::RMat>;
 #endif
 
 namespace magazine
 {
-    void         GAPI_EXPORTS bindInArg (Mag& mag, const RcDesc &rc, const GRunArg  &arg, bool is_umat = false);
-    void         GAPI_EXPORTS bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat = false);
+    // Extracts a memory object from GRunArg, stores it in appropriate slot in a magazine
+    // Note:
+    // Only RMats are expected here as a memory object for GMat shape.
+    // If handleRMat flag is true, RMat will be bound to host Mat, and both RMat and Mat will be placed into magazine,
+    // if handleRMat is false, this function skip RMat handling assuming that backend will do it on it's own.
+    void GAPI_EXPORTS bindInArg (Mag& mag, const RcDesc &rc, const GRunArg  &arg, bool handleRMat = true);
+
+    // Extracts a memory object reference fro GRunArgP, stores it in appropriate slot in a magazine
+    // Note on RMat handling from bindInArg above is also applied here
+    void GAPI_EXPORTS bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool handleRMat = true);
 
     void         resetInternalData(Mag& mag, const Data &d);
     cv::GRunArg  getArg    (const Mag& mag, const RcDesc &ref);
     cv::GRunArgP getObjPtr (      Mag& mag, const RcDesc &rc, bool is_umat = false);
-    void         writeBack (const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat = false);
+    void         writeBack (const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool checkGMat = true);
 } // namespace magazine
 
 namespace detail

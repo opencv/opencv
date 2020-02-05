@@ -18,6 +18,7 @@
 #include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
 #include "compiler/gmodel.hpp"
+#include "backends/common/gbackend.hpp" // RMat adapters
 
 #include "logger.hpp"    // GAPI_LOG
 
@@ -351,7 +352,7 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
         switch (in_data_orig.index())
         {
         case cv::GRunArg::index_of<cv::Mat>():
-            in_data = cv::GRunArg{cv::util::get<cv::Mat>(in_data_orig)};
+            in_data = cv::GRunArg{cv::gapi::own::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(in_data_orig))};
             break;
         case cv::GRunArg::index_of<cv::Scalar>():
             in_data = cv::GRunArg{(cv::util::get<cv::Scalar>(in_data_orig))};
