@@ -65,6 +65,8 @@ public:
     using GMat::GMat;
 };
 
+class RMat;
+
 /** @} */
 
 /**
@@ -112,6 +114,8 @@ struct GAPI_EXPORTS GMatDesc
     // 1-channel mat can be reinterpreted as is (1-channel mat)
     // and as a 3-channel planar mat with height divided by 3)
     bool canDescribe(const cv::Mat& mat) const;
+
+    bool canDescribe(const cv::RMat& mat) const;
 
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
@@ -208,6 +212,8 @@ namespace gapi { namespace own {
     class Mat;
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own
+
+GAPI_EXPORTS GMatDesc descr_of(const RMat &mat);
 
 #if !defined(GAPI_STANDALONE)
 GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);

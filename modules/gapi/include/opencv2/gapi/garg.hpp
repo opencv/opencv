@@ -24,6 +24,7 @@
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/gmetaarg.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
+#include <opencv2/gapi/rmat.hpp>
 
 namespace cv {
 
@@ -94,6 +95,7 @@ using GRunArg  = util::variant<
 #if !defined(GAPI_STANDALONE)
     cv::UMat,
 #endif // !defined(GAPI_STANDALONE)
+    cv::RMat,
     cv::gapi::wip::IStreamSource::Ptr,
     cv::Mat,
     cv::Scalar,
@@ -144,6 +146,7 @@ using GRunArgP = util::variant<
     cv::UMat*,
 #endif // !defined(GAPI_STANDALONE)
     cv::Mat*,
+    cv::RMat*,
     cv::Scalar*,
     cv::detail::VectorRef,
     cv::detail::OpaqueRef

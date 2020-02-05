@@ -104,17 +104,27 @@ INSTANTIATE_TEST_CASE_P(Test, RMatViewTest,
 
 struct RMatViewCallbackTest : public ::testing::Test {
     RMatViewCallbackTest()
-        : mat(8,8,CV_8UC1), view(cv::descr_of(mat), mat.ptr(), mat.step1(), [this](){ callbackCalls++; }) {
+        : mat(8,8,CV_8UC1) {
         cv::randn(mat, cv::Scalar::all(127), cv::Scalar::all(40));
     }
+    View getView() { return {cv::descr_of(mat), mat.ptr(), mat.step1(), [this](){ callbackCalls++; }}; }
     int callbackCalls = 0;
     Mat mat;
-    View view;
 };
+
+TEST_F(RMatViewCallbackTest, MoveCtor) {
+    {
+        View copy(getView());
+        cv::util::suppress_unused_warning(copy);
+        EXPECT_EQ(callbackCalls, 0);
+    }
+    EXPECT_EQ(callbackCalls, 1);
+}
 
 TEST_F(RMatViewCallbackTest, MoveCopy) {
     {
-        View copy(std::move(view));
+        View copy;
+        copy = getView();
         cv::util::suppress_unused_warning(copy);
         EXPECT_EQ(callbackCalls, 0);
     }
@@ -128,7 +138,7 @@ TEST_F(RMatViewCallbackTest, MagazineInteraction) {
     cv::gimpl::magazine::Class<View> mag;
     constexpr int rc = 1;
     constexpr uchar value = 11;
-    mag.slot<View>()[rc] = std::move(view);
+    mag.slot<View>()[rc] = getView();
     {
         auto& mag_view = mag.slot<View>()[rc];
         setFirstElement(mag_view, value);
