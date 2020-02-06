@@ -304,7 +304,7 @@ void mkOpNode(ade::Graph& g, const Op& op)
             }
             case detail::OpaqueKind::BOOL:
             {
-                auto opaque_bool = op.opaque_bools[i_bool]; i_bool++;
+                bool opaque_bool = op.opaque_bools[i_bool]; i_bool++;
                 args[i] = GArg(opaque_bool);
                 std::cout << "mkOpNode    bool " << args[i].get<bool>() << std::endl;
                 break;
