@@ -98,6 +98,36 @@ void copy_data(Mat& out, const InT* (&data)[N], uint8_t shift) {
         CV_Error(Error::StsNotImplemented, "only depth CV_8U and CV16_U are supported");
 }
 
+template<typename InT, int N>
+void copy_from_mat_(OPJ_INT32* (&data)[N], const Mat& in) {
+    Size size = in.size();
+    if (in.isContinuous()) {
+        size.width *= size.height;
+        size.height = 1;
+    }
+
+    for (int i = 0; i < size.height; i++ ) {
+        const InT* sptr = in.ptr<InT>(i);
+        // when the arrays are continuous,
+        // the outer loop is executed only once
+        for( int j = 0; j < size.width; j++) {
+            for (int c = 0; c < N; c++) {
+                *data[c]++ = *sptr++;
+            }
+        }
+    }
+}
+
+template<int N>
+void copy_from_mat(OPJ_INT32* (&data)[N], const Mat& in) {
+    if (in.depth() == CV_8U)
+        copy_from_mat_<uint8_t>(data, in);
+    else if (in.depth() == CV_16U)
+        copy_from_mat_<uint16_t>(data, in);
+    else
+        CV_Error(Error::StsNotImplemented, "only depth CV_8U and CV16_U are supported");
+}
+
 } // namespace <anonymous>
 
 /////////////////////// Jpeg2KOpjDecoder ///////////////////
@@ -317,6 +347,129 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
         + (channels == 1 ? "gray" : "BGR"));
 
     return false;
+}
+
+
+/////////////////////// Jpeg2KOpjEncoder ///////////////////
+
+Jpeg2KOpjEncoder::Jpeg2KOpjEncoder()
+{
+    m_description = "JPEG-2000 files (*.jp2)";
+}
+
+Jpeg2KOpjEncoder::~Jpeg2KOpjEncoder()
+{
+}
+
+ImageEncoder Jpeg2KOpjEncoder::newEncoder() const
+{
+    return makePtr<Jpeg2KOpjEncoder>();
+}
+
+bool Jpeg2KOpjEncoder::isFormatSupported( int depth ) const
+{
+    return depth == CV_8U || depth == CV_16U;
+}
+
+bool Jpeg2KOpjEncoder::write( const Mat& img, const std::vector<int>& params )
+{
+    const int channels = CV_MAT_CN(img.type());
+    const int depth = CV_MAT_DEPTH(img.type());
+
+    const OPJ_UINT32 outPrec = [depth]() {
+        if (depth == CV_8U) return 8;
+        if (depth == CV_16U) return 16;
+        CV_Error(Error::StsNotImplemented, "image precision > 16 not supported");
+    }();
+
+    if (channels > 4)
+        CV_Error(Error::StsNotImplemented, "only BGR(a) and gray (+ alpha) images supported");
+
+    CV_Assert(params.size() % 2 == 0);
+    double target_compression_rate = 1.0;
+    for (size_t i = 0; i < params.size(); i += 2) {
+        switch(params[i]) {
+        case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
+            target_compression_rate = 1000.0 / std::min(std::max(params[i+1], 1), 1000);
+            break;
+        }
+    }
+
+    opj_cparameters parameters;
+    opj_set_default_encoder_parameters(&parameters);
+    parameters.tcp_numlayers = 1;
+    parameters.tcp_rates[0] = target_compression_rate;
+    parameters.cp_disto_alloc = 1;
+
+    opj_image_cmptparm_t compparams[4] = {};
+    for (int i = 0; i < channels; i++) {
+        compparams[i].prec = outPrec;
+        compparams[i].bpp = outPrec;
+        compparams[i].sgnd = 0; // unsigned for now
+        compparams[i].dx = parameters.subsampling_dx;
+        compparams[i].dy = parameters.subsampling_dy;
+        compparams[i].w = img.size().width;
+        compparams[i].h = img.size().height;
+    }
+
+    std::unique_ptr<opj_stream_t, streamDeleter> stream;
+    std::unique_ptr<opj_codec_t, codecDeleter> codec;
+    std::unique_ptr<opj_image_t, imageDeleter> image;
+
+    auto colorspace = (channels > 2) ? OPJ_CLRSPC_SRGB : OPJ_CLRSPC_GRAY;
+    image.reset(opj_image_create(channels, &compparams[0], colorspace));
+    CV_Assert(image);
+
+    if (channels == 2 || channels == 4) {
+        image->comps[channels - 1].alpha = 1;
+    }
+    // we want the full image
+    image->x0 = 0;
+    image->y0 = 0;
+    image->x1 = compparams[0].dx * compparams[0].w;
+    image->y1 = compparams[0].dy * compparams[0].h;
+
+    // fill the component data arrays
+    if (channels == 1) {
+        OPJ_INT32* outcomps[] = {image->comps[0].data};
+        copy_from_mat(outcomps, img);
+    } else if (channels == 2) {
+        OPJ_INT32* outcomps[] = {image->comps[0].data, image->comps[1].data};
+        copy_from_mat(outcomps, img);
+    } else if (channels == 3) {
+        OPJ_INT32* outcomps[] = {image->comps[2].data, image->comps[1].data, image->comps[0].data};
+        copy_from_mat(outcomps, img);
+    } else if (channels == 4) {
+        OPJ_INT32* outcomps[] = {image->comps[2].data, image->comps[1].data, image->comps[0].data, image->comps[3].data};
+        copy_from_mat(outcomps, img);
+    } else {
+        CV_Error(Error::StsNotImplemented,
+            "unsupported number of channels during color conversion: "
+            + std::to_string(channels));
+    }
+
+    codec.reset(opj_create_compress(OPJ_CODEC_JP2));
+    CV_Assert(codec);
+
+    opj_msg_callback error_handler = [](const char* msg, void* client_data) {
+        static_cast<Jpeg2KOpjEncoder*>(client_data)->m_errorMessage += msg;
+    };
+    opj_set_error_handler(codec.get(), error_handler, this);
+
+    if (!opj_setup_encoder(codec.get(), &parameters, image.get()))
+        return false;
+
+    stream.reset(opj_stream_create_default_file_stream(m_filename.c_str(), OPJ_STREAM_WRITE));
+    if (!stream)
+        return false;
+
+    CV_Assert(opj_start_compress(codec.get(), image.get(), stream.get()));
+
+    CV_Assert(opj_encode(codec.get(), stream.get()));
+
+    CV_Assert(opj_end_compress(codec.get(), stream.get()));
+
+    return true;
 }
 
 } // namespace cv

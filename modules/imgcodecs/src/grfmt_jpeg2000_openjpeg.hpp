@@ -39,6 +39,20 @@ private:
     OPJ_UINT32 m_maxPrec = 0;
 };
 
+class Jpeg2KOpjEncoder CV_FINAL : public BaseImageEncoder
+{
+public:
+    Jpeg2KOpjEncoder();
+    virtual ~Jpeg2KOpjEncoder();
+
+    bool isFormatSupported( int depth ) const CV_OVERRIDE;
+    bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+    ImageEncoder newEncoder() const CV_OVERRIDE;
+
+private:
+    String m_errorMessage;
+};
+
 }
 
 #endif
