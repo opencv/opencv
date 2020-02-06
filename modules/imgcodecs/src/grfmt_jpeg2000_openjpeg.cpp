@@ -264,6 +264,15 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
             return true;
         }
 
+        // Assume RGB for >= 3 channels -> gray
+        if (channels == 1 && numcomps >= 3) {
+            Mat tmp(img.size(), CV_MAKETYPE(depth, 3));
+            const OPJ_INT32* incomps[] = {image->comps[2].data, image->comps[1].data, image->comps[0].data};
+            copy_data(tmp, incomps, shift);
+            cvtColor(tmp, img, COLOR_BGR2GRAY);
+            return true;
+        }
+
         CV_Error(Error::StsNotImplemented,
             "unsupported number of channels during color conversion, IN: "
             + std::to_string(numcomps) + " OUT: " + std::to_string(channels));
@@ -288,6 +297,13 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
         if (channels == 1) {
             const OPJ_INT32* incomps[] = {image->comps[0].data};
             copy_data(img, incomps, shift);
+            return true;
+        }
+
+        if (channels == 3 && numcomps >= 3) {
+            const OPJ_INT32* incomps[] = {image->comps[0].data, image->comps[1].data, image->comps[2].data};
+            copy_data(img, incomps, shift);
+            cvtColor(img, img, COLOR_YUV2BGR);
             return true;
         }
 
