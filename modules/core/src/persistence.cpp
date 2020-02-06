@@ -692,7 +692,7 @@ public:
         }
         else
         {
-            const size_t buf_size0 = 1 << 15;
+            const size_t buf_size0 = 40;
             buffer.resize(buf_size0);
             if( mem_mode )
             {

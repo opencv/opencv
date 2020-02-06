@@ -858,8 +858,6 @@ public:
             CV_PARSE_ERROR_CPP( "left-brace of top level is missing" );
         }
 
-        if( !ptr || !*ptr )
-            CV_PARSE_ERROR_CPP( "Unexpected End-Of-File" );
         return true;
     }
 
