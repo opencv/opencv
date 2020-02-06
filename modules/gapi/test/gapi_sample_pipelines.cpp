@@ -408,41 +408,101 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
     EXPECT_TRUE(is_called);
 }
 
-struct TrackerState {
-    cv::Ptr<cv::Tracker> _tracker;
-};
+//G_TYPED_KERNEL(GObjectTracker,
+              //<GArray<cv::Rect2d>(GMat, GArray<cv::Rect2d>)>,
+              //"org.opencv.test.object.tracking",
+              //[> Is statefuly object <]true)
+//{
+    //static void initMeta(GMatDesc, GArrayDesc, GStateDesc) { return cv::empty_desc();       }
+    //static GArrayDesc outMeta(GMatDesc, GArrayDesc)        { return cv::empty_array_desc(); }
+//};
 
-G_TYPED_KERNEL(GObjectTracker, <GArray<cv::Rect2d>(GMat, GArray<cv::Rect2d>)>, "org.opencv.test.object.tracking")
+//struct TrackerState {
+    //cv::Ptr<cv::Tracker> _tracker;
+//};
+
+//GAPI_OCV_KERNEL(GOCVObjectTracker,
+                //GObjectTracker)
+//{
+    //static void init(const cv::Mat& in,
+                     //const std::vector<cv::Rect2d>& rois,
+                     //TrackerState& state)
+    //{
+        //state._tracker->init(in, rois);
+    //}
+
+    //static void run(const cv::Mat& in,
+                    //std::vector<cv::Rect2d>& tracked_rois,
+                    //TrackerState& state)
+    //{
+        //state.tracker->update(in, tracked_rois);
+    //}
+//};
+
+//TEST(GAPI_Pipeline, ObjectTrackingDemo2)
+//{
+    //cv::GMat in;
+    //cv::GState s;
+    //// Just imagine that we have detections
+    //auto rois = [> Get detections <];
+    //GObjectTracker::init(in, rois, s);
+    //GObjectTracker::on(in, rois, s);
+
+    //cv::GComputation c(cv::GIn(in, [> GState is always marked as input <] s),
+                       //cv::GOut(new_rois));
+
+    //TrackerState state {cv::TrackerBoosting::create()};
+    //std::vector<cv::Rect2d> rects;
+
+    //auto src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>("video.mp4");
+
+    //auto pkg = cv::gapi::kernels<GOCVObjectTracker>();
+    //auto sc = c.compileStreaming(cv::compile_args(pkg));
+
+    //sc.setSource(src);
+    //sc.start();
+
+    //while (sc.pull(cv::gout(rects, state))) {
+        //std::cout << rects[0] << std::endl;
+    //}
+//}
+
+G_TYPED_KERNEL(GObjectTracker,
+              <GArray<cv::Rect2d>(GMat, GArray<cv::Rect2d>)>,
+              "org.opencv.test.object.tracking",
+              /* Is statefuly kernel */ true)
 {
     static GArrayDesc outMeta(GMatDesc, GArrayDesc) { return cv::empty_array_desc(); }
 };
 
-GAPI_OCV_KERNEL(GOCVObjectTracker,
-                GObjectTracker,
-                /* Is stateful kernel */ true,
-                /* State type */ TrackerState)
-{
-    static void init(const cv::Mat& in,
-                     const std::vector<cv::Rect2d>& rois,
-                     TrackerState& state)
-    {
-        state._tracker->init(in, rois);
+struct OCVTracker {
+    explicit OCVTracker(const std::string& type) {
+        // Handle type and create tracker
+        if (type == "BOOSTING") {
+            _tracker = TrackerBoosting::create();
+        } // else etc
     }
 
-    static void run(const cv::Mat& in,
-                    const std::vector<cv::Rect2d>& rois,
-                    const std::vector<cv::Rect2d>& tracked_rois,
-                    TrackerState& state)
-    {
+    void init(const cv::Mat& in,
+              const std::vector<cv::Rect2d>& rois) {
+        _tracker->init(in, rois);
+    }
+
+    void operator()(const cv::Mat& in,
+                    std::vector<cv::Rect2d>& tracked_rois) {
+
         state.tracker->update(in, tracked_rois);
     }
+
+    cv::Ptr<cv::Tracker> _tracker;
 };
 
-TEST(GAPI_Pipeline, ObjectTrackingDemo2)
+
+TEST(GAPI_Pipeline, ObjectTrackingDemo)
 {
     cv::GMat in;
     // Just imagine that we have detections
-    auto old_rois = /* Get detections */;
+    auto old_rois = /* Get detections */
     auto new_rois = GObjectTracker::on(in, old_rois);
 
     cv::GComputation c(cv::GIn(in), cv::GOut(new_rois));
@@ -450,10 +510,11 @@ TEST(GAPI_Pipeline, ObjectTrackingDemo2)
     cv::Mat out_mat_gapi(1280, 720, CV_8UC3);
     std::vector<cv::Rect2d> rects;
 
-    auto src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>("video.mp4");
+    OCVTracker tracker("BOOSTING");
+    auto pkg = cv::gapi::kernels(cv::ocv_kernel<GObjectTracker>(tracker));
+    comp.apply(cv::gin(in_mat), cv::gout(rects), cv::compile_args(pkg));
 
-    // GOCVObjectTracker::setState(state);
-    auto pkg = cv::gapi::kernels<GOCVObjectTracker>();
+    auto src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>("video.mp4");
     auto sc = c.compileStreaming(cv::compile_args(pkg));
 
     sc.setSource(src);
