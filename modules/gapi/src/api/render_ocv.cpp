@@ -167,27 +167,11 @@ void drawPrimitivesOCV(cv::Mat& in,
                 break;
             }
 
-            // FIXME avoid code duplicate for Text and FText
             case Prim::index_of<Text>():
             {
                 auto tp = cv::util::get<Text>(p);
                 tp.color = converter.cvtColor(tp.color);
-
-                int baseline = 0;
-                auto size    = cv::getTextSize(tp.text, tp.ff, tp.fs, tp.thick, &baseline);
-                baseline    += tp.thick;
-                size.height += baseline;
-
-                // Allocate mask outside
-                cv::Mat mask(size, CV_8UC1, cv::Scalar::all(0));
-                // Org it's bottom left position for baseline
-                cv::Point org(0, mask.rows - baseline);
-                cv::putText(mask, tp.text, org, tp.ff, tp.fs, 255, tp.thick);
-
-                // Org is bottom left point, transform it to top left point for blendImage
-                cv::Point tl(tp.org.x, tp.org.y - mask.size().height + baseline);
-
-                blendTextMask(in, mask, tl, tp.color);
+                cv::putText(in, tp.text, tp.org, tp.ff, tp.fs, tp.color, tp.thick, tp.lt, tp.bottom_left_origin);
                 break;
             }
 
