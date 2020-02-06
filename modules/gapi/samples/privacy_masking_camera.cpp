@@ -67,7 +67,7 @@ G_API_OP(ParseSSD, <GDetections(cv::GMat, cv::GMat, int)>, "custom.privacy_maski
 
 using GPrims = cv::GArray<cv::gapi::wip::draw::Prim>;
 
-G_API_OP(DetectionsToMosaic, <GPrims(GDetections, GDetections)>, "custom.privacy_masking.rc_mosaic") {
+G_API_OP(ToMosaic, <GPrims(GDetections, GDetections)>, "custom.privacy_masking.to_mosaic") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc &, const cv::GArrayDesc &) {
         return cv::empty_array_desc();
     }
@@ -76,10 +76,13 @@ G_API_OP(DetectionsToMosaic, <GPrims(GDetections, GDetections)>, "custom.privacy
 GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
     static void run(const cv::Mat &in_ssd_result,
                     const cv::Mat &in_frame,
-                    const int     filter_label,
+                    const int      filter_label,
                     std::vector<cv::Rect> &out_objects) {
-        const int MAX_PROPOSALS = 200;
-        const int OBJECT_SIZE   =   7;
+        const auto &in_ssd_dims = in_ssd_result.size;
+        CV_Assert(in_ssd_dims.dims() == 4u);
+
+        const int MAX_PROPOSALS = in_ssd_dims[2];
+        const int OBJECT_SIZE   = in_ssd_dims[3];
         const cv::Size upscale = in_frame.size();
         const cv::Rect surface({0,0}, upscale);
 
@@ -87,7 +90,7 @@ GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
 
         const float *data = in_ssd_result.ptr<float>();
         for (int i = 0; i < MAX_PROPOSALS; i++) {
-            const float image_id   = data[i * OBJECT_SIZE + 0]; // batch id
+            const float image_id   = data[i * OBJECT_SIZE + 0];
             const float label      = data[i * OBJECT_SIZE + 1];
             const float confidence = data[i * OBJECT_SIZE + 2];
             const float rc_left    = data[i * OBJECT_SIZE + 3];
@@ -96,16 +99,16 @@ GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
             const float rc_bottom  = data[i * OBJECT_SIZE + 6];
 
             if (image_id < 0.f) {
-                break;
+                break;    // marks end-of-detections
             }
             if (confidence < 0.5f) {
-                continue;
+                continue; // skip objects with low confidence
             }
             if (filter_label != -1 && static_cast<int>(label) != filter_label) {
-                continue;
+                continue; // filter out object classes if filter is specified
             }
 
-            cv::Rect rc;
+            cv::Rect rc;  // map relative coordinates to the original image scale
             rc.x      = static_cast<int>(rc_left   * upscale.width);
             rc.y      = static_cast<int>(rc_top    * upscale.height);
             rc.width  = static_cast<int>(rc_right  * upscale.width)  - rc.x;
@@ -115,7 +118,7 @@ GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
     }
 };
 
-GAPI_OCV_KERNEL(OCVDetectionsToMosaic, DetectionsToMosaic) {
+GAPI_OCV_KERNEL(OCVToMosaic, ToMosaic) {
     static void run(const std::vector<cv::Rect> &in_plate_rcs,
                     const std::vector<cv::Rect> &in_face_rcs,
                           std::vector<cv::gapi::wip::draw::Prim> &out_prims) {
@@ -155,7 +158,7 @@ int main(int argc, char *argv[])
     cv::GMat blob_faces  = cv::gapi::infer<custom::FaceDetector>(in);
     cv::GArray<cv::Rect> rc_plates = custom::ParseSSD::on(blob_plates, in, 2);
     cv::GArray<cv::Rect> rc_faces  = custom::ParseSSD::on(blob_faces, in, -1);
-    cv::GMat out = cv::gapi::wip::draw::render3ch(in, custom::DetectionsToMosaic::on(rc_plates, rc_faces));
+    cv::GMat out = cv::gapi::wip::draw::render3ch(in, custom::ToMosaic::on(rc_plates, rc_faces));
     cv::GComputation graph(in, out);
 
     auto plate_net = cv::gapi::ie::Params<custom::VehLicDetector> {
@@ -168,7 +171,7 @@ int main(int argc, char *argv[])
         cmd.get<std::string>("facew"),   // path to weights
         cmd.get<std::string>("faced"),   // device specifier
     };
-    auto kernels = cv::gapi::kernels<custom::OCVParseSSD, custom::OCVDetectionsToMosaic>();
+    auto kernels = cv::gapi::kernels<custom::OCVParseSSD, custom::OCVToMosaic>();
     auto networks = cv::gapi::networks(plate_net, face_net);
 
     Avg avg;
