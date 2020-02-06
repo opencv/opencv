@@ -46,6 +46,7 @@ class Jpeg2KOpjDecoder CV_FINAL : public BaseImageDecoder
     using ImagePtr = std::unique_ptr<opj_image_t, detail::OpjImageDeleter>;
 
 public:
+
     Jpeg2KOpjDecoder();
     virtual ~Jpeg2KOpjDecoder();
 
@@ -64,7 +65,21 @@ private:
     OPJ_UINT32 m_maxPrec = 0;
 };
 
-} // namespace cv
+class Jpeg2KOpjEncoder CV_FINAL : public BaseImageEncoder
+{
+public:
+    Jpeg2KOpjEncoder();
+    virtual ~Jpeg2KOpjEncoder();
+
+    bool isFormatSupported( int depth ) const CV_OVERRIDE;
+    bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+    ImageEncoder newEncoder() const CV_OVERRIDE;
+
+private:
+    String m_errorMessage;
+};
+
+} //namespace cv
 
 #endif
 
