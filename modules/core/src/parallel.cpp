@@ -849,7 +849,7 @@ int cv::getNumberOfCPUs(void)
 #endif
 
     return concurentThreadsSupported == 0 ? (unsigned)sysinfo.dwNumberOfProcessors : (concurentThreadsSupported < (unsigned)sysinfo.dwNumberOfProcessors ? concurentThreadsSupported : (unsigned)sysinfo.dwNumberOfProcessors);
-#elif defined CV_HAVE_CGROUP
+#elif defined CV_HAVE_CGROUP && !defined __ANDROID__
     unsigned ncpus = concurentThreadsSupported;
     static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
     ncpus = min_non_zero(ncpus, ncpus_impl);
