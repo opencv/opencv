@@ -411,7 +411,10 @@ public:
         if( *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must end with \'\"\'" );
 
-        const char * end = ptr;
+        if( ptr == beg )
+            CV_PARSE_ERROR_CPP( "Key is empty" );
+        value_placeholder = fs->addNode(collection, std::string(beg, (size_t)(ptr - beg)), FileNode::NONE);
+
         ptr++;
         ptr = skipSpaces( ptr );
         if( !ptr || !*ptr )
@@ -420,11 +423,6 @@ public:
         if( *ptr != ':' )
             CV_PARSE_ERROR_CPP( "Missing \':\' between key and value" );
 
-        /* [beg, end) */
-        if( end <= beg )
-            CV_PARSE_ERROR_CPP( "Key is empty" );
-
-        value_placeholder = fs->addNode(collection, std::string(beg, (size_t)(end - beg)), FileNode::NONE);
         return ++ptr;
     }
 
