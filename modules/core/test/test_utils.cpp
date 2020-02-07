@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include "opencv2/core/utils/logger.hpp"
+#include "opencv2/core/utils/buffer_area.private.hpp"
 
 #include "test_utils_tls.impl.hpp"
 
@@ -302,5 +303,133 @@ TEST(Samples, findFile_missing)
     ASSERT_ANY_THROW(path = samples::findFile("non-existed.file", true));
     cv::utils::logging::setLogLevel(prev);
 }
+
+template <typename T>
+inline bool buffers_overlap(T * first, size_t first_num, T * second, size_t second_num)
+{
+    // cerr << "[" << (void*)first << " : " << (void*)(first + first_num) << ")";
+    // cerr << " X ";
+    // cerr << "[" << (void*)second << " : " << (void*)(second + second_num) << ")";
+    // cerr << endl;
+    bool res = false;
+    res |= (second <= first) && (first < second + second_num);
+    res |= (second < first + first_num) && (first + first_num < second + second_num);
+    return res;
+}
+
+typedef testing::TestWithParam<bool> BufferArea;
+
+TEST_P(BufferArea, basic)
+{
+    const bool safe = GetParam();
+    const size_t SZ = 3;
+    int * int_ptr = NULL;
+    uchar * uchar_ptr = NULL;
+    double * dbl_ptr = NULL;
+    {
+        cv::utils::BufferArea area(safe);
+        area.allocate(int_ptr, SZ);
+        area.allocate(uchar_ptr, SZ);
+        area.allocate(dbl_ptr, SZ);
+        area.commit();
+        ASSERT_TRUE(int_ptr != NULL);
+        ASSERT_TRUE(uchar_ptr != NULL);
+        ASSERT_TRUE(dbl_ptr != NULL);
+        EXPECT_EQ((size_t)0, (size_t)int_ptr % sizeof(int));
+        EXPECT_EQ((size_t)0, (size_t)dbl_ptr % sizeof(double));
+    }
+    EXPECT_TRUE(int_ptr == NULL);
+    EXPECT_TRUE(uchar_ptr == NULL);
+    EXPECT_TRUE(dbl_ptr == NULL);
+}
+
+TEST_P(BufferArea, align)
+{
+    const bool safe = GetParam();
+    const size_t SZ = 3;
+    const size_t CNT = 5;
+    typedef int T;
+    T * buffers[CNT] = {0};
+    {
+        cv::utils::BufferArea area(safe);
+        // allocate buffers with 3 elements with growing alignment (power of two)
+        for (size_t i = 0; i < CNT; ++i)
+        {
+            const ushort ALIGN = static_cast<ushort>(sizeof(T) << i);
+            EXPECT_TRUE(buffers[i] == NULL);
+            area.allocate(buffers[i], SZ, ALIGN);
+        }
+        area.commit();
+        for (size_t i = 0; i < CNT; ++i)
+        {
+            const ushort ALIGN = static_cast<ushort>(sizeof(T) << i);
+            EXPECT_TRUE(buffers[i] != NULL);
+            EXPECT_EQ((size_t)0, reinterpret_cast<size_t>(buffers[i]) % ALIGN);
+            if (i < CNT - 1)
+            {
+                SCOPED_TRACE(i);
+                EXPECT_FALSE(buffers_overlap(buffers[i], SZ, buffers[i + 1], SZ))
+                    << "Buffers overlap: "
+                    << buffers[i] << " (" << SZ << " elems)"
+                    << " and "
+                    << buffers[i + 1] << " (" << SZ << " elems)"
+                    << " (element size: " << sizeof(T) << ")";
+            }
+        }
+    }
+    for (size_t i = 0; i < CNT; ++i)
+    {
+        EXPECT_TRUE(buffers[i] == NULL);
+    }
+}
+
+TEST_P(BufferArea, default_align)
+{
+    const bool safe = GetParam();
+    const size_t CNT = 100;
+    const ushort ALIGN = 64;
+    typedef int T;
+    T * buffers[CNT] = {0};
+    {
+        cv::utils::BufferArea area(safe);
+        // allocate buffers with 1-99 elements with default alignment
+        for (size_t i = 0; i < CNT; ++ i)
+        {
+            EXPECT_TRUE(buffers[i] == NULL);
+            area.allocate(buffers[i], i + 1, ALIGN);
+        }
+        area.commit();
+        for (size_t i = 0; i < CNT; ++i)
+        {
+            EXPECT_TRUE(buffers[i] != NULL);
+            EXPECT_EQ((size_t)0, reinterpret_cast<size_t>(buffers[i]) % ALIGN);
+            if (i < CNT - 1)
+            {
+                SCOPED_TRACE(i);
+                EXPECT_FALSE(buffers_overlap(buffers[i], i + 1, buffers[i + 1], i + 2))
+                    << "Buffers overlap: "
+                    << buffers[i] << " (" << i + 1 << " elems)"
+                    << " and "
+                    << buffers[i + 1] << " (" << i + 2 << " elems)"
+                    << " (element size: " << sizeof(T) << ")";
+            }
+        }
+    }
+}
+
+TEST_P(BufferArea, bad)
+{
+    const bool safe = GetParam();
+    int * ptr = 0;
+    cv::utils::BufferArea area(safe);
+    EXPECT_ANY_THROW(area.allocate(ptr, 0)); // bad size
+    EXPECT_ANY_THROW(area.allocate(ptr, 1, 0)); // bad alignment
+    EXPECT_ANY_THROW(area.allocate(ptr, 1, 3)); // bad alignment
+    ptr = (int*)1;
+    EXPECT_ANY_THROW(area.allocate(ptr, 1)); // non-zero pointer
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, BufferArea, testing::Values(true, false));
+
 
 }} // namespace
