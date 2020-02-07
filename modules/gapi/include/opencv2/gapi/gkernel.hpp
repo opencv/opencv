@@ -325,47 +325,10 @@ G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8, _
                                                  G_TYPED_KERNEL_HELPER)(Class, __VA_ARGS__)) \
 
 /**
- * Helper for G_TYPED_KERNEL_M declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
- * for more details.
+ * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api) for more details.
  *
- * @param Class type name for this operation.
- * @param API an `std::function<>`-like signature for the operation;
- *    return type is a tuple of multiple values.
- * @param Id string identifier for the operation. Must be unique.
- */
-#define G_TYPED_KERNEL_M_HELPER G_TYPED_KERNEL_HELPER
-// {body} is to be defined by user
-
-#define G_TYPED_KERNEL_M_HELPER_2(Class, _1, _2, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2), Id)
-
-#define G_TYPED_KERNEL_M_HELPER_3(Class, _1, _2, _3, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3), Id)
-
-#define G_TYPED_KERNEL_M_HELPER_4(Class, _1, _2, _3, _4, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4), Id)
-
-#define G_TYPED_KERNEL_M_HELPER_5(Class, _1, _2, _3, _4, _5, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5), Id)
-
-#define G_TYPED_KERNEL_M_HELPER_6(Class, _1, _2, _3, _4, _5, _6, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6), Id)
-
-#define G_TYPED_KERNEL_M_HELPER_7(Class, _1, _2, _3, _4, _5, _6, _7, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7), Id)
-
-#define G_TYPED_KERNEL_M_HELPER_8(Class, _1, _2, _3, _4, _5, _6, _7, _8, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8), Id)
-
-#define G_TYPED_KERNEL_M_HELPER_9(Class, _1, _2, _3, _4, _5, _6, _7, _8, _9, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8, _9), Id)
-
-#define G_TYPED_KERNEL_M_HELPER_10(Class, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, Id) \
-    G_TYPED_KERNEL_M_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10), Id)
-
-/**
- * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
- * for more details.
+ * @deprecated This macro is deprecated in favor of `G_TYPED_KERNEL` that is used for declaring any
+ * G-API Operation.
  *
  * @param Class type name for this operation.
  */
