@@ -217,24 +217,6 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
-                void setDropout()
-                {
-                    cv::dnn::LayerParams dropout_param;
-                    dropout_param.name = "Dropout-name";
-                    dropout_param.type = "Dropout";
-                    darknet::LayerParameter lp;
-
-                    std::string layer_name = cv::format("dropout_%d", layer_id);
-                    lp.layer_name = layer_name;
-                    lp.layer_type = dropout_param.type;
-                    lp.layerParams = dropout_param;
-                    lp.bottom_indexes.push_back(last_layer);
-                    last_layer = layer_name;
-                    net->layers.push_back(lp);
-                    layer_id++;
-                    fused_layer_names.push_back(last_layer);
-                }
-
                 void setReLU()
                 {
                     cv::dnn::LayerParams activation_param;
@@ -695,6 +677,7 @@ namespace cv {
 
                         CV_Assert(kernel_size > 0 && filters > 0);
                         CV_Assert(tensor_shape[0] > 0);
+                        CV_Assert(tensor_shape[0] % groups == 0);
 
                         setParams.setConvolution(kernel_size, padding, stride, filters, tensor_shape[0],
                             groups, batch_normalize);
@@ -718,10 +701,6 @@ namespace cv {
                         tensor_shape[0] = output;
                         tensor_shape[1] = 1;
                         tensor_shape[2] = 1;
-                    }
-                    else if (layer_type == "dropout")
-                    {
-                        setParams.setDropout();
                     }
                     else if (layer_type == "maxpool")
                     {
@@ -937,7 +916,6 @@ namespace cv {
                             int sizes_weights[] = { filters, total(tensor_shape) };
                             weightsBlob.create(2, sizes_weights, CV_32F);
                         }
-
                         CV_Assert(weightsBlob.isContinuous());
 
                         cv::Mat meanData_mat(1, filters, CV_32F);	// mean
