@@ -897,7 +897,7 @@ int cv::getNumberOfCPUs(void)
             numCPU = 1;
     }
 
-    unsigned ncpus = min_non_zero(concurentThreadsSupported, numCPU);
+    unsigned ncpus = min_non_zero(concurentThreadsSupported, (unsigned)numCPU);
     return ncpus != 0 ? ncpus : 1;
 #else
     return concurentThreadsSupported != 0 ? concurentThreadsSupported : 1;
