@@ -1458,16 +1458,23 @@ template<typename _Tp, int n> inline void v_zip( const v_reg<_Tp, n>& a0, const 
 @return register object
 
 @note Returned type will be detected from passed pointer type, for example uchar ==> cv::v_uint8x16, int ==> cv::v_int32x4, etc.
+
+@note Alignment requirement:
+if CV_STRONG_ALIGNMENT=1 then passed pointer must be aligned (`sizeof(lane type)` should be enough).
+Do not cast pointer types without runtime check for pointer alignment (like `uchar*` => `int*`).
  */
 template<typename _Tp>
 inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load(const _Tp* ptr)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     return v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128>(ptr);
 }
 
 /** @brief Load register contents from memory (aligned)
 
-similar to cv::v_load, but source memory block should be aligned (to 16-byte boundary)
+similar to cv::v_load, but source memory block should be aligned (to 16-byte boundary in case of SIMD128, 32-byte - SIMD256, etc)
  */
 template<typename _Tp>
 inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load_aligned(const _Tp* ptr)
@@ -1488,6 +1495,9 @@ v_int32x4 r = v_load_low(lo);
 template<typename _Tp>
 inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load_low(const _Tp* ptr)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
     for( int i = 0; i < c.nlanes/2; i++ )
     {
@@ -1509,6 +1519,10 @@ v_int32x4 r = v_load_halves(lo, hi);
 template<typename _Tp>
 inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load_halves(const _Tp* loptr, const _Tp* hiptr)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(loptr));
+    CV_Assert(isAligned<sizeof(_Tp)>(hiptr));
+#endif
     v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
     for( int i = 0; i < c.nlanes/2; i++ )
     {
@@ -1531,6 +1545,9 @@ template<typename _Tp>
 inline v_reg<typename V_TypeTraits<_Tp>::w_type, V_TypeTraits<_Tp>::nlanes128 / 2>
 v_load_expand(const _Tp* ptr)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     typedef typename V_TypeTraits<_Tp>::w_type w_type;
     v_reg<w_type, V_TypeTraits<w_type>::nlanes128> c;
     for( int i = 0; i < c.nlanes; i++ )
@@ -1552,6 +1569,9 @@ template<typename _Tp>
 inline v_reg<typename V_TypeTraits<_Tp>::q_type, V_TypeTraits<_Tp>::nlanes128 / 4>
 v_load_expand_q(const _Tp* ptr)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     typedef typename V_TypeTraits<_Tp>::q_type q_type;
     v_reg<q_type, V_TypeTraits<q_type>::nlanes128> c;
     for( int i = 0; i < c.nlanes; i++ )
@@ -1572,6 +1592,9 @@ For all types except 64-bit. */
 template<typename _Tp, int n> inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
                                                             v_reg<_Tp, n>& b)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     int i, i2;
     for( i = i2 = 0; i < n; i++, i2 += 2 )
     {
@@ -1591,6 +1614,9 @@ For all types except 64-bit. */
 template<typename _Tp, int n> inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
                                                             v_reg<_Tp, n>& b, v_reg<_Tp, n>& c)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     int i, i3;
     for( i = i3 = 0; i < n; i++, i3 += 3 )
     {
@@ -1613,6 +1639,9 @@ inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
                                 v_reg<_Tp, n>& b, v_reg<_Tp, n>& c,
                                 v_reg<_Tp, n>& d)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     int i, i4;
     for( i = i4 = 0; i < n; i++, i4 += 4 )
     {
@@ -1636,6 +1665,9 @@ inline void v_store_interleave( _Tp* ptr, const v_reg<_Tp, n>& a,
                                const v_reg<_Tp, n>& b,
                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     int i, i2;
     for( i = i2 = 0; i < n; i++, i2 += 2 )
     {
@@ -1657,6 +1689,9 @@ inline void v_store_interleave( _Tp* ptr, const v_reg<_Tp, n>& a,
                                 const v_reg<_Tp, n>& b, const v_reg<_Tp, n>& c,
                                 hal::StoreMode /*mode*/=hal::STORE_UNALIGNED)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     int i, i3;
     for( i = i3 = 0; i < n; i++, i3 += 3 )
     {
@@ -1679,6 +1714,9 @@ template<typename _Tp, int n> inline void v_store_interleave( _Tp* ptr, const v_
                                                             const v_reg<_Tp, n>& d,
                                                             hal::StoreMode /*mode*/=hal::STORE_UNALIGNED)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     int i, i4;
     for( i = i4 = 0; i < n; i++, i4 += 4 )
     {
@@ -1700,6 +1738,9 @@ Pointer can be unaligned. */
 template<typename _Tp, int n>
 inline void v_store(_Tp* ptr, const v_reg<_Tp, n>& a)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     for( int i = 0; i < n; i++ )
         ptr[i] = a.s[i];
 }
@@ -1707,6 +1748,9 @@ inline void v_store(_Tp* ptr, const v_reg<_Tp, n>& a)
 template<typename _Tp, int n>
 inline void v_store(_Tp* ptr, const v_reg<_Tp, n>& a, hal::StoreMode /*mode*/)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     v_store(ptr, a);
 }
 
@@ -1720,6 +1764,9 @@ Scheme:
 template<typename _Tp, int n>
 inline void v_store_low(_Tp* ptr, const v_reg<_Tp, n>& a)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     for( int i = 0; i < (n/2); i++ )
         ptr[i] = a.s[i];
 }
@@ -1734,6 +1781,9 @@ Scheme:
 template<typename _Tp, int n>
 inline void v_store_high(_Tp* ptr, const v_reg<_Tp, n>& a)
 {
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(_Tp)>(ptr));
+#endif
     for( int i = 0; i < (n/2); i++ )
         ptr[i] = a.s[i+(n/2)];
 }
