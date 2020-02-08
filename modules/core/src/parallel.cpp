@@ -45,6 +45,10 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
+#define min_non_zero(val_1, val_2)                                                    \
+   (((val_1 > 0) && (val_2 > 0) && (val_1 > val_2)) || ((val_1 == 0) && (val_2 > 0))) \
+   ? val_2 : val_1
+
 #if defined _WIN32 || defined WINCE
     #include <windows.h>
     #undef small
@@ -84,9 +88,6 @@
 
 #if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__
    #define CV_HAVE_CGROUP
-   #define min_non_zero(val_1, val_2)                                                    \
-      (((val_1 > 0) && (val_2 > 0) && (val_1 > val_2)) || ((val_1 == 0) && (val_2 > 0))) \
-      ? val_2 : val_1
 #endif
 
 /* IMPORTANT: always use the same order of defines
@@ -847,8 +848,8 @@ int cv::getNumberOfCPUs(void)
 #else
     GetSystemInfo( &sysinfo );
 #endif
-
-    return concurentThreadsSupported == 0 ? (unsigned)sysinfo.dwNumberOfProcessors : (concurentThreadsSupported < (unsigned)sysinfo.dwNumberOfProcessors ? concurentThreadsSupported : (unsigned)sysinfo.dwNumberOfProcessors);
+    unsigned ncpus = min_non_zero(concurentThreadsSupported, sysinfo.dwNumberOfProcessors);
+    return ncpus != 0 ? ncpus : 1;
 #elif defined CV_HAVE_CGROUP && !defined __ANDROID__
     unsigned ncpus = concurentThreadsSupported;
     static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
@@ -859,9 +860,10 @@ int cv::getNumberOfCPUs(void)
 
     #if defined _GNU_SOURCE
         cpu_set_t cpu_set;
-        sched_getaffinity(0, sizeof(cpu_set), &cpu_set);
-        unsigned cpu_count_cpu_set = CPU_COUNT(&cpu_set);
-        ncpus = min_non_zero(ncpus, cpu_count_cpu_set);
+        if(!sched_getaffinity(0, sizeof(cpu_set), &cpu_set)) {
+            unsigned cpu_count_cpu_set = CPU_COUNT(&cpu_set);
+            ncpus = min_non_zero(ncpus, cpu_count_cpu_set);
+        }
     #endif
 
     static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
@@ -895,9 +897,10 @@ int cv::getNumberOfCPUs(void)
             numCPU = 1;
     }
 
-    return  concurentThreadsSupported == 0 ? (unsigned)numCPU : (concurentThreadsSupported < (unsigned)numCPU ? concurentThreadsSupported : (unsigned)numCPU);
+    unsigned ncpus = min_non_zero(concurentThreadsSupported, numCPU);
+    return ncpus != 0 ? ncpus : 1;
 #else
-    return 1;
+    return concurentThreadsSupported != 0 ? concurentThreadsSupported : 1;
 #endif
 }
 
