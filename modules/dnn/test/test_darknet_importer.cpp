@@ -552,6 +552,11 @@ TEST_P(Test_Darknet_layers, convolutional)
     testDarknetLayer("convolutional", true);
 }
 
+TEST_P(Test_Darknet_layers, scale_channels)
+{
+    testDarknetLayer("scale_channels");
+}
+
 TEST_P(Test_Darknet_layers, connected)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
