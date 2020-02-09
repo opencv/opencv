@@ -774,6 +774,11 @@ conv = tf.layers.conv2d(inp, filters=4, kernel_size=[1, 1])
 strided_slice = conv[:, 1:, :2, 2:3]
 save(inp, strided_slice, 'strided_slice')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 5, 3], 'input')
+conv_out = tf.keras.layers.Conv2D(filters=3, kernel_size=[3, 3], padding='same')(inp)
+crop2d = tf.keras.layers.Cropping2D(((1, 1), (1, 1)))(conv_out)
+save(inp, crop2d, 'crop2d')
+################################################################################
 
 inp = tf.placeholder(tf.float32, [1, 2, 3, 4, 2], 'input')
 bn = tf.layers.batch_normalization(inp, training=False, fused=False, name='batch_norm3d',
