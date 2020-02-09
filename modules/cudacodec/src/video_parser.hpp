@@ -44,7 +44,7 @@
 #ifndef __VIDEO_PARSER_HPP__
 #define __VIDEO_PARSER_HPP__
 
-#if CUDA_VERSION >= 9000
+#if CUDA_VERSION >= 9000 && CUDA_VERSION < 10000
     #include <dynlink_nvcuvid.h>
 #else
     #include <nvcuvid.h>
