@@ -94,7 +94,7 @@ struct v_uint16x8
     }
     ushort get0() const
     {
-        return (ushort)wasm_i16x8_extract_lane(val, 0);    // wasm_u16x8_extract_lane() unimplemeted yet
+        return (ushort)wasm_i16x8_extract_lane(val, 0);    // wasm_u16x8_extract_lane() unimplemented yet
     }
 
     v128_t val;

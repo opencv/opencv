@@ -222,7 +222,10 @@ template <typename R> std::ostream & operator<<(std::ostream & out, const Data<R
     return out;
 }
 
-template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b);
+template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b)
+{
+    EXPECT_EQ(a, b);
+}
 template<> inline void EXPECT_COMPARE_EQ_<float>(const float a, const float b)
 {
     EXPECT_FLOAT_EQ( a, b );
@@ -742,12 +745,12 @@ template<typename R> struct TheTest
         for (int i = 0; i < n; ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ((double)dataA[i*2]     * (double)dataA[i*2] +
-                      (double)dataA[i*2 + 1] * (double)dataA[i*2  + 1], resA[i]);
-            EXPECT_EQ((double)dataB[i*2]     * (double)dataB[i*2] +
-                      (double)dataB[i*2 + 1] * (double)dataB[i*2  + 1], resB[i]);
-            EXPECT_EQ((double)dataA[i*2]     * (double)dataB[i*2] +
-                      (double)dataA[i*2 + 1] * (double)dataB[i*2  + 1] + dataC[i], resC[i]);
+            EXPECT_COMPARE_EQ((double)dataA[i*2]     * (double)dataA[i*2] +
+                              (double)dataA[i*2 + 1] * (double)dataA[i*2  + 1], resA[i]);
+            EXPECT_COMPARE_EQ((double)dataB[i*2]     * (double)dataB[i*2] +
+                              (double)dataB[i*2 + 1] * (double)dataB[i*2  + 1], resB[i]);
+            EXPECT_COMPARE_EQ((double)dataA[i*2]     * (double)dataB[i*2] +
+                              (double)dataA[i*2 + 1] * (double)dataB[i*2  + 1] + dataC[i], resC[i]);
         }
     #endif
         return *this;
@@ -891,13 +894,18 @@ template<typename R> struct TheTest
     TheTest & test_reduce()
     {
         Data<R> dataA;
+        int sum = 0;
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            sum += (int)(dataA[i]);   // To prevent a constant overflow with int8
+        }
         R a = dataA;
-        EXPECT_EQ((LaneType)1, v_reduce_min(a));
-        EXPECT_EQ((LaneType)R::nlanes, v_reduce_max(a));
-        EXPECT_EQ((LaneType)((1 + R::nlanes)*R::nlanes/2), v_reduce_sum(a));
+        EXPECT_EQ((LaneType)1, (LaneType)v_reduce_min(a));
+        EXPECT_EQ((LaneType)(R::nlanes), (LaneType)v_reduce_max(a));
+        EXPECT_EQ((int)(sum), (int)v_reduce_sum(a));
         dataA[0] += R::nlanes;
         R an = dataA;
-        EXPECT_EQ((LaneType)2, v_reduce_min(an));
+        EXPECT_EQ((LaneType)2, (LaneType)v_reduce_min(an));
         return *this;
     }
 
@@ -1585,6 +1593,7 @@ void test_hal_intrin_uint8()
         .test_dotprod_expand()
         .test_min_max()
         .test_absdiff()
+        .test_reduce()
         .test_reduce_sad()
         .test_mask()
         .test_popcount()
@@ -1626,6 +1635,7 @@ void test_hal_intrin_int8()
         .test_absdiff()
         .test_absdiffs()
         .test_abs()
+        .test_reduce()
         .test_reduce_sad()
         .test_mask()
         .test_popcount()

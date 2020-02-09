@@ -572,6 +572,10 @@ template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, s
     int width_1 = width & -v_uint8x16::nlanes;
     int i, j;
 
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(T)>(src, dst));
+#endif
+
     for( ; size.height--; src += sstep, dst += dstep )
     {
         for( i = 0, j = end; i < width_1; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
@@ -585,7 +589,7 @@ template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, s
             v_store((T*)(dst + j - v_uint8x16::nlanes), t0);
             v_store((T*)(dst + i), t1);
         }
-        if (((size_t)src|(size_t)dst) % sizeof(T) == 0)
+        if (isAligned<sizeof(T)>(src, dst))
         {
             for ( ; i < width; i += sizeof(T), j -= sizeof(T) )
             {
@@ -620,6 +624,11 @@ template<typename T1, typename T2> CV_ALWAYS_INLINE void flipHoriz_double( const
     int end = (int)(size.width*esz);
     int width = (end + 1)/2;
 
+#if CV_STRONG_ALIGNMENT
+    CV_Assert(isAligned<sizeof(T1)>(src, dst));
+    CV_Assert(isAligned<sizeof(T2)>(src, dst));
+#endif
+
     for( ; size.height--; src += sstep, dst += dstep )
     {
         for ( int i = 0, j = end; i < width; i += sizeof(T1) + sizeof(T2), j -= sizeof(T1) + sizeof(T2) )
@@ -644,6 +653,9 @@ static void
 flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
 #if CV_SIMD
+#if CV_STRONG_ALIGNMENT
+    size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
+#endif
     if (esz == 2 * v_uint8x16::nlanes)
     {
         int end = (int)(size.width*esz);
@@ -693,15 +705,27 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
             }
         }
     }
-    else if (esz == 8)
+    else if (esz == 8
+#if CV_STRONG_ALIGNMENT
+            && isAligned<sizeof(uint64)>(alignmentMark)
+#endif
+    )
     {
         flipHoriz_single<v_uint64x2>(src, sstep, dst, dstep, size, esz);
     }
-    else if (esz == 4)
+    else if (esz == 4
+#if CV_STRONG_ALIGNMENT
+            && isAligned<sizeof(unsigned)>(alignmentMark)
+#endif
+    )
     {
         flipHoriz_single<v_uint32x4>(src, sstep, dst, dstep, size, esz);
     }
-    else if (esz == 2)
+    else if (esz == 2
+#if CV_STRONG_ALIGNMENT
+            && isAligned<sizeof(ushort)>(alignmentMark)
+#endif
+    )
     {
         flipHoriz_single<v_uint16x8>(src, sstep, dst, dstep, size, esz);
     }
@@ -709,7 +733,11 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
     {
         flipHoriz_single<v_uint8x16>(src, sstep, dst, dstep, size, esz);
     }
-    else if (esz == 24)
+    else if (esz == 24
+#if CV_STRONG_ALIGNMENT
+            && isAligned<sizeof(uint64_t)>(alignmentMark)
+#endif
+    )
     {
         int end = (int)(size.width*esz);
         int width = (end + 1)/2;
@@ -732,6 +760,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
             }
         }
     }
+#if !CV_STRONG_ALIGNMENT
     else if (esz == 12)
     {
         flipHoriz_double<uint64_t,uint>(src, sstep, dst, dstep, size, esz);
@@ -744,8 +773,9 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
     {
         flipHoriz_double<ushort,uchar>(src, sstep, dst, dstep, size, esz);
     }
-    else
 #endif
+    else
+#endif // CV_SIMD
     {
         int i, j, limit = (int)(((size.width + 1)/2)*esz);
         AutoBuffer<int> _tab(size.width*esz);
@@ -779,16 +809,33 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
     {
         int i = 0;
 #if CV_SIMD
-        for( ; i <= size.width - (v_int32::nlanes * 4); i += v_int32::nlanes * 4 )
+#if CV_STRONG_ALIGNMENT
+        if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
+#endif
         {
-            v_int32 t0 = vx_load((int*)(src0 + i));
-            v_int32 t1 = vx_load((int*)(src1 + i));
-            vx_store((int*)(dst0 + i), t1);
-            vx_store((int*)(dst1 + i), t0);
+            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            {
+                v_int32 t0 = vx_load((int*)(src0 + i));
+                v_int32 t1 = vx_load((int*)(src1 + i));
+                vx_store((int*)(dst0 + i), t1);
+                vx_store((int*)(dst1 + i), t0);
+            }
+        }
+#if CV_STRONG_ALIGNMENT
+        else
+        {
+            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            {
+                v_uint8 t0 = vx_load(src0 + i);
+                v_uint8 t1 = vx_load(src1 + i);
+                vx_store(dst0 + i, t1);
+                vx_store(dst1 + i, t0);
+            }
         }
 #endif
+#endif
 
-        if( ((size_t)src0|(size_t)dst0|(size_t)src1|(size_t)dst1) % sizeof(int) == 0 )
+        if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
         {
             for( ; i <= size.width - 16; i += 16 )
             {

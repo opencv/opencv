@@ -1451,7 +1451,7 @@ public:
             sortSamplesByClasses( _samples, _responses, sidx_all, class_ranges );
 
             //check that while cross-validation there were the samples from all the classes
-            if( class_ranges[class_count] <= 0 )
+            if ((int)class_ranges.size() < class_count + 1)
                 CV_Error( CV_StsBadArg, "While cross-validation one or more of the classes have "
                 "been fell out of the sample. Try to reduce <Params::k_fold>" );
 

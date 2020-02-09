@@ -17,7 +17,7 @@ In short, we found locations of some parts of an object in another cluttered ima
 is sufficient to find the object exactly on the trainImage.
 
 For that, we can use a function from calib3d module, ie **cv.findHomography()**. If we pass the set
-of points from both the images, it will find the perpective transformation of that object. Then we
+of points from both the images, it will find the perspective transformation of that object. Then we
 can use **cv.perspectiveTransform()** to find the object. It needs atleast four correct points to
 find the transformation.
 
@@ -68,7 +68,7 @@ Now we set a condition that atleast 10 matches (defined by MIN_MATCH_COUNT) are 
 find the object. Otherwise simply show a message saying not enough matches are present.
 
 If enough matches are found, we extract the locations of matched keypoints in both the images. They
-are passed to find the perpective transformation. Once we get this 3x3 transformation matrix, we use
+are passed to find the perspective transformation. Once we get this 3x3 transformation matrix, we use
 it to transform the corners of queryImage to corresponding points in trainImage. Then we draw it.
 @code{.py}
 if len(good)>MIN_MATCH_COUNT:

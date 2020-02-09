@@ -488,13 +488,13 @@ public:
             for(j = 0; j < i; ++j)
             {
                 Point3f d1 = ptr[j] - ptr[i];
-                float n1 = d1.x*d1.x + d1.y*d1.y;
+                float n1 = d1.x*d1.x + d1.y*d1.y + d1.z*d1.z;
 
                 for(k = 0; k < j; ++k)
                 {
                     Point3f d2 = ptr[k] - ptr[i];
-                    float denom = (d2.x*d2.x + d2.y*d2.y)*n1;
-                    float num = d1.x*d2.x + d1.y*d2.y;
+                    float denom = (d2.x*d2.x + d2.y*d2.y + d2.z*d2.z)*n1;
+                    float num = d1.x*d2.x + d1.y*d2.y + d1.z*d2.z;
 
                     if( num*num > threshold*threshold*denom )
                         return false;

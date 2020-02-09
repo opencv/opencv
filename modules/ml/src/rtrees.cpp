@@ -90,12 +90,12 @@ public:
         CV_TRACE_FUNCTION();
         DTreesImpl::clear();
         oobError = 0.;
-        rng = RNG((uint64)-1);
     }
 
     const vector<int>& getActiveVars() CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
+        RNG &rng = theRNG();
         int i, nvars = (int)allVars.size(), m = (int)activeVars.size();
         for( i = 0; i < nvars; i++ )
         {
@@ -134,6 +134,7 @@ public:
     bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
+        RNG &rng = theRNG();
         CV_Assert(!trainData.empty());
         startTraining(trainData, flags);
         int treeidx, ntrees = (rparams.termCrit.type & TermCriteria::COUNT) != 0 ?
@@ -424,7 +425,6 @@ public:
     double oobError;
     vector<float> varImportance;
     vector<int> allVars, activeVars;
-    RNG rng;
 };
 
 

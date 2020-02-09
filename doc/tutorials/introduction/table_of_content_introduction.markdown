@@ -110,6 +110,14 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     Modify Android camera preview with OpenCL
 
+-   @subpage tutorial_macos_install
+
+    _Compatibility:_ \> OpenCV 3.4.x
+
+    _Author:_ [\@sajarindider](https://github.com/sajarindider)
+
+    We will learn how to setup OpenCV in MacOS.
+
 -   @subpage tutorial_ios_install
 
     _Compatibility:_ \> OpenCV 2.4.2

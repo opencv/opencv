@@ -805,7 +805,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
         // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's CV_YUV2BGR_YV12)
         // kCVPixelFormatType_32ABGR is reportedly faster on OS X, but OpenCV doesn't have a CV_ABGR2BGR conversion.
-        // kCVPixelFormatType_24RGB is significanly slower than kCVPixelFormatType_32BGRA.
+        // kCVPixelFormatType_24RGB is significantly slower than kCVPixelFormatType_32BGRA.
         pixelFormat = kCVPixelFormatType_32BGRA;
         mFormat = CV_8UC3;
     } else if (mMode == CV_CAP_MODE_GRAY) {
@@ -1323,7 +1323,7 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
             colorSpace, kCGImageAlphaLast|kCGBitmapByteOrderDefault,
             provider, NULL, false, kCGRenderingIntentDefault);
 
-    //CGImage -> CVPixelBufferRef coversion
+    //CGImage -> CVPixelBufferRef conversion
     CVPixelBufferRef pixelBuffer = NULL;
     CFDataRef cfData = CGDataProviderCopyData(CGImageGetDataProvider(cgImage));
     int status = CVPixelBufferCreateWithBytes(NULL,

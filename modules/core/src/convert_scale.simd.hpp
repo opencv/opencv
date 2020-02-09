@@ -53,7 +53,7 @@ cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     }
 }
 
-// variant for convrsions 16f <-> ... w/o unrolling
+// variant for conversions 16f <-> ... w/o unrolling
 template<typename _Ts, typename _Td> inline void
 cvtabs1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
              Size size, float a, float b )
@@ -123,7 +123,7 @@ cvt_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     }
 }
 
-// variant for convrsions 16f <-> ... w/o unrolling
+// variant for conversions 16f <-> ... w/o unrolling
 template<typename _Ts, typename _Td> inline void
 cvt1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
           Size size, float a, float b )

@@ -67,7 +67,7 @@ namespace opt_SSE4_1
 void resizeNN2_SSE4_1(const Range&, const Mat&, Mat&, int*, int, double);
 void resizeNN4_SSE4_1(const Range&, const Mat&, Mat&, int*, int, double);
 
-int VResizeLanczos4Vec_32f16u_SSE41(const uchar** _src, uchar* _dst, const uchar* _beta, int width);
+int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float* beta, int width);
 #endif
 }
 }

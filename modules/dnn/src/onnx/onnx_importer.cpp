@@ -26,6 +26,8 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include "onnx_graph_simplifier.hpp"
+
 namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
@@ -145,8 +147,20 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         }
         else
         {
-            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
-            int64_t* src = reinterpret_cast<int64_t*>(val);
+            const char* val = tensor_proto.raw_data().c_str();
+#if CV_STRONG_ALIGNMENT
+            // Aligned pointer is required: https://github.com/opencv/opencv/issues/16373
+            // this doesn't work: typedef int64_t CV_DECL_ALIGNED(1) unaligned_int64_t;
+            AutoBuffer<int64_t, 16> aligned_val;
+            if (!isAligned<sizeof(int64_t)>(val))
+            {
+                size_t sz = tensor_proto.raw_data().size();
+                aligned_val.allocate(divUp(sz, sizeof(int64_t)));
+                memcpy(aligned_val.data(), val, sz);
+                val = (const char*)aligned_val.data();
+            }
+#endif
+            const int64_t* src = reinterpret_cast<const int64_t*>(val);
             convertInt64ToInt32(src, dst, blob.total());
         }
     }
@@ -326,6 +340,9 @@ void ONNXImporter::populateNet(Net dstNet)
 {
     CV_Assert(model_proto.has_graph());
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
+
+    simplifySubgraphs(graph_proto);
+
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
     // List of internal blobs shapes.
     std::map<std::string, MatShape> outShapes;

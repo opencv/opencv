@@ -1078,8 +1078,8 @@ void cvCreateTrainingSamples( const char* filename,
                 icvPlaceDistortedSample( sample, inverse, maxintensitydev,
                     maxxangle, maxyangle, maxzangle,
                     0   /* nonzero means placing image without cut offs */,
-                    0.0 /* nozero adds random shifting                  */,
-                    0.0 /* nozero adds random scaling                   */,
+                    0.0 /* nonzero adds random shifting                  */,
+                    0.0 /* nonzero adds random scaling                   */,
                     &data );
 
                 if( showsamples )

@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include <float.h>
 #include <algorithm>
 
@@ -105,7 +106,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -378,6 +379,18 @@ public:
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
 #endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto tr_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                       ngraph::Shape({_order.size()}), _order.data());
+        auto transpose = std::make_shared<ngraph::op::Transpose>(ieInpNode, tr_axes);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(transpose));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     size_t _count;
     std::vector<size_t> _order;

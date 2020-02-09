@@ -58,7 +58,7 @@
 namespace {
 inline unsigned int trailingZeros32(unsigned int value) {
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1700) || defined(_M_ARM)
+#if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64)
     unsigned long index = 0;
     _BitScanForward(&index, value);
     return (unsigned int)index;
@@ -99,6 +99,7 @@ enum StoreMode
 
 }
 
+// TODO FIXIT: Don't use "God" traits. Split on separate cases.
 template<typename _Tp> struct V_TypeTraits
 {
 };
@@ -130,21 +131,51 @@ template<typename _Tp> struct V_TypeTraits
         } \
     }
 
+#define CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(type, int_type_, uint_type_, abs_type_, w_type_, sum_type_, nlanes128_) \
+    template<> struct V_TypeTraits<type> \
+    { \
+        typedef type value_type; \
+        typedef int_type_ int_type; \
+        typedef abs_type_ abs_type; \
+        typedef uint_type_ uint_type; \
+        typedef w_type_ w_type; \
+        typedef sum_type_ sum_type; \
+        enum { nlanes128 = nlanes128_ }; \
+    \
+        static inline int_type reinterpret_int(type x) \
+        { \
+            union { type l; int_type i; } v; \
+            v.l = x; \
+            return v.i; \
+        } \
+    \
+        static inline type reinterpret_from_int(int_type x) \
+        { \
+            union { type l; int_type i; } v; \
+            v.i = x; \
+            return v.l; \
+        } \
+    }
+
 CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, uchar, ushort, unsigned, unsigned, 16);
 CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, uchar, short, int, int, 16);
 CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, ushort, unsigned, uint64, unsigned, 8);
 CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, ushort, int, int64, int, 8);
-CV_INTRIN_DEF_TYPE_TRAITS(unsigned, int, unsigned, unsigned, uint64, void, unsigned, 4);
-CV_INTRIN_DEF_TYPE_TRAITS(int, int, unsigned, unsigned, int64, void, int, 4);
-CV_INTRIN_DEF_TYPE_TRAITS(float, int, unsigned, float, double, void, float, 4);
-CV_INTRIN_DEF_TYPE_TRAITS(uint64, int64, uint64, uint64, void, void, uint64, 2);
-CV_INTRIN_DEF_TYPE_TRAITS(int64, int64, uint64, uint64, void, void, int64, 2);
-CV_INTRIN_DEF_TYPE_TRAITS(double, int64, uint64, double, void, void, double, 2);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(unsigned, int, unsigned, unsigned, uint64, unsigned, 4);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int, int, unsigned, unsigned, int64, int, 4);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(float, int, unsigned, float, double, float, 4);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(uint64, int64, uint64, uint64, void, uint64, 2);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int64, int64, uint64, uint64, void, int64, 2);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(double, int64, uint64, double, void, double, 2);
 
 #ifndef CV_DOXYGEN
 
 #ifndef CV_CPU_OPTIMIZATION_HAL_NAMESPACE
-#ifdef CV_CPU_DISPATCH_MODE
+#ifdef CV_FORCE_SIMD128_CPP
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE hal_EMULATOR_CPP
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace hal_EMULATOR_CPP {
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
+#elif defined(CV_CPU_DISPATCH_MODE)
     #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE __CV_CAT(hal_, CV_CPU_DISPATCH_MODE)
     #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace __CV_CAT(hal_, CV_CPU_DISPATCH_MODE) {
     #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
@@ -197,7 +228,6 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 
 #else
 
-#define CV_SIMD128_CPP 1
 #include "opencv2/core/hal/intrin_cpp.hpp"
 
 #endif
@@ -240,6 +270,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #ifndef CV_SIMD128
 #define CV_SIMD128 0
+#endif
+
+#ifndef CV_SIMD128_CPP
+#define CV_SIMD128_CPP 0
 #endif
 
 #ifndef CV_SIMD128_64F
@@ -346,7 +380,7 @@ template<typename _Tp> struct V_RegTraits
     CV_DEF_REG_TRAITS(v, v_int16x8, short, s16, v_uint16x8, v_int32x4, v_int64x2, v_int16x8, void);
     CV_DEF_REG_TRAITS(v, v_uint32x4, unsigned, u32, v_uint32x4, v_uint64x2, void, v_int32x4, void);
     CV_DEF_REG_TRAITS(v, v_int32x4, int, s32, v_uint32x4, v_int64x2, void, v_int32x4, void);
-#if CV_SIMD128_64F
+#if CV_SIMD128_64F || CV_SIMD128_CPP
     CV_DEF_REG_TRAITS(v, v_float32x4, float, f32, v_float32x4, v_float64x2, void, v_int32x4, v_int32x4);
 #else
     CV_DEF_REG_TRAITS(v, v_float32x4, float, f32, v_float32x4, void, void, v_int32x4, v_int32x4);
@@ -433,7 +467,11 @@ namespace CV__SIMD_NAMESPACE {
 } // namespace
 using namespace CV__SIMD_NAMESPACE;
 #elif (CV_SIMD128 || CV_SIMD128_CPP) && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 128)
+#if defined CV_SIMD128_CPP
+#define CV__SIMD_NAMESPACE simd128_cpp
+#else
 #define CV__SIMD_NAMESPACE simd128
+#endif
 namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD CV_SIMD128
     #define CV_SIMD_64F CV_SIMD128_64F

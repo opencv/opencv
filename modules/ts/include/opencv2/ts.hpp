@@ -219,6 +219,8 @@ static inline void applyTestTag(const std::string& tag1, const std::string& tag2
 { applyTestTag_(tag1); applyTestTag_(tag2); applyTestTag_(tag3); checkTestTags(); }
 static inline void applyTestTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4)
 { applyTestTag_(tag1); applyTestTag_(tag2); applyTestTag_(tag3); applyTestTag_(tag4); checkTestTags(); }
+static inline void applyTestTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4, const std::string& tag5)
+{ applyTestTag_(tag1); applyTestTag_(tag2); applyTestTag_(tag3); applyTestTag_(tag4); applyTestTag_(tag5); checkTestTags(); }
 
 
 /** Append global skip test tags

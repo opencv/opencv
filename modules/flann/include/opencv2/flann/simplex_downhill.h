@@ -131,7 +131,7 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
         }
 
         if (val_r<vals[0]) {
-            // value is smaller than smalest in simplex
+            // value is smaller than smallest in simplex
 
             // expand some more to see if it drops further
             for (int i=0; i<n; ++i) {

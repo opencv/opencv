@@ -62,7 +62,7 @@ class MultiscaleAnchorGenerator:
 
 def createSSDGraph(modelPath, configPath, outputPath):
     # Nodes that should be kept.
-    keepOps = ['Conv2D', 'BiasAdd', 'Add', 'Relu', 'Relu6', 'Placeholder', 'FusedBatchNorm',
+    keepOps = ['Conv2D', 'BiasAdd', 'Add', 'AddV2', 'Relu', 'Relu6', 'Placeholder', 'FusedBatchNorm',
                'DepthwiseConv2dNative', 'ConcatV2', 'Mul', 'MaxPool', 'AvgPool', 'Identity',
                'Sub', 'ResizeNearestNeighbor', 'Pad', 'FusedBatchNormV3']
 
@@ -151,6 +151,9 @@ def createSSDGraph(modelPath, configPath, outputPath):
         subgraphBatchNorm = ['Add',
             ['Mul', 'input', ['Mul', ['Rsqrt', ['Add', 'moving_variance', 'add_y']], 'gamma']],
             ['Sub', 'beta', ['Mul', 'moving_mean', 'Mul_0']]]
+        subgraphBatchNormV2 = ['AddV2',
+            ['Mul', 'input', ['Mul', ['Rsqrt', ['AddV2', 'moving_variance', 'add_y']], 'gamma']],
+            ['Sub', 'beta', ['Mul', 'moving_mean', 'Mul_0']]]
         # Detect unfused nearest neighbor resize.
         subgraphResizeNN = ['Reshape',
             ['Mul', ['Reshape', 'input', ['Pack', 'shape_1', 'shape_2', 'shape_3', 'shape_4', 'shape_5']],
@@ -177,7 +180,8 @@ def createSSDGraph(modelPath, configPath, outputPath):
         for node in graph_def.node:
             inputs = {}
             fusedNodes = []
-            if checkSubgraph(node, subgraphBatchNorm, inputs, fusedNodes):
+            if checkSubgraph(node, subgraphBatchNorm, inputs, fusedNodes) or \
+               checkSubgraph(node, subgraphBatchNormV2, inputs, fusedNodes):
                 name = node.name
                 node.Clear()
                 node.name = name

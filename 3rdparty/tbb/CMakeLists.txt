@@ -5,10 +5,11 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-ocv_update(OPENCV_TBB_RELEASE "2019_U8")
-ocv_update(OPENCV_TBB_RELEASE_MD5 "7c371d0f62726154d2c568a85697a0ad")
+ocv_update(OPENCV_TBB_RELEASE "v2020.0")
+ocv_update(OPENCV_TBB_RELEASE_MD5 "5858dd01ec007c139d5d178b21e06dae")
 ocv_update(OPENCV_TBB_FILENAME "${OPENCV_TBB_RELEASE}.tar.gz")
-ocv_update(OPENCV_TBB_SUBDIR "tbb-${OPENCV_TBB_RELEASE}")
+string(REGEX REPLACE "^v" "" OPENCV_TBB_RELEASE_ "${OPENCV_TBB_RELEASE}")
+ocv_update(OPENCV_TBB_SUBDIR "tbb-${OPENCV_TBB_RELEASE_}")
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
 ocv_download(FILENAME ${OPENCV_TBB_FILENAME}
@@ -34,10 +35,12 @@ ocv_include_directories("${tbb_src_dir}/include"
 file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
 file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")
 list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
+ocv_list_filterout(lib_srcs "${tbb_src_dir}/src/tbb/tbbbind.cpp")  # hwloc.h requirement
 
 if (WIN32)
   add_definitions(/D__TBB_DYNAMIC_LOAD_ENABLED=0
                   /D__TBB_BUILD=1
+                  /DTBB_SUPPRESS_DEPRECATED_MESSAGES=1
                   /DTBB_NO_LEGACY=1
                   /D_UNICODE
                   /DUNICODE
