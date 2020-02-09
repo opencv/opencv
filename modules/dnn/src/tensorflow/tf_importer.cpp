@@ -1468,6 +1468,8 @@ void TFImporter::populateNet(Net dstNet)
             int end_mask = getLayerAttr(layer, "end_mask").i();
             for (int i = 0; i < num; ++i)
             {
+                if (ends.at<int>(i) < 0)
+                    ends.at<int>(i) -= 1;
                 if (end_mask & (1 << i))
                     ends.at<int>(i) = -1;
                 if (strides.at<int>(i) != 1)
