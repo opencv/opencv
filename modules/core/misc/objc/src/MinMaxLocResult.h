@@ -1,9 +1,7 @@
 //
 //  MinMaxLocResult.h
-//  StitchApp
 //
 //  Created by Giles Payne on 2019/12/28.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #pragma once
@@ -14,7 +12,7 @@
 
 #import <Foundation/Foundation.h>
 
-@class CVPoint;
+@class Point2i;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -22,11 +20,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property double minVal;
 @property double maxVal;
-@property CVPoint* minLoc;
-@property CVPoint* maxLoc;
+@property Point2i* minLoc;
+@property Point2i* maxLoc;
 
 - (instancetype)init;
-- (instancetype)initWithMinval:(double)minVal maxVal:(double)maxVal minLoc:(CVPoint*)minLoc maxLoc:(CVPoint*)maxLoc;
+- (instancetype)initWithMinval:(double)minVal maxVal:(double)maxVal minLoc:(Point2i*)minLoc maxLoc:(Point2i*)maxLoc;
 
 @end
 

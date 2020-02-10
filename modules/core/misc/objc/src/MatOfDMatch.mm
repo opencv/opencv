@@ -7,7 +7,8 @@
 #import "MatOfDMatch.h"
 #import "Range.h"
 #import "DMatch.h"
-#import "CVType.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfDMatch
 
@@ -42,7 +43,7 @@ const int _channels = 4;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
@@ -60,9 +61,9 @@ const int _channels = 4;
 
 - (NSArray<DMatch*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<DMatch*>* ret = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<DMatch*>* ret = [NSMutableArray allocateWithSize:length fillValue:[DMatch new]];
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[DMatch alloc] initWithQueryIdx:data[index * _channels].intValue trainIdx:data[index * _channels + 1].intValue imgIdx:data[index * _channels + 2].intValue distance:data[index * _channels + 3].floatValue];

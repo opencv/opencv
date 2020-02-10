@@ -6,9 +6,10 @@
 
 #import "MatOfKeyPoint.h"
 #import "Range.h"
-#import "CVPoint.h"
+#import "Point2f.h"
 #import "KeyPoint.h"
-#import "CVType.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfKeyPoint
 
@@ -43,7 +44,7 @@ const int _channels = 7;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
@@ -64,9 +65,9 @@ const int _channels = 7;
 
 - (NSArray<KeyPoint*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<KeyPoint*>* ret = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<KeyPoint*>* ret = [NSMutableArray allocateWithSize:length fillValue:[KeyPoint new]];
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[KeyPoint alloc] initWithX:data[index * _channels].floatValue y:data[index * _channels + 1].floatValue size:data[index * _channels + 2].floatValue angle:data[index * _channels + 3].floatValue response:data[index * _channels + 4].floatValue octave:data[index * _channels + 5].intValue classId:data[index * _channels + 6].intValue];

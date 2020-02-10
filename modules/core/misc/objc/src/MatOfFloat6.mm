@@ -7,7 +7,8 @@
 
 #import "MatOfFloat6.h"
 #import "Range.h"
-#import "CVType.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfFloat6
 
@@ -42,7 +43,7 @@ const int _channels = 6;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 

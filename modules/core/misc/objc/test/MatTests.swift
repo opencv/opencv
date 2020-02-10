@@ -24,16 +24,16 @@ class MatTests: OpenCVTestCase {
         let originalroi = roi.clone()
         let adjusted = roi.adjustRoi(top: 2, bottom: 2, left: 2, right: 2)
         try assertMatEqual(adjusted, roi)
-        assertSizeEquals(CVSize(width: 5, height: 6), adjusted.size(), OpenCVTestCase.EPS)
+        assertSizeEquals(Size2i(width: 5, height: 6), adjusted.size())
         XCTAssertEqual(originalroi.type(), adjusted.type())
         XCTAssertTrue(adjusted.isSubmatrix())
         XCTAssertFalse(adjusted.isContinuous())
         
-        let offset = CVPoint()
-        let size = CVSize()
+        let offset = Point2i()
+        let size = Size2i()
         adjusted.locateROI(wholeSize: size, offset: offset)
-        assertPointEquals(CVPoint(x: 5, y: 1), offset, OpenCVTestCase.EPS);
-        assertSizeEquals(gray0.size(), size, OpenCVTestCase.EPS);
+        assertPointEquals(Point2i(x: 5, y: 1), offset);
+        assertSizeEquals(gray0.size(), size);
     }
     
     func testAssignToMat() throws {
@@ -168,7 +168,7 @@ class MatTests: OpenCVTestCase {
     }
 
     func testCreateSizeInt() {
-        let size = CVSize(width: 5, height: 5)
+        let size = Size2i(width: 5, height: 5)
         dst.create(size: size, type: CvType.CV_16U)
 
         XCTAssertEqual(5, dst.rows())
@@ -248,7 +248,7 @@ class MatTests: OpenCVTestCase {
     }
 
     func testEyeSizeInt() {
-        let size = CVSize(width: 5, height: 5)
+        let size = Size2i(width: 5, height: 5)
         let eye = Mat.eye(size: size, type: CvType.CV_32S)
         XCTAssertEqual(5, Core.countNonZero(src: eye))
     }
@@ -469,13 +469,13 @@ class MatTests: OpenCVTestCase {
 
     func testLocateROI() {
         let roi = gray0.submat(rowStart: 3, rowEnd: 5, colStart: 7, colEnd: 10)
-        let offset = CVPoint()
-        let size = CVSize()
+        let offset = Point2i()
+        let size = Size2i()
 
         roi.locateROI(wholeSize: size, offset: offset)
 
-        assertPointEquals(CVPoint(x: 7, y: 3), offset, OpenCVTestCase.EPS)
-        assertSizeEquals(CVSize(width: 10, height: 10), size, OpenCVTestCase.EPS)
+        assertPointEquals(Point2i(x: 7, y: 3), offset)
+        assertSizeEquals(Size2i(width: 10, height: 10), size)
     }
 
     func testMat() {
@@ -557,7 +557,7 @@ class MatTests: OpenCVTestCase {
                      50, 51, 52, 53, 54, 55,
                      60, 61, 62, 63, 64, 65])
 
-        dst = Mat(mat: m, rect: CVRect(x: 1, y: 2, width: 3, height: 4))
+        dst = Mat(mat: m, rect: Rect2i(x: 1, y: 2, width: 3, height: 4))
 
         truth = Mat(rows: 4, cols: 3, type: CvType.CV_32SC1)
         truth!.put(row: 0, col: 0,
@@ -571,13 +571,13 @@ class MatTests: OpenCVTestCase {
     }
 
     func testMatSizeInt() {
-        dst = Mat(size: CVSize(width: 10, height: 10), type: CvType.CV_8U)
+        dst = Mat(size: Size2i(width: 10, height: 10), type: CvType.CV_8U)
 
         XCTAssertFalse(dst.empty())
     }
 
     func testMatSizeIntScalar() throws {
-        dst = Mat(size: CVSize(width: 10, height: 10), type: CvType.CV_32F, scalar: Scalar(255))
+        dst = Mat(size: Size2i(width: 10, height: 10), type: CvType.CV_32F, scalar: Scalar(255))
 
         XCTAssertFalse(dst.empty())
         try assertMatEqual(gray255_32f, dst, OpenCVTestCase.EPS)
@@ -630,7 +630,7 @@ class MatTests: OpenCVTestCase {
     }
 
     func testOnesSizeInt() throws {
-        dst = Mat.ones(size: CVSize(width: 2, height: 2), type: CvType.CV_16S)
+        dst = Mat.ones(size: Size2i(width: 2, height: 2), type: CvType.CV_16S)
         truth = Mat(rows: 2, cols: 2, type: CvType.CV_16S, scalar: Scalar(1))
         try assertMatEqual(truth!, dst)
     }
@@ -977,9 +977,9 @@ class MatTests: OpenCVTestCase {
     }
 
     func testSize() {
-        XCTAssertEqual(CVSize(width: Double(OpenCVTestCase.matSize), height: Double(OpenCVTestCase.matSize)), gray0.size())
+        XCTAssertEqual(Size2i(width: OpenCVTestCase.matSize, height: OpenCVTestCase.matSize), gray0.size())
 
-        XCTAssertEqual(CVSize(width: 3, height: 1), v1.size())
+        XCTAssertEqual(Size2i(width: 3, height: 1), v1.size())
     }
 
     func testStep1() {
@@ -1027,7 +1027,7 @@ class MatTests: OpenCVTestCase {
     }
 
     func testSubmatRect() {
-        let submat = gray255.submat(roi: CVRect(x: 5, y: 5, width: gray255.cols() / 2, height: gray255.rows() / 2))
+        let submat = gray255.submat(roi: Rect2i(x: 5, y: 5, width: gray255.cols() / 2, height: gray255.rows() / 2))
         XCTAssert(submat.isSubmatrix())
         XCTAssertFalse(submat.isContinuous())
 
@@ -1082,7 +1082,7 @@ class MatTests: OpenCVTestCase {
     }
 
     func testZerosSizeInt() throws {
-        dst = Mat.zeros(CVSize(width: 2, height: 2), type: CvType.CV_16S)
+        dst = Mat.zeros(Size2i(width: 2, height: 2), type: CvType.CV_16S)
 
         truth = Mat(rows: 2, cols: 2, type: CvType.CV_16S, scalar: Scalar(0))
         try assertMatEqual(truth!, dst)

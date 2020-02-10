@@ -1,5 +1,5 @@
 {
-    "module_imports": ["CVPoint", "MinMaxLocResult"],
+    "module_imports": ["Point2i", "MinMaxLocResult"],
     "module_objc_h_code": "src/Core.h.objccode.in",
     "module_objc_mm_code": "src/Core.mm.objccode.in",
     "class_ignore_list" : [
@@ -41,7 +41,7 @@
                     "    } else {",
                     "        cv::minMaxLoc(rSrc, &minVal, &maxVal, &minLoc, &maxLoc);",
                     "    }",
-                    "    return [[MinMaxLocResult alloc] initWithMinval:minVal maxVal:maxVal minLoc:[[CVPoint alloc] initWithX:minLoc.x y:minLoc.y] maxLoc:[[CVPoint alloc] initWithX:maxLoc.x y:maxLoc.y]];",
+                    "    return [[MinMaxLocResult alloc] initWithMinval:minVal maxVal:maxVal minLoc:[Point2i fromNative:minLoc] maxLoc:[Point2i fromNative:maxLoc]];",
                     "}",
                     "\n",
                     "+ (MinMaxLocResult*)minMaxLoc:(Mat*)src {",
@@ -76,7 +76,7 @@
     },
     "type_dict" : {
         "Algorithm": {
-            "objc_type": "Feature2D*"
+            "objc_type": "Algorithm*"
         },
         "CvSlice": {
             "objc_type": "Range*"
@@ -97,42 +97,66 @@
         "Mat": {
             "objc_type": "Mat*",
             "to_cpp": "%(n)s.nativeRef",
-            "from_cpp": "[Mat fromNative:%(n)s]"
+            "from_cpp": "[Mat fromNative:%(n)s]",
+            "from_cpp_ptr": "[Mat fromNativePtr:%(n)s]"
         },
         "Moments": {
-            "objc_type": "Moments*"
+            "objc_type": "Moments*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Moments fromNative:%(n)s]"
         },
         "Point": {
-            "objc_type": "CVPoint*",
-            "to_cpp": "cv::Point(%(n)s.nativeRef)"
-        },
-        "Point2d": {
-            "objc_type": "CVPoint*",
-            "to_cpp": "%(n)s.nativeRef"
+            "objc_type": "Point2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point2i fromNative:%(n)s]"
         },
         "Point2f": {
-            "objc_type": "CVPoint*"
+            "objc_type": "Point2f*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point2f fromNative:%(n)s]"
+        },
+        "Point2d": {
+            "objc_type": "Point2d*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point2d fromNative:%(n)s]"
         },
         "Point3d": {
-            "objc_type": "Point3*"
+            "objc_type": "Point3d*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point3d fromNative:%(n)s]"
         },
         "Point3f": {
-            "objc_type": "Point3*"
+            "objc_type": "Point3f*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point3f fromNative:%(n)s]"
         },
-        "Point3i": {
-            "objc_type": "Point3*"
+        "Point3": {
+            "objc_type": "Point3i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Point3i fromNative:%(n)s]"
         },
         "Range": {
             "objc_type": "Range*"
         },
         "Rect": {
-            "objc_type": "CVRect*"
+            "objc_type": "Rect2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Rect2i fromNative:%(n)s]"
+        },
+        "Rect2f": {
+            "objc_type": "Rect2f*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Rect2f fromNative:%(n)s]"
         },
         "Rect2d": {
-            "objc_type": "Rect2d*"
+            "objc_type": "Rect2d*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Rect2d fromNative:%(n)s]"
         },
         "RotatedRect": {
-            "objc_type": "RotatedRect*"
+            "objc_type": "RotatedRect*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[RotatedRect fromNative:%(n)s]"
         },
         "Scalar": {
             "objc_type": "Scalar*",
@@ -140,10 +164,19 @@
             "from_cpp": "[Scalar fromNative:%(n)s]"
         },
         "Size": {
-            "objc_type": "CVSize*"
+            "objc_type": "Size2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Size2i fromNative:%(n)s]"
         },
         "Size2f": {
-            "objc_type": "CVSize*"
+            "objc_type": "Size2f*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Size2f fromNative:%(n)s]"
+        },
+        "Size2d": {
+            "objc_type": "Size2d*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Size2d fromNative:%(n)s]"
         },
         "String": {
             "objc_type": "NSString*",
@@ -154,6 +187,21 @@
             "objc_type": "TermCriteria*",
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[TermCriteria fromNative:%(n)s]"
+        },
+        "Vec4f": {
+            "objc_type": "Float4*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Float4 fromNative:%(n)s]"
+        },
+        "Vec4i": {
+            "objc_type": "Int4*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Int4 fromNative:%(n)s]"
+        },
+        "Vec6f": {
+            "objc_type": "Float6*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Float6 fromNative:%(n)s]"
         },
         "Vec2d": {
             "objc_type": "NSArray<NSNumber*>*"
@@ -168,7 +216,7 @@
             "objc_type": "long"
         },
         "vector_DMatch": {
-            "objc_type": "DMatch",
+            "objc_type": "DMatch*",
             "v_type": "DMatch"
         },
         "vector_KeyPoint": {
@@ -176,60 +224,60 @@
             "v_type": "KeyPoint"
         },
         "vector_Mat": {
-            "objc_type": "Mat",
+            "objc_type": "Mat*",
             "v_type": "Mat"
         },
         "vector_Point": {
-            "objc_type": "CVPoint",
+            "objc_type": "Point2i*",
             "v_type": "Point"
         },
         "vector_Point2f": {
-            "objc_type": "CVPoint",
+            "objc_type": "Point2f*",
             "v_type": "Point2f"
         },
-        "vector_Point3f": {
-            "objc_type": "Point3",
-            "v_type": "Point3f"
-        },
         "vector_Point2d": {
-            "objc_type": "CVPoint",
+            "objc_type": "Point2d*",
             "v_type": "Point2d"
         },
+        "vector_Point3": {
+            "objc_type": "Point3i*",
+            "v_type": "Point"
+        },
+        "vector_Point3f": {
+            "objc_type": "Point3f*",
+            "v_type": "Point3f"
+        },
         "vector_Point3d": {
-            "objc_type": "Point3",
+            "objc_type": "Point3d*",
             "v_type": "Point3d"
         },
-        "vector_Point3i": {
-            "objc_type": "Point3",
-            "v_type": "Point3i"
-        },
         "vector_Rect": {
-            "objc_type": "CVRect",
-            "v_type": "Rect"
+            "objc_type": "Rect2i*",
+            "v_type": "Rect2i"
         },
         "vector_Rect2d": {
-            "objc_type": "Rect2d",
+            "objc_type": "Rect2d*",
             "v_type": "Rect2d"
         },
         "vector_RotatedRect": {
-            "objc_type": "RotatedRect",
+            "objc_type": "RotatedRect*",
             "v_type": "RotatedRect"
         },
         "vector_String": {
-            "objc_type": "NSString",
+            "objc_type": "NSString*",
             "v_type": "String"
         },
         "vector_Vec4f": {
-            "objc_type": "NSNumber*",
-            "v_type": "float"
+            "objc_type": "Float4*",
+            "v_type": "Vec4f"
         },
         "vector_Vec4i": {
-            "objc_type": "NSNumber*",
-            "v_type": "int"
+            "objc_type": "Int4*",
+            "v_type": "Vec4i"
         },
         "vector_Vec6f": {
-            "objc_type": "NSNumber*",
-            "v_type": "float"
+            "objc_type": "Float6*",
+            "v_type": "Vec6f"
         },
         "vector_char": {
             "objc_type": "ByteVector*",
@@ -265,20 +313,20 @@
             "v_v_type": "KeyPoint"
         },
         "vector_vector_Point": {
-            "objc_type": "CVPoint*",
-            "v_v_type": "CVPoint"
+            "objc_type": "Point2i*",
+            "v_v_type": "Point"
         },
         "vector_vector_Point2f": {
-            "objc_type": "CVPoint*",
-            "v_v_type": "CVPoint"
+            "objc_type": "Point2f*",
+            "v_v_type": "Point2f"
         },
         "vector_vector_Point3f": {
-            "objc_type": "Point3*",
-            "v_v_type": "Point3"
+            "objc_type": "Point3f*",
+            "v_v_type": "Point3f"
         },
         "vector_vector_char": {
-            "objc_type": "NSNumber*",
-            "v_v_type": "char"
+            "objc_type": "ByteVector*",
+            "v_type": "ByteVector"
         }
     }
 }

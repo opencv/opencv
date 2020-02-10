@@ -6,7 +6,8 @@
 
 #import "MatOfByte.h"
 #import "Range.h"
-#import "CVType.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfByte
 
@@ -41,7 +42,7 @@ const int _channels = 1;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
@@ -52,7 +53,7 @@ const int _channels = 1;
 
 - (NSArray<NSNumber*>*)toArray {
     int length = [self length];
-    NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:length fillValue:@0.0];
     [self get:0 col:0 data:data];
     return data;
 }

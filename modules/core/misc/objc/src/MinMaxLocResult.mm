@@ -1,21 +1,19 @@
 //
 //  MinMaxLocResult.m
-//  StitchApp
 //
 //  Created by Giles Payne on 2019/12/28.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #import "MinMaxLocResult.h"
-#import "CVPoint.h"
+#import "Point2i.h"
 
 @implementation MinMaxLocResult
 
 - (instancetype)init {
-    return [self initWithMinval:0 maxVal:0 minLoc:[CVPoint new] maxLoc:[CVPoint new]];
+    return [self initWithMinval:0 maxVal:0 minLoc:[Point2i new] maxLoc:[Point2i new]];
 }
 
-- (instancetype)initWithMinval:(double)minVal maxVal:(double)maxVal minLoc:(CVPoint*)minLoc maxLoc:(CVPoint*)maxLoc {
+- (instancetype)initWithMinval:(double)minVal maxVal:(double)maxVal minLoc:(Point2i*)minLoc maxLoc:(Point2i*)maxLoc {
     self = [super init];
     if (self) {
         self.minVal = minVal;

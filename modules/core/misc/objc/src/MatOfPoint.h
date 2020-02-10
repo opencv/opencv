@@ -8,6 +8,8 @@
 
 #import "Mat.h"
 
+@class Point2i;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface MatOfPoint : Mat
@@ -17,12 +19,12 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 
 - (instancetype)initWithMat:(Mat*)mat;
-- (instancetype)initWithArray:(NSArray<CVPoint*>*)array;
+- (instancetype)initWithArray:(NSArray<Point2i*>*)array;
 
 - (void)alloc:(int)elemNumber;
 
-- (void)fromArray:(NSArray<CVPoint*>*)array;
-- (NSArray<CVPoint*>*)toArray;
+- (void)fromArray:(NSArray<Point2i*>*)array;
+- (NSArray<Point2i*>*)toArray;
 - (int)length;
 
 @end

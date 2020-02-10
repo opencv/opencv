@@ -1,15 +1,44 @@
 //
-//  CVPoint.m
+//  Point3d.mm
 //
 //  Created by Giles Payne on 2019/10/09.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#import "Point3.h"
-#import "CVPoint.h"
+#import "Point3d.h"
+#import "Point2d.h"
 #import "CVObjcUtil.h"
 
-@implementation Point3
+@implementation Point3d {
+    cv::Point3d native;
+}
+
+- (double)x {
+    return native.x;
+}
+
+- (void)setX:(double)val {
+    native.x = val;
+}
+
+- (double)y {
+    return native.y;
+}
+
+- (void)setY:(double)val {
+    native.y = val;
+}
+
+- (double)z {
+    return native.z;
+}
+
+- (void)setZ:(double)val {
+    native.z = val;
+}
+
+- (cv::Point3d&)nativeRef {
+    return native;
+}
 
 - (instancetype)init {
     return [self initWithX:0 y:0 z:0];
@@ -25,7 +54,7 @@
     return self;
 }
 
-- (instancetype)initWithPoint:(CVPoint*)point {
+- (instancetype)initWithPoint:(Point2d*)point {
     return [self initWithX:point.x y:point.y z:0];
 }
 
@@ -38,36 +67,30 @@
 }
 
 - (void)set:(NSArray<NSNumber*>*)vals {
-    if (vals != nil) {
-        self.x = vals.count > 0 ? vals[0].doubleValue : 0.0;
-        self.y = vals.count > 1 ? vals[1].doubleValue : 0.0;
-        self.z = vals.count > 2 ? vals[2].doubleValue : 0.0;
-    } else {
-        self.x = 0.0;
-        self.y = 0.0;
-        self.z = 0.0;
-    }
+    self.x = (vals != nil && vals.count > 0) ? vals[0].doubleValue : 0.0;
+    self.y = (vals != nil && vals.count > 1) ? vals[1].doubleValue : 0.0;
+    self.z = (vals != nil && vals.count > 2) ? vals[2].doubleValue : 0.0;
 }
 
-- (Point3*) clone {
-    return [[Point3 alloc] initWithX:self.x y:self.y z:self.z];
+- (Point3d*) clone {
+    return [[Point3d alloc] initWithX:self.x y:self.y z:self.z];
 }
 
-- (double)dot:(Point3*)point {
+- (double)dot:(Point3d*)point {
     return self.x * point.x + self.y * point.y + self.z * point.z;
 }
 
-- (Point3*)cross:(Point3*)point {
-    return [[Point3 alloc] initWithX:(self.y * point.z - self.z * point.y) y:(self.z * point.x - self.x * point.z) z:(self.x * point.y - self.y * point.x)];
+- (Point3d*)cross:(Point3d*)point {
+    return [[Point3d alloc] initWithX:(self.y * point.z - self.z * point.y) y:(self.z * point.x - self.x * point.z) z:(self.x * point.y - self.y * point.x)];
 }
 
 - (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![other isKindOfClass:[Point3 class]]) {
+    } else if (![other isKindOfClass:[Point3d class]]) {
         return NO;
     } else {
-        Point3* point = (Point3*)other;
+        Point3d* point = (Point3d*)other;
         return self.x == point.x && self.y == point.y && self.z == point.z;
     }
 }

@@ -12,26 +12,33 @@
 #endif
 
 #import <Foundation/Foundation.h>
+#import "ObjectVector.h"
 
-@class CVPoint;
+@class Rect2d;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface Point3 : NSObject
+@interface Point2d : NSObject
 
 @property double x;
 @property double y;
-@property double z;
+#ifdef __cplusplus
+@property(readonly) cv::Point2d& nativeRef;
+#endif
 
 - (instancetype)init;
-- (instancetype)initWithX:(double)x y:(double)y z:(double)z;
-- (instancetype)initWithPoint:(CVPoint*)point;
+- (instancetype)initWithX:(double)x y:(double)y;
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
-- (void)set:(NSArray<NSNumber*>*)vals;
-- (Point3*)clone;
-- (double)dot:(Point3*)point;
-- (Point3*)cross:(Point3*)point;
 
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::Point2d&)point;
+- (void)update:(cv::Point2d&)point;
+#endif
+- (Point2d*)clone;
+- (double)dot:(Point2d*)point;
+- (BOOL)inside:(Rect2d*)rect;
+
+- (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
 - (BOOL)isEqual:(nullable id)other;
 - (NSUInteger)hash;
 - (NSString *)description;

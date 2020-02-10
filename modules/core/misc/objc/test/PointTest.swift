@@ -11,11 +11,11 @@ import StitchApp
 
 class PointTest: OpenCVTestCase {
 
-    let p1 = CVPoint(x: 2, y: 2)
-    let p2 = CVPoint(x: 1, y: 1)
+    let p1 = Point2d(x: 2, y: 2)
+    let p2 = Point2d(x: 1, y: 1)
 
     func testClone() {
-        let truth = CVPoint(x: 1, y: 1)
+        let truth = Point2d(x: 1, y: 1)
         let dstPoint = truth.clone()
         XCTAssertEqual(truth, dstPoint);
     }
@@ -38,15 +38,15 @@ class PointTest: OpenCVTestCase {
     }
 
     func testInside() {
-        let rect =  CVRect(x: 0, y: 0, width: 5, height: 3)
+        let rect =  Rect2d(x: 0, y: 0, width: 5, height: 3)
         XCTAssert(p1.inside(rect))
 
-        let p2 = CVPoint(x: 3, y: 3)
+        let p2 = Point2d(x: 3, y: 3)
         XCTAssertFalse(p2.inside(rect))
     }
 
     func testPoint() {
-        let p = CVPoint()
+        let p = Point2d()
 
         XCTAssertNotNil(p)
         XCTAssertEqual(0.0, p.x)
@@ -55,14 +55,14 @@ class PointTest: OpenCVTestCase {
 
     func testPointDoubleArray() {
         let vals:[Double] =  [2, 4]
-        let p = CVPoint(vals: vals as [NSNumber])
+        let p = Point2d(vals: vals as [NSNumber])
 
         XCTAssertEqual(2.0, p.x);
         XCTAssertEqual(4.0, p.y);
     }
 
     func testPointDoubleDouble() {
-        let p1 = CVPoint(x: 7, y: 5)
+        let p1 = Point2d(x: 7, y: 5)
 
         XCTAssertNotNil(p1)
         XCTAssertEqual(7.0, p1.x);
@@ -83,7 +83,7 @@ class PointTest: OpenCVTestCase {
 
     func testToString() {
         let actual = "\(p1)"
-        let expected = "Point {2.000000,2.000000}"
+        let expected = "Point2d {2.000000,2.000000}"
         XCTAssertEqual(expected, actual)
     }
 

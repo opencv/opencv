@@ -75,12 +75,12 @@ class RangeTest: OpenCVTestCase {
 
     func testSet() {
         let vals1:[Double] = []
-        r1.set(vals1 as [NSNumber])
+        r1.set(vals: vals1 as [NSNumber])
         XCTAssertEqual(0, r1.start)
         XCTAssertEqual(0, r1.end)
 
         let vals2 = [6, 10]
-        r2.set(vals2 as [NSNumber])
+        r2.set(vals: vals2 as [NSNumber])
         XCTAssertEqual(6, r2.start)
         XCTAssertEqual(10, r2.end)
     }

@@ -9,6 +9,7 @@
 #endif
 
 #import <Foundation/Foundation.h>
+$importBaseClass
 
 $forwardDeclarations
 
@@ -18,17 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface $objcName : $base
 
-#ifdef __cplusplus
-@property(readonly) cv::$cName* nativePtr;
-@property(readonly) cv::$cName& nativeRef;
-#endif
-
-- (void)dealloc;
-
-#ifdef __cplusplus
-- (instancetype)initWithNativePtr:(cv::$cName*)nativePtr;
-+ (instancetype)fromNative:(cv::$cName*)nativePtr;
-#endif
+$nativePointerHandling
 
 $methodDeclarations
 

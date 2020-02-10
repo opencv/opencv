@@ -1,15 +1,14 @@
 //
-//  CVPoint.m
+//  Point2d.m
 //
 //  Created by Giles Payne on 2019/10/09.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#import "CVPoint.h"
-#import "CVRect.h"
+#import "Point2d.h"
+#import "Rect2d.h"
 #import "CVObjcUtil.h"
 
-@implementation CVPoint {
+@implementation Point2d {
     cv::Point2d native;
 }
 
@@ -55,14 +54,19 @@
 }
 
 + (instancetype)fromNative:(cv::Point2d&)point {
-    return [[CVPoint alloc] initWithX:point.x y:point.y];
+    return [[Point2d alloc] initWithX:point.x y:point.y];
 }
 
-- (CVPoint*) clone {
-    return [[CVPoint alloc] initWithX:self.x y:self.y];
+- (void)update:(cv::Point2d&)point {
+    self.x = point.x;
+    self.y = point.y;
 }
 
-- (double)dot:(CVPoint*)point {
+- (Point2d*) clone {
+    return [[Point2d alloc] initWithX:self.x y:self.y];
+}
+
+- (double)dot:(Point2d*)point {
     return self.x * point.x + self.y * point.y;
 }
 
@@ -74,15 +78,15 @@
 - (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![other isKindOfClass:[CVPoint class]]) {
+    } else if (![other isKindOfClass:[Point2d class]]) {
         return NO;
     } else {
-        CVPoint* point = (CVPoint*)other;
+        Point2d* point = (Point2d*)other;
         return self.x == point.x && self.y == point.y;
     }
 }
 
-- (BOOL)inside:(CVRect *)rect {
+- (BOOL)inside:(Rect2d*)rect {
     return [rect contains:self];
 }
 
@@ -97,7 +101,7 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"Point {%lf,%lf}", self.x, self.y];
+    return [NSString stringWithFormat:@"Point2d {%lf,%lf}", self.x, self.y];
 }
 
 @end

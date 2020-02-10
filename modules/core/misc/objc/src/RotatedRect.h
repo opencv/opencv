@@ -11,9 +11,9 @@
 #import <opencv2/opencv.hpp>
 #endif
 
-@class CVPoint;
-@class CVSize;
-@class CVRect;
+@class Point2f;
+@class Size2f;
+@class Rect2f;
 
 #import <Foundation/Foundation.h>
 
@@ -21,18 +21,24 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RotatedRect : NSObject
 
-@property CVPoint* center;
-@property CVSize* size;
+@property Point2f* center;
+@property Size2f* size;
 @property double angle;
+#ifdef __cplusplus
+@property(readonly) cv::RotatedRect& nativeRef;
+#endif
 
 - (instancetype)init;
-- (instancetype)initWithCenter:(CVPoint*)center size:(CVSize*)size angle:(double)angle;
+- (instancetype)initWithCenter:(Point2f*)center size:(Size2f*)size angle:(double)angle;
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::RotatedRect&)rotatedRect;
+#endif
 
 - (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
 
-- (NSArray<CVPoint*>*)points;
-- (CVRect*)boundingRect;
+- (NSArray<Point2f*>*)points;
+- (Rect2f*)boundingRect;
 
 - (RotatedRect*)clone;
 - (BOOL)isEqual:(nullable id)other;

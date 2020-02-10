@@ -6,8 +6,9 @@
 
 #import "MatOfPoint.h"
 #import "Range.h"
-#import "CVPoint.h"
-#import "CVType.h"
+#import "Point2i.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfPoint
 
@@ -32,7 +33,7 @@ const int _channels = 2;
     return self;
 }
 
-- (instancetype)initWithArray:(NSArray<CVPoint*>*)array {
+- (instancetype)initWithArray:(NSArray<Point2i*>*)array {
     self = [super init];
     if (self) {
         [self fromArray:array];
@@ -42,11 +43,11 @@ const int _channels = 2;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
-- (void)fromArray:(NSArray<CVPoint*>*)array {
+- (void)fromArray:(NSArray<Point2i*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
     for (int index = 0; index < array.count; index++) {
         data[_channels * index] = [NSNumber numberWithInt:array[index].x];
@@ -56,14 +57,14 @@ const int _channels = 2;
     [self put:0 col:0 data:data];
 }
 
-- (NSArray<CVPoint*>*)toArray {
+- (NSArray<Point2i*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<CVPoint*>* ret = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<Point2i*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Point2i new]];
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
-            ret[index] = [[CVPoint alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue];
+            ret[index] = [[Point2i alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue];
         }
     }
     return ret;

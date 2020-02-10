@@ -25,7 +25,9 @@ open class OpenCVTestCase: XCTestCase {
 
     static let matSize: Int32 = 10
     static let EPS = 0.001
+    static let FEPS:Float = 0.001
     static let weakEPS = 0.5
+    static let weakFEPS:Float = 0.5
 
     var dst: Mat = Mat()
     var truth: Mat? = nil
@@ -76,8 +78,8 @@ open class OpenCVTestCase: XCTestCase {
 
     override open func setUp() {
         //Core.setErrorVerbosity(false)
-        Core.randu(grayRnd, low: 0, high: 255)
-        Core.randu(grayRnd_32f, low:0, high: 255)
+        Core.randu(dst: grayRnd, low: 0, high: 255)
+        Core.randu(dst: grayRnd_32f, low:0, high: 255)
         v1.put(row: 0,col: 0, data: [1.0, 3.0, 2.0])
         v2.put(row: 0,col: 0, data: [2.0, 1.0, 3.0])
         
@@ -87,35 +89,75 @@ open class OpenCVTestCase: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
-    func assertMatEqual(_ expected:Mat, _ actual:Mat) throws {
-        try compareMats(expected, actual, true)
+    func assertMatEqual(_ expected:Mat, _ actual:Mat, file: StaticString = #file, line: UInt = #line) throws {
+        try compareMats(expected, actual, true, file:file, line:line)
     }
 
-    func assertMatNotEqual(_ expected:Mat, _ actual:Mat) throws {
-        try compareMats(expected, actual, false)
+    func assertMatNotEqual(_ expected:Mat, _ actual:Mat, file: StaticString = #file, line: UInt = #line) throws {
+        try compareMats(expected, actual, false, file:file, line:line)
     }
 
-    func assertMatEqual(_ expected:Mat, _ actual:Mat, _ eps:Double) throws {
-        try compareMats(expected, actual, eps, true);
+    func assertMatEqual(_ expected:Mat, _ actual:Mat, _ eps:Double, file: StaticString = #file, line: UInt = #line) throws {
+        try compareMats(expected, actual, eps, true, file:file, line:line);
     }
 
-    func assertMatNotEqual(_ expected:Mat, _ actual:Mat, _ eps:Double) throws {
-        try compareMats(expected, actual, eps, false);
-    }
-
-    func assertSizeEquals(_ expected:CVSize,_ actual: CVSize,_ eps: Double) {
-        let msg = "expected:<\(expected)> but was:<\(actual)>"
-        XCTAssertEqual(expected.width, actual.width, accuracy:eps, msg)
-        XCTAssertEqual(expected.height, actual.height, accuracy:eps, msg)
-    }
-
-    func assertPointEquals(_ expected:CVPoint, _ actual: CVPoint, _ eps: Double) {
-        let msg = "expected:<\(expected)> but was:<\(actual)>"
-        XCTAssertEqual(expected.x, actual.x, accuracy:eps, msg)
-        XCTAssertEqual(expected.y, actual.y, accuracy:eps, msg)
+    func assertMatNotEqual(_ expected:Mat, _ actual:Mat, _ eps:Double, file: StaticString = #file, line: UInt = #line) throws {
+        try compareMats(expected, actual, eps, false, file:file, line:line);
     }
     
-    func compareMats(_ expected:Mat, _ actual:Mat, _ isEqualityMeasured:Bool) throws {
+    func assertSizeEquals(_ expected:Size2i,_ actual: Size2i, file: StaticString = #file, line: UInt = #line) {
+        let msg = "expected:<\(expected)> but was:<\(actual)>"
+        XCTAssertEqual(expected.width, actual.width,  msg, file:file, line:line)
+        XCTAssertEqual(expected.height, actual.height,  msg, file:file, line:line)
+    }
+    
+    func assertSize2fEquals(_ expected:Size2f,_ actual: Size2f,_ eps: Float, file: StaticString = #file, line: UInt = #line) {
+        let msg = "expected:<\(expected)> but was:<\(actual)>"
+        XCTAssertEqual(expected.width, actual.width, accuracy:eps, msg, file:file, line:line)
+        XCTAssertEqual(expected.height, actual.height, accuracy:eps, msg, file:file, line:line)
+    }
+    
+    func assertSize2dEquals(_ expected:Size2d,_ actual: Size2d,_ eps: Double, file: StaticString = #file, line: UInt = #line) {
+        let msg = "expected:<\(expected)> but was:<\(actual)>"
+        XCTAssertEqual(expected.width, actual.width, accuracy:eps, msg, file:file, line:line)
+        XCTAssertEqual(expected.height, actual.height, accuracy:eps, msg, file:file, line:line)
+    }
+
+    func assertPointEquals(_ expected:Point2i, _ actual: Point2i, file: StaticString = #file, line: UInt = #line) {
+        let msg = "expected:<\(expected)> but was:<\(actual)>"
+        XCTAssertEqual(expected.x, actual.x, msg, file:file, line:line)
+        XCTAssertEqual(expected.y, actual.y, msg, file:file, line:line)
+    }
+
+    func assertPoint2dEquals(_ expected:Point2d, _ actual: Point2d, _ eps: Double, file: StaticString = #file, line: UInt = #line) {
+        let msg = "expected:<\(expected)> but was:<\(actual)>"
+        XCTAssertEqual(expected.x, actual.x, accuracy:eps, msg, file:file, line:line)
+        XCTAssertEqual(expected.y, actual.y, accuracy:eps, msg, file:file, line:line)
+    }
+    
+    func assertPoint2fEquals(_ expected:Point2f, _ actual: Point2f, _ eps: Float, file: StaticString = #file, line: UInt = #line) {
+        let msg = "expected:<\(expected)> but was:<\(actual)>"
+        XCTAssertEqual(expected.x, actual.x, accuracy:eps, msg, file:file, line:line)
+        XCTAssertEqual(expected.y, actual.y, accuracy:eps, msg, file:file, line:line)
+    }
+
+    func assertScalarEqual(_ expected:Scalar, _ actual:Scalar, _ eps: Double, file: StaticString = #file, line: UInt = #line) {
+        let msg = "expected:<\(expected)> but was:<\(actual)>"
+        XCTAssertEqual(expected.val[0] as! Double, actual.val[0] as! Double, accuracy:eps, msg, file:file, line:line)
+        XCTAssertEqual(expected.val[1] as! Double, actual.val[1] as! Double, accuracy:eps, msg, file:file, line:line)
+        XCTAssertEqual(expected.val[2] as! Double, actual.val[2] as! Double, accuracy:eps, msg, file:file, line:line)
+        XCTAssertEqual(expected.val[3] as! Double, actual.val[3] as! Double, accuracy:eps, msg, file:file, line:line)
+    }
+    
+    func assertArrayEquals(_ expected:[NSNumber], _ actual:[NSNumber], _ eps: Double, file: StaticString = #file, line: UInt = #line) {
+        XCTAssertEqual(expected.count, actual.count, "Arrays have different sizes.", file:file, line:line)
+        
+        for i in 0..<expected.count {
+            XCTAssertEqual(expected[i] as! Double, actual[i] as! Double, accuracy:eps, file:file, line:line)
+        }
+    }
+
+    func compareMats(_ expected:Mat, _ actual:Mat, _ isEqualityMeasured:Bool, file: StaticString = #file, line: UInt = #line) throws {
         if expected.type() != actual.type() || !dimensionsEqual(expected, actual) {
             throw OpenCVTestError.unsupportedOperationError("Incompatible matrices")
         }
@@ -129,30 +171,30 @@ open class OpenCVTestCase: XCTestCase {
         }
 
         let diff = Mat()
-        Core.absdiff(expected, src2: actual, dst: diff);
+        Core.absdiff(src1: expected, src2: actual, dst: diff);
         let reshaped = diff.reshape(channels: 1)
-        let mistakes = Core.countNonZero(reshaped)
+        let mistakes = Core.countNonZero(src: reshaped)
 
         if isEqualityMeasured {
-            XCTAssertTrue(mistakes == 0, "Mats are different in \(mistakes) points")
+            XCTAssertTrue(mistakes == 0, "Mats are different in \(mistakes) points", file:file, line:line)
         } else {
-            XCTAssertFalse(mistakes == 0, "Mats are equal")
+            XCTAssertFalse(mistakes == 0, "Mats are equal", file:file, line:line)
         }
     }
 
-    func compareMats(_ expected: Mat, _ actual:Mat, _ eps:Double, _ isEqualityMeasured:Bool) throws {
+    func compareMats(_ expected: Mat, _ actual:Mat, _ eps:Double, _ isEqualityMeasured:Bool, file: StaticString = #file, line: UInt = #line) throws {
         if expected.type() != actual.type() || !dimensionsEqual(expected, actual) {
             throw OpenCVTestError.unsupportedOperationError("Incompatible matrices")
         }
 
         let diff = Mat()
-        Core.absdiff(expected, src2: actual, dst: diff)
-        let maxDiff = Core.norm(diff, normType: NormTypes.NORM_INF.rawValue)
+        Core.absdiff(src1: expected, src2: actual, dst: diff)
+        let maxDiff = Core.norm(src1: diff, normType: NormTypes.NORM_INF.rawValue)
 
         if isEqualityMeasured {
-            XCTAssertTrue(maxDiff <= eps, "Max difference between expected and actual Mats is \(maxDiff), that bigger than \(eps)")
+            XCTAssertTrue(maxDiff <= eps, "Max difference between expected and actual Mats is \(maxDiff), that bigger than \(eps)", file:file, line:line)
         } else {
-            XCTAssertFalse(maxDiff <= eps, "Max difference between expected and actual Mats is \(maxDiff), that less than \(eps)")
+            XCTAssertFalse(maxDiff <= eps, "Max difference between expected and actual Mats is \(maxDiff), that less than \(eps)", file:file, line:line)
         }
     }
 
@@ -165,6 +207,10 @@ open class OpenCVTestCase: XCTestCase {
         } else {
             return expected.cols() == actual.cols() && expected.rows() == actual.rows();
         }
+    }
+
+    func getMat(_ type:Int32, vals:[NSNumber]) -> Mat {
+        return Mat(rows:OpenCVTestCase.matSize, cols:OpenCVTestCase.matSize, type:type, scalar:Scalar(vals: vals))
     }
 
     func makeMask(_ mat:Mat, vals:[Double] = []) -> Mat {

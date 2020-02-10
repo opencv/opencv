@@ -1,9 +1,7 @@
 //
 //  SizeTest.swift
-//  StitchAppTests
 //
 //  Created by Giles Payne on 2020/01/31.
-//  Copyright © 2020 Xtravision. All rights reserved.
 //
 
 import XCTest
@@ -11,8 +9,8 @@ import StitchApp
 
 class SizeTest: OpenCVTestCase {
 
-    let sz1 = CVSize(width: 10.0, height: 10.0)
-    let sz2 = CVSize(width: -1, height: -1)
+    let sz1 = Size2d(width: 10.0, height: 10.0)
+    let sz2 = Size2d(width: -1, height: -1)
 
     func testArea() {
         let area = sz1.area()
@@ -48,7 +46,7 @@ class SizeTest: OpenCVTestCase {
     }
 
     func testSize() {
-        let dstSize = CVSize()
+        let dstSize = Size2d()
 
         XCTAssertNotNil(dstSize)
         XCTAssertEqual(0, dstSize.width)
@@ -57,7 +55,7 @@ class SizeTest: OpenCVTestCase {
 
     func testSizeDoubleArray() {
         let vals:[Double] = [10, 20]
-        let sz2 = CVSize(vals: vals as [NSNumber])
+        let sz2 = Size2d(vals: vals as [NSNumber])
 
         XCTAssertEqual(10, sz2.width)
         XCTAssertEqual(20, sz2.height)
@@ -71,8 +69,8 @@ class SizeTest: OpenCVTestCase {
     }
 
     func testSizePoint() {
-        let p = CVPoint(x: 2, y: 4)
-        let sz1 = CVSize(point: p)
+        let p = Point2d(x: 2, y: 4)
+        let sz1 = Size2d(point: p)
 
         XCTAssertNotNil(sz1)
         XCTAssertEqual(2.0, sz1.width)
@@ -81,7 +79,7 @@ class SizeTest: OpenCVTestCase {
 
     func testToString() {
         let actual = "\(sz1)"
-        let expected = "Size {10.000000,10.000000}"
+        let expected = "Size2d {10.000000,10.000000}"
         XCTAssertEqual(expected, actual);
     }
 

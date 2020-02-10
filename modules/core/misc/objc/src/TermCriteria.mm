@@ -83,15 +83,9 @@
 #endif
 
 - (void)set:(NSArray<NSNumber*>*)vals {
-    if (vals != nil) {
-        self.type = vals.count > 0 ? vals[0].intValue : 0;
-        self.maxCount = vals.count > 1 ? vals[1].intValue : 0;
-        self.epsilon = vals.count > 2 ? vals[2].doubleValue : 0;
-    } else {
-        self.type = 0;
-        self.maxCount = 0;
-        self.epsilon = 0.0f;
-    }
+    self.type = (vals != nil && vals.count > 0) ? vals[0].intValue : 0;
+    self.maxCount = (vals != nil && vals.count > 1) ? vals[1].intValue : 0;
+    self.epsilon = (vals != nil && vals.count > 2) ? vals[2].doubleValue : 0.0;
 }
 
 - (TermCriteria*)clone {

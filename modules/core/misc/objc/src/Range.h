@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithStart:(int)start end:(int)end;
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
 
-- (void)set:(NSArray<NSNumber*>*)vals;
+- (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
 - (int)size;
 - (BOOL)empty;
 + (Range*)all;

@@ -7,7 +7,8 @@
 #import "MatOfRect2d.h"
 #import "Range.h"
 #import "Rect2d.h"
-#import "CVType.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfRect2d
 
@@ -47,7 +48,7 @@ const int _channels = 4;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
@@ -65,9 +66,9 @@ const int _channels = 4;
 
 - (NSArray<Rect2d*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<Rect2d*>* ret = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<Rect2d*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Rect2d new]];
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[Rect2d alloc] initWithX:data[index * _channels].doubleValue y:data[index * _channels + 1].doubleValue width:data[index * _channels + 2].doubleValue height:data[index * _channels + 3].doubleValue];

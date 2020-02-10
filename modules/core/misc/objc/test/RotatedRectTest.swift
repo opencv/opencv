@@ -12,11 +12,11 @@ import StitchApp
 class RotatedRectTest: OpenCVTestCase {
 
     let angle: Double = 40
-    let center = CVPoint(x: Double(OpenCVTestCase.matSize / 2), y: Double(OpenCVTestCase.matSize / 2))
-    let size = CVSize(width: Double(OpenCVTestCase.matSize / 4), height: Double(OpenCVTestCase.matSize / 2))
+    let center = Point2f(x: Float(OpenCVTestCase.matSize / 2), y: Float(OpenCVTestCase.matSize / 2))
+    let size = Size2f(width: Float(OpenCVTestCase.matSize / 4), height: Float(OpenCVTestCase.matSize / 2))
 
     func testBoundingRect() {
-        let size = CVSize(width: Double(OpenCVTestCase.matSize / 2), height: Double(OpenCVTestCase.matSize / 2));
+        let size = Size2f(width: Float(OpenCVTestCase.matSize / 2), height: Float(OpenCVTestCase.matSize / 2));
         XCTAssertEqual(size.height, size.width);
         let length = size.height;
 
@@ -26,7 +26,7 @@ class RotatedRectTest: OpenCVTestCase {
         let r = rr.boundingRect()
         let halfDiagonal = length * sqrt(2) / 2
 
-        XCTAssert(Double(r.x) == floor(center.x - halfDiagonal) && Double(r.y) == floor(center.y - halfDiagonal))
+        XCTAssert(Float(r.x) == floor(center.x - halfDiagonal) && Float(r.y) == floor(center.y - halfDiagonal))
 
         XCTAssert((r.br().x >= ceil(center.x + halfDiagonal)) && (r.br().y >= ceil(center.y + halfDiagonal)))
 
@@ -44,8 +44,8 @@ class RotatedRectTest: OpenCVTestCase {
     }
 
     func testEqualsObject() {
-        let center2 = CVPoint(x: Double(OpenCVTestCase.matSize / 3), y: Double(OpenCVTestCase.matSize) / 1.5)
-        let size2 = CVSize(width: Double(OpenCVTestCase.matSize / 2), height: Double(OpenCVTestCase.matSize / 4))
+        let center2 = Point2f(x: Float(OpenCVTestCase.matSize / 3), y: Float(OpenCVTestCase.matSize) / 1.5)
+        let size2 = Size2f(width: Float(OpenCVTestCase.matSize / 2), height: Float(OpenCVTestCase.matSize / 4))
         let angle2:Double = 0
 
         let rrect1 = RotatedRect(center: center, size: size, angle: angle)
@@ -92,29 +92,29 @@ class RotatedRectTest: OpenCVTestCase {
 
         XCTAssert(is_p0_irrational && is_p1_irrational && is_p2_irrational && is_p3_irrational)
 
-        XCTAssert(abs((p[0].x + p[2].x) / 2 - center.x) + abs((p[0].y + p[2].y) / 2 - center.y) < OpenCVTestCase.EPS, "Symmetric points 0 and 2")
+        XCTAssert(abs((p[0].x + p[2].x) / 2 - center.x) + abs((p[0].y + p[2].y) / 2 - center.y) < OpenCVTestCase.FEPS, "Symmetric points 0 and 2")
 
-        XCTAssert(abs((p[1].x + p[3].x) / 2 - center.x) + abs((p[1].y + p[3].y) / 2 - center.y) < OpenCVTestCase.EPS, "Symmetric points 1 and 3")
+        XCTAssert(abs((p[1].x + p[3].x) / 2 - center.x) + abs((p[1].y + p[3].y) / 2 - center.y) < OpenCVTestCase.FEPS, "Symmetric points 1 and 3")
 
         XCTAssert(abs((p[1].x - p[0].x) * (p[2].x - p[1].x) +
-            (p[1].y - p[0].y) * (p[2].y - p[1].y)) < OpenCVTestCase.EPS, "Orthogonal vectors 01 and 12")
+            (p[1].y - p[0].y) * (p[2].y - p[1].y)) < OpenCVTestCase.FEPS, "Orthogonal vectors 01 and 12")
 
         XCTAssert(abs((p[2].x - p[1].x) * (p[3].x - p[2].x) +
-            (p[2].y - p[1].y) * (p[3].y - p[2].y)) < OpenCVTestCase.EPS, "Orthogonal vectors 12 and 23");
+            (p[2].y - p[1].y) * (p[3].y - p[2].y)) < OpenCVTestCase.FEPS, "Orthogonal vectors 12 and 23");
 
         XCTAssert(abs((p[3].x - p[2].x) * (p[0].x - p[3].x) +
-            (p[3].y - p[2].y) * (p[0].y - p[3].y)) < OpenCVTestCase.EPS, "Orthogonal vectors 23 and 30")
+            (p[3].y - p[2].y) * (p[0].y - p[3].y)) < OpenCVTestCase.FEPS, "Orthogonal vectors 23 and 30")
 
         XCTAssert(abs((p[0].x - p[3].x) * (p[1].x - p[0].x) +
-            (p[0].y - p[3].y) * (p[1].y - p[0].y)) < OpenCVTestCase.EPS, "Orthogonal vectors 30 and 01")
+            (p[0].y - p[3].y) * (p[1].y - p[0].y)) < OpenCVTestCase.FEPS, "Orthogonal vectors 30 and 01")
 
         XCTAssert(abs((p[1].x - p[0].x) * (p[1].x - p[0].x) +
-            (p[1].y - p[0].y) * (p[1].y - p[0].y) - size.height * size.height) < OpenCVTestCase.EPS, "Length of the vector 01")
+            (p[1].y - p[0].y) * (p[1].y - p[0].y) - size.height * size.height) < OpenCVTestCase.FEPS, "Length of the vector 01")
 
         XCTAssert(abs((p[1].x - p[2].x) * (p[1].x - p[2].x) +
-            (p[1].y - p[2].y) * (p[1].y - p[2].y) - size.width * size.width) < OpenCVTestCase.EPS, "Length of the vector 21")
+            (p[1].y - p[2].y) * (p[1].y - p[2].y) - size.width * size.width) < OpenCVTestCase.FEPS, "Length of the vector 21")
 
-        XCTAssert(abs((p[2].x - p[1].x) / size.width - cos(angle * Double.pi / 180)) < OpenCVTestCase.EPS, "Angle of the vector 21 with the axes");
+        XCTAssert(abs((p[2].x - p[1].x) / size.width - Float(cos(angle * Double.pi / 180))) < OpenCVTestCase.FEPS, "Angle of the vector 21 with the axes");
     }
 
     func testRotatedRect() {
@@ -154,8 +154,8 @@ class RotatedRectTest: OpenCVTestCase {
         r1.set(vals: vals1 as [NSNumber])
 
         XCTAssertEqual(0, r1.angle)
-        assertPointEquals(CVPoint(x: 0, y: 0), r1.center, OpenCVTestCase.EPS)
-        assertSizeEquals(CVSize(width: 0, height: 0), r1.size, OpenCVTestCase.EPS)
+        assertPoint2fEquals(Point2f(x: 0, y: 0), r1.center, OpenCVTestCase.FEPS)
+        assertSize2fEquals(Size2f(width: 0, height: 0), r1.size, OpenCVTestCase.FEPS)
 
         let vals2 = [1, 2, 3, 4, 5]
         let r2 = RotatedRect(center: center, size: size, angle: 40)
@@ -163,13 +163,13 @@ class RotatedRectTest: OpenCVTestCase {
         r2.set(vals: vals2 as [NSNumber])
 
         XCTAssertEqual(5, r2.angle)
-        assertPointEquals(CVPoint(x: 1, y: 2), r2.center, OpenCVTestCase.EPS)
-        assertSizeEquals(CVSize(width: 3, height: 4), r2.size, OpenCVTestCase.EPS)
+        assertPoint2fEquals(Point2f(x: 1, y: 2), r2.center, OpenCVTestCase.FEPS)
+        assertSize2fEquals(Size2f(width: 3, height: 4), r2.size, OpenCVTestCase.FEPS)
     }
 
     func testToString() {
-        let actual = "\(RotatedRect(center: CVPoint(x:1, y:2), size: CVSize(width:10, height:12), angle:4.5))"
-        let expected = "RotatedRect {Point {1.000000,2.000000},Size {10.000000,12.000000},4.500000}"
+        let actual = "\(RotatedRect(center: Point2f(x:1, y:2), size: Size2f(width:10, height:12), angle:4.5))"
+        let expected = "RotatedRect {Point2f {1.000000,2.000000},Size2f {10.000000,12.000000},4.500000}"
         XCTAssertEqual(expected, actual);
     }
 

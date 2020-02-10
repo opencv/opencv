@@ -8,7 +8,7 @@
 
 #import "Mat.h"
 
-@class CVRect;
+@class Rect2i;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -19,12 +19,12 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 
 - (instancetype)initWithMat:(Mat*)mat;
-- (instancetype)initWithArray:(NSArray<CVRect*>*)array;
+- (instancetype)initWithArray:(NSArray<Rect2i*>*)array;
 
 - (void)alloc:(int)elemNumber;
 
-- (void)fromArray:(NSArray<CVRect*>*)array;
-- (NSArray<CVRect*>*)toArray;
+- (void)fromArray:(NSArray<Rect2i*>*)array;
+- (NSArray<Rect2i*>*)toArray;
 - (int)length;
 
 @end

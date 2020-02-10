@@ -1,16 +1,14 @@
 //
-//  CVSize.mm
-//  StitchApp
+//  Size2d.mm
 //
 //  Created by Giles Payne on 2019/10/06.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#import "CVSize.h"
-#import "CVPoint.h"
+#import "Size2d.h"
+#import "Point2d.h"
 #import "CVObjcUtil.h"
 
-@implementation CVSize {
+@implementation Size2d {
     cv::Size2d native;
 }
 
@@ -47,7 +45,7 @@
     return self;
 }
 
-- (instancetype)initWithPoint:(CVPoint*)point {
+- (instancetype)initWithPoint:(Point2d*)point {
     return [self initWithWidth:point.x height:point.y];
 }
 
@@ -60,7 +58,11 @@
 }
  
 + (instancetype)fromNative:(cv::Size2d&)size {
-    return [[CVSize alloc] initWithWidth:size.width height:size.height];
+    return [[Size2d alloc] initWithWidth:size.width height:size.height];
+}
+
++ (instancetype)width:(double)width height:(double)height {
+    return [[Size2d alloc] initWithWidth:width height:height];
 }
 
 - (double)area {
@@ -76,23 +78,22 @@
     self.height = (vals != nil && vals.count > 1) ? vals[1].doubleValue : 0;
 }
 
-- (CVSize*)clone {
-    return [[CVSize alloc] initWithWidth:self.width height:self.height];
+- (Size2d*)clone {
+    return [[Size2d alloc] initWithWidth:self.width height:self.height];
 }
 
 - (BOOL)isEqual:(id)other {
     if (other == self) {
         return YES;
-    } else if (![other isKindOfClass:[CVSize class]]) {
+    } else if (![other isKindOfClass:[Size2d class]]) {
         return NO;
     } else {
-        CVSize* it = (CVSize*)other;
+        Size2d* it = (Size2d*)other;
         return self.width == it.width && self.height == it.height;
     }
 }
 
-- (NSUInteger)hash
-{
+- (NSUInteger)hash {
     int prime = 31;
     uint32_t result = 1;
     int64_t temp = DOUBLE_TO_BITS(self.height);
@@ -103,7 +104,7 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"Size {%lf,%lf}", self.width, self.height];
+    return [NSString stringWithFormat:@"Size2d {%lf,%lf}", self.width, self.height];
 }
 
 @end

@@ -7,8 +7,10 @@
 #pragma once
 
 typedef union { double d; int64_t l; } V64;
+typedef union { float f; int32_t i; } V32;
 
 #define DOUBLE_TO_BITS(x)  ((V64){ .d = x }).l
+#define FLOAT_TO_BITS(x)  ((V32){ .f = x }).i
 
 #ifdef __cplusplus
 #import <vector>
@@ -91,6 +93,6 @@ template <typename CV, typename OBJC> void cv2objc2(std::vector<std::vector<CV>>
 }
 
 #define CV2OBJC2(CV_CLASS, OBJC_CLASS, v, a) \
-    cv2objc2<CV_CLASS, OBJC_CLASS>(v, a, [](CV_CLASS& cv) -> OBJC_CLASS* { return [OBJC_CLASS fromNative:&cv]; })
+    cv2objc2<CV_CLASS, OBJC_CLASS>(v, a, [](CV_CLASS& cv) -> OBJC_CLASS* { return [OBJC_CLASS fromNative:cv]; })
 
 #endif

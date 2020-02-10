@@ -8,7 +8,7 @@
 
 #import "Mat.h"
 
-@class Point3;
+@class Point3f;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -19,12 +19,12 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 
 - (instancetype)initWithMat:(Mat*)mat;
-- (instancetype)initWithArray:(NSArray<Point3*>*)array;
+- (instancetype)initWithArray:(NSArray<Point3f*>*)array;
 
 - (void)alloc:(int)elemNumber;
 
-- (void)fromArray:(NSArray<Point3*>*)array;
-- (NSArray<Point3*>*)toArray;
+- (void)fromArray:(NSArray<Point3f*>*)array;
+- (NSArray<Point3f*>*)toArray;
 - (int)length;
 
 @end

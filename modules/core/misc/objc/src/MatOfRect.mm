@@ -6,8 +6,9 @@
 
 #import "MatOfRect.h"
 #import "Range.h"
-#import "CVRect.h"
-#import "CVType.h"
+#import "Rect2i.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfRect
 
@@ -32,7 +33,7 @@ const int _channels = 4;
     return self;
 }
 
-- (instancetype)initWithArray:(NSArray<CVRect*>*)array {
+- (instancetype)initWithArray:(NSArray<Rect2i*>*)array {
     self = [super init];
     if (self) {
         [self fromArray:array];
@@ -42,11 +43,11 @@ const int _channels = 4;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
-- (void)fromArray:(NSArray<CVRect*>*)array {
+- (void)fromArray:(NSArray<Rect2i*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
     for (int index = 0; index < array.count; index++) {
         data[_channels * index] = [NSNumber numberWithInt:array[index].x];
@@ -58,14 +59,14 @@ const int _channels = 4;
     [self put:0 col:0 data:data];
 }
 
-- (NSArray<CVRect*>*)toArray {
+- (NSArray<Rect2i*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<CVRect*>* ret = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<Rect2i*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Rect2i new]];
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
-            ret[index] = [[CVRect alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue width:data[index * _channels + 2].intValue height:data[index * _channels + 3].intValue];
+            ret[index] = [[Rect2i alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue width:data[index * _channels + 2].intValue height:data[index * _channels + 3].intValue];
         }
     }
     return ret;

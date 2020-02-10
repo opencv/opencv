@@ -21,12 +21,12 @@ class KeyPointTest: OpenCVTestCase {
 
     func testKeyPoint() {
         let keyPoint = KeyPoint()
-        assertPointEquals(CVPoint(x: 0, y: 0), keyPoint.pt, OpenCVTestCase.EPS)
+        assertPoint2fEquals(Point2f(x: 0, y: 0), keyPoint.pt, OpenCVTestCase.FEPS)
     }
 
     func testKeyPointFloatFloatFloat() {
         let keyPoint = KeyPoint(x: x, y: y, size: size)
-        assertPointEquals(CVPoint(x: 1, y: 2), keyPoint.pt, OpenCVTestCase.EPS)
+        assertPoint2fEquals(Point2f(x: 1, y: 2), keyPoint.pt, OpenCVTestCase.FEPS)
     }
 
     func testKeyPointFloatFloatFloatFloat() {
@@ -54,7 +54,7 @@ class KeyPointTest: OpenCVTestCase {
 
         let actual = "\(keyPoint)"
 
-        let expected = "KeyPoint { pt: Point {1.000000,2.000000}, size: 3.000000, angle: 30.000000, response: 2.000000, octace: 1, classId: 1}"
+        let expected = "KeyPoint { pt: Point2f {1.000000,2.000000}, size: 3.000000, angle: 30.000000, response: 2.000000, octave: 1, classId: 1}"
         XCTAssertEqual(expected, actual)
     }
 

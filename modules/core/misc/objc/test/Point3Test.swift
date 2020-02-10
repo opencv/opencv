@@ -11,18 +11,18 @@ import StitchApp
 
 class Point3Test: OpenCVTestCase {
 
-    let p1 = Point3(x: 2, y: 2, z: 2)
-    let p2 = Point3(x: 1, y: 1, z: 1)
+    let p1 = Point3i(x: 2, y: 2, z: 2)
+    let p2 = Point3i(x: 1, y: 1, z: 1)
 
     func testClone() {
-        let truth = Point3(x: 1, y: 1, z: 1)
+        let truth = Point3i(x: 1, y: 1, z: 1)
         let p1 = truth.clone()
         XCTAssertEqual(truth, p1)
     }
 
     func testCross() {
         let dstPoint = p1.cross(p2)
-        let truth = Point3(x: 0, y: 0, z: 0)
+        let truth = Point3i(x: 0, y: 0, z: 0)
         XCTAssertEqual(truth, dstPoint)
     }
 
@@ -44,7 +44,7 @@ class Point3Test: OpenCVTestCase {
     }
 
     func testPoint3() {
-        let p1 = Point3()
+        let p1 = Point3i()
 
         XCTAssertNotNil(p1)
         XCTAssert(0 == p1.x)
@@ -54,7 +54,7 @@ class Point3Test: OpenCVTestCase {
 
     func testPoint3DoubleArray() {
         let vals:[Double] = [1, 2, 3]
-        let p1 = Point3(vals: vals as [NSNumber])
+        let p1 = Point3i(vals: vals as [NSNumber])
 
         XCTAssert(1 == p1.x)
         XCTAssert(2 == p1.y)
@@ -62,7 +62,7 @@ class Point3Test: OpenCVTestCase {
     }
 
     func testPoint3DoubleDoubleDouble() {
-        let p1 = Point3(x: 1, y: 2, z: 3)
+        let p1 = Point3i(x: 1, y: 2, z: 3)
 
         XCTAssertEqual(1, p1.x)
         XCTAssertEqual(2, p1.y)
@@ -70,8 +70,8 @@ class Point3Test: OpenCVTestCase {
     }
 
     func testPoint3Point() {
-        let p = CVPoint(x: 2, y: 3)
-        let p1 = Point3(point: p)
+        let p = Point2i(x: 2, y: 3)
+        let p1 = Point3i(point: p)
 
         XCTAssertEqual(2, p1.x)
         XCTAssertEqual(3, p1.y)
@@ -80,14 +80,14 @@ class Point3Test: OpenCVTestCase {
 
     func testSet() {
         let vals1:[Double] = []
-        p1.set(vals1 as [NSNumber]);
+        p1.set(vals: vals1 as [NSNumber]);
 
         XCTAssertEqual(0, p1.x)
         XCTAssertEqual(0, p1.y)
         XCTAssertEqual(0, p1.z)
 
         let vals2 = [3, 6, 10]
-        p1.set(vals2 as [NSNumber])
+        p1.set(vals: vals2 as [NSNumber])
 
         XCTAssertEqual(3, p1.x)
         XCTAssertEqual(6, p1.y)
@@ -96,7 +96,7 @@ class Point3Test: OpenCVTestCase {
 
     func testToString() {
         let actual = "\(p1)"
-        let expected = "Point3 {2.000000,2.000000,2.000000}"
+        let expected = "Point3i {2,2,2}"
         XCTAssertEqual(expected, actual)
     }
 

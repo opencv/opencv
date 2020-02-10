@@ -10,6 +10,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class Point2f;
+
 @interface MatOfPoint2f : Mat
 
 #ifdef __cplusplus
@@ -17,12 +19,12 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 
 - (instancetype)initWithMat:(Mat*)mat;
-- (instancetype)initWithArray:(NSArray<CVPoint*>*)array;
+- (instancetype)initWithArray:(NSArray<Point2f*>*)array;
 
 - (void)alloc:(int)elemNumber;
 
-- (void)fromArray:(NSArray<CVPoint*>*)array;
-- (NSArray<CVPoint*>*)toArray;
+- (void)fromArray:(NSArray<Point2f*>*)array;
+- (NSArray<Point2f*>*)toArray;
 - (int)length;
 
 @end

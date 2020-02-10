@@ -6,8 +6,9 @@
 
 #import "MatOfPoint3.h"
 #import "Range.h"
-#import "Point3.h"
-#import "CVType.h"
+#import "Point3i.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfPoint3
 
@@ -32,7 +33,7 @@ const int _channels = 3;
     return self;
 }
 
-- (instancetype)initWithArray:(NSArray<Point3*>*)array {
+- (instancetype)initWithArray:(NSArray<Point3i*>*)array {
     self = [super init];
     if (self) {
         [self fromArray:array];
@@ -42,11 +43,11 @@ const int _channels = 3;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
-- (void)fromArray:(NSArray<Point3*>*)array {
+- (void)fromArray:(NSArray<Point3i*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
     for (int index = 0; index < array.count; index++) {
         data[_channels * index] = [NSNumber numberWithInt:array[index].x];
@@ -57,14 +58,14 @@ const int _channels = 3;
     [self put:0 col:0 data:data];
 }
 
-- (NSArray<Point3*>*)toArray {
+- (NSArray<Point3i*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<Point3*>* ret = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<Point3i*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Point3i new]];
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
-            ret[index] = [[Point3 alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue z:data[index * _channels + 2].intValue];
+            ret[index] = [[Point3i alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue z:data[index * _channels + 2].intValue];
         }
     }
     return ret;

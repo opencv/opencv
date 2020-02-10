@@ -7,9 +7,10 @@
 #import "MatOfRotatedRect.h"
 #import "Range.h"
 #import "RotatedRect.h"
-#import "CVPoint.h"
-#import "CVSize.h"
-#import "CVType.h"
+#import "Point2f.h"
+#import "Size2f.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfRotatedRect
 
@@ -44,7 +45,7 @@ const int _channels = 5;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
@@ -64,12 +65,12 @@ const int _channels = 5;
 
 - (NSArray<RotatedRect*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<RotatedRect*>* ret = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<RotatedRect*>* ret = [NSMutableArray allocateWithSize:length fillValue:[RotatedRect new]];
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
-            ret[index] = [[RotatedRect alloc] initWithCenter:[[CVPoint alloc] initWithX:data[index * _channels].floatValue y:data[index * _channels + 1].floatValue] size:[[CVSize alloc] initWithWidth:data[index * _channels + 2].floatValue height:data[index * _channels + 3].floatValue] angle:data[index * _channels + 4].floatValue];
+            ret[index] = [[RotatedRect alloc] initWithCenter:[[Point2f alloc] initWithX:data[index * _channels].floatValue y:data[index * _channels + 1].floatValue] size:[[Size2f alloc] initWithWidth:data[index * _channels + 2].floatValue height:data[index * _channels + 3].floatValue] angle:data[index * _channels + 4].floatValue];
         }
     }
     return ret;

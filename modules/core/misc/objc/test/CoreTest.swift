@@ -390,28 +390,28 @@ class CoreTest: OpenCVTestCase {
     }
 
     func testFillConvexPolyMatListOfPointScalar() {
-        let polyline = [CVPoint(x: 1, y: 1), CVPoint(x: 5, y: 0), CVPoint(x: 6, y: 8), CVPoint(x: 0, y: 9)]
+        let polyline = [Point2i(x: 1, y: 1), Point2i(x: 5, y: 0), Point2i(x: 6, y: 8), Point2i(x: 0, y: 9)]
         dst = gray0.clone()
 
-        Imgproc.fillConvexPoly(dst, pointArray: polyline, color: Scalar(150))
+        Imgproc.fillConvexPoly(img: dst, points: polyline, color: Scalar(150))
 
         XCTAssert(0 < Core.countNonZero(src: dst))
         XCTAssert(dst.total() > Core.countNonZero(src: dst))
     }
 
     func testFillConvexPolyMatListOfPointScalarIntInt() {
-        let polyline1 = [CVPoint(x: 2, y: 1), CVPoint(x: 5, y: 1), CVPoint(x: 5, y: 7), CVPoint(x: 2, y: 7)]
-        let polyline2 = [CVPoint(x: 4, y: 2), CVPoint(x: 10, y: 2), CVPoint(x: 10, y: 14), CVPoint(x: 4, y: 14)]
+        let polyline1 = [Point2i(x: 2, y: 1), Point2i(x: 5, y: 1), Point2i(x: 5, y: 7), Point2i(x: 2, y: 7)]
+        let polyline2 = [Point2i(x: 4, y: 2), Point2i(x: 10, y: 2), Point2i(x: 10, y: 14), Point2i(x: 4, y: 14)]
 
         // current implementation of fixed-point version of fillConvexPoly
         // requires image to be at least 2-pixel wider in each direction than
         // contour
-        Imgproc.fillConvexPoly(gray0, pointArray: polyline1, color: colorWhite, lineType: LineTypes.LINE_8.rawValue, shift: 0)
+        Imgproc.fillConvexPoly(img: gray0, points: polyline1, color: colorWhite, lineType: LineTypes.LINE_8.rawValue, shift: 0)
 
         XCTAssert(0 < Core.countNonZero(src: gray0))
         XCTAssert(gray0.total() > Core.countNonZero(src: gray0))
 
-        Imgproc.fillConvexPoly(gray0, pointArray: polyline2, color: colorBlack, lineType: LineTypes.LINE_8.rawValue, shift: 1)
+        Imgproc.fillConvexPoly(img: gray0, points: polyline2, color: colorBlack, lineType: LineTypes.LINE_8.rawValue, shift: 1)
 
         XCTAssertEqual(0, Core.countNonZero(src: gray0))
     }
@@ -419,10 +419,10 @@ class CoreTest: OpenCVTestCase {
     func testFillPolyMatListOfListOfPointScalar() throws {
         let matSize = 10;
         let gray0 = Mat.zeros(Int32(matSize), cols: Int32(matSize), type: CvType.CV_8U)
-        let polyline = [CVPoint(x: 1, y: 4), CVPoint(x: 1, y: 8), CVPoint(x: 4, y: 1), CVPoint(x: 7, y: 8), CVPoint(x: 7, y: 4)]
+        let polyline = [Point2i(x: 1, y: 4), Point2i(x: 1, y: 8), Point2i(x: 4, y: 1), Point2i(x: 7, y: 8), Point2i(x: 7, y: 4)]
         let polylines = [polyline]
 
-        Imgproc.fillPoly(gray0, pointArrayArray: polylines, color: Scalar(1))
+        Imgproc.fillPoly(img: gray0, pts: polylines, color: Scalar(1))
 
         let truth =
             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -443,17 +443,17 @@ class CoreTest: OpenCVTestCase {
     }
 
     func testFillPolyMatListOfListOfPointScalarIntIntPoint() {
-        let polyline1 = [CVPoint(x: 1, y: 4), CVPoint(x: 1, y: 8), CVPoint(x: 4, y: 1), CVPoint(x: 7, y: 8), CVPoint(x: 7, y: 4)]
-        let polyline2 = [CVPoint(x: 0, y: 3), CVPoint(x: 0, y: 7), CVPoint(x: 3, y: 0), CVPoint(x: 6, y: 7), CVPoint(x: 6, y: 3)]
+        let polyline1 = [Point2i(x: 1, y: 4), Point2i(x: 1, y: 8), Point2i(x: 4, y: 1), Point2i(x: 7, y: 8), Point2i(x: 7, y: 4)]
+        let polyline2 = [Point2i(x: 0, y: 3), Point2i(x: 0, y: 7), Point2i(x: 3, y: 0), Point2i(x: 6, y: 7), Point2i(x: 6, y: 3)]
 
         let polylines1 = [polyline1]
         let polylines2 = [polyline2]
 
-        Imgproc.fillPoly(gray0, pointArrayArray: polylines1, color: Scalar(1), lineType: LineTypes.LINE_8.rawValue, shift: 0, offset: CVPoint(x: 0, y: 0))
+        Imgproc.fillPoly(img: gray0, pts: polylines1, color: Scalar(1), lineType: LineTypes.LINE_8.rawValue, shift: 0, offset: Point2i(x: 0, y: 0))
 
         XCTAssert(0 < Core.countNonZero(src: gray0))
 
-        Imgproc.fillPoly(gray0, pointArrayArray: polylines2, color: Scalar(0), lineType: LineTypes.LINE_8.rawValue, shift: 0, offset: CVPoint(x: 1, y: 1))
+        Imgproc.fillPoly(img: gray0, pts: polylines2, color: Scalar(0), lineType: LineTypes.LINE_8.rawValue, shift: 0, offset: Point2i(x: 1, y: 1))
 
         XCTAssertEqual(0, Core.countNonZero(src: gray0))
     }
@@ -721,37 +721,37 @@ class CoreTest: OpenCVTestCase {
     
     func testLineMatPointPointScalar() {
         let nPoints = min(gray0.cols(), gray0.rows())
-        let point1 = CVPoint(x: 0, y: 0)
-        let point2 = CVPoint(x: Double(nPoints), y: Double(nPoints))
+        let point1 = Point2i(x: 0, y: 0)
+        let point2 = Point2i(x: nPoints, y: nPoints)
         let color = Scalar(255)
 
-        Imgproc.line(gray0, point1: point1, point2: point2, scalar: color)
+        Imgproc.line(img: gray0, pt1: point1, pt2: point2, color: color)
 
         XCTAssert(nPoints == Core.countNonZero(src: gray0))
     }
 
     func testLineMatPointPointScalarInt() {
         let nPoints = min(gray0.cols(), gray0.rows())
-        let point1 = CVPoint(x: 0, y: 0)
-        let point2 = CVPoint(x: Double(nPoints), y: Double(nPoints))
+        let point1 = Point2i(x: 0, y: 0)
+        let point2 = Point2i(x: nPoints, y: nPoints)
 
-        Imgproc.line(gray0, point1: point1, point2: point2, scalar: colorWhite, thickness: 1)
+        Imgproc.line(img: gray0, pt1: point1, pt2: point2, color: colorWhite, thickness: 1)
 
         XCTAssert(nPoints == Core.countNonZero(src: gray0))
     }
 
     func testLineMatPointPointScalarIntIntInt() {
         let nPoints = min(gray0.cols(), gray0.rows())
-        let point1 = CVPoint(x: 3, y: 4)
-        let point2 = CVPoint(x: Double(nPoints), y: Double(nPoints))
-        let point1_4 = CVPoint(x: 3 * 4, y: 4 * 4)
-        let point2_4 = CVPoint(x: Double(nPoints * 4), y: Double(nPoints * 4))
+        let point1 = Point2i(x: 3, y: 4)
+        let point2 = Point2i(x: nPoints, y: nPoints)
+        let point1_4 = Point2i(x: 3 * 4, y: 4 * 4)
+        let point2_4 = Point2i(x: nPoints * 4, y: nPoints * 4)
 
-        Imgproc.line(gray0, point1: point2, point2: point1, scalar: colorWhite, thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 0)
+        Imgproc.line(img: gray0, pt1: point2, pt2: point1, color: colorWhite, thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 0)
 
         XCTAssertFalse(0 == Core.countNonZero(src: gray0))
 
-        Imgproc.line(gray0, point1: point2_4, point2: point1_4, scalar: colorBlack, thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 2)
+        Imgproc.line(img: gray0, pt1: point2_4, pt2: point1_4, color: colorBlack, thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 2)
 
         XCTAssertEqual(0, Core.countNonZero(src: gray0))
     }
@@ -905,18 +905,18 @@ class CoreTest: OpenCVTestCase {
     func testMinMaxLocMat() {
         let minVal:Double = 1
         let maxVal:Double = 10
-        let minLoc = CVPoint(x: Double(gray3.cols() / 4), y: Double(gray3.rows() / 2))
-        let maxLoc = CVPoint(x: Double(gray3.cols() / 2), y: Double(gray3.rows() / 4))
+        let minLoc = Point2i(x: gray3.cols() / 4, y: gray3.rows() / 2)
+        let maxLoc = Point2i(x: gray3.cols() / 2, y: gray3.rows() / 4)
         let gray3copy = gray3.clone()
-        gray3copy.put(row: Int32(minLoc.y), col: Int32(minLoc.x), data: [minVal] as [NSNumber])
-        gray3copy.put(row: Int32(maxLoc.y), col: Int32(maxLoc.x), data: [maxVal] as [NSNumber])
+        gray3copy.put(row: minLoc.y, col: minLoc.x, data: [minVal] as [NSNumber])
+        gray3copy.put(row: maxLoc.y, col: maxLoc.x, data: [maxVal] as [NSNumber])
 
         let mmres = Core.minMaxLoc(gray3copy)
 
         XCTAssertEqual(minVal, mmres.minVal)
         XCTAssertEqual(maxVal, mmres.maxVal)
-        assertPointEquals(minLoc, mmres.minLoc, OpenCVTestCase.EPS)
-        assertPointEquals(maxLoc, mmres.maxLoc, OpenCVTestCase.EPS)
+        assertPointEquals(minLoc, mmres.minLoc)
+        assertPointEquals(maxLoc, mmres.maxLoc)
     }
 
     func testMinMaxLocMatMat() {
@@ -932,8 +932,8 @@ class CoreTest: OpenCVTestCase {
 
         XCTAssertEqual(4.0, res.minVal)
         XCTAssertEqual(130.0, res.maxVal)
-        assertPointEquals(CVPoint(x: 1, y: 2), res.minLoc, OpenCVTestCase.EPS)
-        assertPointEquals(CVPoint(x: 3, y: 1), res.maxLoc, OpenCVTestCase.EPS)
+        assertPointEquals(Point2i(x: 1, y: 2), res.minLoc)
+        assertPointEquals(Point2i(x: 3, y: 1), res.maxLoc)
     }
 
     func testMixChannels() throws {
@@ -1334,48 +1334,48 @@ class CoreTest: OpenCVTestCase {
     }
 
     func testRectangleMatPointPointScalar() {
-        let bottomRight = CVPoint(x: Double(gray0.cols() / 2), y: Double(gray0.rows() / 2))
-        let topLeft = CVPoint(x: 0, y: 0)
+        let bottomRight = Point2i(x: gray0.cols() / 2, y: gray0.rows() / 2)
+        let topLeft = Point2i(x: 0, y: 0)
         let color = Scalar(128)
 
-        Imgproc.rectangle(gray0, point1: bottomRight, point2: topLeft, color: color)
+        Imgproc.rectangle(img: gray0, pt1: bottomRight, pt2: topLeft, color: color)
 
         XCTAssert(0 != Core.countNonZero(src: gray0))
     }
 
     func testRectangleMatPointPointScalarInt() {
-        let bottomRight = CVPoint(x: Double(gray0.cols()), y: Double(gray0.rows()))
-        let topLeft = CVPoint(x: 0, y: 0)
+        let bottomRight = Point2i(x: gray0.cols(), y: gray0.rows())
+        let topLeft = Point2i(x: 0, y: 0)
         let color = Scalar(128)
 
-        Imgproc.rectangle(gray0, point1: bottomRight, point2: topLeft, color: color, thickness: 2)
-        Imgproc.rectangle(gray0, point1: bottomRight, point2: topLeft, color: colorBlack)
+        Imgproc.rectangle(img: gray0, pt1: bottomRight, pt2: topLeft, color: color, thickness: 2)
+        Imgproc.rectangle(img: gray0, pt1: bottomRight, pt2: topLeft, color: colorBlack)
 
         XCTAssert(0 != Core.countNonZero(src: gray0))
     }
 
     func testRectangleMatPointPointScalarIntInt() {
-        let bottomRight = CVPoint(x: Double(gray0.cols() / 2), y: Double(gray0.rows() / 2))
-        let topLeft = CVPoint(x: 0, y: 0)
+        let bottomRight = Point2i(x: gray0.cols() / 2, y: gray0.rows() / 2)
+        let topLeft = Point2i(x: 0, y: 0)
         let color = Scalar(128)
 
-        Imgproc.rectangle(gray0, point1: bottomRight, point2: topLeft, color: color, thickness: 2, lineType: LineTypes.LINE_AA.rawValue, shift: 0)
-        Imgproc.rectangle(gray0, point1: bottomRight, point2: topLeft, color: colorBlack, thickness: 2, lineType: LineTypes.LINE_4.rawValue, shift: 0)
+        Imgproc.rectangle(img: gray0, pt1: bottomRight, pt2: topLeft, color: color, thickness: 2, lineType: LineTypes.LINE_AA.rawValue, shift: 0)
+        Imgproc.rectangle(img: gray0, pt1: bottomRight, pt2: topLeft, color: colorBlack, thickness: 2, lineType: LineTypes.LINE_4.rawValue, shift: 0)
 
         XCTAssert(0 != Core.countNonZero(src: gray0))
     }
 
     func testRectangleMatPointPointScalarIntIntInt() {
-        let bottomRight1 = CVPoint(x: Double(gray0.cols()), y: Double(gray0.rows()))
-        let bottomRight2 = CVPoint(x: Double(gray0.cols() / 2), y: Double(gray0.rows() / 2))
-        let topLeft = CVPoint(x: 0, y: 0)
+        let bottomRight1 = Point2i(x: gray0.cols(), y: gray0.rows())
+        let bottomRight2 = Point2i(x: gray0.cols() / 2, y: gray0.rows() / 2)
+        let topLeft = Point2i(x: 0, y: 0)
         let color = Scalar(128)
 
-        Imgproc.rectangle(gray0, point1: bottomRight1, point2: topLeft, color: color, thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 1)
+        Imgproc.rectangle(img: gray0, pt1: bottomRight1, pt2: topLeft, color: color, thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 1)
 
         XCTAssert(0 != Core.countNonZero(src: gray0))
 
-        Imgproc.rectangle(gray0, point1: bottomRight2, point2: topLeft, color: colorBlack, thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 0)
+        Imgproc.rectangle(img: gray0, pt1: bottomRight2, pt2: topLeft, color: colorBlack, thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 0)
 
         XCTAssertEqual(0, Core.countNonZero(src: gray0))
     }

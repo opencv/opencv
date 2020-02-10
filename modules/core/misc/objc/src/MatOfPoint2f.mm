@@ -6,8 +6,9 @@
 
 #import "MatOfPoint2f.h"
 #import "Range.h"
-#import "CVPoint.h"
-#import "CVType.h"
+#import "Point2f.h"
+#import "CvType.h"
+#import "ArrayUtil.h"
 
 @implementation MatOfPoint2f
 
@@ -32,7 +33,7 @@ const int _channels = 2;
     return self;
 }
 
-- (instancetype)initWithArray:(NSArray<CVPoint*>*)array {
+- (instancetype)initWithArray:(NSArray<Point2f*>*)array {
     self = [super init];
     if (self) {
         [self fromArray:array];
@@ -42,11 +43,11 @@ const int _channels = 2;
 
 - (void)alloc:(int)elemNumber {
     if (elemNumber>0) {
-        [super create:elemNumber cols:1 type:[CVType makeType:_depth channels:_channels]];
+        [super create:elemNumber cols:1 type:[CvType makeType:_depth channels:_channels]];
     }
 }
 
-- (void)fromArray:(NSArray<CVPoint*>*)array {
+- (void)fromArray:(NSArray<Point2f*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
     for (int index = 0; index < array.count; index++) {
         data[_channels * index] = [NSNumber numberWithFloat:array[index].x];
@@ -56,14 +57,14 @@ const int _channels = 2;
     [self put:0 col:0 data:data];
 }
 
-- (NSArray<CVPoint*>*)toArray {
+- (NSArray<Point2f*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<CVPoint*>* ret = [[NSMutableArray alloc] initWithCapacity:length];
+    NSMutableArray<Point2f*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Point2f new]];
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:length];
+        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
-            ret[index] = [[CVPoint alloc] initWithX:data[index * _channels].floatValue y:data[index * _channels + 1].floatValue];
+            ret[index] = [[Point2f alloc] initWithX:data[index * _channels].floatValue y:data[index * _channels + 1].floatValue];
         }
     }
     return ret;

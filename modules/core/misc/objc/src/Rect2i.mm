@@ -6,12 +6,12 @@
 //  Copyright © 2019 Xtravision. All rights reserved.
 //
 
-#import "CVRect.h"
-#import "CVPoint.h"
-#import "CVSize.h"
+#import "Rect2i.h"
+#import "Point2i.h"
+#import "Size2i.h"
 
-@implementation CVRect {
-    cv::Rect native;
+@implementation Rect2i {
+    cv::Rect2i native;
 }
 
 - (int)x {
@@ -65,7 +65,7 @@
     return [self initWithX:0 y:0 width:0 height:0];
 }
 
-- (instancetype)initWithPoint:(CVPoint*)point1 point:(CVPoint*)point2 {
+- (instancetype)initWithPoint:(Point2i*)point1 point:(Point2i*)point2 {
     int x = (point1.x < point2.x ? point1.x : point2.x);
     int y = (point1.y < point2.y ? point1.y : point2.y);
     int width = (point1.x > point2.x ? point1.x : point2.x) - x;
@@ -73,7 +73,7 @@
     return [self initWithX:x y:y width:width height:height];
 }
 
-- (instancetype)initWithPoint:(CVPoint*)point size:(CVSize*)size {
+- (instancetype)initWithPoint:(Point2i*)point size:(Size2i*)size {
     return [self initWithX:point.x y:point.y width:size.width height:size.height];
 }
 
@@ -86,23 +86,23 @@
 }
 
 + (instancetype)fromNative:(cv::Rect&)rect {
-    return [[CVRect alloc] initWithX:rect.x y:rect.y width:rect.width height:rect.height];
+    return [[Rect2i alloc] initWithX:rect.x y:rect.y width:rect.width height:rect.height];
 }
 
-- (CVRect*)clone {
-    return [[CVRect alloc] initWithX:self.x y:self.y width:self.width height:self.height];
+- (Rect2i*)clone {
+    return [[Rect2i alloc] initWithX:self.x y:self.y width:self.width height:self.height];
 }
 
-- (CVPoint *)tl {
-    return [[CVPoint alloc] initWithX:self.x y:self.y];
+- (Point2i*)tl {
+    return [[Point2i alloc] initWithX:self.x y:self.y];
 }
 
-- (CVPoint *)br {
-    return [[CVPoint alloc] initWithX:self.x + self.width y:self.y + self.height];
+- (Point2i*)br {
+    return [[Point2i alloc] initWithX:self.x + self.width y:self.y + self.height];
 }
 
-- (CVSize *)size {
-    return [[CVSize alloc] initWithWidth:self.width height:self.height];
+- (Size2i*)size {
+    return [[Size2i alloc] initWithWidth:self.width height:self.height];
 }
 
 - (double)area {
@@ -113,7 +113,7 @@
     return self.width <= 0 || self.height <= 0;
 }
 
-- (BOOL)contains:(CVPoint*)point {
+- (BOOL)contains:(Point2i*)point {
     return self.x <= point.x && point.x < self.x + self.width && self.y <= point.y && point.y < self.y + self.height;
 }
 
@@ -127,10 +127,10 @@
 - (BOOL)isEqual:(id)other{
     if (other == self) {
         return YES;
-    } else if (![other isKindOfClass:[CVRect class]]) {
+    } else if (![other isKindOfClass:[Rect2i class]]) {
         return NO;
     } else {
-        CVRect* rect = (CVRect*)other;
+        Rect2i* rect = (Rect2i*)other;
         return self.x == rect.x && self.y == rect.y && self.width == rect.width && self.height == rect.height;
     }
 }
@@ -146,7 +146,7 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"CVRect {%d,%d,%d,%d}", self.x, self.y, self.width, self.height];
+    return [NSString stringWithFormat:@"Rect2i {%d,%d,%d,%d}", self.x, self.y, self.width, self.height];
 }
 
 @end

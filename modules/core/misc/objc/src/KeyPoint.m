@@ -6,7 +6,7 @@
 //
 
 #import "KeyPoint.h"
-#import "CVPoint.h"
+#import "Point2f.h"
 
 @implementation KeyPoint
 
@@ -17,7 +17,7 @@
 - (instancetype)initWithX:(float)x y:(float)y size:(float)size angle:(float)angle response:(float)response octave:(int)octave classId:(int)classId {
     self = [super init];
     if (self != nil) {
-        self.pt = [[CVPoint alloc] initWithX:x y:y];
+        self.pt = [[Point2f alloc] initWithX:x y:y];
         self.size = size;
         self.angle = angle;
         self.response = response;
@@ -44,7 +44,7 @@
 }
 
 - (NSString*)description {
-    return [NSString stringWithFormat:@"KeyPoint { pt: %@, size: %f, angle: %f, response: %f, octace: %d, classId: %d}", self.pt.description, self.size, self.angle, self.response, self.octave, self.classId];
+    return [NSString stringWithFormat:@"KeyPoint { pt: %@, size: %f, angle: %f, response: %f, octave: %d, classId: %d}", self.pt.description, self.size, self.angle, self.response, self.octave, self.classId];
 }
 
 @end
