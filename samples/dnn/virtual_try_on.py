@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 '''
 You can download the Geometric Matching Module model from https://drive.google.com/file/d/1oBnM9R-LgH0APkwxOiEUbFqbKArh0ZcR/view?usp=sharing
-You can download the Try-On Module model from https://drive.google.com/file/d/1oBnM9R-LgH0APkwxOiEUbFqbKArh0ZcR/view?usp=sharing
+You can download the Try-On Module model from https://drive.google.com/file/d/1czKbtPlFzE3-CN7lHsUNsgvKXLVi244c/view?usp=sharing
 You can download the cloth segmentation model from https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0
 You can find the OpenPose proto in opencv_extra/testdata/dnn/openpose_pose_coco.prototxt
 and get .caffemodel using opencv_extra/testdata/dnn/download_models.py
 '''
 
 import argparse
-import math
 import numpy as np
 import cv2 as cv
 
@@ -54,19 +53,18 @@ def get_pose_map(image_path, proto_path, model_path, backend, target, height=256
     out = net.forward()
 
     threshold = 0.1
-    pose_map = np.zeros((height, width, out.shape[1] - 1))
+    _, out_c, out_h, out_w = out.shape
+    pose_map = np.zeros((height, width, out_c - 1))
     # last label: Background
     for i in range(0, out.shape[1] - 1):
         heatMap = out[0, i, :, :]
-        keypoint = np.zeros((height, width, 1))
+        keypoint = np.full((height, width), -1)
         _, conf, _, point = cv.minMaxLoc(heatMap)
-        x = (width * point[0]) / out.shape[3]
-        y = (height * point[1]) / out.shape[2]
-        x, y = int(x), int(y)
+        x = width * point[0] // out_w
+        y = height * point[1] // out_h
         if conf > threshold and x > 0 and y > 0:
-            cv.rectangle(keypoint, (x - radius, y - radius), (x + radius, y + radius), (255, 255, 255), cv.FILLED)
-        keypoint[:, :, 0] = (keypoint[:, :, 0] - 127.5) / 127.5
-        pose_map[:, :, i] = keypoint.reshape(height, width)
+            keypoint[y - radius:y + radius, x - radius:x + radius] = 1
+        pose_map[:, :, i] = keypoint
 
     pose_map = pose_map.transpose(2, 0, 1)
     return pose_map
@@ -75,7 +73,7 @@ def get_pose_map(image_path, proto_path, model_path, backend, target, height=256
 class BilinearFilter(object):
     def precompute_coeffs(self, inSize, outSize):
         filterscale = max(1.0, inSize / outSize)
-        ksize = math.ceil(filterscale) * 2 + 1
+        ksize = np.ceil(filterscale) * 2 + 1
 
         kk = np.zeros(shape=(outSize * ksize, ), dtype=np.float32)
         bounds = np.empty(shape=(outSize * 2, ), dtype=np.int32)
@@ -159,10 +157,8 @@ def prepare_agnostic(segm_image, image_name, pose_map, height=256, width=192):
                     pose_shape[r, c] = 255
 
     input_image = cv.imread(image_name)
-    input_image = cv.resize(input_image, (width, height), cv.INTER_LINEAR)
-    input_image = cv.cvtColor(input_image, cv.COLOR_BGR2RGB)
-    input_image = (input_image - 127.5) / 127.5
-    input_image = input_image.transpose(2, 0, 1)
+    input_image = cv.dnn.blobFromImage(image, 1.0 / 127.5, (width, height), mean=(127.5, 127.5, 127.5), swapRB=True)
+    input_image = input_image.squeeze(0)
 
     img_head = input_image * phead - (1 - phead)
 
