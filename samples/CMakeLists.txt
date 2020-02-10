@@ -45,7 +45,7 @@ if(INSTALL_PYTHON_EXAMPLES)
   add_subdirectory(python)
 endif()
 
-ocv_install_example_src("." CMakeLists.txt)
+ocv_install_example_src("." CMakeLists.txt samples_utils.cmake)
 if(INSTALL_C_EXAMPLES)
   install(DIRECTORY data DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}" COMPONENT samples_data)
 endif()

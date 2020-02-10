@@ -460,6 +460,9 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
 
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(9, 7) << 0, 7,  0.952983f, 0.614622f, 0.150257f, 0.901369f, 0.289251f,  // a truck
                                     0, 1,  0.987908f, 0.150913f, 0.221933f, 0.742255f, 0.74626f,   // a bicycle
@@ -554,6 +557,11 @@ TEST_P(Test_Darknet_layers, reorg)
     testDarknetLayer("reorg");
 }
 
+TEST_P(Test_Darknet_layers, maxpool)
+{
+    testDarknetLayer("maxpool");
+}
+
 TEST_P(Test_Darknet_layers, convolutional)
 {
     if (target == DNN_TARGET_MYRIAD)
@@ -561,6 +569,13 @@ TEST_P(Test_Darknet_layers, convolutional)
         default_l1 = 0.01f;
     }
     testDarknetLayer("convolutional", true);
+}
+
+TEST_P(Test_Darknet_layers, connected)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testDarknetLayer("connected", true);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());

@@ -25,6 +25,16 @@ if(WITH_IPP)
     elseif(ANDROID AND NOT OPENCV_SKIP_ANDROID_IPP_FIX_2)
       set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bsymbolic ${CMAKE_SHARED_LINKER_FLAGS}")
     endif()
+
+    if(OPENCV_FORCE_IPP_EXCLUDE_LIBS
+        OR (HAVE_IPP_ICV
+            AND UNIX AND NOT ANDROID AND NOT APPLE
+            AND (CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        )
+        AND NOT OPENCV_SKIP_IPP_EXCLUDE_LIBS
+    )
+      set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,libippicv.a -Wl,--exclude-libs,libippiw.a ${CMAKE_SHARED_LINKER_FLAGS}")
+    endif()
   endif()
 endif()
 

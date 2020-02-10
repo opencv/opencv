@@ -148,6 +148,7 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         else
         {
             const char* val = tensor_proto.raw_data().c_str();
+#if CV_STRONG_ALIGNMENT
             // Aligned pointer is required: https://github.com/opencv/opencv/issues/16373
             // this doesn't work: typedef int64_t CV_DECL_ALIGNED(1) unaligned_int64_t;
             AutoBuffer<int64_t, 16> aligned_val;
@@ -158,6 +159,7 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
                 memcpy(aligned_val.data(), val, sz);
                 val = (const char*)aligned_val.data();
             }
+#endif
             const int64_t* src = reinterpret_cast<const int64_t*>(val);
             convertInt64ToInt32(src, dst, blob.total());
         }
