@@ -215,12 +215,6 @@ namespace
                 prevPts.cols, level, block, patch,
                 stream_);
         }
-
-        // prevPyr obtains the value of nextPyr
-        prevPyr.assign(nextPyr.begin(), nextPyr.end());
-        // nextPyr is cleared so that it can be
-        // constructed again for the new frame
-        nextPyr.clear();
     }
 
     void PyrLKOpticalFlowBase::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err, Stream& stream)
@@ -236,7 +230,6 @@ namespace
         CV_Assert( prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type() );
 
         sparse(prevPyr_, nextPyr_, prevPts, nextPts, status, err, stream);
-
     }
 
     void PyrLKOpticalFlowBase::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, Stream& stream)
