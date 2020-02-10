@@ -330,7 +330,9 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     }
 
     // There is something wrong with Reshape layer in Myriad plugin.
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019
+        || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
+    )
     {
         if (targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_OPENCL_FP16)
             return;
@@ -675,7 +677,10 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
 
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 #endif
 

@@ -146,7 +146,8 @@ enum VideoCaptureProperties {
        CAP_PROP_HUE           =13, //!< Hue of the image (only for cameras).
        CAP_PROP_GAIN          =14, //!< Gain of the image (only for those cameras that support).
        CAP_PROP_EXPOSURE      =15, //!< Exposure (only for those cameras that support).
-       CAP_PROP_CONVERT_RGB   =16, //!< Boolean flags indicating whether images should be converted to RGB.
+       CAP_PROP_CONVERT_RGB   =16, //!< Boolean flags indicating whether images should be converted to RGB. <br/>
+                                   //!< *GStreamer note*: The flag is ignored in case if custom pipeline is used. It's user responsibility to interpret pipeline output.
        CAP_PROP_WHITE_BALANCE_BLUE_U =17, //!< Currently unsupported.
        CAP_PROP_RECTIFICATION =18, //!< Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently).
        CAP_PROP_MONOCHROME    =19,
@@ -631,7 +632,8 @@ public:
     @param filename it can be:
     - name of video file (eg. `video.avi`)
     - or image sequence (eg. `img_%02d.jpg`, which will read samples like `img_00.jpg, img_01.jpg, img_02.jpg, ...`)
-    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
+    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`)
+    - or GStreamer pipeline string in gst-launch tool format in case if GStreamer is used as backend
       Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
       documentation of source stream to know the right URL.
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader

@@ -1,43 +1,7 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                        Intel License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of Intel Corporation may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
 #include "precomp.hpp"
 #if defined _WIN32 && defined HAVE_MSMF
 /*
@@ -181,40 +145,155 @@ private:
 
 #define _ComPtr ComPtr
 
-// Structure for collecting info about types of video, which are supported by current video device
+template <typename T> inline T absDiff(T a, T b) { return a >= b ? a - b : b - a; }
+
+//==================================================================================================
+
+// Structure for collecting info about types of video which are supported by current video device
 struct MediaType
 {
-    unsigned int MF_MT_FRAME_SIZE;
-    UINT32 height;
     UINT32 width;
-    unsigned int MF_MT_YUV_MATRIX;
-    unsigned int MF_MT_VIDEO_LIGHTING;
-    int MF_MT_DEFAULT_STRIDE; // stride is negative if image is bottom-up
-    unsigned int MF_MT_VIDEO_CHROMA_SITING;
-    GUID MF_MT_AM_FORMAT_TYPE;
-    unsigned int MF_MT_FIXED_SIZE_SAMPLES;
-    unsigned int MF_MT_VIDEO_NOMINAL_RANGE;
-    UINT32 MF_MT_FRAME_RATE_NUMERATOR;
-    UINT32 MF_MT_FRAME_RATE_DENOMINATOR;
-    UINT32 MF_MT_PIXEL_ASPECT_RATIO_NUMERATOR;
-    UINT32 MF_MT_PIXEL_ASPECT_RATIO_DENOMINATOR;
-    unsigned int MF_MT_ALL_SAMPLES_INDEPENDENT;
-    UINT32 MF_MT_FRAME_RATE_RANGE_MIN_NUMERATOR;
-    UINT32 MF_MT_FRAME_RATE_RANGE_MIN_DENOMINATOR;
-    unsigned int MF_MT_SAMPLE_SIZE;
-    unsigned int MF_MT_VIDEO_PRIMARIES;
-    unsigned int MF_MT_INTERLACE_MODE;
-    UINT32 MF_MT_FRAME_RATE_RANGE_MAX_NUMERATOR;
-    UINT32 MF_MT_FRAME_RATE_RANGE_MAX_DENOMINATOR;
-    GUID MF_MT_MAJOR_TYPE;
-    GUID MF_MT_SUBTYPE;
-    LPCWSTR pMF_MT_MAJOR_TYPEName;
-    LPCWSTR pMF_MT_SUBTYPEName;
-    MediaType();
-    MediaType(IMFMediaType *pType);
-    ~MediaType();
-    void Clear();
+    UINT32 height;
+    INT32 stride; // stride is negative if image is bottom-up
+    UINT32 isFixedSize;
+    UINT32 frameRateNum;
+    UINT32 frameRateDenom;
+    UINT32 aspectRatioNum;
+    UINT32 aspectRatioDenom;
+    UINT32 sampleSize;
+    UINT32 interlaceMode;
+    GUID majorType; // video or audio
+    GUID subType; // fourCC
+    MediaType(IMFMediaType *pType = 0) :
+        width(0), height(0),
+        stride(0),
+        isFixedSize(true),
+        frameRateNum(1), frameRateDenom(1),
+        aspectRatioNum(1), aspectRatioDenom(1),
+        sampleSize(0),
+        interlaceMode(0),
+        majorType(MFMediaType_Video),
+        subType({ 0 })
+    {
+        if (pType)
+        {
+            MFGetAttributeSize(pType, MF_MT_FRAME_SIZE, &width, &height);
+            pType->GetUINT32(MF_MT_DEFAULT_STRIDE, (UINT32*)&stride); // value is stored as UINT32 but should be casted to INT3)
+            pType->GetUINT32(MF_MT_FIXED_SIZE_SAMPLES, &isFixedSize);
+            MFGetAttributeRatio(pType, MF_MT_FRAME_RATE, &frameRateNum, &frameRateDenom);
+            MFGetAttributeRatio(pType, MF_MT_PIXEL_ASPECT_RATIO, &aspectRatioNum, &aspectRatioDenom);
+            pType->GetUINT32(MF_MT_SAMPLE_SIZE, &sampleSize);
+            pType->GetUINT32(MF_MT_INTERLACE_MODE, &interlaceMode);
+            pType->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
+            pType->GetGUID(MF_MT_SUBTYPE, &subType);
+        }
+    }
+    static MediaType createDefault()
+    {
+        MediaType res;
+        res.width = 640;
+        res.height = 480;
+        res.setFramerate(30.0);
+        return res;
+    }
+    inline bool isEmpty() const
+    {
+        return width == 0 && height == 0;
+    }
+    _ComPtr<IMFMediaType> createMediaType() const
+    {
+        _ComPtr<IMFMediaType> res;
+        MFCreateMediaType(&res);
+        if (width != 0 || height != 0)
+            MFSetAttributeSize(res.Get(), MF_MT_FRAME_SIZE, width, height);
+        if (stride != 0)
+            res->SetUINT32(MF_MT_DEFAULT_STRIDE, stride);
+        res->SetUINT32(MF_MT_FIXED_SIZE_SAMPLES, isFixedSize);
+        if (frameRateNum != 0 || frameRateDenom != 0)
+            MFSetAttributeRatio(res.Get(), MF_MT_FRAME_RATE, frameRateNum, frameRateDenom);
+        if (aspectRatioNum != 0 || aspectRatioDenom != 0)
+            MFSetAttributeRatio(res.Get(), MF_MT_PIXEL_ASPECT_RATIO, aspectRatioNum, aspectRatioDenom);
+        if (sampleSize > 0)
+            res->SetUINT32(MF_MT_SAMPLE_SIZE, sampleSize);
+        res->SetUINT32(MF_MT_INTERLACE_MODE, interlaceMode);
+        if (majorType != GUID())
+            res->SetGUID(MF_MT_MAJOR_TYPE, majorType);
+        if (subType != GUID())
+            res->SetGUID(MF_MT_SUBTYPE, subType);
+        return res;
+    }
+    void setFramerate(double fps)
+    {
+        frameRateNum = (UINT32)cvRound(fps * 1000.0);
+        frameRateDenom = 1000;
+    }
+    double getFramerate() const
+    {
+        return frameRateDenom != 0 ? ((double)frameRateNum) / ((double)frameRateDenom) : 0;
+    }
+    LONGLONG getFrameStep() const
+    {
+        const double fps = getFramerate();
+        return (LONGLONG)(fps > 0 ? 1e7 / fps : 0);
+    }
+    inline unsigned long resolutionDiff(const MediaType& other) const
+    {
+        const unsigned long wdiff = absDiff(width, other.width);
+        const unsigned long hdiff = absDiff(height, other.height);
+        return wdiff + hdiff;
+    }
+    // check if 'this' is better than 'other' comparing to reference
+    bool isBetterThan(const MediaType& other, const MediaType& ref) const
+    {
+        const unsigned long thisDiff = resolutionDiff(ref);
+        const unsigned long otherDiff = other.resolutionDiff(ref);
+        if (thisDiff < otherDiff)
+            return true;
+        if (thisDiff == otherDiff)
+        {
+            if (width > other.width)
+                return true;
+            if (width == other.width && height > other.height)
+                return true;
+            if (width == other.width && height == other.height)
+            {
+                const double thisRateDiff = absDiff(getFramerate(), ref.getFramerate());
+                const double otherRateDiff = absDiff(other.getFramerate(), ref.getFramerate());
+                if (thisRateDiff < otherRateDiff)
+                    return true;
+            }
+        }
+        return false;
+    }
 };
+
+void printFormat(std::ostream& out, const GUID& fmt)
+{
+#define PRNT(FMT) else if (fmt == FMT) out << #FMT;
+    if (fmt == MFVideoFormat_Base) out << "Base";
+    PRNT(MFVideoFormat_RGB32)
+    PRNT(MFVideoFormat_ARGB32)
+    PRNT(MFVideoFormat_RGB24)
+    PRNT(MFVideoFormat_RGB555)
+    PRNT(MFVideoFormat_RGB565)
+    PRNT(MFVideoFormat_RGB8)
+    else
+    {
+        char fourcc[5] = { 0 };
+        memcpy(fourcc, &fmt.Data1, 4);
+        out << fourcc;
+    }
+#undef PRNT
+}
+
+std::ostream& operator<<(std::ostream& out, const MediaType& mt)
+{
+    out << "(" << mt.width << "x" << mt.height << " @ " << mt.getFramerate() << ") ";
+    printFormat(out, mt.subType);
+    return out;
+}
+
+//==================================================================================================
 
 // Class for creating of Media Foundation context
 class Media_Foundation
@@ -230,391 +309,7 @@ private:
     Media_Foundation(void) { CoInitialize(0); CV_Assert(SUCCEEDED(MFStartup(MF_VERSION))); }
 };
 
-#ifndef IF_GUID_EQUAL_RETURN
-#define IF_GUID_EQUAL_RETURN(val) if(val == guid) return L#val
-#endif
-LPCWSTR GetGUIDNameConstNew(const GUID& guid)
-{
-    IF_GUID_EQUAL_RETURN(MF_MT_MAJOR_TYPE);
-    IF_GUID_EQUAL_RETURN(MF_MT_SUBTYPE);
-    IF_GUID_EQUAL_RETURN(MF_MT_ALL_SAMPLES_INDEPENDENT);
-    IF_GUID_EQUAL_RETURN(MF_MT_FIXED_SIZE_SAMPLES);
-    IF_GUID_EQUAL_RETURN(MF_MT_COMPRESSED);
-    IF_GUID_EQUAL_RETURN(MF_MT_SAMPLE_SIZE);
-    IF_GUID_EQUAL_RETURN(MF_MT_WRAPPED_TYPE);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_NUM_CHANNELS);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_SAMPLES_PER_SECOND);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_FLOAT_SAMPLES_PER_SECOND);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_AVG_BYTES_PER_SECOND);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_BLOCK_ALIGNMENT);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_BITS_PER_SAMPLE);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_VALID_BITS_PER_SAMPLE);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_SAMPLES_PER_BLOCK);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_CHANNEL_MASK);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_FOLDDOWN_MATRIX);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_WMADRC_PEAKREF);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_WMADRC_PEAKTARGET);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_WMADRC_AVGREF);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_WMADRC_AVGTARGET);
-    IF_GUID_EQUAL_RETURN(MF_MT_AUDIO_PREFER_WAVEFORMATEX);
-    IF_GUID_EQUAL_RETURN(MF_MT_AAC_PAYLOAD_TYPE);
-    IF_GUID_EQUAL_RETURN(MF_MT_AAC_AUDIO_PROFILE_LEVEL_INDICATION);
-    IF_GUID_EQUAL_RETURN(MF_MT_FRAME_SIZE);
-    IF_GUID_EQUAL_RETURN(MF_MT_FRAME_RATE);
-    IF_GUID_EQUAL_RETURN(MF_MT_FRAME_RATE_RANGE_MAX);
-    IF_GUID_EQUAL_RETURN(MF_MT_FRAME_RATE_RANGE_MIN);
-    IF_GUID_EQUAL_RETURN(MF_MT_PIXEL_ASPECT_RATIO);
-    IF_GUID_EQUAL_RETURN(MF_MT_DRM_FLAGS);
-    IF_GUID_EQUAL_RETURN(MF_MT_PAD_CONTROL_FLAGS);
-    IF_GUID_EQUAL_RETURN(MF_MT_SOURCE_CONTENT_HINT);
-    IF_GUID_EQUAL_RETURN(MF_MT_VIDEO_CHROMA_SITING);
-    IF_GUID_EQUAL_RETURN(MF_MT_INTERLACE_MODE);
-    IF_GUID_EQUAL_RETURN(MF_MT_TRANSFER_FUNCTION);
-    IF_GUID_EQUAL_RETURN(MF_MT_VIDEO_PRIMARIES);
-    IF_GUID_EQUAL_RETURN(MF_MT_CUSTOM_VIDEO_PRIMARIES);
-    IF_GUID_EQUAL_RETURN(MF_MT_YUV_MATRIX);
-    IF_GUID_EQUAL_RETURN(MF_MT_VIDEO_LIGHTING);
-    IF_GUID_EQUAL_RETURN(MF_MT_VIDEO_NOMINAL_RANGE);
-    IF_GUID_EQUAL_RETURN(MF_MT_GEOMETRIC_APERTURE);
-    IF_GUID_EQUAL_RETURN(MF_MT_MINIMUM_DISPLAY_APERTURE);
-    IF_GUID_EQUAL_RETURN(MF_MT_PAN_SCAN_APERTURE);
-    IF_GUID_EQUAL_RETURN(MF_MT_PAN_SCAN_ENABLED);
-    IF_GUID_EQUAL_RETURN(MF_MT_AVG_BITRATE);
-    IF_GUID_EQUAL_RETURN(MF_MT_AVG_BIT_ERROR_RATE);
-    IF_GUID_EQUAL_RETURN(MF_MT_MAX_KEYFRAME_SPACING);
-    IF_GUID_EQUAL_RETURN(MF_MT_DEFAULT_STRIDE);
-    IF_GUID_EQUAL_RETURN(MF_MT_PALETTE);
-    IF_GUID_EQUAL_RETURN(MF_MT_USER_DATA);
-    IF_GUID_EQUAL_RETURN(MF_MT_AM_FORMAT_TYPE);
-    IF_GUID_EQUAL_RETURN(MF_MT_MPEG_START_TIME_CODE);
-    IF_GUID_EQUAL_RETURN(MF_MT_MPEG2_PROFILE);
-    IF_GUID_EQUAL_RETURN(MF_MT_MPEG2_LEVEL);
-    IF_GUID_EQUAL_RETURN(MF_MT_MPEG2_FLAGS);
-    IF_GUID_EQUAL_RETURN(MF_MT_MPEG_SEQUENCE_HEADER);
-    IF_GUID_EQUAL_RETURN(MF_MT_DV_AAUX_SRC_PACK_0);
-    IF_GUID_EQUAL_RETURN(MF_MT_DV_AAUX_CTRL_PACK_0);
-    IF_GUID_EQUAL_RETURN(MF_MT_DV_AAUX_SRC_PACK_1);
-    IF_GUID_EQUAL_RETURN(MF_MT_DV_AAUX_CTRL_PACK_1);
-    IF_GUID_EQUAL_RETURN(MF_MT_DV_VAUX_SRC_PACK);
-    IF_GUID_EQUAL_RETURN(MF_MT_DV_VAUX_CTRL_PACK);
-    IF_GUID_EQUAL_RETURN(MF_MT_ARBITRARY_HEADER);
-    IF_GUID_EQUAL_RETURN(MF_MT_ARBITRARY_FORMAT);
-    IF_GUID_EQUAL_RETURN(MF_MT_IMAGE_LOSS_TOLERANT);
-    IF_GUID_EQUAL_RETURN(MF_MT_MPEG4_SAMPLE_DESCRIPTION);
-    IF_GUID_EQUAL_RETURN(MF_MT_MPEG4_CURRENT_SAMPLE_ENTRY);
-    IF_GUID_EQUAL_RETURN(MF_MT_ORIGINAL_4CC);
-    IF_GUID_EQUAL_RETURN(MF_MT_ORIGINAL_WAVE_FORMAT_TAG);
-    // Media types
-    IF_GUID_EQUAL_RETURN(MFMediaType_Audio);
-    IF_GUID_EQUAL_RETURN(MFMediaType_Video);
-    IF_GUID_EQUAL_RETURN(MFMediaType_Protected);
-#ifdef MFMediaType_Perception
-    IF_GUID_EQUAL_RETURN(MFMediaType_Perception);
-#endif
-    IF_GUID_EQUAL_RETURN(MFMediaType_Stream);
-    IF_GUID_EQUAL_RETURN(MFMediaType_SAMI);
-    IF_GUID_EQUAL_RETURN(MFMediaType_Script);
-    IF_GUID_EQUAL_RETURN(MFMediaType_Image);
-    IF_GUID_EQUAL_RETURN(MFMediaType_HTML);
-    IF_GUID_EQUAL_RETURN(MFMediaType_Binary);
-    IF_GUID_EQUAL_RETURN(MFMediaType_FileTransfer);
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_AI44); //     FCC('AI44')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_ARGB32); //   D3DFMT_A8R8G8B8
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_AYUV); //     FCC('AYUV')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_DV25); //     FCC('dv25')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_DV50); //     FCC('dv50')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVH1); //     FCC('dvh1')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVC);
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVHD);
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVSD); //     FCC('dvsd')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_DVSL); //     FCC('dvsl')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_H264); //     FCC('H264')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_I420); //     FCC('I420')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_IYUV); //     FCC('IYUV')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_M4S2); //     FCC('M4S2')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_MJPG);
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_MP43); //     FCC('MP43')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_MP4S); //     FCC('MP4S')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_MP4V); //     FCC('MP4V')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_MPG1); //     FCC('MPG1')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_MSS1); //     FCC('MSS1')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_MSS2); //     FCC('MSS2')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_NV11); //     FCC('NV11')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_NV12); //     FCC('NV12')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_P010); //     FCC('P010')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_P016); //     FCC('P016')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_P210); //     FCC('P210')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_P216); //     FCC('P216')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB24); //    D3DFMT_R8G8B8
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB32); //    D3DFMT_X8R8G8B8
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB555); //   D3DFMT_X1R5G5B5
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB565); //   D3DFMT_R5G6B5
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_RGB8);
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_UYVY); //     FCC('UYVY')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_v210); //     FCC('v210')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_v410); //     FCC('v410')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_WMV1); //     FCC('WMV1')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_WMV2); //     FCC('WMV2')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_WMV3); //     FCC('WMV3')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_WVC1); //     FCC('WVC1')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y210); //     FCC('Y210')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y216); //     FCC('Y216')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y410); //     FCC('Y410')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y416); //     FCC('Y416')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y41P);
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y41T);
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_YUY2); //     FCC('YUY2')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_YV12); //     FCC('YV12')
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_YVYU);
-#ifdef MFVideoFormat_H263
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_H263);
-#endif
-#ifdef MFVideoFormat_H265
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_H265);
-#endif
-#ifdef MFVideoFormat_H264_ES
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_H264_ES);
-#endif
-#ifdef MFVideoFormat_HEVC
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_HEVC);
-#endif
-#ifdef MFVideoFormat_HEVC_ES
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_HEVC_ES);
-#endif
-#ifdef MFVideoFormat_MPEG2
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_MPEG2);
-#endif
-#ifdef MFVideoFormat_VP80
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_VP80);
-#endif
-#ifdef MFVideoFormat_VP90
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_VP90);
-#endif
-#ifdef MFVideoFormat_420O
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_420O);
-#endif
-#ifdef MFVideoFormat_Y42T
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_Y42T);
-#endif
-#ifdef MFVideoFormat_YVU9
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_YVU9);
-#endif
-#ifdef MFVideoFormat_v216
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_v216);
-#endif
-#ifdef MFVideoFormat_L8
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_L8);
-#endif
-#ifdef MFVideoFormat_L16
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_L16);
-#endif
-#ifdef MFVideoFormat_D16
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_D16);
-#endif
-#ifdef D3DFMT_X8R8G8B8
-    IF_GUID_EQUAL_RETURN(D3DFMT_X8R8G8B8);
-#endif
-#ifdef D3DFMT_A8R8G8B8
-    IF_GUID_EQUAL_RETURN(D3DFMT_A8R8G8B8);
-#endif
-#ifdef D3DFMT_R8G8B8
-    IF_GUID_EQUAL_RETURN(D3DFMT_R8G8B8);
-#endif
-#ifdef D3DFMT_X1R5G5B5
-    IF_GUID_EQUAL_RETURN(D3DFMT_X1R5G5B5);
-#endif
-#ifdef D3DFMT_A4R4G4B4
-    IF_GUID_EQUAL_RETURN(D3DFMT_A4R4G4B4);
-#endif
-#ifdef D3DFMT_R5G6B5
-    IF_GUID_EQUAL_RETURN(D3DFMT_R5G6B5);
-#endif
-#ifdef D3DFMT_P8
-    IF_GUID_EQUAL_RETURN(D3DFMT_P8);
-#endif
-#ifdef D3DFMT_A2R10G10B10
-    IF_GUID_EQUAL_RETURN(D3DFMT_A2R10G10B10);
-#endif
-#ifdef D3DFMT_A2B10G10R10
-    IF_GUID_EQUAL_RETURN(D3DFMT_A2B10G10R10);
-#endif
-#ifdef D3DFMT_L8
-    IF_GUID_EQUAL_RETURN(D3DFMT_L8);
-#endif
-#ifdef D3DFMT_L16
-    IF_GUID_EQUAL_RETURN(D3DFMT_L16);
-#endif
-#ifdef D3DFMT_D16
-    IF_GUID_EQUAL_RETURN(D3DFMT_D16);
-#endif
-#ifdef MFVideoFormat_A2R10G10B10
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_A2R10G10B10);
-#endif
-#ifdef MFVideoFormat_A16B16G16R16F
-    IF_GUID_EQUAL_RETURN(MFVideoFormat_A16B16G16R16F);
-#endif
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_PCM); //              WAVE_FORMAT_PCM
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_Float); //            WAVE_FORMAT_IEEE_FLOAT
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_DTS); //              WAVE_FORMAT_DTS
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_Dolby_AC3_SPDIF); //  WAVE_FORMAT_DOLBY_AC3_SPDIF
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_DRM); //              WAVE_FORMAT_DRM
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_WMAudioV8); //        WAVE_FORMAT_WMAUDIO2
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_WMAudioV9); //        WAVE_FORMAT_WMAUDIO3
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_WMAudio_Lossless); // WAVE_FORMAT_WMAUDIO_LOSSLESS
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_WMASPDIF); //         WAVE_FORMAT_WMASPDIF
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_MSP1); //             WAVE_FORMAT_WMAVOICE9
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_MP3); //              WAVE_FORMAT_MPEGLAYER3
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_MPEG); //             WAVE_FORMAT_MPEG
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_AAC); //              WAVE_FORMAT_MPEG_HEAAC
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_ADTS); //             WAVE_FORMAT_MPEG_ADTS_AAC
-#ifdef MFAudioFormat_ALAC
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_ALAC);
-#endif
-#ifdef MFAudioFormat_AMR_NB
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_AMR_NB);
-#endif
-#ifdef MFAudioFormat_AMR_WB
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_AMR_WB);
-#endif
-#ifdef MFAudioFormat_AMR_WP
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_AMR_WP);
-#endif
-#ifdef MFAudioFormat_Dolby_AC3
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_Dolby_AC3);
-#endif
-#ifdef MFAudioFormat_Dolby_DDPlus
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_Dolby_DDPlus);
-#endif
-#ifdef MFAudioFormat_FLAC
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_FLAC);
-#endif
-#ifdef MFAudioFormat_Opus
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_Opus);
-#endif
-#ifdef MEDIASUBTYPE_RAW_AAC1
-    IF_GUID_EQUAL_RETURN(MEDIASUBTYPE_RAW_AAC1);
-#endif
-#ifdef MFAudioFormat_Float_SpatialObjects
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_Float_SpatialObjects);
-#endif
-#ifdef MFAudioFormat_QCELP
-    IF_GUID_EQUAL_RETURN(MFAudioFormat_QCELP);
-#endif
-
-    return NULL;
-}
-
-bool LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType &out)
-{
-    PROPVARIANT var;
-    PropVariantInit(&var);
-    GUID guid = { 0 };
-    if (SUCCEEDED(pAttr->GetItemByIndex(index, &guid, &var)))
-    {
-        if (guid == MF_MT_DEFAULT_STRIDE && var.vt == VT_INT)
-            out.MF_MT_DEFAULT_STRIDE = var.intVal;
-        else if (guid == MF_MT_FRAME_RATE && var.vt == VT_UI8)
-            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.MF_MT_FRAME_RATE_NUMERATOR, &out.MF_MT_FRAME_RATE_DENOMINATOR);
-        else if (guid == MF_MT_FRAME_RATE_RANGE_MAX && var.vt == VT_UI8)
-            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.MF_MT_FRAME_RATE_RANGE_MAX_NUMERATOR, &out.MF_MT_FRAME_RATE_RANGE_MAX_DENOMINATOR);
-        else if (guid == MF_MT_FRAME_RATE_RANGE_MIN && var.vt == VT_UI8)
-            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.MF_MT_FRAME_RATE_RANGE_MIN_NUMERATOR, &out.MF_MT_FRAME_RATE_RANGE_MIN_DENOMINATOR);
-        else if (guid == MF_MT_PIXEL_ASPECT_RATIO && var.vt == VT_UI8)
-            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.MF_MT_PIXEL_ASPECT_RATIO_NUMERATOR, &out.MF_MT_PIXEL_ASPECT_RATIO_DENOMINATOR);
-        else if (guid == MF_MT_YUV_MATRIX && var.vt == VT_UI4)
-            out.MF_MT_YUV_MATRIX = var.ulVal;
-        else if (guid == MF_MT_VIDEO_LIGHTING && var.vt == VT_UI4)
-            out.MF_MT_VIDEO_LIGHTING = var.ulVal;
-        else if (guid == MF_MT_DEFAULT_STRIDE && var.vt == VT_UI4)
-            out.MF_MT_DEFAULT_STRIDE = (int)var.ulVal;
-        else if (guid == MF_MT_VIDEO_CHROMA_SITING && var.vt == VT_UI4)
-            out.MF_MT_VIDEO_CHROMA_SITING = var.ulVal;
-        else if (guid == MF_MT_VIDEO_NOMINAL_RANGE && var.vt == VT_UI4)
-            out.MF_MT_VIDEO_NOMINAL_RANGE = var.ulVal;
-        else if (guid == MF_MT_ALL_SAMPLES_INDEPENDENT && var.vt == VT_UI4)
-            out.MF_MT_ALL_SAMPLES_INDEPENDENT = var.ulVal;
-        else if (guid == MF_MT_FIXED_SIZE_SAMPLES && var.vt == VT_UI4)
-            out.MF_MT_FIXED_SIZE_SAMPLES = var.ulVal;
-        else if (guid == MF_MT_SAMPLE_SIZE && var.vt == VT_UI4)
-            out.MF_MT_SAMPLE_SIZE = var.ulVal;
-        else if (guid == MF_MT_VIDEO_PRIMARIES && var.vt == VT_UI4)
-            out.MF_MT_VIDEO_PRIMARIES = var.ulVal;
-        else if (guid == MF_MT_INTERLACE_MODE && var.vt == VT_UI4)
-            out.MF_MT_INTERLACE_MODE = var.ulVal;
-        else if (guid == MF_MT_AM_FORMAT_TYPE && var.vt == VT_CLSID)
-            out.MF_MT_AM_FORMAT_TYPE = *var.puuid;
-        else if (guid == MF_MT_MAJOR_TYPE && var.vt == VT_CLSID)
-            out.pMF_MT_MAJOR_TYPEName = GetGUIDNameConstNew(out.MF_MT_MAJOR_TYPE = *var.puuid);
-        else if (guid == MF_MT_SUBTYPE && var.vt == VT_CLSID)
-            out.pMF_MT_SUBTYPEName = GetGUIDNameConstNew(out.MF_MT_SUBTYPE = *var.puuid);
-        else if (guid == MF_MT_FRAME_SIZE && var.vt == VT_UI8)
-        {
-            Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &out.width, &out.height);
-            out.MF_MT_FRAME_SIZE = out.width * out.height;
-        }
-        PropVariantClear(&var);
-        return true;
-    }
-    return false;
-}
-
-MediaType::MediaType()
-{
-    pMF_MT_MAJOR_TYPEName = NULL;
-    pMF_MT_SUBTYPEName = NULL;
-    Clear();
-}
-
-MediaType::MediaType(IMFMediaType *pType)
-{
-    pMF_MT_MAJOR_TYPEName = NULL;
-    pMF_MT_SUBTYPEName = NULL;
-    Clear();
-    UINT32 count = 0;
-    if (SUCCEEDED(pType->GetCount(&count)) &&
-        SUCCEEDED(pType->LockStore()))
-    {
-        for (UINT32 i = 0; i < count; i++)
-            if (!LogAttributeValueByIndexNew(pType, i, *this))
-                break;
-        pType->UnlockStore();
-    }
-}
-
-MediaType::~MediaType()
-{
-    Clear();
-}
-
-void MediaType::Clear()
-{
-    MF_MT_FRAME_SIZE = 0;
-    height = 0;
-    width = 0;
-    MF_MT_YUV_MATRIX = 0;
-    MF_MT_VIDEO_LIGHTING = 0;
-    MF_MT_DEFAULT_STRIDE = 0;
-    MF_MT_VIDEO_CHROMA_SITING = 0;
-    MF_MT_FIXED_SIZE_SAMPLES = 0;
-    MF_MT_VIDEO_NOMINAL_RANGE = 0;
-    MF_MT_FRAME_RATE_NUMERATOR = 0;
-    MF_MT_FRAME_RATE_DENOMINATOR = 0;
-    MF_MT_PIXEL_ASPECT_RATIO_NUMERATOR = 0;
-    MF_MT_PIXEL_ASPECT_RATIO_DENOMINATOR = 0;
-    MF_MT_ALL_SAMPLES_INDEPENDENT = 0;
-    MF_MT_FRAME_RATE_RANGE_MIN_NUMERATOR = 0;
-    MF_MT_FRAME_RATE_RANGE_MIN_DENOMINATOR = 0;
-    MF_MT_SAMPLE_SIZE = 0;
-    MF_MT_VIDEO_PRIMARIES = 0;
-    MF_MT_INTERLACE_MODE = 0;
-    MF_MT_FRAME_RATE_RANGE_MAX_NUMERATOR = 0;
-    MF_MT_FRAME_RATE_RANGE_MAX_DENOMINATOR = 0;
-    memset(&MF_MT_MAJOR_TYPE, 0, sizeof(GUID));
-    memset(&MF_MT_AM_FORMAT_TYPE, 0, sizeof(GUID));
-    memset(&MF_MT_SUBTYPE, 0, sizeof(GUID));
-}
-
-}
+//==================================================================================================
 
 class SourceReaderCB : public IMFSourceReaderCallback
 {
@@ -655,7 +350,50 @@ public:
         return uCount;
     }
 
-    STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE;
+    STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE
+    {
+        CV_UNUSED(llTimestamp);
+
+        HRESULT hr = 0;
+        cv::AutoLock lock(m_mutex);
+
+        if (SUCCEEDED(hrStatus))
+        {
+            if (pSample)
+            {
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
+                if (m_lastSample.Get())
+                {
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed)");
+                }
+                m_lastSample = pSample;
+            }
+        }
+        else
+        {
+            CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+        }
+
+        if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+        {
+            // Reached the end of the stream.
+            m_bEOS = true;
+        }
+        m_hrStatus = hrStatus;
+
+        if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+        {
+            CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
+            m_bEOS = true;
+        }
+
+        if (pSample || m_bEOS)
+        {
+            SetEvent(m_hEvent);
+        }
+        return S_OK;
+    }
+
     STDMETHODIMP OnEvent(DWORD, IMFMediaEvent *) CV_OVERRIDE
     {
         return S_OK;
@@ -665,8 +403,32 @@ public:
         return S_OK;
     }
 
-    HRESULT Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSample, BOOL& pbEOS);
+    HRESULT Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSample, BOOL& pbEOS)
+    {
+        pbEOS = FALSE;
 
+        DWORD dwResult = WaitForSingleObject(m_hEvent, dwMilliseconds);
+        if (dwResult == WAIT_TIMEOUT)
+        {
+            return E_PENDING;
+        }
+        else if (dwResult != WAIT_OBJECT_0)
+        {
+            return HRESULT_FROM_WIN32(GetLastError());
+        }
+
+        pbEOS = m_bEOS;
+        if (!pbEOS)
+        {
+            cv::AutoLock lock(m_mutex);
+            videoSample = m_lastSample;
+            CV_Assert(videoSample);
+            m_lastSample.Release();
+            ResetEvent(m_hEvent);  // event is auto-reset, but we need this forced reset due time gap between wait() and mutex hold.
+        }
+
+        return m_hrStatus;
+    }
 private:
     // Destructor is private. Caller should call Release.
     virtual ~SourceReaderCB()
@@ -686,6 +448,122 @@ public:
     _ComPtr<IMFSample>  m_lastSample;
 };
 
+//==================================================================================================
+
+// Enumerate and store supported formats and finds format which is most similar to the one requested
+class FormatStorage
+{
+public:
+    struct MediaID
+    {
+        DWORD stream;
+        DWORD media;
+        MediaID() : stream(0), media(0) {}
+        void nextStream()
+        {
+            stream++;
+            media = 0;
+        }
+        void nextMedia()
+        {
+            media++;
+        }
+        bool operator<(const MediaID& other) const
+        {
+            return (stream < other.stream) || (stream == other.stream && media < other.media);
+        }
+    };
+    void read(IMFSourceReader* source)
+    {
+        HRESULT hr = S_OK;
+        MediaID cur;
+        while (SUCCEEDED(hr))
+        {
+            _ComPtr<IMFMediaType> raw_type;
+            hr = source->GetNativeMediaType(cur.stream, cur.media, &raw_type);
+            if (hr == MF_E_NO_MORE_TYPES)
+            {
+                hr = S_OK;
+                cur.nextStream();
+            }
+            else if (SUCCEEDED(hr))
+            {
+                formats[cur] = MediaType(raw_type.Get());
+                cur.nextMedia();
+            }
+        }
+    }
+    std::pair<MediaID, MediaType> findBest(const MediaType& newType)
+    {
+        std::pair<MediaID, MediaType> best;
+        std::map<MediaID, MediaType>::const_iterator i = formats.begin();
+        for (; i != formats.end(); ++i)
+        {
+            if (newType.isEmpty()) // file input - choose first returned media type
+            {
+                best = *i;
+                break;
+            }
+            if (i->second.isBetterThan(best.second, newType))
+            {
+                best = *i;
+            }
+        }
+        return best;
+    }
+private:
+    std::map<MediaID, MediaType> formats;
+};
+
+//==================================================================================================
+
+// Enumerates devices and activates one of them
+class DeviceList
+{
+public:
+    DeviceList() : devices(NULL), count(0) {}
+    ~DeviceList()
+    {
+        if (devices)
+        {
+            for (UINT32 i = 0; i < count; ++i)
+                if (devices[i])
+                    devices[i]->Release();
+            CoTaskMemFree(devices);
+        }
+    }
+    UINT32 read(IID sourceType = MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID)
+    {
+        _ComPtr<IMFAttributes> attr;
+        if (FAILED(MFCreateAttributes(&attr, 1)) ||
+            FAILED(attr->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, sourceType)))
+        {
+            CV_Error(CV_StsError, "Failed to create attributes");
+        }
+        if (FAILED(MFEnumDeviceSources(attr.Get(), &devices, &count)))
+        {
+            CV_LOG_DEBUG(NULL, "Failed to enumerate MSMF devices");
+            return 0;
+        }
+        return count;
+    }
+    _ComPtr<IMFMediaSource> activateSource(UINT32 index)
+    {
+        _ComPtr<IMFMediaSource> result;
+        if (count == 0 || index >= count || FAILED(devices[index]->ActivateObject(__uuidof(IMFMediaSource), (void**)&result)))
+        {
+            CV_LOG_DEBUG(NULL, "Failed to activate media source (device " << index << ")");
+        }
+        return result;
+    }
+private:
+    IMFActivate** devices;
+    UINT32 count;
+};
+
+} // namespace::
+
+//==================================================================================================
 
 /******* Capturing video from camera or file via Microsoft Media Foundation **********/
 class CvCapture_MSMF : public cv::IVideoCapture
@@ -707,10 +585,16 @@ public:
     virtual bool isOpened() const CV_OVERRIDE { return isOpen; }
     virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; }
 protected:
-    double getFramerate(MediaType MT) const;
-    bool configureOutput(UINT32 width, UINT32 height, double prefFramerate, UINT32 aspectRatioN, UINT32 aspectRatioD, cv::uint32_t outFormat, bool convertToFormat);
+    bool configureOutput(MediaType newType, cv::uint32_t outFormat, bool convertToFormat);
     bool setTime(double time, bool rough);
     bool configureHW(bool enable);
+
+    template <typename CtrlT>
+    bool readComplexPropery(long prop, long& val) const;
+    template <typename CtrlT>
+    bool writeComplexProperty(long prop, double val, long flags);
+    _ComPtr<IMFAttributes> getDefaultSourceConfig(UINT32 num = 10);
+    bool initStream(DWORD streamID, const MediaType& mt);
 
     Media_Foundation& MF;
     cv::String filename;
@@ -724,10 +608,8 @@ protected:
     DWORD dwStreamIndex;
     MediaType nativeFormat;
     MediaType captureFormat;
-    cv::uint32_t outputFormat;
-    UINT32 requestedWidth, requestedHeight;
+    int outputFormat;
     bool convertFormat;
-    UINT32 aspectN, aspectD;
     MFTIME duration;
     LONGLONG frameStep;
     _ComPtr<IMFSample> videoSample;
@@ -748,11 +630,7 @@ CvCapture_MSMF::CvCapture_MSMF():
     videoFileSource(NULL),
     videoSample(NULL),
     outputFormat(CV_CAP_MODE_BGR),
-    requestedWidth(0),
-    requestedHeight(0),
     convertFormat(true),
-    aspectN(1),
-    aspectD(1),
     sampleTime(0),
     isOpen(false)
 {
@@ -776,6 +654,65 @@ void CvCapture_MSMF::close()
         filename.clear();
     }
     readCallback.Release();
+}
+
+bool CvCapture_MSMF::initStream(DWORD streamID, const MediaType& mt)
+{
+    CV_LOG_DEBUG(NULL, "Init stream " << streamID << " with MediaType " << mt);
+    _ComPtr<IMFMediaType> mediaTypeOut = mt.createMediaType();
+    if (FAILED(videoFileSource->SetStreamSelection((DWORD)MF_SOURCE_READER_ALL_STREAMS, false)))
+    {
+        CV_LOG_WARNING(NULL, "Failed to reset streams");
+        return false;
+    }
+    if (FAILED(videoFileSource->SetStreamSelection(streamID, true)))
+    {
+        CV_LOG_WARNING(NULL, "Failed to select stream " << streamID);
+        return false;
+    }
+    HRESULT hr = videoFileSource->SetCurrentMediaType(streamID, NULL, mediaTypeOut.Get());
+    if (hr == MF_E_TOPO_CODEC_NOT_FOUND)
+    {
+        CV_LOG_WARNING(NULL, "Failed to set mediaType (stream " << streamID << ", " << mt << "(codec not found)");
+        return false;
+    }
+    else if (hr == MF_E_INVALIDMEDIATYPE)
+    {
+        CV_LOG_WARNING(NULL, "Failed to set mediaType (stream " << streamID << ", " << mt << "(unsupported media type)");
+        return false;
+    }
+    else if (FAILED(hr))
+    {
+        CV_LOG_WARNING(NULL, "Failed to set mediaType (stream " << streamID << ", " << mt << "(HRESULT " << hr << ")");
+        return false;
+    }
+    captureFormat = mt;
+    return true;
+}
+
+_ComPtr<IMFAttributes> CvCapture_MSMF::getDefaultSourceConfig(UINT32 num)
+{
+    CV_Assert(num > 0);
+    _ComPtr<IMFAttributes> res;
+    if (FAILED(MFCreateAttributes(&res, num)) ||
+        FAILED(res->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true)) ||
+        FAILED(res->SetUINT32(MF_SOURCE_READER_DISABLE_DXVA, false)) ||
+        FAILED(res->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, false)) ||
+        FAILED(res->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true))
+        )
+    {
+        CV_Error(CV_StsError, "Failed to create attributes");
+    }
+#ifdef HAVE_MSMF_DXVA
+    if (D3DMgr)
+    {
+        if (FAILED(res->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get())))
+        {
+            CV_Error(CV_StsError, "Failed to create attributes");
+        }
+    }
+#endif
+    return res;
 }
 
 bool CvCapture_MSMF::configureHW(bool enable)
@@ -835,181 +772,78 @@ bool CvCapture_MSMF::configureHW(bool enable)
 #endif
 }
 
-#define UDIFF(res, ref) (ref == 0 ? 0 : res > ref ? res - ref : ref - res)
-static UINT32 resolutionDiff(MediaType& mType, UINT32 refWidth, UINT32 refHeight)
-{ return UDIFF(mType.width, refWidth) + UDIFF(mType.height, refHeight); }
-#undef UDIFF
-
-bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFramerate, UINT32 aspectRatioN, UINT32 aspectRatioD, cv::uint32_t outFormat, bool convertToFormat)
+bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat, bool convertToFormat)
 {
-    if (width != 0 && height != 0 &&
-        width == captureFormat.width && height == captureFormat.height && prefFramerate == getFramerate(nativeFormat) &&
-        aspectRatioN == aspectN && aspectRatioD == aspectD && outFormat == outputFormat && convertToFormat == convertFormat)
-        return true;
-
-    requestedWidth = width;
-    requestedHeight = height;
-
-    HRESULT hr = S_OK;
-    int dwStreamBest = -1;
-    MediaType MTBest;
-
-    DWORD dwMediaTypeTest = 0;
-    DWORD dwStreamTest = 0;
-    while (SUCCEEDED(hr))
+    FormatStorage formats;
+    formats.read(videoFileSource.Get());
+    std::pair<FormatStorage::MediaID, MediaType> bestMatch = formats.findBest(newType);
+    dwStreamIndex = bestMatch.first.stream;
+    nativeFormat = bestMatch.second;
+    MediaType newFormat = nativeFormat;
+    if (convertToFormat)
     {
-        _ComPtr<IMFMediaType> pType;
-        hr = videoFileSource->GetNativeMediaType(dwStreamTest, dwMediaTypeTest, &pType);
-        if (hr == MF_E_NO_MORE_TYPES)
+        switch (outFormat)
         {
-            hr = S_OK;
-            ++dwStreamTest;
-            dwMediaTypeTest = 0;
+        case CV_CAP_MODE_BGR:
+        case CV_CAP_MODE_RGB:
+            newFormat.subType = captureMode == MODE_HW ? MFVideoFormat_RGB32 : MFVideoFormat_RGB24;
+            newFormat.stride = (captureMode == MODE_HW ? 4 : 3) * newFormat.width;
+            newFormat.sampleSize = newFormat.stride * newFormat.height;
+            break;
+        case CV_CAP_MODE_GRAY:
+            newFormat.subType = MFVideoFormat_YUY2;
+            newFormat.stride = newFormat.width;
+            newFormat.sampleSize = newFormat.stride * newFormat.height * 3 / 2;
+            break;
+        case CV_CAP_MODE_YUYV:
+            newFormat.subType = MFVideoFormat_YUY2;
+            newFormat.stride = 2 * newFormat.width;
+            newFormat.sampleSize = newFormat.stride * newFormat.height;
+            break;
+        default:
+            return false;
         }
-        else if (SUCCEEDED(hr))
-        {
-            MediaType MT(pType.Get());
-            if (MT.MF_MT_MAJOR_TYPE == MFMediaType_Video)
-            {
-                if (dwStreamBest < 0 ||
-                    resolutionDiff(MT, width, height) < resolutionDiff(MTBest, width, height) ||
-                    (resolutionDiff(MT, width, height) == resolutionDiff(MTBest, width, height) && MT.width > MTBest.width) ||
-                    (resolutionDiff(MT, width, height) == resolutionDiff(MTBest, width, height) && MT.width == MTBest.width && MT.height > MTBest.height) ||
-                    (MT.width == MTBest.width && MT.height == MTBest.height && (getFramerate(MT) > getFramerate(MTBest) && (prefFramerate == 0 || getFramerate(MT) <= prefFramerate)))
-                   )
-                {
-                    dwStreamBest = (int)dwStreamTest;
-                    MTBest = MT;
-                }
-            }
-            ++dwMediaTypeTest;
-        }
+        newFormat.interlaceMode = MFVideoInterlace_Progressive;
+        newFormat.isFixedSize = true;
+        if (nativeFormat.subType == MFVideoFormat_MP43) //Unable to estimate FPS for MP43
+            newFormat.frameRateNum = 0;
     }
-    if (dwStreamBest >= 0)
-    {
-        GUID outSubtype = GUID_NULL;
-        UINT32 outStride = 0;
-        UINT32 outSize = 0;
-        if(convertToFormat)
-            switch (outFormat)
-            {
-            case CV_CAP_MODE_BGR:
-            case CV_CAP_MODE_RGB:
-                outSubtype = captureMode == MODE_HW ? MFVideoFormat_RGB32 : MFVideoFormat_RGB24; // HW accelerated mode support only RGB32
-                outStride = (captureMode == MODE_HW ? 4 : 3) * MTBest.width;
-                outSize = outStride * MTBest.height;
-                break;
-            case CV_CAP_MODE_GRAY:
-                outSubtype = MFVideoFormat_NV12;
-                outStride = MTBest.width;
-                outSize = outStride * MTBest.height * 3 / 2;
-                break;
-            case CV_CAP_MODE_YUYV:
-                outSubtype = MFVideoFormat_YUY2;
-                outStride = 2 * MTBest.width;
-                outSize = outStride * MTBest.height;
-                break;
-            default:
-                return false;
-            }
-        _ComPtr<IMFMediaType>  mediaTypeOut;
-        if (// Set the output media type.
-            SUCCEEDED(MFCreateMediaType(&mediaTypeOut)) &&
-            SUCCEEDED(mediaTypeOut->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video)) &&
-            SUCCEEDED(mediaTypeOut->SetGUID(MF_MT_SUBTYPE, convertToFormat ? outSubtype : MTBest.MF_MT_SUBTYPE)) &&
-            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, convertToFormat ? MFVideoInterlace_Progressive : MTBest.MF_MT_INTERLACE_MODE)) &&
-            SUCCEEDED(MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, aspectRatioN, aspectRatioD)) &&
-            SUCCEEDED(MFSetAttributeSize(mediaTypeOut.Get(), MF_MT_FRAME_SIZE, MTBest.width, MTBest.height)) &&
-            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_FIXED_SIZE_SAMPLES, convertToFormat ? 1 : MTBest.MF_MT_FIXED_SIZE_SAMPLES)) &&
-            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_SAMPLE_SIZE, convertToFormat ? outSize : MTBest.MF_MT_SAMPLE_SIZE)) &&
-            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_DEFAULT_STRIDE, convertToFormat ? outStride : MTBest.MF_MT_DEFAULT_STRIDE)))//Assume BGR24 input
-        {
-            if (SUCCEEDED(videoFileSource->SetStreamSelection((DWORD)MF_SOURCE_READER_ALL_STREAMS, false)) &&
-                SUCCEEDED(videoFileSource->SetStreamSelection((DWORD)dwStreamBest, true)) &&
-                SUCCEEDED(videoFileSource->SetCurrentMediaType((DWORD)dwStreamBest, NULL, mediaTypeOut.Get()))
-                )
-            {
-                dwStreamIndex = (DWORD)dwStreamBest;
-                nativeFormat = MTBest;
-                aspectN = aspectRatioN;
-                aspectD = aspectRatioD;
-                outputFormat = outFormat;
-                convertFormat = convertToFormat;
-                captureFormat = MediaType(mediaTypeOut.Get());
-                return true;
-            }
-            close();
-        }
-    }
-    return false;
+    // we select native format first and then our requested format (related issue #12822)
+    if (!newType.isEmpty()) // camera input
+        initStream(dwStreamIndex, nativeFormat);
+    return initStream(dwStreamIndex, newFormat);
 }
 
-// Initialize camera input
-bool CvCapture_MSMF::open(int _index)
+bool CvCapture_MSMF::open(int index)
 {
     close();
-    if (_index < 0)
+    if (index < 0)
         return false;
-    _ComPtr<IMFAttributes> msAttr = NULL;
-    if (SUCCEEDED(MFCreateAttributes(&msAttr, 1)) &&
-        SUCCEEDED(msAttr->SetGUID(
-            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
-            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID
-        )))
+    DeviceList devices;
+    UINT32 count = devices.read();
+    if (count == 0 || static_cast<UINT32>(index) > count)
     {
-        IMFActivate **ppDevices = NULL;
-        UINT32 count;
-        if (SUCCEEDED(MFEnumDeviceSources(msAttr.Get(), &ppDevices, &count)))
-        {
-            if (count > 0)
-            {
-                for (int ind = 0; ind < (int)count; ind++)
-                {
-                    if (ind == _index && ppDevices[ind])
-                    {
-                        // Set source reader parameters
-                        _ComPtr<IMFMediaSource> mSrc;
-                        _ComPtr<IMFAttributes> srAttr;
-                        if (SUCCEEDED(ppDevices[ind]->ActivateObject(__uuidof(IMFMediaSource), (void**)&mSrc)) && mSrc &&
-                            SUCCEEDED(MFCreateAttributes(&srAttr, 10)) &&
-                            SUCCEEDED(srAttr->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, TRUE)) &&
-                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_DISABLE_DXVA, FALSE)) &&
-                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, FALSE)) &&
-                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, TRUE)))
-                        {
-#ifdef HAVE_MSMF_DXVA
-                            if (D3DMgr)
-                                srAttr->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get());
-#endif
-                            readCallback = ComPtr<IMFSourceReaderCallback>(new SourceReaderCB());
-                            HRESULT hr = srAttr->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, (IMFSourceReaderCallback*)readCallback.Get());
-                            if (FAILED(hr))
-                            {
-                                readCallback.Release();
-                                continue;
-                            }
-
-                            if (SUCCEEDED(MFCreateSourceReaderFromMediaSource(mSrc.Get(), srAttr.Get(), &videoFileSource)))
-                            {
-                                isOpen = true;
-                                duration = 0;
-                                if (configureOutput(640, 480, 0, aspectN, aspectD, outputFormat, convertFormat))
-                                {
-                                    double fps = getFramerate(nativeFormat);
-                                    frameStep = (LONGLONG)(fps > 0 ? 1e7 / fps : 0);
-                                    camid = _index;
-                                }
-                            }
-                        }
-                    }
-                    if (ppDevices[ind])
-                        ppDevices[ind]->Release();
-                }
-            }
-        }
-        CoTaskMemFree(ppDevices);
+        CV_LOG_DEBUG(NULL, "Device " << index << " not found (total " << count << " devices)");
+        return false;
+    }
+    _ComPtr<IMFAttributes> attr = getDefaultSourceConfig();
+    _ComPtr<IMFSourceReaderCallback> cb = new SourceReaderCB();
+    attr->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, cb.Get());
+    _ComPtr<IMFMediaSource> src = devices.activateSource(index);
+    if (!src.Get() || FAILED(MFCreateSourceReaderFromMediaSource(src.Get(), attr.Get(), &videoFileSource)))
+    {
+        CV_LOG_DEBUG(NULL, "Failed to create source reader");
+        return false;
     }
 
+    isOpen = true;
+    camid = index;
+    readCallback = cb;
+    duration = 0;
+    if (configureOutput(MediaType::createDefault(), outputFormat, convertFormat))
+    {
+        frameStep = captureFormat.getFrameStep();
+    }
     return isOpen;
 }
 
@@ -1020,119 +854,32 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
         return false;
 
     // Set source reader parameters
-    _ComPtr<IMFAttributes> srAttr;
-    if (SUCCEEDED(MFCreateAttributes(&srAttr, 10)) &&
-        SUCCEEDED(srAttr->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true)) &&
-        SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_DISABLE_DXVA, false)) &&
-        SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, false)) &&
-        SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true))
-        )
+    _ComPtr<IMFAttributes> attr = getDefaultSourceConfig();
+    cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
+    MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
+    if (SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), attr.Get(), &videoFileSource)))
     {
-#ifdef HAVE_MSMF_DXVA
-        if(D3DMgr)
-            srAttr->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get());
-#endif
-        cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
-        MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
-        if (SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), srAttr.Get(), &videoFileSource)))
+        isOpen = true;
+        sampleTime = 0;
+        if (configureOutput(MediaType(), outputFormat, convertFormat))
         {
-            isOpen = true;
-            sampleTime = 0;
-            if (configureOutput(0, 0, 0, aspectN, aspectD, outputFormat, convertFormat))
+            frameStep = captureFormat.getFrameStep();
+            filename = _filename;
+            PROPVARIANT var;
+            HRESULT hr;
+            if (SUCCEEDED(hr = videoFileSource->GetPresentationAttribute((DWORD)MF_SOURCE_READER_MEDIASOURCE, MF_PD_DURATION, &var)) &&
+                var.vt == VT_UI8)
             {
-                double fps = getFramerate(nativeFormat);
-                frameStep = (LONGLONG)(fps > 0 ? 1e7 / fps : 0);
-                filename = _filename;
-                PROPVARIANT var;
-                HRESULT hr;
-                if (SUCCEEDED(hr = videoFileSource->GetPresentationAttribute((DWORD)MF_SOURCE_READER_MEDIASOURCE, MF_PD_DURATION, &var)) &&
-                    var.vt == VT_UI8)
-                {
-                    duration = var.uhVal.QuadPart;
-                    PropVariantClear(&var);
-                }
-                else
-                    duration = 0;
+                duration = var.uhVal.QuadPart;
+                PropVariantClear(&var);
             }
+            else
+                duration = 0;
         }
     }
 
     return isOpen;
 }
-
-
-HRESULT SourceReaderCB::Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSample, BOOL& bEOS)
-{
-    bEOS = FALSE;
-
-    DWORD dwResult = WaitForSingleObject(m_hEvent, dwMilliseconds);
-    if (dwResult == WAIT_TIMEOUT)
-    {
-        return E_PENDING;
-    }
-    else if (dwResult != WAIT_OBJECT_0)
-    {
-        return HRESULT_FROM_WIN32(GetLastError());
-    }
-
-    bEOS = m_bEOS;
-    if (!bEOS)
-    {
-        cv::AutoLock lock(m_mutex);
-        videoSample = m_lastSample;
-        CV_Assert(videoSample);
-        m_lastSample.Release();
-        ResetEvent(m_hEvent);  // event is auto-reset, but we need this forced reset due time gap between wait() and mutex hold.
-    }
-
-    return m_hrStatus;
-}
-
-STDMETHODIMP SourceReaderCB::OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample)
-{
-    CV_UNUSED(llTimestamp);
-
-    HRESULT hr = 0;
-    cv::AutoLock lock(m_mutex);
-
-    if (SUCCEEDED(hrStatus))
-    {
-        if (pSample)
-        {
-            CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
-            IMFSample* prev = m_lastSample.Get();
-            if (prev)
-            {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed)");
-            }
-            m_lastSample = pSample;
-        }
-    }
-    else
-    {
-        CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
-    }
-
-    if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
-    {
-        // Reached the end of the stream.
-        m_bEOS = true;
-    }
-    m_hrStatus = hrStatus;
-
-    if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
-    {
-        CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
-        m_bEOS = true;
-    }
-
-    if (pSample || m_bEOS)
-    {
-        SetEvent(m_hEvent);
-    }
-    return S_OK;
-}
-
 
 bool CvCapture_MSMF::grabFrame()
 {
@@ -1294,7 +1041,7 @@ bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
             break;
         if (convertFormat)
         {
-            if (lock2d || (unsigned int)cursize == captureFormat.MF_MT_SAMPLE_SIZE)
+            if (lock2d || (unsigned int)cursize == captureFormat.sampleSize)
             {
                 switch (outputFormat)
                 {
@@ -1340,13 +1087,6 @@ bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
     return false;
 }
 
-double CvCapture_MSMF::getFramerate(MediaType MT) const
-{
-    if (MT.MF_MT_SUBTYPE == MFVideoFormat_MP43) //Unable to estimate FPS for MP43
-        return 0;
-    return MT.MF_MT_FRAME_RATE_DENOMINATOR != 0 ? ((double)MT.MF_MT_FRAME_RATE_NUMERATOR) / ((double)MT.MF_MT_FRAME_RATE_DENOMINATOR) : 0;
-}
-
 bool CvCapture_MSMF::setTime(double time, bool rough)
 {
     PROPVARIANT var;
@@ -1371,11 +1111,35 @@ bool CvCapture_MSMF::setTime(double time, bool rough)
     return false;
 }
 
+template <typename CtrlT>
+bool CvCapture_MSMF::readComplexPropery(long prop, long & val) const
+{
+    _ComPtr<CtrlT> ctrl;
+    if (FAILED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&ctrl))))
+    {
+        CV_LOG_DEBUG(NULL, "Failed to get service for stream");
+        return false;
+    }
+    long paramVal, paramFlag;
+    if (FAILED(ctrl->Get(prop, &paramVal, &paramFlag)))
+    {
+        CV_LOG_DEBUG(NULL, "Failed to get property " << prop);
+        // we continue
+    }
+    // fallback - get default value
+    long minVal, maxVal, stepVal;
+    if (FAILED(ctrl->GetRange(prop, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag)))
+    {
+        CV_LOG_DEBUG(NULL, "Failed to get default value for property " << prop);
+        return false;
+    }
+    val = paramVal;
+    return true;
+}
+
 double CvCapture_MSMF::getProperty( int property_id ) const
 {
-    IAMVideoProcAmp *pProcAmp = NULL;
-    IAMCameraControl *pProcControl = NULL;
-    // image format properties
+    long cVal = 0;
     if (isOpen)
         switch (property_id)
         {
@@ -1384,24 +1148,24 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         case CV_CAP_PROP_CONVERT_RGB:
                 return convertFormat ? 1 : 0;
         case CV_CAP_PROP_SAR_NUM:
-                return aspectN;
+                return captureFormat.aspectRatioNum;
         case CV_CAP_PROP_SAR_DEN:
-                return aspectD;
+                return captureFormat.aspectRatioDenom;
         case CV_CAP_PROP_FRAME_WIDTH:
             return captureFormat.width;
         case CV_CAP_PROP_FRAME_HEIGHT:
             return captureFormat.height;
         case CV_CAP_PROP_FOURCC:
-            return nativeFormat.MF_MT_SUBTYPE.Data1;
+            return captureFormat.subType.Data1;
         case CV_CAP_PROP_FPS:
-            return getFramerate(nativeFormat);
+            return captureFormat.getFramerate();
         case CV_CAP_PROP_FRAME_COUNT:
             if (duration != 0)
-                return floor(((double)duration / 1e7)*getFramerate(nativeFormat) + 0.5);
+                return floor(((double)duration / 1e7)* captureFormat.getFramerate() + 0.5);
             else
                 break;
         case CV_CAP_PROP_POS_FRAMES:
-            return floor(((double)sampleTime / 1e7)*getFramerate(nativeFormat) + 0.5);
+            return floor(((double)sampleTime / 1e7)* captureFormat.getFramerate() + 0.5);
         case CV_CAP_PROP_POS_MSEC:
             return (double)sampleTime / 1e4;
         case CV_CAP_PROP_POS_AVI_RATIO:
@@ -1410,253 +1174,87 @@ double CvCapture_MSMF::getProperty( int property_id ) const
             else
                 break;
         case CV_CAP_PROP_BRIGHTNESS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_Brightness, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if(FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_Brightness, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Brightness, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_CONTRAST:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_Contrast, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_Contrast, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Contrast, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_SATURATION:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_Saturation, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_Saturation, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Saturation, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_HUE:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_Hue, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_Hue, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Hue, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_GAIN:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_Gain, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_Gain, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gain, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_SHARPNESS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_Sharpness, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_Sharpness, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Sharpness, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_GAMMA:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_Gamma, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_Gamma, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gamma, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_BACKLIGHT:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_BacklightCompensation, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_BacklightCompensation, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_MONOCHROME:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_ColorEnable, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_ColorEnable, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal == 0 ? 1 : 0;
-            }
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, cVal))
+                return cVal == 0 ? 1 : 0;
             break;
         case CV_CAP_PROP_TEMPERATURE:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcAmp->Get(VideoProcAmp_WhiteBalance, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcAmp->GetRange(VideoProcAmp_WhiteBalance, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcAmp->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
-        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-        case CV_CAP_PROP_WHITE_BALANCE_RED_V:
+            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_PAN:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Pan, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Pan, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMCameraControl>(CameraControl_Pan, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_TILT:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Tilt, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Tilt, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMCameraControl>(CameraControl_Tilt, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_ROLL:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Roll, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Roll, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMCameraControl>(CameraControl_Roll, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_IRIS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Iris, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Iris, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMCameraControl>(CameraControl_Iris, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_EXPOSURE:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Exposure, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Exposure, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
         case CV_CAP_PROP_AUTO_EXPOSURE:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
+            if (readComplexPropery<IAMCameraControl>(CameraControl_Exposure, cVal))
             {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Exposure, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Exposure, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramFlag == VideoProcAmp_Flags_Auto;
+                if (property_id == CV_CAP_PROP_EXPOSURE)
+                    return cVal;
+                else
+                    return cVal == VideoProcAmp_Flags_Auto;
             }
             break;
         case CV_CAP_PROP_ZOOM:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Zoom, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Zoom, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
+            if (readComplexPropery<IAMCameraControl>(CameraControl_Zoom, cVal))
+                return cVal;
             break;
         case CV_CAP_PROP_FOCUS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Focus, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Focus, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramVal;
-            }
         case CV_CAP_PROP_AUTOFOCUS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
+            if (readComplexPropery<IAMCameraControl>(CameraControl_Focus, cVal))
             {
-                long paramVal, paramFlag;
-                HRESULT hr = pProcControl->Get(CameraControl_Focus, &paramVal, &paramFlag);
-                long minVal, maxVal, stepVal;
-                if (FAILED(hr))
-                    hr = pProcControl->GetRange(CameraControl_Focus, &minVal, &maxVal, &stepVal, &paramVal, &paramFlag);//Unable to get the property, trying to return default value
-                pProcControl->Release();
-                if (SUCCEEDED(hr))
-                    return paramFlag == VideoProcAmp_Flags_Auto;
+                if (property_id == CV_CAP_PROP_FOCUS)
+                    return cVal;
+                else
+                    return cVal == VideoProcAmp_Flags_Auto;
             }
             break;
-
+        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+        case CV_CAP_PROP_WHITE_BALANCE_RED_V:
         case CV_CAP_PROP_RECTIFICATION:
         case CV_CAP_PROP_TRIGGER:
         case CV_CAP_PROP_TRIGGER_DELAY:
@@ -1667,15 +1265,29 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         default:
             break;
         }
-
     return -1;
+}
+
+template <typename CtrlT>
+bool CvCapture_MSMF::writeComplexProperty(long prop, double val, long flags)
+{
+    _ComPtr<CtrlT> ctrl;
+    if (FAILED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&ctrl))))
+    {
+        CV_LOG_DEBUG(NULL, "Failed get service for stream");
+        return false;
+    }
+    if (FAILED(ctrl->Set(prop, (long)val, flags)))
+    {
+        CV_LOG_DEBUG(NULL, "Failed to set property " << prop);
+        return false;
+    }
+    return true;
 }
 
 bool CvCapture_MSMF::setProperty( int property_id, double value )
 {
-    IAMVideoProcAmp *pProcAmp = NULL;
-    IAMCameraControl *pProcControl = NULL;
-    // image capture properties
+    MediaType newFormat = captureFormat;
     if (isOpen)
         switch (property_id)
         {
@@ -1690,28 +1302,45 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
                 return false;
             }
         case CV_CAP_PROP_FOURCC:
-            return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), aspectN, aspectD, (int)cvRound(value), convertFormat);
+            return configureOutput(newFormat, (int)cvRound(value), convertFormat);
+        case CV_CAP_PROP_FORMAT:
+            return configureOutput(newFormat, (int)cvRound(value), convertFormat);
         case CV_CAP_PROP_CONVERT_RGB:
-            return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), aspectN, aspectD, outputFormat, value != 0);
+            return configureOutput(newFormat, outputFormat, value != 0);
         case CV_CAP_PROP_SAR_NUM:
             if (value > 0)
-                return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), (UINT32)cvRound(value), aspectD, outputFormat, convertFormat);
+            {
+                newFormat.aspectRatioNum = (UINT32)cvRound(value);
+                return configureOutput(newFormat, outputFormat, convertFormat);
+            }
             break;
         case CV_CAP_PROP_SAR_DEN:
             if (value > 0)
-                return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), aspectN, (UINT32)cvRound(value), outputFormat, convertFormat);
+            {
+                newFormat.aspectRatioDenom = (UINT32)cvRound(value);
+                return configureOutput(newFormat, outputFormat, convertFormat);
+            }
             break;
         case CV_CAP_PROP_FRAME_WIDTH:
             if (value >= 0)
-                return configureOutput((UINT32)cvRound(value), requestedHeight, getFramerate(nativeFormat), aspectN, aspectD, outputFormat, convertFormat);
+            {
+                newFormat.width = (UINT32)cvRound(value);
+                return configureOutput(newFormat, outputFormat, convertFormat);
+            }
             break;
         case CV_CAP_PROP_FRAME_HEIGHT:
             if (value >= 0)
-                return configureOutput(requestedWidth, (UINT32)cvRound(value), getFramerate(nativeFormat), aspectN, aspectD, outputFormat, convertFormat);
+            {
+                newFormat.height = (UINT32)cvRound(value);
+                return configureOutput(newFormat, outputFormat, convertFormat);
+            }
             break;
         case CV_CAP_PROP_FPS:
             if (value >= 0)
-                return configureOutput(requestedWidth, requestedHeight, value, aspectN, aspectD, outputFormat, convertFormat);
+            {
+                newFormat.setFramerate(value);
+                return configureOutput(newFormat, outputFormat, convertFormat);
+            }
             break;
         case CV_CAP_PROP_FRAME_COUNT:
             break;
@@ -1720,183 +1349,51 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
                 return setTime(duration * value, true);
             break;
         case CV_CAP_PROP_POS_FRAMES:
-            if (std::fabs(getFramerate(nativeFormat)) > 0)
-                return setTime(value  * 1e7 / getFramerate(nativeFormat), false);
+            if (std::fabs(captureFormat.getFramerate()) > 0)
+                return setTime(value  * 1e7 / captureFormat.getFramerate(), false);
             break;
         case CV_CAP_PROP_POS_MSEC:
                 return setTime(value  * 1e4, false);
         case CV_CAP_PROP_BRIGHTNESS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_Brightness, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Brightness, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_CONTRAST:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_Contrast, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Contrast, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_SATURATION:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_Saturation, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Saturation, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_HUE:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_Hue, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Hue, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_GAIN:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_Gain, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gain, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_SHARPNESS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_Sharpness, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Sharpness, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_GAMMA:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_Gamma, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gamma, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_BACKLIGHT:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_BacklightCompensation, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_MONOCHROME:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = value != 0 ? 0 : 1;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_ColorEnable, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, value, VideoProcAmp_Flags_Manual);
         case CV_CAP_PROP_TEMPERATURE:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcAmp->Set(VideoProcAmp_WhiteBalance, paramVal, VideoProcAmp_Flags_Manual);
-                pProcAmp->Release();
-                return SUCCEEDED(hr);
-            }
+            return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, value, VideoProcAmp_Flags_Manual);
+        case CV_CAP_PROP_PAN:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Pan, value, CameraControl_Flags_Manual);
+        case CV_CAP_PROP_TILT:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Tilt, value, CameraControl_Flags_Manual);
+        case CV_CAP_PROP_ROLL:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Roll, value, CameraControl_Flags_Manual);
+        case CV_CAP_PROP_IRIS:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Iris, value, CameraControl_Flags_Manual);
+        case CV_CAP_PROP_EXPOSURE:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Exposure, value, CameraControl_Flags_Manual);
+        case CV_CAP_PROP_AUTO_EXPOSURE:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Exposure, value, value != 0 ? VideoProcAmp_Flags_Auto : VideoProcAmp_Flags_Manual);
+        case CV_CAP_PROP_ZOOM:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Zoom, value, CameraControl_Flags_Manual);
+        case CV_CAP_PROP_FOCUS:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Focus, value, CameraControl_Flags_Manual);
+        case CV_CAP_PROP_AUTOFOCUS:
+            return writeComplexProperty<IAMCameraControl>(CameraControl_Focus, value, value != 0 ? CameraControl_Flags_Auto : CameraControl_Flags_Manual);
         case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
         case CV_CAP_PROP_WHITE_BALANCE_RED_V:
-            break;
-        case CV_CAP_PROP_PAN:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcControl->Set(CameraControl_Pan, paramVal, VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
-        case CV_CAP_PROP_TILT:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcControl->Set(CameraControl_Tilt, paramVal, VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
-        case CV_CAP_PROP_ROLL:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcControl->Set(CameraControl_Roll, paramVal, VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
-        case CV_CAP_PROP_IRIS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcControl->Set(CameraControl_Iris, paramVal, VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
-        case CV_CAP_PROP_EXPOSURE:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcControl->Set(CameraControl_Exposure, paramVal, VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-        case CV_CAP_PROP_AUTO_EXPOSURE:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = 0;
-                HRESULT hr = pProcControl->Set(CameraControl_Exposure, paramVal, value != 0 ? VideoProcAmp_Flags_Auto : VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
-        case CV_CAP_PROP_ZOOM:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcControl->Set(CameraControl_Zoom, paramVal, VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
-        case CV_CAP_PROP_FOCUS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = (long)value;
-                HRESULT hr = pProcControl->Set(CameraControl_Focus, paramVal, VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-        case CV_CAP_PROP_AUTOFOCUS:
-            if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcControl))))
-            {
-                long paramVal = 0;
-                HRESULT hr = pProcControl->Set(CameraControl_Focus, paramVal, value != 0 ? VideoProcAmp_Flags_Auto : VideoProcAmp_Flags_Manual);
-                pProcControl->Release();
-                return SUCCEEDED(hr);
-            }
-            break;
-
         case CV_CAP_PROP_RECTIFICATION:
         case CV_CAP_PROP_TRIGGER:
         case CV_CAP_PROP_TRIGGER_DELAY:
@@ -1907,7 +1404,6 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
         default:
             break;
         }
-
     return false;
 }
 
