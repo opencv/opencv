@@ -664,7 +664,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 f.close();
             }
             std::cout << "Storage size: " << sz << std::endl;
-            EXPECT_LE(sz, (size_t)6000);
+            EXPECT_LE(sz, (size_t)11000);
         }
         {   /* read */
             cv::FileStorage fs(name, cv::FileStorage::READ + (useMemory ? cv::FileStorage::MEMORY : 0));
@@ -757,11 +757,11 @@ TEST(Core_InputOutput, DISABLED_filestorage_base64_basic_read_JSON)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".json", false);
 }
-TEST(Core_InputOutput, DISABLED_filestorage_base64_basic_rw_XML)
+TEST(Core_InputOutput, filestorage_base64_basic_rw_XML)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".xml", true);
 }
-TEST(Core_InputOutput, DISABLED_filestorage_base64_basic_rw_YAML)
+TEST(Core_InputOutput, filestorage_base64_basic_rw_YAML)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".yml", true);
 }
@@ -769,11 +769,11 @@ TEST(Core_InputOutput, DISABLED_filestorage_base64_basic_rw_JSON)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".json", true);
 }
-TEST(Core_InputOutput, DISABLED_filestorage_base64_basic_memory_XML)
+TEST(Core_InputOutput, filestorage_base64_basic_memory_XML)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".xml", true, true);
 }
-TEST(Core_InputOutput, DISABLED_filestorage_base64_basic_memory_YAML)
+TEST(Core_InputOutput, filestorage_base64_basic_memory_YAML)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".yml", true, true);
 }
