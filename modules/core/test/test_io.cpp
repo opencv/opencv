@@ -753,7 +753,7 @@ TEST(Core_InputOutput, filestorage_base64_basic_read_YAML)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".yml", false);
 }
-TEST(Core_InputOutput, DISABLED_filestorage_base64_basic_read_JSON)
+TEST(Core_InputOutput, filestorage_base64_basic_read_JSON)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".json", false);
 }
