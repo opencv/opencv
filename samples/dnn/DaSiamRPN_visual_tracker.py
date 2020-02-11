@@ -17,24 +17,23 @@ def get_subwindow_tracking(im, pos, model_sz, original_sz, avg_chans):
     sz = original_sz
     im_sz = im.shape
     c = (original_sz+1) / 2
-    
+
     context_xmin = round(pos[0] - c)
     context_xmax = context_xmin + sz - 1
     context_ymin = round(pos[1] - c)
     context_ymax = context_ymin + sz - 1
-    
+
     left_pad = int(max(0., -context_xmin))
     top_pad = int(max(0., -context_ymin))
     right_pad = int(max(0., context_xmax - im_sz[1] + 1))
     bottom_pad = int(max(0., context_ymax - im_sz[0] + 1))
-    
+
     context_xmin = context_xmin + left_pad
     context_xmax = context_xmax + left_pad
     context_ymin = context_ymin + top_pad
     context_ymax = context_ymax + top_pad
-    
     r, c, k = im.shape
-    
+
     if any([top_pad, bottom_pad, left_pad, right_pad]):
         te_im = np.zeros((r + top_pad + bottom_pad, c + left_pad + right_pad, k), np.uint8)
         te_im[top_pad:top_pad + r, left_pad:left_pad + c, :] = im
@@ -49,12 +48,12 @@ def get_subwindow_tracking(im, pos, model_sz, original_sz, avg_chans):
         im_patch_original = te_im[int(context_ymin):int(context_ymax + 1), int(context_xmin):int(context_xmax + 1), :]
     else:
         im_patch_original = im[int(context_ymin):int(context_ymax + 1), int(context_xmin):int(context_xmax + 1), :]
-    
+
     if not np.array_equal(model_sz, original_sz):
         im_patch = cv.resize(im_patch_original, (model_sz, model_sz))
     else:
         im_patch = im_patch_original
-    
+
     return im_patch.astype(float)
 
 #function for calculating target position and size
@@ -73,13 +72,12 @@ def get_subwindow_tracking(im, pos, model_sz, original_sz, avg_chans):
 #     h = s * (y2 - y1) + 1
 #     return [cx, cy, w, h]
 
-
 def generate_anchor(total_stride, scales, ratios, score_size):
     anchor_num = len(ratios) * len(scales)
     anchor = np.zeros((anchor_num, 4),  dtype=np.float32)
     size = total_stride * total_stride
     count = 0
-    
+
     for ratio in ratios:
         ws = int(np.sqrt(size / ratio))
         hs = int(ws * ratio)
@@ -91,14 +89,13 @@ def generate_anchor(total_stride, scales, ratios, score_size):
             anchor[count, 2] = wws
             anchor[count, 3] = hhs
             count += 1
-    
+
     anchor = np.tile(anchor, score_size * score_size).reshape((-1, 4))
     ori = - (score_size / 2) * total_stride
-    xx, yy = np.meshgrid([ori + total_stride * dx for dx in range(score_size)],
-                         [ori + total_stride * dy for dy in range(score_size)])
-    xx, yy = np.tile(xx.flatten(), (anchor_num, 1)).flatten(), \
-             np.tile(yy.flatten(), (anchor_num, 1)).flatten()
+    xx, yy = np.meshgrid([ori + total_stride * dx for dx in range(score_size)], [ori + total_stride * dy for dy in range(score_size)])
+    xx, yy = np.tile(xx.flatten(), (anchor_num, 1)).flatten(), np.tile(yy.flatten(), (anchor_num, 1)).flatten()
     anchor[:, 0], anchor[:, 1] = xx.astype(np.float32), yy.astype(np.float32)
+
     return anchor
 
 #parameters for another functions
@@ -124,26 +121,25 @@ def SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
     p = TrackerConfig()
     state['im_h'] = im.shape[0]
     state['im_w'] = im.shape[1]
-    
+
     if p.adaptive:
         if ((target_sz[0] * target_sz[1]) / float(state['im_h'] * state['im_w'])) < 0.004:
             p.instance_size = 287
         else:
             p.instance_size = 271
         p.score_size = (p.instance_size - p.exemplar_size) / p.total_stride + 1
-    
+
     p.anchor = generate_anchor(p.total_stride, p.scales, p.ratios, int(p.score_size))
     avg_chans = np.mean(im, axis=(0, 1))
     wc_z = target_sz[0] + p.context_amount * sum(target_sz)
     hc_z = target_sz[1] + p.context_amount * sum(target_sz)
     s_z = round(np.sqrt(wc_z * hc_z))
-    
+
     z_crop = get_subwindow_tracking(im, target_pos, p.exemplar_size, s_z, avg_chans)    
     z_crop = np.transpose(z_crop, (2,0,1))
     z_crop = np.reshape(z_crop, (1, 3, 127, 127)).astype(np.float32)
 
     #"temple" Start
-    
     net.setInput(z_crop)
     z_f = net.forward('63')
 
@@ -155,16 +151,16 @@ def SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
 
     r1 = r1.reshape(20, 256, 4, 4)
     cls1 = cls1.reshape(10, 256 , 4, 4)
-    
+
     net.setParam(net.getLayerId('65'), 0, r1)
     net.setParam(net.getLayerId('68'), 0, cls1)
     #"temple" End
-    
+
     if p.windowing == 'cosine':
         window = np.outer(np.hanning(p.score_size), np.hanning(p.score_size))
     elif p.windowing == 'uniform':
         window = np.ones((p.score_size, p.score_size))
-    
+
     window = np.tile(window.flatten(), p.anchor_num)
     state['p'] = p
     state['net'] = net
@@ -172,6 +168,7 @@ def SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
     state['window'] = window
     state['target_pos'] = target_pos
     state['target_sz'] = target_sz
+
     return state
 
 #track function
@@ -182,7 +179,7 @@ def SiamRPN_track(state, im):
     window = state['window']
     target_pos = state['target_pos']
     target_sz = state['target_sz']
-    
+
     wc_z = target_sz[1] + p.context_amount * sum(target_sz)
     hc_z = target_sz[0] + p.context_amount * sum(target_sz)
     s_z = np.sqrt(wc_z * hc_z)
@@ -206,6 +203,7 @@ def SiamRPN_track(state, im):
     state['target_pos'] = target_pos
     state['target_sz'] = target_sz
     state['score'] = score
+
     return state
 
 #posistion of center of the rectangle and it's size
@@ -218,11 +216,11 @@ def tracker_eval(net, x_crop, target_pos, target_sz, window, scale_z, p):
     outNames = net.getUnconnectedOutLayersNames()
     outNames = ['66', '68']
     delta, score = net.forward(outNames)
-    
+
     delta = np.transpose(delta, (1, 2, 3, 0))
     delta = np.ascontiguousarray(delta, dtype = np.float32)
     delta = np.reshape(delta, (4, -1))
-    
+
     score = np.transpose(score, (1, 2, 3, 0))
     score = np.ascontiguousarray(score, dtype = np.float32)
     score = np.reshape(score, (2, -1))
@@ -245,7 +243,7 @@ def tracker_eval(net, x_crop, target_pos, target_sz, window, scale_z, p):
         pad = (wh[0] + wh[1]) * 0.5
         sz2 = (wh[0] + pad) * (wh[1] + pad)
         return np.sqrt(sz2)
-    
+
     s_c = change(sz(delta[2, :], delta[3, :]) / (sz_wh(target_sz)))
     r_c = change((target_sz[0] / target_sz[1]) / (delta[2, :] / delta[3, :]))
 
@@ -267,13 +265,16 @@ def tracker_eval(net, x_crop, target_pos, target_sz, window, scale_z, p):
 
     target_pos = np.array([res_x, res_y])
     target_sz = np.array([res_w, res_h])
+
     return target_pos, target_sz, score[best_pscore_id]
 
 def softmax(x):
     y = np.copy(x)
+
     for i in range(1805):
         e_x = np.exp(x[: , i] - np.max(x[ : , i]))
         y[ : , i] = e_x /e_x.sum()
+
     return y
 
 #parse paths to onnx models and to input sequence
@@ -305,6 +306,7 @@ toc = 0#variable for fps counter
 cap = cv.VideoCapture("/home/ilyaelizarov/trackers/DaSiamRPN/code/bag/%08d.jpg",cv.CAP_IMAGES)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
+
 f = 0
 #tracking cicle
 # for f, image in enumerate(images):
@@ -322,7 +324,7 @@ while (cap.isOpened):
     cv.rectangle(frame, (res[0], res[1]), (res[0] + res[2], res[1] + res[3]), (0, 255, 255), 3)
     # cv.rectangle(im, (int(cx - w/2),int(cy - h/2)), (int(cx + w/2),int(cy + h/2)), (0, 255, 0))
     cv.imshow('SiamRPN', frame)
-    cv.waitKey(1)
-
-#print calculated fps
-# print('Tracking Speed {:.1f}fps'.format((len(images)-1)/(toc/cv.getTickFrequency())))
+    key = cv.waitKey(1)
+    if key == 27:
+        print('Tracking Speed {:.1f}fps'.format((f - 1) / (toc / cv.getTickFrequency())))
+        break
