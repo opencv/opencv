@@ -15,14 +15,14 @@
 const std::string about =
     "This is an OpenCV-based version of Privacy Masking Camera example";
 const std::string keys =
-    "{ h help |   | print this help message }"
-    "{ input  |   | Path to an input video file }"
-    "{ platm  |   | IE vehicle/license plate detection model (.xml) }"
-    "{ platd  |   | IE vehicle/license plate detection model device }"
-    "{ facem  |   | IE face detection model (.xml) }"
-    "{ faced  |   | IE face detection model device }"
-    "{ trad   |   | Run processing in traditional (non-pipelined) way }"
-    "{ noshow |   | Don't display UI (improves performance) }";
+    "{ h help |     | print this help message }"
+    "{ input  |     | Path to an input video file }"
+    "{ platm  |     | IE vehicle/license plate detection model (.xml) }"
+    "{ platd  | CPU | IE vehicle/license plate detection model device (for OpenVINO IE, e.g. CPU, GPU, VPU, ...) }"
+    "{ facem  |     | IE face detection model (.xml) }"
+    "{ faced  | CPU | IE face detection model device (for OpenVINO IE, e.g. CPU, GPU, VPU, ...) }"
+    "{ trad   |     | Run processing in traditional (non-pipelined) way }"
+    "{ noshow |     | Don't display UI (improves performance) }";
 
 namespace {
 
@@ -37,30 +37,7 @@ std::string weights_path(const std::string &model_path) {
 
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
 }
-
-struct Avg {
-    struct Elapsed {
-        explicit Elapsed(double ms) : ss(ms/1000.), mm(static_cast<int>(ss)/60) {}
-        const double ss;
-        const int    mm;
-    };
-
-    using MS = std::chrono::duration<double, std::ratio<1, 1000>>;
-    using TS = std::chrono::time_point<std::chrono::high_resolution_clock>;
-    TS started;
-
-    void    start() { started = now(); }
-    TS      now() const { return std::chrono::high_resolution_clock::now(); }
-    double  tick() const { return std::chrono::duration_cast<MS>(now() - started).count(); }
-    Elapsed elapsed() const { return Elapsed{tick()}; }
-    double  fps(std::size_t n) const { return static_cast<double>(n) / (tick() / 1000.); }
-};
-std::ostream& operator<<(std::ostream &os, const Avg::Elapsed &e) {
-    os << e.mm << ':' << (e.ss - 60*e.mm);
-    return os;
-}
 } // namespace
-
 
 namespace custom {
 
@@ -192,7 +169,7 @@ int main(int argc, char *argv[])
     auto kernels = cv::gapi::kernels<custom::OCVParseSSD, custom::OCVToMosaic>();
     auto networks = cv::gapi::networks(plate_net, face_net);
 
-    Avg avg;
+    cv::TickMeter tm;
     cv::Mat out_frame;
     std::size_t frames = 0u;
     std::cout << "Reading " << input << std::endl;
@@ -203,7 +180,7 @@ int main(int argc, char *argv[])
         cap >> in_frame;
 
         auto exec = graph.compile(cv::descr_of(in_frame), cv::compile_args(kernels, networks));
-        avg.start();
+        tm.start();
         do {
             exec(in_frame, out_frame);
             if (!no_show) {
@@ -212,11 +189,12 @@ int main(int argc, char *argv[])
             }
             frames++;
         } while (cap.read(in_frame));
+        tm.stop();
     } else {
         auto pipeline = graph.compileStreaming(cv::compile_args(kernels, networks));
         pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
         pipeline.start();
-        avg.start();
+        tm.start();
 
         while (pipeline.pull(cv::gout(out_frame))) {
             frames++;
@@ -225,9 +203,11 @@ int main(int argc, char *argv[])
                 cv::waitKey(1);
             }
         }
+
+        tm.stop();
     }
 
-    std::cout << "Processed " << frames << " frames in " << avg.elapsed()
-              << " (" << avg.fps(frames) << " FPS)" << std::endl;
+    std::cout << "Processed " << frames << " frames"
+              << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }
