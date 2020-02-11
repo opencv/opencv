@@ -1669,4 +1669,46 @@ TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
     ASSERT_EQ(0, std::remove(filename.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_JSON_VeryLongLines)
+{
+    for( int iter = 0; iter < 2; iter++ )
+    {
+        std::string temp_path = cv::tempfile("temp.json");
+        {
+        std::ofstream ofs(temp_path);
+        ofs << "{     ";
+        int prev_len = 0, start = 0;
+        for (int i = 0; i < 52500; i++)
+        {
+            std::string str = cv::format("\"KEY%d\"", i);
+            ofs << str;
+            if(iter == 1 && i - start > prev_len)
+            {
+                // build a stairway with increasing text row width
+                ofs << "\n";
+                prev_len = i - start;
+                start = i;
+            }
+            str = cv::format(": \"VALUE%d\", ", i);
+            ofs << str;
+        }
+        ofs << "}";
+        }
+
+        {
+        cv::FileStorage fs(temp_path, cv::FileStorage::READ);
+        char key[16], val0[16];
+        std::string val;
+        for(int i = 0; i < 52500; i += 100)
+        {
+            sprintf(key, "KEY%d", i);
+            sprintf(val0, "VALUE%d", i);
+            fs[key] >> val;
+            ASSERT_EQ(val, val0);
+        }
+        }
+        remove(temp_path.c_str());
+    }
+}
+
 }} // namespace
