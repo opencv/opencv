@@ -71,11 +71,15 @@ namespace cpu
      * @sa gapi_std_backends
      */
     GAPI_EXPORTS cv::gapi::GBackend backend();
+    /** @} */
 
     class GOCVFunctor;
+
     template<typename K, typename Callable>
     GAPI_EXPORTS GOCVFunctor ocv_kernel(const Callable& c);
-    /** @} */
+
+    template<typename K, typename Callable>
+    GAPI_EXPORTS GOCVFunctor ocv_kernel(Callable& c);
 } // namespace cpu
 } // namespace gapi
 
@@ -254,7 +258,7 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         }
 
         template<typename... Outputs>
-        static void call(const Impl& impl, Inputs&&... ins, Outputs&&... outs)
+        static void call(Impl& impl, Inputs&&... ins, Outputs&&... outs)
         {
             impl(std::forward<Inputs>(ins)..., outs...);
         }
@@ -273,7 +277,7 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
     }
 
     template<int... IIs, int... OIs>
-    static void call_impl(cv::GCPUContext &ctx, const Impl& impl, detail::Seq<IIs...>, detail::Seq<OIs...>)
+    static void call_impl(cv::GCPUContext &ctx, Impl& impl, detail::Seq<IIs...>, detail::Seq<OIs...>)
     {
         call_and_postprocess<decltype(cv::detail::get_in<Ins>::get(ctx, IIs))...>::call(impl, cv::detail::get_in<Ins>::get(ctx, IIs)...,
                                                                                               cv::detail::get_out<Outs>::get(ctx, OIs)...);
@@ -286,7 +290,7 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
                   typename detail::MkSeq<sizeof...(Outs)>::type());
     }
 
-    static void callFunctor(cv::GCPUContext &ctx, const Impl& impl)
+    static void callFunctor(cv::GCPUContext &ctx, Impl& impl)
     {
         call_impl(ctx, impl,
                   typename detail::MkSeq<sizeof...(Ins)>::type(),
@@ -328,8 +332,17 @@ private:
     cv::GKernelImpl impl_;
 };
 
+
 template<typename K, typename Callable>
-cv::gapi::cpu::GOCVFunctor cv::gapi::cpu::ocv_kernel(const Callable& c) {
+cv::gapi::cpu::GOCVFunctor cv::gapi::cpu::ocv_kernel(Callable& c)
+{
+    using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
+    return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c)));
+}
+
+template<typename K, typename Callable>
+cv::gapi::cpu::GOCVFunctor cv::gapi::cpu::ocv_kernel(const Callable& c)
+{
     using P = detail::OCVCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
     return GOCVFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
 }
