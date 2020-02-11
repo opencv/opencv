@@ -15,7 +15,7 @@ endif()
 
 set(the_description "OpenCV G-API Core Module")
 
-ocv_add_module(gapi opencv_imgproc opencv_tracking)
+ocv_add_module(gapi opencv_imgproc opencv_tracking opencv_dnn)
 
 if(MSVC)
   # Disable obsollete warning C4503 popping up on MSVC <<2017

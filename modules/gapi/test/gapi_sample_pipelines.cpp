@@ -17,6 +17,8 @@
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/render/render.hpp>
 
+#include <opencv2/dnn/dnn.hpp>
+
 namespace opencv_test
 {
 
@@ -467,61 +469,245 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
     //}
 //}
 
+//G_TYPED_KERNEL(GObjectTracker,
+              //<GArray<cv::Rect2d>(GMat, GArray<cv::Rect2d>)>,
+              //"org.opencv.test.object.tracking",
+              //[> Is statefuly kernel <] true)
+//{
+    //static GArrayDesc outMeta(GMatDesc, GArrayDesc) { return cv::empty_array_desc(); }
+//};
+
+//struct OCVTracker {
+    //explicit OCVTracker(const std::string& type) {
+        //// Handle type and create tracker
+        //if (type == "BOOSTING") {
+            //_tracker = TrackerBoosting::create();
+        //} // else etc
+    //}
+
+    //void init(const cv::Mat& in,
+              //const std::vector<cv::Rect2d>& rois) {
+        //_tracker->init(in, rois);
+    //}
+
+    //void operator()(const cv::Mat& in,
+                    //std::vector<cv::Rect2d>& tracked_rois) {
+
+        //state.tracker->update(in, tracked_rois);
+    //}
+
+    //cv::Ptr<cv::Tracker> _tracker;
+//};
+
+
+//TEST(GAPI_Pipeline, ObjectTrackingDemo)
+//{
+    //cv::GMat in;
+    //// Just imagine that we have detections
+    //auto old_rois = [> Get detections <]
+    //auto new_rois = GObjectTracker::on(in, old_rois);
+
+    //cv::GComputation c(cv::GIn(in), cv::GOut(new_rois));
+
+    //cv::Mat out_mat_gapi(1280, 720, CV_8UC3);
+    //std::vector<cv::Rect2d> rects;
+
+    //OCVTracker tracker("BOOSTING");
+    //auto pkg = cv::gapi::kernels(cv::ocv_kernel<GObjectTracker>(tracker));
+    //comp.apply(cv::gin(in_mat), cv::gout(rects), cv::compile_args(pkg));
+
+    //auto src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>("video.mp4");
+    //auto sc = c.compileStreaming(cv::compile_args(pkg));
+
+    //sc.setSource(src);
+    //sc.start();
+
+    //while (sc.pull(cv::gout(rects))) {
+        //std::cout << rects[0] << std::endl;
+    //}
+//}
+
+TEST(GAPI_Pipeline, OpenCVObjectTracking)
+{
+    cv::VideoCapture cap("video.mp4");
+
+    std::string weights = "opencv_face_detector.caffemodel";
+    std::string cfg     = "opencv_face_detector.prototxt";
+
+    Scalar mean = Scalar(104, 177, 123);
+    float confThreshold = 0.2;
+    double nmsThreshold = 0.0;
+    cv::dnn::DetectionModel model(weights, cfg);
+    model.setInputMean(mean);
+
+    std::vector<int>       classIds;
+    std::vector<float>     confidences;
+    std::vector<cv::Rect>  boxes;
+
+    cv::Ptr<cv::MultiTracker> tracker = cv::MultiTracker::create();
+
+    cv::Mat frame;
+    int dfreq  = 200;
+    int nframe = 0;
+    int thick = 4;
+    while (true)
+    {
+        cap >> frame;
+
+        if (nframe % dfreq == 0)
+        {
+            boxes.clear();
+            confidences.clear();
+            classIds.clear();
+
+            model.detect(frame, classIds, confidences, boxes, confThreshold, nmsThreshold);
+
+            // Run detector until find any objects
+            if (boxes.empty())
+            {
+                continue;
+            }
+            std::cout << "INIT TRACKER" << std::endl;
+
+            // Reset tracker for each detector run
+            tracker = cv::MultiTracker::create();
+            for (const auto& b : boxes)
+            {
+                tracker->add(TrackerBoosting::create(), frame, b);
+            }
+        }
+        else 
+        {
+            tracker->update(frame);
+        }
+
+        const auto& objects = tracker->getObjects();
+        for (int i = 0; i < objects.size(); ++i)
+        {
+            auto tl = objects[i].tl();
+            cv::putText(frame,
+                        std::to_string(confidences[i]),
+                        cv::Point(tl.x, tl.y - thick),
+                        cv::FONT_HERSHEY_SIMPLEX,
+                        0.5, cv::Scalar(0, 0, 255), 2);
+            cv::rectangle(frame, objects[i], cv::Scalar(0, 255, 0), thick, 8, 0);      
+        }
+
+        cv::imshow("window", frame);
+
+        if (waitKey(10) == 27)
+        {
+            break;
+        }
+
+        ++nframe;
+    }
+}
+
 G_TYPED_KERNEL(GObjectTracker,
-              <GArray<cv::Rect2d>(GMat, GArray<cv::Rect2d>)>,
-              "org.opencv.test.object.tracking",
-              /* Is statefuly kernel */ true)
+              <GArray<cv::Rect>(GMat)>,
+              "org.opencv.test.object.tracking")
 {
-    static GArrayDesc outMeta(GMatDesc, GArrayDesc) { return cv::empty_array_desc(); }
+    static GArrayDesc outMeta(GMatDesc) { return cv::empty_array_desc(); }
 };
 
-struct OCVTracker {
-    explicit OCVTracker(const std::string& type) {
-        // Handle type and create tracker
-        if (type == "BOOSTING") {
-            _tracker = TrackerBoosting::create();
-        } // else etc
-    }
-
-    void init(const cv::Mat& in,
-              const std::vector<cv::Rect2d>& rois) {
-        _tracker->init(in, rois);
-    }
-
-    void operator()(const cv::Mat& in,
-                    std::vector<cv::Rect2d>& tracked_rois) {
-
-        state.tracker->update(in, tracked_rois);
-    }
-
-    cv::Ptr<cv::Tracker> _tracker;
-};
-
-
-TEST(GAPI_Pipeline, ObjectTrackingDemo)
+TEST(GAPI_Pipeline, GAPIObjectTracking)
 {
+    cv::VideoCapture cap("video.mp4");
+
+    std::string weights = "opencv_face_detector.caffemodel";
+    std::string cfg     = "opencv_face_detector.prototxt";
+
+    Scalar mean = Scalar(104, 177, 123);
+    float confThreshold = 0.2;
+    double nmsThreshold = 0.0;
+    cv::dnn::DetectionModel model(weights, cfg);
+    model.setInputMean(mean);
+
+    std::vector<int>       classIds;
+    std::vector<float>     confidences;
+    std::vector<cv::Rect>  boxes;
+
+    cv::Ptr<cv::MultiTracker> tracker;
+
+    cv::Mat frame;
+    int dfreq  = 200;
+    int nframe = 0;
+    int thick = 4;
+
+    ////////////////////////////// G-API code ////////////////////////////////
     cv::GMat in;
-    // Just imagine that we have detections
-    auto old_rois = /* Get detections */
-    auto new_rois = GObjectTracker::on(in, old_rois);
+    cv::GArray<cv::Rect> tracked_objs = GObjectTracker::on(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(tracked_objs));
 
-    cv::GComputation c(cv::GIn(in), cv::GOut(new_rois));
+    auto impl = cv::ocv_kernel<GObjectTracker>([&tracker]
+                (const cv::Mat& in, std::vector<cv::Rect>& tracked)
+                {
+                    tracked.clear();
+                    tracker->update(in);
+                    for (const auto& b : tracker->getObjects())
+                    {
+                        tracked.push_back(b);
+                    }
+                });
+    auto pkg = cv::gapi::kernels(impl);
 
-    cv::Mat out_mat_gapi(1280, 720, CV_8UC3);
-    std::vector<cv::Rect2d> rects;
+    // Get first frame
+    cap >> frame;
+    auto cc = comp.compile(cv::descr_of(frame), cv::compile_args(pkg));
+    std::vector<cv::Rect> objects;
+    ////////////////////////////// G-API code ////////////////////////////////
 
-    OCVTracker tracker("BOOSTING");
-    auto pkg = cv::gapi::kernels(cv::ocv_kernel<GObjectTracker>(tracker));
-    comp.apply(cv::gin(in_mat), cv::gout(rects), cv::compile_args(pkg));
+    while (true)
+    {
+        cap >> frame;
 
-    auto src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>("video.mp4");
-    auto sc = c.compileStreaming(cv::compile_args(pkg));
+        if (nframe % dfreq == 0)
+        {
+            boxes.clear();
+            confidences.clear();
+            classIds.clear();
 
-    sc.setSource(src);
-    sc.start();
+            model.detect(frame, classIds, confidences, boxes, confThreshold, nmsThreshold);
 
-    while (sc.pull(cv::gout(rects))) {
-        std::cout << rects[0] << std::endl;
+            // Run detector until find any objects
+            if (boxes.empty())
+            {
+                continue;
+            }
+
+            // Reset tracker for each detector run
+            tracker = cv::MultiTracker::create();
+            std::cout << "INIT TRACKER" << std::endl;
+            for (const auto& b : boxes)
+            {
+                tracker->add(TrackerKCF::create(), frame, b);
+            }
+        }
+
+        // Run G-API computation
+        cc(cv::gin(frame), cv::gout(objects));
+
+        // This can be written using OSD
+        for (int i = 0; i < objects.size(); ++i)
+        {
+            auto tl = objects[i].tl();
+            cv::putText(frame,
+                        std::to_string(confidences[i]),
+                        cv::Point(tl.x, tl.y - thick),
+                        cv::FONT_HERSHEY_SIMPLEX,
+                        0.5, cv::Scalar(0, 0, 255), 2);
+            cv::rectangle(frame, objects[i], cv::Scalar(0, 255, 0), thick, 8, 0);      
+        }
+
+        cv::imshow("window", frame);
+
+        if (waitKey(10) == 27)
+        {
+            break;
+        }
+
+        ++nframe;
     }
 }
 
