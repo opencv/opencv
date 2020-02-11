@@ -248,7 +248,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void abs<__half>(const Stream& stream, Span<__half> output, View<__half> input);
+#endif
     template void abs<float>(const Stream& stream, Span<float> output, View<float> input);
 
     template <class T, std::size_t N>
@@ -274,7 +276,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void tanh<__half>(const Stream&, Span<__half>, View<__half>);
+#endif
     template void tanh<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
@@ -300,7 +304,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void swish<__half>(const Stream&, Span<__half>, View<__half>);
+#endif
     template void swish<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
@@ -326,7 +332,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void mish<__half>(const Stream&, Span<__half>, View<__half>);
+#endif
     template void mish<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
@@ -352,7 +360,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void sigmoid<__half>(const Stream&, Span<__half>, View<__half>);
+#endif
     template void sigmoid<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
@@ -378,7 +388,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void bnll<__half>(const Stream&, Span<__half>, View<__half>);
+#endif
     template void bnll<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
@@ -404,7 +416,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void elu<__half>(const Stream&, Span<__half>, View<__half>);
+#endif
     template void elu<float>(const Stream&, Span<float>, View<float>);
 
     template <class T, std::size_t N>
@@ -430,7 +444,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void relu<__half>(const Stream&, Span<__half>, View<__half>, __half);
+#endif
     template void relu<float>(const Stream&, Span<float>, View<float>, float);
 
     template <class T, std::size_t N>
@@ -457,7 +473,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void clipped_relu<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
+#endif
     template void clipped_relu<float>(const Stream&, Span<float>, View<float>, float, float);
 
     template <class T, std::size_t N>
@@ -484,7 +502,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void axiswise_relu<__half>(const Stream&, Span<__half>, View<__half>, std::size_t, View<__half>);
+#endif
     template void axiswise_relu<float>(const Stream&, Span<float>, View<float>, std::size_t, View<float>);
 
     template <class T, std::size_t N>
@@ -515,7 +535,9 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void power<__half>(const Stream&, Span<__half>, View<__half>, __half, __half, __half);
+#endif
     template void power<float>(const Stream&, Span<float>, View<float>, float, float, float);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

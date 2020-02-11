@@ -15,12 +15,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <class T>
     struct numeric_limits;
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template <>
     struct numeric_limits<__half> {
         __device__ static __half min() { return 0.0000610; }
         __device__ static __half max() { return 65504.0; }
         __device__ static __half lowest() { return -65504.0; }
     };
+#endif
 
     template <>
     struct numeric_limits<float> {

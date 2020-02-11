@@ -364,7 +364,7 @@ TEST(GAPI_Pipeline, CreateKernelImplFromLambda)
     auto ref_mat = in_mat + value;
 
     // G-API //////////////////////////////////////////////////////////////////////////
-    auto impl = cv::ocv_kernel<GCustom>([&value](const cv::Mat& src, cv::Mat& dst)
+    auto impl = cv::gapi::cpu::ocv_kernel<GCustom>([&value](const cv::Mat& src, cv::Mat& dst)
                 {
                     dst = src + value;
                 });
@@ -375,6 +375,51 @@ TEST(GAPI_Pipeline, CreateKernelImplFromLambda)
 
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
 }
+
+TEST(GAPI_Pipeline, ReplaceDefaultByLambda)
+{
+    cv::Size size(300, 300);
+    int type = CV_8UC3;
+    cv::Mat in_mat1(size, type);
+    cv::Mat in_mat2(size, type);
+    cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::GMat in1, in2;
+    cv::GMat out = cv::gapi::add(in1, in2);
+    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
+
+    // OpenCV //////////////////////////////////////////////////////////////////////////
+    cv::Mat ref_mat = in_mat1 + in_mat2;
+
+
+    // G-API //////////////////////////////////////////////////////////////////////////
+    bool is_called = false;
+    auto impl = cv::gapi::cpu::ocv_kernel<cv::gapi::core::GAdd>([&is_called]
+                (const cv::Mat& src1, const cv::Mat& src2, int, cv::Mat& dst)
+                {
+                    is_called = true;
+                    dst = src1 + src2;
+                });
+
+    cv::Mat out_mat;
+    auto pkg = cv::gapi::kernels(impl);
+    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+    EXPECT_TRUE(is_called);
+}
+
+struct AddImpl
+{
+    void operator()(const cv::Mat& in1, const cv::Mat& in2, int, cv::Mat& out)
+    {
+        out = in1 + in2;
+        is_called = true;
+    }
+
+    bool is_called = false;
+};
 
 TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
 {
@@ -394,21 +439,19 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
 
 
     // G-API //////////////////////////////////////////////////////////////////////////
-    bool is_called = false;
-    auto impl = cv::ocv_kernel<cv::gapi::core::GAdd>([&is_called]
-                (const cv::Mat& src1, const cv::Mat& src2, int, cv::Mat& dst)
-                {
-                    is_called = true;
-                    dst = src1 + src2;
-                });
+    AddImpl f;
+    EXPECT_FALSE(f.is_called);
+    auto impl = cv::gapi::cpu::ocv_kernel<cv::gapi::core::GAdd>(f);
 
     cv::Mat out_mat;
     auto pkg = cv::gapi::kernels(impl);
     comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
 
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
-    EXPECT_TRUE(is_called);
+    EXPECT_TRUE(f.is_called);
 }
+
+
 
 //G_TYPED_KERNEL(GObjectTracker,
               //<GArray<cv::Rect2d>(GMat, GArray<cv::Rect2d>)>,
@@ -640,7 +683,7 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
     cv::GArray<cv::Rect> tracked_objs = GObjectTracker::on(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(tracked_objs));
 
-    auto impl = cv::ocv_kernel<GObjectTracker>([&tracker]
+    auto impl = cv::gapi::cpu::ocv_kernel<GObjectTracker>([&tracker]
                 (const cv::Mat& in, std::vector<cv::Rect>& tracked)
                 {
                     tracked.clear();
@@ -650,6 +693,7 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
                         tracked.push_back(b);
                     }
                 });
+
     auto pkg = cv::gapi::kernels(impl);
 
     // Get first frame

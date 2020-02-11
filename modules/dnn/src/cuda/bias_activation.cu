@@ -186,7 +186,9 @@ void biasN_relu_inplace(const Stream& stream, Span<T> inplace_output, std::size_
     }
 }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void biasN_relu_inplace<__half>(const Stream&, Span<__half>, std::size_t, View<__half>, __half);
+#endif
 template void biasN_relu_inplace<float>(const Stream&, Span<float>, std::size_t, View<float>, float);
 
 template <class T, std::size_t N> static
@@ -210,7 +212,9 @@ void biasN_clipped_relu_inplace(const Stream& stream, Span<T> inplace_output, st
     }
 }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void biasN_clipped_relu_inplace<__half>(const Stream&, Span<__half>, std::size_t, View<__half>, __half, __half);
+#endif
 template void biasN_clipped_relu_inplace<float>(const Stream&, Span<float>, std::size_t, View<float>, float, float);
 
 template <class T, std::size_t N> static
@@ -234,7 +238,9 @@ void biasN_power_inplace(const Stream& stream, Span<T> inplace_output, std::size
     }
 }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void biasN_power_inplace<__half>(const Stream&, Span<__half>, std::size_t, View<__half>, __half);
+#endif
 template void biasN_power_inplace<float>(const Stream&, Span<float>, std::size_t, View<float>, float);
 
 template <class T, std::size_t N> static
@@ -258,7 +264,9 @@ void biasN_tanh_inplace(const Stream& stream, Span<T> inplace_output, std::size_
     }
 }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void biasN_tanh_inplace<__half>(const Stream&, Span<__half>, std::size_t, View<__half>);
+#endif
 template void biasN_tanh_inplace<float>(const Stream&, Span<float>, std::size_t, View<float>);
 
 template <class T, std::size_t N> static
@@ -282,7 +290,9 @@ void biasN_sigmoid_inplace(const Stream& stream, Span<T> inplace_output, std::si
     }
 }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void biasN_sigmoid_inplace<__half>(const Stream&, Span<__half>, std::size_t, View<__half>);
+#endif
 template void biasN_sigmoid_inplace<float>(const Stream&, Span<float>, std::size_t, View<float>);
 
 template <class T, std::size_t N> static
@@ -306,7 +316,9 @@ void biasN_swish_inplace(const Stream& stream, Span<T> inplace_output, std::size
     }
 }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void biasN_swish_inplace<__half>(const Stream&, Span<__half>, std::size_t, View<__half>);
+#endif
 template void biasN_swish_inplace<float>(const Stream&, Span<float>, std::size_t, View<float>);
 
 template <class T, std::size_t N> static
@@ -330,7 +342,9 @@ void biasN_mish_inplace(const Stream& stream, Span<T> inplace_output, std::size_
     }
 }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void biasN_mish_inplace<__half>(const Stream&, Span<__half>, std::size_t, View<__half>);
+#endif
 template void biasN_mish_inplace<float>(const Stream&, Span<float>, std::size_t, View<float>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

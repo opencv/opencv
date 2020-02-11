@@ -26,6 +26,8 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include "onnx_graph_simplifier.hpp"
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -326,6 +328,9 @@ void ONNXImporter::populateNet(Net dstNet)
 {
     CV_Assert(model_proto.has_graph());
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
+
+    simplifySubgraphs(graph_proto);
+
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
     // List of internal blobs shapes.
     std::map<std::string, MatShape> outShapes;

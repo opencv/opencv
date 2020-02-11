@@ -114,7 +114,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && !padding) ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !padding) ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
     }
 
@@ -351,14 +352,45 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
+        const int numDims = data->getDims().size();
+        const int cAxis = clamp(axis, numDims);
+        std::vector<size_t> maxDims(numDims, 0);
+
         CV_Assert(inputs.size() == nodes.size());
         ngraph::NodeVector inp_nodes;
-        for (auto& node : nodes) {
-            inp_nodes.push_back(node.dynamicCast<InfEngineNgraphNode>()->node);
-        }
+        for (int i = 0; i < nodes.size(); ++i)
+        {
+            inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);
 
-        InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
-        auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, clamp(axis, data->getDims().size()));
+            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
+            for (int i = 0; i < numDims; ++i)
+                maxDims[i] = std::max(maxDims[i], inpShape[i]);
+        }
+        for (int i = 0; i < inp_nodes.size(); ++i)
+        {
+            bool needPadding = false;
+            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
+            std::vector<int64_t> begins(inpShape.size(), 0), ends(inpShape.size(), 0);
+            for (int j = 0; j < inpShape.size(); ++j)
+            {
+                if (j != cAxis && inpShape[j] != maxDims[j])
+                {
+                    needPadding = true;
+                    begins[j] = static_cast<int64_t>((maxDims[j] - inpShape[j]) / 2);
+                    ends[j] = static_cast<int64_t>(maxDims[j] - inpShape[j] - begins[j]);
+                }
+            }
+            if (needPadding)
+            {
+                inp_nodes[i] = std::make_shared<ngraph::op::v1::Pad>(
+                    inp_nodes[i],
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{begins.size()}, begins.data()),
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{ends.size()}, ends.data()),
+                    ngraph::op::PadMode::CONSTANT);
+            }
+        }
+        auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, cAxis);
         return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
     }
 #endif  // HAVE_DNN_NGRAPH

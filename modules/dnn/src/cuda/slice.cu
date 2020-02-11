@@ -163,7 +163,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         slice_dispatcher<T, 1, CSL_MAX_TENSOR_RANK>(rank, stream, output, outStride, input, inStride, offsets);
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void slice(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
+#endif
     template void slice(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

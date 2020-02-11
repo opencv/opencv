@@ -189,7 +189,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void resize_nn<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>);
+#endif
     template void resize_nn<float>(const Stream&, TensorSpan<float>, TensorView<float>);
 
     template <class T, std::size_t CHANNELS_PER_ITER> static
@@ -227,7 +229,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void resize_bilinear<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, float, float);
+#endif
     template void resize_bilinear<float>(const Stream&, TensorSpan<float>, TensorView<float>, float, float);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

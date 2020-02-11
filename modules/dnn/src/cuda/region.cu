@@ -168,8 +168,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void region(const Stream&, Span<__half>, View<__half>, View<__half>,
         __half, __half, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool);
+#endif
 
     template void region(const Stream&, Span<float>, View<float>, View<float>,
         float, float, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool);

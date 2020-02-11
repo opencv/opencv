@@ -203,7 +203,7 @@ public:
 #endif
         }
         else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
-            return type != STOCHASTIC;
+            return !computeMaxIdx && type != STOCHASTIC;
         }
         else
         {

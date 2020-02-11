@@ -168,21 +168,26 @@ void InfEngineNgraphNet::init(Target targetId)
 {
     if (!hasNetOwner)
     {
-        if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) {
+        if (targetId == DNN_TARGET_OPENCL_FP16)
+        {
             auto nodes = ngraph_function->get_ordered_ops();
-            for (auto& node : nodes) {
+            for (auto& node : nodes)
+            {
                 auto parameter = std::dynamic_pointer_cast<ngraph::op::Parameter>(node);
-                if (parameter && parameter->get_element_type() == ngraph::element::f32) {
+                if (parameter && parameter->get_element_type() == ngraph::element::f32)
+                {
                     parameter->set_element_type(ngraph::element::f16);
                 }
                 auto constant = std::dynamic_pointer_cast<ngraph::op::Constant>(node);
-                if (constant && constant->get_element_type() == ngraph::element::f32) {
-                    auto data = constant->get_vector<float>();
-                    std::vector<ngraph::float16> new_data(data.size());
-                    for (size_t i = 0; i < data.size(); ++i) {
-                        new_data[i] = ngraph::float16(data[i]);
-                    }
-                    auto new_const = std::make_shared<ngraph::op::Constant>(ngraph::element::f16, constant->get_shape(), new_data);
+                if (constant && constant->get_element_type() == ngraph::element::f32)
+                {
+                    const float* floatsData = constant->get_data_ptr<float>();
+                    size_t total = ngraph::shape_size(constant->get_shape());
+                    Mat floats(1, total, CV_32F, (void*)floatsData);
+                    Mat halfs;
+                    cv::convertFp16(floats, halfs);
+
+                    auto new_const = std::make_shared<ngraph::op::Constant>(ngraph::element::f16, constant->get_shape(), halfs.data);
                     new_const->set_friendly_name(constant->get_friendly_name());
                     ngraph::replace_node(constant, new_const);
                 }
