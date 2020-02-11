@@ -3,7 +3,7 @@
 ### Resources
 
 * Homepage: <http://opencv.org>
-* Docs: <http://docs.opencv.org/master/>
+* Docs: <http://docs.opencv.org/3.4/>
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <https://github.com/opencv/opencv/issues>
 
