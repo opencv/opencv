@@ -301,8 +301,8 @@
         },
         "vector_uchar": {
             "objc_type": "ByteVector*",
-            "to_cpp": "%(n)s.vector",
-            "from_cpp": "[ByteVector fromNative:%(n)s]"
+            "to_cpp": "(std::vector<uchar>&)%(n)s.vector",
+            "from_cpp": "[ByteVector fromNative:(std::vector<char>&)%(n)s]"
         },
         "vector_vector_DMatch": {
             "objc_type": "DMatch*",

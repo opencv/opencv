@@ -68,8 +68,8 @@ open class OpenCVTestCase: XCTestCase {
     let rgba0 = Mat(rows: matSize, cols: matSize, type: CvType.CV_8UC4, scalar: Scalar.all(0))
     let rgba128 = Mat(rows: matSize, cols: matSize, type: CvType.CV_8UC4, scalar: Scalar.all(128))
     
-    let rgbLena = Imgcodecs.imread(Bundle(for: OpenCVTestCase.self).path(forResource:"lena", ofType:"png", inDirectory:"resources")!)
-    let grayChess = Imgcodecs.imread(Bundle(for: OpenCVTestCase.self).path(forResource:"chessboard", ofType:"jpg", inDirectory:"resources")!)
+    let rgbLena = Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"lena", ofType:"png", inDirectory:"resources")!)
+    let grayChess = Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"chessboard", ofType:"jpg", inDirectory:"resources")!)
 
     let gray255_32f_3d = Mat(sizes: [matSize, matSize, matSize] as [NSNumber], type: CvType.CV_32F, scalar: Scalar(255.0))
 

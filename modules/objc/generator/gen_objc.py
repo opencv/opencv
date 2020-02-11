@@ -1062,8 +1062,8 @@ if __name__ == "__main__":
         logging.info("\n=== MODULE: %s (%s) ===\n" % (module, module_location))
 
         module_imports = []
-        module_objc_h_code = None
-        module_objc_mm_code = None
+        module_header_code = ""
+        module_body_code = ""
         srcfiles = []
         common_headers = []
 
