@@ -1,4 +1,3 @@
-#include <chrono>
 #include <iostream>
 
 #include <opencv2/imgproc.hpp>
@@ -18,16 +17,27 @@ const std::string about =
 const std::string keys =
     "{ h help |   | print this help message }"
     "{ input  |   | Path to an input video file }"
-    "{ platm  |   | IE vehicle/license plate detection model IR }"
-    "{ platw  |   | IE vehicle/license plate detection model weights }"
+    "{ platm  |   | IE vehicle/license plate detection model (.xml) }"
     "{ platd  |   | IE vehicle/license plate detection model device }"
-    "{ facem  |   | IE face detection model IR }"
-    "{ facew  |   | IE face detection model weights }"
+    "{ facem  |   | IE face detection model (.xml) }"
     "{ faced  |   | IE face detection model device }"
     "{ trad   |   | Run processing in traditional (non-pipelined) way }"
     "{ noshow |   | Don't display UI (improves performance) }";
 
 namespace {
+
+std::string weights_path(const std::string &model_path) {
+    const auto EXT_LEN = 4u;
+    const auto sz = model_path.size();
+    CV_Assert(sz > EXT_LEN);
+
+    auto ext = model_path.substr(sz - EXT_LEN);
+    for (auto &chr : ext) { chr = std::tolower(chr); }
+    CV_Assert(ext == ".xml");
+
+    return model_path.substr(0u, sz - EXT_LEN) + ".bin";
+}
+
 struct Avg {
     struct Elapsed {
         explicit Elapsed(double ms) : ss(ms/1000.), mm(static_cast<int>(ss)/60) {}
@@ -83,6 +93,8 @@ GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
 
         const int MAX_PROPOSALS = in_ssd_dims[2];
         const int OBJECT_SIZE   = in_ssd_dims[3];
+        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
+
         const cv::Size upscale = in_frame.size();
         const cv::Rect surface({0,0}, upscale);
 
@@ -132,7 +144,7 @@ GAPI_OCV_KERNEL(OCVToMosaic, ToMosaic) {
             rc.height += dh;
             rc.x      -= dw / 2;
             rc.y      -= dh / 2;
-            return cv::gapi::wip::draw::Mosaic{rc, 24, 0};
+            return cv::gapi::wip::draw::Mosaic{rc, BLOCK_SIZE, 0};
         };
         for (auto &&rc : in_plate_rcs) { out_prims.emplace_back(cvt(rc)); }
         for (auto &&rc : in_face_rcs)  { out_prims.emplace_back(cvt(rc)); }
@@ -156,19 +168,25 @@ int main(int argc, char *argv[])
     cv::GMat in;
     cv::GMat blob_plates = cv::gapi::infer<custom::VehLicDetector>(in);
     cv::GMat blob_faces  = cv::gapi::infer<custom::FaceDetector>(in);
+    // VehLicDetector from Open Model Zoo marks vehicles with label "1" and
+    // license plates with label "2", filter out license plates only.
     cv::GArray<cv::Rect> rc_plates = custom::ParseSSD::on(blob_plates, in, 2);
+    // Face detector produces faces only so there's no need to filter by label,
+    // pass "-1".
     cv::GArray<cv::Rect> rc_faces  = custom::ParseSSD::on(blob_faces, in, -1);
     cv::GMat out = cv::gapi::wip::draw::render3ch(in, custom::ToMosaic::on(rc_plates, rc_faces));
     cv::GComputation graph(in, out);
 
+    const auto plate_model_path = cmd.get<std::string>("platm");
     auto plate_net = cv::gapi::ie::Params<custom::VehLicDetector> {
-        cmd.get<std::string>("platm"),   // path to topology IR
-        cmd.get<std::string>("platw"),   // path to weights
+        plate_model_path,                // path to topology IR
+        weights_path(plate_model_path),  // path to weights
         cmd.get<std::string>("platd"),   // device specifier
     };
+    const auto face_model_path = cmd.get<std::string>("facem");
     auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
-        cmd.get<std::string>("facem"),   // path to topology IR
-        cmd.get<std::string>("facew"),   // path to weights
+        face_model_path,                 // path to topology IR
+        weights_path(face_model_path),   // path to weights
         cmd.get<std::string>("faced"),   // device specifier
     };
     auto kernels = cv::gapi::kernels<custom::OCVParseSSD, custom::OCVToMosaic>();
