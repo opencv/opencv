@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <iostream>
+#include <cctype>
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -32,7 +34,8 @@ std::string weights_path(const std::string &model_path) {
     CV_Assert(sz > EXT_LEN);
 
     auto ext = model_path.substr(sz - EXT_LEN);
-    for (auto &chr : ext) { chr = std::tolower(chr); }
+
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return std::tolower(c); });
     CV_Assert(ext == ".xml");
 
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
