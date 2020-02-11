@@ -40,7 +40,7 @@ DECLARE_CV_PAUSE
 #endif
 #ifndef CV_PAUSE
 # if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
-#   if !defined(__SSE__)
+#   if !defined(__SSE2__)
       static inline void cv_non_sse_mm_pause() { __asm__ __volatile__ ("rep; nop"); }
 #     define _mm_pause cv_non_sse_mm_pause
 #   endif

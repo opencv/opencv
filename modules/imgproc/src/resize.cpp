@@ -1526,7 +1526,7 @@ struct HResizeLinearVec_X4
 struct HResizeLinearVecU8_X4
 {
     int operator()(const uchar** src, int** dst, int count, const int* xofs,
-        const short* alpha/*[xmax]*/, int smax, int /*dmax*/, int cn, int /*xmin*/, int xmax) const
+        const short* alpha/*[xmax]*/, int /*smax*/, int dmax, int cn, int /*xmin*/, int xmax) const
     {
         int dx = 0, k = 0;
 
@@ -1612,17 +1612,11 @@ struct HResizeLinearVecU8_X4
         }
         else if(cn == 3)
         {
-            int len0 = xmax - cn;
-
-            /* This may need to trim 1 or more extra units depending on the amount of
-               scaling. Test until we find the first value which we know cannot overrun. */
-            while (len0 >= cn &&
-                xofs[len0 - cn] + cn >= smax - cn  // check access: v_load_expand_q(S+xofs[dx]+cn)
-            )
-            {
-                len0 -= cn;
-            }
-            CV_DbgAssert(len0 <= 0 || len0 >= cn);
+            /* Peek at the last x offset to find the maximal s offset.  We know the loop
+               will terminate prior to value which may be 1 or more elements prior to the
+               final valid offset. xofs[] is constucted to be an array of increasingly
+               large offsets (i.e xofs[x] <= xofs[x+1] for x < xmax). */
+            int smax = xofs[dmax-cn];
 
             for( ; k <= (count - 2); k+=2 )
             {
@@ -1631,7 +1625,7 @@ struct HResizeLinearVecU8_X4
                 const uchar *S1 = src[k+1];
                 int *D1 = dst[k+1];
 
-                for( dx = 0; dx < len0; dx += cn )
+                for( dx = 0; (xofs[dx] + cn) < smax; dx += cn )
                 {
                     v_int16x8 a = v_load(alpha+dx*2);
                     v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S0+xofs[dx]) | (v_load_expand_q(S0+xofs[dx]+cn)<<16)), a));
@@ -1642,12 +1636,14 @@ struct HResizeLinearVecU8_X4
             {
                 const uchar *S = src[k];
                 int *D = dst[k];
-                for( dx = 0; dx < len0; dx += cn )
+                for( dx = 0; (xofs[dx] + cn) < smax; dx += cn )
                 {
                     v_int16x8 a = v_load(alpha+dx*2);
                     v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S+xofs[dx]) | (v_load_expand_q(S+xofs[dx]+cn)<<16)), a));
                 }
             }
+            /* Debug check to ensure truthiness that we never vector the final value. */
+            CV_DbgAssert(dx < dmax);
         }
         else if(cn == 4)
         {
@@ -1678,93 +1674,9 @@ struct HResizeLinearVecU8_X4
                 }
             }
         }
-        else if(cn < 9)
-        {
-            const int step = 8;
-            const int len0 = xmax & -step;
-            for( ; k <= (count - 2); k+=2 )
-            {
-                const uchar *S0 = src[k];
-                int *D0 = dst[k];
-                const uchar *S1 = src[k+1];
-                int *D1 = dst[k+1];
-
-                for( dx = 0; dx < len0; dx += cn )
-                {
-                    v_int16x8 a0 = v_load(alpha+dx*2);
-                    v_int16x8 a1 = v_load(alpha+dx*2 + 8);
-                    v_uint16x8 s0, s1;
-                    v_zip(v_load_expand(S0+xofs[dx]), v_load_expand(S0+xofs[dx]+cn), s0, s1);
-                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(s0), a0));
-                    v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(s1), a1));
-                    v_zip(v_load_expand(S1+xofs[dx]), v_load_expand(S1+xofs[dx]+cn), s0, s1);
-                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(s0), a0));
-                    v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(s1), a1));
-                }
-            }
-            for( ; k < count; k++ )
-            {
-                const uchar *S = src[k];
-                int *D = dst[k];
-                for( dx = 0; dx < len0; dx += cn )
-                {
-                    v_int16x8 a0 = v_load(alpha+dx*2);
-                    v_int16x8 a1 = v_load(alpha+dx*2 + 8);
-                    v_uint16x8 s0, s1;
-                    v_zip(v_load_expand(S+xofs[dx]), v_load_expand(S+xofs[dx]+cn), s0, s1);
-                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(s0), a0));
-                    v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(s1), a1));
-                }
-            }
-        }
         else
         {
-            const int step = 16;
-            const int len0 = (xmax - cn) & -step;
-            for( ; k <= (count - 2); k+=2 )
-            {
-                const uchar *S0 = src[k];
-                int *D0 = dst[k];
-                const uchar *S1 = src[k+1];
-                int *D1 = dst[k+1];
-
-                for( dx = 0; dx < len0; dx += step )
-                {
-                    v_int16x8 a0 = v_load(alpha+dx*2);
-                    v_int16x8 a1 = v_load(alpha+dx*2 + 8);
-                    v_int16x8 a2 = v_load(alpha+dx*2 + 16);
-                    v_int16x8 a3 = v_load(alpha+dx*2 + 24);
-                    v_uint8x16 s01, s23;
-                    v_zip(v_lut(S0, xofs+dx), v_lut(S0+cn, xofs+dx), s01, s23);
-                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_expand_low(s01)), a0));
-                    v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(v_expand_high(s01)), a1));
-                    v_store(&D0[dx+8], v_dotprod(v_reinterpret_as_s16(v_expand_low(s23)), a2));
-                    v_store(&D0[dx+12], v_dotprod(v_reinterpret_as_s16(v_expand_high(s23)), a3));
-                    v_zip(v_lut(S1, xofs+dx), v_lut(S1+cn, xofs+dx), s01, s23);
-                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(v_expand_low(s01)), a0));
-                    v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(v_expand_high(s01)), a1));
-                    v_store(&D1[dx+8], v_dotprod(v_reinterpret_as_s16(v_expand_low(s23)), a2));
-                    v_store(&D1[dx+12], v_dotprod(v_reinterpret_as_s16(v_expand_high(s23)), a3));
-                }
-            }
-            for( ; k < count; k++ )
-            {
-                const uchar *S = src[k];
-                int *D = dst[k];
-                for( dx = 0; dx < len0; dx += step )
-                {
-                    v_int16x8 a0 = v_load(alpha+dx*2);
-                    v_int16x8 a1 = v_load(alpha+dx*2 + 8);
-                    v_int16x8 a2 = v_load(alpha+dx*2 + 16);
-                    v_int16x8 a3 = v_load(alpha+dx*2 + 24);
-                    v_uint8x16 s01, s23;
-                    v_zip(v_lut(S, xofs+dx), v_lut(S+cn, xofs+dx), s01, s23);
-                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_expand_low(s01)), a0));
-                    v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(v_expand_high(s01)), a1));
-                    v_store(&D[dx+8], v_dotprod(v_reinterpret_as_s16(v_expand_low(s23)), a2));
-                    v_store(&D[dx+12], v_dotprod(v_reinterpret_as_s16(v_expand_high(s23)), a3));
-                }
-            }
+            return 0;  // images with channels >4 are out of optimization scope
         }
         return dx;
     }

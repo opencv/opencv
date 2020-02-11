@@ -32,6 +32,7 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
         {cv::GShape::GMAT,    "GMat"},
         {cv::GShape::GSCALAR, "GScalar"},
         {cv::GShape::GARRAY,  "GArray"},
+        {cv::GShape::GOPAQUE, "GOpaque"},
     };
 
     auto format_op_label  = [&gr](ade::NodeHandle nh) -> std::string {

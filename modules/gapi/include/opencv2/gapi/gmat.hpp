@@ -46,6 +46,7 @@ struct GOrigin;
  *    cv::GMat           | cv::Mat
  *    cv::GScalar        | cv::Scalar
  *    `cv::GArray<T>`    | std::vector<T>
+ *    `cv::GOpaque<T>`   | T
  */
 class GAPI_EXPORTS GMat
 {

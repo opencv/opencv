@@ -319,6 +319,7 @@ typedef std::vector<std::vector<Mat> > vector_vector_Mat;
 typedef std::vector<UMat> vector_UMat;
 typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
+typedef std::vector<std::string> vector_string;
 typedef std::vector<Scalar> vector_Scalar;
 
 typedef std::vector<std::vector<char> > vector_vector_char;
@@ -980,6 +981,14 @@ PyObject* pyopencv_from(const String& value)
 {
     return PyString_FromString(value.empty() ? "" : value.c_str());
 }
+
+#if CV_VERSION_MAJOR == 3
+template<>
+PyObject* pyopencv_from(const std::string& value)
+{
+    return PyString_FromString(value.empty() ? "" : value.c_str());
+}
+#endif
 
 template<>
 bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)

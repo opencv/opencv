@@ -200,6 +200,14 @@ template<typename U> struct fluid_get_in<cv::GArray<U>>
     }
 };
 
+template<typename U> struct fluid_get_in<cv::GOpaque<U>>
+{
+    static const U& get(const cv::GArgs &in_args, int idx)
+    {
+        return in_args.at(idx).unsafe_get<cv::detail::OpaqueRef>().rref<U>();
+    }
+};
+
 template<class T> struct fluid_get_in
 {
     static const T& get(const cv::GArgs &in_args, int idx)

@@ -564,9 +564,43 @@ static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr>& getShar
     return sharedPlugins;
 }
 #else
-InferenceEngine::Core& getCore()
+static bool init_IE_plugins()
+{
+    // load and hold IE plugins
+    static InferenceEngine::Core* init_core = new InferenceEngine::Core();  // 'delete' is never called
+    (void)init_core->GetAvailableDevices();
+    return true;
+}
+static InferenceEngine::Core& create_IE_Core_instance()
 {
     static InferenceEngine::Core core;
+    return core;
+}
+static InferenceEngine::Core& create_IE_Core_pointer()
+{
+    // load and hold IE plugins
+    static InferenceEngine::Core* core = new InferenceEngine::Core();  // 'delete' is never called
+    return *core;
+}
+InferenceEngine::Core& getCore()
+{
+    // to make happy memory leak tools use:
+    // - OPENCV_DNN_INFERENCE_ENGINE_HOLD_PLUGINS=0
+    // - OPENCV_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
+    static bool param_DNN_INFERENCE_ENGINE_HOLD_PLUGINS = utils::getConfigurationParameterBool("OPENCV_DNN_INFERENCE_ENGINE_HOLD_PLUGINS", true);
+    static bool init_IE_plugins_ = param_DNN_INFERENCE_ENGINE_HOLD_PLUGINS && init_IE_plugins(); CV_UNUSED(init_IE_plugins_);
+
+    static bool param_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND =
+            utils::getConfigurationParameterBool("OPENCV_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND",
+#ifdef _WIN32
+                true
+#else
+                false
+#endif
+            );
+    static InferenceEngine::Core& core = param_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
+            ? create_IE_Core_pointer()
+            : create_IE_Core_instance();
     return core;
 }
 #endif
@@ -574,7 +608,7 @@ InferenceEngine::Core& getCore()
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 static bool detectMyriadX_()
 {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R3)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R3)
     // Lightweight detection
     InferenceEngine::Core& ie = getCore();
     const std::vector<std::string> devices = ie.GetAvailableDevices();
@@ -739,7 +773,14 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
             // Some of networks can work without a library of extra layers.
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2019R1)
             // OpenCV fallbacks as extensions.
-            ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
+            try
+            {
+                ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
+            }
+            catch(const std::exception& e)
+            {
+                CV_LOG_INFO(NULL, "DNN-IE: Can't register OpenCV custom layers extension: " << e.what());
+            }
 #endif
 #ifndef _WIN32
             // Limit the number of CPU threads.
@@ -1068,8 +1109,14 @@ void resetMyriadDevice()
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     getSharedPlugins().erase("MYRIAD");
 #else
-    // To unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
-    getCore() = InferenceEngine::Core();
+    // Unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
+    InferenceEngine::Core& ie = getCore();
+    try
+    {
+        ie.UnregisterPlugin("MYRIAD");
+        ie.UnregisterPlugin("HETERO");
+    }
+    catch (...) {}
 #endif
 #endif  // HAVE_INF_ENGINE
 }

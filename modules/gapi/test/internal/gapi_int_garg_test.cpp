@@ -37,6 +37,10 @@ using GArg_Test_Types = ::testing::Types
    , Expected<cv::GArray<float>,        cv::detail::ArgKind::GARRAY>
    , Expected<cv::GArray<cv::Point>,    cv::detail::ArgKind::GARRAY>
    , Expected<cv::GArray<cv::Rect>,     cv::detail::ArgKind::GARRAY>
+   , Expected<cv::GOpaque<int>,         cv::detail::ArgKind::GOPAQUE>
+   , Expected<cv::GOpaque<float>,       cv::detail::ArgKind::GOPAQUE>
+   , Expected<cv::GOpaque<cv::Point>,   cv::detail::ArgKind::GOPAQUE>
+   , Expected<cv::GOpaque<cv::Rect>,    cv::detail::ArgKind::GOPAQUE>
 
  // Built-in types
    , Expected<int,                      cv::detail::ArgKind::OPAQUE_VAL>
@@ -85,6 +89,11 @@ TEST(GArg, HasWrap)
                   "GArray<int> has custom marshalling logic");
     static_assert(cv::detail::has_custom_wrap<cv::GArray<std::string> >::value,
                   "GArray<int> has custom marshalling logic");
+
+    static_assert(cv::detail::has_custom_wrap<cv::GOpaque<int> >::value,
+                  "GOpaque<int> has custom marshalling logic");
+    static_assert(cv::detail::has_custom_wrap<cv::GOpaque<std::string> >::value,
+                  "GOpaque<int> has custom marshalling logic");
 }
 
 TEST(GArg, GArrayU)
@@ -95,6 +104,16 @@ TEST(GArg, GArrayU)
 
     cv::GArg arg2 = cv::GArg(cv::GArray<cv::Point>());
     EXPECT_NO_THROW(arg2.get<cv::detail::GArrayU>());
+}
+
+TEST(GArg, GOpaqueU)
+{
+    // Placing a GOpaque<T> into GArg automatically strips it to GOpaqueU
+    cv::GArg arg1 = cv::GArg(cv::GOpaque<int>());
+    EXPECT_NO_THROW(arg1.get<cv::detail::GOpaqueU>());
+
+    cv::GArg arg2 = cv::GArg(cv::GOpaque<cv::Point>());
+    EXPECT_NO_THROW(arg2.get<cv::detail::GOpaqueU>());
 }
 
 

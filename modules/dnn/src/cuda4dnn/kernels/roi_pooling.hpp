@@ -12,7 +12,7 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T>
-    void roi_pooling(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> input, csl::View<T> rois, T spatial_scale);
+    void roi_pooling(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> input, csl::View<T> rois, float spatial_scale);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 

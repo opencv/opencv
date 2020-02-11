@@ -42,6 +42,11 @@
 #ifndef __VIDEOIO_H_
 #define __VIDEOIO_H_
 
+#if defined __linux__ || defined __APPLE__ || defined __HAIKU__
+#include <unistd.h>  // -D_FORTIFY_SOURCE=2 workaround: https://github.com/opencv/opencv/issues/15020
+#endif
+
+
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/legacy/constants_c.h"
 

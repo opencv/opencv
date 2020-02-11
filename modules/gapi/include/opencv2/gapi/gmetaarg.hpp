@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
 
 namespace cv
 {
@@ -36,6 +37,7 @@ using GMetaArg = util::variant
     , GMatDesc
     , GScalarDesc
     , GArrayDesc
+    , GOpaqueDesc
     >;
 GAPI_EXPORTS std::ostream& operator<<(std::ostream& os, const GMetaArg &);
 
@@ -52,6 +54,7 @@ namespace detail
     template<> struct is_meta_descr<GMatDesc>    : std::true_type {};
     template<> struct is_meta_descr<GScalarDesc> : std::true_type {};
     template<> struct is_meta_descr<GArrayDesc>  : std::true_type {};
+    template<> struct is_meta_descr<GOpaqueDesc> : std::true_type {};
 
     template<typename... Ts>
     using are_meta_descrs = all_satisfy<is_meta_descr, Ts...>;

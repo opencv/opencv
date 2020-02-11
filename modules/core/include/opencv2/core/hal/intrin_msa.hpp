@@ -1000,6 +1000,22 @@ OPENCV_HAL_IMPL_MSA_REDUCE_OP_4(v_int32x4, int, min, std::min)
 OPENCV_HAL_IMPL_MSA_REDUCE_OP_4(v_float32x4, float, max, std::max)
 OPENCV_HAL_IMPL_MSA_REDUCE_OP_4(v_float32x4, float, min, std::min)
 
+
+#define OPENCV_HAL_IMPL_MSA_REDUCE_OP_16(_Tpvec, scalartype, _Tpvec2, func) \
+inline scalartype v_reduce_##func(const _Tpvec& a) \
+{ \
+    _Tpvec2 a1, a2; \
+    v_expand(a, a1, a2); \
+    return (scalartype)v_reduce_##func(v_##func(a1, a2)); \
+}
+
+OPENCV_HAL_IMPL_MSA_REDUCE_OP_16(v_uint8x16, uchar, v_uint16x8, min)
+OPENCV_HAL_IMPL_MSA_REDUCE_OP_16(v_uint8x16, uchar, v_uint16x8, max)
+OPENCV_HAL_IMPL_MSA_REDUCE_OP_16(v_int8x16, char, v_int16x8, min)
+OPENCV_HAL_IMPL_MSA_REDUCE_OP_16(v_int8x16, char, v_int16x8, max)
+
+
+
 #define OPENCV_HAL_IMPL_MSA_REDUCE_SUM(_Tpvec, scalartype, suffix) \
 inline scalartype v_reduce_sum(const _Tpvec& a) \
 { \

@@ -1008,10 +1008,10 @@ static std::string findData(const std::string& relative_path, bool required, boo
                 CHECK_FILE_WITH_PREFIX(prefix, result_);
                 if (!required && !result_.empty())
                 {
-                    std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << std::endl;
                     static bool checkOptionalFlag = cv::utils::getConfigurationParameterBool("OPENCV_TEST_CHECK_OPTIONAL_DATA", false);
                     if (checkOptionalFlag)
                     {
+                        std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << std::endl;
                         CV_Assert(required || result_.empty());
                     }
                 }

@@ -967,6 +967,29 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         enc->thread_count = get_number_of_cpus();
 //#endif
 
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 123, 0)
+        AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
+
+        if (avdiscard_entry != 0) {
+            if(strcmp(avdiscard_entry->value, "all") == 0)
+                enc->skip_frame = AVDISCARD_ALL;
+            else if (strcmp(avdiscard_entry->value, "bidir") == 0)
+                enc->skip_frame = AVDISCARD_BIDIR;
+            else if (strcmp(avdiscard_entry->value, "default") == 0)
+                enc->skip_frame = AVDISCARD_DEFAULT;
+            else if (strcmp(avdiscard_entry->value, "none") == 0)
+                enc->skip_frame = AVDISCARD_NONE;
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 59, 100)
+            else if (strcmp(avdiscard_entry->value, "nonintra") == 0)
+                enc->skip_frame = AVDISCARD_NONINTRA;
+#endif
+            else if (strcmp(avdiscard_entry->value, "nonkey") == 0)
+                enc->skip_frame = AVDISCARD_NONKEY;
+            else if (strcmp(avdiscard_entry->value, "nonref") == 0)
+                enc->skip_frame = AVDISCARD_NONREF;
+        }
+#endif
+
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
 #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
 #endif

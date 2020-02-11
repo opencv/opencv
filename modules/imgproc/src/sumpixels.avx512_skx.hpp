@@ -2,14 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019, Intel Corporation, all rights reserved.
-#include "precomp.hpp"
-#include "sumpixels.hpp"
+// Copyright (C) 2019-2020, Intel Corporation, all rights reserved.
 
 #include "opencv2/core/hal/intrin.hpp"
 
+namespace cv { namespace hal {
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-namespace cv {
 namespace { // Anonymous namespace to avoid exposing the implementation classes
 
 //
@@ -432,16 +431,14 @@ __m512d IntegralCalculator < 4 > ::calculate_integral(const __m512i src_longs, c
 
 } // end of anonymous namespace
 
-namespace opt_AVX512_SKX {
-
-// This is the implementation for the external callers interface entry point.
-// It should be the only function called into this file from outside
-// Any new implementations should be directed from here
+static
 void calculate_integral_avx512(const uchar *src,   size_t _srcstep,
                                double      *sum,   size_t _sumstep,
                                double      *sqsum, size_t _sqsumstep,
                                int width, int height, int cn)
 {
+    CV_INSTRUMENT_REGION();
+
     switch(cn){
         case 1: {
             IntegralCalculator< 1 > calculator;
@@ -466,5 +463,5 @@ void calculate_integral_avx512(const uchar *src,   size_t _srcstep,
 }
 
 
-} // end namespace opt_AVX512_SXK
-} // end namespace cv
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+}} // end namespace cv::hal

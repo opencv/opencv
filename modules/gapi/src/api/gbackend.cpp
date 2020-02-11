@@ -168,6 +168,10 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, bool is_umat)
         mag.template slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg);
         break;
 
+    case GShape::GOPAQUE:
+        mag.template slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg);
+        break;
+
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
     }
@@ -233,6 +237,10 @@ void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat)
         mag.template slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg);
         break;
 
+    case GShape::GOPAQUE:
+        mag.template slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg);
+        break;
+
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -249,6 +257,11 @@ void resetInternalData(Mag& mag, const Data &d)
     case GShape::GARRAY:
         util::get<cv::detail::ConstructVec>(d.ctor)
             (mag.template slot<cv::detail::VectorRef>()[d.rc]);
+        break;
+
+    case GShape::GOPAQUE:
+        util::get<cv::detail::ConstructOpaque>(d.ctor)
+            (mag.template slot<cv::detail::OpaqueRef>()[d.rc]);
         break;
 
     case GShape::GSCALAR:
@@ -272,9 +285,10 @@ cv::GRunArg getArg(const Mag& mag, const RcDesc &ref)
     {
     case GShape::GMAT:    return GRunArg(mag.template slot<cv::gapi::own::Mat>().at(ref.id));
     case GShape::GSCALAR: return GRunArg(mag.template slot<cv::gapi::own::Scalar>().at(ref.id));
-    // Note: .at() is intentional for GArray as object MUST be already there
+    // Note: .at() is intentional for GArray and GOpaque as objects MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GRunArg(mag.template slot<cv::detail::VectorRef>().at(ref.id));
+    case GShape::GOPAQUE: return GRunArg(mag.template slot<cv::detail::OpaqueRef>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -297,7 +311,7 @@ cv::GRunArgP getObjPtr(Mag& mag, const RcDesc &rc, bool is_umat)
         else
             return GRunArgP(&mag.template slot<cv::gapi::own::Mat>()[rc.id]);
     case GShape::GSCALAR: return GRunArgP(&mag.template slot<cv::gapi::own::Scalar>()[rc.id]);
-    // Note: .at() is intentional for GArray as object MUST be already there
+    // Note: .at() is intentional for GArray and GOpaque as objects MUST be already there
     //   (and constructor by either bindIn/Out or resetInternal)
     case GShape::GARRAY:
         // FIXME(DM): For some absolutely unknown to me reason, move
@@ -307,6 +321,14 @@ cv::GRunArgP getObjPtr(Mag& mag, const RcDesc &rc, bool is_umat)
         // debugging this!!!1
         return GRunArgP(const_cast<const Mag&>(mag)
                         .template slot<cv::detail::VectorRef>().at(rc.id));
+    case GShape::GOPAQUE:
+        // FIXME(DM): For some absolutely unknown to me reason, move
+        // semantics is involved here without const_cast to const (and
+        // value from map is moved into return value GRunArgP, leaving
+        // map with broken value I've spent few late Friday hours
+        // debugging this!!!1
+        return GRunArgP(const_cast<const Mag&>(mag)
+                        .template slot<cv::detail::OpaqueRef>().at(rc.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -318,6 +340,9 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat)
     switch (rc.shape)
     {
     case GShape::GARRAY:
+        // Do nothing - should we really do anything here?
+        break;
+        case GShape::GOPAQUE:
         // Do nothing - should we really do anything here?
         break;
 

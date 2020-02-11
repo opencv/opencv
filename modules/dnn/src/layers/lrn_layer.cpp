@@ -103,7 +103,7 @@ public:
             return bias == (int)bias;
         }
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
-            return type == CHANNEL_NRM && bias == (int)bias;
+            return bias == (int)bias;
         }
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
@@ -471,7 +471,15 @@ public:
             alphaSize *= (type == SPATIAL_NRM ? size*size : size);
 
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto lrn = std::make_shared<ngraph::op::LRN>(ieInpNode, (double)alphaSize, (double)beta, (double)bias, (size_t)size);
+        std::vector<int64_t> axes;
+        if (type != SPATIAL_NRM) {
+            axes = {1};
+        } else {
+            axes.resize(ieInpNode->get_shape().size() - 2);
+            std::iota(axes.begin(), axes.end(), 2);
+        }
+        auto ngraph_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes.data());
+        auto lrn = std::make_shared<ngraph::op::LRN>(ieInpNode, ngraph_axes, alphaSize, beta, bias, size);
         return Ptr<BackendNode>(new InfEngineNgraphNode(lrn));
     }
 #endif  // HAVE_DNN_NGRAPH
