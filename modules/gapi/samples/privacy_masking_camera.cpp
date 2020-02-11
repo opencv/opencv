@@ -123,9 +123,9 @@ GAPI_OCV_KERNEL(OCVToMosaic, ToMosaic) {
                     const std::vector<cv::Rect> &in_face_rcs,
                           std::vector<cv::gapi::wip::draw::Prim> &out_prims) {
         out_prims.clear();
-        const int BLOCK_SIZE = 24;
         const auto cvt = [](cv::Rect rc) {
             // Align the mosaic region to mosaic block size
+            const int BLOCK_SIZE = 24;
             const int dw = BLOCK_SIZE - (rc.width  % BLOCK_SIZE);
             const int dh = BLOCK_SIZE - (rc.height % BLOCK_SIZE);
             rc.width  += dw;
