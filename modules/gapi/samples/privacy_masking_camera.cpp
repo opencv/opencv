@@ -17,14 +17,14 @@
 const std::string about =
     "This is an OpenCV-based version of Privacy Masking Camera example";
 const std::string keys =
-    "{ h help |     | print this help message }"
-    "{ input  |     | Path to an input video file }"
-    "{ platm  |     | IE vehicle/license plate detection model (.xml) }"
-    "{ platd  | CPU | IE vehicle/license plate detection model device (for OpenVINO IE, e.g. CPU, GPU, VPU, ...) }"
-    "{ facem  |     | IE face detection model (.xml) }"
-    "{ faced  | CPU | IE face detection model device (for OpenVINO IE, e.g. CPU, GPU, VPU, ...) }"
-    "{ trad   |     | Run processing in traditional (non-pipelined) way }"
-    "{ noshow |     | Don't display UI (improves performance) }";
+    "{ h help |       | print this help message }"
+    "{ input  |       | Path to the input video file }"
+    "{ platm  |       | Path to IE vehicle/license plate detection model (.xml) }"
+    "{ platd  | CPU   | OpenVINO IE vehicle/license plate detection model device (e.g. CPU, GPU, VPU, ...) }"
+    "{ facem  |       | Path to IE face detection model (.xml) }"
+    "{ faced  | CPU   | OpenVINO IE face detection model device (e.g. CPU, GPU, VPU, ...) }"
+    "{ trad   | false | Run processing in traditional (non-pipelined) way }"
+    "{ noshow | false | Don't display UI (improves performance) }";
 
 namespace {
 
