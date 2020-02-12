@@ -7,13 +7,10 @@ Link to original repo: https://github.com/foolwood/DaSiamRPN
 
 import numpy as np
 import cv2 as cv
-import glob
 import argparse
 
 #function for cropping image
 def get_subwindow_tracking(im, pos, model_sz, original_sz, avg_chans):
-    if isinstance(pos, float):
-        pos = [pos, pos]
     sz = original_sz
     im_sz = im.shape
     c = (original_sz+1) / 2
@@ -56,22 +53,6 @@ def get_subwindow_tracking(im, pos, model_sz, original_sz, avg_chans):
 
     return im_patch.astype(float)
 
-#function for calculating target position and size
-# def get_axis_aligned_bbox(region):
-#     region = np.array(region)
-#     cx = np.mean(region[0::2])
-#     cy = np.mean(region[1::2])
-#     x1 = min(region[0::2])
-#     x2 = max(region[0::2])
-#     y1 = min(region[1::2])
-#     y2 = max(region[1::2])
-#     A1 = np.linalg.norm(region[0:2] - region[2:4]) * np.linalg.norm(region[2:4] - region[4:6])
-#     A2 = (x2 - x1) * (y2 - y1)
-#     s = np.sqrt(A1 / A2)
-#     w = s * (x2 - x1) + 1
-#     h = s * (y2 - y1) + 1
-#     return [cx, cy, w, h]
-
 def generate_anchor(total_stride, scales, ratios, score_size):
     anchor_num = len(ratios) * len(scales)
     anchor = np.zeros((anchor_num, 4),  dtype=np.float32)
@@ -113,7 +94,6 @@ class TrackerConfig(object):
     penalty_k = 0.055
     window_influence = 0.42
     lr = 0.295
-    adaptive = True
 
 #initialization of network
 def SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
@@ -121,13 +101,6 @@ def SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
     p = TrackerConfig()
     state['im_h'] = im.shape[0]
     state['im_w'] = im.shape[1]
-
-    if p.adaptive:
-        if ((target_sz[0] * target_sz[1]) / float(state['im_h'] * state['im_w'])) < 0.004:
-            p.instance_size = 287
-        else:
-            p.instance_size = 271
-        p.score_size = (p.instance_size - p.exemplar_size) / p.total_stride + 1
 
     p.anchor = generate_anchor(p.total_stride, p.scales, p.ratios, int(p.score_size))
     avg_chans = np.mean(im, axis=(0, 1))
@@ -279,42 +252,58 @@ def softmax(x):
 
 #parse paths to onnx models and to input sequence
 parser = argparse.ArgumentParser(description = "Run tracker")
-parser.add_argument("net", type = str, help = "Full path to onnx model of net")
+parser.add_argument("--net", type = str, help = "Full path to onnx model of net")
 parser.add_argument("kernel_r1", type = str, help = "Full path to onnx model of kernel_r1")
 parser.add_argument("kernel_cls1", type = str, help = "Full path to onnx model of kernel_cls1")
-# parser.add_argument("input", type = str, help = "Full path to input sequence")
 args = parser.parse_args()
 
-net = cv.dnn.readNetFromONNX(args.net)
-kernel_r1 = cv.dnn.readNetFromONNX(args.kernel_r1)
-kernel_cls1 = cv.dnn.readNetFromONNX(args.kernel_cls1)
+net = cv.dnn.readNet(args.net)
+kernel_r1 = cv.dnn.readNet(args.kernel_r1)
+kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
+
+#function for drawing initial bounding box
+def get_bb(event, x, y, flag, param):
+    global point, cx, cy, w, h
+
+    if event == cv.EVENT_LBUTTONDOWN:
+        point = [(x, y)]
+
+    elif event == cv.EVENT_LBUTTONUP:
+        point.append((x, y))
+        cv.rectangle(frame, point[0], point[1], (0, 255, 255), 3)
+
+        cx = point[0][0] - (point[0][0] - point[1][0]) / 2
+        cy = point[0][1] - (point[0][1]- point[1][1]) / 2
+        w = abs(point[0][0] - point[1][0])
+        h = abs(point[0][1] - point[1][1])
 
 #read source of video/image sequence
-#for now it should be folder with images named like: "0001", "0002" etc. for correct work "sorted" method
-# images = sorted(glob.glob(args.input + '*.jpg'))
-
-#choose region on image
-#region = [334.02,128.36,438.19,188.78,396.39,260.83,292.23,200.41]
-#[cx, cy, w, h] = get_axis_aligned_bbox(region)
-[cx, cy, w, h] = [365.2075, 194.595, 106.13, 96.41]
-
-#initialization of network and initial bounding box
-target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
-# im = cv.imread(images[0])
-# state = SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1)
-toc = 0#variable for fps counter
-cap = cv.VideoCapture("/home/ilyaelizarov/trackers/DaSiamRPN/code/bag/%08d.jpg",cv.CAP_IMAGES)
+# cap = cv.VideoCapture(0)
+cap = cv.VideoCapture(0, cv.CAP_V4L2)
+# cap = cv.VideoCapture("/home/ilyaelizarov/trackers/DaSiamRPN/code/bag/%08d.jpg",cv.CAP_IMAGES)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
 
+#variables for fps counter
+toc = 0
 f = 0
+
 #tracking cicle
-# for f, image in enumerate(images):
 while (cap.isOpened):
-    # im = cv.imread(image)
     ret,frame = cap.read()
     if f == 0:
+        cv.namedWindow("DaSiamRPN")
+        cv.setMouseCallback("DaSiamRPN", get_bb)
+
+        while True:
+            cv.imshow("DaSiamRPN", frame)
+            key = cv.waitKey(1) & 0xFF
+            if key == ord(" "):
+                break
+
+        target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
         state = SiamRPN_init(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
+
     f += 1
     tic = cv.getTickCount()
     state = SiamRPN_track(state, frame)
@@ -322,8 +311,7 @@ while (cap.isOpened):
     res = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
     res = [int(l) for l in res]
     cv.rectangle(frame, (res[0], res[1]), (res[0] + res[2], res[1] + res[3]), (0, 255, 255), 3)
-    # cv.rectangle(im, (int(cx - w/2),int(cy - h/2)), (int(cx + w/2),int(cy + h/2)), (0, 255, 0))
-    cv.imshow('SiamRPN', frame)
+    cv.imshow('DaSiamRPN', frame)
     key = cv.waitKey(1)
     if key == 27:
         print('Tracking Speed {:.1f}fps'.format((f - 1) / (toc / cv.getTickFrequency())))
