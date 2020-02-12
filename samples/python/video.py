@@ -27,6 +27,10 @@ Keys:
     ESC    - exit
     SPACE  - save current frame to <shot path> directory
 
+Warning:
+    You can't exit using exit button.
+
+
 '''
 
 # Python 2/3 compatibility
