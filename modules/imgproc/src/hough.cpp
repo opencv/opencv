@@ -1958,7 +1958,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                         continue;
                 }
 
-                if( arc_j.weight >= HOUGH_CIRCLES_ALT_MAX_CLUSTERS && arc_j.weight >= r_arc*0.15 )
+                if( arc_j.weight >= MIN_COUNT && arc_j.weight >= r_arc*0.15 )
                 {
                     uint64 mval = 0;
                     for( int di = 0; di < arc_j.weight; di++ )
