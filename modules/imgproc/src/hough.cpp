@@ -1711,6 +1711,23 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
     }
 }
 
+static int circle_popcnt(uint64 val)
+{
+    #ifdef CV_POPCNT_U64
+        return CV_POPCNT_U64(val);
+    #else
+        val -= (val >> 1) & 0x5555555555555555ULL;
+        val = (val & 0x3333333333333333ULL) + ((val >> 2) & 0x3333333333333333ULL);
+        val = (val + (val >> 4)) & 0x0f0f0f0f0f0f0f0fULL;
+        return (int)((val * 0x0101010101010101ULL) >> 56);
+    #endif
+}
+
+// The structure describes the circle "candidate" that is composed by one or more circle-like arcs.
+// * rw - the sum of radiuses multiplied by the corresponding arc lengths.
+// * weight - the arc length (the number of pixels it contains)
+// * mask - bit mask of 64 elements that shows the coverage of the whole 0..360 degrees angular range of the circle.
+//     The mask of all 1's means that the whole circle is completely covered. 0's show the uncovered segments.
 struct CircleData
 {
     CircleData() { rw = 0; weight = 0; mask = 0; }
@@ -1718,14 +1735,6 @@ struct CircleData
     int weight;
     uint64 mask;
 };
-
-static int circle_popcnt(uint64 mask)
-{
-    int count = 0;
-    for(int b = 0; b < 64; b++, mask >>= 1)
-        count += (mask & 1) != 0;
-    return count;
-}
 
 enum
 {
@@ -1737,9 +1746,27 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                              double minRadius, double maxRadius, double cannyThreshold, double minCos2 )
 {
     const int MIN_COUNT = 10;
+    const int RAY_FP_BITS = 10;
+    const int RAY_FP_SCALE = 1 << RAY_FP_BITS;
+    const int ACCUM_FP_BITS = 6;
+    const int RAY_SHIFT2 = ACCUM_FP_BITS/2;
+    const int ACCUM_ALPHA_ONE = 1 << RAY_SHIFT2;
+    const int ACCUM_ALPHA_MASK = ACCUM_ALPHA_ONE - 1;
+    const int RAY_SHIFT1 = RAY_FP_BITS - RAY_SHIFT2;
+    const int RAY_DELTA1 = 1 << (RAY_SHIFT1 - 1);
 
-    if( maxRadius <= 0 ) maxRadius = std::min(img.cols, img.rows)*0.5;
-    if( minRadius > maxRadius ) std::swap(minRadius, maxRadius);
+    const double ARC_DELTA = 80;
+    const double ARC_EPS = 0.03;
+    const double CIRCLE_AREA_OFFSET = 4000;
+    const double ARC2CLUSTER_EPS = 0.06;
+    const double CLUSTER_MERGE_EPS = 0.075;
+    const double FINAL_MERGE_DIST_EPS = 0.01;
+    const double FINAL_MERGE_AREA_EPS = CLUSTER_MERGE_EPS;
+
+    if( maxRadius <= 0 )
+        maxRadius = std::min(img.cols, img.rows)*0.5;
+    if( minRadius > maxRadius )
+        std::swap(minRadius, maxRadius);
     maxRadius = std::min(maxRadius, std::min(img.cols, img.rows)*0.5);
     maxRadius = std::max(maxRadius, 1.);
     minRadius = std::max(minRadius, 1.);
@@ -1803,11 +1830,11 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 nz.push_back(Vec4f((float)p.x, (float)p.y, (float)vx, (float)vy));
                 CV_Assert(mdata[p.y*mstep + p.x] == 1);
 
-                int sx = cvRound(vx * 1024 / mag);
-                int sy = cvRound(vy * 1024 / mag);
+                int sx = cvRound(vx * RAY_FP_SCALE / mag);
+                int sy = cvRound(vy * RAY_FP_SCALE / mag);
 
-                int x0 = cvRound((p.x * idp) * 1024);
-                int y0 = cvRound((p.y * idp) * 1024);
+                int x0 = cvRound((p.x * idp) * RAY_FP_SCALE);
+                int y0 = cvRound((p.y * idp) * RAY_FP_SCALE);
 
                 // Step from min_radius to max_radius in both directions of the gradient
                 for(int k1 = 0; k1 < 2; k1++ )
@@ -1817,17 +1844,20 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
 
                     for(int r = minR; r <= maxR; x1 += sx, y1 += sy, r++ )
                     {
-                        int x2a = (x1 + 64) >> 7, y2a = (y1 + 64) >> 7;
-                        int x2 = x2a >> 3, y2 = y2a >> 3;
+                        int x2a = (x1 + RAY_DELTA1) >> RAY_SHIFT1, y2a = (y1 + RAY_DELTA1) >> RAY_SHIFT1;
+                        int x2 = x2a >> RAY_SHIFT2, y2 = y2a >> RAY_SHIFT2;
                         if( (unsigned)x2 >= (unsigned)acols ||
                             (unsigned)y2 >= (unsigned)arows )
                             break;
 
+                        // instead of giving everything to the computed pixel of the accumulator,
+                        // do a weighted update of 4 neighbor (2x2) pixels using bilinear interpolation.
+                        // we do it to reduce the aliasing effect, even though it's slower
                         int* ptr = adata + y2*astep + x2;
-                        int a = (x2a & 7), b = (y2a & 7);
-                        ptr[0] += (7 - a)*(7 - b);
-                        ptr[1] += a*(7 - b);
-                        ptr[astep] += (7 - a)*b;
+                        int a = (x2a & ACCUM_ALPHA_MASK), b = (y2a & ACCUM_ALPHA_MASK);
+                        ptr[0] += (ACCUM_ALPHA_ONE - a)*(ACCUM_ALPHA_ONE - b);
+                        ptr[1] += a*(ACCUM_ALPHA_ONE - b);
+                        ptr[astep] += (ACCUM_ALPHA_ONE - a)*b;
                         ptr[astep+1] += a*b;
                     }
 
@@ -1854,8 +1884,10 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 }
                 else
                     backtrace_mode = false;
-            }
-            while(!stack.empty());
+            } while(!stack.empty());
+            // insert a special "stop marker" in the end of each
+            // connected component to make sure we
+            // finalize and analyze the arc segment
             nz.push_back(Vec4f(0.f, 0.f, 0.f, 0.f));
         }
     }
@@ -1863,6 +1895,9 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
     if( nz.empty() )
         return;
 
+    // use dilation with massive ((rdMinDisp/dp)*2+1) x ((rdMinDisp/dp)*2+1) kernel.
+    // this trick helps us quickly find the local maxima of accumulator value
+    // that are at least within the specified distance from each other.
     Mat accum_f, accum_max;
     accum.convertTo(accum_f, CV_32F);
     int niters = std::max(cvCeil(rdMinDist*idp), 1);
@@ -1900,8 +1935,12 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
     const int nnz = (int)nz.size();
     Mutex cmutex;
 
-    // for each edge pixel find the corresponding circle centers (i.e. build the clusters).
-    // concentric circles are supported as well.
+    // Check each possible pair (edge_pixel[i], circle_center[j]).
+    // For each circle form the clusters to identify possible radius values.
+    // Several clusters (up to 10) are maintained to help to filter out false alarms and
+    // to support the concentric circle cases.
+
+    // inside parallel for we process the next "HOUGH_CIRCLES_ALT_BLOCK_SIZE" circles
     parallel_for_(Range(0, nstripes), [&](const Range& r)
     {
     CircleData cdata[HOUGH_CIRCLES_ALT_BLOCK_SIZE*HOUGH_CIRCLES_ALT_MAX_CLUSTERS];
@@ -1916,13 +1955,17 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
         int nc = std::min((int)(centers.size() - j0), (int)HOUGH_CIRCLES_ALT_BLOCK_SIZE);
         if(nc <= 0) break;
 
+        // reset the statistics about the clusters
         for( int j = 0; j < nc; j++ )
         {
             for( int k = 0; k < HOUGH_CIRCLES_ALT_BLOCK_SIZE; k++ )
                 cdata[j*HOUGH_CIRCLES_ALT_MAX_CLUSTERS + k] = CircleData();
             arc[j] = CircleData();
-            arc[j].weight = 1;
-            prev_idx[j] = -2;
+            arc[j].weight = 1; // avoid division by zero
+            prev_idx[j] = -2; // we compare the current index "i" with prev_idx[j]+1
+                              // to check whether we are still at the current Canny
+                              // connected component. so we initially set it to -2
+                              // to make sure that the initial check gives "false".
         }
 
         for( int i = 0; i < nnz; i++ )
@@ -1936,8 +1979,11 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 float cx = cc[j].x, cy = cc[j].y;
                 float dx = x - cx, dy = y - cy;
                 float rij2 = dx*dx + dy*dy;
+                // check that i-th pixel is within the specified distance range from the center
                 if( (rij2 > maxR2 || rij2 < minR2) && i < nnz-1 ) continue;
                 float dv = dx*vx + dy*vy;
+                // check that the line segment connecting the edge pixel and the center and
+                // the gradient at the edge pixel are almost collinear
                 if( (double)dv*dv < (double)minCos2*mag2*rij2 && i < nnz-1 ) continue;
                 float rij = std::sqrt(rij2);
 
@@ -1947,7 +1993,8 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 int prev = prev_idx[j];
                 prev_idx[j] = i;
 
-                if( std::abs(rij - r_arc) < (r_arc + 80)*0.03 && prev+1 == i && !stop_marker )
+                // update the arc statistics if it still looks like an arc
+                if( std::abs(rij - r_arc) < (r_arc + ARC_DELTA)*ARC_EPS && prev+1 == i && !stop_marker )
                 {
                     arc_j.rw += rij;
                     arc_j.weight++;
@@ -1957,8 +2004,11 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                         continue;
                 }
 
+                // otherwise (or in the very end) store the arc in the cluster collection,
+                // if the arc is long enough.
                 if( arc_j.weight >= MIN_COUNT && arc_j.weight >= r_arc*0.15 )
                 {
+                    // before doing it, compute the angular range coverage (the mask).
                     uint64 mval = 0;
                     for( int di = 0; di < arc_j.weight; di++ )
                     {
@@ -1970,6 +2020,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                         int a = (cvFloor(af) & 63);
                         int b = (a + 1) & 63;
                         af -= a;
+                        // this is another protection from aliasing effects
                         if( af <= 0.25f )
                             mval |= (uint64)1 << a;
                         else if( af > 0.75f )
@@ -1979,7 +2030,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     }
 
                     double min_eps = DBL_MAX;
-                    double min_w = 1e6;
+                    int min_mval = (int)(sizeof(mval)*8+1);
                     int k = 0, best_k = -1, subst_k = -1;
                     CircleData* cdata_j = &cdata[j*HOUGH_CIRCLES_ALT_MAX_CLUSTERS];
 
@@ -1987,10 +2038,16 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     {
                         CircleData& cjk = cdata_j[k];
                         if( cjk.weight == 0 )
-                            break;
+                            break;  // it means that there is no more valid clusters
                         double rk = cjk.rw/cjk.weight;
+                        // Compute and use the weighted "cluster with arc" area instead of
+                        // just cluster area or just arc area or their sum. This is because the cluster can
+                        // be small and the arc can be big, or vice versa. Weighted area is more robust.
                         double r2avg = (rk*rk*cjk.weight + r_arc*r_arc*arc_j.weight)/(cjk.weight + arc_j.weight);
-                        if( std::abs(rk*rk - r_arc*r_arc) < (r2avg + 4000)*0.06 )
+                        // It seems to be more robust to compare circle areas (without "pi" scale)
+                        // instead of radiuses. When we compare radiuses, when depending on the ALPHA,
+                        // different big circles are merged too easily, or different small circles stay different.
+                        if( std::abs(rk*rk - r_arc*r_arc) < (r2avg + CIRCLE_AREA_OFFSET)*ARC2CLUSTER_EPS )
                         {
                             double eps = std::abs(rk - r_arc)/rk;
                             if( eps < min_eps )
@@ -2001,16 +2058,20 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                         }
                         else
                         {
+                            // Select the cluster with the worst angular coverage.
+                            // We use the angular coverage instead of the arc weight
+                            // in order to protect real small circles
+                            // from "fake" bigger circles with bigger "support".
                             int pcnt = circle_popcnt(cjk.mask);
-                            if( pcnt < min_w )
+                            if( pcnt < min_mval )
                             {
-                                min_w = pcnt;
+                                min_mval = pcnt;
                                 subst_k = k;
                             }
                         }
                     }
 
-                    if( best_k >= 0 )
+                    if( best_k >= 0 ) // if found the match, merge the arc into the cluster
                     {
                         CircleData& cjk = cdata_j[best_k];
                         cjk.rw += arc_j.rw;
@@ -2020,49 +2081,27 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     else
                     {
                         if( k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS )
-                            subst_k = k;
+                            subst_k = k; // if we have empty space, just add the new cluster, do not throw anything
                         CircleData& cjk0 = cdata_j[subst_k];
 
-                        if( k >= HOUGH_CIRCLES_ALT_MAX_CLUSTERS && cjk0.weight > 0 )
-                        {
-                            double r0 = cjk0.rw/cjk0.weight;
-                            min_eps = DBL_MAX;
-                            best_k = -1;
-                            // before removing subst_k-th cluster, try to merge it with some other cluster
-                            for( k = 0; k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS; k++ )
-                            {
-                                CircleData& cjk = cdata_j[k];
-                                if( k == subst_k )
-                                    continue;
-                                double rk = cjk.rw/cjk.weight;
-                                double eps = std::abs(rk*rk - r0*r0)/(rk*rk + r0*r0 + 4000);
-                                if( eps < min_eps )
-                                {
-                                    min_eps = eps;
-                                    best_k = k;
-                                }
-                            }
+                        // here was the code that attempts to merge the thrown-away cluster with others,
+                        // but apparently it does not have any noticeable effect,
+                        // so we removed it for the sake of simplicity ...
 
-                            if( min_eps < 0.08 )
-                            {
-                                CircleData& cjk = cdata_j[best_k];
-                                cjk.rw += cjk0.rw;
-                                cjk.weight += cjk0.weight;
-                                cjk.mask |= cjk0.mask;
-                            }
-                        }
-
+                        // add the new cluster
                         cjk0.rw = arc_j.rw;
                         cjk0.weight = arc_j.weight;
                         cjk0.mask = mval;
                     }
                 }
-                arc_j.rw = rij;
+                // reset the arc statistics.
+                arc_j.rw = stop_marker ? 0. : rij;
                 arc_j.weight = 1;
+                // do not clean arc_j.mval, because we do not alter it.
             }
         }
 
-        // now merge the final clusters
+        // now merge the final clusters for each particular circle center (cx, cy)
         for( int j = 0; j < nc; j++ )
         {
             CircleData* cdata_j = &cdata[j*HOUGH_CIRCLES_ALT_MAX_CLUSTERS];
@@ -2074,11 +2113,21 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 if( cjk.weight == 0 )
                     continue;
 
+                // Let in only more or less significant clusters.
+                // Small clusters more likely correspond to a noise
+                // (otherwise they would grew more substantial during the
+                // cluster construction phase).
+                // Processing those noisy clusters takes time and
+                // potentially decreases accuracy of computed radiuses
+                // of good clusters.
                 double rjk = cjk.rw/cjk.weight;
                 if( cjk.weight < rjk || circle_popcnt(cjk.mask) < 15 )
                     cjk.weight = 0;
             }
 
+            // extensive O(nclusters^2) cluster merge algorithm, but since the number
+            // of clusters is limited with a modest constant HOUGH_CIRCLES_ALT_MAX_CLUSTERS,
+            // it's still O(1) algorithm :)
             for( int k = 0; k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS; k++ )
             {
                 CircleData& cjk = cdata_j[k];
@@ -2093,7 +2142,9 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     if( l == k || cjl.weight == 0 )
                         continue;
                     double rl = cjl.rw/cjl.weight;
-                    if( std::abs(rk*rk - rl*rl) < 0.075*(rk*rk + rl*rl + 4000))
+                    // Here we use a simple sum of areas (without "pi" scale) instead of weighted
+                    // sum just for simplicity and potentially for better accuracy.
+                    if( std::abs(rk*rk - rl*rl) < (rk*rk + rl*rl + CIRCLE_AREA_OFFSET)*CLUSTER_MERGE_EPS)
                     {
                         cjk.rw += cjl.rw;
                         cjk.weight += cjl.weight;
@@ -2128,7 +2179,14 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 if( prev_bit == 1)
                     max_runlen = std::max(max_runlen, runlen + (count < 64 ? count0 : 0));
 
-                bool accepted = (cjk.weight >= rk*3 && count >= 36 && max_runlen >= 20) || count >= 55;
+                // Those constants are the results of fine-tuning.
+                // Basically, by lowering thresholds more real circles, as well as fake circles, are accepted.
+                // By raising the thresholds you get less real circles and less false alarms.
+                // A better and more safe way to obtain better detection results is to regulate
+                // [minRadius, maxRadius] range and to play with minCos2 parameter.
+                // May be some classifier can be trained that takes the weight,
+                // circle radius and the bit mask as inputs and produces the verdict.
+                bool accepted = (cjk.weight >= rk*3 && count >= 35 && max_runlen >= 20) || count >= 55;
                 //if(debug)
                 //printf("[%c]. cx=%.1f, cy=%.1f, r=%.1f, weight=%d, count=%d, max_runlen=%d, mask=%016llx\n",
                 //       (accepted ? '+' : '-'), cx, cy, rk, cjk.weight, count, max_runlen, cjk.mask);
@@ -2137,15 +2195,19 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     local_circles.push_back(EstimatedCircle(Vec3f(cx, cy, (float)rk), cjk.weight));
             }
         }
-        }
-        if(!local_circles.empty())
-        {
-            cmutex.lock();
-            std::copy(local_circles.begin(), local_circles.end(), std::back_inserter(circles));
-            cmutex.unlock();
-        }
+    }
+    if(!local_circles.empty())
+    {
+        cmutex.lock();
+        std::copy(local_circles.begin(), local_circles.end(), std::back_inserter(circles));
+        cmutex.unlock();
+    }
     });
 
+    // The final circle merge procedure.
+    // This is O(ncircles^2) algorithm
+    // and it can take a long time in some specific scenarious.
+    // But most of the time it's very fast.
     size_t i0 = 0, nc = circles.size();
     for( size_t i = 0; i < nc; i++ )
     {
@@ -2158,9 +2220,10 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
             float dx = ci.c[0] - cj.c[0], dy = ci.c[1] - cj.c[1];
             float r2 = dx*dx + dy*dy;
             float rs = ci.c[2] + cj.c[2];
-            if( r2 > rs*rs*0.01)
+            if( r2 > rs*rs*FINAL_MERGE_DIST_EPS)
                 continue;
-            if( std::abs(ci.c[2]*ci.c[2] - cj.c[2]*cj.c[2]) < (ci.c[2]*ci.c[2] + cj.c[2]*cj.c[2] + 4000)*0.15 )
+            if( std::abs(ci.c[2]*ci.c[2] - cj.c[2]*cj.c[2]) <
+                (ci.c[2]*ci.c[2] + cj.c[2]*cj.c[2] + CIRCLE_AREA_OFFSET)*FINAL_MERGE_AREA_EPS )
             {
                 int wi = ci.accum, wj = cj.accum;
                 if( wi < wj ) std::swap(ci, cj);
