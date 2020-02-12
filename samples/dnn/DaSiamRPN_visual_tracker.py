@@ -253,8 +253,8 @@ def softmax(x):
 #parse paths to onnx models and to input sequence
 parser = argparse.ArgumentParser(description = "Run tracker")
 parser.add_argument("--net", type = str, help = "Full path to onnx model of net")
-parser.add_argument("kernel_r1", type = str, help = "Full path to onnx model of kernel_r1")
-parser.add_argument("kernel_cls1", type = str, help = "Full path to onnx model of kernel_cls1")
+parser.add_argument("--kernel_r1", type = str, help = "Full path to onnx model of kernel_r1")
+parser.add_argument("--kernel_cls1", type = str, help = "Full path to onnx model of kernel_cls1")
 args = parser.parse_args()
 
 net = cv.dnn.readNet(args.net)
@@ -278,8 +278,8 @@ def get_bb(event, x, y, flag, param):
         h = abs(point[0][1] - point[1][1])
 
 #read source of video/image sequence
-# cap = cv.VideoCapture(0)
-cap = cv.VideoCapture(0, cv.CAP_V4L2)
+cap = cv.VideoCapture(0)
+# cap = cv.VideoCapture(0, cv.CAP_V4L2)
 # cap = cv.VideoCapture("/home/ilyaelizarov/trackers/DaSiamRPN/code/bag/%08d.jpg",cv.CAP_IMAGES)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
