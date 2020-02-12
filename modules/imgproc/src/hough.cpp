@@ -1005,6 +1005,7 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
 
 struct EstimatedCircle
 {
+    EstimatedCircle() { accum = 0; }
     EstimatedCircle(Vec3f _c, int _accum) :
         c(_c), accum(_accum) {}
     Vec3f c;
@@ -1710,6 +1711,463 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
     }
 }
 
+struct CircleData
+{
+    CircleData() { rw = 0; weight = 0; mask = 0; }
+    double rw;
+    int weight;
+    uint64 mask;
+};
+
+static int circle_popcnt(uint64 mask)
+{
+    int count = 0;
+    for(int b = 0; b < 64; b++, mask >>= 1)
+        count += (mask & 1) != 0;
+    return count;
+}
+
+static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circles, double dp, double rdMinDist,
+                             double minRadius, double maxRadius, double cannyThreshold )
+{
+    const int BLOCK_SIZE = 10;
+    const int MAX_CLUSTERS = 10;
+    const int MIN_COUNT = 10;
+    const double dot_eps2 = 0.9;
+
+    if( maxRadius <= 0 ) maxRadius = std::min(img.cols, img.rows)*0.5;
+    if( minRadius > maxRadius ) std::swap(minRadius, maxRadius);
+    maxRadius = std::min(maxRadius, std::min(img.cols, img.rows)*0.5);
+    maxRadius = std::max(maxRadius, 1.);
+    minRadius = std::max(minRadius, 1.);
+    minRadius = std::min(minRadius, maxRadius);
+    cannyThreshold = std::max(cannyThreshold, 1.);
+    dp = std::max(dp, 1.);
+
+    Mat Dx, Dy, edges;
+    Scharr(img, Dx, CV_16S, 1, 0);
+    Scharr(img, Dy, CV_16S, 0, 1);
+    Canny(Dx, Dy, edges, cannyThreshold/2, cannyThreshold, true);
+    Mat mask(img.rows + 2, img.cols + 2, CV_8U, Scalar::all(0));
+    double idp = 1./dp;
+    int minR = cvFloor(minRadius*idp);
+    int maxR = cvCeil(maxRadius*idp);
+    int acols = cvRound(img.cols*idp);
+    int arows = cvRound(img.rows*idp);
+    Mat accum(arows + 1, acols + 1, CV_32S, Scalar::all(0));
+    int* adata = accum.ptr<int>();
+    int astep = (int)accum.step1();
+    minR = std::max(minR, 1);
+    maxR = std::max(maxR, 1);
+
+    const uchar* edgeData = edges.ptr<uchar>();
+    int estep = (int)edges.step1();
+    const short* dxData = Dx.ptr<short>();
+    const short* dyData = Dy.ptr<short>();
+    int dxystep = (int)Dx.step1();
+    uchar* mdata = mask.ptr<uchar>();
+    int mstep = (int)mask.step1();
+
+    circles.clear();
+    std::vector<Vec4f> nz;
+
+    std::vector<Point> stack;
+    const int n33[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}};
+
+    for( int x = 0; x < mask.cols; x++ ) mdata[x] = mdata[(mask.rows-1)*mstep + x] = (uchar)1;
+    for( int y = 0; y < mask.rows; y++ ) mdata[y*mstep] = mdata[y*mstep + mask.cols-1] = (uchar)1;
+    mdata += mstep + 1;
+
+    for( int y = 0; y < edges.rows; y++ )
+    {
+        for( int x = 0; x < edges.cols; x++ )
+        {
+            if(!edgeData[y*estep + x] || mdata[y*mstep + x])
+                continue;
+
+            mdata[y*mstep + x] = (uchar)1;
+            stack.push_back(Point(x, y));
+            bool backtrace_mode = false;
+
+            do
+            {
+                Point p = stack.back();
+                stack.pop_back();
+                int vx = dxData[p.y*dxystep + p.x];
+                int vy = dyData[p.y*dxystep + p.x];
+
+                float mag = std::sqrt((float)vx*vx+(float)vy*vy);
+                nz.push_back(Vec4f((float)p.x, (float)p.y, (float)vx, (float)vy));
+                CV_Assert(mdata[p.y*mstep + p.x] == 1);
+
+                int sx = cvRound(vx * 1024 / mag);
+                int sy = cvRound(vy * 1024 / mag);
+
+                int x0 = cvRound((p.x * idp) * 1024);
+                int y0 = cvRound((p.y * idp) * 1024);
+
+                // Step from min_radius to max_radius in both directions of the gradient
+                for(int k1 = 0; k1 < 2; k1++ )
+                {
+                    int x1 = x0 + minR * sx;
+                    int y1 = y0 + minR * sy;
+
+                    for(int r = minR; r <= maxR; x1 += sx, y1 += sy, r++ )
+                    {
+                        int x2a = (x1 + 64) >> 7, y2a = (y1 + 64) >> 7;
+                        int x2 = x2a >> 3, y2 = y2a >> 3;
+                        if( (unsigned)x2 >= (unsigned)acols ||
+                            (unsigned)y2 >= (unsigned)arows )
+                            break;
+
+                        int* ptr = adata + y2*astep + x2;
+                        int a = (x2a & 7), b = (y2a & 7);
+                        ptr[0] += (7 - a)*(7 - b);
+                        ptr[1] += a*(7 - b);
+                        ptr[astep] += (7 - a)*b;
+                        ptr[astep+1] += a*b;
+                    }
+
+                    sx = -sx; sy = -sy;
+                }
+
+                int neighbors = 0;
+                for( int k = 0; k < 8; k++ )
+                {
+                    int dy = n33[k][0], dx = n33[k][1];
+                    int y_ = p.y + dy, x_ = p.x + dx;
+                    if( mdata[y_*mstep + x_] || !edgeData[y_*estep + x_])
+                        continue;
+                    mdata[y_*mstep + x_] = (uchar)1;
+                    stack.push_back(Point(x_, y_));
+                    neighbors++;
+                }
+
+                if( neighbors == 0 )
+                {
+                    if( backtrace_mode )
+                        nz.pop_back();
+                    backtrace_mode = true;
+                }
+                else
+                    backtrace_mode = false;
+            }
+            while(!stack.empty());
+            nz.push_back(Vec4f(0.f, 0.f, 0.f, 0.f));
+        }
+    }
+
+    if( nz.empty() )
+        return;
+
+    Mat accum_f, accum_max;
+    accum.convertTo(accum_f, CV_32F);
+    int niters = std::max(cvCeil(rdMinDist*idp), 1);
+    dilate(accum_f, accum_max, Mat(), Point(-1, -1), niters, BORDER_CONSTANT, Scalar::all(0));
+    std::vector<Point2f> centers;
+
+    // find the possible circle centers
+    for( int y = 0; y < arows; y++ )
+    {
+        const float* adataf = accum_f.ptr<float>(y);
+        const float* amaxdata = accum_max.ptr<float>(y);
+        int left = -1;
+        for( int x = 0; x < acols; x++ )
+        {
+            if(adataf[x] == amaxdata[x] && adataf[x] > adataf[x+astep])
+            {
+                if(left < 0) left=x;
+            }
+            else if(left >= 0)
+            {
+                float cx = (float)((left + x - 1)*dp*0.5f);
+                float cy = (float)(y*dp);
+                centers.push_back(Point2f(cx, cy));
+                left = -1;
+            }
+        }
+    }
+
+    if(centers.empty())
+        return;
+
+    float minR2 = (float)(minRadius*minRadius);
+    float maxR2 = (float)(maxRadius*maxRadius);
+    int nstripes = (int)((centers.size() + BLOCK_SIZE-1)/BLOCK_SIZE);
+    const int nnz = (int)nz.size();
+    Mutex cmutex;
+
+    // for each edge pixel find the corresponding circle centers (i.e. build the clusters).
+    // concentric circles are supported as well.
+    parallel_for_(Range(0, nstripes), [&](const Range& r)
+    {
+    CircleData cdata[BLOCK_SIZE*MAX_CLUSTERS];
+    CircleData arc[BLOCK_SIZE];
+    int prev_idx[BLOCK_SIZE];
+
+    std::vector<EstimatedCircle> local_circles;
+    for(int j0 = r.start*BLOCK_SIZE; j0 < r.end*BLOCK_SIZE; j0 += BLOCK_SIZE)
+    {
+        const Vec4f* nzdata = &nz[0];
+        const Point2f* cc = &centers[j0];
+        int nc = std::min((int)(centers.size() - j0), BLOCK_SIZE);
+        if(nc <= 0) break;
+
+        std::fill_n(cdata, nc*MAX_CLUSTERS, CircleData());
+        std::fill_n(arc, nc, CircleData());
+        for( int j = 0; j < nc; j++ )
+        {
+            arc[j].weight = 1;
+            prev_idx[j] = -2;
+        }
+
+        for( int i = 0; i < nnz; i++ )
+        {
+            Vec4f v = nzdata[i];
+            float x = v[0], y = v[1], vx = v[2], vy = v[3], mag2 = vx*vx + vy*vy;
+            bool stop_marker = x == 0.f && y == 0.f && vx == 0.f && vy == 0.f;
+
+            for( int j = 0; j < nc; j++ )
+            {
+                float cx = cc[j].x, cy = cc[j].y;
+                float dx = x - cx, dy = y - cy;
+                float rij2 = dx*dx + dy*dy;
+                if( (rij2 > maxR2 || rij2 < minR2) && i < nnz-1 ) continue;
+                float dv = dx*vx + dy*vy;
+                if( (double)dv*dv < (double)dot_eps2*mag2*rij2 && i < nnz-1 ) continue;
+                float rij = std::sqrt(rij2);
+
+                CircleData& arc_j = arc[j];
+                double r_arc = arc_j.rw/arc_j.weight;
+                int di0 = 0;
+                int prev = prev_idx[j];
+                prev_idx[j] = i;
+
+                if( std::abs(rij - r_arc) < (r_arc + 80)*0.03 && prev+1 == i && !stop_marker )
+                {
+                    arc_j.rw += rij;
+                    arc_j.weight++;
+                    di0 = 1;
+                    r_arc = arc_j.rw/arc_j.weight;
+                    if( i < nnz -1 )
+                        continue;
+                }
+
+                if( arc_j.weight >= MIN_COUNT && arc_j.weight >= r_arc*0.15 )
+                {
+                    uint64 mval = 0;
+                    for( int di = 0; di < arc_j.weight; di++ )
+                    {
+                        int i1 = prev + di0 - di;
+                        Vec4f u = nz[i1];
+                        float x1 = u[0], y1 = u[1];
+                        float dx1 = x1 - cx, dy1 = y1 - cy;
+                        float af = fastAtan2(dy1, dx1)*(64.f/360.f);
+                        int a = (cvFloor(af) & 63);
+                        int b = (a + 1) & 63;
+                        af -= a;
+                        if( af <= 0.25f )
+                            mval |= (uint64)1 << a;
+                        else if( af > 0.75f )
+                            mval |= (uint64)1 << b;
+                        else
+                            mval |= ((uint64)1 << a) | ((uint64)1 << b);
+                    }
+
+                    double min_eps = DBL_MAX;
+                    double min_w = 1e6;
+                    int k = 0, best_k = -1, subst_k = -1;
+                    CircleData* cdata_j = &cdata[j*MAX_CLUSTERS];
+
+                    for( ; k < MAX_CLUSTERS; k++ )
+                    {
+                        CircleData& cjk = cdata_j[k];
+                        if( cjk.weight == 0 )
+                            break;
+                        double rk = cjk.rw/cjk.weight;
+                        double r2avg = (rk*rk*cjk.weight + r_arc*r_arc*arc_j.weight)/(cjk.weight + arc_j.weight);
+                        if( std::abs(rk*rk - r_arc*r_arc) < (r2avg + 4000)*0.06 )
+                        {
+                            double eps = std::abs(rk - r_arc)/rk;
+                            if( eps < min_eps )
+                            {
+                                min_eps = eps;
+                                best_k = k;
+                            }
+                        }
+                        else
+                        {
+                            int pcnt = circle_popcnt(cjk.mask);
+                            if( pcnt < min_w )
+                            {
+                                min_w = pcnt;
+                                subst_k = k;
+                            }
+                        }
+                    }
+
+                    if( best_k >= 0 )
+                    {
+                        CircleData& cjk = cdata_j[best_k];
+                        cjk.rw += arc_j.rw;
+                        cjk.weight += arc_j.weight;
+                        cjk.mask |= mval;
+                    }
+                    else
+                    {
+                        if( k < MAX_CLUSTERS )
+                            subst_k = k;
+                        CircleData& cjk0 = cdata_j[subst_k];
+
+                        if( k >= MAX_CLUSTERS && cjk0.weight > 0 )
+                        {
+                            double r0 = cjk0.rw/cjk0.weight;
+                            min_eps = DBL_MAX;
+                            best_k = -1;
+                            // before removing subst_k-th cluster, try to merge it with some other cluster
+                            for( k = 0; k < MAX_CLUSTERS; k++ )
+                            {
+                                CircleData& cjk = cdata_j[k];
+                                if( k == subst_k )
+                                    continue;
+                                double rk = cjk.rw/cjk.weight;
+                                double eps = std::abs(rk*rk - r0*r0)/(rk*rk + r0*r0 + 4000);
+                                if( eps < min_eps )
+                                {
+                                    min_eps = eps;
+                                    best_k = k;
+                                }
+                            }
+
+                            if( min_eps < 0.08 )
+                            {
+                                CircleData& cjk = cdata_j[best_k];
+                                cjk.rw += cjk0.rw;
+                                cjk.weight += cjk0.weight;
+                                cjk.mask |= cjk0.mask;
+                            }
+                        }
+
+                        cjk0.rw = arc_j.rw;
+                        cjk0.weight = arc_j.weight;
+                        cjk0.mask = mval;
+                    }
+                }
+                arc_j.rw = rij;
+                arc_j.weight = 1;
+            }
+        }
+
+        // now merge the final clusters
+        for( int j = 0; j < nc; j++ )
+        {
+            CircleData* cdata_j = &cdata[j*MAX_CLUSTERS];
+            float cx = cc[j].x, cy = cc[j].y;
+
+            for( int k = 0; k < MAX_CLUSTERS; k++ )
+            {
+                CircleData& cjk = cdata_j[k];
+                if( cjk.weight == 0 )
+                    continue;
+
+                float rjk = cjk.rw/cjk.weight;
+                if( cjk.weight < rjk || circle_popcnt(cjk.mask) < 15 )
+                    cjk.weight = 0;
+            }
+
+            for( int k = 0; k < MAX_CLUSTERS; k++ )
+            {
+                CircleData& cjk = cdata_j[k];
+                if( cjk.weight == 0 )
+                    continue;
+                double rk = cjk.rw/cjk.weight;
+
+                int l = k+1;
+                for( ; l < MAX_CLUSTERS; l++ )
+                {
+                    CircleData& cjl = cdata_j[l];
+                    if( l == k || cjl.weight == 0 )
+                        continue;
+                    double rl = cjl.rw/cjl.weight;
+                    if( std::abs(rk*rk - rl*rl) < 0.075*(rk*rk + rl*rl + 4000))
+                    {
+                        cjk.rw += cjl.rw;
+                        cjk.weight += cjl.weight;
+                        cjk.mask |= cjl.mask;
+                        rk = cjk.rw/cjk.weight;
+                        cjl.weight = 0;
+                        l = -1; // try to merge other clusters again with the updated k-th cluster
+                    }
+                }
+            }
+
+            for( int k = 0; k < MAX_CLUSTERS; k++ )
+            {
+                CircleData& cjk = cdata_j[k];
+                if( cjk.weight == 0 )
+                    continue;
+                double rk = cjk.rw/cjk.weight;
+                uint64 mask_jk = cjk.mask, mask_jk0 = (mask_jk + 1) ^ mask_jk;
+                int count = 0, count0 = -1, runlen = 0, max_runlen = 0;
+                int prev_bit = 0;
+                for( int b = 0; b < 64; b++, mask_jk >>= 1, mask_jk0 >>= 1 )
+                {
+                    int bit_k = (mask_jk & 1) != 0;
+                    count += bit_k;
+                    count0 += (mask_jk0 & 1) != 0;
+                    if(bit_k == prev_bit) { runlen++; continue; }
+                    if(prev_bit == 1)
+                        max_runlen = std::max(max_runlen, runlen);
+                    runlen = 1;
+                    prev_bit = bit_k;
+                }
+                if( prev_bit == 1)
+                    max_runlen = std::max(max_runlen, runlen + (count < 64 ? count0 : 0));
+
+                bool accepted = (cjk.weight >= rk*3 && count >= 36 && max_runlen >= 20) || count >= 55;
+                //if(debug)
+                //printf("[%c]. cx=%.1f, cy=%.1f, r=%.1f, weight=%d, count=%d, max_runlen=%d, mask=%016llx\n",
+                //       (accepted ? '+' : '-'), cx, cy, rk, cjk.weight, count, max_runlen, cjk.mask);
+
+                if( accepted )
+                    local_circles.push_back(EstimatedCircle(Vec3f(cx, cy, rk), cjk.weight));
+            }
+        }
+        }
+        if(!local_circles.empty())
+        {
+            cmutex.lock();
+            std::copy(local_circles.begin(), local_circles.end(), std::back_inserter(circles));
+            cmutex.unlock();
+        }
+    });
+
+    int i0 = 0, nc = circles.size();
+    for( int i = 0; i < nc; i++ )
+    {
+        if( circles[i].accum == 0 ) continue;
+        EstimatedCircle& ci = circles[i0] = circles[i];
+        for( int j = i+1; j < nc; j++ )
+        {
+            EstimatedCircle cj = circles[j];
+            if( cj.accum == 0 ) continue;
+            float dx = ci.c[0] - cj.c[0], dy = ci.c[1] - cj.c[1];
+            float r2 = dx*dx + dy*dy;
+            float rs = ci.c[2] + cj.c[2];
+            if( r2 > rs*rs*0.01)
+                continue;
+            if( std::abs(ci.c[2]*ci.c[2] - cj.c[2]*cj.c[2]) < (ci.c[2]*ci.c[2] + cj.c[2]*cj.c[2] + 4000)*0.15 )
+            {
+                int wi = ci.accum, wj = cj.accum;
+                if( wi < wj ) std::swap(ci, cj);
+                circles[j].accum = 0;
+            }
+        }
+        i0++;
+    }
+    circles.resize(i0);
+}
+
 static void HoughCircles( InputArray _image, OutputArray _circles,
                           int method, double dp, double minDist,
                           double param1, double param2,
@@ -1728,26 +2186,29 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
     CV_Assert(!_image.empty() && _image.type() == CV_8UC1 && (_image.isMat() || _image.isUMat()));
     CV_Assert(_circles.isMat() || _circles.isVector());
 
-    if( dp <= 0 || minDist <= 0 || param1 <= 0 || param2 <= 0)
-        CV_Error( Error::StsOutOfRange, "dp, min_dist, canny_threshold and acc_threshold must be all positive numbers" );
-
-    int cannyThresh = cvRound(param1), accThresh = cvRound(param2), kernelSize = cvRound(param3);
-
-    minRadius = std::max(0, minRadius);
-
-    if(maxCircles < 0)
-        maxCircles = INT_MAX;
-
-    bool centersOnly = (maxRadius < 0);
-
-    if( maxRadius <= 0 )
-        maxRadius = std::max( _image.rows(), _image.cols() );
-    else if( maxRadius <= minRadius )
-        maxRadius = minRadius + 2;
+    if( dp <= 0 || minDist <= 0 || param1 <= 0)
+        CV_Error( Error::StsOutOfRange, "dp, min_dist and canny_threshold must be all positive numbers" );
 
     switch( method )
     {
-    case CV_HOUGH_GRADIENT:
+    case HOUGH_GRADIENT:
+        {
+        int cannyThresh = cvRound(param1), accThresh = cvRound(param2), kernelSize = cvRound(param3);
+        minRadius = std::max(0, minRadius);
+
+        if( param2 <= 0 )
+            CV_Error( Error::StsOutOfRange, "acc_threshold must be a positive number" );
+
+        if(maxCircles < 0)
+            maxCircles = INT_MAX;
+
+        bool centersOnly = (maxRadius < 0);
+
+        if( maxRadius <= 0 )
+            maxRadius = std::max( _image.rows(), _image.cols() );
+        else if( maxRadius <= minRadius )
+            maxRadius = minRadius + 2;
+
         if (type == CV_32FC3)
             HoughCirclesGradient<Vec3f>(_image, _circles, (float)dp, (float)minDist,
                                         minRadius, maxRadius, cannyThresh,
@@ -1758,6 +2219,33 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
                                         accThresh, maxCircles, kernelSize, centersOnly);
         else
             CV_Error(Error::StsError, "Internal error");
+        }
+        break;
+    case HOUGH_GRADIENT_ALT:
+        {
+            std::vector<EstimatedCircle> circles;
+            Mat image = _image.getMat();
+            HoughCirclesAlt(image, circles, dp, minDist, minRadius, maxRadius, param1);
+            std::sort(circles.begin(), circles.end(), cmpAccum);
+            size_t i, ncircles = circles.size();
+
+            if( type == CV_32FC4 )
+            {
+                std::vector<Vec4f> cw(ncircles);
+                for( i = 0; i < ncircles; i++ )
+                    cw[i] = GetCircle4f(circles[i]);
+                Mat(cw).copyTo(_circles);
+            }
+            else if( type == CV_32FC3 )
+            {
+                std::vector<Vec3f> cwow(ncircles);
+                for( i = 0; i < ncircles; i++ )
+                    cwow[i] = GetCircle(circles[i]);
+                Mat(cwow).copyTo(_circles);
+            }
+            else
+                CV_Error(Error::StsError, "Internal error");
+        }
         break;
     default:
         CV_Error( Error::StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );

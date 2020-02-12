@@ -181,48 +181,51 @@ INSTANTIATE_TEST_CASE_P(ImgProc, HoughCirclesTestFixture, testing::Combine(
 TEST(HoughCirclesTest, DefaultMaxRadius)
 {
     string picture_name = "imgproc/stuff.jpg";
-    const double dp = 1.0;
-    double minDist = 20;
-    double edgeThreshold = 20;
-    double accumThreshold = 30;
-    int minRadius = 20;
-    int maxRadius = 0;
 
     string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
     Mat src = imread(filename, IMREAD_GRAYSCALE);
     EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
-
     GaussianBlur(src, src, Size(9, 9), 2, 2);
 
-    vector<Vec3f> circles;
-    vector<Vec4f> circles4f;
-    HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-    HoughCircles(src, circles4f, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-
-#if DEBUG_IMAGES
-    string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
-    highlightCircles(filename, circles, imgProc + "HoughCirclesTest_DefaultMaxRadius.png");
-#endif
-
-    int maxDimension = std::max(src.rows, src.cols);
-
-    EXPECT_GT(circles.size(), size_t(0)) << "Should find at least some circles";
-    for (size_t i = 0; i < circles.size(); ++i)
+    for( int k = 0; k < 2; k++ )
     {
-        EXPECT_GE(circles[i][2], minRadius) << "Radius should be >= minRadius";
-        EXPECT_LE(circles[i][2], maxDimension) << "Radius should be <= max image dimension";
+        int method = k == 0 ? HOUGH_GRADIENT : HOUGH_GRADIENT_ALT;
+
+        const double dp = 1.0;
+        double minDist = 20;
+        double edgeThreshold = 20;
+        double accumThreshold = 30;
+        int minRadius = method == HOUGH_GRADIENT_ALT ? 10 : 20;
+        int maxRadius = 0;
+
+        vector<Vec3f> circles;
+        vector<Vec4f> circles4f;
+        HoughCircles(src, circles, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(src, circles4f, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+
+    #if DEBUG_IMAGES
+        string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
+        highlightCircles(filename, circles, imgProc + "HoughCirclesTest_DefaultMaxRadius.png");
+    #endif
+
+        int maxDimension = std::max(src.rows, src.cols);
+
+        if(method == HOUGH_GRADIENT_ALT)
+            EXPECT_EQ(circles.size(), size_t(3)) << "Should find 3 circles";
+        else
+            EXPECT_GT(circles.size(), size_t(0)) << "Should find at least some circles";
+
+        for (size_t i = 0; i < circles.size(); ++i)
+        {
+            EXPECT_GE(circles[i][2], minRadius) << "Radius should be >= minRadius";
+            EXPECT_LE(circles[i][2], maxDimension) << "Radius should be <= max image dimension";
+        }
     }
 }
 
 TEST(HoughCirclesTest, CentersOnly)
 {
     string picture_name = "imgproc/stuff.jpg";
-    const double dp = 1.0;
-    double minDist = 20;
-    double edgeThreshold = 20;
-    double accumThreshold = 30;
-    int minRadius = 20;
-    int maxRadius = -1;
 
     string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
     Mat src = imread(filename, IMREAD_GRAYSCALE);
@@ -230,53 +233,81 @@ TEST(HoughCirclesTest, CentersOnly)
 
     GaussianBlur(src, src, Size(9, 9), 2, 2);
 
-    vector<Vec3f> circles;
-    vector<Vec4f> circles4f;
-    HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-    HoughCircles(src, circles4f, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-
-#if DEBUG_IMAGES
-    string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
-    highlightCircles(filename, circles, imgProc + "HoughCirclesTest_CentersOnly.png");
-#endif
-
-    EXPECT_GT(circles.size(), size_t(0)) << "Should find at least some circles";
-    for (size_t i = 0; i < circles.size(); ++i)
+    for( int k = 1; k < 2; k++ )
     {
-        EXPECT_EQ(circles[i][2], 0.0f) << "Did not ask for radius";
-        EXPECT_EQ(circles[i][0], circles4f[i][0]);
-        EXPECT_EQ(circles[i][1], circles4f[i][1]);
-        EXPECT_EQ(circles[i][2], circles4f[i][2]);
+        int method = k == 0 ? HOUGH_GRADIENT : HOUGH_GRADIENT_ALT;
+        const double dp = 1.0;
+        double minDist = 20;
+        double edgeThreshold = 20;
+        double accumThreshold = 30;
+        int minRadius = method == HOUGH_GRADIENT_ALT ? 10 : 20;
+        int maxRadius = -1;
+
+        vector<Vec3f> circles;
+        vector<Vec4f> circles4f;
+
+        HoughCircles(src, circles, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(src, circles4f, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+
+    #if DEBUG_IMAGES
+        string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
+        highlightCircles(filename, circles, imgProc + "HoughCirclesTest_DefaultMaxRadius.png");
+    #endif
+
+        if(method == HOUGH_GRADIENT_ALT)
+            EXPECT_EQ(circles.size(), size_t(3)) << "Should find 3 circles";
+        else
+            EXPECT_GT(circles.size(), size_t(0)) << "Should find at least some circles";
+
+        for (size_t i = 0; i < circles.size(); ++i)
+        {
+            if( method == HOUGH_GRADIENT )
+                EXPECT_EQ(circles[i][2], 0.0f) << "Did not ask for radius";
+            EXPECT_EQ(circles[i][0], circles4f[i][0]);
+            EXPECT_EQ(circles[i][1], circles4f[i][1]);
+            EXPECT_EQ(circles[i][2], circles4f[i][2]);
+        }
     }
 }
 
 TEST(HoughCirclesTest, ManySmallCircles)
 {
     string picture_name = "imgproc/beads.jpg";
-    const double dp = 1.0;
-    double minDist = 10;
-    double edgeThreshold = 90;
-    double accumThreshold = 11;
-    int minRadius = 7;
-    int maxRadius = 18;
 
     string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
     Mat src = imread(filename, IMREAD_GRAYSCALE);
     EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
 
-    vector<Vec3f> circles;
-    vector<Vec4f> circles4f;
-    HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-    HoughCircles(src, circles4f, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+    for( int k = 0; k < 2; k++ )
+    {
+        int method = k == 0 ? HOUGH_GRADIENT : HOUGH_GRADIENT_ALT;
+        const double dp = method == HOUGH_GRADIENT_ALT ? 1.5 : 1.0;
+        double minDist = 10;
+        double edgeThreshold = 90;
+        double accumThreshold = 11;
+        int minRadius = 7;
+        int maxRadius = 18;
 
-#if DEBUG_IMAGES
-    string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
-    string test_case_name = getTestCaseName(picture_name, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-    highlightCircles(filename, circles, imgProc + test_case_name + ".png");
-#endif
+        int ncircles_min = method == HOUGH_GRADIENT_ALT ? 1500 : 3000;
+        Mat src_smooth;
+        if( method == HOUGH_GRADIENT_ALT )
+            GaussianBlur(src, src_smooth, Size(7, 7), 1.5, 1.5);
+        else
+            src.copyTo(src_smooth);
+        vector<Vec3f> circles;
+        vector<Vec4f> circles4f;
+        HoughCircles(src_smooth, circles, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(src_smooth, circles4f, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
-    EXPECT_GT(circles.size(), size_t(3000)) << "Should find a lot of circles";
-    EXPECT_EQ(circles.size(), circles4f.size());
+    #if DEBUG_IMAGES
+        string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
+        string test_case_name = getTestCaseName(picture_name, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        highlightCircles(filename, circles, imgProc + test_case_name + ".png");
+    #endif
+
+        EXPECT_GT(circles.size(), size_t(ncircles_min)) << "Should find a lot of circles";
+        EXPECT_EQ(circles.size(), circles4f.size());
+    }
 }
 
 }} // namespace

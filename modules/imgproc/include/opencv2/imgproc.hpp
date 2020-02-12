@@ -473,7 +473,8 @@ enum HoughModes {
     /** multi-scale variant of the classical Hough transform. The lines are encoded the same way as
     HOUGH_STANDARD. */
     HOUGH_MULTI_SCALE   = 2,
-    HOUGH_GRADIENT      = 3 //!< basically *21HT*, described in @cite Yuen90
+    HOUGH_GRADIENT      = 3, //!< basically *21HT*, described in @cite Yuen90
+    HOUGH_GRADIENT_ALT  = 4
 };
 
 //! Variants of Line Segment %Detector
