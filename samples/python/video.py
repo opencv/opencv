@@ -2,34 +2,26 @@
 
 '''
 Video capture sample.
-
 Sample shows how VideoCapture class can be used to acquire video
 frames from a camera of a movie file. Also the sample provides
 an example of procedural video generation by an object, mimicking
 the VideoCapture interface (see Chess class).
-
 'create_capture' is a convenience function for capture creation,
 falling back to procedural video in case of error.
-
 Usage:
     video.py [--shotdir <shot path>] [source0] [source1] ...'
-
     sourceN is an
      - integer number for camera capture
      - name of video file
      - synth:<params> for procedural video
-
 Synth examples:
     synth:bg=lena.jpg:noise=0.1
     synth:class=chess:bg=lena.jpg:noise=0.1:size=640x480
-
 Keys:
     ESC    - exit
     SPACE  - save current frame to <shot path> directory
-
-Warning :
-   You can't close using exit button.
-
+Warning:
+    You can't close using exit button.
 '''
 
 # Python 2/3 compatibility
@@ -41,9 +33,6 @@ import cv2 as cv
 import re
 
 from numpy import pi, sin, cos
-
-# built-in modules
-from time import clock
 
 # local modules
 from tst_scene_render import TestSceneRender
@@ -212,7 +201,7 @@ if __name__ == '__main__':
     args = dict(args)
     shotdir = args.get('--shotdir', '.')
     if len(sources) == 0:
-        sources = [0]
+        sources = [ 0 ]
 
     caps = list(map(create_capture, sources))
     shot_idx = 0
@@ -231,7 +220,4 @@ if __name__ == '__main__':
                 cv.imwrite(fn, img)
                 print(fn, 'saved')
             shot_idx += 1
-            cv.destroyAllWindows()
-            cv.imshow('capture %d' % i, img)
-			
-    cv.destroyAllWindows()
+cv.destroyAllWindows()
