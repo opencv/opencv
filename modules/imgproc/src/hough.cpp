@@ -1727,11 +1727,15 @@ static int circle_popcnt(uint64 mask)
     return count;
 }
 
+enum
+{
+    HOUGH_CIRCLES_ALT_BLOCK_SIZE = 10,
+    HOUGH_CIRCLES_ALT_MAX_CLUSTERS = 10
+};
+
 static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circles, double dp, double rdMinDist,
                              double minRadius, double maxRadius, double cannyThreshold )
 {
-    const int BLOCK_SIZE = 10;
-    const int MAX_CLUSTERS = 10;
     const int MIN_COUNT = 10;
     const double dot_eps2 = 0.9;
 
@@ -1893,7 +1897,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
 
     float minR2 = (float)(minRadius*minRadius);
     float maxR2 = (float)(maxRadius*maxRadius);
-    int nstripes = (int)((centers.size() + BLOCK_SIZE-1)/BLOCK_SIZE);
+    int nstripes = (int)((centers.size() + HOUGH_CIRCLES_ALT_BLOCK_SIZE-1)/HOUGH_CIRCLES_ALT_BLOCK_SIZE);
     const int nnz = (int)nz.size();
     Mutex cmutex;
 
@@ -1901,22 +1905,23 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
     // concentric circles are supported as well.
     parallel_for_(Range(0, nstripes), [&](const Range& r)
     {
-    CircleData cdata[BLOCK_SIZE*MAX_CLUSTERS];
-    CircleData arc[BLOCK_SIZE];
-    int prev_idx[BLOCK_SIZE];
+    CircleData cdata[HOUGH_CIRCLES_ALT_BLOCK_SIZE*HOUGH_CIRCLES_ALT_MAX_CLUSTERS];
+    CircleData arc[HOUGH_CIRCLES_ALT_BLOCK_SIZE];
+    int prev_idx[HOUGH_CIRCLES_ALT_BLOCK_SIZE];
 
     std::vector<EstimatedCircle> local_circles;
-    for(int j0 = r.start*BLOCK_SIZE; j0 < r.end*BLOCK_SIZE; j0 += BLOCK_SIZE)
+    for(int j0 = r.start*HOUGH_CIRCLES_ALT_BLOCK_SIZE; j0 < r.end*HOUGH_CIRCLES_ALT_BLOCK_SIZE; j0 += HOUGH_CIRCLES_ALT_BLOCK_SIZE)
     {
         const Vec4f* nzdata = &nz[0];
         const Point2f* cc = &centers[j0];
-        int nc = std::min((int)(centers.size() - j0), BLOCK_SIZE);
+        int nc = std::min((int)(centers.size() - j0), (int)HOUGH_CIRCLES_ALT_BLOCK_SIZE);
         if(nc <= 0) break;
 
-        std::fill_n(cdata, nc*MAX_CLUSTERS, CircleData());
-        std::fill_n(arc, nc, CircleData());
         for( int j = 0; j < nc; j++ )
         {
+            for( int k = 0; k < HOUGH_CIRCLES_ALT_BLOCK_SIZE; k++ )
+                cdata[j*HOUGH_CIRCLES_ALT_MAX_CLUSTERS + k] = CircleData();
+            arc[j] = CircleData();
             arc[j].weight = 1;
             prev_idx[j] = -2;
         }
@@ -1953,7 +1958,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                         continue;
                 }
 
-                if( arc_j.weight >= MIN_COUNT && arc_j.weight >= r_arc*0.15 )
+                if( arc_j.weight >= HOUGH_CIRCLES_ALT_MAX_CLUSTERS && arc_j.weight >= r_arc*0.15 )
                 {
                     uint64 mval = 0;
                     for( int di = 0; di < arc_j.weight; di++ )
@@ -1977,9 +1982,9 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     double min_eps = DBL_MAX;
                     double min_w = 1e6;
                     int k = 0, best_k = -1, subst_k = -1;
-                    CircleData* cdata_j = &cdata[j*MAX_CLUSTERS];
+                    CircleData* cdata_j = &cdata[j*HOUGH_CIRCLES_ALT_MAX_CLUSTERS];
 
-                    for( ; k < MAX_CLUSTERS; k++ )
+                    for( ; k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS; k++ )
                     {
                         CircleData& cjk = cdata_j[k];
                         if( cjk.weight == 0 )
@@ -2015,17 +2020,17 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     }
                     else
                     {
-                        if( k < MAX_CLUSTERS )
+                        if( k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS )
                             subst_k = k;
                         CircleData& cjk0 = cdata_j[subst_k];
 
-                        if( k >= MAX_CLUSTERS && cjk0.weight > 0 )
+                        if( k >= HOUGH_CIRCLES_ALT_MAX_CLUSTERS && cjk0.weight > 0 )
                         {
                             double r0 = cjk0.rw/cjk0.weight;
                             min_eps = DBL_MAX;
                             best_k = -1;
                             // before removing subst_k-th cluster, try to merge it with some other cluster
-                            for( k = 0; k < MAX_CLUSTERS; k++ )
+                            for( k = 0; k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS; k++ )
                             {
                                 CircleData& cjk = cdata_j[k];
                                 if( k == subst_k )
@@ -2061,10 +2066,10 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
         // now merge the final clusters
         for( int j = 0; j < nc; j++ )
         {
-            CircleData* cdata_j = &cdata[j*MAX_CLUSTERS];
+            CircleData* cdata_j = &cdata[j*HOUGH_CIRCLES_ALT_MAX_CLUSTERS];
             float cx = cc[j].x, cy = cc[j].y;
 
-            for( int k = 0; k < MAX_CLUSTERS; k++ )
+            for( int k = 0; k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS; k++ )
             {
                 CircleData& cjk = cdata_j[k];
                 if( cjk.weight == 0 )
@@ -2075,7 +2080,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     cjk.weight = 0;
             }
 
-            for( int k = 0; k < MAX_CLUSTERS; k++ )
+            for( int k = 0; k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS; k++ )
             {
                 CircleData& cjk = cdata_j[k];
                 if( cjk.weight == 0 )
@@ -2083,7 +2088,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 double rk = cjk.rw/cjk.weight;
 
                 int l = k+1;
-                for( ; l < MAX_CLUSTERS; l++ )
+                for( ; l < HOUGH_CIRCLES_ALT_MAX_CLUSTERS; l++ )
                 {
                     CircleData& cjl = cdata_j[l];
                     if( l == k || cjl.weight == 0 )
@@ -2101,7 +2106,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 }
             }
 
-            for( int k = 0; k < MAX_CLUSTERS; k++ )
+            for( int k = 0; k < HOUGH_CIRCLES_ALT_MAX_CLUSTERS; k++ )
             {
                 CircleData& cjk = cdata_j[k];
                 if( cjk.weight == 0 )
