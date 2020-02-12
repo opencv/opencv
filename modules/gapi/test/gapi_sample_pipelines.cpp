@@ -432,7 +432,7 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
     cv::Mat ref_mat = in_mat1 + in_mat2;
 
 
-    // G-API //////////////////////////////////////////////////////////////////////////
+    // G-API ///////////////////////////////////////////////////////////////////////////
     AddImpl f;
     EXPECT_FALSE(f.is_called);
     auto impl = cv::gapi::cpu::ocv_kernel<cv::gapi::core::GAdd>(f);
