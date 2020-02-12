@@ -195,13 +195,15 @@ TEST(HoughCirclesTest, DefaultMaxRadius)
         double minDist = 20;
         double edgeThreshold = 20;
         double accumThreshold = 30;
+        double minCos2 = 0.9;
+        double param2 = method == HOUGH_GRADIENT_ALT ? minCos2 : accumThreshold;
         int minRadius = method == HOUGH_GRADIENT_ALT ? 10 : 20;
         int maxRadius = 0;
 
         vector<Vec3f> circles;
         vector<Vec4f> circles4f;
-        HoughCircles(src, circles, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-        HoughCircles(src, circles4f, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(src, circles, method, dp, minDist, edgeThreshold, param2, minRadius, maxRadius);
+        HoughCircles(src, circles4f, method, dp, minDist, edgeThreshold, param2, minRadius, maxRadius);
 
     #if DEBUG_IMAGES
         string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
@@ -240,14 +242,16 @@ TEST(HoughCirclesTest, CentersOnly)
         double minDist = 20;
         double edgeThreshold = 20;
         double accumThreshold = 30;
+        double minCos2 = 0.9;
+        double param2 = method == HOUGH_GRADIENT_ALT ? minCos2 : accumThreshold;
         int minRadius = method == HOUGH_GRADIENT_ALT ? 10 : 20;
         int maxRadius = -1;
 
         vector<Vec3f> circles;
         vector<Vec4f> circles4f;
 
-        HoughCircles(src, circles, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-        HoughCircles(src, circles4f, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(src, circles, method, dp, minDist, edgeThreshold, param2, minRadius, maxRadius);
+        HoughCircles(src, circles4f, method, dp, minDist, edgeThreshold, param2, minRadius, maxRadius);
 
     #if DEBUG_IMAGES
         string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
@@ -285,10 +289,12 @@ TEST(HoughCirclesTest, ManySmallCircles)
         double minDist = 10;
         double edgeThreshold = 90;
         double accumThreshold = 11;
+        double minCos2 = 0.75;
+        double param2 = method == HOUGH_GRADIENT_ALT ? minCos2 : accumThreshold;
         int minRadius = 7;
         int maxRadius = 18;
-
         int ncircles_min = method == HOUGH_GRADIENT_ALT ? 1500 : 3000;
+
         Mat src_smooth;
         if( method == HOUGH_GRADIENT_ALT )
             GaussianBlur(src, src_smooth, Size(7, 7), 1.5, 1.5);
@@ -296,8 +302,8 @@ TEST(HoughCirclesTest, ManySmallCircles)
             src.copyTo(src_smooth);
         vector<Vec3f> circles;
         vector<Vec4f> circles4f;
-        HoughCircles(src_smooth, circles, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
-        HoughCircles(src_smooth, circles4f, method, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(src_smooth, circles, method, dp, minDist, edgeThreshold, param2, minRadius, maxRadius);
+        HoughCircles(src_smooth, circles4f, method, dp, minDist, edgeThreshold, param2, minRadius, maxRadius);
 
     #if DEBUG_IMAGES
         string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";

@@ -1734,10 +1734,9 @@ enum
 };
 
 static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circles, double dp, double rdMinDist,
-                             double minRadius, double maxRadius, double cannyThreshold )
+                             double minRadius, double maxRadius, double cannyThreshold, double minCos2 )
 {
     const int MIN_COUNT = 10;
-    const double dot_eps2 = 0.9;
 
     if( maxRadius <= 0 ) maxRadius = std::min(img.cols, img.rows)*0.5;
     if( minRadius > maxRadius ) std::swap(minRadius, maxRadius);
@@ -1939,7 +1938,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 float rij2 = dx*dx + dy*dy;
                 if( (rij2 > maxR2 || rij2 < minR2) && i < nnz-1 ) continue;
                 float dv = dx*vx + dy*vy;
-                if( (double)dv*dv < (double)dot_eps2*mag2*rij2 && i < nnz-1 ) continue;
+                if( (double)dv*dv < (double)minCos2*mag2*rij2 && i < nnz-1 ) continue;
                 float rij = std::sqrt(rij2);
 
                 CircleData& arc_j = arc[j];
@@ -2075,7 +2074,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 if( cjk.weight == 0 )
                     continue;
 
-                float rjk = cjk.rw/cjk.weight;
+                double rjk = cjk.rw/cjk.weight;
                 if( cjk.weight < rjk || circle_popcnt(cjk.mask) < 15 )
                     cjk.weight = 0;
             }
@@ -2135,7 +2134,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 //       (accepted ? '+' : '-'), cx, cy, rk, cjk.weight, count, max_runlen, cjk.mask);
 
                 if( accepted )
-                    local_circles.push_back(EstimatedCircle(Vec3f(cx, cy, rk), cjk.weight));
+                    local_circles.push_back(EstimatedCircle(Vec3f(cx, cy, (float)rk), cjk.weight));
             }
         }
         }
@@ -2147,12 +2146,12 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
         }
     });
 
-    int i0 = 0, nc = circles.size();
-    for( int i = 0; i < nc; i++ )
+    size_t i0 = 0, nc = circles.size();
+    for( size_t i = 0; i < nc; i++ )
     {
         if( circles[i].accum == 0 ) continue;
         EstimatedCircle& ci = circles[i0] = circles[i];
-        for( int j = i+1; j < nc; j++ )
+        for( size_t j = i+1; j < nc; j++ )
         {
             EstimatedCircle cj = circles[j];
             if( cj.accum == 0 ) continue;
@@ -2230,7 +2229,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         {
             std::vector<EstimatedCircle> circles;
             Mat image = _image.getMat();
-            HoughCirclesAlt(image, circles, dp, minDist, minRadius, maxRadius, param1);
+            HoughCirclesAlt(image, circles, dp, minDist, minRadius, maxRadius, param1, param2);
             std::sort(circles.begin(), circles.end(), cmpAccum);
             size_t i, ncircles = circles.size();
 
