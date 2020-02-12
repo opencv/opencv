@@ -50,7 +50,7 @@
 #pragma warning(disable: 4996)  // was declared deprecated
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility push(default)
 #endif
 
@@ -58,7 +58,7 @@
 
 #include <ie_builders.hpp>
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility pop
 #endif
 
