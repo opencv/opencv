@@ -5,6 +5,8 @@
 // Copyright (C) 2019 Intel Corporation
 
 #include "compiler/gmodel.hpp"
+#include <iostream>
+#include <fstream>
 
 namespace cv
 {
@@ -18,8 +20,8 @@ namespace serialization {
 // All structures below are partial copies of default (non-serializable) ones
 struct Kernel
 {
-    const std::string name;
-    const std::string tag;
+    std::string name;
+    std::string tag;
 };
 
 struct RcDesc
@@ -77,6 +79,8 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
 void printOp(const Op& op);
 void printData(const Data& data);
 void printGSerialized(const GSerialized s);
+void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops);
+void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops);
 
 } // namespace serialization
 } // namespace gimpl

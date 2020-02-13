@@ -63,7 +63,23 @@ namespace
                              const std::vector<ade::NodeHandle> &nodes) const override
         {
 #if 1
-            const auto s = cv::gimpl::serialization::serialize(graph, nodes);
+            auto s = cv::gimpl::serialization::serialize(graph, nodes);
+            std::ofstream dump_file;
+            dump_file.open("my_graph.bin", std::ofstream::out | std::ofstream::trunc | std::ofstream::binary );
+            if(dump_file.is_open())
+            {
+                dump_file.seekp(0, std::ofstream::beg);
+                cv::gimpl::serialization::dumpGSerializedOps(s, dump_file);
+            }
+            dump_file.close();
+
+            std::ifstream dump_file1 ("my_graph.bin", std::ifstream::in | std::ofstream::binary);
+            if(dump_file1.is_open())
+            {
+                cv::gimpl::serialization::readGSerializedOps(s, dump_file1);
+            }
+            dump_file1.close();
+
             auto gp = std::make_shared<ade::Graph>();
             auto& g_s = *gp.get();
             std::vector<ade::NodeHandle> nh;
