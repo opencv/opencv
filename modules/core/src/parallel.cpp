@@ -45,10 +45,6 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
-#define min_non_zero(val_1, val_2)                                                    \
-   (((val_1 > 0) && (val_2 > 0) && (val_1 > val_2)) || ((val_1 == 0) && (val_2 > 0))) \
-   ? val_2 : val_1
-
 #if defined _WIN32 || defined WINCE
     #include <windows.h>
     #undef small
@@ -86,8 +82,12 @@
     #define HAVE_CONCURRENCY
 #endif
 
-#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__
-   #define CV_HAVE_CGROUP
+#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+   #define CV_LINUX_GROUPS
+#endif
+
+#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __ANDROID__
+   #define CV_HAVE_CGROUPS
 #endif
 
 /* IMPORTANT: always use the same order of defines
@@ -752,7 +752,7 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#if defined CV_HAVE_CGROUP || defined __ANDROID__
+#if defined CV_LINUX_GROUPS
 static inline std::string getFileContents(const char *filename)
 {
     std::ifstream ifs(filename);
@@ -765,7 +765,7 @@ static inline std::string getFileContents(const char *filename)
 }
 #endif
 
-#if defined CV_HAVE_CGROUP || defined __ANDROID__
+#if defined CV_LINUX_GROUPS
 static inline int getNumberOfCPUsImpl(const char *filename)
 {
    std::string file_contents = getFileContents(filename);
@@ -800,14 +800,14 @@ static inline int getNumberOfCPUsImpl(const char *filename)
 }
 #endif
 
-#if defined CV_HAVE_CGROUP
+#if defined CV_LINUX_GROUPS
 static inline unsigned getNumberOfCPUsCFS(void)
 {
     std::string file_contents = getFileContents("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
     if(file_contents.empty())
         return 0;
 
-    std::stringstream ss_period(file_contents);
+    std::istringstream ss_period(file_contents);
     int cfs_quota;
     ss_period >> cfs_quota;
 
@@ -818,27 +818,41 @@ static inline unsigned getNumberOfCPUsCFS(void)
     if(file_contents.empty())
         return 0;
 
-    std::stringstream ss_quota(file_contents);
+    std::istringstream ss_quota(file_contents);
     int cfs_period;
     ss_quota >> cfs_period;
 
     if(cfs_period < 1)
         return 0;
 
-    return (unsigned) cfs_quota/cfs_period;
+    return max(1u, (unsigned)cfs_quota/cfs_period);
 }
 #endif
 
+template <typename T>
+static inline T minNonZero(T val_1, T val_2)
+{
+    return (((val_1 > 0) && (val_2 > 0) && (val_1 > val_2)) || ((val_1 == 0) && (val_2 > 0))) \
+           ? val_2 : val_1;
+}
+
 int cv::getNumberOfCPUs(void)
 {
+    /* 
+     * Logic here is to try different methods of getting CPU counts and return
+     * the minimum most value as it has high probablity of being right and safe. 
+     * Return 1 if we get 0 or not found on all methods.
+    */
 #if defined CV_CXX11
-    /* Check for this standard C++11 way, we do not return directly because
-       running in a docker or K8s environment will mean this is the host
-       machines config not the containers or pods and as per docs this value
-       must be "considered only a hint" */
-    static unsigned concurentThreadsSupported = std::thread::hardware_concurrency(); /* If the value is not well defined or not computable, returns 0 */
+    /* 
+     * Check for this standard C++11 way, we do not return directly because
+     * running in a docker or K8s environment will mean this is the host
+     * machines config not the containers or pods and as per docs this value
+     * must be "considered only a hint".
+    */
+    unsigned ncpus = std::thread::hardware_concurrency(); /* If the value is not well defined or not computable, returns 0 */
 #else
-    static unsigned concurentThreadsSupported = 0; /* 0 means we have to find out some other way */
+    unsigned ncpus = 0; /* 0 means we have to find out some other way */
 #endif
 
 #if defined _WIN32
@@ -848,34 +862,34 @@ int cv::getNumberOfCPUs(void)
 #else
     GetSystemInfo( &sysinfo );
 #endif
-    unsigned ncpus = min_non_zero(concurentThreadsSupported, sysinfo.dwNumberOfProcessors);
-    return ncpus != 0 ? ncpus : 1;
-#elif defined CV_HAVE_CGROUP && !defined __ANDROID__
-    unsigned ncpus = concurentThreadsSupported;
-    static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
-    ncpus = min_non_zero(ncpus, ncpus_impl);
+    unsigned ncpus_sysinfo = sysinfo.dwNumberOfProcessors < 0 ? 1 : sysinfo.dwNumberOfProcessors; /* Just a fail safe */
+    ncpus = minNonZero(ncpus, ncpus_sysinfo);
 
-    static unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
-    ncpus = min_non_zero(ncpus, ncpus_impl_cfs);
+#elif defined CV_LINUX_GROUPS
+    #if defined CV_HAVE_CGROUPS
+        static unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
+        ncpus = minNonZero(ncpus, ncpus_impl_cpuset);
+
+        static unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
+        ncpus = minNonZero(ncpus, ncpus_impl_cfs);
+    #endif
+
+    static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
+    ncpus = minNonZero(ncpus, ncpus_impl_devices);
 
     #if defined _GNU_SOURCE
         cpu_set_t cpu_set;
         if(!sched_getaffinity(0, sizeof(cpu_set), &cpu_set)) {
             unsigned cpu_count_cpu_set = CPU_COUNT(&cpu_set);
-            ncpus = min_non_zero(ncpus, cpu_count_cpu_set);
+            ncpus = minNonZero(ncpus, cpu_count_cpu_set);
         }
     #endif
 
-    static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
-    ncpus = min_non_zero(ncpus, cpu_count_sysconf);
+    #if !defined __ANDROID__ /* Only if pure Linux */
+        static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
+        ncpus = minNonZero(ncpus, cpu_count_sysconf);
+    #endif
 
-    return ncpus != 0 ? ncpus : 1;
-#elif defined __ANDROID__
-    unsigned ncpus = concurentThreadsSupported;
-    static unsigned ncpus_impl = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
-    ncpus = min_non_zero(ncpus, ncpus_impl);
-
-    return ncpus != 0 ? ncpus : 1;
 #elif defined __APPLE__
     int numCPU=0;
     int mib[4];
@@ -897,11 +911,9 @@ int cv::getNumberOfCPUs(void)
             numCPU = 1;
     }
 
-    unsigned ncpus = min_non_zero(concurentThreadsSupported, (unsigned)numCPU);
-    return ncpus != 0 ? ncpus : 1;
-#else
-    return concurentThreadsSupported != 0 ? concurentThreadsSupported : 1;
+    ncpus = minNonZero(ncpus, (unsigned)numCPU);
 #endif
+    return ncpus != 0 ? ncpus : 1;
 }
 
 const char* cv::currentParallelFramework() {
