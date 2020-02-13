@@ -646,10 +646,10 @@ TEST(GAPI_Pipeline, OpenCVObjectTracking)
 }
 
 G_TYPED_KERNEL(GObjectTracker,
-              <GArray<cv::Rect>(GMat)>,
+              <GArray<cv::Rect>(GMat, GArray<cv::Rect>)>,
               "org.opencv.test.object.tracking")
 {
-    static GArrayDesc outMeta(GMatDesc) { return cv::empty_array_desc(); }
+    static GArrayDesc outMeta(GMatDesc, GArrayDesc) { return cv::empty_array_desc(); }
 };
 
 TEST(GAPI_Pipeline, GAPIObjectTracking)
@@ -683,11 +683,12 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
 
     ////////////////////////////// G-API code ////////////////////////////////
     cv::GMat in;
-    cv::GArray<cv::Rect> tracked_objs = GObjectTracker::on(in);
-    cv::GComputation comp(cv::GIn(in), cv::GOut(tracked_objs));
+    cv::GArray<cv::Rect> rois;
+    cv::GArray<cv::Rect> tracked_objs = GObjectTracker::on(in, rois);
+    cv::GComputation comp(cv::GIn(in, rois), cv::GOut(tracked_objs));
 
     auto impl = cv::gapi::cpu::ocv_kernel<GObjectTracker>([&tracker]
-                (const cv::Mat& src, std::vector<cv::Rect>& tracked)
+                (const cv::Mat& src, const std::vector<cv::Rect> detections, std::vector<cv::Rect>& tracked)
                 {
                     tracked.clear();
                     tracker->update(src);
@@ -702,7 +703,7 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
     // Get first frame
     cap >> frame;
     std::cout << "frame size = " << frame.size() << std::endl;
-    auto cc = comp.compile(cv::descr_of(frame), cv::compile_args(pkg));
+    auto cc = comp.compile(cv::descr_of(cv::gin(frame, boxes)), cv::compile_args(pkg));
     std::vector<cv::Rect> objects;
     ////////////////////////////// G-API code ////////////////////////////////
 
@@ -734,7 +735,7 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
         }
 
         // Run G-API computation
-        cc(cv::gin(frame), cv::gout(objects));
+        cc(cv::gin(frame, boxes), cv::gout(objects));
 
         // This can be written using OSD
         for (int i = 0; i < objects.size(); ++i)
