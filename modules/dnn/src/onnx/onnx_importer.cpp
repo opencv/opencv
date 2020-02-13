@@ -398,6 +398,7 @@ void ONNXImporter::populateNet(Net dstNet)
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
 
+
         if (layer_type == "MaxPool")
         {
             layerParams.type = "Pooling";
@@ -482,7 +483,7 @@ void ONNXImporter::populateNet(Net dstNet)
          }
         else if (layer_type == "Split")
         {
-            if(layerParams.has("split"))
+            if (layerParams.has("split"))
             {
                 DictValue splits = layerParams.get("split");
                 const int numSplits = splits.size();
@@ -494,13 +495,12 @@ void ONNXImporter::populateNet(Net dstNet)
                     slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i - 1);
                 }
                 layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
-                layerParams.type = "Slice";
             }
             else
             {
                 layerParams.set("num_split", node_proto.output_size());
-                layerParams.type = "Slice";
             }
+            layerParams.type = "Slice";
         }
         else if (layer_type == "Add" || layer_type == "Sum")
         {
