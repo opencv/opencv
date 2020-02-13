@@ -56,10 +56,6 @@ protected:
     cv::Mat first;
     bool first_pulled = false;
 
-    virtual void getFrame(cv::Mat& frame) override {
-        cap >> frame;
-    }
-
     void prep()
     {
         // Prepare first frame to report its meta to engine

@@ -60,22 +60,6 @@ function(compile_carotene)
   endif()
 
   add_subdirectory("${CAROTENE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/carotene")
-
-  if(ARM OR AARCH64)
-    if(CMAKE_BUILD_TYPE)
-      set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
-    endif()
-    check_cxx_compiler_flag("-mfpu=neon" CXX_HAS_MFPU_NEON)
-    check_c_compiler_flag("-mfpu=neon" C_HAS_MFPU_NEON)
-    if(${CXX_HAS_MFPU_NEON} AND ${C_HAS_MFPU_NEON} AND NOT "${CMAKE_CXX_FLAGS} " MATCHES "-mfpu=neon[^ ]*")
-      get_target_property(old_flags "carotene_objs" COMPILE_FLAGS)
-      if(old_flags)
-        set_target_properties("carotene_objs" PROPERTIES COMPILE_FLAGS "${old_flags} -mfpu=neon")
-      else()
-        set_target_properties("carotene_objs" PROPERTIES COMPILE_FLAGS "-mfpu=neon")
-      endif()
-    endif()
-  endif()
 endfunction()
 
 compile_carotene()
@@ -90,7 +74,11 @@ set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS ${carotene_defs})
     #   matchTemplate about 5-10%
     #   goodFeaturesToTrack 10-20%
     #   cornerHarris 30% for some cases
-    set_source_files_properties(impl.cpp $<TARGET_OBJECTS:carotene_objs> COMPILE_FLAGS "--param ipcp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0.0")
+      set_source_files_properties(impl.cpp $<TARGET_OBJECTS:carotene_objs> COMPILE_FLAGS "--param ipcp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
+    else()
+      set_source_files_properties(impl.cpp $<TARGET_OBJECTS:carotene_objs> COMPILE_FLAGS "--param ipa-cp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
+    endif()
 #    set_source_files_properties(impl.cpp $<TARGET_OBJECTS:carotene_objs> COMPILE_FLAGS "--param ipcp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
   endif()
 

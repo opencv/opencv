@@ -11,7 +11,6 @@
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
 
-#include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/tracking/tracker.hpp>
 
 #include <opencv2/gapi/core.hpp>
@@ -498,7 +497,7 @@ TEST(GAPI_Pipeline, OpenCVObjectTracking)
                 tracker->add(TrackerBoosting::create(), frame, b);
             }
         }
-        else 
+        else
         {
             tracker->update(frame);
         }
@@ -512,7 +511,7 @@ TEST(GAPI_Pipeline, OpenCVObjectTracking)
                         cv::Point(tl.x, tl.y - thick),
                         cv::FONT_HERSHEY_SIMPLEX,
                         0.5, cv::Scalar(0, 0, 255), 2);
-            cv::rectangle(frame, objects[i], cv::Scalar(0, 255, 0), thick, 8, 0);      
+            cv::rectangle(frame, objects[i], cv::Scalar(0, 255, 0), thick, 8, 0);
         }
 
         cv::imshow("window", frame);

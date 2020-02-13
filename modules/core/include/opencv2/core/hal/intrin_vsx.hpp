@@ -1338,7 +1338,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(vec_extract_fp_from_shorth(vf16));
 #elif CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
     vec_float4 vf32;
-    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wf" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
+    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wa" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
     return v_float32x4(vf32);
 #else
     const vec_int4 z = vec_int4_z, delta = vec_int4_sp(0x38000000);
@@ -1363,7 +1363,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 // fixme: Is there any builtin op or intrinsic that cover "xvcvsphp"?
 #if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
     vec_ushort8 vf16;
-    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wf" (v.val));
+    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wa" (v.val));
     vec_st_l8(vec_mergesqe(vf16, vf16), ptr);
 #else
     const vec_int4 signmask = vec_int4_sp(0x80000000);

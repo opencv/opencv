@@ -88,7 +88,7 @@ into `app/build/intermediates/assets/debug` folder.
 
 - Modify `/app/src/main/AndroidManifest.xml` to enable full-screen mode, set up
 a correct screen orientation and allow to use a camera.
-@include android/mobilenet-objdetect/AndroidManifest.xml
+@include android/mobilenet-objdetect/gradle/AndroidManifest.xml
 
 - Replace content of `app/src/main/java/org/opencv/samples/opencv_mobilenet/MainActivity.java`:
 @include android/mobilenet-objdetect/src/org/opencv/samples/opencv_mobilenet/MainActivity.java

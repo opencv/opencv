@@ -43,6 +43,7 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: OpenCL fp16 (half-float precision), '
                          '%d: VPU' % targets)
 parser.add_argument('--async', type=int, default=0,
+                    dest='asyncN',
                     help='Number of asynchronous forwards at the same time. '
                          'Choose 0 for synchronous mode')
 args, _ = parser.parse_known_args()
@@ -231,8 +232,8 @@ def processingThreadBody():
         try:
             frame = framesQueue.get_nowait()
 
-            if args.async:
-                if len(futureOutputs) == args.async:
+            if args.asyncN:
+                if len(futureOutputs) == args.asyncN:
                     frame = None  # Skip the frame
             else:
                 framesQueue.queue.clear()  # Skip the rest of frames
@@ -256,7 +257,7 @@ def processingThreadBody():
                 frame = cv.resize(frame, (inpWidth, inpHeight))
                 net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
 
-            if args.async:
+            if args.asyncN:
                 futureOutputs.append(net.forwardAsync())
             else:
                 outs = net.forward(outNames)

@@ -365,7 +365,7 @@ public:
     {
     }
 
-    GKernelImpl impl()       const override { return impl_;                    }
+    GKernelImpl impl()       const override { return impl_;                }
     gapi::GBackend backend() const override { return gapi::cpu::backend(); }
 
 private:

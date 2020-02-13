@@ -1555,19 +1555,6 @@ public:
         const int group = numOutput / outGroupCn;
 
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
-            if (padMode.empty()) {
-                for (int i = 0; i < adjust_pads.size(); i++) {
-                    if (pads_end[i] < adjust_pads[i])
-                    return false;
-                }
-            } else if (padMode == "SAME") {
-                for (int i = 0; i < adjust_pads.size(); i++) {
-                    if (kernel_size[i] < pads_begin[i] + 1 + adjust_pads[i])
-                        return false;
-                }
-            } else if (padMode == "VALID")
-                return false;
-
             return group == 1;
         }
 
@@ -2334,20 +2321,16 @@ public:
             ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, newWeights.data);
         }
         std::vector<size_t> paddings_end;
-        if (padMode.empty())
-        {
-            for (int i = 0; i < pads_end.size(); i++) {
-                paddings_end.push_back(pads_end[i] - adjust_pads[i]);
-            }
-        }
-        else if (padMode == "SAME")
+        if (padMode == "SAME")
         {
             for (int i = 0; i < pads_begin.size(); i++) {
                 paddings_end.push_back(kernel_size[i] - pads_begin[i] - 1 - adjust_pads[i]);
             }
+            adjust_pads = std::vector<size_t>(pads_begin.size(), 0);
         } else {
             paddings_end = pads_end;
         }
+        ngraph::op::PadType pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::EXPLICIT;
 
         auto deconv = std::make_shared<ngraph::op::v1::ConvolutionBackpropData>(
                           ieInpNode,
@@ -2355,7 +2338,10 @@ public:
                           ngraph::Strides(strides),
                           ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_begin.begin(), pads_begin.end())),
                           ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(paddings_end.begin(), paddings_end.end())),
-                          ngraph::Strides(dilations));
+                          ngraph::Strides(dilations),
+                          pad_type,
+                          ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(adjust_pads.begin(), adjust_pads.end())));
+
         if (hasBias() || fusedBias)
         {
             std::vector<size_t> shape(deconv->get_shape().size(), 1);

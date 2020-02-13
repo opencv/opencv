@@ -402,8 +402,8 @@ endmacro()
 
 set(OCV_COMPILER_FAIL_REGEX
     "argument .* is not valid"                  # GCC 9+ (including support of unicode quotes)
-    "command line option .* is valid for .* but not for C\\+\\+" # GNU
-    "command line option .* is valid for .* but not for C" # GNU
+    "command[- ]line option .* is valid for .* but not for C\\+\\+" # GNU
+    "command[- ]line option .* is valid for .* but not for C" # GNU
     "unrecognized .*option"                     # GNU
     "unknown .*option"                          # Clang
     "ignoring unknown option"                   # MSVC
@@ -540,7 +540,7 @@ macro(ocv_check_flag_support lang flag varname base_options)
 
   string(TOUPPER "${flag}" ${varname})
   string(REGEX REPLACE "^(/|-)" "HAVE_${_lang}_" ${varname} "${${varname}}")
-  string(REGEX REPLACE " -|-|=| |\\." "_" ${varname} "${${varname}}")
+  string(REGEX REPLACE " -|-|=| |\\.|," "_" ${varname} "${${varname}}")
 
   ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
 endmacro()

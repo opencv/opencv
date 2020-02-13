@@ -600,6 +600,11 @@ TEST_P(Test_Caffe_layers, ROIPooling_Accuracy)
 
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-5;
     double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 2e-4;
+        lInf = 9e-4;
+    }
     normAssert(out, ref, "", l1, lInf);
 }
 
@@ -1624,7 +1629,7 @@ TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
     int backendId = get<0>(get<1>(GetParam()));
     int targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId == DNN_BACKEND_CUDA)
+    if (backendId == DNN_BACKEND_CUDA && weighted)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
 
     Net net;
@@ -1690,14 +1695,14 @@ TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0)
     int backendId = get<0>(get<1>(GetParam()));
     int targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
-
     Net net;
     LayerParams lp;
     lp.type = "Eltwise";
     lp.name = "testLayer";
     lp.set<std::string>("output_channels_mode", "input_0");
+
+    if (backendId == DNN_BACKEND_CUDA && weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
 
     const int inpShapes[][4] = {{1, 4, 2, 2}, {1, 2, 2, 2}, {1, 3, 2, 2}};
     const int out_channels = inpShapes[0][1];
@@ -1754,5 +1759,36 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Eltwise_unequal, Combine(
     testing::Bool(),
     dnnBackendsAndTargets()
 ));
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Resize;
+TEST_P(Layer_Test_Resize, change_input)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Resize";
+    lp.name = "testLayer";
+    lp.set("zoom_factor", 2);
+    lp.set("interpolation", "nearest");
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat inp(4 + i, 5 + i, CV_8UC3), ref;
+        randu(inp, 0, 255);
+        resize(inp, ref, Size(0, 0), 2, 2, INTER_NEAREST);
+        ref = blobFromImage(ref);
+
+        net.setInput(blobFromImage(inp));
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+        normAssert(out, ref);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
 }} // namespace

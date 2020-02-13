@@ -117,6 +117,10 @@ class dnn_test(NewOpenCVTests):
             return False
         return True
 
+    def test_getAvailableTargets(self):
+        targets = cv.dnn.getAvailableTargets(cv.dnn.DNN_BACKEND_OPENCV)
+        self.assertTrue(cv.dnn.DNN_TARGET_CPU in targets)
+
     def test_blobFromImage(self):
         np.random.seed(324)
 

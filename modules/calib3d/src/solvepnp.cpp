@@ -1009,7 +1009,10 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
 
     if (reprojectionError.needed())
     {
-        int type = reprojectionError.type();
+        int type = (reprojectionError.fixedType() || !reprojectionError.empty())
+                ? reprojectionError.type()
+                : (max(_ipoints.depth(), _opoints.depth()) == CV_64F ? CV_64F : CV_32F);
+
         reprojectionError.create(solutions, 1, type);
         CV_CheckType(reprojectionError.type(), type == CV_32FC1 || type == CV_64FC1,
                      "Type of reprojectionError must be CV_32FC1 or CV_64FC1!");

@@ -167,7 +167,12 @@ namespace cv {
 #undef abs
 #undef Complex
 
+#if defined __cplusplus
+#include <limits>
+#else
 #include <limits.h>
+#endif
+
 #include "opencv2/core/hal/interface.h"
 
 #if defined __ICL
@@ -321,6 +326,13 @@ enum CpuFeatures {
 
 #include "cv_cpu_dispatch.h"
 
+#if !defined(CV_STRONG_ALIGNMENT) && defined(__arm__) && !(defined(__aarch64__) || defined(_M_ARM64))
+// int*, int64* should be propertly aligned pointers on ARMv7
+#define CV_STRONG_ALIGNMENT 1
+#endif
+#if !defined(CV_STRONG_ALIGNMENT)
+#define CV_STRONG_ALIGNMENT 0
+#endif
 
 /* fundamental constants */
 #define CV_PI   3.1415926535897932384626433832795

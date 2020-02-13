@@ -217,9 +217,8 @@ namespace detail
 
     public:
         OpaqueRef() = default;
-        template<typename T> explicit OpaqueRef(const T&  obj) : m_ref(new OpaqueRefT<T>(obj)) {}
-        template<typename T> explicit OpaqueRef(      T&  obj) : m_ref(new OpaqueRefT<T>(obj)) {}
-        template<typename T> explicit OpaqueRef(      T&& obj) : m_ref(new OpaqueRefT<T>(obj)) {}
+        template<typename T> explicit OpaqueRef(T&& obj) :
+            m_ref(new OpaqueRefT<typename std::decay<T>::type>(std::forward<T>(obj))) {}
 
         template<typename T> void reset()
         {
