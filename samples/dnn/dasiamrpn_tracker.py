@@ -109,8 +109,9 @@ def SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
     s_z = round(np.sqrt(wc_z * hc_z))
 
     z_crop = get_subwindow_tracking(im, target_pos, p.exemplar_size, s_z, avg_chans)    
-    z_crop = np.transpose(z_crop, (2,0,1))
-    z_crop = np.reshape(z_crop, (1, 3, 127, 127)).astype(np.float32)
+    # z_crop = np.transpose(z_crop, (2,0,1))
+    # z_crop = np.reshape(z_crop, (1, 3, 127, 127)).astype(np.float32)
+    z_crop = z_crop.transpose(2, 0, 1).reshape(1, 3, 127, 127).astype(np.float32)
 
     #"temple" Start
     net.setInput(z_crop)
@@ -163,8 +164,9 @@ def SiamRPN_track(state, im):
 
     #region preprocessing
     x_crop = get_subwindow_tracking(im, target_pos, p.instance_size, round(s_x), avg_chans)
-    x_crop = np.transpose(x_crop, (2, 0, 1))
-    x_crop = np.reshape(x_crop, (1, 3, 271, 271)).astype(np.float32)
+    # x_crop = np.transpose(x_crop, (2, 0, 1))
+    # x_crop = np.reshape(x_crop, (1, 3, 271, 271)).astype(np.float32)
+    x_crop = x_crop.transpose(2, 0, 1).reshape(1, 3, 271, 271).astype(np.float32)
 
     target_pos, target_sz, score = tracker_eval(net, x_crop, target_pos, target_sz * scale_z, window, scale_z, p)
 
@@ -178,10 +180,6 @@ def SiamRPN_track(state, im):
     state['score'] = score
 
     return state
-
-#posistion of center of the rectangle and it's size
-def cxy_wh_2_rect(pos, sz):
-    return np.array([pos[0]-sz[0]/2, pos[1]-sz[1]/2, sz[0], sz[1]])
 
 #evaluations with cropped images
 def tracker_eval(net, x_crop, target_pos, target_sz, window, scale_z, p):
@@ -246,20 +244,12 @@ def softmax(x):
 
     for i in range(1805):
         e_x = np.exp(x[: , i] - np.max(x[ : , i]))
+        # e_x = np.exp(x[: , i] - x.max(i))
         y[ : , i] = e_x /e_x.sum()
 
+    # y[ : , :1804] = np.exp(x[ : , :1804] - np.max(x[ : , :1804])) / np.exp(x[ : , :1804] - np.max(x[ : , :1804])).sum()
+
     return y
-
-#parse paths to onnx models and to input sequence
-parser = argparse.ArgumentParser(description = "Run tracker")
-parser.add_argument("--net", type = str, help = "Full path to onnx model of net")
-parser.add_argument("--kernel_r1", type = str, help = "Full path to onnx model of kernel_r1")
-parser.add_argument("--kernel_cls1", type = str, help = "Full path to onnx model of kernel_cls1")
-args = parser.parse_args()
-
-net = cv.dnn.readNet(args.net)
-kernel_r1 = cv.dnn.readNet(args.kernel_r1)
-kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
 
 #function for drawing initial bounding box
 def get_bb(event, x, y, flag, param):
@@ -277,9 +267,24 @@ def get_bb(event, x, y, flag, param):
         w = abs(point[0][0] - point[1][0])
         h = abs(point[0][1] - point[1][1])
 
+#posistion of center of the rectangle and it's size
+def cxy_wh_2_rect(pos, sz):
+    return np.array([pos[0]-sz[0]/2, pos[1]-sz[1]/2, sz[0], sz[1]])
+
+#parse paths to onnx models and to input sequence
+parser = argparse.ArgumentParser(description = "Run tracker")
+parser.add_argument("--net", type = str, help = "Full path to onnx model of net")
+parser.add_argument("--kernel_r1", type = str, help = "Full path to onnx model of kernel_r1")
+parser.add_argument("--kernel_cls1", type = str, help = "Full path to onnx model of kernel_cls1")
+args = parser.parse_args()
+
+net = cv.dnn.readNet(args.net)
+kernel_r1 = cv.dnn.readNet(args.kernel_r1)
+kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
+
 #read source of video/image sequence
-cap = cv.VideoCapture(0)
-# cap = cv.VideoCapture(0, cv.CAP_V4L2)
+# cap = cv.VideoCapture(0)
+cap = cv.VideoCapture(0, cv.CAP_V4L2)
 # cap = cv.VideoCapture("/home/ilyaelizarov/trackers/DaSiamRPN/code/bag/%08d.jpg",cv.CAP_IMAGES)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
@@ -308,9 +313,15 @@ while (cap.isOpened):
     tic = cv.getTickCount()
     state = SiamRPN_track(state, frame)
     toc += cv.getTickCount()-tic
-    res = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
-    res = [int(l) for l in res]
-    cv.rectangle(frame, (res[0], res[1]), (res[0] + res[2], res[1] + res[3]), (0, 255, 255), 3)
+
+    # res = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
+    # res = [int(l) for l in res]
+    # cv.rectangle(frame, (res[0], res[1]), (res[0] + res[2], res[1] + res[3]), (0, 255, 255), 3)
+
+    w, h = state['target_sz']
+    cx, cy = state['target_pos']
+    cv.rectangle(frame, (int(cx) - w // 2, int(cy) - h // 2, int(w), int(h)), (0, 255, 255), 3)
+
     cv.imshow('DaSiamRPN', frame)
     key = cv.waitKey(1)
     if key == 27:
