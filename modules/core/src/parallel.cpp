@@ -838,13 +838,13 @@ static inline T minNonZero(T val_1, T val_2)
 
 int cv::getNumberOfCPUs(void)
 {
-    /* 
+    /*
      * Logic here is to try different methods of getting CPU counts and return
-     * the minimum most value as it has high probablity of being right and safe. 
+     * the minimum most value as it has high probablity of being right and safe.
      * Return 1 if we get 0 or not found on all methods.
     */
 #if defined CV_CXX11
-    /* 
+    /*
      * Check for this standard C++11 way, we do not return directly because
      * running in a docker or K8s environment will mean this is the host
      * machines config not the containers or pods and as per docs this value
