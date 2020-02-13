@@ -465,6 +465,17 @@ public:
                 net.mutable_layer(li)->mutable_bottom()->RemoveLast();
                 type = "Eltwise";
             }
+            else if (type == "Resample")
+            {
+                // TODO: Check antialias
+                type = "Resize";
+                if (layerParams.get<String>("type") == "LINEAR") {
+                    layerParams.set("interpolation", "bilinear");
+                }
+                else if (layerParams.get<String>("type") == "NEAREST") {
+                    layerParams.set("interpolation", "nearest");
+                }
+            }
             else if ("ConvolutionDepthwise" == type)
             {
                 type = "Convolution";
