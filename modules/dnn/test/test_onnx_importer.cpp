@@ -388,7 +388,10 @@ TEST_P(Test_ONNX_layers, ReduceL2)
 
 TEST_P(Test_ONNX_layers, Split)
 {
-    testONNXModels("split");
+    testONNXModels("split_1");
+    testONNXModels("split_2");
+    testONNXModels("split_3");
+    testONNXModels("split_4");
 }
 
 TEST_P(Test_ONNX_layers, Slice)
