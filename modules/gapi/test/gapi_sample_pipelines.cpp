@@ -438,7 +438,7 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
     cv::Mat ref_mat = in_mat1 + in_mat2;
 
 
-    // G-API //////////////////////////////////////////////////////////////////////////
+    // G-API ///////////////////////////////////////////////////////////////////////////
     AddImpl f;
     EXPECT_FALSE(f.is_called);
     auto impl = cv::gapi::cpu::ocv_kernel<cv::gapi::core::GAdd>(f);
@@ -450,8 +450,6 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
     EXPECT_TRUE(f.is_called);
 }
-
-
 
 //G_TYPED_KERNEL(GObjectTracker,
               //<GArray<cv::Rect2d>(GMat, GArray<cv::Rect2d>)>,
@@ -658,6 +656,11 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
 {
     cv::VideoCapture cap("video.mp4");
 
+    if (!cap.isOpened())
+    {
+        std::cout << "CAP ISN'T opened" << std::endl;
+    }
+
     std::string weights = "opencv_face_detector.caffemodel";
     std::string cfg     = "opencv_face_detector.prototxt";
 
@@ -674,7 +677,7 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
     cv::Ptr<cv::MultiTracker> tracker;
 
     cv::Mat frame;
-    int dfreq  = 200;
+    int dfreq  = 10;
     int nframe = 0;
     int thick = 4;
 
@@ -684,10 +687,10 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
     cv::GComputation comp(cv::GIn(in), cv::GOut(tracked_objs));
 
     auto impl = cv::gapi::cpu::ocv_kernel<GObjectTracker>([&tracker]
-                (const cv::Mat& in, std::vector<cv::Rect>& tracked)
+                (const cv::Mat& src, std::vector<cv::Rect>& tracked)
                 {
                     tracked.clear();
-                    tracker->update(in);
+                    tracker->update(src);
                     for (const auto& b : tracker->getObjects())
                     {
                         tracked.push_back(b);
@@ -698,6 +701,7 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
 
     // Get first frame
     cap >> frame;
+    std::cout << "frame size = " << frame.size() << std::endl;
     auto cc = comp.compile(cv::descr_of(frame), cv::compile_args(pkg));
     std::vector<cv::Rect> objects;
     ////////////////////////////// G-API code ////////////////////////////////
@@ -754,5 +758,4 @@ TEST(GAPI_Pipeline, GAPIObjectTracking)
         ++nframe;
     }
 }
-
 } // namespace opencv_test
