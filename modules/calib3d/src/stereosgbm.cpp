@@ -53,6 +53,7 @@
 #include "precomp.hpp"
 #include <limits.h>
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/utils/buffer_area.private.hpp"
 
 namespace cv
 {
@@ -97,6 +98,16 @@ struct StereoSGBMParams
         speckleWindowSize = _speckleWindowSize;
         speckleRange = _speckleRange;
         mode = _mode;
+    }
+
+    inline bool isFullDP() const
+    {
+        return mode == StereoSGBM::MODE_HH || mode == StereoSGBM::MODE_HH4;
+    }
+    inline Size calcSADWindowSize() const
+    {
+        const int dim = SADWindowSize > 0 ? SADWindowSize : 5;
+        return Size(dim, dim);
     }
 
     int minDisparity;
@@ -148,6 +159,7 @@ static inline void min_pos(const v_int16& val, const v_int16& pos, short &min_va
 #endif
 
 static const int DEFAULT_RIGHT_BORDER = -1;
+
 /*
  For each pixel row1[x], max(maxD, 0) <= minX <= x < maxX <= width - max(0, -minD),
  and for each disparity minD<=d<maxD the function
@@ -161,7 +173,7 @@ static const int DEFAULT_RIGHT_BORDER = -1;
 static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
                             int minD, int maxD, CostType* cost,
                             PixType* buffer, const PixType* tab,
-                            int tabOfs, int , int xrange_min = 0, int xrange_max = DEFAULT_RIGHT_BORDER )
+                            int xrange_min = 0, int xrange_max = DEFAULT_RIGHT_BORDER )
 {
     int x, c, width = img1.cols, cn = img1.channels();
     int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
@@ -177,8 +189,6 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
     int width2 = maxX2 - minX2;
     const PixType *row1 = img1.ptr<PixType>(y), *row2 = img2.ptr<PixType>(y);
     PixType *prow1 = buffer + width2*2, *prow2 = prow1 + width*cn*2;
-
-    tab += tabOfs;
 
     for( c = 0; c < cn*2; c++ )
     {
@@ -297,6 +307,166 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
 }
 
 
+
+class BufferSGBM
+{
+private:
+    size_t width1;
+    size_t Da;
+    size_t Dlra;
+    size_t costWidth;
+    size_t costHeight;
+    size_t hsumRows;
+    bool fullDP;
+    uchar dirs;
+    uchar dirs2;
+    static const size_t TAB_OFS = 256*4;
+
+public:
+    CostType* Cbuf;
+    CostType* Sbuf;
+    CostType* hsumBuf;
+    CostType* pixDiff;
+    CostType* disp2cost;
+    DispType* disp2ptr;
+    PixType* tempBuf;
+    std::vector<CostType*> Lr;
+    std::vector<CostType*> minLr;
+    PixType * clipTab;
+
+private:
+    utils::BufferArea area;
+
+public:
+    BufferSGBM(size_t width1_,
+               size_t Da_,
+               size_t Dlra_,
+               size_t cn,
+               size_t width,
+               size_t height,
+               const StereoSGBMParams &params)
+        : width1(width1_),
+        Da(Da_),
+        Dlra(Dlra_),
+        Cbuf(NULL),
+        Sbuf(NULL),
+        hsumBuf(NULL),
+        pixDiff(NULL),
+        disp2cost(NULL),
+        disp2ptr(NULL),
+        tempBuf(NULL),
+        Lr(2, (CostType*)NULL),
+        minLr(2, (CostType*)NULL),
+        clipTab(NULL)
+    {
+        const size_t TAB_SIZE = 256 + TAB_OFS*2;
+        fullDP = params.isFullDP();
+        costWidth = width1 * Da;
+        costHeight = fullDP ? height : 1;
+        hsumRows = params.calcSADWindowSize().height + 2;
+        dirs = params.mode == StereoSGBM::MODE_HH4 ? 1 : NR;
+        dirs2 = params.mode == StereoSGBM::MODE_HH4 ? 1 : NR2;
+        // for each possible stereo match (img1(x,y) <=> img2(x-d,y))
+        // we keep pixel difference cost (C) and the summary cost over NR directions (S).
+        // we also keep all the partial costs for the previous line L_r(x,d) and also min_k L_r(x, k)
+        area.allocate(Cbuf, costWidth * costHeight, CV_SIMD_WIDTH); // summary cost over different (nDirs) directions
+        area.allocate(Sbuf, costWidth * costHeight, CV_SIMD_WIDTH);
+        area.allocate(hsumBuf, costWidth * hsumRows, CV_SIMD_WIDTH);
+        area.allocate(pixDiff, costWidth, CV_SIMD_WIDTH);
+        area.allocate(disp2cost,    width, CV_SIMD_WIDTH);
+        area.allocate(disp2ptr,     width, CV_SIMD_WIDTH);
+        area.allocate(tempBuf,      width * (4 * cn + 2), CV_SIMD_WIDTH);
+        // the number of L_r(.,.) and min_k L_r(.,.) lines in the buffer:
+        // for 8-way dynamic programming we need the current row and
+        // the previous row, i.e. 2 rows in total
+        for (size_t i = 0; i < 2; ++i)
+        {
+            // 2D: [ NR ][ w1 * NR2 ][ NR ] * [ Dlra ]
+            area.allocate(Lr[i], calcLrCount() * Dlra, CV_SIMD_WIDTH);
+            // 1D: [ NR ][ w1 * NR2 ][ NR ]
+            area.allocate(minLr[i], calcLrCount(), CV_SIMD_WIDTH);
+        }
+        area.allocate(clipTab, TAB_SIZE, CV_SIMD_WIDTH);
+        area.commit();
+
+        // init clipTab
+        const int ftzero = std::max(params.preFilterCap, 15) | 1;
+        for(int i = 0; i < (int)TAB_SIZE; i++ )
+            clipTab[i] = (PixType)(std::min(std::max(i - (int)TAB_OFS, -ftzero), ftzero) + ftzero);
+    }
+    inline const PixType * getClipTab() const
+    {
+        return clipTab + TAB_OFS;
+    }
+    inline void initCBuf(CostType val) const
+    {
+        for (size_t i = 0; i < costWidth * costHeight; ++i)
+            Cbuf[i] = val;
+    }
+    inline void clearLr(const Range & range = Range::all()) const
+    {
+            for (uchar i = 0; i < 2; ++i)
+            {
+                if (range == Range::all())
+                {
+                    memset(Lr[i],    0, calcLrCount() * Dlra * sizeof(CostType));
+                    memset(minLr[i], 0, calcLrCount()        * sizeof(CostType));
+                }
+                else
+                {
+                    memset(getLr(i, range.start), 0, range.size() * sizeof(CostType) * Dlra);
+                    memset(getMinLr(i, range.start), 0, range.size() * sizeof(CostType));
+                }
+            }
+    }
+    inline size_t calcLrCount() const
+    {
+        return width1 * dirs2 + 2 * dirs;
+    }
+    inline void swapLr()
+    {
+        std::swap(Lr[0], Lr[1]);
+        std::swap(minLr[0], minLr[1]);
+    }
+    inline CostType * getHSumBuf(int row) const
+    {
+        return hsumBuf + (row % hsumRows) * costWidth;
+    }
+    inline CostType * getCBuf(int row) const
+    {
+        CV_Assert(row >= 0);
+        return Cbuf + (!fullDP ? 0 : (row * costWidth));
+    }
+    inline CostType * getSBuf(int row) const
+    {
+        CV_Assert(row >= 0);
+        return Sbuf + (!fullDP ? 0 : (row * costWidth));
+    }
+    inline void clearSBuf(int row, const Range & range = Range::all()) const
+    {
+        if (range == Range::all())
+            memset(getSBuf(row), 0, costWidth * sizeof(CostType));
+        else
+            memset(getSBuf(row) + range.start * Da, 0, range.size() * Da * sizeof(CostType));
+    }
+
+    // shift Lr[k] and minLr[k] pointers, because we allocated them with the borders,
+    // and will occasionally use negative indices with the arrays
+    // we need to shift Lr[k] pointers by 1, to give the space for d=-1.
+    inline CostType * getLr(uchar id, int idx, uchar shift = 0) const
+    {
+        CV_Assert(id < 2);
+        const size_t fixed_offset = dirs * Dlra;
+        return Lr[id] + fixed_offset + (idx * (int)dirs2 + (int)shift) * (int)Dlra;
+    }
+    inline CostType * getMinLr(uchar id, int idx, uchar shift = 0) const
+    {
+        CV_Assert(id < 2);
+        const size_t fixed_offset = dirs;
+        return minLr[id] + fixed_offset + (idx * dirs2 + shift);
+    }
+};
+
 /*
  computes disparity for "roi" in img1 w.r.t. img2 and write it to disp1buf.
  that is, disp1buf(x, y)=d means that img1(x+roi.x, y+roi.y) ~ img2(x+roi.x-d, y+roi.y).
@@ -318,34 +488,25 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
  It contains the minimum current cost, used to find the best disparity, corresponding to the minimal cost.
  */
 static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
-                                 Mat& disp1, const StereoSGBMParams& params,
-                                 Mat& buffer )
+                                 Mat& disp1, const StereoSGBMParams& params )
 {
     const int DISP_SHIFT = StereoMatcher::DISP_SHIFT;
     const int DISP_SCALE = (1 << DISP_SHIFT);
     const CostType MAX_COST = SHRT_MAX;
 
     int minD = params.minDisparity, maxD = minD + params.numDisparities;
-    Size SADWindowSize;
-    SADWindowSize.width = SADWindowSize.height = params.SADWindowSize > 0 ? params.SADWindowSize : 5;
-    int ftzero = std::max(params.preFilterCap, 15) | 1;
     int uniquenessRatio = params.uniquenessRatio >= 0 ? params.uniquenessRatio : 10;
     int disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
     int P1 = params.P1 > 0 ? params.P1 : 2, P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
     int k, width = disp1.cols, height = disp1.rows;
     int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
-    int D = maxD - minD, width1 = maxX1 - minX1;
+    const int D = params.numDisparities;
+    int width1 = maxX1 - minX1;
     int Da = (int)alignSize(D, v_int16::nlanes);
     int Dlra = Da + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
-    int SW2 = SADWindowSize.width/2, SH2 = SADWindowSize.height/2;
-    bool fullDP = params.mode == StereoSGBM::MODE_HH;
-    int npasses = fullDP ? 2 : 1;
-    const int TAB_OFS = 256*4, TAB_SIZE = 256 + TAB_OFS*2;
-    PixType clipTab[TAB_SIZE];
-
-    for( k = 0; k < TAB_SIZE; k++ )
-        clipTab[k] = (PixType)(std::min(std::max(k - TAB_OFS, -ftzero), ftzero) + ftzero);
+    int SW2 = params.calcSADWindowSize().width/2, SH2 = params.calcSADWindowSize().height/2;
+    int npasses = params.isFullDP() ? 2 : 1;
 
     if( minX1 >= maxX1 )
     {
@@ -353,39 +514,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
         return;
     }
 
-    // for each possible stereo match (img1(x,y) <=> img2(x-d,y))
-    // we keep pixel difference cost (C) and the summary cost over NR directions (S).
-    // we also keep all the partial costs for the previous line L_r(x,d) and also min_k L_r(x, k)
-    size_t costBufSize = width1*Da;
-    size_t CSBufSize = costBufSize*(fullDP ? height : 1);
-    size_t minLrSize = (width1 + 2)*NR2, LrSize = minLrSize*Dlra;
-    int hsumBufNRows = SH2*2 + 2;
-    // the number of L_r(.,.) and min_k L_r(.,.) lines in the buffer:
-    // for 8-way dynamic programming we need the current row and
-    // the previous row, i.e. 2 rows in total
-    size_t totalBufSize = CV_SIMD_WIDTH + CSBufSize * 2 * sizeof(CostType) + // alignment, C, S
-    costBufSize*(hsumBufNRows + 1)*sizeof(CostType) + // hsumBuf, pixdiff
-    ((LrSize + minLrSize)*2 + v_int16::nlanes) * sizeof(CostType) + // minLr[] and Lr[]
-    width*(sizeof(CostType) + sizeof(DispType)) + // disp2cost + disp2
-    width * (4*img1.channels() + 2) * sizeof(PixType); // temp buffer for computing per-pixel cost
-
-    if( buffer.empty() || !buffer.isContinuous() ||
-        buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-        buffer.reserveBuffer(totalBufSize);
-
-    // summary cost over different (nDirs) directions
-    CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), CV_SIMD_WIDTH);
-    CostType* Sbuf = Cbuf + CSBufSize;
-    CostType* hsumBuf = Sbuf + CSBufSize;
-    CostType* pixDiff = hsumBuf + costBufSize*hsumBufNRows;
-
-    CostType* disp2cost = pixDiff + costBufSize + ((LrSize + minLrSize)*2 + v_int16::nlanes);
-    DispType* disp2ptr = (DispType*)(disp2cost + width);
-    PixType* tempBuf = (PixType*)(disp2ptr + width);
-
-    // add P2 to every C(x,y). it saves a few operations in the inner loops
-    for(k = 0; k < (int)CSBufSize; k++ )
-        Cbuf[k] = (CostType)P2;
+    BufferSGBM mem(width1, Da, Dlra, img1.channels(), width, height, params);
+    mem.initCBuf((CostType)P2); // add P2 to every C(x,y). it saves a few operations in the inner loops
 
     for( int pass = 1; pass <= npasses; pass++ )
     {
@@ -402,27 +532,15 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
             x1 = width1-1; x2 = -1; dx = -1;
         }
 
-        CostType *Lr[2]={0}, *minLr[2]={0};
-
-        for( k = 0; k < 2; k++ )
-        {
-            // shift Lr[k] and minLr[k] pointers, because we allocated them with the borders,
-            // and will occasionally use negative indices with the arrays
-            // we need to shift Lr[k] pointers by 1, to give the space for d=-1.
-            // however, then the alignment will be imperfect, i.e. bad for SSE,
-            // thus we shift the pointers by SIMD vector size
-            Lr[k] = pixDiff + costBufSize + v_int16::nlanes + LrSize*k + NR2*Dlra;
-            memset( Lr[k] - NR2*Dlra, 0, LrSize*sizeof(CostType) );
-            minLr[k] = pixDiff + costBufSize + v_int16::nlanes + LrSize*2 + minLrSize*k + NR2;
-            memset( minLr[k] - NR2, 0, minLrSize*sizeof(CostType) );
-        }
+        uchar lrID = 0;
+        mem.clearLr();
 
         for( int y = y1; y != y2; y += dy )
         {
             int x, d;
             DispType* disp1ptr = disp1.ptr<DispType>(y);
-            CostType* C = Cbuf + (!fullDP ? 0 : y*costBufSize);
-            CostType* S = Sbuf + (!fullDP ? 0 : y*costBufSize);
+            CostType* const C = mem.getCBuf(y);
+            CostType* const S = mem.getSBuf(y);
 
             if( pass == 1 ) // compute C on the first pass, and reuse it on the second pass, if any.
             {
@@ -430,35 +548,35 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
                 for( k = dy1; k <= dy2; k++ )
                 {
-                    CostType* hsumAdd = hsumBuf + (std::min(k, height-1) % hsumBufNRows)*costBufSize;
+                    CostType* hsumAdd = mem.getHSumBuf(std::min(k, height-1));
 
                     if( k < height )
                     {
-                        calcPixelCostBT( img1, img2, k, minD, maxD, pixDiff, tempBuf, clipTab, TAB_OFS, ftzero );
+                        calcPixelCostBT( img1, img2, k, minD, maxD, mem.pixDiff, mem.tempBuf, mem.getClipTab() );
 
                         memset(hsumAdd, 0, Da*sizeof(CostType));
 #if CV_SIMD
                         v_int16 h_scale = vx_setall_s16((short)SW2 + 1);
                         for( d = 0; d < Da; d += v_int16::nlanes )
                         {
-                            v_int16 v_hsumAdd = vx_load_aligned(pixDiff + d) * h_scale;
+                            v_int16 v_hsumAdd = vx_load_aligned(mem.pixDiff + d) * h_scale;
                             for( x = Da; x <= SW2*Da; x += Da )
-                                v_hsumAdd += vx_load_aligned(pixDiff + x + d);
+                                v_hsumAdd += vx_load_aligned(mem.pixDiff + x + d);
                             v_store_aligned(hsumAdd + d, v_hsumAdd);
                         }
 #else
                         for (d = 0; d < D; d++)
                         {
-                            hsumAdd[d] = (CostType)(pixDiff[d] * (SW2 + 1));
+                            hsumAdd[d] = (CostType)(mem.pixDiff[d] * (SW2 + 1));
                             for( x = Da; x <= SW2*Da; x += Da )
-                                hsumAdd[d] = (CostType)(hsumAdd[d] + pixDiff[x + d]);
+                                hsumAdd[d] = (CostType)(hsumAdd[d] + mem.pixDiff[x + d]);
                         }
 #endif
 
                         if( y > 0 )
                         {
-                            const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
-                            const CostType* Cprev = !fullDP || y == 0 ? C : C - costBufSize;
+                            const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, 0));
+                            const CostType* Cprev =  mem.getCBuf(y - 1);
 
 #if CV_SIMD
                             for (d = 0; d < Da; d += v_int16::nlanes)
@@ -470,8 +588,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
                             for( x = Da; x < width1*Da; x += Da )
                             {
-                                const CostType* pixAdd = pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
-                                const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*Da, 0);
+                                const CostType* pixAdd = mem.pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
+                                const CostType* pixSub = mem.pixDiff + std::max(x - (SW2+1)*Da, 0);
 #if CV_SIMD
                                 for( d = 0; d < Da; d += v_int16::nlanes )
                                 {
@@ -501,8 +619,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 #endif
                             for( x = Da; x < width1*Da; x += Da )
                             {
-                                const CostType* pixAdd = pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
-                                const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*Da, 0);
+                                const CostType* pixAdd = mem.pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
+                                const CostType* pixSub = mem.pixDiff + std::max(x - (SW2+1)*Da, 0);
 
 #if CV_SIMD
                                 for (d = 0; d < Da; d += v_int16::nlanes)
@@ -526,8 +644,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                     {
                         if( y > 0 )
                         {
-                            const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
-                            const CostType* Cprev = !fullDP || y == 0 ? C : C - costBufSize;
+                            const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, 0));
+                            const CostType* Cprev = mem.getCBuf(y - 1);
 #if CV_SIMD
                             for (x = 0; x < width1*Da; x += v_int16::nlanes)
                                 v_store_aligned(C + x, vx_load_aligned(Cprev + x) - vx_load_aligned(hsumSub + x) + vx_load_aligned(hsumAdd + x));
@@ -551,7 +669,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                 }
 
                 // also, clear the S buffer
-                memset(S, 0, width1*Da * sizeof(CostType));
+                mem.clearSBuf(y);
             }
 
             /*
@@ -575,24 +693,26 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
             for( x = x1; x != x2; x += dx )
             {
-                int xm = x*NR2, xd = xm*Dlra;
+                int delta0 = P2 + *mem.getMinLr(lrID, x - dx);
+                int delta1 = P2 + *mem.getMinLr(1 - lrID, x - 1, 1);
+                int delta2 = P2 + *mem.getMinLr(1 - lrID, x,     2);
+                int delta3 = P2 + *mem.getMinLr(1 - lrID, x + 1, 3);
 
-                int delta0 = minLr[0][xm - dx*NR2] + P2, delta1 = minLr[1][xm - NR2 + 1] + P2;
-                int delta2 = minLr[1][xm + 2] + P2, delta3 = minLr[1][xm + NR2 + 3] + P2;
+                CostType* Lr_p0 = mem.getLr(lrID, x - dx);
+                CostType* Lr_p1 = mem.getLr(1 - lrID, x - 1, 1);
+                CostType* Lr_p2 = mem.getLr(1 - lrID, x,     2);
+                CostType* Lr_p3 = mem.getLr(1 - lrID, x + 1, 3);
 
-                CostType* Lr_p0 = Lr[0] + xd - dx*NR2*Dlra;
-                CostType* Lr_p1 = Lr[1] + xd - NR2*Dlra + Dlra;
-                CostType* Lr_p2 = Lr[1] + xd + Dlra*2;
-                CostType* Lr_p3 = Lr[1] + xd + NR2*Dlra + Dlra*3;
+                Lr_p0[-1] = Lr_p0[D] = MAX_COST;
+                Lr_p1[-1] = Lr_p1[D] = MAX_COST;
+                Lr_p2[-1] = Lr_p2[D] = MAX_COST;
+                Lr_p3[-1] = Lr_p3[D] = MAX_COST;
 
-                Lr_p0[-1] = Lr_p0[D] = Lr_p1[-1] = Lr_p1[D] =
-                Lr_p2[-1] = Lr_p2[D] = Lr_p3[-1] = Lr_p3[D] = MAX_COST;
-
-                CostType* Lr_p = Lr[0] + xd;
+                CostType* Lr_p = mem.getLr(lrID, x);
                 const CostType* Cp = C + x*Da;
                 CostType* Sp = S + x*Da;
 
-                CostType* minL = minLr[0] + xm;
+                CostType* minL = mem.getMinLr(lrID, x);
                 d = 0;
 #if CV_SIMD
                 v_int16 _P1 = vx_setall_s16((short)P1);
@@ -703,14 +823,14 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                 for( ; x <= width - v_int16::nlanes; x += v_int16::nlanes )
                 {
                     v_store(disp1ptr + x, v_inv_dist);
-                    v_store(disp2ptr + x, v_inv_dist);
-                    v_store(disp2cost + x, v_max_cost);
+                    v_store(mem.disp2ptr + x, v_inv_dist);
+                    v_store(mem.disp2cost + x, v_max_cost);
                 }
 #endif
                 for( ; x < width; x++ )
                 {
-                    disp1ptr[x] = disp2ptr[x] = (DispType)INVALID_DISP_SCALED;
-                    disp2cost[x] = MAX_COST;
+                    disp1ptr[x] = mem.disp2ptr[x] = (DispType)INVALID_DISP_SCALED;
+                    mem.disp2cost[x] = MAX_COST;
                 }
 
                 for( x = width1 - 1; x >= 0; x-- )
@@ -721,16 +841,14 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
                     if( npasses == 1 )
                     {
-                        int xm = x*NR2, xd = xm*Dlra;
-
-                        CostType* Lr_p0 = Lr[0] + xd + NR2*Dlra;
+                        CostType* Lr_p0 = mem.getLr(lrID, x + 1);
                         Lr_p0[-1] = Lr_p0[D] = MAX_COST;
-                        CostType* Lr_p = Lr[0] + xd;
+                        CostType* Lr_p = mem.getLr(lrID, x);
 
                         const CostType* Cp = C + x*Da;
 
                         d = 0;
-                        int delta0 = minLr[0][xm + NR2] + P2;
+                        int delta0 = P2 + *mem.getMinLr(lrID, x + 1);
                         int minL0 = MAX_COST;
 #if CV_SIMD
                         v_int16 _P1 = vx_setall_s16((short)P1);
@@ -768,7 +886,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                                 bestDisp = (short)d;
                             }
                         }
-                        minLr[0][xm] = (CostType)minL0;
+                        *mem.getMinLr(lrID, x) = (CostType)minL0;
                     }
                     else
                     {
@@ -803,10 +921,10 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         continue;
                     d = bestDisp;
                     int _x2 = x + minX1 - d - minD;
-                    if( disp2cost[_x2] > minS )
+                    if( mem.disp2cost[_x2] > minS )
                     {
-                        disp2cost[_x2] = (CostType)minS;
-                        disp2ptr[_x2] = (DispType)(d + minD);
+                        mem.disp2cost[_x2] = (CostType)minS;
+                        mem.disp2ptr[_x2] = (DispType)(d + minD);
                     }
 
                     if( 0 < d && d < D-1 )
@@ -833,15 +951,13 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                     int _d = d1 >> DISP_SHIFT;
                     int d_ = (d1 + DISP_SCALE-1) >> DISP_SHIFT;
                     int _x = x - _d, x_ = x - d_;
-                    if( 0 <= _x && _x < width && disp2ptr[_x] >= minD && std::abs(disp2ptr[_x] - _d) > disp12MaxDiff &&
-                       0 <= x_ && x_ < width && disp2ptr[x_] >= minD && std::abs(disp2ptr[x_] - d_) > disp12MaxDiff )
+                    if( 0 <= _x && _x < width && mem.disp2ptr[_x] >= minD && std::abs(mem.disp2ptr[_x] - _d) > disp12MaxDiff &&
+                       0 <= x_ && x_ < width && mem.disp2ptr[x_] >= minD && std::abs(mem.disp2ptr[x_] - d_) > disp12MaxDiff )
                         disp1ptr[x] = (DispType)INVALID_DISP_SCALED;
                 }
             }
 
-            // now shift the cyclic buffers
-            std::swap( Lr[0], Lr[1] );
-            std::swap( minLr[0], minLr[1] );
+            lrID = 1 - lrID; // now shift the cyclic buffers
         }
     }
 }
@@ -849,13 +965,12 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 ////////////////////////////////////////////////////////////////////////////////////////////
 struct CalcVerticalSums: public ParallelLoopBody
 {
-    CalcVerticalSums(const Mat& _img1, const Mat& _img2, const StereoSGBMParams& params,
-                     CostType* alignedBuf, PixType* _clipTab): img1(_img1), img2(_img2), clipTab(_clipTab)
+    CalcVerticalSums(const Mat& _img1, const Mat& _img2, const StereoSGBMParams& params, const BufferSGBM &mem_)
+        : img1(_img1), img2(_img2), mem(mem_)
     {
         minD = params.minDisparity;
         maxD = minD + params.numDisparities;
-        SW2 = SH2 = (params.SADWindowSize > 0 ? params.SADWindowSize : 5)/2;
-        ftzero = std::max(params.preFilterCap, 15) | 1;
+        SW2 = SH2 = params.calcSADWindowSize().height/2;
         P1 = params.P1 > 0 ? params.P1 : 2;
         P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
         height = img1.rows;
@@ -865,32 +980,27 @@ struct CalcVerticalSums: public ParallelLoopBody
         Da = (int)alignSize(D, v_int16::nlanes);
         Dlra = Da + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
         width1 = maxX1 - minX1;
-        costBufSize = width1*Da;
-        CSBufSize = costBufSize*height;
-        minLrSize = width1;
-        LrSize = minLrSize*Dlra;
-        hsumBufNRows = SH2*2 + 2;
-        Cbuf = alignedBuf;
-        Sbuf = Cbuf + CSBufSize;
-        hsumBuf = Sbuf + CSBufSize;
+        D = params.numDisparities;
+        Da = (int)alignSize(D, v_int16::nlanes);
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        static const CostType MAX_COST = SHRT_MAX;
-        static const int TAB_OFS = 256*4;
-        static const int npasses = 2;
-        int x1 = range.start, x2 = range.end, k;
-        size_t pixDiffSize = ((x2 - x1) + 2*SW2)*Da;
-        size_t auxBufsSize = CV_SIMD_WIDTH + pixDiffSize*sizeof(CostType) + //alignment and pixdiff size
-                             width*(4*img1.channels()+2)*sizeof(PixType);   //tempBuf
-        Mat auxBuff;
-        auxBuff.create(1, (int)auxBufsSize, CV_8U);
-        CostType* pixDiff = (CostType*)alignPtr(auxBuff.ptr(), CV_SIMD_WIDTH);
-        PixType* tempBuf = (PixType*)(pixDiff + pixDiffSize);
+        const CostType MAX_COST = SHRT_MAX;
+        const int npasses = 2;
+        const int x1 = range.start, x2 = range.end;
+        int k;
+
+        CostType* pixDiff = 0;
+        PixType* tempBuf = 0;
+        utils::BufferArea aux_area;
+        aux_area.allocate(pixDiff, ((x2 - x1) + 2 * SW2) * Da, CV_SIMD_WIDTH);
+        aux_area.allocate(tempBuf, width * (4 * img1.channels() + 2) * sizeof(PixType), CV_SIMD_WIDTH);
+        aux_area.commit();
 
         // Simplification of index calculation
-        pixDiff -= (x1>SW2 ? (x1 - SW2): 0)*Da;
+        if (x1 > SW2)
+            pixDiff -= (x1 - SW2) * Da;
 
         for( int pass = 1; pass <= npasses; pass++ )
         {
@@ -905,26 +1015,14 @@ struct CalcVerticalSums: public ParallelLoopBody
                 y1 = height-1; y2 = -1; dy = -1;
             }
 
-            CostType *Lr[2]={0}, *minLr[2]={0};
-
-            for( k = 0; k < 2; k++ )
-            {
-                // shift Lr[k] and minLr[k] pointers, because we allocated them with the borders,
-                // and will occasionally use negative indices with the arrays
-                // we need to shift Lr[k] pointers by 1, to give the space for d=-1.
-                // however, then the alignment will be imperfect, i.e. bad for SSE,
-                // thus we shift the pointers by SIMD vector size
-                Lr[k] = hsumBuf + costBufSize*hsumBufNRows + v_int16::nlanes + LrSize*k;
-                memset( Lr[k] + x1*Dlra, 0, (x2-x1)*Dlra*sizeof(CostType) );
-                minLr[k] = hsumBuf + costBufSize*hsumBufNRows + v_int16::nlanes + LrSize*2 + minLrSize*k;
-                memset( minLr[k] + x1, 0, (x2-x1)*sizeof(CostType) );
-            }
+            uchar lrID = 0;
+            mem.clearLr(range);
 
             for( int y = y1; y != y2; y += dy )
             {
                 int x, d;
-                CostType* C = Cbuf + y*costBufSize;
-                CostType* S = Sbuf + y*costBufSize;
+                CostType* C = mem.getCBuf(y);
+                CostType* S = mem.getSBuf(y);
 
                 if( pass == 1 ) // compute C on the first pass, and reuse it on the second pass, if any.
                 {
@@ -932,11 +1030,11 @@ struct CalcVerticalSums: public ParallelLoopBody
 
                     for( k = dy1; k <= dy2; k++ )
                     {
-                        CostType* hsumAdd = hsumBuf + (std::min(k, height-1) % hsumBufNRows)*costBufSize;
+                        CostType* hsumAdd = mem.getHSumBuf(std::min(k, height-1));
 
                         if( k < height )
                         {
-                            calcPixelCostBT( img1, img2, k, minD, maxD, pixDiff, tempBuf, clipTab, TAB_OFS, ftzero, x1 - SW2, x2 + SW2);
+                            calcPixelCostBT( img1, img2, k, minD, maxD, pixDiff, tempBuf, mem.getClipTab(), x1 - SW2, x2 + SW2);
 
                             memset(hsumAdd + x1*Da, 0, Da*sizeof(CostType));
                             for( x = (x1 - SW2)*Da; x <= (x1 + SW2)*Da; x += Da )
@@ -953,8 +1051,8 @@ struct CalcVerticalSums: public ParallelLoopBody
 
                             if( y > 0 )
                             {
-                                const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
-                                const CostType* Cprev = C - costBufSize;
+                                const CostType* hsumSub =  mem.getHSumBuf(std::max(y - SH2 - 1, 0));
+                                const CostType* Cprev = mem.getCBuf(y - 1);
 #if CV_SIMD
                                 for( d = 0; d < Da; d += v_int16::nlanes )
                                     v_store_aligned(C + x1*Da + d, vx_load_aligned(Cprev + x1*Da + d) + vx_load_aligned(hsumAdd + x1*Da + d) - vx_load_aligned(hsumSub + x1*Da + d));
@@ -1020,8 +1118,8 @@ struct CalcVerticalSums: public ParallelLoopBody
                         {
 /*                            if (y > 0)
                             {
-                                const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
-                                const CostType* Cprev = C - costBufSize;
+                                const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, 0));
+                                const CostType* Cprev = mem.getCBuf(y - 1);
 
 #if CV_SIMD
                                 for( x = x1*Da; x < x2*Da; x += v_int16::nlanes )
@@ -1044,9 +1142,7 @@ struct CalcVerticalSums: public ParallelLoopBody
                             }
                         }
                     }
-
-                    // also, clear the S buffer
-                    memset(S + x1*Da, 0, (x2-x1)*Da*sizeof(CostType));
+                    mem.clearSBuf(y, range);
                 }
 
 //              [formula 13 in the paper]
@@ -1061,19 +1157,16 @@ struct CalcVerticalSums: public ParallelLoopBody
 
                 for( x = x1; x != x2; x++ )
                 {
-                    int xd = x*Dlra;
-
-                    int delta = minLr[1][x] + P2;
-
-                    CostType* Lr_ppr = Lr[1] + xd;
+                    int delta = P2 + *mem.getMinLr(1 - lrID, x);
+                    CostType* Lr_ppr = mem.getLr(1 - lrID, x);
 
                     Lr_ppr[-1] = Lr_ppr[D] = MAX_COST;
 
-                    CostType* Lr_p = Lr[0] + xd;
+                    CostType* Lr_p = mem.getLr(lrID, x);
                     const CostType* Cp = C + x*Da;
                     CostType* Sp = S + x*Da;
 
-                    CostType& minL = minLr[0][x];
+                    CostType& minL = *(mem.getMinLr(lrID, x));
                     d = 0;
 #if CV_SIMD
                     v_int16 _P1 = vx_setall_s16((short)P1);
@@ -1105,19 +1198,13 @@ struct CalcVerticalSums: public ParallelLoopBody
                         Sp[d] = saturate_cast<CostType>(Sp[d] + L);
                     }
                 }
-
-                // now shift the cyclic buffers
-                std::swap( Lr[0], Lr[1] );
-                std::swap( minLr[0], minLr[1] );
+                lrID = 1 - lrID; // now shift the cyclic buffers
             }
         }
     }
     const Mat& img1;
     const Mat& img2;
-    CostType* Cbuf;
-    CostType* Sbuf;
-    CostType* hsumBuf;
-    PixType* clipTab;
+    const BufferSGBM & mem;
     int minD;
     int maxD;
     int D, Da, Dlra;
@@ -1128,18 +1215,12 @@ struct CalcVerticalSums: public ParallelLoopBody
     int height;
     int P1;
     int P2;
-    size_t costBufSize;
-    size_t CSBufSize;
-    size_t minLrSize;
-    size_t LrSize;
-    size_t hsumBufNRows;
-    int ftzero;
 };
 
 struct CalcHorizontalSums: public ParallelLoopBody
 {
-    CalcHorizontalSums(const Mat& _img1, const Mat& _img2, Mat& _disp1, const StereoSGBMParams& params,
-                     CostType* alignedBuf): img1(_img1), img2(_img2), disp1(_disp1)
+    CalcHorizontalSums(const Mat& _img1, const Mat& _img2, Mat& _disp1, const StereoSGBMParams& params, const BufferSGBM &mem_)
+        : img1(_img1), img2(_img2), disp1(_disp1), mem(mem_)
     {
         minD = params.minDisparity;
         maxD = minD + params.numDisparities;
@@ -1157,23 +1238,22 @@ struct CalcHorizontalSums: public ParallelLoopBody
         Da = (int)alignSize(D, v_int16::nlanes);
         Dlra = Da + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
         width1 = maxX1 - minX1;
-        costBufSize = width1*Da;
-        CSBufSize = costBufSize*height;
-        LrSize = 2 * Dlra;
-        Cbuf = alignedBuf;
-        Sbuf = Cbuf + CSBufSize;
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
         int y1 = range.start, y2 = range.end;
-        size_t auxBufsSize = CV_SIMD_WIDTH + (v_int16::nlanes + LrSize) * sizeof(CostType) + width*(sizeof(CostType) + sizeof(DispType));
 
-        Mat auxBuff;
-        auxBuff.create(1, (int)auxBufsSize, CV_8U);
-        CostType *Lr = ((CostType*)alignPtr(auxBuff.ptr(), CV_SIMD_WIDTH)) + v_int16::nlanes;
-        CostType* disp2cost = Lr + LrSize;
-        DispType* disp2ptr = (DispType*)(disp2cost + width);
+        const size_t LrSize = 2 * (1 + Dlra + 1);
+
+        CostType * Lr = 0;
+        CostType * disp2cost = 0;
+        DispType * disp2ptr = 0;
+        utils::BufferArea aux_area;
+        aux_area.allocate(Lr, LrSize);
+        aux_area.allocate(disp2cost, width, CV_SIMD_WIDTH);
+        aux_area.allocate(disp2ptr, width, CV_SIMD_WIDTH);
+        aux_area.commit();
 
         CostType minLr;
 
@@ -1181,8 +1261,8 @@ struct CalcHorizontalSums: public ParallelLoopBody
         {
             int x, d;
             DispType* disp1ptr = disp1.ptr<DispType>(y);
-            CostType* C = Cbuf + y*costBufSize;
-            CostType* S = Sbuf + y*costBufSize;
+            CostType* C = mem.getCBuf(y);
+            CostType* S = mem.getSBuf(y);
 
             x = 0;
 #if CV_SIMD
@@ -1202,8 +1282,8 @@ struct CalcHorizontalSums: public ParallelLoopBody
             }
 
             // clear buffers
-            memset( Lr, 0, LrSize*sizeof(CostType) );
-            Lr[-1] = Lr[D] = Lr[Dlra - 1] = Lr[Dlra + D] = MAX_COST;
+            aux_area.zeroFill(Lr);
+            Lr[0] = Lr[1 + D] = Lr[3 + Dlra - 1] = Lr[3 + Dlra + D] = MAX_COST;
 
             minLr = 0;
 //          [formula 13 in the paper]
@@ -1219,10 +1299,8 @@ struct CalcHorizontalSums: public ParallelLoopBody
             for( x = 0; x != width1; x++)
             {
                 int delta = minLr + P2;
-
-                CostType* Lr_ppr = Lr + ((x&1)? 0 : Dlra);
-
-                CostType* Lr_p = Lr + ((x&1)? Dlra :0);
+                CostType* Lr_ppr = Lr + ((x&1)? 1 : 3 + Dlra);
+                CostType* Lr_p = Lr + ((x&1)? 3 + Dlra : 1);
                 const CostType* Cp = C + x*Da;
                 CostType* Sp = S + x*Da;
 
@@ -1236,8 +1314,8 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 for( ; d <= D - v_int16::nlanes; d += v_int16::nlanes)
                 {
                     v_int16 Cpd = vx_load_aligned(Cp + d);
-                    v_int16 L = v_min(v_min(v_min(vx_load_aligned(Lr_ppr + d), vx_load(Lr_ppr + d - 1) + _P1), vx_load(Lr_ppr + d + 1) + _P1), _delta) - _delta + Cpd;
-                    v_store_aligned(Lr_p + d, L);
+                    v_int16 L = v_min(v_min(v_min(vx_load(Lr_ppr + d), vx_load(Lr_ppr + d - 1) + _P1), vx_load(Lr_ppr + d + 1) + _P1), _delta) - _delta + Cpd;
+                    v_store(Lr_p + d, L);
                     _minL = v_min(_minL, L);
                     v_store_aligned(Sp + d, vx_load_aligned(Sp + d) + L);
                 }
@@ -1255,18 +1333,16 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 }
             }
 
-            memset( Lr, 0, LrSize*sizeof(CostType) );
-            Lr[-1] = Lr[D] = Lr[Dlra - 1] = Lr[Dlra + D] = MAX_COST;
+            aux_area.zeroFill(Lr);
+            Lr[0] = Lr[1 + D] = Lr[3 + Dlra - 1] = Lr[3 + Dlra + D] = MAX_COST;
 
             minLr = 0;
 
             for( x = width1-1; x != -1; x--)
             {
                 int delta = minLr + P2;
-
-                CostType* Lr_ppr = Lr + ((x&1)? 0 :Dlra);
-
-                CostType* Lr_p = Lr + ((x&1)? Dlra :0);
+                CostType* Lr_ppr = Lr + ((x&1)? 1 : 3 + Dlra);
+                CostType* Lr_p = Lr + ((x&1)? 3 + Dlra : 1);
                 const CostType* Cp = C + x*Da;
                 CostType* Sp = S + x*Da;
                 CostType minS = MAX_COST;
@@ -1283,8 +1359,8 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 for( ; d <= D - v_int16::nlanes; d += v_int16::nlanes )
                 {
                     v_int16 Cpd = vx_load_aligned(Cp + d);
-                    v_int16 L = v_min(v_min(v_min(vx_load_aligned(Lr_ppr + d), vx_load(Lr_ppr + d - 1) + _P1), vx_load(Lr_ppr + d + 1) + _P1), _delta) - _delta + Cpd;
-                    v_store_aligned(Lr_p + d, L);
+                    v_int16 L = v_min(v_min(v_min(vx_load(Lr_ppr + d), vx_load(Lr_ppr + d - 1) + _P1), vx_load(Lr_ppr + d + 1) + _P1), _delta) - _delta + Cpd;
+                    v_store(Lr_p + d, L);
                     _minL = v_min(_minL, L);
                     L += vx_load_aligned(Sp + d);
                     v_store_aligned(Sp + d, L);
@@ -1366,8 +1442,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
     const Mat& img1;
     const Mat& img2;
     Mat& disp1;
-    CostType* Cbuf;
-    CostType* Sbuf;
+    const BufferSGBM & mem;
     int minD;
     int maxD;
     int D, Da, Dlra;
@@ -1378,9 +1453,6 @@ struct CalcHorizontalSums: public ParallelLoopBody
     int P2;
     int minX1;
     int maxX1;
-    size_t costBufSize;
-    size_t CSBufSize;
-    size_t LrSize;
     int INVALID_DISP;
     int INVALID_DISP_SCALED;
     int uniquenessRatio;
@@ -1401,28 +1473,21 @@ struct CalcHorizontalSums: public ParallelLoopBody
  is written as is, without interpolation.
  */
 static void computeDisparitySGBM_HH4( const Mat& img1, const Mat& img2,
-                                 Mat& disp1, const StereoSGBMParams& params,
-                                 Mat& buffer )
+                                 Mat& disp1, const StereoSGBMParams& params)
 {
     const int DISP_SHIFT = StereoMatcher::DISP_SHIFT;
     const int DISP_SCALE = (1 << DISP_SHIFT);
     int minD = params.minDisparity, maxD = minD + params.numDisparities;
     Size SADWindowSize;
     SADWindowSize.width = SADWindowSize.height = params.SADWindowSize > 0 ? params.SADWindowSize : 5;
-    int ftzero = std::max(params.preFilterCap, 15) | 1;
     int P1 = params.P1 > 0 ? params.P1 : 2, P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
-    int k, width = disp1.cols, height = disp1.rows;
+    int width = disp1.cols, height = disp1.rows;
     int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
-    int D = (int)alignSize(maxD - minD, v_int16::nlanes), width1 = maxX1 - minX1;
-    int Dlra = D + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
-    int SH2 = SADWindowSize.height/2;
+    int width1 = maxX1 - minX1;
+    int Da = (int)alignSize(params.numDisparities, v_int16::nlanes);
+    int Dlra = Da + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
     int INVALID_DISP = minD - 1;
     int INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
-    const int TAB_OFS = 256*4, TAB_SIZE = 256 + TAB_OFS*2;
-    PixType clipTab[TAB_SIZE];
-
-    for( k = 0; k < TAB_SIZE; k++ )
-        clipTab[k] = (PixType)(std::min(std::max(k - TAB_OFS, -ftzero), ftzero) + ftzero);
 
     if( minX1 >= maxX1 )
     {
@@ -1430,54 +1495,79 @@ static void computeDisparitySGBM_HH4( const Mat& img1, const Mat& img2,
         return;
     }
 
-    // for each possible stereo match (img1(x,y) <=> img2(x-d,y))
-    // we keep pixel difference cost (C) and the summary cost over 4 directions (S).
-    // we also keep all the partial costs for the previous line L_r(x,d) and also min_k L_r(x, k)
+    BufferSGBM mem(width1, Da, Dlra, img1.channels(), width, height, params);
+    mem.initCBuf((CostType)P2); // add P2 to every C(x,y). it saves a few operations in the inner loops
 
-    // the number of L_r(.,.) and min_k L_r(.,.) lines in the buffer:
-    // for dynamic programming we need the current row and
-    // the previous row, i.e. 2 rows in total
-    size_t costBufSize = width1*D;
-    size_t CSBufSize = costBufSize*height;
-    size_t minLrSize = width1 , LrSize = minLrSize*Dlra;
-    int hsumBufNRows = SH2*2 + 2;
-    size_t totalBufSize = CV_SIMD_WIDTH + CSBufSize * 2 * sizeof(CostType) + // Alignment, C, S
-                          costBufSize*hsumBufNRows * sizeof(CostType) + // hsumBuf
-                          ((LrSize + minLrSize)*2 + v_int16::nlanes) * sizeof(CostType); // minLr[] and Lr[]
-
-    if( buffer.empty() || !buffer.isContinuous() ||
-        buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-    {
-        buffer.reserveBuffer(totalBufSize);
-    }
-
-    // summary cost over different (nDirs) directions
-    CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), CV_SIMD_WIDTH);
-
-    // add P2 to every C(x,y). it saves a few operations in the inner loops
-    for(k = 0; k < (int)CSBufSize; k++ )
-        Cbuf[k] = (CostType)P2;
-
-    parallel_for_(Range(0,width1),CalcVerticalSums(img1, img2, params, Cbuf, clipTab),8);
-    parallel_for_(Range(0,height),CalcHorizontalSums(img1, img2, disp1, params, Cbuf),8);
-
+    parallel_for_(Range(0,width1),CalcVerticalSums(img1, img2, params, mem),8);
+    parallel_for_(Range(0,height),CalcHorizontalSums(img1, img2, disp1, params, mem),8);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void getBufferPointers(Mat& buffer, int width, int width1, int Da, int num_ch, int SH2, int P2,
-                       CostType*& curCostVolumeLine, CostType*& hsumBuf, CostType*& pixDiff,
-                       PixType*& tmpBuf, CostType*& horPassCostVolume,
-                       CostType*& vertPassCostVolume, CostType*& vertPassMin, CostType*& rightPassBuf,
-                       CostType*& disp2CostBuf, short*& disp2Buf);
+class BufferSGBM3Way
+{
+private:
+    size_t hsumCols;
+    size_t hsumRows;
+public:
+    CostType *curCostVolumeLine;
+    CostType *hsumBuf;
+    CostType *pixDiff;
+    PixType *tmpBuf;
+    CostType *horPassCostVolume;
+    CostType *vertPassCostVolume;
+    CostType *vertPassMin;
+    CostType *rightPassBuf;
+    CostType *disp2CostBuf;
+    short *disp2Buf;
+private:
+    utils::BufferArea area;
+public:
+    BufferSGBM3Way(int width1, int width, int num_ch, int Da, int SH2, int P2) :
+        curCostVolumeLine(0),
+        hsumBuf(0),
+        pixDiff(0),
+        tmpBuf(0),
+        horPassCostVolume(0),
+        vertPassCostVolume(0),
+        vertPassMin(0),
+        rightPassBuf(0),
+        disp2CostBuf(0),
+        disp2Buf(0)
+    {
+        hsumCols = width1 * Da;
+        hsumRows = SH2*2 + 2;
+        area.allocate(curCostVolumeLine, hsumCols, CV_SIMD_WIDTH);
+        area.allocate(hsumBuf, hsumCols * hsumRows, CV_SIMD_WIDTH);
+        area.allocate(pixDiff,hsumCols, CV_SIMD_WIDTH);
+        area.allocate(tmpBuf, width * (4 * num_ch + 2), CV_SIMD_WIDTH);
+        area.allocate(horPassCostVolume, (width1 + 2) * Da, CV_SIMD_WIDTH);
+        area.allocate(vertPassCostVolume, (width1 + 2) * Da, CV_SIMD_WIDTH);
+        area.allocate(vertPassMin, width1 + 2, CV_SIMD_WIDTH);
+        area.allocate(rightPassBuf, Da, CV_SIMD_WIDTH);
+        area.allocate(disp2CostBuf, width, CV_SIMD_WIDTH);
+        area.allocate(disp2Buf, width, CV_SIMD_WIDTH);
+        area.commit();
+        area.zeroFill();
+        for(size_t i = 0; i < hsumCols; i++)
+            curCostVolumeLine[i] = (CostType)P2;
+    }
+    inline void clearRightPassBuf()
+    {
+        area.zeroFill(rightPassBuf);
+    }
+    CostType *getHSumBuf(int x) const
+    {
+        return hsumBuf + (x % hsumRows) * hsumCols;
+    }
+};
 
 struct SGBM3WayMainLoop : public ParallelLoopBody
 {
-    Mat* buffers;
     const Mat *img1, *img2;
     Mat* dst_disp;
 
-    int nstripes, stripe_sz;
+    int stripe_sz;
     int stripe_overlap;
 
     int width,height;
@@ -1488,25 +1578,54 @@ struct SGBM3WayMainLoop : public ParallelLoopBody
     int P1, P2;
     int uniquenessRatio, disp12MaxDiff;
 
-    int costBufSize, hsumBufNRows;
-    int TAB_OFS, ftzero;
+    int TAB_OFS;
 
+    utils::BufferArea aux_area;
     PixType* clipTab;
 #if CV_SIMD
     short idx_row[v_int16::nlanes];
 #endif
-    SGBM3WayMainLoop(Mat *_buffers, const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, PixType* _clipTab, int _nstripes, int _stripe_overlap);
-    void getRawMatchingCost(CostType* C, CostType* hsumBuf, CostType* pixDiff, PixType* tmpBuf, int y, int src_start_idx) const;
+    SGBM3WayMainLoop(const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, int stripe_size, int _stripe_overlap);
     void operator () (const Range& range) const CV_OVERRIDE;
     template<bool x_nlanes> void impl(const Range& range) const;
+
+private:
+    void getRawMatchingCost(const BufferSGBM3Way &mem, int y, int src_start_idx) const;
+
+    template<bool x_nlanes>
+    void accumulateCostsLeftTop(const BufferSGBM3Way &mem,
+                                int x,
+                                CostType &leftMinCost) const;
+
+    template<bool x_nlanes>
+    void accumulateCostsRight(const BufferSGBM3Way &mem,
+                              int x,
+                              CostType &rightMinCost,
+                              short &optimal_disp,
+                              CostType &min_cost) const;
 };
 
-SGBM3WayMainLoop::SGBM3WayMainLoop(Mat *_buffers, const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, PixType* _clipTab, int _nstripes, int _stripe_overlap):
-buffers(_buffers), img1(&_img1), img2(&_img2), dst_disp(_dst_disp), clipTab(_clipTab)
+SGBM3WayMainLoop::SGBM3WayMainLoop(const Mat& _img1,
+                                   const Mat& _img2,
+                                   Mat* _dst_disp,
+                                   const StereoSGBMParams& params,
+                                   int _stripe_sz,
+                                   int _stripe_overlap)
+    : img1(&_img1),
+    img2(&_img2),
+    dst_disp(_dst_disp),
+    stripe_sz(_stripe_sz),
+    stripe_overlap(_stripe_overlap),
+    clipTab(0)
 {
-    nstripes = _nstripes;
-    stripe_overlap = _stripe_overlap;
-    stripe_sz = (int)ceil(img1->rows/(double)nstripes);
+    // precompute a lookup table for the raw matching cost computation:
+    TAB_OFS = 256*4;
+    const int TAB_SIZE = 256 + TAB_OFS*2;
+    aux_area.allocate(clipTab, TAB_SIZE, CV_SIMD_WIDTH);
+    aux_area.commit();
+    const int ftzero = std::max(params.preFilterCap, 15) | 1;
+    for(int k = 0; k < TAB_SIZE; k++ )
+        clipTab[k] = (PixType)(std::min(std::max(k - TAB_OFS, -ftzero), ftzero) + ftzero);
 
     width = img1->cols; height = img1->rows;
     minD = params.minDisparity; maxD = minD + params.numDisparities; D = maxD - minD;
@@ -1519,100 +1638,27 @@ buffers(_buffers), img1(&_img1), img2(&_img2), dst_disp(_dst_disp), clipTab(_cli
     uniquenessRatio = params.uniquenessRatio >= 0 ? params.uniquenessRatio : 10;
     disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
 
-    costBufSize = width1*Da;
-    hsumBufNRows = SH2*2 + 2;
-    TAB_OFS = 256*4;
-    ftzero = std::max(params.preFilterCap, 15) | 1;
 #if CV_SIMD
     for(short i = 0; i < v_int16::nlanes; ++i)
         idx_row[i] = i;
 #endif
 }
 
-void getBufferPointers(Mat& buffer, int width, int width1, int Da, int num_ch, int SH2, int P2,
-                       CostType*& curCostVolumeLine, CostType*& hsumBuf, CostType*& pixDiff,
-                       PixType*& tmpBuf, CostType*& horPassCostVolume,
-                       CostType*& vertPassCostVolume, CostType*& vertPassMin, CostType*& rightPassBuf,
-                       CostType*& disp2CostBuf, short*& disp2Buf)
-{
-    // allocating all the required memory:
-    int costVolumeLineSize = width1*Da;
-    int width1_ext = width1+2;
-    int costVolumeLineSize_ext = width1_ext*Da;
-    int hsumBufNRows = SH2*2 + 2;
-
-    // main buffer to store matching costs for the current line:
-    int curCostVolumeLineSize = costVolumeLineSize*sizeof(CostType);
-
-    // auxiliary buffers for the raw matching cost computation:
-    int hsumBufSize  = costVolumeLineSize*hsumBufNRows*sizeof(CostType);
-    int pixDiffSize  = costVolumeLineSize*sizeof(CostType);
-    int tmpBufSize = width * (4 * num_ch + 2) * sizeof(PixType);
-
-    // auxiliary buffers for the matching cost aggregation:
-    int horPassCostVolumeSize  = costVolumeLineSize_ext*sizeof(CostType); // buffer for the 2-pass horizontal cost aggregation
-    int vertPassCostVolumeSize = costVolumeLineSize_ext*sizeof(CostType); // buffer for the vertical cost aggregation
-    int rightPassBufSize = Da * sizeof(CostType);                     // additional small buffer for the right-to-left pass
-    int vertPassMinSize        = width1_ext*sizeof(CostType);             // buffer for storing minimum costs from the previous line
-
-    // buffers for the pseudo-LRC check:
-    int disp2CostBufSize = width*sizeof(CostType);
-    int disp2BufSize     = width*sizeof(short);
-
-    // sum up the sizes of all the buffers:
-    size_t totalBufSize = CV_SIMD_WIDTH + curCostVolumeLineSize +
-                          hsumBufSize +
-                          pixDiffSize +
-                          horPassCostVolumeSize +
-                          vertPassCostVolumeSize +
-                          rightPassBufSize +
-                          vertPassMinSize +
-                          disp2CostBufSize +
-                          disp2BufSize +
-                          tmpBufSize;
-
-    if( buffer.empty() || !buffer.isContinuous() || buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-        buffer.reserveBuffer(totalBufSize);
-
-    // set up all the pointers:
-    curCostVolumeLine  = (CostType*)alignPtr(buffer.ptr(), CV_SIMD_WIDTH);
-    hsumBuf            = curCostVolumeLine + costVolumeLineSize;
-    pixDiff            = hsumBuf + costVolumeLineSize*hsumBufNRows;
-    horPassCostVolume  = pixDiff + costVolumeLineSize;
-    vertPassCostVolume = horPassCostVolume + costVolumeLineSize_ext;
-    rightPassBuf       = vertPassCostVolume + costVolumeLineSize_ext;
-    vertPassMin        = rightPassBuf + Da;
-
-    disp2CostBuf       = vertPassMin + width1_ext;
-    disp2Buf           = disp2CostBuf + width;
-    tmpBuf = (PixType*)(disp2Buf + width);
-
-    // initialize memory:
-    memset(buffer.ptr(),0,totalBufSize);
-    int i = 0;
-#if CV_SIMD
-    v_int16 _P2 = vx_setall_s16((CostType)P2);
-    for (; i<=costVolumeLineSize-v_int16::nlanes; i+=v_int16::nlanes)
-        v_store_aligned(curCostVolumeLine + i, _P2);
-#endif
-    for(;i<costVolumeLineSize;i++)
-        curCostVolumeLine[i] = (CostType)P2; //such initialization simplifies the cost aggregation loops a bit
-}
-
 // performing block matching and building raw cost-volume for the current row
-void SGBM3WayMainLoop::getRawMatchingCost(CostType* C, // target cost-volume row
-                                          CostType* hsumBuf, CostType* pixDiff, PixType* tmpBuf, //buffers
-                                          int y, int src_start_idx) const
+void SGBM3WayMainLoop::getRawMatchingCost(const BufferSGBM3Way &mem, int y, int src_start_idx) const
 {
+    CostType* C = mem.curCostVolumeLine;
+    CostType* pixDiff = mem.pixDiff;
+    PixType* tmpBuf = mem.tmpBuf;
     int x, d;
     int dy1 = (y == src_start_idx) ? src_start_idx : y + SH2, dy2 = (y == src_start_idx) ? src_start_idx+SH2 : dy1;
 
     for(int k = dy1; k <= dy2; k++ )
     {
-        CostType* hsumAdd = hsumBuf + (std::min(k, height-1) % hsumBufNRows)*costBufSize;
+        CostType* hsumAdd = mem.getHSumBuf(std::min(k, height-1));
         if( k < height )
         {
-            calcPixelCostBT( *img1, *img2, k, minD, maxD, pixDiff, tmpBuf, clipTab, TAB_OFS, ftzero );
+            calcPixelCostBT( *img1, *img2, k, minD, maxD, pixDiff, tmpBuf, clipTab + TAB_OFS );
 
 #if CV_SIMD
             v_int16 sw2_1 = vx_setall_s16((short)SW2 + 1);
@@ -1634,7 +1680,7 @@ void SGBM3WayMainLoop::getRawMatchingCost(CostType* C, // target cost-volume row
 #endif
             if( y > src_start_idx )
             {
-                const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, src_start_idx) % hsumBufNRows)*costBufSize;
+                const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, src_start_idx));
 
 #if CV_SIMD
                 for (d = 0; d < Da; d += v_int16::nlanes)
@@ -1702,7 +1748,7 @@ void SGBM3WayMainLoop::getRawMatchingCost(CostType* C, // target cost-volume row
         {
             if( y > src_start_idx )
             {
-                const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, src_start_idx) % hsumBufNRows)*costBufSize;
+                const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, src_start_idx));
 #if CV_SIMD
                 for( x = 0; x < width1*Da; x += v_int16::nlanes)
                     v_store_aligned(C + x, vx_load_aligned(C + x) + vx_load_aligned(hsumAdd + x) - vx_load_aligned(hsumSub + x));
@@ -1728,12 +1774,15 @@ void SGBM3WayMainLoop::getRawMatchingCost(CostType* C, // target cost-volume row
 // performing SGM cost accumulation from left to right (result is stored in leftBuf) and
 // in-place cost accumulation from top to bottom (result is stored in topBuf)
 template<bool x_nlanes>
-inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, CostType* topBuf, CostType* costs,
-                                   CostType& leftMinCost, CostType& topMinCost, int D, int P1, int P2)
+void SGBM3WayMainLoop::accumulateCostsLeftTop(const BufferSGBM3Way &mem, int x, CostType& leftMinCost) const
 {
+    CostType *leftBuf = mem.horPassCostVolume + x;
+    CostType *leftBuf_prev = mem.horPassCostVolume + x - Da;
+    CostType *topBuf = mem.vertPassCostVolume + x;
+    CostType *costs = mem.curCostVolumeLine - Da + x;
+    CostType& topMinCost = mem.vertPassMin[x/Da];
     int i = 0;
 #if CV_SIMD
-    int Da = (int)alignSize(D, v_int16::nlanes);
     v_int16 P1_reg = vx_setall_s16(cv::saturate_cast<CostType>(P1));
 
     v_int16 leftMinCostP2_reg   = vx_setall_s16(cv::saturate_cast<CostType>(leftMinCost+P2));
@@ -1847,12 +1896,16 @@ inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, Co
 // summing rightBuf, topBuf, leftBuf together (the result is stored in leftBuf), as well as finding the
 // optimal disparity value with minimum accumulated cost
 template<bool x_nlanes>
-inline void accumulateCostsRight(CostType* rightBuf, CostType* topBuf, CostType* leftBuf, CostType* costs,
-                                 CostType& rightMinCost, int D, int P1, int P2, short& optimal_disp, CostType& min_cost)
+void SGBM3WayMainLoop::accumulateCostsRight(const BufferSGBM3Way &mem, int x,
+                                            CostType& rightMinCost, short& optimal_disp, CostType& min_cost) const
 {
+    CostType* costs = mem.curCostVolumeLine - Da + x;
+    CostType* rightBuf = mem.rightPassBuf;
+    CostType* topBuf = mem.vertPassCostVolume + x;
+    CostType* leftBuf = mem.horPassCostVolume + x;
+
     int i = 0;
 #if CV_SIMD
-    int Da = (int)alignSize(D, v_int16::nlanes);
     v_int16 P1_reg = vx_setall_s16(cv::saturate_cast<CostType>(P1));
 
     v_int16 rightMinCostP2_reg   = vx_setall_s16(cv::saturate_cast<CostType>(rightMinCost+P2));
@@ -1955,6 +2008,7 @@ void SGBM3WayMainLoop::operator () (const Range& range) const
     if (D == Da) impl<true>(range);
     else impl<false>(range);
 }
+
 template<bool x_nlanes>
 void SGBM3WayMainLoop::impl(const Range& range) const
 {
@@ -1979,33 +2033,24 @@ void SGBM3WayMainLoop::impl(const Range& range) const
     else
         dst_offset=0;
 
-    Mat cur_buffer = buffers [range.start];
     Mat cur_disp   = dst_disp[range.start];
     cur_disp = Scalar(INVALID_DISP_SCALED);
 
-    // prepare buffers:
-    CostType *curCostVolumeLine, *hsumBuf, *pixDiff;
-    PixType* tmpBuf;
-    CostType *horPassCostVolume, *vertPassCostVolume, *vertPassMin, *rightPassBuf, *disp2CostBuf;
-    short* disp2Buf;
-    getBufferPointers(cur_buffer,width,width1,Da,img1->channels(),SH2,P2,
-                      curCostVolumeLine,hsumBuf,pixDiff,tmpBuf,horPassCostVolume,
-                      vertPassCostVolume,vertPassMin,rightPassBuf,disp2CostBuf,disp2Buf);
-
+    BufferSGBM3Way mem(width1, width, img1->channels(), Da, SH2, P2);
+    CostType *horPassCostVolume = mem.horPassCostVolume;
     // start real processing:
     for(int y=src_start_idx;y<src_end_idx;y++)
     {
-        getRawMatchingCost(curCostVolumeLine,hsumBuf,pixDiff,tmpBuf,y,src_start_idx);
+        getRawMatchingCost(mem, y, src_start_idx);
 
         short* disp_row = (short*)cur_disp.ptr(dst_offset+(y-src_start_idx));
 
         // initialize the auxiliary buffers for the pseudo left-right consistency check:
         for(int x=0;x<width;x++)
         {
-            disp2Buf[x] = (short)INVALID_DISP_SCALED;
-            disp2CostBuf[x] = SHRT_MAX;
+            mem.disp2Buf[x] = (short)INVALID_DISP_SCALED;
+            mem.disp2CostBuf[x] = SHRT_MAX;
         }
-        CostType* C = curCostVolumeLine - Da;
         CostType prev_min, min_cost;
         int d;
         short best_d;
@@ -2014,14 +2059,14 @@ void SGBM3WayMainLoop::impl(const Range& range) const
         // forward pass
         prev_min=0;
         for (int x=Da;x<(1+width1)*Da;x+=Da)
-            accumulateCostsLeftTop<x_nlanes>(horPassCostVolume+x,horPassCostVolume+x-Da,vertPassCostVolume+x,C+x,prev_min,vertPassMin[x/Da],D,P1,P2);
+            accumulateCostsLeftTop<x_nlanes>(mem, x, prev_min);
 
         //backward pass
-        memset(rightPassBuf,0,Da*sizeof(CostType));
+        mem.clearRightPassBuf();
         prev_min=0;
         for (int x=width1*Da;x>=Da;x-=Da)
         {
-            accumulateCostsRight<x_nlanes>(rightPassBuf,vertPassCostVolume+x,horPassCostVolume+x,C+x,prev_min,D,P1,P2,best_d,min_cost);
+            accumulateCostsRight<x_nlanes>(mem, x, prev_min, best_d, min_cost);
 
             if(uniquenessRatio>0)
             {
@@ -2074,10 +2119,10 @@ void SGBM3WayMainLoop::impl(const Range& range) const
             d = best_d;
 
             int _x2 = x/Da - 1 + minX1 - d - minD;
-            if( _x2>=0 && _x2<width && disp2CostBuf[_x2] > min_cost )
+            if( _x2>=0 && _x2<width && mem.disp2CostBuf[_x2] > min_cost )
             {
-                disp2CostBuf[_x2] = min_cost;
-                disp2Buf[_x2] = (short)(d + minD);
+                mem.disp2CostBuf[_x2] = min_cost;
+                mem.disp2Buf[_x2] = (short)(d + minD);
             }
 
             if( 0 < d && d < D-1 )
@@ -2104,32 +2149,27 @@ void SGBM3WayMainLoop::impl(const Range& range) const
             int _d = d1 >> StereoMatcher::DISP_SHIFT;
             int d_ = (d1 + DISP_SCALE-1) >> StereoMatcher::DISP_SHIFT;
             int _x = x - _d, x_ = x - d_;
-            if( 0 <= _x && _x < width && disp2Buf[_x] >= minD && std::abs(disp2Buf[_x] - _d) > disp12MaxDiff &&
-                0 <= x_ && x_ < width && disp2Buf[x_] >= minD && std::abs(disp2Buf[x_] - d_) > disp12MaxDiff )
+            if( 0 <= _x && _x < width && mem.disp2Buf[_x] >= minD && std::abs(mem.disp2Buf[_x] - _d) > disp12MaxDiff &&
+                0 <= x_ && x_ < width && mem.disp2Buf[x_] >= minD && std::abs(mem.disp2Buf[x_] - d_) > disp12MaxDiff )
                 disp_row[x] = (short)INVALID_DISP_SCALED;
         }
     }
 }
 
-static void computeDisparity3WaySGBM( const Mat& img1, const Mat& img2,
-                                      Mat& disp1, const StereoSGBMParams& params,
-                                      Mat* buffers, int nstripes )
+template <uchar nstripes>
+static void computeDisparity3WaySGBM(const Mat& img1, const Mat& img2, Mat& disp1, const StereoSGBMParams& params)
 {
-    // precompute a lookup table for the raw matching cost computation:
-    const int TAB_OFS = 256*4, TAB_SIZE = 256 + TAB_OFS*2;
-    PixType* clipTab = new PixType[TAB_SIZE];
-    int ftzero = std::max(params.preFilterCap, 15) | 1;
-    for(int k = 0; k < TAB_SIZE; k++ )
-        clipTab[k] = (PixType)(std::min(std::max(k - TAB_OFS, -ftzero), ftzero) + ftzero);
-
     // allocate separate dst_disp arrays to avoid conflicts due to stripe overlap:
     int stripe_sz = (int)ceil(img1.rows/(double)nstripes);
     int stripe_overlap = (params.SADWindowSize/2+1) + (int)ceil(0.1*stripe_sz);
-    Mat* dst_disp = new Mat[nstripes];
+    Mat dst_disp[nstripes];
     for(int i=0;i<nstripes;i++)
         dst_disp[i].create(stripe_sz+stripe_overlap,img1.cols,CV_16S);
 
-    parallel_for_(Range(0,nstripes),SGBM3WayMainLoop(buffers,img1,img2,dst_disp,params,clipTab,nstripes,stripe_overlap));
+    parallel_for_(
+        Range(0,nstripes),
+        SGBM3WayMainLoop(img1,img2,dst_disp,params,stripe_sz,stripe_overlap)
+    );
 
     //assemble disp1 from dst_disp:
     short* dst_row;
@@ -2140,9 +2180,6 @@ static void computeDisparity3WaySGBM( const Mat& img1, const Mat& img2,
         src_row = (short*)dst_disp[i/stripe_sz].ptr(stripe_overlap+i%stripe_sz);
         memcpy(dst_row,src_row,disp1.cols*sizeof(short));
     }
-
-    delete[] clipTab;
-    delete[] dst_disp;
 }
 
 class StereoSGBMImpl CV_FINAL : public StereoSGBM
@@ -2176,11 +2213,13 @@ public:
         Mat disp = disparr.getMat();
 
         if(params.mode==MODE_SGBM_3WAY)
-            computeDisparity3WaySGBM( left, right, disp, params, buffers, num_stripes );
+            // the number of stripes is fixed, disregarding the number of threads/processors
+            // to make the results fully reproducible
+            computeDisparity3WaySGBM<4>( left, right, disp, params );
         else if(params.mode==MODE_HH4)
-            computeDisparitySGBM_HH4( left, right, disp, params, buffer );
+            computeDisparitySGBM_HH4( left, right, disp, params );
         else
-            computeDisparitySGBM( left, right, disp, params, buffer );
+            computeDisparitySGBM( left, right, disp, params );
 
         medianBlur(disp, disp, 3);
 
@@ -2258,11 +2297,6 @@ public:
 
     StereoSGBMParams params;
     Mat buffer;
-
-    // the number of stripes is fixed, disregarding the number of threads/processors
-    // to make the results fully reproducible:
-    static const int num_stripes = 4;
-    Mat buffers[num_stripes];
 
     static const char* name_;
 };
