@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 You can download the Geometric Matching Module model from https://drive.google.com/file/d/1oBnM9R-LgH0APkwxOiEUbFqbKArh0ZcR/view?usp=sharing
 You can download the Try-On Module model from https://drive.google.com/file/d/1czKbtPlFzE3-CN7lHsUNsgvKXLVi244c/view?usp=sharing
@@ -15,21 +15,22 @@ from numpy import linalg
 from common import findFile
 from human_parsing import parse_human
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
 parser = argparse.ArgumentParser(description='Use this script to run virtial try-on using CP-VTON',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--input_image', '-i', help='Path to image with person. Skip this argument to capture frames from a camera.')
+parser.add_argument('--input_image', '-i', required=True, help='Path to image with person.')
 parser.add_argument('--input_cloth', '-c', required=True, help='Path to target cloth image')
 parser.add_argument('--gmm_model', '-gmm', default='gmm.onnx', help='Path to Geometric Matching Module .onnx model.')
 parser.add_argument('--tom_model', '-tom', default='tom.onnx', help='Path to Try-On Module .onnx model.')
 parser.add_argument('--segmentation_model', default='lip_jppnet_384.pb', help='Path to cloth segmentation .pb model.')
-parser.add_argument('--openpose_proto', required=True, help='Path to OpenPose .prototxt model was trained on COCO dataset.')
-parser.add_argument('--openpose_model', required=True, help='Path to OpenPose .caffemodel model was trained on COCO dataset.')
+parser.add_argument('--openpose_proto', default='openpose_pose_coco.prototxt', help='Path to OpenPose .prototxt model was trained on COCO dataset.')
+parser.add_argument('--openpose_model', default='openpose_pose_coco.caffemodel', help='Path to OpenPose .caffemodel model was trained on COCO dataset.')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                     help="Choose one of computation backends: "
                             "%d: automatically (by default), "
+                            "%d: Halide language (http://halide-lang.org/), "
                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
                             "%d: OpenCV implementation" % backends)
 parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
@@ -71,9 +72,10 @@ def get_pose_map(image_path, proto_path, model_path, backend, target, height=256
 
 
 class BilinearFilter(object):
+    """ PIL resize implementation """
     def precompute_coeffs(self, inSize, outSize):
         filterscale = max(1.0, inSize / outSize)
-        ksize = np.ceil(filterscale) * 2 + 1
+        ksize = int(np.ceil(filterscale)) * 2 + 1
 
         kk = np.zeros(shape=(outSize * ksize, ), dtype=np.float32)
         bounds = np.empty(shape=(outSize * 2, ), dtype=np.int32)
@@ -157,7 +159,7 @@ def prepare_agnostic(segm_image, image_name, pose_map, height=256, width=192):
                     pose_shape[r, c] = 255
 
     input_image = cv.imread(image_name)
-    input_image = cv.dnn.blobFromImage(image, 1.0 / 127.5, (width, height), mean=(127.5, 127.5, 127.5), swapRB=True)
+    input_image = cv.dnn.blobFromImage(input_image, 1.0 / 127.5, (width, height), mean=(127.5, 127.5, 127.5), swapRB=True)
     input_image = input_image.squeeze(0)
 
     img_head = input_image * phead - (1 - phead)
