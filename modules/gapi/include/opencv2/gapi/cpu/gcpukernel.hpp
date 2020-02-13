@@ -77,10 +77,10 @@ namespace cpu
 
     //! @cond IGNORED
     template<typename K, typename Callable>
-    GAPI_EXPORTS GOCVFunctor ocv_kernel(const Callable& c);
+    GOCVFunctor ocv_kernel(const Callable& c);
 
     template<typename K, typename Callable>
-    GAPI_EXPORTS GOCVFunctor ocv_kernel(Callable& c);
+    GOCVFunctor ocv_kernel(Callable& c);
     //! @endcond
 
 } // namespace cpu
@@ -340,7 +340,6 @@ public:
 private:
     GKernelImpl impl_;
 };
-
 
 //! @cond IGNORED
 template<typename K, typename Callable>
