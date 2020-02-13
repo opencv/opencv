@@ -324,7 +324,7 @@ public:
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
         CV_Assert(inputs.size() == 1);
-        CV_Assert(!mean_per_pixel && blobs.size() == 3 || blobs.size() >= 2);
+        CV_Assert((!mean_per_pixel && blobs.size() == 3) || blobs.size() >= 2);
         ++num_iter;
     }
 
@@ -366,8 +366,8 @@ public:
             }
             data_mean_cpu *= (1.0 / num_iter);
 
-            std::vector<int> newsize = {3, data_mean_cpu.total(2)};
-            reduce(data_mean_cpu.reshape(1, newsize), data_mean_per_channel_cpu, 1, REDUCE_SUM, CV_32F);
+            int newsize[] = {blobs[1].size[1], (int)blobs[1].total(2)};
+            reduce(data_mean_cpu.reshape(1, 2, &newsize[0]), data_mean_per_channel_cpu, 1, REDUCE_SUM, CV_32F);
 
             int area = blobs[1].total(2);
             data_mean_per_channel_cpu *= (1.0 / area);
