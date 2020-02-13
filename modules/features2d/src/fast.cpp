@@ -47,6 +47,7 @@ The references are:
 #include "opencl_kernels_features2d.hpp"
 #include "hal_replacement.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/utils/buffer_area.private.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
@@ -80,20 +81,26 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
     for( i = -255; i <= 255; i++ )
         threshold_tab[i+255] = (uchar)(i < -threshold ? 1 : i > threshold ? 2 : 0);
 
-    AutoBuffer<uchar> _buf((img.cols+16)*3*(sizeof(int) + sizeof(uchar)) + 128);
-    uchar* buf[3];
-    buf[0] = _buf.data(); buf[1] = buf[0] + img.cols; buf[2] = buf[1] + img.cols;
-    int* cpbuf[3];
-    cpbuf[0] = (int*)alignPtr(buf[2] + img.cols, sizeof(int)) + 1;
-    cpbuf[1] = cpbuf[0] + img.cols + 1;
-    cpbuf[2] = cpbuf[1] + img.cols + 1;
-    memset(buf[0], 0, img.cols*3);
+    uchar* buf[3] = { 0 };
+    int* cpbuf[3] = { 0 };
+    utils::BufferArea area;
+    for (unsigned idx = 0; idx < 3; ++idx)
+    {
+        area.allocate(buf[idx], img.cols);
+        area.allocate(cpbuf[idx], img.cols + 1);
+    }
+    area.commit();
+
+    for (unsigned idx = 0; idx < 3; ++idx)
+    {
+        memset(buf[idx], 0, img.cols);
+    }
 
     for(i = 3; i < img.rows-2; i++)
     {
         const uchar* ptr = img.ptr<uchar>(i) + 3;
         uchar* curr = buf[(i - 3)%3];
-        int* cornerpos = cpbuf[(i - 3)%3];
+        int* cornerpos = cpbuf[(i - 3)%3] + 1; // cornerpos[-1] is used to store a value
         memset(curr, 0, img.cols);
         int ncorners = 0;
 
@@ -266,7 +273,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
 
         const uchar* prev = buf[(i - 4 + 3)%3];
         const uchar* pprev = buf[(i - 5 + 3)%3];
-        cornerpos = cpbuf[(i - 4 + 3)%3];
+        cornerpos = cpbuf[(i - 4 + 3)%3] + 1; // cornerpos[-1] is used to store a value
         ncorners = cornerpos[-1];
 
         for( k = 0; k < ncorners; k++ )

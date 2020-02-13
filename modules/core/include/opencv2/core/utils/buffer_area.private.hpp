@@ -74,6 +74,25 @@ public:
         allocate_((void**)(&ptr), static_cast<ushort>(sizeof(T)), count, alignment);
     }
 
+    /** @brief Fill one of buffers with zeroes
+
+    @param ptr pointer to memory block previously added using BufferArea::allocate
+
+    BufferArea::commit must be called before using this method
+    */
+    template <typename T>
+    void zeroFill(T*&ptr)
+    {
+        CV_Assert(ptr);
+        zeroFill_((void**)&ptr);
+    }
+
+    /** @brief Fill all buffers with zeroes
+
+    BufferArea::commit must be called before using this method
+    */
+    void zeroFill();
+
     /** @brief Allocate memory and initialize all bound pointers
 
     Each pointer bound to the area with the BufferArea::allocate will be initialized and will be set
@@ -83,10 +102,18 @@ public:
     */
     void commit();
 
+    /** @brief Release all memory and unbind all pointers
+
+    All memory will be freed and all pointers will be reset to NULL and untied from the area allowing
+    to call `allocate` and `commit` again.
+    */
+    void release();
+
 private:
     BufferArea(const BufferArea &); // = delete
     BufferArea &operator=(const BufferArea &); // = delete
     void allocate_(void **ptr, ushort type_size, size_t count, ushort alignment);
+    void zeroFill_(void **ptr);
 
 private:
     class Block;
