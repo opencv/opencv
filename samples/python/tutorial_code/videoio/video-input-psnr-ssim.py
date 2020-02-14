@@ -7,7 +7,7 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 
-
+# [get-psnr]
 def getPSNR(I1, I2):
     s1 = cv.absdiff(I1, I2) #|I1 - I2|
     s1 = np.float32(s1)     # cannot make a square on 8 bits
@@ -20,8 +20,9 @@ def getPSNR(I1, I2):
         mse = 1.0 * sse / (shape[0] * shape[1] * shape[2])
         psnr = 10.0 * np.log10((255 * 255) / mse)
         return psnr
+# [get-psnr]
 
-
+# [get-mssim]
 def getMSSISM(i1, i2):
     C1 = 6.5025
     C2 = 58.5225
@@ -64,6 +65,7 @@ def getMSSISM(i1, i2):
 
     mssim = cv.mean(ssim_map)       # mssim = average of ssim map
     return mssim
+# [get-mssim]
 
 
 def main():
