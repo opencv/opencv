@@ -119,11 +119,16 @@ public:
         }
     };
 
-    ElementWiseLayer(const Func &f=Func()) : run_parallel(false) { func = f; }
+    ElementWiseLayer(const Func &f=Func()) { func = f; }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return func.supportBackend(backendId, this->preferableTarget);
+    }
+
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        func.finalize();
     }
 
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
@@ -262,7 +267,6 @@ public:
     }
 
     Func func;
-    bool run_parallel;
 };
 
 #ifdef HAVE_OPENCL
@@ -277,7 +281,16 @@ static String oclGetTMacro(const UMat &m)
 }
 #endif
 
-struct ReLUFunctor
+struct BaseFunctor
+{
+    void finalize() {}
+
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
+};
+
+struct ReLUFunctor : public BaseFunctor
 {
     typedef ReLULayer Layer;
     float slope;
@@ -421,14 +434,10 @@ struct ReLUFunctor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
-struct ReLU6Functor
+struct ReLU6Functor : public BaseFunctor
 {
     typedef ReLU6Layer Layer;
     float minValue, maxValue;
@@ -548,14 +557,10 @@ struct ReLU6Functor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 2; }
 };
 
-struct TanHFunctor
+struct TanHFunctor : public BaseFunctor
 {
     typedef TanHLayer Layer;
 
@@ -644,14 +649,10 @@ struct TanHFunctor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
-struct SwishFunctor
+struct SwishFunctor : public BaseFunctor
 {
     typedef SwishLayer Layer;
 
@@ -740,15 +741,10 @@ struct SwishFunctor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 3; }
-
 };
 
-struct MishFunctor
+struct MishFunctor : public BaseFunctor
 {
     typedef MishLayer Layer;
 
@@ -842,15 +838,10 @@ struct MishFunctor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 3; }
-
 };
 
-struct SigmoidFunctor
+struct SigmoidFunctor : public BaseFunctor
 {
     typedef SigmoidLayer Layer;
 
@@ -939,18 +930,12 @@ struct SigmoidFunctor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 3; }
 };
 
-struct ELUFunctor
+struct ELUFunctor : public BaseFunctor
 {
     typedef ELULayer Layer;
-
-    explicit ELUFunctor() {}
 
     bool supportBackend(int backendId, int)
     {
@@ -1037,14 +1022,10 @@ struct ELUFunctor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 2; }
 };
 
-struct AbsValFunctor
+struct AbsValFunctor : public BaseFunctor
 {
     typedef AbsLayer Layer;
 
@@ -1139,14 +1120,10 @@ struct AbsValFunctor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
-struct BNLLFunctor
+struct BNLLFunctor : public BaseFunctor
 {
     typedef BNLLLayer Layer;
 
@@ -1236,23 +1213,19 @@ struct BNLLFunctor
     }
 #endif  // HAVE_VULKAN
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
-
     int64 getFLOPSPerElement() const { return 5; }
 };
 
-struct PowerFunctor
+struct PowerFunctor : public BaseFunctor
 {
     typedef PowerLayer Layer;
 
-    float power;
-    float scale;
-    float shift;
+    float power, scale, shift;
+    float originPower, originScale, originShift;
 
     explicit PowerFunctor(float power_ = 1.f, float scale_ = 1.f, float shift_ = 0.f)
-        : power(power_), scale(scale_), shift(shift_) {}
+        : power(power_), scale(scale_), shift(shift_),
+          originPower(power_), originScale(scale_), originShift(shift_) {}
 
     bool supportBackend(int backendId, int targetId)
     {
@@ -1264,6 +1237,13 @@ struct PowerFunctor
             return backendId == DNN_BACKEND_OPENCV ||
                    backendId == DNN_BACKEND_CUDA ||
                    backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void finalize()
+    {
+        power = originPower;
+        scale = originScale;
+        shift = originShift;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -1410,8 +1390,7 @@ struct PowerFunctor
     int64 getFLOPSPerElement() const { return power == 1 ? 2 : 10; }
 };
 
-
-struct ChannelsPReLUFunctor
+struct ChannelsPReLUFunctor : public BaseFunctor
 {
     typedef ChannelsPReLULayer Layer;
     Mat scale;
@@ -1544,10 +1523,6 @@ struct ChannelsPReLUFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
-
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
-
-    void getScaleShift(Mat&, Mat&) const {}
 
     int64 getFLOPSPerElement() const { return 1; }
 };
