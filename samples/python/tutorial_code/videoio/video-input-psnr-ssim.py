@@ -115,8 +115,8 @@ def main():
     print("PSNR trigger value {}".format(psnrTriggerValue))
 
     while True: # Show the image captured in the window and repeat
-        ret, frameReference = captRefrnc.read()
-        ret, frameUnderTest = captUndTst.read()
+        _, frameReference = captRefrnc.read()
+        _, frameUnderTest = captUndTst.read()
 
         if frameReference is None or frameUnderTest is None:
             print(" < < <  Game over!  > > > ")
