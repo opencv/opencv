@@ -345,13 +345,14 @@ public:
         float* inpData = (float*)inpBlob.data;
         float* outData = (float*)outBlob.data;
 
-        Mat data_mean_cpu = blobs[1];
-        Mat data_mean_per_channel_cpu = blobs[2];
+        Mat data_mean_cpu = blobs[1].clone();
+        Mat data_mean_per_channel_cpu = blobs[2].clone();
 
         const int numWeights = blobs[1].total();
         CV_Assert(numWeights != 0);
 
-        if (num_iter <= recompute_mean) {
+        if (num_iter <= recompute_mean)
+        {
             data_mean_cpu *= (num_iter - 1);
             const int batch = inputs[0].size[0];
             float alpha = 1.0 / batch;
@@ -376,7 +377,8 @@ public:
         MatShape inpShape = shape(inpBlob);
 
         inpData = (float*)inpBlob.data;
-        if (mean_per_pixel) {
+        if (mean_per_pixel)
+        {
             int numSlices = inputs[0].size[0];
             for (int i = 0; i < numSlices; ++i)
             {
@@ -387,7 +389,9 @@ public:
                 inpData += numWeights;
                 outData += numWeights;
             }
-        } else {
+        }
+        else
+        {
             int numSlices = inpShape[1];
             int count = numWeights / numSlices;
 
@@ -402,11 +406,6 @@ public:
                 outData += count;
             }
         }
-    }
-
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_OPENCV;
     }
 
 private:
