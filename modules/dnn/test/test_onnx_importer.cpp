@@ -14,7 +14,7 @@ namespace opencv_test { namespace {
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
 {
-    return findDataFile(std::string("dnn/onnx/") + filename, required);
+    return findDataFile(std::string("../../opencv_extra/testdata/dnn/onnx/") + filename, required);
 }
 
 class Test_ONNX_layers : public DNNTestLayer
@@ -388,6 +388,10 @@ TEST_P(Test_ONNX_layers, ReduceL2)
 
 TEST_P(Test_ONNX_layers, Split)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("split_1");
     testONNXModels("split_2");
     testONNXModels("split_3");
