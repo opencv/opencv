@@ -19,10 +19,10 @@ const std::string about =
 const std::string keys =
     "{ h help |       | print this help message }"
     "{ input  |       | Path to the input video file }"
-    "{ platm  |       | Path to IE vehicle/license plate detection model (.xml) }"
-    "{ platd  | CPU   | OpenVINO IE vehicle/license plate detection model device (e.g. CPU, GPU, VPU, ...) }"
-    "{ facem  |       | Path to IE face detection model (.xml) }"
-    "{ faced  | CPU   | OpenVINO IE face detection model device (e.g. CPU, GPU, VPU, ...) }"
+    "{ platm  |       | Path to OpenVINO IE model vehicle-license-plate-detection-barrier-0106 (.xml) }"
+    "{ platd  | CPU   | Target device for model vehicle-license-plate-detection-barrier-0106 (e.g. CPU, GPU, VPU, ...) }"
+    "{ facem  |       | Path to OpenVINO IE model face-detection-adas-0001 (.xml) }"
+    "{ faced  | CPU   | Target device for model face-detection-adas-0001 (e.g. CPU, GPU, VPU, ...) }"
     "{ trad   | false | Run processing in traditional (non-pipelined) way }"
     "{ noshow | false | Don't display UI (improves performance) }";
 
