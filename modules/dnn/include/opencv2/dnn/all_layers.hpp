@@ -562,6 +562,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<DataAugmentationLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS CorrelationLayer : public Layer
+    {
+    public:
+        static Ptr<CorrelationLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS PriorBoxLayer : public Layer
     {
     public:
