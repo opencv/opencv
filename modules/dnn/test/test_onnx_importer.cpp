@@ -84,6 +84,34 @@ TEST_P(Test_ONNX_layers, InstanceNorm)
         testONNXModels("instancenorm", npy);
 }
 
+
+TEST_P(Test_ONNX_layers, FlowNet)
+{
+    Net net = readNet("/home/liubov/Downloads/FlowNet2/FlowNet2_deploy.prototxt", "/home/liubov/Downloads/FlowNet2/flow.caffemodel");
+    Mat inp0 = blobFromNPY("/home/liubov/caffe-shared/input_0.npy");
+    Mat inp1 = blobFromNPY("/home/liubov/caffe-shared/input_1.npy");
+    std::cout << "-----input--------" << '\n';
+    Mat ref = blobFromNPY("/home/liubov/caffe-shared/corr.npy");
+    net.setInput(inp0, "img0");
+    net.setInput(inp1, "img1");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+
+    std::vector<Mat> outs;
+    net.forward(outs);
+    std::cout << "outs " << outs.size() << '\n';
+
+    // std::cout << "out " << outs[0].size << '\n';
+//     std::cout << "SUM OUTPUT = " << sum(out)[0] << '\n';
+//     std::cout << "SUM REFER = " << sum(ref)[0] << '\n';
+//
+//     std::cout << "out  " << out.reshape(1, 1).at<float>(0, 0) << '\n';
+//     std::cout << "ref  " << ref.reshape(1, 1).at<float>(0, 0) << '\n';
+//     // out = Mat(4, out.size, CV_32F, float(0));
+    normAssert(ref, outs[0]);
+}
+
+
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
     testONNXModels("maxpooling", npy, 0, 0, false, false);
