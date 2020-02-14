@@ -10,6 +10,8 @@
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/videoio_c.h"
 
+#include <map>
+
 //===================================================
 
 // Legacy structs
@@ -37,6 +39,7 @@ struct CvVideoWriter
 
 namespace cv
 {
+using VideoWriterParameters = std::map<int, int>;
 
 class IVideoCapture
 {
@@ -168,24 +171,34 @@ public:
 //==================================================================================================
 
 Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename);
-Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc, double fps, const Size &frameSize, bool isColor);
+Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc,
+                                                   double fps, const Size& frameSize,
+                                                   const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> createGStreamerCapture_file(const std::string& filename);
 Ptr<IVideoCapture> createGStreamerCapture_cam(int index);
-Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc, double fps, const Size &frameSize, bool isColor);
+Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc,
+                                          double fps, const Size& frameSize,
+                                          const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> create_MFX_capture(const std::string &filename);
-Ptr<IVideoWriter> create_MFX_writer(const std::string &filename, int _fourcc, double fps, const Size &frameSize, bool isColor);
+Ptr<IVideoWriter> create_MFX_writer(const std::string& filename, int _fourcc,
+                                    double fps, const Size& frameSize,
+                                    const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> create_AVFoundation_capture_file(const std::string &filename);
 Ptr<IVideoCapture> create_AVFoundation_capture_cam(int index);
-Ptr<IVideoWriter> create_AVFoundation_writer(const std::string& filename, int fourcc, double fps, const Size &frameSize, bool isColor);
+Ptr<IVideoWriter> create_AVFoundation_writer(const std::string& filename, int fourcc,
+                                             double fps, const Size& frameSize,
+                                             const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> create_WRT_capture(int device);
 
 Ptr<IVideoCapture> cvCreateCapture_MSMF(int index);
 Ptr<IVideoCapture> cvCreateCapture_MSMF(const std::string& filename);
-Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const std::string& filename, int fourcc, double fps, const Size &frameSize, bool is_color);
+Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const std::string& filename, int fourcc,
+                                           double fps, const Size& frameSize,
+                                           const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> create_DShow_capture(int index);
 
@@ -196,7 +209,9 @@ Ptr<IVideoCapture> create_OpenNI2_capture_cam( int index );
 Ptr<IVideoCapture> create_OpenNI2_capture_file( const std::string &filename );
 
 Ptr<IVideoCapture> create_Images_capture(const std::string &filename);
-Ptr<IVideoWriter> create_Images_writer(const std::string &filename, int fourcc, double fps, const Size &frameSize, bool iscolor);
+Ptr<IVideoWriter> create_Images_writer(const std::string& filename, int fourcc,
+                                       double fps, const Size& frameSize,
+                                       const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> create_DC1394_capture(int index);
 
@@ -210,7 +225,9 @@ Ptr<IVideoCapture> create_XIMEA_capture_file( const std::string &serialNumber );
 Ptr<IVideoCapture> create_Aravis_capture( int index );
 
 Ptr<IVideoCapture> createMotionJpegCapture(const std::string& filename);
-Ptr<IVideoWriter> createMotionJpegWriter(const std::string &filename, int fourcc, double fps, const Size &frameSize, bool iscolor);
+Ptr<IVideoWriter> createMotionJpegWriter(const std::string& filename, int fourcc,
+                                         double fps, const Size& frameSize,
+                                         const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> createGPhoto2Capture(int index);
 Ptr<IVideoCapture> createGPhoto2Capture(const std::string& deviceName);

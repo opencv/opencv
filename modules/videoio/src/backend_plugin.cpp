@@ -240,7 +240,8 @@ public:
 
     Ptr<IVideoCapture> createCapture(int camera) const CV_OVERRIDE;
     Ptr<IVideoCapture> createCapture(const std::string &filename) const CV_OVERRIDE;
-    Ptr<IVideoWriter>  createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const CV_OVERRIDE;
+    Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps,
+                                   const cv::Size& sz, const VideoWriterParameters& params) const CV_OVERRIDE;
 };
 
 class PluginBackendFactory : public IBackendFactory
@@ -486,7 +487,8 @@ class PluginWriter : public cv::IVideoWriter
 public:
     static
     Ptr<PluginWriter> create(const OpenCV_VideoIO_Plugin_API_preview* plugin_api,
-            const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor)
+            const std::string& filename, int fourcc, double fps, const cv::Size& sz,
+            const VideoWriterParameters& params)
     {
         CV_Assert(plugin_api);
         CvPluginWriter writer = NULL;
@@ -494,6 +496,7 @@ public:
         {
             CV_Assert(plugin_api->Writer_release);
             CV_Assert(!filename.empty());
+            const bool isColor = params.at(VIDEOWRITER_PROP_IS_COLOR) != 0;
             if (CV_ERROR_OK == plugin_api->Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
             {
                 CV_Assert(writer);
@@ -581,12 +584,13 @@ Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename) con
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoWriter> PluginBackend::createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const
+Ptr<IVideoWriter> PluginBackend::createWriter(const std::string& filename, int fourcc, double fps,
+                                              const cv::Size& sz, const VideoWriterParameters& params) const
 {
     try
     {
         if (plugin_api_)
-            return PluginWriter::create(plugin_api_, filename, fourcc, fps, sz, isColor); //.staticCast<IVideoWriter>();
+            return PluginWriter::create(plugin_api_, filename, fourcc, fps, sz, params); //.staticCast<IVideoWriter>();
     }
     catch (...)
     {

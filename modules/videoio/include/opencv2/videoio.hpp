@@ -189,7 +189,9 @@ enum VideoCaptureProperties {
 enum VideoWriterProperties {
   VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
   VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
-  VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
+  VIDEOWRITER_PROP_NSTRIPES = 3,   //!< Number of stripes for parallel encoding. -1 for auto detection.
+  VIDEOWRITER_PROP_IS_COLOR = 4    //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
+                                   //!< will work with grayscale frames (the flag is currently supported on Windows only)
 };
 
 //! @} videoio_flags_base
@@ -896,6 +898,19 @@ public:
     CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
 
+    /** @overload
+     *
+     * @param params Encoder parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .)
+     * see cv::VideoWriterProperties
+     */
+    CV_WRAP VideoWriter(const String& filename, int fourcc, double fps, const Size& frameSize,
+                        const std::vector<int>& params);
+
+    /** @overload
+     */
+    CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
+                        const Size& frameSize, const std::vector<int>& params);
+
     /** @brief Default destructor
 
     The method first calls VideoWriter::release to close the already opened file.
@@ -917,6 +932,16 @@ public:
      */
     CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
+
+    /** @overload
+     */
+    CV_WRAP bool open(const String& filename, int fourcc, double fps, const Size& frameSize,
+                      const std::vector<int>& params);
+
+    /** @overload
+     */
+    CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
+                      const Size& frameSize, const std::vector<int>& params);
 
     /** @brief Returns true if video writer has been successfully initialized.
     */
