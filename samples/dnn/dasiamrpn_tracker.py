@@ -236,13 +236,12 @@ def tracker_eval(net, x_crop, target_pos, target_sz, window, scale_z, p):
     return target_pos, target_sz, score[best_pscore_id]
 
 def softmax(x):
-    y = np.copy(x)
     x_max = x.max(0)
     e_x = np.exp(x - x_max)
     y = e_x / e_x.sum(axis = 0)
     return y
 
-#function for drawing initial bounding box
+# #function for drawing initial bounding box
 def get_bb(event, x, y, flag, param):
     global point, cx, cy, w, h, drawing, mode
 
@@ -257,35 +256,72 @@ def get_bb(event, x, y, flag, param):
         cy = point[0][1] - (point[0][1]- point[1][1]) / 2
         w = abs(point[0][0] - point[1][0])
         h = abs(point[0][1] - point[1][1])
+######################################################################################
+# def get_bb(event, x, y, flag, param):
+#     global drawing, mode, ix, iy
 
-    # if event == cv.EVENT_LBUTTONDOWN:
-    #     drawing = True
-    #     point = [(x, y)]
+#     if event == cv.EVENT_LBUTTONDOWN:
+#         drawing = True
+#         ix, iy = x, y
+#     elif event == cv.EVENT_MOUSEMOVE:
+#         if drawing == True:
+#             if mode == True:
+#                 cv.rectangle(frame, (ix, iy), (x, y), (0, 255, 0), 3)
+#                 a = x
+#                 b = y
+#                 if a != x | b != y:
+#                     cv.rectangle(frame, (ix, iy), (x, y), (0, 0, 0), -1)
+#             else:
+#                 cv.circle(frame, (x, y), 5, (0, 255, 0), -1)
+#     elif event == cv.EVENT_LBUTTONUP:
+#         drawing = False
+#         if mode == True:
+#             cv.rectangle(frame, (ix, iy), (x, y), (0, 255, 0), 3)
+#             cx = point[0][0] - (point[0][0] - point[1][0]) / 2
+#             cy = point[0][1] - (point[0][1]- point[1][1]) / 2
+#             w = abs(point[0][0] - point[1][0])
+#             h = abs(point[0][1] - point[1][1])
+#         else:
+#             cv.circle(frame, (x, y), 5,(0, 0, 255), -1)
+##########################################################################################
+# class UIControl:
+#     def __init__(self):
+#         self.mode = 'init'
+#         self.target_tl = (-1, -1)
+#         self.target_br = (-1, -1)
+#         self.mode_switch = False
 
-    # elif event == cv.EVENT_MOUSEMOVE:
-    #     if drawing == True:
-    #         if mode == True:
-    #             point.append((x, y))
-    #             cv.rectangle(frame, point[0], point[1], (0, 255, 255), 3)
-    #             if point[0][0] != point[1][0] | point[0][1] != point[1][1]:
-    #                 cv.rectangle(frame, point[0], point[1], (0, 0, 0), -1)
-    #         else:
-    #             cv.circle(frame, (point[1][0], point[1][1]), 5, (0, 0, 255), -1)
+#     def mouse_callback(self, event, x, y, flag, param):
+#         if event == cv.EVENT_LBUTTONDOWN and self.mode == 'init':
+#             self.target_tl = (x, y)
+#             self.target_br = (x, y)
+#             self.mode = 'select'
+#             self.mode_switch = True
+#         elif event == cv.EVENT_MOUSEMOVE and self.mode == 'select':
+#             self.target_br = (x, y)
+#         elif event == cv.EVENT_LBUTTONUP and self.mode == 'select':
+#             self.target_br = (x, y)
+#             self.mode = 'track'
+#             self.mode_switch = True
 
-    # elif event == cv.EVENT_LBUTTONUP:
-    #     drawing = False
-    #     if mode == True:
-    #         point.append((x, y))
-    #         cv.rectangle(frame, point[0], point[1], (0, 255, 255), 3)
+#     def get_tl(self):
+#         return self.target_tl if self.target_tl[0] < self.target_br[0] else self.target_br
 
-    #         cx = point[0][0] - (point[0][0] - point[1][0]) / 2
-    #         cy = point[0][1] - (point[0][1]- point[1][1]) / 2
-    #         w = abs(point[0][0] - point[1][0])
-    #         h = abs(point[0][1] - point[1][1])
-    #     else:
-    #         cv.circle(frame, (point[1][0], point[1][1]), 5, (0, 0, 255), -1)
+#     def get_br(self):
+#         return self.target_br if self.target_tl[0] < self.target_br[0] else self.target_tl
 
-#parse paths to onnx models and to input sequence
+#     def get_bb(self):
+#         tl = self.get_tl()
+#         br = self.get_br()
+#         cx = br[0] - (br[0] - tl[0]) / 2
+#         cy = br[1] - (br[1] - tl[1]) / 2
+#         w = abs(br[0] - tl[0])
+#         h = abs(br[1] - br[1])
+#         return [cx, cy, w, h]
+############################################################################################
+#Reading paths to onnx files with models from command line when launching tracking.
+#--net *absolute path to onnx file with net*
+#--kernel_r1 and --kernel_cls1 *absolute paths to onnx files with added convolution layers*
 parser = argparse.ArgumentParser(description = "Run tracker")
 parser.add_argument("--net", type = str, help = "Full path to onnx model of net")
 parser.add_argument("--kernel_r1", type = str, help = "Full path to onnx model of kernel_r1")
@@ -306,6 +342,7 @@ cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
 toc = 0
 f = 0
 #variables for drawing bounding box
+# uicontrol = UIControl()
 drawing = False
 mode = True
 #tracking cicle
