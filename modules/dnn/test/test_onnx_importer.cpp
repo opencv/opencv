@@ -14,7 +14,7 @@ namespace opencv_test { namespace {
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
 {
-    return findDataFile(std::string("../../opencv_extra/testdata/dnn/onnx/") + filename, required);
+    return findDataFile(std::string("dnn/onnx/") + filename, required);
 }
 
 class Test_ONNX_layers : public DNNTestLayer
