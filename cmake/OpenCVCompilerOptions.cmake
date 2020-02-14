@@ -444,3 +444,38 @@ if(OPENCV_EXTRA_RPATH_LINK_PATH)
     message(WARNING "OPENCV_EXTRA_RPATH_LINK_PATH may not work properly because CMAKE_EXECUTABLE_RPATH_LINK_CXX_FLAG is not defined (not supported)")
   endif()
 endif()
+
+# Control MSVC /MP flag
+# Input variables: OPENCV_MSVC_PARALLEL (ON,1,2,3,...) + OPENCV_SKIP_MSVC_PARALLEL
+# Details:
+# - https://docs.microsoft.com/en-us/cpp/build/reference/mp-build-with-multiple-processes
+# - https://docs.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
+# - https://gitlab.kitware.com/cmake/cmake/merge_requests/1718/diffs
+if(CMAKE_GENERATOR MATCHES "Visual Studio" AND CMAKE_CXX_COMPILER_ID MATCHES "MSVC|Intel")
+  ocv_check_environment_variables(OPENCV_SKIP_MSVC_PARALLEL)
+  if(OPENCV_SKIP_MSVC_PARALLEL)
+    # nothing
+  elseif(" ${CMAKE_CXX_FLAGS}" MATCHES "/MP")
+    # nothing, already defined in compiler flags
+  elseif(DEFINED ENV{CL} AND " $ENV{CL}" MATCHES "/MP")
+    # nothing, compiler will use CL environment variable
+  elseif(DEFINED ENV{_CL_} AND " $ENV{_CL_}" MATCHES "/MP")
+    # nothing, compiler will use _CL_ environment variable
+  else()
+    ocv_check_environment_variables(OPENCV_MSVC_PARALLEL)
+    set(_mp_value "ON")
+    if(DEFINED OPENCV_MSVC_PARALLEL)
+      set(_mp_value "${OPENCV_MSVC_PARALLEL}")
+    endif()
+    set(OPENCV_MSVC_PARALLEL "${_mp_value}" CACHE STRING "Control MSVC /MP flag")
+    if(_mp_value)
+      if(_mp_value GREATER 0)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP${_mp_value}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP${_mp_value}")
+      else()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+      endif()
+    endif()
+  endif()
+endif()

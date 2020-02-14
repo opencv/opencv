@@ -92,9 +92,9 @@ endif()
 
 if(INF_ENGINE_TARGET)
   if(NOT INF_ENGINE_RELEASE)
-    message(WARNING "InferenceEngine version have not been set, 2019R3 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
+    message(WARNING "InferenceEngine version has not been set, 2020.1 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
   endif()
-  set(INF_ENGINE_RELEASE "2019030000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2018R2.0.2 -> 2018020002)")
+  set(INF_ENGINE_RELEASE "2020010000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2020.1.0.2 -> 2020010002)")
   set_target_properties(${INF_ENGINE_TARGET} PROPERTIES
     INTERFACE_COMPILE_DEFINITIONS "HAVE_INF_ENGINE=1;INF_ENGINE_RELEASE=${INF_ENGINE_RELEASE}"
   )

@@ -1297,7 +1297,7 @@ protected:
     {
     public:
         ParallelSearch(vector< vector< Point2f > >& true_points_group_,
-                vector< vector< Point2f > >& loc_, int iter_, int* end_,
+                vector< vector< Point2f > >& loc_, int iter_, vector<int>& end_,
                 vector< vector< Vec3i > >& all_points_,
                 QRDetectMulti& cl_)
         :
@@ -1313,7 +1313,7 @@ protected:
         vector< vector< Point2f > >& true_points_group;
         vector< vector< Point2f > >& loc;
         int iter;
-        int* end;
+        vector<int>& end;
         vector< vector< Vec3i > >& all_points;
         QRDetectMulti& cl;
     };
@@ -1925,7 +1925,7 @@ bool QRDetectMulti::checkSets(vector<vector<Point2f> >& true_points_group, vecto
         return false;
 
 
-    int* set_size = new int[true_points_group.size()];
+    vector<int> set_size(true_points_group.size());
     for (size_t i = 0; i < true_points_group.size(); i++)
     {
         set_size[i] = int(0.5 * (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1));
@@ -1963,7 +1963,7 @@ bool QRDetectMulti::checkSets(vector<vector<Point2f> >& true_points_group, vecto
     transformation_points.resize(iter + true_points_group.size());
 
     true_points_group_copy = true_points_group;
-    int* end = new int[true_points_group.size()];
+    vector<int> end(true_points_group.size());
     for (size_t i = 0; i < true_points_group.size(); i++)
         end[i] = iter + set_size[i];
     ParallelSearch parallelSearch(true_points_group,
