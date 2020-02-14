@@ -238,16 +238,13 @@ def tracker_eval(net, x_crop, target_pos, target_sz, window, scale_z, p):
 def softmax(x):
     y = np.copy(x)
     x_max = x.max(0)
-
-    for i in range(1805):
-        e_x = np.exp(x[: , i] - x_max[i])
-        y[ : , i] = e_x /e_x.sum()
-
+    e_x = np.exp(x - x_max)
+    y = e_x / e_x.sum(axis = 0)
     return y
 
 #function for drawing initial bounding box
 def get_bb(event, x, y, flag, param):
-    global point, cx, cy, w, h
+    global point, cx, cy, w, h, drawing, mode
 
     if event == cv.EVENT_LBUTTONDOWN:
         point = [(x, y)]
@@ -260,6 +257,33 @@ def get_bb(event, x, y, flag, param):
         cy = point[0][1] - (point[0][1]- point[1][1]) / 2
         w = abs(point[0][0] - point[1][0])
         h = abs(point[0][1] - point[1][1])
+
+    # if event == cv.EVENT_LBUTTONDOWN:
+    #     drawing = True
+    #     point = [(x, y)]
+
+    # elif event == cv.EVENT_MOUSEMOVE:
+    #     if drawing == True:
+    #         if mode == True:
+    #             point.append((x, y))
+    #             cv.rectangle(frame, point[0], point[1], (0, 255, 255), 3)
+    #             if point[0][0] != point[1][0] | point[0][1] != point[1][1]:
+    #                 cv.rectangle(frame, point[0], point[1], (0, 0, 0), -1)
+    #         else:
+    #             cv.circle(frame, (point[1][0], point[1][1]), 5, (0, 0, 255), -1)
+
+    # elif event == cv.EVENT_LBUTTONUP:
+    #     drawing = False
+    #     if mode == True:
+    #         point.append((x, y))
+    #         cv.rectangle(frame, point[0], point[1], (0, 255, 255), 3)
+
+    #         cx = point[0][0] - (point[0][0] - point[1][0]) / 2
+    #         cy = point[0][1] - (point[0][1]- point[1][1]) / 2
+    #         w = abs(point[0][0] - point[1][0])
+    #         h = abs(point[0][1] - point[1][1])
+    #     else:
+    #         cv.circle(frame, (point[1][0], point[1][1]), 5, (0, 0, 255), -1)
 
 #parse paths to onnx models and to input sequence
 parser = argparse.ArgumentParser(description = "Run tracker")
@@ -281,12 +305,16 @@ cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
 #variables for fps counter
 toc = 0
 f = 0
+#variables for drawing bounding box
+drawing = False
+mode = True
 #tracking cicle
 while (cap.isOpened):
     ret,frame = cap.read()
     if f == 0:
         cv.namedWindow("DaSiamRPN")
         cv.setMouseCallback("DaSiamRPN", get_bb)
+
         while True:
             cv.imshow("DaSiamRPN", frame)
             key = cv.waitKey(1) & 0xFF
