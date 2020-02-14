@@ -199,7 +199,7 @@ TEST_P(HoughCirclesTest, DefaultMaxRadius)
     double minDist = 20.0;
     double edgeThreshold = 20.0;
     double param2 = method == HOUGH_GRADIENT_ALT ? 0.9 : 30.;
-    int minRadius = method == HOUGH_GRADIENT_ALT ? 10. : 20.;
+    int minRadius = method == HOUGH_GRADIENT_ALT ? 10 : 20;
     int maxRadius = 0;
 
     vector<Vec3f> circles;
@@ -242,7 +242,7 @@ TEST_P(HoughCirclesTest, CentersOnly)
     double minDist = 20.0;
     double edgeThreshold = 20.0;
     double param2 = method == HOUGH_GRADIENT_ALT ? 0.9 : 30.;
-    int minRadius = method == HOUGH_GRADIENT_ALT ? 10. : 20.;
+    int minRadius = method == HOUGH_GRADIENT_ALT ? 10 : 20;
     int maxRadius = -1;
 
     vector<Vec3f> circles;
