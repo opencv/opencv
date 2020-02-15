@@ -47,20 +47,6 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    int window_counter = 0;
-    int window_position = 0;
-    Mat opencv_image = imread("/Users/vpisarev/tmp/2Dpg6.jpg", 1);
-    for (int i = 0; i < 4; i++)
-    {
-        std::string window_name = "TexSyn" + std::to_string(window_counter++);
-        cv::namedWindow(window_name);
-        cv::imshow(window_name, opencv_image);
-        cv::moveWindow(window_name, window_position, window_position);
-        window_position += 100;
-    }
-    cv::waitKey(0);
-    return 0;
-
     cv::CommandLineParser parser(argc, argv, "{help h | | }{ @input | fruits.jpg | }");
     if (parser.has("help"))
     {

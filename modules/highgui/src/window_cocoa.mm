@@ -838,6 +838,8 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 @synthesize mouseParam;
 @synthesize autosize;
 @synthesize firstContent;
+@synthesize x0;
+@synthesize y0;
 @synthesize sliders;
 @synthesize status;
 
