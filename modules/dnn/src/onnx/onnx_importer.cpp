@@ -485,16 +485,23 @@ void ONNXImporter::populateNet(Net dstNet)
          }
         else if (layer_type == "Split")
         {
-            DictValue splits = layerParams.get("split");
-            const int numSplits = splits.size();
-            CV_Assert(numSplits > 1);
-
-            std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
-            for (int i = 1; i < splits.size() - 1; ++i)
+            if (layerParams.has("split"))
             {
-                slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i - 1);
+                DictValue splits = layerParams.get("split");
+                const int numSplits = splits.size();
+                CV_Assert(numSplits > 1);
+
+                std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
+                for (int i = 1; i < splits.size() - 1; ++i)
+                {
+                    slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i - 1);
+                }
+                layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
             }
-            layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
+            else
+            {
+                layerParams.set("num_split", node_proto.output_size());
+            }
             layerParams.type = "Slice";
         }
         else if (layer_type == "Add" || layer_type == "Sum")
