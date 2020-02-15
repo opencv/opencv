@@ -25,7 +25,13 @@ version of it ](https://github.com/opencv/opencv/tree/3.4/samples/data/Megamind_
 You may also find the source code and these video file in the
 `samples/data` folder of the OpenCV source library.
 
+@add_toggle_cpp
 @include cpp/tutorial_code/videoio/video-input-psnr-ssim/video-input-psnr-ssim.cpp
+@end_toggle
+
+@add_toggle_python
+@include samples/python/tutorial_code/videoio/video-input-psnr-ssim.py
+@end_toggle
 
 How to read a video stream (online-camera or offline-file)?
 -----------------------------------------------------------
