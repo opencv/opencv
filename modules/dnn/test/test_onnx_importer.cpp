@@ -386,6 +386,18 @@ TEST_P(Test_ONNX_layers, ReduceL2)
     testONNXModels("reduceL2");
 }
 
+TEST_P(Test_ONNX_layers, Split)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("split_1");
+    testONNXModels("split_2");
+    testONNXModels("split_3");
+    testONNXModels("split_4");
+}
+
 TEST_P(Test_ONNX_layers, Slice)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
