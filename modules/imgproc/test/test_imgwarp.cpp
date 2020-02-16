@@ -1721,6 +1721,21 @@ TEST(Resize, lanczos4_regression_16192)
     EXPECT_EQ(cvtest::norm(dst, expected, NORM_INF), 0) << dst(Rect(0,0,8,8));
 }
 
+TEST(Resize, nearest_regression_15075)
+{
+    const int C = 5;
+    const int i1 = 5, j1 = 5;
+    Size src_size(12, 12);
+    Size dst_size(11, 11);
+
+    cv::Mat src = cv::Mat::zeros(src_size, CV_8UC(C)), dst;
+    for (int j = 0; j < C; j++)
+        src.col(i1).row(j1).data[j] = 1;
+
+    cv::resize(src, dst, dst_size, 0, 0, INTER_NEAREST);
+    EXPECT_EQ(C, cvtest::norm(dst, NORM_L1)) << src.size;
+}
+
 TEST(Imgproc_Warp, multichannel)
 {
     static const int inter_types[] = {INTER_NEAREST, INTER_AREA, INTER_CUBIC,
