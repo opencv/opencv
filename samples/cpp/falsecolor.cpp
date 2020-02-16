@@ -41,10 +41,10 @@ static Mat DrawMyImage(int thickness,int nbShape)
 {
     Mat img=Mat::zeros(500,256*thickness+100,CV_8UC1);
     int offsetx = 50, offsety = 25;
-    int lineLenght = 50;
+    int lineLength = 50;
 
     for (int i=0;i<256;i++)
-        line(img,Point(thickness*i+ offsetx, offsety),Point(thickness*i+ offsetx, offsety+ lineLenght),Scalar(i), thickness);
+        line(img,Point(thickness*i+ offsetx, offsety),Point(thickness*i+ offsetx, offsety+ lineLength),Scalar(i), thickness);
     RNG r;
     Point center;
     int radius;
@@ -57,19 +57,19 @@ static Mat DrawMyImage(int thickness,int nbShape)
         int typeShape = r.uniform(MyCIRCLE, MyELLIPSE+1);
         switch (typeShape) {
         case MyCIRCLE:
-            center = Point(r.uniform(offsetx,img.cols- offsetx), r.uniform(offsety + lineLenght, img.rows - offsety));
+            center = Point(r.uniform(offsetx,img.cols- offsetx), r.uniform(offsety + lineLength, img.rows - offsety));
             radius = r.uniform(1, min(offsetx, offsety));
             circle(img,center,radius,Scalar(i),-1);
             break;
         case MyRECTANGLE:
-            center = Point(r.uniform(offsetx, img.cols - offsetx), r.uniform(offsety + lineLenght, img.rows - offsety));
+            center = Point(r.uniform(offsetx, img.cols - offsetx), r.uniform(offsety + lineLength, img.rows - offsety));
             width = r.uniform(1, min(offsetx, offsety));
             height = r.uniform(1, min(offsetx, offsety));
             rc = Rect(center-Point(width ,height )/2, center + Point(width , height )/2);
             rectangle(img,rc, Scalar(i), -1);
             break;
         case MyELLIPSE:
-            center = Point(r.uniform(offsetx, img.cols - offsetx), r.uniform(offsety + lineLenght, img.rows - offsety));
+            center = Point(r.uniform(offsetx, img.cols - offsetx), r.uniform(offsety + lineLength, img.rows - offsety));
             width = r.uniform(1, min(offsetx, offsety));
             height = r.uniform(1, min(offsetx, offsety));
             angle = r.uniform(0, 180);
