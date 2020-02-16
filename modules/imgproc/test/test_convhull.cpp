@@ -2262,5 +2262,34 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
 
 #undef DRAW
 
+TEST(Imgproc_ConvexHull, overflow)
+{
+    std::vector<Point> points;
+    std::vector<Point2f> pointsf;
+
+    points.push_back(Point(14763, 2890));
+    points.push_back(Point(14388, 72088));
+    points.push_back(Point(62810, 72274));
+    points.push_back(Point(63166, 3945));
+    points.push_back(Point(56782, 3945));
+    points.push_back(Point(56763, 3077));
+    points.push_back(Point(34666, 2965));
+    points.push_back(Point(34547, 2953));
+    points.push_back(Point(34508, 2866));
+    points.push_back(Point(34429, 2965));
+
+    size_t i, n = points.size();
+    for( i = 0; i < n; i++ )
+        pointsf.push_back(Point2f(points[i]));
+
+    std::vector<int> hull;
+    std::vector<int> hullf;
+
+    convexHull(points, hull, false, false);
+    convexHull(pointsf, hullf, false, false);
+
+    ASSERT_EQ(hull, hullf);
+}
+
 }} // namespace
 /* End of file. */
