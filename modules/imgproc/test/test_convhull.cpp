@@ -2241,16 +2241,19 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
     {
         Vec4i d = defects[i];
         //printf("defect %d. start=%d, end=%d, farthest=%d, depth=%d\n", (int)i, d[0], d[1], d[2], d[3]);
-        Point start = contours[0][d[0]];
-        Point end = contours[0][d[1]];
-        Point far = contours[0][d[2]];
+        EXPECT_LT(d[0], d[1]);
+        EXPECT_LE(d[0], d[2]);
+        EXPECT_LE(d[2], d[1]);
 
-        DRAW(line(canvas, start, end, Scalar(255, 255, 128), 3, LINE_AA);
-            line(canvas, start, far, Scalar(255, 150, 255), 3, LINE_AA);
-            line(canvas, end, far, Scalar(255, 150, 255), 3, LINE_AA);
-            circle(canvas, start, 7, Scalar(0, 0, 255), -1, LINE_AA);
-            circle(canvas, end, 7, Scalar(0, 0, 255), -1, LINE_AA);
-            circle(canvas, far, 7, Scalar(255, 0, 0), -1, LINE_AA));
+        DRAW(Point start = contours[0][d[0]];
+             Point end = contours[0][d[1]];
+             Point far = contours[0][d[2]];
+             line(canvas, start, end, Scalar(255, 255, 128), 3, LINE_AA);
+             line(canvas, start, far, Scalar(255, 150, 255), 3, LINE_AA);
+             line(canvas, end, far, Scalar(255, 150, 255), 3, LINE_AA);
+             circle(canvas, start, 7, Scalar(0, 0, 255), -1, LINE_AA);
+             circle(canvas, end, 7, Scalar(0, 0, 255), -1, LINE_AA);
+             circle(canvas, far, 7, Scalar(255, 0, 0), -1, LINE_AA));
     }
 
     DRAW(imshow("defects", canvas);
