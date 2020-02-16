@@ -231,11 +231,10 @@ void InfEngineNgraphNet::init(Target targetId)
                 }
             }
         }
-    } else {
-        for (const auto& name : requestedOutputs)
-        {
-            cnn.addOutput(name);
-        }
+    }
+    for (const auto& name : requestedOutputs)
+    {
+        cnn.addOutput(name);
     }
 
     for (const auto& it : cnn.getInputsInfo())
