@@ -40,6 +40,7 @@ Follow these steps if you want to convert the original model yourself:
 '''
 
 import argparse
+import os.path
 import numpy as np
 import cv2 as cv
 
@@ -48,12 +49,11 @@ backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
 
-def preprocess(image_path):
+def preprocess(image):
     """
     Create 4-dimensional blob from image and flip image
-    :param image_path: path to input image
+    :param image: input image
     """
-    image = cv.imread(image_path)
     image_rev = np.flip(image, axis=1)
     input = cv.dnn.blobFromImages([image, image_rev], mean=(104.00698793, 116.66876762, 122.67891434))
     return input
@@ -137,15 +137,15 @@ def decode_labels(gray_image):
     return segm
 
 
-def parse_human(image_path, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
+def parse_human(image, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
     """
     Prepare input for execution, run net and postprocess output to parse human.
-    :param image_path: path to input image
+    :param image: input image
     :param model_path: path to JPPNet model
     :param backend: name of computation backend
     :param target: name of computation target
     """
-    input = preprocess(image_path)
+    input = preprocess(image)
     input_h, input_w = input.shape[2:]
     output = run_net(input, model_path, backend, target)
     grayscale_out = postprocess(output, (input_w, input_h))
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--input', '-i', required=True, help='Path to input image.')
-    parser.add_argument('--model', '-m', required=True, help='Path to pb model.')
+    parser.add_argument('--model', '-m', default='lip_jppnet_384.pb', help='Path to pb model.')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
@@ -171,7 +171,11 @@ if __name__ == '__main__':
                              '%d: VPU' % targets)
     args, _ = parser.parse_known_args()
 
-    output = parse_human(args.input, args.model, args.backend, args.target)
+    if not os.path.isfile(args.model):
+        raise OSError("Model not exist")
+
+    image = cv.imread(args.input)
+    output = parse_human(image, args.model, args.backend, args.target)
     winName = 'Deep learning human parsing in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
     cv.imshow(winName, output)

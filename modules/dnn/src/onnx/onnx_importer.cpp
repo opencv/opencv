@@ -980,6 +980,15 @@ void ONNXImporter::populateNet(Net dstNet)
                 replaceLayerParam(layerParams, "width_scale", "zoom_factor_x");
             }
             replaceLayerParam(layerParams, "mode", "interpolation");
+
+            if (layerParams.get<String>("interpolation") == "linear" && framework_name == "pytorch") {
+                layerParams.type = "Resize";
+                Mat scales = getBlob(node_proto, constBlobs, 1);
+                CV_Assert(scales.total() == 4);
+                layerParams.set("interpolation", "opencv_linear");
+                layerParams.set("zoom_factor_y", scales.at<float>(2));
+                layerParams.set("zoom_factor_x", scales.at<float>(3));
+            }
         }
         else if (layer_type == "LogSoftmax")
         {
