@@ -51,7 +51,7 @@ const int _channels = 5;
 
 - (void)fromArray:(NSArray<RotatedRect*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
-    for (int index = 0; index < array.count; index++) {
+    for (int index = 0; index < (int)array.count; index++) {
         data[_channels * index] = [NSNumber numberWithFloat:array[index].center.x];
         data[_channels * index + 1] = [NSNumber numberWithFloat:array[index].center.y];
         data[_channels * index + 2] = [NSNumber numberWithFloat:array[index].size.width];

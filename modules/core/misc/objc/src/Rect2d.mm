@@ -149,7 +149,7 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"CVRect {%lf,%lf,%lf,%lf}", self.x, self.y, self.width, self.height];
+    return [NSString stringWithFormat:@"Rect2d {%lf,%lf,%lf,%lf}", self.x, self.y, self.width, self.height];
 }
 
 @end

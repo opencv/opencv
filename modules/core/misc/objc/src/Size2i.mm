@@ -1,5 +1,5 @@
 //
-//  CVSize.mm
+//  Size2i.mm
 //
 //  Created by Giles Payne on 2019/10/06.
 //

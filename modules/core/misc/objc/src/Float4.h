@@ -12,6 +12,8 @@
 
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 @class Mat;
 
 @interface Float4 : NSObject
@@ -36,3 +38,5 @@
 -(BOOL)isEqual:(nullable id)other;
 
 @end
+
+NS_ASSUME_NONNULL_END

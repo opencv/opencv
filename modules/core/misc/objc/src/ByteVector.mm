@@ -63,7 +63,7 @@
 }
 
 -(SInt8)get:(NSInteger)index {
-    if (index < 0 || index >= v.size()) {
+    if (index < 0 || index >= (long)v.size()) {
         @throw [NSException exceptionWithName:NSRangeException reason:@"Invalid data length" userInfo:nil];
     }
     return v[index];

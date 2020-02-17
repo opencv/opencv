@@ -49,7 +49,7 @@ const int _channels = 4;
 
 - (void)fromArray:(NSArray<DMatch*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
-    for (int index = 0; index < array.count; index++) {
+    for (int index = 0; index < (int)array.count; index++) {
         data[_channels * index] = [NSNumber numberWithFloat:array[index].queryIdx];
         data[_channels * index + 1] = [NSNumber numberWithFloat:array[index].trainIdx];
         data[_channels * index + 2] = [NSNumber numberWithFloat:array[index].imgIdx];

@@ -49,7 +49,7 @@ const int _channels = 2;
 
 - (void)fromArray:(NSArray<Point2i*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
-    for (int index = 0; index < array.count; index++) {
+    for (int index = 0; index < (int)array.count; index++) {
         data[_channels * index] = [NSNumber numberWithInt:array[index].x];
         data[_channels * index + 1] = [NSNumber numberWithInt:array[index].y];
     }

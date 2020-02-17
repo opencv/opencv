@@ -62,9 +62,9 @@
 }
 
 - (NSArray<Point2f*>*)points {
-    double _angle = self.angle * M_PI / 180.0;
-    double b = cos(_angle) * 0.5;
-    double a = sin(_angle) * 0.5f;
+    double angleRadians = self.angle * M_PI / 180.0;
+    double b = cos(angleRadians) * 0.5;
+    double a = sin(angleRadians) * 0.5f;
 
     Point2f* p0 = [[Point2f alloc] initWithX:self.center.x - a * self.size.height - b * self.size.width y:self.center.y + b * self.size.height - a * self.size.width];
     Point2f* p1 = [[Point2f alloc] initWithX:self.center.x + a * self.size.height - b * self.size.width y:self.center.y - b * self.size.height - a * self.size.width];

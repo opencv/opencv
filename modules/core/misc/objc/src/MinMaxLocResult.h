@@ -20,8 +20,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property double minVal;
 @property double maxVal;
-@property Point2i* minLoc;
-@property Point2i* maxLoc;
+@property(assign) Point2i* minLoc;
+@property(assign) Point2i* maxLoc;
 
 - (instancetype)init;
 - (instancetype)initWithMinval:(double)minVal maxVal:(double)maxVal minLoc:(Point2i*)minLoc maxLoc:(Point2i*)maxLoc;

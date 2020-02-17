@@ -1,9 +1,7 @@
 //
-//  CVRect.m
-//  StitchApp
+//  Rect2i.m
 //
 //  Created by Giles Payne on 2019/10/09.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #import "Rect2i.h"

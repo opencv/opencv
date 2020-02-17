@@ -1,5 +1,5 @@
 //
-//  Range.h
+//  KeyPoint.h
 //
 //  Created by Giles Payne on 2019/10/08.
 //  Copyright © 2019 Xtravision. All rights reserved.
@@ -13,13 +13,13 @@
 
 #import <Foundation/Foundation.h>
 
-@class CVPoint;
+@class Point2f;
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface KeyPoint : NSObject
 
-@property CVPoint* pt;
+@property(assign) Point2f* pt;
 @property float size;
 @property float angle;
 @property float response;

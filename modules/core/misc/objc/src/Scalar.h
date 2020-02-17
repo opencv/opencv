@@ -16,7 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface Scalar : NSObject
 
-@property NSArray<NSNumber*>* val;
+@property(assign) NSArray<NSNumber*>* val;
 #ifdef __cplusplus
 @property(readonly) cv::Scalar& nativeRef;
 #endif

@@ -6,11 +6,11 @@
 //
 
 #import "Mat.h"
-#import "CVSize.h"
+#import "Size2i.h"
 #import "Scalar.h"
 #import "Range.h"
-#import "CVRect.h"
-#import "CVPoint.h"
+#import "Rect2i.h"
+#import "Point2i.h"
 #import "CvType.h"
 #import "CVObjcUtil.h"
 
@@ -90,7 +90,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return self;
 }
 
-- (instancetype)initWithSize:(CVSize *)size type:(int)type {
+- (instancetype)initWithSize:(Size2i*)size type:(int)type {
     self = [super init];
     if (self) {
         _nativePtr = new cv::Mat(size.width, size.height, type);
@@ -119,7 +119,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return self;
 }
 
-- (instancetype)initWithSize:(CVSize *)size type:(int)type scalar:(Scalar *)scalar {
+- (instancetype)initWithSize:(Size2i*)size type:(int)type scalar:(Scalar *)scalar {
     self = [super init];
     if (self) {
         cv::Scalar scalerTemp(scalar.val[0].doubleValue, scalar.val[1].doubleValue, scalar.val[2].doubleValue, scalar.val[3].doubleValue);
@@ -172,7 +172,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return self;
 }
 
-- (instancetype)initWithMat:(Mat *)mat rect:(CVRect *)roi {
+- (instancetype)initWithMat:(Mat*)mat rect:(Rect2i*)roi {
     self = [super init];
     if (self) {
         cv::Range rows(roi.y, roi.y + roi.height);
@@ -263,7 +263,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     _nativePtr->create(rows, cols, type);
 }
 
-- (void)create:(CVSize*)size type:(int)type {
+- (void)create:(Size2i*)size type:(int)type {
     cv::Size tempSize(size.width, size.height);
     _nativePtr->create(tempSize, type);
 }
@@ -320,7 +320,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::eye(rows, cols, type))];
 }
 
-+ (Mat*)eye:(CVSize*)size type:(int)type {
++ (Mat*)eye:(Size2i*)size type:(int)type {
     cv::Size tempSize(size.width, size.height);
     return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::eye(tempSize, type))];
 }
@@ -341,7 +341,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return _nativePtr->isSubmatrix();
 }
 
-- (void)locateROI:(CVSize*)wholeSize ofs:(CVPoint*)ofs {
+- (void)locateROI:(Size2i*)wholeSize ofs:(Point2i*)ofs {
     cv::Size tempWholeSize;
     cv::Point tempOfs;
     _nativePtr->locateROI(tempWholeSize, tempOfs);
@@ -367,7 +367,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::ones(rows, cols, type))];
 }
 
-+ (Mat*)ones:(CVSize*)size type:(int)type {
++ (Mat*)ones:(Size2i*)size type:(int)type {
     cv::Size tempSize(size.width, size.height);
     return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::ones(tempSize, type))];
 }
@@ -434,8 +434,8 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->setTo(*(cv::Mat*)value.nativePtr))];
 }
 
-- (CVSize*)size {
-    return [[CVSize alloc] initWithWidth:_nativePtr->size().width height:_nativePtr->size().height];
+- (Size2i*)size {
+    return [[Size2i alloc] initWithWidth:_nativePtr->size().width height:_nativePtr->size().height];
 }
 
 - (int)size:(int)dimIndex {
@@ -470,7 +470,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->operator()(tempRanges))];
 }
 
-- (Mat*)submatRoi:(CVRect*)roi {
+- (Mat*)submatRoi:(Rect2i*)roi {
     cv::Rect tempRoi(roi.x, roi.y, roi.width, roi.height);
     return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->operator()(tempRoi))];
 }
@@ -491,7 +491,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::zeros(rows, cols, type))];
 }
 
-+ (Mat*)zeros:(CVSize*)size type:(int)type {
++ (Mat*)zeros:(Size2i*)size type:(int)type {
     cv::Size tempSize(size.width, size.height);
     return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::zeros(tempSize, type))];
 }

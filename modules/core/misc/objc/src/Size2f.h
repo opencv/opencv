@@ -1,5 +1,5 @@
 //
-//  CVSize.h
+//  Size2f.h
 //
 //  Created by Giles Payne on 2019/10/06.
 //

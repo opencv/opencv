@@ -14,6 +14,8 @@
 
 @class Mat;
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface Float6 : NSObject
 
 @property float v0;
@@ -38,3 +40,5 @@
 -(BOOL)isEqual:(nullable id)other;
 
 @end
+
+NS_ASSUME_NONNULL_END

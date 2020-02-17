@@ -486,7 +486,6 @@ def build_swift_signature(args):
 
 class ObjectiveCWrapperGenerator(object):
     def __init__(self):
-        self.cpp_files = []
         self.clear()
 
     def clear(self):
@@ -970,10 +969,6 @@ typedef NS_ENUM(int, {2}) {{
             return "Ptr<" + fullname + ">"
         return fullname
 
-    def finalize(self, output_objc_path):
-        list_file = os.path.join(output_objc_path, "opencv_objc.h")
-        self.save(list_file, '\n'.join(['#include "%s"' % f for f in self.cpp_files]))
-
 
 def copy_objc_files(objc_files_dir, objc_base_path, module_path):
     global total_files, updated_files
@@ -983,7 +978,7 @@ def copy_objc_files(objc_files_dir, objc_base_path, module_path):
        objc_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
     objc_files = [f.replace('\\', '/') for f in objc_files]
 
-    re_prefix = re.compile(r'^.+[\+/]([^\+]+).(h|m|mm|swift)(.in)?$')
+    re_prefix = re.compile(r'^.+[\+/]([^\+]+)\.(h|m|mm|swift)(.in)?$')
     for objc_file in objc_files:
         src = checkFileRemap(objc_file)
         m = re_prefix.match(objc_file)
@@ -1121,6 +1116,5 @@ if __name__ == "__main__":
             generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers)
         else:
             logging.info("No generated code for module: %s", module)
-    generator.finalize(objc_base_path)
 
     print('Generated files: %d (updated %d)' % (total_files, updated_files))

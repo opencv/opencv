@@ -54,7 +54,7 @@ const int _channels = 4;
 
 - (void)fromArray:(NSArray<Rect2d*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
-    for (int index = 0; index < array.count; index++) {
+    for (int index = 0; index < (int)array.count; index++) {
         data[_channels * index] = [NSNumber numberWithDouble:array[index].x];
         data[_channels * index + 1] = [NSNumber numberWithDouble:array[index].y];
         data[_channels * index + 2] = [NSNumber numberWithDouble:array[index].width];

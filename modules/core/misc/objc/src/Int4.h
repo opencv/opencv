@@ -14,6 +14,8 @@
 
 @class Mat;
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface Int4 : NSObject
 
 @property int v0;
@@ -36,3 +38,5 @@
 -(BOOL)isEqual:(nullable id)other;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -36,7 +36,7 @@
 }
 
 -(id)get:(NSInteger)index {
-    if (index < 0 || index >= _array.count) {
+    if (index < 0 || index >= (long)_array.count) {
         @throw [NSException exceptionWithName:NSRangeException reason:@"Invalid data length" userInfo:nil];
     }
     return _array[index];

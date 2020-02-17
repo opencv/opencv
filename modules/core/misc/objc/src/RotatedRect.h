@@ -21,8 +21,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RotatedRect : NSObject
 
-@property Point2f* center;
-@property Size2f* size;
+@property(assign) Point2f* center;
+@property(assign) Size2f* size;
 @property double angle;
 #ifdef __cplusplus
 @property(readonly) cv::RotatedRect& nativeRef;

@@ -41,7 +41,7 @@ template <typename CV, typename CV_RAW, typename OBJC> std::vector<CV> objc2cv_c
 
 template <typename CV, typename OBJC> void cv2objc(std::vector<CV>& vector, NSMutableArray<OBJC*>* _Nonnull array, OBJC* _Nonnull (* _Nonnull converter)(CV&)) {
     [array removeAllObjects];
-    for (int index = 0; index < vector.size(); index++) {
+    for (size_t index = 0; index < vector.size(); index++) {
         [array addObject:converter(vector[index])];
     }
 }
@@ -82,10 +82,10 @@ template <typename CV, typename CV_RAW, typename OBJC> std::vector<std::vector<C
 
 template <typename CV, typename OBJC> void cv2objc2(std::vector<std::vector<CV>>& vector, NSMutableArray<NSMutableArray<OBJC*>*>* _Nonnull array, OBJC* _Nonnull (* _Nonnull converter)(CV&)) {
     [array removeAllObjects];
-    for (int index = 0; index < vector.size(); index++) {
+    for (size_t index = 0; index < vector.size(); index++) {
         std::vector<CV>& innerVector = vector[index];
         NSMutableArray<OBJC*>* innerArray = [NSMutableArray arrayWithCapacity:innerVector.size()];
-        for (int index2 = 0; index2 < innerVector.size(); index2++) {
+        for (size_t index2 = 0; index2 < innerVector.size(); index2++) {
             [innerArray addObject:converter(innerVector[index2])];
         }
         [array addObject:innerArray];

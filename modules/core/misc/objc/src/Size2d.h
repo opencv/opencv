@@ -1,9 +1,7 @@
 //
-//  CVSize.h
-//  StitchApp
+//  Size2d.h
 //
 //  Created by Giles Payne on 2019/10/06.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #pragma once

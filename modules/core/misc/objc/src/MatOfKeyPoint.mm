@@ -50,7 +50,7 @@ const int _channels = 7;
 
 - (void)fromArray:(NSArray<KeyPoint*>*)array {
     NSMutableArray<NSNumber*>* data = [[NSMutableArray alloc] initWithCapacity:array.count * _channels];
-    for (int index = 0; index < array.count; index++) {
+    for (int index = 0; index < (int)array.count; index++) {
         data[_channels * index] = [NSNumber numberWithFloat:array[index].pt.x];
         data[_channels * index + 1] = [NSNumber numberWithFloat:array[index].pt.y];
         data[_channels * index + 2] = [NSNumber numberWithFloat:array[index].size];
