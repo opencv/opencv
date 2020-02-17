@@ -61,6 +61,7 @@
     #include <fstream>
     #if defined __ANDROID__
         #include <sys/sysconf.h>
+        #include <sys/syscall.h>
     #elif defined __APPLE__
         #include <sys/sysctl.h>
     #endif
