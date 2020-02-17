@@ -337,29 +337,25 @@ kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
 cap = cv.VideoCapture(0, cv.CAP_V4L2)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
+ret, frame = cap.read()
+cv.namedWindow("DaSiamRPN")
+cv.setMouseCallback("DaSiamRPN", get_bb)
+cv.imshow("DaSiamRPN", frame)
+cv.waitKey(0)
+target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
+state = SiamRPN_init(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
 
 #variables for fps counter
 toc = 0
-f = 0
+f = 1
 #variables for drawing bounding box
 # uicontrol = UIControl()
 drawing = False
 mode = True
+
 #tracking cicle
 while (cap.isOpened):
     ret,frame = cap.read()
-    if f == 0:
-        cv.namedWindow("DaSiamRPN")
-        cv.setMouseCallback("DaSiamRPN", get_bb)
-
-        while True:
-            cv.imshow("DaSiamRPN", frame)
-            key = cv.waitKey(1) & 0xFF
-            if key == ord(" "):
-                break
-
-        target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
-        state = SiamRPN_init(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
 
     f += 1
     tic = cv.getTickCount()
