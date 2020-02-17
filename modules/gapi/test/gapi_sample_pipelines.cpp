@@ -11,6 +11,8 @@
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
 
+#include <opencv2/gapi/core.hpp>
+
 namespace opencv_test
 {
 
@@ -40,6 +42,11 @@ namespace
         {
             out = in.clone();
         }
+    };
+
+    G_TYPED_KERNEL(GCustom, <GMat(GMat)>, "org.opencv.test.custom")
+    {
+         static GMatDesc outMeta(GMatDesc in) { return in; }
     };
 
     // These definitons test the correct macro work if the kernel has multiple output values
@@ -333,6 +340,109 @@ TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
 
     // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
     EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
+}
+
+TEST(GAPI_Pipeline, CreateKernelImplFromLambda)
+{
+    cv::Size size(300, 300);
+    int type = CV_8UC3;
+    cv::Mat in_mat(size, type);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    int value = 5;
+
+    cv::GMat in;
+    cv::GMat out = GCustom::on(in);
+    cv::GComputation comp(in, out);
+
+    // OpenCV //////////////////////////////////////////////////////////////////////////
+    auto ref_mat = in_mat + value;
+
+    // G-API //////////////////////////////////////////////////////////////////////////
+    auto impl = cv::gapi::cpu::ocv_kernel<GCustom>([&value](const cv::Mat& src, cv::Mat& dst)
+                {
+                    dst = src + value;
+                });
+
+    cv::Mat out_mat;
+    auto pkg = cv::gapi::kernels(impl);
+    comp.apply(in_mat, out_mat, cv::compile_args(pkg));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+}
+
+TEST(GAPI_Pipeline, ReplaceDefaultByLambda)
+{
+    cv::Size size(300, 300);
+    int type = CV_8UC3;
+    cv::Mat in_mat1(size, type);
+    cv::Mat in_mat2(size, type);
+    cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::GMat in1, in2;
+    cv::GMat out = cv::gapi::add(in1, in2);
+    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
+
+    // OpenCV //////////////////////////////////////////////////////////////////////////
+    cv::Mat ref_mat = in_mat1 + in_mat2;
+
+
+    // G-API //////////////////////////////////////////////////////////////////////////
+    bool is_called = false;
+    auto impl = cv::gapi::cpu::ocv_kernel<cv::gapi::core::GAdd>([&is_called]
+                (const cv::Mat& src1, const cv::Mat& src2, int, cv::Mat& dst)
+                {
+                    is_called = true;
+                    dst = src1 + src2;
+                });
+
+    cv::Mat out_mat;
+    auto pkg = cv::gapi::kernels(impl);
+    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+    EXPECT_TRUE(is_called);
+}
+
+struct AddImpl
+{
+    void operator()(const cv::Mat& in1, const cv::Mat& in2, int, cv::Mat& out)
+    {
+        out = in1 + in2;
+        is_called = true;
+    }
+
+    bool is_called = false;
+};
+
+TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
+{
+    cv::Size size(300, 300);
+    int type = CV_8UC3;
+    cv::Mat in_mat1(size, type);
+    cv::Mat in_mat2(size, type);
+    cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::GMat in1, in2;
+    cv::GMat out = cv::gapi::add(in1, in2);
+    cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
+
+    // OpenCV //////////////////////////////////////////////////////////////////////////
+    cv::Mat ref_mat = in_mat1 + in_mat2;
+
+
+    // G-API ///////////////////////////////////////////////////////////////////////////
+    AddImpl f;
+    EXPECT_FALSE(f.is_called);
+    auto impl = cv::gapi::cpu::ocv_kernel<cv::gapi::core::GAdd>(f);
+
+    cv::Mat out_mat;
+    auto pkg = cv::gapi::kernels(impl);
+    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+    EXPECT_TRUE(f.is_called);
 }
 
 } // namespace opencv_test
