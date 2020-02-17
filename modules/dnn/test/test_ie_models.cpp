@@ -304,13 +304,19 @@ TEST_P(DNNTestOpenVINO, models)
     runIE(targetId, xmlPath, binPath, inputsMap, ieOutputsMap);
     runCV(backendId, targetId, xmlPath, binPath, inputsMap, cvOutputsMap);
 
+    double eps = 0;
+#if INF_ENGINE_VER_MAJOR_GE(2020010000)
+    if (targetId == DNN_TARGET_CPU && checkHardwareSupport(CV_CPU_AVX_512F))
+        eps = 1e-5;
+#endif
+
     EXPECT_EQ(ieOutputsMap.size(), cvOutputsMap.size());
     for (auto& srcIt : ieOutputsMap)
     {
         auto dstIt = cvOutputsMap.find(srcIt.first);
         CV_Assert(dstIt != cvOutputsMap.end());
         double normInf = cvtest::norm(srcIt.second, dstIt->second, cv::NORM_INF);
-        EXPECT_EQ(normInf, 0);
+        EXPECT_LE(normInf, eps) << "output=" << srcIt.first;
     }
 }
 
