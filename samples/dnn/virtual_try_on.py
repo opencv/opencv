@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
-You can download the Geometric Matching Module model from https://drive.google.com/file/d/1oBnM9R-LgH0APkwxOiEUbFqbKArh0ZcR/view?usp=sharing
-You can download the Try-On Module model from https://drive.google.com/file/d/1czKbtPlFzE3-CN7lHsUNsgvKXLVi244c/view?usp=sharing
+You can download the Geometric Matching Module model from https://www.dropbox.com/s/tyhc73xa051grjp/cp_vton_gmm.onnx?dl=0
+You can download the Try-On Module model from https://www.dropbox.com/s/q2x97ve2h53j66k/cp_vton_tom.onnx?dl=0
 You can download the cloth segmentation model from https://www.dropbox.com/s/qag9vzambhhkvxr/lip_jppnet_384.pb?dl=0
 You can find the OpenPose proto in opencv_extra/testdata/dnn/openpose_pose_coco.prototxt
 and get .caffemodel using opencv_extra/testdata/dnn/download_models.py
@@ -22,8 +22,8 @@ parser = argparse.ArgumentParser(description='Use this script to run virtial try
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--input_image', '-i', required=True, help='Path to image with person.')
 parser.add_argument('--input_cloth', '-c', required=True, help='Path to target cloth image')
-parser.add_argument('--gmm_model', '-gmm', default='gmm.onnx', help='Path to Geometric Matching Module .onnx model.')
-parser.add_argument('--tom_model', '-tom', default='tom.onnx', help='Path to Try-On Module .onnx model.')
+parser.add_argument('--gmm_model', '-gmm', default='cp_vton_gmm.onnx', help='Path to Geometric Matching Module .onnx model.')
+parser.add_argument('--tom_model', '-tom', default='cp_vton_tom.onnx', help='Path to Try-On Module .onnx model.')
 parser.add_argument('--segmentation_model', default='lip_jppnet_384.pb', help='Path to cloth segmentation .pb model.')
 parser.add_argument('--openpose_proto', default='openpose_pose_coco.prototxt', help='Path to OpenPose .prototxt model was trained on COCO dataset.')
 parser.add_argument('--openpose_model', default='openpose_pose_coco.caffemodel', help='Path to OpenPose .caffemodel model was trained on COCO dataset.')
@@ -71,8 +71,11 @@ def get_pose_map(image, proto_path, model_path, backend, target, height=256, wid
 
 
 class BilinearFilter(object):
-    """ PIL resize implementation """
-    def precompute_coeffs(self, inSize, outSize):
+    """
+    PIL bilinear resize implementation
+    image = image.resize((image_width // 16, image_height // 16), Image.BILINEAR)
+    """
+    def _precompute_coeffs(self, inSize, outSize):
         filterscale = max(1.0, inSize / outSize)
         ksize = int(np.ceil(filterscale)) * 2 + 1
 
@@ -92,7 +95,7 @@ class BilinearFilter(object):
             kk[xx * ksize : xx * ksize + bilinear.size] = np.where(ww == 0.0, bilinear, bilinear / ww)
         return bounds, kk, ksize
 
-    def ResampleHorizontal(self, out, img, ksize, bounds, kk):
+    def _resample_horizontal(self, out, img, ksize, bounds, kk):
         for yy in range(0, out.shape[0]):
             for xx in range(0, out.shape[1]):
                 xmin = bounds[xx * 2 + 0]
@@ -100,22 +103,22 @@ class BilinearFilter(object):
                 k = kk[xx * ksize : xx * ksize + xmax]
                 out[yy, xx] = np.round(np.sum(img[yy, xmin : xmin + xmax] * k))
 
-    def ResampleVertical(self, out, img, ksize, bounds, kk):
+    def _resample_vertical(self, out, img, ksize, bounds, kk):
         for yy in range(0, out.shape[0]):
             ymin = bounds[yy * 2 + 0]
             ymax = bounds[yy * 2 + 1]
             k = kk[yy * ksize: yy * ksize + ymax]
             out[yy] = np.round(np.sum(img[ymin : ymin + ymax, 0:out.shape[1]] * k[:, np.newaxis], axis=0))
 
-    def ImagingResample(self, img, xsize, ysize):
+    def imaging_resample(self, img, xsize, ysize):
         height, width, *args = img.shape
-        bounds_horiz, kk_horiz, ksize_horiz = self.precompute_coeffs(width, xsize)
-        bounds_vert, kk_vert, ksize_vert    = self.precompute_coeffs(height, ysize)
+        bounds_horiz, kk_horiz, ksize_horiz = self._precompute_coeffs(width, xsize)
+        bounds_vert, kk_vert, ksize_vert    = self._precompute_coeffs(height, ysize)
 
         out_hor = np.empty((img.shape[0], xsize), dtype=np.uint8)
-        self.ResampleHorizontal(out_hor, img, ksize_horiz, bounds_horiz, kk_horiz)
+        self._resample_horizontal(out_hor, img, ksize_horiz, bounds_horiz, kk_horiz)
         out = np.empty((ysize, xsize), dtype=np.uint8)
-        self.ResampleVertical(out, out_hor, ksize_vert, bounds_vert, kk_vert)
+        self._resample_vertical(out, out_hor, ksize_vert, bounds_vert, kk_vert)
         return out
 
 
@@ -173,7 +176,7 @@ class CpVton(object):
         img_head = input_image * phead - (1 - phead)
 
         downsample = BilinearFilter()
-        down = downsample.ImagingResample(pose_shape, width // 16, height // 16)
+        down = downsample.imaging_resample(pose_shape, width // 16, height // 16)
         res_shape = cv.resize(down, (width, height), cv.INTER_LINEAR)
 
         res_shape = cv.dnn.blobFromImage(res_shape, 1.0 / 127.5, mean=(127.5, 127.5, 127.5), swapRB=True)
