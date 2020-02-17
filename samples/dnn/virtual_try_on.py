@@ -8,6 +8,7 @@ and get .caffemodel using opencv_extra/testdata/dnn/download_models.py
 '''
 
 import argparse
+import os.path
 import numpy as np
 import cv2 as cv
 
@@ -415,6 +416,17 @@ class CorrelationLayer(object):
 
 
 if __name__ == "__main__":
+    if not os.path.isfile(args.gmm_model):
+        raise OSError("GMM model not exist")
+    if not os.path.isfile(args.tom_model):
+        raise OSError("TOM model not exist")
+    if not os.path.isfile(args.segmentation_model):
+        raise OSError("Segmentation model not exist")
+    if not os.path.isfile(findFile(args.openpose_proto)):
+        raise OSError("OpenPose proto not exist")
+    if not os.path.isfile(findFile(args.openpose_model)):
+        raise OSError("OpenPose model not exist")
+
     person_img = cv.imread(args.input_image)
     ratio = 256 / 192
     inp_h, inp_w, _ = person_img.shape

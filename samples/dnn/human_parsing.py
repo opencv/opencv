@@ -40,6 +40,7 @@ Follow these steps if you want to convert the original model yourself:
 '''
 
 import argparse
+import os.path
 import numpy as np
 import cv2 as cv
 
@@ -169,6 +170,9 @@ if __name__ == '__main__':
                              '%d: OpenCL fp16 (half-float precision), '
                              '%d: VPU' % targets)
     args, _ = parser.parse_known_args()
+
+    if not os.path.isfile(args.model):
+        raise OSError("Model not exist")
 
     image = cv.imread(args.input)
     output = parse_human(image, args.model, args.backend, args.target)
