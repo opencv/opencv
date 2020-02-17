@@ -70,6 +70,7 @@ namespace
             {
                 dump_file.seekp(0, std::ofstream::beg);
                 cv::gimpl::serialization::dumpGSerializedOps(s, dump_file);
+                cv::gimpl::serialization::dumpGSerializedDatas(s, dump_file);
             }
             dump_file.close();
 
@@ -77,6 +78,7 @@ namespace
             if(dump_file1.is_open())
             {
                 cv::gimpl::serialization::readGSerializedOps(s, dump_file1);
+                cv::gimpl::serialization::readGSerializedDatas(s, dump_file1);
             }
             dump_file1.close();
 

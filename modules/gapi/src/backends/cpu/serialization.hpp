@@ -81,6 +81,8 @@ void printData(const Data& data);
 void printGSerialized(const GSerialized s);
 void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops);
 void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops);
+void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data);
+void readGSerializedDatas(GSerialized &s, std::ifstream &ifs_data);
 
 } // namespace serialization
 } // namespace gimpl

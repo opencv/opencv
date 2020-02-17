@@ -408,6 +408,67 @@ void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops)
     }
 }
 
+void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data)
+{
+    uint datas_size = (uint)s.m_datas.size();
+    ofs_data.write((char*)&datas_size, sizeof(uint));
+    //std::cout << "dumpGSerializedDatas datas size " << s.m_datas.size() <<  std::endl;
+    for (const auto& data : s.m_datas)
+    {
+        //RcDesc rc;
+        ofs_data.write((char*)&data.rc, sizeof(RcDesc));
+        //std::cout << "dumpGSerializedDatas RcDesc " << data.rc.id << " " << (int)data.rc.shape <<  std::endl;
+
+        //GMetaArg meta;
+        switch (data.rc.shape)
+        {
+        case cv::GShape::GMAT:
+        {
+            std::cout << "dumpGSerializedDatas  GMAT " << data.meta << std::endl;
+            GMatDesc mat_desc = util::get<GMatDesc>(data.meta);
+            ofs_data.write((char*)&mat_desc.depth, sizeof(int));
+            ofs_data.write((char*)&mat_desc.chan, sizeof(int));
+            ofs_data.write((char*)&mat_desc.size, sizeof(cv::gapi::own::Size));
+            int bool_val;
+            bool_val = mat_desc.planar ? 1 : 0;
+            ofs_data.write((char*)&bool_val, sizeof(int));
+//            std::cout << "dumpGSerializedOps GMAT data " << mat_desc.depth << " "
+//                      << mat_desc.chan << " "
+//                      << mat_desc.size.width << " " << mat_desc.size.height << " "
+//                      << bool_val << std::endl;
+            uint dims_size = (uint)mat_desc.dims.size();
+            ofs_data.write((char*)&dims_size, sizeof(uint));
+            ofs_data.write((char*)mat_desc.dims.data(), dims_size * sizeof(int));
+            for(uint j = 0; j < dims_size; j++)
+            {
+                std::cout << mat_desc.dims[j] << std::endl;
+            }
+            break;
+        }
+        case cv::GShape::GSCALAR:
+        {
+            //std::cout << "dumpGSerializedDatas  GSCALAR " << std::endl;
+            //GScalarDesc scalar_desc = util::get<GScalarDesc>(data.meta);
+            break;
+        }
+        case cv::GShape::GARRAY:
+        {   //std::cout << "dumpGSerializedDatas  GARRAY " << std::endl;
+            //GArrayDesc array_desc = util::get<GArrayDesc>(data.meta);
+            break;
+        }
+        case cv::GShape::GOPAQUE:
+        {
+            //std::cout << "dumpGSerializedDatas  GOPAQUE " << std::endl;
+            //GOpaqueDesc opaque_desc = util::get<GOpaqueDesc>(data.meta);
+            break;
+        }
+        default:
+            std::cout << "dumpGSerializedDatas  unsupported" << std::endl;
+        }
+
+    }
+}
+
 void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops)
 {
     uint ops_size;
@@ -640,6 +701,81 @@ void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops)
         std::fill(s.m_ops[i].opaque_cvrects.begin(), s.m_ops[i].opaque_cvrects.end(), cv::Rect(0, 0, 0, 0));
         s.m_ops[i].opaque_cvrects.clear();
         s.m_ops[i].opaque_cvrects = opaque_cvrects;
+    }
+}
+
+void readGSerializedDatas(GSerialized &s, std::ifstream &ifs_data)
+{
+    uint datas_size;
+    ifs_data.read((char*)&datas_size, sizeof(uint));
+    //std::cout << "readGSerializedDatas datas size " << datas_size <<  std::endl;
+    for (uint i = 0; i < datas_size;  i++)
+    {
+        //RcDesc rc;
+        RcDesc rc;
+        ifs_data.read((char*)&rc, sizeof(RcDesc));
+        //std::cout << "readGSerializedDatas RcDesc " << rc.id << " " << (int)rc.shape <<  std::endl;
+        s.m_datas[i].rc.id = 0;
+        s.m_datas[i].rc.shape = cv::GShape::GMAT;
+        s.m_datas[i].rc = rc;
+
+        //GMetaArg meta;
+        switch (s.m_datas[i].rc.shape)
+        {
+        case cv::GShape::GMAT:
+        {
+            //std::cout << "readGSerializedDatas  GMAT " << std::endl;
+            GMatDesc mat_desc;
+            ifs_data.read((char*)&mat_desc.depth, sizeof(int));
+            ifs_data.read((char*)&mat_desc.chan, sizeof(int));
+            ifs_data.read((char*)&mat_desc.size, sizeof(cv::gapi::own::Size));
+            int bool_val;
+            ifs_data.read((char*)&bool_val, sizeof(int));
+            mat_desc.planar = bool_val == 1 ? true : false;
+//            std::cout << "readGSerializedDatas GMAT data " << mat_desc.depth << " "
+//                      << mat_desc.chan << " "
+//                      << mat_desc.size.width << " " << mat_desc.size.height << " "
+//                      << mat_desc.planar << std::endl;
+            uint dims_size;
+            ifs_data.read((char*)&dims_size, sizeof(uint));
+            //std::cout << "readGSerializedDatas  GMAT dims size " << dims_size << std::endl;
+            std::vector<int> dims(dims_size);
+            ifs_data.read((char*)dims.data(), dims_size * sizeof(int));
+            mat_desc.dims = dims;
+            for(uint j = 0; j < dims_size; j++)
+            {
+                std::cout << mat_desc.dims[j] << std::endl;
+            }
+            s.m_datas[i].meta = util::monostate();
+            //s.m_datas[i].meta(std::move(mat_desc));
+            s.m_datas[i].meta = GMatDesc(mat_desc.depth, mat_desc.chan, mat_desc.size, mat_desc.planar);
+            break;
+        }
+        case cv::GShape::GSCALAR:
+        {
+            //std::cout << "readGSerializedDatas  GSCALAR " << std::endl;
+            s.m_datas[i].meta = util::monostate();
+            s.m_datas[i].meta = GScalarDesc();
+            break;
+        }
+        case cv::GShape::GARRAY:
+        {
+            //std::cout << "readGSerializedDatas  GARRAY " << std::endl;
+            s.m_datas[i].meta = util::monostate();
+            s.m_datas[i].meta = GArrayDesc();
+            break;
+        }
+        case cv::GShape::GOPAQUE:
+        {
+            //std::cout << "readGSerializedDatas  GOPAQUE " << std::endl;
+            s.m_datas[i].meta = util::monostate();
+            s.m_datas[i].meta = GOpaqueDesc();
+            break;
+        }
+        default:
+            std::cout << "readGSerializedDatas  unsupported" << std::endl;
+        }
+
     }
 }
 
