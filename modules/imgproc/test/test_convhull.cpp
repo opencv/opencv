@@ -2182,7 +2182,7 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
     Mat canvas_gray(Size(60*scale, 45*scale), CV_8U, Scalar::all(0));
     fillConvexPoly(canvas_gray, contour_.ptr<Point>(), npoints, Scalar(255, 255, 255));
 
-#if 1
+#if 1 // try to eliminate the self-intersection in one way or another
 #if 1
     // one way to eliminate the contour self-intersection in this particular case is to apply dilate(),
     // so that the self-repeating points are not self-repeating anymore
