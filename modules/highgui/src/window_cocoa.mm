@@ -111,11 +111,14 @@ static bool wasInitialized = false;
     BOOL autosize;
     BOOL firstContent;
     int status;
+    int x0, y0;
 }
 @property(assign) CvMouseCallback mouseCallback;
 @property(assign) void *mouseParam;
 @property(assign) BOOL autosize;
 @property(assign) BOOL firstContent;
+@property(assign) int x0;
+@property(assign) int y0;
 @property(retain) NSMutableDictionary *sliders;
 @property(readwrite) int status;
 - (CVView *)contentView;
@@ -251,6 +254,16 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
                 contentSize.height = scaledImageSize.height + [window contentView].sliderHeight;
                 contentSize.width = std::max<int>(scaledImageSize.width, MIN_SLIDER_WIDTH);
                 [window setContentSize:contentSize]; //adjust sliders to fit new window size
+                if([window firstContent])
+                {
+                    int x = [window x0];
+                    int y = [window y0];
+                    if(x >= 0 && y >= 0)
+                    {
+                        y = [[window screen] visibleFrame].size.height - y;
+                        [window setFrameTopLeftPoint:NSMakePoint(x, y)];
+                    }
+                }
             }
         }
         [window setFirstContent:NO];
@@ -274,7 +287,6 @@ CV_IMPL void cvResizeWindow( const char* name, int width, int height)
 
 CV_IMPL void cvMoveWindow( const char* name, int x, int y)
 {
-
     CV_FUNCNAME("cvMoveWindow");
     __BEGIN__;
 
@@ -286,8 +298,14 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y)
     //cout << "cvMoveWindow"<< endl;
     window = cvGetWindow(name);
     if(window) {
-        y = [[window screen] frame].size.height - y;
-        [window setFrameTopLeftPoint:NSMakePoint(x, y)];
+        if([window firstContent]) {
+            [window setX0:x];
+            [window setY0:y];
+        }
+        else {
+            y = [[window screen] visibleFrame].size.height - y;
+            [window setFrameTopLeftPoint:NSMakePoint(x, y)];
+        }
     }
     [localpool1 drain];
 
@@ -556,6 +574,8 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     [window setFrameTopLeftPoint:initContentRect.origin];
 
     [window setFirstContent:YES];
+    [window setX0:-1];
+    [window setY0:-1];
 
     [window setContentView:[[CVView alloc] init]];
 
@@ -818,6 +838,8 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 @synthesize mouseParam;
 @synthesize autosize;
 @synthesize firstContent;
+@synthesize x0;
+@synthesize y0;
 @synthesize sliders;
 @synthesize status;
 
