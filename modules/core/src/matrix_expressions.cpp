@@ -1312,9 +1312,12 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
                 cv::add(dst, e.s, dst);
         }
         else
-            cv::addWeighted(e.a, e.alpha, e.b, e.beta, e.s[0], dst);
+        {
+            cv::addWeighted(e.a, e.alpha, e.b, e.beta, 0, dst);
+            cv::add(dst, e.s, dst);
+        }
     }
-    else if( e.s.isReal() && (dst.data != m.data || fabs(e.alpha) != 1))
+    else if( e.a.channels() == 1 && e.s.isReal() && (dst.data != m.data || fabs(e.alpha) != 1))
     {
         e.a.convertTo(m, _type, e.alpha, e.s[0]);
         return;
