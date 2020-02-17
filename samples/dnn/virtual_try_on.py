@@ -413,11 +413,26 @@ class CorrelationLayer(object):
 
 if __name__ == "__main__":
     person_img = cv.imread(args.input_image)
-    cloth_img = cv.imread(args.input_cloth)
+    ratio = 256 / 192
+    inp_h, inp_w, _ = person_img.shape
+    current_ratio = inp_h / inp_w
+    if current_ratio > ratio:
+        center_h = inp_h // 2
+        out_h = inp_w * ratio
+        start = int(center_h - out_h // 2)
+        end = int(center_h + out_h // 2)
+        person_img = person_img[start:end, ...]
+    else:
+        center_w = inp_w // 2
+        out_w = inp_h / ratio
+        start = int(center_w - out_w // 2)
+        end = int(center_w + out_w // 2)
+        person_img = person_img[:, start:end, :]
 
+    cloth_img = cv.imread(args.input_cloth)
     pose = get_pose_map(person_img, findFile(args.openpose_proto),
                         findFile(args.openpose_model), args.backend, args.target)
-    segm_image = parse_human(args.input_image, args.segmentation_model)
+    segm_image = parse_human(person_img, args.segmentation_model)
     segm_image = cv.resize(segm_image, (192, 256), cv.INTER_LINEAR)
 
     cv.dnn_registerLayer('Correlation', CorrelationLayer)
