@@ -475,6 +475,9 @@ public:
                 else if (layerParams.get<String>("type") == "NEAREST") {
                     layerParams.set("interpolation", "nearest");
                 }
+                float factor = layerParams.get<float>("factor", 1.0);
+                layerParams.set("zoom_factor", factor);
+                CV_Assert(layer.bottom_size() == 1 || (layer.bottom_size() == 2 && factor == 1.0));
             }
             else if ("ConvolutionDepthwise" == type)
             {
