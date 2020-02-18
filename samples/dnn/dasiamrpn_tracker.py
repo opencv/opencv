@@ -1,8 +1,8 @@
 """
 DaSiamRPN tracker.
 Original paper: https://arxiv.org/abs/1808.06048
-Link to onnx models: https://drive.google.com/drive/folders/1UuwZsgoOVJfwHdE7rS8dtG4UvYfr8OGi?usp=sharing
 Link to original repo: https://github.com/foolwood/DaSiamRPN
+Link to onnx models: https://drive.google.com/drive/folders/1UuwZsgoOVJfwHdE7rS8dtG4UvYfr8OGi?usp=sharing
 """
 
 import numpy as np
@@ -94,6 +94,7 @@ class TrackerConfig(object):
     penalty_k = 0.055
     window_influence = 0.42
     lr = 0.295
+    size_checking = True
 
 #initialization of network
 def SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
@@ -101,6 +102,10 @@ def SiamRPN_init(im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
     p = TrackerConfig()
     state['im_h'] = im.shape[0]
     state['im_w'] = im.shape[1]
+
+    if p.size_checking:
+        if ((target_sz[0] * target_sz[1]) / float(state['im_h'] * state['im_w'])) < 0.004:
+            raise AssertionError("Initializing bounding box is too small - try to restart tracker  with larger bounding box")
 
     p.anchor = generate_anchor(p.total_stride, p.scales, p.ratios, int(p.score_size))
     avg_chans = np.mean(im, axis=(0, 1))
@@ -174,7 +179,7 @@ def SiamRPN_track(state, im):
     state['target_pos'] = target_pos
     state['target_sz'] = target_sz
     state['score'] = score
-
+    # print(state)
     return state
 
 #evaluations with cropped images
@@ -241,10 +246,9 @@ def softmax(x):
     y = e_x / e_x.sum(axis = 0)
     return y
 
-# #function for drawing initial bounding box
+#function for drawing initial bounding box
 def get_bb(event, x, y, flag, param):
-    global point, cx, cy, w, h, drawing, mode
-
+    global point, cx, cy, w, h
     if event == cv.EVENT_LBUTTONDOWN:
         point = [(x, y)]
 
@@ -256,69 +260,7 @@ def get_bb(event, x, y, flag, param):
         cy = point[0][1] - (point[0][1]- point[1][1]) / 2
         w = abs(point[0][0] - point[1][0])
         h = abs(point[0][1] - point[1][1])
-######################################################################################
-# def get_bb(event, x, y, flag, param):
-#     global drawing, mode, ix, iy
 
-#     if event == cv.EVENT_LBUTTONDOWN:
-#         drawing = True
-#         ix, iy = x, y
-#     elif event == cv.EVENT_MOUSEMOVE:
-#         if drawing == True:
-#             if mode == True:
-#                 cv.rectangle(frame, (ix, iy), (x, y), (0, 255, 0), 3)
-#                 a = x
-#                 b = y
-#                 if a != x | b != y:
-#                     cv.rectangle(frame, (ix, iy), (x, y), (0, 0, 0), -1)
-#             else:
-#                 cv.circle(frame, (x, y), 5, (0, 255, 0), -1)
-#     elif event == cv.EVENT_LBUTTONUP:
-#         drawing = False
-#         if mode == True:
-#             cv.rectangle(frame, (ix, iy), (x, y), (0, 255, 0), 3)
-#             cx = point[0][0] - (point[0][0] - point[1][0]) / 2
-#             cy = point[0][1] - (point[0][1]- point[1][1]) / 2
-#             w = abs(point[0][0] - point[1][0])
-#             h = abs(point[0][1] - point[1][1])
-#         else:
-#             cv.circle(frame, (x, y), 5,(0, 0, 255), -1)
-##########################################################################################
-# class UIControl:
-#     def __init__(self):
-#         self.mode = 'init'
-#         self.target_tl = (-1, -1)
-#         self.target_br = (-1, -1)
-#         self.mode_switch = False
-
-#     def mouse_callback(self, event, x, y, flag, param):
-#         if event == cv.EVENT_LBUTTONDOWN and self.mode == 'init':
-#             self.target_tl = (x, y)
-#             self.target_br = (x, y)
-#             self.mode = 'select'
-#             self.mode_switch = True
-#         elif event == cv.EVENT_MOUSEMOVE and self.mode == 'select':
-#             self.target_br = (x, y)
-#         elif event == cv.EVENT_LBUTTONUP and self.mode == 'select':
-#             self.target_br = (x, y)
-#             self.mode = 'track'
-#             self.mode_switch = True
-
-#     def get_tl(self):
-#         return self.target_tl if self.target_tl[0] < self.target_br[0] else self.target_br
-
-#     def get_br(self):
-#         return self.target_br if self.target_tl[0] < self.target_br[0] else self.target_tl
-
-#     def get_bb(self):
-#         tl = self.get_tl()
-#         br = self.get_br()
-#         cx = br[0] - (br[0] - tl[0]) / 2
-#         cy = br[1] - (br[1] - tl[1]) / 2
-#         w = abs(br[0] - tl[0])
-#         h = abs(br[1] - br[1])
-#         return [cx, cy, w, h]
-############################################################################################
 #Reading paths to onnx files with models from command line when launching tracking.
 #--net *absolute path to onnx file with net*
 #--kernel_r1 and --kernel_cls1 *absolute paths to onnx files with added convolution layers*
@@ -348,25 +290,29 @@ state = SiamRPN_init(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
 #variables for fps counter
 toc = 0
 f = 1
-#variables for drawing bounding box
-# uicontrol = UIControl()
-drawing = False
-mode = True
 
 #tracking cicle
 while (cap.isOpened):
+
     ret,frame = cap.read()
 
     f += 1
     tic = cv.getTickCount()
+
     state = SiamRPN_track(state, frame)
-    toc += cv.getTickCount()-tic
+
+    toc += cv.getTickCount() - tic
 
     w, h = state['target_sz']
     cx, cy = state['target_pos']
+
     cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2), int(w), int(h)), (0, 255, 255), 3)
     cv.imshow('DaSiamRPN', frame)
+
     key = cv.waitKey(1)
     if key == 27:
         print('Tracking Speed {:.1f}fps'.format((f - 1) / (toc / cv.getTickFrequency())))
         break
+
+cap.release()
+cv.destroyAllWindows()
