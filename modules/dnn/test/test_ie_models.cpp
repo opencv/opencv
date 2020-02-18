@@ -73,28 +73,7 @@ struct OpenVINOModelTestCaseInfo
 static const std::map<std::string, OpenVINOModelTestCaseInfo>& getOpenVINOTestModels()
 {
     static std::map<std::string, OpenVINOModelTestCaseInfo> g_models {
-#if INF_ENGINE_RELEASE <= 2018050000
-        { "age-gender-recognition-retail-0013", {
-            "deployment_tools/intel_models/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013",
-            "deployment_tools/intel_models/age-gender-recognition-retail-0013/FP16/age-gender-recognition-retail-0013"
-        }},
-        { "face-person-detection-retail-0002", {
-            "deployment_tools/intel_models/face-person-detection-retail-0002/FP32/face-person-detection-retail-0002",
-            "deployment_tools/intel_models/face-person-detection-retail-0002/FP16/face-person-detection-retail-0002"
-        }},
-        { "head-pose-estimation-adas-0001", {
-            "deployment_tools/intel_models/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001",
-            "deployment_tools/intel_models/head-pose-estimation-adas-0001/FP16/head-pose-estimation-adas-0001"
-        }},
-        { "person-detection-retail-0002", {
-            "deployment_tools/intel_models/person-detection-retail-0002/FP32/person-detection-retail-0002",
-            "deployment_tools/intel_models/person-detection-retail-0002/FP16/person-detection-retail-0002"
-        }},
-        { "vehicle-detection-adas-0002", {
-            "deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002",
-            "deployment_tools/intel_models/vehicle-detection-adas-0002/FP16/vehicle-detection-adas-0002"
-        }}
-#else
+#if INF_ENGINE_RELEASE >= 2018050000
         // layout is defined by open_model_zoo/model_downloader
         // Downloaded using these parameters for Open Model Zoo downloader (2019R1):
         // ./downloader.py -o ${OPENCV_DNN_TEST_DATA_PATH}/omz_intel_models --cache_dir ${OPENCV_DNN_TEST_DATA_PATH}/.omz_cache/ \
@@ -118,7 +97,16 @@ static const std::map<std::string, OpenVINOModelTestCaseInfo>& getOpenVINOTestMo
         { "vehicle-detection-adas-0002", {
             "Transportation/object_detection/vehicle/mobilenet-reduced-ssd/dldt/vehicle-detection-adas-0002",
             "Transportation/object_detection/vehicle/mobilenet-reduced-ssd/dldt/vehicle-detection-adas-0002-fp16"
-        }}
+        }},
+#endif
+#if INF_ENGINE_RELEASE >= 2020010000
+        // Downloaded using these parameters for Open Model Zoo downloader (2020.1):
+        // ./downloader.py -o ${OPENCV_DNN_TEST_DATA_PATH}/omz_intel_models --cache_dir ${OPENCV_DNN_TEST_DATA_PATH}/.omz_cache/ \
+        //     --name person-detection-retail-0013
+        { "person-detection-retail-0013", {  // IRv10
+            "intel/person-detection-retail-0013/FP32/person-detection-retail-0013",
+            "intel/person-detection-retail-0013/FP16/person-detection-retail-0013"
+        }},
 #endif
     };
 
@@ -305,8 +293,8 @@ TEST_P(DNNTestOpenVINO, models)
     OpenVINOModelTestCaseInfo modelInfo = it->second;
     std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
 
-    std::string xmlPath = findDataFile(modelPath + ".xml");
-    std::string binPath = findDataFile(modelPath + ".bin");
+    std::string xmlPath = findDataFile(modelPath + ".xml", false);
+    std::string binPath = findDataFile(modelPath + ".bin", false);
 
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
@@ -316,13 +304,19 @@ TEST_P(DNNTestOpenVINO, models)
     runIE(targetId, xmlPath, binPath, inputsMap, ieOutputsMap);
     runCV(backendId, targetId, xmlPath, binPath, inputsMap, cvOutputsMap);
 
+    double eps = 0;
+#if INF_ENGINE_VER_MAJOR_GE(2020010000)
+    if (targetId == DNN_TARGET_CPU && checkHardwareSupport(CV_CPU_AVX_512F))
+        eps = 1e-5;
+#endif
+
     EXPECT_EQ(ieOutputsMap.size(), cvOutputsMap.size());
     for (auto& srcIt : ieOutputsMap)
     {
         auto dstIt = cvOutputsMap.find(srcIt.first);
         CV_Assert(dstIt != cvOutputsMap.end());
         double normInf = cvtest::norm(srcIt.second, dstIt->second, cv::NORM_INF);
-        EXPECT_EQ(normInf, 0);
+        EXPECT_LE(normInf, eps) << "output=" << srcIt.first;
     }
 }
 
