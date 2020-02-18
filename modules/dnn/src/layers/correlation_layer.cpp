@@ -20,6 +20,9 @@ public:
         pad = params.get<int>("pad", 0);
         CV_Assert(params.has("kernel_size"));
         kernel = params.get<int>("kernel_size");
+        if (kernel % 2 == 0) {
+            CV_Error(Error::StsNotImplemented, "Odd kernel size required.");
+        }
         CV_Assert(params.has("max_displacement"));
         max_displacement = params.get<int>("max_displacement");
         stride_1 = params.get<int>("stride_1", 1);

@@ -133,6 +133,8 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Scale,          ScaleLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DataAugmentation, DataAugmentationLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Correlation,    CorrelationLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Accum,          AccumLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(FlowWarp,       FlowWarpLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
 }

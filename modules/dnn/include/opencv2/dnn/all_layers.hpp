@@ -568,6 +568,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<CorrelationLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS AccumLayer : public Layer
+    {
+    public:
+        static Ptr<AccumLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS FlowWarpLayer : public Layer
+    {
+    public:
+        static Ptr<FlowWarpLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS PriorBoxLayer : public Layer
     {
     public:
