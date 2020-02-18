@@ -360,5 +360,74 @@ Ptr<NormalizeBBoxLayer> NormalizeBBoxLayer::create(const LayerParams &params)
     return Ptr<NormalizeBBoxLayer>(new NormalizeBBoxLayerImpl(params));
 }
 
+
+class ChannelNormLayerImpl CV_FINAL : public ChannelNormLayer
+{
+public:
+    ChannelNormLayerImpl(const LayerParams& params)
+    {
+        setParamsFrom(params);
+    }
+
+    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<MatShape> &outputs,
+                                 std::vector<MatShape> &internals) const CV_OVERRIDE
+    {
+        CV_Assert_N(inputs.size() == 1);
+        const int num = inputs[0][0];
+        const int height = inputs[0][2];
+        const int width = inputs[0][3];
+
+        std::vector<int> outShape;
+        outShape.push_back(num);
+        outShape.push_back(1);
+        outShape.push_back(height);
+        outShape.push_back(width);
+        outputs.assign(1, outShape);
+        return false;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        const float* inpData = (float*)inputs[0].data;
+        float* outData = (float*)outputs[0].data;
+
+        const int num      = outputs[0].size[0];
+        const int channels = inputs[0].size[1];
+        const int height   = outputs[0].size[2];
+        const int width    = outputs[0].size[3];
+
+        for (int n = 0; n < num; n++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    float sum_squares = 0;
+                    for (int c = 0; c < channels; c++)
+                    {
+                        float val = inpData[((n * channels + c) * height + y) * width + x];
+                        sum_squares += val*val;
+                    }
+                    outData[(n * height + y) * width + x] = sqrt(sum_squares);
+                }
+            }
+        }
+    }
+};
+
+Ptr<ChannelNormLayer> ChannelNormLayer::create(const LayerParams &params)
+{
+    return Ptr<ChannelNormLayer>(new ChannelNormLayerImpl(params));
+}
+
 }
 }
