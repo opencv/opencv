@@ -36,7 +36,7 @@ class FastX : public cv::Feature2D
                 branches = 2;
                 min_scale = 2;
                 max_scale = 5;
-                super_resolution = 1;
+                super_resolution = true;
                 filter = true;
             }
         };
@@ -96,7 +96,7 @@ class FastX : public cv::Feature2D
         void detectImpl(const cv::Mat& _src, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask)const;
         virtual void detectImpl(cv::InputArray image, std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask=cv::noArray())const;
 
-        void rotate(float angle,const cv::Mat &img,cv::Size size,cv::Mat &out)const;
+        void rotate(float angle,cv::InputArray img,cv::Size size,cv::OutputArray out)const;
         void calcFeatureMap(const cv::Mat &images,cv::Mat& out)const;
 
     private:
@@ -111,6 +111,8 @@ class Ellipse
     public:
         Ellipse();
         Ellipse(const cv::Point2f &center, const cv::Size2f &axes, float angle);
+        Ellipse(const Ellipse &other);
+
 
         void draw(cv::InputOutputArray img,const cv::Scalar &color = cv::Scalar::all(120))const;
         bool contains(const cv::Point2f &pt)const;
@@ -149,16 +151,18 @@ class Chessboard: public cv::Feature2D
             int max_tests;            //!< maximal number of tested hypothesis
             bool super_resolution;    //!< use super-repsolution for chessboard detection
             bool larger;              //!< indicates if larger boards should be returned
+            bool marker;              //!< indicates that valid boards must have a white and black cirlce marker used for orientation
 
             Parameters()
             {
                 chessboard_size = cv::Size(9,6);
-                min_scale = 2;
+                min_scale = 3;
                 max_scale = 4;
                 super_resolution = true;
-                max_points = 400;
-                max_tests = 100;
+                max_points = 200;
+                max_tests = 50;
                 larger = false;
+                marker = false;
             }
 
             Parameters(int scale,int _max_points):
@@ -387,6 +391,14 @@ class Chessboard: public cv::Feature2D
                 std::vector<cv::Point2f> getCellCenters() const;
 
                 /**
+                 * \brief Returns all cells as mats of four points each describing their corners.
+                 *
+                 * The left top cell has index 0
+                 *
+                 */
+                std::vector<cv::Mat> getCells(float shrink_factor = 1.0,bool bwhite=true,bool bblack = true) const;
+
+                /**
                  * \brief Estimates the homography between an ideal board
                  * and reality based on the already recovered points
                  *
@@ -404,6 +416,12 @@ class Chessboard: public cv::Feature2D
                  *
                  */
                 cv::Mat estimateHomography(int field_size = DUMMY_FIELD_SIZE)const;
+
+                /**
+                 * \brief Warp image to match ideal checkerboard
+                 *
+                 */
+                cv::Mat warpImage(cv::InputArray image)const;
 
                 /**
                  * \brief Returns the size of the board
@@ -431,6 +449,11 @@ class Chessboard: public cv::Feature2D
                  */
                 std::vector<cv::Point2f> getContour()const;
 
+                /**
+                 * \brief Masks the found board in the given image
+                 *
+                 */
+                void maskImage(cv::InputOutputArray img,const cv::Scalar &color=cv::Scalar::all(0))const;
 
                 /**
                  * \brief Grows the board in all direction until no more corners are found in the feature map
@@ -466,6 +489,27 @@ class Chessboard: public cv::Feature2D
                   *
                   */
                  bool validateContour()const;
+
+
+                 /**
+                   \brief delete left column of the board
+                   */
+                 bool shrinkLeft();
+
+                 /**
+                   \brief delete right column of the board
+                   */
+                 bool shrinkRight();
+
+                 /**
+                   \brief shrink first row of the board
+                   */
+                 bool shrinkTop();
+
+                 /**
+                   \brief delete last row of the board
+                   */
+                 bool shrinkBottom();
 
                 /**
                  * \brief Grows the board to the left by adding one column.
@@ -568,6 +612,12 @@ class Chessboard: public cv::Feature2D
                 void normalizeOrientation(bool bblack=true);
 
                 /**
+                 * \brief Flips and rotates the board so that the marker
+                 * is normalized
+                 */
+                bool normalizeMarkerOrientation();
+
+                /**
                  * \brief Exchanges the stored board with the board stored in other
                  */
                 void swap(Chessboard::Board &other);
@@ -595,15 +645,68 @@ class Chessboard: public cv::Feature2D
                 std::map<int,int> getMapping()const;
 
                 /**
-                 * \brief Estimates rotation of the board around the camera axis
-                 */
-                 double estimateRotZ()const;
-
-                /**
                  * \brief Returns true if the cell is black
                  *
                  */
-                 bool isCellBlack(int row,int cola)const;
+                 bool isCellBlack(int row,int col)const;
+
+                /**
+                 * \brief Returns true if the cell has a round marker at its
+                 * center
+                 *
+                 */
+                 bool hasCellMarker(int row,int col);
+
+                /**
+                 * \brief Detects round markers in the chessboard fields based
+                 * on the given image and the already recoverd board corners
+                 *
+                 * \returns Returns the number of found markes
+                 *
+                 */
+                 int detectMarkers(cv::InputArray image);
+
+                 /**
+                  * \brief Calculates the average edge sharpness for the chessboard
+                  *
+                  * \param[in] image The image where the chessboard was detected
+                  * \param[in] rise_distante Rise distance 0.8 means 10% ... 90%
+                  * \param[in] vertical by default only edge response for horiontal lines are calculated
+                  *
+                  * \returns Scalar(sharpness, average min_val, average max_val)
+                  *
+                  * \author aduda@krakenrobotik.de
+                  */
+                 cv::Scalar calcEdgeSharpness(cv::InputArray image,float rise_distance=0.8,bool vertical=false,cv::OutputArray sharpness=cv::noArray());
+
+
+                 /**
+                  * \brief Gets the 3D objects points for the chessboard
+                  * assuming the left top corner is located at the origin. In
+                  * case the board as a marker, the white marker cell is at position zero
+                  *
+                  * \param[in] cell_size Size of one cell
+                  *
+                  * \returns Returns the object points as CV_32FC3
+                  */
+                 cv::Mat getObjectPoints(float cell_size)const;
+
+
+                 /**
+                  * \brief Returns the angle the board is rotated agains the x-axis of the image plane
+                  * \returns Returns the object points as CV_32FC3
+                  */
+                 float getAngle()const;
+
+                 /**
+                  * \brief Returns true if the main direction of the board is close to the image x-axis than y-axis
+                  */
+                 bool isHorizontal()const;
+
+                 /**
+                  * \brief Updates the search angles
+                  */
+                 void setAngles(float white,float black);
 
             private:
                 // stores one cell
@@ -616,10 +719,13 @@ class Chessboard: public cv::Feature2D
                     cv::Point2f *top_left,*top_right,*bottom_right,*bottom_left; // corners
                     Cell *left,*top,*right,*bottom;         // neighbouring cells
                     bool black;                             // set to true if cell is black
+                    bool marker;                            // set to true if cell has a round marker in its center
                     Cell();
                     bool empty()const;                      // indicates if the cell is empty (one of its corners has NaN)
                     int getRow()const;
                     int getCol()const;
+                    cv::Point2f getCenter()const;
+                    bool isInside(const cv::Point2f &pt)const;  // check if point is inside the cell
                 };
 
                 // corners
@@ -666,8 +772,8 @@ class Chessboard: public cv::Feature2D
                 std::vector<Cell*> cells;          // storage for all board cells
                 std::vector<cv::Point2f*> corners; // storage for all corners
                 Cell *top_left;                    // pointer to the top left corner of the board in its local coordinate system
-                int rows;                          // number of row cells
-                int cols;                          // number of col cells
+                int rows;                          // number of inner pattern rows
+                int cols;                          // number of inner pattern cols
                 float white_angle,black_angle;
         };
     public:

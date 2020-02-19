@@ -257,7 +257,9 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_FILTER_QUADS    = 4,
        CALIB_CB_FAST_CHECK      = 8,
        CALIB_CB_EXHAUSTIVE      = 16,
-       CALIB_CB_ACCURACY        = 32
+       CALIB_CB_ACCURACY        = 32,
+       CALIB_CB_LARGER          = 64,
+       CALIB_CB_MARKER          = 128
      };
 
 enum { CALIB_CB_SYMMETRIC_GRID  = 1,
@@ -1237,7 +1239,16 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 -   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before detection.
 -   **CALIB_CB_EXHAUSTIVE** Run an exhaustive search to improve detection rate.
 -   **CALIB_CB_ACCURACY** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
+-   **CALIB_CB_LARGER** The detected pattern is allowed to be larger than patternSize (see description).
+-   **CALIB_CB_MARKER** The detected pattern must have a marker (see description).
 This should be used if an accurate camera calibration is required.
+@param meta Optional output arrray of detected corners (CV_8UC1 and size = cv::Size(columns,rows)).
+Each entry stands for one corner of the pattern and can have one of the following values:
+-   0 = no meta data attached
+-   1 = left-top corner of a black cell
+-   2 = left-top corner of a white cell
+-   3 = left-top corner of a black cell with a white marker dot
+-   4 = left-top corner of a white cell with a black marker dot (pattern origin in case of markers otherwise first corner)
 
 The function is analog to findchessboardCorners but uses a localized radon
 transformation approximated by box filters being more robust to all sort of
@@ -1248,6 +1259,15 @@ Calibration" demonstrating that the returned sub-pixel positions are more
 accurate than the one returned by cornerSubPix allowing a precise camera
 calibration for demanding applications.
 
+In the case, the flags **CALIB_CB_LARGER** or **CALIB_CB_MARKER** are given,
+the result can be recovered from the optional meta array. Both flags are
+helpful to use calibration patterns exceeding the field of view of the camera.
+These oversized patterns allow more accurate calibrations as corners can be
+utilized, which are as close as possible to the image borders.  For a
+consistent coordinate system across all images, the optional marker (see image
+below) can be used to move the origin of the board to the location where the
+black circle is located.
+
 @note The function requires a white boarder with roughly the same width as one
 of the checkerboard fields around the whole board to improve the detection in
 various environments. In addition, because of the localized radon
@@ -1257,7 +1277,16 @@ a sample checkerboard optimized for the detection. However, any other checkerboa
 can be used as well.
 ![Checkerboard](pics/checkerboard_radon.png)
  */
-CV_EXPORTS_W bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,int flags=0);
+CV_EXPORTS_AS(findChessboardCornersSBWithMeta)
+bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,
+                             int flags,OutputArray meta);
+/** @overload */
+CV_EXPORTS_W static inline
+bool findChessboardCornersSB(InputArray image, Size patternSize, OutputArray corners,
+                             int flags = 0)
+{
+    return findChessboardCornersSB(image, patternSize, corners, flags, noArray());
+}
 
 //! finds subpixel-accurate positions of the chessboard corners
 CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
