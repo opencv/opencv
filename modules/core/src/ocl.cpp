@@ -4706,8 +4706,6 @@ public:
             getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
 
             bool copyOnMap = (flags0 & UMatData::COPY_ON_MAP) != 0;
-            if( copyOnMap )
-                accessFlags &= ~ACCESS_FAST;
 
             cl_context ctx_handle = (cl_context)ctx.ptr();
             int allocatorFlags = 0;
@@ -4768,6 +4766,9 @@ public:
             else
 #endif
             {
+                if( copyOnMap )
+                    accessFlags &= ~ACCESS_FAST;
+
                 tempUMatFlags = UMatData::TEMP_UMAT;
                 if (!copyOnMap
                     && CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
