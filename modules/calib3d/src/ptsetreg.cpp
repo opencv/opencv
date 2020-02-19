@@ -580,9 +580,13 @@ public:
         }
     }
 
-    // not doing SVD, no degeneracy concerns
+    // not doing SVD, no degeneracy concerns, can simply return true
     bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
+        // voids to suppress compiler warnings
+        (void)_ms1;
+        (void)_ms2;
+        (void)count;
         return true;
     }
 };
