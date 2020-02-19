@@ -344,7 +344,6 @@ struct Integral_SIMD<uchar, int, double>
         else if (cn == 4)
         {
             // the others
-            v_int32 mask = vx_setall_s32((int)0xff);
             for (int i = 0; i < height; ++i)
             {
                 const uchar * src_row = src + _srcstep * i;
@@ -353,99 +352,39 @@ struct Integral_SIMD<uchar, int, double>
 
                 sum_row[-1] = sum_row[-2] = sum_row[-3] = sum_row[-4] = 0;
 
-                v_int32 prev_1 = vx_setzero_s32(), prev_2 = vx_setzero_s32(),
-                        prev_3 = vx_setzero_s32(), prev_4 = vx_setzero_s32();
+                v_int32 prev = vx_setzero_s32();
                 int j = 0;
-                for ( ; j + v_uint16::nlanes * cn <= width; j += v_uint16::nlanes * cn)
+                for ( ; j + v_uint16::nlanes <= width; j += v_uint16::nlanes)
                 {
-                    v_int32 v_src_row_1 = v_reinterpret_as_s32(vx_load(src_row + j));
-                    v_int32 v_src_row_2 = v_reinterpret_as_s32(vx_load(src_row + j + v_uint8::nlanes));
-                    v_int16 el8_1 = v_pack(v_src_row_1 & mask, v_src_row_2 & mask);
-                    v_int16 el8_2 = v_pack((v_src_row_1 >> 8) & mask, (v_src_row_2 >> 8) & mask);
-                    v_int16 el8_3 = v_pack((v_src_row_1 >> 16) & mask, (v_src_row_2 >> 16) & mask);
-                    v_int16 el8_4 = v_pack(v_reinterpret_as_s32(v_reinterpret_as_u32(v_src_row_1) >> 24), v_reinterpret_as_s32(v_reinterpret_as_u32(v_src_row_2) >> 24));
-                    v_int32 el4l_1, el4h_1, el4l_2, el4h_2, el4l_3, el4h_3, el4l_4, el4h_4;
+                    v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
+                    v_int32 el4l, el4h;
 #if CV_AVX2 && CV_SIMD_WIDTH == 32
-                    __m256i vsum_1 = _mm256_add_epi16(el8_1.val, _mm256_slli_si256(el8_1.val, 2));
-                    __m256i vsum_2 = _mm256_add_epi16(el8_2.val, _mm256_slli_si256(el8_2.val, 2));
-                    __m256i vsum_3 = _mm256_add_epi16(el8_3.val, _mm256_slli_si256(el8_3.val, 2));
-                    __m256i vsum_4 = _mm256_add_epi16(el8_4.val, _mm256_slli_si256(el8_4.val, 2));
-                    vsum_1 = _mm256_add_epi16(vsum_1, _mm256_slli_si256(vsum_1, 4));
-                    vsum_2 = _mm256_add_epi16(vsum_2, _mm256_slli_si256(vsum_2, 4));
-                    vsum_3 = _mm256_add_epi16(vsum_3, _mm256_slli_si256(vsum_3, 4));
-                    vsum_4 = _mm256_add_epi16(vsum_4, _mm256_slli_si256(vsum_4, 4));
-                    vsum_1 = _mm256_add_epi16(vsum_1, _mm256_slli_si256(vsum_1, 8));
-                    vsum_2 = _mm256_add_epi16(vsum_2, _mm256_slli_si256(vsum_2, 8));
-                    vsum_3 = _mm256_add_epi16(vsum_3, _mm256_slli_si256(vsum_3, 8));
-                    vsum_4 = _mm256_add_epi16(vsum_4, _mm256_slli_si256(vsum_4, 8));
-                    __m256i shmask = _mm256_set1_epi32(7);
-                    el4l_1.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_low(vsum_1)), prev_1.val);
-                    el4l_2.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_low(vsum_2)), prev_2.val);
-                    el4l_3.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_low(vsum_3)), prev_3.val);
-                    el4l_4.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_low(vsum_4)), prev_4.val);
-                    el4h_1.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_high(vsum_1)), _mm256_permutevar8x32_epi32(el4l_1.val, shmask));
-                    el4h_2.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_high(vsum_2)), _mm256_permutevar8x32_epi32(el4l_2.val, shmask));
-                    el4h_3.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_high(vsum_3)), _mm256_permutevar8x32_epi32(el4l_3.val, shmask));
-                    el4h_4.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_high(vsum_4)), _mm256_permutevar8x32_epi32(el4l_4.val, shmask));
-                    prev_1.val = _mm256_permutevar8x32_epi32(el4h_1.val, shmask);
-                    prev_2.val = _mm256_permutevar8x32_epi32(el4h_2.val, shmask);
-                    prev_3.val = _mm256_permutevar8x32_epi32(el4h_3.val, shmask);
-                    prev_4.val = _mm256_permutevar8x32_epi32(el4h_4.val, shmask);
+                    __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 8));
+                    el4l.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_low(vsum)), prev.val);
+                    el4h.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_high(vsum)), _mm256_permute2x128_si256(el4l.val, el4l.val, 0x31));
+                    prev.val = _mm256_permute2x128_si256(el4h.val, el4h.val, 0x31);
 #else
-                    el8_1 += v_rotate_left<1>(el8_1);
-                    el8_2 += v_rotate_left<1>(el8_2);
-                    el8_3 += v_rotate_left<1>(el8_3);
-                    el8_4 += v_rotate_left<1>(el8_4);
-                    el8_1 += v_rotate_left<2>(el8_1);
-                    el8_2 += v_rotate_left<2>(el8_2);
-                    el8_3 += v_rotate_left<2>(el8_3);
-                    el8_4 += v_rotate_left<2>(el8_4);
 #if CV_SIMD_WIDTH >= 32
-                    el8_1 += v_rotate_left<4>(el8_1);
-                    el8_2 += v_rotate_left<4>(el8_2);
-                    el8_3 += v_rotate_left<4>(el8_3);
-                    el8_4 += v_rotate_left<4>(el8_4);
+                    el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
-                    el8_1 += v_rotate_left<8>(el8_1);
-                    el8_2 += v_rotate_left<8>(el8_2);
-                    el8_3 += v_rotate_left<8>(el8_3);
-                    el8_4 += v_rotate_left<8>(el8_4);
+                    el8 += v_rotate_left<8>(el8);
 #endif
 #endif
-                    v_expand(el8_1, el4l_1, el4h_1);
-                    v_expand(el8_2, el4l_2, el4h_2);
-                    v_expand(el8_3, el4l_3, el4h_3);
-                    v_expand(el8_4, el4l_4, el4h_4);
-                    el4l_1 += prev_1;
-                    el4l_2 += prev_2;
-                    el4l_3 += prev_3;
-                    el4l_4 += prev_4;
-                    el4h_1 += el4l_1;
-                    el4h_2 += el4l_2;
-                    el4h_3 += el4l_3;
-                    el4h_4 += el4l_4;
-                    prev_1 = v_broadcast_element<v_int32::nlanes - 1>(el4h_1);
-                    prev_2 = v_broadcast_element<v_int32::nlanes - 1>(el4h_2);
-                    prev_3 = v_broadcast_element<v_int32::nlanes - 1>(el4h_3);
-                    prev_4 = v_broadcast_element<v_int32::nlanes - 1>(el4h_4);
+                    v_expand(el8, el4l, el4h);
+                    el4l += prev;
+                    el4h += el4l;
+#if CV_SIMD_WIDTH == 16
+                    prev = el4h;
+#elif CV_SIMD_WIDTH == 32
+                    prev = v_combine_high(el4h, el4h);
+#else
+                    v_int32 t0, t1;
+                    v_zip(el4h, el4h, t0, t1);
+                    prev = v_combine_high(t1, t1);
 #endif
-                    v_int32 el4_1, el4_2, el4_3, el4_4, el4_5, el4_6, el4_7, el4_8;
-                    v_zip(el4l_1, el4l_3, el4_1, el4_2);
-                    v_zip(el4l_2, el4l_4, el4_3, el4_4);
-                    v_zip(el4h_1, el4h_3, el4_5, el4_6);
-                    v_zip(el4h_2, el4h_4, el4_7, el4_8);
-                    v_zip(el4_1, el4_3, el4l_1, el4l_2);
-                    v_zip(el4_2, el4_4, el4l_3, el4l_4);
-                    v_zip(el4_5, el4_7, el4h_1, el4h_2);
-                    v_zip(el4_6, el4_8, el4h_3, el4h_4);
-                    v_store(sum_row + j                      , el4l_1 + vx_load(prev_sum_row + j                      ));
-                    v_store(sum_row + j + v_int32::nlanes    , el4l_2 + vx_load(prev_sum_row + j + v_int32::nlanes    ));
-                    v_store(sum_row + j + v_int32::nlanes * 2, el4l_3 + vx_load(prev_sum_row + j + v_int32::nlanes * 2));
-                    v_store(sum_row + j + v_int32::nlanes * 3, el4l_4 + vx_load(prev_sum_row + j + v_int32::nlanes * 3));
-                    v_store(sum_row + j + v_int32::nlanes * 4, el4h_1 + vx_load(prev_sum_row + j + v_int32::nlanes * 4));
-                    v_store(sum_row + j + v_int32::nlanes * 5, el4h_2 + vx_load(prev_sum_row + j + v_int32::nlanes * 5));
-                    v_store(sum_row + j + v_int32::nlanes * 6, el4h_3 + vx_load(prev_sum_row + j + v_int32::nlanes * 6));
-                    v_store(sum_row + j + v_int32::nlanes * 7, el4h_4 + vx_load(prev_sum_row + j + v_int32::nlanes * 7));
+#endif
+                    v_store(sum_row + j                  , el4l + vx_load(prev_sum_row + j                  ));
+                    v_store(sum_row + j + v_int32::nlanes, el4h + vx_load(prev_sum_row + j + v_int32::nlanes));
                 }
 
                 for (int v4 = sum_row[j - 1] - prev_sum_row[j - 1],
@@ -714,7 +653,6 @@ struct Integral_SIMD<uchar, float, double>
         else if (cn == 4)
         {
             // the others
-            v_int32 mask = vx_setall_s32((int)0xff);
             for (int i = 0; i < height; ++i)
             {
                 const uchar * src_row = src + _srcstep * i;
@@ -723,100 +661,40 @@ struct Integral_SIMD<uchar, float, double>
 
                 sum_row[-1] = sum_row[-2] = sum_row[-3] = sum_row[-4] = 0;
 
-                v_float32 prev_1 = vx_setzero_f32(), prev_2 = vx_setzero_f32(),
-                          prev_3 = vx_setzero_f32(), prev_4 = vx_setzero_f32();
+                v_float32 prev = vx_setzero_f32();
                 int j = 0;
-                for (; j + v_uint16::nlanes * cn <= width; j += v_uint16::nlanes * cn)
+                for ( ; j + v_uint16::nlanes <= width; j += v_uint16::nlanes)
                 {
-                    v_int32 v_src_row_1 = v_reinterpret_as_s32(vx_load(src_row + j));
-                    v_int32 v_src_row_2 = v_reinterpret_as_s32(vx_load(src_row + j + v_uint8::nlanes));
-                    v_int16 el8_1 = v_pack(v_src_row_1 & mask, v_src_row_2 & mask);
-                    v_int16 el8_2 = v_pack((v_src_row_1 >> 8) & mask, (v_src_row_2 >> 8) & mask);
-                    v_int16 el8_3 = v_pack((v_src_row_1 >> 16) & mask, (v_src_row_2 >> 16) & mask);
-                    v_int16 el8_4 = v_pack(v_reinterpret_as_s32(v_reinterpret_as_u32(v_src_row_1) >> 24), v_reinterpret_as_s32(v_reinterpret_as_u32(v_src_row_2) >> 24));
-                    v_float32 el4l_1, el4h_1, el4l_2, el4h_2, el4l_3, el4h_3, el4l_4, el4h_4;
+                    v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
+                    v_float32 el4l, el4h;
 #if CV_AVX2 && CV_SIMD_WIDTH == 32
-                    __m256i vsum_1 = _mm256_add_epi16(el8_1.val, _mm256_slli_si256(el8_1.val, 2));
-                    __m256i vsum_2 = _mm256_add_epi16(el8_2.val, _mm256_slli_si256(el8_2.val, 2));
-                    __m256i vsum_3 = _mm256_add_epi16(el8_3.val, _mm256_slli_si256(el8_3.val, 2));
-                    __m256i vsum_4 = _mm256_add_epi16(el8_4.val, _mm256_slli_si256(el8_4.val, 2));
-                    vsum_1 = _mm256_add_epi16(vsum_1, _mm256_slli_si256(vsum_1, 4));
-                    vsum_2 = _mm256_add_epi16(vsum_2, _mm256_slli_si256(vsum_2, 4));
-                    vsum_3 = _mm256_add_epi16(vsum_3, _mm256_slli_si256(vsum_3, 4));
-                    vsum_4 = _mm256_add_epi16(vsum_4, _mm256_slli_si256(vsum_4, 4));
-                    vsum_1 = _mm256_add_epi16(vsum_1, _mm256_slli_si256(vsum_1, 8));
-                    vsum_2 = _mm256_add_epi16(vsum_2, _mm256_slli_si256(vsum_2, 8));
-                    vsum_3 = _mm256_add_epi16(vsum_3, _mm256_slli_si256(vsum_3, 8));
-                    vsum_4 = _mm256_add_epi16(vsum_4, _mm256_slli_si256(vsum_4, 8));
-                    __m256i shmask = _mm256_set1_epi32(7);
-                    el4l_1.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_low(vsum_1))), prev_1.val);
-                    el4l_2.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_low(vsum_2))), prev_2.val);
-                    el4l_3.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_low(vsum_3))), prev_3.val);
-                    el4l_4.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_low(vsum_4))), prev_4.val);
-                    el4h_1.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_high(vsum_1))), _mm256_permutevar8x32_ps(el4l_1.val, shmask));
-                    el4h_2.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_high(vsum_2))), _mm256_permutevar8x32_ps(el4l_2.val, shmask));
-                    el4h_3.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_high(vsum_3))), _mm256_permutevar8x32_ps(el4l_3.val, shmask));
-                    el4h_4.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_high(vsum_4))), _mm256_permutevar8x32_ps(el4l_4.val, shmask));
-                    prev_1.val = _mm256_permutevar8x32_ps(el4h_1.val, shmask);
-                    prev_2.val = _mm256_permutevar8x32_ps(el4h_2.val, shmask);
-                    prev_3.val = _mm256_permutevar8x32_ps(el4h_3.val, shmask);
-                    prev_4.val = _mm256_permutevar8x32_ps(el4h_4.val, shmask);
+                    __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 8));
+                    el4l.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_low(vsum))), prev.val);
+                    el4h.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_high(vsum))), _mm256_permute2f128_ps(el4l.val, el4l.val, 0x31));
+                    prev.val = _mm256_permute2f128_ps(el4h.val, el4h.val, 0x31);
 #else
-                    el8_1 += v_rotate_left<1>(el8_1);
-                    el8_2 += v_rotate_left<1>(el8_2);
-                    el8_3 += v_rotate_left<1>(el8_3);
-                    el8_4 += v_rotate_left<1>(el8_4);
-                    el8_1 += v_rotate_left<2>(el8_1);
-                    el8_2 += v_rotate_left<2>(el8_2);
-                    el8_3 += v_rotate_left<2>(el8_3);
-                    el8_4 += v_rotate_left<2>(el8_4);
 #if CV_SIMD_WIDTH >= 32
-                    el8_1 += v_rotate_left<4>(el8_1);
-                    el8_2 += v_rotate_left<4>(el8_2);
-                    el8_3 += v_rotate_left<4>(el8_3);
-                    el8_4 += v_rotate_left<4>(el8_4);
+                    el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
-                    el8_1 += v_rotate_left<8>(el8_1);
-                    el8_2 += v_rotate_left<8>(el8_2);
-                    el8_3 += v_rotate_left<8>(el8_3);
-                    el8_4 += v_rotate_left<8>(el8_4);
+                    el8 += v_rotate_left<8>(el8);
 #endif
 #endif
-                    v_int32 el4li_1, el4hi_1, el4li_2, el4hi_2, el4li_3, el4hi_3, el4li_4, el4hi_4;
-                    v_expand(el8_1, el4li_1, el4hi_1);
-                    v_expand(el8_2, el4li_2, el4hi_2);
-                    v_expand(el8_3, el4li_3, el4hi_3);
-                    v_expand(el8_4, el4li_4, el4hi_4);
-                    el4l_1 = v_cvt_f32(el4li_1) + prev_1;
-                    el4l_2 = v_cvt_f32(el4li_2) + prev_2;
-                    el4l_3 = v_cvt_f32(el4li_3) + prev_3;
-                    el4l_4 = v_cvt_f32(el4li_4) + prev_4;
-                    el4h_1 = v_cvt_f32(el4hi_1) + el4l_1;
-                    el4h_2 = v_cvt_f32(el4hi_2) + el4l_2;
-                    el4h_3 = v_cvt_f32(el4hi_3) + el4l_3;
-                    el4h_4 = v_cvt_f32(el4hi_4) + el4l_4;
-                    prev_1 = v_broadcast_element<v_float32::nlanes - 1>(el4h_1);
-                    prev_2 = v_broadcast_element<v_float32::nlanes - 1>(el4h_2);
-                    prev_3 = v_broadcast_element<v_float32::nlanes - 1>(el4h_3);
-                    prev_4 = v_broadcast_element<v_float32::nlanes - 1>(el4h_4);
+                    v_int32 el4li, el4hi;
+                    v_expand(el8, el4li, el4hi);
+                    el4l = v_cvt_f32(el4li) + prev;
+                    el4h = v_cvt_f32(el4hi) + el4l;
+#if CV_SIMD_WIDTH == 16
+                    prev = el4h;
+#elif CV_SIMD_WIDTH == 32
+                    prev = v_combine_high(el4h, el4h);
+#else
+                    v_float32 t0, t1;
+                    v_zip(el4h, el4h, t0, t1);
+                    prev = v_combine_high(t1, t1);
 #endif
-                    v_float32 el4_1, el4_2, el4_3, el4_4, el4_5, el4_6, el4_7, el4_8;
-                    v_zip(el4l_1, el4l_3, el4_1, el4_2);
-                    v_zip(el4l_2, el4l_4, el4_3, el4_4);
-                    v_zip(el4h_1, el4h_3, el4_5, el4_6);
-                    v_zip(el4h_2, el4h_4, el4_7, el4_8);
-                    v_zip(el4_1, el4_3, el4l_1, el4l_2);
-                    v_zip(el4_2, el4_4, el4l_3, el4l_4);
-                    v_zip(el4_5, el4_7, el4h_1, el4h_2);
-                    v_zip(el4_6, el4_8, el4h_3, el4h_4);
-                    v_store(sum_row + j                        , el4l_1 + vx_load(prev_sum_row + j                        ));
-                    v_store(sum_row + j + v_float32::nlanes    , el4l_2 + vx_load(prev_sum_row + j + v_float32::nlanes    ));
-                    v_store(sum_row + j + v_float32::nlanes * 2, el4l_3 + vx_load(prev_sum_row + j + v_float32::nlanes * 2));
-                    v_store(sum_row + j + v_float32::nlanes * 3, el4l_4 + vx_load(prev_sum_row + j + v_float32::nlanes * 3));
-                    v_store(sum_row + j + v_float32::nlanes * 4, el4h_1 + vx_load(prev_sum_row + j + v_float32::nlanes * 4));
-                    v_store(sum_row + j + v_float32::nlanes * 5, el4h_2 + vx_load(prev_sum_row + j + v_float32::nlanes * 5));
-                    v_store(sum_row + j + v_float32::nlanes * 6, el4h_3 + vx_load(prev_sum_row + j + v_float32::nlanes * 6));
-                    v_store(sum_row + j + v_float32::nlanes * 7, el4h_4 + vx_load(prev_sum_row + j + v_float32::nlanes * 7));
+#endif
+                    v_store(sum_row + j                    , el4l + vx_load(prev_sum_row + j                    ));
+                    v_store(sum_row + j + v_float32::nlanes, el4h + vx_load(prev_sum_row + j + v_float32::nlanes));
                 }
 
                 for (float v4 = sum_row[j - 1] - prev_sum_row[j - 1],
@@ -1153,7 +1031,6 @@ struct Integral_SIMD<uchar, double, double>
         else if (cn == 4)
         {
             // the others
-            v_int32 mask = vx_setall_s32((int)0xff);
             for (int i = 0; i < height; ++i)
             {
                 const uchar * src_row = src + _srcstep * i;
@@ -1162,147 +1039,47 @@ struct Integral_SIMD<uchar, double, double>
 
                 sum_row[-1] = sum_row[-2] = sum_row[-3] = sum_row[-4] = 0;
 
-                v_float64 prev_1 = vx_setzero_f64(), prev_2 = vx_setzero_f64(),
-                          prev_3 = vx_setzero_f64(), prev_4 = vx_setzero_f64();
+                v_float64 prev_1 = vx_setzero_f64(), prev_2 = vx_setzero_f64();
                 int j = 0;
-                for (; j + v_uint16::nlanes * cn <= width; j += v_uint16::nlanes * cn)
+                for ( ; j + v_uint16::nlanes <= width; j += v_uint16::nlanes)
                 {
-                    v_int32 v_src_row_1 = v_reinterpret_as_s32(vx_load(src_row + j));
-                    v_int32 v_src_row_2 = v_reinterpret_as_s32(vx_load(src_row + j + v_uint8::nlanes));
-                    v_int16 el8_1 = v_pack(v_src_row_1 & mask, v_src_row_2 & mask);
-                    v_int16 el8_2 = v_pack((v_src_row_1 >> 8) & mask, (v_src_row_2 >> 8) & mask);
-                    v_int16 el8_3 = v_pack((v_src_row_1 >> 16) & mask, (v_src_row_2 >> 16) & mask);
-                    v_int16 el8_4 = v_pack(v_reinterpret_as_s32(v_reinterpret_as_u32(v_src_row_1) >> 24), v_reinterpret_as_s32(v_reinterpret_as_u32(v_src_row_2) >> 24));
-                    v_float64 el4ll_1, el4lh_1, el4hl_1, el4hh_1, el4ll_2, el4lh_2, el4hl_2, el4hh_2, el4ll_3, el4lh_3, el4hl_3, el4hh_3, el4ll_4, el4lh_4, el4hl_4, el4hh_4;
+                    v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
+                    v_float64 el4ll, el4lh, el4hl, el4hh;
 #if CV_AVX2 && CV_SIMD_WIDTH == 32
-                    __m256i vsum_1 = _mm256_add_epi16(el8_1.val, _mm256_slli_si256(el8_1.val, 2));
-                    __m256i vsum_2 = _mm256_add_epi16(el8_2.val, _mm256_slli_si256(el8_2.val, 2));
-                    __m256i vsum_3 = _mm256_add_epi16(el8_3.val, _mm256_slli_si256(el8_3.val, 2));
-                    __m256i vsum_4 = _mm256_add_epi16(el8_4.val, _mm256_slli_si256(el8_4.val, 2));
-                    vsum_1 = _mm256_add_epi16(vsum_1, _mm256_slli_si256(vsum_1, 4));
-                    vsum_2 = _mm256_add_epi16(vsum_2, _mm256_slli_si256(vsum_2, 4));
-                    vsum_3 = _mm256_add_epi16(vsum_3, _mm256_slli_si256(vsum_3, 4));
-                    vsum_4 = _mm256_add_epi16(vsum_4, _mm256_slli_si256(vsum_4, 4));
-                    vsum_1 = _mm256_add_epi16(vsum_1, _mm256_slli_si256(vsum_1, 8));
-                    vsum_2 = _mm256_add_epi16(vsum_2, _mm256_slli_si256(vsum_2, 8));
-                    vsum_3 = _mm256_add_epi16(vsum_3, _mm256_slli_si256(vsum_3, 8));
-                    vsum_4 = _mm256_add_epi16(vsum_4, _mm256_slli_si256(vsum_4, 8));
-                    __m256i el4l1_32 = _mm256_cvtepi16_epi32(_v256_extract_low(vsum_1));
-                    __m256i el4l2_32 = _mm256_cvtepi16_epi32(_v256_extract_low(vsum_2));
-                    __m256i el4l3_32 = _mm256_cvtepi16_epi32(_v256_extract_low(vsum_3));
-                    __m256i el4l4_32 = _mm256_cvtepi16_epi32(_v256_extract_low(vsum_4));
-                    __m256i el4h1_32 = _mm256_cvtepi16_epi32(_v256_extract_high(vsum_1));
-                    __m256i el4h2_32 = _mm256_cvtepi16_epi32(_v256_extract_high(vsum_2));
-                    __m256i el4h3_32 = _mm256_cvtepi16_epi32(_v256_extract_high(vsum_3));
-                    __m256i el4h4_32 = _mm256_cvtepi16_epi32(_v256_extract_high(vsum_4));
-                    el4ll_1.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4l1_32)), prev_1.val);
-                    el4ll_2.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4l2_32)), prev_2.val);
-                    el4ll_3.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4l3_32)), prev_3.val);
-                    el4ll_4.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4l4_32)), prev_4.val);
-                    el4lh_1.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4l1_32)), prev_1.val);
-                    el4lh_2.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4l2_32)), prev_2.val);
-                    el4lh_3.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4l3_32)), prev_3.val);
-                    el4lh_4.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4l4_32)), prev_4.val);
-                    __m256d el4d_1 = _mm256_permute4x64_pd(el4lh_1.val, 0xff);
-                    __m256d el4d_2 = _mm256_permute4x64_pd(el4lh_2.val, 0xff);
-                    __m256d el4d_3 = _mm256_permute4x64_pd(el4lh_3.val, 0xff);
-                    __m256d el4d_4 = _mm256_permute4x64_pd(el4lh_4.val, 0xff);
-                    el4hl_1.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4h1_32)), el4d_1);
-                    el4hl_2.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4h2_32)), el4d_2);
-                    el4hl_3.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4h3_32)), el4d_3);
-                    el4hl_4.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4h4_32)), el4d_4);
-                    el4hh_1.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4h1_32)), el4d_1);
-                    el4hh_2.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4h2_32)), el4d_2);
-                    el4hh_3.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4h3_32)), el4d_3);
-                    el4hh_4.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4h4_32)), el4d_4);
-                    prev_1.val = _mm256_permute4x64_pd(el4hh_1.val, 0xff);
-                    prev_2.val = _mm256_permute4x64_pd(el4hh_2.val, 0xff);
-                    prev_3.val = _mm256_permute4x64_pd(el4hh_3.val, 0xff);
-                    prev_4.val = _mm256_permute4x64_pd(el4hh_4.val, 0xff);
+                    __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 8));
+                    __m256i el4l_32 = _mm256_cvtepi16_epi32(_v256_extract_low(vsum));
+                    __m256i el4h_32 = _mm256_cvtepi16_epi32(_v256_extract_high(vsum));
+                    el4ll.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4l_32)), prev_1.val);
+                    el4lh.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4l_32)), prev_2.val);
+                    el4hl.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_low(el4h_32)), el4lh.val);
+                    el4hh.val = _mm256_add_pd(_mm256_cvtepi32_pd(_v256_extract_high(el4h_32)), el4lh.val);
+                    prev_1.val = prev_2.val = el4hh.val;
 #else
-                    el8_1 += v_rotate_left<1>(el8_1);
-                    el8_2 += v_rotate_left<1>(el8_2);
-                    el8_3 += v_rotate_left<1>(el8_3);
-                    el8_4 += v_rotate_left<1>(el8_4);
-                    el8_1 += v_rotate_left<2>(el8_1);
-                    el8_2 += v_rotate_left<2>(el8_2);
-                    el8_3 += v_rotate_left<2>(el8_3);
-                    el8_4 += v_rotate_left<2>(el8_4);
 #if CV_SIMD_WIDTH >= 32
-                    el8_1 += v_rotate_left<4>(el8_1);
-                    el8_2 += v_rotate_left<4>(el8_2);
-                    el8_3 += v_rotate_left<4>(el8_3);
-                    el8_4 += v_rotate_left<4>(el8_4);
+                    el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
-                    el8_1 += v_rotate_left<8>(el8_1);
-                    el8_2 += v_rotate_left<8>(el8_2);
-                    el8_3 += v_rotate_left<8>(el8_3);
-                    el8_4 += v_rotate_left<8>(el8_4);
+                    el8 += v_rotate_left<8>(el8);
 #endif
 #endif
-                    v_int32 el4li_1, el4hi_1, el4li_2, el4hi_2, el4li_3, el4hi_3, el4li_4, el4hi_4;
-                    v_expand(el8_1, el4li_1, el4hi_1);
-                    v_expand(el8_2, el4li_2, el4hi_2);
-                    v_expand(el8_3, el4li_3, el4hi_3);
-                    v_expand(el8_4, el4li_4, el4hi_4);
-                    el4ll_1 = v_cvt_f64(el4li_1) + prev_1;
-                    el4ll_2 = v_cvt_f64(el4li_2) + prev_2;
-                    el4ll_3 = v_cvt_f64(el4li_3) + prev_3;
-                    el4ll_4 = v_cvt_f64(el4li_4) + prev_4;
-                    el4lh_1 = v_cvt_f64_high(el4li_1) + prev_1;
-                    el4lh_2 = v_cvt_f64_high(el4li_2) + prev_2;
-                    el4lh_3 = v_cvt_f64_high(el4li_3) + prev_3;
-                    el4lh_4 = v_cvt_f64_high(el4li_4) + prev_4;
-                    el4hl_1 = v_cvt_f64(el4hi_1) + el4ll_1;
-                    el4hl_2 = v_cvt_f64(el4hi_2) + el4ll_2;
-                    el4hl_3 = v_cvt_f64(el4hi_3) + el4ll_3;
-                    el4hl_4 = v_cvt_f64(el4hi_4) + el4ll_4;
-                    el4hh_1 = v_cvt_f64_high(el4hi_1) + el4lh_1;
-                    el4hh_2 = v_cvt_f64_high(el4hi_2) + el4lh_2;
-                    el4hh_3 = v_cvt_f64_high(el4hi_3) + el4lh_3;
-                    el4hh_4 = v_cvt_f64_high(el4hi_4) + el4lh_4;
-                    prev_1 = vx_setall_f64(v_extract_n<v_float64::nlanes - 1>(el4hh_1));
-                    prev_2 = vx_setall_f64(v_extract_n<v_float64::nlanes - 1>(el4hh_2));
-                    prev_3 = vx_setall_f64(v_extract_n<v_float64::nlanes - 1>(el4hh_3));
-                    prev_4 = vx_setall_f64(v_extract_n<v_float64::nlanes - 1>(el4hh_4));
-//                    prev_1 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_1);
-//                    prev_2 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_2);
-//                    prev_3 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_3);
-//                    prev_4 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_4);
+                    v_int32 el4li, el4hi;
+                    v_expand(el8, el4li, el4hi);
+                    el4ll = v_cvt_f64(el4li) + prev_1;
+                    el4lh = v_cvt_f64_high(el4li) + prev_2;
+                    el4hl = v_cvt_f64(el4hi) + el4ll;
+                    el4hh = v_cvt_f64_high(el4hi) + el4lh;
+#if CV_SIMD_WIDTH == 16
+                    prev_1 = el4hl;
+                    prev_2 = el4hh;
+#elif CV_SIMD_WIDTH == 32
+                    prev_1 = prev_2 = el4hh;
+#else
+                    prev_1 = prev_2 = v_combine_high(el4hh, el4hh);
 #endif
-                    v_float64 el4_1, el4_2, el4_3, el4_4, el4_5, el4_6, el4_7, el4_8, el4_9, el4_10, el4_11, el4_12, el4_13, el4_14, el4_15, el4_16;
-                    v_zip(el4ll_1, el4ll_3, el4_1, el4_2);
-                    v_zip(el4ll_2, el4ll_4, el4_3, el4_4);
-                    v_zip(el4lh_1, el4lh_3, el4_5, el4_6);
-                    v_zip(el4lh_2, el4lh_4, el4_7, el4_8);
-                    v_zip(el4hl_1, el4hl_3, el4_9, el4_10);
-                    v_zip(el4hl_2, el4hl_4, el4_11, el4_12);
-                    v_zip(el4hh_1, el4hh_3, el4_13, el4_14);
-                    v_zip(el4hh_2, el4hh_4, el4_15, el4_16);
-                    v_zip(el4_1, el4_3, el4ll_1, el4ll_2);
-                    v_zip(el4_2, el4_4, el4ll_3, el4ll_4);
-                    v_zip(el4_5, el4_7, el4lh_1, el4lh_2);
-                    v_zip(el4_6, el4_8, el4lh_3, el4lh_4);
-                    v_zip(el4_9, el4_11, el4hl_1, el4hl_2);
-                    v_zip(el4_10, el4_12, el4hl_3, el4hl_4);
-                    v_zip(el4_13, el4_15, el4hh_1, el4hh_2);
-                    v_zip(el4_14, el4_16, el4hh_3, el4hh_4);
-                    v_store(sum_row + j                         , el4ll_1 + vx_load(prev_sum_row + j                         ));
-                    v_store(sum_row + j + v_float64::nlanes     , el4ll_2 + vx_load(prev_sum_row + j + v_float64::nlanes     ));
-                    v_store(sum_row + j + v_float64::nlanes * 2 , el4ll_3 + vx_load(prev_sum_row + j + v_float64::nlanes * 2 ));
-                    v_store(sum_row + j + v_float64::nlanes * 3 , el4ll_4 + vx_load(prev_sum_row + j + v_float64::nlanes * 3 ));
-                    v_store(sum_row + j + v_float64::nlanes * 4 , el4lh_1 + vx_load(prev_sum_row + j + v_float64::nlanes * 4 ));
-                    v_store(sum_row + j + v_float64::nlanes * 5 , el4lh_2 + vx_load(prev_sum_row + j + v_float64::nlanes * 5 ));
-                    v_store(sum_row + j + v_float64::nlanes * 6 , el4lh_3 + vx_load(prev_sum_row + j + v_float64::nlanes * 6 ));
-                    v_store(sum_row + j + v_float64::nlanes * 7 , el4lh_4 + vx_load(prev_sum_row + j + v_float64::nlanes * 7 ));
-                    v_store(sum_row + j + v_float64::nlanes * 8 , el4hl_1 + vx_load(prev_sum_row + j + v_float64::nlanes * 8 ));
-                    v_store(sum_row + j + v_float64::nlanes * 9 , el4hl_2 + vx_load(prev_sum_row + j + v_float64::nlanes * 9 ));
-                    v_store(sum_row + j + v_float64::nlanes * 10, el4hl_3 + vx_load(prev_sum_row + j + v_float64::nlanes * 10));
-                    v_store(sum_row + j + v_float64::nlanes * 11, el4hl_4 + vx_load(prev_sum_row + j + v_float64::nlanes * 11));
-                    v_store(sum_row + j + v_float64::nlanes * 12, el4hh_1 + vx_load(prev_sum_row + j + v_float64::nlanes * 12));
-                    v_store(sum_row + j + v_float64::nlanes * 13, el4hh_2 + vx_load(prev_sum_row + j + v_float64::nlanes * 13));
-                    v_store(sum_row + j + v_float64::nlanes * 14, el4hh_3 + vx_load(prev_sum_row + j + v_float64::nlanes * 14));
-                    v_store(sum_row + j + v_float64::nlanes * 15, el4hh_4 + vx_load(prev_sum_row + j + v_float64::nlanes * 15));
+#endif
+                    v_store(sum_row + j                        , el4ll + vx_load(prev_sum_row + j                       ));
+                    v_store(sum_row + j + v_float64::nlanes    , el4lh + vx_load(prev_sum_row + j + v_float64::nlanes   ));
+                    v_store(sum_row + j + v_float64::nlanes * 2, el4hl + vx_load(prev_sum_row + j + v_float64::nlanes * 2));
+                    v_store(sum_row + j + v_float64::nlanes * 3, el4hh + vx_load(prev_sum_row + j + v_float64::nlanes * 3));
                 }
 
                 for (double v4 = sum_row[j - 1] - prev_sum_row[j - 1],
