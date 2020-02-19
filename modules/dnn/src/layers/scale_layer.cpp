@@ -304,7 +304,6 @@ public:
         setParamsFrom(params);
         recompute_mean = params.get<int>("recompute_mean", 0);
         mean_per_pixel = params.get<bool>("mean_per_pixel", false);
-        num_iter = 0;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -321,10 +320,13 @@ public:
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        num_iter = 0;
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
         CV_Assert(inputs.size() == 1);
         CV_Assert((!mean_per_pixel && blobs.size() == 3) || blobs.size() >= 2);
+        data_mean_cpu = blobs[1].clone();
+        data_mean_per_channel_cpu = blobs[2].clone();
         ++num_iter;
     }
 
@@ -345,10 +347,7 @@ public:
         float* inpData = (float*)inpBlob.data;
         float* outData = (float*)outBlob.data;
 
-        Mat data_mean_cpu = blobs[1].clone();
-        Mat data_mean_per_channel_cpu = blobs[2].clone();
-
-        const int numWeights = blobs[1].total();
+        const int numWeights = data_mean_cpu.total();
         CV_Assert(numWeights != 0);
 
         if (num_iter <= recompute_mean)

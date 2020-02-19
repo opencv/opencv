@@ -45,8 +45,10 @@ public:
         int neighborhood_grid_radius = max_displacement / stride_2;
         int neighborhood_grid_width = neighborhood_grid_radius * 2 + 1;
 
+        int num = inputs[0][0];
+
         std::vector<int> outShape;
-        outShape.push_back(inputs[0][0]);
+        outShape.push_back(num);
 
         int out_c = neighborhood_grid_width * neighborhood_grid_width;
         outShape.push_back(out_c);
@@ -57,8 +59,14 @@ public:
 
         outShape.push_back(out_h);
         outShape.push_back(out_w);
-
         outputs.assign(1, outShape);
+
+        std::vector<int> internalShape;
+        internalShape.push_back(num);
+        internalShape.push_back(padded_height);
+        internalShape.push_back(padded_width);
+        internalShape.push_back(inputs[0][1]);
+        internals.assign(2, internalShape);
         return false;
     }
 
@@ -164,9 +172,10 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        std::vector<Mat> inputs, outputs;
+        std::vector<Mat> inputs, outputs, internals;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         const int num   = inputs[0].size[0];
         const int inp_c = inputs[0].size[1];
@@ -175,9 +184,8 @@ public:
         int padded_height = inp_h + 2 * pad;
         int padded_width  = inp_w + 2 * pad;
 
-        int size[] = {num, padded_height, padded_width, inp_c};
-        Mat rbot0(4, &size[0], CV_32F, float(0));
-        Mat rbot1(4, &size[0], CV_32F, float(0));
+        Mat& rbot0 = internals[0];
+        Mat& rbot1 = internals[1];
         blobRearrangeKernel2(inputs[0], rbot0);
         blobRearrangeKernel2(inputs[1], rbot1);
 
