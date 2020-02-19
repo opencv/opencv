@@ -84,7 +84,7 @@ void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops);
 void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data);
 void readGSerializedDatas(GSerialized &s, std::ifstream &ifs_data);
 
-//std::ostream& operator << (std::ostream& os, uint size);
+//Graph dump operators
 std::ostream& operator << (std::ostream& os, Kernel k);
 std::ostream& operator << (std::ostream& os, std::string str);
 std::ostream& operator << (std::ostream& os, std::vector<int> ints);
@@ -102,8 +102,7 @@ std::ostream& operator << (std::ostream& os, std::vector<Data> datas);
 std::ostream& operator << (std::ostream& os, Op op);
 std::ostream& operator << (std::ostream& os, std::vector<Op> ops);
 
-
-
+//Graph restore operators
 std::ifstream& operator >> (std::ifstream& ifs, Kernel& k);
 
 } // namespace serialization
