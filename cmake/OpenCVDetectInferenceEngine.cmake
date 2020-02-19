@@ -64,9 +64,9 @@ endfunction()
 
 function(download_ie)
   set(ie_src_dir "${OpenCV_BINARY_DIR}/3rdparty/dldt")
-  set(ie_subdir "dldt-2019_R2")
-  ocv_download(FILENAME "2019_R2.zip"
-               HASH "c486380deb75503adca5d7e88763e4a5"
+  set(ie_subdir "dldt-2020.1")
+  ocv_download(FILENAME "2020.1.zip"
+               HASH "98dae3a279e766c843557cbf0f9441db"
                URL
                  "${OPENCV_IE_URL}"
                  "$ENV{OPENCV_IE_URL}"
@@ -87,21 +87,18 @@ function(download_ie)
   endfunction()
 
   # This is a minor patch to IE's cmake files.
-  ie_patch("cmake/dependencies.cmake" "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR")
-  ie_patch("src/inference_engine/CMakeLists.txt" "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR")
-  ie_patch("CMakeLists.txt" "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR")
-
-  ie_patch("CMakeLists.txt" "add_subdirectory(tests)" "")  # Disable tests
+  ie_patch("CMakeLists.txt" "\${CMAKE_BINARY_DIR}" "${OpenCV_BINARY_DIR}/3rdparty/dldt")
   ie_patch("CMakeLists.txt" "add_subdirectory(samples)" "")  # Disable samples
   ie_patch("CMakeLists.txt" "add_subdirectory(tools)" "")  # Disable tools
-  # Enable extensions library
-  ie_patch("src/CMakeLists.txt" "add_subdirectory(extension EXCLUDE_FROM_ALL)" "add_subdirectory(extension)")
+  ie_patch("CMakeLists.txt" "ie_developer_export_targets(format_reader)" "")
+
   # Redirect plugins.xml output
   ie_patch("cmake/plugins/plugins.cmake" "IE_CONFIG_OUTPUT_FILE=\${config_output_file}" "IE_CONFIG_OUTPUT_FILE=${LIBRARY_OUTPUT_PATH}/plugins.xml")
+  ie_patch("cmake/vpu_dependencies.cmake" "CMAKE_LIBRARY_OUTPUT_DIRECTORY" "LIBRARY_OUTPUT_PATH")
 
-  function(download_from_github name version md5 org)
+  function(download_from_github name version md5 org dst)
     string(TOUPPER ${name} upName)
-    set(src_dir "${ie_src_dir}/${ie_subdir}/inference-engine/thirdparty/${name}")
+    set(dst_dir "${dst}/${name}")
     set(filename "v${version}.zip")
     set(subdir "${name}-${version}")
     ocv_download(FILENAME ${filename}
@@ -110,7 +107,7 @@ function(download_ie)
                    "${OPENCV_${upName}_URL}"
                    "$ENV{OPENCV_${upName}_URL}"
                    "https://github.com/${org}/${name}/archive/"
-                 DESTINATION_DIR ${src_dir}
+                 DESTINATION_DIR ${dst_dir}
                  ID ${upName}
                  STATUS res
     UNPACK RELATIVE_URL)
@@ -120,16 +117,20 @@ function(download_ie)
     endif()
 
     # Move folder excluding subfolder name
-    if(EXISTS "${src_dir}/${subdir}")
-      file(RENAME "${src_dir}/${subdir}" "${src_dir}_tmp")
-      file(REMOVE_RECURSE "${src_dir}")
-      file(RENAME "${src_dir}_tmp" "${src_dir}")
+    if(EXISTS "${dst_dir}/${subdir}")
+      file(RENAME "${dst_dir}/${subdir}" "${dst_dir}_tmp")
+      file(REMOVE_RECURSE "${dst_dir}")
+      file(RENAME "${dst_dir}_tmp" "${dst_dir}")
     endif()
   endfunction()
 
-  download_from_github(ade "0.1.1d" "37479d90e3a5d47f132f512b22cbe206" "opencv")
-  download_from_github(ngraph "0.22.0" "1ad1e35c1746c67264c9ee525f5893c0" "NervanaSystems")
+  download_from_github(ade "0.1.1d" "37479d90e3a5d47f132f512b22cbe206" "opencv"
+                       "${ie_src_dir}/${ie_subdir}/inference-engine/thirdparty/")
+  download_from_github(ngraph "0.29.0-rc.0" "62dbce13db2682ce75513f2738f265ca" "NervanaSystems"
+                       "${ie_src_dir}/${ie_subdir}/")
 
+  set(ENABLE_TESTS OFF)
+  set(ENABLE_SAMPLES OFF)
   set(ENABLE_GNA OFF)
   set(ENABLE_PROFILING_ITT OFF)
   set(ENABLE_SAMPLES_CORE OFF)
@@ -138,6 +139,9 @@ function(download_ie)
   set(ENABLE_OPENCV OFF)
   set(BUILD_TESTS OFF)  # pugixml
   set(BUILD_SHARED_LIBS OFF)  # pugixml
+  set(NGRAPH_CURRENT_RELEASE_TAG "0.29.0" CACHE STRING "" FORCE)
+  set(NGRAPH_UNIT_TEST_ENABLE OFF CACHE BOOL "" FORCE)
+  set(NGRAPH_TEST_UTIL_ENABLE OFF CACHE BOOL "" FORCE)
 
   if(MSVC)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4146 /wd4703)
@@ -147,7 +151,7 @@ function(download_ie)
                                          -Wundef -Wstrict-aliasing -Wsign-promo -Wreorder -Wunused-variable
                                          -Wunknown-pragmas -Wstrict-overflow -Wextra -Wunused-local-typedefs
                                          -Wunused-function -Wsequence-point -Wunused-but-set-variable -Wparentheses
-                                         -Wsuggest-override -Wimplicit-fallthrough -Wattributes)
+                                         -Wsuggest-override -Wimplicit-fallthrough -Wattributes -Wbool-compare)
     ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes)
 
     if(APPLE)
@@ -156,11 +160,10 @@ function(download_ie)
     endif()
   endif()
 
-  add_subdirectory(${OpenCV_BINARY_DIR}/3rdparty/dldt/${ie_subdir}/inference-engine
+  add_subdirectory(${OpenCV_BINARY_DIR}/3rdparty/dldt/${ie_subdir}
                    ${OpenCV_BINARY_DIR}/3rdparty/dldt)
   if (TARGET MKLDNNPlugin)
     set_target_properties(MKLDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
-    set_target_properties(ie_cpu_extension PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
   endif()
   if (TARGET clDNNPlugin)
     set_target_properties(clDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
@@ -170,7 +173,7 @@ function(download_ie)
   endif()
 
   set(INF_ENGINE_TARGET inference_engine_s PARENT_SCOPE)
-  set(INF_ENGINE_RELEASE "2019020000" PARENT_SCOPE)
+  set(INF_ENGINE_RELEASE "2020010000" PARENT_SCOPE)
 
   # if(WITH_TBB)
   #   # message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
