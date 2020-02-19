@@ -192,9 +192,9 @@ if(CMAKE_VERSION VERSION_LESS "3.1")
   endforeach()
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++11 instead of -std=gnu++11
+ocv_update(CMAKE_CXX_STANDARD 11)
+ocv_update(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++11 instead of -std=gnu++11
 if(CMAKE_CXX11_COMPILE_FEATURES)
   set(HAVE_CXX11 ON)
 endif()
