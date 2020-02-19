@@ -2180,9 +2180,22 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
     contour_ *= (double)scale;
 
     Mat canvas_gray(Size(60*scale, 45*scale), CV_8U, Scalar::all(0));
-    fillConvexPoly(canvas_gray, contour_.ptr<Point>(), npoints, Scalar(255, 255, 255));
+    const Point* ptptr = contour_.ptr<Point>();
+    fillPoly(canvas_gray, &ptptr, &npoints, 1, Scalar(255, 255, 255));
 
-#if 1 // try to eliminate the self-intersection in one way or another
+    vector<vector<Point> > contours;
+    findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
+
+    vector<Point> hull;
+    vector<int> hull_ind;
+    convexHull(contours[0], hull_ind, false, false);
+    vector<Vec4i> defects;
+
+    // the original contour contains self-intersections,
+    // therefore convexHull does not return a monotonous sequence of points
+    // and therefore convexityDefects throws an exception
+    EXPECT_THROW( convexityDefects(contours[0], hull_ind, defects), cv::Exception );
+
 #if 1
     // one way to eliminate the contour self-intersection in this particular case is to apply dilate(),
     // so that the self-repeating points are not self-repeating anymore
@@ -2193,17 +2206,16 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
     erode(canvas_gray, canvas_gray, Mat());
     dilate(canvas_gray, canvas_gray, Mat());
 #endif
-#endif
-    vector<vector<Point> > contours;
+
+    // after the "fix", the newly retrieved contour should not have self-intersections,
+    // and everything should work well
     findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
+    convexHull(contours[0], hull, false, true);
+    convexHull(contours[0], hull_ind, false, false);
 
     DRAW(Mat canvas(Size(60*scale, 45*scale), CV_8UC3, Scalar::all(0));
         drawContours(canvas, contours, -1, Scalar(255, 255, 255), -1));
 
-    vector<int> hull_ind;
-    vector<Point> hull;
-    convexHull(contours[0], hull, false, true);
-    convexHull(contours[0], hull_ind, false, false);
     size_t nhull = hull.size();
     ASSERT_EQ( nhull, hull_ind.size() );
 
@@ -2234,7 +2246,6 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
         }
     }
 
-    vector<Vec4i> defects;
     convexityDefects(contours[0], hull_ind, defects);
 
     for(size_t i = 0; i < defects.size(); i++ )
