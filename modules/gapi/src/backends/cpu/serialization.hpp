@@ -84,6 +84,28 @@ void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops);
 void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data);
 void readGSerializedDatas(GSerialized &s, std::ifstream &ifs_data);
 
+//std::ostream& operator << (std::ostream& os, uint size);
+std::ostream& operator << (std::ostream& os, Kernel k);
+std::ostream& operator << (std::ostream& os, std::string str);
+std::ostream& operator << (std::ostream& os, std::vector<int> ints);
+std::ostream& operator << (std::ostream& os, std::vector<RcDesc> descs);
+std::ostream& operator << (std::ostream& os, RcDesc desc);
+std::ostream& operator << (std::ostream& os, std::vector<double> doubles);
+std::ostream& operator << (std::ostream& os, std::vector<cv::Size> cvsizes);
+std::ostream& operator << (std::ostream& os, std::vector<bool> bools);
+std::ostream& operator << (std::ostream& os, std::vector<cv::Scalar> cvscalars);
+std::ostream& operator << (std::ostream& os, std::vector<cv::Point> cvpoints);
+std::ostream& operator << (std::ostream& os, std::vector<cv::Mat> cvmats);
+std::ostream& operator << (std::ostream& os, std::vector<cv::Rect> cvrects);
+std::ostream& operator << (std::ostream& os, Data data);
+std::ostream& operator << (std::ostream& os, std::vector<Data> datas);
+std::ostream& operator << (std::ostream& os, Op op);
+std::ostream& operator << (std::ostream& os, std::vector<Op> ops);
+
+
+
+std::ifstream& operator >> (std::ifstream& ifs, Kernel& k);
+
 } // namespace serialization
 } // namespace gimpl
 

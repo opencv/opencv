@@ -240,56 +240,75 @@ void printGSerialized(const GSerialized s)
 }
 void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops)
 {
+#if 1
+    ofs_ops << s.m_ops;
+#else
     uint ops_size = (uint)s.m_ops.size();
     ofs_ops.write((char*)&ops_size, sizeof(uint));
-//    std::cout << "dumpGSerializedOps ops size " << s.m_ops.size() <<  std::endl;
+    //ofs_ops << ops_size;
+    std::cout << "dumpGSerializedOps ops size " << s.m_ops.size() <<  std::endl;
     for (const auto& op : s.m_ops)
     {
         //Kernel k
+#if 0
         uint k_name_size = (uint)op.k.name.size();
-//        std::cout << "dumpGSerializedOps k_name_size " << k_name_size <<  std::endl;
-        ofs_ops.write((char*)&k_name_size, sizeof(uint));
+        std::cout << "dumpGSerializedOps k_name_size " << k_name_size <<  std::endl;
+        ///ofs_ops.write((char*)&k_name_size, sizeof(uint));
+        ofs_ops << k_name_size;
         ofs_ops.write(op.k.name.c_str(), k_name_size);
+        ///ofs_ops << op.k.name;
         uint k_tag_size = (uint)op.k.tag.size();
 //        std::cout << "dumpGSerializedOps k_tag_size " << k_tag_size <<  std::endl;
         ofs_ops.write((char*)&k_tag_size, sizeof(uint));
         ofs_ops.write(op.k.tag.c_str(), k_tag_size);
+#else
+        uint k_name_size = (uint)op.k.name.size();
+        std::cout << "dumpGSerializedOps k_name_size " << k_name_size <<  std::endl;
+        std::cout << "dumpGSerializedOps op.k.name " << op.k.name.c_str() <<  std::endl;
+        //ofs_ops << op.k.name;
+        //ofs_ops << op.k.tag;
+        ofs_ops << op.k;
+#endif
 
         //std::vector<int>   kind;
-        uint kind_size = (uint)op.kind.size();
-//        std::cout << "dumpGSerializedOps kind_size " << kind_size <<  std::endl;
-        ofs_ops.write((char*)&kind_size, sizeof(uint));
-        ofs_ops.write((char*)op.kind.data(), kind_size * sizeof(int));
-//        for(uint j = 0; j < kind_size; j++)
-//        {
-//            std::cout << op.kind[j] <<  std::endl;
-//        }
+        //uint kind_size = (uint)op.kind.size();
+        //std::cout << "dumpGSerializedOps kind_size " << kind_size <<  std::endl;
+        //ofs_ops.write((char*)&kind_size, sizeof(uint));
+        //ofs_ops.write((char*)op.kind.data(), kind_size * sizeof(int));
+        ofs_ops << op.kind;
+        //for(uint j = 0; j < kind_size; j++)
+        //{
+        //    std::cout << op.kind[j] <<  std::endl;
+        //}
 
         //std::vector<int>   opaque_kind;
-        uint opaque_kind_size = (uint)op.opaque_kind.size();
+        //uint opaque_kind_size = (uint)op.opaque_kind.size();
 //        std::cout << "dumpGSerializedOps opaque_kind_size " << opaque_kind_size <<  std::endl;
-        ofs_ops.write((char*)&opaque_kind_size, sizeof(uint));
-        ofs_ops.write((char*)op.opaque_kind.data(), opaque_kind_size * sizeof(int));
+        //ofs_ops.write((char*)&opaque_kind_size, sizeof(uint));
+        //ofs_ops.write((char*)op.opaque_kind.data(), opaque_kind_size * sizeof(int));
+        ofs_ops << op.opaque_kind;
 //        for(uint j = 0; j < opaque_kind_size; j++)
 //        {
 //            std::cout << op.opaque_kind[j] <<  std::endl;
 //        }
 
         //std::vector<RcDesc> outs;
-        uint outs_size = (uint)op.outs.size();
+        //uint outs_size = (uint)op.outs.size();
 //        std::cout << "dumpGSerializedOps outs_size " << outs_size <<  std::endl;
-        ofs_ops.write((char*)&outs_size, sizeof(uint));
-        ofs_ops.write((char*)op.outs.data(), outs_size * sizeof(RcDesc));
+        //ofs_ops.write((char*)&outs_size, sizeof(uint));
+        //ofs_ops.write((char*)op.outs.data(), outs_size * sizeof(RcDesc));
+        ofs_ops << op.outs;
 //        for(uint j = 0; j < outs_size; j++)
 //        {
 //            std::cout << op.outs[j].id << " " << (int)op.outs[j].shape <<  std::endl;
 //        }
 
         //std::vector<RcDesc> ins;
-        uint ins_size = (uint)op.ins.size();
+        //uint ins_size = (uint)op.ins.size();
 //        std::cout << "dumpGSerializedOps ins_size " << ins_size <<  std::endl;
-        ofs_ops.write((char*)&ins_size, sizeof(uint));
-        ofs_ops.write((char*)op.ins.data(), ins_size * sizeof(RcDesc));
+        //ofs_ops.write((char*)&ins_size, sizeof(uint));
+        //ofs_ops.write((char*)op.ins.data(), ins_size * sizeof(RcDesc));
+        ofs_ops << op.ins;
 //        for(uint j = 0; j < ins_size; j++)
 //        {
 //            std::cout << op.ins[j].id << " " << (int)op.ins[j].shape <<  std::endl;
@@ -297,55 +316,60 @@ void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops)
 
         //opaque args
         //std::vector<int> opaque_ints;
-        uint ints_size = (uint)op.opaque_ints.size();
+        //uint ints_size = (uint)op.opaque_ints.size();
 //        std::cout << "dumpGSerializedOps ints_size " << ints_size <<  std::endl;
-        ofs_ops.write((char*)&ints_size, sizeof(uint));
-        ofs_ops.write((char*)op.opaque_ints.data(), ints_size * sizeof(int));
+        //ofs_ops.write((char*)&ints_size, sizeof(uint));
+        //ofs_ops.write((char*)op.opaque_ints.data(), ints_size * sizeof(int));
+        ofs_ops << op.opaque_ints;
 //        for(uint j = 0; j < ints_size; j++)
 //        {
 //            std::cout << op.opaque_ints[j] <<  std::endl;
 //        }
 
         //std::vector<double> opaque_doubles;
-        uint doubles_size = (uint)op.opaque_doubles.size();
+        //uint doubles_size = (uint)op.opaque_doubles.size();
 //        std::cout << "dumpGSerializedOps doubles_size " << doubles_size <<  std::endl;
-        ofs_ops.write((char*)&doubles_size, sizeof(uint));
-        ofs_ops.write((char*)op.opaque_doubles.data(), doubles_size * sizeof(double));
+        //ofs_ops.write((char*)&doubles_size, sizeof(uint));
+        //ofs_ops.write((char*)op.opaque_doubles.data(), doubles_size * sizeof(double));
+        ofs_ops << op.opaque_doubles;
 //        for(uint j = 0; j < doubles_size; j++)
 //        {
 //            std::cout << op.opaque_doubles[j] <<  std::endl;
 //        }
 
         //std::vector<cv::Size> opaque_cvsizes;
-        uint cvsizes_size = (uint)op.opaque_cvsizes.size();
+        //uint cvsizes_size = (uint)op.opaque_cvsizes.size();
 //        std::cout << "dumpGSerializedOps cvsizes_size " << cvsizes_size <<  std::endl;
-        ofs_ops.write((char*)&cvsizes_size, sizeof(uint));
-        ofs_ops.write((char*)op.opaque_cvsizes.data(), cvsizes_size * sizeof(cv::Size));
+        //ofs_ops.write((char*)&cvsizes_size, sizeof(uint));
+        //ofs_ops.write((char*)op.opaque_cvsizes.data(), cvsizes_size * sizeof(cv::Size));
+        ofs_ops << op.opaque_cvsizes;
 //        for(uint j = 0; j < cvsizes_size; j++)
 //        {
 //            std::cout << op.opaque_cvsizes[j].width << " " << op.opaque_cvsizes[j].height << std::endl;
 //        }
 
         //std::vector<bool> opaque_bools;
-        uint bools_size = (uint)op.opaque_bools.size();
+        //uint bools_size = (uint)op.opaque_bools.size();
 //        std::cout << "dumpGSerializedOps bools_size " << bools_size <<  std::endl;
-        ofs_ops.write((char*)&bools_size, sizeof(uint));
-        int bool_val;
-        for(uint j = 0; j < bools_size; j++)
-        {
-            bool_val = op.opaque_bools[j] ? 1 : 0;
-            ofs_ops.write((char*)&bool_val, sizeof(int));
-        }
+        //ofs_ops.write((char*)&bools_size, sizeof(uint));
+        //int bool_val;
+        //for(uint j = 0; j < bools_size; j++)
+        //{
+        //    bool_val = op.opaque_bools[j] ? 1 : 0;
+        //    ofs_ops.write((char*)&bool_val, sizeof(int));
+        //}
+        ofs_ops << op.opaque_bools;
 //        for(uint j = 0; j < bools_size; j++)
 //        {
 //            std::cout << op.opaque_bools[j] <<  std::endl;
 //        }
 
         //std::vector<cv::Scalar> opaque_cvscalars;
-        uint cvscalars_size = (uint)op.opaque_cvscalars.size();
+        //uint cvscalars_size = (uint)op.opaque_cvscalars.size();
 //        std::cout << "dumpGSerializedOps cvscalars_size " << cvscalars_size <<  std::endl;
-        ofs_ops.write((char*)&cvscalars_size, sizeof(uint));
-        ofs_ops.write((char*)op.opaque_cvscalars.data(), cvscalars_size * sizeof(cv::Scalar));
+        //ofs_ops.write((char*)&cvscalars_size, sizeof(uint));
+        //ofs_ops.write((char*)op.opaque_cvscalars.data(), cvscalars_size * sizeof(cv::Scalar));
+        ofs_ops << op.opaque_cvscalars;
 //        for(uint j = 0; j < cvscalars_size; j++)
 //        {
 //            std::cout << op.opaque_cvscalars[j][0] << " "
@@ -355,16 +379,18 @@ void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops)
 //        }
 
         //std::vector<cv::Point> opaque_cvpoints;
-        uint cvpoints_size = (uint)op.opaque_cvpoints.size();
+        //uint cvpoints_size = (uint)op.opaque_cvpoints.size();
 //        std::cout << "dumpGSerializedOps cvpoints_size " << cvpoints_size <<  std::endl;
-        ofs_ops.write((char*)&cvpoints_size, sizeof(uint));
-        ofs_ops.write((char*)op.opaque_cvpoints.data(), cvpoints_size * sizeof(cv::Point));
+        //ofs_ops.write((char*)&cvpoints_size, sizeof(uint));
+        //ofs_ops.write((char*)op.opaque_cvpoints.data(), cvpoints_size * sizeof(cv::Point));
+        ofs_ops << op.opaque_cvpoints;
 //        for(uint j = 0; j < cvpoints_size; j++)
 //        {
 //            std::cout << op.opaque_cvpoints[j].x << " " << op.opaque_cvpoints[j].y << std::endl;
 //        }
 
         //std::vector<cv::Mat> opaque_cvmats;
+#if 0
         uint cvmats_size = (uint)op.opaque_cvmats.size();
 //        std::cout << "dumpGSerializedOps cvmats_size " << cvmats_size <<  std::endl;
         ofs_ops.write((char*)&cvmats_size, sizeof(uint));
@@ -391,12 +417,16 @@ void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops)
                 }
             }
         }
+#else
+        ofs_ops << op.opaque_cvmats;
+#endif
 
         //std::vector<cv::Rect> opaque_cvrects;
-        uint cvrects_size = (uint)op.opaque_cvrects.size();
+        //uint cvrects_size = (uint)op.opaque_cvrects.size();
 //        std::cout << "dumpGSerializedOps cvrects_size " << cvrects_size <<  std::endl;
-        ofs_ops.write((char*)&cvrects_size, sizeof(uint));
-        ofs_ops.write((char*)op.opaque_cvrects.data(), cvrects_size * sizeof(cv::Rect));
+        //ofs_ops.write((char*)&cvrects_size, sizeof(uint));
+        //ofs_ops.write((char*)op.opaque_cvrects.data(), cvrects_size * sizeof(cv::Rect));
+        ofs_ops << op.opaque_cvrects;
 //        for(uint j = 0; j < cvrects_size; j++)
 //        {
 //            std::cout << op.opaque_cvrects[j].x << " "
@@ -406,18 +436,23 @@ void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops)
 //        }
 
     }
+#endif
 }
 
 void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data)
 {
+#if 1
+    ofs_data << s.m_datas;
+#else
     uint datas_size = (uint)s.m_datas.size();
     ofs_data.write((char*)&datas_size, sizeof(uint));
     //std::cout << "dumpGSerializedDatas datas size " << s.m_datas.size() <<  std::endl;
     for (const auto& data : s.m_datas)
     {
         //RcDesc rc;
-        ofs_data.write((char*)&data.rc, sizeof(RcDesc));
+        //ofs_data.write((char*)&data.rc, sizeof(RcDesc));
         //std::cout << "dumpGSerializedDatas RcDesc " << data.rc.id << " " << (int)data.rc.shape <<  std::endl;
+        ofs_data << data.rc;
 
         //GMetaArg meta;
         switch (data.rc.shape)
@@ -426,6 +461,7 @@ void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data)
         {
             std::cout << "dumpGSerializedDatas  GMAT " << data.meta << std::endl;
             GMatDesc mat_desc = util::get<GMatDesc>(data.meta);
+
             ofs_data.write((char*)&mat_desc.depth, sizeof(int));
             ofs_data.write((char*)&mat_desc.chan, sizeof(int));
             ofs_data.write((char*)&mat_desc.size, sizeof(cv::gapi::own::Size));
@@ -443,6 +479,7 @@ void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data)
             {
                 std::cout << mat_desc.dims[j] << std::endl;
             }
+
             break;
         }
         case cv::GShape::GSCALAR:
@@ -465,8 +502,8 @@ void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data)
         default:
             std::cout << "dumpGSerializedDatas  unsupported" << std::endl;
         }
-
     }
+#endif
 }
 
 void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops)
@@ -477,13 +514,16 @@ void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops)
     for (uint i = 0; i < ops_size;  i++)
     {
         //Kernel k
+#if 1
         uint k_name_size;
         ifs_ops.read((char*)&k_name_size, sizeof(uint));
-//        std::cout << "readGSerializedOps k_name_size " << k_name_size <<  std::endl;
+        //ifs_ops >> k_name_size;
+        std::cout << "readGSerializedOps k_name_size " << k_name_size <<  std::endl;
         std::string k_name;
         k_name.resize(k_name_size);
+        //ifs_ops >> k_name;
         ifs_ops.read((char*)k_name.c_str(), k_name_size);
-//        std::cout << "readGSerializedOps k_name " << k_name <<  std::endl;
+        std::cout << "readGSerializedOps k_name " << k_name.c_str() <<  std::endl;
         std::fill(s.m_ops[i].k.name.begin(), s.m_ops[i].k.name.end(), 0);
         s.m_ops[i].k.name.clear();
         //s.m_ops[i].k.name.append(k_name);
@@ -491,24 +531,41 @@ void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops)
 
         uint k_tag_size;
         ifs_ops.read((char*)&k_tag_size, sizeof(uint));
-//        std::cout << "readGSerializedOps k_tag_size " << k_tag_size <<  std::endl;
+        std::cout << "readGSerializedOps k_tag_size " << k_tag_size <<  std::endl;
         std::string k_tag;
         k_tag.resize(k_tag_size);
         ifs_ops.read((char*)k_tag.c_str(), k_tag_size);
-//        std::cout << "readGSerializedOps k_tag " << k_tag <<  std::endl;
+        std::cout << "readGSerializedOps k_tag " << k_tag <<  std::endl;
         s.m_ops[i].k.tag.clear();
         s.m_ops[i].k.tag = k_tag;
+#else
+        Kernel kernel;
+        ifs_ops >> kernel;
+
+        uint k_tag_size;
+        ifs_ops.read((char*)&k_tag_size, sizeof(uint));
+        std::cout << "readGSerializedOps k_tag_size " << k_tag_size <<  std::endl;
+        kernel.tag.resize(k_tag_size);
+        ifs_ops.read((char*)kernel.tag.c_str(), k_tag_size);
+        std::cout << "readGSerializedOps k_tag " << kernel.tag <<  std::endl;
+
+        std::fill(s.m_ops[i].k.name.begin(), s.m_ops[i].k.name.end(), 0);
+        s.m_ops[i].k.name.clear();
+        std::fill(s.m_ops[i].k.tag.begin(), s.m_ops[i].k.tag.end(), 0);
+        s.m_ops[i].k.tag.clear();
+        s.m_ops[i].k = kernel;
+#endif
 
         //std::vector<int>   kind;
         uint kind_size;
         ifs_ops.read((char*)&kind_size, sizeof(uint));
-//        std::cout << "readGSerializedOps kind_size " << kind_size <<  std::endl;
+        std::cout << "readGSerializedOps kind_size " << kind_size <<  std::endl;
         std::vector<int> kind(kind_size);
         ifs_ops.read((char*)kind.data(), kind_size * sizeof(int));
-//        for(uint j = 0; j < kind_size; j++)
-//        {
-//            std::cout << kind[j] <<  std::endl;
-//        }
+        for(uint j = 0; j < kind_size; j++)
+        {
+            std::cout << kind[j] <<  std::endl;
+        }
         std::fill(s.m_ops[i].kind.begin(), s.m_ops[i].kind.end(), 0);
         s.m_ops[i].kind.clear();
         s.m_ops[i].kind = kind;
@@ -1005,6 +1062,247 @@ void deserialize(const serialization::GSerialized& s)
     auto pass_ctx = ade::passes::PassContext{g};
     ade::passes::TopologicalSort{}(pass_ctx);
     gimpl::passes::dumpDotToFile(pass_ctx, "graph.dot");
+}
+
+std::ostream& operator << (std::ostream& os, Kernel k)
+{
+    os << k.name;
+    os << k.tag;
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::string str)
+{
+    uint str_size = (uint)str.size();
+    os.write((char*)&str_size, sizeof(uint));
+    os.write((char*)str.c_str(), str_size * sizeof(char));
+    return os;
+}
+
+
+std::ostream& operator << (std::ostream& os, std::vector<int> ints)
+{
+    uint ints_size = (uint)ints.size();
+    os.write((char*)&ints_size, sizeof(uint));
+    os.write((char*)ints.data(), ints_size * sizeof(int));
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::vector<RcDesc> descs)
+{
+    uint descs_size = (uint)descs.size();
+    os.write((char*)&descs_size, sizeof(uint));
+    os.write((char*)descs.data(), descs_size * sizeof(RcDesc));
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, RcDesc desc)
+{
+    os.write((char*)&desc,  sizeof(RcDesc));
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::vector<double> doubles)
+{
+    uint doubles_size = (uint)doubles.size();
+    os.write((char*)&doubles_size, sizeof(uint));
+    os.write((char*)doubles.data(), doubles_size * sizeof(double));
+    return os;
+}
+std::ostream& operator << (std::ostream& os, std::vector<cv::Size> cvsizes)
+{
+    uint cvsizes_size = (uint)cvsizes.size();
+    os.write((char*)&cvsizes_size, sizeof(uint));
+    os.write((char*)cvsizes.data(), cvsizes_size * sizeof(cv::Size));
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::vector<bool> bools)
+{
+    uint bools_size = (uint)bools.size();
+    os.write((char*)&bools_size, sizeof(uint));
+    int bool_val;
+    for(uint j = 0; j < bools_size; j++)
+    {
+        bool_val = bools[j] ? 1 : 0;
+        os.write((char*)&bool_val, sizeof(int));
+    }
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::vector<cv::Scalar> cvscalars)
+{
+    uint cvscalars_size = (uint)cvscalars.size();
+    os.write((char*)&cvscalars_size, sizeof(uint));
+    os.write((char*)cvscalars.data(), cvscalars_size * sizeof(cv::Scalar));
+    return os;
+}
+std::ostream& operator << (std::ostream& os, std::vector<cv::Point> cvpoints)
+{
+    uint cvpoints_size = (uint)cvpoints.size();
+    os.write((char*)&cvpoints_size, sizeof(uint));
+    os.write((char*)cvpoints.data(), cvpoints_size * sizeof(cv::Point));
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::vector<cv::Mat> cvmats)
+{
+    uint cvmats_size = (uint)cvmats.size();
+    os.write((char*)&cvmats_size, sizeof(uint));
+    for(uint j = 0; j < cvmats_size; j++)
+    {
+        size_t matSizeInBytes = cvmats[j].rows * cvmats[j].step[0];
+        int mat_type = cvmats[j].type();
+        os.write((char*)&cvmats[j].cols, sizeof(int));
+        os.write((char*)&cvmats[j].rows, sizeof(int));
+        os.write((char*)&mat_type, sizeof(int));
+        os.write((char*)&cvmats[j].step[0], sizeof(int));
+        if(matSizeInBytes!=0)
+        {
+            os.write((char*)cvmats[j].data, matSizeInBytes);
+        }
+    }
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::vector<cv::Rect> cvrects)
+{
+    uint cvrects_size = (uint)cvrects.size();
+    os.write((char*)&cvrects_size, sizeof(uint));
+    os.write((char*)cvrects.data(), cvrects_size * sizeof(cv::Rect));
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::vector<Data> datas)
+{
+    uint datas_size = (uint)datas.size();
+    os.write((char*)&datas_size, sizeof(uint));
+    for (const auto& data : datas)
+    {
+        //Data
+        os << data;
+    }
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, Data data)
+{
+    os << data.rc;
+
+    //GMetaArg meta;
+    switch (data.rc.shape)
+    {
+    case cv::GShape::GMAT:
+    {
+        GMatDesc mat_desc = util::get<GMatDesc>(data.meta);
+
+        os.write((char*)&mat_desc.depth, sizeof(int));
+        os.write((char*)&mat_desc.chan, sizeof(int));
+        os.write((char*)&mat_desc.size, sizeof(cv::gapi::own::Size));
+        int bool_val;
+        bool_val = mat_desc.planar ? 1 : 0;
+        os.write((char*)&bool_val, sizeof(int));
+
+        uint dims_size = (uint)mat_desc.dims.size();
+        os.write((char*)&dims_size, sizeof(uint));
+        os.write((char*)mat_desc.dims.data(), dims_size * sizeof(int));
+        break;
+    }
+    case cv::GShape::GSCALAR:
+    {
+        //std::cout << "dumpGSerializedDatas  GSCALAR " << std::endl;
+        //GScalarDesc scalar_desc = util::get<GScalarDesc>(data.meta);
+        break;
+    }
+    case cv::GShape::GARRAY:
+    {   //std::cout << "dumpGSerializedDatas  GARRAY " << std::endl;
+        //GArrayDesc array_desc = util::get<GArrayDesc>(data.meta);
+        break;
+    }
+    case cv::GShape::GOPAQUE:
+    {
+        //std::cout << "dumpGSerializedDatas  GOPAQUE " << std::endl;
+        //GOpaqueDesc opaque_desc = util::get<GOpaqueDesc>(data.meta);
+        break;
+    }
+    default:
+        //std::cout << "dumpGSerializedDatas  unsupported" << std::endl;
+        break;
+    }
+
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, Op op)
+{
+    //Kernel k
+    os << op.k;
+
+    //std::vector<int>   kind;
+    os << op.kind;
+
+    //std::vector<int>   opaque_kind;
+    os << op.opaque_kind;
+
+    //std::vector<RcDesc> outs;
+    os << op.outs;
+
+    //std::vector<RcDesc> ins;
+    os << op.ins;
+
+    //opaque args
+    //std::vector<int> opaque_ints;
+    os << op.opaque_ints;
+
+    //std::vector<double> opaque_doubles;
+    os << op.opaque_doubles;
+
+    //std::vector<cv::Size> opaque_cvsizes;
+    os << op.opaque_cvsizes;
+
+    //std::vector<bool> opaque_bools;
+    os << op.opaque_bools;
+
+    //std::vector<cv::Scalar> opaque_cvscalars;
+    os << op.opaque_cvscalars;
+
+    //std::vector<cv::Point> opaque_cvpoints;
+    os << op.opaque_cvpoints;
+
+    //std::vector<cv::Mat> opaque_cvmats;
+    os << op.opaque_cvmats;
+
+    //std::vector<cv::Rect> opaque_cvrects;
+    os << op.opaque_cvrects;
+
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, std::vector<Op> ops)
+{
+    uint ops_size = (uint)ops.size();
+    os.write((char*)&ops_size, sizeof(uint));
+    for (const auto& op : ops)
+    {
+        //Op
+        os << op;
+    }
+    return os;
+}
+
+
+std::ifstream& operator >> (std::ifstream& is, Kernel& k)
+{
+    uint k_name_size;
+    is >> k_name_size;
+    k.name.resize(k_name_size);
+    //is.read((char*)k.name.c_str(), k_name_size);
+    is >> k.name;
+    //uint k_tag_size;
+    //is >> k_tag_size;
+    //k.tag.resize(k_tag_size);
+    //is.read((char*)k.tag.c_str(), k_tag_size);
+    return is;
 }
 
 } // namespace serialization
