@@ -67,6 +67,7 @@
 //M*/
 
 #include "../precomp.hpp"
+#include <opencv2/dnn/shape_utils.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -109,6 +110,26 @@ namespace cv {
                     params.blobs = blobs;
                 }
 
+                void setBatchNorm()
+                {
+                    cv::dnn::LayerParams bn_param;
+
+                    bn_param.name = "BatchNorm-name";
+                    bn_param.type = "BatchNorm";
+                    bn_param.set<bool>("has_weight", true);
+                    bn_param.set<bool>("has_bias", true);
+                    bn_param.set<float>("eps", 1E-6);	// .000001f in Darknet Yolo
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("bn_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = bn_param.type;
+                    lp.layerParams = bn_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+                }
+
                 cv::dnn::LayerParams getParamConvolution(int kernel, int pad,
                     int stride, int filters_num)
                 {
@@ -149,24 +170,46 @@ namespace cv {
                     net->layers.push_back(lp);
 
                     if (use_batch_normalize)
-                    {
-                        cv::dnn::LayerParams bn_param;
+                        setBatchNorm();
 
-                        bn_param.name = "BatchNorm-name";
-                        bn_param.type = "BatchNorm";
-                        bn_param.set<bool>("has_weight", true);
-                        bn_param.set<bool>("has_bias", true);
-                        bn_param.set<float>("eps", 1E-6);	// .000001f in Darknet Yolo
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
 
-                        darknet::LayerParameter lp;
-                        std::string layer_name = cv::format("bn_%d", layer_id);
-                        lp.layer_name = layer_name;
-                        lp.layer_type = bn_param.type;
-                        lp.layerParams = bn_param;
-                        lp.bottom_indexes.push_back(last_layer);
-                        last_layer = layer_name;
-                        net->layers.push_back(lp);
+                cv::dnn::LayerParams getParamFullyConnected(int output)
+                {
+                    cv::dnn::LayerParams params;
+                    params.name = "FullyConnected-name";
+                    params.type = "InnerProduct";
+
+                    params.set<bool>("bias_term", false);	// true only if(BatchNorm == false)
+                    params.set<int>("num_output", output);
+
+                    return params;
+                }
+
+                void setFullyConnected(int output, int use_batch_normalize)
+                {
+                    cv::dnn::LayerParams fullyconnected_param =
+                        getParamFullyConnected(output);
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("fullyConnected_%d", layer_id);
+
+                    // use BIAS in any case
+                    if (!use_batch_normalize) {
+                        fullyconnected_param.set<bool>("bias_term", true);
                     }
+
+                    lp.layer_name = layer_name;
+                    lp.layer_type = fullyconnected_param.type;
+                    lp.layerParams = fullyconnected_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    if (use_batch_normalize)
+                        setBatchNorm();
 
                     layer_id++;
                     fused_layer_names.push_back(last_layer);
@@ -191,18 +234,21 @@ namespace cv {
                     fused_layer_names.back() = last_layer;
                 }
 
-                void setMaxpool(size_t kernel, size_t pad, size_t stride)
+                void setMaxpool(int kernel, int pad, int stride)
                 {
                     cv::dnn::LayerParams maxpool_param;
                     maxpool_param.set<cv::String>("pool", "max");
                     maxpool_param.set<int>("kernel_size", kernel);
-                    maxpool_param.set<int>("pad", pad);
+                    maxpool_param.set<int>("pad_l", floor((float)pad / 2));
+                    maxpool_param.set<int>("pad_r", ceil((float)pad / 2));
+                    maxpool_param.set<int>("pad_t", floor((float)pad / 2));
+                    maxpool_param.set<int>("pad_b", ceil((float)pad / 2));
+                    maxpool_param.set<bool>("ceil_mode", false);
                     maxpool_param.set<int>("stride", stride);
-                    maxpool_param.set<cv::String>("pad_mode", "SAME");
                     maxpool_param.name = "Pooling-name";
                     maxpool_param.type = "Pooling";
-                    darknet::LayerParameter lp;
 
+                    darknet::LayerParameter lp;
                     std::string layer_name = cv::format("pool_%d", layer_id);
                     lp.layer_name = layer_name;
                     lp.layer_type = maxpool_param.type;
@@ -539,7 +585,10 @@ namespace cv {
                 net->channels = getParam(net_params, "channels", 3);
                 CV_Assert(net->width > 0 && net->height > 0 && net->channels > 0);
 
-                int current_channels = net->channels;
+                MatShape tensor_shape(3);
+                tensor_shape[0] = net->channels;
+                tensor_shape[1] = net->width;
+                tensor_shape[2] = net->height;
                 net->out_channels_vec.resize(net->layers_cfg.size());
 
                 layers_counter = -1;
@@ -568,23 +617,46 @@ namespace cv {
                             padding = kernel_size / 2;
 
                         CV_Assert(kernel_size > 0 && filters > 0);
-                        CV_Assert(current_channels > 0);
+                        CV_Assert(tensor_shape[0] > 0);
 
-                        setParams.setConvolution(kernel_size, padding, stride, filters, current_channels,
+                        setParams.setConvolution(kernel_size, padding, stride, filters, tensor_shape[0],
                             batch_normalize);
 
-                        current_channels = filters;
+                        tensor_shape[0] = filters;
+                        tensor_shape[1] = (tensor_shape[1] - kernel_size + 2 * padding) / stride + 1;
+                        tensor_shape[2] = (tensor_shape[2] - kernel_size + 2 * padding) / stride + 1;
+                    }
+                    else if (layer_type == "connected")
+                    {
+                        int output = getParam<int>(layer_params, "output", 1);
+                        bool batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
+
+                        CV_Assert(output > 0);
+
+                        setParams.setFullyConnected(output, batch_normalize);
+
+                        if(layers_counter && tensor_shape[1] > 1)
+                            net->out_channels_vec[layers_counter-1] = total(tensor_shape);
+
+                        tensor_shape[0] = output;
+                        tensor_shape[1] = 1;
+                        tensor_shape[2] = 1;
                     }
                     else if (layer_type == "maxpool")
                     {
                         int kernel_size = getParam<int>(layer_params, "size", 2);
                         int stride = getParam<int>(layer_params, "stride", 2);
-                        int pad = getParam<int>(layer_params, "pad", 0);
-                        setParams.setMaxpool(kernel_size, pad, stride);
+                        int padding = getParam<int>(layer_params, "padding", kernel_size - 1);
+                        setParams.setMaxpool(kernel_size, padding, stride);
+
+                        tensor_shape[1] = (tensor_shape[1] - kernel_size + padding) / stride + 1;
+                        tensor_shape[2] = (tensor_shape[2] - kernel_size + padding) / stride + 1;
                     }
                     else if (layer_type == "avgpool")
                     {
                         setParams.setAvgpool();
+                        tensor_shape[1] = 1;
+                        tensor_shape[2] = 1;
                     }
                     else if (layer_type == "softmax")
                     {
@@ -599,10 +671,10 @@ namespace cv {
                         CV_Assert(!bottom_layers.empty());
                         std::vector<int> layers_vec = getNumbers<int>(bottom_layers);
 
-                        current_channels = 0;
+                        tensor_shape[0] = 0;
                         for (size_t k = 0; k < layers_vec.size(); ++k) {
                             layers_vec[k] = layers_vec[k] >= 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
-                            current_channels += net->out_channels_vec[layers_vec[k]];
+                            tensor_shape[0] += net->out_channels_vec[layers_vec[k]];
                         }
 
                         if (layers_vec.size() == 1)
@@ -610,10 +682,16 @@ namespace cv {
                         else
                             setParams.setConcat(layers_vec.size(), layers_vec.data());
                     }
+                    else if (layer_type == "dropout")
+                    {
+                        setParams.setIdentity(layers_counter-1);
+                    }
                     else if (layer_type == "reorg")
                     {
                         int stride = getParam<int>(layer_params, "stride", 2);
-                        current_channels = current_channels * (stride*stride);
+                        tensor_shape[0] = tensor_shape[0] * (stride * stride);
+                        tensor_shape[1] = tensor_shape[1] / stride;
+                        tensor_shape[2] = tensor_shape[2] / stride;
 
                         setParams.setReorg(stride);
                     }
@@ -653,6 +731,8 @@ namespace cv {
                     {
                         int scaleFactor = getParam<int>(layer_params, "stride", 1);
                         setParams.setUpsample(scaleFactor);
+                        tensor_shape[1] = tensor_shape[1] * scaleFactor;
+                        tensor_shape[2] = tensor_shape[2] * scaleFactor;
                     }
                     else if (layer_type == "yolo")
                     {
@@ -686,7 +766,7 @@ namespace cv {
                     else if (activation != "linear")
                         CV_Error(cv::Error::StsParseError, "Unsupported activation: " + activation);
 
-                    net->out_channels_vec[layers_counter] = current_channels;
+                    net->out_channels_vec[layers_counter] = tensor_shape[0];
                 }
 
                 return true;
@@ -712,7 +792,10 @@ namespace cv {
                 if(transpose)
                     CV_Error(cv::Error::StsNotImplemented, "Transpose the weights (except for convolutional) is not implemented");
 
-                int current_channels = net->channels;
+                MatShape tensor_shape(3);
+                tensor_shape[0] = net->channels;
+                tensor_shape[1] = net->width;
+                tensor_shape[2] = net->height;
                 int cv_layers_counter = -1;
                 int darknet_layers_counter = -1;
 
@@ -725,19 +808,36 @@ namespace cv {
                     std::map<std::string, std::string> &layer_params = i->second;
                     std::string layer_type = layer_params["type"];
 
-                    if (layer_type == "convolutional")
+                    if (layer_type == "convolutional" || layer_type == "connected")
                     {
-                        int kernel_size = getParam<int>(layer_params, "size", -1);
-                        int filters = getParam<int>(layer_params, "filters", -1);
-                        bool use_batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
-
-                        CV_Assert(kernel_size > 0 && filters > 0);
-                        CV_Assert(current_channels > 0);
-
-                        size_t const weights_size = filters * current_channels * kernel_size * kernel_size;
-                        int sizes_weights[] = { filters, current_channels, kernel_size, kernel_size };
+                        size_t weights_size;
+                        int filters;
+                        bool use_batch_normalize;
                         cv::Mat weightsBlob;
-                        weightsBlob.create(4, sizes_weights, CV_32F);
+                        if(layer_type == "convolutional")
+                        {
+                            int kernel_size = getParam<int>(layer_params, "size", -1);
+                            filters = getParam<int>(layer_params, "filters", -1);
+                            use_batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
+
+                            CV_Assert(kernel_size > 0 && filters > 0);
+                            CV_Assert(tensor_shape[0] > 0);
+
+                            weights_size = filters * tensor_shape[0] * kernel_size * kernel_size;
+                            int sizes_weights[] = { filters, tensor_shape[0], kernel_size, kernel_size };
+                            weightsBlob.create(4, sizes_weights, CV_32F);
+                        }
+                        else
+                        {
+                            filters = getParam<int>(layer_params, "output", 1);
+                            use_batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
+
+                            CV_Assert(filters>0);
+
+                            weights_size = total(tensor_shape) * filters;
+                            int sizes_weights[] = { filters, total(tensor_shape) };
+                            weightsBlob.create(2, sizes_weights, CV_32F);
+                        }
                         CV_Assert(weightsBlob.isContinuous());
 
                         cv::Mat meanData_mat(1, filters, CV_32F);	// mean
@@ -753,14 +853,14 @@ namespace cv {
                         }
                         ifile.read(reinterpret_cast<char *>(weightsBlob.ptr<float>()), sizeof(float)*weights_size);
 
-                        // set convolutional weights
-                        std::vector<cv::Mat> conv_blobs;
-                        conv_blobs.push_back(weightsBlob);
+                        // set conv/connected weights
+                        std::vector<cv::Mat> layer_blobs;
+                        layer_blobs.push_back(weightsBlob);
                         if (!use_batch_normalize) {
                             // use BIAS in any case
-                            conv_blobs.push_back(biasData_mat);
+                            layer_blobs.push_back(biasData_mat);
                         }
-                        setParams.setLayerBlobs(cv_layers_counter, conv_blobs);
+                        setParams.setLayerBlobs(cv_layers_counter, layer_blobs);
 
                         // set batch normalize (mean, variance, scale, bias)
                         if (use_batch_normalize) {
@@ -782,7 +882,10 @@ namespace cv {
                     if(activation == "leaky")
                         ++cv_layers_counter;  // For ReLU
 
-                    current_channels = net->out_channels_vec[darknet_layers_counter];
+                    if(!darknet_layers_counter)
+                        tensor_shape.resize(1);
+
+                    tensor_shape[0] = net->out_channels_vec[darknet_layers_counter];
                 }
                 return true;
             }

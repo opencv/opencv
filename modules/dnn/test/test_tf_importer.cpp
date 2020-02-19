@@ -196,20 +196,58 @@ TEST_P(Test_TensorFlow_layers, concat_axis_1)
     runTensorFlowNet("concat_axis_1");
 }
 
-TEST_P(Test_TensorFlow_layers, batch_norm)
+TEST_P(Test_TensorFlow_layers, batch_norm_1)
 {
     runTensorFlowNet("batch_norm");
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_2)
+{
     runTensorFlowNet("batch_norm", false, 0.0, 0.0, true);
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_3)
+{
     runTensorFlowNet("fused_batch_norm");
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_4)
+{
     runTensorFlowNet("fused_batch_norm", false, 0.0, 0.0, true);
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_5)
+{
     runTensorFlowNet("batch_norm_text", true);
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_6)
+{
     runTensorFlowNet("batch_norm_text", true, 0.0, 0.0, true);
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_7)
+{
     runTensorFlowNet("unfused_batch_norm");
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_8)
+{
     runTensorFlowNet("fused_batch_norm_no_gamma");
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_9)
+{
     runTensorFlowNet("unfused_batch_norm_no_gamma");
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_10)
+{
     runTensorFlowNet("mvn_batch_norm");
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_11)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     runTensorFlowNet("mvn_batch_norm_1x1");
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_12)
+{
     runTensorFlowNet("switch_identity");
+}
+TEST_P(Test_TensorFlow_layers, batch_norm_13)
+{
     runTensorFlowNet("keras_batch_norm_training");
 }
 
@@ -431,6 +469,8 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
                              CV_TEST_TAG_DNN_SKIP_IE_NGRAPH,
                          CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     }
 #endif
 
@@ -703,10 +743,15 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_OPENCL_FP16 &&
-        INF_ENGINE_VER_MAJOR_EQ(2019020000))
+        (INF_ENGINE_VER_MAJOR_EQ(2019020000) || INF_ENGINE_VER_MAJOR_GE(2020010000))
+    )
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
     checkBackend();
@@ -843,6 +888,8 @@ TEST_P(Test_TensorFlow_layers, slice)
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
                      CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    double l1 = target == DNN_TARGET_MYRIAD ? 4.9e-3 : default_l1;
+    runTensorFlowNet("crop2d", false, l1);
     runTensorFlowNet("slice_4d");
     runTensorFlowNet("strided_slice");
 }

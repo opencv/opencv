@@ -982,6 +982,14 @@ PyObject* pyopencv_from(const String& value)
     return PyString_FromString(value.empty() ? "" : value.c_str());
 }
 
+#if CV_VERSION_MAJOR == 3
+template<>
+PyObject* pyopencv_from(const std::string& value)
+{
+    return PyString_FromString(value.empty() ? "" : value.c_str());
+}
+#endif
+
 template<>
 bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
 {

@@ -23,10 +23,11 @@
 #define INF_ENGINE_RELEASE_2019R1 2019010000
 #define INF_ENGINE_RELEASE_2019R2 2019020000
 #define INF_ENGINE_RELEASE_2019R3 2019030000
+#define INF_ENGINE_RELEASE_2020_1 2020010000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2019R3 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2019R3
+#warning("IE version have not been provided via command-line. Using 2019.1 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2020_1
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
@@ -49,7 +50,7 @@
 #pragma warning(disable: 4996)  // was declared deprecated
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility push(default)
 #endif
 
@@ -57,7 +58,7 @@
 
 #include <ie_builders.hpp>
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility pop
 #endif
 

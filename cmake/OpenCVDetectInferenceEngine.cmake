@@ -29,13 +29,16 @@ function(add_custom_ie_build _inc _lib _lib_rel _lib_dbg _msg)
     INTERFACE_INCLUDE_DIRECTORIES "${_inc}"
   )
 
-  find_library(ie_builder_custom_lib "inference_engine_nn_builder" PATHS "${INF_ENGINE_LIB_DIRS}" NO_DEFAULT_PATH)
-  if(EXISTS "${ie_builder_custom_lib}")
-    add_library(inference_engine_nn_builder UNKNOWN IMPORTED)
-    set_target_properties(inference_engine_nn_builder PROPERTIES
-      IMPORTED_LOCATION "${ie_builder_custom_lib}"
-    )
-  endif()
+  set(custom_libraries "")
+  file(GLOB libraries "${INF_ENGINE_LIB_DIRS}/${CMAKE_SHARED_LIBRARY_PREFIX}inference_engine_*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  foreach(full_path IN LISTS libraries)
+    get_filename_component(library "${full_path}" NAME_WE)
+    string(REPLACE "${CMAKE_SHARED_LIBRARY_PREFIX}" "" library "${library}")
+    add_library(${library} UNKNOWN IMPORTED)
+    set_target_properties(${library} PROPERTIES
+      IMPORTED_LOCATION "${full_path}")
+    list(APPEND custom_libraries ${library})
+  endforeach()
 
   if(NOT INF_ENGINE_RELEASE VERSION_GREATER "2018050000")
     find_library(INF_ENGINE_OMP_LIBRARY iomp5 PATHS "${INF_ENGINE_OMP_DIR}" NO_DEFAULT_PATH)
@@ -46,12 +49,7 @@ function(add_custom_ie_build _inc _lib _lib_rel _lib_dbg _msg)
     endif()
   endif()
   set(INF_ENGINE_VERSION "Unknown" CACHE STRING "")
-  set(INF_ENGINE_TARGET inference_engine)
-  if(TARGET inference_engine_nn_builder)
-    list(APPEND INF_ENGINE_TARGET inference_engine_nn_builder)
-    set(_msg "${_msg}, with IE NN Builder API")
-  endif()
-  set(INF_ENGINE_TARGET "${INF_ENGINE_TARGET}" PARENT_SCOPE)
+  set(INF_ENGINE_TARGET "inference_engine;${custom_libraries}" PARENT_SCOPE)
   message(STATUS "Detected InferenceEngine: ${_msg}")
 endfunction()
 
@@ -94,9 +92,9 @@ endif()
 
 if(INF_ENGINE_TARGET)
   if(NOT INF_ENGINE_RELEASE)
-    message(WARNING "InferenceEngine version have not been set, 2019R3 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
+    message(WARNING "InferenceEngine version has not been set, 2020.1 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
   endif()
-  set(INF_ENGINE_RELEASE "2019030000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2018R2.0.2 -> 2018020002)")
+  set(INF_ENGINE_RELEASE "2020010000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2020.1.0.2 -> 2020010002)")
   set_target_properties(${INF_ENGINE_TARGET} PROPERTIES
     INTERFACE_COMPILE_DEFINITIONS "HAVE_INF_ENGINE=1;INF_ENGINE_RELEASE=${INF_ENGINE_RELEASE}"
   )

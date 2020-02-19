@@ -449,7 +449,7 @@ Returned value is a string containing space separated list of CPU features with 
 
 Example: `SSE SSE2 SSE3 *SSE4.1 *SSE4.2 *FP16 *AVX *AVX2 *AVX512-SKX?`
 */
-CV_EXPORTS std::string getCPUFeaturesLine();
+CV_EXPORTS_W std::string getCPUFeaturesLine();
 
 /** @brief Returns the number of logical CPUs available for the process.
  */
