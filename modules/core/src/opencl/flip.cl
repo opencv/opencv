@@ -48,6 +48,7 @@
 #else
 #define loadpix(addr) vload3(0, (__global const T1 *)(addr))
 #define storepix(val, addr) vstore3(val, 0, (__global T1 *)(addr))
+#if DEPTH == 2 || DEPTH == 3
 #define storepix_2(val0, val1, addr0, addr1) \
     ((__global T1 *)(addr0))[0] = val0.x; \
     ((__global T1 *)(addr1))[0] = val1.x; \
@@ -55,7 +56,11 @@
     ((__global T1 *)(addr1))[1] = val1.y; \
     ((__global T1 *)(addr0))[2] = val0.z; \
     ((__global T1 *)(addr1))[2] = val1.z
-
+#else
+#define storepix_2(val0, val1, addr0, addr1) \
+    storepix(val0, addr0); \
+    storepix(val1, addr1)
+#endif
 #define TSIZE ((int)sizeof(T1)*3)
 #endif
 
