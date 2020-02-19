@@ -306,8 +306,7 @@ public:
                      "be multiple of %d but got %d", blobs[0].size[1], inpCn));
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
-        outputs.resize(inputs.size(), outShape);
-
+        outputs.assign(inputs.size(), outShape);
         return false;
     }
 

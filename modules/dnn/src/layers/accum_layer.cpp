@@ -112,9 +112,7 @@ public:
             const int inp_h = inputs[i].size[2];
             const int inp_w = inputs[i].size[3];
 
-            // float* top_data_chanoffsetptr = out_data + cntChannelsOfPrevious;
             float* top_data_chanoffsetptr = out_data + cntChannelsOfPrevious * out_h * out_w;
-
             for (int n = 0; n < num; n++)
             {
                 for (int c = 0; c < inp_c; c++)
@@ -130,15 +128,14 @@ public:
                             // Get interpolated sample
                             float tlx = floor(xpos);
                             float tly = floor(ypos);
+                            float xdist = xpos - tlx;
+                            float ydist = ypos - tly;
                             int src_idx = inp_w * (inp_h * cn + tly) + tlx;
 
                             float sampleTL = inp_data[src_idx];
                             float sampleTR = inp_data[min(src_idx + 1, total)];
                             float sampleBL = inp_data[min(src_idx + inp_w, total)];
                             float sampleBR = inp_data[min(src_idx + 1 + inp_w, total)];
-
-                            float xdist = xpos - tlx;
-                            float ydist = ypos - tly;
 
                             float sample = (1 - xdist) * (1 - ydist) * sampleTL +
                                            (1 - xdist) * ydist       * sampleBL +

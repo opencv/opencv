@@ -18,13 +18,12 @@ public:
     {
         setParamsFrom(params);
         pad = params.get<int>("pad", 0);
-        CV_Assert(params.has("kernel_size"));
-        kernel = params.get<int>("kernel_size");
-        if (kernel % 2 == 0) {
-            CV_Error(Error::StsNotImplemented, "Odd kernel size required.");
-        }
-        CV_Assert(params.has("max_displacement"));
+        CV_Assert_N(params.has("kernel_size"), params.has("max_displacement"));
         max_displacement = params.get<int>("max_displacement");
+        kernel = params.get<int>("kernel_size");
+        if (kernel % 2 == 0)
+            CV_Error(Error::StsNotImplemented, "Odd kernel size required.");
+
         stride_1 = params.get<int>("stride_1", 1);
         stride_2 = params.get<int>("stride_2", 1);
     }
@@ -45,9 +44,9 @@ public:
         int neighborhood_grid_radius = max_displacement / stride_2;
         int neighborhood_grid_width = neighborhood_grid_radius * 2 + 1;
 
-        int num = inputs[0][0];
-
         std::vector<int> outShape;
+
+        int num = inputs[0][0];
         outShape.push_back(num);
 
         int out_c = neighborhood_grid_width * neighborhood_grid_width;
@@ -61,12 +60,8 @@ public:
         outShape.push_back(out_w);
         outputs.assign(1, outShape);
 
-        std::vector<int> internalShape;
-        internalShape.push_back(num);
-        internalShape.push_back(padded_height);
-        internalShape.push_back(padded_width);
-        internalShape.push_back(inputs[0][1]);
-        internals.assign(2, internalShape);
+        int size[] = {num, padded_height, padded_width, inputs[0][1]};
+        internals.assign(2, std::vector<int>(size, size + 4));
         return false;
     }
 
@@ -79,7 +74,7 @@ public:
         const int area     = height * width;
         const int pad_area = (width + 2 * pad) * (height + 2 * pad);
 
-        float* in = (float*)input.data;
+        const float* in = (float*)input.data;
         float* out = (float*)output.data;
         for (int n = 0; n < num; n++)
         {
@@ -143,6 +138,8 @@ public:
                     int s2o = (out_ch % neighborhood_grid_width - neighborhood_grid_radius) * stride_2;
                     int s2p = (out_ch / neighborhood_grid_width - neighborhood_grid_radius) * stride_2;
 
+                    int x2 = x1 + s2o;
+                    int y2 = y1 + s2p;
                     for (int j = 0; j < kernel; j++)
                     {
                         for (int i = 0; i < kernel; i++)
@@ -150,16 +147,13 @@ public:
                             int ji_off = ((j * kernel) + i) * inp_c;
                             for (int ch = 0; ch < inp_c; ch++)
                             {
-                                int x2 = x1 + s2o;
-                                int y2 = y1 + s2p;
-
                                 int idxPatchData = ji_off + ch;
                                 int idx2 = ((item * inp_h + y2 + j) * inp_w + x2 + i) * inp_c + ch;
                                 sum += patch_data[idxPatchData] * inp1_data[idx2];
                             }
                         }
                     }
-                    const int index = ((out_ch * out_h + y) * out_w) + x;
+                    int index = ((out_ch * out_h + y) * out_w) + x;
                     out_data[index + item * topcount] = static_cast<float>(sum) / sumelems;
                 }
             }
@@ -177,19 +171,12 @@ public:
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
-        const int num   = inputs[0].size[0];
-        const int inp_c = inputs[0].size[1];
-        const int inp_h = inputs[0].size[2];
-        const int inp_w = inputs[0].size[3];
-        int padded_height = inp_h + 2 * pad;
-        int padded_width  = inp_w + 2 * pad;
-
         Mat& rbot0 = internals[0];
         Mat& rbot1 = internals[1];
         blobRearrangeKernel2(inputs[0], rbot0);
         blobRearrangeKernel2(inputs[1], rbot1);
 
-        for (int i = 0; i < num; i++)
+        for (int i = 0; i < inputs[0].size[0]; i++)
         {
             correlationKernelSubtraction(rbot0, rbot1, outputs[0], i);
         }

@@ -375,15 +375,8 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert_N(inputs.size() == 1);
-        const int num = inputs[0][0];
-        const int height = inputs[0][2];
-        const int width = inputs[0][3];
-
-        std::vector<int> outShape;
-        outShape.push_back(num);
-        outShape.push_back(1);
-        outShape.push_back(height);
-        outShape.push_back(width);
+        std::vector<int> outShape(inputs[0]);
+        outShape[1] = 1;
         outputs.assign(1, outShape);
         return false;
     }
@@ -398,26 +391,26 @@ public:
         outputs_arr.getMatVector(outputs);
 
         const float* inpData = (float*)inputs[0].data;
-        float* outData = (float*)outputs[0].data;
+        float* outData       = (float*)outputs[0].data;
 
-        const int num      = outputs[0].size[0];
-        const int channels = inputs[0].size[1];
-        const int height   = outputs[0].size[2];
-        const int width    = outputs[0].size[3];
+        const int out_n = outputs[0].size[0];
+        const int inp_c = inputs[0].size[1];
+        const int out_h = outputs[0].size[2];
+        const int out_w = outputs[0].size[3];
 
-        for (int n = 0; n < num; n++)
+        for (int n = 0; n < out_n; n++)
         {
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < out_w; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (int y = 0; y < out_h; y++)
                 {
                     float sum_squares = 0;
-                    for (int c = 0; c < channels; c++)
+                    for (int c = 0; c < inp_c; c++)
                     {
-                        float val = inpData[((n * channels + c) * height + y) * width + x];
-                        sum_squares += val*val;
+                        float val = inpData[((n * inp_c + c) * out_h + y) * out_w + x];
+                        sum_squares += val * val;
                     }
-                    outData[(n * height + y) * width + x] = sqrt(sum_squares);
+                    outData[(n * out_h + y) * out_w + x] = sqrt(sum_squares);
                 }
             }
         }

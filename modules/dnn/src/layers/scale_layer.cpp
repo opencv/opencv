@@ -327,7 +327,6 @@ public:
         CV_Assert((!mean_per_pixel && blobs.size() == 3) || blobs.size() >= 2);
         data_mean_cpu = blobs[1].clone();
         data_mean_per_channel_cpu = blobs[2].clone();
-        ++num_iter;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -350,6 +349,7 @@ public:
         const int numWeights = data_mean_cpu.total();
         CV_Assert(numWeights != 0);
 
+        ++num_iter;
         if (num_iter <= recompute_mean)
         {
             data_mean_cpu *= (num_iter - 1);
