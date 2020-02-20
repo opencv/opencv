@@ -660,7 +660,7 @@ void CvCaptureCAM_V4L::v4l2_create_frame()
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
         case V4L2_PIX_FMT_Y16:
-        case V4L2_PIX_FMT_Y12                
+        case V4L2_PIX_FMT_Y12:                
         case V4L2_PIX_FMT_Y10:
             depth = IPL_DEPTH_16U;
             /* fallthru */
@@ -1585,7 +1585,7 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
     }
-    case V4L2_PIX_FMT_Y12
+    case V4L2_PIX_FMT_Y12:
     {
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
         cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 16;
