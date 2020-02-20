@@ -767,7 +767,7 @@ static inline std::string getFileContents(const char *filename)
 }
 #endif
 
-#if defined CV_LINUX_GROUPS
+#if defined CV_LINUX_GROUPS || defined __ANDROID__
 static inline int getNumberOfCPUsImpl(const char *filename)
 {
    std::string file_contents = getFileContents(filename);
