@@ -341,7 +341,7 @@ TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
     // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
     EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
 }
-
+#if 0
 TEST(GAPI_Pipeline, CreateKernelImplFromLambda)
 {
     cv::Size size(300, 300);
@@ -403,7 +403,7 @@ TEST(GAPI_Pipeline, ReplaceDefaultByLambda)
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
     EXPECT_TRUE(is_called);
 }
-
+#endif
 struct AddImpl
 {
     void operator()(const cv::Mat& in1, const cv::Mat& in2, int, cv::Mat& out)
@@ -414,7 +414,7 @@ struct AddImpl
 
     bool is_called = false;
 };
-
+#if 0
 TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
 {
     cv::Size size(300, 300);
@@ -444,5 +444,5 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
     EXPECT_TRUE(f.is_called);
 }
-
+#endif
 } // namespace opencv_test

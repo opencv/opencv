@@ -101,7 +101,7 @@ struct GAPI_Streaming: public ::testing::TestWithParam<KernelPackage> {
 };
 
 } // anonymous namespace
-
+#if 0
 TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
 {
     // This graph models the following use-case:
@@ -415,6 +415,7 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoScalar)
     while (testc.pull(cv::gout(tmp))) test_frames++;
     EXPECT_EQ(165u, test_frames);
 }
+#endif
 
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
                         Values(  KernelPackage::OCV
@@ -587,7 +588,7 @@ TEST(GAPI_Streaming_Types, InputVector)
         EXPECT_EQ(0., cv::norm(ref_mat, out_mat, cv::NORM_INF));
     }
 }
-#endif
+
 TEST(GAPI_Streaming_Types, XChangeScalar)
 {
     // This test verifies if Streaming works when pipeline steps
@@ -650,6 +651,7 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
     }
     EXPECT_LT(0u, num_frames);
 }
+#endif
 #if 0
 TEST(GAPI_Streaming_Types, XChangeVector)
 {
@@ -711,7 +713,7 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     }
     EXPECT_LT(0u, num_frames);
 }
-#endif
+
 TEST(GAPI_Streaming_Types, OutputScalar)
 {
     // This test verifies if Streaming works when pipeline
@@ -743,6 +745,7 @@ TEST(GAPI_Streaming_Types, OutputScalar)
     }
     EXPECT_LT(0u, num_frames);
 }
+#endif
 #if 0
 TEST(GAPI_Streaming_Types, OutputVector)
 {
@@ -814,7 +817,7 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
         ref = cc.compile(a_desc, b_desc);
     }
 };
-
+#if 0
 TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
 {
     const auto c_ptr = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
@@ -830,7 +833,7 @@ TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
     sc = cc.compileStreaming(c_desc, c_desc);
     EXPECT_ANY_THROW(sc.setSource(cv::gin(c_ptr, c_ptr)));
 }
-
+#endif
 TEST_F(GAPI_Streaming_Unit, TestStartWithoutnSetSource)
 {
     EXPECT_ANY_THROW(sc.start());
@@ -889,7 +892,7 @@ TEST_F(GAPI_Streaming_Unit, StartStopStress_Const)
         for (int j = 0; j < 5; j++) EXPECT_TRUE(sc.pull(cv::gout(out)));
     }
 }
-
+#if 0
 TEST_F(GAPI_Streaming_Unit, StartStopStress_Video)
 {
     // Runs 100 times with no deadlock - assumed stable (robust) enough
@@ -906,7 +909,7 @@ TEST_F(GAPI_Streaming_Unit, StartStopStress_Video)
         for (int j = 0; j < 5; j++) EXPECT_TRUE(sc.pull(cv::gout(out)));
     }
 }
-
+#endif
 TEST_F(GAPI_Streaming_Unit, PullNoStart)
 {
     sc.setSource(cv::gin(m, m));
