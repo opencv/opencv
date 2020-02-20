@@ -893,7 +893,6 @@ int cv::getNumberOfCPUs(void)
 #elif defined __ANDROID__
     static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
     ncpus = minNonZero(ncpus, ncpus_impl_devices);
-#endif
 
 #elif defined __APPLE__
     int numCPU=0;
