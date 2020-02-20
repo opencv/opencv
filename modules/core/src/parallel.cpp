@@ -84,11 +84,11 @@
     #define HAVE_CONCURRENCY
 #endif
 
-#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __ANDROID__
+#if (defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__) && !defined __ANDROID__
    #define CV_LINUX_GROUPS
 #endif
 
-#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __ANDROID__
+#if (defined __linux__ || defined __GLIBC__ || defined __HAIKU__) && !defined __ANDROID__
    #define CV_HAVE_CGROUPS
 #endif
 
@@ -887,10 +887,13 @@ int cv::getNumberOfCPUs(void)
         }
     #endif
 
-    #if !defined __ANDROID__ /* Only if pure Linux */
-        static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
-        ncpus = minNonZero(ncpus, cpu_count_sysconf);
-    #endif
+    static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
+    ncpus = minNonZero(ncpus, cpu_count_sysconf);
+
+#elif defined __ANDROID__
+    static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
+    ncpus = minNonZero(ncpus, ncpus_impl_devices);
+#endif
 
 #elif defined __APPLE__
     int numCPU=0;
