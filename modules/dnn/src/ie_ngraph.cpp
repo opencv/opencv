@@ -26,6 +26,35 @@ namespace cv { namespace dnn {
 // OpenCV lets users use an empty input name and to prevent unexpected naming,
 // we can use some predefined name.
 static std::string kDefaultInpLayerName = "empty_inp_layer_name";
+static constexpr const char* kOpenCVLayersType = "OpenCVLayer";
+
+static std::string shapesToStr(const std::vector<Mat>& mats)
+{
+    std::ostringstream shapes;
+    shapes << mats.size() << " ";
+    for (const Mat& m : mats)
+    {
+        shapes << m.dims << " ";
+        for (int i = 0; i < m.dims; ++i)
+            shapes << m.size[i] << " ";
+    }
+    return shapes.str();
+}
+
+static void strToShapes(const std::string& str, std::vector<std::vector<size_t> >& shapes)
+{
+    std::istringstream ss(str);
+    int num, dims;
+    ss >> num;
+    shapes.resize(num);
+    for (int i = 0; i < num; ++i)
+    {
+        ss >> dims;
+        shapes[i].resize(dims);
+        for (int j = 0; j < dims; ++j)
+            ss >> shapes[i][j];
+    }
+}
 
 static std::vector<Ptr<NgraphBackendWrapper> >
 ngraphWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
@@ -40,11 +69,79 @@ ngraphWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
     return wrappers;
 }
 
+class NgraphCustomOp: public ngraph::op::Op {
+public:
+    static constexpr ngraph::NodeTypeInfo type_info{kOpenCVLayersType, 0};
+    const ngraph::NodeTypeInfo& get_type_info() const override { return type_info;  }
+
+    NgraphCustomOp() = default;
+    NgraphCustomOp(const ngraph::NodeVector& inputs,
+                   const std::map<std::string, InferenceEngine::Parameter>& params = {}):
+        Op(inputs), params(params)
+    {
+        constructor_validate_and_infer_types();
+    }
+
+    void validate_and_infer_types() override
+    {
+        std::vector<std::vector<size_t> > shapes;
+        strToShapes(params["outputs"], shapes);
+        for (size_t i = 0; i < shapes.size(); ++i)
+        {
+            ngraph::Shape output_shape(shapes[i]);
+            set_output_type(i, get_input_element_type(0), output_shape);
+        }
+    }
+
+    std::shared_ptr<ngraph::Node> copy_with_new_args(const ngraph::NodeVector& new_args) const override
+    {
+        return std::make_shared<NgraphCustomOp>(new_args, params);
+    }
+
+    bool visit_attributes(ngraph::AttributeVisitor& visitor) override
+    {
+        for (auto& attr : params)
+        {
+            if (attr.second.is<std::string>())
+                visitor.on_attribute(attr.first, attr.second.as<std::string>());
+        }
+        return true;
+    }
+
+private:
+    std::map<std::string, InferenceEngine::Parameter> params;
+};
+
+constexpr ngraph::NodeTypeInfo NgraphCustomOp::type_info;
+
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {}
 
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>& _node)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(_node) {}
+
+InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& nodes,
+                                         Ptr<Layer>& cvLayer_, std::vector<Mat*>& inputs,
+                                         std::vector<Mat>& outputs, std::vector<Mat>& internals)
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), cvLayer(cvLayer_)
+{
+    std::ostringstream oss;
+    oss << (size_t)cvLayer.get();
+
+    std::map<std::string, InferenceEngine::Parameter> params = {
+        {"impl", oss.str()},
+        {"outputs", shapesToStr(outputs)},
+        {"internals", shapesToStr(internals)}
+    };
+
+    ngraph::NodeVector inp_nodes;
+    for (const auto& node : nodes)
+        inp_nodes.emplace_back(node.dynamicCast<InfEngineNgraphNode>()->node);
+    node = std::make_shared<NgraphCustomOp>(inp_nodes, params);
+
+    CV_Assert(!cvLayer->name.empty());
+    setName(cvLayer->name);
+}
 
 void InfEngineNgraphNode::setName(const std::string& name) {
     node->set_friendly_name(name);
@@ -342,7 +439,24 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
         if (device_name == "MYRIAD") {
             config.emplace("VPU_DETECT_NETWORK_BATCH", CONFIG_VALUE(NO));
         }
-        netExec = ie.LoadNetwork(net, device_name, config);
+
+        bool isHetero = false;
+        if (device_name != "CPU")
+        {
+            isHetero = device_name == "FPGA";
+            for (auto& layer : net)
+            {
+                if (layer->type == kOpenCVLayersType)
+                {
+                    isHetero = true;
+                    break;
+                }
+            }
+        }
+        if (isHetero)
+            netExec = ie.LoadNetwork(net, "HETERO:" + device_name + ",CPU", config);
+        else
+            netExec = ie.LoadNetwork(net, device_name, config);
     }
     catch (const std::exception& ex)
     {
