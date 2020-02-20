@@ -485,16 +485,23 @@ void ONNXImporter::populateNet(Net dstNet)
          }
         else if (layer_type == "Split")
         {
-            DictValue splits = layerParams.get("split");
-            const int numSplits = splits.size();
-            CV_Assert(numSplits > 1);
-
-            std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
-            for (int i = 1; i < splits.size() - 1; ++i)
+            if (layerParams.has("split"))
             {
-                slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i - 1);
+                DictValue splits = layerParams.get("split");
+                const int numSplits = splits.size();
+                CV_Assert(numSplits > 1);
+
+                std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
+                for (int i = 1; i < splits.size() - 1; ++i)
+                {
+                    slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i - 1);
+                }
+                layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
             }
-            layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
+            else
+            {
+                layerParams.set("num_split", node_proto.output_size());
+            }
             layerParams.type = "Slice";
         }
         else if (layer_type == "Add" || layer_type == "Sum")
@@ -973,6 +980,15 @@ void ONNXImporter::populateNet(Net dstNet)
                 replaceLayerParam(layerParams, "width_scale", "zoom_factor_x");
             }
             replaceLayerParam(layerParams, "mode", "interpolation");
+
+            if (layerParams.get<String>("interpolation") == "linear" && framework_name == "pytorch") {
+                layerParams.type = "Resize";
+                Mat scales = getBlob(node_proto, constBlobs, 1);
+                CV_Assert(scales.total() == 4);
+                layerParams.set("interpolation", "opencv_linear");
+                layerParams.set("zoom_factor_y", scales.at<float>(2));
+                layerParams.set("zoom_factor_x", scales.at<float>(3));
+            }
         }
         else if (layer_type == "LogSoftmax")
         {

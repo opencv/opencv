@@ -41,7 +41,7 @@ public:
             CV_Assert(params.has("zoom_factor_x") && params.has("zoom_factor_y"));
         }
         interpolation = params.get<String>("interpolation");
-        CV_Assert(interpolation == "nearest" || interpolation == "bilinear");
+        CV_Assert(interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear");
 
         alignCorners = params.get<bool>("align_corners", false);
     }
@@ -115,14 +115,15 @@ public:
 
         Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        if (interpolation == "nearest")
+        if (interpolation == "nearest" || interpolation == "opencv_linear")
         {
+            InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
             {
                 for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
                 {
                     resize(getPlane(inp, n, ch), getPlane(out, n, ch),
-                           Size(outWidth, outHeight), 0, 0, INTER_NEAREST);
+                           Size(outWidth, outHeight), 0, 0, mode);
                 }
             }
         }
