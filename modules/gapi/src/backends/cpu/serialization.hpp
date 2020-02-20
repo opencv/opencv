@@ -103,7 +103,22 @@ std::ostream& operator << (std::ostream& os, Op op);
 std::ostream& operator << (std::ostream& os, std::vector<Op> ops);
 
 //Graph restore operators
-std::ifstream& operator >> (std::ifstream& ifs, Kernel& k);
+std::istream& operator >> (std::istream& is, Kernel& k);
+std::istream& operator >> (std::istream& is, std::string& str);
+std::istream& operator >> (std::istream& is, std::vector<int>& ints);
+std::istream& operator >> (std::istream& is, std::vector<RcDesc>& descs);
+std::istream& operator >> (std::istream& is, RcDesc& desc);
+std::istream& operator >> (std::istream& is, std::vector<double>& doubles);
+std::istream& operator >> (std::istream& is, std::vector<cv::Size>& cvsizes);
+std::istream& operator >> (std::istream& is, std::vector<bool>& bools);
+std::istream& operator >> (std::istream& is, std::vector<cv::Scalar>& cvscalars);
+std::istream& operator >> (std::istream& is, std::vector<cv::Point>& cvpoints);
+std::istream& operator >> (std::istream& is, std::vector<cv::Mat>& cvmats);
+std::istream& operator >> (std::istream& is, std::vector<cv::Rect>& cvrects);
+std::istream& operator >> (std::istream& is, Data& data);
+std::istream& operator >> (std::istream& is, std::vector<Data>& datas);
+std::istream& operator >> (std::istream& is, Op& op);
+std::istream& operator >> (std::istream& is, std::vector<Op>& ops);
 
 } // namespace serialization
 } // namespace gimpl
