@@ -257,6 +257,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         for( i = br_count-1; i > 0; i-- )
             hullbuf[nout++] = int(pointer[br_stack[i]] - data0);
 
+        // try to make the convex hull indices form
+        // an ascending or descending sequence by the cyclic
+        // shift of the output sequence.
         if( nout >= 3 )
         {
             int min_idx = 0, max_idx = 0, lt = 0;
@@ -271,11 +274,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                 if( idx > hullbuf[max_idx] )
                     max_idx = i;
             }
-            int diff = std::abs(max_idx - min_idx);
-            if( (diff == 1 || diff == nout-1) && (lt <= 1 || lt >= nout-2) )
+            int mmdist = std::abs(max_idx - min_idx);
+            if( (mmdist == 1 || mmdist == nout-1) && (lt <= 1 || lt >= nout-2) )
             {
-                int accenting = (max_idx + 1) % nout == min_idx;
-                int i0 = accenting ? min_idx : max_idx, j = i0;
+                int ascending = (max_idx + 1) % nout == min_idx;
+                int i0 = ascending ? min_idx : max_idx, j = i0;
                 if( i0 > 0 )
                 {
                     for( i = 0; i < nout; i++ )
@@ -283,7 +286,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                         int curr_idx = stack[i] = hullbuf[j];
                         int next_j = j+1 < nout ? j+1 : 0;
                         int next_idx = hullbuf[next_j];
-                        if( i < nout-1 && (accenting != (curr_idx < next_idx)) )
+                        if( i < nout-1 && (ascending != (curr_idx < next_idx)) )
                             break;
                         j = next_j;
                     }
