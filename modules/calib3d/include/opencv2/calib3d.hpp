@@ -1281,12 +1281,44 @@ CV_EXPORTS_AS(findChessboardCornersSBWithMeta)
 bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,
                              int flags,OutputArray meta);
 /** @overload */
-CV_EXPORTS_W static inline
+CV_EXPORTS_W inline
 bool findChessboardCornersSB(InputArray image, Size patternSize, OutputArray corners,
                              int flags = 0)
 {
     return findChessboardCornersSB(image, patternSize, corners, flags, noArray());
 }
+
+/** @brief Estimates the sharpness of a detected chessboard.
+
+Image sharpness, as well as brightness, are a critical parameter for accuracte
+camera calibration. For accessing these parameters for filtering out
+problematic calibraiton images, this method calculates edge profiles by traveling from
+black to white chessboard cell centers. Based on this, the number of pixels is
+calculated required to transit from black to white. This width of the
+transition area is a good indication of how sharp the chessboard is imaged
+and should be below ~3.0 pixels.
+
+@param image Gray image used to find chessboard corners
+@param patternSize Size of a found chessboard pattern
+@param corners Corners found by findChessboardCorners(SB)
+@param rise_distance Rise distance 0.8 means 10% ... 90% of the final signal strength
+@param vertical By default edge responses for horizontal lines are calculated
+@param sharpness Optional output array with a sharpness value for calculated edge responses (see description)
+
+The optional sharpness array is of type CV_32FC1 and has for each calculated
+profile one row with the following five entries:
+* 0 = x coordinate of the underlying edge in the image
+* 1 = y coordinate of the underlying edge in the image
+* 2 = width of the transition area (sharpness)
+* 3 = signal strength in the black cell (min brightness)
+* 4 = signal strength in the white cell (max brightness)
+
+@return Scalar(average sharpness, average min brightness, average max brightness,0)
+*/
+CV_EXPORTS_W Scalar estimateChessboardSharpness(InputArray image, Size patternSize, InputArray corners,
+                                                float rise_distance=0.8F,bool vertical=false,
+                                                OutputArray sharpness=noArray());
+
 
 //! finds subpixel-accurate positions of the chessboard corners
 CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
