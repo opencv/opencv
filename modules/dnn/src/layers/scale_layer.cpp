@@ -311,6 +311,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        CV_Assert(blobs.size() == 3);
         CV_Assert(blobs[0].total() == 1);
         CV_Assert(blobs[1].total() == total(inputs[0], 1));
         CV_Assert(blobs[2].total() == inputs[0][1]);

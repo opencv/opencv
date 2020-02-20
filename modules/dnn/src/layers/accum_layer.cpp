@@ -36,7 +36,7 @@ public:
         {
             CV_Assert(inputs.size() >= 2);
             int totalchannels = 0;
-            for (size_t i = 0; i < inputs.size() - 1; i++) {
+            for (int i = 0; i < inputs.size() - 1; i++) {
                 CV_Assert(inputs[i][0] == batch);
                 totalchannels += inputs[i][1];
             }

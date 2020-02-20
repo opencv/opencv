@@ -59,10 +59,20 @@ public:
         outShape.push_back(out_h);
         outShape.push_back(out_w);
         outputs.assign(1, outShape);
-
-        int size[] = {num, padded_height, padded_width, inputs[0][1]};
-        internals.assign(2, std::vector<int>(size, size + 4));
         return false;
+    }
+
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        int padded_height = inputs[0].size[2] + 2 * pad;
+        int padded_width  = inputs[0].size[3] + 2 * pad;
+
+        int size[] = {inputs[0].size[0], padded_height, padded_width, inputs[0].size[1]};
+        rbot0 = Mat(4, &size[0], CV_32F, float(0));
+        rbot1 = Mat(4, &size[0], CV_32F, float(0));
     }
 
     void blobRearrangeKernel2(const Mat& input, Mat& output)
@@ -110,7 +120,7 @@ public:
         float* inp1_data = (float*)input1.data;
         float* out_data  = (float*)output.data;
         int sumelems = kernel * kernel * inp_c;
-        std::vector<float> patch_data(sumelems);
+        std::vector<float> patch_data(sumelems, 0);
         for (int y = 0; y < out_h; y++)
         {
             for (int x = 0; x < out_w; x++)
@@ -171,11 +181,8 @@ public:
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
-        Mat& rbot0 = internals[0];
-        Mat& rbot1 = internals[1];
         blobRearrangeKernel2(inputs[0], rbot0);
         blobRearrangeKernel2(inputs[1], rbot1);
-
         for (int i = 0; i < inputs[0].size[0]; i++)
         {
             correlationKernelSubtraction(rbot0, rbot1, outputs[0], i);
@@ -188,6 +195,8 @@ private:
     int max_displacement;
     int stride_1;
     int stride_2;
+    Mat rbot0;
+    Mat rbot1;
 };
 
 Ptr<CorrelationLayer> CorrelationLayer::create(const LayerParams& params)
