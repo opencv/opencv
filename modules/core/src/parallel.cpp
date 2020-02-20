@@ -754,7 +754,7 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#if defined CV_LINUX_GROUPS
+#if defined CV_LINUX_GROUPS || defined __ANDROID__
 static inline std::string getFileContents(const char *filename)
 {
     std::ifstream ifs(filename);
