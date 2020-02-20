@@ -90,6 +90,7 @@ set(gapi_srcs
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gapi_tbb_executor.cpp
     src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
 
@@ -149,6 +150,10 @@ if(OPENCV_GAPI_INF_ENGINE)
 endif()
 if(HAVE_TBB)
   ocv_target_link_libraries(${the_module} PRIVATE tbb)
+endif()
+
+if(USE_GAPI_TBB_EXECUTOR)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DUSE_GAPI_TBB_EXECUTOR)
 endif()
 
 set(__test_extra_deps "")

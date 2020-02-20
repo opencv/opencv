@@ -10,6 +10,7 @@
 #include <iostream>
 
 #include <ade/util/zip_range.hpp>
+#include <ade/util/filter_range.hpp>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include "executor/gexecutor.hpp"
@@ -35,53 +36,122 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     // 6. Run GIslandExecutable
     // 7. writeBack
 
+    auto is_slot = [&](ade::NodeHandle const& nh){
+        return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::SLOT;
+    };
+
+    auto is_island = [&](ade::NodeHandle const& nh){
+        return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
+    };
+
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
-    for (auto nh : sorted.nodes())
-    {
-        switch (m_gim.metadata(nh).get<NodeKind>().k)
-        {
-        case NodeKind::ISLAND:
-            {
-                std::vector<RcDesc> input_rcs;
-                std::vector<RcDesc> output_rcs;
-                input_rcs.reserve(nh->inNodes().size());
-                output_rcs.reserve(nh->outNodes().size());
+    for (auto&& nh : ade::util::filter(sorted.nodes(), is_slot)){
+        const auto orig_data_nh
+            = m_gim.metadata(nh).get<DataSlot>().original_data_node;
+        // (1)
+        initResource(orig_data_nh);
+        m_slots.emplace_back(DataDesc{nh, orig_data_nh});
+    }
 
-                auto xtract = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
-                    const auto orig_data_nh
-                        = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
-                    const auto &orig_data_info
-                        = m_gm.metadata(orig_data_nh).get<Data>();
-                    vec.emplace_back(RcDesc{ orig_data_info.rc
-                                           , orig_data_info.shape
-                                           , orig_data_info.ctor});
-                };
-                // (3)
-                for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
-                for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
+    using op_index_t = size_t;
+    std::unordered_map<ade::NodeHandle, op_index_t, ade::HandleHasher<ade::Node>> op_indexes;
+    std::unordered_map<op_index_t, std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>>> op_dependees_node_handles;
 
-                m_ops.emplace_back(OpDesc{ std::move(input_rcs)
-                                         , std::move(output_rcs)
-                                         , m_gim.metadata(nh).get<IslandExec>().object
-                                         });
-            }
-            break;
+    namespace r = ade::util::Range;
+    for (auto&& nh : r::filter(sorted.nodes(), is_island)){
+        std::vector<RcDesc> input_rcs;
+        std::vector<RcDesc> output_rcs;
+        input_rcs.reserve(nh->inNodes().size());
+        output_rcs.reserve(nh->outNodes().size());
 
-        case NodeKind::SLOT:
-            {
-                const auto orig_data_nh
-                    = m_gim.metadata(nh).get<DataSlot>().original_data_node;
-                // (1)
-                initResource(orig_data_nh);
-                m_slots.emplace_back(DataDesc{nh, orig_data_nh});
-            }
-            break;
+        auto xtract = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
+            const auto orig_data_nh
+                = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
+            const auto &orig_data_info
+                = m_gm.metadata(orig_data_nh).get<Data>();
+            vec.emplace_back(RcDesc{ orig_data_info.rc
+                                   , orig_data_info.shape
+                                   , orig_data_info.ctor});
+        };
+        // (3)
+        for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
+        for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
 
-        default:
-            GAPI_Assert(false);
-            break;
-        } // switch(kind)
-    } // for(gim nodes)
+        m_ops.emplace_back(OpDesc{ std::move(input_rcs)
+                                 , std::move(output_rcs)
+                                 , m_gim.metadata(nh).get<IslandExec>().object
+                                 });
+#if defined(USE_GAPI_TBB_EXECUTOR)
+        //TBB executor staff ------
+        const auto op_index = m_ops.size() - 1;
+        op_indexes[nh] = op_index;
+
+        std::function<void()> body = [this, op_index](){
+            GExecutor::run_op(m_ops[op_index], m_res);
+        };
+        tasks.emplace_back(std::move(body));
+
+        auto dependees_range = r::map(
+                r::filter(nh->inNodes(), [](ade::NodeHandle const& in_slot_nh){
+                    //count input data nodes what are result of other operation
+                    return ! in_slot_nh->inNodes().empty();
+                }),
+                [](ade::NodeHandle const& in_slot_nh){
+                    return in_slot_nh->inNodes().front();
+                }
+        );
+
+        //task dependencies is equal to the number of input slot objects (as there is only one writer to the any slot)
+        tasks.back().dependencies = std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>>{dependees_range.begin(), dependees_range.end()}.size();
+        tasks.back().dependency_count = tasks.back().dependencies;
+
+        //get the dependees node_handles to convert them into op indexes later
+        std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>> dependees_node_handles;
+        for (auto&& out_slot_nh : nh->outNodes()){
+            auto dependee_islands = out_slot_nh->outNodes();
+            dependees_node_handles.insert(dependee_islands.begin(), dependee_islands.end());
+        }
+        op_dependees_node_handles[op_index] = std::move(dependees_node_handles);
+#endif //USE_GAPI_TBB_EXECUTOR
+    }
+
+#if defined(USE_GAPI_TBB_EXECUTOR)
+    auto total_order_index = tasks.size();
+
+    //fill the tasks graph : set priority indexes, number of deps, and dependees
+
+    for (auto i : ade::util::Range::iota(tasks.size())){
+        tasks[i].total_order_index = --total_order_index;
+
+        auto dependees_range = ade::util::Range::map(ade::util::Range::toRange(op_dependees_node_handles.at(i)), [&](ade::NodeHandle const& nh)-> parallel::tile_node *{
+            return &tasks.at(op_indexes.at(nh));
+        });
+        tasks[i].dependees.assign(dependees_range.begin(), dependees_range.end());
+    }
+
+    using task_t = parallel::tile_node;
+    auto start_task_r = r::map(
+            r::filter(r::toRange(tasks),[](const task_t& task){
+                return task.dependencies == 0;
+            }),
+            [](task_t& t) { return &t;}
+    );
+    start_tasks.assign(start_task_r.begin(), start_task_r.end());
+
+//    std::cout << "tasks count : " <<tasks.size() <<std::endl
+//              << "start tasks count :" << start_tasks.size() << std::endl
+//              << "start_task[0] dependees count:" << start_tasks[0]->dependees.size() << std::endl
+//    ;
+//
+//    for (auto&& task : tasks) {
+//        std::cout<< &task <<"\t" << "deps :" << task.dependencies <<"\t" <<"dependees: ";
+//        for (auto* dependee : task.dependees) {
+//            std::cout<<dependee << " ";
+//        }
+//        std::cout<<std::endl;
+//    }
+#endif //USE_GAPI_TBB_EXECUTOR
+
 }
 
 void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
@@ -147,6 +217,13 @@ public:
     Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
 };
 
+void cv::gimpl::GExecutor::run_op(OpDesc& op, Mag& m_res)
+{
+    Input i{m_res, op.in_objects};
+    Output o{m_res, op.out_objects};
+
+    op.isl_exec->run(i,o);
+}
 void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 {
     // (2)
@@ -228,14 +305,16 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     }
 
     // Run the script
+#if defined(USE_GAPI_TBB_EXECUTOR)
+    tbb::concurrent_priority_queue<parallel::tile_node* , parallel::tile_node_indirect_priority_comparator> q {start_tasks.begin(), start_tasks.end()};
+    parallel::execute(q);
+#else
     for (auto &op : m_ops)
     {
-        // (5)
-        Input i{m_res, op.in_objects};
-        Output o{m_res, op.out_objects};
-        op.isl_exec->run(i, o);
+        // (5) and  (6)
+        run_op(op, m_res);
     }
-
+#endif
     // (7)
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))

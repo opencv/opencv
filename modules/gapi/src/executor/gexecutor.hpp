@@ -16,6 +16,9 @@
 #include <ade/graph.hpp>
 
 #include "backends/common/gbackend.hpp"
+#if defined(USE_GAPI_TBB_EXECUTOR)
+#include "gapi_tbb_executor.hpp"
+#endif
 
 namespace cv {
 namespace gimpl {
@@ -70,6 +73,11 @@ protected:
     };
     std::vector<OpDesc> m_ops;
 
+#if defined(USE_GAPI_TBB_EXECUTOR)
+    std::vector<parallel::tile_node> tasks;
+    std::vector<parallel::tile_node*> start_tasks;
+#endif
+
     struct DataDesc
     {
         ade::NodeHandle slot_nh;
@@ -84,6 +92,7 @@ protected:
 
     void initResource(const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
 
+    static void run_op(OpDesc& op, Mag& mag);
 public:
     explicit GExecutor(std::unique_ptr<ade::Graph> &&g_model);
     void run(cv::gimpl::GRuntimeArgs &&args);
