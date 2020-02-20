@@ -378,9 +378,9 @@ struct Integral_SIMD<uchar, int, double>
 #elif CV_SIMD_WIDTH == 32
                     prev = v_combine_high(el4h, el4h);
 #else
-                    v_int32 t0, t1;
-                    v_zip(el4h, el4h, t0, t1);
-                    prev = v_combine_high(t1, t1);
+                    v_int32 t = v_rotate_right<12>(el4h);
+                    t |= v_rotate_left<4>(t);
+                    prev = v_combine_low(t, t);
 #endif
 #endif
                     v_store(sum_row + j                  , el4l + vx_load(prev_sum_row + j                  ));
@@ -688,9 +688,9 @@ struct Integral_SIMD<uchar, float, double>
 #elif CV_SIMD_WIDTH == 32
                     prev = v_combine_high(el4h, el4h);
 #else
-                    v_float32 t0, t1;
-                    v_zip(el4h, el4h, t0, t1);
-                    prev = v_combine_high(t1, t1);
+                    v_float32 t = v_rotate_right<12>(el4h);
+                    t |= v_rotate_left<4>(t);
+                    prev = v_combine_low(t, t);
 #endif
 #endif
                     v_store(sum_row + j                    , el4l + vx_load(prev_sum_row + j                    ));
