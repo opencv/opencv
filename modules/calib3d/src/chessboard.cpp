@@ -725,19 +725,19 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
             // calc images
             // for each angle step
             int scale_id = scale-parameters.min_scale;
-            int scale_size = int(pow(2.0,scale+1+super_res)-1);
-            int scale_size2 = int((scale_size/10)*2+1);
+            int scale_size = int(pow(2.0,scale+1+super_res));
+            int scale_size2 = int((scale_size/7)*2+1);
             std::vector<cv::UMat> images;
             images.resize(2*num);
             cv::UMat rotated,filtered_h,filtered_v;
-            cv::blur(gray_image,images[0],cv::Size(scale_size,scale_size2));
-            cv::blur(gray_image,images[num],cv::Size(scale_size2,scale_size));
+            cv::boxFilter(gray_image,images[0],-1,cv::Size(scale_size,scale_size2));
+            cv::boxFilter(gray_image,images[num],-1,cv::Size(scale_size2,scale_size));
             for(int i=1;i<num;++i)
             {
                 float angle = parameters.resolution*i;
                 rotate(-angle,gray_image,size,rotated);
-                cv::blur(rotated,filtered_h,cv::Size(scale_size,scale_size2));
-                cv::blur(rotated,filtered_v,cv::Size(scale_size2,scale_size));
+                cv::boxFilter(rotated,filtered_h,-1,cv::Size(scale_size,scale_size2));
+                cv::boxFilter(rotated,filtered_v,-1,cv::Size(scale_size2,scale_size));
 
                 // rotate filtered images back
                 rotate(angle,filtered_h,gray_image.size(),images[i]);
@@ -752,9 +752,9 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
             if(parameters.filter)
             {
                 cv::Mat high,low;
-                cv::blur(feature_maps[scale_id],low,cv::Size(scale_size,scale_size));
+                cv::boxFilter(feature_maps[scale_id],low,-1,cv::Size(scale_size,scale_size));
                 int scale2 = int((scale_size/6))*2+1;
-                cv::blur(feature_maps[scale_id],high,cv::Size(scale2,scale2));
+                cv::boxFilter(feature_maps[scale_id],high,-1,cv::Size(scale2,scale2));
                 feature_maps[scale_id] = high-0.8*low;
             }
         }
@@ -3885,7 +3885,7 @@ bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     if(flags & CALIB_CB_EXHAUSTIVE)
     {
         para.max_tests = 100;
-        para.max_points = std::max(500,pattern_size.width*pattern_size.height*2);
+        para.max_points = std::max(1000,pattern_size.width*pattern_size.height*2);
         flags ^= CALIB_CB_EXHAUSTIVE;
     }
     if(flags & CALIB_CB_ACCURACY)
@@ -3953,5 +3953,33 @@ bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     }
     return true;
 }
+
+// public API
+cv::Scalar estimateChessboardSharpness(InputArray image_, Size patternSize, InputArray corners_,
+                                       float rise_distance,bool vertical, cv::OutputArray sharpness)
+{
+    CV_INSTRUMENT_REGION();
+    int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_CheckType(type, depth == CV_8U && (cn == 1 || cn == 3),
+            "Only 8-bit grayscale or color images are supported");
+    if(patternSize.width <= 2 || patternSize.height <= 2)
+        CV_Error(Error::StsOutOfRange, "Both width and height of the pattern should have bigger than 2");
+
+    cv::Mat corners = details::normalizeVector(corners_);
+    std::vector<cv::Point2f> points;
+    corners.reshape(2,corners.rows).convertTo(points,CV_32FC2);
+    if(int(points.size()) != patternSize.width * patternSize.height)
+        CV_Error(Error::StsBadArg, "Size mismatch between patternSize and number of provided corners.");
+
+    Mat img;
+    if (image_.channels() != 1)
+        cvtColor(image_, img, COLOR_BGR2GRAY);
+    else
+        img = image_.getMat();
+
+    details::Chessboard::Board board(patternSize,points);
+    return board.calcEdgeSharpness(img,rise_distance,vertical,sharpness);
+}
+
 
 } // namespace cv
