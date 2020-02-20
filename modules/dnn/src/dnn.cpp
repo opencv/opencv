@@ -1294,13 +1294,15 @@ struct Net::Impl
 #endif
             clear();
 
+            this->blobsToKeep = blobsToKeep_;
+
             allocateLayers(blobsToKeep_);
 
             MapIdToLayerData::iterator it = layers.find(0);
             CV_Assert(it != layers.end());
             it->second.skip = netInputLayer->skip;
 
-            initBackend();
+            initBackend(blobsToKeep_);
 
             if (!netWasAllocated )
             {
@@ -1313,7 +1315,6 @@ struct Net::Impl
             }
 
             netWasAllocated = true;
-            this->blobsToKeep = blobsToKeep_;
 
             if (DNN_NETWORK_DUMP > 0)
             {
@@ -1440,7 +1441,7 @@ struct Net::Impl
         ldOut.consumers.push_back(LayerPin(inLayerId, outNum));
     }
 
-    void initBackend()
+    void initBackend(const std::vector<LayerPin>& blobsToKeep_)
     {
         CV_TRACE_FUNCTION();
         if (preferableBackend == DNN_BACKEND_OPENCV)
@@ -1450,7 +1451,7 @@ struct Net::Impl
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
 #ifdef HAVE_INF_ENGINE
-            initInfEngineBackend();
+            initInfEngineBackend(blobsToKeep_);
 #else
             CV_Assert(false && "This OpenCV version is built without Inference Engine API support");
 #endif
@@ -1458,7 +1459,7 @@ struct Net::Impl
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
 #ifdef HAVE_DNN_NGRAPH
-            initNgraphBackend();
+            initNgraphBackend(blobsToKeep_);
 #else
             CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
 #endif
@@ -1560,7 +1561,7 @@ struct Net::Impl
         }
     }
 
-    void initInfEngineBackend()
+    void initInfEngineBackend(const std::vector<LayerPin>& blobsToKeep_)
     {
         CV_TRACE_FUNCTION();
         CV_Assert_N(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, haveInfEngine());
@@ -1750,6 +1751,15 @@ struct Net::Impl
             CV_Assert(!ieNode.empty());
             ieNode->net = net;
 
+            for (const auto& pin : blobsToKeep_)
+            {
+                if (pin.lid == ld.id)
+                {
+                    ieNode->net->addOutput(ieNode->layer.getName());
+                    break;
+                }
+            }
+
             // Convert weights in FP16 for specific targets.
             if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                  preferableTarget == DNN_TARGET_MYRIAD ||
@@ -1856,7 +1866,7 @@ struct Net::Impl
         }
     }
 
-    void initNgraphBackend()
+    void initNgraphBackend(const std::vector<LayerPin>& blobsToKeep_)
     {
         CV_TRACE_FUNCTION();
         CV_Assert_N(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, haveInfEngine());
@@ -2044,6 +2054,14 @@ struct Net::Impl
             if (ld.consumers.empty()) {
                 // TF EAST_text_detection
                 ieNode->net->setUnconnectedNodes(ieNode);
+            }
+            for (const auto& pin : blobsToKeep_)
+            {
+                if (pin.lid == ld.id)
+                {
+                    ieNode->net->addOutput(ieNode->node->get_friendly_name());
+                    break;
+                }
             }
             ieNode->net->setNodePtr(&ieNode->node);
 
