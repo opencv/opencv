@@ -132,6 +132,12 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Proposal,       ProposalLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Scale,          ScaleLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Copy,           CopyLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(AddConstant,    AddConstantLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(PixelShuffle,   PixelShuffleLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ParallelTable,  ParallelTableLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(FlattenTable,   FlattenTableLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(NarrowTable,    NarrowTableLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(SelectTable,    SelectTableLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
 }

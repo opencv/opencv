@@ -658,6 +658,52 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
             static Ptr<Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS AddConstantLayer : public Layer
+    {
+        public:
+
+            float constant_scalar, inplace;
+
+            static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS PixelShuffleLayer : public Layer
+    {
+        public:
+
+            float upscaleFactor;
+
+            static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ParallelTableLayer : public Layer
+    {
+        public:
+
+            static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS FlattenTableLayer : public Layer
+    {
+        public:
+
+            static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS NarrowTableLayer : public Layer
+    {
+        public:
+
+            static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS SelectTableLayer : public Layer
+    {
+        public:
+
+            static Ptr<Layer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END

@@ -42,29 +42,27 @@
 #include "../precomp.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include<iostream>
 
 namespace cv
 {
     namespace dnn
     {
 
-        class CopyLayerImpl CV_FINAL : public CopyLayer
+        class PixelShuffleLayerImpl CV_FINAL : public PixelShuffleLayer
         {
             public:
 
-                CopyLayerImpl(const LayerParams& params)
+                PixelShuffleLayerImpl(const LayerParams& params)
                 {
                     setParamsFrom(params);
-                    intype = params.get("intype", params.get<String>("_type"));
-                    outtype = params.get("outtype", params.get<String>("_type"));
-                    forceCopy = params.get<bool>("forceCopy", false);
-                    dontCast = params.get<bool>("dontCast", false);
+                    upscaleFactor = params.get<float>("upscaleFactor");
                 }
         };
 
-        Ptr<Layer> CopyLayer::create(const LayerParams& params)
+        Ptr<Layer> PixelShuffleLayer::create(const LayerParams& params)
         {
-            return Ptr<CopyLayer>(new CopyLayerImpl(params));
+            return Ptr<PixelShuffleLayer>(new PixelShuffleLayerImpl(params));
         }
 
     }

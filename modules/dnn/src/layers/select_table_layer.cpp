@@ -48,23 +48,19 @@ namespace cv
     namespace dnn
     {
 
-        class CopyLayerImpl CV_FINAL : public CopyLayer
+        class SelectTableLayerImpl CV_FINAL : public SelectTableLayer
         {
             public:
 
-                CopyLayerImpl(const LayerParams& params)
+                SelectTableLayerImpl(const LayerParams& params)
                 {
                     setParamsFrom(params);
-                    intype = params.get("intype", params.get<String>("_type"));
-                    outtype = params.get("outtype", params.get<String>("_type"));
-                    forceCopy = params.get<bool>("forceCopy", false);
-                    dontCast = params.get<bool>("dontCast", false);
                 }
         };
 
-        Ptr<Layer> CopyLayer::create(const LayerParams& params)
+        Ptr<Layer> SelectTableLayer::create(const LayerParams& params)
         {
-            return Ptr<CopyLayer>(new CopyLayerImpl(params));
+            return Ptr<SelectTableLayer>(new SelectTableLayerImpl(params));
         }
 
     }
