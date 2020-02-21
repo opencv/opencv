@@ -1588,7 +1588,7 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     case V4L2_PIX_FMT_Y12:
     {
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
-        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 16;
+        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 16);
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
     }
