@@ -1125,31 +1125,24 @@ static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size 
 }
 #endif
 
-static double
-getThreshVal_Otsu_8u( const Mat& _src )
+template<typename T, size_t BinsOnStack = 0u>
+static double getThreshVal_Otsu( const Mat& _src, const Size& size)
 {
-    Size size = _src.size();
-    int step = (int) _src.step;
-    if( _src.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-        step = size.width;
-    }
-
-#ifdef HAVE_IPP
-    unsigned char thresh = 0;
-    CV_IPP_RUN_FAST(ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
-#endif
-
-    const int N = 256;
-    int i, j, h[N] = {0};
+    const int N = std::numeric_limits<T>::max() + 1;
+    int i, j;
     #if CV_ENABLE_UNROLLED
-    int h_unrolled[3][N] = {};
+    AutoBuffer<int, 4 * BinsOnStack> hBuf(4 * N);
+    #else
+    AutoBuffer<int, BinsOnStack> hBuf(N);
+    #endif
+    memset(hBuf.data(), 0, hBuf.size() * sizeof(int));
+    int* h = hBuf.data();
+    #if CV_ENABLE_UNROLLED
+    int* h_unrolled[3] = {h + N, h + 2 * N, h + 3 * N };
     #endif
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* src = _src.ptr() + step*i;
+        const T* src = _src.ptr<T>(i, 0);
         j = 0;
         #if CV_ENABLE_UNROLLED
         for( ; j <= size.width - 4; j += 4 )
@@ -1177,7 +1170,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     double mu1 = 0, q1 = 0;
     double max_sigma = 0, max_val = 0;
 
-    for( i = 0; i < N; i++ )
+    for(i = 0; i < N; i++ )
     {
         double p_i, q2, mu2, sigma;
 
@@ -1198,8 +1191,42 @@ getThreshVal_Otsu_8u( const Mat& _src )
             max_val = i;
         }
     }
-
     return max_val;
+}
+
+static double
+getThreshVal_Otsu_8u( const Mat& _src )
+{
+    Size size = _src.size();
+    int step = (int) _src.step;
+    if( _src.isContinuous() )
+    {
+        size.width *= size.height;
+        size.height = 1;
+        step = size.width;
+    }
+
+#ifdef HAVE_IPP
+    unsigned char thresh = 0;
+    CV_IPP_RUN_FAST(ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
+#else
+    CV_UNUSED(step);
+#endif
+
+    return getThreshVal_Otsu<uchar, 256u>(_src, size);
+}
+
+static double
+getThreshVal_Otsu_16u( const Mat& _src )
+{
+    Size size = _src.size();
+    if( _src.isContinuous() )
+    {
+        size.width *= size.height;
+        size.height = 1;
+    }
+
+    return getThreshVal_Otsu<ushort>(_src, size);
 }
 
 static double
@@ -1526,8 +1553,10 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     CV_Assert( automatic_thresh != (CV_THRESH_OTSU | CV_THRESH_TRIANGLE) );
     if( automatic_thresh == CV_THRESH_OTSU )
     {
-        CV_Assert( src.type() == CV_8UC1 );
-        thresh = getThreshVal_Otsu_8u( src );
+        int src_type = src.type();
+        CV_CheckType(src_type, src_type == CV_8UC1 || src_type == CV_16UC1, "THRESH_OTSU mode");
+        thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src )
+                                       : getThreshVal_Otsu_16u( src );
     }
     else if( automatic_thresh == CV_THRESH_TRIANGLE )
     {
