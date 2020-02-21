@@ -80,8 +80,10 @@ void printOp(const Op& op);
 void printData(const Data& data);
 void printGSerialized(const GSerialized s);
 void dumpGSerializedOps(const GSerialized s, std::ofstream &ofs_ops);
+void cleanGSerializedOps(GSerialized &s);
 void readGSerializedOps(GSerialized &s, std::ifstream &ifs_ops);
 void dumpGSerializedDatas(const GSerialized s, std::ofstream &ofs_data);
+void cleanupGSerializedDatas(GSerialized &s);
 void readGSerializedDatas(GSerialized &s, std::ifstream &ifs_data);
 
 //Graph dump operators
