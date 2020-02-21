@@ -4705,6 +4705,8 @@ public:
             int createFlags = 0, flags0 = 0;
             getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
 
+            bool copyOnMap = (flags0 & UMatData::COPY_ON_MAP) != 0;
+
             cl_context ctx_handle = (cl_context)ctx.ptr();
             int allocatorFlags = 0;
             int tempUMatFlags = 0;
@@ -4764,8 +4766,15 @@ public:
             else
 #endif
             {
+                if( copyOnMap )
+                    accessFlags &= ~ACCESS_FAST;
+
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                if (CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
+                if (
+                #ifdef __APPLE__
+                    !copyOnMap &&
+                #endif
+                    CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
                     // There are OpenCL runtime issues for less aligned data
                     && (CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR != 0
                         && u->origdata == cv::alignPtr(u->origdata, (int)CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR))
@@ -4793,7 +4802,7 @@ public:
             u->handle = handle;
             u->prevAllocator = u->currAllocator;
             u->currAllocator = this;
-            u->flags |= tempUMatFlags;
+            u->flags |= tempUMatFlags | flags0;
             u->allocatorFlags_ = allocatorFlags;
         }
         if(accessFlags & ACCESS_WRITE)
