@@ -484,10 +484,7 @@ public:
         {
             CV_CheckEQ(inp_shapes.size(), netInputs.size(), "");
             for (int inp_id = 0; inp_id < inp_shapes.size(); inp_id++)
-            {
-                if (!inp_shapes[inp_id].empty())
-                    dstNet.setInput(Mat(inp_shapes[inp_id], CV_32F), netInputs[inp_id]);
-            }
+                dstNet.setInputShape(netInputs[inp_id], inp_shapes[inp_id]);
         }
 
         addedBlobs.clear();
