@@ -6,6 +6,8 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+import argparse
+import sys
 
 # [get-psnr]
 def getPSNR(I1, I2):
@@ -69,21 +71,18 @@ def getMSSISM(i1, i2):
 
 
 def main():
-    import argparse
-    import sys
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--delay", type=int, default=30, help=" Time delay")
-    parser.add_argument("-PTV", "--psnrTriggerValue", type=int, default=30, help="PSNR Trigger Value")
+    parser.add_argument("-v", "--psnrtriggervalue", type=int, default=30, help="PSNR Trigger Value")
     parser.add_argument("-r", "--ref", type=str, default="Megamind.avi", help="Path to reference video")
-    parser.add_argument("-UT", "--UnderTest", type=str, default="Megamind_bugy.avi",
+    parser.add_argument("-t", "--undertest", type=str, default="Megamind_bugy.avi",
                         help="Path to the video to be tested")
     args = parser.parse_args()
 
     sourceReference = args.ref
-    sourceCompareWith = args.UnderTest
+    sourceCompareWith = args.undertest
     delay = args.delay
-    psnrTriggerValue = args.psnrTriggerValue
+    psnrTriggerValue = args.psnrtriggervalue
 
     framenum = -1 # Frame counter
 
