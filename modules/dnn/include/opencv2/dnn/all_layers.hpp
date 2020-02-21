@@ -648,6 +648,16 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS CopyLayer : public Layer
+    {
+        public:
+
+            String intype, outtype;
+            bool forceCopy, dontCast;
+
+            static Ptr<Layer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END
