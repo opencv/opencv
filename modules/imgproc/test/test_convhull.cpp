@@ -2175,8 +2175,16 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
         {36,  9}, {35,  9}, {34,  9}, {33,  9}, {32,  9}, {31,  9}, {30,  9}, {29,  9}, {28,  9}, {27,  9}
     };
     int npoints = (int)(sizeof(contour)/sizeof(contour[0][0])/2);
-    int scale = 20;
     Mat contour_(1, npoints, CV_32SC2, contour);
+    vector<Point> hull;
+    vector<int> hull_ind;
+    vector<Vec4i> defects;
+
+    // first, check the original contour as-is, without intermediate fillPoly/drawContours.
+    convexHull(contour_, hull_ind, false, false);
+    EXPECT_THROW( convexityDefects(contour_, hull_ind, defects), cv::Exception );
+
+    int scale = 20;
     contour_ *= (double)scale;
 
     Mat canvas_gray(Size(60*scale, 45*scale), CV_8U, Scalar::all(0));
@@ -2185,11 +2193,7 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
 
     vector<vector<Point> > contours;
     findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
-
-    vector<Point> hull;
-    vector<int> hull_ind;
     convexHull(contours[0], hull_ind, false, false);
-    vector<Vec4i> defects;
 
     // the original contour contains self-intersections,
     // therefore convexHull does not return a monotonous sequence of points
