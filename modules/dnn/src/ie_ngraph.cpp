@@ -71,10 +71,13 @@ ngraphWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
 
 class NgraphCustomOp: public ngraph::op::Op {
 public:
-    static constexpr ngraph::NodeTypeInfo type_info{kOpenCVLayersType, 0};
-    const ngraph::NodeTypeInfo& get_type_info() const override { return type_info;  }
+    const ngraph::NodeTypeInfo& get_type_info() const override
+    {
+        static constexpr ngraph::NodeTypeInfo type_info{kOpenCVLayersType, 0};
+        return type_info;
+    }
 
-    NgraphCustomOp() = default;
+    NgraphCustomOp() {};
     NgraphCustomOp(const ngraph::NodeVector& inputs,
                    const std::map<std::string, InferenceEngine::Parameter>& params = {}):
         Op(inputs), params(params)
@@ -86,6 +89,7 @@ public:
     {
         std::vector<std::vector<size_t> > shapes;
         strToShapes(params["outputs"], shapes);
+        set_output_size(shapes.size());
         for (size_t i = 0; i < shapes.size(); ++i)
         {
             ngraph::Shape output_shape(shapes[i]);
@@ -111,8 +115,6 @@ public:
 private:
     std::map<std::string, InferenceEngine::Parameter> params;
 };
-
-constexpr ngraph::NodeTypeInfo NgraphCustomOp::type_info;
 
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {}

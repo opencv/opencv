@@ -1953,9 +1953,7 @@ struct Net::Impl
             Ptr<Layer> layer = ld.layerInstance;
             if (!fused && !layer->supportBackend(preferableBackend))
             {
-                bool customizable = ld.id != 0 &&
-                                    INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R2) &&
-                                    supportsCPUFallback;
+                bool customizable = ld.id != 0 && supportsCPUFallback;
 
                 // TODO: there is a bug in Myriad plugin with custom layers shape infer.
                 if (preferableTarget == DNN_TARGET_MYRIAD)
@@ -2069,6 +2067,19 @@ struct Net::Impl
 
             if (!fused)
             {
+                CV_Assert(ld.inputBlobsId.size() == inputNodes.size());
+                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                {
+                    int lid = ld.inputBlobsId[i].lid;
+                    int oid = ld.inputBlobsId[i].oid;
+                    if (oid == 0 || lid == 0)
+                        continue;
+
+                    auto ieInpNode = inputNodes[i].dynamicCast<InfEngineNgraphNode>();
+                    CV_Assert(oid < ieInpNode->node->get_output_size());
+                    inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ieInpNode->node->get_output_as_single_output_node(oid, false)));
+                }
+
                 if (layer->supportBackend(preferableBackend))
                 {
                     node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
