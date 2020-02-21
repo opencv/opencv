@@ -19,8 +19,8 @@ namespace cv { namespace dnn {
 class ResizeLayerImpl : public ResizeLayer
 {
 public:
-    ResizeLayerImpl(const LayerParams& params) : zoomFactorWidth(params.get<int>("zoom_factor_x", params.get<int>("zoom_factor", 0))),
-                                                 zoomFactorHeight(params.get<int>("zoom_factor_y", params.get<int>("zoom_factor", 0))),
+    ResizeLayerImpl(const LayerParams& params) : zoomFactorWidth(params.get<float>("zoom_factor_x", params.get<float>("zoom_factor", 0))),
+                                                 zoomFactorHeight(params.get<float>("zoom_factor_y", params.get<float>("zoom_factor", 0))),
                                                  scaleWidth(0), scaleHeight(0)
     {
         setParamsFrom(params);
@@ -35,7 +35,8 @@ public:
             CV_Assert(params.has("zoom_factor_x") && params.has("zoom_factor_y"));
         }
         interpolation = params.get<String>("interpolation");
-        CV_Assert(interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear");
+        CV_Assert(interpolation == "caffe_nearest" || interpolation == "caffe_bilinear" ||
+                  interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear");
 
         alignCorners = params.get<bool>("align_corners", false);
     }
@@ -51,8 +52,13 @@ public:
             outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
             outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
         } else {
+            float factor_h = static_cast<float>(inputs[1][2]) / inputs[0][2];
+            float factor_w = static_cast<float>(inputs[1][3]) / inputs[0][3];
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
+            if ((interpolation == "caffe_bilinear" && (factor_w != 1.0 || factor_h != 1.0)) ||
+                (interpolation == "caffe_nearest" && (factor_w < 1.0 || factor_h < 1.0)))
+                    CV_Error(Error::StsNotImplemented, "Unsupported Resize mode");
         }
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
@@ -79,6 +85,10 @@ public:
 
         outHeight = outputs[0].size[2];
         outWidth = outputs[0].size[3];
+
+        if (interpolation.find("caffe") != std::string::npos)
+            interpolation = interpolation == "caffe_bilinear" ? "bilinear" : "nearest";
+
         if (alignCorners && outHeight > 1)
             scaleHeight = static_cast<float>(inputs[0].size[2] - 1) / (outHeight - 1);
         else
@@ -230,7 +240,7 @@ public:
 
 protected:
     int outWidth, outHeight;
-    const int zoomFactorWidth, zoomFactorHeight;
+    const float zoomFactorWidth, zoomFactorHeight;
     String interpolation;
     float scaleWidth, scaleHeight;
     bool alignCorners;

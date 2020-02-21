@@ -467,17 +467,24 @@ public:
             }
             else if (type == "Resample")
             {
-                // TODO: Check antialias
+                CV_Assert(layer.bottom_size() == 1 || layer.bottom_size() == 2);
                 type = "Resize";
-                if (layerParams.get<String>("type") == "LINEAR") {
-                    layerParams.set("interpolation", "bilinear");
+                String interp = layerParams.get<String>("type");
+                if (interp == "LINEAR")
+                    layerParams.set("interpolation", "caffe_bilinear");
+                else if (interp == "NEAREST")
+                    layerParams.set("interpolation", "caffe_nearest");
+
+                if (layerParams.has("factor"))
+                {
+                    float factor = layerParams.get<float>("factor");
+                    CV_Assert(layer.bottom_size() != 2 || factor == 1.0);
+                    layerParams.set("zoom_factor", factor);
+
+                    if ((interp == "LINEAR" && factor != 1.0) ||
+                        (interp == "NEAREST" && factor < 1.0))
+                        CV_Error(Error::StsNotImplemented, "Unsupported Resample mode");
                 }
-                else if (layerParams.get<String>("type") == "NEAREST") {
-                    layerParams.set("interpolation", "nearest");
-                }
-                float factor = layerParams.get<float>("factor", 1.0);
-                layerParams.set("zoom_factor", factor);
-                CV_Assert(layer.bottom_size() == 1 || (layer.bottom_size() == 2 && factor == 1.0));
             }
             else if ("ConvolutionDepthwise" == type)
             {
