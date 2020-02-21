@@ -565,7 +565,7 @@ bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
             V4L2_PIX_FMT_JPEG,
 #endif
             V4L2_PIX_FMT_Y16,
-            V4L2_PIX_FMT_Y12,        
+            V4L2_PIX_FMT_Y12,
             V4L2_PIX_FMT_Y10,
             V4L2_PIX_FMT_GREY,
     };
@@ -624,7 +624,6 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
     case V4L2_PIX_FMT_SGBRG8:
     case V4L2_PIX_FMT_RGB24:
     case V4L2_PIX_FMT_Y16:
-    case V4L2_PIX_FMT_Y12:            
     case V4L2_PIX_FMT_Y10:
     case V4L2_PIX_FMT_GREY:
     case V4L2_PIX_FMT_BGR24:
@@ -660,7 +659,7 @@ void CvCaptureCAM_V4L::v4l2_create_frame()
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
         case V4L2_PIX_FMT_Y16:
-        case V4L2_PIX_FMT_Y12:                
+        case V4L2_PIX_FMT_Y12:
         case V4L2_PIX_FMT_Y10:
             depth = IPL_DEPTH_16U;
             /* fallthru */
