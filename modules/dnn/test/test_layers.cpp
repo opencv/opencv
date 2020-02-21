@@ -638,6 +638,14 @@ TEST_P(Test_Caffe_layers, DataAugmentation)
     testLayerUsingCaffeModels("data_augmentation", true, false);
 }
 
+TEST_P(Test_Caffe_layers, Resample)
+{
+    if (backend != DNN_BACKEND_OPENCV)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testLayerUsingCaffeModels("nearest_2inps", false, false, 0.0, 0.0, 2);
+    testLayerUsingCaffeModels("nearest", false, false);
+}
+
 TEST_P(Test_Caffe_layers, Correlation)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
