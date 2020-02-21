@@ -10,6 +10,7 @@
 // */
 
 #include "precomp.hpp"
+#include <iostream>
 
 namespace cv
 {
@@ -1329,7 +1330,10 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
     else
     {
         e.a.convertTo(dst, e.a.type(), e.alpha);
-        cv::add(dst, e.s, dst);
+        if (e.a.channels() == 1)
+            cv::add(dst, e.s, dst);
+        else
+            cv::add(dst, e.s[0], dst);
     }
 
     if( dst.data != m.data )
