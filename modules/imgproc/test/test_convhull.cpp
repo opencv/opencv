@@ -2154,5 +2154,157 @@ TEST(Imgproc_FitLine, regression_4903)
     EXPECT_GE(fabs(lineParam[1]), fabs(lineParam[0]) * 4) << lineParam;
 }
 
+#if 0
+#define DRAW(x) x
+#else
+#define DRAW(x)
+#endif
+
+// the Python test by @hannarud is converted to C++; see the issue #4539
+TEST(Imgproc_ConvexityDefects, ordering_4539)
+{
+    int contour[][2] =
+    {
+        {26,  9}, {25, 10}, {24, 10}, {23, 10}, {22, 10}, {21, 10}, {20, 11}, {19, 11}, {18, 11}, {17, 12},
+        {17, 13}, {18, 14}, {18, 15}, {18, 16}, {18, 17}, {19, 18}, {19, 19}, {20, 20}, {21, 21}, {21, 22},
+        {22, 23}, {22, 24}, {23, 25}, {23, 26}, {24, 27}, {25, 28}, {26, 29}, {27, 30}, {27, 31}, {28, 32},
+        {29, 32}, {30, 33}, {31, 34}, {30, 35}, {29, 35}, {30, 35}, {31, 34}, {32, 34}, {33, 34}, {34, 33},
+        {35, 32}, {35, 31}, {35, 30}, {36, 29}, {37, 28}, {37, 27}, {38, 26}, {39, 25}, {40, 24}, {40, 23},
+        {41, 22}, {42, 21}, {42, 20}, {42, 19}, {43, 18}, {43, 17}, {44, 16}, {45, 15}, {45, 14}, {46, 13},
+        {46, 12}, {45, 11}, {44, 11}, {43, 11}, {42, 10}, {41, 10}, {40,  9}, {39,  9}, {38,  9}, {37,  9},
+        {36,  9}, {35,  9}, {34,  9}, {33,  9}, {32,  9}, {31,  9}, {30,  9}, {29,  9}, {28,  9}, {27,  9}
+    };
+    int npoints = (int)(sizeof(contour)/sizeof(contour[0][0])/2);
+    Mat contour_(1, npoints, CV_32SC2, contour);
+    vector<Point> hull;
+    vector<int> hull_ind;
+    vector<Vec4i> defects;
+
+    // first, check the original contour as-is, without intermediate fillPoly/drawContours.
+    convexHull(contour_, hull_ind, false, false);
+    EXPECT_THROW( convexityDefects(contour_, hull_ind, defects), cv::Exception );
+
+    int scale = 20;
+    contour_ *= (double)scale;
+
+    Mat canvas_gray(Size(60*scale, 45*scale), CV_8U, Scalar::all(0));
+    const Point* ptptr = contour_.ptr<Point>();
+    fillPoly(canvas_gray, &ptptr, &npoints, 1, Scalar(255, 255, 255));
+
+    vector<vector<Point> > contours;
+    findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
+    convexHull(contours[0], hull_ind, false, false);
+
+    // the original contour contains self-intersections,
+    // therefore convexHull does not return a monotonous sequence of points
+    // and therefore convexityDefects throws an exception
+    EXPECT_THROW( convexityDefects(contours[0], hull_ind, defects), cv::Exception );
+
+#if 1
+    // one way to eliminate the contour self-intersection in this particular case is to apply dilate(),
+    // so that the self-repeating points are not self-repeating anymore
+    dilate(canvas_gray, canvas_gray, Mat());
+#else
+    // another popular technique to eliminate such thin "hair" is to use morphological "close" operation,
+    // which is erode() + dilate()
+    erode(canvas_gray, canvas_gray, Mat());
+    dilate(canvas_gray, canvas_gray, Mat());
+#endif
+
+    // after the "fix", the newly retrieved contour should not have self-intersections,
+    // and everything should work well
+    findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
+    convexHull(contours[0], hull, false, true);
+    convexHull(contours[0], hull_ind, false, false);
+
+    DRAW(Mat canvas(Size(60*scale, 45*scale), CV_8UC3, Scalar::all(0));
+        drawContours(canvas, contours, -1, Scalar(255, 255, 255), -1));
+
+    size_t nhull = hull.size();
+    ASSERT_EQ( nhull, hull_ind.size() );
+
+    if( nhull > 2 )
+    {
+        bool initial_lt = hull_ind[0] < hull_ind[1];
+        for( size_t i = 0; i < nhull; i++ )
+        {
+            int ind = hull_ind[i];
+            Point pt = contours[0][ind];
+
+            ASSERT_EQ(pt, hull[i]);
+            if( i > 0 )
+            {
+                // check that the convex hull indices are monotone
+                if( initial_lt )
+                {
+                    ASSERT_LT(hull_ind[i-1], hull_ind[i]);
+                }
+                else
+                {
+                    ASSERT_GT(hull_ind[i-1], hull_ind[i]);
+                }
+            }
+            DRAW(circle(canvas, pt, 7, Scalar(180, 0, 180), -1, LINE_AA);
+                putText(canvas, format("%d (%d)", (int)i, ind), pt+Point(15, 0), FONT_HERSHEY_SIMPLEX, 0.4, Scalar(200, 0, 200), 1, LINE_AA));
+            //printf("%d. ind=%d, pt=(%d, %d)\n", (int)i, ind, pt.x, pt.y);
+        }
+    }
+
+    convexityDefects(contours[0], hull_ind, defects);
+
+    for(size_t i = 0; i < defects.size(); i++ )
+    {
+        Vec4i d = defects[i];
+        //printf("defect %d. start=%d, end=%d, farthest=%d, depth=%d\n", (int)i, d[0], d[1], d[2], d[3]);
+        EXPECT_LT(d[0], d[1]);
+        EXPECT_LE(d[0], d[2]);
+        EXPECT_LE(d[2], d[1]);
+
+        DRAW(Point start = contours[0][d[0]];
+             Point end = contours[0][d[1]];
+             Point far = contours[0][d[2]];
+             line(canvas, start, end, Scalar(255, 255, 128), 3, LINE_AA);
+             line(canvas, start, far, Scalar(255, 150, 255), 3, LINE_AA);
+             line(canvas, end, far, Scalar(255, 150, 255), 3, LINE_AA);
+             circle(canvas, start, 7, Scalar(0, 0, 255), -1, LINE_AA);
+             circle(canvas, end, 7, Scalar(0, 0, 255), -1, LINE_AA);
+             circle(canvas, far, 7, Scalar(255, 0, 0), -1, LINE_AA));
+    }
+
+    DRAW(imshow("defects", canvas);
+         waitKey());
+}
+
+#undef DRAW
+
+TEST(Imgproc_ConvexHull, overflow)
+{
+    std::vector<Point> points;
+    std::vector<Point2f> pointsf;
+
+    points.push_back(Point(14763, 2890));
+    points.push_back(Point(14388, 72088));
+    points.push_back(Point(62810, 72274));
+    points.push_back(Point(63166, 3945));
+    points.push_back(Point(56782, 3945));
+    points.push_back(Point(56763, 3077));
+    points.push_back(Point(34666, 2965));
+    points.push_back(Point(34547, 2953));
+    points.push_back(Point(34508, 2866));
+    points.push_back(Point(34429, 2965));
+
+    size_t i, n = points.size();
+    for( i = 0; i < n; i++ )
+        pointsf.push_back(Point2f(points[i]));
+
+    std::vector<int> hull;
+    std::vector<int> hullf;
+
+    convexHull(points, hull, false, false);
+    convexHull(pointsf, hullf, false, false);
+
+    ASSERT_EQ(hull, hullf);
+}
+
 }} // namespace
 /* End of file. */
