@@ -4770,8 +4770,11 @@ public:
                     accessFlags &= ~ACCESS_FAST;
 
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                if (!copyOnMap
-                    && CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
+                if (
+                #ifdef __APPLE__
+                    !copyOnMap &&
+                #endif
+                    CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
                     // There are OpenCL runtime issues for less aligned data
                     && (CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR != 0
                         && u->origdata == cv::alignPtr(u->origdata, (int)CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR))
