@@ -788,9 +788,9 @@ models = [
         filename='onnx/models/facial_keypoints.onnx'),
     Model(
         name='LightWeight Human Pose Estimation (ONNX)', # https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch
-        url='https://drive.google.com/uc?export=dowload&id=1T2Kq01WXzPMrQdnEOUEiVBhwouW8Pka5',
-        sha='20370164b8c43aa14625c0be4e31f62b9b397ac4',
-        filename='onnx/models/lightweight_pose_estimation.onnx'),
+        url='https://drive.google.com/uc?export=dowload&id=1--Ij_gIzCeNA488u5TA4FqWMMdxBqOji',
+        sha='5960f7aef233d75f8f4020be1fd911b2d93fbffc',
+        filename='onnx/models/lightweight_pose_estimation_201912.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
