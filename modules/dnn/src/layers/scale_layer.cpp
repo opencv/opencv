@@ -302,7 +302,8 @@ public:
     DataAugmentationLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        recompute_mean = params.get<int>("recompute_mean", 0);
+        recompute_mean = params.get<int>("recompute_mean", 1);
+        CV_Assert(recompute_mean > 0);
         mean_per_pixel = params.get<bool>("mean_per_pixel", false);
     }
 
@@ -311,10 +312,10 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(blobs.size() == 3);
-        CV_Assert(blobs[0].total() == 1);
-        CV_Assert(blobs[1].total() == total(inputs[0], 1));
-        CV_Assert(blobs[2].total() == inputs[0][1]);
+        CV_Assert_N(inputs.size() == 1, blobs.size() == 3);
+        CV_Assert_N(blobs[0].total() == 1, blobs[1].total() == total(inputs[0], 1),
+                    blobs[2].total() == inputs[0][1]);
+
         outputs.assign(1, inputs[0]);
         return true;
     }
@@ -324,8 +325,6 @@ public:
         num_iter = 0;
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        CV_Assert(inputs.size() == 1);
-        CV_Assert((!mean_per_pixel && blobs.size() == 3) || blobs.size() >= 2);
         data_mean_cpu = blobs[1].clone();
         data_mean_per_channel_cpu = blobs[2].clone();
     }
