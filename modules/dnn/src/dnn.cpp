@@ -4531,7 +4531,6 @@ Ptr<Layer> LayerFactory::createLayerInstance(const String &type, LayerParams& pa
     cv::AutoLock lock(getLayerFactoryMutex());
     String type_ = type.toLowerCase();
     LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type_);
-    
     if (it != getLayerFactoryImpl().end())
     {
         CV_Assert(!it->second.empty());
