@@ -43,7 +43,7 @@ static void help()
 {
     printf("\nThis sample demonstrates Canny edge detection\n"
            "Call:\n"
-           "    /.edge [image_name -- Default is fruits.jpg]\n\n");
+           "    ./edge [image_name -- Default is fruits.jpg]\n\n");
 }
 
 const char* keys =
