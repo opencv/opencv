@@ -1,5 +1,6 @@
 %YAML:1.0
 isFound: 1
+sharpness: 1.45
 corners: !!opencv-matrix
    rows: 6
    cols: 4
