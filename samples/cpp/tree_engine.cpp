@@ -8,14 +8,14 @@
 using namespace cv;
 using namespace cv::ml;
 
-static void help()
+static void help(char** argv)
 {
     printf(
         "\nThis sample demonstrates how to use different decision trees and forests including boosting and random trees.\n"
-        "Usage:\n\t./tree_engine [-r=<response_column>] [-ts=type_spec] <csv filename>\n"
+        "Usage:\n\t%s [-r=<response_column>] [-ts=type_spec] <csv filename>\n"
         "where -r=<response_column> specified the 0-based index of the response (0 by default)\n"
         "-ts= specifies the var type spec in the form ord[n1,n2-n3,n4-n5,...]cat[m1-m2,m3,m4-m5,...]\n"
-        "<csv filename> is the name of training data file in comma-separated value format\n\n");
+        "<csv filename> is the name of training data file in comma-separated value format\n\n", argv[0]);
 }
 
 static void train_and_print_errs(Ptr<StatModel> model, const Ptr<TrainData>& data)
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     cv::CommandLineParser parser(argc, argv, "{ help h | | }{r | 0 | }{ts | | }{@input | | }");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     std::string filename = parser.get<std::string>("@input");
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     if( filename.empty() || !parser.check() )
     {
         parser.printErrors();
-        help();
+        help(argv);
         return 0;
     }
     printf("\nReading in %s...\n\n",filename.c_str());
