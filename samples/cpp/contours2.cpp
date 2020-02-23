@@ -12,7 +12,7 @@ static void help(char** argv)
         << "\nThis program illustrates the use of findContours and drawContours\n"
         << "The original image is put up along with the image of drawn contours\n"
         << "Usage:\n";
-    cout 
+    cout
         << argv[0]
         << "\nA trackbar is put up which controls the contour level from -3 to 3\n"
         << endl;

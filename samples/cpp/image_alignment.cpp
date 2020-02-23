@@ -66,7 +66,7 @@ static void help(const char** argv)
         "If inputWarp is missing, the identity transformation initializes the algorithm. \n" << endl;
 
     cout << "\nUsage example (one image): \n"
-         << argv[0]  
+         << argv[0]
          << " fruits.jpg -o=outWarp.ecc "
             "-m=euclidean -e=1e-6 -N=70 -v=1 \n" << endl;
 
