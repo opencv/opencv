@@ -28,7 +28,7 @@
 using namespace cv;
 using namespace std;
 
-static void help(void);
+static void help(const char** argv);
 static int readWarp(string iFilename, Mat& warp, int motionType);
 static int saveWarp(string fileName, const Mat& warp, int motionType);
 static void draw_warped_roi(Mat& image, const int width, const int height, Mat& W);
@@ -57,7 +57,7 @@ const std::string keys =
 ;
 
 
-static void help(void)
+static void help(const char** argv)
 {
 
     cout << "\nThis file demonstrates the use of the ECC image alignment algorithm. When one image"
@@ -65,10 +65,14 @@ static void help(void)
         " are given, the initialization of the warp by command line parsing is possible. "
         "If inputWarp is missing, the identity transformation initializes the algorithm. \n" << endl;
 
-    cout << "\nUsage example (one image): \n./image_alignment fruits.jpg -o=outWarp.ecc "
-        "-m=euclidean -e=1e-6 -N=70 -v=1 \n" << endl;
+    cout << "\nUsage example (one image): \n"
+         << argv[0]
+         << " fruits.jpg -o=outWarp.ecc "
+            "-m=euclidean -e=1e-6 -N=70 -v=1 \n" << endl;
 
-    cout << "\nUsage example (two images with initialization): \n./image_alignment yourInput.png yourTemplate.png "
+    cout << "\nUsage example (two images with initialization): \n"
+         << argv[0]
+         << " yourInput.png yourTemplate.png "
         "yourInitialWarp.ecc -o=outWarp.ecc -m=homography -e=1e-6 -N=70 -v=1 -w=yourFinalImage.png \n" << endl;
 
 }
@@ -178,7 +182,7 @@ int main (const int argc, const char * argv[])
     parser.about("ECC demo");
 
     parser.printMessage();
-    help();
+    help(argv);
 
     string imgFile = parser.get<string>(0);
     string tempImgFile = parser.get<string>(1);

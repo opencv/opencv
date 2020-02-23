@@ -9,7 +9,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::ml;
 
-static void help()
+static void help(char** argv)
 {
     printf("\nThe sample demonstrates how to train Random Trees classifier\n"
     "(or Boosting classifier, or MLP, or Knearest, or Nbayes, or Support Vector Machines - see main()) using the provided dataset.\n"
@@ -28,10 +28,10 @@ static void help()
     "and the remaining 4000 (10000 for boosting) - to test the classifier.\n"
     "======================================================\n");
     printf("\nThis is letter recognition sample.\n"
-            "The usage: letter_recog [-data=<path to letter-recognition.data>] \\\n"
+            "The usage: %s [-data=<path to letter-recognition.data>] \\\n"
             "  [-save=<output XML file for the classifier>] \\\n"
             "  [-load=<XML file with the pre-trained classifier>] \\\n"
-            "  [-boost|-mlp|-knearest|-nbayes|-svm] # to use boost/mlp/knearest/SVM classifier instead of default Random Trees\n" );
+            "  [-boost|-mlp|-knearest|-nbayes|-svm] # to use boost/mlp/knearest/SVM classifier instead of default Random Trees\n", argv[0] );
 }
 
 // This function reads data and responses from the file <filename>
@@ -538,7 +538,7 @@ int main( int argc, char *argv[] )
     else if (parser.has("svm"))
         method = 5;
 
-    help();
+    help(argv);
 
     if( (method == 0 ?
         build_rtrees_classifier( data_filename, filename_to_save, filename_to_load ) :
