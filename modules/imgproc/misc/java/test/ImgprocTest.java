@@ -427,7 +427,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.convexHull(points, hull);
 
         MatOfInt expHull = new MatOfInt(
-                1, 2, 3, 0
+                0, 1, 2, 3
         );
         assertMatEqual(expHull, hull, EPS);
     }

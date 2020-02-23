@@ -1270,6 +1270,34 @@ Matx<_Tp, m, n> operator * (double alpha, const Matx<_Tp, m, n>& a)
 }
 
 template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n>& operator /= (Matx<_Tp, m, n>& a, float alpha)
+{
+    for( int i = 0; i < m*n; i++ )
+        a.val[i] = a.val[i] / alpha;
+    return a;
+}
+
+template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n>& operator /= (Matx<_Tp, m, n>& a, double alpha)
+{
+    for( int i = 0; i < m*n; i++ )
+        a.val[i] = a.val[i] / alpha;
+    return a;
+}
+
+template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, float alpha)
+{
+    return Matx<_Tp, m, n>(a, 1.f/alpha, Matx_ScaleOp());
+}
+
+template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, double alpha)
+{
+    return Matx<_Tp, m, n>(a, 1./alpha, Matx_ScaleOp());
+}
+
+template<typename _Tp, int m, int n> static inline
 Matx<_Tp, m, n> operator - (const Matx<_Tp, m, n>& a)
 {
     return Matx<_Tp, m, n>(a, -1, Matx_ScaleOp());
