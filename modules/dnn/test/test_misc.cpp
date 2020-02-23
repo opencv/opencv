@@ -56,7 +56,10 @@ TEST(imagesFromBlob, Regression)
 
     for (int i = 0; i < nbOfImages; i++)
     {
-        ASSERT_EQ(cv::countNonZero(inputImgs[i] != outputImgs[i]), 0);
+        EXPECT_EQ(0, cvtest::norm(inputImgs[i], outputImgs[i], NORM_INF))
+            << "i=" << i
+            << " inputImgs[i]=" << inputImgs[i].size
+            << " outputImgs[i]=" << outputImgs[i].size;
     }
 }
 
