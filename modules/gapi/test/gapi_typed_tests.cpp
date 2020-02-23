@@ -10,23 +10,6 @@
 namespace opencv_test
 {
 
-namespace
-{
-    cv::Mat diff(cv::Mat m1, cv::Mat m2, int t)
-    {
-        return cv::abs(m1-m2) > t;
-    }
-
-    int non_zero3(cv::Mat m3c)
-    {
-        std::vector<cv::Mat> mm(3);
-        cv::split(m3c, mm);
-        return (  cv::countNonZero(mm[0])
-                + cv::countNonZero(mm[1])
-                + cv::countNonZero(mm[2]));
-    }
-}
-
 TEST(GAPI_Typed, UnaryOp)
 {
     // Initialization //////////////////////////////////////////////////////////
@@ -60,14 +43,9 @@ TEST(GAPI_Typed, UnaryOp)
 
     // Comparison //////////////////////////////////////////////////////////////
     // FIXME: There must be OpenCV comparison test functions already available!
-    cv::Mat
-        diff_u  = diff(out_mat_cv, out_mat_untyped, 0),
-        diff_t  = diff(out_mat_cv, out_mat_typed1,  0),
-        diff_tc = diff(out_mat_cv, out_mat_typed2,  0);
-
-    EXPECT_EQ(0, non_zero3(diff_u));
-    EXPECT_EQ(0, non_zero3(diff_t));
-    EXPECT_EQ(0, non_zero3(diff_tc));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv, out_mat_untyped, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv, out_mat_typed1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv, out_mat_typed2, NORM_INF));
 }
 
 TEST(GAPI_Typed, BinaryOp)
@@ -111,14 +89,9 @@ TEST(GAPI_Typed, BinaryOp)
 
     // Comparison //////////////////////////////////////////////////////////////
     // FIXME: There must be OpenCV comparison test functions already available!
-    cv::Mat
-        diff_u  = diff(out_mat_cv, out_mat_untyped, 0),
-        diff_t  = diff(out_mat_cv, out_mat_typed1,  0),
-        diff_tc = diff(out_mat_cv, out_mat_typed2,  0);
-
-    EXPECT_EQ(0, cv::countNonZero(diff_u));
-    EXPECT_EQ(0, cv::countNonZero(diff_t));
-    EXPECT_EQ(0, cv::countNonZero(diff_tc));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv, out_mat_untyped, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv, out_mat_typed1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv, out_mat_typed2, NORM_INF));
 }
 
 
@@ -166,20 +139,12 @@ TEST(GAPI_Typed, MultipleOuts)
 
     // Comparison //////////////////////////////////////////////////////////////
     // FIXME: There must be OpenCV comparison test functions already available!
-    cv::Mat
-        diff_u1 = diff(out_mat_cv1, out_mat_unt1,   0),
-        diff_u2 = diff(out_mat_cv2, out_mat_unt2,   0),
-        diff_t1 = diff(out_mat_cv1, out_mat_typed1, 0),
-        diff_t2 = diff(out_mat_cv2, out_mat_typed2, 0),
-        diff_c1 = diff(out_mat_cv1, out_mat_comp1,  0),
-        diff_c2 = diff(out_mat_cv2, out_mat_comp2,  0);
-
-    EXPECT_EQ(0, cv::countNonZero(diff_u1));
-    EXPECT_EQ(0, cv::countNonZero(diff_u2));
-    EXPECT_EQ(0, cv::countNonZero(diff_t1));
-    EXPECT_EQ(0, cv::countNonZero(diff_t2));
-    EXPECT_EQ(0, cv::countNonZero(diff_c1));
-    EXPECT_EQ(0, cv::countNonZero(diff_c2));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv1, out_mat_unt1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv2, out_mat_unt2, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv1, out_mat_typed1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv2, out_mat_typed2, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv1, out_mat_comp1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_cv2, out_mat_comp2, NORM_INF));
 }
 
 } // opencv_test

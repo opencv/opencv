@@ -184,7 +184,7 @@ TEST_F(GAPIHeteroTest, TestOCV)
 
     cv::Mat ref = ocvBar(ocvFoo(m_in_mat), ocvFoo(m_in_mat));
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_ocv_kernels)));
-    EXPECT_EQ(0, cv::countNonZero(ref != m_out_mat));
+    EXPECT_EQ(0, cvtest::norm(ref, m_out_mat, NORM_INF));
 }
 
 TEST_F(GAPIHeteroTest, TestFluid)
@@ -194,7 +194,7 @@ TEST_F(GAPIHeteroTest, TestFluid)
 
     cv::Mat ref = fluidBar(fluidFoo(m_in_mat), fluidFoo(m_in_mat));
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_fluid_kernels)));
-    EXPECT_EQ(0, cv::countNonZero(ref != m_out_mat));
+    EXPECT_EQ(0, cvtest::norm(ref, m_out_mat, NORM_INF));
 }
 
 TEST_F(GAPIHeteroTest, TestBoth)
@@ -204,7 +204,7 @@ TEST_F(GAPIHeteroTest, TestBoth)
 
     cv::Mat ref = fluidBar(ocvFoo(m_in_mat), ocvFoo(m_in_mat));
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_hetero_kernels)));
-    EXPECT_EQ(0, cv::countNonZero(ref != m_out_mat));
+    EXPECT_EQ(0, cvtest::norm(ref, m_out_mat, NORM_INF));
 }
 
 struct GAPIBigHeteroTest : public ::testing::TestWithParam<std::array<int, 9>>
@@ -271,8 +271,8 @@ GAPIBigHeteroTest::GAPIBigHeteroTest()
 TEST_P(GAPIBigHeteroTest, Test)
 {
     EXPECT_NO_THROW(m_comp.apply(gin(m_in_mat), gout(m_out_mat1, m_out_mat2), cv::compile_args(m_kernels)));
-    EXPECT_EQ(0, cv::countNonZero(m_ref_mat1 != m_out_mat1));
-    EXPECT_EQ(0, cv::countNonZero(m_ref_mat2 != m_out_mat2));
+    EXPECT_EQ(0, cvtest::norm(m_ref_mat1, m_out_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(m_ref_mat2 != m_out_mat2, NORM_INF));
 }
 
 static auto configurations = []()
@@ -306,7 +306,7 @@ TEST(GAPIHeteroTestLPI, Test)
     cv::Mat out_mat;
     EXPECT_NO_THROW(c.apply(in_mat, out_mat, cv::compile_args(cv::gapi::kernels<FluidFoo2lpi>())));
     cv::Mat ref = fluidFoo(fluidFoo(in_mat));
-    EXPECT_EQ(0, cv::countNonZero(ref != out_mat));
+    EXPECT_EQ(0, cvtest::norm(ref, out_mat, NORM_INF));
 }
 
 }  // namespace opencv_test
