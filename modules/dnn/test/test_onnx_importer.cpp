@@ -624,7 +624,11 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
 {
     applyTestTag(
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+        CV_TEST_TAG_MEMORY_2GB,
+#else
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
+#endif
         CV_TEST_TAG_DEBUG_LONG
     );
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
