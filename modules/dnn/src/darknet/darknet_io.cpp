@@ -556,7 +556,7 @@ namespace cv {
                             const size_t layer_type_size = line.find("]") - 1;
                             CV_Assert(layer_type_size < line.size());
                             std::string layer_type = line.substr(1, layer_type_size);
-                            net->layers_cfg[layers_counter]["type"] = layer_type;
+                            net->layers_cfg[layers_counter]["layer_type"] = layer_type;
                         }
                         break;
                     default:
@@ -599,7 +599,7 @@ namespace cv {
                 for (it_type i = net->layers_cfg.begin(); i != net->layers_cfg.end(); ++i) {
                     ++layers_counter;
                     std::map<std::string, std::string> &layer_params = i->second;
-                    std::string layer_type = layer_params["type"];
+                    std::string layer_type = layer_params["layer_type"];
 
                     if (layer_type == "convolutional")
                     {
@@ -682,7 +682,7 @@ namespace cv {
                         else
                             setParams.setConcat(layers_vec.size(), layers_vec.data());
                     }
-                    else if (layer_type == "dropout")
+                    else if (layer_type == "dropout" || layer_type == "cost")
                     {
                         setParams.setIdentity(layers_counter-1);
                     }
@@ -806,7 +806,7 @@ namespace cv {
                     ++darknet_layers_counter;
                     ++cv_layers_counter;
                     std::map<std::string, std::string> &layer_params = i->second;
-                    std::string layer_type = layer_params["type"];
+                    std::string layer_type = layer_params["layer_type"];
 
                     if (layer_type == "convolutional" || layer_type == "connected")
                     {
