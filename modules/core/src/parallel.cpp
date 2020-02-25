@@ -84,17 +84,6 @@
     #define HAVE_CONCURRENCY
 #endif
 
-#if defined __linux__ || defined __GLIBC__ || defined __EMSCRIPTEN__ || defined __HAIKU__
-   #define CV_CPU_GROUPS_1
-   #if defined __ANDROID__
-       #define CV_HAVE_CGROUPS
-   #endif
-#endif
-
-#if defined __linux__ || defined __ANDROID__
-   #define CV_HAVE_CGROUPS
-#endif
-
 /* IMPORTANT: always use the same order of defines
    1. HAVE_TBB         - 3rdparty library, should be explicitly enabled
    2. HAVE_CSTRIPES    - 3rdparty library, should be explicitly enabled
@@ -757,21 +746,34 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#if defined CV_CPU_GROUPS_1
-static inline std::string getFileContents(const char *filename)
-{
-    std::ifstream ifs(filename);
-    if(ifs.fail())
-        return "";
 
-    std::string content( (std::istreambuf_iterator<char>(ifs) ),
-                         (std::istreambuf_iterator<char>()    ) );
-    return content;
-}
+#if defined __linux__ || defined __GLIBC__ || defined __EMSCRIPTEN__ || defined __HAIKU__ || defined __ANDROID__
+  #define CV_CPU_GROUPS_1
+#endif
+
+#if defined __linux__ || defined __ANDROID__
+  #define CV_HAVE_CGROUPS 1
 #endif
 
 #if defined CV_CPU_GROUPS_1
-static inline int getNumberOfCPUsImpl(const char *filename)
+static inline
+std::string getFileContents(const char *filename)
+{
+    std::ifstream ifs(filename);
+    if (!ifs.is_open())
+        return std::string();
+
+    std::string content( (std::istreambuf_iterator<char>(ifs) ),
+                         (std::istreambuf_iterator<char>()    ) );
+
+    if (ifs.fail())
+        return std::string();
+
+    return content;
+}
+
+static inline
+int getNumberOfCPUsImpl(const char *filename)
 {
    std::string file_contents = getFileContents(filename);
    if(file_contents.empty())
@@ -806,39 +808,37 @@ static inline int getNumberOfCPUsImpl(const char *filename)
 #endif
 
 #if defined CV_HAVE_CGROUPS
-static inline unsigned getNumberOfCPUsCFS(void)
+static inline
+unsigned getNumberOfCPUsCFS()
 {
-    std::string file_contents = getFileContents("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
-    if(file_contents.empty())
-        return 0;
+    int cfs_quota = 0;
+    {
+        std::ifstream ss_period("/sys/fs/cgroup/cpu/cpu.cfs_quota_us", std::ios::in | std::ios::binary);
+        ss_period >> cfs_quota;
 
-    std::istringstream ss_period(file_contents);
-    int cfs_quota;
-    ss_period >> cfs_quota;
+        if (ss_period.fail() || cfs_quota < 1) /* cfs_quota must not be 0 or negative */
+            return 0;
+    }
 
-    if(cfs_quota < 1) /* cfs_quota must not be 0 or negative */
-        return 0;
+    int cfs_period = 0;
+    {
+        std::ifstream ss_quota("/sys/fs/cgroup/cpu/cpu.cfs_period_us", std::ios::in | std::ios::binary);
+        ss_quota >> cfs_period;
 
-    file_contents = getFileContents("/sys/fs/cgroup/cpu/cpu.cfs_period_us");
-    if(file_contents.empty())
-        return 0;
+        if (ss_quota.fail() || cfs_period < 1)
+            return 0;
+    }
 
-    std::istringstream ss_quota(file_contents);
-    int cfs_period;
-    ss_quota >> cfs_period;
-
-    if(cfs_period < 1)
-        return 0;
-
-    return max(1u, (unsigned)cfs_quota/cfs_period);
+    return (unsigned)max(1, cfs_quota/cfs_period);
 }
 #endif
 
-template <typename T>
-static inline T minNonZero(T val_1, T val_2)
+template <typename T> static inline
+T minNonZero(const T& val_1, const T& val_2)
 {
-    return (((val_1 > 0) && (val_2 > 0) && (val_1 > val_2)) || ((val_1 == 0) && (val_2 > 0))) \
-           ? val_2 : val_1;
+    if ((val_1 != 0) && (val_2 != 0))
+        return std::min(val_1, val_2);
+    return (val_1 != 0) ? val_1 : val_2;
 }
 
 int cv::getNumberOfCPUs(void)
@@ -871,24 +871,29 @@ int cv::getNumberOfCPUs(void)
     ncpus = minNonZero(ncpus, ncpus_sysinfo);
 
 #elif defined CV_CPU_GROUPS_1
-    #if defined CV_HAVE_CGROUPS
-        static unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
-        ncpus = minNonZero(ncpus, ncpus_impl_cpuset);
 
-        static unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
-        ncpus = minNonZero(ncpus, ncpus_impl_cfs);
-    #endif
+#if defined CV_HAVE_CGROUPS
+    static unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
+    ncpus = minNonZero(ncpus, ncpus_impl_cpuset);
+
+    static unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
+    ncpus = minNonZero(ncpus, ncpus_impl_cfs);
+#endif
 
     static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/online");
     ncpus = minNonZero(ncpus, ncpus_impl_devices);
 
-    #if defined _GNU_SOURCE && !defined __ANDROID__
-        cpu_set_t cpu_set;
-        if(!sched_getaffinity(0, sizeof(cpu_set), &cpu_set)) {
-            unsigned cpu_count_cpu_set = CPU_COUNT(&cpu_set);
-            ncpus = minNonZero(ncpus, cpu_count_cpu_set);
-        }
-    #endif
+#if defined _GNU_SOURCE \
+    && !defined(__ANDROID__)  // TODO: add check for modern Android NDK
+
+    cpu_set_t cpu_set;
+    if (0 == sched_getaffinity(0, sizeof(cpu_set), &cpu_set))
+    {
+        unsigned cpu_count_cpu_set = CPU_COUNT(&cpu_set);
+        ncpus = minNonZero(ncpus, cpu_count_cpu_set);
+    }
+
+#endif
 
     static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
     ncpus = minNonZero(ncpus, cpu_count_sysconf);
