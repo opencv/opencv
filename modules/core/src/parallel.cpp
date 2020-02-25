@@ -84,11 +84,14 @@
     #define HAVE_CONCURRENCY
 #endif
 
-#if (defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __EMSCRIPTEN__) && !defined __ANDROID__
-   #define CV_LINUX_GROUPS
+#if defined __linux__ || defined __GLIBC__ || defined __EMSCRIPTEN__ || defined __HAIKU__
+   #define CV_CPU_GROUPS_1
+   #if defined __ANDROID__
+       #define CV_HAVE_CGROUPS
+   #endif
 #endif
 
-#if (defined __linux__ || defined __GLIBC__ || defined __HAIKU__) && !defined __ANDROID__
+#if defined __linux__ || defined __ANDROID__
    #define CV_HAVE_CGROUPS
 #endif
 
@@ -754,7 +757,7 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#if defined CV_LINUX_GROUPS || defined __ANDROID__
+#if defined CV_CPU_GROUPS_1
 static inline std::string getFileContents(const char *filename)
 {
     std::ifstream ifs(filename);
@@ -767,7 +770,7 @@ static inline std::string getFileContents(const char *filename)
 }
 #endif
 
-#if defined CV_LINUX_GROUPS || defined __ANDROID__
+#if defined CV_CPU_GROUPS_1
 static inline int getNumberOfCPUsImpl(const char *filename)
 {
    std::string file_contents = getFileContents(filename);
@@ -802,7 +805,7 @@ static inline int getNumberOfCPUsImpl(const char *filename)
 }
 #endif
 
-#if defined CV_LINUX_GROUPS
+#if defined CV_HAVE_CGROUPS
 static inline unsigned getNumberOfCPUsCFS(void)
 {
     std::string file_contents = getFileContents("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
@@ -867,7 +870,7 @@ int cv::getNumberOfCPUs(void)
     unsigned ncpus_sysinfo = sysinfo.dwNumberOfProcessors < 0 ? 1 : sysinfo.dwNumberOfProcessors; /* Just a fail safe */
     ncpus = minNonZero(ncpus, ncpus_sysinfo);
 
-#elif defined CV_LINUX_GROUPS
+#elif defined CV_CPU_GROUPS_1
     #if defined CV_HAVE_CGROUPS
         static unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
         ncpus = minNonZero(ncpus, ncpus_impl_cpuset);
@@ -876,10 +879,10 @@ int cv::getNumberOfCPUs(void)
         ncpus = minNonZero(ncpus, ncpus_impl_cfs);
     #endif
 
-    static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
+    static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/online");
     ncpus = minNonZero(ncpus, ncpus_impl_devices);
 
-    #if defined _GNU_SOURCE
+    #if defined _GNU_SOURCE && !defined __ANDROID__
         cpu_set_t cpu_set;
         if(!sched_getaffinity(0, sizeof(cpu_set), &cpu_set)) {
             unsigned cpu_count_cpu_set = CPU_COUNT(&cpu_set);
@@ -889,10 +892,6 @@ int cv::getNumberOfCPUs(void)
 
     static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
     ncpus = minNonZero(ncpus, cpu_count_sysconf);
-
-#elif defined __ANDROID__
-    static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/possible");
-    ncpus = minNonZero(ncpus, ncpus_impl_devices);
 
 #elif defined __APPLE__
     int numCPU=0;
