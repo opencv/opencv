@@ -337,6 +337,195 @@ public:
     Allocator* allocator;
 };
 
+class CV_EXPORTS GpuMatND
+{
+public:
+    class CV_EXPORTS Allocator
+    {
+    public:
+        virtual ~Allocator() {}
+
+        // allocator must fill data, step and refcount fields
+        virtual bool allocate(GpuMatND* mat, int* shape, size_t elemSize) = 0;
+        virtual void free(GpuMatND* mat) = 0;
+    };
+
+    //! default allocator
+    static Allocator* defaultAllocator();
+    static void setDefaultAllocator(Allocator* allocator);
+
+    //! default constructor
+    explicit GpuMatND(Allocator* allocator = defaultAllocator());
+
+    //! constructs GpuMatND of the specified shape and type
+    GpuMatND(int* shape, int type, Allocator* allocator = defaultAllocator());
+
+    //! constructs GpuMatND and fills it with the specified value _s
+    GpuMatND(int* shape, int type, Scalar s, Allocator* allocator = defaultAllocator());
+
+    //! copy constructor
+    GpuMatND(const GpuMatND& m);
+
+    //! constructor for GpuMatND headers pointing to user-allocated data
+    GpuMatND(int* shape, int type, void* data, size_t step = Mat::AUTO_STEP);
+
+    //! builds GpuMatND from host memory (Blocking call)
+    explicit GpuMatND(InputArray arr, Allocator* allocator = defaultAllocator());
+
+    //! destructor - calls release()
+    ~GpuMatND();
+
+    //! assignment operators
+    GpuMatND& operator =(const GpuMatND& m);
+
+    //! allocates new GpuMatND data unless the GpuMatND already has specified size and type
+    void create(int* shape, int type);
+
+    //! decreases reference counter, deallocate the data when reference counter reaches 0
+    void release();
+
+    //! swaps with other smart pointer
+    void swap(GpuMatND& mat);
+
+    /** @brief Performs data upload to GpuMatND (Blocking call)
+
+    This function copies data from host memory to device memory. As being a blocking call, it is
+    guaranteed that the copy operation is finished when this function returns.
+    */
+    void upload(InputArray arr);
+
+    /** @brief Performs data upload to GpuMatND (Non-Blocking call)
+
+    This function copies data from host memory to device memory. As being a non-blocking call, this
+    function may return even if the copy operation is not finished.
+
+    The copy operation may be overlapped with operations in other non-default streams if \p stream is
+    not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
+    */
+    void upload(InputArray arr, Stream& stream);
+
+    /** @brief Performs data download from GpuMatND (Blocking call)
+
+    This function copies data from device memory to host memory. As being a blocking call, it is
+    guaranteed that the copy operation is finished when this function returns.
+    */
+    void download(OutputArray dst) const;
+
+    /** @brief Performs data download from GpuMatND (Non-Blocking call)
+
+    This function copies data from device memory to host memory. As being a non-blocking call, this
+    function may return even if the copy operation is not finished.
+
+    The copy operation may be overlapped with operations in other non-default streams if \p stream is
+    not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
+    */
+    void download(OutputArray dst, Stream& stream) const;
+
+    //! returns deep copy of the GpuMatND, i.e. the data is copied
+    GpuMatND clone() const;
+
+    //! copies the GpuMatND content to device memory (Blocking call)
+    void copyTo(OutputArray dst) const;
+
+    //! copies the GpuMatND content to device memory (Non-Blocking call)
+    void copyTo(OutputArray dst, Stream& stream) const;
+
+    //! copies those GpuMatND elements to "m" that are marked with non-zero mask elements (Blocking call)
+    void copyTo(OutputArray dst, InputArray mask) const;
+
+    //! copies those GpuMatND elements to "m" that are marked with non-zero mask elements (Non-Blocking call)
+    void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
+
+    //! sets some of the GpuMatND elements to s (Blocking call)
+    GpuMatND& setTo(Scalar s);
+
+    //! sets some of the GpuMatND elements to s (Non-Blocking call)
+    GpuMatND& setTo(Scalar s, Stream& stream);
+
+    //! sets some of the GpuMatND elements to s, according to the mask (Blocking call)
+    GpuMatND& setTo(Scalar s, InputArray mask);
+
+    //! sets some of the GpuMatND elements to s, according to the mask (Non-Blocking call)
+    GpuMatND& setTo(Scalar s, InputArray mask, Stream& stream);
+
+    //! converts GpuMatND to another datatype (Blocking call)
+    void convertTo(OutputArray dst, int rtype) const;
+
+    //! converts GpuMatND to another datatype (Non-Blocking call)
+    void convertTo(OutputArray dst, int rtype, Stream& stream) const;
+
+    //! converts GpuMatND to another datatype with scaling (Blocking call)
+    void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+
+    //! converts GpuMatND to another datatype with scaling (Non-Blocking call)
+    void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
+
+    //! converts GpuMatND to another datatype with scaling (Non-Blocking call)
+    void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
+
+    void assignTo(GpuMatND& m, int type=-1) const;
+
+    //! returns pointer to y-th row
+    uchar* ptr(int y = 0);
+    const uchar* ptr(int y = 0) const;
+
+    //! template version of the above method
+    template<typename _Tp> _Tp* ptr(int y = 0);
+    template<typename _Tp> const _Tp* ptr(int y = 0) const;
+
+    template <typename _Tp> operator PtrStepSz<_Tp>() const;
+    template <typename _Tp> operator PtrStep<_Tp>() const;
+
+    //! creates alternative GpuMatND header for the same data, with different
+    //! number of channels and/or different number of rows
+    GpuMatND reshape(int* new_shape) const;
+
+    //! returns element size in bytes
+    size_t elemSize() const;
+
+    //! returns the size of element channel in bytes
+    size_t elemSize1() const;
+
+    //! returns element type
+    int type() const;
+
+    //! returns step/elemSize1()
+    size_t step1() const;
+
+    //! returns the shape of the GpuMatND
+    int* shape() const;
+
+    //! returns true if GpuMatND data is NULL
+    bool empty() const;
+
+    //! internal use method: updates the continuity flag
+    void updateContinuityFlag();
+
+    /*! includes several bit-fields:
+    - the magic signature
+    - continuity flag
+    - depth
+    - number of channels
+    */
+    int flags;
+
+    //! the n
+    int* _shape;
+
+    //! a distance between successive rows in bytes; includes the gap if any
+    size_t step;
+
+    //! pointer to the data
+    uchar* data;
+
+    //! pointer to the reference counter;
+    //! when GpuMatND points to user-allocated data, the pointer is NULL
+    int* refcount;
+
+    //! allocator
+    Allocator* allocator;
+};
+
 /** @brief Creates a continuous matrix.
 
 @param rows Row count.
