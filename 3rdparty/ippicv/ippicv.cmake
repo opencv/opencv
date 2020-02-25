@@ -2,7 +2,7 @@ function(download_ippicv root_var)
   set(${root_var} "" PARENT_SCOPE)
 
   # Commit SHA in the opencv_3rdparty repo
-  set(IPPICV_COMMIT "5b7f53de8072f4ee1d54e2325ee7459c6e12e061")
+  set(IPPICV_COMMIT "a56b6ac6f030c312b2dce17430eef13aed9af274")
   # Define actual ICV versions
   if(APPLE)
     set(OPENCV_ICV_PLATFORM "macosx")
