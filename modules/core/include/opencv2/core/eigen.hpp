@@ -184,6 +184,53 @@ void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
     }
 }
 
+template<typename _Tp>  static inline
+void cv2eigen( const Mat& src,
+               Eigen::Matrix<_Tp, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& dst )
+{
+    dst.resize(src.rows, src.cols);
+    if( !(dst.Flags & Eigen::RowMajorBit) )
+    {
+        const Mat _dst(src.cols, src.rows, traits::Type<_Tp>::value,
+             dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
+        if( src.type() == _dst.type() )
+            transpose(src, _dst);
+        else if( src.cols == src.rows )
+        {
+            src.convertTo(_dst, _dst.type());
+            transpose(_dst, _dst);
+        }
+        else
+            Mat(src.t()).convertTo(_dst, _dst.type());
+    }
+    else
+    {
+        const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
+        src.convertTo(_dst, _dst.type());
+    }
+}
+
+// Matx case
+template<typename _Tp, int _rows, int _cols> static inline
+void cv2eigen( const Matx<_Tp, _rows, _cols>& src,
+               Eigen::Matrix<_Tp, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& dst )
+{
+    dst.resize(_rows, _cols);
+    if( !(dst.Flags & Eigen::RowMajorBit) )
+    {
+        const Mat _dst(_cols, _rows, traits::Type<_Tp>::value,
+             dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
+        transpose(src, _dst);
+    }
+    else
+    {
+        const Mat _dst(_rows, _cols, traits::Type<_Tp>::value,
+                 dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
+        Mat(src).copyTo(_dst);
+    }
+}
+
 template<typename _Tp> static inline
 void cv2eigen( const Mat& src,
                Eigen::Matrix<_Tp, Eigen::Dynamic, 1>& dst )
