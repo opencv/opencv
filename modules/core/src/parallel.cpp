@@ -747,7 +747,7 @@ int cv::getThreadNum(void)
 }
 
 
-#if defined __linux__ || defined __GLIBC__ || defined __EMSCRIPTEN__ || defined __HAIKU__ || defined __ANDROID__
+#if defined __linux__ || defined __GLIBC__ || defined __HAIKU__ || defined __ANDROID__
   #define CV_CPU_GROUPS_1
 #endif
 
@@ -861,6 +861,7 @@ int cv::getNumberOfCPUs(void)
 #endif
 
 #if defined _WIN32
+
     SYSTEM_INFO sysinfo;
 #if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );
@@ -870,35 +871,8 @@ int cv::getNumberOfCPUs(void)
     unsigned ncpus_sysinfo = sysinfo.dwNumberOfProcessors < 0 ? 1 : sysinfo.dwNumberOfProcessors; /* Just a fail safe */
     ncpus = minNonZero(ncpus, ncpus_sysinfo);
 
-#elif defined CV_CPU_GROUPS_1
-
-#if defined CV_HAVE_CGROUPS
-    static unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
-    ncpus = minNonZero(ncpus, ncpus_impl_cpuset);
-
-    static unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
-    ncpus = minNonZero(ncpus, ncpus_impl_cfs);
-#endif
-
-    static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/online");
-    ncpus = minNonZero(ncpus, ncpus_impl_devices);
-
-#if defined _GNU_SOURCE \
-    && !defined(__ANDROID__)  // TODO: add check for modern Android NDK
-
-    cpu_set_t cpu_set;
-    if (0 == sched_getaffinity(0, sizeof(cpu_set), &cpu_set))
-    {
-        unsigned cpu_count_cpu_set = CPU_COUNT(&cpu_set);
-        ncpus = minNonZero(ncpus, cpu_count_cpu_set);
-    }
-
-#endif
-
-    static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
-    ncpus = minNonZero(ncpus, cpu_count_sysconf);
-
 #elif defined __APPLE__
+
     int numCPU=0;
     int mib[4];
     size_t len = sizeof(numCPU);
@@ -920,7 +894,42 @@ int cv::getNumberOfCPUs(void)
     }
 
     ncpus = minNonZero(ncpus, (unsigned)numCPU);
+
+#elif defined CV_CPU_GROUPS_1
+
+#if defined CV_HAVE_CGROUPS
+    static unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
+    ncpus = minNonZero(ncpus, ncpus_impl_cpuset);
+
+    static unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
+    ncpus = minNonZero(ncpus, ncpus_impl_cfs);
 #endif
+
+    static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/online");
+    ncpus = minNonZero(ncpus, ncpus_impl_devices);
+
+#endif
+
+#if defined _GNU_SOURCE \
+    && !defined(__EMSCRIPTEN__) \
+    && !defined(__ANDROID__)  // TODO: add check for modern Android NDK
+
+    cpu_set_t cpu_set;
+    if (0 == sched_getaffinity(0, sizeof(cpu_set), &cpu_set))
+    {
+        unsigned cpu_count_cpu_set = CPU_COUNT(&cpu_set);
+        ncpus = minNonZero(ncpus, cpu_count_cpu_set);
+    }
+
+#endif
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+
+    static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
+    ncpus = minNonZero(ncpus, cpu_count_sysconf);
+
+#endif
+
     return ncpus != 0 ? ncpus : 1;
 }
 
