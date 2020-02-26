@@ -422,9 +422,7 @@ TEST_P(ResizeTestFluid, SanityTest)
     cv::blur(in_mat1, mid_mat, {3,3}, {-1,-1},  cv::BORDER_REPLICATE);
     cv::resize(mid_mat, out_mat_ocv, sz_out, fx, fy, interp);
 
-    cv::Mat absDiff;
-    cv::absdiff(out_mat(outRoi), out_mat_ocv(outRoi), absDiff);
-    EXPECT_EQ(0, cv::countNonZero(absDiff > tolerance));
+    EXPECT_LE(cvtest::norm(out_mat(outRoi), out_mat_ocv(outRoi), NORM_INF), tolerance);
 }
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFluid,
@@ -618,8 +616,8 @@ TEST_P(ResizeAndAnotherReaderTest, SanityTest)
     cv::Mat ocv_blur_out = cv::Mat::zeros(sz, CV_8UC1);
     cvBlur(in_mat, ocv_blur_out, kernelSize);
 
-    EXPECT_EQ(0, cv::countNonZero(gapi_resize_out(resizedRoi) != ocv_resize_out(resizedRoi)));
-    EXPECT_EQ(0, cv::countNonZero(gapi_blur_out(roi) != ocv_blur_out(roi)));
+    EXPECT_EQ(0, cvtest::norm(gapi_resize_out(resizedRoi), ocv_resize_out(resizedRoi), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(gapi_blur_out(roi), ocv_blur_out(roi), NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeAndAnotherReaderTest,
@@ -691,8 +689,8 @@ TEST_P(BlursAfterResizeTest, SanityTest)
     cvBlur(resized, ocv_out1, kernelSize1);
     cvBlur(resized, ocv_out2, kernelSize2);
 
-    EXPECT_EQ(0, cv::countNonZero(gapi_out1(outRoi) != ocv_out1(outRoi)));
-    EXPECT_EQ(0, cv::countNonZero(gapi_out2(outRoi) != ocv_out2(outRoi)));
+    EXPECT_EQ(0, cvtest::norm(gapi_out1(outRoi), ocv_out1(outRoi), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(gapi_out2(outRoi), ocv_out2(outRoi), NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, BlursAfterResizeTest,
@@ -752,7 +750,7 @@ TEST_P(NV12PlusResizeTest, Test)
     cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);
     cv::resize(rgb_mat, out_mat_ocv, out_sz, 0, 0, interp);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat(roi) != out_mat_ocv(roi)));
+    EXPECT_EQ(0, cvtest::norm(out_mat(roi), out_mat_ocv(roi), NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, NV12PlusResizeTest,
@@ -831,7 +829,7 @@ TEST_P(Preproc4lpiTest, Test)
     cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);
     cv::resize(rgb_mat, out_mat_ocv, out_sz, 0, 0, interp);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat(roi) != out_mat_ocv(roi)));
+    EXPECT_EQ(0, cvtest::norm(out_mat(roi), out_mat_ocv(roi), NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, Preproc4lpiTest,

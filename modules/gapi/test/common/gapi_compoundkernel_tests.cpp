@@ -245,7 +245,7 @@ TEST(GCompoundKernel, ReplaceDefaultKernel)
     comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 - in_mat2 - in_mat2;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, DoubleAddC)
@@ -270,7 +270,7 @@ TEST(GCompoundKernel, DoubleAddC)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar + scalar + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, AddC)
@@ -295,7 +295,7 @@ TEST(GCompoundKernel, AddC)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, MergeWithSplit)
@@ -315,7 +315,7 @@ TEST(GCompoundKernel, MergeWithSplit)
     comp.apply(cv::gin(in_mat), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, AddWithAddC)
@@ -338,7 +338,7 @@ TEST(GCompoundKernel, AddWithAddC)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, SplitWithAdd)
@@ -364,8 +364,8 @@ TEST(GCompoundKernel, SplitWithAdd)
     ref_mat1 = channels[0] + channels[1];
     ref_mat2 = channels[2];
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != ref_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != ref_mat2));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, ref_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, ref_mat2, NORM_INF));
 }
 
 TEST(GCompoundKernel, ParallelAddC)
@@ -391,8 +391,8 @@ TEST(GCompoundKernel, ParallelAddC)
     ref_mat1 = in_mat + scalar;
     ref_mat2 = in_mat + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != ref_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != ref_mat2));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, ref_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, ref_mat2, NORM_INF));
 }
 
 TEST(GCompoundKernel, GCompundKernelAndDefaultUseOneData)
@@ -415,7 +415,7 @@ TEST(GCompoundKernel, GCompundKernelAndDefaultUseOneData)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar + in_mat2 + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, CompoundExpandedToCompound)
@@ -441,7 +441,7 @@ TEST(GCompoundKernel, CompoundExpandedToCompound)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar + scalar + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, MaxInArray)
@@ -494,7 +494,7 @@ TEST(GCompoundKernel, RightGArrayHandle)
 
     comp.apply(cv::gin(in_mat1, in_v, in_mat2), cv::gout(out_mat), cv::compile_args(full_pkg));
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 
 }
 } // opencv_test

@@ -157,28 +157,6 @@ public:
 
     // empty function intended to show that nothing is to be initialized via TestFunctional methods
     void initNothing(int, cv::Size, int, bool = true) {}
-
-    static cv::Mat nonZeroPixels(const cv::Mat& mat)
-    {
-        int channels = mat.channels();
-        std::vector<cv::Mat> split(channels);
-        cv::split(mat, split);
-        cv::Mat result;
-        for (int c=0; c < channels; c++)
-        {
-            if (c == 0)
-                result = split[c] != 0;
-            else
-                result = result | (split[c] != 0);
-        }
-        return result;
-    }
-
-    static int countNonZeroPixels(const cv::Mat& mat)
-    {
-        return cv::countNonZero( nonZeroPixels(mat) );
-    }
-
 };
 
 template<class T>
@@ -453,7 +431,7 @@ public:
         Mat diff;
         cv::absdiff(in1, in2, diff);
         Mat err_mask = diff > _tol;
-        int err_points = cv::countNonZero(err_mask.reshape(1));
+        int err_points = (cv::countNonZero)(err_mask.reshape(1));
         double max_err_points = _percent * std::max((size_t)1000, in1.total());
         if (err_points > max_err_points)
         {

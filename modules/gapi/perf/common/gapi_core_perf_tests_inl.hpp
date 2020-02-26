@@ -620,7 +620,7 @@ PERF_TEST_P_(CmpPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
     EXPECT_EQ(out_mat_gapi.size(), sz);
 
     SANITY_CHECK_NOTHING();
@@ -666,7 +666,7 @@ PERF_TEST_P_(CmpWithScalarPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
     EXPECT_EQ(out_mat_gapi.size(), sz);
 
     SANITY_CHECK_NOTHING();
