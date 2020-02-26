@@ -337,6 +337,21 @@ TEST_P(BufferArea, basic)
         ASSERT_TRUE(dbl_ptr != NULL);
         EXPECT_EQ((size_t)0, (size_t)int_ptr % sizeof(int));
         EXPECT_EQ((size_t)0, (size_t)dbl_ptr % sizeof(double));
+        for (size_t i = 0; i < SZ; ++i)
+        {
+            int_ptr[i] = (int)i + 1;
+            uchar_ptr[i] = (uchar)i + 1;
+            dbl_ptr[i] = (double)i + 1;
+        }
+        area.zeroFill(int_ptr);
+        area.zeroFill(uchar_ptr);
+        area.zeroFill(dbl_ptr);
+        for (size_t i = 0; i < SZ; ++i)
+        {
+            EXPECT_EQ((int)0, int_ptr[i]);
+            EXPECT_EQ((uchar)0, uchar_ptr[i]);
+            EXPECT_EQ((double)0, dbl_ptr[i]);
+        }
     }
     EXPECT_TRUE(int_ptr == NULL);
     EXPECT_TRUE(uchar_ptr == NULL);

@@ -66,6 +66,16 @@ public:
         *ptr = buf;
         return static_cast<void*>(static_cast<uchar*>(*ptr) + type_size * count);
     }
+    bool operator==(void **other) const
+    {
+        CV_Assert(ptr && other);
+        return *ptr == *other;
+    }
+    void zeroFill() const
+    {
+        CV_Assert(ptr && *ptr);
+        memset(static_cast<uchar*>(*ptr), 0, count * type_size);
+    }
 private:
     void **ptr;
     void * raw_mem;
@@ -85,10 +95,7 @@ BufferArea::BufferArea(bool safe_) :
 
 BufferArea::~BufferArea()
 {
-    for(std::vector<Block>::const_iterator i = blocks.begin(); i != blocks.end(); ++i)
-        i->cleanup();
-    if (oneBuf)
-        fastFree(oneBuf);
+    release();
 }
 
 void BufferArea::allocate_(void **ptr, ushort type_size, size_t count, ushort alignment)
@@ -98,6 +105,26 @@ void BufferArea::allocate_(void **ptr, ushort type_size, size_t count, ushort al
         blocks.back().real_allocate();
     else
         totalSize += blocks.back().getByteCount();
+}
+
+void BufferArea::zeroFill_(void **ptr)
+{
+    for(std::vector<Block>::const_iterator i = blocks.begin(); i != blocks.end(); ++i)
+    {
+        if (*i == ptr)
+        {
+            i->zeroFill();
+            break;
+        }
+    }
+}
+
+void BufferArea::zeroFill()
+{
+    for(std::vector<Block>::const_iterator i = blocks.begin(); i != blocks.end(); ++i)
+    {
+        i->zeroFill();
+    }
 }
 
 void BufferArea::commit()
@@ -113,6 +140,20 @@ void BufferArea::commit()
         {
             ptr = i->fast_allocate(ptr);
         }
+    }
+}
+
+void BufferArea::release()
+{
+    for(std::vector<Block>::const_iterator i = blocks.begin(); i != blocks.end(); ++i)
+    {
+        i->cleanup();
+    }
+    blocks.clear();
+    if (oneBuf)
+    {
+        fastFree(oneBuf);
+        oneBuf = 0;
     }
 }
 
