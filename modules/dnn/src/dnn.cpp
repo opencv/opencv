@@ -1897,7 +1897,9 @@ struct Net::Impl
                 for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                 {
                     InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                    dataPtr->setName(netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i]);
+                    std::string outputName = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
+                    outputName = ld.outputBlobsWrappers.size() > 1 ? (outputName + "." + std::to_string(i)) : outputName;
+                    dataPtr->setName(outputName);
                 }
             }
             else
@@ -1905,7 +1907,8 @@ struct Net::Impl
                 for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                 {
                     InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                    dataPtr->setName(ld.name);
+                    std::string outputName = ld.outputBlobsWrappers.size() > 1 ? (ld.name + "." + std::to_string(i)) : ld.name;
+                    dataPtr->setName(outputName);
                 }
             }
         }
@@ -1946,6 +1949,9 @@ struct Net::Impl
             return;
         }
 
+        bool supportsCPUFallback = preferableTarget == DNN_TARGET_CPU ||
+                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU);
+
         // Build Inference Engine networks from sets of layers that support this
         // backend. Split a whole model on several Inference Engine networks if
         // some of layers are not implemented.
@@ -1960,20 +1966,47 @@ struct Net::Impl
             Ptr<Layer> layer = ld.layerInstance;
             if (!fused && !layer->supportBackend(preferableBackend))
             {
-                addNgraphOutputs(ld);
-                net = Ptr<InfEngineNgraphNet>();
-                layer->preferableTarget = DNN_TARGET_CPU;
+                bool customizable = ld.id != 0 && supportsCPUFallback;
 
-                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                // TODO: there is a bug in Myriad plugin with custom layers shape infer.
+                if (preferableTarget == DNN_TARGET_MYRIAD)
                 {
-                    LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
-                    Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
-                    if (!inpNode.empty()) {
-                        Ptr<InfEngineNgraphNode> ieNode = inpNode.dynamicCast<InfEngineNgraphNode>();
-                        ieNode->net->setUnconnectedNodes(ieNode);
+                    for (int i = 0; customizable && i < ld.inputBlobs.size(); ++i)
+                    {
+                        customizable = ld.inputBlobs[i]->size[0] == 1;
                     }
                 }
-                continue;
+
+                // TODO: fix these workarounds
+                if (preferableTarget == DNN_TARGET_MYRIAD ||
+                    preferableTarget == DNN_TARGET_OPENCL ||
+                    preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    customizable &= ld.type != "Concat";
+
+                if (preferableTarget == DNN_TARGET_OPENCL ||
+                    preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    customizable &= ld.type != "Power";
+
+                if (preferableTarget == DNN_TARGET_OPENCL)
+                    customizable &= ld.type != "Eltwise";
+
+                if (!customizable)
+                {
+                    addNgraphOutputs(ld);
+                    net = Ptr<InfEngineNgraphNet>();
+                    layer->preferableTarget = DNN_TARGET_CPU;
+
+                    for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                    {
+                        LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+                        Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+                        if (!inpNode.empty()) {
+                            Ptr<InfEngineNgraphNode> ieNode = inpNode.dynamicCast<InfEngineNgraphNode>();
+                            ieNode->net->setUnconnectedNodes(ieNode);
+                        }
+                    }
+                    continue;
+                }
             }
             ld.skip = true;  // Initially skip all Inference Engine supported layers.
 
@@ -2047,12 +2080,32 @@ struct Net::Impl
 
             if (!fused)
             {
-                CV_Assert(!inputNodes.empty());
-                node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
-                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                CV_Assert(ld.inputBlobsId.size() == inputNodes.size());
+                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
                 {
-                    InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                    node.dynamicCast<InfEngineNgraphNode>()->setName(dataPtr->getName());
+                    int lid = ld.inputBlobsId[i].lid;
+                    int oid = ld.inputBlobsId[i].oid;
+                    if (oid == 0 || lid == 0)
+                        continue;
+
+                    auto ieInpNode = inputNodes[i].dynamicCast<InfEngineNgraphNode>();
+                    CV_Assert(oid < ieInpNode->node->get_output_size());
+                    inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ieInpNode->node->get_output_as_single_output_node(oid, false)));
+                }
+
+                if (layer->supportBackend(preferableBackend))
+                {
+                    node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
+                    for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                    {
+                        InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
+                        node.dynamicCast<InfEngineNgraphNode>()->setName(dataPtr->getName());
+                    }
+                }
+                else
+                {
+                    node = Ptr<BackendNode>(new InfEngineNgraphNode(inputNodes,
+                        ld.layerInstance, ld.inputBlobs, ld.outputBlobs, ld.internals));
                 }
             }
             else if (node.empty())
