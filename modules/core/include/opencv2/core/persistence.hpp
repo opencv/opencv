@@ -124,7 +124,7 @@ streams.
 
 Here is an example:
 @code
-    #include "opencv2/opencv.hpp"
+    #include "opencv2/core.hpp"
     #include <time.h>
 
     using namespace cv;
