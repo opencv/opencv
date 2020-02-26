@@ -1257,7 +1257,7 @@ int MatExpr::type() const
     if( isInitializer(*this) )
         return a.type();
     if( isCmp(*this) )
-        return CV_8U;
+        return CV_MAKETYPE(CV_8U, a.channels());
     return op ? op->type(*this) : -1;
 }
 

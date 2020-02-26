@@ -461,7 +461,12 @@ public:
 
 TEST_P(Test_ONNX_nets, Alexnet)
 {
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+#else
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+#endif
+
     const String model =  _tf("models/alexnet.onnx", false);
 
     Net net = readNetFromONNX(model);
@@ -520,7 +525,12 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
 TEST_P(Test_ONNX_nets, CaffeNet)
 {
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+#else
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+#endif
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019030000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
         && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
@@ -531,7 +541,12 @@ TEST_P(Test_ONNX_nets, CaffeNet)
 
 TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
 {
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+#else
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+#endif
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019030000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
         && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
@@ -643,7 +658,11 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
 {
     applyTestTag(
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+        CV_TEST_TAG_MEMORY_2GB,
+#else
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
+#endif
         CV_TEST_TAG_DEBUG_LONG
     );
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
