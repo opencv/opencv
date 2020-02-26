@@ -410,9 +410,12 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         throw SkipTestException("");
     }
 #endif
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
     {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        throw SkipTestException("");
     }
 
     Net net;

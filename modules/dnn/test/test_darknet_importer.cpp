@@ -300,7 +300,14 @@ public:
 
 TEST_P(Test_Darknet_nets, YoloVoc)
 {
-    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+        CV_TEST_TAG_MEMORY_2GB,
+#else
+        CV_TEST_TAG_MEMORY_1GB,
+#endif
+        CV_TEST_TAG_LONG
+    );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_OPENCL_FP16)

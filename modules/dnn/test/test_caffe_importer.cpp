@@ -168,7 +168,11 @@ typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
     Target targetId = get<1>(GetParam());
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+#else
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+#endif
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU);
 
     bool readFromMemory = get<0>(GetParam());
@@ -668,7 +672,11 @@ INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
 TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 {
     applyTestTag(
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+        CV_TEST_TAG_MEMORY_2GB,  // utilizes ~1Gb, but huge blobs may not be allocated on 32-bit systems due memory fragmentation
+#else
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+#endif
         CV_TEST_TAG_LONG,
         CV_TEST_TAG_DEBUG_VERYLONG
     );
@@ -693,7 +701,11 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 {
     applyTestTag(
+#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+        CV_TEST_TAG_MEMORY_2GB,
+#else
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
+#endif
         CV_TEST_TAG_DEBUG_LONG
     );
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||

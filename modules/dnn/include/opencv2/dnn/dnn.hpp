@@ -494,6 +494,10 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void setInputsNames(const std::vector<String> &inputBlobNames);
 
+        /** @brief Specify shape of network input.
+         */
+        CV_WRAP void setInputShape(const String &inputName, const MatShape& shape);
+
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputName name for layer which output is needed to get
          *  @return blob for first output of specified layer.

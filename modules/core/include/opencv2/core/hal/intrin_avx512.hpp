@@ -1553,13 +1553,13 @@ inline v_float64x8 v_cvt_f64(const v_int64x8& v)
     return v_float64x8(_mm512_cvtepi64_pd(v.val));
 #else
     // constants encoded as floating-point
-    __m512i magic_i_lo   = _mm512_set1_epi64x(0x4330000000000000); // 2^52
-    __m512i magic_i_hi32 = _mm512_set1_epi64x(0x4530000080000000); // 2^84 + 2^63
-    __m512i magic_i_all  = _mm512_set1_epi64x(0x4530000080100000); // 2^84 + 2^63 + 2^52
+    __m512i magic_i_lo   = _mm512_set1_epi64(0x4330000000000000); // 2^52
+    __m512i magic_i_hi32 = _mm512_set1_epi64(0x4530000080000000); // 2^84 + 2^63
+    __m512i magic_i_all  = _mm512_set1_epi64(0x4530000080100000); // 2^84 + 2^63 + 2^52
     __m512d magic_d_all  = _mm512_castsi512_pd(magic_i_all);
 
     // Blend the 32 lowest significant bits of v with magic_int_lo
-    __m512i v_lo         = _mm512_blend_epi32(magic_i_lo, v.val, 0x55);
+    __m512i v_lo         = _mm512_mask_blend_epi32(0x5555, magic_i_lo, v.val);
     // Extract the 32 most significant bits of v
     __m512i v_hi         = _mm512_srli_epi64(v.val, 32);
     // Flip the msb of v_hi and blend with 0x45300000

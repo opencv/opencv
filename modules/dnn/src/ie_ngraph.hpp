@@ -90,6 +90,10 @@ private:
 class InfEngineNgraphNode : public BackendNode
 {
 public:
+    InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& nodes, Ptr<Layer>& layer,
+                        std::vector<Mat*>& inputs, std::vector<Mat>& outputs,
+                        std::vector<Mat>& internals);
+
     InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node);
     InfEngineNgraphNode(std::shared_ptr<ngraph::Node>& _node);
 
@@ -98,6 +102,7 @@ public:
     // Inference Engine network object that allows to obtain the outputs of this layer.
     std::shared_ptr<ngraph::Node> node;
     Ptr<InfEngineNgraphNet> net;
+    Ptr<dnn::Layer> cvLayer;
 };
 
 class NgraphBackendWrapper : public BackendWrapper

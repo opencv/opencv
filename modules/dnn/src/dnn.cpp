@@ -758,6 +758,18 @@ struct DataLayer : public Layer
     void setNames(const std::vector<String> &names)
     {
         outNames.assign(names.begin(), names.end());
+        shapes.clear(); shapes.resize(outNames.size());
+    }
+
+    void setInputShape(const String& tgtName, const MatShape& shape)
+    {
+        std::vector<String>::const_iterator it = std::find(outNames.begin(), outNames.end(), tgtName);
+        CV_Check(tgtName, it != outNames.end(), "Unknown input");
+        int idx = (int)(it - outNames.begin());
+
+        CV_Assert(idx < (int)shapes.size());
+        CV_Check(tgtName, shapes[idx].empty(), "Input shape redefinition is not allowed");
+        shapes[idx] = shape;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -820,6 +832,7 @@ struct DataLayer : public Layer
 #endif  // HAVE_INF_ENGINE
 
     std::vector<String> outNames;
+    std::vector<MatShape> shapes;
     // Preprocessing parameters for each network's input.
     std::vector<double> scaleFactors;
     std::vector<Scalar> means;
@@ -2012,7 +2025,9 @@ struct Net::Impl
                 for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                 {
                     InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                    dataPtr->setName(netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i]);
+                    std::string outputName = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
+                    outputName = ld.outputBlobsWrappers.size() > 1 ? (outputName + "." + std::to_string(i)) : outputName;
+                    dataPtr->setName(outputName);
                 }
             }
             else
@@ -2020,7 +2035,8 @@ struct Net::Impl
                 for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                 {
                     InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                    dataPtr->setName(ld.name);
+                    std::string outputName = ld.outputBlobsWrappers.size() > 1 ? (ld.name + "." + std::to_string(i)) : ld.name;
+                    dataPtr->setName(outputName);
                 }
             }
         }
@@ -2061,6 +2077,9 @@ struct Net::Impl
             return;
         }
 
+        bool supportsCPUFallback = preferableTarget == DNN_TARGET_CPU ||
+                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU);
+
         // Build Inference Engine networks from sets of layers that support this
         // backend. Split a whole model on several Inference Engine networks if
         // some of layers are not implemented.
@@ -2075,20 +2094,47 @@ struct Net::Impl
             Ptr<Layer> layer = ld.layerInstance;
             if (!fused && !layer->supportBackend(preferableBackend))
             {
-                addNgraphOutputs(ld);
-                net = Ptr<InfEngineNgraphNet>();
-                layer->preferableTarget = DNN_TARGET_CPU;
+                bool customizable = ld.id != 0 && supportsCPUFallback;
 
-                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                // TODO: there is a bug in Myriad plugin with custom layers shape infer.
+                if (preferableTarget == DNN_TARGET_MYRIAD)
                 {
-                    LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
-                    Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
-                    if (!inpNode.empty()) {
-                        Ptr<InfEngineNgraphNode> ieNode = inpNode.dynamicCast<InfEngineNgraphNode>();
-                        ieNode->net->setUnconnectedNodes(ieNode);
+                    for (int i = 0; customizable && i < ld.inputBlobs.size(); ++i)
+                    {
+                        customizable = ld.inputBlobs[i]->size[0] == 1;
                     }
                 }
-                continue;
+
+                // TODO: fix these workarounds
+                if (preferableTarget == DNN_TARGET_MYRIAD ||
+                    preferableTarget == DNN_TARGET_OPENCL ||
+                    preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    customizable &= ld.type != "Concat";
+
+                if (preferableTarget == DNN_TARGET_OPENCL ||
+                    preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    customizable &= ld.type != "Power";
+
+                if (preferableTarget == DNN_TARGET_OPENCL)
+                    customizable &= ld.type != "Eltwise";
+
+                if (!customizable)
+                {
+                    addNgraphOutputs(ld);
+                    net = Ptr<InfEngineNgraphNet>();
+                    layer->preferableTarget = DNN_TARGET_CPU;
+
+                    for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                    {
+                        LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+                        Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+                        if (!inpNode.empty()) {
+                            Ptr<InfEngineNgraphNode> ieNode = inpNode.dynamicCast<InfEngineNgraphNode>();
+                            ieNode->net->setUnconnectedNodes(ieNode);
+                        }
+                    }
+                    continue;
+                }
             }
             ld.skip = true;  // Initially skip all Inference Engine supported layers.
 
@@ -2162,12 +2208,32 @@ struct Net::Impl
 
             if (!fused)
             {
-                CV_Assert(!inputNodes.empty());
-                node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
-                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                CV_Assert(ld.inputBlobsId.size() == inputNodes.size());
+                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
                 {
-                    InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                    node.dynamicCast<InfEngineNgraphNode>()->setName(dataPtr->getName());
+                    int lid = ld.inputBlobsId[i].lid;
+                    int oid = ld.inputBlobsId[i].oid;
+                    if (oid == 0 || lid == 0)
+                        continue;
+
+                    auto ieInpNode = inputNodes[i].dynamicCast<InfEngineNgraphNode>();
+                    CV_Assert(oid < ieInpNode->node->get_output_size());
+                    inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ieInpNode->node->get_output_as_single_output_node(oid, false)));
+                }
+
+                if (layer->supportBackend(preferableBackend))
+                {
+                    node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
+                    for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                    {
+                        InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
+                        node.dynamicCast<InfEngineNgraphNode>()->setName(dataPtr->getName());
+                    }
+                }
+                else
+                {
+                    node = Ptr<BackendNode>(new InfEngineNgraphNode(inputNodes,
+                        ld.layerInstance, ld.inputBlobs, ld.outputBlobs, ld.internals));
                 }
             }
             else if (node.empty())
@@ -3145,8 +3211,25 @@ struct Net::Impl
             }
             else
             {
-                inOutShapes[0].out.clear();
-                return;
+                const std::vector<MatShape>& inputShapes = netInputLayer->shapes;
+                bool none = true;
+                for (size_t i = 0; i < inputShapes.size(); i++)
+                {
+                    if (!inputShapes[i].empty())
+                    {
+                        none = false;
+                        break;
+                    }
+                }
+                if (none)
+                {
+                    inOutShapes[0].out.clear();
+                    return;
+                }
+                else
+                {
+                    inOutShapes[0].in = inputShapes;
+                }
             }
         }
 
@@ -3372,7 +3455,7 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
     // set empty input to determine input shapes
     for (int inp_id = 0; inp_id < inputsNames.size(); ++inp_id)
     {
-        cvNet.setInput(Mat(inp_shapes[inp_id], CV_32F), inputsNames[inp_id]);
+        cvNet.setInputShape(inputsNames[inp_id], inp_shapes[inp_id]);
     }
 
     Ptr<BackendNode> backendNode;
@@ -3798,6 +3881,13 @@ void Net::setInputsNames(const std::vector<String> &inputBlobNames)
     impl->netInputLayer->setNames(inputBlobNames);
 }
 
+void Net::setInputShape(const String &inputName, const MatShape& shape)
+{
+    CV_TRACE_FUNCTION();
+
+    impl->netInputLayer->setInputShape(inputName, shape);
+}
+
 void Net::setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean)
 {
     CV_TRACE_FUNCTION();
@@ -3810,6 +3900,33 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     if (!pin.valid())
         CV_Error(Error::StsObjectNotFound, "Requested blob \"" + name + "\" not found");
 
+    Mat blob_ = blob.getMat();  // can't use InputArray directly due MatExpr stuff
+    MatShape blobShape = shape(blob_);
+
+    if (pin.lid == 0)
+    {
+        CV_Assert(!impl->netInputLayer.empty());
+        const DataLayer& netInputLayer = *impl->netInputLayer.get();
+        if (!netInputLayer.shapes.empty())
+        {
+            CV_CheckLT(pin.oid, (int)netInputLayer.shapes.size(), "");
+            const MatShape& inputShapeLimitation = netInputLayer.shapes[pin.oid];
+            if (!inputShapeLimitation.empty())
+            {
+                CV_CheckEQ(inputShapeLimitation.size(), blobShape.size(), "");
+#if 0  // TODO: DNNTestNetwork.MobileNet_SSD_Caffe_Different_Width_Height/0
+                const size_t dims = inputShapeLimitation.size();
+                for (size_t dim = 0; dim < dims; dim++)
+                {
+                    if (dims >= 3 && dim == 0 && inputShapeLimitation[0] == 1)
+                        continue;  // don't limit batch
+                    CV_CheckEQ(inputShapeLimitation[dim], blobShape[dim], "");
+                }
+#endif
+            }
+        }
+    }
+
     LayerData &ld = impl->layers[pin.lid];
     const int numInputs = std::max(pin.oid+1, (int)ld.requiredOutputs.size());
     ld.outputBlobs.resize(numInputs);
@@ -3819,17 +3936,11 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     impl->netInputLayer->means.resize(numInputs);
 
     MatShape prevShape = shape(impl->netInputLayer->inputsData[pin.oid]);
-    Mat blob_ = blob.getMat();
-    bool oldShape = prevShape == shape(blob_);
-    if (oldShape)
-    {
-        blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
-    }
-    else
-    {
-        ld.outputBlobs[pin.oid] = blob_.clone();
-        impl->netInputLayer->inputsData[pin.oid] = ld.outputBlobs[pin.oid];
-    }
+    bool oldShape = prevShape == blobShape;
+
+    blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
+    if (!oldShape)
+        ld.outputBlobs[pin.oid] = impl->netInputLayer->inputsData[pin.oid];
 
     if (!ld.outputBlobsWrappers[pin.oid].empty())
     {

@@ -2007,6 +2007,17 @@ TEST(Core_MatExpr, issue_13926)
     EXPECT_GE(1e-6, cvtest::norm(M2*M1, M2*M2, NORM_INF)) << Mat(M2*M1) << std::endl << Mat(M2*M2);
 }
 
+TEST(Core_MatExpr, issue_16655)
+{
+    Mat a(Size(5, 5), CV_32FC3, Scalar::all(1));
+    Mat b(Size(5, 5), CV_32FC3, Scalar::all(2));
+    MatExpr ab_expr = a != b;
+    Mat ab_mat = ab_expr;
+    EXPECT_EQ(CV_8UC3, ab_expr.type())
+        << "MatExpr: CV_8UC3 != " << typeToString(ab_expr.type());
+    EXPECT_EQ(CV_8UC3, ab_mat.type())
+        << "Mat: CV_8UC3 != " << typeToString(ab_mat.type());
+}
 
 #ifdef HAVE_EIGEN
 TEST(Core_Eigen, eigen2cv_check_Mat_type)

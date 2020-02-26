@@ -570,6 +570,7 @@ int _InputArray::sizend(int* arrsz, int i) const
     }
     else
     {
+        CV_CheckLE(dims(i), 2, "Not supported");  // TODO Support EXPR with 3+ dims
         Size sz2d = size(i);
         d = 2;
         if(arrsz)
