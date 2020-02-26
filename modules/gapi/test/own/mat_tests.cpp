@@ -220,7 +220,7 @@ TEST(OwnMatConversion, WithStep)
     auto ownMat = to_own(cvMat);
     auto cvMatFromOwn = cv::gapi::own::to_ocv(ownMat);
 
-    EXPECT_EQ(0, cv::countNonZero(cvMat != cvMatFromOwn))
+    EXPECT_EQ(0, cvtest::norm(cvMat, cvMatFromOwn, NORM_INF))
     << cvMat << std::endl
     << (cvMat != cvMatFromOwn);
 }
@@ -285,7 +285,7 @@ TEST(OwnMat, CopyToWithStep)
     mat.copyTo(dst);
 
     EXPECT_NE(mat.data, dst.data);
-    EXPECT_EQ(0, cv::countNonZero(to_ocv(mat) != to_ocv(dst)))
+    EXPECT_EQ(0, cvtest::norm(to_ocv(mat), to_ocv(dst), NORM_INF))
     << to_ocv(mat) << std::endl
     << (to_ocv(mat) != to_ocv(dst));
 }
@@ -460,8 +460,8 @@ TEST(OwnMat, ScalarAssign32SC1)
     }
 
     auto cmp_result_mat = (cv::Mat{height, stepInPixels, CV_32S, data.data()} != cv::Mat{height, stepInPixels, CV_32S, expected.data()});
-    EXPECT_EQ(0, cv::countNonZero(cmp_result_mat))
-    << cmp_result_mat << std::endl;
+    EXPECT_EQ(0, cvtest::norm(cmp_result_mat, NORM_INF))
+        << cmp_result_mat;
 }
 
 TEST(OwnMat, ScalarAssign8UC1)
@@ -491,8 +491,8 @@ TEST(OwnMat, ScalarAssign8UC1)
     }
 
     auto cmp_result_mat = (cv::Mat{height, stepInPixels, CV_8U, data.data()} != cv::Mat{height, stepInPixels, CV_8U, expected.data()});
-    EXPECT_EQ(0, cv::countNonZero(cmp_result_mat))
-    << cmp_result_mat << std::endl;
+    EXPECT_EQ(0, cvtest::norm(cmp_result_mat, NORM_INF))
+        << cmp_result_mat;
 }
 
 TEST(OwnMat, ScalarAssignND)
@@ -542,12 +542,12 @@ TEST(OwnMat, ScalarAssign8UC3)
     }
 
     auto cmp_result_mat = (cv::Mat{height, stepInPixels, cv_type, data.data()} != cv::Mat{height, stepInPixels, cv_type, expected.data()});
-    EXPECT_EQ(0, cv::countNonZero(cmp_result_mat))
-    << cmp_result_mat << std::endl
-    << "data : " << std::endl
-    << cv::Mat{height, stepInPixels, cv_type, data.data()}     << std::endl
-    << "expected : " << std::endl
-    << cv::Mat{height, stepInPixels, cv_type, expected.data()} << std::endl;
+    EXPECT_EQ(0, cvtest::norm(cmp_result_mat, NORM_INF))
+        << cmp_result_mat << std::endl
+        << "data : " << std::endl
+        << cv::Mat{height, stepInPixels, cv_type, data.data()}     << std::endl
+        << "expected : " << std::endl
+        << cv::Mat{height, stepInPixels, cv_type, expected.data()} << std::endl;
 }
 
 TEST(OwnMat, ROIView)
@@ -583,9 +583,9 @@ TEST(OwnMat, ROIView)
     auto expected_cv_mat = cv::Mat{4, 4, CV_8U, expected.data()};
 
     auto cmp_result_mat = (to_ocv(roi_view) != expected_cv_mat);
-    EXPECT_EQ(0, cv::countNonZero(cmp_result_mat))
-    << cmp_result_mat   << std::endl
-    << to_ocv(roi_view) << std::endl
-    << expected_cv_mat  << std::endl;
+    EXPECT_EQ(0, cvtest::norm(cmp_result_mat, NORM_INF))
+        << cmp_result_mat   << std::endl
+        << to_ocv(roi_view) << std::endl
+        << expected_cv_mat  << std::endl;
 }
 } // namespace opencv_test

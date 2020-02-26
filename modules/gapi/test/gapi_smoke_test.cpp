@@ -91,7 +91,7 @@ TEST(GAPI, EmptyOutMat)
     EXPECT_EQ(640, out.cols);
     EXPECT_EQ(480, out.rows);
     EXPECT_EQ(CV_8U, out.type());
-    EXPECT_EQ(0, cv::countNonZero(out - (in_mat+in_mat)));
+    EXPECT_EQ(0, cvtest::norm(out, (in_mat+in_mat), NORM_INF));
 }
 
 }
