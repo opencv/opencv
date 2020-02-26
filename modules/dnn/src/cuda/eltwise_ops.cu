@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 
-#include "math.hpp"
+#include "functors.hpp"
 #include "grid_stride_range.hpp"
 #include "execution.hpp"
 #include "vector_traits.hpp"
@@ -19,39 +19,6 @@ using namespace cv::dnn::cuda4dnn::csl;
 using namespace cv::dnn::cuda4dnn::csl::device;
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
-
-template <class T>
-struct max_functor {
-    __device__ T operator()(T x, T y) {
-        using csl::device::max;
-        return max(x, y);
-    }
-};
-
-template <class T>
-struct sum_functor {
-    __device__ T operator()(T x, T y) { return x + y; }
-};
-
-template <class T>
-struct scaled_sum_functor {
-    __device__ scaled_sum_functor(T scale_x_, T scale_y_)
-        : scale_x{scale_x_}, scale_y{scale_y_} { }
-
-    __device__ T operator()(T x, T y) { return scale_x * x + scale_y * y; }
-
-    T scale_x, scale_y;
-};
-
-template <class T>
-struct product_functor {
-    __device__ T operator()(T x, T y) { return x * y; }
-};
-
-template <class T>
-struct div_functor {
-    __device__ T operator()(T x, T y) { return x / y; }
-};
 
 namespace raw {
     template <class T, class Functor, std::size_t N, class ...FunctorArgs>
