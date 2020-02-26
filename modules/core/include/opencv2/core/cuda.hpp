@@ -346,7 +346,7 @@ public:
         virtual ~Allocator() {}
 
         // allocator must fill data, step and refcount fields
-        virtual bool allocate(GpuMatND* mat, int* shape, size_t elemSize) = 0;
+        virtual bool allocate(GpuMatND* mat, std::vector<int> shape, size_t elemSize) = 0;
         virtual void free(GpuMatND* mat) = 0;
     };
 
@@ -358,16 +358,16 @@ public:
     explicit GpuMatND(Allocator* allocator = defaultAllocator());
 
     //! constructs GpuMatND of the specified shape and type
-    GpuMatND(int* shape, int type, Allocator* allocator = defaultAllocator());
+    GpuMatND(std::vector<int> shape, int type, Allocator* allocator = defaultAllocator());
 
     //! constructs GpuMatND and fills it with the specified value _s
-    GpuMatND(int* shape, int type, Scalar s, Allocator* allocator = defaultAllocator());
+    GpuMatND(std::vector<int> shape, int type, Scalar s, Allocator* allocator = defaultAllocator());
 
     //! copy constructor
     GpuMatND(const GpuMatND& m);
 
     //! constructor for GpuMatND headers pointing to user-allocated data
-    GpuMatND(int* shape, int type, void* data, size_t step = Mat::AUTO_STEP);
+    GpuMatND(std::vector<int> shape, int type, void* data, size_t step = Mat::AUTO_STEP);
 
     //! builds GpuMatND from host memory (Blocking call)
     explicit GpuMatND(InputArray arr, Allocator* allocator = defaultAllocator());
@@ -379,7 +379,7 @@ public:
     GpuMatND& operator =(const GpuMatND& m);
 
     //! allocates new GpuMatND data unless the GpuMatND already has specified size and type
-    void create(int* shape, int type);
+    void create(std::vector<int> shape, int type);
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
     void release();
@@ -493,7 +493,7 @@ public:
     size_t step1() const;
 
     //! returns the shape of the GpuMatND
-    int* shape() const;
+    std::vector<int> shape() const;
 
     //! returns true if GpuMatND data is NULL
     bool empty() const;
@@ -510,7 +510,7 @@ public:
     int flags;
 
     //! the n
-    int* _shape;
+    std::vector<int> _shape;
 
     //! a distance between successive rows in bytes; includes the gap if any
     size_t step;
