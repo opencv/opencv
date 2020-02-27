@@ -35,7 +35,7 @@ std::string weights_path(const std::string &model_path) {
 
     auto ext = model_path.substr(sz - EXT_LEN);
 
-    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return std::tolower(c); });
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
     CV_Assert(ext == ".xml");
 
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
