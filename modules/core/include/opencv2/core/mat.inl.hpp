@@ -54,6 +54,15 @@
 #pragma warning( disable: 4127 )
 #endif
 
+#if defined(__clang__) && defined(__has_warning)
+#if __has_warning("-Wdeprecated-enum-enum-conversion") && __has_warning("-Wdeprecated-anon-enum-enum-conversion")
+#define DISABLE_CLANG_ENUM_WARNINGS
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-enum-enum-conversion"
+#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
+#endif
+#endif
+
 namespace cv
 {
 CV__DEBUG_NS_BEGIN
@@ -4032,6 +4041,11 @@ inline void UMatData::markDeviceCopyObsolete(bool flag)
 
 #ifdef _MSC_VER
 #pragma warning( pop )
+#endif
+
+#ifdef DISABLE_CLANG_ENUM_WARNINGS
+#undef DISABLE_CLANG_ENUM_WARNINGS
+#pragma clang diagnostic pop
 #endif
 
 #endif
