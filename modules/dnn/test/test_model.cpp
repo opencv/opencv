@@ -308,12 +308,20 @@ TEST_P(Test_Model, Keypoints_face)
     Mat exp = blobFromNPY(_tf("facial_keypoints_exp.npy"));
 
     Size size{224, 224};
-    float norm = (target == DNN_TARGET_OPENCL_FP16) ? 5e-3 : 1e-4;
     double scale = 1.0/255;
     Scalar mean = Scalar();
     bool swapRB = false;
 
     // Ref. Range: [-1.1784188, 1.7758257]
+    float norm = 1e-4;
+    if (target == DNN_TARGET_OPENCL_FP16)
+        norm = 5e-3;
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        // Myriad2: l1 = 0.0004, lInf = 0.002
+        // MyriadX: l1 = 0.003, lInf = 0.009
+        norm = 0.009;
+    }
     if (target == DNN_TARGET_CUDA_FP16)
         norm = 0.004; // l1 = 0.0006, lInf = 0.004
 
