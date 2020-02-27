@@ -75,32 +75,6 @@ struct Integral_SIMD
     }
 };
 
-#if CV_AVX512_SKX
-template <>
-struct Integral_SIMD<uchar, double, double> {
-    Integral_SIMD() {};
-
-
-    bool operator()(const uchar *src, size_t _srcstep,
-                    double *sum,      size_t _sumstep,
-                    double *sqsum,    size_t _sqsumstep,
-                    double *tilted,   size_t _tiltedstep,
-                    int width, int height, int cn) const
-    {
-        CV_UNUSED(_tiltedstep);
-        // TODO:  Add support for 1 channel input (WIP)
-        if (!tilted && (cn <= 4))
-        {
-            calculate_integral_avx512(src, _srcstep, sum, _sumstep,
-                                      sqsum, _sqsumstep, width, height, cn);
-            return true;
-        }
-        return false;
-    }
-
-};
-#endif
-
 #if CV_SIMD && CV_SIMD_WIDTH <= 64
 
 template <>
@@ -116,6 +90,11 @@ struct Integral_SIMD<uchar, int, double>
     {
         if (sqsum || tilted || cn > 4)
             return false;
+#if !CV_SSE4_1 && CV_SSE2
+        // 3 channel code is slower for SSE2 & SSE3
+        if (cn == 3)
+            return false;
+#endif
 
         width *= cn;
 
@@ -242,6 +221,7 @@ struct Integral_SIMD<uchar, int, double>
                 }
             }
         }
+#if CV_SSE4_1 || !CV_SSE2
         else if (cn == 3)
         {
             // the others
@@ -341,6 +321,7 @@ struct Integral_SIMD<uchar, int, double>
                 }
             }
         }
+#endif
         else if (cn == 4)
         {
             // the others
@@ -719,7 +700,7 @@ struct Integral_SIMD<uchar, float, double>
     }
 };
 
-#if CV_SIMD128_64F && !CV_AVX512_SKX
+#if CV_SIMD128_64F
 template <>
 struct Integral_SIMD<uchar, double, double>
 {
@@ -727,10 +708,19 @@ struct Integral_SIMD<uchar, double, double>
 
     bool operator()(const uchar * src, size_t _srcstep,
         double * sum, size_t _sumstep,
-        double * sqsum, size_t,
+        double * sqsum, size_t _sqsumstep,
         double * tilted, size_t,
         int width, int height, int cn) const
     {
+#if CV_AVX512_SKX
+        if (!tilted && cn <= 4 && (cn > 1 || sqsum))
+        {
+            calculate_integral_avx512(src, _srcstep, sum, _sumstep, sqsum, _sqsumstep, width, height, cn);
+            return true;
+        }
+#else
+        CV_UNUSED(_sqsumstep);
+#endif
         if (sqsum || tilted || cn > 4)
             return false;
 
