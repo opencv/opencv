@@ -392,7 +392,10 @@ void initDNNTests()
 #ifdef HAVE_DNN_NGRAPH
         CV_TEST_TAG_DNN_SKIP_IE_NGRAPH,
 #endif
-        CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+        CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
+#endif
+        ""
     );
 #endif
     registerGlobalSkipTag(

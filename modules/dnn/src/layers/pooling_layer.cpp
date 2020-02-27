@@ -188,15 +188,15 @@ public:
         {
             return type == MAX || type == AVE || type == ROI;
         }
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
         else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
             if (computeMaxIdx)
                 return false;
-#ifdef HAVE_INF_ENGINE
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
             if (preferableTarget == DNN_TARGET_MYRIAD) {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
                 if (type == MAX && (pad_l == 1 && pad_t == 1) && stride == Size(2, 2) ) {
                     return !isMyriadX();
                 }
@@ -205,14 +205,13 @@ public:
             }
             else
                 return type != STOCHASTIC;
-#else
-            return false;
-#endif
         }
-        else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+#endif
+        else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
             return !computeMaxIdx && type != STOCHASTIC;
         }
-        else
+        else if (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_VKCOM)
         {
             if (kernel_size.size() == 3)
                 return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU);
@@ -225,6 +224,7 @@ public:
             else
                 return false;
         }
+        return false;
     }
 
 #ifdef HAVE_OPENCL
@@ -454,7 +454,7 @@ public:
             return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
         if (type == MAX || type == AVE)
@@ -500,7 +500,7 @@ public:
             CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
         return Ptr<BackendNode>();
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 
