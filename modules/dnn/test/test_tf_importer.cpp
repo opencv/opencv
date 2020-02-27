@@ -1006,6 +1006,9 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
     if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
+    if (target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+
     applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_VERYLONG);
     Mat img = imread(findDataFile("dnn/street.png"));
     std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt");
