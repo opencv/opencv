@@ -160,8 +160,8 @@ TEST_P(MulDoubleTest, AccuracyTest)
         CV_MAT_DEPTH(out_mat_ocv.type()) != CV_64F)
     {
         // integral: allow 1% of differences, and no diffs by >1 unit
+        EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF), 1);
         EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_L1 | NORM_RELATIVE), 0.01);
-        EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_L1), 1);
     }
     else
     {
