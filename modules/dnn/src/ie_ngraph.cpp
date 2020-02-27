@@ -25,8 +25,8 @@ namespace cv { namespace dnn {
 // For networks with input layer which has an empty name, IE generates a name id[some_number].
 // OpenCV lets users use an empty input name and to prevent unexpected naming,
 // we can use some predefined name.
-static std::string kDefaultInpLayerName = "empty_inp_layer_name";
-static constexpr const char* kOpenCVLayersType = "OpenCVLayer";
+static std::string kDefaultInpLayerName = "opencv_ngraph_empty_inp_layer_name";
+static constexpr const char* kOpenCVLayersType = "opencv_ngraph_layer";
 
 static std::string shapesToStr(const std::vector<Mat>& mats)
 {
@@ -77,12 +77,16 @@ public:
         return type_info;
     }
 
-    NgraphCustomOp() {};
     NgraphCustomOp(const ngraph::NodeVector& inputs,
                    const std::map<std::string, InferenceEngine::Parameter>& params = {}):
         Op(inputs), params(params)
     {
         constructor_validate_and_infer_types();
+    }
+
+    ~NgraphCustomOp()
+    {
+        // nothing
     }
 
     void validate_and_infer_types() override
@@ -115,6 +119,136 @@ public:
 private:
     std::map<std::string, InferenceEngine::Parameter> params;
 };
+
+
+class InfEngineNgraphCustomLayer : public InferenceEngine::ILayerExecImpl
+{
+public:
+    explicit InfEngineNgraphCustomLayer(const InferenceEngine::CNNLayer& layer) : cnnLayer(layer)
+    {
+        std::istringstream iss(layer.GetParamAsString("impl"));
+        size_t ptr;
+        iss >> ptr;
+        cvLayer = (Layer*)ptr;
+
+        std::vector<std::vector<size_t> > shapes;
+        strToShapes(layer.GetParamAsString("internals"), shapes);
+        internals.resize(shapes.size());
+        for (int i = 0; i < shapes.size(); ++i)
+            internals[i].create(std::vector<int>(shapes[i].begin(), shapes[i].end()), CV_32F);
+    }
+
+    ~InfEngineNgraphCustomLayer()
+    {
+        // nothing
+    }
+
+    virtual InferenceEngine::StatusCode execute(std::vector<InferenceEngine::Blob::Ptr>& inputs,
+                                                std::vector<InferenceEngine::Blob::Ptr>& outputs,
+                                                InferenceEngine::ResponseDesc *resp) noexcept
+    {
+        std::vector<Mat> inpMats, outMats;
+        infEngineBlobsToMats(inputs, inpMats);
+        infEngineBlobsToMats(outputs, outMats);
+
+        try
+        {
+            cvLayer->forward(inpMats, outMats, internals);
+            return InferenceEngine::StatusCode::OK;
+        }
+        catch (...)
+        {
+            return InferenceEngine::StatusCode::GENERAL_ERROR;
+        }
+    }
+
+    virtual InferenceEngine::StatusCode
+    getSupportedConfigurations(std::vector<InferenceEngine::LayerConfig>& conf,
+                               InferenceEngine::ResponseDesc* resp) noexcept
+    {
+        std::vector<InferenceEngine::DataConfig> inDataConfig;
+        std::vector<InferenceEngine::DataConfig> outDataConfig;
+        for (auto& it : cnnLayer.insData)
+        {
+            InferenceEngine::DataConfig conf;
+            conf.desc = it.lock()->getTensorDesc();
+            inDataConfig.push_back(conf);
+        }
+
+        for (auto& it : cnnLayer.outData)
+        {
+            InferenceEngine::DataConfig conf;
+            conf.desc = it->getTensorDesc();
+            outDataConfig.push_back(conf);
+        }
+
+        InferenceEngine::LayerConfig layerConfig;
+        layerConfig.inConfs = inDataConfig;
+        layerConfig.outConfs = outDataConfig;
+
+        conf.push_back(layerConfig);
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode init(InferenceEngine::LayerConfig& config,
+                                     InferenceEngine::ResponseDesc *resp) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+private:
+    InferenceEngine::CNNLayer cnnLayer;
+    dnn::Layer* cvLayer;
+    std::vector<Mat> internals;
+};
+
+
+class InfEngineNgraphCustomLayerFactory : public InferenceEngine::ILayerImplFactory {
+public:
+    explicit InfEngineNgraphCustomLayerFactory(const InferenceEngine::CNNLayer* layer) : cnnLayer(*layer)
+    {
+        // nothing
+    }
+
+    InferenceEngine::StatusCode
+    getImplementations(std::vector<InferenceEngine::ILayerImpl::Ptr>& impls,
+                       InferenceEngine::ResponseDesc* resp) noexcept override
+    {
+        impls.push_back(std::make_shared<InfEngineNgraphCustomLayer>(cnnLayer));
+        return InferenceEngine::StatusCode::OK;
+    }
+
+private:
+    InferenceEngine::CNNLayer cnnLayer;
+};
+
+
+class InfEngineNgraphExtension : public InferenceEngine::IExtension
+{
+public:
+    virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
+    virtual void Unload() noexcept {}
+    virtual void Release() noexcept {}
+    virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
+
+    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
+                                                          InferenceEngine::ResponseDesc*) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode getFactoryFor(InferenceEngine::ILayerImplFactory*& factory,
+                                              const InferenceEngine::CNNLayer* cnnLayer,
+                                              InferenceEngine::ResponseDesc* resp) noexcept
+    {
+        if (cnnLayer->type != kOpenCVLayersType)
+            return InferenceEngine::StatusCode::NOT_IMPLEMENTED;
+        factory = new InfEngineNgraphCustomLayerFactory(cnnLayer);
+        return InferenceEngine::StatusCode::OK;
+    }
+};
+
+
 
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {}
@@ -423,11 +557,11 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
             // OpenCV fallbacks as extensions.
             try
             {
-                ie.AddExtension(std::make_shared<InfEngineExtension>(), "CPU");
+                ie.AddExtension(std::make_shared<InfEngineNgraphExtension>(), "CPU");
             }
             catch(const std::exception& e)
             {
-                CV_LOG_INFO(NULL, "DNN-IE: Can't register OpenCV custom layers extension: " << e.what());
+                CV_LOG_INFO(NULL, "DNN-IE: Can't register OpenCV custom layers nGraph extension: " << e.what());
             }
 #ifndef _WIN32
             // Limit the number of CPU threads.

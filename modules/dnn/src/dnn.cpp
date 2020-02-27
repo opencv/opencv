@@ -185,30 +185,40 @@ private:
 
 #ifdef HAVE_INF_ENGINE
         if (checkIETarget(DNN_TARGET_CPU)) {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_CPU));
+#endif
 #ifdef HAVE_DNN_NGRAPH
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_CPU));
 #endif
         }
         if (checkIETarget(DNN_TARGET_MYRIAD)) {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_MYRIAD));
+#endif
 #ifdef HAVE_DNN_NGRAPH
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_MYRIAD));
 #endif
         }
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
         if (checkIETarget(DNN_TARGET_FPGA))
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_FPGA));
+#endif
 #ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
         {
             if (checkIETarget(DNN_TARGET_OPENCL)) {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
                 backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_OPENCL));
+#endif
 #ifdef HAVE_DNN_NGRAPH
                 backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_OPENCL));
 #endif
             }
             if (checkIETarget(DNN_TARGET_OPENCL_FP16)) {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
                 backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_OPENCL_FP16));
+#endif
 #ifdef HAVE_DNN_NGRAPH
                 backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_OPENCL_FP16));
 #endif
@@ -797,7 +807,7 @@ struct DataLayer : public Layer
         }
     }
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
         CV_CheckEQ(inputsData.size(), (size_t)1, "");
@@ -829,7 +839,7 @@ struct DataLayer : public Layer
         addConstantData("biases", biases, ieLayer);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
     std::vector<String> outNames;
     std::vector<MatShape> shapes;
@@ -1087,10 +1097,10 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
     }
     else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
         return Ptr<BackendWrapper>(new InfEngineBackendWrapper(targetId, m));
 #else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Inference Engine API support");
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Inference Engine NN Builder API support");
 #endif
     }
     else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -1587,10 +1597,10 @@ struct Net::Impl
             initHalideBackend();
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
             initInfEngineBackend(blobsToKeep_);
 #else
-            CV_Assert(false && "This OpenCV version is built without Inference Engine API support");
+            CV_Assert(false && "This OpenCV version is built without Inference Engine NN Builder API support");
 #endif
         }
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -1664,7 +1674,7 @@ struct Net::Impl
         }
     }
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     // Before launching Inference Engine graph we need to specify output blobs.
     // This function requests output blobs based on inputs references of
     // layers from default backend or layers from different graphs.
@@ -1969,7 +1979,7 @@ struct Net::Impl
             }
         }
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH
@@ -3377,8 +3387,12 @@ struct Net::Impl
         CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
         if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
             Ptr<InfEngineBackendWrapper> wrapper = ld.outputBlobsWrappers[pin.oid].dynamicCast<InfEngineBackendWrapper>();
             return std::move(wrapper->futureMat);
+#else
+            CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Inference Engine NN Builder API support");
+#endif
         }
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
@@ -3470,9 +3484,13 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
     else
 #endif
     {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
         Ptr<InfEngineBackendNode> backendNodeNN(new InfEngineBackendNode(InferenceEngine::Builder::Layer("")));
         backendNodeNN->net = Ptr<InfEngineBackendNet>(new InfEngineBackendNet(ieNet));
         backendNode = backendNodeNN;
+#else
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Inference Engine NN Builder API support");
+#endif
     }
 
     for (auto& it : ieNet.getOutputsInfo())
@@ -3499,6 +3517,7 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
         else
 #endif
         {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
             Ptr<Layer> cvLayer(new InfEngineBackendLayer(ieNet));
 
             InferenceEngine::CNNLayerPtr ieLayer = ieNet.getLayerByName(it.first.c_str());
@@ -3509,6 +3528,9 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
             ld.layerInstance = cvLayer;
 
             ld.backendNodes[DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019] = backendNode;
+#else
+            CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Inference Engine NN Builder API support");
+#endif
         }
 
         for (int i = 0; i < inputsNames.size(); ++i)

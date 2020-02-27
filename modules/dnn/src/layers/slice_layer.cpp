@@ -119,14 +119,17 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && sliceRanges.size() == 1) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 &&
-#ifdef HAVE_INF_ENGINE
-                INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+            return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
+                sliceRanges.size() == 1 && sliceRanges[0].size() == 4;
 #endif
-                sliceRanges.size() == 1 && sliceRanges[0].size() == 4);
+#ifdef HAVE_DNN_NGRAPH
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return sliceRanges.size() == 1;
+#endif
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -292,7 +295,7 @@ public:
     }
 #endif
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
