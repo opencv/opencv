@@ -13,16 +13,10 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T>
-    void bias1(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> input, T alpha);
-
-    template <class T>
     void biasN(const csl::Stream& stream,
         csl::TensorSpan<T> output,
         csl::TensorView<T> input, std::size_t inner_size,
         csl::TensorView<T> bias);
-
-    template <class T>
-    void scale1(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> input, T alpha);
 
     template <class T>
     void scaleN(const csl::Stream& stream,
