@@ -442,13 +442,14 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
             config.emplace("VPU_DETECT_NETWORK_BATCH", CONFIG_VALUE(NO));
         }
 
-        bool isHetero = false;
-        if (device_name != "CPU")
+        bool isHetero = device_name == "FPGA";
+        // It is actual only for non-CPU targets and networks built in runtime using nGraph.
+        // We do not check IR models because they can be with version less than IRv10
+        if (!isHetero && device_name != "CPU" && !hasNetOwner)
         {
-            isHetero = device_name == "FPGA";
-            for (auto& layer : net)
+            for (auto& node : net.getFunction()->get_ops())
             {
-                if (layer->type == kOpenCVLayersType)
+                if (node->description() == kOpenCVLayersType)
                 {
                     isHetero = true;
                     break;
