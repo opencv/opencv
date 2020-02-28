@@ -385,6 +385,17 @@ typedef AVBSFContext BitStreamFilterContext;
 typedef AVBitStreamFilterContext BitStreamFilterContext;
 #endif
 
+static inline void avCodecFreeContext(AVStream* stream) {
+    // functional is added CALC_FFMPEG_VERSION(55, 52, 0), but
+    // Memory leaks were fixed at
+    // https://github.com/FFmpeg/FFmpeg/commit/345cfd04d093d9fdec81ea3531e73b1f5c1b6a6c
+#if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 13, 100)
+    avcodec_free_context(&(stream->codec));
+#else
+    avcodec_close(stream->codec);
+#endif
+}
+
 static inline void avImageFillArrays(AVFrame* frame, uint8_t* pictureBuf, enum AVPixelFormat pix_fmt,
                                      int width, int height, int align = 1)
 {
@@ -459,7 +470,7 @@ static inline void avFormatFreeContext(AVFormatContext* formatContext)
 #endif
 }
 
-static inline AVStream* avFormatNewStream(AVFormatContext* formatContext, const AVCodec* codec = NULL)
+static inline AVStream* avFormatNewStream(AVFormatContext* formatContext, AVCodec* codec = NULL)
 {
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 10, 0)
     return avformat_new_stream(formatContext, codec);
@@ -477,15 +488,15 @@ static inline AVFrame* avFrameAlloc() {
 #endif
 }
 
-static inline void avFrameFree(AVFrame* frame) {
+static inline void avFrameFree(AVFrame** frame) {
 #if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 ? CALC_FFMPEG_VERSION(55, 45, 101) \
                                                          : CALC_FFMPEG_VERSION(55, 28, 1))
-    av_frame_free(&frame);
+    av_frame_free(frame);
 #elif LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 ? CALC_FFMPEG_VERSION(54, 59, 100) \
                                                            : CALC_FFMPEG_VERSION(54, 28, 0))
-    avcodec_free_frame(&frame);
+    avcodec_free_frame(frame);
 #else
-    av_free(frame);
+    av_freep(frame);
 #endif
 }
 
@@ -526,7 +537,7 @@ enum OpenMode {
 };
 
 static inline int avioOpen(AVFormatContext* oc, const char* filename,
-                           OpenMode mode = OpenMode::WriteOnly)
+                           OpenMode mode = WriteOnly)
 {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
     return url_fopen(&oc->pb, filename, static_cast<int>(mode));
@@ -592,7 +603,7 @@ static inline bool avBitstreamFilterFilter(BitStreamFilterContext* bsfc, AVCodec
         CV_WARN("Packet submission for filtering failed");
         return false;
     }
-    err = av_bsf_receive_packet(bsfc, &packet_filtered);
+    err = av_bsf_receive_packet(bsfc, &filteredPacket);
     if (err < 0)
     {
         CV_WARN("Filtered packet retrieve failed");
@@ -776,12 +787,12 @@ void CvCapture_FFMPEG::close()
 
     if( picture )
     {
-        compat::avFrameFree(picture);
+        compat::avFrameFree(&picture);
     }
 
     if( video_st )
     {
-        avcodec_free_context(&video_st->codec);
+        compat::avCodecFreeContext(video_st);
         video_st = NULL;
     }
 
@@ -1837,7 +1848,7 @@ static AVFrame* icv_alloc_picture_FFMPEG(AVPixelFormat pix_fmt, int width, int h
         uint8_t* picture_buf = (uint8_t*)malloc(size);
         if (!picture_buf)
         {
-            compat::avFrameFree(picture);
+            compat::avFrameFree(&picture);
             return NULL;
         }
         compat::avImageFillArrays(picture, picture_buf, pix_fmt, width, height);
@@ -2205,16 +2216,16 @@ void CvVideoWriter_FFMPEG::close()
             free(picture->data[0]);
         picture->data[0] = 0;
     }
-    compat::avFrameFree(picture);
+    compat::avFrameFree(&picture);
 
     if (input_picture) {
-        compat::avFrameFree(input_picture);
+        compat::avFrameFree(&input_picture);
     }
 
     /* close codec */
-    avcodec_free_context(&video_st->codec);
+    compat::avCodecFreeContext(video_st);
 
-    av_free(outbuf);
+    av_freep(&outbuf);
 
     if (oc)
     {
@@ -2726,7 +2737,7 @@ void OutputMediaStream_FFMPEG::close()
         }
 
         // free the stream
-        av_free(oc_);
+        compat::avFormatFreeContext(oc_);
     }
 }
 
