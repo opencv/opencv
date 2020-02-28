@@ -75,6 +75,17 @@ extern "C" {
 #include "jpeglib.h"
 }
 
+#ifndef CV_MANUAL_JPEG_STD_HUFF_TABLES
+  #if defined(LIBJPEG_TURBO_VERSION_NUMBER) && LIBJPEG_TURBO_VERSION_NUMBER >= 1003090
+    #define CV_MANUAL_JPEG_STD_HUFF_TABLES 0  // libjpeg-turbo handles standard huffman tables itself (jstdhuff.c)
+  #else
+    #define CV_MANUAL_JPEG_STD_HUFF_TABLES 1
+  #endif
+#endif
+#if CV_MANUAL_JPEG_STD_HUFF_TABLES == 0
+  #undef CV_MANUAL_JPEG_STD_HUFF_TABLES
+#endif
+
 namespace cv
 {
 
@@ -252,6 +263,7 @@ bool  JpegDecoder::readHeader()
     return result;
 }
 
+#ifdef CV_MANUAL_JPEG_STD_HUFF_TABLES
 /***************************************************************************
  * following code is for supporting MJPEG image files
  * based on a message of Laurent Pinchart on the video4linux mailing list
@@ -385,6 +397,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
  * end of code for supportting MJPEG image files
  * based on a message of Laurent Pinchart on the video4linux mailing list
  ***************************************************************************/
+#endif  // CV_MANUAL_JPEG_STD_HUFF_TABLES
 
 bool  JpegDecoder::readData( Mat& img )
 {
@@ -400,6 +413,7 @@ bool  JpegDecoder::readData( Mat& img )
 
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {
+#ifdef CV_MANUAL_JPEG_STD_HUFF_TABLES
             /* check if this is a mjpeg image format */
             if ( cinfo->ac_huff_tbl_ptrs[0] == NULL &&
                 cinfo->ac_huff_tbl_ptrs[1] == NULL &&
@@ -413,6 +427,7 @@ bool  JpegDecoder::readData( Mat& img )
                     cinfo->ac_huff_tbl_ptrs,
                     cinfo->dc_huff_tbl_ptrs );
             }
+#endif
 
             if( color )
             {
