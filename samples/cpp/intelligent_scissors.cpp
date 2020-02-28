@@ -126,7 +126,7 @@ void find_min_path(const Point& start)
                     }
                  }
               }
-           }        
+           }
         }
     }
 }
@@ -141,7 +141,7 @@ void onMouse(int event, int x, int y, int flags, void *param)
         img.copyTo(img_pre_draw);
         imshow("lasso", img);
     }
-    else   
+    else
      if (event == EVENT_RBUTTONDOWN)
        {
         cont = false;
@@ -161,7 +161,6 @@ void onMouse(int event, int x, int y, int flags, void *param)
           }
           imshow("lasso", img);
        }
-     
 }
 
 const char* keys =
@@ -187,7 +186,7 @@ int main( int argc, const char** argv )
     Sobel(grayscale, Ix, CV_64FC1, 1, 0, 1);
     Sobel(grayscale, Iy, CV_64FC1, 0, 1, 1);
     Ix = Ix / 255.0;
-    Iy = Iy / 255.0; 
+    Iy = Iy / 255.0;
     grad_mag();
     img.copyTo(img_pre_draw);
     setMouseCallback("lasso", onMouse, 0);
