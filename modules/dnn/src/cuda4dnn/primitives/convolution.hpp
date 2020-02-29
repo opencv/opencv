@@ -286,7 +286,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                             kernels::biasN_clipped_relu_inplace<T>(stream, output, inner_size, biasTensor, crelu_floor, crelu_ceil);
                             break;
                         case ConvolutionConfiguration::ActivationType::POWER:
-                            kernels::biasN_power_inplace<T>(stream, output, inner_size, biasTensor, power_exp);
+                            kernels::biasN_power_inplace<T>(stream, output, inner_size, biasTensor, power_exp, T(1.0), T(0.0));
                             break;
                         case ConvolutionConfiguration::ActivationType::TANH:
                             kernels::biasN_tanh_inplace<T>(stream, output, inner_size, biasTensor);
