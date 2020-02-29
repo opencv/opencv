@@ -13,18 +13,16 @@ Mat img, img_pre_render, img_render;
 Point end;
 std::vector<std::vector<Point> > contours(1);
 std::vector<Point> tmp_contour; 
-
-
 Mat zero_crossing, gradient_magnitude, Ix, Iy, hit_map_x, hit_map_y;
 
 struct Pix
 {
     Point next_point;
-    double value;
+    double cost;
 
     bool operator > (const Pix &b) const
     {
-        return value > b.value;
+        return cost > b.cost;
     }
 };
 
@@ -58,27 +56,20 @@ float local_cost(const Point& p, const Point& q)
             + acos(dq)) / M_PI + 0.14 * fG;
 }
 
-
-
 void find_min_path(const Point& start)
 {
-    Mat processed;
-    Mat removed;
-    Mat expand;
-    Mat cost_map;
     Pix begin;
-    cost_map.create(img.rows, img.cols, CV_32F);
-    expand.create(img.rows, img.cols, CV_8UC1);
-    processed.create(img.rows, img.cols, CV_8UC1);
-    removed.create(img.rows, img.cols, CV_8UC1);
-    expand.setTo(0);
-    processed.setTo(0);
-    cost_map.setTo(INT_MAX);
+    Mat cost_map(img.size(), CV_32F, Scalar(FLT_MAX));
+    Mat expand(img.size(), CV_8UC1, Scalar(0));
+    Mat processed(img.size(), CV_8UC1, Scalar(0));
+    Mat removed(img.size(), CV_8UC1, Scalar(0));
+    std::priority_queue < Pix, std::vector<Pix>, std::greater<Pix> > L;
+
     cost_map.at<float>(start) = 0;
     processed.at<uchar>(start) = 1;
-    std :: priority_queue < Pix, std :: vector<Pix>, std:: greater<Pix> > L;
-    begin.value=0;
+    begin.cost = 0;
     begin.next_point = start;
+    
     L.push(begin);
     while (!L.empty())
     {
@@ -88,35 +79,37 @@ void find_min_path(const Point& start)
         processed.at<uchar>(p) = 0;
         if (removed.at<uchar>(p) == 0)
         {
-           expand.at<uchar>(p) = 1;
-           for (int i = -1; i <= 1; i++)
-           {
-              for(int j = -1; j <= 1; j++)
-              {
-                 int tx = p.x + i;
-                 int ty = p.y + j;
-                 if ((tx >= 0 && tx < img.cols && ty >= 0 && ty < img.rows && expand.at<uchar>(ty, tx) == 0) && ((i!=0)||(j!=0)))
-                 { 
-                    Point q = Point(tx, ty);
-                    float tmp = cost_map.at<float>(p) + local_cost(p, q);
-                    if (processed.at<uchar>(q) == 1 && tmp < cost_map.at<float>(q))
-                    {
-                       removed.at<uchar>(q) = 1;
+            expand.at<uchar>(p) = 1;
+            for (int i = -1; i <= 1; i++)
+            {
+                for(int j = -1; j <= 1; j++)
+                {
+                    int tx = p.x + i;
+                    int ty = p.y + j;
+                    if (tx < 0 || tx >= img.cols || ty < 0 || ty >= img.rows)
+                        continue;
+                    if (expand.at<uchar>(ty, tx) == 0)
+                    { 
+                        Point q = Point(tx, ty);
+                        float cost = cost_map.at<float>(p) + local_cost(p, q);
+                        if (processed.at<uchar>(q) == 1 && cost < cost_map.at<float>(q))
+                        {
+                            removed.at<uchar>(q) = 1;
+                        }
+                        if (processed.at<uchar>(q) == 0)
+                        {
+                            cost_map.at<float>(q) = cost;
+                            hit_map_x.at<int>(q)= p.x;
+                            hit_map_y.at<int>(q) = p.y;
+                            processed.at<uchar>(q) = 1;
+                            Pix val;
+                            val.cost = cost_map.at<float>(q);
+                            val.next_point = q;
+                            L.push(val);
+                        }
                     }
-                    if (processed.at<uchar>(q) == 0)
-                    {
-                       cost_map.at<float>(q) = tmp;
-                       hit_map_x.at<int>(q)= p.x;
-                       hit_map_y.at<int>(q) = p.y;
-                       processed.at<uchar>(q) = 1;
-                       Pix val;
-                       val.value = cost_map.at<float>(q);
-                       val.next_point = q;
-                       L.push(val);
-                    }
-                 }
-              }
-           }
+                }
+            }
         }
     }
 }
@@ -146,7 +139,9 @@ void onMouse(int event, int x, int y, int flags, void *param)
     else if (event == EVENT_RBUTTONDOWN)
     {
         img_pre_render.copyTo(img_render);
-        contours.resize(contours.size() + 1); 
+        drawContours(img_pre_render, contours, contours.size() - 1, Scalar(0,255,0), CV_FILLED);
+        addWeighted(img_pre_render, 0.3, img_render, 0.7, 0, img_render);
+        contours.resize(contours.size() + 1);
         imshow("lasso", img_render);
     }
     else if (event == EVENT_MOUSEMOVE && !contours.back().empty())
