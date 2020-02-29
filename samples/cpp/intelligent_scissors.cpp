@@ -28,24 +28,24 @@ struct Pix
     }
 };
 
-double local_cost(const Point& p, const Point& q, bool diag)
+float local_cost(const Point& p, const Point& q)
 {
-    double  fG = 0.0;
-    fG = gradient_magnitude.at<double>(q.y, q.x);
-    double dp;
-    double dq;
+    float fG = gradient_magnitude.at<float>(q.y, q.x);
+    float dp;
+    float dq;
+    bool isDiag = (p.x != q.x) && (p.y != q.y);
 
-    if ((Iy.at<double>(p) * (q.x - p.x) - Ix.at<double>(p) * (q.y - p.y)) >= 0)
+    if ((Iy.at<float>(p) * (q.x - p.x) - Ix.at<float>(p) * (q.y - p.y)) >= 0)
     {
-        dp = Iy.at<double>(p) * (q.x - p.x) - Ix.at<double>(p) * (q.y - p.y);
-        dq = Iy.at<double>(q) * (q.x - p.x) - Ix.at<double>(q) * (q.y - p.y);
+        dp = Iy.at<float>(p) * (q.x - p.x) - Ix.at<float>(p) * (q.y - p.y);
+        dq = Iy.at<float>(q) * (q.x - p.x) - Ix.at<float>(q) * (q.y - p.y);
     }
     else
     {
-        dp = Iy.at<double>(p) * (p.x - q.x) + (-Ix.at<double>(p)) * (p.y - q.y);
-        dq = Iy.at<double>(q) * (p.x - q.x) + (-Ix.at<double>(q)) * (p.y - q.y);
+        dp = Iy.at<float>(p) * (p.x - q.x) + (-Ix.at<float>(p)) * (p.y - q.y);
+        dq = Iy.at<float>(q) * (p.x - q.x) + (-Ix.at<float>(q)) * (p.y - q.y);
     }
-    if (!diag)
+    if (isDiag)
     {
         dp /= sqrt(2);
         dq /= sqrt(2);
@@ -67,14 +67,14 @@ void find_min_path(const Point& start)
     Mat expand;
     Mat cost_map;
     Pix begin;
-    cost_map.create(img.rows, img.cols, CV_64FC1);
+    cost_map.create(img.rows, img.cols, CV_32F);
     expand.create(img.rows, img.cols, CV_8UC1);
     processed.create(img.rows, img.cols, CV_8UC1);
     removed.create(img.rows, img.cols, CV_8UC1);
     expand.setTo(0);
     processed.setTo(0);
     cost_map.setTo(INT_MAX);
-    cost_map.at<double>(start) = 0;
+    cost_map.at<float>(start) = 0;
     processed.at<uchar>(start) = 1;
     std :: priority_queue < Pix, std :: vector<Pix>, std:: greater<Pix> > L;
     begin.value=0;
@@ -98,19 +98,19 @@ void find_min_path(const Point& start)
                  if ((tx >= 0 && tx < img.cols && ty >= 0 && ty < img.rows && expand.at<uchar>(ty, tx) == 0) && ((i!=0)||(j!=0)))
                  { 
                     Point q = Point(tx, ty);
-                    double tmp = cost_map.at<double>(p) + local_cost(p, q, ((p.x == q.x) || (p.y == q.y)));
-                    if (processed.at<uchar>(q) == 1 && tmp < cost_map.at<double>(q))
+                    float tmp = cost_map.at<float>(p) + local_cost(p, q);
+                    if (processed.at<uchar>(q) == 1 && tmp < cost_map.at<float>(q))
                     {
                        removed.at<uchar>(q) = 1;
                     }
                     if (processed.at<uchar>(q) == 0)
                     {
-                       cost_map.at<double>(q) = tmp;
+                       cost_map.at<float>(q) = tmp;
                        hit_map_x.at<int>(q)= p.x;
                        hit_map_y.at<int>(q) = p.y;
                        processed.at<uchar>(q) = 1;
                        Pix val;
-                       val.value = cost_map.at<double>(q);
+                       val.value = cost_map.at<float>(q);
                        val.next_point = q;
                        L.push(val);
                     }
@@ -185,16 +185,16 @@ int main( int argc, const char** argv )
     Canny(grayscale, img_canny, 50, 100);
 
     threshold(img_canny, zero_crossing, 254, 1, THRESH_BINARY_INV);
-    Sobel(grayscale, Ix, CV_64FC1, 1, 0, 1);
-    Sobel(grayscale, Iy, CV_64FC1, 0, 1, 1);
-    Ix = Ix / 255.0;
-    Iy = Iy / 255.0;
+    Sobel(grayscale, Ix, CV_32FC1, 1, 0, 1);
+    Sobel(grayscale, Iy, CV_32FC1, 0, 1, 1);
+    Ix.convertTo(Ix, CV_32F, 1.0/255);
+    Iy.convertTo(Iy, CV_32F, 1.0/255);
 
     // Compute gradients magnitude.
     double max_val = 0.0;
     magnitude(Iy, Ix, gradient_magnitude); 
     minMaxLoc(gradient_magnitude, 0, &max_val);
-    gradient_magnitude = 1.0 - gradient_magnitude / max_val;
+    gradient_magnitude.convertTo(gradient_magnitude, CV_32F, -1/max_val, 1.0);
 
     img.copyTo(img_pre_render);
     img.copyTo(img_render);
