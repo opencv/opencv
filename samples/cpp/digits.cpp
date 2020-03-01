@@ -15,7 +15,7 @@ const int SZ = 20;  // size of each digit is SZ x SZ
 const int CLASS_N = 10;
 const char* DIGITS_FN = "digits.png";
 
-static void help()
+static void help(char** argv)
 {
     cout <<
     "\n"
@@ -38,7 +38,7 @@ static void help()
     "    http://www.robots.ox.ac.uk/~vgg/publications/2012/Arandjelovic12/arandjelovic12.pdf\n"
     "\n"
     "Usage:\n"
-    "   ./digits\n" << endl;
+    << argv[0] << endl;
 }
 
 static void split2d(const Mat& image, const Size cell_size, vector<Mat>& cells)
@@ -299,9 +299,9 @@ static void shuffle(vector<Mat>& digits, vector<int>& labels)
     labels = shuffled_labels;
 }
 
-int main()
+int main(int /* argc */, char* argv[])
 {
-    help();
+    help(argv);
 
     vector<Mat> digits;
     vector<int> labels;
