@@ -1599,7 +1599,7 @@ endif()
 # ========================== Objective-C =======================
 if(BUILD_OBJC)
   status("")
-  status("  Objective-C wrappers:" HAVE_opencv_objc                                        THEN YES ELSE NO)
+  status("  Objective-C wrappers:" HAVE_opencv_objc                                                       THEN YES ELSE NO)
 endif()
 
 ocv_cmake_hook(STATUS_DUMP_EXTRA)

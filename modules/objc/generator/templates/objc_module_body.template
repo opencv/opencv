@@ -9,8 +9,6 @@ $imports
 
 @implementation $module
 
-$moduleBodyCode
-
 $methodImplementations
 
 @end

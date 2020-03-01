@@ -20,23 +20,14 @@ else:
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# list of modules + files remap
+# list of modules
 config = None
 ROOT_DIR = None
-FILES_REMAP = {}
-def checkFileRemap(path):
-    path = os.path.realpath(path)
-    if path in FILES_REMAP:
-        return FILES_REMAP[path]
-    assert path[-3:] != '.in', path
-    return path
 
 total_files = 0
 updated_files = 0
 
 module_imports = []
-module_header_code = None
-module_body_code = None
 
 # list of class names, which should be skipped by wrapper generator
 # the list is loaded from misc/objc/gen_dict.json defined for the module and its dependencies
@@ -55,7 +46,7 @@ missing_consts = {}
 type_dict = {
     ""        : {"objc_type" : ""}, # c-tor ret_type
     "void"    : {"objc_type" : "void", "is_primitive" : True},
-    "bool"    : {"objc_type" : "BOOL", "is_primitive" : True},
+    "bool"    : {"objc_type" : "BOOL", "is_primitive" : True, "to_cpp": "(bool)%(n)s"},
     "char"    : {"objc_type" : "char", "is_primitive" : True},
     "int"     : {"objc_type" : "int", "is_primitive" : True, "out_type" : "IntOut*", "out_type_ptr": "%(n)s.ptr", "out_type_ref": "*(int*)(%(n)s.ptr)"},
     "long"    : {"objc_type" : "long", "is_primitive" : True},
@@ -299,7 +290,6 @@ class ClassInfo(GeneralInfo):
                             importBaseClass = '#import "' + self.base + '.h"' if not self.is_base_class else "",
                             forwardDeclarations = "\n".join(self.getForwardDeclarations(M)),
                             enumDeclarations = self.enum_declarations.getvalue(),
-                            moduleHeaderCode = module_header_code,
                             nativePointerHandling = Template(
 """
 #ifdef __cplusplus
@@ -328,7 +318,6 @@ class ClassInfo(GeneralInfo):
     def generateObjcBodyCode(self, m, M):
         return Template(self.objc_body_template + "\n\n").substitute(
                             module = M,
-                            moduleBodyCode = module_body_code,
                             nativePointerHandling=Template(
 """
 - (void)dealloc {
@@ -486,6 +475,7 @@ def build_swift_signature(args):
 
 class ObjectiveCWrapperGenerator(object):
     def __init__(self):
+        self.header_files = []
         self.clear()
 
     def clear(self):
@@ -643,7 +633,9 @@ class ObjectiveCWrapperGenerator(object):
             ci.initCodeStreams(self.Module)
             self.gen_class(ci)
             classObjcHeaderCode = ci.generateObjcHeaderCode(self.module, self.Module)
-            self.save("%s/%s/%s.h" % (output_objc_path, module, ci.objc_name), classObjcHeaderCode)
+            header_file = "%s/%s/%s.h" % (output_objc_path, module, ci.objc_name)
+            self.save(header_file, classObjcHeaderCode)
+            self.header_files.append(header_file)
             classObjcBodyCode = ci.generateObjcBodyCode(self.module, self.Module)
             self.save("%s/%s/%s.mm" % (output_objc_path, module, ci.objc_name), classObjcBodyCode)
             ci.cleanupCodeStreams()
@@ -730,7 +722,7 @@ class ObjectiveCWrapperGenerator(object):
             for a in args:
                 if not "v_type" in type_dict[a.ctype] and not "v_v_type" in type_dict[a.ctype]:
                     cv_name = type_dict[a.ctype].get("to_cpp", "%(n)s") if a.ctype else a.defval
-                    if a.pointer:
+                    if a.pointer and not cv_name == "0":
                         cv_name = "&(" + cv_name + ")"
                     if "O" in a.out and type_dict[a.ctype].get("out_type", ""):
                         cv_name = type_dict[a.ctype].get("out_type_ptr" if a.pointer else "out_type_ref", "%(n)s")
@@ -969,27 +961,56 @@ typedef NS_ENUM(int, {2}) {{
             return "Ptr<" + fullname + ">"
         return fullname
 
+    def finalize(self, output_objc_path):
+        mkdir_p(os.path.join(objc_base_path, "OpenCV-ObjC"))
+        for header_file in self.header_files:
+            copyfile(header_file, os.path.join(output_objc_path, "OpenCV-ObjC", os.path.basename(header_file)))
+        opencv_header_file = os.path.join(output_objc_path, "OpenCV-ObjC", "OpenCV.h")
+        bridge_header_file = os.path.join(output_objc_path, "OpenCV-ObjC-Bridge.h")
+        self.save(opencv_header_file, '\n'.join(['#import <opencv2/OpenCV-ObjC/%s>' % os.path.basename(f) for f in self.header_files]))
+        self.save(bridge_header_file, '\n'.join(['#import "%s"' % os.path.basename(f) for f in self.header_files]))
+        copyfile(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'), os.path.join(dstdir, "CMakeLists.txt"))
+        mkdir_p("./objc_build")
 
-def copy_objc_files(objc_files_dir, objc_base_path, module_path):
+def copy_objc_files(objc_files_dir, objc_base_path, module_path, include = False):
     global total_files, updated_files
     objc_files = []
-    re_filter = re.compile(r'^.+\.(h|m|mm|swift)(.in)?$')
+    re_filter = re.compile(r'^.+\.(h|m|mm|swift)$')
     for root, dirnames, filenames in os.walk(objc_files_dir):
        objc_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
     objc_files = [f.replace('\\', '/') for f in objc_files]
 
-    re_prefix = re.compile(r'^.+[\+/]([^\+]+)\.(h|m|mm|swift)(.in)?$')
+    re_prefix = re.compile(r'^.+[\+/]([^\+]+)\.(h|m|mm|swift)$')
     for objc_file in objc_files:
-        src = checkFileRemap(objc_file)
+        src = objc_file
         m = re_prefix.match(objc_file)
         target_fname = (m.group(1) + '.' + m.group(2)) if m else os.path.basename(objc_file)
         dest = os.path.join(objc_base_path, os.path.join(module_path, target_fname))
-        assert dest[-3:] != '.in', dest + ' | ' + target_fname
         mkdir_p(os.path.dirname(dest))
         total_files += 1
+        if include and m.group(2) == 'h':
+            generator.header_files.append(dest)
         if (not os.path.exists(dest)) or (os.stat(src).st_mtime - os.stat(dest).st_mtime > 1):
             copyfile(src, dest)
             updated_files += 1
+
+def copy_header_files(include_src_dir, include_dst_dir, module):
+    header_files = []
+    re_filter = re.compile(r'^.+\.(h|hpp)$')
+    for root, dirnames, filenames in os.walk(include_src_dir):
+       header_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
+
+    re_prefix = re.compile(r'^' + include_src_dir)
+    for header_file in header_files:
+        src = header_file
+        dest = re_prefix.sub(include_dst_dir, header_file)
+        mkdir_p(os.path.dirname(dest))
+        if (not os.path.exists(dest)) or (os.stat(src).st_mtime - os.stat(dest).st_mtime > 1):
+            copyfile(src, dest)
+
+    opencv_hpp = open(os.path.join(include_dst_dir, 'opencv.hpp'), 'a')
+    opencv_hpp.write("#include \"opencv2/" + module + ".hpp\"\n")
+    opencv_hpp.close()
 
 def sanitize_documentation_string(doc, type):
     lines = doc.splitlines()
@@ -1031,12 +1052,18 @@ if __name__ == "__main__":
         config = json.load(f)
 
     ROOT_DIR = config['rootdir']; assert os.path.exists(ROOT_DIR)
-    FILES_REMAP = { os.path.realpath(os.path.join(ROOT_DIR, f['src'])): f['target'] for f in config['files_remap'] }
-    logging.info("\nRemapped configured files (%d):\n%s", len(FILES_REMAP), pformat(FILES_REMAP))
 
     dstdir = "./gen"
     objc_base_path = os.path.join(dstdir, 'objc'); mkdir_p(objc_base_path)
     objc_test_base_path = os.path.join(dstdir, 'test'); mkdir_p(objc_test_base_path)
+    opencv2_inc_path = os.path.join(dstdir, 'include', 'opencv2'); mkdir_p(opencv2_inc_path)
+    opencv_hpp = open(os.path.join(opencv2_inc_path, "opencv.hpp"), "w+")
+    opencv_hpp.write("//\n//This file is auto-generated. Please don't modify it\n//\n\n")
+    opencv_hpp.write("#pragma once\n\n")
+    opencv_hpp.close()
+    opencv_modules_hpp = open(os.path.join(opencv2_inc_path, "opencv_modules.hpp"), "w+")
+    opencv_modules_hpp.write("// Dummy file\n")
+    opencv_modules_hpp.close()
 
     for (subdir, target_subdir) in [('src/objc', 'objc')]:
         if target_subdir is None:
@@ -1057,12 +1084,11 @@ if __name__ == "__main__":
         logging.info("\n=== MODULE: %s (%s) ===\n" % (module, module_location))
 
         module_imports = []
-        module_header_code = ""
-        module_body_code = ""
         srcfiles = []
         common_headers = []
 
         misc_location = os.path.join(module_location, 'misc/objc')
+        header_location = os.path.join(module_location, 'include/opencv2')
 
         srcfiles_fname = os.path.join(misc_location, 'filelist')
         if os.path.exists(srcfiles_fname):
@@ -1098,23 +1124,22 @@ if __name__ == "__main__":
             ManualFuncs.update(gen_type_dict.get("ManualFuncs", {}))
             func_arg_fix.update(gen_type_dict.get("func_arg_fix", {}))
             namespaces_dict.update(gen_type_dict.get("namespaces_dict", {}))
-            if 'module_objc_h_code' in gen_type_dict:
-                module_header_code = read_contents(checkFileRemap(os.path.join(misc_location, gen_type_dict['module_objc_h_code'])))
-            if 'module_objc_mm_code' in gen_type_dict:
-                module_body_code = read_contents(checkFileRemap(os.path.join(misc_location, gen_type_dict['module_objc_mm_code'])))
             module_imports += gen_type_dict.get("module_imports", [])
 
         objc_files_dir = os.path.join(misc_location, 'src')
         if os.path.exists(objc_files_dir):
-            copy_objc_files(objc_files_dir, objc_base_path, module)
+            copy_objc_files(objc_files_dir, objc_base_path, module, True)
+
+        copy_header_files(header_location, opencv2_inc_path, module)
 
         objc_test_files_dir = os.path.join(misc_location, 'test')
         if os.path.exists(objc_test_files_dir):
-            copy_objc_files(objc_test_files_dir, objc_test_base_path, 'test' + module)
+            copy_objc_files(objc_test_files_dir, objc_test_base_path, 'test' + module, False)
 
         if len(srcfiles) > 0:
             generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers)
         else:
             logging.info("No generated code for module: %s", module)
+    generator.finalize(objc_base_path)
 
     print('Generated files: %d (updated %d)' % (total_files, updated_files))

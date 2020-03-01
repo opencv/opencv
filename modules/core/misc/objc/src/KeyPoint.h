@@ -19,7 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface KeyPoint : NSObject
 
-@property(assign) Point2f* pt;
+@property Point2f* pt;
 @property float size;
 @property float angle;
 @property float response;

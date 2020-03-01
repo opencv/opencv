@@ -214,6 +214,7 @@ class Builder:
             shutil.rmtree(clean_dir)
         buildcmd = self.getBuildCommand(arch, target)
         execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir)
+        execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir + "/modules/objc/objc_build")
         execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-P", "cmake_install.cmake"], cwd = builddir)
 
     def mergeLibs(self, builddir):
@@ -241,6 +242,7 @@ class Builder:
 
         # copy headers from one of build folders
         shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(dstdir, "Headers"))
+        shutil.copytree(os.path.join(builddirs[0], "modules", "objc", "gen", "objc", "OpenCV-ObjC"), os.path.join(dstdir, "Headers", "OpenCV-ObjC"))
 
         # make universal static lib
         libs = [os.path.join(d, "lib", self.getConfiguration(), libname) for d in builddirs]

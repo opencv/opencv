@@ -1,7 +1,5 @@
 {
     "module_imports": ["Point2i", "MinMaxLocResult"],
-    "module_objc_h_code": "src/Core.h.objccode.in",
-    "module_objc_mm_code": "src/Core.mm.objccode.in",
     "class_ignore_list" : [
         "FileNode",
         "FileStorage",
@@ -50,9 +48,6 @@
                     "\n"
                 ]
             },
-            "getVersionMajor"      : {"declaration" : [""], "implementation" : [""] },
-            "getVersionMinor"      : {"declaration" : [""], "implementation" : [""] },
-            "getVersionRevision"   : {"declaration" : [""], "implementation" : [""] },
             "checkHardwareSupport" : {"declaration" : [""], "implementation" : [""] },
             "setUseOptimized"      : {"declaration" : [""], "implementation" : [""] },
             "useOptimized"         : {"declaration" : [""], "implementation" : [""] }
