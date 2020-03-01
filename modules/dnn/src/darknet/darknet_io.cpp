@@ -239,7 +239,6 @@ namespace cv {
                 void setSwish()
                 {
                     cv::dnn::LayerParams activation_param;
-                    activation_param.name = "Swish-name";
                     activation_param.type = "Swish";
 
                     darknet::LayerParameter lp;
@@ -257,7 +256,6 @@ namespace cv {
                 void setLogistic()
                 {
                     cv::dnn::LayerParams activation_param;
-                    activation_param.name = "Sigmoid-name";
                     activation_param.type = "Sigmoid";
 
                     darknet::LayerParameter lp;
@@ -528,7 +526,6 @@ namespace cv {
                 void setScaleChannels(int from)
                 {
                     cv::dnn::LayerParams shortcut_param;
-                    shortcut_param.name = "Scale-name";
                     shortcut_param.type = "Scale";
 
                     darknet::LayerParameter lp;
