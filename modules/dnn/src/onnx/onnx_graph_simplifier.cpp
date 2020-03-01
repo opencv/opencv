@@ -157,25 +157,31 @@ private:
 class ExtractScalesSubgraph : public Subgraph
 {
 public:
-    ExtractScalesSubgraph()
+    ExtractScalesSubgraph(bool castGather)
     {
         input = addNodeToMatch("");
 
         int indexH = addNodeToMatch("Constant");
         int shape1 = addNodeToMatch("Shape", input);
         int gather1 = addNodeToMatch("Gather", shape1, indexH);
-        int castG1 = addNodeToMatch("Cast", gather1);
+
+        if (castGather)
+            gather1 = addNodeToMatch("Cast", gather1);
+
         scaleHNode = addNodeToMatch("Constant");
-        int mul1 = addNodeToMatch("Mul", castG1, scaleHNode);
+        int mul1 = addNodeToMatch("Mul", gather1, scaleHNode);
         int castM1 = addNodeToMatch("Cast", mul1);
         int floor1 = addNodeToMatch("Floor", castM1);
 
         int indexW = addNodeToMatch("Constant");
         int shape2 = addNodeToMatch("Shape", input);
         int gather2 = addNodeToMatch("Gather", shape2, indexW);
-        int castG2 = addNodeToMatch("Cast", gather2);
+
+        if (castGather)
+            gather2 = addNodeToMatch("Cast", gather2);
+
         scaleWNode = addNodeToMatch("Constant");
-        int mul2 = addNodeToMatch("Mul", castG2, scaleWNode);
+        int mul2 = addNodeToMatch("Mul", gather2, scaleWNode);
         int castM2 = addNodeToMatch("Cast", mul2);
         int floor2 = addNodeToMatch("Floor", castM2);
 
@@ -190,19 +196,23 @@ public:
     {
         opencv_onnx::NodeProto* constant_node = inputs[1].dynamicCast<ONNXNodeWrapper>()->node;
         opencv_onnx::TensorProto tensor_proto = constant_node->attribute(0).t();
-        float scaleW = getMatFromTensor(tensor_proto).at<float>(0);
+        Mat scaleW = getMatFromTensor(tensor_proto);
+        CV_Assert(scaleW.total() == 1);
+        scaleW.convertTo(scaleW, CV_32F);
 
         constant_node = inputs[2].dynamicCast<ONNXNodeWrapper>()->node;
         tensor_proto = constant_node->attribute(0).t();
-        float scaleH = getMatFromTensor(tensor_proto).at<float>(0);
+        Mat scaleH = getMatFromTensor(tensor_proto);
+        CV_Assert(scaleH.total() == 1);
+        scaleH.convertTo(scaleH, CV_32F);
 
         opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
         opencv_onnx::AttributeProto* attrH = node->add_attribute();
         attrH->set_name("height_scale");
-        attrH->set_i(scaleH);
+        attrH->set_i(scaleH.at<float>(0));
         opencv_onnx::AttributeProto* attrW = node->add_attribute();
         attrW->set_name("width_scale");
-        attrW->set_i(scaleW);
+        attrW->set_i(scaleW.at<float>(0));
 
         node->mutable_input()->DeleteSubrange(1, 2);  // Remove two last inputs
     }
@@ -215,7 +225,7 @@ protected:
 class UpsampleSubgraph : public ExtractScalesSubgraph
 {
 public:
-    UpsampleSubgraph() : ExtractScalesSubgraph()
+    UpsampleSubgraph(bool castGather) : ExtractScalesSubgraph(castGather)
     {
         int shape = addNodeToMatch("Shape", input);
         int slice = addNodeToMatch("Slice", shape);
@@ -235,7 +245,7 @@ public:
 class ResizeSubgraph1 : public ExtractScalesSubgraph
 {
 public:
-    ResizeSubgraph1() : ExtractScalesSubgraph()
+    ResizeSubgraph1(bool castGather) : ExtractScalesSubgraph(castGather)
     {
         int shape = addNodeToMatch("Shape", input);
         int slice = addNodeToMatch("Slice", shape, addNodeToMatch("Constant"), addNodeToMatch("Constant"), addNodeToMatch("Constant"));
@@ -252,7 +262,7 @@ public:
 class ResizeSubgraph2 : public ExtractScalesSubgraph
 {
 public:
-    ResizeSubgraph2() : ExtractScalesSubgraph()
+    ResizeSubgraph2(bool castGather) : ExtractScalesSubgraph(castGather)
     {
         int constantConcat = addNodeToMatch("Constant");
         int castConcat = addNodeToMatch("Cast", concatId);
@@ -267,9 +277,12 @@ public:
 void simplifySubgraphs(opencv_onnx::GraphProto& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
-    subgraphs.push_back(makePtr<UpsampleSubgraph>());
-    subgraphs.push_back(makePtr<ResizeSubgraph1>());
-    subgraphs.push_back(makePtr<ResizeSubgraph2>());
+    subgraphs.push_back(makePtr<UpsampleSubgraph>(true));
+    subgraphs.push_back(makePtr<ResizeSubgraph1>(true));
+    subgraphs.push_back(makePtr<ResizeSubgraph2>(true));
+    subgraphs.push_back(makePtr<UpsampleSubgraph>(false));
+    subgraphs.push_back(makePtr<ResizeSubgraph1>(false));
+    subgraphs.push_back(makePtr<ResizeSubgraph2>(false));
     subgraphs.push_back(makePtr<SoftMaxSubgraph>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
