@@ -54,7 +54,7 @@ int create_conv_node(graph_t graph, const char* node_name, const char* input_nam
 
     if (input_tensor == nullptr)
     {
-        std::cout << "ERRNO: " << get_tengine_errno() << std::endl;
+        CV_LOG_WARNING(NULL,"Tengine :input_tensor is nullptr . " );
         return -1;
     }
 
@@ -162,7 +162,7 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
 
     if(graph == nullptr)
     {
-        std::cout << "ERRNO: " << get_tengine_errno() << std::endl;
+        CV_LOG_WARNING(NULL,"Tengine :create_graph failed . " );
     }
 
     const char* input_name = "data";
@@ -170,13 +170,13 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
 
     if (create_input_node(graph, input_name, inch, in_h, in_w) < 0)
     {
-        std::cout << "create input failed\n";
+        CV_LOG_WARNING(NULL,"Tengine :create_input_node failed. " );
     }
 
     if (create_conv_node(graph, conv_name, input_name, in_h, in_w, out_h, out_w, kernel_h, kernel_w, 
         stride_h, stride_w, pad_h, pad_w, inch, outch, group, dilation_h, dilation_w, activation, padMode) < 0)
     {
-        std::cout << "create conv node failed\n";
+        CV_LOG_WARNING(NULL,"Tengine :create conv node failed. " );
     }
 
     /* set input/output node */
@@ -185,12 +185,12 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
 
     if (set_graph_input_node(graph, inputs_name, sizeof(inputs_name) / sizeof(char*)) < 0)
     {
-        std::cout << "set inputs failed: ERRNO: " << get_tengine_errno() << std::endl;
+        CV_LOG_WARNING(NULL,"Tengine :set inputs failed . " );
     }
 
     if (set_graph_output_node(graph, outputs_name, sizeof(outputs_name) / sizeof(char*)) < 0)
     {
-        std::cout << "set outputs failed: ERRNO: " << get_tengine_errno() << std::endl;
+        CV_LOG_WARNING(NULL,"Tengine :set outputs failed . " );
     }
 
     /* set input data */
@@ -198,7 +198,7 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
     buf_size     = get_tensor_buffer_size(input_tensor);
     if (buf_size != in_size * FLOAT_TO_REALSIZE)
     {
-        printf("Input data size check failed . buf_size = %d , input_data_size = %d \n", buf_size, in_size);
+        CV_LOG_WARNING(NULL,"Tengine :Input data size check failed . ");
     }
 
     set_tensor_buffer(input_tensor, (float *)input_data, buf_size);
@@ -212,7 +212,7 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
 
     if (buf_size != weight_size * FLOAT_TO_REALSIZE)
     {
-        printf("Input weight size check failed . buf_size = %d , input_weight_size = %d \n", buf_size, weight_size);
+        CV_LOG_WARNING(NULL,"Input weight size check failed . ");
     }
     set_tensor_buffer(weight_tensor, teg_weight, buf_size);
 
@@ -328,7 +328,7 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
     }
     else     
     {
-    //    printf("Not Support by tengine .\n");
+    //    ("Not Support by tengine .\n");
         return false ;
     }
     return true ;
