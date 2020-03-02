@@ -23,6 +23,7 @@
  */
 
 #include <iostream>
+#include <vector>
 #include <opencv2/core/utils/logger.hpp>
 #include "../include/tengine_graph_convolution.hpp"
 namespace cv
@@ -159,96 +160,118 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
 
     /* create graph */
     graph_t graph = create_graph(nullptr, nullptr, nullptr);
+    bool ok = true;
 
     if(graph == nullptr)
     {
         CV_LOG_WARNING(NULL,"Tengine :create_graph failed . " );
+        ok = false;
     }
 
     const char* input_name = "data";
     const char* conv_name  = "conv";
 
-    if (create_input_node(graph, input_name, inch, in_h, in_w) < 0)
+    if (ok && create_input_node(graph, input_name, inch, in_h, in_w) < 0)
     {
         CV_LOG_WARNING(NULL,"Tengine :create_input_node failed. " );
+        ok = false;
     }
 
-    if (create_conv_node(graph, conv_name, input_name, in_h, in_w, out_h, out_w, kernel_h, kernel_w, 
+    if (ok && create_conv_node(graph, conv_name, input_name, in_h, in_w, out_h, out_w, kernel_h, kernel_w, 
         stride_h, stride_w, pad_h, pad_w, inch, outch, group, dilation_h, dilation_w, activation, padMode) < 0)
     {
         CV_LOG_WARNING(NULL,"Tengine :create conv node failed. " );
+        ok = false;
     }
 
     /* set input/output node */
     const char* inputs_name[]  = {input_name};
     const char* outputs_name[] = {conv_name};
 
-    if (set_graph_input_node(graph, inputs_name, sizeof(inputs_name) / sizeof(char*)) < 0)
+    if (ok && set_graph_input_node(graph, inputs_name, sizeof(inputs_name) / sizeof(char*)) < 0)
     {
         CV_LOG_WARNING(NULL,"Tengine :set inputs failed . " );
+        ok = false;
     }
 
-    if (set_graph_output_node(graph, outputs_name, sizeof(outputs_name) / sizeof(char*)) < 0)
+    if (ok && set_graph_output_node(graph, outputs_name, sizeof(outputs_name) / sizeof(char*)) < 0)
     {
         CV_LOG_WARNING(NULL,"Tengine :set outputs failed . " );
+        ok = false;
     }
 
     /* set input data */
-    input_tensor = get_graph_input_tensor(graph, 0, 0);
-    buf_size     = get_tensor_buffer_size(input_tensor);
-    if (buf_size != in_size * FLOAT_TO_REALSIZE)
+    if (ok)
     {
-        CV_LOG_WARNING(NULL,"Tengine :Input data size check failed . ");
-    }
-
-    set_tensor_buffer(input_tensor, (float *)input_data, buf_size);
-    release_graph_tensor(input_tensor);
-
-    /* create convolution node */
-    /* set weight node */
-    conv_node     = get_graph_node(graph, "conv");
-    weight_tensor = get_node_input_tensor(conv_node, 1);
-    buf_size      = get_tensor_buffer_size(weight_tensor);
-
-    if (buf_size != weight_size * FLOAT_TO_REALSIZE)
-    {
-        CV_LOG_WARNING(NULL,"Input weight size check failed . ");
-    }
-    set_tensor_buffer(weight_tensor, teg_weight, buf_size);
-
-    /* set bias node */
-    input_num = get_node_input_number(conv_node);
-    if (input_num > 2)
-    {
-        bias_tensor = get_node_input_tensor(conv_node, 2);
-        buf_size    = get_tensor_buffer_size(bias_tensor);
-        if (buf_size != bias_size * FLOAT_TO_REALSIZE)
+        input_tensor = get_graph_input_tensor(graph, 0, 0);
+        buf_size     = get_tensor_buffer_size(input_tensor);
+        if (buf_size != in_size * FLOAT_TO_REALSIZE)
         {
-            CV_LOG_WARNING(NULL,"Tengine :Input bias size check failed . ");
+            CV_LOG_WARNING(NULL,"Tengine :Input data size check failed . ");
+            ok = false;
         }
-        set_tensor_buffer(bias_tensor, teg_bias, buf_size);
     }
 
-    /* set output data */
-    output_tensor = get_node_output_tensor(conv_node, 0);
-    int ret = set_tensor_buffer(output_tensor, output_data, out_size * FLOAT_TO_REALSIZE);
-    if(ret)
+    if (ok)
     {
-        CV_LOG_WARNING(NULL,"Tengine :Set output tensor buffer failed . " );
+        set_tensor_buffer(input_tensor, (float *)input_data, buf_size);
+        release_graph_tensor(input_tensor);
+
+        /* create convolution node */
+        /* set weight node */
+        conv_node     = get_graph_node(graph, "conv");
+        weight_tensor = get_node_input_tensor(conv_node, 1);
+        buf_size      = get_tensor_buffer_size(weight_tensor);
+
+        if (buf_size != weight_size * FLOAT_TO_REALSIZE)
+        {
+            CV_LOG_WARNING(NULL,"Input weight size check failed . ");
+            ok = false;
+        }
+    }
+    
+    if (ok)
+    {
+        set_tensor_buffer(weight_tensor, teg_weight, buf_size);
+
+        /* set bias node */
+        input_num = get_node_input_number(conv_node);
+        if (input_num > 2)
+        {
+            bias_tensor = get_node_input_tensor(conv_node, 2);
+            buf_size    = get_tensor_buffer_size(bias_tensor);
+            if (buf_size != bias_size * FLOAT_TO_REALSIZE)
+            {
+                CV_LOG_WARNING(NULL,"Tengine :Input bias size check failed . ");
+                ok = false;
+            }
+            else set_tensor_buffer(bias_tensor, teg_bias, buf_size);
+        }
     }
 
+    if (ok)
+    {
+        /* set output data */
+        output_tensor = get_node_output_tensor(conv_node, 0);
+        int ret = set_tensor_buffer(output_tensor, output_data, out_size * FLOAT_TO_REALSIZE);
+        if(ret)
+        {
+            CV_LOG_WARNING(NULL,"Tengine :Set output tensor buffer failed . " );
+        }
+    }
+
+    if (!ok)
+    {
+        destroy_graph(graph);
+        return nullptr;
+    }
     return graph;
 }
 
 void tengine_set_Winograd(bool flag)
 {
-    if(flag){
-        // Winograd on .
-        setenv("NO_WINO","1",0);
-    }else{
-        //Winograd off . 
-        setenv("NO_WINO","1",1);
-    }
+    // Winograd on/off .
+    setenv("NO_WINO", "1", (int)!flag);
 }
 
 bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w, 
@@ -259,28 +282,32 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
                         size_t wstep, std::string padMode)
 {
     graph_t graph = NULL;
+    std::vector<float> teg_weight_vec;
     float *teg_weight = NULL;
     int kernel_inwh = (inch / group) * kernel_w * kernel_h;
     // Do not using the activation fuse mode, just convolution only.
     int activation = -1; 
   
-    if (kernel_s == 2 && kernel_h == kernel_w && pad_h == pad_w
-                                    && dilation_h == dilation_w && stride_h == stride_w
-                                    && out_b == 1 && pad_h < 10) // just for Conv2D
+    if (!(kernel_s == 2 && kernel_h == kernel_w && pad_h == pad_w
+        && dilation_h == dilation_w && stride_h == stride_w
+        && out_b == 1 && pad_h < 10)) // just for Conv2D
+        return false;
+
     {
-        printf("Tengine: input (1 x %d x %d x %d),output (%d x %d x %d x %d), kernel (%d x %d), stride (%d x %d), dilation (%d x %d), pad (%d x %d).\n",
+        /*printf("Tengine: input (1 x %d x %d x %d),output (%d x %d x %d x %d), kernel (%d x %d), stride (%d x %d), dilation (%d x %d), pad (%d x %d).\n",
                inch, in_h, in_w,
                out_b,outch,out_h,out_w,
                kernel_w, kernel_h, 
                stride_w, stride_h, 
                dilation_w, dilation_h, 
-               pad_w,pad_h);
+               pad_w,pad_h);*/
         tengine_set_Winograd(false);    // Default not using the winograd algorithm.
     
         // weight
         if (kernel_inwh != wstep)
         {
-            teg_weight = (float *)malloc(kernel_inwh * outch * sizeof(float));
+            teg_weight_vec.resize(kernel_inwh * outch);
+            teg_weight = &teg_weight_vec[0];
             for (int i=0; i<outch; i++)
             {
                 memcpy(teg_weight+i*kernel_inwh, kernel_+i*wstep, kernel_inwh*FLOAT_TO_REALSIZE);
@@ -305,9 +332,6 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
         if(prerun_graph(graph) < 0)
         {
             CV_LOG_WARNING(NULL, "Tengine :prerun_graph failed .");
-
-            postrun_graph(graph);
-            destroy_graph(graph);           
             return false ;
         }
 
@@ -315,21 +339,11 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
         if(run_graph(graph, 1) < 0)
         {
             CV_LOG_WARNING(NULL,"Tengine :run_graph failed .");
-            postrun_graph(graph);
-            destroy_graph(graph);       
             return false ;
         }
 
-        /* release the resource */
-        if(teg_weight && (teg_weight != kernel_))
-            free(teg_weight);
         postrun_graph(graph);
         destroy_graph(graph);
-    }
-    else     
-    {
-    //    ("Not Support by tengine .\n");
-        return false ;
     }
     return true ;
 }
