@@ -246,20 +246,38 @@ def softmax(x):
     y = e_x / e_x.sum(axis = 0)
     return y
 
-#function for drawing initial bounding box
+# #function for drawing initial bounding box
+# def get_bb(event, x, y, flag, param):
+#     global point, cx, cy, w, h
+#     if event == cv.EVENT_LBUTTONDOWN:
+#         point = [(x, y)]
+
+#     elif event == cv.EVENT_LBUTTONUP:
+#         point.append((x, y))
+#         cv.rectangle(frame, point[0], point[1], (0, 255, 255), 3)
+
+#         cx = point[0][0] - (point[0][0] - point[1][0]) / 2
+#         cy = point[0][1] - (point[0][1]- point[1][1]) / 2
+#         w = abs(point[0][0] - point[1][0])
+#         h = abs(point[0][1] - point[1][1])
+
 def get_bb(event, x, y, flag, param):
-    global point, cx, cy, w, h
+    global point1, point2, cx, cy, w, h, drawing
+
     if event == cv.EVENT_LBUTTONDOWN:
-        point = [(x, y)]
-
+        if drawing == False:
+            drawing = True
+            point1 = (x, y)
+        else:
+            drawing = False
+    elif event == cv.EVENT_MOUSEMOVE:
+        if drawing == True:
+            point2 = (x, y)
     elif event == cv.EVENT_LBUTTONUP:
-        point.append((x, y))
-        cv.rectangle(frame, point[0], point[1], (0, 255, 255), 3)
-
-        cx = point[0][0] - (point[0][0] - point[1][0]) / 2
-        cy = point[0][1] - (point[0][1]- point[1][1]) / 2
-        w = abs(point[0][0] - point[1][0])
-        h = abs(point[0][1] - point[1][1])
+        cx = point1[0] - (point1[0] - point2[0]) / 2
+        cy = point1[1] - (point1[1] - point2[1]) / 2
+        w = abs(point1[0] - point2[0])
+        h = abs(point1[1] - point2[1])
 
 #Reading paths to onnx files with models from command line when launching tracking.
 #--net *absolute path to onnx file with net*
@@ -279,11 +297,28 @@ kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
 cap = cv.VideoCapture(0, cv.CAP_V4L2)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
+
+# ret, frame = cap.read()
+# cv.namedWindow("DaSiamRPN")
+# cv.setMouseCallback("DaSiamRPN", get_bb)
+# cv.imshow("DaSiamRPN", frame)
+# cv.waitKey(0)
+
 ret, frame = cap.read()
 cv.namedWindow("DaSiamRPN")
 cv.setMouseCallback("DaSiamRPN", get_bb)
-cv.imshow("DaSiamRPN", frame)
-cv.waitKey(0)
+drawing = False
+point1 = ()
+point2 = ()
+while True:
+    ret, frame = cap.read()
+    if point1 and point2:
+        cv.rectangle(frame, point1, point2, (0, 255, 255), 3)
+    cv.imshow("DaSiamRPN", frame)
+    key = cv.waitKey(1)
+    if key == 27:
+        break
+
 target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
 state = SiamRPN_init(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
 
@@ -306,7 +341,9 @@ while (cap.isOpened):
     w, h = state['target_sz']
     cx, cy = state['target_pos']
 
-    cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2), int(w), int(h)), (0, 255, 255), 3)
+    # cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2), int(w), int(h)), (0, 255, 255), 3)
+    cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2)), (int(cx - w // 2) + int(w), int(cy - h // 2) + int(h)),(0, 255, 255), 3)
+
     cv.imshow('DaSiamRPN', frame)
 
     key = cv.waitKey(1)
