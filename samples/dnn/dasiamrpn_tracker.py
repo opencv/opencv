@@ -262,8 +262,7 @@ def softmax(x):
 #         h = abs(point[0][1] - point[1][1])
 
 def get_bb(event, x, y, flag, param):
-    global point1, point2, cx, cy, w, h, drawing
-
+    global point1, point2, cx, cy, w, h, drawing, mark
     if event == cv.EVENT_LBUTTONDOWN:
         if drawing == False:
             drawing = True
@@ -278,6 +277,7 @@ def get_bb(event, x, y, flag, param):
         cy = point1[1] - (point1[1] - point2[1]) / 2
         w = abs(point1[0] - point2[0])
         h = abs(point1[1] - point2[1])
+        mark = False
 
 #Reading paths to onnx files with models from command line when launching tracking.
 #--net *absolute path to onnx file with net*
@@ -310,14 +310,16 @@ cv.setMouseCallback("DaSiamRPN", get_bb)
 drawing = False
 point1 = ()
 point2 = ()
-while True:
+mark = True
+while mark == True:
     ret, frame = cap.read()
     if point1 and point2:
         cv.rectangle(frame, point1, point2, (0, 255, 255), 3)
     cv.imshow("DaSiamRPN", frame)
-    key = cv.waitKey(1)
-    if key == 27:
-        break
+    cv.waitKey(1)
+    # key = cv.waitKey(1)
+    # if key == 27:
+    #     break
 
 target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
 state = SiamRPN_init(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
