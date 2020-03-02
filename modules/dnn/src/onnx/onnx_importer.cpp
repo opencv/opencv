@@ -367,45 +367,101 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Slice")
         {
-            if (layerParams.has("steps")) {
-                DictValue steps = layerParams.get("steps");
-                for (int i = 0; i < steps.size(); ++i) {
-                    if (steps.get<int>(i) != 1)
-                        CV_Error(Error::StsNotImplemented,
-                                 "Slice layer only supports steps = 1");
-                }
-            }
-
             int axis = 0;
-            if (layerParams.has("axes")) {
-                DictValue axes = layerParams.get("axes");
-                for (int i = 1; i < axes.size(); ++i) {
-                    CV_Assert(axes.get<int>(i - 1) == axes.get<int>(i) - 1);
-                }
-                axis = axes.get<int>(0);
-            }
-            layerParams.set("axis", axis);
-
-            DictValue starts = layerParams.get("starts");
-            DictValue ends = layerParams.get("ends");
-            CV_Assert(starts.size() == ends.size());
-
             std::vector<int> begin;
             std::vector<int> end;
-            if (axis > 0) {
-                begin.resize(axis, 0);
-                end.resize(axis, -1);
-            }
+            int inp_size = node_proto.input_size();
 
-            for (int i = 0; i < starts.size(); ++i)
-            {
-                begin.push_back(starts.get<int>(i));
-                int finish = ends.get<int>(i);
-                end.push_back((finish < 0) ? --finish : finish); // numpy doesn't include last dim
+            if (inp_size == 1) {
+                if (layerParams.has("steps")) {
+                    DictValue steps = layerParams.get("steps");
+                    for (int i = 0; i < steps.size(); ++i) {
+                        if (steps.get<int>(i) != 1)
+                            CV_Error(Error::StsNotImplemented,
+                                "Slice layer only supports steps = 1");
+                    }
+                }
+                if (layerParams.has("axes")) {
+                    DictValue axes = layerParams.get("axes");
+                    for (int i = 1; i < axes.size(); ++i) {
+                        CV_Assert(axes.get<int>(i - 1) == axes.get<int>(i) - 1);
+                    }
+                    axis = axes.get<int>(0);
+                }
+
+                DictValue starts = layerParams.get("starts");
+                DictValue ends = layerParams.get("ends");
+                CV_Assert(starts.size() == ends.size());
+
+                if (axis > 0) {
+                    begin.resize(axis, 0);
+                    end.resize(axis, -1);
+                }
+                for (int i = 0; i < starts.size(); ++i)
+                {
+                    begin.push_back(starts.get<int>(i));
+                    int finish = ends.get<int>(i);
+                    end.push_back((finish < 0) ? --finish : finish); // numpy doesn't include last dim
+                }
+            } else {
+                CV_Assert(inp_size >= 3);
+                for (int i = 1; i < inp_size; i++) {
+                    CV_Assert(constBlobs.find(node_proto.input(i)) != constBlobs.end());
+                }
+                Mat start_blob = getBlob(node_proto, constBlobs, 1);
+                Mat end_blob   = getBlob(node_proto, constBlobs, 2);
+                CV_Assert(start_blob.total() == end_blob.total());
+
+                if (inp_size > 3) {
+                    Mat axes_blob = getBlob(node_proto, constBlobs, 3);
+                    const int* axes = (int*)axes_blob.data;
+                    for (int i = 1; i < axes_blob.total(); ++i) {
+                        CV_Assert(axes[i - 1] == axes[i] - 1);
+                    }
+                    axis = axes[0];
+                }
+
+                const int* starts = (int*)start_blob.data;
+                const int* ends = (int*)end_blob.data;
+                std::vector<int> begin;
+                std::vector<int> end;
+                if (axis > 0) {
+                    begin.resize(axis, 0);
+                    end.resize(axis, -1);
+                }
+                std::copy(starts, starts + start_blob.total(), std::back_inserter(begin));
+                for (int i = 0; i < end_blob.total(); ++i)
+                {
+                    int finish = ends[i];
+                    end.push_back((finish < 0) ? --finish : finish); // numpy doesn't include last dim
+                }
+
+                if (inp_size == 5) {
+                    CV_Assert(constBlobs.find(node_proto.input(4)) != constBlobs.end());
+                    Mat step_blob = getBlob(node_proto, constBlobs, 4);
+                    double min_val, max_val;
+                    minMaxLoc(getBlob(node_proto, constBlobs, 4), &min_val, &max_val, NULL, NULL);
+                    if (min_val != max_val || min_val != 1) {
+                        CV_Error(Error::StsNotImplemented,
+                            "Slice layer only supports steps = 1");
+                    }
+                }
             }
             layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
             layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
-         }
+            layerParams.set("axis", axis);
+
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                Mat inp = getBlob(node_proto, constBlobs, 0);
+                std::vector<Mat> inputs, sliced;
+                inputs.push_back(inp);
+                runLayer(layerParams, inputs, sliced);
+                CV_Assert(sliced.size() == 1);
+                constBlobs.insert(std::make_pair(layerParams.name, sliced[0]));
+                continue;
+            }
+        }
         else if (layer_type == "Split")
         {
             if (layerParams.has("split"))
