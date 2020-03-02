@@ -277,21 +277,30 @@ input = Variable(torch.randn(1, 2, 3, 4))
 resize = nn.Upsample(size=[6, 8], mode='bilinear')
 save_data_and_model("resize_bilinear", input, resize)
 
-input = Variable(torch.randn(1, 3, 4, 5))
-upsample_unfused = nn.Sequential(
-        nn.Conv2d(3, 2, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(2),
-        nn.Upsample(scale_factor=2, mode='nearest')
-        )
-save_data_and_model("upsample_unfused_opset9_torch1.4", input, upsample_unfused)
+if torch.__version__ == '1.4.0':
+    input = Variable(torch.randn(1, 3, 4, 5))
+    upsample_unfused = nn.Sequential(
+            nn.Conv2d(3, 2, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(2),
+            nn.Upsample(scale_factor=2, mode='nearest')
+            )
+    save_data_and_model("upsample_unfused_opset9_torch1.4", input, upsample_unfused)
 
-input = Variable(torch.randn(1, 3, 4, 5))
-resize_nearest_unfused = nn.Sequential(
-        nn.Conv2d(3, 2, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(2),
-        nn.Upsample(scale_factor=2, mode='nearest')
-        )
-save_data_and_model("resize_nearest_unfused_opset11_torch1.4", input, resize_nearest_unfused, 11)
+    input = Variable(torch.randn(1, 3, 4, 5))
+    resize_nearest_unfused = nn.Sequential(
+            nn.Conv2d(3, 2, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(2),
+            nn.Upsample(scale_factor=2, mode='nearest')
+            )
+    save_data_and_model("resize_nearest_unfused_opset11_torch1.4", input, resize_nearest_unfused, 11)
+
+if torch.__version__ == '1.2.0':
+    input = Variable(torch.randn(1, 2, 3, 4))
+    resize_nearest_unfused = nn.Sequential(
+            nn.BatchNorm2d(2),
+            nn.Upsample(scale_factor=2, mode='nearest')
+            )
+    save_data_and_model("upsample_unfused_torch1.2", input, resize_nearest_unfused)
 
 class Unsqueeze(nn.Module):
 
