@@ -2029,6 +2029,29 @@ TEST(Core_MatExpr, issue_16655)
         << "Mat: CV_8UC3 != " << typeToString(ab_mat.type());
 }
 
+TEST(Core_MatExpr, issue_16689)
+{
+    Mat a(Size(10, 5), CV_32FC1, 5);
+    Mat b(Size(10, 5), CV_32FC1, 2);
+    Mat bt(Size(5, 10), CV_32FC1, 3);
+    {
+        MatExpr r = a * bt;  // gemm
+        EXPECT_EQ(Mat(r).size(), r.size()) << "[10x5] x [5x10] => [5x5]";
+    }
+    {
+        MatExpr r = a * b.t();  // gemm
+        EXPECT_EQ(Mat(r).size(), r.size()) << "[10x5] x [10x5].t() => [5x5]";
+    }
+    {
+        MatExpr r = a.t() * b;  // gemm
+        EXPECT_EQ(Mat(r).size(), r.size()) << "[10x5].t() x [10x5] => [10x10]";
+    }
+    {
+        MatExpr r = a.t() * bt.t();  // gemm
+        EXPECT_EQ(Mat(r).size(), r.size()) << "[10x5].t() x [5x10].t() => [10x10]";
+    }
+}
+
 #ifdef HAVE_EIGEN
 TEST(Core_Eigen, eigen2cv_check_Mat_type)
 {
