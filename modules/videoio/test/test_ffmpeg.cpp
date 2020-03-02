@@ -573,5 +573,41 @@ TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
     readers.clear();
 }
 
+typedef std::pair<VideoCaptureProperties, double> cap_property_t;
+typedef std::vector<cap_property_t> cap_properties_t;
+typedef std::pair<std::string, cap_properties_t> ffmpeg_cap_properties_param_t;
+typedef testing::TestWithParam<ffmpeg_cap_properties_param_t> ffmpeg_cap_properties;
+
+TEST_P(ffmpeg_cap_properties, can_read_property)
+{
+    ffmpeg_cap_properties_param_t parameters = GetParam();
+    const std::string path = parameters.first;
+    const cap_properties_t properties = parameters.second;
+
+    VideoCapture cap(findDataFile(path), CAP_FFMPEG);
+    ASSERT_TRUE(cap.isOpened()) << "Can not open " << findDataFile(path);
+
+    for (std::size_t i = 0; i < properties.size(); ++i)
+    {
+        const std::pair<VideoCaptureProperties, double>& prop = properties[i];
+        EXPECT_DOUBLE_EQ(cap.get(static_cast<int>(prop.first)), prop.second)
+            << "Property " << static_cast<int>(prop.first) << " has wrong value";
+    }
+}
+
+cap_properties_t loadBigBuckBunnyFFProbeResults() {
+    cap_property_t properties[] = { cap_property_t(CAP_PROP_BITRATE, 5851.),
+                                    cap_property_t(CAP_PROP_FPS, 24.),
+                                    cap_property_t(CAP_PROP_FRAME_HEIGHT, 384.),
+                                    cap_property_t(CAP_PROP_FRAME_WIDTH, 672.) };
+    return cap_properties_t(properties, properties + sizeof(properties) / sizeof(cap_property_t));
+}
+
+const ffmpeg_cap_properties_param_t videoio_ffmpeg_properties[] = {
+    ffmpeg_cap_properties_param_t("video/big_buck_bunny.avi", loadBigBuckBunnyFFProbeResults())
+};
+
+INSTANTIATE_TEST_CASE_P(videoio, ffmpeg_cap_properties, testing::ValuesIn(videoio_ffmpeg_properties));
+
 #endif
 }} // namespace
