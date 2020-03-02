@@ -418,6 +418,7 @@ TEST_P(Test_ONNX_layers, Slice)
     testONNXModels("slice", npy, 0, 0, false, false);
 #else
     testONNXModels("slice");
+    testONNXModels("slice_opset_11");
 #endif
 }
 

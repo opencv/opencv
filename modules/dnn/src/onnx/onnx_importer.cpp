@@ -423,8 +423,6 @@ void ONNXImporter::populateNet(Net dstNet)
 
                 const int* starts = (int*)start_blob.data;
                 const int* ends = (int*)end_blob.data;
-                std::vector<int> begin;
-                std::vector<int> end;
                 if (axis > 0) {
                     begin.resize(axis, 0);
                     end.resize(axis, -1);
