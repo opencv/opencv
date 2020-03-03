@@ -1284,15 +1284,15 @@ public:
         int outch = outputs[0].size[1]; 	// outch
         int out_h = outputs[0].size[2]; 	// out_h
         int out_w = outputs[0].size[3]; 	// out_w
-            
+
         float *input_  = inputs[0].ptr<float>();
         float *output_ = outputs[0].ptr<float>();
-        float *kernel_ = weightsMat.ptr<float>(); 
+        float *kernel_ = weightsMat.ptr<float>();
         float *teg_bias = &biasvec[0];
-        
+
         bool tengine_ret = tengine_forward(input_, inch, ngroups, in_h, in_w,
                                     output_, out_b, outch, out_h, out_w,
-                                    kernel_, kernel_size.size(), kernel.height, kernel.width, 
+                                    kernel_, kernel_size.size(), kernel.height, kernel.width,
                                     teg_bias, stride.height, stride.width,
                                     pad.height,  pad.width, dilation.height, dilation.width,
                                     weightsMat.step1(), padMode);
@@ -1300,12 +1300,12 @@ public:
         if((true == tengine_ret) && activ )
         {
             int out_cstep = out_h * out_w;	    // out_cstep
-            
+
             ActivationLayer* activ_ = activ.get();
             activ_->forwardSlice(output_, output_, out_cstep, out_cstep, 0, outch);
         }
         if(false == tengine_ret)
-#endif 
+#endif
         {
             int nstripes = std::max(getNumThreads(), 1);
 

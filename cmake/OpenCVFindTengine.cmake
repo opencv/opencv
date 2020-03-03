@@ -84,7 +84,7 @@ ELSE()
 
 		set(HAVE_TENGINE 1)
 
-		# android system 
+		# android system
 		if(ANDROID)
 			if(${ANDROID_ABI} STREQUAL "armeabi-v7a")
 				set(CONFIG_ARCH_ARM32 ON)
@@ -98,7 +98,7 @@ ELSE()
 			set(CONFIG_ARCH_ARM32 ON)
 		elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64) ## AARCH64
 			set(CONFIG_ARCH_ARM64 ON)
-		endif()	
+		endif()
 
 		set(BUILT_IN_OPENCV ON) ## set for tengine compile discern .
 		set(Tengine_INCLUDE_DIR  ${DEFAULT_OPENCV_TENGINE_SOURCE_PATH}/core/include)
@@ -107,8 +107,8 @@ ELSE()
 		add_subdirectory("${DEFAULT_OPENCV_TENGINE_SOURCE_PATH}")
 
 	else()
-	# Not need build tengine . 
-		# Tengine_LIB 
+	# Not need build tengine .
+		# Tengine_LIB
 		#    Check include files
 	#	MESSAGE(STATUS "Tengine_INCLUDE_DIR = ${Tengine_INCLUDE_DIR}")
 	#	FIND_PATH(Tengine_INCLUDE_DIR NAMES cpu_device.h tengine_c_api.h tengine_c_compat.h tengine_operations.h PATHS ${Tengine_INCLUDE_DIR} NO_DEFAULT_PATH)

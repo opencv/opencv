@@ -55,8 +55,8 @@ int create_input_node(graph_t graph, const char* node_name, int inch, int in_h, 
     return 0;
 }
 
-int create_conv_node(graph_t graph, const char* node_name, const char* input_name, int in_h, int in_w, int out_h, int out_w, 
-    int kernel_h, int kernel_w, int stride_h, int stride_w, int pad_h, int pad_w, int inch, int outch, int group, 
+int create_conv_node(graph_t graph, const char* node_name, const char* input_name, int in_h, int in_w, int out_h, int out_w,
+    int kernel_h, int kernel_w, int stride_h, int stride_w, int pad_h, int pad_w, int inch, int outch, int group,
     int dilation_h, int dilation_w, int activation, std::string padMode)
 {
     node_t conv_node      = create_graph_node(graph, node_name, "Convolution");
@@ -119,7 +119,7 @@ int create_conv_node(graph_t graph, const char* node_name, const char* input_nam
 
             if (out_h_temp < out_h)
                 pad_h1 += 1;
-            if (out_w_temp < out_w)    
+            if (out_w_temp < out_w)
                 pad_w1 += 1;
         }
     }
@@ -137,18 +137,18 @@ int create_conv_node(graph_t graph, const char* node_name, const char* input_nam
     set_node_attr_int(conv_node, "group", &group);
     set_node_attr_int(conv_node, "dilation_h", &dilation_h);
     set_node_attr_int(conv_node, "dilation_w", &dilation_w);
-    set_node_attr_int(conv_node, "activation", &activation); 
+    set_node_attr_int(conv_node, "activation", &activation);
 
     release_graph_node(conv_node);
 
     return 0;
 }
 
-graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int in_w, 
-                        float *output_data, int outch, int out_h, int out_w, 
-                        int kernel_h, int kernel_w, 
+graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int in_w,
+                        float *output_data, int outch, int out_h, int out_w,
+                        int kernel_h, int kernel_w,
                         int stride_h,int stride_w,
-                        int pad_h, int pad_w,  int dilation_h, int dilation_w, int activation, 
+                        int pad_h, int pad_w,  int dilation_h, int dilation_w, int activation,
                         float * teg_weight , float * teg_bias , std::string padMode)
 {
     node_t    conv_node     = NULL;
@@ -186,7 +186,7 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
         ok = false;
     }
 
-    if (ok && create_conv_node(graph, conv_name, input_name, in_h, in_w, out_h, out_w, kernel_h, kernel_w, 
+    if (ok && create_conv_node(graph, conv_name, input_name, in_h, in_w, out_h, out_w, kernel_h, kernel_w,
         stride_h, stride_w, pad_h, pad_w, inch, outch, group, dilation_h, dilation_w, activation, padMode) < 0)
     {
         CV_LOG_WARNING(NULL,"Tengine :create conv node failed. " );
@@ -238,7 +238,7 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
             ok = false;
         }
     }
-    
+
     if (ok)
     {
         set_tensor_buffer(weight_tensor, teg_weight, buf_size);
@@ -283,11 +283,11 @@ void tengine_set_Winograd(bool flag)
     setenv("NO_WINO", "1", (int)!flag);
 }
 
-bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w, 
-                        float *output_, int out_b, int outch, int out_h, int out_w, 
-                        float *kernel_, int kernel_s ,int kernel_h, int kernel_w, 
+bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
+                        float *output_, int out_b, int outch, int out_h, int out_w,
+                        float *kernel_, int kernel_s ,int kernel_h, int kernel_w,
                         float *teg_bias, int stride_h,int stride_w,
-                        int pad_h, int pad_w,  int dilation_h, int dilation_w, 
+                        int pad_h, int pad_w,  int dilation_h, int dilation_w,
                         size_t wstep, std::string padMode)
 {
     graph_t graph = NULL;
@@ -295,8 +295,8 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
     float *teg_weight = NULL;
     int kernel_inwh = (inch / group) * kernel_w * kernel_h;
     // Do not using the activation fuse mode, just convolution only.
-    int activation = -1; 
-  
+    int activation = -1;
+
     if (!(kernel_s == 2 && kernel_h == kernel_w && pad_h == pad_w
         && dilation_h == dilation_w && stride_h == stride_w
         && out_b == 1 && pad_h < 10)) // just for Conv2D
@@ -306,12 +306,12 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
         /*printf("Tengine: input (1 x %d x %d x %d),output (%d x %d x %d x %d), kernel (%d x %d), stride (%d x %d), dilation (%d x %d), pad (%d x %d).\n",
                inch, in_h, in_w,
                out_b,outch,out_h,out_w,
-               kernel_w, kernel_h, 
-               stride_w, stride_h, 
-               dilation_w, dilation_h, 
+               kernel_w, kernel_h,
+               stride_w, stride_h,
+               dilation_w, dilation_h,
                pad_w,pad_h);*/
         tengine_set_Winograd(false);    // Default not using the winograd algorithm.
-    
+
         // weight
         if (kernel_inwh != wstep)
         {
