@@ -6445,16 +6445,19 @@ struct Image2D::Impl
                                                 CL_MEM_OBJECT_IMAGE2D, numFormats,
                                                 NULL, &numFormats);
         CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, NULL)");
-        AutoBuffer<cl_image_format> formats(numFormats);
-        err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
-                                         CL_MEM_OBJECT_IMAGE2D, numFormats,
-                                         formats.data(), NULL);
-        CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
-        for (cl_uint i = 0; i < numFormats; ++i)
+        if (numFormats > 0)
         {
-            if (!memcmp(&formats[i], &format, sizeof(format)))
+            AutoBuffer<cl_image_format> formats(numFormats);
+            err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
+                                             CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                             formats.data(), NULL);
+            CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
+            for (cl_uint i = 0; i < numFormats; ++i)
             {
-                return true;
+                if (!memcmp(&formats[i], &format, sizeof(format)))
+                {
+                    return true;
+                }
             }
         }
         return false;
