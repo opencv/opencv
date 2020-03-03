@@ -381,6 +381,7 @@ TEST_P(Test_ONNX_layers, DynamicReshape)
         if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     }
     testONNXModels("dynamic_reshape");
+    testONNXModels("dynamic_reshape_opset_11");
 }
 
 TEST_P(Test_ONNX_layers, Reshape)
