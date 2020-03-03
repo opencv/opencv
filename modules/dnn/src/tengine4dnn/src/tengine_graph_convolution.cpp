@@ -21,6 +21,7 @@
  * Copyright (c) 2020, OPEN AI LAB
  * Author: qtang@openailab.com
  */
+#ifdef HAVE_TENGINE
 
 #include <iostream>
 #include <vector>
@@ -29,6 +30,11 @@
 #include <opencv2/core/utils/logger.hpp>
 
 #include "../include/tengine_graph_convolution.hpp"
+
+#include "tengine_c_api.h"
+#include "tengine_c_compat.h"
+#include "tengine_operations.h"
+
 namespace cv
 {
 namespace dnn
@@ -353,3 +359,4 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
 
 }
 }
+#endif

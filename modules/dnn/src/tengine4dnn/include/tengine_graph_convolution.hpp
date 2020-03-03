@@ -27,10 +27,6 @@
 
 #define FLOAT_TO_REALSIZE (4)
 
-#include "tengine_c_api.h"
-#include "tengine_c_compat.h"
-#include "tengine_operations.h"
-
 /*!
  * @brief
  *
