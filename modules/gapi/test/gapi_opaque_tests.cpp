@@ -37,7 +37,7 @@ G_TYPED_KERNEL(PaintPoint, <GMat(GPointOpaque, int, int, cv::Size)>, "test.opaqu
 };
 
 struct MyCustomType{
-    int num;
+    int num = -1;
     std::string s;
 };
 
