@@ -24,7 +24,10 @@
 
 #include <iostream>
 #include <vector>
+
+#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
+
 #include "../include/tengine_graph_convolution.hpp"
 namespace cv
 {
