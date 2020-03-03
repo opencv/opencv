@@ -469,11 +469,8 @@ public:
             {
                 CV_Assert(layer.bottom_size() == 1 || layer.bottom_size() == 2);
                 type = "Resize";
-                String interp = layerParams.get<String>("type");
-                if (interp == "LINEAR")
-                    layerParams.set("interpolation", "caffe_bilinear");
-                else if (interp == "NEAREST")
-                    layerParams.set("interpolation", "caffe_nearest");
+                String interp = layerParams.get<String>("type").toLowerCase();
+                layerParams.set("interpolation", "caffe_" + interp);
 
                 if (layerParams.has("factor"))
                 {
@@ -481,8 +478,8 @@ public:
                     CV_Assert(layer.bottom_size() != 2 || factor == 1.0);
                     layerParams.set("zoom_factor", factor);
 
-                    if ((interp == "LINEAR" && factor != 1.0) ||
-                        (interp == "NEAREST" && factor < 1.0))
+                    if ((interp == "linear" && factor != 1.0) ||
+                        (interp == "nearest" && factor < 1.0))
                         CV_Error(Error::StsNotImplemented, "Unsupported Resample mode");
                 }
             }
