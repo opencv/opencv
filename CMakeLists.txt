@@ -434,7 +434,7 @@ OCV_OPTION(WITH_QUIRC "Include library QR-code decoding" ON
   VERIFY HAVE_QUIRC)
 OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" OFF
   VISIBLE_IF TRUE
-  VERIFY HAVE_TENGINE)   
+  VERIFY HAVE_TENGINE)
 
 # OpenCV build components
 # ===================================================
