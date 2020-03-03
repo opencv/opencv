@@ -486,6 +486,16 @@ public:
                         CV_Error(Error::StsNotImplemented, "Unsupported Resample mode");
                 }
             }
+            else if ("Convolution" == type)
+            {
+                CV_Assert(layer.bottom_size() == layer.top_size());
+                for (int i = 0; i < layer.bottom_size(); i++) {
+                    int conv_id = dstNet.addLayer(i == 0 ? name : name + "_" + toString(i), type, layerParams);
+                    addInput(layer.bottom(i), conv_id, 0, dstNet);
+                    addedBlobs.push_back(BlobNote(layer.top(i), conv_id, 0));
+                }
+                continue;
+            }
             else if ("ConvolutionDepthwise" == type)
             {
                 type = "Convolution";

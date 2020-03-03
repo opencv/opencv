@@ -274,14 +274,11 @@ public:
     {
         CV_Assert(blobs.size() != 0);
         CV_Assert(!hasBias() || blobs[1].total() == (size_t)blobs[0].size[0]);
-        CV_Assert(inputs.size() != 0);
-
-        for (size_t i = 1; i < inputs.size(); i++) {
-            CV_Assert(inputs[0] == inputs[i]);
-        }
+        CV_Assert(inputs.size() == (size_t)1);
 
         internals.clear();
 
+        CV_Assert(inputs.size() != 0);
         std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
 
         int outCn = blobs[0].size[0];
@@ -306,7 +303,8 @@ public:
                      "be multiple of %d but got %d", blobs[0].size[1], inpCn));
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
-        outputs.assign(inputs.size(), outShape);
+        outputs.resize(1, outShape);
+
         return false;
     }
 
@@ -1246,11 +1244,8 @@ public:
                name.c_str(), inputs[0].size[0], inputs[0].size[1], inputs[0].size[2], inputs[0].size[3],
                kernel.width, kernel.height, pad.width, pad.height,
                stride.width, stride.height, dilation.width, dilation.height);*/
-        CV_Assert_N(inputs.size() == outputs.size(), inputs[0].size[1] % blobs[0].size[1] == 0);
-
-        for (size_t i = 0; i < inputs.size(); i++) {
-            CV_Assert(inputs[i].data != outputs[i].data);
-        }
+        CV_Assert_N(inputs.size() == (size_t)1, inputs[0].size[1] % blobs[0].size[1] == 0,
+                    outputs.size() == 1, inputs[0].data != outputs[0].data);
 
         int ngroups = inputs[0].size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
@@ -1279,11 +1274,8 @@ public:
 
         int nstripes = std::max(getNumThreads(), 1);
 
-        for (size_t i = 0; i < inputs.size(); i++) {
-            ParallelConv::run(inputs[i], outputs[i], weightsMat, biasvec, reluslope,
-                kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
-        }
-
+        ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
+                          kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,

@@ -656,9 +656,7 @@ TEST_P(Test_Caffe_layers, Correlation)
 
 TEST_P(Test_Caffe_layers, Convolution2Inputs)
 {
-    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    testLayerUsingCaffeModels("conv_2_inps", true, false, 0.0, 0.0, 2, 2);
+    testLayerUsingCaffeModels("conv_2_inps", true, false, 0.0, 0.0, 2);
 }
 
 TEST_P(Test_Caffe_layers, ROIPooling_Accuracy)
