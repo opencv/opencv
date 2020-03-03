@@ -617,7 +617,7 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             CV_Assert(node_proto.input_size() == 2);
 
-            bool is_div = layer_type == "Div";
+            bool isDiv = layer_type == "Div";
             int constId = -1;
             bool haveVariables = false;
             for (int i = 0; i < 2; ++i)
@@ -632,12 +632,12 @@ void ONNXImporter::populateNet(Net dstNet)
                 Mat blob = getBlob(node_proto, constBlobs, constId);
                 blob = blob.reshape(1, 1);
                 if (blob.total() == 1) {
-                    float coeff = is_div ? 1.0 / blob.at<float>(0) : blob.at<float>(0);
+                    float coeff = isDiv ? 1.0 / blob.at<float>(0) : blob.at<float>(0);
                     layerParams.set("scale", coeff);
                     layerParams.type = "Power";
                 }
                 else {
-                    if (is_div)
+                    if (isDiv)
                         divide(1.0, blob, blob);
                     layerParams.blobs.push_back(blob);
                     layerParams.type = "Scale";
@@ -645,8 +645,7 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             else {
                 layerParams.type = "Eltwise";
-                String op = is_div ? "div" : "prod";
-                layerParams.set("operation", op);
+                layerParams.set("operation", isDiv ? "div" : "prod");
             }
 
             if (!haveVariables)
@@ -657,7 +656,7 @@ void ONNXImporter::populateNet(Net dstNet)
                     CV_Error(Error::StsNotImplemented, "Constant multiply with different shapes");
 
                 Mat out;
-                if (is_div)
+                if (isDiv)
                     divide(inp0, inp1, out);
                 else
                     multiply(inp0, inp1, out);
