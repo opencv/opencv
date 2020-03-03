@@ -21,7 +21,7 @@
 #
 
 # Default tengine source store directory .
-SET(DEFAULT_OPENCV_TENGINE_SOURCE_PATH ${OpenCV_BINARY_DIR}/3rdparty/libtengine/Tengine-master)
+SET(DEFAULT_OPENCV_TENGINE_SOURCE_PATH ${OpenCV_BINARY_DIR}/3rdparty/libtengine/Tengine-1.12.0)
 
 IF( WITH_CUDA OR WITH_OPENCL OR WITH_CUDNN OR WITH_VULKAN OR X86 OR X86_64)
 	MESSAGE(STATUS "TENGINE:--  Not support . Turning Tengine_FOUND off.")
@@ -51,9 +51,9 @@ ELSE()
 
 		SET(OCV_TENGINE_DSTDIRECTORY ${OpenCV_BINARY_DIR}/3rdparty/libtengine)
 
-		SET(OCV_TENGINE_FILENAME "master.zip")#name2
+		SET(OCV_TENGINE_FILENAME "v1.12.0.zip")#name2
 		SET(OCV_TENGINE_URL "https://github.com/OAID/Tengine/archive/") #url2
-		SET(tengine_md5sum 9bb5a4dcecc1d1ab6cfffb05f9a64d54) #md5sum2
+		SET(tengine_md5sum d97e5c379281c5aa06e28daf868166a7) #md5sum2
 
 		MESSAGE(STATUS "**** TENGINE DOWNLOAD BEGIN ****")
 		ocv_download(FILENAME ${OCV_TENGINE_FILENAME}
