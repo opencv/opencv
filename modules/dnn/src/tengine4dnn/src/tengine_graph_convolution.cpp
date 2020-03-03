@@ -21,7 +21,6 @@
  * Copyright (c) 2020, OPEN AI LAB
  * Author: qtang@openailab.com
  */
-#ifdef HAVE_TENGINE
 
 #include <iostream>
 #include <vector>
@@ -30,6 +29,8 @@
 #include <opencv2/core/utils/logger.hpp>
 
 #include "../include/tengine_graph_convolution.hpp"
+
+#ifdef HAVE_TENGINE
 
 #include "tengine_c_api.h"
 #include "tengine_c_compat.h"
