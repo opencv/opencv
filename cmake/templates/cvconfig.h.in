@@ -248,7 +248,4 @@
 /* Library QR-code decoding */
 #cmakedefine HAVE_QUIRC
 
-/* Tengine support */
-#cmakedefine HAVE_TENGINE
-
 #endif // OPENCV_CVCONFIG_H_INCLUDED
