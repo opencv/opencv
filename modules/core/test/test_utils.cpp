@@ -291,7 +291,7 @@ TEST(CommandLineParser, testScalar)
 }
 
 
-TEST(Logger, message)
+TEST(Logger, DISABLED_message)
 {
     int id = 42;
     CV_LOG_VERBOSE(NULL, 0, "Verbose message: " << id);
@@ -314,7 +314,7 @@ static int testLoggerMessageOnce(int id)
     // doesn't make sense: CV_LOG_ONCE_FATAL
     return id;
 }
-TEST(Logger, message_once)
+TEST(Logger, DISABLED_message_once)
 {
     int check_id_first = testLoggerMessageOnce(42);
     EXPECT_GT(check_id_first, 42);
@@ -322,7 +322,7 @@ TEST(Logger, message_once)
     EXPECT_EQ(0, check_id_second);
 }
 
-TEST(Logger, message_if)
+TEST(Logger, DISABLED_message_if)
 {
     for (int i = 0; i < 100; i++)
     {
