@@ -12,7 +12,7 @@ using namespace cv;
 Mat img, img_pre_render, img_render;
 Point end;
 std::vector<std::vector<Point> > contours(1);
-std::vector<Point> tmp_contour; 
+std::vector<Point> tmp_contour;
 Mat zero_crossing, gradient_magnitude, Ix, Iy, hit_map_x, hit_map_y;
 
 struct Pix
@@ -26,7 +26,7 @@ struct Pix
     }
 };
 
-float local_cost(const Point& p, const Point& q)
+static float local_cost(const Point& p, const Point& q)
 {
     float fG = gradient_magnitude.at<float>(q.y, q.x);
     float dp;
@@ -56,7 +56,7 @@ float local_cost(const Point& p, const Point& q)
             + acos(dq)) / M_PI + 0.14 * fG;
 }
 
-void find_min_path(const Point& start)
+static void find_min_path(const Point& start)
 {
     Pix begin;
     Mat cost_map(img.size(), CV_32F, Scalar(FLT_MAX));
@@ -69,7 +69,7 @@ void find_min_path(const Point& start)
     processed.at<uchar>(start) = 1;
     begin.cost = 0;
     begin.next_point = start;
-    
+
     L.push(begin);
     while (!L.empty())
     {
@@ -89,7 +89,7 @@ void find_min_path(const Point& start)
                     if (tx < 0 || tx >= img.cols || ty < 0 || ty >= img.rows)
                         continue;
                     if (expand.at<uchar>(ty, tx) == 0)
-                    { 
+                    {
                         Point q = Point(tx, ty);
                         float cost = cost_map.at<float>(p) + local_cost(p, q);
                         if (processed.at<uchar>(q) == 1 && cost < cost_map.at<float>(q))
@@ -114,7 +114,7 @@ void find_min_path(const Point& start)
     }
 }
 
-void onMouse(int event, int x, int y, int flags, void *param)
+static void onMouse(int event, int x, int y, int , void *)
 {
     if (event == EVENT_LBUTTONDOWN)
     {
@@ -134,12 +134,12 @@ void onMouse(int event, int x, int y, int flags, void *param)
         find_min_path(end);
 
         img_render.copyTo(img_pre_render);
-        imshow("lasso", img_render);    
+        imshow("lasso", img_render);
     }
     else if (event == EVENT_RBUTTONDOWN)
     {
         img_pre_render.copyTo(img_render);
-        drawContours(img_pre_render, contours, contours.size() - 1, Scalar(0,255,0), CV_FILLED);
+        drawContours(img_pre_render, contours, contours.size() - 1, Scalar(0,255,0), FILLED);
         addWeighted(img_pre_render, 0.3, img_render, 0.7, 0, img_render);
         contours.resize(contours.size() + 1);
         imshow("lasso", img_render);
@@ -162,13 +162,21 @@ void onMouse(int event, int x, int y, int flags, void *param)
 
 const char* keys =
 {
-    "{help h||}{@image |fruits.jpg|input image name}"
+    "{help h | |}{@image|fruits.jpg|}"
 };
-
 
 int main( int argc, const char** argv )
 {
     CommandLineParser parser(argc, argv, keys);
+    parser.about("\nThis program demonstrates implementation of 'intelligent scissors' algorithm\n"
+                 "To start the algorithm select a pixel, press lbm and move a mouse to create a path.\n"
+                 "To stop the algorithm click rbm\n");
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 1;
+    }
+
     std::string filename = parser.get<std::string>(0);
 
     Mat grayscale, img_canny;
@@ -187,7 +195,7 @@ int main( int argc, const char** argv )
 
     // Compute gradients magnitude.
     double max_val = 0.0;
-    magnitude(Iy, Ix, gradient_magnitude); 
+    magnitude(Iy, Ix, gradient_magnitude);
     minMaxLoc(gradient_magnitude, 0, &max_val);
     gradient_magnitude.convertTo(gradient_magnitude, CV_32F, -1/max_val, 1.0);
 
@@ -199,3 +207,4 @@ int main( int argc, const char** argv )
     imshow("lasso", img);
     waitKey(0);
 }
+
