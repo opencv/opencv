@@ -54,13 +54,15 @@ if (BUILD_TENGINE)
 	elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64) ## AARCH64
 		   set(CONFIG_ARCH_ARM64 ON)
 	endif()
-	
+
 	SET(DEFAULT_OPENCV_TENGINE_SOURCE_PATH ${OCV_TENGINE_DSTDIRECTORY}/Tengine-${TENGINE_VERSION})
 	set(BUILT_IN_OPENCV ON) ## set for tengine compile discern .
 	set(Tengine_INCLUDE_DIR  ${DEFAULT_OPENCV_TENGINE_SOURCE_PATH}/core/include)
 	set(Tengine_LIB   ${CMAKE_BINARY_DIR}/lib/${ANDROID_ABI}/libtengine.a)
 
-	add_subdirectory("${DEFAULT_OPENCV_TENGINE_SOURCE_PATH}")
+	if ( IS_DIRECTORY ${DEFAULT_OPENCV_TENGINE_SOURCE_PATH})
+ 	        add_subdirectory("${DEFAULT_OPENCV_TENGINE_SOURCE_PATH}" tengine.out )
+	endif()
 endif()
-			   
-			   
+
+
