@@ -325,8 +325,6 @@ public:
         num_iter = 0;
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        data_mean_cpu = blobs[1].clone();
-        data_mean_per_channel_cpu = blobs[2].clone();
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -345,6 +343,9 @@ public:
 
         float* inpData = (float*)inpBlob.data;
         float* outData = (float*)outBlob.data;
+
+        Mat data_mean_cpu = blobs[1].clone();
+        Mat data_mean_per_channel_cpu = blobs[2].clone();
 
         const int numWeights = data_mean_cpu.total();
         CV_Assert(numWeights != 0);
@@ -411,8 +412,6 @@ private:
     int num_iter;
     int recompute_mean;
     bool mean_per_pixel;
-    Mat data_mean_cpu;
-    Mat data_mean_per_channel_cpu;
 };
 
 Ptr<DataAugmentationLayer> DataAugmentationLayer::create(const LayerParams& params)
