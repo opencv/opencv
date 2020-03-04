@@ -5,15 +5,15 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help(char** argv)
 {
     cout << "\nThis program demonstrates iterative construction of\n"
-           "delaunay triangulation and voronoi tessellation.\n"
-           "It draws a random set of points in an image and then delaunay triangulates them.\n"
-           "Usage: \n"
-           "./delaunay \n"
-           "\nThis program builds the triangulation interactively, you may stop this process by\n"
-           "hitting any key.\n";
+            "delaunay triangulation and voronoi tessellation.\n"
+            "It draws a random set of points in an image and then delaunay triangulates them.\n"
+            "Usage: \n";
+    cout << argv[0];
+    cout << "\n\nThis program builds the triangulation interactively, you may stop this process by\n"
+            "hitting any key.\n";
 }
 
 static void draw_subdiv_point( Mat& img, Point2f fp, Scalar color )
@@ -108,7 +108,7 @@ int main( int argc, char** argv )
     cv::CommandLineParser parser(argc, argv, "{help h||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
 

@@ -504,7 +504,7 @@ public:
                 best = *i;
                 break;
             }
-            if (i->second.isBetterThan(best.second, newType))
+            if (best.second.isEmpty() || i->second.isBetterThan(best.second, newType))
             {
                 best = *i;
             }

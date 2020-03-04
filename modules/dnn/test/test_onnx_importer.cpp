@@ -340,6 +340,16 @@ TEST_P(Test_ONNX_layers, Resize)
     testONNXModels("resize_bilinear");
 }
 
+TEST_P(Test_ONNX_layers, ResizeUnfused)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    testONNXModels("upsample_unfused_torch1.2");
+    testONNXModels("upsample_unfused_opset9_torch1.4");
+    testONNXModels("resize_nearest_unfused_opset11_torch1.4");
+    testONNXModels("resize_nearest_unfused_opset11_torch1.3");
+}
+
 TEST_P(Test_ONNX_layers, MultyInputs)
 {
     const String model =  _tf("models/multy_inputs.onnx");
@@ -397,6 +407,8 @@ TEST_P(Test_ONNX_layers, DynamicReshape)
         if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     }
     testONNXModels("dynamic_reshape");
+    testONNXModels("dynamic_reshape_opset_11");
+    testONNXModels("flatten_by_prod");
 }
 
 TEST_P(Test_ONNX_layers, Reshape)

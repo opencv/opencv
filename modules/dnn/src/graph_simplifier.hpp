@@ -39,7 +39,9 @@ public:
 
     virtual int getNumNodes() const = 0;
 
-    virtual std::string getNodeName(int idx) const = 0;
+    virtual int getNumOutputs(int nodeId) const = 0;
+
+    virtual std::string getOutputName(int nodeId, int outId) const = 0;
 
     virtual void removeNode(int idx) = 0;
 };

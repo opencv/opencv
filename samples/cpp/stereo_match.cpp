@@ -17,12 +17,12 @@
 
 using namespace cv;
 
-static void print_help()
+static void print_help(char** argv)
 {
     printf("\nDemo stereo matching converting L and R images into disparity and point clouds\n");
-    printf("\nUsage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh|sgbm3way] [--blocksize=<block_size>]\n"
+    printf("\nUsage: %s <left_image> <right_image> [--algorithm=bm|sgbm|hh|sgbm3way] [--blocksize=<block_size>]\n"
            "[--max-disparity=<max_disparity>] [--scale=scale_factor>] [-i=<intrinsic_filename>] [-e=<extrinsic_filename>]\n"
-           "[--no-display] [-o=<disparity_image>] [-p=<point_cloud_file>]\n");
+           "[--no-display] [-o=<disparity_image>] [-p=<point_cloud_file>]\n", argv[0]);
 }
 
 static void saveXYZ(const char* filename, const Mat& mat)
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
         "{@arg1||}{@arg2||}{help h||}{algorithm||}{max-disparity|0|}{blocksize|0|}{no-display||}{scale|1|}{i||}{e||}{o||}{p||}");
     if(parser.has("help"))
     {
-        print_help();
+        print_help(argv);
         return 0;
     }
     img1_filename = samples::findFile(parser.get<std::string>(0));
@@ -96,13 +96,13 @@ int main(int argc, char** argv)
     if( alg < 0 )
     {
         printf("Command-line parameter error: Unknown stereo algorithm\n\n");
-        print_help();
+        print_help(argv);
         return -1;
     }
     if ( numberOfDisparities < 1 || numberOfDisparities % 16 != 0 )
     {
         printf("Command-line parameter error: The max disparity (--maxdisparity=<...>) must be a positive integer divisible by 16\n");
-        print_help();
+        print_help(argv);
         return -1;
     }
     if (scale < 0)
