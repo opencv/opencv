@@ -95,83 +95,6 @@ void releaseONNXTensor(opencv_onnx::TensorProto& tensor_proto)
     }
 }
 
-template<typename T1, typename T2>
-void convertInt64ToInt32(const T1& src, T2& dst, int size)
-{
-    for (int i = 0; i < size; i++) {
-        if (src[i] < std::numeric_limits<int32_t>::min() || src[i] > std::numeric_limits<int32_t>::max()) {
-            CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
-        }
-        dst[i] = saturate_cast<int32_t>(src[i]);
-    }
-}
-
-Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
-{
-    CV_Assert(!tensor_proto.raw_data().empty() || !tensor_proto.float_data().empty()
-                    || !tensor_proto.double_data().empty() || !tensor_proto.int64_data().empty());
-
-    opencv_onnx::TensorProto_DataType datatype = tensor_proto.data_type();
-    Mat blob;
-    std::vector<int> sizes;
-    for (int i = 0; i < tensor_proto.dims_size(); i++) {
-            sizes.push_back(tensor_proto.dims(i));
-    }
-    if (sizes.empty())
-        sizes.assign(1, 1);
-    if (datatype == opencv_onnx::TensorProto_DataType_FLOAT) {
-
-        if (!tensor_proto.float_data().empty()) {
-            const ::google::protobuf::RepeatedField<float> field = tensor_proto.float_data();
-            Mat(sizes, CV_32FC1, (void*)field.data()).copyTo(blob);
-        }
-        else {
-            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
-            Mat(sizes, CV_32FC1, val).copyTo(blob);
-        }
-    }
-    else if (datatype == opencv_onnx::TensorProto_DataType_DOUBLE)
-    {
-        const ::google::protobuf::RepeatedField<double> field = tensor_proto.double_data();
-        CV_Assert(!field.empty());
-        Mat(sizes, CV_64FC1, (void*)field.data()).convertTo(blob, CV_32FC1);
-    }
-    else if (datatype == opencv_onnx::TensorProto_DataType_INT64)
-    {
-        blob.create(sizes, CV_32SC1);
-        int32_t* dst = reinterpret_cast<int32_t*>(blob.data);
-
-        if (!tensor_proto.int64_data().empty()) {
-            ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = tensor_proto.int64_data();
-            convertInt64ToInt32(src, dst, blob.total());
-        }
-        else
-        {
-            const char* val = tensor_proto.raw_data().c_str();
-#if CV_STRONG_ALIGNMENT
-            // Aligned pointer is required: https://github.com/opencv/opencv/issues/16373
-            // this doesn't work: typedef int64_t CV_DECL_ALIGNED(1) unaligned_int64_t;
-            AutoBuffer<int64_t, 16> aligned_val;
-            if (!isAligned<sizeof(int64_t)>(val))
-            {
-                size_t sz = tensor_proto.raw_data().size();
-                aligned_val.allocate(divUp(sz, sizeof(int64_t)));
-                memcpy(aligned_val.data(), val, sz);
-                val = (const char*)aligned_val.data();
-            }
-#endif
-            const int64_t* src = reinterpret_cast<const int64_t*>(val);
-            convertInt64ToInt32(src, dst, blob.total());
-        }
-    }
-    else
-        CV_Error(Error::StsUnsupportedFormat, "Unsupported data type: " +
-                        opencv_onnx::TensorProto_DataType_Name(datatype));
-    if (tensor_proto.dims_size() == 0)
-        blob.dims = 1;  // To force 1-dimensional cv::Mat for scalars.
-    return blob;
-}
-
 void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
               std::vector<Mat>& outputs)
 {
@@ -542,31 +465,6 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.blobs.push_back(-1.0f * blob.reshape(1, 1));
             }
         }
-        else if (layer_type == "Div")
-        {
-            if (constBlobs.find(node_proto.input(1)) == constBlobs.end())
-            {
-                layerParams.type = "Eltwise";
-                layerParams.set("operation", "div");
-            }
-            else
-            {
-                Mat blob = getBlob(node_proto, constBlobs, 1);
-                CV_Assert_N(blob.type() == CV_32F, blob.total());
-                if (blob.total() == 1)
-                {
-                    layerParams.set("scale", 1.0f / blob.at<float>(0));
-                    layerParams.type = "Power";
-                }
-                else
-                {
-                    layerParams.type = "Scale";
-                    divide(1.0, blob, blob);
-                    layerParams.blobs.push_back(blob);
-                    layerParams.set("bias_term", false);
-                }
-            }
-        }
         else if (layer_type == "Neg")
         {
             layerParams.type = "Power";
@@ -715,24 +613,58 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("bias_term", false);
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
         }
-        else if (layer_type == "Mul")
+        else if (layer_type == "Mul" || layer_type == "Div")
         {
             CV_Assert(node_proto.input_size() == 2);
-            if (layer_id.find(node_proto.input(1)) == layer_id.end()) {
-                Mat blob = getBlob(node_proto, constBlobs, 1);
+
+            bool isDiv = layer_type == "Div";
+            int constId = -1;
+            bool haveVariables = false;
+            for (int i = 0; i < 2; ++i)
+            {
+                if (constBlobs.find(node_proto.input(i)) != constBlobs.end())
+                    constId = i;
+                else
+                    haveVariables = true;
+            }
+            if (constId != -1 && haveVariables)
+            {
+                Mat blob = getBlob(node_proto, constBlobs, constId);
                 blob = blob.reshape(1, 1);
                 if (blob.total() == 1) {
-                    layerParams.set("scale", blob.at<float>(0));
+                    float coeff = isDiv ? 1.0 / blob.at<float>(0) : blob.at<float>(0);
+                    layerParams.set("scale", coeff);
                     layerParams.type = "Power";
                 }
                 else {
+                    if (isDiv)
+                        divide(1.0, blob, blob);
                     layerParams.blobs.push_back(blob);
                     layerParams.type = "Scale";
                 }
             }
             else {
                 layerParams.type = "Eltwise";
-                layerParams.set("operation", "prod");
+                layerParams.set("operation", isDiv ? "div" : "prod");
+            }
+
+            if (!haveVariables)
+            {
+                Mat inp0 = getBlob(node_proto, constBlobs, 0);
+                Mat inp1 = getBlob(node_proto, constBlobs, 1);
+                if (inp0.size != inp1.size)
+                    CV_Error(Error::StsNotImplemented, "Constant multiply with different shapes");
+
+                Mat out;
+                if (isDiv)
+                    divide(inp0, inp1, out);
+                else
+                    multiply(inp0, inp1, out);
+
+                out = out.reshape(1, inp0.dims, inp0.size);
+                out.dims = inp0.dims;  // to workaround dims == 1
+                constBlobs.insert(std::make_pair(layerParams.name, out));
+                continue;
             }
         }
         else if (layer_type == "Conv")

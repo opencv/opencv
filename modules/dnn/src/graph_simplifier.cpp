@@ -69,8 +69,12 @@ int Subgraph::getInputNodeId(const Ptr<ImportGraphWrapper>& net,
     const int numNodes = net->getNumNodes();
     for (int i = 0; i < numNodes; ++i)
     {
-        if (net->getNodeName(i) == name)
-            return i;
+        const int numOutputs = net->getNumOutputs(i);
+        for (int j = 0; j < numOutputs; j++)
+        {
+            if (net->getOutputName(i, j) == name)
+                return i;
+        }
     }
     CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
 }
@@ -111,12 +115,12 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                 continue;
             nodeId = getInputNodeId(net, node, j);
             const Ptr<ImportNodeWrapper> inpNode = net->getNode(nodeId);
-            if (inpNode->getType() != "Const")
+            if (inpNode->getType() != "Const" && inpNode->getType() != "Constant")
             {
                 nodesToMatch.push(nodeId);
                 targetNodes.push(inputNodes[j]);
             }
-            else if (nodes[inputNodes[j]] != "Const")
+            else if (nodes[inputNodes[j]] != "Const" && nodes[inputNodes[j]] != "Constant")
                 return false;
         }
         matchedNodesIds.push_back(nodeToMatch);
@@ -190,15 +194,14 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
 {
     int numNodes = net->getNumNodes();
     std::vector<int> matchedNodesIds, targetNodesIds;
-    for (int i = 0; i < numNodes; ++i)
+    for (int j = 0; j < patterns.size(); ++j)
     {
-        for (int j = 0; j < patterns.size(); ++j)
+        for (int i = 0; i < numNodes; ++i)
         {
             if (patterns[j]->match(net, i, matchedNodesIds, targetNodesIds))
             {
                 patterns[j]->replace(net, matchedNodesIds, targetNodesIds);
                 numNodes -= matchedNodesIds.size() - 1;  // #matchedNodes removed and one added.
-                break;
             }
         }
     }
