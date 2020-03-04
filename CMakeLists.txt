@@ -432,7 +432,7 @@ OCV_OPTION(WITH_IMGCODEC_PXM "Include PNM (PBM,PGM,PPM) and PAM formats support"
 OCV_OPTION(WITH_QUIRC "Include library QR-code decoding" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_QUIRC)
-OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" OFF
+OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_TENGINE)
 
