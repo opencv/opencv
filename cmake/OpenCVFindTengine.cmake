@@ -25,7 +25,7 @@
 # ----------------------------------------------------------------------------
 set(OPENCV_LIBTENGINE_ROOT_DIR "" CACHE PATH "Where to look for additional OpenCV modules (can be ;-separated list of paths)")
 
-IF( WITH_CUDA OR WITH_OPENCL OR WITH_CUDNN OR WITH_VULKAN OR X86 OR X86_64 OR APPLE OR IOS)
+IF( NOT ARM AND NOT AARCH64)
     MESSAGE(STATUS "TENGINE:--  Not support . Turning Tengine_FOUND off.")
 	SET(Tengine_FOUND OFF)
     return()

@@ -22,6 +22,7 @@
  * Author: qtang@openailab.com
  */
 
+#include "../../precomp.hpp"
 #include <iostream>
 #include <vector>
 
@@ -289,7 +290,7 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
                         float *kernel_, int kernel_s ,int kernel_h, int kernel_w,
                         float *teg_bias, int stride_h,int stride_w,
                         int pad_h, int pad_w,  int dilation_h, int dilation_w,
-                        size_t wstep, std::string padMode)
+                        size_t wstep,const std::string padMode)
 {
     graph_t graph = NULL;
     std::vector<float> teg_weight_vec;
