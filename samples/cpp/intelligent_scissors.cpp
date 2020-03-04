@@ -207,4 +207,3 @@ int main( int argc, const char** argv )
     imshow("lasso", img);
     waitKey(0);
 }
-
