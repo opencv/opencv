@@ -549,3 +549,35 @@ class SoftMaxUnfused(nn.Module):
 input = Variable(torch.randn(1, 2, 4, 3))
 model = SoftMaxUnfused()
 save_data_and_model("softmax_unfused", input, model)
+
+class FlattenByProd(nn.Module):
+    def __init__(self):
+        super(FlattenByProd, self).__init__()
+
+    def forward(self, image):
+        batch_size = image.size(0)
+        channels = image.size(1)
+        h = image.size(2)
+        w = image.size(3)
+        image = image.view(batch_size, channels*h*w)
+        return image
+
+input = Variable(torch.randn(1, 2, 3, 4))
+model = FlattenByProd()
+save_data_and_model("flatten_by_prod", input, model, version=11)
+
+class ReshapeByDiv(nn.Module):
+    def __init__(self):
+        super(ReshapeByDiv, self).__init__()
+
+    def forward(self, image):
+        batch_size = image.size(0)
+        channels = image.size(1)
+        h = image.size(2)
+        w = image.size(3)
+        image = image.view(batch_size, channels*h* (w / 2), -1)
+        return image
+
+input = Variable(torch.randn(1, 2, 3, 4))
+model = ReshapeByDiv()
+save_data_and_model("dynamic_reshape_opset_11", input, model, version=11)
