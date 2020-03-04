@@ -237,7 +237,10 @@ struct Integral_SIMD<uchar, int, double>
                 v_int32 prev_1 = vx_setzero_s32(), prev_2 = vx_setzero_s32(),
                         prev_3 = vx_setzero_s32();
                 int j = 0;
-                for ( ; j + v_uint16::nlanes * cn <= width; j += v_uint16::nlanes * cn)
+                for ( ;
+                    j <= width - v_uint8::nlanes * cn;  // uint8 in v_load_deinterleave()
+                    j += v_uint8::nlanes * cn / 2       // v_expand_low
+                )
                 {
                     v_uint8 v_src_row_1, v_src_row_2, v_src_row_3;
                     v_load_deinterleave(src_row + j, v_src_row_1, v_src_row_2, v_src_row_3);
@@ -546,7 +549,10 @@ struct Integral_SIMD<uchar, float, double>
                 v_float32 prev_1 = vx_setzero_f32(), prev_2 = vx_setzero_f32(),
                           prev_3 = vx_setzero_f32();
                 int j = 0;
-                for (; j + v_uint16::nlanes * cn <= width; j += v_uint16::nlanes * cn)
+                for ( ;
+                    j <= width - v_uint8::nlanes * cn;  // uint8 in v_load_deinterleave()
+                    j += v_uint8::nlanes * cn / 2       // v_expand_low
+                )
                 {
                     v_uint8 v_src_row_1, v_src_row_2, v_src_row_3;
                     v_load_deinterleave(src_row + j, v_src_row_1, v_src_row_2, v_src_row_3);
@@ -896,7 +902,10 @@ struct Integral_SIMD<uchar, double, double>
                 v_float64 prev_1 = vx_setzero_f64(), prev_2 = vx_setzero_f64(),
                           prev_3 = vx_setzero_f64();
                 int j = 0;
-                for (; j + v_uint16::nlanes * cn <= width; j += v_uint16::nlanes * cn)
+                for ( ;
+                    j <= width - v_uint8::nlanes * cn;  // uint8 in v_load_deinterleave()
+                    j += v_uint8::nlanes * cn / 2       // v_expand_low
+                )
                 {
                     v_uint8 v_src_row_1, v_src_row_2, v_src_row_3;
                     v_load_deinterleave(src_row + j, v_src_row_1, v_src_row_2, v_src_row_3);
