@@ -45,7 +45,7 @@ ELSE()
 
 	MESSAGE(STATUS "TENGINE:--  Auto download Tengine source code. ")
 	include("${OpenCV_SOURCE_DIR}/3rdparty/libtengine/tengine.cmake")
-		
+
 ENDIF()
 
 IF(NOT Tengine_LIB)
