@@ -22,14 +22,14 @@ def assertONNXExpected(binary_pb):
     return model_def
 
 
-def export_to_string(model, inputs):
+def export_to_string(model, inputs, version=None):
     f = io.BytesIO()
     with torch.no_grad():
-        torch.onnx.export(model, inputs, f)
+        torch.onnx.export(model, inputs, f, export_params=True, opset_version=version)
     return f.getvalue()
 
 
-def save_data_and_model(name, input, model):
+def save_data_and_model(name, input, model, version=None):
     model.eval()
     print(name + " input has sizes",  input.shape)
     input_files = os.path.join("data", "input_" + name)
@@ -44,7 +44,7 @@ def save_data_and_model(name, input, model):
 
     models_files = os.path.join("models", name + ".onnx")
 
-    onnx_model_pb = export_to_string(model, input)
+    onnx_model_pb = export_to_string(model, input, version)
     model_def = assertONNXExpected(onnx_model_pb)
     with open(models_files, 'wb') as file:
         file.write(model_def.SerializeToString())
@@ -276,6 +276,31 @@ save_data_and_model("resize_nearest", input, resize)
 input = Variable(torch.randn(1, 2, 3, 4))
 resize = nn.Upsample(size=[6, 8], mode='bilinear')
 save_data_and_model("resize_bilinear", input, resize)
+
+if torch.__version__ == '1.4.0':
+    input = Variable(torch.randn(1, 3, 4, 5))
+    upsample_unfused = nn.Sequential(
+            nn.Conv2d(3, 2, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(2),
+            nn.Upsample(scale_factor=2, mode='nearest')
+            )
+    save_data_and_model("upsample_unfused_opset9_torch1.4", input, upsample_unfused)
+
+    input = Variable(torch.randn(1, 3, 4, 5))
+    resize_nearest_unfused = nn.Sequential(
+            nn.Conv2d(3, 2, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(2),
+            nn.Upsample(scale_factor=2, mode='nearest')
+            )
+    save_data_and_model("resize_nearest_unfused_opset11_torch1.4", input, resize_nearest_unfused, 11)
+
+if torch.__version__ == '1.2.0':
+    input = Variable(torch.randn(1, 2, 3, 4))
+    resize_nearest_unfused = nn.Sequential(
+            nn.BatchNorm2d(2),
+            nn.Upsample(scale_factor=2, mode='nearest')
+            )
+    save_data_and_model("upsample_unfused_torch1.2", input, resize_nearest_unfused)
 
 class Unsqueeze(nn.Module):
 
@@ -524,3 +549,35 @@ class SoftMaxUnfused(nn.Module):
 input = Variable(torch.randn(1, 2, 4, 3))
 model = SoftMaxUnfused()
 save_data_and_model("softmax_unfused", input, model)
+
+class FlattenByProd(nn.Module):
+    def __init__(self):
+        super(FlattenByProd, self).__init__()
+
+    def forward(self, image):
+        batch_size = image.size(0)
+        channels = image.size(1)
+        h = image.size(2)
+        w = image.size(3)
+        image = image.view(batch_size, channels*h*w)
+        return image
+
+input = Variable(torch.randn(1, 2, 3, 4))
+model = FlattenByProd()
+save_data_and_model("flatten_by_prod", input, model, version=11)
+
+class ReshapeByDiv(nn.Module):
+    def __init__(self):
+        super(ReshapeByDiv, self).__init__()
+
+    def forward(self, image):
+        batch_size = image.size(0)
+        channels = image.size(1)
+        h = image.size(2)
+        w = image.size(3)
+        image = image.view(batch_size, channels*h* (w / 2), -1)
+        return image
+
+input = Variable(torch.randn(1, 2, 3, 4))
+model = ReshapeByDiv()
+save_data_and_model("dynamic_reshape_opset_11", input, model, version=11)
