@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/logger.defines.hpp"
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/utils/buffer_area.private.hpp"
 
@@ -286,6 +289,53 @@ TEST(CommandLineParser, testScalar)
     EXPECT_EQ(parser.get<Scalar>("s4"), Scalar(-4.2, 1, 0, 3));
     EXPECT_EQ(parser.get<Scalar>("s5"), Scalar(5, -4, 3, 2));
 }
+
+
+TEST(Logger, DISABLED_message)
+{
+    int id = 42;
+    CV_LOG_VERBOSE(NULL, 0, "Verbose message: " << id);
+    CV_LOG_VERBOSE(NULL, 1, "Verbose message: " << id);
+    CV_LOG_DEBUG(NULL, "Debug message: " << id);
+    CV_LOG_INFO(NULL, "Info message: " << id);
+    CV_LOG_WARNING(NULL, "Warning message: " << id);
+    CV_LOG_ERROR(NULL, "Error message: " << id);
+    CV_LOG_FATAL(NULL, "Fatal message: " << id);
+}
+
+static int testLoggerMessageOnce(int id)
+{
+    CV_LOG_ONCE_VERBOSE(NULL, 0, "Verbose message: " << id++);
+    CV_LOG_ONCE_VERBOSE(NULL, 1, "Verbose message: " << id++);
+    CV_LOG_ONCE_DEBUG(NULL, "Debug message: " << id++);
+    CV_LOG_ONCE_INFO(NULL, "Info message: " << id++);
+    CV_LOG_ONCE_WARNING(NULL, "Warning message: " << id++);
+    CV_LOG_ONCE_ERROR(NULL, "Error message: " << id++);
+    // doesn't make sense: CV_LOG_ONCE_FATAL
+    return id;
+}
+TEST(Logger, DISABLED_message_once)
+{
+    int check_id_first = testLoggerMessageOnce(42);
+    EXPECT_GT(check_id_first, 42);
+    int check_id_second = testLoggerMessageOnce(0);
+    EXPECT_EQ(0, check_id_second);
+}
+
+TEST(Logger, DISABLED_message_if)
+{
+    for (int i = 0; i < 100; i++)
+    {
+        CV_LOG_IF_VERBOSE(NULL, 0, i == 0 || i == 42, "Verbose message: " << i);
+        CV_LOG_IF_VERBOSE(NULL, 1, i == 0 || i == 42, "Verbose message: " << i);
+        CV_LOG_IF_DEBUG(NULL, i == 0 || i == 42, "Debug message: " << i);
+        CV_LOG_IF_INFO(NULL, i == 0 || i == 42, "Info message: " << i);
+        CV_LOG_IF_WARNING(NULL, i == 0 || i == 42, "Warning message: " << i);
+        CV_LOG_IF_ERROR(NULL, i == 0 || i == 42, "Error message: " << i);
+        CV_LOG_IF_FATAL(NULL, i == 0 || i == 42, "Fatal message: " << i);
+    }
+}
+
 
 TEST(Samples, findFile)
 {
