@@ -407,6 +407,18 @@ void cv::cuda::syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream)
 #endif
 }
 
+void cv::cuda::GpuMatND::updateContinuityFlag()
+{
+    int ndims = _shape.size();
+    int sz[ndims];
+    for(int i = 0; i < ndims; i++)
+    {
+        sz[i] = _shape.at(i);
+    }
+    size_t steps[] = { step, elemSize() };
+    flags = cv::updateContinuityFlag(flags, 2, sz, steps);
+}
+
 #ifndef HAVE_CUDA
 
 GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
@@ -509,6 +521,17 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
     CV_UNUSED(alpha);
     CV_UNUSED(beta);
     CV_UNUSED(_stream);
+    throw_no_cuda();
+}
+
+GpuMatND::Allocator* cv::cuda::GpuMat::defaultAllocator()
+{
+    return 0;
+}
+
+void cv::cuda::GpuMatND::setDefaultAllocator(Allocator* allocator)
+{
+    CV_UNUSED(allocator);
     throw_no_cuda();
 }
 
