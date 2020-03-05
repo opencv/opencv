@@ -64,9 +64,9 @@ int create_conv_node(graph_t graph, const char* node_name, const char* input_nam
     node_t conv_node      = create_graph_node(graph, node_name, "Convolution");
     tensor_t input_tensor = get_graph_tensor(graph, input_name);
 
-    if (input_tensor == nullptr)
+    if (input_tensor == NULL)
     {
-        CV_LOG_WARNING(NULL,"Tengine :input_tensor is nullptr . " );
+        CV_LOG_WARNING(NULL,"Tengine :input_tensor is NULL . " );
         return -1;
     }
 
@@ -170,10 +170,10 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
     int input_num = 0;
 
     /* create graph */
-    graph_t graph = create_graph(nullptr, nullptr, nullptr);
+    graph_t graph = create_graph(NULL, NULL, NULL);
     bool ok = true;
 
-    if(graph == nullptr)
+    if(graph == NULL)
     {
         CV_LOG_WARNING(NULL,"Tengine :create_graph failed . " );
         ok = false;
@@ -274,7 +274,7 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
     if (!ok)
     {
         destroy_graph(graph);
-        return nullptr;
+        return NULL;
     }
     return graph;
 }

@@ -441,7 +441,7 @@ OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" ON
 OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" NOT (ANDROID OR APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_opencv_apps        "Build utility applications (used for example to train classifiers)" (NOT ANDROID AND NOT WINRT) IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_opencv_js          "Build JavaScript bindings by Emscripten" OFF )
-OCV_OPTION(BUILD_ANDROID_PROJECTS   "Build Android projects providing .apk files" ON  IF ANDROID )
+OCV_OPTION(BUILD_ANDROID_PROJECTS   "Build Android projects providing .apk files" OFF  IF ANDROID )
 OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"         ON  IF ANDROID )
 OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" OFF  IF (NOT WINRT AND NOT APPLE_FRAMEWORK))
 OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )

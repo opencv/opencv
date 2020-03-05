@@ -1,4 +1,4 @@
-SET(TENGINE_VERSION "master")
+SET(TENGINE_VERSION "tengine-opencv")
 SET(OCV_TENGINE_DSTDIRECTORY ${OpenCV_BINARY_DIR}/3rdparty/libtengine)
 SET(DEFAULT_OPENCV_TENGINE_SOURCE_PATH ${OCV_TENGINE_DSTDIRECTORY}/Tengine-${TENGINE_VERSION})
 
@@ -10,7 +10,7 @@ IF(EXISTS ${DEFAULT_OPENCV_TENGINE_SOURCE_PATH})
 ELSE()
 	SET(OCV_TENGINE_FILENAME "${TENGINE_VERSION}.zip")#name2
 	SET(OCV_TENGINE_URL "https://github.com/OAID/Tengine/archive/") #url2
-	SET(tengine_md5sum f82727300a82db5d6e87343dcba6efa6) #md5sum2
+	SET(tengine_md5sum 66d8d470e5fecc6ba36b738f9baa4d53) #md5sum2
 
 	MESSAGE(STATUS "**** TENGINE DOWNLOAD BEGIN ****")
 	ocv_download(FILENAME ${OCV_TENGINE_FILENAME}
@@ -45,6 +45,12 @@ if (BUILD_TENGINE)
 	   elseif(${ANDROID_ABI} STREQUAL "arm64-v8a")
 			   set(CONFIG_ARCH_ARM64 ON)
 	   endif()
+
+	   if(${ANDROID_NDK_REVISION} LESS 14)
+		MESSAGE(STATUS "TENGINE NOT SUPPORT NDK less 14.")
+		set(Tengine_FOUND OFF)
+		set(HAVE_TENGINE FALSE)
+	   endif()
 	endif()
 
 	# linux system
@@ -58,7 +64,6 @@ if (BUILD_TENGINE)
 	set(BUILT_IN_OPENCV ON) ## set for tengine compile discern .
 	set(Tengine_INCLUDE_DIR  ${DEFAULT_OPENCV_TENGINE_SOURCE_PATH}/core/include)
 	set(Tengine_LIB   ${CMAKE_BINARY_DIR}/lib/${ANDROID_ABI}/libtengine.a)
-
 	if ( IS_DIRECTORY ${DEFAULT_OPENCV_TENGINE_SOURCE_PATH})
 		add_subdirectory("${DEFAULT_OPENCV_TENGINE_SOURCE_PATH}" ${OCV_TENGINE_DSTDIRECTORY}/build)
 	endif()
