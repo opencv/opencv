@@ -433,7 +433,8 @@ void ONNXImporter::populateNet(Net dstNet)
             CV_CheckEQ(node_proto.input_size(), 2, "");
             if (layer_id.find(node_proto.input(1)) == layer_id.end())
             {
-                Mat blob = getBlob(node_proto, constBlobs, 1);
+                int blob_id = is_const_0 ? 0 : 1;
+                Mat blob = getBlob(node_proto, constBlobs, blob_id);
                 blob = blob.reshape(1, 1);
                 if (blob.total() == 1) {
                     layerParams.type = "Power";
@@ -807,6 +808,26 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("axis", axis - 1);
             layerParams.set("end_axis", axis);
             layerParams.type = "Flatten";
+        }
+        else if (layer_type == "Flatten")
+        {
+            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axis"));
+
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                int axis = layerParams.get<int>("axis");
+                Mat input = getBlob(node_proto, constBlobs, 0);
+                axis = clamp(axis, input.dims);
+
+                std::vector<int> out_size(&input.size[0], &input.size[0] + axis);
+                int last_dim = input.total(axis);
+                out_size.push_back(last_dim);
+
+                Mat output = input.reshape(1, out_size);
+                constBlobs.insert(std::make_pair(layerParams.name, output));
+                continue;
+            }
+
         }
         else if (layer_type == "Unsqueeze")
         {
