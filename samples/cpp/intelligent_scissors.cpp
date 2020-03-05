@@ -169,8 +169,9 @@ int main( int argc, const char** argv )
 {
     CommandLineParser parser(argc, argv, keys);
     parser.about("\nThis program demonstrates implementation of 'intelligent scissors' algorithm\n"
-                 "To start the algorithm select a pixel, press lbm and move a mouse to create a path.\n"
-                 "To stop the algorithm click rbm\n");
+                 "To start drawing a new contour select a pixel, click LEFT mouse button.\n"
+                 "To fix a path click LEFT mouse button again.\n"
+                 "To finish drawing a contour click RIGHT mouse button.\n");
     if (parser.has("help"))
     {
         parser.printMessage();
