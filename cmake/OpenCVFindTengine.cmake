@@ -25,12 +25,6 @@
 # ----------------------------------------------------------------------------
 set(OPENCV_LIBTENGINE_ROOT_DIR "" CACHE PATH "Where to look for additional OpenCV modules (can be ;-separated list of paths)")
 
-IF( NOT ARM AND NOT AARCH64)
-    MESSAGE(STATUS "TENGINE:--  Not support . Turning Tengine_FOUND off.")
-	SET(Tengine_FOUND OFF)
-    return()
-ENDIF()
-
 IF(OPENCV_LIBTENGINE_ROOT_DIR)
 
 	MESSAGE(STATUS "TENGINE:--  Set tengine lib dir by user ")
