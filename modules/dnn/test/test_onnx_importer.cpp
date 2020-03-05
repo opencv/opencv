@@ -32,29 +32,33 @@ public:
 
     void testONNXModels(const String& basename, const Extension ext = npy,
                         const double l1 = 0, const float lInf = 0, const bool useSoftmax = false,
-                        bool checkNoFallbacks = true)
+                        bool checkNoFallbacks = true, int numInps = 1)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
-        Mat inp, ref;
+        std::vector<Mat> inps(numInps);
+        Mat ref;
         if (ext == npy) {
-            inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+            for (int i = 0; i < numInps; ++i)
+                inps[i] = blobFromNPY(_tf("data/input_" + basename + (numInps > 1 ? format("_%d", i) : "") + ".npy"));
             ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
         }
         else if (ext == pb) {
-            inp = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
+            for (int i = 0; i < numInps; ++i)
+                inps[i] = readTensorFromONNX(_tf("data/input_" + basename + (numInps > 1 ? format("_%d", i) : "") + ".pb"));
             ref = readTensorFromONNX(_tf("data/output_" + basename + ".pb"));
         }
         else
             CV_Error(Error::StsUnsupportedFormat, "Unsupported extension");
 
-        checkBackend(&inp, &ref);
+        checkBackend(&inps[0], &ref);
         Net net = readNetFromONNX(onnxmodel);
         ASSERT_FALSE(net.empty());
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
 
-        net.setInput(inp);
+        for (int i = 0; i < numInps; ++i)
+            net.setInput(inps[i], numInps > 1 ? format("%d", i) : "");
         Mat out = net.forward("");
 
         if (useSoftmax)
@@ -328,25 +332,14 @@ TEST_P(Test_ONNX_layers, ResizeUnfused)
 
 TEST_P(Test_ONNX_layers, MultyInputs)
 {
-    const String model =  _tf("models/multy_inputs.onnx");
+    testONNXModels("multy_inputs", npy, 0, 0, false, true, 2);
+}
 
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp1 = blobFromNPY(_tf("data/input_multy_inputs_0.npy"));
-    Mat inp2 = blobFromNPY(_tf("data/input_multy_inputs_1.npy"));
-    Mat ref  = blobFromNPY(_tf("data/output_multy_inputs.npy"));
-    checkBackend(&inp1, &ref);
-
-    net.setInput(inp1, "0");
-    net.setInput(inp2, "1");
-    Mat out = net.forward();
-
-    normAssert(ref, out, "", default_l1,  default_lInf);
-    expectNoFallbacksFromIE(net);
+TEST_P(Test_ONNX_layers, Broadcast)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    testONNXModels("channel_broadcast", npy, 0, 0, false, true, 2);
 }
 
 TEST_P(Test_ONNX_layers, Div)
