@@ -588,4 +588,23 @@ TEST(OwnMat, ROIView)
         << to_ocv(roi_view) << std::endl
         << expected_cv_mat  << std::endl;
 }
+
+TEST(OwnMat, CreateWithNegativeDims)
+{
+    Mat own_mat;
+    ASSERT_ANY_THROW(own_mat.create(cv::Size{-1, -1}, CV_8U));
+}
+
+TEST(OwnMat, CreateWithNegativeWidth)
+{
+    Mat own_mat;
+    ASSERT_ANY_THROW(own_mat.create(cv::Size{-1, 1}, CV_8U));
+}
+
+TEST(OwnMat, CreateWithNegativeHeight)
+{
+    Mat own_mat;
+    ASSERT_ANY_THROW(own_mat.create(cv::Size{1, -1}, CV_8U));
+}
+
 } // namespace opencv_test
