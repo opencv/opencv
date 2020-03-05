@@ -433,8 +433,7 @@ void ONNXImporter::populateNet(Net dstNet)
             CV_CheckEQ(node_proto.input_size(), 2, "");
             if (layer_id.find(node_proto.input(1)) == layer_id.end())
             {
-                int blob_id = is_const_0 ? 0 : 1;
-                Mat blob = getBlob(node_proto, constBlobs, blob_id);
+                Mat blob = getBlob(node_proto, constBlobs, is_const_0 ? 0 : 1);
                 blob = blob.reshape(1, 1);
                 if (blob.total() == 1) {
                     layerParams.type = "Power";
@@ -826,7 +825,6 @@ void ONNXImporter::populateNet(Net dstNet)
                 constBlobs.insert(std::make_pair(layerParams.name, output));
                 continue;
             }
-
         }
         else if (layer_type == "Unsqueeze")
         {
