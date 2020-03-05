@@ -230,6 +230,7 @@ namespace cv { namespace gapi { namespace own {
         */
         void create(Size _size, int _type)
         {
+            GAPI_Assert(_size.height >= 0 && _size.width >= 0);
             if (_size != Size{cols, rows} )
             {
                 Mat tmp{_size.height, _size.width, _type, nullptr};
