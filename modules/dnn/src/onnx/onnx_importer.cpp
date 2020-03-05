@@ -460,6 +460,23 @@ void ONNXImporter::populateNet(Net dstNet)
                 continue;
             }
         }
+        else if (layer_type == "Cast")
+        {
+            CV_Assert(constBlobs.find(node_proto.input(0)) != constBlobs.end());
+            Mat blob = getBlob(node_proto, constBlobs, 0);
+            int type;
+            switch (layerParams.get<int>("to")) {
+                case 1: type = CV_32F; break;
+                case 2: type = CV_8U; break;
+                case 3: case 5: case 6: case 7: type = CV_32S; break;
+                case 4: type = CV_16U; break;
+                case 10: type = CV_16S; break;
+                default: type = blob.type();
+            }
+            blob.convertTo(blob, type);
+            constBlobs.insert(std::make_pair(layerParams.name, blob));
+            continue;
+        }
         else if (layer_type == "Split")
         {
             if (layerParams.has("split"))
@@ -1043,6 +1060,37 @@ void ONNXImporter::populateNet(Net dstNet)
                 constBlobs.insert(std::make_pair(layerParams.name, concatenated[0]));
                 continue;
             }
+        }
+        else if (layer_type == "Resize")
+        {
+            for (int i = 1; i < node_proto.input_size(); i++)
+                CV_Assert(layer_id.find(node_proto.input(i)) == layer_id.end());
+
+            String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
+            CV_Assert_N(interp_mode != "tf_crop_and_resize", interp_mode != "asymmetric",
+                        interp_mode != "tf_half_pixel_for_nn");
+
+            layerParams.set("align_corners", interp_mode == "align_corners");
+            Mat shapes = getBlob(node_proto, constBlobs, node_proto.input_size() - 1);
+            CV_Assert_N(shapes.size[0] == 4, shapes.size[1] == 1);
+            int height = shapes.at<int>(2, 0);
+            int width  = shapes.at<int>(3, 0);
+            if (node_proto.input_size() == 3)
+            {
+                shapeIt = outShapes.find(node_proto.input(0));
+                CV_Assert(shapeIt != outShapes.end());
+                MatShape scales = shapeIt->second;
+                height *= scales[2];
+                width  *= scales[3];
+            }
+            layerParams.set("width", width);
+            layerParams.set("height", height);
+
+            if (layerParams.get<String>("mode") == "linear") {
+                layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
+                                        "opencv_linear" : "bilinear");
+            }
+            replaceLayerParam(layerParams, "mode", "interpolation");
         }
         else if (layer_type == "Upsample")
         {
