@@ -197,18 +197,43 @@ bool cv::can_describe(const GMetaArgs &metas, const GRunArgs &args)
                      });
 }
 
-bool cv::nonzero_dims_in_inmat(const GMetaArgs& metas)
+bool cv::validate_input_arg(const GRunArg& arg)
 {
-    bool state = true;
-    for (const auto& current_meta : metas)
+    // FIXME: It checks only Mat's argument
+    switch (arg.index())
     {
-        if (current_meta.index() == cv::GMetaArg::index_of<cv::GMatDesc>())
-        {
-            const auto& desc_mat = cv::util::get<cv::GMatDesc>(current_meta);
-            state &= (desc_mat.size.height != 0 && desc_mat.size.width != 0);
-        }
+#if !defined(GAPI_STANDALONE)
+    case GRunArg::index_of<cv::Mat>():
+    {
+        const auto desc = descr_of(util::get<cv::Mat>(arg));
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of cv::Mat!"); return true;
     }
-    return state;
+    case GRunArg::index_of<cv::UMat>():
+    {
+        const auto desc = descr_of(util::get<cv::UMat>(arg));
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of cv::UMat!"); return true;
+    }
+    case GRunArg::index_of<cv::Scalar>(): return true;
+#endif //  !defined(GAPI_STANDALONE)
+    case GRunArg::index_of<cv::gapi::own::Mat>():
+    {
+        const auto desc = descr_of(util::get<cv::gapi::own::Mat>(arg));
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of own::Mat!"); return true;
+    }
+    case GRunArg::index_of<cv::gapi::own::Scalar>(): return true;
+    case GRunArg::index_of<cv::detail::VectorRef>(): return true;
+    case GRunArg::index_of<cv::detail::OpaqueRef>(): return true;
+    case GRunArg::index_of<cv::gapi::wip::IStreamSource::Ptr>(): return true;
+    default: util::throw_error(std::logic_error("Unsupported GRunArg type"));
+    }
+}
+
+bool cv::validate_input_arg(const GRunArgs& args)
+{
+    return std::any_of(args.begin(), args.end(),
+                      [](const GRunArg& arg) {
+                          return validate_input_arg(arg);
+                      });
 }
 
 namespace cv {

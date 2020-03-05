@@ -56,10 +56,10 @@ void cv::GCompiled::Priv::checkArgs(const cv::gimpl::GRuntimeArgs &args) const
                                            "for different metadata!"));
         // FIXME: Add details on what is actually wrong
     }
-    if (!nonzero_dims_in_inmat(m_metas))
+    if (!validate_input_arg(args.inObjs))
     {
         util::throw_error(std::logic_error("This object was compiled "
-                                           "for Mat with zero dimensions!"));
+                                           "for incorrect input arguments!"));
     }
 }
 
