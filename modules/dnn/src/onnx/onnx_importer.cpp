@@ -810,7 +810,7 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Flatten")
         {
-            CV_Assert_N(node_proto.input_size() == 1);
+            CV_CheckEQ(node_proto.input_size(), 1, "");
             if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
             {
                 int axis = layerParams.get<int>("axis", 1);
