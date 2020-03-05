@@ -126,6 +126,9 @@ bool GAPI_EXPORTS can_describe(const GMetaArgs& metas, const GRunArgs& args);
 // coincides with output arguments passed to computation in cpu and ocl backends
 bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArgP& argp);
 
+// Checks dimensions of input Mat for inequality to zero.
+bool GAPI_EXPORTS nonzero_dims_in_inmat(const GMetaArgs& metas);
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GPROTO_HPP

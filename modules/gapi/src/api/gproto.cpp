@@ -197,6 +197,20 @@ bool cv::can_describe(const GMetaArgs &metas, const GRunArgs &args)
                      });
 }
 
+bool cv::nonzero_dims_in_inmat(const GMetaArgs& metas)
+{
+    bool state = true;
+    for (const auto& current_meta : metas)
+    {
+        if (current_meta.index() == cv::GMetaArg::index_of<cv::GMatDesc>())
+        {
+            const auto& desc_mat = cv::util::get<cv::GMatDesc>(current_meta);
+            state &= (desc_mat.size.height != 0 && desc_mat.size.width != 0);
+        }
+    }
+    return state;
+}
+
 namespace cv {
 std::ostream& operator<<(std::ostream& os, const cv::GMetaArg &arg)
 {
