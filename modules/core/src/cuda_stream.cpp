@@ -535,6 +535,15 @@ Stream& cv::cuda::Stream::Null()
 #endif
 }
 
+void* cv::cuda::Stream::cudaPtr() const
+{
+#ifndef HAVE_CUDA
+    return nullptr;
+#else
+    return impl_->stream;
+#endif
+}
+
 cv::cuda::Stream::operator bool_type() const
 {
 #ifndef HAVE_CUDA
