@@ -1089,6 +1089,7 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
         getMinMaxRes<double>
     };
 
+    CV_Assert(ddepth <= CV_64F);
     getMinMaxResFunc func = functab[ddepth];
 
     int locTemp[2];
