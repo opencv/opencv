@@ -217,49 +217,30 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
-                void setReLU()
+                void setActivation(String type)
                 {
                     cv::dnn::LayerParams activation_param;
-                    activation_param.set<float>("negative_slope", 0.1f);
-                    activation_param.name = "ReLU-name";
-                    activation_param.type = "ReLU";
+                    if (type == "relu")
+                    {
+                        activation_param.set<float>("negative_slope", 0.1f);
+                        activation_param.type = "ReLU";
+                    }
+                    else if (type == "swish")
+                    {
+                        activation_param.type = "Swish";
+                    }
+                    else if (type == "logistic")
+                    {
+                        activation_param.type = "Sigmoid";
+                    }
+                    else
+                    {
+                        CV_Error(cv::Error::StsParseError, "Unsupported activation: " + type);
+                    }
+
+                    std::string layer_name = cv::format("%s_%d", type.c_str(), layer_id);
 
                     darknet::LayerParameter lp;
-                    std::string layer_name = cv::format("relu_%d", layer_id);
-                    lp.layer_name = layer_name;
-                    lp.layer_type = activation_param.type;
-                    lp.layerParams = activation_param;
-                    lp.bottom_indexes.push_back(last_layer);
-                    last_layer = layer_name;
-                    net->layers.push_back(lp);
-
-                    fused_layer_names.back() = last_layer;
-                }
-
-                void setSwish()
-                {
-                    cv::dnn::LayerParams activation_param;
-                    activation_param.type = "Swish";
-
-                    darknet::LayerParameter lp;
-                    std::string layer_name = cv::format("swish_%d", layer_id);
-                    lp.layer_name = layer_name;
-                    lp.layer_type = activation_param.type;
-                    lp.layerParams = activation_param;
-                    lp.bottom_indexes.push_back(last_layer);
-                    last_layer = layer_name;
-                    net->layers.push_back(lp);
-
-                    fused_layer_names.back() = last_layer;
-                }
-
-                void setLogistic()
-                {
-                    cv::dnn::LayerParams activation_param;
-                    activation_param.type = "Sigmoid";
-
-                    darknet::LayerParameter lp;
-                    std::string layer_name = cv::format("logistic_%d", layer_id);
                     lp.layer_name = layer_name;
                     lp.layer_type = activation_param.type;
                     lp.layerParams = activation_param;
@@ -826,15 +807,15 @@ namespace cv {
                     std::string activation = getParam<std::string>(layer_params, "activation", "linear");
                     if (activation == "leaky")
                     {
-                        setParams.setReLU();
+                        setParams.setActivation("relu");
                     }
                     else if (activation == "swish")
                     {
-                        setParams.setSwish();
+                        setParams.setActivation("swish");
                     }
                     else if (activation == "logistic")
                     {
-                        setParams.setLogistic();
+                        setParams.setActivation("logistic");
                     }
                     else if (activation != "linear")
                         CV_Error(cv::Error::StsParseError, "Unsupported activation: " + activation);
