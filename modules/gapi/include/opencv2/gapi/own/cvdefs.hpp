@@ -137,6 +137,11 @@ enum InterpolationFlags{
     INTER_LINEAR_EXACT   = 5,
     INTER_MAX            = 7,
 };
+namespace gapi { namespace own {
+    class Scalar;
+}
+}
+    using Scalar = gapi::own::Scalar;
 } // namespace cv
 
 static inline int cvFloor( double value )
