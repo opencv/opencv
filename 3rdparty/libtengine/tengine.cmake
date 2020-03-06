@@ -45,12 +45,6 @@ if (BUILD_TENGINE)
 	   elseif(${ANDROID_ABI} STREQUAL "arm64-v8a")
 			   set(CONFIG_ARCH_ARM64 ON)
 	   endif()
-
-	   if(${ANDROID_NDK_REVISION} LESS 14)
-		MESSAGE(STATUS "TENGINE NOT SUPPORT NDK less 14.")
-		set(Tengine_FOUND OFF)
-		set(HAVE_TENGINE FALSE)
-	   endif()
 	endif()
 
 	# linux system
