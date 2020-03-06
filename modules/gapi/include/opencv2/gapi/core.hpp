@@ -485,6 +485,12 @@ namespace core {
             return (ddepth < 0 ? in : in.withDepth(ddepth));
         }
     };
+
+    G_TYPED_KERNEL(GWarpAffine, <GMat(GMat, const Mat&, Size, int, int, const cv::Scalar&)>, "org.opencv.core.warpAffine") {
+        static GMatDesc outMeta(GMatDesc in, const Mat&, Size dsize, int, int, const cv::Scalar&) {
+            return in.withType(in.depth, in.chan).withSize(dsize);
+        }
+    };
 }
 
 //! @addtogroup gapi_math
@@ -1653,6 +1659,32 @@ number of channels as src and the depth =ddepth.
 */
 GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
                             int norm_type, int ddepth = -1);
+
+/** @brief Applies an affine transformation to an image.
+
+The function warpAffine transforms the source image using the specified matrix:
+
+\f[\texttt{dst} (x,y) =  \texttt{src} ( \texttt{M} _{11} x +  \texttt{M} _{12} y +  \texttt{M} _{13}, \texttt{M} _{21} x +  \texttt{M} _{22} y +  \texttt{M} _{23})\f]
+
+when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted
+with #invertAffineTransform and then put in the formula above instead of M. The function cannot
+operate in-place.
+
+@param src input image.
+@param M \f$2\times 3\f$ transformation matrix.
+@param dsize size of the output image.
+@param flags combination of interpolation methods (see #InterpolationFlags) and the optional
+flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
+\f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
+@param borderMode pixel extrapolation method (see #BorderTypes); when
+borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
+the "outliers" in the source image are not modified by the function.
+@param borderValue value used in case of a constant border; by default, it is 0.
+
+@sa  warpPerspective, resize, remap, getRectSubPix, transform
+ */
+GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
+                             int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
 } //namespace gapi
