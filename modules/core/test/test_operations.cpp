@@ -1519,6 +1519,23 @@ TEST(Core_sortIdx, regression_8941)
         "expected=" << std::endl << expected;
 }
 
+TEST(Core_Mat, augmentation_operations_9688)
+{
+    {
+        Mat x(1, 1, CV_64FC1, 1.0f);
+        Mat p(1, 4, CV_64FC1, 5.0f);
+        EXPECT_ANY_THROW(
+            x += p;
+        ) << x;
+    }
+    {
+        Mat x(1, 1, CV_64FC1, 1.0f);
+        Mat p(1, 4, CV_64FC1, 5.0f);
+        EXPECT_ANY_THROW(
+            x -= p;
+        ) << x;
+    }
+}
 
 //These tests guard regressions against running MatExpr
 //operations on empty operands and giving bogus
