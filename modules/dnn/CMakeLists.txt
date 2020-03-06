@@ -92,7 +92,7 @@ endif()
 
 set(dnn_runtime_libs "")
 if(INF_ENGINE_TARGET)
-  ocv_option(OPENCV_DNN_IE_NN_BUILDER_2019 "Build with Inference Engine NN Builder API support" ON)
+  ocv_option(OPENCV_DNN_IE_NN_BUILDER_2019 "Build with Inference Engine NN Builder API support" ON)  # future: NOT HAVE_NGRAPH
   if(OPENCV_DNN_IE_NN_BUILDER_2019)
     message(STATUS "DNN: Enabling Inference Engine NN Builder API support")
     add_definitions(-DHAVE_DNN_IE_NN_BUILDER_2019=1)
