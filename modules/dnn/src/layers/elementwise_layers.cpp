@@ -62,6 +62,10 @@ using std::abs;
 using std::exp;
 using std::tanh;
 using std::pow;
+using std::ceil;
+using std::floor;
+using std::log;
+using std::sqrt;
 
 template<typename Func>
 class ElementWiseLayer : public Func::Layer
@@ -963,6 +967,524 @@ struct AbsValFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 1; }
 };
 
+struct CeilFunctor : public BaseFunctor
+{
+    typedef CeilLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = ceil(x);
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("CeilForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = ceil(input);
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+struct FloorFunctor : public BaseFunctor
+{
+    typedef FloorLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = floor(x);
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("FloorForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = floor(input);
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+struct LogFunctor : public BaseFunctor
+{
+    typedef LogLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = log(x);
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("LogForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = log(input);
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        return std::make_shared<ngraph::op::v0::Log>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+struct RoundFunctor : public BaseFunctor
+{
+    typedef RoundLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = floor(x + 0.5f);
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("RoundForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = floor(input + 0.5f);
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    int64 getFLOPSPerElement() const { return 2; }
+};
+
+struct SqrtFunctor : public BaseFunctor
+{
+    typedef SqrtLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = sqrt(x);
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("SqrtForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = sqrt(input);
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        return std::make_shared<ngraph::op::v0::Sqrt>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+struct ExpFunctor : public BaseFunctor
+{
+    typedef ExpLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = exp(x);
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("ExpForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = exp(input);
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        return std::make_shared<ngraph::op::v0::Exp>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+struct NotFunctor : public BaseFunctor
+{
+    typedef NotLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for( int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = floor(1.0f - x);
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("NotForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = floor(1.0f - input);
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    int64 getFLOPSPerElement() const { return 2; }
+};
+
 struct BNLLFunctor : public BaseFunctor
 {
     typedef BNLLLayer Layer;
@@ -1421,6 +1943,62 @@ Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
         return ReLULayer::create(reluParams);
     }
     Ptr<ChannelsPReLULayer> l(new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(params.blobs[0])));
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<CeilLayer> CeilLayer::create(const LayerParams& params)
+{
+    Ptr<CeilLayer> l(new ElementWiseLayer<CeilFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<FloorLayer> FloorLayer::create(const LayerParams& params)
+{
+    Ptr<FloorLayer> l(new ElementWiseLayer<FloorFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<LogLayer> LogLayer::create(const LayerParams& params)
+{
+    Ptr<LogLayer> l(new ElementWiseLayer<LogFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<RoundLayer> RoundLayer::create(const LayerParams& params)
+{
+    Ptr<RoundLayer> l(new ElementWiseLayer<RoundFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<SqrtLayer> SqrtLayer::create(const LayerParams& params)
+{
+    Ptr<SqrtLayer> l(new ElementWiseLayer<SqrtFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<ExpLayer> ExpLayer::create(const LayerParams& params)
+{
+    Ptr<ExpLayer> l(new ElementWiseLayer<ExpFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<NotLayer> NotLayer::create(const LayerParams& params)
+{
+    Ptr<NotLayer> l(new ElementWiseLayer<NotFunctor>());
     l->setParamsFrom(params);
 
     return l;

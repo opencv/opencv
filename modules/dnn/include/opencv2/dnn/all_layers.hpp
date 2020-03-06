@@ -501,6 +501,48 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<PowerLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS CeilLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<CeilLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS FloorLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<FloorLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS LogLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<LogLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS RoundLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<RoundLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SqrtLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SqrtLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS ExpLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<ExpLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS NotLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<NotLayer> create(const LayerParams &params);
+    };
+
     /* Layers used in semantic segmentation */
 
     class CV_EXPORTS CropLayer : public Layer

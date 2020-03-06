@@ -811,6 +811,10 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.type = "PReLU";
             layerParams.blobs.push_back(getBlob(node_proto, constBlobs, 1));
         }
+        else if (layer_type == "Abs")
+        {
+            layerParams.type = "AbsVal";
+        }
         else if (layer_type == "LRN")
         {
             replaceLayerParam(layerParams, "size", "local_size");
