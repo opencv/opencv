@@ -145,11 +145,13 @@ using Size   = gapi::own::Size;
 using Point  = gapi::own::Point;
 using Scalar = gapi::own::Scalar;
 } // namespace cv
+
 static inline int cvFloor( double value )
 {
     int i = (int)value;
     return i - (i > value);
 }
+
 #endif //  defined(GAPI_STANDALONE)
 
 #endif //  OPENCV_GAPI_CV_DEFS_HPP

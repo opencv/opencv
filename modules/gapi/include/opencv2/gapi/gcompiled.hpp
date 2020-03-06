@@ -15,6 +15,7 @@
 #include <opencv2/gapi/garg.hpp>
 
 namespace cv {
+
 // This class represents a compiled computation.
 // In theory (and ideally), it can be used w/o the rest of APIs.
 // In theory (and ideally), it can be serialized/deserialized.
@@ -25,6 +26,7 @@ namespace cv {
 //
 // FIXME: In future, there should be a way to name I/O objects and specify it
 // to GCompiled externally (for example, when it is loaded on the target system).
+
 /**
  * \addtogroup gapi_main_classes
  * @{

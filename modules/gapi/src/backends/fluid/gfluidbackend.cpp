@@ -554,8 +554,8 @@ void cv::gimpl::FluidAgent::debug(std::ostream &os)
 // GCPUExcecutable implementation //////////////////////////////////////////////
 
 void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
-                                                 std::vector<Rect>& rois,
-                                                 const std::vector<Rect>& out_rois)
+                                                 std::vector<cv::Rect>& rois,
+                                                 const std::vector<cv::Rect>& out_rois)
 {
     GConstFluidModel fg(m_g);
     auto proto = m_gm.metadata().get<Protocol>();
@@ -592,9 +592,9 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
             readStarts[id] = 0;
 
             const auto& out_roi = out_rois[idx];
-            if (out_roi == Rect{})
+            if (out_roi == cv::Rect{})
             {
-                rois[id] = Rect{ 0, 0, desc.size.width, desc.size.height };
+                rois[id] = cv::Rect{ 0, 0, desc.size.width, desc.size.height };
             }
             else
             {
@@ -639,14 +639,14 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                     const auto& in_meta = util::get<GMatDesc>(in_data.meta);
                     const auto& fd = fg.metadata(in_node).get<FluidData>();
 
-                    auto adjFilterRoi = [](Rect produced, int b, int max_height) {
+                    auto adjFilterRoi = [](cv::Rect produced, int b, int max_height) {
                         // Extend with border roi which should be produced, crop to logical image size
-                        Rect roi = {produced.x, produced.y - b, produced.width, produced.height + 2*b};
-                        Rect fullImg{ 0, 0, produced.width, max_height };
+                        cv::Rect roi = {produced.x, produced.y - b, produced.width, produced.height + 2*b};
+                        cv::Rect fullImg{ 0, 0, produced.width, max_height };
                         return roi & fullImg;
                     };
 
-                    auto adjResizeRoi = [](Rect produced, Size inSz, Size outSz) {
+                    auto adjResizeRoi = [](cv::Rect produced, cv::Size inSz, cv::Size outSz) {
                         auto map = [](int outCoord, int producedSz, int inSize, int outSize) {
                             double ratio = (double)inSize / outSize;
                             int w0 = 0, w1 = 0;
@@ -671,30 +671,30 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                         auto x0 = mapX.first;
                         auto x1 = mapX.second;
 
-                        Rect roi = {x0, y0, x1 - x0, y1 - y0};
+                        cv::Rect roi = {x0, y0, x1 - x0, y1 - y0};
                         return roi;
                     };
 
-                    auto adj420Roi = [&](Rect produced, std::size_t port) {
+                    auto adj420Roi = [&](cv::Rect produced, std::size_t port) {
                         GAPI_Assert(produced.x % 2 == 0);
                         GAPI_Assert(produced.y % 2 == 0);
                         GAPI_Assert(produced.width % 2 == 0);
                         GAPI_Assert(produced.height % 2 == 0);
 
-                        Rect roi;
+                        cv::Rect roi;
                         switch (port) {
                         case 0: roi = produced; break;
                         case 1:
-                        case 2: roi = Rect{ produced.x/2, produced.y/2, produced.width/2, produced.height/2 }; break;
+                        case 2: roi = cv::Rect{ produced.x/2, produced.y/2, produced.width/2, produced.height/2 }; break;
                         default: GAPI_Assert(false);
                         }
                         return roi;
                     };
 
-                    Rect produced = rois[m_id_map.at(data.rc)];
+                    cv::Rect produced = rois[m_id_map.at(data.rc)];
 
                     // Apply resize-specific roi transformations
-                    Rect resized;
+                    cv::Rect resized;
                     switch (fg.metadata(oh).get<FluidUnit>().k.m_kind)
                     {
                     case GFluidKernel::Kind::Filter:      resized = produced; break;
@@ -727,7 +727,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                     auto roi = adjFilterRoi(resized, fd.border_size, in_meta.size.height);
 
                     auto in_id = m_id_map.at(in_data.rc);
-                    if (rois[in_id] == Rect{})
+                    if (rois[in_id] == cv::Rect{})
                     {
                         readStarts[in_id] = readStart;
                         rois[in_id] = roi;
@@ -828,7 +828,7 @@ cv::gimpl::FluidGraphInputData cv::gimpl::fluidExtractInputDataFromGraph(const a
 
 cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                       &g,
                                               const cv::gimpl::FluidGraphInputData   &traverse_res,
-                                              const std::vector<Rect> &outputRois)
+                                              const std::vector<cv::Rect> &outputRois)
     : m_g(g), m_gm(m_g),
       m_num_int_buffers (traverse_res.m_mat_count),
       m_scratch_users   (traverse_res.m_scratch_users),
@@ -1146,13 +1146,13 @@ namespace
     }
 }
 
-void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<Rect> &out_rois)
+void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<cv::Rect> &out_rois)
 {
     GConstFluidModel fg(m_g);
 
     // Calculate rois for each fluid buffer
     std::vector<int> readStarts(m_num_int_buffers);
-    std::vector<Rect> rois(m_num_int_buffers);
+    std::vector<cv::Rect> rois(m_num_int_buffers);
     initBufferRois(readStarts, rois, out_rois);
 
     // NB: Allocate ALL buffer object at once, and avoid any further reallocations

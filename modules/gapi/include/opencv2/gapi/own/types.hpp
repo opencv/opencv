@@ -17,6 +17,7 @@ namespace gapi
 {
 namespace own
 {
+
 class Point
 {
 public:
