@@ -710,51 +710,58 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     result;
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
-    int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
-    bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
-            ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S);
-    int isum = 0;
-    int *ibuf = &result.i;
-    size_t esz = 0;
+    CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
 
-    if( blockSum )
+    if ((normType == NORM_L1 && depth <= CV_16S) ||
+        ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S))
     {
-        intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
-        blockSize = std::min(blockSize, intSumBlockSize);
-        ibuf = &isum;
-        esz = src.elemSize();
-    }
+        // special case to handle "integer" overflow in accumulator
+        const size_t esz = src.elemSize();
+        const int total = (int)it.size;
+        const int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
+        const int blockSize = std::min(total, intSumBlockSize);
+        int isum = 0;
+        int count = 0;
 
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
-    {
-        for( j = 0; j < total; j += blockSize )
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            int bsz = std::min(total - j, blockSize);
-            func( ptrs[0], ptrs[1], (uchar*)ibuf, bsz, cn );
-            count += bsz;
-            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            for (int j = 0; j < total; j += blockSize)
             {
-                result.d += isum;
-                isum = 0;
-                count = 0;
+                int bsz = std::min(total - j, blockSize);
+                func(ptrs[0], ptrs[1], (uchar*)&isum, bsz, cn);
+                count += bsz;
+                if (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total))
+                {
+                    result.d += isum;
+                    isum = 0;
+                    count = 0;
+                }
+                ptrs[0] += bsz*esz;
+                if (ptrs[1])
+                    ptrs[1] += bsz;
             }
-            ptrs[0] += bsz*esz;
-            if( ptrs[1] )
-                ptrs[1] += bsz;
+        }
+    }
+    else
+    {
+        // generic implementation
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            func(ptrs[0], ptrs[1], (uchar*)&result, (int)it.size, cn);
         }
     }
 
     if( normType == NORM_INF )
     {
         if( depth == CV_64F )
-            ;
+            return result.d;
         else if( depth == CV_32F )
-            result.d = result.f;
+            return result.f;
         else
-            result.d = result.i;
+            return result.i;
     }
     else if( normType == NORM_L2 )
-        result.d = std::sqrt(result.d);
+        return std::sqrt(result.d);
 
     return result.d;
 }
@@ -1170,52 +1177,59 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     result;
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
-    int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
-    bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
-            ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S);
-    unsigned isum = 0;
-    unsigned *ibuf = &result.u;
-    size_t esz = 0;
+    CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
 
-    if( blockSum )
+    if ((normType == NORM_L1 && depth <= CV_16S) ||
+        ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S))
     {
-        intSumBlockSize = normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15);
-        blockSize = std::min(blockSize, intSumBlockSize);
-        ibuf = &isum;
-        esz = src1.elemSize();
-    }
+        // special case to handle "integer" overflow in accumulator
+        const size_t esz = src1.elemSize();
+        const int total = (int)it.size;
+        const int intSumBlockSize = normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15);
+        const int blockSize = std::min(total, intSumBlockSize);
+        int isum = 0;
+        int count = 0;
 
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
-    {
-        for( j = 0; j < total; j += blockSize )
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            int bsz = std::min(total - j, blockSize);
-            func( ptrs[0], ptrs[1], ptrs[2], (uchar*)ibuf, bsz, cn );
-            count += bsz;
-            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            for (int j = 0; j < total; j += blockSize)
             {
-                result.d += isum;
-                isum = 0;
-                count = 0;
+                int bsz = std::min(total - j, blockSize);
+                func(ptrs[0], ptrs[1], ptrs[2], (uchar*)&isum, bsz, cn);
+                count += bsz;
+                if (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total))
+                {
+                    result.d += isum;
+                    isum = 0;
+                    count = 0;
+                }
+                ptrs[0] += bsz*esz;
+                ptrs[1] += bsz*esz;
+                if (ptrs[2])
+                    ptrs[2] += bsz;
             }
-            ptrs[0] += bsz*esz;
-            ptrs[1] += bsz*esz;
-            if( ptrs[2] )
-                ptrs[2] += bsz;
+        }
+    }
+    else
+    {
+        // generic implementation
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            func(ptrs[0], ptrs[1], ptrs[2], (uchar*)&result, (int)it.size, cn);
         }
     }
 
     if( normType == NORM_INF )
     {
         if( depth == CV_64F )
-            ;
+            return result.d;
         else if( depth == CV_32F )
-            result.d = result.f;
+            return result.f;
         else
-            result.d = result.u;
+            return result.u;
     }
     else if( normType == NORM_L2 )
-        result.d = std::sqrt(result.d);
+        return std::sqrt(result.d);
 
     return result.d;
 }
