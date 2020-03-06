@@ -68,14 +68,14 @@ public:
         blobs[0].copyTo(outputs[0]);
     }
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
         InferenceEngine::Builder::ConstLayer ieLayer(name);
         ieLayer.setData(wrapToInfEngineBlob(blobs[0]));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH
@@ -87,7 +87,8 @@ public:
                                                            blobs[0].data);
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_NGRAPH
+
 };
 
 Ptr<Layer> ConstLayer::create(const LayerParams& params)
