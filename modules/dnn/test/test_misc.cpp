@@ -130,14 +130,18 @@ void test_readNet_IE_do_not_call_setInput(Backend backendId)
     EXPECT_TRUE(res.empty()) << res.size;
 }
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 TEST(readNet, do_not_call_setInput_IE_NN_BUILDER_2019)
 {
     test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
 }
+#endif
+#ifdef HAVE_DNN_NGRAPH
 TEST(readNet, do_not_call_setInput_IE_NGRAPH)
 {
     test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 }
+#endif
 #endif  // HAVE_INF_ENGINE
 
 typedef testing::TestWithParam<tuple<Backend, Target> > dump;
