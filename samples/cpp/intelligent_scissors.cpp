@@ -53,7 +53,7 @@ static float local_cost(const Point& p, const Point& q)
         fG /= sqrtf(2);
     }
     return  0.43 * zero_crossing.at<uchar>(q) + 0.43 * (acos(dp)
-            + acos(dq)) / acos(-1) + 0.14 * fG;
+            + acos(dq)) / CV_PI + 0.14 * fG;
 }
 
 static void find_min_path(const Point& start)
