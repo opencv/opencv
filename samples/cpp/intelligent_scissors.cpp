@@ -45,12 +45,12 @@ static float local_cost(const Point& p, const Point& q)
     }
     if (isDiag)
     {
-        dp /= sqrt(2);
-        dq /= sqrt(2);
+        dp /= sqrtf(2);
+        dq /= sqrtf(2);
     }
     else
     {
-        fG /= sqrt(2);
+        fG /= sqrtf(2);
     }
     return  0.43 * zero_crossing.at<uchar>(q) + 0.43 * (acos(dp)
             + acos(dq)) / acos(-1) + 0.14 * fG;
@@ -121,7 +121,7 @@ static void onMouse(int event, int x, int y, int , void *)
         end = Point(x, y);
         if (!contours.back().empty())
         {
-            for(int i = tmp_contour.size() - 1; i >= 0; i--)
+            for (int i = static_cast<int>(tmp_contour.size()) - 1; i >= 0; i--)
             {
                 contours.back().push_back(tmp_contour[i]);
             }
@@ -139,7 +139,7 @@ static void onMouse(int event, int x, int y, int , void *)
     else if (event == EVENT_RBUTTONDOWN)
     {
         img_pre_render.copyTo(img_render);
-        drawContours(img_pre_render, contours, contours.size() - 1, Scalar(0,255,0), FILLED);
+        drawContours(img_pre_render, contours, static_cast<int>(contours.size()) - 1, Scalar(0,255,0), FILLED);
         addWeighted(img_pre_render, 0.3, img_render, 0.7, 0, img_render);
         contours.resize(contours.size() + 1);
         imshow("lasso", img_render);
