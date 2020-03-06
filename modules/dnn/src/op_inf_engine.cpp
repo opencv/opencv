@@ -42,8 +42,8 @@ Backend& getInferenceEngineBackendTypeParam()
 {
     static Backend param = parseInferenceEngineBackendType(
         utils::getConfigurationParameterString("OPENCV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019_TYPE",
-#ifdef HAVE_NGRAPH
-            CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API  // future: CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
+#ifndef HAVE_DNN_IE_NN_BUILDER_2019
+            CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
 #else
             CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API
 #endif
@@ -68,6 +68,36 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
 }
 
 CV__DNN_INLINE_NS_END
+
+
+Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
+{
+    // NOTE: Inference Engine sizes are reversed.
+    std::vector<size_t> dims = blob->getTensorDesc().getDims();
+    std::vector<int> size(dims.begin(), dims.end());
+    auto precision = blob->getTensorDesc().getPrecision();
+
+    int type = -1;
+    switch (precision)
+    {
+        case InferenceEngine::Precision::FP32: type = CV_32F; break;
+        case InferenceEngine::Precision::U8: type = CV_8U; break;
+        default:
+            CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+    }
+    return Mat(size, type, (void*)blob->buffer());
+}
+
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats)
+{
+    mats.resize(blobs.size());
+    for (int i = 0; i < blobs.size(); ++i)
+        mats[i] = infEngineBlobToMat(blobs[i]);
+}
+
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 
 // For networks with input layer which has an empty name, IE generates a name id[some_number].
 // OpenCV lets users use an empty input name and to prevent unexpected naming,
@@ -556,6 +586,7 @@ void InfEngineBackendWrapper::setHostDirty()
 
 }
 
+#endif // HAVE_DNN_IE_NN_BUILDER_2019
 
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
 static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr>& getSharedPlugins()
@@ -686,6 +717,9 @@ static bool detectMyriadX_()
 #endif
 }
 #endif  // !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
+
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 
 void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
 {
@@ -985,32 +1019,6 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
     }
 }
 
-Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
-{
-    // NOTE: Inference Engine sizes are reversed.
-    std::vector<size_t> dims = blob->getTensorDesc().getDims();
-    std::vector<int> size(dims.begin(), dims.end());
-    auto precision = blob->getTensorDesc().getPrecision();
-
-    int type = -1;
-    switch (precision)
-    {
-        case InferenceEngine::Precision::FP32: type = CV_32F; break;
-        case InferenceEngine::Precision::U8: type = CV_8U; break;
-        default:
-            CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
-    }
-    return Mat(size, type, (void*)blob->buffer());
-}
-
-void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
-                          std::vector<Mat>& mats)
-{
-    mats.resize(blobs.size());
-    for (int i = 0; i < blobs.size(); ++i)
-        mats[i] = infEngineBlobToMat(blobs[i]);
-}
-
 bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             const int requiredOutputs,
                                             std::vector<MatShape> &outputs,
@@ -1077,6 +1085,8 @@ void addConstantData(const std::string& name, InferenceEngine::Blob::Ptr data,
 #endif
 }
 
+#endif // HAVE_DNN_IE_NN_BUILDER_2019
+
 #endif  // HAVE_INF_ENGINE
 
 bool haveInfEngine()
@@ -1092,11 +1102,13 @@ void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                       Ptr<BackendNode>& node, bool isAsync)
 {
     CV_Assert(haveInfEngine());
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     CV_Assert(!node.empty());
     Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
     CV_Assert(!ieNode.empty());
     ieNode->net->forward(outBlobsWrappers, isAsync);
+#else
+    CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Inference Engine NN Builder API support");
 #endif  // HAVE_INF_ENGINE
 }
 
