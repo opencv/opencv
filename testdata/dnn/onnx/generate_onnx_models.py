@@ -581,3 +581,15 @@ class ReshapeByDiv(nn.Module):
 input = Variable(torch.randn(1, 2, 3, 4))
 model = ReshapeByDiv()
 save_data_and_model("dynamic_reshape_opset_11", input, model, version=11)
+
+class Broadcast(nn.Module):
+
+    def __init__(self):
+        super(Broadcast, self).__init__()
+
+    def forward(self, x, y):
+        return x * y + (x - x) / y - y
+
+input1 = Variable(torch.randn(1, 4, 1, 2))
+input2 = Variable(torch.randn(1, 4, 1, 1))
+save_data_and_model_multy_inputs("channel_broadcast", Broadcast(), input1, input2)
