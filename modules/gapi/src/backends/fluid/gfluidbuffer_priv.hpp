@@ -101,23 +101,23 @@ public:
 class BufferStorageWithoutBorder final : public BufferStorage
 {
     bool m_is_virtual = true;
-    cv::gapi::own::Rect m_roi;
+    Rect m_roi;
 
 public:
     virtual void copyTo(BufferStorageWithBorder &dst, int startLine, int nLines) const override;
 
     inline virtual const uint8_t* ptr(int idx) const override
     {
-        GAPI_DbgAssert((m_is_virtual && m_roi == cv::gapi::own::Rect{}) || (!m_is_virtual && m_roi != cv::gapi::own::Rect{}));
+        GAPI_DbgAssert((m_is_virtual && m_roi == Rect{}) || (!m_is_virtual && m_roi != Rect{}));
         return m_data.ptr(physIdx(idx), 0);
     }
     inline virtual uint8_t* ptr(int idx) override
     {
-        GAPI_DbgAssert((m_is_virtual && m_roi == cv::gapi::own::Rect{}) || (!m_is_virtual && m_roi != cv::gapi::own::Rect{}));
+        GAPI_DbgAssert((m_is_virtual && m_roi == Rect{}) || (!m_is_virtual && m_roi != Rect{}));
         return m_data.ptr(physIdx(idx), 0);
     }
 
-    inline void attach(const cv::gapi::own::Mat& _data, cv::gapi::own::Rect _roi)
+    inline void attach(const cv::gapi::own::Mat& _data, Rect _roi)
     {
         m_data = _data(_roi);
         m_roi = _roi;
@@ -246,13 +246,13 @@ class GAPI_EXPORTS Buffer::Priv
     // Coordinate starting from which this buffer is assumed
     // to be read (with border not being taken into account)
     int m_readStart;
-    cv::gapi::own::Rect m_roi;
+    Rect m_roi;
 
     friend void debugBufferPriv(const Buffer& p, std::ostream &os);
 
 public:
     Priv() = default;
-    Priv(int read_start, cv::gapi::own::Rect roi);
+    Priv(int read_start, Rect roi);
 
     inline const BufferStorage& storage() const { return *m_storage.get(); }
 
@@ -260,7 +260,7 @@ public:
     void init(const cv::GMatDesc &desc,
               int writer_lpi,
               int readStart,
-              cv::gapi::own::Rect roi);
+              Rect roi);
 
     void allocate(BorderOpt border, int border_size, int line_consumption, int skew);
     void bindTo(const cv::gapi::own::Mat &data, bool is_input);

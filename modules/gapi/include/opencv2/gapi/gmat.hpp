@@ -82,11 +82,11 @@ struct GAPI_EXPORTS GMatDesc
     // FIXME: Default initializers in C++14
     int depth;
     int chan;
-    cv::gapi::own::Size size; // NB.: no multi-dimensional cases covered yet
+    Size size; // NB.: no multi-dimensional cases covered yet
     bool planar;
     std::vector<int> dims; // FIXME: Maybe it's real questionable to have it here
 
-    GMatDesc(int d, int c, cv::gapi::own::Size s, bool p = false)
+    GMatDesc(int d, int c, Size s, bool p = false)
         : depth(d), chan(c), size(s), planar(p) {}
 
     GMatDesc(int d, const std::vector<int> &dd)
@@ -122,23 +122,13 @@ struct GAPI_EXPORTS GMatDesc
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
     // FIXME: a better name?
-    GMatDesc withSizeDelta(cv::gapi::own::Size delta) const
+    GMatDesc withSizeDelta(Size delta) const
     {
         GMatDesc desc(*this);
         desc.size += delta;
         return desc;
     }
 #if !defined(GAPI_STANDALONE)
-    GMatDesc withSizeDelta(cv::Size delta) const
-    {
-        return withSizeDelta(to_own(delta));
-    }
-
-    GMatDesc withSize(cv::Size sz) const
-    {
-        return withSize(to_own(sz));
-    }
-
     bool canDescribe(const cv::Mat& mat) const;
 #endif // !defined(GAPI_STANDALONE)
     // Meta combinator: return a new GMatDesc which differs in size by delta
@@ -147,10 +137,10 @@ struct GAPI_EXPORTS GMatDesc
     // This is an overload.
     GMatDesc withSizeDelta(int dx, int dy) const
     {
-        return withSizeDelta(cv::gapi::own::Size{dx,dy});
+        return withSizeDelta(Size{dx,dy});
     }
 
-    GMatDesc withSize(cv::gapi::own::Size sz) const
+    GMatDesc withSize(Size sz) const
     {
         GMatDesc desc(*this);
         desc.size = sz;

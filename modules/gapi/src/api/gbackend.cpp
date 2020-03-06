@@ -395,7 +395,7 @@ void createMat(const cv::GMatDesc &desc, cv::gapi::own::Mat& mat)
     if (desc.dims.empty())
     {
         const auto type = desc.planar ? desc.depth : CV_MAKETYPE(desc.depth, desc.chan);
-        const auto size = desc.planar ? cv::gapi::own::Size{desc.size.width, desc.size.height*desc.chan}
+        const auto size = desc.planar ? Size{desc.size.width, desc.size.height*desc.chan}
                                       : desc.size;
         mat.create(size, type);
     }

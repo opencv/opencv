@@ -142,8 +142,8 @@ class GFluidExecutable final: public GIslandExecutable
     void bindOutArg(const RcDesc &rc, const GRunArgP &arg);
     void packArg   (GArg &in_arg, const GArg &op_arg);
 
-    void initBufferRois(std::vector<int>& readStarts, std::vector<cv::gapi::own::Rect>& rois, const std::vector<gapi::own::Rect> &out_rois);
-    void makeReshape(const std::vector<cv::gapi::own::Rect>& out_rois);
+    void initBufferRois(std::vector<int>& readStarts, std::vector<Rect>& rois, const std::vector<Rect> &out_rois);
+    void makeReshape(const std::vector<Rect>& out_rois);
     std::size_t total_buffers_size() const;
 
 public:
@@ -159,7 +159,7 @@ public:
 
      GFluidExecutable(const ade::Graph                          &g,
                       const FluidGraphInputData                 &graph_data,
-                      const std::vector<cv::gapi::own::Rect>    &outputRois);
+                      const std::vector<Rect>    &outputRois);
 };
 
 

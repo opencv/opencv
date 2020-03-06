@@ -18,4 +18,6 @@
 #  include <opencv2/gapi/own/cvdefs.hpp>
 #endif // !defined(GAPI_STANDALONE)
 
+#if defined(GAPI_STANDALONE)
+#endif
 #endif // OPENCV_GAPI_OPENCV_INCLUDES_HPP

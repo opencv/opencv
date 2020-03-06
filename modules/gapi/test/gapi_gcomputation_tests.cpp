@@ -25,7 +25,7 @@ namespace opencv_test
               {
                   GAPI_Assert(fx != 0. && fy != 0.);
                   return in.withSize
-                    (cv::gapi::own::Size(static_cast<int>(std::round(in.size.width  * fx)),
+                    (Size(static_cast<int>(std::round(in.size.width  * fx)),
                                          static_cast<int>(std::round(in.size.height * fy))));
               }
           }
