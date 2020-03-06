@@ -433,6 +433,9 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     bool doubleSupport = d.doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
 
+    if (depth >= CV_16F)
+        return false;  // TODO: support FP16
+
     if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
          (!doubleSupport && depth == CV_64F))
         return false;

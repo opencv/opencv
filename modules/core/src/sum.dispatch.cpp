@@ -46,6 +46,9 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
         return false;
 
+    if (depth >= CV_16F)
+        return false;
+
     int ngroups = dev.maxComputeUnits(), dbsize = ngroups * (calc2 ? 2 : 1);
     size_t wgs = dev.maxWorkGroupSize();
 
