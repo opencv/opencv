@@ -281,13 +281,14 @@ namespace util
     template<class T> typename detail::are_different<variant<Ts...>, T, variant<Ts...>&>
     ::type variant<Ts...>::operator=(T&& t) noexcept
     {
+        using decayed_t = typename std::decay<T>::type;
         // FIXME: No version with implicit type conversion available!
         static const constexpr std::size_t t_index =
-            util::type_list_index<T, Ts...>::value;
+            util::type_list_index<decayed_t, Ts...>::value;
 
         if (t_index == m_index)
         {
-            util::get<T>(*this) = std::move(t);
+            util::get<decayed_t>(*this) = std::move(t);
             return *this;
         }
         else return (*this = variant(std::move(t)));
