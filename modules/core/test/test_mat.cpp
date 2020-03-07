@@ -1969,6 +1969,21 @@ TEST(Core_InputArray, support_CustomType)
     }
 }
 
+
+TEST(Core_InputArray, fetch_MatExpr)
+{
+    Mat a(Size(10, 5), CV_32FC1, 5);
+    Mat b(Size(10, 5), CV_32FC1, 2);
+    MatExpr expr = a * b.t();                    // gemm expression
+    Mat dst;
+    cv::add(expr, Scalar(1), dst);               // invoke gemm() here
+    void* expr_data = expr.a.data;
+    Mat result = expr;                           // should not call gemm() here again
+    EXPECT_EQ(expr_data, result.data);           // expr data is reused
+    EXPECT_EQ(dst.size(), result.size());
+}
+
+
 TEST(Core_Vectors, issue_13078)
 {
     float floats_[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
