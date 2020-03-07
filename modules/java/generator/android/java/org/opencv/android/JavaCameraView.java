@@ -65,6 +65,10 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     public JavaCameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
+    
+    public Camera getCamera() {
+        return mCamera;
+    }
 
     protected boolean initializeCamera(int width, int height) {
         Log.d(TAG, "Initialize java camera");
