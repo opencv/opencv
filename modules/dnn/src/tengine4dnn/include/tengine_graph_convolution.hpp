@@ -27,15 +27,6 @@
 
 #define FLOAT_TO_REALSIZE (4)
 
-/*!
- * @brief
- *
- * @param [in] graph:
- * @param [in] node_name:
- * @param [in] TODO
-
- * @return true: success, false: fail.
- */
 namespace cv
 {
 namespace dnn

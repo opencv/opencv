@@ -87,9 +87,16 @@ else()
 endif()
 
 if(HAVE_TENGINE)
-  list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
-  list(APPEND libs ${TENGINE_LIBRARIES})
+	list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
+	if(EXISTS ${TENGINE_LIBRARIES})
+		list(APPEND libs ${TENGINE_LIBRARIES})
+	else()
+		ocv_add_dependencies(opencv_dnn tengine)
+		list(APPEND libs ${TENGINE_LIBRARIES})
+	endif()
 endif()
+
+
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-suggest-override")  # GCC

@@ -279,12 +279,6 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
     return graph;
 }
 
-void tengine_set_Winograd(bool flag)
-{
-    // Winograd on/off .
-    setenv("NO_WINO", "1", (int)!flag);
-}
-
 bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
                         float *output_, int out_b, int outch, int out_h, int out_w,
                         float *kernel_, int kernel_s ,int kernel_h, int kernel_w,
@@ -312,7 +306,6 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
                stride_w, stride_h,
                dilation_w, dilation_h,
                pad_w,pad_h);*/
-        tengine_set_Winograd(false);    // Default not using the winograd algorithm.
 
         // weight
         if (kernel_inwh != wstep)
