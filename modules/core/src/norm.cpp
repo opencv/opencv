@@ -750,7 +750,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         const size_t esz = src.elemSize();
         const int total = (int)it.size;
         const int blockSize = std::min(total, divUp(1024, cn));
-        AutoBuffer<float, 1024> fltbuf(blockSize);
+        AutoBuffer<float, 1026/*divUp(1024,3)*3*/> fltbuf(blockSize * cn);
         float* data0 = fltbuf.data();
         for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
@@ -1238,7 +1238,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         const size_t esz = src1.elemSize();
         const int total = (int)it.size;
         const int blockSize = std::min(total, divUp(512, cn));
-        AutoBuffer<float, 1024> fltbuf(blockSize * 2);
+        AutoBuffer<float, 1026/*divUp(512,3)*3*2*/> fltbuf(blockSize * cn * 2);
         float* data0 = fltbuf.data();
         float* data1 = fltbuf.data() + blockSize * cn;
         for (size_t i = 0; i < it.nplanes; i++, ++it)
