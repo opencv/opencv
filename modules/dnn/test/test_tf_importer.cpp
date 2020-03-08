@@ -181,6 +181,13 @@ TEST_P(Test_TensorFlow_layers, eltwise)
     runTensorFlowNet("eltwise_sub");
 }
 
+TEST_P(Test_TensorFlow_layers, channel_broadcast)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    runTensorFlowNet("channel_broadcast");
+}
+
 TEST_P(Test_TensorFlow_layers, pad_and_concat)
 {
     runTensorFlowNet("pad_and_concat");
