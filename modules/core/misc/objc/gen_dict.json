@@ -138,6 +138,11 @@
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[Rect2i fromNative:%(n)s]"
         },
+        "Rect2i": {
+            "objc_type": "Rect2i*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Rect2i fromNative:%(n)s]"
+        },
         "Rect2f": {
             "objc_type": "Rect2f*",
             "to_cpp": "%(n)s.nativeRef",
@@ -207,9 +212,6 @@
         "c_string": {
             "objc_type": "NSString*"
         },
-        "size_t": {
-            "objc_type": "long"
-        },
         "vector_DMatch": {
             "objc_type": "DMatch*",
             "v_type": "DMatch"
@@ -276,28 +278,33 @@
         },
         "vector_char": {
             "objc_type": "ByteVector*",
-            "to_cpp": "%(n)s.vector",
-            "from_cpp": "[ByteVector fromNative:%(n)s]"
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[ByteVector fromNative:%(n)s]",
+            "cast_to": "std::vector<char>"
         },
         "vector_double": {
             "objc_type": "DoubleVector*",
-            "to_cpp": "%(n)s.vector",
-            "from_cpp": "[DoubleVector fromNative:%(n)s]"
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[DoubleVector fromNative:%(n)s]",
+            "cast_to": "std::vector<double>"
         },
         "vector_float": {
             "objc_type": "FloatVector*",
-            "to_cpp": "%(n)s.vector",
-            "from_cpp": "[FloatVector fromNative:%(n)s]"
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[FloatVector fromNative:%(n)s]",
+            "cast_to": "std::vector<float>"
         },
         "vector_int": {
             "objc_type": "IntVector*",
-            "to_cpp": "%(n)s.vector",
-            "from_cpp": "[IntVector fromNative:%(n)s]"
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[IntVector fromNative:%(n)s]",
+            "cast_to": "std::vector<int>"
         },
         "vector_uchar": {
             "objc_type": "ByteVector*",
-            "to_cpp": "(std::vector<uchar>&)%(n)s.vector",
-            "from_cpp": "[ByteVector fromNative:(std::vector<char>&)%(n)s]"
+            "to_cpp": "(std::vector<uchar>&)%(n)s.nativeRef",
+            "from_cpp": "[ByteVector fromNative:(std::vector<char>&)%(n)s]",
+            "cast_to": "std::vector<uchar>"
         },
         "vector_vector_DMatch": {
             "objc_type": "DMatch*",
@@ -322,6 +329,10 @@
         "vector_vector_char": {
             "objc_type": "ByteVector*",
             "v_type": "ByteVector"
+        },
+        "ByteVector": {
+            "objc_type": "ByteVector*",
+            "cast_to": "std::vector<char>"
         }
     }
 }

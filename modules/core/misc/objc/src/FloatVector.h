@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 
 #ifdef __cplusplus
-@property(readonly) std::vector<float>& vector;
+@property(readonly) std::vector<float>& nativeRef;
 -(instancetype)initWithStdVector:(std::vector<float>&)src;
 +(instancetype)fromNative:(std::vector<float>&)src;
 #endif

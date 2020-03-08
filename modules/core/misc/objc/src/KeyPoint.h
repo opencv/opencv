@@ -25,6 +25,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property float response;
 @property int octave;
 @property int classId;
+#ifdef __cplusplus
+@property(readonly) cv::KeyPoint& nativeRef;
+#endif
 
 - (instancetype)init;
 - (instancetype)initWithX:(float)x y:(float)y size:(float)size angle:(float)angle response:(float)response octave:(int)octave classId:(int)classId;
@@ -32,7 +35,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithX:(float)x y:(float)y size:(float)size angle:(float)angle response:(float)response;
 - (instancetype)initWithX:(float)x y:(float)y size:(float)size angle:(float)angle;
 - (instancetype)initWithX:(float)x y:(float)y size:(float)size;
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::KeyPoint&)keyPoint;
+#endif
 
+- (KeyPoint*)clone;
+- (BOOL)isEqual:(nullable id)other;
+- (NSUInteger)hash;
 - (NSString*)description;
 
 @end

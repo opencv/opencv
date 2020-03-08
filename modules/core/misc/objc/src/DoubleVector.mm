@@ -27,7 +27,7 @@
 -(instancetype)initWithVector:(DoubleVector*)src {
     self = [super init];
     if (self) {
-        v.insert(v.begin(), src.vector.begin(), src.vector.end());
+        v.insert(v.begin(), src.nativeRef.begin(), src.nativeRef.end());
     }
     return self;
 }
@@ -48,7 +48,7 @@
     return self;
 }
 
-- (std::vector<double>&)vector {
+- (std::vector<double>&)nativeRef {
     return v;
 }
 

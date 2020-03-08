@@ -75,6 +75,7 @@
         "convexHull" : { "points" : {"ctype" : "vector_Point"},
                          "hull"   : {"ctype" : "vector_int"},
                          "returnPoints" : {"ctype" : ""} },
+        "EMD" : { "lowerBound" : {"defval" : "cv::Ptr<float>()"}},
         "(void)insert:(NSArray<Point2f*>*)ptvec" : { "insert" : {"name" : "insertVector"} }
     }
 }

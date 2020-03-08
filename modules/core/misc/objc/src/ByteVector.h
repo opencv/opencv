@@ -19,17 +19,17 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(readonly) NSInteger length;
 #ifdef __OBJC__
-@property(readonly) SInt8* nativeArray;
--(instancetype)initWithNativeArray:(SInt8*)array elements:(NSInteger)elements;
+@property(readonly) char* nativeArray;
+-(instancetype)initWithNativeArray:(char*)array elements:(NSInteger)elements;
 #endif
 
 #ifdef __cplusplus
-@property(readonly) std::vector<SInt8>& vector;
--(instancetype)initWithStdVector:(std::vector<SInt8>&)src;
-+(instancetype)fromNative:(std::vector<SInt8>&)src;
+@property(readonly) std::vector<char>& nativeRef;
+-(instancetype)initWithStdVector:(std::vector<char>&)src;
++(instancetype)fromNative:(std::vector<char>&)src;
 #endif
 
--(SInt8)get:(NSInteger)index;
+-(char)get:(NSInteger)index;
 @property(readonly) NSData* data;
 
 @end

@@ -21,12 +21,22 @@ NS_ASSUME_NONNULL_BEGIN
 @property int trainIdx;
 @property int imgIdx;
 @property float distance;
+#ifdef __cplusplus
+@property(readonly) cv::DMatch& nativeRef;
+#endif
 
 - (instancetype)init;
 - (instancetype)initWithQueryIdx:(int)queryIdx trainIdx:(int)trainIdx distance:(float)distance;
 - (instancetype)initWithQueryIdx:(int)queryIdx trainIdx:(int)trainIdx imgIdx:(int)imgIdx distance:(float)distance;
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::DMatch&)dMatch;
+#endif
 
 - (BOOL)lessThan:(DMatch*)it;
+
+- (DMatch*)clone;
+- (BOOL)isEqual:(nullable id)other;
+- (NSUInteger)hash;
 - (NSString*)description;
 
 @end
