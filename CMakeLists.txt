@@ -422,6 +422,9 @@ OCV_OPTION(WITH_QUIRC "Include library QR-code decoding" ON
 OCV_OPTION(WITH_ANDROID_MEDIANDK "Use Android Media NDK for Video I/O (Android)" (ANDROID_NATIVE_API_LEVEL GREATER 20)
   VISIBLE_IF ANDROID
   VERIFY HAVE_ANDROID_MEDIANDK)
+OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" OFF
+  VISIBLE_IF (ARM OR AARCH64) AND UNIX AND NOT ANDROID AND NOT IOS
+  VERIFY HAVE_TENGINE)
 
 # OpenCV build components
 # ===================================================
@@ -677,6 +680,9 @@ include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 include(cmake/OpenCVFindLAPACK.cmake)
 include(cmake/OpenCVFindProtobuf.cmake)
+if(WITH_TENGINE)
+  include(cmake/OpenCVFindTengine.cmake)
+endif()
 
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
@@ -1407,6 +1413,10 @@ endif()
 
 if(WITH_VA_INTEL OR HAVE_VA_INTEL)
   status("    Intel VA-API/OpenCL:"  HAVE_VA_INTEL       THEN "YES (OpenCL: ${VA_INTEL_IOCL_ROOT})" ELSE NO)
+endif()
+
+if(WITH_TENGINE OR HAVE_TENGINE)
+  status("    Tengine:"      HAVE_TENGINE     THEN "YES (${TENGINE_LIBRARIES})" ELSE NO)
 endif()
 
 if(WITH_LAPACK OR HAVE_LAPACK)
