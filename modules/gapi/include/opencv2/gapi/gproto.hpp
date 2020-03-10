@@ -127,8 +127,8 @@ bool GAPI_EXPORTS can_describe(const GMetaArgs& metas, const GRunArgs& args);
 bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArgP& argp);
 
 // Validates input arguments
-bool GAPI_EXPORTS validate_input_arg(const GRunArg& arg);
-bool GAPI_EXPORTS validate_input_arg(const GRunArgs& args);
+void GAPI_EXPORTS validate_input_arg(const GRunArg& arg);
+void GAPI_EXPORTS validate_input_args(const GRunArgs& args);
 
 } // namespace cv
 
