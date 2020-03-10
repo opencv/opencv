@@ -138,9 +138,9 @@ enum InterpolationFlags{
     INTER_MAX            = 7,
 };
 namespace gapi { namespace own {
-    class Scalar;
-}
-}
+class Scalar;
+} // namespace own
+} // namespace gapi
     using Scalar = gapi::own::Scalar;
 } // namespace cv
 
