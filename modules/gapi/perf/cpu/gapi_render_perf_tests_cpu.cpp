@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2020 Intel Corporation
 
 
 #include "../perf_precomp.hpp"
@@ -14,12 +14,12 @@
 namespace opencv_test
 {
 
-INSTANTIATE_TEST_CASE_P(RenderTestTextsCPU_8U, RenderTestTexts,
-    Combine(Values(AbsExact().to_compare_f()),
-        Values(CV_8UC1, CV_8UC3),
-        Values(szVGA, sz720p, sz1080p),
-        Values(cv::compile_args(RENDER_CPU))));
 
+INSTANTIATE_TEST_CASE_P(RenderTestTextsCPU_8U, RenderTestTexts,
+    Combine(Values(AbsExact().to_compare_obj()),
+        Values(CV_8UC1, CV_8UC3),
+        Values(szVGA, sz720p, sz1080p, cv::Size(12, 12)),
+        Values(cv::compile_args(RENDER_CPU))));
 
 INSTANTIATE_TEST_CASE_P(RenderTestRectsCPU_8U, RenderTestRects,
     Combine(Values(AbsExact().to_compare_f()),
@@ -51,7 +51,7 @@ INSTANTIATE_TEST_CASE_P(RenderTestImagesCPU_8U, RenderTestCircles,
         Values(szVGA, sz720p, sz1080p),
         Values(cv::compile_args(RENDER_CPU))));
 
-INSTANTIATE_TEST_CASE_P(RenderTestImagesCPU_8U, RenderTestPolylines,
+INSTANTIATE_TEST_CASE_P(RenderTestPolylinesCPU_8U, RenderTestPolylines,
     Combine(Values(AbsExact().to_compare_f()),
         Values(CV_8UC1, CV_8UC3),
         Values(szVGA, sz720p, sz1080p),
