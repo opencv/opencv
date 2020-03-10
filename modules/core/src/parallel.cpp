@@ -140,13 +140,12 @@
 
 using namespace cv;
 
-namespace cv
-{
-    ParallelLoopBody::~ParallelLoopBody() {}
-}
+namespace cv {
 
-namespace
-{
+ParallelLoopBody::~ParallelLoopBody() {}
+
+namespace {
+
 #ifdef CV_PARALLEL_FRAMEWORK
 #ifdef ENABLE_INSTRUMENTATION
     static void SyncNodes(cv::instr::InstrNode *pNode)
@@ -445,7 +444,7 @@ static SchedPtr pplScheduler;
 
 #endif // CV_PARALLEL_FRAMEWORK
 
-} //namespace
+} // namespace anon
 
 /* ================================   parallel_for_  ================================ */
 
@@ -453,7 +452,7 @@ static SchedPtr pplScheduler;
 static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes); // forward declaration
 #endif
 
-void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
+void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
 #ifdef OPENCV_TRACE
     CV__TRACE_OPENCV_FUNCTION_NAME_("parallel_for", 0);
@@ -573,7 +572,7 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 #endif // CV_PARALLEL_FRAMEWORK
 
 
-int cv::getNumThreads(void)
+int getNumThreads(void)
 {
 #ifdef CV_PARALLEL_FRAMEWORK
 
@@ -634,7 +633,6 @@ int cv::getNumThreads(void)
 #endif
 }
 
-namespace cv {
 unsigned defaultNumberOfThreads()
 {
 #ifdef __ANDROID__
@@ -656,9 +654,8 @@ unsigned defaultNumberOfThreads()
     }
     return result;
 }
-}
 
-void cv::setNumThreads( int threads_ )
+void setNumThreads( int threads_ )
 {
     CV_UNUSED(threads_);
 #ifdef CV_PARALLEL_FRAMEWORK
@@ -719,7 +716,7 @@ void cv::setNumThreads( int threads_ )
 }
 
 
-int cv::getThreadNum(void)
+int getThreadNum()
 {
 #if defined HAVE_TBB
     #if TBB_INTERFACE_VERSION >= 9100
@@ -841,14 +838,17 @@ T minNonZero(const T& val_1, const T& val_2)
     return (val_1 != 0) ? val_1 : val_2;
 }
 
-int cv::getNumberOfCPUs(void)
+static
+int getNumberOfCPUs_()
 {
     /*
      * Logic here is to try different methods of getting CPU counts and return
      * the minimum most value as it has high probablity of being right and safe.
      * Return 1 if we get 0 or not found on all methods.
     */
-#if defined CV_CXX11
+#if defined CV_CXX11 \
+    && !defined(__MINGW32__) /* not implemented (2020-03) */ \
+
     /*
      * Check for this standard C++11 way, we do not return directly because
      * running in a docker or K8s environment will mean this is the host
@@ -862,13 +862,13 @@ int cv::getNumberOfCPUs(void)
 
 #if defined _WIN32
 
-    SYSTEM_INFO sysinfo;
+    SYSTEM_INFO sysinfo = {};
 #if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );
 #else
     GetSystemInfo( &sysinfo );
 #endif
-    unsigned ncpus_sysinfo = sysinfo.dwNumberOfProcessors < 0 ? 1 : sysinfo.dwNumberOfProcessors; /* Just a fail safe */
+    unsigned ncpus_sysinfo = sysinfo.dwNumberOfProcessors;
     ncpus = minNonZero(ncpus, ncpus_sysinfo);
 
 #elif defined __APPLE__
@@ -911,6 +911,7 @@ int cv::getNumberOfCPUs(void)
 #endif
 
 #if defined _GNU_SOURCE \
+    && !defined(__MINGW32__) /* not implemented (2020-03) */ \
     && !defined(__EMSCRIPTEN__) \
     && !defined(__ANDROID__)  // TODO: add check for modern Android NDK
 
@@ -933,13 +934,21 @@ int cv::getNumberOfCPUs(void)
     return ncpus != 0 ? ncpus : 1;
 }
 
-const char* cv::currentParallelFramework() {
+int getNumberOfCPUs()
+{
+    static int nCPUs = getNumberOfCPUs_();
+    return nCPUs;  // cached value
+}
+
+const char* currentParallelFramework() {
 #ifdef CV_PARALLEL_FRAMEWORK
     return CV_PARALLEL_FRAMEWORK;
 #else
     return NULL;
 #endif
 }
+
+}  // namespace cv::
 
 CV_IMPL void cvSetNumThreads(int nt)
 {
