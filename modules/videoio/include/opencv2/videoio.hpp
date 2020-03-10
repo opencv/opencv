@@ -899,8 +899,7 @@ public:
                 Size frameSize, bool isColor = true);
 
     /** @overload
-     *
-     * @param params Encoder parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .)
+     * The `params` parameter allows to specify extra encoder parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .)
      * see cv::VideoWriterProperties
      */
     CV_WRAP VideoWriter(const String& filename, int fourcc, double fps, const Size& frameSize,
