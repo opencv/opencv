@@ -431,7 +431,18 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             bool isSub = layer_type == "Sub";
             CV_CheckEQ(node_proto.input_size(), 2, "");
-            if (layer_id.find(node_proto.input(1)) == layer_id.end())
+            bool is_const_0 = layer_id.find(node_proto.input(0)) == layer_id.end();
+            bool is_const_1 = layer_id.find(node_proto.input(1)) == layer_id.end();
+            if (is_const_0 && is_const_1)
+            {
+                Mat blob_0 = getBlob(node_proto, constBlobs, 0);
+                Mat blob_1 = getBlob(node_proto, constBlobs, 1);
+                CV_Assert(blob_0.size == blob_1.size);
+                Mat output = isSub ? blob_0 - blob_1 : blob_0 + blob_1;
+                constBlobs.insert(std::make_pair(layerParams.name, output));
+                continue;
+            }
+            else if (is_const_0 || is_const_1)
             {
                 Mat blob = getBlob(node_proto, constBlobs, is_const_0 ? 0 : 1);
                 blob = blob.reshape(1, 1);
@@ -813,14 +824,11 @@ void ONNXImporter::populateNet(Net dstNet)
             CV_CheckEQ(node_proto.input_size(), 1, "");
             if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
             {
-                int axis = layerParams.get<int>("axis", 1);
                 Mat input = getBlob(node_proto, constBlobs, 0);
-                axis = clamp(axis, input.dims);
+                int axis = clamp(layerParams.get<int>("axis", 1), input.dims);
 
                 std::vector<int> out_size(&input.size[0], &input.size[0] + axis);
-                int last_dim = input.total(axis);
-                out_size.push_back(last_dim);
-
+                out_size.push_back(input.total(axis));
                 Mat output = input.reshape(1, out_size);
                 constBlobs.insert(std::make_pair(layerParams.name, output));
                 continue;
@@ -913,6 +921,23 @@ void ONNXImporter::populateNet(Net dstNet)
 
             constBlobs.insert(std::make_pair(layerParams.name, shapeMat));
             continue;
+        }
+        else if (layer_type == "Cast")
+        {
+           CV_Assert(constBlobs.find(node_proto.input(0)) != constBlobs.end());
+           Mat blob = getBlob(node_proto, constBlobs, 0);
+           int type;
+           switch (layerParams.get<int>("to")) {
+               case 1: type = CV_32F; break;
+               case 2: type = CV_8U; break;
+               case 3: case 5: case 6: case 7: type = CV_32S; break;
+               case 4: type = CV_16U; break;
+               case 10: type = CV_16S; break;
+               default: type = blob.type();
+           }
+           blob.convertTo(blob, type);
+           constBlobs.insert(std::make_pair(layerParams.name, blob));
+           continue;
         }
         else if (layer_type == "Gather")
         {
