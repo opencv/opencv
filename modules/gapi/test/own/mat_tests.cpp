@@ -607,4 +607,28 @@ TEST(OwnMat, CreateWithNegativeHeight)
     ASSERT_ANY_THROW(own_mat.create(cv::Size{1, -1}, CV_8U));
 }
 
+TEST(OwnMat, ZeroHeightMat)
+{
+    cv::GMat in, a, b, c, d;
+    std::tie(a, b, c, d) = cv::gapi::split4(in);
+    cv::GMat out = cv::gapi::merge3(a, b, c);
+    cv::Mat in_mat(cv::Size(8, 0), CV_8UC4);
+    cv::Mat out_mat(cv::Size(8, 8), CV_8UC3);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+    ASSERT_ANY_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat),
+        cv::compile_args(cv::gapi::core::fluid::kernels())));
+}
+
+TEST(OwnMat, ZeroWidthMat)
+{
+    cv::GMat in, a, b, c, d;
+    std::tie(a, b, c, d) = cv::gapi::split4(in);
+    cv::GMat out = cv::gapi::merge3(a, b, c);
+    cv::Mat in_mat(cv::Size(0, 8), CV_8UC4);
+    cv::Mat out_mat(cv::Size(8, 8), CV_8UC3);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+    ASSERT_ANY_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat),
+        cv::compile_args(cv::gapi::core::fluid::kernels())));
+}
+
 } // namespace opencv_test
