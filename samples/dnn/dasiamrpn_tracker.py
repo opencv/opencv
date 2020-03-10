@@ -98,8 +98,8 @@ class DaSiamRPN:
         scale_z = self.exemplar_size / s_z
         d_search = (self.instance_size - self.exemplar_size) / 2
         pad = d_search / scale_z
-        s_x = s_z + 2 * pad
-
+        s_x = round(s_z + 2 * pad)
+        print(s_x)
         #region preprocessing
         x_crop = self.get_subwindow_tracking(im, self.instance_size, s_x)
         x_crop = x_crop.transpose(2, 0, 1).reshape(1, 3, 271, 271).astype(np.float32)
