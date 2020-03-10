@@ -41,11 +41,13 @@ static const char* dumpInferenceEngineBackendType(Backend backend)
 Backend& getInferenceEngineBackendTypeParam()
 {
     static Backend param = parseInferenceEngineBackendType(
-        utils::getConfigurationParameterString("OPENCV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019_TYPE",
-#ifndef HAVE_DNN_IE_NN_BUILDER_2019
+        utils::getConfigurationParameterString("OPENCV_DNN_BACKEND_INFERENCE_ENGINE_TYPE",
+#ifdef HAVE_DNN_NGRAPH
             CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
-#else
+#elif defined(HAVE_DNN_IE_NN_BUILDER_2019)
             CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API
+#else
+#error "Build configuration error: nGraph or NN Builder API backend should be enabled"
 #endif
         )
     );
