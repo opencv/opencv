@@ -126,6 +126,10 @@ bool GAPI_EXPORTS can_describe(const GMetaArgs& metas, const GRunArgs& args);
 // coincides with output arguments passed to computation in cpu and ocl backends
 bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArgP& argp);
 
+// Validates input arguments
+void GAPI_EXPORTS validate_input_arg(const GRunArg& arg);
+void GAPI_EXPORTS validate_input_args(const GRunArgs& args);
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GPROTO_HPP

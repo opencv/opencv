@@ -197,6 +197,42 @@ bool cv::can_describe(const GMetaArgs &metas, const GRunArgs &args)
                      });
 }
 
+void cv::validate_input_arg(const GRunArg& arg)
+{
+    // FIXME: It checks only Mat argument
+    switch (arg.index())
+    {
+#if !defined(GAPI_STANDALONE)
+    case GRunArg::index_of<cv::Mat>():
+    {
+        const auto desc = descr_of(util::get<cv::Mat>(arg));
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of cv::Mat!"); break;
+    }
+    case GRunArg::index_of<cv::UMat>():
+    {
+        const auto desc = descr_of(util::get<cv::UMat>(arg));
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of cv::UMat!"); break;
+    }
+#endif //  !defined(GAPI_STANDALONE)
+    case GRunArg::index_of<cv::gapi::own::Mat>():
+    {
+        const auto desc = descr_of(util::get<cv::gapi::own::Mat>(arg));
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of own::Mat!"); break;
+    }
+    default:
+        // No extra handling
+        break;
+    }
+}
+
+void cv::validate_input_args(const GRunArgs& args)
+{
+    for (const auto& arg : args)
+    {
+        validate_input_arg(arg);
+    }
+}
+
 namespace cv {
 std::ostream& operator<<(std::ostream& os, const cv::GMetaArg &arg)
 {
