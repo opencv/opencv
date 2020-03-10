@@ -87,6 +87,9 @@ template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const ArgInfo& info);
 
 """)
 
+"""
+    Template to add code for mapping fields in CV_EXPORTS_W_MAP classes
+"""
 gen_template_set_prop_from_map = Template("""
     if( PyMapping_HasKeyString(src, (char*)"$propname") )
     {
@@ -96,6 +99,9 @@ gen_template_set_prop_from_map = Template("""
         if(!ok) return false;
     }""")
 
+"""
+    Template wrapping all classes
+"""
 gen_template_type_impl = Template("""
 // GetSet (${name})
 
@@ -126,6 +132,7 @@ static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *clo
     return pyopencv_from(p->v${access}${member});
 }
 """)
+
 
 gen_template_get_prop_algo = Template("""
 static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *closure)
@@ -217,6 +224,9 @@ def get_type_format_string(arg_type_info):
 
 
 class ClassProp(object):
+    """
+    Helper class to store field information(type, name and flags) of classes and structs
+    """
     def __init__(self, decl):
         self.tp = decl[0].replace("*", "_ptr")
         self.name = decl[1]
@@ -229,14 +239,14 @@ class ClassInfo(object):
         self.cname = name.replace(".", "::")
         self.name = self.wname = normalize_class_name(name)
         self.sname = name[name.rfind('.') + 1:]
-        self.ismap = False
-        self.issimple = False
-        self.isalgorithm = False
+        self.ismap = False  #CV_EXPORTS_W_MAP
+        self.issimple = False   #CV_EXPORTS_W_SIMPLE
+        self.isalgorithm = False    #if class inherits from cv::Algorithm
         self.methods = {}
-        self.props = []
+        self.props = []     #Collection of ClassProp associated with this class
         self.mappables = []
         self.consts = {}
-        self.base = None
+        self.base = None    #name of base class if current class inherits another class
         self.constructor = None
         customname = False
 
@@ -268,7 +278,11 @@ class ClassInfo(object):
         if not customname and self.wname.startswith("Cv"):
             self.wname = self.wname[2:]
 
+
     def gen_map_code(self, codegen):
+        """
+        Generate and return code for classes of map type. No methods in this class, only fields. 
+        """
         all_classes = codegen.classes
         code = "static bool pyopencv_to(PyObject* src, %s& dst, const ArgInfo& info)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
@@ -279,6 +293,9 @@ class ClassInfo(object):
         return code
 
     def gen_code(self, codegen):
+        """
+        Generate and return code for all classes
+        """
         all_classes = codegen.classes
         if self.ismap:
             return self.gen_map_code(codegen)
@@ -294,10 +311,15 @@ class ClassInfo(object):
             access_op = "."
 
         for pname, p in sorted_props:
+
+            #create getter functions
             if self.isalgorithm:
                 getset_code.write(gen_template_get_prop_algo.substitute(name=self.name, cname=self.cname, member=pname, membertype=p.tp, access=access_op))
             else:
                 getset_code.write(gen_template_get_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
+
+
+            #create setter and init functions
             if p.readonly:
                 getset_inits.write(gen_template_prop_init.substitute(name=self.name, member=pname))
             else:
@@ -313,6 +335,7 @@ class ClassInfo(object):
         sorted_methods = list(self.methods.items())
         sorted_methods.sort()
 
+        #write code for functions contained in class
         if self.constructor is not None:
             methods_code.write(self.constructor.gen_code(codegen))
 
@@ -327,6 +350,9 @@ class ClassInfo(object):
         return code
 
     def gen_def(self, codegen):
+        """
+            Returns class declaration containing information about name, type and base class
+        """
         all_classes = codegen.classes
         baseptr = "NoBase"
         if self.base and self.base in all_classes:
@@ -352,6 +378,10 @@ def handle_ptr(tp):
 
 
 class ArgInfo(object):
+    """
+    Helper class to parse and contain information about function arguments
+    """
+
     def __init__(self, arg_tuple):
         self.tp = handle_ptr(arg_tuple[0])
         self.name = arg_tuple[1]
@@ -387,7 +417,11 @@ class ArgInfo(object):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
 
 
+
 class FuncVariant(object):
+    """
+    Helper class to parse and contain information about different overloaded versions of same function
+    """
     def __init__(self, classname, name, decl, isconstructor, isphantom=False):
         self.classname = classname
         self.name = self.wname = name
@@ -513,6 +547,9 @@ class FuncInfo(object):
         self.variants.append(FuncVariant(self.classname, self.name, decl, self.isconstructor, isphantom))
 
     def get_wrapper_name(self):
+        """
+        Return wrapping function name
+        """
         name = self.name
         if self.classname:
             classname = self.classname + "_"
@@ -527,18 +564,24 @@ class FuncInfo(object):
         return "pyopencv_" + self.namespace.replace('.','_') + '_' + classname + name
 
     def get_wrapper_prototype(self, codegen):
+        """
+        Return function prototype
+        """
         full_fname = self.get_wrapper_name()
         if self.isconstructor:
             return "static int {fn_name}(pyopencv_{type_name}_t* self, PyObject* args, PyObject* kw)".format(
                     fn_name=full_fname, type_name=codegen.classes[self.classname].name)
 
-        if self.classname:
+        if self.classname: #Method belongs to class
             self_arg = "self"
-        else:
+        else:   #Global method
             self_arg = ""
         return "static PyObject* %s(PyObject* %s, PyObject* args, PyObject* kw)" % (full_fname, self_arg)
 
     def get_tab_entry(self):
+        """
+        Returns JSON entry with function prototype and docstrings
+        """
         prototype_list = []
         docstring_list = []
 
@@ -584,6 +627,9 @@ class FuncInfo(object):
                                      flags = 'METH_STATIC' if self.is_static else '0', py_docstring = full_docstring)
 
     def gen_code(self, codegen):
+        """
+        Returns wrapping code for wrapping functions along with all varients
+        """
         all_classes = codegen.classes
         proto = self.get_wrapper_prototype(codegen)
         code = "%s\n{\n" % (proto,)
@@ -816,7 +862,7 @@ class PythonWrapperGenerator(object):
         self.clear()
 
     def clear(self):
-        self.classes = {}
+        self.classes = {}   #Dictionary of class names : ClassInfo objects
         self.namespaces = {}
         self.consts = {}
         self.enums = {}
@@ -828,9 +874,12 @@ class PythonWrapperGenerator(object):
         self.code_ns_init = StringIO()
         self.code_type_publish = StringIO()
         self.py_signatures = dict()
-        self.class_idx = 0
+        self.class_idx = 0  #Total number of classes
 
     def add_class(self, stype, name, decl):
+        """
+        Creates class based on name and declaration. Add it to list of classes and to JSON file
+        """
         classinfo = ClassInfo(name, decl)
         classinfo.decl_idx = self.class_idx
         self.class_idx += 1
@@ -891,6 +940,9 @@ class PythonWrapperGenerator(object):
             self.add_const(name.replace("const ", "").strip(), decl)
 
     def add_func(self, decl):
+        """
+        Creates functions based on declaration and add to appropriate classes and/or namespaces
+        """
         namespace, classes, barename = self.split_decl_name(decl[0])
         cname = "::".join(namespace+classes+[barename])
         name = barename
@@ -948,6 +1000,9 @@ class PythonWrapperGenerator(object):
 
 
     def gen_namespace(self, ns_name):
+        """
+        Adds code to code_ns_reg for namespace with given name
+        """
         ns = self.namespaces[ns_name]
         wname = normalize_class_name(ns_name)
 
@@ -983,6 +1038,9 @@ class PythonWrapperGenerator(object):
         self.code_enums.write(code)
 
     def save(self, path, name, buf):
+        """
+        Helper function to save generated code
+        """
         with open(path + "/" + name, "wt") as f:
             f.write(buf.getvalue())
 
