@@ -36,7 +36,7 @@ namespace cv
     };
 
 
-    inline cv::gapi::own::Scalar to_own(const cv::Scalar& s) { return {s[0], s[1], s[2], s[3]}; };
+    inline cv::Scalar to_own(const cv::Scalar& s) { return {s[0], s[1], s[2], s[3]}; };
 
     inline cv::gapi::own::Size to_own (const Size& s) { return {s.width, s.height}; };
 

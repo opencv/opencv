@@ -112,15 +112,12 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         case T::index_of<cv::Mat*>():
             *cv::util::get<cv::Mat*>(out_obj) = std::move(cv::util::get<cv::Mat>(res_obj));
             break;
-        case T::index_of<cv::Scalar*>():
-            *cv::util::get<cv::Scalar*>(out_obj) = std::move(cv::util::get<cv::Scalar>(res_obj));
-            break;
 #endif // !GAPI_STANDALONE
         case T::index_of<own::Mat*>():
             *cv::util::get<own::Mat*>(out_obj) = std::move(cv::util::get<own::Mat>(res_obj));
             break;
-        case T::index_of<own::Scalar*>():
-            *cv::util::get<own::Scalar*>(out_obj) = std::move(cv::util::get<own::Scalar>(res_obj));
+        case T::index_of<cv::Scalar*>():
+            *cv::util::get<cv::Scalar*>(out_obj) = std::move(cv::util::get<cv::Scalar>(res_obj));
             break;
         case T::index_of<cv::detail::VectorRef>():
             cv::util::get<cv::detail::VectorRef>(out_obj).mov(cv::util::get<cv::detail::VectorRef>(res_obj));
@@ -443,7 +440,7 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
             using SclType = cv::Scalar;
 #else
             using MatType = cv::gapi::own::Mat;
-            using SclType = cv::gapi::own::Scalar;
+            using SclType = cv::Scalar;
 #endif // GAPI_STANDALONE
 
             switch (r.shape) {
