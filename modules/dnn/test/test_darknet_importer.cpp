@@ -97,7 +97,7 @@ TEST(Test_Darknet, read_yolo_voc_stream)
 class Test_Darknet_layers : public DNNTestLayer
 {
 public:
-    void testDarknetLayer(const std::string& name, bool hasWeights = false)
+    void testDarknetLayer(const std::string& name, bool hasWeights = false, bool testBatchProcessing = true)
     {
         SCOPED_TRACE(name);
         Mat inp = blobFromNPY(findDataFile("dnn/darknet/" + name + "_in.npy"));
@@ -117,7 +117,7 @@ public:
         Mat out = net.forward();
         normAssert(out, ref, "", default_l1, default_lInf);
 
-        if (inp.size[0] == 1)  // test handling of batch size
+        if (inp.size[0] == 1 && testBatchProcessing)  // test handling of batch size
         {
             SCOPED_TRACE("batch size 2");
 
@@ -576,6 +576,12 @@ TEST_P(Test_Darknet_layers, convolutional)
         default_l1 = 0.01f;
     }
     testDarknetLayer("convolutional", true);
+}
+
+TEST_P(Test_Darknet_layers, scale_channels)
+{
+    // TODO: test fails for batches due to a bug/missing feature in ScaleLayer
+    testDarknetLayer("scale_channels", false, false);
 }
 
 TEST_P(Test_Darknet_layers, connected)
