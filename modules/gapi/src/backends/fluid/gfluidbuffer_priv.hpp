@@ -52,11 +52,11 @@ public:
 template<>
 class BorderHandlerT<cv::BORDER_CONSTANT> : public BorderHandler
 {
-    cv::gapi::own::Scalar m_border_value;
+    cv::Scalar m_border_value;
     cv::gapi::own::Mat m_const_border;
 
 public:
-    BorderHandlerT(int border_size, cv::gapi::own::Scalar border_value);
+    BorderHandlerT(int border_size, cv::Scalar border_value);
     virtual const uint8_t* inLineB(int log_idx, const BufferStorageWithBorder &data, int desc_height) const override;
     virtual void fillCompileTimeBorder(BufferStorageWithBorder &) override;
     virtual std::size_t size() const override;

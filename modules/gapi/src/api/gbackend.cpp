@@ -155,7 +155,7 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, bool is_umat)
         auto& mag_scalar = mag.template slot<cv::Scalar>()[rc.id];
         switch (arg.index())
         {
-            case GRunArg::index_of<cv::Scalar>()            : mag_scalar = to_own(util::get<cv::Scalar>(arg));    break;
+            case GRunArg::index_of<cv::Scalar>()            : mag_scalar = util::get<cv::Scalar>(arg);    break;
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;
@@ -222,7 +222,7 @@ void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat)
         auto& mag_scalar = mag.template slot<cv::Scalar>()[rc.id];
         switch (arg.index())
         {
-            case GRunArgP::index_of<cv::Scalar*>()            : mag_scalar = to_own(*util::get<cv::Scalar*>(arg)); break;
+            case GRunArgP::index_of<cv::Scalar*>()            : mag_scalar = *util::get<cv::Scalar*>(arg); break;
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;
@@ -375,7 +375,7 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat)
     {
         switch (g_arg.index())
         {
-            case GRunArgP::index_of<cv::Scalar*>()            : *util::get<cv::Scalar*>(g_arg) = cv::gapi::own::to_ocv(mag.template slot<cv::Scalar>().at(rc.id)); break;
+            case GRunArgP::index_of<cv::Scalar*>()            : *util::get<cv::Scalar*>(g_arg) = to_ocv(mag.template slot<cv::Scalar>().at(rc.id)); break;
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;

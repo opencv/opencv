@@ -415,7 +415,7 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
                 isl_input.second = cv::GRunArg{cv::to_own(cv::util::get<cv::Mat>(in_arg))};
                 break;
             case cv::GRunArg::index_of<cv::Scalar>():
-                isl_input.second = cv::GRunArg{cv::to_own(cv::util::get<cv::Scalar>(in_arg))};
+                isl_input.second = cv::GRunArg{cv::util::get<cv::Scalar>(in_arg)};
                 break;
             default:
                 isl_input.second = in_arg;

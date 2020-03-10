@@ -175,7 +175,7 @@ bool cv::can_describe(const GMetaArg& meta, const GRunArg& arg)
 #endif //  !defined(GAPI_STANDALONE)
     case GRunArg::index_of<cv::gapi::own::Mat>():    return util::holds_alternative<GMatDesc>(meta) &&
                                                             util::get<GMatDesc>(meta).canDescribe(util::get<cv::gapi::own::Mat>(arg));
-    case GRunArg::index_of<cv::Scalar>(): return meta == cv::GMetaArg(descr_of(util::get<cv::Scalar>(arg)));
+    case GRunArg::index_of<cv::Scalar>():            return meta == cv::GMetaArg(descr_of(util::get<cv::Scalar>(arg)));
     case GRunArg::index_of<cv::detail::VectorRef>(): return meta == cv::GMetaArg(util::get<cv::detail::VectorRef>(arg).descr_of());
     case GRunArg::index_of<cv::detail::OpaqueRef>(): return meta == cv::GMetaArg(util::get<cv::detail::OpaqueRef>(arg).descr_of());
     case GRunArg::index_of<cv::gapi::wip::IStreamSource::Ptr>(): return util::holds_alternative<GMatDesc>(meta); // FIXME(?) may be not the best option
