@@ -618,9 +618,9 @@ int getNumThreads(void)
 
 #elif defined HAVE_CONCURRENCY
 
-    return 1 + (pplScheduler == 0
+    return (pplScheduler == 0)
         ? Concurrency::CurrentScheduler::Get()->GetNumberOfVirtualProcessors()
-        : pplScheduler->GetNumberOfVirtualProcessors());
+        : pplScheduler->GetNumberOfVirtualProcessors();
 
 #elif defined HAVE_PTHREADS_PF
 
