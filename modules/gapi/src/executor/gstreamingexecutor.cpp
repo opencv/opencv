@@ -737,7 +737,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
             for (auto& op : m_ops)
             {
                 op.isl_exec = m_gim.metadata(op.nh).get<IslandExec>().object;
-                is_reshapable &= op.isl_exec->canReshape();
+                is_reshapable = is_reshapable && op.isl_exec->canReshape();
             }
             update_int_metas(); // (7)
             m_reshapable = util::make_optional(is_reshapable);
