@@ -32,6 +32,7 @@ using GArg_Test_Types = ::testing::Types
   // G-API types
      Expected<cv::GMat,                 cv::detail::ArgKind::GMAT>
    , Expected<cv::GMatP,                cv::detail::ArgKind::GMATP>
+   , Expected<cv::GFrame,               cv::detail::ArgKind::GFRAME>
    , Expected<cv::GScalar,              cv::detail::ArgKind::GSCALAR>
    , Expected<cv::GArray<int>,          cv::detail::ArgKind::GARRAY>
    , Expected<cv::GArray<float>,        cv::detail::ArgKind::GARRAY>

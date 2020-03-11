@@ -67,6 +67,12 @@ public:
     using GMat::GMat;
 };
 
+class GAPI_EXPORTS GFrame : public GMat
+{
+public:
+    using GMat::GMat;
+};
+
 namespace gapi { namespace own {
     class Mat;
 }}//gapi::own
