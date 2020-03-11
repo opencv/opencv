@@ -3323,13 +3323,15 @@ cv::Scalar Chessboard::Board::calcEdgeSharpness(cv::InputArray _img,float rise_d
         // build vertical lines
         for(int col = 1;col< tcols-1;++col)
         {
-            std::vector<cv::Point2f>::const_iterator iter1 = centers.begin()+col;
-            std::vector<cv::Point2f>::const_iterator iter2 = iter1+tcols;
-            for(int row= 0;row<trows-1;++row,iter1+=tcols,iter2+=tcols)
-                pairs.push_back(std::make_pair(*iter1,*iter2));
+            // avoid using iterators to not trigger out of range
+            int i1 = col;
+            int i2 = i1 + tcols;
+            for (int row = 0; row < trows - 1; ++row, i1 += tcols, i2 += tcols)
+            {
+                pairs.push_back(std::make_pair(centers[i1], centers[i2]));
+            }
         }
     }
-
 
     // calc edge response for each line
     cv::Rect rect(0,0,img.cols,img.rows);
