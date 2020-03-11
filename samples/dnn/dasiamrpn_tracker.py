@@ -9,7 +9,7 @@ import numpy as np
 import cv2 as cv
 import argparse
 
-class DaSiamRPN:
+class DaSiamRPNTracker:
     def __init__(self, im, target_pos, target_sz, net, kernel_r1, kernel_cls1):
         self.windowing = "cosine"
         self.exemplar_size = 127
@@ -90,7 +90,7 @@ class DaSiamRPN:
         return self.anchor
 
 #track function
-    def SiamRPN_track(self, im):
+    def track(self, im):
         wc_z = self.target_sz[1] + self.context_amount * sum(self.target_sz)
         hc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
 
@@ -99,7 +99,6 @@ class DaSiamRPN:
         d_search = (self.instance_size - self.exemplar_size) / 2
         pad = d_search / scale_z
         s_x = round(s_z + 2 * pad)
-        print(s_x)
         #region preprocessing
         x_crop = self.get_subwindow_tracking(im, self.instance_size, s_x)
         x_crop = x_crop.transpose(2, 0, 1).reshape(1, 3, 271, 271).astype(np.float32)
@@ -223,6 +222,7 @@ def main():
     parser.add_argument("--net", type = str, help = "Full path to onnx model of net")
     parser.add_argument("--kernel_r1", type = str, help = "Full path to onnx model of kernel_r1")
     parser.add_argument("--kernel_cls1", type = str, help = "Full path to onnx model of kernel_cls1")
+    parser.add_argument("--input", type = str, default = " ", help = "Full path to input. Do not use if input is camera")
     args = parser.parse_args()
 
     point1 = ()
@@ -254,27 +254,29 @@ def main():
     kernel_r1 = cv.dnn.readNet(args.kernel_r1)
     kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
 
-    cap = cv.VideoCapture(0, cv.CAP_V4L2)
-    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
-    cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
-    ret, frame = cap.read()
+    if args.input == " ":
 
-    cv.namedWindow("DaSiamRPN")
-    cv.setMouseCallback("DaSiamRPN", get_bb)
-
-    while mark == True:
+        cap = cv.VideoCapture(0, cv.CAP_V4L2)
+        cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
+        cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
         ret, frame = cap.read()
-        if point1 and point2:
-            cv.rectangle(frame, point1, point2, (0, 255, 255), 3)
-        cv.imshow("DaSiamRPN", frame)
-        cv.waitKey(1)
+
+        cv.namedWindow("DaSiamRPN")
+        cv.setMouseCallback("DaSiamRPN", get_bb)
+
+        while mark == True:
+            ret, frame = cap.read()
+            if point1 and point2:
+                cv.rectangle(frame, point1, point2, (0, 255, 255), 3)
+            cv.imshow("DaSiamRPN", frame)
+            cv.waitKey(1)
 
     target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
-    Tracker = DaSiamRPN(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
+    Tracker = DaSiamRPNTracker(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
 
     while (cap.isOpened):
         ret,frame = cap.read()
-        Tracker.SiamRPN_track(frame)
+        Tracker.track(frame)
 
         w, h = Tracker.target_sz
         cx, cy = Tracker.target_pos
