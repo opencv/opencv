@@ -90,6 +90,7 @@ namespace detail
     template<typename T> struct MetaType;
     template<> struct MetaType<cv::GMat>    { using type = GMatDesc; };
     template<> struct MetaType<cv::GMatP>   { using type = GMatDesc; };
+    template<> struct MetaType<cv::GFrame>  { using type = GMatDesc; };
     template<> struct MetaType<cv::GScalar> { using type = GScalarDesc; };
     template<typename U> struct MetaType<cv::GArray<U> >  { using type = GArrayDesc; };
     template<typename U> struct MetaType<cv::GOpaque<U> > { using type = GOpaqueDesc; };
@@ -219,6 +220,8 @@ class GKernelType<K, std::function<R(Args...)> >
 public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R>;
+
+    static_assert(!cv::detail::contains<GFrame, OutArgs>::value, "Values of GFrame type can't be used as operation outputs");
 
     static R on(Args... args)
     {
