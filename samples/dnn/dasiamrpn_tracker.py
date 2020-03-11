@@ -34,13 +34,13 @@ class DaSiamRPNTracker:
         if ((self.target_sz[0] * self.target_sz[1]) / float(self.im_h * self.im_w)) < 0.004: 
              raise AssertionError("Initializing BB is too small-try to restart tracker with larger BB")
 
-        self.anchor = self.generate_anchor()
+        self.anchor = self.__generate_anchor()
 
         wc_z = self.target_sz[0] + self.context_amount * sum(self.target_sz)
         hc_z = self.target_sz[1] + self.context_amount * sum(self.target_sz)
         s_z = round(np.sqrt(wc_z * hc_z))
 
-        z_crop = self.get_subwindow_tracking(im, self.exemplar_size, s_z)
+        z_crop = self.__get_subwindow_tracking(im, self.exemplar_size, s_z)
         z_crop = z_crop.transpose(2, 0, 1).reshape(1, 3, 127, 127).astype(np.float32)
 
         self.net.setInput(z_crop)
@@ -64,7 +64,7 @@ class DaSiamRPNTracker:
             self.window = np.ones((self.score_size, self.score_size))
         self.window = np.tile(self.window.flatten(), self.anchor_num)
 
-    def generate_anchor(self):
+    def __generate_anchor(self):
         self.anchor = np.zeros((self.anchor_num, 4),  dtype = np.float32)
         size = self.total_stride * self.total_stride
         count = 0
@@ -100,10 +100,10 @@ class DaSiamRPNTracker:
         pad = d_search / scale_z
         s_x = round(s_z + 2 * pad)
         #region preprocessing
-        x_crop = self.get_subwindow_tracking(im, self.instance_size, s_x)
+        x_crop = self.__get_subwindow_tracking(im, self.instance_size, s_x)
         x_crop = x_crop.transpose(2, 0, 1).reshape(1, 3, 271, 271).astype(np.float32)
 
-        self.score = self.tracker_eval(x_crop, scale_z)
+        self.score = self.__tracker_eval(x_crop, scale_z)
 
         self.target_pos[0] = max(0, min(self.im_w, self.target_pos[0]))
         self.target_pos[1] = max(0, min(self.im_h, self.target_pos[1]))
@@ -111,7 +111,7 @@ class DaSiamRPNTracker:
         self.target_sz[1] = max(10, min(self.im_h, self.target_sz[1]))
 
     #evaluations with cropped images
-    def tracker_eval(self, x_crop, scale_z):
+    def __tracker_eval(self, x_crop, scale_z):
         target_size = self.target_sz * scale_z
         self.net.setInput(x_crop)
         outNames = self.net.getUnconnectedOutLayersNames()
@@ -125,28 +125,28 @@ class DaSiamRPNTracker:
         score = np.transpose(score, (1, 2, 3, 0))
         score = np.ascontiguousarray(score, dtype = np.float32)
         score = np.reshape(score, (2, -1))
-        score = self.softmax(score)[1, :]
+        score = self.__softmax(score)[1, :]
 
         delta[0, :] = delta[0, :] * self.anchor[:, 2] + self.anchor[:, 0]
         delta[1, :] = delta[1, :] * self.anchor[:, 3] + self.anchor[:, 1]
         delta[2, :] = np.exp(delta[2, :]) * self.anchor[:, 2]
         delta[3, :] = np.exp(delta[3, :]) * self.anchor[:, 3]
 
-        def change(r):
+        def __change(r):
             return np.maximum(r, 1./r)
 
-        def sz(w, h):
+        def __sz(w, h):
             pad = (w + h) * 0.5
             sz2 = (w + pad) * (h + pad)
             return np.sqrt(sz2)
 
-        def sz_wh(wh):
+        def __sz_wh(wh):
             pad = (wh[0] + wh[1]) * 0.5
             sz2 = (wh[0] + pad) * (wh[1] + pad)
             return np.sqrt(sz2)
 
-        s_c = change(sz(delta[2, :], delta[3, :]) / (sz_wh(target_size)))
-        r_c = change((target_size[0] / target_size[1]) / (delta[2, :] / delta[3, :]))
+        s_c = __change(__sz(delta[2, :], delta[3, :]) / (__sz_wh(target_size)))
+        r_c = __change((target_size[0] / target_size[1]) / (delta[2, :] / delta[3, :]))
 
         penalty = np.exp(-(r_c * s_c - 1.) * self.penalty_k)
         pscore = penalty * score
@@ -169,13 +169,13 @@ class DaSiamRPNTracker:
 
         return score[best_pscore_id]
 
-    def softmax(self, x):
+    def __softmax(self, x):
         x_max = x.max(0)
         e_x = np.exp(x - x_max)
         y = e_x / e_x.sum(axis = 0)
         return y
 
-    def get_subwindow_tracking(self, im, model_size, original_sz):
+    def __get_subwindow_tracking(self, im, model_size, original_sz):
         im_sz = im.shape
         c = (original_sz + 1) / 2
 
