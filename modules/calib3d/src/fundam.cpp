@@ -809,7 +809,7 @@ public:
 
 cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
                                 int method, double ransacReprojThreshold, double confidence,
-                                OutputArray _mask )
+                                int maxIters, OutputArray _mask )
 {
     CV_INSTRUMENT_REGION();
 
@@ -861,7 +861,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
             confidence = 0.99;
 
         if( (method & ~3) == FM_RANSAC && npoints >= 15 )
-            result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence)->run(m1, m2, F, _mask);
+            result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence, maxIters)->run(m1, m2, F, _mask);
         else
             result = createLMeDSPointSetRegistrator(cb, 7, confidence)->run(m1, m2, F, _mask);
     }
@@ -872,11 +872,17 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     return F;
 }
 
-cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
-                               OutputArray _mask, int method,
-                               double ransacReprojThreshold , double confidence)
+cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2,
+                                     int method, double ransacReprojThreshold, double confidence,
+                                     cv::OutputArray mask )
 {
-    return cv::findFundamentalMat(_points1, _points2, method, ransacReprojThreshold, confidence, _mask);
+    return cv::findFundamentalMat(points1, points2, method, ransacReprojThreshold, confidence, 1000, mask);
+}
+
+cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2, cv::OutputArray mask,
+                                int method, double ransacReprojThreshold, double confidence )
+{
+    return cv::findFundamentalMat(points1, points2, method, ransacReprojThreshold, confidence, 1000, mask);
 }
 
 
