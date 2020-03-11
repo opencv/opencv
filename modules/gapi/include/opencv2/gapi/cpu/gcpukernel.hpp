@@ -155,7 +155,7 @@ template<> struct get_in<cv::GMatP>
 };
 template<> struct get_in<cv::GScalar>
 {
-    static cv::Scalar get(GCPUContext &ctx, int idx) { return cv::gapi::own::to_ocv(ctx.inVal(idx)); }
+    static cv::Scalar get(GCPUContext &ctx, int idx) { return ctx.inVal(idx); }
 };
 template<typename U> struct get_in<cv::GArray<U> >
 {
@@ -210,7 +210,7 @@ struct tracked_cv_mat{
 
 struct scalar_wrapper
 {
-    scalar_wrapper(cv::Scalar& s) : m_s{cv::gapi::own::to_ocv(s)}, m_org_s(s) {};
+    scalar_wrapper(cv::Scalar& s) : m_s{s}, m_org_s(s) {};
     operator cv::Scalar& () { return m_s; }
     void writeBack() const  { m_org_s = m_s; }
 
