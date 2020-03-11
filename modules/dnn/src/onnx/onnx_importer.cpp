@@ -438,7 +438,7 @@ void ONNXImporter::populateNet(Net dstNet)
                 Mat blob_0 = getBlob(node_proto, constBlobs, 0);
                 Mat blob_1 = getBlob(node_proto, constBlobs, 1);
                 CV_Assert(blob_0.size == blob_1.size);
-                Mat output = isSub ? blob_0 - blob_1 : blob_0 + blob_1;
+                Mat output = isSub ? (blob_0 - blob_1) : (blob_0 + blob_1);
                 constBlobs.insert(std::make_pair(layerParams.name, output));
                 continue;
             }
@@ -928,11 +928,14 @@ void ONNXImporter::populateNet(Net dstNet)
            Mat blob = getBlob(node_proto, constBlobs, 0);
            int type;
            switch (layerParams.get<int>("to")) {
-               case 1: type = CV_32F; break;
-               case 2: type = CV_8U; break;
-               case 3: case 5: case 6: case 7: type = CV_32S; break;
-               case 4: type = CV_16U; break;
-               case 10: type = CV_16S; break;
+               case opencv_onnx::TensorProto_DataType_FLOAT:   type = CV_32F; break;
+               case opencv_onnx::TensorProto_DataType_UINT8:   type = CV_8U; break;
+               case opencv_onnx::TensorProto_DataType_UINT16:  type = CV_16U; break;
+               case opencv_onnx::TensorProto_DataType_FLOAT16: type = CV_16S; break;
+               case opencv_onnx::TensorProto_DataType_INT8:
+               case opencv_onnx::TensorProto_DataType_INT16:
+               case opencv_onnx::TensorProto_DataType_INT32:
+               case opencv_onnx::TensorProto_DataType_INT64:   type = CV_32S; break;
                default: type = blob.type();
            }
            blob.convertTo(blob, type);
