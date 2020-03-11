@@ -255,15 +255,12 @@ def main():
     kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
 
     if args.input == " ":
-
-        cap = cv.VideoCapture(0, cv.CAP_V4L2)
+        cap = cv.VideoCapture(0)
+        # cap = cv.VideoCapture(0, cv.CAP_V4L2)
         cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
         cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
-        ret, frame = cap.read()
-
         cv.namedWindow("DaSiamRPN")
         cv.setMouseCallback("DaSiamRPN", get_bb)
-
         while mark == True:
             ret, frame = cap.read()
             if point1 and point2:
@@ -271,21 +268,38 @@ def main():
             cv.imshow("DaSiamRPN", frame)
             cv.waitKey(1)
 
+    else:
+        cap = cv.VideoCapture(args.input)
+        cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
+        cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
+        cv.namedWindow("DaSiamRPN")
+        cv.setMouseCallback("DaSiamRPN", get_bb)
+        ref, frame = cap.read()
+        # while mark == True:
+        while True:
+            # ref, frame = cap.read()
+            if point1 and point2:
+                cv.rectangle(frame, point1, point2, (0, 255, 255), 3)
+            cv.imshow("DaSiamRPN", frame)
+            key = cv.waitKey(1)
+            if key == ord("q"):
+                break
+
     target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
-    Tracker = DaSiamRPNTracker(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
+    tracker = DaSiamRPNTracker(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
 
     while (cap.isOpened):
         ret,frame = cap.read()
-        Tracker.track(frame)
+        tracker.track(frame)
 
-        w, h = Tracker.target_sz
-        cx, cy = Tracker.target_pos
+        w, h = tracker.target_sz
+        cx, cy = tracker.target_pos
 
         cv.rectangle(frame, (int(cx - w // 2), int(cy - h // 2)), (int(cx - w // 2) + int(w), int(cy - h // 2) + int(h)),(0, 255, 255), 3)
 
-        cv.imshow('DaSiamRPN', frame)
+        cv.imshow("DaSiamRPN", frame)
         key = cv.waitKey(1)
-        if key == 27:
+        if key == ord("q"):
             break
 
     cap.release()
