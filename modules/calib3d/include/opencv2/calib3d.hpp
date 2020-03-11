@@ -1905,6 +1905,7 @@ point localization, image resolution, and the image noise.
 @param confidence Parameter used for the RANSAC and LMedS methods only. It specifies a desirable level
 of confidence (probability) that the estimated matrix is correct.
 @param mask
+@param maxIters The maximum number of robust method iterations.
 
 The epipolar geometry is described by the following equation:
 
@@ -1938,6 +1939,11 @@ stereoRectifyUncalibrated to compute the rectification transformation. :
      findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
 @endcode
  */
+CV_EXPORTS_W Mat findFundamentalMat( InputArray points1, InputArray points2,
+                                     int method, double ransacReprojThreshold, double confidence,
+                                     int maxIters, OutputArray mask = noArray() );
+
+/** @overload */
 CV_EXPORTS_W Mat findFundamentalMat( InputArray points1, InputArray points2,
                                      int method = FM_RANSAC,
                                      double ransacReprojThreshold = 3., double confidence = 0.99,
