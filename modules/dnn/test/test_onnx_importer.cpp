@@ -57,8 +57,13 @@ public:
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
 
+        std::vector<String> inputNames;
         for (int i = 0; i < numInps; ++i)
-            net.setInput(inps[i], numInps > 1 ? format("%d", i) : "");
+            inputNames.push_back(format("%d", i));
+        net.setInputsNames(inputNames);
+
+        for (int i = 0; i < numInps; ++i)
+            net.setInput(inps[i], inputNames[i]);
         Mat out = net.forward("");
 
         if (useSoftmax)
@@ -349,25 +354,7 @@ TEST_P(Test_ONNX_layers, Broadcast)
 
 TEST_P(Test_ONNX_layers, DynamicResize)
 {
-    const String model =  _tf("models/dynamic_resize.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(DNN_TARGET_CPU);
-
-    Mat inp1 = blobFromNPY(_tf("data/input_dynamic_resize_0.npy"));
-    Mat inp2 = blobFromNPY(_tf("data/input_dynamic_resize_1.npy"));
-    Mat ref  = blobFromNPY(_tf("data/output_dynamic_resize.npy"));
-    checkBackend(&inp1, &ref);
-
-    net.setInput(inp1, "input");
-    net.setInput(inp2, "1");
-    Mat out = net.forward();
-
-    normAssert(ref, out, "", default_l1,  default_lInf);
-    expectNoFallbacksFromIE(net);
+    testONNXModels("dynamic_resize", npy, 0, 0, false, true, 2);
 }
 
 TEST_P(Test_ONNX_layers, Div)
