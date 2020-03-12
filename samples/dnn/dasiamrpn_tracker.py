@@ -32,7 +32,7 @@ class DaSiamRPNTracker:
         self.net = net
         self.score = []
 
-        if ((self.target_sz[0] * self.target_sz[1]) / float(self.im_h * self.im_w)) < 0.004: 
+        if ((self.target_sz[0] * self.target_sz[1]) / float(self.im_h * self.im_w)) < 0.004:
              raise AssertionError("Initializing BB is too small-try to restart tracker with larger BB")
 
         self.anchor = self.__generate_anchor()
@@ -199,11 +199,11 @@ class DaSiamRPNTracker:
 
 #function for reading paths, bounding box drawing, showing results
 def main():
-    parser = argparse.ArgumentParser(description = "Run tracker")
-    parser.add_argument("--net", type = str, help = "Full path to onnx model of net")
-    parser.add_argument("--kernel_r1", type = str, help = "Full path to onnx model of kernel_r1")
-    parser.add_argument("--kernel_cls1", type = str, help = "Full path to onnx model of kernel_cls1")
-    parser.add_argument("--input", type = str, help = "Full path to input. Do not use if input is camera")
+    parser = argparse.ArgumentParser(description="Run tracker")
+    parser.add_argument("--net", type=str, help="Full path to onnx model of net")
+    parser.add_argument("--kernel_r1", type=str, help="Full path to onnx model of kernel_r1")
+    parser.add_argument("--kernel_cls1", type=str, help="Full path to onnx model of kernel_cls1")
+    parser.add_argument("--input", type=str, help="Full path to input. Do not use if input is camera")
     args = parser.parse_args()
     point1 = ()
     point2 = ()
