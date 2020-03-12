@@ -2,7 +2,10 @@
 DaSiamRPN tracker.
 Original paper: https://arxiv.org/abs/1808.06048
 Link to original repo: https://github.com/foolwood/DaSiamRPN
-Link to onnx models: https://drive.google.com/drive/folders/1UuwZsgoOVJfwHdE7rS8dtG4UvYfr8OGi?usp=sharing
+Links to onnx models:
+network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
+kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
+kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
 """
 
 import numpy as np
