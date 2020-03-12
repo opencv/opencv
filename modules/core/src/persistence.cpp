@@ -2096,7 +2096,7 @@ FileNode FileNode::operator[](const char* nodename) const
     return this->operator[](std::string(nodename));
 }
 
-FileNode FileNode::operator[](int i) const{
+FileNode FileNode::operator[](int i){
   if (!fs) return FileNode();
   CV_Assert(isSeq());
   int sz = (int)size();
@@ -2410,7 +2410,7 @@ FileNodeIterator::FileNodeIterator(const FileNodeIterator& it)
     idx = it.idx;
 }
 
-FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
+FileNodeIterator& FileNodeIterator::operator =(const FileNodeIterator& it)
 {
     fs = it.fs;
     blockIdx = it.blockIdx;

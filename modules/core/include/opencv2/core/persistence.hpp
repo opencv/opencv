@@ -458,14 +458,12 @@ public:
 };
 
 /** @brief used to iterate through sequences and mappings.
-
  A standard STL notation, with node.begin(), node.end() denoting the beginning and the end of a
  sequence, stored in node. See the data reading sample in the beginning of the section.
  */
     class CV_EXPORTS FileNodeIterator {
     public:
         /** @brief The constructors.
-
          These constructors are used to create a default iterator, set it to specific element in a file node
          or construct it from another iterator.
          */
@@ -486,6 +484,8 @@ public:
          */
         FileNodeIterator(const FileNodeIterator &it);
 
+        FileNodeIterator &operator=(const FileNodeIterator &it);
+
         //! returns the currently observed element
         FileNode operator*() const;
 
@@ -499,15 +499,14 @@ public:
         FileNodeIterator &operator+=(int ofs);
 
         /** @brief Reads node elements to the buffer with the specified format.
-
-         Usually it is more convenient to use operator `>>` instead of this method.
-         @param fmt Specification of each array element. See @ref format_spec "format specification"
-         @param vec Pointer to the destination array.
-         @param maxCount Number of elements to read. If it is greater than number of remaining elements then
-         all of them will be read.
+        Usually it is more convenient to use operator `>>` instead of this method.
+        @param fmt Specification of each array element. See @ref format_spec "format specification"
+        @param vec Pointer to the destination array.
+        @param len Number of bytes to read (buffer size limit). If it is greater than number of
+                   remaining elements then all of them will be read.
          */
         FileNodeIterator &readRaw(const String &fmt, void *vec,
-                                  size_t maxCount = (size_t) INT_MAX);
+                                  size_t len = (size_t) INT_MAX);
 
         //! returns the number of remaining (not read yet) elements
         size_t remaining() const;
@@ -592,7 +591,7 @@ public:
     /** @overload
      @param i Index of an element in the sequence node.
      */
-    CV_WRAP_AS(at) FileNode operator[](int i) const;
+    CV_WRAP_AS(at) FileNode operator[](int i);
 
     /** @brief Returns keys of a mapping node.
      @returns Keys of a mapping node.
