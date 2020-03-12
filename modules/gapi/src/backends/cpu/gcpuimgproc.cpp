@@ -335,6 +335,17 @@ GAPI_OCV_KERNEL(GCPUNV12toRGBp, cv::gapi::imgproc::GNV12toRGBp)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUNV12toGray, cv::gapi::imgproc::GNV12toGray)
+{
+    static void run(const cv::Mat& in_y, const cv::Mat& in_uv, cv::Mat& out)
+    {
+        cv::Mat yuv_planar;
+        cv::Mat uv_planar(in_y.rows / 2, in_y.cols, CV_8UC1, in_uv.data);
+        cv::vconcat(in_y, uv_planar, yuv_planar);
+        cv::cvtColor(yuv_planar, out, cv::COLOR_YUV2GRAY_NV12);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUNV12toBGRp, cv::gapi::imgproc::GNV12toBGRp)
 {
     static void run(const cv::Mat& inY, const cv::Mat& inUV, cv::Mat& out)
@@ -378,6 +389,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPURGB2YUV422
         , GCPUNV12toRGBp
         , GCPUNV12toBGRp
+        , GCPUNV12toGray
         >();
     return pkg;
 }
