@@ -3488,8 +3488,7 @@ void Net::setParam(LayerId layer, int numParam, const Mat &blob)
     std::vector<Mat> &layerBlobs = ld.getLayerInstance()->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     //we don't make strong checks, use this function carefully
-    blob.copyTo(layerBlobs[numParam]);
-    //layerBlobs[numParam] = blob;
+    layerBlobs[numParam] = blob;
 }
 
 int Net::getLayerId(const String &layer)
