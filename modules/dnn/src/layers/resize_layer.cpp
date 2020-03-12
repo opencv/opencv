@@ -35,7 +35,7 @@ public:
             CV_Assert(params.has("zoom_factor_x") && params.has("zoom_factor_y"));
         }
         interpolation = params.get<String>("interpolation");
-        CV_Assert(interpolation == "caffe_nearest" || interpolation == "caffe_bilinear" ||
+        CV_Assert(interpolation == "caffe_nearest" || interpolation == "caffe_linear" ||
                   interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear");
 
         alignCorners = params.get<bool>("align_corners", false);
@@ -56,7 +56,7 @@ public:
             float factor_w = static_cast<float>(inputs[1][3]) / inputs[0][3];
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
-            if ((interpolation == "caffe_bilinear" && (factor_w != 1.0 || factor_h != 1.0)) ||
+            if ((interpolation == "caffe_linear" && (factor_w != 1.0 || factor_h != 1.0)) ||
                 (interpolation == "caffe_nearest" && (factor_w < 1.0 || factor_h < 1.0)))
                     CV_Error(Error::StsNotImplemented, "Unsupported Resize mode");
         }
@@ -87,7 +87,7 @@ public:
         outWidth = outputs[0].size[3];
 
         if (interpolation.find("caffe") != std::string::npos)
-            interpolation = interpolation == "caffe_bilinear" ? "bilinear" : "nearest";
+            interpolation = interpolation == "caffe_linear" ? "bilinear" : "nearest";
 
         if (alignCorners && outHeight > 1)
             scaleHeight = static_cast<float>(inputs[0].size[2] - 1) / (outHeight - 1);
