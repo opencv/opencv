@@ -375,7 +375,7 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat)
     {
         switch (g_arg.index())
         {
-            case GRunArgP::index_of<cv::Scalar*>()            : *util::get<cv::Scalar*>(g_arg) = (mag.template slot<cv::Scalar>().at(rc.id)); break;
+            case GRunArgP::index_of<cv::Scalar*>()            : *util::get<cv::Scalar*>(g_arg) = mag.template slot<cv::Scalar>().at(rc.id); break;
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;

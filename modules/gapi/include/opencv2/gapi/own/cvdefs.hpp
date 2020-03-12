@@ -141,7 +141,7 @@ namespace gapi { namespace own {
 class Scalar;
 } // namespace own
 } // namespace gapi
-    using Scalar = gapi::own::Scalar;
+using Scalar = gapi::own::Scalar;
 } // namespace cv
 
 static inline int cvFloor( double value )
