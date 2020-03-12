@@ -152,6 +152,8 @@ public:
 private:
     BackendRegistry()
     {
+        backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
+
 #ifdef HAVE_HALIDE
         backends.push_back(std::make_pair(DNN_BACKEND_HALIDE, DNN_TARGET_CPU));
 #  ifdef HAVE_OPENCL
@@ -211,8 +213,6 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16));
         }
 #endif
-
-        backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
     }
 
     BackendsList backends;
