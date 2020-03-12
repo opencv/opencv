@@ -457,7 +457,73 @@ public:
     Ptr<Impl> p;
 };
 
-/** @brief File Storage Node class.
+/** @brief used to iterate through sequences and mappings.
+
+ A standard STL notation, with node.begin(), node.end() denoting the beginning and the end of a
+ sequence, stored in node. See the data reading sample in the beginning of the section.
+ */
+    class CV_EXPORTS FileNodeIterator {
+    public:
+        /** @brief The constructors.
+
+         These constructors are used to create a default iterator, set it to specific element in a file node
+         or construct it from another iterator.
+         */
+        FileNodeIterator();
+
+        /** @overload
+         @param node File node - the collection to iterate over;
+            it can be a scalar (equivalent to 1-element collection) or "none" (equivalent to empty collection).
+         @param seekEnd - true if iterator needs to be set after the last element of the node;
+            that is:
+                * node.begin() => FileNodeIterator(node, false)
+                * node.end() => FileNodeIterator(node, true)
+         */
+        FileNodeIterator(const FileNode &node, bool seekEnd);
+
+        /** @overload
+         @param it Iterator to be used as initialization for the created iterator.
+         */
+        FileNodeIterator(const FileNodeIterator &it);
+
+        //! returns the currently observed element
+        FileNode operator*() const;
+
+        //! moves iterator to the next node
+        FileNodeIterator &operator++();
+
+        //! moves iterator to the next node
+        FileNodeIterator operator++(int);
+
+        //! moves iterator forward by the specified offset (possibly negative)
+        FileNodeIterator &operator+=(int ofs);
+
+        /** @brief Reads node elements to the buffer with the specified format.
+
+         Usually it is more convenient to use operator `>>` instead of this method.
+         @param fmt Specification of each array element. See @ref format_spec "format specification"
+         @param vec Pointer to the destination array.
+         @param maxCount Number of elements to read. If it is greater than number of remaining elements then
+         all of them will be read.
+         */
+        FileNodeIterator &readRaw(const String &fmt, void *vec,
+                                  size_t maxCount = (size_t) INT_MAX);
+
+        //! returns the number of remaining (not read yet) elements
+        size_t remaining() const;
+
+        bool equalTo(const FileNodeIterator &it) const;
+
+    protected:
+        const FileStorage *fs;
+        size_t blockIdx;
+        size_t ofs;
+        size_t blockSize;
+        size_t nodeNElems;
+        size_t idx;
+    };
+
+    /** @brief File Storage Node class.
 
 The node is used to store each and every element of the file storage opened for reading. When
 XML/YAML file is read, it is first parsed and stored in the memory as a hierarchical collection of
@@ -609,75 +675,11 @@ public:
     const FileStorage* fs;
     size_t blockIdx;
     size_t ofs;
+    FileNodeIterator last_node;
+    int last_id{0};
 };
 
 
-/** @brief used to iterate through sequences and mappings.
-
- A standard STL notation, with node.begin(), node.end() denoting the beginning and the end of a
- sequence, stored in node. See the data reading sample in the beginning of the section.
- */
-class CV_EXPORTS FileNodeIterator
-{
-public:
-    /** @brief The constructors.
-
-     These constructors are used to create a default iterator, set it to specific element in a file node
-     or construct it from another iterator.
-     */
-    FileNodeIterator();
-
-    /** @overload
-     @param node File node - the collection to iterate over;
-        it can be a scalar (equivalent to 1-element collection) or "none" (equivalent to empty collection).
-     @param seekEnd - true if iterator needs to be set after the last element of the node;
-        that is:
-            * node.begin() => FileNodeIterator(node, false)
-            * node.end() => FileNodeIterator(node, true)
-     */
-    FileNodeIterator(const FileNode& node, bool seekEnd);
-
-    /** @overload
-     @param it Iterator to be used as initialization for the created iterator.
-     */
-    FileNodeIterator(const FileNodeIterator& it);
-
-    FileNodeIterator& operator=(const FileNodeIterator& it);
-
-    //! returns the currently observed element
-    FileNode operator *() const;
-
-    //! moves iterator to the next node
-    FileNodeIterator& operator ++ ();
-    //! moves iterator to the next node
-    FileNodeIterator operator ++ (int);
-    //! moves iterator forward by the specified offset (possibly negative)
-    FileNodeIterator& operator += (int ofs);
-
-    /** @brief Reads node elements to the buffer with the specified format.
-
-    Usually it is more convenient to use operator `>>` instead of this method.
-    @param fmt Specification of each array element. See @ref format_spec "format specification"
-    @param vec Pointer to the destination array.
-    @param len Number of bytes to read (buffer size limit). If it is greater than number of
-               remaining elements then all of them will be read.
-     */
-    FileNodeIterator& readRaw( const String& fmt, void* vec,
-                               size_t len=(size_t)INT_MAX );
-
-    //! returns the number of remaining (not read yet) elements
-    size_t remaining() const;
-
-    bool equalTo(const FileNodeIterator& it) const;
-
-protected:
-    const FileStorage* fs;
-    size_t blockIdx;
-    size_t ofs;
-    size_t blockSize;
-    size_t nodeNElems;
-    size_t idx;
-};
 
 //! @} core_xml
 
