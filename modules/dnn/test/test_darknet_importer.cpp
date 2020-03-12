@@ -554,6 +554,8 @@ TEST_P(Test_Darknet_layers, convolutional)
 
 TEST_P(Test_Darknet_layers, scale_channels)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     // TODO: test fails for batches due to a bug/missing feature in ScaleLayer
     testDarknetLayer("scale_channels", false, false);
 }
