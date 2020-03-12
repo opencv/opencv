@@ -236,8 +236,6 @@ def main():
     #case with camera
     if args.input is None:
         cap = cv.VideoCapture(0)
-        cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
-        cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
         cv.namedWindow("DaSiamRPN")
         cv.setMouseCallback("DaSiamRPN", get_bb)
         while mark == True:
@@ -249,8 +247,6 @@ def main():
     #case with video
     else:
         cap = cv.VideoCapture(args.input)
-        cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
-        cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
         cv.namedWindow("DaSiamRPN")
         cv.setMouseCallback("DaSiamRPN", get_bb)
         ref, frame = cap.read()
