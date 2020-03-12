@@ -78,64 +78,95 @@ public:
         Mat &outBlob = outputs[0];
         // There is a mode when we multiply a first blob by a second one
         // instead of trainable weights.
-        Mat weights = hasWeights ? (blobs.empty() ? inputs[1] : blobs[0]).reshape(1, 1) : Mat();;
+        Mat weights = hasWeights ? (blobs.empty() ? inputs[1] : blobs[0]).reshape(1, 1) : Mat();
         Mat bias = hasBias ? (blobs.empty() ? inputs[1] : blobs.back()).reshape(1, 1) : Mat();
 
         MatShape inpShape = shape(inpBlob);
+        const int numSamples = inpShape[0];
+        const int numWeightsSamples = (hasWeights || hasBias) && blobs.empty() ? numSamples : 1;
         const int numWeights = !weights.empty() ? weights.total() : bias.total();
+        const int numWeightsPerSample = numWeights / numWeightsSamples;
         CV_Assert(numWeights != 0);
         if (hasWeights && hasBias)
             CV_CheckEQ(weights.total(), bias.total(), "Incompatible weights/bias blobs");
 
-        int endAxis;
+        axis = clamp(axis , inpBlob.dims) ? clamp(axis , inpBlob.dims) : 1;
+        CV_Assert(axis > 0 && axis < inpBlob.dims);
+
+        int endAxis = 1;
         for (endAxis = axis + 1; endAxis <= inpBlob.dims; ++endAxis)
         {
-            if (total(inpShape, axis, endAxis) == numWeights)
+            if (total(inpShape, axis, endAxis) == numWeightsPerSample)
                 break;
         }
-        CV_Assert(total(inpShape, axis, endAxis) == numWeights);
+        endAxis = (numWeightsPerSample == 1) ? 1 : endAxis;
+
+        CV_Assert(total(inpShape, axis, endAxis) == numWeightsPerSample);
         CV_Assert(!hasBias || numWeights == bias.total());
         CV_CheckTypeEQ(inpBlob.type(), CV_32FC1, ""); CV_CheckTypeEQ(outBlob.type(), CV_32FC1, "");
 
-        int numSlices = total(inpShape, 0, axis);
+        int numSlices = total(inpShape, 1, axis);
         float* inpData = (float*)inpBlob.data;
         float* outData = (float*)outBlob.data;
 
+        float* weightsData = !weights.empty() ? (float*)weights.data : 0;
+        float* biasesData = hasBias ? (float*)bias.data : 0;
         if (endAxis != inpBlob.dims)
         {
-            float* weightsData = !weights.empty() ? (float*)weights.data : 0;
-            float* biasesData = hasBias ? (float*)bias.data : 0;
-            int spatialSize = total(inpShape, endAxis);  // spatialSize != 1
-            for (int i = 0; i < numSlices; ++i)
+            for (int inp_sample = 0; inp_sample < numSamples; inp_sample++)
             {
-                for (int j = 0; j < numWeights; ++j)
+                int spatialSize = total(inpShape, endAxis);  // spatialSize != 1
+                for (int i = 0; i < numSlices; ++i)
                 {
-                    float w = weightsData ? weightsData[j] : 1;
-                    float b = biasesData ? biasesData[j] : 0;
-                    Mat inpSlice(1, spatialSize, CV_32F, inpData);
-                    Mat outSlice(1, spatialSize, CV_32F, outData);
-                    inpSlice.convertTo(outSlice, CV_32F, w, b);
-                    inpData += spatialSize;
-                    outData += spatialSize;
+                    for (int j = 0; j < numWeightsPerSample; ++j)
+                    {
+                        float w = weightsData ? weightsData[j] : 1;
+                        float b = biasesData ? biasesData[j] : 0;
+                        Mat inpSlice(1, spatialSize, CV_32F, inpData);
+                        Mat outSlice(1, spatialSize, CV_32F, outData);
+                        inpSlice.convertTo(outSlice, CV_32F, w, b);
+                        inpData += spatialSize;
+                        outData += spatialSize;
+                    }
+                }
+                if (numWeightsSamples > 1)
+                {
+                    weightsData += weightsData ? numWeightsPerSample : 0;
+                    biasesData += biasesData ? numWeightsPerSample : 0;
                 }
             }
         }
         else
         {
-            for (int i = 0; i < numSlices; ++i)
+            for (int inp_sample = 0; inp_sample < numSamples; inp_sample++)
             {
-                Mat inpSlice(1, numWeights, CV_32F, inpData);
-                Mat outSlice(1, numWeights, CV_32F, outData);
-                if (!weights.empty())
+                for (int i = 0; i < numSlices; ++i)
                 {
-                    multiply(inpSlice, weights, outSlice);
-                    if (hasBias)
-                        add(outSlice, bias, outSlice);
+                    Mat inpSlice(1, numWeightsPerSample, CV_32F, inpData);
+                    Mat outSlice(1, numWeightsPerSample, CV_32F, outData);
+                    if (!weights.empty())
+                    {
+                        Mat weightsSlice(1, numWeightsPerSample, CV_32F, weightsData);
+                        multiply(inpSlice, weightsSlice, outSlice);
+                        if (hasBias)
+                        {
+                            Mat biasesSlice(1, numWeightsPerSample, CV_32F, biasesData);
+                            add(outSlice, biasesSlice, outSlice);
+                        }
+                    }
+                    else if (hasBias)
+                    {
+                        Mat biasesSlice(1, numWeightsPerSample, CV_32F, biasesData);
+                        add(inpSlice, biasesSlice, outSlice);
+                    }
+                    inpData += numWeightsPerSample;
+                    outData += numWeightsPerSample;
                 }
-                else if (hasBias)
-                    add(inpSlice, bias, outSlice);
-                inpData += numWeights;
-                outData += numWeights;
+                if (numWeightsSamples > 1)
+                {
+                    weightsData += numWeightsPerSample;
+                    biasesData += numWeightsPerSample;
+                }
             }
         }
     }

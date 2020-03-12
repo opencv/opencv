@@ -639,6 +639,8 @@ TEST_P(Scale_untrainable, Accuracy)
     int weightsDims = get<1>(GetParam())[1];
     bool testFusion = get<2>(GetParam());
     const int inpShape[] = {inpShapeVec[0], inpShapeVec[1], inpShapeVec[2], inpShapeVec[3]};
+    int totalPerSample = inpShapeVec[1] * inpShapeVec[2] * inpShapeVec[3];
+    int Shape_weights[4];
 
     // Create a network with two inputs. Scale layer multiplies a first input to
     // a second one. See http://caffe.berkeleyvision.org/tutorial/layers/scale.html
@@ -672,7 +674,12 @@ TEST_P(Scale_untrainable, Accuracy)
     net.connect(0, 1, id, 1);
 
     Mat input(4, inpShape, CV_32F);
-    Mat weights(weightsDims, &inpShape[axis], CV_32F);
+    Shape_weights[0] = inpShape[0];
+    axis = axis == 0 ? 1 : axis;
+    for (int dim = 1; dim < weightsDims; dim++)
+        Shape_weights[dim] = inpShape[axis+dim-1];
+    Mat weights(weightsDims, Shape_weights, CV_32F);
+    int totalWeightsPerSample = weights.total() / Shape_weights[0];
     randu(input, -1, 1);
     randu(weights, -1, 1);
 
@@ -690,12 +697,16 @@ TEST_P(Scale_untrainable, Accuracy)
     float* refData = (float*)ref.data;
     float* weightsData = (float*)weights.data;
     int spatialSize = 1;
-    for (int i = axis + weightsDims; i < 4; ++i)
+    for (int i = axis + weightsDims - 1; i < 4; ++i)
         spatialSize *= inpShape[i];
-    for (int i = 0; i < ref.total(); ++i)
+    for (int num_samples = 0; num_samples < inpShape[0] ;num_samples++)
     {
-        float w = weightsData[(i / spatialSize) % weights.total()];
-        refData[i] = inpData[i] * w;
+        for (int i = 0; i < totalPerSample; ++i)
+        {
+            int index = i + num_samples * totalPerSample;
+            float w = weightsData[(i / spatialSize) % totalWeightsPerSample + num_samples * totalWeightsPerSample ];
+            refData[index] = inpData[index] * w;
+        }
     }
     normAssert(out, ref);
 }
@@ -703,9 +714,9 @@ TEST_P(Scale_untrainable, Accuracy)
 INSTANTIATE_TEST_CASE_P(Layer_Test, Scale_untrainable, Combine(
 /*input size*/   Values(Vec4i(2, 3, 4, 5)),
 /*axis, #dims*/  Values(Vec2i(0, 1), Vec2i(0, 2), Vec2i(0, 3), Vec2i(0, 4),
-                                     Vec2i(1, 1), Vec2i(1, 2), Vec2i(1, 3),
-                                                  Vec2i(2, 1), Vec2i(2, 2),
-                                                               Vec2i(3, 1)),
+                                     Vec2i(1, 2), Vec2i(1, 3), Vec2i(1, 4),
+                                     Vec2i(2, 2), Vec2i(2, 3),
+                                     Vec2i(3, 2)),
 /*conv fusion*/  testing::Bool()
 ));
 
