@@ -460,23 +460,6 @@ void ONNXImporter::populateNet(Net dstNet)
                 continue;
             }
         }
-        else if (layer_type == "Cast")
-        {
-            CV_Assert(constBlobs.find(node_proto.input(0)) != constBlobs.end());
-            Mat blob = getBlob(node_proto, constBlobs, 0);
-            int type;
-            switch (layerParams.get<int>("to")) {
-                case 1: type = CV_32F; break;
-                case 2: type = CV_8U; break;
-                case 3: case 5: case 6: case 7: type = CV_32S; break;
-                case 4: type = CV_16U; break;
-                case 10: type = CV_16S; break;
-                default: type = blob.type();
-            }
-            blob.convertTo(blob, type);
-            constBlobs.insert(std::make_pair(layerParams.name, blob));
-            continue;
-        }
         else if (layer_type == "Split")
         {
             if (layerParams.has("split"))
