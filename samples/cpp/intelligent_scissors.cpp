@@ -169,7 +169,7 @@ const char* keys =
 {
     "{help h | |}{@image|fruits.jpg|}"
 };
-   
+
 
 int main( int argc, const char** argv )
 {
@@ -188,7 +188,7 @@ int main( int argc, const char** argv )
     std::vector<std::vector<Point> > c(1);
     tmp.contours=c;
     std::string filename = parser.get<std::string>(0);
-    
+
     Mat grayscale, img_canny;
     tmp.img = imread(samples::findFile(filename));
     tmp.hit_map_x.create(tmp.img.rows, tmp.img.cols, CV_32SC1);
