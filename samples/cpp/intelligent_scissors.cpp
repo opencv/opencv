@@ -8,13 +8,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 using namespace cv;
-
-Mat img, img_pre_render, img_render;
-Point end;
-std::vector<std::vector<Point> > contours(1);
-std::vector<Point> tmp_contour;
-Mat zero_crossing, gradient_magnitude, Ix, Iy, hit_map_x, hit_map_y;
-
 struct Pix
 {
     Point next_point;
@@ -26,7 +19,17 @@ struct Pix
     }
 };
 
-static float local_cost(const Point& p, const Point& q)
+struct Calculated_parameters
+{
+        Mat img, img_pre_render, img_render;
+        Point end;
+        std::vector<std::vector<Point> > contours;
+        std::vector<Point> tmp_contour;
+        Mat zero_crossing, gradient_magnitude, Ix, Iy, hit_map_x, hit_map_y;
+};
+
+
+static float local_cost(const Point& p, const Point& q, const Mat& gradient_magnitude, const Mat& Iy, const Mat& Ix, const Mat& zero_crossing)
 {
     float fG = gradient_magnitude.at<float>(q.y, q.x);
     float dp;
@@ -56,13 +59,13 @@ static float local_cost(const Point& p, const Point& q)
             + acosf(dq)) / static_cast<float>(CV_PI) + 0.14f * fG;
 }
 
-static void find_min_path(const Point& start)
+static void find_min_path(const Point& start, Calculated_parameters* tmp)
 {
     Pix begin;
-    Mat cost_map(img.size(), CV_32F, Scalar(FLT_MAX));
-    Mat expand(img.size(), CV_8UC1, Scalar(0));
-    Mat processed(img.size(), CV_8UC1, Scalar(0));
-    Mat removed(img.size(), CV_8UC1, Scalar(0));
+    Mat cost_map(tmp->img.size(), CV_32F, Scalar(FLT_MAX));
+    Mat expand(tmp->img.size(), CV_8UC1, Scalar(0));
+    Mat processed(tmp->img.size(), CV_8UC1, Scalar(0));
+    Mat removed(tmp->img.size(), CV_8UC1, Scalar(0));
     std::priority_queue < Pix, std::vector<Pix>, std::greater<Pix> > L;
 
     cost_map.at<float>(start) = 0;
@@ -86,12 +89,12 @@ static void find_min_path(const Point& start)
                 {
                     int tx = p.x + i;
                     int ty = p.y + j;
-                    if (tx < 0 || tx >= img.cols || ty < 0 || ty >= img.rows)
+                    if (tx < 0 || tx >= tmp->img.cols || ty < 0 || ty >= tmp->img.rows)
                         continue;
                     if (expand.at<uchar>(ty, tx) == 0)
                     {
                         Point q = Point(tx, ty);
-                        float cost = cost_map.at<float>(p) + local_cost(p, q);
+                        float cost = cost_map.at<float>(p) + local_cost(p, q, tmp->gradient_magnitude, tmp->Iy, tmp->Ix, tmp->zero_crossing);
                         if (processed.at<uchar>(q) == 1 && cost < cost_map.at<float>(q))
                         {
                             removed.at<uchar>(q) = 1;
@@ -99,8 +102,8 @@ static void find_min_path(const Point& start)
                         if (processed.at<uchar>(q) == 0)
                         {
                             cost_map.at<float>(q) = cost;
-                            hit_map_x.at<int>(q)= p.x;
-                            hit_map_y.at<int>(q) = p.y;
+                            tmp->hit_map_x.at<int>(q)= p.x;
+                            tmp->hit_map_y.at<int>(q) = p.y;
                             processed.at<uchar>(q) = 1;
                             Pix val;
                             val.cost = cost_map.at<float>(q);
@@ -114,49 +117,51 @@ static void find_min_path(const Point& start)
     }
 }
 
-static void onMouse(int event, int x, int y, int , void *)
+
+static void onMouse(int event, int x, int y, int , void* userdata)
 {
+    Calculated_parameters* tmp = reinterpret_cast<Calculated_parameters*>(userdata);
     if (event == EVENT_LBUTTONDOWN)
     {
-        end = Point(x, y);
-        if (!contours.back().empty())
+        tmp->end = Point(x, y);
+        if (!tmp->contours.back().empty())
         {
-            for (int i = static_cast<int>(tmp_contour.size()) - 1; i >= 0; i--)
+            for (int i = static_cast<int>(tmp->tmp_contour.size()) - 1; i >= 0; i--)
             {
-                contours.back().push_back(tmp_contour[i]);
+                tmp->contours.back().push_back(tmp->tmp_contour[i]);
             }
-            tmp_contour.clear();
+            tmp->tmp_contour.clear();
         }
         else
         {
-            contours.back().push_back(end);
+            tmp->contours.back().push_back(tmp->end);
         }
-        find_min_path(end);
+        find_min_path(tmp->end, tmp);
 
-        img_render.copyTo(img_pre_render);
-        imshow("lasso", img_render);
+        tmp->img_render.copyTo(tmp->img_pre_render);
+        imshow("lasso", tmp->img_render);
     }
     else if (event == EVENT_RBUTTONDOWN)
     {
-        img_pre_render.copyTo(img_render);
-        drawContours(img_pre_render, contours, static_cast<int>(contours.size()) - 1, Scalar(0,255,0), FILLED);
-        addWeighted(img_pre_render, 0.3, img_render, 0.7, 0, img_render);
-        contours.resize(contours.size() + 1);
-        imshow("lasso", img_render);
+        tmp->img_pre_render.copyTo(tmp->img_render);
+        drawContours(tmp->img_pre_render, tmp->contours, static_cast<int>(tmp->contours.size()) - 1, Scalar(0,255,0), FILLED);
+        addWeighted(tmp->img_pre_render, 0.3, tmp->img_render, 0.7, 0, tmp->img_render);
+        tmp->contours.resize(tmp->contours.size() + 1);
+        imshow("lasso", tmp->img_render);
     }
-    else if (event == EVENT_MOUSEMOVE && !contours.back().empty())
+    else if (event == EVENT_MOUSEMOVE && !tmp->contours.back().empty())
     {
-        tmp_contour.clear();
-        img_pre_render.copyTo(img_render);
+        tmp->tmp_contour.clear();
+        tmp->img_pre_render.copyTo(tmp->img_render);
         Point val_point = Point(x, y);
-        while (val_point != end)
+        while (val_point != tmp->end)
         {
-            tmp_contour.push_back(val_point);
-            Point cur = Point(hit_map_x.at<int>(val_point), hit_map_y.at<int>(val_point));
-            line(img_render, val_point, cur, Scalar(255, 0, 0), 2);
+            tmp->tmp_contour.push_back(val_point);
+            Point cur = Point(tmp->hit_map_x.at<int>(val_point), tmp->hit_map_y.at<int>(val_point));
+            line(tmp->img_render, val_point, cur, Scalar(255, 0, 0), 2);
             val_point = cur;
         }
-        imshow("lasso", img_render);
+        imshow("lasso", tmp->img_render);
     }
 }
 
@@ -164,9 +169,12 @@ const char* keys =
 {
     "{help h | |}{@image|fruits.jpg|}"
 };
+   
 
 int main( int argc, const char** argv )
 {
+    Calculated_parameters tmp;
+
     CommandLineParser parser(argc, argv, keys);
     parser.about("\nThis program demonstrates implementation of 'intelligent scissors' algorithm\n"
                  "To start drawing a new contour select a pixel, click LEFT mouse button.\n"
@@ -177,34 +185,35 @@ int main( int argc, const char** argv )
         parser.printMessage();
         return 1;
     }
-
+    std::vector<std::vector<Point> > c(1);
+    tmp.contours=c;
     std::string filename = parser.get<std::string>(0);
-
+    
     Mat grayscale, img_canny;
-    img = imread(samples::findFile(filename));
-    hit_map_x.create(img.rows, img.cols, CV_32SC1);
-    hit_map_y.create(img.rows, img.cols, CV_32SC1);
+    tmp.img = imread(samples::findFile(filename));
+    tmp.hit_map_x.create(tmp.img.rows, tmp.img.cols, CV_32SC1);
+    tmp.hit_map_y.create(tmp.img.rows, tmp.img.cols, CV_32SC1);
 
-    cvtColor(img, grayscale, COLOR_BGR2GRAY);
+    cvtColor(tmp.img, grayscale, COLOR_BGR2GRAY);
     Canny(grayscale, img_canny, 50, 100);
 
-    threshold(img_canny, zero_crossing, 254, 1, THRESH_BINARY_INV);
-    Sobel(grayscale, Ix, CV_32FC1, 1, 0, 1);
-    Sobel(grayscale, Iy, CV_32FC1, 0, 1, 1);
-    Ix.convertTo(Ix, CV_32F, 1.0/255);
-    Iy.convertTo(Iy, CV_32F, 1.0/255);
+    threshold(img_canny, tmp.zero_crossing, 254, 1, THRESH_BINARY_INV);
+    Sobel(grayscale, tmp.Ix, CV_32FC1, 1, 0, 1);
+    Sobel(grayscale, tmp.Iy, CV_32FC1, 0, 1, 1);
+    tmp.Ix.convertTo(tmp.Ix, CV_32F, 1.0/255);
+    tmp.Iy.convertTo(tmp.Iy, CV_32F, 1.0/255);
 
     // Compute gradients magnitude.
     double max_val = 0.0;
-    magnitude(Iy, Ix, gradient_magnitude);
-    minMaxLoc(gradient_magnitude, 0, &max_val);
-    gradient_magnitude.convertTo(gradient_magnitude, CV_32F, -1/max_val, 1.0);
+    magnitude(tmp.Iy, tmp.Ix, tmp.gradient_magnitude);
+    minMaxLoc(tmp.gradient_magnitude, 0, &max_val);
+    tmp.gradient_magnitude.convertTo(tmp.gradient_magnitude, CV_32F, -1/max_val, 1.0);
 
-    img.copyTo(img_pre_render);
-    img.copyTo(img_render);
+    tmp.img.copyTo(tmp.img_pre_render);
+    tmp.img.copyTo(tmp.img_render);
 
     namedWindow("lasso");
-    setMouseCallback("lasso", onMouse, 0);
-    imshow("lasso", img);
+    setMouseCallback("lasso", onMouse, &tmp);
+    imshow("lasso", tmp.img);
     waitKey(0);
 }
