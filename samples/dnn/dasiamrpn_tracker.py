@@ -67,6 +67,7 @@ class DaSiamRPNTracker:
         self.anchor = np.zeros((self.anchor_num, 4),  dtype = np.float32)
         size = self.total_stride * self.total_stride
         count = 0
+
         for ratio in self.ratios:
             ws = int(np.sqrt(size / ratio))
             hs = int(ws * ratio)
@@ -78,6 +79,7 @@ class DaSiamRPNTracker:
                 self.anchor[count, 2] = wws
                 self.anchor[count, 3] = hhs
                 count += 1
+
         score_sz = int(self.score_size)
         self.anchor = np.tile(self.anchor, score_sz * score_sz).reshape((-1, 4))
         ori = - (score_sz / 2) * self.total_stride
@@ -95,6 +97,7 @@ class DaSiamRPNTracker:
         d_search = (self.instance_size - self.exemplar_size) / 2
         pad = d_search / scale_z
         s_x = round(s_z + 2 * pad)
+
         #region preprocessing
         x_crop = self.__get_subwindow_tracking(im, self.instance_size, s_x)
         x_crop = x_crop.transpose(2, 0, 1).reshape(1, 3, 271, 271).astype(np.float32)
@@ -151,7 +154,6 @@ class DaSiamRPNTracker:
         res_h = target_size[1] * (1 - lr) + target[3] * lr
         self.target_pos = np.array([res_x, res_y])
         self.target_sz = np.array([res_w, res_h])
-
         return score[best_pscore_id]
 
     def __softmax(self, x):
@@ -223,42 +225,43 @@ def main():
                 point1 = (x, y)
             else:
                 drawing = False
+
         elif event == cv.EVENT_MOUSEMOVE:
             if drawing == True:
                 point2 = (x, y)
+
         elif event == cv.EVENT_LBUTTONUP:
             cx = point1[0] - (point1[0] - point2[0]) / 2
             cy = point1[1] - (point1[1] - point2[1]) / 2
             w = abs(point1[0] - point2[0])
             h = abs(point1[1] - point2[1])
             mark = False
+
     #loading network`s and kernel`s models
     net = cv.dnn.readNet(args.net)
     kernel_r1 = cv.dnn.readNet(args.kernel_r1)
     kernel_cls1 = cv.dnn.readNet(args.kernel_cls1)
-    #case with camera
-    if args.input is None:
-        cap = cv.VideoCapture(0)
-        cv.namedWindow("DaSiamRPN")
-        cv.setMouseCallback("DaSiamRPN", get_bb)
-        while mark == True:
-            ret, frame = cap.read()
-            if point1 and point2:
-                cv.rectangle(frame, point1, point2, (0, 255, 255), 3)
-            cv.imshow("DaSiamRPN", frame)
-            cv.waitKey(1)
-    #case with video
-    else:
-        cap = cv.VideoCapture(args.input)
-        cv.namedWindow("DaSiamRPN")
-        cv.setMouseCallback("DaSiamRPN", get_bb)
-        ref, frame = cap.read()
-        while mark == True:
-            cv.imshow("DaSiamRPN", frame)
-            key = cv.waitKey(1)
+
     #initializing bounding box
+    cap = cv.VideoCapture(args.input if args.input else 0)
+    cv.namedWindow("DaSiamRPN")
+    cv.setMouseCallback("DaSiamRPN", get_bb)
+
+    whitespace_key = 32
+    while cv.waitKey(40) != whitespace_key:
+        ref, frame = cap.read()
+        cv.imshow("DaSiamRPN", frame)
+
+    while mark == True:
+        twin = np.copy(frame)
+        if point1 and point2:
+            cv.rectangle(twin, point1, point2, (0, 255, 255), 3)
+        cv.imshow("DaSiamRPN", twin)
+        cv.waitKey(40)
+
     target_pos, target_sz = np.array([cx, cy]), np.array([w, h])
     tracker = DaSiamRPNTracker(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
+
     #tracking loop
     while (cap.isOpened):
         ret, frame = cap.read()
@@ -270,6 +273,7 @@ def main():
         key = cv.waitKey(1)
         if key == ord("q"):
             break
+
     cap.release()
     cv.destroyAllWindows()
 
