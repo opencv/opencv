@@ -7,74 +7,58 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_OPENJPEG
+#include "grfmt_jpeg2000_openjpeg.hpp"
+
 #include <sstream>
 
-#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
-#include "grfmt_jpeg2000_openjpeg.hpp"
 #include "opencv2/imgproc.hpp"
-
-#include <openjpeg.h>
 
 namespace cv {
 
 namespace {
-struct streamDeleter {
-    void operator()(opj_stream_t* obj) const {
-        if (obj) opj_stream_destroy(obj);
-    }
-};
 
-struct codecDeleter {
-    void operator()(opj_codec_t* obj) const {
-        if (obj) opj_destroy_codec(obj);
+const String colorspaceName(COLOR_SPACE colorspace) {
+    switch(colorspace) {
+        case OPJ_CLRSPC_CMYK:
+            return "CMYK";
+        case OPJ_CLRSPC_SRGB:
+            return "sRGB";
+        case OPJ_CLRSPC_EYCC:
+            return "e-YCC";
+        case OPJ_CLRSPC_GRAY:
+            return "grayscale";
+        case OPJ_CLRSPC_SYCC:
+            return "YUV";
+        case OPJ_CLRSPC_UNKNOWN:
+            return "unknown";
+        case OPJ_CLRSPC_UNSPECIFIED:
+            return "unspecified";
+        default:
+            CV_Assert(!"Invalid colorspace");
     }
-};
-
-struct imageDeleter {
-    void operator()(opj_image_t* obj) const {
-        if (obj) opj_image_destroy(obj);
-    }
-};
-
-const String colorspaceName(int colorspace) {
-    if (colorspace == OPJ_CLRSPC_UNKNOWN)
-        return "unknown";
-    if (colorspace == OPJ_CLRSPC_UNSPECIFIED)
-        return "unspecified";
-    if (colorspace == OPJ_CLRSPC_SRGB)
-        return "sRGB";
-    if (colorspace == OPJ_CLRSPC_GRAY)
-        return "grayscale";
-    if (colorspace == OPJ_CLRSPC_SYCC)
-        return "YUV";
-    if (colorspace == OPJ_CLRSPC_EYCC)
-        return "e-YCC";
-    if (colorspace == OPJ_CLRSPC_CMYK)
-        return "CMYK";
-    return "bad colorspace value";
 }
 
 
-template<typename OutT, bool doShift, typename InT, int N>
-void copy_data_(Mat& out, const InT* (&data)[N], uint8_t shift) {
+template<typename OutT, bool doShift, typename InT, std::size_t N>
+void copy_data_(Mat& out, const std::array<InT*, N>& data, uint8_t shift) {
     Size size = out.size();
     if (out.isContinuous()) {
         size.width *= size.height;
         size.height = 1;
     }
 
-    const InT* sptr[N];
+    std::array<const InT*, N> sptr = {nullptr, };
     for (int i = 0; i < size.height; i++ ) {
-        for (int c = 0; c < N; c++) {
-            sptr[c] = static_cast<const InT*>(data[c]) + i * size.width;
+        for (std::size_t c = 0; c < N; c++) {
+            sptr[c] = data[c] + i * size.width;
         }
         OutT* dptr = out.ptr<OutT>(i);
         // when the arrays are continuous,
         // the outer loop is executed only once
         for( int j = 0; j < size.width; j++) {
-            for (int c = 0; c < N; c++) {
+            for (std::size_t c = 0; c < N; c++) {
                 InT in = *(sptr[c])++;
                 if (doShift) {
                     *dptr++ = in >> shift;
@@ -86,8 +70,8 @@ void copy_data_(Mat& out, const InT* (&data)[N], uint8_t shift) {
     }
 }
 
-template<typename InT, int N>
-void copy_data(Mat& out, const InT* (&data)[N], uint8_t shift) {
+template<typename InT, std::size_t N>
+void copy_data(Mat& out, const std::array<InT*, N>& data, uint8_t shift) {
     if (out.depth() == CV_8U && shift == 0)
         copy_data_<uint8_t, false>(out, data, 0);
     else if (out.depth() == CV_8U)
@@ -111,23 +95,7 @@ Jpeg2KOpjDecoder::Jpeg2KOpjDecoder()
 
 Jpeg2KOpjDecoder::~Jpeg2KOpjDecoder()
 {
-    opj_set_error_handler(m_codec, nullptr, nullptr);
-}
-
-size_t Jpeg2KOpjDecoder::signatureLength() const
-{
-    return m_signature.size();
-}
-
-bool Jpeg2KOpjDecoder::checkSignature( const String& signature ) const
-{
-    if (signature.size() >= m_signature.size() &&
-        0 == signature.compare(0, m_signature.size(), m_signature))
-    {
-        return true;
-    }
-
-    return false;
+    opj_set_error_handler(codec_.get(), nullptr, nullptr);
 }
 
 ImageDecoder Jpeg2KOpjDecoder::newDecoder() const
@@ -141,7 +109,7 @@ void Jpeg2KOpjDecoder::setMessageHandlers()
         static_cast<Jpeg2KOpjDecoder*>(client_data)->m_errorMessage += msg;
     };
 
-    opj_set_error_handler(m_codec, error_handler, this);
+    opj_set_error_handler(codec_.get(), error_handler, this);
 }
 
 bool Jpeg2KOpjDecoder::readHeader()
@@ -149,48 +117,50 @@ bool Jpeg2KOpjDecoder::readHeader()
     opj_dparameters parameters;
     opj_set_default_decoder_parameters(&parameters);
 
-    std::unique_ptr<opj_stream_t, streamDeleter> stream;
-    std::unique_ptr<opj_codec_t, codecDeleter> codec;
-    std::unique_ptr<opj_image_t, imageDeleter> image;
-
-    stream.reset(opj_stream_create_default_file_stream(m_filename.c_str(), OPJ_STREAM_READ));
-    if (!stream)
+    stream_.reset(opj_stream_create_default_file_stream(m_filename.c_str(), OPJ_STREAM_READ));
+    if (!stream_)
         return false;
 
-    codec.reset(opj_create_decompress(OPJ_CODEC_JP2));
-    if (!codec)
+    codec_.reset(opj_create_decompress(OPJ_CODEC_JP2));
+    if (!codec_)
         return false;
 
     setMessageHandlers();
 
-    if (!opj_setup_decoder(codec.get(), &parameters))
+    if (!opj_setup_decoder(codec_.get(), &parameters))
         return false;
 
     {
-        opj_image_t* _image;
-        if (!opj_read_header(stream.get(), codec.get(), &_image))
+        opj_image_t* rawImage;
+        if (!opj_read_header(stream_.get(), codec_.get(), &rawImage))
             return false;
 
-        image.reset(_image);
+        image_.reset(rawImage);
     }
 
-    m_width = image->x1 - image->x0;
-    m_height = image->y1 - image->y0;
+    m_width = image_->x1 - image_->x0;
+    m_height = image_->y1 - image_->y0;
 
     /* Different components may have different precision,
      * so check all.
      */
     bool hasAlpha = false;
-    int numcomps = image->numcomps;
+    const int numcomps = image_->numcomps;
     CV_Assert(numcomps >= 1);
     for (int i = 0; i < numcomps; i++) {
-        const opj_image_comp_t& comp = image->comps[i];
-        auto msgprefix = [&]() { return "component " + std::to_string(i) + "/" + std::to_string(numcomps); };
+        const opj_image_comp_t& comp = image_->comps[i];
+        
         if (comp.sgnd)
-            CV_Error(Error::StsNotImplemented, msgprefix() + " is signed");
+        {
+            CV_Error(Error::StsNotImplemented, cv::format("component %d/%d is signed", i, numcomps));
+        }
+         
 
         if (hasAlpha && comp.alpha)
-            CV_Error(Error::StsNotImplemented, msgprefix() + " is duplicate alpha channel");
+        {
+            CV_Error(Error::StsNotImplemented, cv::format("componenet %d/%d is duplicate alpha channel", i, numcomps));
+        }
+            
         hasAlpha |= comp.alpha;
 
         m_maxPrec = std::max(m_maxPrec, comp.prec);
@@ -207,30 +177,21 @@ bool Jpeg2KOpjDecoder::readHeader()
     } else {
         m_type = CV_MAKETYPE(CV_64F, numcomps);
     }
-
-    m_image = image.release();
-    m_codec = codec.release();
-    m_stream = stream.release();
-
     return true;
 }
 
 bool Jpeg2KOpjDecoder::readData( Mat& img )
 {
-    std::unique_ptr<opj_stream_t, streamDeleter> stream{m_stream};
-    std::unique_ptr<opj_codec_t, codecDeleter> codec{m_codec};
-    std::unique_ptr<opj_image_t, imageDeleter> image{m_image};
-
     m_errorMessage.clear();
-    if (!opj_decode(m_codec, m_stream, m_image)) {
+    if (!opj_decode(codec_.get(), stream_.get(), image_.get())) {
         CV_Error(Error::StsError, "failed to decode:" + m_errorMessage);
     }
 
-    if (m_image->color_space == OPJ_CLRSPC_UNSPECIFIED)
+    if (image_->color_space == OPJ_CLRSPC_UNSPECIFIED)
         CV_Error(Error::StsNotImplemented, "image has unspecified color space");
 
     // file format
-    const int numcomps = image->numcomps;
+    const int numcomps = image_->numcomps;
 
     // requested format
     const int channels = CV_MAT_CN(img.type());
@@ -242,24 +203,24 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
     }();
     const uint8_t shift = outPrec > m_maxPrec ? 0 : m_maxPrec - outPrec;
 
-    if (m_image->color_space == OPJ_CLRSPC_SRGB || m_image->color_space == OPJ_CLRSPC_UNKNOWN) {
+    if (image_->color_space == OPJ_CLRSPC_SRGB || image_->color_space == OPJ_CLRSPC_UNKNOWN) {
         // Assume gray (+ alpha) for 1 channels -> gray
         if (channels == 1 && numcomps <= 2) {
-            const OPJ_INT32* incomps[] = {image->comps[0].data};
+            const std::array<OPJ_INT32*, 1> incomps = {image_->comps[0].data};
             copy_data(img, incomps, shift);
             return true;
         }
 
         // Assume RGB (+ alpha) for 3 channels -> BGR
         if (channels == 3 && (numcomps == 3 || numcomps == 4)) {
-            const OPJ_INT32* incomps[] = {image->comps[2].data, image->comps[1].data, image->comps[0].data};
+            const std::array<OPJ_INT32*, 3> incomps = {image_->comps[2].data, image_->comps[1].data, image_->comps[0].data};
             copy_data(img, incomps, shift);
             return true;
         }
 
         // Assume RGBA for 4 channels -> BGRA
         if (channels == 4 && numcomps == 4) {
-            const OPJ_INT32* incomps[] = {image->comps[2].data, image->comps[1].data, image->comps[0].data, image->comps[3].data};
+            const std::array<OPJ_INT32*, 4> incomps = {image_->comps[2].data, image_->comps[1].data, image_->comps[0].data, image_->comps[3].data};
             copy_data(img, incomps, shift);
             return true;
         }
@@ -267,54 +228,53 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
         // Assume RGB for >= 3 channels -> gray
         if (channels == 1 && numcomps >= 3) {
             Mat tmp(img.size(), CV_MAKETYPE(depth, 3));
-            const OPJ_INT32* incomps[] = {image->comps[2].data, image->comps[1].data, image->comps[0].data};
+            const std::array<OPJ_INT32*, 3> incomps = {image_->comps[2].data, image_->comps[1].data, image_->comps[0].data};
             copy_data(tmp, incomps, shift);
             cvtColor(tmp, img, COLOR_BGR2GRAY);
             return true;
         }
 
         CV_Error(Error::StsNotImplemented,
-            "unsupported number of channels during color conversion, IN: "
-            + std::to_string(numcomps) + " OUT: " + std::to_string(channels));
+                 cv::format("Unsupported number of channels during color conversion, IN: %d OUT: %d",
+                            numcomps, channels));
 
-    } else if (m_image->color_space == OPJ_CLRSPC_GRAY) {
+    } else if (image_->color_space == OPJ_CLRSPC_GRAY) {
         if (channels == 3) {
-            const OPJ_INT32* incomps[] = {image->comps[0].data, image->comps[0].data, image->comps[0].data};
+            const std::array<OPJ_INT32*, 3> incomps = {image_->comps[0].data, image_->comps[0].data, image_->comps[0].data};
             copy_data(img, incomps, shift);
             return true;
 
         } else if (channels == 1) {
-            const OPJ_INT32* incomps[] = {image->comps[0].data};
+            const std::array<OPJ_INT32*, 1> incomps = {image_->comps[0].data};
             copy_data(img, incomps, shift);
             return true;
         }
 
         CV_Error(Error::StsNotImplemented,
-            "unsupported number of channels during color conversion, IN: "
-            + std::to_string(numcomps) + " OUT: " + std::to_string(channels));
+                 cv::format("Unsupported number of channels during color conversion, IN: %d OUT %d",
+                            numcomps, channels));
 
-    } else if (m_image->color_space == OPJ_CLRSPC_SYCC) {
+    } else if (image_->color_space == OPJ_CLRSPC_SYCC) {
         if (channels == 1) {
-            const OPJ_INT32* incomps[] = {image->comps[0].data};
+            const std::array<OPJ_INT32*, 1> incomps = {image_->comps[0].data};
             copy_data(img, incomps, shift);
             return true;
         }
 
         if (channels == 3 && numcomps >= 3) {
-            const OPJ_INT32* incomps[] = {image->comps[0].data, image->comps[1].data, image->comps[2].data};
+            const std::array<OPJ_INT32*, 3> incomps = {image_->comps[0].data, image_->comps[1].data, image_->comps[2].data};
             copy_data(img, incomps, shift);
             cvtColor(img, img, COLOR_YUV2BGR);
             return true;
         }
 
         CV_Error(Error::StsNotImplemented,
-            "unsupported number of channels during color conversion, IN: "
-            + std::to_string(numcomps) + " OUT: " + std::to_string(channels));
+                 cv::format("Unsupported number of channels during color conversion, IN: %d OUT %d",
+                            numcomps, channels));
     }
 
-    CV_Error(Error::StsNotImplemented, "unsupported color space conversion: "
-        + colorspaceName(m_image->color_space) + " -> "
-        + (channels == 1 ? "gray" : "BGR"));
+    CV_Error(Error::StsNotImplemented, cv::format("Unsupported color space conversion: %s -> %s",
+                                                  colorspaceName(image_->color_space).c_str(),(channels == 1) ? "gray" : "BGR"));
 
     return false;
 }
@@ -322,5 +282,3 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
 } // namespace cv
 
 #endif
-
-/* End of file. */

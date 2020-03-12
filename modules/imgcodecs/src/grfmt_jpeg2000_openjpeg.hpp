@@ -12,34 +12,68 @@
 #include "grfmt_base.hpp"
 #include <openjpeg.h>
 
-namespace cv
+namespace cv {
+namespace detail {
+struct OpjStreamDeleter
 {
+    void operator()(opj_stream_t* stream) const
+    {
+        if (stream)
+        {
+            opj_stream_destroy(stream);
+        }
+    }
+};
+
+struct OpjCodecDeleter
+{
+    void operator()(opj_codec_t* codec) const
+    {
+        if (codec)
+        {
+            opj_destroy_codec(codec);
+        }
+    }
+};
+
+struct OpjImageDeleter
+{
+    void operator()(opj_image_t* image) const
+    {
+        if (image)
+        {
+            opj_image_destroy(image);
+        }
+    }
+};
+} // namespace detail
 
 class Jpeg2KOpjDecoder CV_FINAL : public BaseImageDecoder
 {
-public:
+    using StreamPtr = std::unique_ptr<opj_stream_t, detail::OpjStreamDeleter>;
+    using CodecPtr = std::unique_ptr<opj_codec_t, detail::OpjCodecDeleter>;
+    using ImagePtr = std::unique_ptr<opj_image_t, detail::OpjImageDeleter>;
 
+public:
     Jpeg2KOpjDecoder();
     virtual ~Jpeg2KOpjDecoder();
 
+    ImageDecoder newDecoder() const CV_OVERRIDE;
     bool readData( Mat& img ) CV_OVERRIDE;
     bool readHeader() CV_OVERRIDE;
-    bool checkSignature( const String& signature ) const CV_OVERRIDE;
-    ImageDecoder newDecoder() const CV_OVERRIDE;
-    size_t signatureLength() const CV_OVERRIDE;
 
 private:
     void setMessageHandlers();
 
-    opj_stream_t* m_stream = nullptr;
-    opj_codec_t* m_codec = nullptr;
-    opj_image_t* m_image = nullptr;
+    StreamPtr stream_{nullptr};
+    CodecPtr codec_{nullptr};
+    ImagePtr image_{nullptr};
 
     String m_errorMessage;
     OPJ_UINT32 m_maxPrec = 0;
 };
 
-}
+} // namespace cv
 
 #endif
 
