@@ -36,6 +36,7 @@ namespace cv {
 using GProtoArg = util::variant
     < GMat
     , GMatP
+    , GFrame
     , GScalar
     , detail::GArrayU  // instead of GArray<T>
     , detail::GOpaqueU // instead of GOpaque<T>
