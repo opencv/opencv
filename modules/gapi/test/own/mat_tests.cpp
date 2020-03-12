@@ -14,6 +14,12 @@ namespace opencv_test
 using Mat = cv::gapi::own::Mat;
 using Dims = std::vector<int>;
 
+namespace {
+inline std::size_t multiply_dims(Dims const& dims){
+    return std::accumulate(dims.begin(), dims.end(), static_cast<size_t>(1), std::multiplies<std::size_t>());
+}
+}
+
 TEST(OwnMat, DefaultConstruction)
 {
     Mat m;
@@ -74,7 +80,7 @@ TEST(OwnMat, CreateOverload)
     ASSERT_NE(m.data, nullptr);
     ASSERT_EQ((cv::Size{m.cols, m.rows}), size);
 
-    ASSERT_EQ(m.total(), static_cast<size_t>(size.height*size.width));
+    ASSERT_EQ(m.total(), static_cast<size_t>(size.height) * size.width);
     ASSERT_EQ(m.type(), CV_8UC1);
     ASSERT_EQ(m.depth(), CV_8U);
     ASSERT_EQ(m.channels(), 1);
@@ -371,7 +377,7 @@ TEST(OwnMat, CopyNDtoRegular)
 
     ASSERT_NE(nullptr , a.data);
     ASSERT_EQ(sz      , (cv::gapi::own::Size{a.cols, a.rows}));
-    ASSERT_EQ(static_cast<size_t>(sz.width*sz.height), a.total());
+    ASSERT_EQ(static_cast<size_t>(sz.width) * sz.height, a.total());
     ASSERT_EQ(CV_8U   , a.type());
     ASSERT_EQ(CV_8U   , a.depth());
     ASSERT_EQ(1       , a.channels());
@@ -387,7 +393,7 @@ TEST(OwnMat, CopyNDtoRegular)
     ASSERT_NE(old_ptr , a.data);
     ASSERT_NE(b.data  , a.data);
     ASSERT_EQ((cv::gapi::own::Size{0,0}), (cv::gapi::own::Size{a.cols, a.rows}));
-    ASSERT_EQ(static_cast<size_t>(dims[0]*dims[1]*dims[2]*dims[3]), a.total());
+    ASSERT_EQ(multiply_dims(dims), a.total());
     ASSERT_EQ(CV_32F  , a.type());
     ASSERT_EQ(CV_32F  , a.depth());
     ASSERT_EQ(-1      , a.channels());
@@ -408,7 +414,7 @@ TEST(OwnMat, CopyRegularToND)
 
     ASSERT_NE(nullptr , a.data);
     ASSERT_EQ((cv::gapi::own::Size{0,0}), (cv::gapi::own::Size{a.cols, a.rows}));
-    ASSERT_EQ(static_cast<size_t>(dims[0]*dims[1]*dims[2]*dims[3]), a.total());
+    ASSERT_EQ(multiply_dims(dims), a.total());
     ASSERT_EQ(CV_32F  , a.type());
     ASSERT_EQ(CV_32F  , a.depth());
     ASSERT_EQ(-1      , a.channels());
@@ -424,7 +430,7 @@ TEST(OwnMat, CopyRegularToND)
     ASSERT_NE(old_ptr , a.data);
     ASSERT_NE(b.data  , a.data);
     ASSERT_EQ(sz      , (cv::gapi::own::Size{a.cols, a.rows}));
-    ASSERT_EQ(static_cast<size_t>(sz.width*sz.height), a.total());
+    ASSERT_EQ(static_cast<size_t>(sz.width) * sz.height, a.total());
     ASSERT_EQ(CV_8U   , a.type());
     ASSERT_EQ(CV_8U   , a.depth());
     ASSERT_EQ(1       , a.channels());
