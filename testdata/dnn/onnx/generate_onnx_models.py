@@ -615,3 +615,14 @@ class FlattenModel(nn.Module):
 x = Variable(torch.rand(1, 2))
 model = FlattenModel()
 save_data_and_model("flatten_const", x, model)
+
+class Cast(nn.Module):
+    def __init__(self):
+        super(Cast, self).__init__()
+
+    def forward(self, x):
+        return x.type(torch.FloatTensor)
+
+x = Variable(torch.randn(1, 2))
+model = Cast()
+save_data_and_model("cast", x, model)
