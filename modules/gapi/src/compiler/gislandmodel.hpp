@@ -129,7 +129,7 @@ public:
     // FIXME: This thing will likely break stuff once we introduce
     // "multi-source streaming", a better design needs to be proposed
     // at that stage.
-    virtual void newStreamSignal() {}; // do nothing here by default
+    virtual void handleNewStream() {}; // do nothing here by default
 
     virtual ~GIslandExecutable() = default;
 };

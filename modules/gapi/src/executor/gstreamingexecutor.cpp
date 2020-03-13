@@ -849,7 +849,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         for (auto &&out_eh : op.nh->outNodes()) {
             out_queues.push_back(reader_queues(*m_island_graph, out_eh));
         }
-        op.isl_exec->newStreamSignal();
+        op.isl_exec->handleNewStream();
 
         m_threads.emplace_back(islandActorThread,
                                op.in_objects,
