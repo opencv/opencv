@@ -18,10 +18,7 @@ struct OpjStreamDeleter
 {
     void operator()(opj_stream_t* stream) const
     {
-        if (stream)
-        {
-            opj_stream_destroy(stream);
-        }
+        opj_stream_destroy(stream);
     }
 };
 
@@ -29,10 +26,7 @@ struct OpjCodecDeleter
 {
     void operator()(opj_codec_t* codec) const
     {
-        if (codec)
-        {
-            opj_destroy_codec(codec);
-        }
+        opj_destroy_codec(codec);
     }
 };
 
@@ -40,10 +34,7 @@ struct OpjImageDeleter
 {
     void operator()(opj_image_t* image) const
     {
-        if (image)
-        {
-            opj_image_destroy(image);
-        }
+        opj_image_destroy(image);
     }
 };
 } // namespace detail

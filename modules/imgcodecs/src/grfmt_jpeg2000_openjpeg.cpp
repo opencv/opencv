@@ -9,34 +9,30 @@
 #ifdef HAVE_OPENJPEG
 #include "grfmt_jpeg2000_openjpeg.hpp"
 
-#include <sstream>
-
-#include <opencv2/core/utils/logger.hpp>
-
-#include "opencv2/imgproc.hpp"
-
 namespace cv {
 
 namespace {
 
-const String colorspaceName(COLOR_SPACE colorspace) {
-    switch(colorspace) {
-        case OPJ_CLRSPC_CMYK:
-            return "CMYK";
-        case OPJ_CLRSPC_SRGB:
-            return "sRGB";
-        case OPJ_CLRSPC_EYCC:
-            return "e-YCC";
-        case OPJ_CLRSPC_GRAY:
-            return "grayscale";
-        case OPJ_CLRSPC_SYCC:
-            return "YUV";
-        case OPJ_CLRSPC_UNKNOWN:
-            return "unknown";
-        case OPJ_CLRSPC_UNSPECIFIED:
-            return "unspecified";
-        default:
-            CV_Assert(!"Invalid colorspace");
+const String colorspaceName(COLOR_SPACE colorspace)
+{
+    switch (colorspace)
+    {
+    case OPJ_CLRSPC_CMYK:
+        return "CMYK";
+    case OPJ_CLRSPC_SRGB:
+        return "sRGB";
+    case OPJ_CLRSPC_EYCC:
+        return "e-YCC";
+    case OPJ_CLRSPC_GRAY:
+        return "grayscale";
+    case OPJ_CLRSPC_SYCC:
+        return "YUV";
+    case OPJ_CLRSPC_UNKNOWN:
+        return "unknown";
+    case OPJ_CLRSPC_UNSPECIFIED:
+        return "unspecified";
+    default:
+        CV_Assert(!"Invalid colorspace");
     }
 }
 
@@ -49,15 +45,17 @@ void copy_data_(Mat& out, const std::array<InT*, N>& data, uint8_t shift) {
         size.height = 1;
     }
 
-    std::array<const InT*, N> sptr = {nullptr, };
-    for (int i = 0; i < size.height; i++ ) {
-        for (std::size_t c = 0; c < N; c++) {
+    std::array<const InT*, N> sptr;
+    for (int i = 0; i < size.height; i++)
+    {
+        for (std::size_t c = 0; c < N; c++)
+        {
             sptr[c] = data[c] + i * size.width;
         }
         OutT* dptr = out.ptr<OutT>(i);
         // when the arrays are continuous,
         // the outer loop is executed only once
-        for( int j = 0; j < size.width; j++) {
+        for (int j = 0; j < size.width; j++) {
             for (std::size_t c = 0; c < N; c++) {
                 InT in = *(sptr[c])++;
                 if (doShift) {
@@ -88,7 +86,7 @@ void copy_data(Mat& out, const std::array<InT*, N>& data, uint8_t shift) {
 
 Jpeg2KOpjDecoder::Jpeg2KOpjDecoder()
 {
-    static const unsigned char signature[] = { 0, 0, 0, 0x0c, 'j', 'P', ' ', ' ', 13, 10, 0x87, 10};
+    static const unsigned char signature[] = { 0, 0, 0, 0x0c, 'j', 'P', ' ', ' ', 13, 10, 0x87, 10 };
     m_signature = String((const char*)(signature), sizeof(signature));
     // FIXME: raw code stream
 }
@@ -149,18 +147,17 @@ bool Jpeg2KOpjDecoder::readHeader()
     CV_Assert(numcomps >= 1);
     for (int i = 0; i < numcomps; i++) {
         const opj_image_comp_t& comp = image_->comps[i];
-        
+
         if (comp.sgnd)
         {
             CV_Error(Error::StsNotImplemented, cv::format("component %d/%d is signed", i, numcomps));
         }
-         
 
         if (hasAlpha && comp.alpha)
         {
             CV_Error(Error::StsNotImplemented, cv::format("componenet %d/%d is duplicate alpha channel", i, numcomps));
         }
-            
+
         hasAlpha |= comp.alpha;
 
         m_maxPrec = std::max(m_maxPrec, comp.prec);
@@ -213,14 +210,19 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
 
         // Assume RGB (+ alpha) for 3 channels -> BGR
         if (channels == 3 && (numcomps == 3 || numcomps == 4)) {
-            const std::array<OPJ_INT32*, 3> incomps = {image_->comps[2].data, image_->comps[1].data, image_->comps[0].data};
+            const std::array<OPJ_INT32*, 3> incomps = { image_->comps[2].data,
+                                                        image_->comps[1].data,
+                                                        image_->comps[0].data };
             copy_data(img, incomps, shift);
             return true;
         }
 
         // Assume RGBA for 4 channels -> BGRA
         if (channels == 4 && numcomps == 4) {
-            const std::array<OPJ_INT32*, 4> incomps = {image_->comps[2].data, image_->comps[1].data, image_->comps[0].data, image_->comps[3].data};
+            const std::array<OPJ_INT32*, 4> incomps = { image_->comps[2].data,
+                                                        image_->comps[1].data,
+                                                        image_->comps[0].data,
+                                                        image_->comps[3].data };
             copy_data(img, incomps, shift);
             return true;
         }
@@ -228,7 +230,9 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
         // Assume RGB for >= 3 channels -> gray
         if (channels == 1 && numcomps >= 3) {
             Mat tmp(img.size(), CV_MAKETYPE(depth, 3));
-            const std::array<OPJ_INT32*, 3> incomps = {image_->comps[2].data, image_->comps[1].data, image_->comps[0].data};
+            const std::array<OPJ_INT32*, 3> incomps = { image_->comps[2].data,
+                                                        image_->comps[1].data,
+                                                        image_->comps[0].data};
             copy_data(tmp, incomps, shift);
             cvtColor(tmp, img, COLOR_BGR2GRAY);
             return true;
@@ -240,12 +244,14 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
 
     } else if (image_->color_space == OPJ_CLRSPC_GRAY) {
         if (channels == 3) {
-            const std::array<OPJ_INT32*, 3> incomps = {image_->comps[0].data, image_->comps[0].data, image_->comps[0].data};
+            const std::array<OPJ_INT32*, 3> incomps = { image_->comps[0].data,
+                                                        image_->comps[0].data,
+                                                        image_->comps[0].data };
             copy_data(img, incomps, shift);
             return true;
 
         } else if (channels == 1) {
-            const std::array<OPJ_INT32*, 1> incomps = {image_->comps[0].data};
+            const std::array<OPJ_INT32*, 1> incomps = { image_->comps[0].data };
             copy_data(img, incomps, shift);
             return true;
         }
@@ -256,13 +262,15 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
 
     } else if (image_->color_space == OPJ_CLRSPC_SYCC) {
         if (channels == 1) {
-            const std::array<OPJ_INT32*, 1> incomps = {image_->comps[0].data};
+            const std::array<OPJ_INT32*, 1> incomps = { image_->comps[0].data };
             copy_data(img, incomps, shift);
             return true;
         }
 
         if (channels == 3 && numcomps >= 3) {
-            const std::array<OPJ_INT32*, 3> incomps = {image_->comps[0].data, image_->comps[1].data, image_->comps[2].data};
+            const std::array<OPJ_INT32*, 3> incomps = { image_->comps[0].data,
+                                                        image_->comps[1].data,
+                                                        image_->comps[2].data };
             copy_data(img, incomps, shift);
             cvtColor(img, img, COLOR_YUV2BGR);
             return true;
@@ -274,7 +282,8 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
     }
 
     CV_Error(Error::StsNotImplemented, cv::format("Unsupported color space conversion: %s -> %s",
-                                                  colorspaceName(image_->color_space).c_str(),(channels == 1) ? "gray" : "BGR"));
+                                                  colorspaceName(image_->color_space).c_str(),
+                                                  (channels == 1) ? "gray" : "BGR"));
 
     return false;
 }
