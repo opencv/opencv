@@ -34,9 +34,9 @@ static float local_cost(const Point& p, const Point& q, const Mat& gradient_magn
     float fG = gradient_magnitude.at<float>(q.y, q.x);
     float dp;
     float dq;
-    float WEIGHT_LAP_ZERO_CROSS = 0.43f;
-    float WEIGHT_GRADIENT_MAGNITUDE = 0.14f;
-    float WEIGHT_GRADIENT_DIRECTION = 0.43f;
+    const float WEIGHT_LAP_ZERO_CROSS = 0.43f;
+    const float WEIGHT_GRADIENT_MAGNITUDE = 0.14f;
+    const float WEIGHT_GRADIENT_DIRECTION = 0.43f;
     bool isDiag = (p.x != q.x) && (p.y != q.y);
 
     if ((Iy.at<float>(p) * (q.x - p.x) - Ix.at<float>(p) * (q.y - p.y)) >= 0)
@@ -184,7 +184,8 @@ const char* keys =
 int main( int argc, const char** argv )
 {
     Parameters param;
-
+    const int EDGE_THRESHOLD_LOW = 50;
+    const int EDGE_THRESHOLD_HIGH = 100;
     CommandLineParser parser(argc, argv, keys);
     parser.about("\nThis program demonstrates implementation of 'intelligent scissors' algorithm\n"
                  "To start drawing a new contour select a pixel, click LEFT mouse button.\n"
@@ -205,7 +206,7 @@ int main( int argc, const char** argv )
     param.hit_map_y.create(param.img.rows, param.img.cols, CV_32SC1);
 
     cvtColor(param.img, grayscale, COLOR_BGR2GRAY);
-    Canny(grayscale, img_canny, 50, 100);
+    Canny(grayscale, img_canny, EDGE_THRESHOLD_LOW, EDGE_THRESHOLD_HIGH);
 
     threshold(img_canny, param.zero_crossing, 254, 1, THRESH_BINARY_INV);
     Sobel(grayscale, param.Ix, CV_32FC1, 1, 0, 1);
