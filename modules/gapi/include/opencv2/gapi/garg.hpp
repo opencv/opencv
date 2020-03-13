@@ -90,7 +90,7 @@ using GArgs = std::vector<GArg>;
 // FIXME: Move to a separate file!
 using GRunArg  = util::variant<
 #if !defined(GAPI_STANDALONE)
-    cv::Mat,    
+    cv::Mat,
     cv::UMat,
 #endif // !defined(GAPI_STANDALONE)
     cv::gapi::wip::IStreamSource::Ptr,
@@ -123,7 +123,7 @@ struct Data: public GRunArg
 
 using GRunArgP = util::variant<
 #if !defined(GAPI_STANDALONE)
-    cv::Mat*,    
+    cv::Mat*,
     cv::UMat*,
 #endif // !defined(GAPI_STANDALONE)
     cv::gapi::own::Mat*,
