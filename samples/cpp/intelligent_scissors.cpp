@@ -177,7 +177,8 @@ static void onMouse(int event, int x, int y, int , void* userdata)
 
 const char* keys =
 {
-    "{help h | |}{@image|fruits.jpg|}"
+    "{help h | |}"
+    "{@image | fruits.jpg| Path to image to process}"
 };
 
 
