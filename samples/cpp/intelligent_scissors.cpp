@@ -197,7 +197,7 @@ int main( int argc, const char** argv )
         return 1;
     }
     std::vector<std::vector<Point> > c(1);
-    param.contours=c;
+    param.contours = c;
     std::string filename = parser.get<std::string>(0);
 
     Mat grayscale, img_canny;
