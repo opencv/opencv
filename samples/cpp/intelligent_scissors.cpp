@@ -34,9 +34,9 @@ static float local_cost(const Point& p, const Point& q, const Mat& gradient_magn
     float fG = gradient_magnitude.at<float>(q.y, q.x);
     float dp;
     float dq;
-    float WEIGHT_LAP_ZERO_CROSS = 0.43;
-    float WEIGHT_GRADIENT_MAGNITUDE = 0.14;
-    float WEIGHT_GRADIENT_DIRECTION = 0.43;
+    float WEIGHT_LAP_ZERO_CROSS = 0.43f;
+    float WEIGHT_GRADIENT_MAGNITUDE = 0.14f;
+    float WEIGHT_GRADIENT_DIRECTION = 0.43f;
     bool isDiag = (p.x != q.x) && (p.y != q.y);
 
     if ((Iy.at<float>(p) * (q.x - p.x) - Ix.at<float>(p) * (q.y - p.y)) >= 0)
@@ -125,47 +125,53 @@ static void find_min_path(const Point& start, Parameters* param)
 static void onMouse(int event, int x, int y, int , void* userdata)
 {
     Parameters* param = reinterpret_cast<Parameters*>(userdata);
+    Point &end = param->end;
+    std::vector<std::vector<Point> > &contours = param->contours;
+    std::vector<Point> &tmp_contour = param->tmp_contour;
+    Mat &img_render = param->img_render;
+    Mat &img_pre_render = param->img_pre_render;
+
     if (event == EVENT_LBUTTONDOWN)
     {
-        param->end = Point(x, y);
-        if (!param->contours.back().empty())
+        end = Point(x, y);
+        if (!contours.back().empty())
         {
-            for (int i = static_cast<int>(param->tmp_contour.size()) - 1; i >= 0; i--)
+            for (int i = static_cast<int>(tmp_contour.size()) - 1; i >= 0; i--)
             {
-                param->contours.back().push_back(param->tmp_contour[i]);
+                contours.back().push_back(tmp_contour[i]);
             }
-            param->tmp_contour.clear();
+            tmp_contour.clear();
         }
         else
         {
-            param->contours.back().push_back(param->end);
+            contours.back().push_back(end);
         }
-        find_min_path(param->end, param);
+        find_min_path(end, param);
 
-        param->img_render.copyTo(param->img_pre_render);
-        imshow("lasso", param->img_render);
+        img_render.copyTo(img_pre_render);
+        imshow("lasso", img_render);
     }
     else if (event == EVENT_RBUTTONDOWN)
     {
-        param->img_pre_render.copyTo(param->img_render);
-        drawContours(param->img_pre_render, param->contours, static_cast<int>(param->contours.size()) - 1, Scalar(0,255,0), FILLED);
-        addWeighted(param->img_pre_render, 0.3, param->img_render, 0.7, 0, param->img_render);
-        param->contours.resize(param->contours.size() + 1);
-        imshow("lasso", param->img_render);
+        img_pre_render.copyTo(img_render);
+        drawContours(img_pre_render, contours, static_cast<int>(contours.size()) - 1, Scalar(0,255,0), FILLED);
+        addWeighted(img_pre_render, 0.3, img_render, 0.7, 0, img_render);
+        contours.resize(contours.size() + 1);
+        imshow("lasso", img_render);
     }
-    else if (event == EVENT_MOUSEMOVE && !param->contours.back().empty())
+    else if (event == EVENT_MOUSEMOVE && !contours.back().empty())
     {
-        param->tmp_contour.clear();
-        param->img_pre_render.copyTo(param->img_render);
+        tmp_contour.clear();
+        img_pre_render.copyTo(img_render);
         Point val_point = Point(x, y);
-        while (val_point != param->end)
+        while (val_point != end)
         {
-            param->tmp_contour.push_back(val_point);
+            tmp_contour.push_back(val_point);
             Point cur = Point(param->hit_map_x.at<int>(val_point), param->hit_map_y.at<int>(val_point));
-            line(param->img_render, val_point, cur, Scalar(255, 0, 0), 2);
+            line(img_render, val_point, cur, Scalar(255, 0, 0), 2);
             val_point = cur;
         }
-        imshow("lasso", param->img_render);
+        imshow("lasso", img_render);
     }
 }
 
