@@ -1564,81 +1564,10 @@ OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_uint32x4, vec_uint4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_int32x4, vec_int4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_float32x4, vec_float4)
 
-template<int i>
-inline v_int8x16 v_broadcast_element(v_int8x16 v)
-{
-    return v_int8x16(vec_perm(v.val, v.val, vec_splats((unsigned char)i)));
-}
+template<int i, typename Tvec>
+inline Tvec v_broadcast_element(const Tvec& v)
+{ return Tvec(vec_splat(v.val, i)); }
 
-template<int i>
-inline v_uint8x16 v_broadcast_element(v_uint8x16 v)
-{
-    return v_uint8x16(vec_perm(v.val, v.val, vec_splats((unsigned char)i)));
-}
-
-template<int i>
-inline v_int16x8 v_broadcast_element(v_int16x8 v)
-{
-    unsigned char t0 = 2*i, t1 = 2*i + 1;
-    vec_uchar16 p = {t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1};
-    return v_int16x8(vec_perm(v.val, v.val, p));
-}
-
-template<int i>
-inline v_uint16x8 v_broadcast_element(v_uint16x8 v)
-{
-    unsigned char t0 = 2*i, t1 = 2*i + 1;
-    vec_uchar16 p = {t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1, t0, t1};
-    return v_uint16x8(vec_perm(v.val, v.val, p));
-}
-
-template<int i>
-inline v_int32x4 v_broadcast_element(v_int32x4 v)
-{
-    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
-    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
-    return v_int32x4(vec_perm(v.val, v.val, p));
-}
-
-template<int i>
-inline v_uint32x4 v_broadcast_element(v_uint32x4 v)
-{
-    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
-    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
-    return v_uint32x4(vec_perm(v.val, v.val, p));
-}
-
-template<int i>
-inline v_int64x2 v_broadcast_element(v_int64x2 v)
-{
-    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
-    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
-    return v_int64x2(vec_perm(v.val, v.val, p));
-}
-
-template<int i>
-inline v_uint64x2 v_broadcast_element(v_uint64x2 v)
-{
-    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
-    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
-    return v_uint64x2(vec_perm(v.val, v.val, p));
-}
-
-template<int i>
-inline v_float32x4 v_broadcast_element(v_float32x4 v)
-{
-    unsigned char t0 = 4*i, t1 = 4*i + 1, t2 = 4*i + 2, t3 = 4*i + 3;
-    vec_uchar16 p = {t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3, t0, t1, t2, t3};
-    return v_float32x4(vec_perm(v.val, v.val, p));
-}
-
-template<int i>
-inline v_float64x2 v_broadcast_element(v_float64x2 v)
-{
-    unsigned char t0 = 8*i, t1 = 8*i + 1, t2 = 8*i + 2, t3 = 8*i + 3, t4 = 8*i + 4, t5 = 8*i + 5, t6 = 8*i + 6, t7 = 8*i + 7;
-    vec_uchar16 p = {t0, t1, t2, t3, t4, t5, t6, t7, t0, t1, t2, t3, t4, t5, t6, t7};
-    return v_float64x2(vec_perm(v.val, v.val, p));
-}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
