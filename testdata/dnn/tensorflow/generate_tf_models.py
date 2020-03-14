@@ -844,6 +844,12 @@ with tf.Session(graph=tf.Graph()) as localSession:
 
     with tf.gfile.FastGFile('keras_learning_phase_net.pb', 'wb') as f:
         f.write(graph_def.SerializeToString())
+################################################################################
+inp = tf.placeholder(tf.float32, [None, 2, 3, 4], 'input')
+pool = tf.layers.average_pooling2d(inp, pool_size=(2, 3), strides=1, padding='VALID')
+out = inp * pool
+save(inp, out, 'channel_broadcast', optimize=False)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
