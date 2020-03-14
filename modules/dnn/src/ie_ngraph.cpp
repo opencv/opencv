@@ -524,7 +524,7 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
     try
     {
         AutoLock lock(getInitializationMutex());
-        InferenceEngine::Core& ie = getCore();
+        InferenceEngine::Core& ie = getCore(device_name);
         {
             isInit = true;
             std::vector<std::string> candidates;
