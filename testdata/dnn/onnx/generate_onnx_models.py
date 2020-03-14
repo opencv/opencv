@@ -593,3 +593,36 @@ class Broadcast(nn.Module):
 input1 = Variable(torch.randn(1, 4, 1, 2))
 input2 = Variable(torch.randn(1, 4, 1, 1))
 save_data_and_model_multy_inputs("channel_broadcast", Broadcast(), input1, input2)
+
+class FlattenConst(Function):
+    @staticmethod
+    def symbolic(g, x):
+        return g.op("Flatten", x)
+
+    @staticmethod
+    def forward(self, x):
+        return torch.flatten(x)
+
+class FlattenModel(nn.Module):
+    def __init__(self):
+        super(FlattenModel, self).__init__()
+
+    def forward(self, input):
+        sizes = torch.tensor(input.shape)
+        flatten = FlattenConst.apply(sizes)
+        return input + flatten
+
+x = Variable(torch.rand(1, 2))
+model = FlattenModel()
+save_data_and_model("flatten_const", x, model)
+
+class Cast(nn.Module):
+    def __init__(self):
+        super(Cast, self).__init__()
+
+    def forward(self, x):
+        return x.type(torch.FloatTensor)
+
+x = Variable(torch.randn(1, 2))
+model = Cast()
+save_data_and_model("cast", x, model)
