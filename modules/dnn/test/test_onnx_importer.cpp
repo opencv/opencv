@@ -187,6 +187,11 @@ TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
     testONNXModels("maxpooling_sigmoid");
 }
 
+TEST_P(Test_ONNX_layers, Cast)
+{
+    testONNXModels("cast");
+}
+
 TEST_P(Test_ONNX_layers, Concatenation)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -377,6 +382,7 @@ TEST_P(Test_ONNX_layers, DynamicReshape)
     testONNXModels("dynamic_reshape");
     testONNXModels("dynamic_reshape_opset_11");
     testONNXModels("flatten_by_prod");
+    testONNXModels("flatten_const");
 }
 
 TEST_P(Test_ONNX_layers, Reshape)
