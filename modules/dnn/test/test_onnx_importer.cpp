@@ -79,12 +79,6 @@ public:
             netSoftmax.setInput(ref);
             ref = netSoftmax.forward();
         }
-        std::cout << "ref: " << ref.size << '\n';
-        std::cout << "out: " << out.size << '\n';
-        std::cout << ref.reshape(1, 1) << '\n';
-        std::cout << '\n';
-        std::cout << out.reshape(1, 1) << '\n';
-
         normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
