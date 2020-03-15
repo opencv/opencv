@@ -290,6 +290,30 @@ public:
     }
 };
 
+// // To remove Squeeze after LSTM for non-bidirectional LSTM
+// class LSTMSqueeze : public Subgraph
+// {
+// public:
+//     LSTMSqueeze()
+//     {
+//         int input = addNodeToMatch("");
+//
+//         std::vector<int> lstmInps(7);
+//         lstmInps[0] = input;
+//
+//         for (int i = 1; i < 4; ++i)
+//             lstmInps[i] = addNodeToMatch("Unsqueeze");
+//         lstmInps[4] = addNodeToMatch("");
+//         for (int i = 5; i < 7; ++i)
+//             lstmInps[i] = addNodeToMatch("ConstantOfShape");
+//
+//         int lstm = addNodeToMatch("LSTM", lstmInps);
+//         addNodeToMatch("Squeeze", lstm);
+//
+//         setFusedNode("LSTM", lstmInps);
+//     }
+// };
+
 void simplifySubgraphs(opencv_onnx::GraphProto& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
@@ -299,6 +323,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<ResizeSubgraph1>());
     subgraphs.push_back(makePtr<ResizeSubgraph2>());
     subgraphs.push_back(makePtr<SoftMaxSubgraph>());
+    // subgraphs.push_back(makePtr<LSTMSqueeze>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }

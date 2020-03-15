@@ -322,7 +322,7 @@ void ONNXImporter::populateNet(Net dstNet)
 
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
-
+        std::cout << layerParams.name << " " << layer_type << '\n';
 
         if (layer_type == "MaxPool")
         {
@@ -457,6 +457,19 @@ void ONNXImporter::populateNet(Net dstNet)
                 constBlobs.insert(std::make_pair(layerParams.name, sliced[0]));
                 continue;
             }
+
+            layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
+            layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
+
+            CV_Assert(node_proto.input_size() == 1);
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                std::vector<Mat> inputs(1, getBlob(node_proto, constBlobs, 0)), sliced;
+                runLayer(layerParams, inputs, sliced);
+                CV_Assert(sliced.size() == 1);
+                constBlobs.insert(std::make_pair(layerParams.name, sliced[0]));
+                continue;
+            }
         }
         else if (layer_type == "Split")
         {
@@ -578,6 +591,117 @@ void ONNXImporter::populateNet(Net dstNet)
             CV_Assert(layerParams.blobs.size() == 1);
             constBlobs.insert(std::make_pair(layerParams.name, layerParams.blobs[0]));
             continue;
+        }
+        else if (layer_type == "ConstantFill" || layer_type == "ConstantOfShape")
+        {
+            CV_Assert_N(node_proto.input_size());
+            MatShape inpShape = getBlob(node_proto, constBlobs, 0);
+            float value = layerParams.get("value", 0);
+            Mat fill(inpShape.size(), &inpShape[0], CV_32F, Scalar(value));
+            constBlobs.insert(std::make_pair(layerParams.name, fill));
+            continue;
+        }
+        else if (layer_type == "LSTM")
+        {
+            std::cout << "~~~~~~" << '\n';
+            std::cout << layerParams << '\n';
+            for (int i = 1; i < node_proto.input_size(); ++i) {
+              std::cout << "i: " << node_proto.input(i) << " " << constBlobs[node_proto.input(i)].size << '\n';
+            }
+
+            CV_Assert(node_proto.input_size() == 7);
+            Mat Wx = getBlob(node_proto, constBlobs, 1);
+            Mat Wh = getBlob(node_proto, constBlobs, 2);
+            Mat b = getBlob(node_proto, constBlobs, 3);
+
+
+            std::cout << Wx.size << '\n';
+            std::cout << Wh.size << '\n';
+
+            int Wx_shape[] = {Wx.size[1], Wx.size[2]};
+            int Wh_shape[] = {Wh.size[1], Wh.size[2]};
+            std::cout << "b.size " <<  b.size << '\n';
+            int b_shape[] = {2, b.size[1] / 2};
+
+            Wx = Wx.reshape(1, 2, &Wx_shape[0]);
+            b = b.reshape(1, 2, &b_shape[0]);
+
+            std::cout << "b ----------------" << '\n';
+
+            std::cout << b << '\n';
+            reduce(b, b, 0, REDUCE_SUM);
+            std::cout << b << '\n';
+
+            // https://pytorch.org/docs/stable/nn.html#lstm
+            // IFGO->IFOG
+            // swap each 3rd and 4th rows
+            // Wx = Wx.t();
+
+            float* weightData = (float*)Wx.data;
+            std::swap(weightData[1], weightData[2]);
+
+            float* biasData = (float*)b.data;
+            std::swap(biasData[1], biasData[2]);
+
+            // std::swap(weightData[2], weightData[3]);
+            //
+            // weightData = (float*)Wh.data;
+            // std::swap(weightData[1], weightData[2]);
+            // std::swap(weightData[2], weightData[3]);
+
+
+            // const int outSize = Wx.cols / 4;
+            // for (int i = 0; i < Wx.rows; ++i)
+            //     for (int j = 0; j < outSize; ++j)
+            //     {
+            //         // std::swap(weightData[i * W.cols + 1 * outSize + j],
+            //         //           weightData[i * W.cols + 2 * outSize + j]);
+            //         std::swap(weightData[i * Wx.cols + 2 * outSize + j],
+            //                   weightData[i * Wx.cols + 3 * outSize + j]);
+            //     }
+
+            // float* weightData = Wx.ptr<float>();
+            // for (int j = 0; j < 5; ++j)
+            // {
+            //     std::cout << "swap " << (10 + j) << " " << (15 + j) << '\n';
+            //     for (int i = 0; i < 12; ++i)
+            //         std::swap(weightData[(10 + j) * 12 + i],
+            //                   weightData[(15 + j) * 12 + i]);
+            // }
+
+            layerParams.blobs.resize(3);
+            layerParams.blobs[0] = Wh.reshape(1, 2, &Wh_shape[0]);
+            layerParams.blobs[1] = Wx;
+            layerParams.blobs[2] = b;
+
+            std::cout << "Wx" << '\n';
+            std::cout << layerParams.blobs[1] << '\n';
+
+            std::cout << "Wh" << '\n';
+            std::cout << layerParams.blobs[0] << '\n';
+
+            // layerParams.set("reverse", true);
+
+
+            // layerParams.set("use_peephole", true);
+            // layerParams.blobs.resize(6);
+            // for (int i = 0; i < 3; ++i)
+            // {
+            //     Mat w = Mat::eye(layerParams.blobs[0].cols, layerParams.blobs[0].cols, CV_32F);
+            //     layerParams.blobs[3 + i] = w;
+            // }
+
+            // std::cout << layerParams.blobs[1] << '\n';
+
+            // int lstmId = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
+            //
+            // layerParams = LayerParams();
+            //
+            // // Add reshape
+            // int shape[] = {1, 10, 11, 5};
+            // layerParams.name = node_proto.output(0) + "/reshape";
+            // layerParams.type = "Reshape";
+            // layerParams.set("dim", DictValue::arrayInt(&shape[0], 4));
         }
         else if (layer_type == "ImageScaler")
         {
@@ -881,14 +1005,14 @@ void ONNXImporter::populateNet(Net dstNet)
         else if (layer_type == "Squeeze")
         {
             CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
-            DictValue axes_dict = layerParams.get("axes");
-            if (axes_dict.size() != 1)
-                CV_Error(Error::StsNotImplemented, "Multidimensional squeeze");
-
-            int axis = axes_dict.getIntValue(0);
-            layerParams.set("axis", axis - 1);
-            layerParams.set("end_axis", axis);
-            layerParams.type = "Flatten";
+            // DictValue axes_dict = layerParams.get("axes");
+            // if (axes_dict.size() != 1)
+            //     CV_Error(Error::StsNotImplemented, "Multidimensional squeeze");
+            //
+            // int axis = axes_dict.getIntValue(0);
+            // layerParams.set("axis", axis - 1);
+            // layerParams.set("end_axis", axis);
+            layerParams.type = "Identity";
         }
         else if (layer_type == "Flatten")
         {
@@ -1032,17 +1156,30 @@ void ONNXImporter::populateNet(Net dstNet)
         else if (layer_type == "Gather")
         {
             CV_Assert(node_proto.input_size() == 2);
-            CV_Assert(layerParams.has("axis"));
             Mat input = getBlob(node_proto, constBlobs, 0);
             Mat indexMat = getBlob(node_proto, constBlobs, 1);
             CV_Assert_N(indexMat.type() == CV_32S, indexMat.total() == 1);
             int index = indexMat.at<int>(0);
-            int axis = layerParams.get<int>("axis");
 
-            std::vector<cv::Range> ranges(input.dims, Range::all());
-            ranges[axis] = Range(index, index + 1);
+            Mat out;
+            if (layerParams.has("axis"))
+            {
+                int axis = layerParams.get<int>("axis");
 
-            Mat out = input(ranges);
+                std::vector<cv::Range> ranges(input.dims, Range::all());
+                ranges[axis] = Range(index, index + 1);
+
+                out = input(ranges);
+            }
+            else
+            {
+                CV_Assert(index < input.total());
+                const int dims = input.dims;
+                input = input.reshape(1, 1);
+                input.dims = 2;
+                out = input.reshape(1, 1).colRange(index, index + 1);
+                out.dims = dims;
+            }
             constBlobs.insert(std::make_pair(layerParams.name, out));
             continue;
         }
