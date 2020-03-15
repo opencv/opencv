@@ -66,10 +66,11 @@ static float local_cost(const Point& p, const Point& q, const Mat& gradient_magn
 static void find_min_path(const Point& start, Parameters* param)
 {
     Pix begin;
-    Mat cost_map(param->img.size(), CV_32F, Scalar(FLT_MAX));
-    Mat expand(param->img.size(), CV_8UC1, Scalar(0));
-    Mat processed(param->img.size(), CV_8UC1, Scalar(0));
-    Mat removed(param->img.size(), CV_8UC1, Scalar(0));
+    Mat &img = param->img;
+    Mat cost_map(img.size(), CV_32F, Scalar(FLT_MAX));
+    Mat expand(img.size(), CV_8UC1, Scalar(0));
+    Mat processed(img.size(), CV_8UC1, Scalar(0));
+    Mat removed(img.size(), CV_8UC1, Scalar(0));
     std::priority_queue < Pix, std::vector<Pix>, std::greater<Pix> > L;
 
     cost_map.at<float>(start) = 0;
@@ -93,7 +94,7 @@ static void find_min_path(const Point& start, Parameters* param)
                 {
                     int tx = p.x + i;
                     int ty = p.y + j;
-                    if (tx < 0 || tx >= param->img.cols || ty < 0 || ty >= param->img.rows)
+                    if (tx < 0 || tx >= img.cols || ty < 0 || ty >= img.rows)
                         continue;
                     if (expand.at<uchar>(ty, tx) == 0)
                     {
