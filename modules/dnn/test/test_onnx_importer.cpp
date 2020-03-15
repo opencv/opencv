@@ -79,6 +79,12 @@ public:
             netSoftmax.setInput(ref);
             ref = netSoftmax.forward();
         }
+        std::cout << "ref: " << ref.size << '\n';
+        std::cout << "out: " << out.size << '\n';
+        std::cout << ref.reshape(1, 1) << '\n';
+        std::cout << '\n';
+        std::cout << out.reshape(1, 1) << '\n';
+
         normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
@@ -449,6 +455,11 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("split_max");
+}
+
+TEST_P(Test_ONNX_layers, LSTM)
+{
+    testONNXModels("lstm");
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
