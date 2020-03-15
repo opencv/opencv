@@ -655,3 +655,24 @@ class ShapeConst(nn.Module):
 x = Variable(torch.Tensor([[1, 2, 3], [1, 2, 3]]))
 model = ShapeConst()
 save_data_and_model("shape_of_constant", x, model, version=11)
+
+
+class LSTM(nn.Module):
+
+    def __init__(self, features, hidden, batch, num_layers=1):
+        super(LSTM, self).__init__()
+        self.lstm = nn.LSTM(features, hidden, num_layers)
+        self.h0 = torch.zeros(num_layers, batch, hidden)
+        self.c0 = torch.zeros(num_layers, batch, hidden)
+
+    def forward(self, x):
+        return self.lstm(x, (self.h0, self.c0))[0]
+
+batch = 5
+features = 4
+hidden = 3
+seq_len = 2
+
+input = Variable(torch.randn(seq_len, batch, features))
+lstm = LSTM(features, hidden, batch)
+save_data_and_model("lstm", input, lstm)
