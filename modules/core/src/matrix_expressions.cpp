@@ -1329,10 +1329,7 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
     else
     {
         e.a.convertTo(dst, e.a.type(), e.alpha);
-        if (e.a.channels() == 1)
-            cv::add(dst, e.s, dst);
-        else
-            cv::add(dst, e.s[0], dst);
+        cv::add(dst, e.s, dst);
     }
 
     if( dst.data != m.data )
