@@ -215,8 +215,6 @@ public:
         internals.push_back(shape(_numSamples, 1)); // dummyOnes
         internals.push_back(shape(_numSamples, 4*_numOut)); // gates
 
-
-        std::cout << "LSTM out: " << outputs[0] << '\n';
         return false;
     }
 
@@ -303,8 +301,6 @@ public:
             tsEnd = numTimeStamps;
             tsInc = 1;
         }
-        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << '\n';
-        std::cout << tsStart << " " << tsEnd << '\n';
         for (int ts = tsStart; ts != tsEnd; ts += tsInc)
         {
             Range curRowRange(ts*numSamples, (ts + 1)*numSamples);
@@ -318,7 +314,6 @@ public:
             Mat gateF = gates.colRange(1*numOut, 2*numOut);
             Mat gateO = gates.colRange(2*numOut, 3*numOut);
             Mat gateG = gates.colRange(3*numOut, 4*numOut);
-            std::cout << "i " << gateI << '\n';
 
             if (forgetBias)
                 add(gateF, forgetBias, gateF);
@@ -334,7 +329,6 @@ public:
             {
                 Mat gatesIFO = gates.colRange(0, 3*numOut);
                 sigmoid(gatesIFO, gatesIFO);
-                std::cout << "ifo " << gatesIFO << '\n';
             }
 
             tanh(gateG, gateG);
@@ -351,15 +345,12 @@ public:
             }
             if (usePeephole)
             {
-                std::cout << "if (usePeephole)" << '\n';
                 gemm(cInternal, blobs[5], 1, gateO, 1, gateO);
                 sigmoid(gateO, gateO);
             }
 
             //compute h_t
             tanh(cInternal, hInternal);
-            std::cout << "o " << gateO << '\n';
-            std::cout << "tanh(o) " << hInternal << '\n';
             multiply(gateO, hInternal, hInternal);
 
             //save results in output blobs
@@ -367,7 +358,6 @@ public:
             if (produceCellOutput)
                 cInternal.copyTo(cOutTs.rowRange(curRowRange));
         }
-        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << '\n';
     }
 };
 

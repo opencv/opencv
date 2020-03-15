@@ -1826,12 +1826,10 @@ void TFImporter::populateNet(Net dstNet)
             const int outSize = W.cols / 4;
 
             // IGFO->IFOG
-            std::cout << "(TF) W " << W.size << '\n';
             float* weightData = (float*)W.data;
             for (int i = 0; i < W.rows; ++i)
                 for (int j = 0; j < outSize; ++j)
                 {
-                    // std::cout << "swap " << i * W.cols + 1 * outSize << " " << i * W.cols + 2 * outSize << '\n';
                     std::swap(weightData[i * W.cols + 1 * outSize + j],
                               weightData[i * W.cols + 2 * outSize + j]);
                     std::swap(weightData[i * W.cols + 2 * outSize + j],
@@ -1839,11 +1837,6 @@ void TFImporter::populateNet(Net dstNet)
                 }
             Wx = W.rowRange(0, W.rows - outSize).t();
             Wh = W.rowRange(W.rows - outSize, W.rows).t();
-
-            std::cout << "(TF) Wx " << Wx.size << '\n';
-            std::cout << "(TF) Wh " << Wh.size << '\n';
-            std::cout << "(TF) b " << b.size << '\n';
-
 
             layerParams.blobs.resize(3);
             layerParams.blobs[0] = Wh;
