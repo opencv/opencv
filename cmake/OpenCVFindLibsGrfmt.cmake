@@ -158,6 +158,7 @@ if(WITH_OPENJPEG)
   find_package(OpenJPEG QUIET)
 
   if(NOT OpenJPEG_FOUND OR OPENJPEG_MAJOR_VERSION LESS 2)
+    set(HAVE_OPENJPEG NO)
     ocv_clear_vars(OPENJPEG_MAJOR_VERSION OPENJPEG_MINOR_VERSION OPENJPEG_BUILD_VERSION OPENJPEG_LIBRARIES OPENJPEG_INCLUDE_DIRS)
     message(STATUS "Could NOT find OpenJPEG (minimal suitable version: 2.0, recommended version >= 2.3.1)")
   else()

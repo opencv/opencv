@@ -38,9 +38,49 @@ String colorspaceName(COLOR_SPACE colorspace)
     }
 }
 
+/**
+ * Iterator over the channel in continuous chunk of the memory e.g. in the one row of a Mat
+ *
+ * @tparam T type of the Mat elements
+ */
+template <class T>
+class ChannelsIterator
+{
+public:
+    using difference_type = std::ptrdiff_t ;
+    using value_type = T;
+    using pointer = T*;
+    using reference = T&;
+    using iterator_category = std::output_iterator_tag;
+
+    ChannelsIterator(pointer ptr, std::size_t channel, std::size_t channels_count)
+        : ptr_ { ptr + channel }, step_ { channels_count }
+    {
+    }
+
+    ChannelsIterator& operator++() {
+        ptr_ += step_;
+        return *this;
+    }
+
+    ChannelsIterator operator++(int) {
+        ChannelsIterator ret(*this);
+        ptr_ += step_;
+        return ret;
+    }
+
+    reference operator*() const
+    {
+        return *ptr_;
+    }
+
+private:
+    pointer ptr_{nullptr};
+    std::size_t step_{1};
+};
 
 template<typename OutT, typename InT>
-void copyToMatImpl(const std::vector<InT*>& in, Mat& out, uint8_t shift)
+void copyToMatImpl(std::vector<InT*>&& in, Mat& out, uint8_t shift)
 {
     Size size = out.size();
     if (out.isContinuous())
@@ -53,38 +93,38 @@ void copyToMatImpl(const std::vector<InT*>& in, Mat& out, uint8_t shift)
 
     const std::size_t channelsCount = in.size();
 
-    std::vector<const InT*> sptr(channelsCount, nullptr);
 
-    for (int i = 0; i < size.height; i++)
+    for (int i = 0; i < size.height; ++i)
     {
-        for (std::size_t c = 0; c < channelsCount; c++)
+        auto rowPtr = out.ptr<OutT>(i);
+        for (std::size_t c = 0; c < channelsCount; ++c)
         {
-            sptr[c] = in[c] + i * size.width;
-        }
-        OutT* dptr = out.ptr<OutT>(i);
-        // when the arrays are continuous,
-        // the outer loop is executed only once
-        for (int j = 0; j < size.width; j++)
-        {
-            for (std::size_t c = 0; c < channelsCount; c++)
+            const auto first = in[c];
+            const auto last = first + size.width;
+            auto dOut = ChannelsIterator<OutT>(rowPtr, c, channelsCount);
+            if (isShiftRequired)
             {
-                InT inVal = *(sptr[c])++;
-                *dptr++ = isShiftRequired ? inVal >> shift : inVal;
+                std::transform(first, last, dOut, [shift](InT val) -> OutT { return val >> shift; });
             }
+            else
+            {
+                std::copy(first, last, dOut);
+            }
+            in[c] += size.width;
         }
     }
 }
 
 template<typename InT>
-void copyToMat(const std::vector<InT*>& in, Mat& out, uint8_t shift)
+void copyToMat(std::vector<const InT*>&& in, Mat& out, uint8_t shift)
 {
     switch (out.depth())
     {
     case CV_8U:
-        copyToMatImpl<uint8_t>(in, out, shift);
+        copyToMatImpl<uint8_t>(std::move(in), out, shift);
         break;
     case CV_16U:
-        copyToMatImpl<uint16_t>(in, out, shift);
+        copyToMatImpl<uint16_t>(std::move(in), out, shift);
         break;
     default:
         CV_Error(Error::StsNotImplemented, "only depth CV_8U and CV16_U are supported");
@@ -92,7 +132,7 @@ void copyToMat(const std::vector<InT*>& in, Mat& out, uint8_t shift)
 }
 
 template<typename InT, typename OutT>
-void copyFromMatImpl(const Mat& in, std::vector<OutT*>& out)
+void copyFromMatImpl(const Mat& in, std::vector<OutT*>&& out)
 {
     Size size = in.size();
     if (in.isContinuous())
@@ -103,31 +143,30 @@ void copyFromMatImpl(const Mat& in, std::vector<OutT*>& out)
 
     const std::size_t outChannelsCount = out.size();
 
-    for (int i = 0; i < size.height; i++)
+    std::vector<Mat> inChannels(outChannelsCount);
+    split(in, inChannels.data());
+
+    for (int i = 0; i < size.height; ++i)
     {
-        const InT* sptr = in.ptr<InT>(i);
-        // when the arrays are continuous,
-        // the outer loop is executed only once
-        for (int j = 0; j < size.width; j++)
+        for (std::size_t c = 0; c < outChannelsCount; ++c)
         {
-            for (std::size_t c = 0; c < outChannelsCount; c++)
-            {
-                *out[c]++ = *sptr++;
-            }
+            const InT* first = inChannels[c].ptr<InT>(i);
+            const InT* last = first + size.width;
+            std::copy(first, last, out[c]);
         }
     }
 }
 
 template<typename OutT>
-void copyFromMat(const Mat& in, std::vector<OutT*>& out)
+void copyFromMat(const Mat& in, std::vector<OutT*>&& out)
 {
     switch (in.depth())
     {
     case CV_8U:
-        copyFromMatImpl<uint8_t>(in, out);
+        copyFromMatImpl<uint8_t>(in, std::move(out));
         break;
     case CV_16U:
-        copyFromMatImpl<uint16_t>(in, out);
+        copyFromMatImpl<uint16_t>(in, std::move(out));
         break;
     default:
         CV_Error(Error::StsNotImplemented, "only depth CV_8U and CV16_U are supported");
@@ -183,6 +222,8 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
 
 bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
 {
+    using ImageComponents = std::vector<const OPJ_INT32*>;
+
     const int inChannels = inImg.numcomps;
     const int outChannels = outImg.channels();
 
@@ -191,16 +232,14 @@ bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
         // Assume gray (+ alpha) for 1 channels -> gray
         if (inChannels <= 2)
         {
-            const std::vector<OPJ_INT32*> incomps { inImg.comps[0].data };
-            copyToMat(incomps, outImg, shift);
+            copyToMat(ImageComponents { inImg.comps[0].data }, outImg, shift);
         }
         // Assume RGB for >= 3 channels -> gray
         else
         {
             Mat tmp(outImg.size(), CV_MAKETYPE(outImg.depth(), 3));
-            const std::vector<OPJ_INT32*> incomps { inImg.comps[2].data, inImg.comps[1].data,
-                                                    inImg.comps[0].data };
-            copyToMat(incomps, tmp, shift);
+            copyToMat(ImageComponents { inImg.comps[2].data, inImg.comps[1].data, inImg.comps[0].data },
+                      tmp, shift);
             cvtColor(tmp, outImg, COLOR_BGR2GRAY);
         }
         return true;
@@ -209,14 +248,13 @@ bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
     if (inChannels >= 3)
     {
         // Assume RGB (+ alpha) for 3 channels -> BGR
-        std::vector<OPJ_INT32*> incomps { inImg.comps[2].data, inImg.comps[1].data,
-                                          inImg.comps[0].data };
+        ImageComponents incomps { inImg.comps[2].data, inImg.comps[1].data, inImg.comps[0].data };
         // Assume RGBA for 4 channels -> BGRA
         if (outChannels > 3)
         {
             incomps.push_back(inImg.comps[3].data);
         }
-        copyToMat(incomps, outImg, shift);
+        copyToMat(std::move(incomps), outImg, shift);
         return true;
     }
     CV_LOG_ERROR(nullptr,
@@ -227,13 +265,14 @@ bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
 
 bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
 {
+    using ImageComponents = std::vector<const OPJ_INT32*>;
+
     const int inChannels = inImg.numcomps;
     const int outChannels = outImg.channels();
 
     if (outChannels == 1 || outChannels == 3)
     {
-        const std::vector<OPJ_INT32*> incomps(outChannels, inImg.comps[0].data);
-        copyToMat(incomps, outImg, shift);
+        copyToMat(ImageComponents(outChannels, inImg.comps[0].data), outImg, shift);
         return true;
     }
     CV_LOG_ERROR(nullptr,
@@ -244,19 +283,19 @@ bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shif
 
 bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
 {
+    using ImageComponents = std::vector<const OPJ_INT32*>;
+
     const int inChannels = inImg.numcomps;
     const int outChannels = outImg.channels();
 
     if (outChannels == 1) {
-        const std::vector<OPJ_INT32*> incomps { inImg.comps[0].data };
-        copyToMat(incomps, outImg, shift);
+        copyToMat(ImageComponents { inImg.comps[0].data }, outImg, shift);
         return true;
     }
 
     if (outChannels == 3 && inChannels >= 3) {
-        const std::vector<OPJ_INT32*> incomps { inImg.comps[0].data, inImg.comps[1].data,
-                                                inImg.comps[2].data };
-        copyToMat(incomps, outImg, shift);
+        copyToMat(ImageComponents { inImg.comps[0].data, inImg.comps[1].data, inImg.comps[2].data },
+                  outImg, shift);
         cvtColor(outImg, outImg, COLOR_YUV2BGR);
         return true;
     }
@@ -488,7 +527,9 @@ bool Jpeg2KOpjEncoder::write(const Mat& img, const std::vector<int>& params)
         outcomps.assign({ image->comps[2].data, image->comps[1].data, image->comps[0].data,
                           image->comps[3].data });
     }
-    copyFromMat(img, outcomps);
+    // outcomps holds pointers to the data, so the actual data will be modified but won't be freed
+    // The container is not needed after data was copied
+    copyFromMat(img, std::move(outcomps));
 
     CodecPtr codec(opj_create_compress(OPJ_CODEC_JP2));
     if (!codec) {
