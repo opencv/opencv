@@ -1593,6 +1593,8 @@ bool QRDetectMulti::checkPoints(const vector<Point2f>& quadrangle_points)
             li2++;
         }
     }
+    if (count_w == 0)
+        return false;
 
     double frac = double(count_b) / double(count_w);
     double bottom_bound = 0.76;

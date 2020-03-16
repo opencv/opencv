@@ -2215,11 +2215,13 @@ int Chessboard::Board::detectMarkers(cv::InputArray image)
     cv::Mat mask = cv::Mat::zeros(DUMMY_FIELD_SIZE,DUMMY_FIELD_SIZE,CV_8UC1);
     cv::circle(mask,cv::Point(DUMMY_FIELD_SIZE/2,DUMMY_FIELD_SIZE/2),DUMMY_FIELD_SIZE/7,cv::Scalar::all(255),-1);
     int signal_size = cv::countNonZero(mask);
+    CV_Assert(signal_size > 0);
 
     cv::Mat mask2 = cv::Mat::zeros(DUMMY_FIELD_SIZE,DUMMY_FIELD_SIZE,CV_8UC1);
     cv::circle(mask2,cv::Point(DUMMY_FIELD_SIZE/2,DUMMY_FIELD_SIZE/2),DUMMY_FIELD_SIZE/2,cv::Scalar::all(255),-1);
     cv::circle(mask2,cv::Point(DUMMY_FIELD_SIZE/2,DUMMY_FIELD_SIZE/2),DUMMY_FIELD_SIZE/5,cv::Scalar::all(0),-1);
     int noise_size = cv::countNonZero(mask2);
+    CV_Assert(noise_size > 0);
 
     std::vector<cv::Point2f> dst,src;
     dst.push_back(cv::Point2f(0.0F,0.0F));
@@ -3369,7 +3371,7 @@ cv::Scalar Chessboard::Board::calcEdgeSharpness(cv::InputArray _img,float rise_d
                 value += patch.at<uint8_t>(0,0);
                 ++count2;
             }
-            values.push_back(uint8_t(value/count2));
+            values.push_back(count2 > 0 ? uint8_t(value/count2) : 0);
         }
 
         float val = calcSharpness(values,rise_distance);
