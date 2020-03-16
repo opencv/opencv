@@ -160,12 +160,13 @@ public:
         PyObject* args = pyopencv_from(inputs);
         PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("forward"), args, NULL);
         Py_DECREF(args);
-        PyGILState_Release(gstate);
         if (!res)
             CV_Error(Error::StsNotImplemented, "Failed to call \"forward\" method");
 
         std::vector<Mat> pyOutputs;
         CV_Assert(pyopencv_to(res, pyOutputs, ArgInfo("", 0)));
+        Py_DECREF(res);
+        PyGILState_Release(gstate);
 
         CV_Assert(pyOutputs.size() == outputs.size());
         for (size_t i = 0; i < outputs.size(); ++i)
