@@ -507,7 +507,7 @@ void ONNXImporter::populateNet(Net dstNet)
                 else {
                     int blobTotal = blob.total();
                     MatShape inpShape = outShapes[node_proto.input(1 - const_id)];
-                    if (blobTotal > 1 && blobTotal == total(inpShape))
+                    if (blobTotal > 1 && shape(blob) == inpShape)
                     {
                         LayerParams constParams;
                         constParams.name = layerParams.name + "/const";
@@ -515,9 +515,7 @@ void ONNXImporter::populateNet(Net dstNet)
                         constParams.blobs.push_back(blob);
                         int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
                         layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
-                        shapeIt = outShapes.find(node_proto.input(const_id));
-                        CV_Assert(shapeIt != outShapes.end());
-                        outShapes[constParams.name] = shapeIt->second;
+                        outShapes[constParams.name] = shape(blob);
 
                         layerParams.type = "Eltwise";
                         node_proto.set_input(const_id, constParams.name);
