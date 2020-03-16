@@ -372,10 +372,13 @@ void ONNXImporter::populateNet(Net dstNet)
             std::vector<int> end;
             int inp_size = node_proto.input_size();
 
-            if (inp_size == 1) {
-                if (layerParams.has("steps")) {
+            if (inp_size == 1)
+            {
+                if (layerParams.has("steps"))
+                {
                     DictValue steps = layerParams.get("steps");
-                    for (int i = 0; i < steps.size(); ++i) {
+                    for (int i = 0; i < steps.size(); ++i)
+                    {
                         if (steps.get<int>(i) != 1)
                             CV_Error(Error::StsNotImplemented,
                                 "Slice layer only supports steps = 1");
@@ -421,8 +424,8 @@ void ONNXImporter::populateNet(Net dstNet)
                     axis = axes[0];
                 }
 
-                const int* starts = (int*)start_blob.data;
-                const int* ends = (int*)end_blob.data;
+                const int* starts = start_blob.ptr<int>();
+                const int* ends   = end_blob.ptr<int>();
                 if (axis > 0) {
                     begin.resize(axis, 0);
                     end.resize(axis, -1);
@@ -437,12 +440,7 @@ void ONNXImporter::populateNet(Net dstNet)
                 if (inp_size == 5) {
                     CV_Assert(constBlobs.find(node_proto.input(4)) != constBlobs.end());
                     Mat step_blob = getBlob(node_proto, constBlobs, 4);
-                    double min_val, max_val;
-                    minMaxLoc(getBlob(node_proto, constBlobs, 4), &min_val, &max_val, NULL, NULL);
-                    if (min_val != max_val || min_val != 1) {
-                        CV_Error(Error::StsNotImplemented,
-                            "Slice layer only supports steps = 1");
-                    }
+                    CV_CheckEQ(countNonZero(step_blob != 1), 0, "Slice layer only supports steps = 1");
                 }
             }
             layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
@@ -1097,9 +1095,11 @@ void ONNXImporter::populateNet(Net dstNet)
 
             layerParams.set("align_corners", interp_mode == "align_corners");
             Mat shapes = getBlob(node_proto, constBlobs, node_proto.input_size() - 1);
-            CV_Assert_N(shapes.size[0] == 4, shapes.size[1] == 1);
-            int height = shapes.at<int>(2, 0);
-            int width  = shapes.at<int>(3, 0);
+            CV_CheckEQ(shapes.size[0], 4, "");
+            CV_CheckEQ(shapes.size[1], 1, "");
+            CV_CheckTypeEQ(shapes.depth(), CV_32S, "");
+            int height = shapes.at<int>(2);
+            int width  = shapes.at<int>(3);
             if (node_proto.input_size() == 3)
             {
                 shapeIt = outShapes.find(node_proto.input(0));
