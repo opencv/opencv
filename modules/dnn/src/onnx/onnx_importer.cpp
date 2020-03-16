@@ -498,16 +498,42 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             else if (is_const_0 || is_const_1)
             {
-                Mat blob = getBlob(node_proto, constBlobs, is_const_0 ? 0 : 1);
-                blob = blob.reshape(1, 1);
+                int const_id = is_const_0 ? 0 : 1;
+                Mat blob = getBlob(node_proto, constBlobs, const_id);
                 if (blob.total() == 1) {
                     layerParams.type = "Power";
                     layerParams.set("shift", (isSub ? -1 : 1) * blob.at<float>(0));
                 }
                 else {
-                    layerParams.type = "Scale";
-                    layerParams.set("bias_term", true);
-                    layerParams.blobs.push_back((isSub ? -1 : 1) * blob);
+                    int blobTotal = blob.total();
+                    MatShape inpShape = outShapes[node_proto.input(1 - const_id)];
+                    if (blobTotal > 1 && blobTotal == total(inpShape))
+                    {
+                        LayerParams constParams;
+                        constParams.name = layerParams.name + "/const";
+                        constParams.type = "Const";
+                        constParams.blobs.push_back(blob);
+                        int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
+                        layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
+                        shapeIt = outShapes.find(node_proto.input(const_id));
+                        CV_Assert(shapeIt != outShapes.end());
+                        outShapes[constParams.name] = shapeIt->second;
+
+                        layerParams.type = "Eltwise";
+                        node_proto.set_input(const_id, constParams.name);
+                    } else {
+                        layerParams.type = "Scale";
+                        layerParams.set("bias_term", true);
+
+                        layerParams.blobs.push_back((isSub ? -1 : 1) * blob);
+                        int axis;
+                        for (axis = 0; axis < inpShape.size(); axis++)
+                        {
+                            if (total(inpShape, axis) == blobTotal)
+                            break;
+                        }
+                        layerParams.set("axis", axis);
+                    }
                 }
             }
             else if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(1)])
@@ -1001,6 +1027,24 @@ void ONNXImporter::populateNet(Net dstNet)
             else
                 layerParams.type = "Identity";
         }
+        else if (layer_type == "ConstantOfShape")
+        {
+            Mat input = getBlob(node_proto, constBlobs, 0);
+            CV_CheckEQ(input.dims, 2, "");
+            CV_CheckEQ(input.size[1], 1, "");
+            float fill_value = layerParams.blobs.empty() ? 0 : layerParams.blobs[0].at<float>(0, 0);
+            std::vector<int> sizes;
+            for (int i = 0; i < input.total(); i++)
+            {
+                int size = input.at<int>(i, 0);
+                CV_Assert(size > 0);
+                sizes.push_back(size);
+            }
+            Mat tensor(sizes, CV_32F, fill_value);
+            constBlobs.insert(std::make_pair(layerParams.name, tensor));
+            outShapes[node_proto.output(0)] = sizes;
+            continue;
+        }
         else if (layer_type == "Gather")
         {
             CV_Assert(node_proto.input_size() == 2);
@@ -1123,10 +1167,12 @@ void ONNXImporter::populateNet(Net dstNet)
         }
 
         std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
+        int inpNum = 0;
         for (int j = 0; j < node_proto.input_size(); j++) {
             layerId = layer_id.find(node_proto.input(j));
             if (layerId != layer_id.end()) {
-                dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
+                dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, inpNum);
+                ++inpNum;
                 // Collect input shapes.
                 shapeIt = outShapes.find(node_proto.input(j));
                 CV_Assert(shapeIt != outShapes.end());

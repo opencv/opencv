@@ -171,6 +171,11 @@ TEST_P(Test_ONNX_layers, Clip)
     testONNXModels("clip", npy);
 }
 
+TEST_P(Test_ONNX_layers, Shape)
+{
+    testONNXModels("shape_of_constant");
+}
+
 TEST_P(Test_ONNX_layers, ReduceMean)
 {
     testONNXModels("reduce_mean");
