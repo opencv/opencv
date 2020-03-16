@@ -704,10 +704,15 @@ public:
             const char* json_signature = "{";
             const char* xml_signature  = "<?xml";
             char* buf = this->gets(16);
-            char* bufPtr = !buf ? "" : cv_skip_BOM(buf);
-            size_t bufOffset = bufPtr - buf;
+            char* bufPtr = !buf ? 0 : cv_skip_BOM(buf);
+            size_t bufOffset = (bufPtr - buf);
 
-            if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
+            if(!bufPtr)
+            {
+                closeFile();
+                CV_Error(CV_BADARG_ERR, "Input file is invalid");
+            }
+            else if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
                 fmt = FileStorage::FORMAT_YAML;
             else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
                 fmt = FileStorage::FORMAT_JSON;
