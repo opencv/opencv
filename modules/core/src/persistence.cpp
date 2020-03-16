@@ -704,6 +704,7 @@ public:
             const char* json_signature = "{";
             const char* xml_signature  = "<?xml";
             char* buf = this->gets(16);
+            CV_Assert(buf);
             char* bufPtr = cv_skip_BOM(buf);
             size_t bufOffset = bufPtr - buf;
 
