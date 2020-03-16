@@ -74,10 +74,7 @@ class DaSiamRPNTracker:
             for scale in self.scales:
                 wws = ws * scale
                 hhs = hs * scale
-                self.anchor[count, 0] = 0
-                self.anchor[count, 1] = 0
-                self.anchor[count, 2] = wws
-                self.anchor[count, 3] = hhs
+                self.anchor[count] = [0, 0, wws, hhs]
                 count += 1
 
         score_sz = int(self.score_size)
@@ -146,7 +143,7 @@ class DaSiamRPNTracker:
         pscore = pscore * (1 - self.window_influence) + self.window * self.window_influence
         best_pscore_id = np.argmax(pscore)
         target = delta[:, best_pscore_id] / scale_z
-        target_size = target_size / scale_z
+        target_size /= scale_z
         lr = penalty[best_pscore_id] * score[best_pscore_id] * self.lr
         res_x = target[0] + self.target_pos[0]
         res_y = target[1] + self.target_pos[1]
@@ -174,10 +171,10 @@ class DaSiamRPNTracker:
         top_pad = int(max(0., -context_ymin))
         right_pad = int(max(0., context_xmax - im_sz[1] + 1))
         bottom_pad = int(max(0., context_ymax - im_sz[0] + 1))
-        context_xmin = context_xmin + left_pad
-        context_xmax = context_xmax + left_pad
-        context_ymin = context_ymin + top_pad
-        context_ymax = context_ymax + top_pad
+        context_xmin += left_pad
+        context_xmax += left_pad
+        context_ymin += top_pad
+        context_ymax += top_pad
         r, c, k = im.shape
 
         if any([top_pad, bottom_pad, left_pad, right_pad]):
@@ -196,18 +193,16 @@ class DaSiamRPNTracker:
             im_patch_original = im[int(context_ymin):int(context_ymax + 1), int(context_xmin):int(context_xmax + 1), :]
 
         if not np.array_equal(model_size, original_sz):
-            im_patch = cv.resize(im_patch_original, (model_size, model_size))
-        else:
-            im_patch = im_patch_original
+            im_patch_original = cv.resize(im_patch_original, (model_size, model_size))
 
-        return im_patch.astype(float)
+        return im_patch_original
 
 #function for reading paths, bounding box drawing, showing results
 def main():
     parser = argparse.ArgumentParser(description="Run tracker")
-    parser.add_argument("--net", type=str, help="Full path to onnx model of net")
-    parser.add_argument("--kernel_r1", type=str, help="Full path to onnx model of kernel_r1")
-    parser.add_argument("--kernel_cls1", type=str, help="Full path to onnx model of kernel_cls1")
+    parser.add_argument("--net", type=str, default="dasiamrpn_model.onnx", help="Full path to onnx model of net")
+    parser.add_argument("--kernel_r1", type=str, default="dasiamrpn_kernel_r1.onnx", help="Full path to onnx model of kernel_r1")
+    parser.add_argument("--kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Full path to onnx model of kernel_cls1")
     parser.add_argument("--input", type=str, help="Full path to input. Do not use if input is camera")
     args = parser.parse_args()
     point1 = ()
@@ -220,14 +215,14 @@ def main():
         nonlocal point1, point2, cx, cy, w, h, drawing, mark
 
         if event == cv.EVENT_LBUTTONDOWN:
-            if drawing == False:
+            if not drawing:
                 drawing = True
                 point1 = (x, y)
             else:
                 drawing = False
 
         elif event == cv.EVENT_MOUSEMOVE:
-            if drawing == True:
+            if drawing:
                 point2 = (x, y)
 
         elif event == cv.EVENT_LBUTTONUP:
@@ -249,10 +244,10 @@ def main():
 
     whitespace_key = 32
     while cv.waitKey(40) != whitespace_key:
-        ref, frame = cap.read()
+        _, frame = cap.read()
         cv.imshow("DaSiamRPN", frame)
 
-    while mark == True:
+    while mark:
         twin = np.copy(frame)
         if point1 and point2:
             cv.rectangle(twin, point1, point2, (0, 255, 255), 3)
@@ -263,8 +258,8 @@ def main():
     tracker = DaSiamRPNTracker(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
 
     #tracking loop
-    while (cap.isOpened):
-        ret, frame = cap.read()
+    while cap.isOpened:
+        _, frame = cap.read()
         tracker.track(frame)
         w, h = tracker.target_sz
         cx, cy = tracker.target_pos
