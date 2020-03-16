@@ -127,13 +127,13 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
 class cv::gimpl::GExecutor::Input final: public cv::gimpl::GIslandExecutable::IInput
 {
     cv::gimpl::Mag &mag;
-    virtual cv::GRunArgs get()
+    virtual cv::GRunArgs get() override
     {
         cv::GRunArgs res;
         for (const auto &rc : desc()) { res.emplace_back(magazine::getArg(mag, rc)); }
         return res;
     }
-    virtual cv::GRunArgs try_get() { return get(); }
+    virtual cv::GRunArgs try_get() override { return get(); }
 public:
     Input(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
 };
@@ -141,8 +141,8 @@ public:
 class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
 {
     cv::gimpl::Mag &mag;
-    virtual GRunArgP get(int idx) { return magazine::getObjPtr(mag, desc()[idx]); }
-    virtual void post(GRunArgP&&) { } // Do nothing here
+    virtual GRunArgP get(int idx) override { return magazine::getObjPtr(mag, desc()[idx]); }
+    virtual void post(GRunArgP&&) override { } // Do nothing here
 public:
     Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
 };

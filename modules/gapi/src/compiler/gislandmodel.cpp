@@ -324,14 +324,19 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
 {
     // Default implementation: just reuse the existing old-fashioned run
     // Build a single synchronous execution frame for it.
-    std::vector<InObj> in_objs;
+    std::vector<InObj>  in_objs;
     std::vector<OutObj> out_objs;
-    for (auto &&it: ade::util::zip(ade::util::toRange(in.desc()),
-                                 ade::util::toRange(in.get())))
+    const auto &in_desc  = in.desc();
+    const auto &out_desc = out.desc();
+    const auto in_vector = in.get(); // FIXME: passing temporary objects to toRange() leads to issues
+    in_objs.reserve(in_desc.size());
+    out_objs.reserve(out_desc.size());
+    for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
+                                   ade::util::toRange(in_vector)))
     {
         in_objs.emplace_back(std::get<0>(it), std::get<1>(it));
     }
-    for (auto &&it: ade::util::indexed(ade::util::toRange(out.desc())))
+    for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))
     {
         out_objs.emplace_back(ade::util::value(it),
                               out.get(ade::util::checked_cast<int>(ade::util::index(it))));
