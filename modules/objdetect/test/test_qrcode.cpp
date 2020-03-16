@@ -284,7 +284,7 @@ TEST_P(Objdetect_QRCode_Close, regression)
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
 #else
-    ASSERT_TRUE(qrcode.detect(src, corners));
+    ASSERT_TRUE(qrcode.detect(barcode, corners));
 #endif
 
     const std::string dataset_config = findDataFile(root + "dataset_config.json");
@@ -349,7 +349,7 @@ TEST_P(Objdetect_QRCode_Monitor, regression)
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
 #else
-    ASSERT_TRUE(qrcode.detect(src, corners));
+    ASSERT_TRUE(qrcode.detect(barcode, corners));
 #endif
 
     const std::string dataset_config = findDataFile(root + "dataset_config.json");
