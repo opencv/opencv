@@ -496,16 +496,16 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             else if (is_const_0 || is_const_1)
             {
-                int const_id = is_const_0 ? 0 : 1;
-                Mat blob = getBlob(node_proto, constBlobs, const_id);
+                int const_blob_id = is_const_0 ? 0 : 1;
+                Mat blob = getBlob(node_proto, constBlobs, const_blob_id);
                 if (blob.total() == 1) {
                     layerParams.type = "Power";
                     layerParams.set("shift", (isSub ? -1 : 1) * blob.at<float>(0));
                 }
                 else {
                     int blobTotal = blob.total();
-                    MatShape inpShape = outShapes[node_proto.input(1 - const_id)];
-                    if (blobTotal > 1 && shape(blob) == inpShape)
+                    MatShape inpShape = outShapes[node_proto.input(1 - const_blob_id)];
+                    if (shape(blob) == inpShape)
                     {
                         LayerParams constParams;
                         constParams.name = layerParams.name + "/const";
@@ -516,7 +516,7 @@ void ONNXImporter::populateNet(Net dstNet)
                         outShapes[constParams.name] = shape(blob);
 
                         layerParams.type = "Eltwise";
-                        node_proto.set_input(const_id, constParams.name);
+                        node_proto.set_input(const_blob_id, constParams.name);
                     } else {
                         layerParams.type = "Scale";
                         layerParams.set("bias_term", true);
