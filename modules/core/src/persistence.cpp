@@ -704,7 +704,7 @@ public:
             const char* json_signature = "{";
             const char* xml_signature  = "<?xml";
             char* buf = this->gets(16);
-            char* bufPtr = cv_skip_BOM(buf);
+            char* bufPtr = !buf ? "" : cv_skip_BOM(buf);
             size_t bufOffset = bufPtr - buf;
 
             if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
@@ -714,9 +714,15 @@ public:
             else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
                 fmt = FileStorage::FORMAT_XML;
             else if(strbufsize  == bufOffset)
+            {
+                closeFile();
                 CV_Error(CV_BADARG_ERR, "Input file is invalid");
+            }
             else
+            {
+                closeFile();
                 CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
+            }
 
             rewind();
             strbufpos = bufOffset;
