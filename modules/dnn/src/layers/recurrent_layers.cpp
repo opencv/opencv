@@ -110,10 +110,11 @@ public:
             const Mat& Wh = blobs[0];
             const Mat& Wx = blobs[1];
             const Mat& bias = blobs[2];
-            CV_Assert(Wh.dims == 2 && Wx.dims == 2);
-            CV_Assert(Wh.rows == Wx.rows);
-            CV_Assert(Wh.rows == 4*Wh.cols);
-            CV_Assert(Wh.rows == (int)bias.total());
+            CV_CheckEQ(Wh.dims, 2, "");
+            CV_CheckEQ(Wx.dims, 2, "");
+            CV_CheckEQ(Wh.rows, Wx.rows, "");
+            CV_CheckEQ(Wh.rows, 4*Wh.cols, "");
+            CV_CheckEQ(Wh.rows, (int)bias.total(), "");
             CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
 
             // Peephole weights.
