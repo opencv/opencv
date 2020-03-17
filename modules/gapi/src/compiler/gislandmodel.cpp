@@ -328,13 +328,36 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
     std::vector<OutObj> out_objs;
     const auto &in_desc  = in.desc();
     const auto &out_desc = out.desc();
-    const auto in_vector = in.get(); // FIXME: passing temporary objects to toRange() leads to issues
+    const auto  in_msg   = in.get();
+    if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
+    {
+        out.post(cv::gimpl::EndOfStream{});
+        return;
+    }
+    GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
+    const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
     in_objs.reserve(in_desc.size());
     out_objs.reserve(out_desc.size());
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
                                    ade::util::toRange(in_vector)))
     {
-        in_objs.emplace_back(std::get<0>(it), std::get<1>(it));
+        // FIXME: Not every Island expects a cv::Mat instead of own::Mat on input
+        // This kludge should go as a result of de-ownification
+        const cv::GRunArg& in_data_orig = std::get<1>(it);
+        cv::GRunArg in_data;
+        switch (in_data_orig.index())
+        {
+        case cv::GRunArg::index_of<cv::Mat>():
+            in_data = cv::GRunArg{cv::to_own(cv::util::get<cv::Mat>(in_data_orig))};
+            break;
+        case cv::GRunArg::index_of<cv::Scalar>():
+            in_data = cv::GRunArg{cv::to_own(cv::util::get<cv::Scalar>(in_data_orig))};
+            break;
+        default:
+            in_data = in_data_orig;
+            break;
+        }
+        in_objs.emplace_back(std::get<0>(it), std::move(in_data));
     }
     for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))
     {

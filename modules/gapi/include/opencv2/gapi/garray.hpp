@@ -29,7 +29,6 @@ namespace cv
 // (user-inaccessible) classes.
 class GNode;
 struct GOrigin;
-
 template<typename T> class GArray;
 
 /**
@@ -262,6 +261,9 @@ namespace detail
         {
             return m_ref->m_desc;
         }
+
+        // May be used to uniquely identify this object internally
+        const void *ptr() const { return static_cast<const void*>(m_ref.get()); }
     };
 
     // Helper (FIXME: work-around?)
