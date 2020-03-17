@@ -680,3 +680,21 @@ save_data_and_model("lstm", input, lstm)
 input = Variable(torch.randn(seq_len, batch, features))
 lstm = LSTM(features, hidden, batch, bidirectional=True)
 save_data_and_model("lstm_bidirectional", input, lstm)
+
+class MatMul(nn.Module):
+    def __init__(self):
+        super(MatMul, self).__init__()
+
+    def forward(self, x):
+      axis = len(x.shape)
+      return x @ x.transpose(axis - 1, axis - 2)
+
+model = MatMul()
+x = Variable(torch.randn(2, 4))
+save_data_and_model("matmul_2d", x, model)
+
+x = Variable(torch.randn(3, 2, 4))
+save_data_and_model("matmul_3d", x, model)
+
+x = Variable(torch.randn(1, 3, 2, 4))
+save_data_and_model("matmul_4d", x, model)
