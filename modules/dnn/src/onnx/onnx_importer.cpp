@@ -498,12 +498,12 @@ void ONNXImporter::populateNet(Net dstNet)
             {
                 int const_blob_id = is_const_0 ? 0 : 1;
                 Mat blob = getBlob(node_proto, constBlobs, const_blob_id);
-                if (blob.total() == 1) {
+                int blob_total = blob.total();
+                if (blob_total == 1) {
                     layerParams.type = "Power";
                     layerParams.set("shift", (isSub ? -1 : 1) * blob.at<float>(0));
                 }
                 else {
-                    int blobTotal = blob.total();
                     MatShape inpShape = outShapes[node_proto.input(1 - const_blob_id)];
                     if (shape(blob) == inpShape)
                     {
@@ -517,18 +517,13 @@ void ONNXImporter::populateNet(Net dstNet)
 
                         layerParams.type = "Eltwise";
                         node_proto.set_input(const_blob_id, constParams.name);
-                    } else {
+                    }
+                    else
+                    {
                         layerParams.type = "Scale";
                         layerParams.set("bias_term", true);
-
+                        blob = blob.reshape(1, 1);
                         layerParams.blobs.push_back((isSub ? -1 : 1) * blob);
-                        int axis;
-                        for (axis = 0; axis < inpShape.size(); axis++)
-                        {
-                            if (total(inpShape, axis) == blobTotal)
-                            break;
-                        }
-                        layerParams.set("axis", axis);
                     }
                 }
             }
@@ -1025,20 +1020,13 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "ConstantOfShape")
         {
-            Mat input = getBlob(node_proto, constBlobs, 0);
-            CV_CheckEQ(input.dims, 2, "");
-            CV_CheckEQ(input.size[1], 1, "");
             float fill_value = layerParams.blobs.empty() ? 0 : layerParams.blobs[0].at<float>(0, 0);
-            std::vector<int> sizes;
-            for (int i = 0; i < input.total(); i++)
-            {
-                int size = input.at<int>(i, 0);
-                CV_Assert(size > 0);
-                sizes.push_back(size);
-            }
-            Mat tensor(sizes, CV_32F, fill_value);
+            MatShape inpShape = getBlob(node_proto, constBlobs, 0);
+            for (int i = 0; i < inpShape.size(); i++)
+                CV_CheckGT(inpShape[i], 0, "");
+            Mat tensor(inpShape.size(), &inpShape[0], CV_32F, Scalar(fill_value));
             constBlobs.insert(std::make_pair(layerParams.name, tensor));
-            outShapes[node_proto.output(0)] = sizes;
+            outShapes[node_proto.output(0)] = shape(tensor);
             continue;
         }
         else if (layer_type == "Gather")
