@@ -177,7 +177,7 @@ model = Mul()
 save_data_and_model("mul", input, model)
 
 
-def save_data_and_model_multy_inputs(name, model, *args):
+def save_data_and_model_multy_inputs(name, model, *args, **kwargs):
     for index, input in enumerate(args, start=0):
         input_files = os.path.join("data", "input_" + name + "_" + str(index))
         np.save(input_files, input)
@@ -190,7 +190,7 @@ def save_data_and_model_multy_inputs(name, model, *args):
 
     models_files = os.path.join("models", name + ".onnx")
 
-    onnx_model_pb = export_to_string(model, (args))
+    onnx_model_pb = export_to_string(model, (args), version=kwargs.get('version', None))
     model_def = assertONNXExpected(onnx_model_pb)
     with open(models_files, 'wb') as file:
         file.write(model_def.SerializeToString())
@@ -376,6 +376,7 @@ class Slice(nn.Module):
 input = Variable(torch.randn(1, 2, 4, 4))
 model = Slice()
 save_data_and_model("slice", input, model)
+save_data_and_model("slice_opset_11", input, model, opset_version=11)
 
 class Eltwise(nn.Module):
 
@@ -626,3 +627,31 @@ class Cast(nn.Module):
 x = Variable(torch.randn(1, 2))
 model = Cast()
 save_data_and_model("cast", x, model)
+
+class DynamicResize(nn.Module):
+    def __init__(self):
+        super(DynamicResize, self).__init__()
+
+    def forward(self, x, y):
+        h = y.size(2)
+        w = y.size(3)
+        up = nn.Upsample(size=[h, w], mode='bilinear')
+        return up(x) + y
+
+input_0 = Variable(torch.randn(1, 3, 8, 6))
+input_1 = Variable(torch.randn(1, 3, 4, 3))
+model = DynamicResize()
+save_data_and_model_multy_inputs("dynamic_resize", model, input_0, input_1, version=11)
+
+class ShapeConst(nn.Module):
+    def __init__(self):
+        super(ShapeConst, self).__init__()
+
+    def forward(self, x):
+      x = 2 * x
+      z = torch.zeros(x.shape, dtype=torch.float32)
+      return z + x
+
+x = Variable(torch.Tensor([[1, 2, 3], [1, 2, 3]]))
+model = ShapeConst()
+save_data_and_model("shape_of_constant", x, model, version=11)
