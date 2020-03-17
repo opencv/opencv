@@ -816,10 +816,21 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             CV_Assert(node_proto.input_size() == 2);
             layerParams.type = "InnerProduct";
-            Mat blob = getBlob(node_proto, constBlobs, 1);
-            layerParams.blobs.push_back(blob.t());
             layerParams.set("bias_term", false);
-            layerParams.set("num_output", layerParams.blobs[0].size[0]);
+
+            int constId = -1;
+            for (int i = 0; i < 2; ++i)
+            {
+                if (constBlobs.find(node_proto.input(i)) != constBlobs.end())
+                    constId = i;
+            }
+
+            if (constId != -1)
+            {
+                Mat blob = getBlob(node_proto, constBlobs, constId);
+                layerParams.blobs.push_back(blob.t());
+                layerParams.set("num_output", layerParams.blobs[0].size[0]);
+            }
         }
         else if (layer_type == "Mul" || layer_type == "Div")
         {

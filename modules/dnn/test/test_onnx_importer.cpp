@@ -308,6 +308,13 @@ TEST_P(Test_ONNX_layers, Multiplication)
     testONNXModels("mul");
 }
 
+TEST_P(Test_ONNX_layers, MatMul)
+{
+    testONNXModels("matmul_2d");
+    testONNXModels("matmul_3d");
+    testONNXModels("matmul_4d");
+}
+
 TEST_P(Test_ONNX_layers, Constant)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)

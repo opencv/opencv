@@ -75,32 +75,34 @@ public:
     FullyConnectedLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
-
-        int numOutput = params.get<int>("num_output");
-        int innerSize = (int)blobs[0].total() / numOutput;
         bias = params.get<bool>("bias_term", true);
         axis = params.get<int>("axis", 1);
-
-        CV_Assert(blobs[0].dims >= 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
-        CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
-
-        weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
-        int vecsize = weightsMat.cols;
-        if( vecsize % VEC_ALIGN != 0 )
+        if (!blobs.empty())
         {
-            int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
-            Mat weightsBuf(weightsMat.rows, vecsize_aligned, weightsMat.type());
-            Mat wpadding = weightsBuf.colRange(vecsize, vecsize_aligned);
-            wpadding.setTo(Scalar::all(0.));
-            weightsMat = weightsBuf.colRange(0, vecsize);
-            blobs[0].copyTo(weightsMat);
-        }
+            CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
+            int numOutput = params.get<int>("num_output");
+            int innerSize = (int)blobs[0].total() / numOutput;
 
-        if (bias)
-            biasMat = blobs[1] = blobs[1].reshape(1, 1);
-        else
-            biasMat = Mat::zeros(1, numOutput, weightsMat.type());
+            CV_Assert(blobs[0].dims == 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
+            CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
+
+            weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
+            int vecsize = weightsMat.cols;
+            if (vecsize % VEC_ALIGN != 0)
+            {
+                int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
+                Mat weightsBuf(weightsMat.rows, vecsize_aligned, weightsMat.type());
+                Mat wpadding = weightsBuf.colRange(vecsize, vecsize_aligned);
+                wpadding.setTo(Scalar::all(0.));
+                weightsMat = weightsBuf.colRange(0, vecsize);
+                blobs[0].copyTo(weightsMat);
+            }
+
+            if (bias)
+                biasMat = blobs[1] = blobs[1].reshape(1, 1);
+            else
+                biasMat = Mat::zeros(1, numOutput, weightsMat.type());
+        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -108,20 +110,28 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
-        CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
-        CV_Assert(blobs[0].dims == 2);
+        CV_Assert((inputs.size() == 1 && !blobs.empty()) || inputs.size() == 2);
+        int numOutput = !blobs.empty() ? blobs[0].size[0] : inputs[1].back();
+        int cAxis = !blobs.empty() ? clamp(axis, inputs[0]) : inputs[0].size() - 1;
 
-        int cAxis = clamp(axis, inputs[0]);
-        int numOutput = blobs[0].size[0];
+        if (blobs.empty())
+        {
+            int dims = inputs[0].size();
+            for (int i = 0; i < dims - 2; i++)
+            {
+                CV_CheckEQ(inputs[0][i], inputs[1][i], "");
+            }
+            CV_CheckEQ(inputs[0].back(), inputs[1][dims - 2], "");
+        }
+        CV_Assert(!bias || ((blobs.empty() && numOutput == inputs[0][cAxis]) ||
+                           (size_t)numOutput == blobs[1].total()));
+
         MatShape outShape(cAxis + 1);
         for (int i = 0; i < cAxis; ++i)
             outShape[i] = inputs[0][i];
         outShape.back() = numOutput;
 
-        outputs.resize(inputs.size(), outShape);
-
-        CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
+        outputs.resize(1, outShape);
         return false;
     }
 
@@ -407,16 +417,42 @@ public:
         inputs_arr.getMatVector(input);
         outputs_arr.getMatVector(output);
 
-        int axisCan = clamp(axis, input[0].dims);
-        int outerSize = input[0].total(0, axisCan);
-
-        for (size_t i = 0; i < input.size(); i++)
+        if (!blobs.empty())
         {
-            Mat srcMat = input[i].reshape(1, outerSize);
-            Mat dstMat = output[i].reshape(1, outerSize);
+            int axisCan = clamp(axis, input[0].dims);
+            int outerSize = input[0].total(0, axisCan);
 
-            const int nstripes = getNumThreads();
-            FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
+            for (size_t i = 0; i < input.size(); i++)
+            {
+                Mat srcMat = input[i].reshape(1, outerSize);
+                Mat dstMat = output[i].reshape(1, outerSize);
+
+                const int nstripes = getNumThreads();
+                FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
+            }
+        }
+        else
+        {
+            float* inpData = input[0].ptr<float>();
+            float* weightData = input[1].ptr<float>();
+            float* outData = output[0].ptr<float>();
+
+            int dims = output[0].dims;
+            int numSlice = output[0].total() / output[0].total(dims - 2);
+            int m = input[0].size[dims - 2];
+            int n = input[0].size[dims - 1];
+            int k = input[1].size[dims - 1];
+            for (int i = 0; i < numSlice; i++)
+            {
+                Mat inpSlice(m, n, CV_32F, inpData);
+                Mat weightSlice(n, k, CV_32F, weightData);
+                Mat outSlice(m, k, CV_32F, outData);
+
+                outSlice = inpSlice * weightSlice;
+                inpData += inpSlice.total();
+                weightData += weightSlice.total();
+                outData += outSlice.total();
+            }
         }
     }
 
