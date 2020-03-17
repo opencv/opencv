@@ -18,7 +18,6 @@
 #include <opencv2/gapi/gmat.hpp>
 
 #include <opencv2/gapi/util/optional.hpp>
-#include <opencv2/gapi/own/scalar.hpp>
 #include <opencv2/gapi/own/mat.hpp>
 
 namespace cv {

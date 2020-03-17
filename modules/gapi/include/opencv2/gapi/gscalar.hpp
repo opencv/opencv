@@ -14,7 +14,6 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/gcommon.hpp> // GShape
 #include <opencv2/gapi/util/optional.hpp>
-#include <opencv2/gapi/own/scalar.hpp>
 
 namespace cv
 {

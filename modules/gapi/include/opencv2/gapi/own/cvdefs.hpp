@@ -9,6 +9,7 @@
 #define OPENCV_GAPI_CV_DEFS_HPP
 
 #if defined(GAPI_STANDALONE)
+#include <opencv2/gapi/own/scalar.hpp> // cv::gapi::own::Scalar
 
 // Simulate OpenCV definitions taken from various
 // OpenCV interface headers if G-API is built in a
@@ -137,10 +138,6 @@ enum InterpolationFlags{
     INTER_LINEAR_EXACT   = 5,
     INTER_MAX            = 7,
 };
-namespace gapi { namespace own {
-class Scalar;
-} // namespace own
-} // namespace gapi
 using Scalar = gapi::own::Scalar;
 } // namespace cv
 

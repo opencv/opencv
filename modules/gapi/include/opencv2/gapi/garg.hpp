@@ -23,7 +23,6 @@
 #include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/gmetaarg.hpp>
-#include <opencv2/gapi/own/scalar.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
 
 namespace cv {
