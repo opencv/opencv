@@ -246,7 +246,7 @@ bool isMyriadX();
 
 CV__DNN_INLINE_NS_END
 
-InferenceEngine::Core& getCore();
+InferenceEngine::Core& getCore(const std::string& id);
 
 template<typename T = size_t>
 static inline std::vector<T> getShape(const Mat& mat)
