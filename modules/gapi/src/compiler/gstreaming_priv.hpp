@@ -42,6 +42,7 @@ public:
     void setSource(GRunArgs &&args);
     void start();
     bool pull(cv::GRunArgsP &&outs);
+    bool pull(cv::GOptRunArgsP &&outs);
     bool try_pull(cv::GRunArgsP &&outs);
     void stop();
 
