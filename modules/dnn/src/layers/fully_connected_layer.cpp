@@ -118,9 +118,7 @@ public:
         {
             int dims = inputs[0].size();
             for (int i = 0; i < dims - 2; i++)
-            {
                 CV_CheckEQ(inputs[0][i], inputs[1][i], "");
-            }
             CV_CheckEQ(inputs[0].back(), inputs[1][dims - 2], "");
         }
         CV_Assert(!bias || ((blobs.empty() && numOutput == inputs[0][cAxis]) ||
