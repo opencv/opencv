@@ -72,6 +72,10 @@ public:
         CV_Assert(alignment % sizeof(T) == 0);
         CV_Assert((alignment & (alignment - 1)) == 0);
         allocate_((void**)(&ptr), static_cast<ushort>(sizeof(T)), count, alignment);
+#ifndef OPENCV_ENABLE_MEMORY_SANITIZER
+        if (safe)
+#endif
+            CV_Assert(ptr != NULL);
     }
 
     /** @brief Fill one of buffers with zeroes
@@ -118,9 +122,11 @@ private:
 private:
     class Block;
     std::vector<Block> blocks;
+#ifndef OPENCV_ENABLE_MEMORY_SANITIZER
     void * oneBuf;
     size_t totalSize;
     const bool safe;
+#endif
 };
 
 //! @}

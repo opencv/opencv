@@ -458,6 +458,7 @@ private:
     tensorflow::GraphDef netTxt;
 
     std::vector<String> netInputsNames;
+    std::vector<MatShape> netInputShapes;
 };
 
 TFImporter::TFImporter(const char *model, const char *config)
@@ -1401,6 +1402,27 @@ void TFImporter::populateNet(Net dstNet)
                 netInputsNames.push_back(name);
                 layer_id[name] = 0;
             }
+            if (hasLayerAttr(layer, "shape"))
+            {
+                const tensorflow::TensorShapeProto& shape = getLayerAttr(layer, "shape").shape();
+                MatShape dims(shape.dim_size());
+                for (int i = 0; i < dims.size(); ++i)
+                    dims[i] = shape.dim(i).size();
+                if (dims.size() == 4 && predictedLayout == DATA_LAYOUT_NHWC)
+                {
+                    std::swap(dims[1], dims[3]);  // NHWC->NCWH
+                    std::swap(dims[2], dims[3]);  // NCWH->NCHW
+                    if (dims[0] == -1)  // It's OK to have undetermined batch size
+                        dims[0] = 1;
+                }
+                bool hasNeg = false;
+                for (int i = 0; i < dims.size() && !hasNeg; ++i)
+                {
+                    hasNeg = dims[i] < 0;
+                }
+                if (!hasNeg)
+                    netInputShapes.push_back(dims);
+            }
         }
         else if (type == "Split") {
             // TODO: determining axis index remapping by input dimensions order of input blob
@@ -1580,8 +1602,41 @@ void TFImporter::populateNet(Net dstNet)
             }
             else
             {
-                layerParams.set("operation", "prod");
-                int id = dstNet.addLayer(name, "Eltwise", layerParams);
+                // Check if all the inputs have the same shape.
+                bool equalInpShapes = true;
+                MatShape outShape0;
+                for (int ii = 0; ii < layer.input_size() && !netInputShapes.empty(); ii++)
+                {
+                    Pin pin = parsePin(layer.input(ii));
+                    int inpId = layer_id.find(pin.name)->second;
+
+                    // Get input shape
+                    MatShape outShape;
+                    std::vector<MatShape> inpShapes, outShapes;
+                    dstNet.getLayerShapes(netInputShapes, inpId, inpShapes, outShapes);
+                    CV_CheckGT(static_cast<int>(outShapes.size()), pin.blobIndex, "");
+                    outShape = outShapes[pin.blobIndex];
+
+                    if (ii == 0)
+                    {
+                        outShape0 = outShape;
+                    }
+                    else if (outShape != outShape0)
+                    {
+                        equalInpShapes = false;
+                        break;
+                    }
+                }
+
+                int id;
+                if (equalInpShapes || netInputShapes.empty())
+                {
+                    layerParams.set("operation", "prod");
+                    id = dstNet.addLayer(name, "Eltwise", layerParams);
+                }
+                else
+                    id = dstNet.addLayer(name, "Scale", layerParams);
+
                 layer_id[name] = id;
 
                 for (int ii = 0; ii < layer.input_size(); ii++)
