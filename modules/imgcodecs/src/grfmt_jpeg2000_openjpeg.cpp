@@ -38,40 +38,143 @@ String colorspaceName(COLOR_SPACE colorspace)
     }
 }
 
+template <class T>
+struct ConstItTraits {
+    using value_type = T;
+    using difference_type = std::ptrdiff_t;
+    using pointer = const T*;
+    using reference = const T&;
+};
+
+template <class T>
+struct NonConstItTraits {
+   using value_type = T;
+   using difference_type = std::ptrdiff_t;
+   using pointer = T*;
+   using reference = T&;
+};
+
 /**
  * Iterator over the channel in continuous chunk of the memory e.g. in the one row of a Mat
+ * No bounds checks are preformed due to keeping this class as simple as possible while
+ * fulfilling RandomAccessIterator naming requirements.
  *
- * @tparam T type of the Mat elements
+ * @tparam Traits holds information about value type and constness of the defined types
  */
-template <class T>
+template <class Traits>
 class ChannelsIterator
 {
 public:
-    using difference_type = std::ptrdiff_t ;
-    using value_type = T;
-    using pointer = T*;
-    using reference = T&;
-    using iterator_category = std::output_iterator_tag;
+    using difference_type = typename Traits::difference_type;
+    using value_type = typename Traits::value_type;
+    using pointer = typename Traits::pointer;
+    using reference = typename Traits::reference;
+    using iterator_category = std::random_access_iterator_tag;
 
     ChannelsIterator(pointer ptr, std::size_t channel, std::size_t channels_count)
         : ptr_ { ptr + channel }, step_ { channels_count }
     {
     }
 
-    ChannelsIterator& operator++() {
+    /* Element Access */
+    reference operator*() const
+    {
+        return *ptr_;
+    }
+
+    pointer operator->() const
+    {
+        return &(operator*());
+    }
+
+    reference operator[](difference_type n) const
+    {
+        return *(*this + n);
+    }
+
+    /* Iterator movement */
+    ChannelsIterator<Traits>& operator++()
+    {
         ptr_ += step_;
         return *this;
     }
 
-    ChannelsIterator operator++(int) {
+    ChannelsIterator<Traits> operator++(int)
+    {
         ChannelsIterator ret(*this);
-        ptr_ += step_;
+        ++(*this);
         return ret;
     }
 
-    reference operator*() const
+    ChannelsIterator<Traits>& operator--()
     {
-        return *ptr_;
+        ptr_ -= step_;
+        return *this;
+    }
+
+    ChannelsIterator<Traits> operator--(int)
+    {
+        ChannelsIterator ret(*this);
+        --(*this);
+        return ret;
+    }
+
+    ChannelsIterator<Traits>& operator-=(difference_type n)
+    {
+        ptr_ -= n * step_;
+        return *this;
+    }
+
+    ChannelsIterator<Traits>& operator+=(difference_type n)
+    {
+        ptr_ += n * step_;
+        return *this;
+    }
+
+    ChannelsIterator<Traits> operator-(difference_type n) const
+    {
+        return ChannelsIterator<Traits>(*this) -= n;
+    }
+
+    ChannelsIterator<Traits> operator+(difference_type n) const
+    {
+        return ChannelsIterator<Traits>(*this) += n;
+    }
+
+    difference_type operator-(const ChannelsIterator<Traits>& other)
+    {
+        return (ptr_ - other.ptr_) / step_;
+    }
+
+    /* Comparision */
+    bool operator==(const ChannelsIterator<Traits>& other) const CV_NOEXCEPT
+    {
+        return ptr_ == other.ptr_;
+    }
+
+    bool operator!=(const ChannelsIterator<Traits>& other) const CV_NOEXCEPT
+    {
+        return !(*this == other);
+    }
+
+    bool operator<(const ChannelsIterator<Traits>& other) const CV_NOEXCEPT
+    {
+        return ptr_ < other.ptr_;
+    }
+
+    bool operator>(const ChannelsIterator<Traits>& other) const CV_NOEXCEPT
+    {
+        return other < *this;
+    }
+
+    bool operator>=(const ChannelsIterator<Traits>& other) const CV_NOEXCEPT
+    {
+        return !(*this < other);
+    }
+
+    bool operator<=(const ChannelsIterator<Traits>& other) const CV_NOEXCEPT
+    {
+        return !(other < *this);
     }
 
 private:
@@ -79,9 +182,17 @@ private:
     std::size_t step_{1};
 };
 
+template <class Traits>
+inline ChannelsIterator<Traits> operator+(typename Traits::difference_type n, const ChannelsIterator<Traits>& it)
+{
+    return it + n;
+}
+
 template<typename OutT, typename InT>
 void copyToMatImpl(std::vector<InT*>&& in, Mat& out, uint8_t shift)
 {
+    using ChannelsIt = ChannelsIterator<NonConstItTraits<OutT>>;
+
     Size size = out.size();
     if (out.isContinuous())
     {
@@ -93,24 +204,34 @@ void copyToMatImpl(std::vector<InT*>&& in, Mat& out, uint8_t shift)
 
     const std::size_t channelsCount = in.size();
 
-
-    for (int i = 0; i < size.height; ++i)
+    if (isShiftRequired)
     {
-        auto rowPtr = out.ptr<OutT>(i);
-        for (std::size_t c = 0; c < channelsCount; ++c)
+        for (int i = 0; i < size.height; ++i)
         {
-            const auto first = in[c];
-            const auto last = first + size.width;
-            auto dOut = ChannelsIterator<OutT>(rowPtr, c, channelsCount);
-            if (isShiftRequired)
+            auto rowPtr = out.ptr<OutT>(i);
+            for (std::size_t c = 0; c < channelsCount; ++c)
             {
+                const auto first = in[c];
+                const auto last = first + size.width;
+                auto dOut = ChannelsIt(rowPtr, c, channelsCount);
                 std::transform(first, last, dOut, [shift](InT val) -> OutT { return val >> shift; });
+                in[c] += size.width;
             }
-            else
+        }
+    }
+    else
+    {
+        for (int i = 0; i < size.height; ++i)
+        {
+            auto rowPtr = out.ptr<OutT>(i);
+            for (std::size_t c = 0; c < channelsCount; ++c)
             {
+                const auto first = in[c];
+                const auto last = first + size.width;
+                auto dOut = ChannelsIt(rowPtr, c, channelsCount);
                 std::copy(first, last, dOut);
+                in[c] += size.width;
             }
-            in[c] += size.width;
         }
     }
 }
@@ -134,6 +255,8 @@ void copyToMat(std::vector<const InT*>&& in, Mat& out, uint8_t shift)
 template<typename InT, typename OutT>
 void copyFromMatImpl(const Mat& in, std::vector<OutT*>&& out)
 {
+    using ChannelsIt = ChannelsIterator<ConstItTraits<InT>>;
+
     Size size = in.size();
     if (in.isContinuous())
     {
@@ -143,16 +266,14 @@ void copyFromMatImpl(const Mat& in, std::vector<OutT*>&& out)
 
     const std::size_t outChannelsCount = out.size();
 
-    std::vector<Mat> inChannels(outChannelsCount);
-    split(in, inChannels.data());
-
     for (int i = 0; i < size.height; ++i)
     {
+        const InT* row = in.ptr<InT>(i);
         for (std::size_t c = 0; c < outChannelsCount; ++c)
         {
-            const InT* first = inChannels[c].ptr<InT>(i);
-            const InT* last = first + size.width;
-            std::copy(first, last, out[c]);
+            auto first = ChannelsIt(row, c, outChannelsCount);
+            auto last = first + size.width;
+            out[c] = std::copy(first, last, out[c]);
         }
     }
 }
