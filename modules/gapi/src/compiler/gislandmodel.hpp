@@ -142,6 +142,14 @@ public:
     // at that stage.
     virtual void handleNewStream() {}; // do nothing here by default
 
+    // This method is called for every IslandExecutable when
+    // the stream-based execution is stopped.
+    // All processing is guaranteed to be stopped by this moment,
+    // with no pending or running 'run()' processes ran in background.
+    // FIXME: This method is tightly bound to the GStreamingExecutor
+    // now.
+    virtual void handleStopStream() {} // do nothing here by default
+
     virtual ~GIslandExecutable() = default;
 };
 
@@ -222,8 +230,19 @@ struct IslandsCompiled
     static const char *name() { return "IslandsCompiled"; }
 };
 
+// This flag marks an edge in an GIslandModel as "desynchronized"
+// i.e. it starts a new desynchronized subgraph
+struct DesyncIslEdge
+{
+    static const char *name() { return "DesynchronizedIslandEdge"; }
+
+    // Projection from GModel/DesyncEdge.index
+    int index;
+};
+
 namespace GIslandModel
 {
+
     using Graph = ade::TypedGraph
         < NodeKind
         , FusedIsland
@@ -232,6 +251,7 @@ namespace GIslandModel
         , Emitter
         , Sink
         , IslandsCompiled
+        , DesyncIslEdge
         , ade::passes::TopologicalSortData
         >;
 
@@ -244,6 +264,7 @@ namespace GIslandModel
         , Emitter
         , Sink
         , IslandsCompiled
+        , DesyncIslEdge
         , ade::passes::TopologicalSortData
         >;
 

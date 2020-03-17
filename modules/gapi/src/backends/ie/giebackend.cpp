@@ -519,6 +519,65 @@ struct Infer: public cv::detail::KernelTag {
     }
 };
 
+struct InferROI: public cv::detail::KernelTag {
+    using API = cv::GInferROIBase;
+    static cv::gapi::GBackend backend()  { return cv::gapi::ie::backend(); }
+    static KImpl kernel()                { return KImpl{outMeta, run}; }
+
+    static cv::GMetaArgs outMeta(const ade::Graph      &gr,
+                                 const ade::NodeHandle &nh,
+                                 const cv::GMetaArgs   &in_metas,
+                                 const cv::GArgs       &/*in_args*/) {
+        cv::GMetaArgs result;
+
+        GConstGIEModel gm(gr);
+        const auto &uu = gm.metadata(nh).get<IEUnit>();
+
+        // Initialize input information
+        // FIXME: So far it is pretty limited
+        GAPI_Assert(1u == uu.params.input_names.size());
+        GAPI_Assert(2u == in_metas.size());
+
+        // 0th is ROI, 1st is in0put image
+        auto       &&ii = uu.inputs.at(uu.params.input_names.at(0));
+        const auto &meta = util::get<cv::GMatDesc>(in_metas.at(1));
+        ii->setPrecision(toIE(meta.depth));
+        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+
+        // FIXME: It would be nice here to have an exact number of network's
+        // input/output parameters. Probably GCall should store it here for us.
+        // It doesn't, as far as I know..
+        for (const auto &out_name : uu.params.output_names) {
+            // NOTE: our output_names vector follows the API order
+            // of this operation's outputs
+            const IE::DataPtr& ie_out = uu.outputs.at(out_name);
+            const IE::SizeVector dims = ie_out->getTensorDesc().getDims();
+
+            cv::GMatDesc outm(toCV(ie_out->getPrecision()),
+                              toCV(ie_out->getTensorDesc().getDims()));
+            result.emplace_back(outm);
+        }
+        return result;
+    }
+
+    static void run(IECompiled &iec, const IEUnit &uu, IECallContext &ctx) {
+        // non-generic version for now, per the InferROI's definition
+        GAPI_Assert(uu.params.num_in == 1);
+        const auto& this_roi = ctx.inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
+        const auto  this_mat = ctx.inMat(1);
+        IE::Blob::Ptr this_blob = wrapIE(this_mat, cv::gapi::ie::TraitAs::IMAGE);
+        IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(this_roi));
+        iec.this_request.SetBlob(*uu.params.input_names.begin(), roi_blob);
+        iec.this_request.Infer();
+        for (auto i : ade::util::iota(uu.params.num_out)) {
+            cv::Mat& out_mat = ctx.outMatR(i);
+            IE::Blob::Ptr out_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
+            copyFromIE(out_blob, out_mat);
+        }
+    }
+};
+
+
 struct InferList: public cv::detail::KernelTag {
     using API = cv::GInferListBase;
     static cv::gapi::GBackend backend()  { return cv::gapi::ie::backend(); }
@@ -780,6 +839,7 @@ namespace {
 
         virtual cv::gapi::GKernelPackage auxiliaryKernels() const override {
             return cv::gapi::kernels< cv::gimpl::ie::Infer
+                                    , cv::gimpl::ie::InferROI
                                     , cv::gimpl::ie::InferList
                                     , cv::gimpl::ie::InferList2
                                     >();

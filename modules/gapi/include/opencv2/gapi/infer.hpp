@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_INFER_HPP
@@ -77,6 +77,9 @@ public:
 
     using ResultL = std::tuple< cv::GArray<R>... >;
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
+
+    // FIXME: Args... must be limited to a single GMat
+    using APIRoi = std::function<Result(cv::GOpaque<cv::Rect>, Args...)>;
 };
 
 // Single-return-value network definition (specialized base class)
@@ -92,6 +95,9 @@ public:
 
     using ResultL = cv::GArray<R>;
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
+
+    // FIXME: Args... must be limited to a single GMat
+    using APIRoi = std::function<Result(cv::GOpaque<cv::Rect>, Args...)>;
 };
 
 // APIList2 is also template to allow different calling options
@@ -114,10 +120,10 @@ struct InferAPIList2 {
 // a particular backend, not by a network itself.
 struct GInferBase {
     static constexpr const char * id() {
-        return "org.opencv.dnn.infer";     // Universal stub
+        return "org.opencv.dnn.infer";            // Universal stub
     }
     static GMetaArgs getOutMeta(const GMetaArgs &, const GArgs &) {
-        return GMetaArgs{};                // One more universal stub
+        return GMetaArgs{};                       // One more universal stub
     }
 };
 
@@ -164,15 +170,25 @@ private:
     std::shared_ptr<Priv> m_priv;
 };
 /** @} */
+// Base "InferROI" kernel.
+// All notes from "Infer" kernel apply here as well.
+struct GInferROIBase {
+    static constexpr const char * id() {
+        return "org.opencv.dnn.infer-roi";        // Universal stub
+    }
+    static GMetaArgs getOutMeta(const GMetaArgs &, const GArgs &) {
+        return GMetaArgs{};                       // One more universal stub
+    }
+};
 
 // Base "Infer list" kernel.
 // All notes from "Infer" kernel apply here as well.
 struct GInferListBase {
     static constexpr const char * id() {
-        return "org.opencv.dnn.infer-roi";      // Universal stub
+        return "org.opencv.dnn.infer-roi-list-1"; // Universal stub
     }
     static GMetaArgs getOutMeta(const GMetaArgs &, const GArgs &) {
-        return GMetaArgs{};                     // One more universal stub
+        return GMetaArgs{};                       // One more universal stub
     }
 };
 
@@ -180,10 +196,10 @@ struct GInferListBase {
 // All notes from "Infer" kernel apply here as well.
 struct GInferList2Base {
     static constexpr const char * id() {
-        return "org.opencv.dnn.infer-roi-list"; // Universal stub
+        return "org.opencv.dnn.infer-roi-list-2"; // Universal stub
     }
     static GMetaArgs getOutMeta(const GMetaArgs &, const GArgs &) {
-        return GMetaArgs{};                     // One more universal stub
+        return GMetaArgs{};                       // One more universal stub
     }
 };
 
@@ -199,6 +215,19 @@ struct GInfer final
 
     static constexpr const char* tag() { return Net::tag(); }
 };
+
+// A specific roi-inference kernel. API (::on()) is fixed here and
+// verified against Net.
+template<typename Net>
+struct GInferROI final
+    : public GInferROIBase
+    , public detail::KernelTypeMedium< GInferROI<Net>
+                                     , typename Net::APIRoi > {
+    using GInferROIBase::getOutMeta; // FIXME: name lookup conflict workaround?
+
+    static constexpr const char* tag() { return Net::tag(); }
+};
+
 
 // A generic roi-list inference kernel. API (::on()) is derived from
 // the Net template parameter (see more in infer<> overload).
@@ -238,6 +267,23 @@ struct GInferList2 final
 namespace cv {
 namespace gapi {
 
+/** @brief Calculates response for the specified network (template
+ *     parameter) for the specified region in the source image.
+ *     Currently expects a single-input network only.
+ *
+ * @tparam A network type defined with G_API_NET() macro.
+ * @param in input image where to take ROI from.
+ * @param roi an object describing the region of interest
+ *   in the source image. May be calculated in the same graph dynamically.
+ * @return an object of return type as defined in G_API_NET().
+ *   If a network has multiple return values (defined with a tuple), a tuple of
+ *   objects of appropriate type is returned.
+ * @sa  G_API_NET()
+ */
+template<typename Net>
+typename Net::Result infer(cv::GOpaque<cv::Rect> roi, cv::GMat in) {
+    return GInferROI<Net>::on(roi, in);
+}
 
 /** @brief Calculates responses for the specified network (template
  *     parameter) for every region in the source image.
@@ -328,7 +374,8 @@ infer(const std::string& tag, const GInferInputs& inputs)
                 tag,
                 GInferBase::getOutMeta,
                 {}, // outShape will be filled later
-                std::move(kinds)
+                std::move(kinds),
+                {}, // outCtors will be filled later
             });
 
     call->setArgs(std::move(input_args));
