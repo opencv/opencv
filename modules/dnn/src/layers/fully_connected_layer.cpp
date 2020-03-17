@@ -83,7 +83,7 @@ public:
             int numOutput = params.get<int>("num_output");
             int innerSize = (int)blobs[0].total() / numOutput;
 
-            CV_Assert(blobs[0].dims == 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
+            CV_Assert(blobs[0].dims >= 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
             CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
 
             weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
@@ -111,6 +111,7 @@ public:
                          std::vector<MatShape> &) const CV_OVERRIDE
     {
         CV_Assert((inputs.size() == 1 && !blobs.empty()) || inputs.size() == 2);
+        CV_Assert(blobs.empty() || blobs[0].dims == 2);
         int numOutput = !blobs.empty() ? blobs[0].size[0] : inputs[1].back();
         int cAxis = !blobs.empty() ? clamp(axis, inputs[0]) : inputs[0].size() - 1;
 
