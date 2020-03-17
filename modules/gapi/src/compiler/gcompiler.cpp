@@ -273,6 +273,11 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     // FIXME: document passes hierarchy and order for backend developers
     m_e.addPassStage("transform");
 
+    // Special stage for intrinsics handling
+    m_e.addPassStage("intrin");
+    m_e.addPass("intrin", "desync", passes::intrinDesync);
+    m_e.addPass("intrin", "finalize", passes::intrinFinalize);
+
     m_e.addPassStage("exec");
     m_e.addPass("exec", "fuse_islands",     passes::fuseIslands);
     m_e.addPass("exec", "sync_islands",     passes::syncIslandTags);

@@ -193,6 +193,11 @@ struct CustomMetaFunction
     CM customOutMeta;
 };
 
+struct HasIntrinsics
+{
+    static const char *name() { return "HasIntrinsicsFlag"; }
+};
+
 namespace GModel
 {
     using Graph = ade::TypedGraph
@@ -213,6 +218,7 @@ namespace GModel
         , ActiveBackends
         , CustomMetaFunction
         , Streaming
+        , HasIntrinsics
         >;
 
     // FIXME: How to define it based on GModel???
@@ -234,6 +240,7 @@ namespace GModel
         , ActiveBackends
         , CustomMetaFunction
         , Streaming
+        , HasIntrinsics
         >;
 
     // FIXME:

@@ -18,6 +18,7 @@
 #include <opencv2/gapi/ocl/imgproc.hpp>
 
 #include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/gapi/streaming/desync.hpp>
 
 namespace opencv_test
 {
@@ -977,6 +978,23 @@ TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
     // Test against new ref
     ref(cv::gin(eye, m), cv::gout(out_ref));
     EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    // FIXME: Unary desync should not require tie!
+    cv::GMat tmp2;
+    std::tie(tmp2) = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    cv::Mat test_in = cv::Mat::eye(cv::Size(32,32), CV_8UC3);
+    cv::Mat test_out1, test_out2;
+    cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .apply(cv::gin(test_in), cv::gout(test_out1, test_out2));
 }
 
 } // namespace opencv_test

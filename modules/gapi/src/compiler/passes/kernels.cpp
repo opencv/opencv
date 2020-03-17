@@ -14,6 +14,7 @@
 #include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
 #include <opencv2/gapi/gkernel.hpp>         // GKernelPackage
 #include <opencv2/gapi/infer.hpp>           // GNetPackage
+#include <opencv2/gapi/streaming/desync.hpp>// GDesync intrinsic
 
 #include "compiler/gmodel.hpp"
 #include "compiler/passes/passes.hpp"
@@ -23,6 +24,20 @@
 #include "compiler/gmodelbuilder.hpp"
 #include "logger.hpp"    // GAPI_LOG
 #include "api/gproto_priv.hpp" // is_dynamic, rewrap
+
+namespace
+{
+    // FIXME: This may be not the right design choice, but so far it works
+    const std::vector<std::string> known_intrinsics = {
+        cv::gapi::streaming::detail::GDesync::id()
+    };
+}
+bool cv::gimpl::is_intrinsic(const std::string &s) {
+    // FIXME: This search might be better in time once we start using string
+    return std::find(known_intrinsics.begin(),
+                     known_intrinsics.end(),
+                     s) != known_intrinsics.end();
+}
 
 namespace
 {
@@ -130,8 +145,13 @@ void cv::gimpl::passes::bindNetParams(ade::passes::PassContext &ctx,
     }
 }
 
-// This pass, given the kernel package, selects a kernel implementation
-// for every operation in the graph
+// This pass, given the kernel package, selects a kernel
+// implementation for every operation in the graph
+//
+// Starting OpenCV 4.3, G-API may have some special "intrinsic"
+// operations.  Those can be implemented by backends as regular
+// kernels, but if not, they are handled by the framework itself in
+// its optimization/execution passes.
 void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
                                        const gapi::GKernelPackage &kernels)
 {
@@ -142,7 +162,25 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
     {
         if (gr.metadata(nh).get<NodeType>().t == NodeType::OP)
         {
+            // If the operation is known to be intrinsic and is NOT
+            // implemented in the package, just skip it - there should
+            // be some pass which handles it.
             auto &op = gr.metadata(nh).get<Op>();
+            if (is_intrinsic(op.k.name) && !kernels.includesAPI(op.k.name)) {
+                gr.metadata().set(HasIntrinsics{});
+                continue;
+            }
+            // FIXME: And this logic is terribly wrong. The right
+            // thing is to assign an intrinsic to a particular island
+            // if and only if it is:
+            // (a) surrounded by nodes of backend X, AND
+            // (b) is supported by backend X.
+            // Here we may have multiple backends supporting an
+            // intrinsic but only one of those gets selected.  And
+            // this is exactly a situation we need multiple versions
+            // of the same kernel to be presented in the kernel
+            // package (as it was designed originally).
+
             cv::gapi::GBackend selected_backend;
             cv::GKernelImpl    selected_impl;
             std::tie(selected_backend, selected_impl) = kernels.lookup(op.k.name);
@@ -170,6 +208,12 @@ void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi:
             if (gr.metadata(nh).get<NodeType>().t == NodeType::OP)
             {
                 const auto& op = gr.metadata(nh).get<Op>();
+                // FIXME: Essentially the same problem as in the above resolveKernels
+                if (is_intrinsic(op.k.name) && !kernels.includesAPI(op.k.name)) {
+                    // Note: There's no need to set HasIntrinsics flag here
+                    // since resolveKernels would do it later.
+                    continue;
+                }
 
                 cv::gapi::GBackend selected_backend;
                 cv::GKernelImpl    selected_impl;

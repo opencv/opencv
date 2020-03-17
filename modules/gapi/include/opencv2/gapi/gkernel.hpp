@@ -55,30 +55,27 @@ namespace detail
     // yield() is used in graph construction time as a generic method to obtain
     // lazy "return value" of G-API operations
     //
-    namespace
+    template<typename T> struct Yield;
+    template<> struct Yield<cv::GMat>
     {
-        template<typename T> struct Yield;
-        template<> struct Yield<cv::GMat>
-        {
-            static inline cv::GMat yield(cv::GCall &call, int i) { return call.yield(i); }
-        };
-        template<> struct Yield<cv::GMatP>
-        {
-            static inline cv::GMatP yield(cv::GCall &call, int i) { return call.yieldP(i); }
-        };
-        template<> struct Yield<cv::GScalar>
-        {
-            static inline cv::GScalar yield(cv::GCall &call, int i) { return call.yieldScalar(i); }
-        };
-        template<typename U> struct Yield<cv::GArray<U> >
-        {
-            static inline cv::GArray<U> yield(cv::GCall &call, int i) { return call.yieldArray<U>(i); }
-        };
-        template<typename U> struct Yield<cv::GOpaque<U> >
-        {
-            static inline cv::GOpaque<U> yield(cv::GCall &call, int i) { return call.yieldOpaque<U>(i); }
-        };
-    } // anonymous namespace
+        static inline cv::GMat yield(cv::GCall &call, int i) { return call.yield(i); }
+    };
+    template<> struct Yield<cv::GMatP>
+    {
+        static inline cv::GMatP yield(cv::GCall &call, int i) { return call.yieldP(i); }
+    };
+    template<> struct Yield<cv::GScalar>
+    {
+        static inline cv::GScalar yield(cv::GCall &call, int i) { return call.yieldScalar(i); }
+    };
+    template<typename U> struct Yield<cv::GArray<U> >
+    {
+        static inline cv::GArray<U> yield(cv::GCall &call, int i) { return call.yieldArray<U>(i); }
+    };
+    template<typename U> struct Yield<cv::GOpaque<U> >
+    {
+        static inline cv::GOpaque<U> yield(cv::GCall &call, int i) { return call.yieldOpaque<U>(i); }
+    };
 
     ////////////////////////////////////////////////////////////////////////////
     // Helper classes which brings outputMeta() marshalling to kernel
@@ -445,11 +442,6 @@ namespace gapi {
 
     protected:
         /// @private
-        // Check if package contains ANY implementation of a kernel API
-        // by API textual id.
-        bool includesAPI(const std::string &id) const;
-
-        /// @private
         // Remove ALL implementations of the given API (identified by ID)
         void removeAPI(const std::string &id);
 
@@ -550,6 +542,9 @@ namespace gapi {
         {
             return includesAPI(KAPI::id());
         }
+
+        /// @private
+        bool includesAPI(const std::string &id) const;
 
         // FIXME: The below comment is wrong, and who needs this function?
         /**
