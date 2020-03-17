@@ -244,7 +244,9 @@ def main():
 
     whitespace_key = 32
     while cv.waitKey(40) != whitespace_key:
-        _, frame = cap.read()
+        has_frame, frame = cap.read()
+        if not has_frame:
+            sys.exit(0)
         cv.imshow("DaSiamRPN", frame)
 
     while mark:
@@ -258,7 +260,7 @@ def main():
     tracker = DaSiamRPNTracker(frame, target_pos, target_sz, net, kernel_r1, kernel_cls1)
 
     #tracking loop
-    while cap.isOpened:
+    while cap.isOpened():
         _, frame = cap.read()
         tracker.track(frame)
         w, h = tracker.target_sz
