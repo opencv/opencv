@@ -151,15 +151,18 @@ public:
     void set(const std::vector<cv::gimpl::RcDesc> &newd) { d = newd; }
     const std::vector<cv::gimpl::RcDesc> &desc() const   { return d; }
 };
+struct EndOfStream {};
+using StreamMsg = cv::util::variant<EndOfStream, cv::GRunArgs>;
 struct GIslandExecutable::IInput: public GIslandExecutable::IODesc {
     virtual ~IInput() = default;
-    virtual cv::GRunArgs get() = 0;     // Get a new input vector (blocking)
-    virtual cv::GRunArgs try_get() = 0; // Get a new input vector (non-blocking)
+    virtual StreamMsg get() = 0;     // Get a new input vector (blocking)
+    virtual StreamMsg try_get() = 0; // Get a new input vector (non-blocking)
 };
 struct GIslandExecutable::IOutput: public GIslandExecutable::IODesc {
     virtual ~IOutput() = default;
     virtual GRunArgP get(int idx) = 0;  // Allocate (wrap) a new data object for output idx
     virtual void post(GRunArgP&&) = 0;  // Release the object back to the framework (mark available)
+    virtual void post(EndOfStream&&) = 0; // Post end-of-stream marker back to the framework
 };
 
 // GIslandEmitter - a backend-specific thing which feeds data into
