@@ -261,7 +261,9 @@ def main():
 
     #tracking loop
     while cap.isOpened():
-        _, frame = cap.read()
+        has_frame, frame = cap.read()
+        if not has_frame:
+            sys.exit(0)
         tracker.track(frame)
         w, h = tracker.target_sz
         cx, cy = tracker.target_pos
