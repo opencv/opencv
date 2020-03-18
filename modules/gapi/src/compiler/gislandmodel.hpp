@@ -94,7 +94,10 @@ protected:
 // * Is instantiated by the last step of the Islands fusion procedure;
 // * Is orchestrated by a GExecutor instance.
 //
-class GIslandExecutable
+// GAPI_EXPORTS is here since this class comes with the default
+// implementation to some methods and it needs to be exported to allow
+// it to use in the external (extra) backends.
+class GAPI_EXPORTS GIslandExecutable
 {
 public:
     using InObj  = std::pair<RcDesc, cv::GRunArg>;
