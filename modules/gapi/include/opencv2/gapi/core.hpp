@@ -487,7 +487,9 @@ namespace core {
     };
 
     G_TYPED_KERNEL(GWarpAffine, <GMat(GMat, const Mat&, Size, int, int, const cv::Scalar&)>, "org.opencv.core.warpAffine") {
-        static GMatDesc outMeta(GMatDesc in, const Mat&, Size dsize, int, int, const cv::Scalar&) {
+        static GMatDesc outMeta(GMatDesc in, const Mat&, Size dsize, int, int border_mode, const cv::Scalar&) {
+            GAPI_Assert(border_mode != cv::BORDER_TRANSPARENT &&
+                        "cv::BORDER_TRANSPARENT mode isn't support in G-API");
             return in.withType(in.depth, in.chan).withSize(dsize);
         }
     };
