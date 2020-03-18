@@ -117,10 +117,36 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
         // Constructed on Reset, do nothing here
         break;
 
+    // FIXME: What about GOPAQUE here??
+
     default:
         GAPI_Assert(false);
     }
 }
+
+class cv::gimpl::GExecutor::Input final: public cv::gimpl::GIslandExecutable::IInput
+{
+    cv::gimpl::Mag &mag;
+    virtual StreamMsg get() override
+    {
+        cv::GRunArgs res;
+        for (const auto &rc : desc()) { res.emplace_back(magazine::getArg(mag, rc)); }
+        return StreamMsg{std::move(res)};
+    }
+    virtual StreamMsg try_get() override { return get(); }
+public:
+    Input(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
+};
+
+class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
+{
+    cv::gimpl::Mag &mag;
+    virtual GRunArgP get(int idx) override { return magazine::getObjPtr(mag, desc()[idx]); }
+    virtual void post(GRunArgP&&) override { } // Do nothing here
+    virtual void post(EndOfStream&&) override {} // Do nothing here too
+public:
+    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
+};
 
 void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 {
@@ -144,8 +170,9 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 
     namespace util = ade::util;
 
-    //ensure that output Mat parameters are correctly allocated
-    for (auto index : util::iota(proto.out_nhs.size()) )     //FIXME: avoid copy of NodeHandle and GRunRsltComp ?
+    // ensure that output Mat parameters are correctly allocated
+    // FIXME: avoid copy of NodeHandle and GRunRsltComp ?
+    for (auto index : util::iota(proto.out_nhs.size()))
     {
         auto& nh = proto.out_nhs.at(index);
         const Data &d = m_gm.metadata(nh).get<Data>();
@@ -162,8 +189,9 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
             };
 
 #if !defined(GAPI_STANDALONE)
-            // Building as part of OpenCV - follow OpenCV behavior
-            // In the case of cv::Mat if output buffer is not enough to hold the result, reallocate it
+            // Building as part of OpenCV - follow OpenCV behavior In
+            // the case of cv::Mat if output buffer is not enough to
+            // hold the result, reallocate it
             if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
             {
                 auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
@@ -204,24 +232,9 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     for (auto &op : m_ops)
     {
         // (5)
-        using InObj  = GIslandExecutable::InObj;
-        using OutObj = GIslandExecutable::OutObj;
-        std::vector<InObj>  in_objs;
-        std::vector<OutObj> out_objs;
-        in_objs.reserve (op.in_objects.size());
-        out_objs.reserve(op.out_objects.size());
-
-        for (const auto &rc : op.in_objects)
-        {
-            in_objs.emplace_back(InObj{rc, magazine::getArg(m_res, rc)});
-        }
-        for (const auto &rc : op.out_objects)
-        {
-            out_objs.emplace_back(OutObj{rc, magazine::getObjPtr(m_res, rc)});
-        }
-
-        // (6)
-        op.isl_exec->run(std::move(in_objs), std::move(out_objs));
+        Input i{m_res, op.in_objects};
+        Output o{m_res, op.out_objects};
+        op.isl_exec->run(i, o);
     }
 
     // (7)
