@@ -127,6 +127,9 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         case T::index_of<cv::detail::VectorRef>():
             cv::util::get<cv::detail::VectorRef>(out_obj).mov(cv::util::get<cv::detail::VectorRef>(res_obj));
             break;
+        case T::index_of<cv::detail::OpaqueRef>():
+            cv::util::get<cv::detail::OpaqueRef>(out_obj).mov(cv::util::get<cv::detail::OpaqueRef>(res_obj));
+            break;
         default:
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
@@ -466,7 +469,17 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                 ret_val = cv::GRunArgP(rr);
             }
             break;
-            // FIXME: What's about GOpauqe??
+        case cv::GShape::GOPAQUE:
+            {
+                cv::detail::OpaqueRef newOpaque;
+                cv::util::get<cv::detail::ConstructOpaque>(r.ctor)(newOpaque);
+                out_arg = cv::GRunArg(std::move(newOpaque));
+                // OpaqueRef is implicitly shared so no pointer is taken here
+                // FIXME: that variant MOVE problem again
+                const auto &rr = cv::util::get<cv::detail::OpaqueRef>(out_arg);
+                ret_val = cv::GRunArgP(rr);
+            }
+            break;
         default:
             cv::util::throw_error(std::logic_error("Unsupported GShape"));
         }
