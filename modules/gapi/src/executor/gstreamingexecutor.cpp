@@ -125,6 +125,9 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         case T::index_of<cv::detail::VectorRef>():
             cv::util::get<cv::detail::VectorRef>(out_obj).mov(cv::util::get<cv::detail::VectorRef>(res_obj));
             break;
+        case T::index_of<cv::detail::OpaqueRef>():
+            cv::util::get<cv::detail::OpaqueRef>(out_obj).mov(cv::util::get<cv::detail::OpaqueRef>(res_obj));
+            break;
         default:
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
@@ -475,6 +478,16 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
                     out_data[id] = cv::GRunArg(std::move(newVec));
                     // VectorRef is implicitly shared so no pointer is taken here
                     const auto &rr = cv::util::get<cv::detail::VectorRef>(out_data[id]); // FIXME: that variant MOVE problem again
+                    isl_outputs[id] = { r, cv::GRunArgP(rr) };
+                }
+                break;
+            case cv::GShape::GOPAQUE:
+                {
+                    cv::detail::OpaqueRef newOpaque;
+                    cv::util::get<cv::detail::ConstructOpaque>(r.ctor)(newOpaque);
+                    out_data[id] = cv::GRunArg(std::move(newOpaque));
+                    // OpaqueRef is implicitly shared so no pointer is taken here
+                    const auto &rr = cv::util::get<cv::detail::OpaqueRef>(out_data[id]); // FIXME: that variant MOVE problem again
                     isl_outputs[id] = { r, cv::GRunArgP(rr) };
                 }
                 break;
