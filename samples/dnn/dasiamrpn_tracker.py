@@ -11,6 +11,7 @@ kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onn
 import numpy as np
 import cv2 as cv
 import argparse
+import sys
 
 class DaSiamRPNTracker:
     #initialization of used values, initial bounding box, used network
