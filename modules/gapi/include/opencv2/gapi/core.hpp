@@ -1678,9 +1678,8 @@ operate in-place.
 @param flags combination of interpolation methods (see #InterpolationFlags) and the optional
 flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
-@param borderMode pixel extrapolation method (see #BorderTypes); when
-borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
-the "outliers" in the source image are not modified by the function.
+@param borderMode pixel extrapolation method (see #BorderTypes);
+borderMode=#BORDER_TRANSPARENT isn't supported
 @param borderValue value used in case of a constant border; by default, it is 0.
 
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
