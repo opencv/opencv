@@ -462,7 +462,7 @@ TEST_P(YUV2GrayTest, AccuracyTest)
     cv::GMat in;
     auto out = cv::gapi::YUV2Gray(in);
 
-    cv::Mat in_mat(cv::Size(sz.width, sz.height * 1.5), CV_8UC1);
+    cv::Mat in_mat(cv::Size(sz.width, static_cast<int>(sz.height * 1.5)), CV_8UC1);
     cv::randn(in_mat, cv::Scalar::all(127), cv::Scalar::all(40.f));
 
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
