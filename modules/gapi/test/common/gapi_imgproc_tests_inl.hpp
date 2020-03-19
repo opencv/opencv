@@ -456,6 +456,29 @@ TEST_P(YUV2RGBTest, AccuracyTest)
     }
 }
 
+TEST_P(YUV2GrayTest, AccuracyTest)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::YUV2Gray(in);
+
+    cv::Mat in_mat(cv::Size(sz.width, sz.height * 1.5), CV_8UC1);
+    cv::randn(in_mat, cv::Scalar::all(127), cv::Scalar::all(40.f));
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat), cv::gout(out_mat_gapi), getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat, out_mat_ocv, cv::COLOR_YUV2GRAY_NV12);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
+
 TEST_P(NV12toRGBTest, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
@@ -531,7 +554,6 @@ TEST_P(NV12toGrayTest, AccuracyTest)
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
-
 
 static void toPlanar(const cv::Mat& in, cv::Mat& out)
 {

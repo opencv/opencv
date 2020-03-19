@@ -177,6 +177,11 @@ GMat NV12toGray(const GMat &y, const GMat &uv)
     return imgproc::GNV12toGray::on(y, uv);
 }
 
+GMat YUV2Gray(const GMat& src)
+{
+    return imgproc::GYUV2Gray::on(src);
+}
+
 GMatP NV12toRGBp(const GMat &y, const GMat &uv)
 {
     return imgproc::GNV12toRGBp::on(y, uv);
