@@ -1038,7 +1038,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
      * @param top_k if `>0`, keep at most @p top_k picked indices.
      */
-    CV_EXPORTS_W void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
+    CV_EXPORTS void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
                                const float score_threshold, const float nms_threshold,
                                CV_OUT std::vector<int>& indices,
                                const float eta = 1.f, const int top_k = 0);
