@@ -13,6 +13,8 @@
 #include "../../test/common/gapi_tests_common.hpp"
 #include <opencv2/gapi/imgproc.hpp>
 
+#include <string>
+
 namespace opencv_test
 {
 
@@ -20,14 +22,15 @@ namespace opencv_test
 
   //------------------------------------------------------------------------------
 
-    class RenderTestTexts : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
-    class RenderTestRects : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
-    class RenderTestCircles : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
-    class RenderTestLines : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
-    class RenderTestMosaics : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
-    class RenderTestImages : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
-    class RenderTestPolylines : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
+    class RenderTestTexts : public TestPerfParams<tuple<std::string, cv::Size, compare_f>> {};
+    class RenderTestRects : public TestPerfParams<tuple<cv::Size, compare_f>> {};
+    class RenderTestCircles : public TestPerfParams<tuple<cv::Size, compare_f>> {};
+    class RenderTestLines : public TestPerfParams<tuple<cv::Size, compare_f>> {};
+    class RenderTestMosaics : public TestPerfParams<tuple<cv::Size, compare_f>> {};
+    class RenderTestImages : public TestPerfParams<tuple<cv::Size, compare_f>> {};
+    class RenderTestPolylines : public TestPerfParams<tuple<cv::Size, compare_f>> {};
+    class RenderTestPolyItems : public TestPerfParams<tuple<cv::Size, int, int, int, compare_f>> {};
 
-}
+} // opencv_test
 
 #endif // OPENCV_GAPI_RENDER_PERF_TESTS_HPP

@@ -6,4 +6,4 @@
 
 
 #include "../perf_precomp.hpp"
-#include "gapi_render_perf_tests_inl.hpp"
+#include "../render/gapi_render_perf_tests_inl.hpp"

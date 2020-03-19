@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#include "gapi_render_perf_tests.hpp"
+#include "../common/gapi_render_perf_tests.hpp"
 
 #include "../../src/api/render_priv.hpp"
 
@@ -25,6 +25,7 @@ namespace opencv_test
         ref_mat.copyTo(gapi_mat);
     };
 
+    // TODO: remove this code duplication with /gapi/test/common/gapi_render_tests.hpp
     cv::Scalar cvtBGRToYUVC(const cv::Scalar& bgr)
     {
         double y = bgr[2] *  0.299000 + bgr[1] *  0.587000 + bgr[0] *  0.114000;
@@ -33,6 +34,7 @@ namespace opencv_test
         return {y, u, v};
     }
 
+    // TODO: remove this code duplication with /gapi/test/common/gapi_render_tests.hpp
     void drawMosaicRef(const cv::Mat& mat, const cv::Rect &rect, int cellSz)
     {
         cv::Rect mat_rect(0, 0, mat.cols, mat.rows);
@@ -88,6 +90,7 @@ namespace opencv_test
         }
     }
 
+    // TODO: remove this code duplication with /gapi/test/common/gapi_render_tests.hpp
     void blendImageRef(cv::Mat& mat, const cv::Point& org, const cv::Mat& img, const cv::Mat& alpha)
     {
         auto roi = mat(cv::Rect(org, img.size()));
@@ -110,9 +113,44 @@ namespace opencv_test
 
   }
 
+  INSTANTIATE_TEST_CASE_P(RenderTestTexts, RenderTestTexts,
+      Combine(Values(std::string("Some text")),
+              Values(szVGA, sz720p, sz1080p),
+              Values(AbsExact().to_compare_f())));
+
+  INSTANTIATE_TEST_CASE_P(RenderTestRects, RenderTestRects,
+      Combine(Values(szVGA, sz720p, sz1080p),
+              Values(AbsExact().to_compare_f())));
+
+  INSTANTIATE_TEST_CASE_P(RenderTestCircles, RenderTestCircles,
+      Combine(Values(szVGA, sz720p, sz1080p),
+              Values(AbsExact().to_compare_f())));
+
+  INSTANTIATE_TEST_CASE_P(RenderTestLines, RenderTestCircles,
+      Combine(Values(szVGA, sz720p, sz1080p),
+              Values(AbsExact().to_compare_f())));
+
+  INSTANTIATE_TEST_CASE_P(RenderTestMosaics, RenderTestCircles,
+      Combine(Values(szVGA, sz720p, sz1080p),
+              Values(AbsExact().to_compare_f())));
+
+  INSTANTIATE_TEST_CASE_P(RenderTestImages, RenderTestCircles,
+      Combine(Values(szVGA, sz720p, sz1080p),
+              Values(AbsExact().to_compare_f())));
+
+  INSTANTIATE_TEST_CASE_P(RenderTestPolylines, RenderTestPolylines,
+      Combine(Values(szVGA, sz720p, sz1080p),
+              Values(AbsExact().to_compare_f())));
+
+  INSTANTIATE_TEST_CASE_P(RenderTestPolyItems, RenderTestPolyItems,
+      Combine(Values(szVGA, sz720p, sz1080p),
+              Values(50),
+              Values(50),
+              Values(50),
+              Values(AbsExact().to_compare_f())));
+
 PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
 {
-    std::string text("SomeText");
     cv::Point org(200, 200);
     int ff = FONT_HERSHEY_SIMPLEX;
     double fs = 2.0;
@@ -120,12 +158,12 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
     int thick = 2;
     int lt = LINE_8;
     bool blo = false;
+    MatType type = CV_8UC3;
 
-    compare_f cmpF;
-    MatType type = 0;
+    std::string text;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    compare_f cmpF;
+    std::tie(text, sz, cmpF) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -141,7 +179,7 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
                           cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
 
     // Warm-up graph engine:
-    comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(compile_args));
+    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
 
     TEST_CYCLE()
     {
@@ -163,7 +201,6 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
 
 PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
 {
-    std::string text("SomeText");
     cv::Point org(200, 200);
     int ff = FONT_HERSHEY_SIMPLEX;
     double fs = 2.0;
@@ -172,11 +209,10 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
     int lt = LINE_8;
     bool blo = false;
 
-    compare_f cmpF;
-    MatType type = 0;
+    std::string text;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    compare_f cmpF;
+    std::tie(text, sz, cmpF) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -198,8 +234,7 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
 
     // Warm-up graph engine:
     comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-               cv::gout(y_out_gapi_mat, uv_out_gapi_mat),
-               std::move(compile_args));
+               cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
 
     TEST_CYCLE()
     {
@@ -234,12 +269,11 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
     int thick = 2;
     int lt = LINE_8;
     int shift = 0;
+    MatType type = CV_8UC3;
 
-    compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    compare_f cmpF;
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -255,7 +289,7 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
                           cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
 
     // Warm-up graph engine:
-    comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(compile_args));
+    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
 
     TEST_CYCLE()
     {
@@ -283,11 +317,9 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
     int lt = LINE_8;
     int shift = 0;
 
-    compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    compare_f cmpF;
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -309,8 +341,7 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
 
     // Warm-up graph engine:
     comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-               cv::gout(y_out_gapi_mat, uv_out_gapi_mat),
-               std::move(compile_args));
+               cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
 
     TEST_CYCLE()
     {
@@ -332,8 +363,8 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -347,12 +378,11 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceBGROCVTest)
     int thick = 2;
     int lt = LINE_8;
     int shift = 0;
+    MatType type = CV_8UC3;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -368,7 +398,7 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceBGROCVTest)
                           cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
 
     // Warm-up graph engine:
-    comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(compile_args));
+    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
 
     TEST_CYCLE()
     {
@@ -399,10 +429,9 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
     int shift = 0;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
+
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -424,8 +453,7 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
 
     // Warm-up graph engine:
     comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-               cv::gout(y_out_gapi_mat, uv_out_gapi_mat),
-               std::move(compile_args));
+               cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
 
     TEST_CYCLE()
     {
@@ -447,8 +475,8 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -462,12 +490,11 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
     int thick = 2;
     int lt = LINE_8;
     int shift = 0;
+    MatType type = CV_8UC3;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -483,7 +510,7 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
                           cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
 
     // Warm-up graph engine:
-    comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(compile_args));
+    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
 
     TEST_CYCLE()
     {
@@ -514,10 +541,8 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
     int shift = 0;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -539,8 +564,7 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
 
     // Warm-up graph engine:
     comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-               cv::gout(y_out_gapi_mat, uv_out_gapi_mat),
-               std::move(compile_args));
+               cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
 
     TEST_CYCLE()
     {
@@ -562,8 +586,8 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -574,12 +598,11 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
     cv::Rect mos(100, 100, 200, 200);
     int cellsz = 25;
     int decim = 0;
+    MatType type = CV_8UC3;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -595,7 +618,7 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
                           cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
 
     // Warm-up graph engine:
-    comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(compile_args));
+    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
 
     TEST_CYCLE()
     {
@@ -622,10 +645,8 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
     int decim = 0;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -647,8 +668,7 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
 
     // Warm-up graph engine:
     comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-               cv::gout(y_out_gapi_mat, uv_out_gapi_mat),
-               std::move(compile_args));
+               cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
 
     TEST_CYCLE()
     {
@@ -670,8 +690,8 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -682,12 +702,11 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
     cv::Rect rect(100, 100, 200, 200);
     cv::Scalar color(100, 150, 60);
     double  transparency = 1.0;
+    MatType type = CV_8UC3;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -709,7 +728,7 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
                           cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
 
     // Warm-up graph engine:
-    comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(compile_args));
+    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
 
     TEST_CYCLE()
     {
@@ -736,10 +755,8 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
     double  transparency = 1.0;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -766,8 +783,7 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
 
     // Warm-up graph engine:
     comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-               cv::gout(y_out_gapi_mat, uv_out_gapi_mat),
-               std::move(compile_args));
+               cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
 
     TEST_CYCLE()
     {
@@ -791,8 +807,8 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -805,12 +821,11 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceBGROCVTest)
     int thick = 2;
     int lt = LINE_8;
     int shift = 0;
+    MatType type = CV_8UC3;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -826,7 +841,7 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceBGROCVTest)
                           cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
 
     // Warm-up graph engine:
-    comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(compile_args));
+    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
 
     TEST_CYCLE()
     {
@@ -857,10 +872,8 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
     int shift = 0;
 
     compare_f cmpF;
-    MatType type = 0;
     cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(sz, cmpF) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -882,8 +895,7 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
 
     // Warm-up graph engine:
     comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-               cv::gout(y_out_gapi_mat, uv_out_gapi_mat),
-               std::move(compile_args));
+               cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
 
     TEST_CYCLE()
     {
@@ -906,8 +918,96 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
+{
+    int thick = 2;
+    int lt = LINE_8;
+    cv::Scalar color(100, 50, 150);
+    MatType type = CV_8UC3;
+
+    cv::Size sz;
+    int n, m, k;
+    compare_f cmpF;
+    std::tie(sz, n, m, k, cmpF) = GetParam();
+
+    cv::Mat gapi_mat = cv::Mat(sz, type);
+    cv::Mat ref_mat(gapi_mat);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::gapi::wip::draw::Prims prims;
+
+    // Rects
+    cv::Rect rect(200, 200, 200, 200);
+    int shift = 0;
+
+    for (int i = 0; i < n; ++i)
+        prims.emplace_back(cv::gapi::wip::draw::Rect(rect, color, thick, lt, shift));
+
+    // Mosaic
+    cv::Rect mos(200, 200, 200, 200);
+    int cellsz = 25;
+    int decim = 0;
+
+    for (int i = 0; i < n; ++i)
+        prims.emplace_back(cv::gapi::wip::draw::Mosaic(mos, cellsz, decim));
+
+    // Text
+    std::string text = "Some text";
+    cv::Point org(200, 200);
+    int ff = FONT_HERSHEY_SIMPLEX;
+    double fs = 2.0;
+    bool blo = false;
+
+    for (int i = 0; i < m; ++i)
+        prims.emplace_back(cv::gapi::wip::draw::Text(text, org, ff, fs, color, thick, lt, blo));
+
+    // Image
+    cv::Rect rect_img(100, 100, 100, 100);
+    double  transparency = 1.0;
+
+    cv::Mat img(rect_img.size(), CV_8UC3, color);
+    cv::Mat alpha(rect_img.size(), CV_32FC1, transparency);
+    auto tl = rect_img.tl();
+    cv::Point org_img = {tl.x, tl.y + rect_img.size().height};
+
+    for (int i = 0; i < k; ++i)
+        prims.emplace_back(cv::gapi::wip::draw::Image(org_img, img, alpha));
+
+    cv::GMat in;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+
+    cv::GComputation comp(cv::GIn(in, arr),
+                          cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
+
+    // Warm-up graph engine:
+    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
+
+    TEST_CYCLE()
+    {
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
+    }
+
+    // OpenCV code //////////////////////////////////////////////////////////////
+    {
+        cv::rectangle(ref_mat, rect, color, thick, lt, shift);
+
+        drawMosaicRef(ref_mat, mos, cellsz);
+
+        cv::putText(ref_mat, text, org, ff, fs, color, thick, lt, blo);
+
+        blendImageRef(ref_mat, org_img, img, alpha);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
