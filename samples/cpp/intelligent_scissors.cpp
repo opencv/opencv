@@ -189,7 +189,8 @@ int main( int argc, const char** argv )
     const int EDGE_THRESHOLD_LOW = 50;
     const int EDGE_THRESHOLD_HIGH = 100;
     CommandLineParser parser(argc, argv, keys);
-    parser.about("\nThis program demonstrates implementation of 'intelligent scissors' algorithm\n"
+    parser.about("\nThis program demonstrates implementation of 'intelligent scissors' algorithm:\n"
+                 "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.138.3811&rep=rep1&type=pdf"
                  "To start drawing a new contour select a pixel, click LEFT mouse button.\n"
                  "To fix a path click LEFT mouse button again.\n"
                  "To finish drawing a contour click RIGHT mouse button.\n");
