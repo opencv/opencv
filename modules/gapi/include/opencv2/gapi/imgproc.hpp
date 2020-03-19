@@ -222,6 +222,18 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GYUVtoGray, <GMat(GMat)>, "org.opencv.colorconvert.imgproc.yuvtogray") {
+        static GMatDesc outMeta(GMatDesc in) {
+            GAPI_Assert(in.depth  == CV_8U);
+            GAPI_Assert(in.planar == false);
+            GAPI_Assert(in.size.width  % 2 == 0);
+            GAPI_Assert(in.size.height % 3 == 0);
+
+            return in.withType(CV_8U, 1)
+                     .withSize(Size{in.size.width, in.size.height - (in.size.height / 3)});
+        }
+    };
+
     G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12togray") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth   == CV_8U);
