@@ -1266,6 +1266,27 @@ TEST_P(SqrtTest, AccuracyTest)
     }
 }
 
+TEST_P(WarpAffineTest, AccuracyTest)
+{
+    cv::Point center{in_mat1.size() / 2};
+    cv::Mat warp_mat = cv::getRotationMatrix2D(center, angle, scale);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::warpAffine(in, warp_mat, in_mat1.size(), flags, border_mode, border_value);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::warpAffine(in_mat1, out_mat_ocv, warp_mat, in_mat1.size(), flags, border_mode, border_value);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
+}
+
 TEST_P(NormalizeTest, Test)
 {
     initMatrixRandN(type, sz, CV_MAKETYPE(ddepth, CV_MAT_CN(type)));
