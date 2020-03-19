@@ -69,7 +69,7 @@ if(BUILD_TENGINE)
 	   elseif(${ANDROID_ABI} STREQUAL "arm64-v8a")
 			   SET(CONFIG_ARCH_ARM64 ON)
 	   endif()
-	   SET(Tengine_LIB "${CMAKE_BINARY_DIR}/lib/${ANDROID_ABI}/libtengine.a" CACHE INTERNAL "")
+	   SET(Tengine_LIB "tengine" CACHE INTERNAL "")
 	else()
 		# linux system
 		if(CMAKE_SYSTEM_PROCESSOR STREQUAL arm)
@@ -77,7 +77,7 @@ if(BUILD_TENGINE)
 		elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64) ## AARCH64
 			   SET(CONFIG_ARCH_ARM64 ON)
 		endif()
-		SET(Tengine_LIB "${CMAKE_BINARY_DIR}/lib/libtengine.a" CACHE INTERNAL "")
+		SET(Tengine_LIB "tengine" CACHE INTERNAL "")
 	endif()
 
 	SET(BUILT_IN_OPENCV ON) ## set for tengine compile discern .
