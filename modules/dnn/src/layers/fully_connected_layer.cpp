@@ -118,6 +118,8 @@ public:
         if (blobs.empty())
         {
             int dims = inputs[0].size();
+            CV_CheckEQ(inputs[1].size(), (size_t)dims, "");
+            CV_CheckGE(dims, 2, "");
             for (int i = 0; i < dims - 2; i++)
                 CV_CheckEQ(inputs[0][i], inputs[1][i], "");
             CV_CheckEQ(inputs[0].back(), inputs[1][dims - 2], "");
@@ -138,7 +140,8 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && axis == 1);
+               (((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && !blobs.empty()) ||
+                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -296,6 +299,51 @@ public:
         bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
+
+        if (inputs.size() == 2)
+        {
+            int dims = outputs[0].dims;
+            int m = inputs[0].size[dims - 2];
+            int n = inputs[0].size[dims - 1];
+            int k = inputs[1].size[dims - 1];
+            int rows = inputs[0].total() / (m * n);
+
+            MatShape sh_A = shape(rows, m * n);
+            MatShape sh_B = shape(rows, n * k);
+            MatShape sh_C = shape(rows, m * k);
+            UMat inp = inputs[0].reshape(1, sh_A.size(), &sh_A[0]);
+            UMat weight = inputs[1].reshape(1, sh_B.size(), &sh_B[0]);
+            UMat out = outputs[0].reshape(1, sh_C.size(), &sh_C[0]);
+
+            UMat A, B, C, A_fp32, B_fp32, C_fp32;
+            for (int i = 0; i < rows; ++i)
+            {
+                A = inp.row(i).reshape(1, m);
+                B = weight.row(i).reshape(1, n);
+                C = out.row(i).reshape(1, m);
+
+                if (use_half)
+                {
+                    convertFp16(A, A_fp32);
+                    convertFp16(B, B_fp32);
+                    convertFp16(C, C_fp32);
+                }
+                else
+                {
+                    A_fp32 = A;
+                    B_fp32 = B;
+                    C_fp32 = C;
+                }
+                cv::gemm(A_fp32, B_fp32, 1, noArray(), 0, C_fp32);
+                if (use_half)
+                {
+                    convertFp16(A_fp32, A);
+                    convertFp16(B_fp32, B);
+                    convertFp16(C_fp32, C);
+                }
+            }
+            return true;
+        }
 
         int axisCan = clamp(axis, inputs[0].dims);
         int numOutput = blobs[0].size[0];
