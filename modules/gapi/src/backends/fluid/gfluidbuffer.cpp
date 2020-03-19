@@ -181,7 +181,8 @@ const uint8_t* fluid::BorderHandlerT<cv::BORDER_CONSTANT>::inLineB(int /*log_idx
 void fluid::BorderHandlerT<cv::BORDER_CONSTANT>::fillCompileTimeBorder(BufferStorageWithBorder& data)
 {
     m_const_border.create(1, data.cols(), data.data().type());
-    m_const_border = {m_border_value[0], m_border_value[1], m_border_value[2], m_border_value[3]}; // crutch is waiting deowned mat
+    m_const_border = {m_border_value[0], m_border_value[1],
+                      m_border_value[2], m_border_value[3]};
 
     cv::gapi::fillBorderConstant(m_border_size, m_border_value, data.data());
 }
