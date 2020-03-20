@@ -169,6 +169,9 @@ int FilterEngine::start(const Size& _wholeSize, const Size& sz, const Point& ofs
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!sz.empty());
+    CV_Assert(!_wholeSize.empty());
+
     CV_CPU_DISPATCH(FilterEngine__start, (*this, _wholeSize, sz, ofs),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -176,6 +179,11 @@ int FilterEngine::start(const Size& _wholeSize, const Size& sz, const Point& ofs
 
 int FilterEngine::start(const Mat& src, const Size &wsz, const Point &ofs)
 {
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(!src.empty());
+    CV_Assert(!wsz.empty());
+
     start( wsz, src.size(), ofs);
     return startY - ofs.y;
 }
@@ -1398,6 +1406,9 @@ void filter2D(InputArray _src, OutputArray _dst, int ddepth,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!_src.empty());
+    CV_Assert(!_kernel.empty());
+
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_filter2D(_src, _dst, ddepth, _kernel, anchor0, delta, borderType))
 
@@ -1428,6 +1439,10 @@ void sepFilter2D(InputArray _src, OutputArray _dst, int ddepth,
                  double delta, int borderType)
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
+    CV_Assert(!_kernelX.empty());
+    CV_Assert(!_kernelY.empty());
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > _kernelY.total() && (size_t)_src.cols() > _kernelX.total(),
                ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
