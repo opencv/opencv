@@ -47,6 +47,8 @@
 #include <iterator>
 #include <limits>
 
+#include <iostream>
+
 namespace cv
 {
 
@@ -529,10 +531,8 @@ public:
         const Point3f* from = m1.ptr<Point3f>();
         const Point3f* to   = m2.ptr<Point3f>();
 
-        double buf[3];
-        Mat T(3, 1, CV_64F, &buf[0]);
-        double* Tptr = T.ptr<double>();
-        T = Scalar::all(0);
+        double buf[3] = {0, 0, 0};
+        Matx13d T(buf);
 
         // The optimal translation is the mean of the pointwise displacements
         for(int i = 0; i < 4; i++)
@@ -540,16 +540,12 @@ public:
             const Point3f& f = from[i];
             const Point3f& t = to[i];
 
-            Tptr[0] = Tptr[0] + t.x - f.x;
-            Tptr[1] = Tptr[1] + t.y - f.y;
-            Tptr[2] = Tptr[2] + t.z - f.z;
+            T(0, 0) = T(0, 0) + t.x - f.x;
+            T(0, 1) = T(0, 1) + t.y - f.y;
+            T(0, 2) = T(0, 2) + t.z - f.z;
         }
-        Tptr[0] = Tptr[0] / 4;
-        Tptr[1] = Tptr[1] / 4;
-        Tptr[2] = Tptr[2] / 4;
-
-        T.copyTo(_model);
-
+        T *= (1.0f / 4);
+        Mat(T, false).copyTo(_model);
         return 1;
     }
 
