@@ -1269,14 +1269,14 @@ TEST_P(SqrtTest, AccuracyTest)
 TEST_P(WarpPerspectiveTest, AccuracyTest)
 {
     cv::Point center{in_mat1.size() / 2};
-    cv::Mat rm = cv::getRotationMatrix2D(center, angle, scale);
-    cv::Matx33d transform_mat(rm.at<double>(0, 0), rm.at<double>(0, 1), rm.at<double>(0, 2),
-                              rm.at<double>(1, 0), rm.at<double>(1, 1), rm.at<double>(1, 2),
-                              0                  , 0                  , 1                 );
+    cv::Mat xy = cv::getRotationMatrix2D(center, angle, scale);
+    cv::Matx13d z (0, 0, 1);
+    cv::Mat transform_mat;
+    cv::vconcat(xy, z, transform_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::warpPerspective(in, cv::Mat(transform_mat), in_mat1.size(), flags, border_mode, border_value);
+    auto out = cv::gapi::warpPerspective(in, transform_mat, in_mat1.size(), flags, border_mode, border_value);
 
     cv::GComputation c(in, out);
     c.apply(in_mat1, out_mat_gapi, getCompileArgs());
