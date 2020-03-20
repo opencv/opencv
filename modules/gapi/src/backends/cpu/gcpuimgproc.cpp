@@ -311,14 +311,6 @@ GAPI_OCV_KERNEL(GCPURGB2YUV422, cv::gapi::imgproc::GRGB2YUV422)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUYUV2Gray, cv::gapi::imgproc::GYUV2Gray)
-{
-    static void run(const cv::Mat& in, cv::Mat& out)
-    {
-        cv::cvtColor(in, out, cv::COLOR_YUV2GRAY_NV12);
-    }
-};
-
 static void toPlanar(const cv::Mat& in, cv::Mat& out)
 {
     GAPI_Assert(out.depth() == in.depth());
@@ -345,6 +337,34 @@ GAPI_OCV_KERNEL(GCPUNV12toRGBp, cv::gapi::imgproc::GNV12toRGBp)
     }
 };
 
+G_TYPED_KERNEL(GYUV2Gray, <cv::GMat(cv::GMat)>, "yuvtogray") {
+    static cv::GMatDesc outMeta(cv::GMatDesc in) {
+        GAPI_Assert(in.depth  == CV_8U);
+        GAPI_Assert(in.planar == false);
+        GAPI_Assert(in.size.width  % 2 == 0);
+        GAPI_Assert(in.size.height % 3 == 0);
+
+        /* YUV format for this kernel:
+         * Y Y Y Y Y Y Y Y
+         * Y Y Y Y Y Y Y Y
+         * Y Y Y Y Y Y Y Y
+         * Y Y Y Y Y Y Y Y
+         * U V U V U V U V
+         * U V U V U V U V
+         */
+
+        return {CV_8U, 1, cv::gapi::own::Size{in.size.width, in.size.height - (in.size.height / 3)}, false};
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUYUV2Gray, GYUV2Gray)
+{
+    static void run(const cv::Mat& in, cv::Mat& out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_YUV2GRAY_NV12);
+    }
+};
+
 G_TYPED_KERNEL(GConcatYUVPlanes, <cv::GMat(cv::GMat, cv::GMat)>, "concatyuvplanes") {
     static cv::GMatDesc outMeta(cv::GMatDesc y, cv::GMatDesc uv) {
         return {CV_8U, 1, cv::gapi::own::Size{y.size.width, y.size.height + uv.size.height}, false};
@@ -364,7 +384,7 @@ GAPI_COMPOUND_KERNEL(GCPUNV12toGray, cv::gapi::imgproc::GNV12toGray)
 {
     static cv::GMat expand(cv::GMat y, cv::GMat uv)
     {
-        return cv::gapi::YUV2Gray(GConcatYUVPlanes::on(y, uv));
+        return GYUV2Gray::on(GConcatYUVPlanes::on(y, uv));
     }
 };
 

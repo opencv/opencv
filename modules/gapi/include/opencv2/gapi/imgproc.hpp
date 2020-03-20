@@ -222,17 +222,6 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GYUV2Gray, <GMat(GMat)>, "org.opencv.colorconvert.imgproc.yuvtogray") {
-        static GMatDesc outMeta(GMatDesc in) {
-            GAPI_Assert(in.depth  == CV_8U);
-            GAPI_Assert(in.planar == false);
-            GAPI_Assert(in.size.width  % 2 == 0);
-            GAPI_Assert(in.size.height % 3 == 0);
-
-            return {CV_8U, 1, Size{in.size.width, in.size.height - (in.size.height / 3)}, false};
-        }
-    };
-
     G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12togray") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth   == CV_8U);
@@ -829,20 +818,6 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa RGB2Lab, RGB2YUV
 */
 GAPI_EXPORTS GMat YUV2RGB(const GMat& src);
-
-/** @brief Converts an image from YUV color space to gray-scaled.
-The function converts an input image from YUV color space to gray-scaled.
-The conventional ranges for Y, U, and V channel values are 0 to 255.
-
-Output image must be 8-bit unsigned 1-channel image @ref CV_8UC1.
-
-@note Function textual ID is "org.opencv.imgproc.colorconvert.yuvtogray"
-
-@param src input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
-
-@sa YUV2RGB, NV12toBGR
-*/
-GAPI_EXPORTS GMat YUV2Gray(const GMat& src);
 
 /** @brief Converts an image from NV12 (YUV420p) color space to RGB.
 The function converts an input image from NV12 color space to RGB.
