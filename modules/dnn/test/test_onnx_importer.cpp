@@ -57,8 +57,13 @@ public:
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
 
+        std::vector<String> inputNames;
         for (int i = 0; i < numInps; ++i)
-            net.setInput(inps[i], numInps > 1 ? format("%d", i) : "");
+            inputNames.push_back(format("%d", i));
+        net.setInputsNames(inputNames);
+
+        for (int i = 0; i < numInps; ++i)
+            net.setInput(inps[i], inputNames[i]);
         Mat out = net.forward("");
 
         if (useSoftmax)
@@ -171,6 +176,11 @@ TEST_P(Test_ONNX_layers, ReLU)
 TEST_P(Test_ONNX_layers, Clip)
 {
     testONNXModels("clip", npy);
+}
+
+TEST_P(Test_ONNX_layers, Shape)
+{
+    testONNXModels("shape_of_constant");
 }
 
 TEST_P(Test_ONNX_layers, ReduceMean)
@@ -371,6 +381,11 @@ TEST_P(Test_ONNX_layers, Broadcast)
     testONNXModels("channel_broadcast", npy, 0, 0, false, true, 2);
 }
 
+TEST_P(Test_ONNX_layers, DynamicResize)
+{
+    testONNXModels("dynamic_resize", npy, 0, 0, false, true, 2);
+}
+
 TEST_P(Test_ONNX_layers, Div)
 {
     const String model =  _tf("models/div.onnx");
@@ -400,10 +415,8 @@ TEST_P(Test_ONNX_layers, Div)
 TEST_P(Test_ONNX_layers, DynamicReshape)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-    {
-        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-    }
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     testONNXModels("dynamic_reshape");
     testONNXModels("dynamic_reshape_opset_11");
     testONNXModels("flatten_by_prod");
@@ -443,6 +456,7 @@ TEST_P(Test_ONNX_layers, Slice)
     testONNXModels("slice", npy, 0, 0, false, false);
 #else
     testONNXModels("slice");
+    testONNXModels("slice_opset_11");
 #endif
 }
 
