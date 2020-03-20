@@ -193,9 +193,36 @@ struct CustomMetaFunction
     CM customOutMeta;
 };
 
+// This is a general flag indicating that this GModel has intrinsics.
+// In the beginning of the compilation, it is a quick check to
+// indicate there are intrinsics.
+//
+// In the end of the compilation, having this flag is fatal -- all
+// intrinsics must be resolved.
 struct HasIntrinsics
 {
     static const char *name() { return "HasIntrinsicsFlag"; }
+};
+
+// This is a special tag for both DATA and OP nodes indicating
+// which desynchronized path this node belongs to.
+// This tag is set by a special complex pass intrinDesync/accept.
+struct DesyncPath
+{
+    static const char *name() { return "DesynchronizedPath"; }
+    int index;
+};
+
+// This is a special tag for graph Edges indicating that this
+// particular edge starts a desynchronized path in the graph.
+// At the execution stage, the data coming "through" these edges
+// (virtually, of course, since our GModel edges never transfer the
+// actual data, they just represent these transfers) is desynchronized
+// from the rest of the pipeline, i.e. may be "lost" (stay unconsumed
+// and then overwritten with some new data when streaming).
+struct DesyncEdge
+{
+    static const char *name() { return "DesynchronizedEdge"; }
 };
 
 namespace GModel
@@ -219,6 +246,8 @@ namespace GModel
         , CustomMetaFunction
         , Streaming
         , HasIntrinsics
+        , DesyncPath
+        , DesyncEdge
         >;
 
     // FIXME: How to define it based on GModel???
@@ -241,6 +270,8 @@ namespace GModel
         , CustomMetaFunction
         , Streaming
         , HasIntrinsics
+        , DesyncPath
+        , DesyncEdge
         >;
 
     // FIXME:
@@ -261,11 +292,11 @@ namespace GModel
     // Clears logged messages of a node.
     GAPI_EXPORTS void log_clear(Graph &g, ade::NodeHandle node);
 
-    GAPI_EXPORTS void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
-    GAPI_EXPORTS void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
+    GAPI_EXPORTS ade::EdgeHandle linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
+    GAPI_EXPORTS ade::EdgeHandle linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
 
-    GAPI_EXPORTS void redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
-    GAPI_EXPORTS void redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
+    GAPI_EXPORTS std::vector<ade::EdgeHandle> redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
+    GAPI_EXPORTS             ade::EdgeHandle  redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
 
     GAPI_EXPORTS std::vector<ade::NodeHandle> orderedInputs (const ConstGraph &g, ade::NodeHandle nh);
     GAPI_EXPORTS std::vector<ade::NodeHandle> orderedOutputs(const ConstGraph &g, ade::NodeHandle nh);

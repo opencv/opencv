@@ -980,7 +980,7 @@ TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
     EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
 }
 
-TEST(GAPI_Streaming_Desync, SmokeTest)
+TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
 {
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
@@ -995,6 +995,35 @@ TEST(GAPI_Streaming_Desync, SmokeTest)
     cv::Mat test_out1, test_out2;
     cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
         .apply(cv::gin(test_in), cv::gout(test_out1, test_out2));
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    // FIXME: Unary desync should not require tie!
+    cv::GMat tmp2;
+    std::tie(tmp2) = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    cv::Mat test_out1, test_out2;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    std::size_t test_frames = 0u;
+    while (sc.pull(cv::gout(test_out1, test_out2))) {
+        test_frames++;
+    }
+    EXPECT_EQ(100u, test_frames);
 }
 
 } // namespace opencv_test
