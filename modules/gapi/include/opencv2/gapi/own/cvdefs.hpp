@@ -138,6 +138,7 @@ enum InterpolationFlags{
     INTER_LINEAR_EXACT   = 5,
     INTER_MAX            = 7,
 };
+// replacement of cv's structures:
 using Scalar = gapi::own::Scalar;
 } // namespace cv
 
