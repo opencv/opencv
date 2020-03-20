@@ -2082,4 +2082,12 @@ TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
     cv::flip(src, dst, 0);
 }
 
+TEST(Mat, empty_iterator_16855)
+{
+    cv::Mat m;
+    EXPECT_NO_THROW(m.begin<uchar>());
+    EXPECT_NO_THROW(m.end<uchar>());
+    EXPECT_TRUE(m.begin<uchar>() == m.end<uchar>());
+}
+
 }} // namespace
