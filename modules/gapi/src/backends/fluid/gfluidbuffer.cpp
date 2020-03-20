@@ -181,6 +181,7 @@ const uint8_t* fluid::BorderHandlerT<cv::BORDER_CONSTANT>::inLineB(int /*log_idx
 void fluid::BorderHandlerT<cv::BORDER_CONSTANT>::fillCompileTimeBorder(BufferStorageWithBorder& data)
 {
     m_const_border.create(1, data.cols(), data.data().type());
+    // FIXME: remove this crutch in deowned Mat
     m_const_border = {m_border_value[0], m_border_value[1],
                       m_border_value[2], m_border_value[3]};
 
