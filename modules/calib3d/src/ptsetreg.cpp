@@ -47,8 +47,6 @@
 #include <iterator>
 #include <limits>
 
-#include <iostream>
-
 namespace cv
 {
 
