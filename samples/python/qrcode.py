@@ -26,11 +26,12 @@ o_f_ext=''
 
 #Default values of input parameters
 parser = argparse.ArgumentParser(description='This program detects the QR-codes input images using OpenCV Library.')
-parser.add_argument('-i','--input',help="input image path (default input file path is 'opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png",default="opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png",metavar="")
+parser.add_argument('-i','--input',help="input image path (default input file path is 'opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png",default="../../../opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png",metavar="")
 parser.add_argument('-d','--detect',help="detect QR code only (skip decoding) (value True/False default value is False)",metavar='',type=str2bool,default=False)
 parser.add_argument('-m','--multi',help="use detect for multiple qr-codes (value True/False default value is True)",metavar="",type=str2bool,default=True)
 parser.add_argument('-o','--out',help="path to result file (default output filename is qr_code.png)",metavar="",default="qr_code.png")
 args = parser.parse_args()
+print(args)
 #save_detection ='False'
 #save_all='False'
 
@@ -47,7 +48,7 @@ def drawFPS(result,fps):
 
 def drawQRCodeContours(image,cnt):
     if(cnt.size!=0):
-        rows,cols,channels=image.shape
+        rows,cols,_=image.shape
         show_radius = (2.813*rows)/cols if (rows>cols) else (2.813*cols)/rows
         contour_radius=show_radius*0.4
         cv.drawContours(image,[cnt],0,(0,255,0),int(round(contour_radius)))
@@ -79,10 +80,10 @@ def drawQRCodeResults(result,points,decode_info,fps):
 def runQR(qrCode,inputimg):
     if(not args.multi):
         if(not args.detect):
-            decode_info,points,straight_qrcode=qrCode.detectAndDecode(inputimg)
+            decode_info,points,_=qrCode.detectAndDecode(inputimg)
             dec_info=decode_info
         else:
-            retval,points=qrCode.detect(inputimg)
+            _,points=qrCode.detect(inputimg)
             dec_info=[]
     else:
         if(not args.detect):
@@ -100,7 +101,7 @@ def DetectQRFrmImage(inputfile):
     qrCode = cv.QRCodeDetector()
     count = 10
     timer=cv.TickMeter()
-    for i in range(count):
+    for _ in range(count):
         timer.start()
         points,decode_info=runQR(qrCode,inputimg)
         timer.stop()
