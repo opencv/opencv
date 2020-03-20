@@ -279,6 +279,12 @@ class dnn_test(NewOpenCVTests):
                 self.assertTrue(ret)
                 normAssert(self, refs[i], result, 'Index: %d' % i, 1e-10)
 
+    def test_nms(self):
+        confs = (1, 1)
+        rects = ((0, 0, 0.4, 0.4), (0, 0, 0.2, 0.4)) # 0.5 overlap
+
+        self.assertTrue(all(cv.dnn.NMSBoxes(rects, confs, 0, 0.6).ravel() == (0, 1)))
+
     def test_custom_layer(self):
         class CropLayer(object):
             def __init__(self, params, blobs):
