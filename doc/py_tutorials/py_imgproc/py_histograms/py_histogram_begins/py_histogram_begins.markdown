@@ -94,7 +94,7 @@ hist is same as we calculated before. But bins will have 257 elements, because N
 as 0-0.99, 1-1.99, 2-2.99 etc. So final range would be 255-255.99. To represent that, they also add
 256 at end of bins. But we don't need that 256. Upto 255 is sufficient.
 
-@sa Numpy has another function, **np.bincount()** which is much faster than (around 10X)
+@note Numpy has another function, **np.bincount()** which is much faster than (around 10X)
 np.histogram(). So for one-dimensional histograms, you can better try that. Don't forget to set
 minlength = 256 in np.bincount. For example, hist = np.bincount(img.ravel(),minlength=256)
 
