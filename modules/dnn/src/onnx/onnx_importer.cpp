@@ -1135,6 +1135,75 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.type = "Reshape";
             layerParams.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
         }
+        else if (layer_type == "Expand")
+        {
+            CV_CheckEQ(node_proto.input_size(), 2, "");
+            CV_Assert(constBlobs.find(node_proto.input(1)) != constBlobs.end());
+            Mat newShapeMat = getBlob(node_proto, constBlobs, 1);
+            MatShape targetShape(newShapeMat.ptr<int>(), newShapeMat.ptr<int>() + newShapeMat.total());
+
+            shapeIt = outShapes.find(node_proto.input(0));
+            CV_Assert(shapeIt != outShapes.end());
+            MatShape inpShape = shapeIt->second;
+            CV_CheckEQ(inpShape.size(), targetShape.size(), "Unsupported Expand op with different dims");
+
+            std::vector<int> broadcast_axes;
+            for (int i = 0; i < targetShape.size(); i++)
+            {
+                if (targetShape[i] != inpShape[i])
+                {
+                    if (inpShape[i] == 1)
+                        broadcast_axes.push_back(i);
+                    else
+                        CV_Error(Error::StsError, "Could not be broadcast by axis: " + i);
+                }
+            }
+
+            if (broadcast_axes.size() == 2 &&
+                broadcast_axes[0] == broadcast_axes[1] - 1 && broadcast_axes[1] == inpShape.size() - 1)
+            {
+                LayerParams constParams;
+                constParams.name = layerParams.name + "/const";
+                CV_Assert(layer_id.find(constParams.name) == layer_id.end());
+                constParams.type = "Const";
+
+                Mat inp = Mat::ones(newShapeMat.total(), newShapeMat.ptr<int>(), CV_32F);
+                constParams.blobs.push_back(inp);
+                int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
+                layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
+                outShapes[constParams.name] = shape(inp);
+
+                layerParams.type = "Scale";
+                layerParams.set("bias_term", false);
+                node_proto.set_input(1, node_proto.input(0));
+                node_proto.set_input(0, constParams.name);
+            }
+            else if (broadcast_axes.size() == 1 && broadcast_axes[0] <= 1)
+            {
+                String base_name = layerParams.name + "/copy_";
+                layerId = layer_id.find(node_proto.input(0));
+                CV_Assert(layerId != layer_id.end());
+                node_proto.clear_input();
+                for (int j = 0; j < targetShape[broadcast_axes[0]]; j++)
+                {
+                    std::ostringstream ss;
+                    ss << j;
+                    std::string copy_name = base_name + ss.str();
+                    CV_Assert(layer_id.find(copy_name) == layer_id.end());
+                    LayerParams copyLP;
+
+                    int copy_id = dstNet.addLayer(copy_name, "Identity", copyLP);
+                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, copy_id, 0);
+                    layer_id.insert(std::make_pair(copy_name, LayerInfo(copy_id, 0)));
+                    node_proto.add_input(copy_name);
+                    outShapes[copy_name] = inpShape;
+                }
+                layerParams.set("axis", broadcast_axes[0]);
+                layerParams.type = "Concat";
+            }
+            else
+                CV_Error(Error::StsNotImplemented, "Unsupported Expand op");
+        }
         else if (layer_type == "Reshape")
         {
             CV_Assert(node_proto.input_size() == 2 || layerParams.has("shape"));

@@ -320,6 +320,13 @@ TEST_P(Test_ONNX_layers, MatMul)
     testONNXModels("matmul_4d");
 }
 
+TEST_P(Test_ONNX_layers, Expand)
+{
+    testONNXModels("expand_batch");
+    testONNXModels("expand_channels");
+    testONNXModels("expand_hw");
+}
+
 TEST_P(Test_ONNX_layers, Constant)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
