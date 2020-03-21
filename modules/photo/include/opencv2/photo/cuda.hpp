@@ -75,7 +75,7 @@ CV_EXPORTS void nonLocalMeans(InputArray src, OutputArray dst,
 <http://www.ipol.im/pub/algo/bcm_non_local_means_denoising> with several computational
 optimizations. Noise expected to be a gaussian white noise
 
-@param src Input 8-bit 1-channel, 2-channel or 3-channel image.
+@param src Input 8-bit (1-channel, 2-channel or 3-channel image) or 16-bit 1-channel.
 @param dst Output image with the same size and type as src .
 @param h Parameter regulating filter strength. Big h value perfectly removes noise but also
 removes image details, smaller h value preserves details but also preserves some noise

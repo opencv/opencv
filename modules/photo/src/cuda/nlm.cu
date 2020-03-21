@@ -171,6 +171,8 @@ namespace cv { namespace cuda { namespace device
         template void nlm_bruteforce_gpu<uchar>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
         template void nlm_bruteforce_gpu<uchar2>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
         template void nlm_bruteforce_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
+
+        template void nlm_bruteforce_gpu<ushort>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
     }
 }}}
 
@@ -510,9 +512,8 @@ namespace cv { namespace cuda { namespace device
 
         template void nlm_fast_gpu<uchar>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float,  cudaStream_t);
         template void nlm_fast_gpu<uchar2>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
-        template void nlm_fast_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
-
-
+        template void nlm_fast_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);        
+        template void nlm_fast_gpu<ushort>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
 
         __global__ void fnlm_split_kernel(const PtrStepSz<uchar3> lab, PtrStepb l, PtrStep<uchar2> ab)
         {
