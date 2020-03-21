@@ -456,6 +456,11 @@ TEST_P(Test_ONNX_layers, LSTM)
     testONNXModels("lstm");
 }
 
+TEST_P(Test_ONNX_layers, LSTM_bidirectional)
+{
+    testONNXModels("lstm_bidirectional");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
