@@ -179,6 +179,8 @@ TEST_P(Test_ONNX_layers, Shape)
 TEST_P(Test_ONNX_layers, ReduceMean)
 {
     testONNXModels("reduce_mean");
+    testONNXModels("reduce_mean_axis1");
+    testONNXModels("reduce_mean_axis2");
 }
 
 TEST_P(Test_ONNX_layers, ReduceMean3D)

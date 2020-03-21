@@ -391,10 +391,63 @@ void ONNXImporter::populateNet(Net dstNet)
                     CV_Error(Error::StsNotImplemented, "Unsupported mode of ReduceMean operation.");
 
                 MatShape inpShape = outShapes[node_proto.input(0)];
+                DictValue axes = layerParams.get("axes");
+                if (inpShape.size() == 3 && axes.size() <= 2)
+                {
+                    int axis = axes.get<int>(0);
+                    CV_CheckNE(axis, 0, "");
+                    outShapes[layerParams.name] = inpShape;
+                    outShapes[layerParams.name][axis] = 1;
+
+                    LayerParams reshapeLp;
+                    std::string reshapeName = layerParams.name + "/reshape";
+                    CV_Assert(layer_id.find(reshapeName) == layer_id.end());
+                    reshapeLp.set("axis", 0);
+                    reshapeLp.set("num_axes", 1);
+                    int newShape[] = {1, -1};
+                    reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], 2));
+                    int reshapeId = dstNet.addLayer(reshapeName, "Reshape", reshapeLp);
+                    layerId = layer_id.find(node_proto.input(0));
+                    CV_Assert(layerId != layer_id.end());
+                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, reshapeId, 0);
+                    layer_id.insert(std::make_pair(reshapeName, LayerInfo(reshapeId, 0)));
+
+                    LayerParams avgLp;
+                    std::string avgName = layerParams.name + "/avg";
+                    CV_Assert(layer_id.find(avgName) == layer_id.end());
+                    avgLp.set("pool", "ave");
+                    if (axes.size() == 2)
+                    {
+                        CV_CheckEQ(axes.get<int>(0), 1, "Unsupported ReduceMean mode");
+                        CV_CheckEQ(axes.get<int>(1), 2, "Unsupported ReduceMean mode");
+                        avgLp.set("global_pooling", true);
+                        outShapes[layerParams.name][axes.get<int>(1)] = 1;
+                    }
+                    else
+                    {
+                        avgLp.set(axis == 2 ? "global_pooling_w" : "global_pooling_h", true);
+                        avgLp.set(axis == 2 ? "kernel_h" : "kernel_w", 1);
+                    }
+
+                    int avgId = dstNet.addLayer(avgName, "Pooling", avgLp);
+                    layerId = layer_id.find(reshapeName);
+                    CV_Assert(layerId != layer_id.end());
+                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, avgId, 0);
+                    layer_id.insert(std::make_pair(avgName, LayerInfo(avgId, 0)));
+
+                    LayerParams squeezeLp;
+                    squeezeLp.set("axis", 0);
+                    squeezeLp.set("end_axis", 1);
+                    int squeezeId = dstNet.addLayer(layerParams.name, "Flatten", squeezeLp);
+                    layerId = layer_id.find(avgName);
+                    CV_Assert(layerId != layer_id.end());
+                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, squeezeId, 0);
+                    layer_id.insert(std::make_pair(layerParams.name, LayerInfo(squeezeId, 0)));
+                    continue;
+                }
                 if (inpShape.size() != 4 && inpShape.size() != 5)
                     CV_Error(Error::StsNotImplemented, "Unsupported input shape of reduce_mean operation.");
 
-                DictValue axes = layerParams.get("axes");
                 CV_Assert(axes.size() <= inpShape.size() - 2);
                 std::vector<int> kernel_size(inpShape.size() - 2, 1);
                 for (int i = 0; i < axes.size(); i++) {
