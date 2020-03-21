@@ -642,7 +642,8 @@ public:
       documentation of source stream to know the right URL.
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
     implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
-    @sa The list of supported API backends cv::VideoCaptureAPIs
+
+    @sa cv::VideoCaptureAPIs
     */
     CV_WRAP VideoCapture(const String& filename, int apiPreference);
 
@@ -653,7 +654,7 @@ public:
     Use a `domain_offset` to enforce a specific reader implementation if multiple are available like cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
     e.g. to open Camera 1 using the MS Media Foundation API use `index = 1 + cv::CAP_MSMF`
 
-    @sa The list of supported API backends cv::VideoCaptureAPIs
+    @sa cv::VideoCaptureAPIs
     */
     CV_WRAP VideoCapture(int index);
 
@@ -665,7 +666,7 @@ public:
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
     implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L2.
 
-    @sa The list of supported API backends cv::VideoCaptureAPIs
+    @sa cv::VideoCaptureAPIs
     */
     CV_WRAP VideoCapture(int index, int apiPreference);
 
