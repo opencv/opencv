@@ -101,7 +101,6 @@ public:
         }
         endAxis = (numWeightsPerSample == 1) ? 1 : endAxis;
 
-        CV_Assert(total(inpShape, axis, endAxis) == numWeightsPerSample);
         CV_Assert(!hasBias || numWeights == bias.total());
         CV_CheckTypeEQ(inpBlob.type(), CV_32FC1, ""); CV_CheckTypeEQ(outBlob.type(), CV_32FC1, "");
 
@@ -115,7 +114,7 @@ public:
         {
             for (int inp_sample = 0; inp_sample < numSamples; inp_sample++)
             {
-                int spatialSize = total(inpShape, endAxis);  // spatialSize != 1
+                int spatialSize = total(inpShape, (endAxis > axis ? endAxis : axis));  // spatialSize != 1
                 for (int i = 0; i < numSlices; ++i)
                 {
                     for (int j = 0; j < numWeightsPerSample; ++j)
@@ -164,8 +163,8 @@ public:
                 }
                 if (numWeightsSamples > 1)
                 {
-                    weightsData += numWeightsPerSample;
-                    biasesData += numWeightsPerSample;
+                    weightsData += weightsData ? numWeightsPerSample : 0;
+                    biasesData += biasesData ? numWeightsPerSample : 0;
                 }
             }
         }

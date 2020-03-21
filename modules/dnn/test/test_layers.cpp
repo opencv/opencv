@@ -714,10 +714,76 @@ TEST_P(Scale_untrainable, Accuracy)
 INSTANTIATE_TEST_CASE_P(Layer_Test, Scale_untrainable, Combine(
 /*input size*/   Values(Vec4i(2, 3, 4, 5)),
 /*axis, #dims*/  Values(Vec2i(0, 1), Vec2i(0, 2), Vec2i(0, 3), Vec2i(0, 4),
-                                     Vec2i(1, 2), Vec2i(1, 3), Vec2i(1, 4),
-                                     Vec2i(2, 2), Vec2i(2, 3),
-                                     Vec2i(3, 2)),
+                        Vec2i(1, 1), Vec2i(1, 2), Vec2i(1, 3), Vec2i(1, 4),
+                                     Vec2i(2, 1), Vec2i(2, 2), Vec2i(2, 3),
+                                                  Vec2i(3, 1), Vec2i(3, 2)),
 /*conv fusion*/  testing::Bool()
+));
+
+typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_trainable;
+TEST_P(Scale_trainable, Accuracy)
+{
+    Vec4i inpShapeVec = get<0>(GetParam());
+    int axis = get<1>(GetParam())[0];
+    int weightsDims = get<1>(GetParam())[1];
+    bool isbatchDim = get<2>(GetParam());
+    int batchDim = int(isbatchDim);
+    const int inpShape[] = {inpShapeVec[0], inpShapeVec[1], inpShapeVec[2], inpShapeVec[3]};
+    int totalPerSample = inpShapeVec[1] * inpShapeVec[2] * inpShapeVec[3];
+    int Shape_weights[4];
+
+    // Create a network with one inputs. Scale layer multiplies a first input with weights blob
+    Net net;
+    LayerParams lp;
+    lp.type = "Scale";
+    lp.name = "testLayer";
+    lp.set("axis", axis);
+
+    Mat input(4, inpShape, CV_32F);
+    // batch size is 1
+    Shape_weights[0] = 1;
+    axis = axis == 0 ? 1 : axis;
+
+    for (int dim = batchDim; dim < weightsDims + batchDim; dim++)
+        Shape_weights[dim] = inpShape[axis + dim - batchDim];
+    Mat weights(weightsDims + batchDim, Shape_weights, CV_32F);
+    int totalWeightsPerSample = weights.total();
+    randu(input, -1, 1);
+    randu(weights, -1, 1);
+
+    lp.blobs.push_back(weights);
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    Mat out = net.forward();
+
+    Mat ref(input.dims, input.size, CV_32F);
+    float* inpData = (float*)input.data;
+    float* refData = (float*)ref.data;
+    float* weightsData = (float*)weights.data;
+    int spatialSize = 1;
+    for (int i = axis + weightsDims; i < 4; ++i)
+        spatialSize *= inpShape[i];
+    for (int num_samples = 0; num_samples < inpShape[0] ;num_samples++)
+    {
+        for (int i = 0; i < totalPerSample; ++i)
+        {
+            int index = i + num_samples * totalPerSample;
+            float w = weightsData[(i / spatialSize) % totalWeightsPerSample];
+            refData[index] = inpData[index] * w;
+        }
+    }
+    normAssert(out, ref);
+}
+
+INSTANTIATE_TEST_CASE_P(Layer_Test, Scale_trainable, Combine(
+/*input size*/   Values(Vec4i(2, 3, 4, 5)),
+/*axis, #dims*/  Values(Vec2i(0, 1), Vec2i(0, 2), Vec2i(0, 3),
+                                     Vec2i(1, 1), Vec2i(1, 2), Vec2i(1, 3),
+                                                  Vec2i(2, 1), Vec2i(2, 2),
+                                                               Vec2i(3, 1)),
+/*batchsize*/    testing::Bool()
 ));
 
 typedef testing::TestWithParam<tuple<Vec4i, Vec4i, int, int, int> > Crop;
