@@ -630,37 +630,44 @@ void ONNXImporter::populateNet(Net dstNet)
             Mat Wx = getBlob(node_proto, constBlobs, 1);
             Mat Wh = getBlob(node_proto, constBlobs, 2);
             Mat b = getBlob(node_proto, constBlobs, 3);
+            b = b.reshape(1, b.size[0]);
 
             const int numHidden = lstmParams.get<int>("hidden_size");
-
-            Wx = Wx.reshape(1, Wx.size[1]);
-            Wh = Wh.reshape(1, Wh.size[1]);
-            b = b.reshape(1, 2);
-            reduce(b, b, 0, REDUCE_SUM);
+            const int numDirs = Wx.size[0];  // Is 1 for forward only and 2 for bidirectional LSTM.
+            const int numFeatures = Wx.size[2];
+            Mat bx = b.colRange(0, b.cols / 2);
+            Mat bh = b.colRange(b.cols / 2, b.cols);
+            b = bx + bh;
 
             // IFGO->IGFO
-            float* WxData = (float*)Wx.data;
-            float* WhData = (float*)Wh.data;
-            float* biasData = (float*)b.data;
-            for (int j = 0; j < numHidden; ++j)
+            for (int k = 0; k < numDirs; ++k)
             {
-                for (int i = 0; i < Wx.cols; ++i)
+                float* WxData = Wx.ptr<float>(k);
+                float* WhData = Wh.ptr<float>(k);
+                float* biasData = b.ptr<float>(k);
+                for (int j = 0; j < numHidden; ++j)
                 {
-                    std::swap(WxData[(numHidden + j) * Wx.cols + i],
-                              WxData[(numHidden * 2 + j) * Wx.cols + i]);
+                    for (int i = 0; i < numFeatures; ++i)
+                    {
+                        std::swap(WxData[(numHidden + j) * numFeatures + i],
+                                  WxData[(numHidden * 2 + j) * numFeatures + i]);
+                    }
+                    for (int i = 0; i < numHidden; ++i)
+                    {
+                        std::swap(WhData[(numHidden + j) * numHidden + i],
+                                  WhData[(numHidden * 2 + j) * numHidden + i]);
+                    }
+                    std::swap(biasData[numHidden + j], biasData[numHidden * 2 + j]);
                 }
-                for (int i = 0; i < Wh.cols; ++i)
-                {
-                    std::swap(WhData[(numHidden + j) * Wh.cols + i],
-                              WhData[(numHidden * 2 + j) * Wh.cols + i]);
-                }
-                std::swap(biasData[numHidden + j], biasData[numHidden * 2 + j]);
             }
+            Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+            Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
 
             lstmParams.blobs.resize(3);
             lstmParams.blobs[0] = Wh;
             lstmParams.blobs[1] = Wx;
             lstmParams.blobs[2] = b;
+            lstmParams.set("bidirectional", lstmParams.get<String>("direction", "") == "bidirectional");
 
             node_proto.set_output(0, lstmParams.name);  // set different name so output shapes will be registered on that name
             addLayer(dstNet, lstmParams, node_proto, layer_id, outShapes);
