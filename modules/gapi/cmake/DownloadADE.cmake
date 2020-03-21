@@ -1,8 +1,3 @@
-if(ANDROID)
-  # FIXME: Android build will be enabled separately
-  return()
-endif()
-
 set(ade_src_dir "${OpenCV_BINARY_DIR}/3rdparty/ade")
 set(ade_filename "v0.1.1f.zip")
 set(ade_subdir "ade-0.1.1f")
