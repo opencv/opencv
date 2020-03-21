@@ -1,0 +1,16 @@
+reduce_mean_axis2:‰
+9
+inputoutput"
+ReduceMean*
+axes *
+keepdims reduce_mean_axis2Z
+input
+
+
+
+b
+output
+
+
+
+B

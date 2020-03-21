@@ -698,3 +698,11 @@ save_data_and_model("matmul_3d", x, model)
 
 x = Variable(torch.randn(1, 3, 2, 4))
 save_data_and_model("matmul_4d", x, model)
+
+x = np.random.rand(1, 3, 2)
+output = np.mean(x, axis=1, keepdims=True)
+save_onnx_data_and_model(x, output, 'reduce_mean_axis1', 'ReduceMean', axes=(1), keepdims=True)
+
+x = np.random.rand(1, 3, 2)
+output = np.mean(x, axis=2, keepdims=True)
+save_onnx_data_and_model(x, output, 'reduce_mean_axis2', 'ReduceMean', axes=(2), keepdims=True)
