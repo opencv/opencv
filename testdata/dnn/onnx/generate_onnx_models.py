@@ -706,3 +706,23 @@ save_onnx_data_and_model(x, output, 'reduce_mean_axis1', 'ReduceMean', axes=(1),
 x = np.random.rand(1, 3, 2)
 output = np.mean(x, axis=2, keepdims=True)
 save_onnx_data_and_model(x, output, 'reduce_mean_axis2', 'ReduceMean', axes=(2), keepdims=True)
+
+class Expand(nn.Module):
+    def __init__(self, shape):
+        super(Expand, self).__init__()
+        self.shape = shape
+
+    def forward(self, x):
+      return x.expand(self.shape)
+
+x = Variable(torch.randn(1, 1, 2, 2))
+model = Expand(shape=[2, 1, 2, 2])
+save_data_and_model("expand_batch", x, model)
+
+x = Variable(torch.randn(1, 1, 2, 2))
+model = Expand(shape=[1, 3, 2, 2])
+save_data_and_model("expand_channels", x, model)
+
+x = Variable(torch.randn(1, 2, 1, 1))
+model = Expand(shape=[1, 2, 3, 4])
+save_data_and_model("expand_hw", x, model)
