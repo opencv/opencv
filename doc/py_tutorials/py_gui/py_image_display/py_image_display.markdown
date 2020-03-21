@@ -132,7 +132,7 @@ A screen-shot of the window will look like this :
 
 ![image](images/matplotlib_screenshot.jpg)
 
-@sa Plenty of plotting options are available in Matplotlib. Please refer to Matplotlib docs for more
+@note Plenty of plotting options are available in Matplotlib. Please refer to Matplotlib docs for more
 details. Some, we will see on the way.
 
 __warning__
