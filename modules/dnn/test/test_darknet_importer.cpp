@@ -580,8 +580,8 @@ TEST_P(Test_Darknet_layers, convolutional)
 
 TEST_P(Test_Darknet_layers, scale_channels)
 {
-    // TODO: test fails for batches due to a bug/missing feature in ScaleLayer
-    testDarknetLayer("scale_channels", false, false);
+    bool testBatches = backend == DNN_BACKEND_CUDA;
+    testDarknetLayer("scale_channels", false, testBatches);
 }
 
 TEST_P(Test_Darknet_layers, connected)
