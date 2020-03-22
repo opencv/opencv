@@ -161,4 +161,35 @@ bool checkBigDataTests();
 #undef TEST_P
 #define TEST_P(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, Body, CV__TEST_BODY_IMPL)
 
+
+#define CV_TEST_EXPECT_EXCEPTION_MESSAGE(statement, msg) \
+  GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
+  if (::testing::internal::AlwaysTrue()) { \
+    const char* msg_ = msg; \
+    bool hasException = false; \
+    try { \
+      GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
+    } \
+    catch (const cv::Exception& e) { \
+      if (NULL == strstr(e.what(), msg_)) \
+        ADD_FAILURE() << "Unexpected cv::Exception is raised: " << #statement << "\n  Expected message substring: '" << msg_ << "'. Actual message:\n" << e.what(); \
+      hasException = true; \
+    } \
+    catch (const std::exception& e) { \
+      ADD_FAILURE() << "Unexpected std::exception is raised: " << #statement << "\n" << e.what(); \
+      hasException = true; \
+    } \
+    catch (...) { \
+      ADD_FAILURE() << "Unexpected C++ exception is raised: " << #statement; \
+      hasException = true; \
+    } \
+    if (!hasException) { \
+      goto GTEST_CONCAT_TOKEN_(gtest_label_test_, __LINE__); \
+    } \
+  } else \
+    GTEST_CONCAT_TOKEN_(gtest_label_test_, __LINE__): \
+      ADD_FAILURE() << "Failed: Expected: " #statement " throws an '" << msg << "' exception.\n" \
+           "  Actual: it doesn't."
+
+
 #endif  // OPENCV_TS_EXT_HPP
