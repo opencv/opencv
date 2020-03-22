@@ -1099,6 +1099,7 @@ static inline void ICV_HLINE(uchar* ptr, int xl, int xr, const void* color, int 
 }
 //end ICV_HLINE()
 
+    
 /* filling convex polygon. v - array of vertices, ntps - number of points */
 static void
 FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int line_type, int shift )
@@ -1878,6 +1879,45 @@ void rectangle( InputOutputArray img, Rect rec,
     if( !rec.empty() )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
                    color, thickness, lineType, shift );
+}
+void dash_rectangle(InputOutputArray _img, Point pt1, Point pt2,
+    const Scalar& color, int thickness = 1,
+    int lineType = 8, int shift = 0,int gap=5) {
+    // High thickness is going to result in a really bad look
+    thickness = 1;
+    int startX = pt1.x;
+    int endX = pt2.x;
+    int startY = pt1.y;
+    int endY = pt2.y;
+
+    while (startX + 2 < endX) {
+        Point p1(startX, pt1.y);
+        Point p2(startX + 2, pt1.y);
+        line(_img, p1, p2, color, thickness, lineType = 8, shift = 0);
+        Point p3(startX, pt2.y);
+        Point p4(startX + 2, pt2.y);
+        line(_img, p3, p4, color, thickness, lineType = 8, shift = 0);
+        startX += gap+2;
+    }
+    while (startY + 2 < endY) {
+        Point p1(pt1.x, startY);
+        Point p2(pt1.x, startY + 2);
+        line(_img, p1, p2, color, thickness, lineType = 8, shift = 0);
+        Point p3(pt2.x, startY);
+        Point p4(pt2.x, startY + 2);
+        line(_img, p3, p4, color, thickness, lineType = 8, shift = 0);
+        startY += gap + 2;
+
+    }
+    Point v1(startX, startY);
+    Point v2(startX, endY);
+    Point v3(endX, startY);
+    Point v4(endX, endY);
+    // Plotting the vertices
+    line(_img, v1, v1, color, thickness, lineType = 8, shift = 0);
+    line(_img, v2, v2, color, thickness, lineType = 8, shift = 0);
+    line(_img, v3, v3, color, thickness, lineType = 8, shift = 0);
+    line(_img, v4, v4, color, thickness, lineType = 8, shift = 0);
 }
 
 
