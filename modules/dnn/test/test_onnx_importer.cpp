@@ -70,7 +70,7 @@ public:
         {
             LayerParams lp;
             Net netSoftmax;
-            netSoftmax.addLayerToPrev("softmaxLayer", "SoftMax", lp);
+            netSoftmax.addLayerToPrev("softmaxLayer", "Softmax", lp);
             netSoftmax.setPreferableBackend(DNN_BACKEND_OPENCV);
 
             netSoftmax.setInput(out);
