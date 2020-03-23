@@ -261,16 +261,32 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 input = transformed_input;
             }
 
+            auto conv_scratchpad = allocator.get_instance();
+
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
             if (fusion_location == InternalFusionLocation::CUDNN)
             {
-                convoluter.convolve_with_bias_activation(output, input, filtersTensor, biasTensor, allocator.get_instance());
+                try
+                {
+                    convoluter.convolve_with_bias_activation(output, input, filtersTensor, biasTensor, conv_scratchpad);
+                }
+                catch(const csl::cudnn::cuDNNException& ex)
+                {
+                    if (ex.getCUDNNStatus() == CUDNN_STATUS_NOT_SUPPORTED)
+                    {
+                        /* drop cuDNN fusion and use the native fusion path */
+                        fusion_location = InternalFusionLocation::NATIVE;
+                    }
+                    else
+                        throw;
+                }
             }
-            else
+
+            if (fusion_location == InternalFusionLocation::NATIVE)
             {
-                convoluter.convolve(output, input, filtersTensor, allocator.get_instance());
+                convoluter.convolve(output, input, filtersTensor, conv_scratchpad);
                 if (!biasTensor.empty())
                 {
                     std::size_t inner_size = output.size_range(2, output.rank());
