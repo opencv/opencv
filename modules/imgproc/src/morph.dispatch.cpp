@@ -939,6 +939,8 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!_src.empty());
+
     Mat kernel = _kernel.getMat();
     Size ksize = !kernel.empty() ? kernel.size() : Size(3,3);
     anchor = normalizeAnchor(anchor, ksize);
@@ -1005,6 +1007,8 @@ void erode( InputArray src, OutputArray dst, InputArray kernel,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!src.empty());
+
     morphOp( MORPH_ERODE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
 
@@ -1014,6 +1018,8 @@ void dilate( InputArray src, OutputArray dst, InputArray kernel,
                  int borderType, const Scalar& borderValue )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(!src.empty());
 
     morphOp( MORPH_DILATE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
@@ -1153,6 +1159,8 @@ void morphologyEx( InputArray _src, OutputArray _dst, int op,
                        int borderType, const Scalar& borderValue )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     Mat kernel = _kernel.getMat();
     if (kernel.empty())
