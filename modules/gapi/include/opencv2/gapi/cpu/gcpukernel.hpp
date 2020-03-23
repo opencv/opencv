@@ -210,12 +210,9 @@ struct tracked_cv_mat{
 
 struct scalar_wrapper
 {
-    scalar_wrapper(cv::Scalar& s) : m_s{s}, m_org_s(s) {};
-    operator cv::Scalar& () { return m_s; }
-    void writeBack() const  { m_org_s = m_s; }
-
-    cv::Scalar m_s;
-    cv::Scalar& m_org_s;
+    scalar_wrapper(cv::Scalar& s) : m_s{s} {};
+    operator cv::Scalar& () { return m_s; }    
+    cv::Scalar m_s;    
 };
 
 template<typename... Outputs>
@@ -223,8 +220,7 @@ void postprocess(Outputs&... outs)
 {
     struct
     {
-        void operator()(tracked_cv_mat* bm) { bm->validate();  }
-        void operator()(scalar_wrapper* sw) { sw->writeBack(); }
+        void operator()(tracked_cv_mat* bm) { bm->validate();  }        
         void operator()(...)                {                  }
 
     } validate;

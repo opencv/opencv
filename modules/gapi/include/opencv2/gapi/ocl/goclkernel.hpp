@@ -149,12 +149,9 @@ struct tracked_cv_umat{
 struct scalar_wrapper_ocl
 {
     //FIXME reuse CPU (OpenCV) plugin code
-    scalar_wrapper_ocl(cv::Scalar& s) : m_s{s}, m_org_s(s) {};
-    operator cv::Scalar& () { return m_s; }
-    void writeBack() const  { m_org_s = m_s; }
-
-    cv::Scalar m_s;
-    cv::Scalar& m_org_s;
+    scalar_wrapper_ocl(cv::Scalar& s) : m_s{s} {};
+    operator cv::Scalar& () { return m_s; }    
+    cv::Scalar m_s;    
 };
 
 template<typename... Outputs>
@@ -162,8 +159,7 @@ void postprocess_ocl(Outputs&... outs)
 {
     struct
     {
-        void operator()(tracked_cv_umat* bm) { bm->validate(); }
-        void operator()(scalar_wrapper_ocl* sw) { sw->writeBack(); }
+        void operator()(tracked_cv_umat* bm) { bm->validate(); }        
         void operator()(...) {                  }
 
     } validate;
