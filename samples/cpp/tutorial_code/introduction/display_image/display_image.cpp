@@ -6,46 +6,32 @@
 #include <iostream>
 //! [includes]
 
-//! [namespace]
-using namespace cv;
-using namespace std;
-//! [namespace]
-
-
-int main( int argc, char** argv )
+int main(int argc, char** argv)
 {
-    //! [load]
-    String imageName( "HappyFish.jpg" ); // by default
-    if( argc > 1)
-    {
-        imageName = argv[1];
-    }
-    //! [load]
-
-    //! [mat]
-    Mat image;
-    //! [mat]
-
     //! [imread]
-    image = imread( samples::findFile( imageName ), IMREAD_COLOR ); // Read the file
+    cv::Mat img;
+    img = cv::imread(cv::samples::findFile("starry_night.jpg"));
     //! [imread]
 
-    if( image.empty() )                      // Check for invalid input
+    //! [empty]
+    if(img.empty())
     {
-        cout <<  "Could not open or find the image" << std::endl ;
+        std::cout << "Could not read the image." << std::endl ;
         return -1;
     }
-
-    //! [window]
-    namedWindow( "Display window", WINDOW_AUTOSIZE ); // Create a window for display.
-    //! [window]
+    //! [empty]
 
     //! [imshow]
-    imshow( "Display window", image );                // Show our image inside it.
+    cv::imshow("Display window", img);
+    int k = cv::waitKey(0); // Wait for a keystroke in the window
     //! [imshow]
 
-    //! [wait]
-    waitKey(0); // Wait for a keystroke in the window
-    //! [wait]
+    //! [imsave]
+    if(k == 's')
+    {
+        cv::imwrite("starry_night.png", img);
+    }
+    //! [imsave]
+
     return 0;
 }
