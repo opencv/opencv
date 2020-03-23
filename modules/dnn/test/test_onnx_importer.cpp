@@ -430,6 +430,8 @@ TEST_P(Test_ONNX_layers, Reshape)
 
 TEST_P(Test_ONNX_layers, Squeeze)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("squeeze");
 }
 
@@ -474,6 +476,16 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("split_max");
+}
+
+TEST_P(Test_ONNX_layers, LSTM)
+{
+    testONNXModels("lstm", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_bidirectional)
+{
+    testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

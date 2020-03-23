@@ -639,7 +639,8 @@ public:
       documentation of source stream to know the right URL.
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
     implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
-    @sa The list of supported API backends cv::VideoCaptureAPIs
+
+    @sa cv::VideoCaptureAPIs
     */
     CV_WRAP explicit VideoCapture(const String& filename, int apiPreference = CAP_ANY);
 
@@ -651,7 +652,7 @@ public:
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
     implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
 
-    @sa The list of supported API backends cv::VideoCaptureAPIs
+    @sa cv::VideoCaptureAPIs
     */
     CV_WRAP explicit VideoCapture(int index, int apiPreference = CAP_ANY);
 
