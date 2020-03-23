@@ -81,7 +81,7 @@ INSTANTIATE_TEST_CASE_P(DivRCPerfTestGPU, DivRCPerfTest,
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(cv::compile_args(CORE_GPU))));
 //TODO: mask test doesn't work
-INSTANTIATE_TEST_CASE_P(DISABLE_MaskPerfTestGPU, MaskPerfTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_MaskPerfTestGPU, MaskPerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::compile_args(CORE_GPU))));
