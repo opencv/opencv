@@ -1,7 +1,7 @@
 /*
  * jidctint.c
  *
- * This file was part of the Independent JPEG Group's software.
+ * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1998, Thomas G. Lane.
  * Modification developed 2002-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:

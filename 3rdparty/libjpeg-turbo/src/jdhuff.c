@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2016, 2018, D. R. Commander.
+ * Copyright (C) 2009-2011, 2016, 2018-2019, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -589,7 +589,11 @@ decode_mcu_slow(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
     if (entropy->dc_needed[blkn]) {
       /* Convert DC difference to actual value, update last_dc_val */
       int ci = cinfo->MCU_membership[blkn];
-      s += state.last_dc_val[ci];
+      /* This is really just
+       *   s += state.last_dc_val[ci];
+       * It is written this way in order to shut up UBSan.
+       */
+      s = (int)((unsigned int)s + (unsigned int)state.last_dc_val[ci]);
       state.last_dc_val[ci] = s;
       if (block) {
         /* Output the DC coefficient (assumes jpeg_natural_order[0] = 0) */
@@ -684,7 +688,7 @@ decode_mcu_fast(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 
     if (entropy->dc_needed[blkn]) {
       int ci = cinfo->MCU_membership[blkn];
-      s += state.last_dc_val[ci];
+      s = (int)((unsigned int)s + (unsigned int)state.last_dc_val[ci]);
       state.last_dc_val[ci] = s;
       if (block)
         (*block)[0] = (JCOEF)s;
