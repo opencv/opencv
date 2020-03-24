@@ -92,7 +92,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && preferableTarget != DNN_TARGET_MYRIAD);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && preferableTarget != DNN_TARGET_MYRIAD);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -327,36 +327,8 @@ public:
         layerOutputs[0].col(2).copyTo(dst);
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::ProposalLayer ieLayer(name);
-
-        ieLayer.setBaseSize(baseSize);
-        ieLayer.setFeatStride(featStride);
-        ieLayer.setMinSize(16);
-        ieLayer.setNMSThresh(nmsThreshold);
-        ieLayer.setPostNMSTopN(keepTopAfterNMS);
-        ieLayer.setPreNMSTopN(keepTopBeforeNMS);
-
-        std::vector<float> scalesVec(scales.size());
-        for (int i = 0; i < scales.size(); ++i)
-            scalesVec[i] = scales.get<float>(i);
-        ieLayer.setScale(scalesVec);
-
-        std::vector<float> ratiosVec(ratios.size());
-        for (int i = 0; i < ratios.size(); ++i)
-            ratiosVec[i] = ratios.get<float>(i);
-        ieLayer.setRatio(ratiosVec);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 3);
         ngraph::op::ProposalAttrs attr;

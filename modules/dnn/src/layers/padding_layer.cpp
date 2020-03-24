@@ -96,9 +96,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
-                   (preferableTarget != DNN_TARGET_MYRIAD ||
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return  (preferableTarget != DNN_TARGET_MYRIAD ||
                     (dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0));
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
@@ -184,34 +183,8 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::Layer ieLayer(name);
-        ieLayer.setName(name);
-        ieLayer.setType("Pad");
-
-        std::vector<int> begins(paddings.size(), 0), ends(paddings.size(), 0);
-        for (int i = 0; i < paddings.size(); ++i)
-        {
-            begins[i] = paddings[i].first;
-            ends[i] = paddings[i].second;
-        }
-        ieLayer.getParameters()["pads_begin"] = begins;
-        ieLayer.getParameters()["pads_end"] = ends;
-        ieLayer.getParameters()["pad_mode"] = paddingType;
-        if (paddingType == "constant")
-            ieLayer.getParameters()["pad_value"] = paddingValue;
-
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
-        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif
-
 #ifdef HAVE_DNN_NGRAPH
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<int64_t> begins(paddings.size(), 0), ends(paddings.size(), 0);

@@ -106,7 +106,6 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !padding) ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
@@ -300,22 +299,8 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-
-        InferenceEngine::Builder::ConcatLayer ieLayer(name);
-        ieLayer.setAxis(clamp(axis, input->getDims().size()));
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
         const int numDims = data->getDims().size();
