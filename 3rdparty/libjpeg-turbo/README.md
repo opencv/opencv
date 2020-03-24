@@ -1,14 +1,14 @@
 Background
 ==========
 
-libjpeg-turbo is a JPEG image codec that uses SIMD instructions (MMX, SSE2,
-AVX2, NEON, AltiVec) to accelerate baseline JPEG compression and decompression
-on x86, x86-64, ARM, and PowerPC systems, as well as progressive JPEG
-compression on x86 and x86-64 systems.  On such systems, libjpeg-turbo is
-generally 2-6x as fast as libjpeg, all else being equal.  On other types of
-systems, libjpeg-turbo can still outperform libjpeg by a significant amount, by
-virtue of its highly-optimized Huffman coding routines.  In many cases, the
-performance of libjpeg-turbo rivals that of proprietary high-speed JPEG codecs.
+libjpeg-turbo is a JPEG image codec that uses SIMD instructions to accelerate
+baseline JPEG compression and decompression on x86, x86-64, ARM, PowerPC, and
+MIPS systems, as well as progressive JPEG compression on x86 and x86-64
+systems.  On such systems, libjpeg-turbo is generally 2-6x as fast as libjpeg,
+all else being equal.  On other types of systems, libjpeg-turbo can still
+outperform libjpeg by a significant amount, by virtue of its highly-optimized
+Huffman coding routines.  In many cases, the performance of libjpeg-turbo
+rivals that of proprietary high-speed JPEG codecs.
 
 libjpeg-turbo implements both the traditional libjpeg API as well as the less
 powerful but more straightforward TurboJPEG API.  libjpeg-turbo also features
@@ -135,25 +135,24 @@ without recompiling.  libjpeg-turbo does not claim to support all of the
 libjpeg v7+ features, nor to produce identical output to libjpeg v7+ in all
 cases (see below.)
 
-By passing an argument of `--with-jpeg7` or `--with-jpeg8` to `configure`, or
-an argument of `-DWITH_JPEG7=1` or `-DWITH_JPEG8=1` to `cmake`, you can build a
-version of libjpeg-turbo that emulates the libjpeg v7 or v8 ABI, so that
-programs that are built against libjpeg v7 or v8 can be run with libjpeg-turbo.
-The following section describes which libjpeg v7+ features are supported and
-which aren't.
+By passing an argument of `-DWITH_JPEG7=1` or `-DWITH_JPEG8=1` to `cmake`, you
+can build a version of libjpeg-turbo that emulates the libjpeg v7 or v8 ABI, so
+that programs that are built against libjpeg v7 or v8 can be run with
+libjpeg-turbo.  The following section describes which libjpeg v7+ features are
+supported and which aren't.
 
 ### Support for libjpeg v7 and v8 Features
 
 #### Fully supported
 
-- **libjpeg: IDCT scaling extensions in decompressor**<br>
+- **libjpeg API: IDCT scaling extensions in decompressor**<br>
   libjpeg-turbo supports IDCT scaling with scaling factors of 1/8, 1/4, 3/8,
   1/2, 5/8, 3/4, 7/8, 9/8, 5/4, 11/8, 3/2, 13/8, 7/4, 15/8, and 2/1 (only 1/4
   and 1/2 are SIMD-accelerated.)
 
-- **libjpeg: Arithmetic coding**
+- **libjpeg API: Arithmetic coding**
 
-- **libjpeg: In-memory source and destination managers**<br>
+- **libjpeg API: In-memory source and destination managers**<br>
   See notes below.
 
 - **cjpeg: Separate quality settings for luminance and chrominance**<br>
@@ -185,14 +184,14 @@ means of quality improvement.  The reader is invited to peruse the research at
 but it is the general belief of our project that these features have not
 demonstrated sufficient usefulness to justify inclusion in libjpeg-turbo.
 
-- **libjpeg: DCT scaling in compressor**<br>
+- **libjpeg API: DCT scaling in compressor**<br>
   `cinfo.scale_num` and `cinfo.scale_denom` are silently ignored.
   There is no technical reason why DCT scaling could not be supported when
   emulating the libjpeg v7+ API/ABI, but without the SmartScale extension (see
   below), only scaling factors of 1/2, 8/15, 4/7, 8/13, 2/3, 8/11, 4/5, and
   8/9 would be available, which is of limited usefulness.
 
-- **libjpeg: SmartScale**<br>
+- **libjpeg API: SmartScale**<br>
   `cinfo.block_size` is silently ignored.
   SmartScale is an extension to the JPEG format that allows for DCT block
   sizes other than 8x8.  Providing support for this new format would be
@@ -205,7 +204,7 @@ demonstrated sufficient usefulness to justify inclusion in libjpeg-turbo.
   interest in providing this feature would be as a means of supporting
   additional DCT scaling factors.
 
-- **libjpeg: Fancy downsampling in compressor**<br>
+- **libjpeg API: Fancy downsampling in compressor**<br>
   `cinfo.do_fancy_downsampling` is silently ignored.
   This requires the DCT scaling feature, which is not supported.
 
@@ -247,15 +246,14 @@ don't, and it allows those functions to be provided in the "official"
 libjpeg-turbo binaries.
 
 Those who are concerned about maintaining strict conformance with the libjpeg
-v6b or v7 API can pass an argument of `--without-mem-srcdst` to `configure` or
-an argument of `-DWITH_MEM_SRCDST=0` to `cmake` prior to building
-libjpeg-turbo.  This will restore the pre-1.3 behavior, in which
+v6b or v7 API can pass an argument of `-DWITH_MEM_SRCDST=0` to `cmake` prior to
+building libjpeg-turbo.  This will restore the pre-1.3 behavior, in which
 `jpeg_mem_src()` and `jpeg_mem_dest()` are only included when emulating the
 libjpeg v8 API/ABI.
 
 On Un*x systems, including the in-memory source/destination managers changes
-the dynamic library version from 62.1.0 to 62.2.0 if using libjpeg v6b API/ABI
-emulation and from 7.1.0 to 7.2.0 if using libjpeg v7 API/ABI emulation.
+the dynamic library version from 62.2.0 to 62.3.0 if using libjpeg v6b API/ABI
+emulation and from 7.2.0 to 7.3.0 if using libjpeg v7 API/ABI emulation.
 
 Note that, on most Un*x systems, the dynamic linker will not look for a
 function in a library until that function is actually used.  Thus, if a program
@@ -331,7 +329,7 @@ in a way that makes the rest of the libjpeg infrastructure happy, so it is
 necessary to use the slow Huffman decoder when decompressing a JPEG image that
 has restart markers.  This can cause the decompression performance to drop by
 as much as 20%, but the performance will still be much greater than that of
-libjpeg.  Many consumer packages, such as PhotoShop, use restart markers when
+libjpeg.  Many consumer packages, such as Photoshop, use restart markers when
 generating JPEG images, so images generated by those programs will experience
 this issue.
 
@@ -344,3 +342,15 @@ quality of 98-100.  Thus, libjpeg-turbo must use the non-SIMD quantization
 function in those cases.  This causes performance to drop by as much as 40%.
 It is therefore strongly advised that you use the slow integer forward DCT
 whenever encoding images with a JPEG quality of 98 or higher.
+
+
+Memory Debugger Pitfalls
+========================
+
+Valgrind and Memory Sanitizer (MSan) can generate false positives
+(specifically, incorrect reports of uninitialized memory accesses) when used
+with libjpeg-turbo's SIMD extensions.  It is generally recommended that the
+SIMD extensions be disabled, either by passing an argument of `-DWITH_SIMD=0`
+to `cmake` when configuring the build or by setting the environment variable
+`JSIMD_FORCENONE` to `1` at run time, when testing libjpeg-turbo with Valgrind,
+MSan, or other memory debuggers.

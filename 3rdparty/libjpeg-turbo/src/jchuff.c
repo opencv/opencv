@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2014-2016, 2018, D. R. Commander.
+ * Copyright (C) 2009-2011, 2014-2016, 2018-2019, D. R. Commander.
  * Copyright (C) 2015, Matthieu Darbois.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -43,8 +43,8 @@
  */
 
 /* NOTE: Both GCC and Clang define __GNUC__ */
-#if defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-#if !defined __thumb__ || defined __thumb2__
+#if defined(__GNUC__) && (defined(__arm__) || defined(__aarch64__))
+#if !defined(__thumb__) || defined(__thumb2__)
 #define USE_CLZ_INTRINSIC
 #endif
 #endif
@@ -356,12 +356,16 @@ dump_buffer(working_state *state)
   put_buffer = (put_buffer << size) | code; \
 }
 
+#if SIZEOF_SIZE_T != 8 && !defined(_WIN64)
+
 #define CHECKBUF15() { \
   if (put_bits > 15) { \
     EMIT_BYTE() \
     EMIT_BYTE() \
   } \
 }
+
+#endif
 
 #define CHECKBUF31() { \
   if (put_bits > 31) { \
@@ -428,7 +432,7 @@ dump_buffer(working_state *state)
  * scanning order-- 1, 8, 16, etc.), then this will produce an encoded block
  * larger than 200 bytes.
  */
-#define BUFSIZE  (DCTSIZE2 * 4)
+#define BUFSIZE  (DCTSIZE2 * 8)
 
 #define LOAD_BUFFER() { \
   if (state->free_in_buffer < BUFSIZE) { \
