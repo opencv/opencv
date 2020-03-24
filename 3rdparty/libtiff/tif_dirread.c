@@ -164,6 +164,7 @@ static int TIFFFetchNormalTag(TIFF*, TIFFDirEntry*, int recover);
 static int TIFFFetchStripThing(TIFF* tif, TIFFDirEntry* dir, uint32 nstrips, uint64** lpp);
 static int TIFFFetchSubjectDistance(TIFF*, TIFFDirEntry*);
 static void ChopUpSingleUncompressedStrip(TIFF*);
+static void TryChopUpUncompressedBigTiff(TIFF*);
 static uint64 TIFFReadUInt64(const uint8 *value);
 static int _TIFFGetMaxColorChannels(uint16 photometric);
 
@@ -4246,6 +4247,19 @@ TIFFReadDirectory(TIFF* tif)
 		ChopUpSingleUncompressedStrip(tif);
     }
 
+        /* There are also uncompressed stripped files with strips larger than */
+        /* 2 GB, which make them unfriendly with a lot of code. If possible, */
+        /* try to expose smaller "virtual" strips. */
+        if( tif->tif_dir.td_planarconfig == PLANARCONFIG_CONTIG &&
+            tif->tif_dir.td_compression == COMPRESSION_NONE &&
+            (tif->tif_flags&(TIFF_STRIPCHOP|TIFF_ISTILED)) == TIFF_STRIPCHOP &&
+            TIFFStripSize64(tif) > 0x7FFFFFFFUL )
+        {
+            if ( !_TIFFFillStriles(tif) || !tif->tif_dir.td_stripbytecount )
+                return 0;
+            TryChopUpUncompressedBigTiff(tif);
+        }
+
         /*
          * Clear the dirty directory flag. 
          */
@@ -5699,6 +5713,63 @@ TIFFFetchSubjectDistance(TIFF* tif, TIFFDirEntry* dir)
 	}
 }
 
+static void allocChoppedUpStripArrays(TIFF* tif, uint32 nstrips,
+                                      uint64 stripbytes, uint32 rowsperstrip)
+{
+    TIFFDirectory *td = &tif->tif_dir;
+    uint64 bytecount;
+    uint64 offset;
+    uint32 i;
+    uint64 *newcounts;
+    uint64 *newoffsets;
+
+    newcounts = (uint64*) _TIFFCheckMalloc(tif, nstrips, sizeof (uint64),
+                            "for chopped \"StripByteCounts\" array");
+    newoffsets = (uint64*) _TIFFCheckMalloc(tif, nstrips, sizeof (uint64),
+                            "for chopped \"StripOffsets\" array");
+    if (newcounts == NULL || newoffsets == NULL) {
+        /*
+        * Unable to allocate new strip information, give up and use
+        * the original one strip information.
+        */
+        if (newcounts != NULL)
+            _TIFFfree(newcounts);
+        if (newoffsets != NULL)
+            _TIFFfree(newoffsets);
+        return;
+    }
+
+    /*
+     * Fill the strip information arrays with new bytecounts and offsets
+     * that reflect the broken-up format.
+     */
+    offset = td->td_stripoffset[0];
+    bytecount = td->td_stripoffset[td->td_nstrips-1] +
+                td->td_stripbytecount[td->td_nstrips-1] - offset;
+    for (i = 0; i < nstrips; i++)
+    {
+        if (stripbytes > bytecount)
+            stripbytes = bytecount;
+        newcounts[i] = stripbytes;
+        newoffsets[i] = stripbytes ? offset : 0;
+        offset += stripbytes;
+        bytecount -= stripbytes;
+    }
+
+    /*
+     * Replace old single strip info with multi-strip info.
+     */
+    td->td_stripsperimage = td->td_nstrips = nstrips;
+    TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, rowsperstrip);
+
+    _TIFFfree(td->td_stripbytecount);
+    _TIFFfree(td->td_stripoffset);
+    td->td_stripbytecount = newcounts;
+    td->td_stripoffset = newoffsets;
+    td->td_stripbytecountsorted = 1;
+}
+
+
 /*
  * Replace a single strip (tile) of uncompressed data by multiple strips
  * (tiles), each approximately STRIP_SIZE_DEFAULT bytes. This is useful for
@@ -5714,11 +5785,8 @@ ChopUpSingleUncompressedStrip(TIFF* tif)
 	uint32 rowblock;
 	uint64 rowblockbytes;
 	uint64 stripbytes;
-	uint32 strip;
 	uint32 nstrips;
 	uint32 rowsperstrip;
-	uint64* newcounts;
-	uint64* newoffsets;
 
 	bytecount = td->td_stripbytecount[0];
         /* On a newly created file, just re-opened to be filled, we */
@@ -5769,45 +5837,105 @@ ChopUpSingleUncompressedStrip(TIFF* tif)
             return;
         }
 
-	newcounts = (uint64*) _TIFFCheckMalloc(tif, nstrips, sizeof (uint64),
-				"for chopped \"StripByteCounts\" array");
-	newoffsets = (uint64*) _TIFFCheckMalloc(tif, nstrips, sizeof (uint64),
-				"for chopped \"StripOffsets\" array");
-	if (newcounts == NULL || newoffsets == NULL) {
-		/*
-		 * Unable to allocate new strip information, give up and use
-		 * the original one strip information.
-		 */
-		if (newcounts != NULL)
-			_TIFFfree(newcounts);
-		if (newoffsets != NULL)
-			_TIFFfree(newoffsets);
-		return;
-	}
-	/*
-	 * Fill the strip information arrays with new bytecounts and offsets
-	 * that reflect the broken-up format.
-	 */
-	for (strip = 0; strip < nstrips; strip++) {
-		if (stripbytes > bytecount)
-			stripbytes = bytecount;
-		newcounts[strip] = stripbytes;
-		newoffsets[strip] = stripbytes ? offset : 0;
-		offset += stripbytes;
-		bytecount -= stripbytes;
-	}
-	/*
-	 * Replace old single strip info with multi-strip info.
-	 */
-	td->td_stripsperimage = td->td_nstrips = nstrips;
-	TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, rowsperstrip);
-
-	_TIFFfree(td->td_stripbytecount);
-	_TIFFfree(td->td_stripoffset);
-	td->td_stripbytecount = newcounts;
-	td->td_stripoffset = newoffsets;
-	td->td_stripbytecountsorted = 1;
+        allocChoppedUpStripArrays(tif, nstrips, stripbytes, rowsperstrip);
 }
+
+
+/*
+ * Replace a file with contiguous strips > 2 GB of uncompressed data by
+ * multiple smaller strips. This is useful for
+ * dealing with large images or for dealing with machines with a limited
+ * amount memory.
+ */
+static void TryChopUpUncompressedBigTiff( TIFF* tif )
+{
+    TIFFDirectory *td = &tif->tif_dir;
+    uint32 rowblock;
+    uint64 rowblockbytes;
+    uint32 i;
+    uint64 stripsize;
+    uint32 rowblocksperstrip;
+    uint32 rowsperstrip;
+    uint64 stripbytes;
+    uint32 nstrips;
+
+    stripsize = TIFFStripSize64(tif);
+
+    assert( tif->tif_dir.td_planarconfig == PLANARCONFIG_CONTIG );
+    assert( tif->tif_dir.td_compression == COMPRESSION_NONE );
+    assert( (tif->tif_flags&(TIFF_STRIPCHOP|TIFF_ISTILED)) == TIFF_STRIPCHOP );
+    assert( stripsize > 0x7FFFFFFFUL );
+
+    /* On a newly created file, just re-opened to be filled, we */
+    /* don't want strip chop to trigger as it is going to cause issues */
+    /* later ( StripOffsets and StripByteCounts improperly filled) . */
+    if( td->td_stripbytecount[0] == 0 && tif->tif_mode != O_RDONLY )
+        return;
+
+    if ((td->td_photometric == PHOTOMETRIC_YCBCR)&&
+        (!isUpSampled(tif)))
+        rowblock = td->td_ycbcrsubsampling[1];
+    else
+        rowblock = 1;
+    rowblockbytes = TIFFVStripSize64(tif, rowblock);
+    if( rowblockbytes == 0 || rowblockbytes > 0x7FFFFFFFUL )
+    {
+        /* In case of file with gigantic width */
+        return;
+    }
+
+    /* Check that the strips are contiguous and of the expected size */
+    for( i = 0; i < td->td_nstrips; i++ )
+    {
+        if( i == td->td_nstrips - 1 )
+        {
+            if( td->td_stripbytecount[i] < TIFFVStripSize64(
+                    tif, td->td_imagelength - i * td->td_rowsperstrip ) )
+            {
+                return;
+            }
+        }
+        else
+        {
+            if( td->td_stripbytecount[i] != stripsize )
+            {
+                return;
+            }
+            if( i > 0 && td->td_stripoffset[i] !=
+                    td->td_stripoffset[i-1] + td->td_stripbytecount[i - 1] )
+            {
+                return;
+            }
+        }
+    }
+
+    /* Aim for 512 MB strips (that will still be manageable by 32 bit builds */
+    rowblocksperstrip = (uint32) (512 * 1024 * 1024 / rowblockbytes);
+    if( rowblocksperstrip == 0 )
+        rowblocksperstrip = 1;
+    rowsperstrip = rowblocksperstrip * rowblock;
+    stripbytes = rowblocksperstrip * rowblockbytes;
+    assert( stripbytes <= 0x7FFFFFFFUL );
+
+    nstrips = TIFFhowmany_32(td->td_imagelength, rowsperstrip);
+    if( nstrips == 0 )
+        return;
+
+    /* If we are going to allocate a lot of memory, make sure that the */
+    /* file is as big as needed */
+    if( tif->tif_mode == O_RDONLY &&
+        nstrips > 1000000 &&
+        (td->td_stripoffset[td->td_nstrips-1] > TIFFGetFileSize(tif) ||
+         td->td_stripoffset[td->td_nstrips-1] +
+         td->td_stripbytecount[td->td_nstrips-1] > TIFFGetFileSize(tif)) )
+    {
+        return;
+    }
+
+    allocChoppedUpStripArrays(tif, nstrips, stripbytes, rowsperstrip);
+}
+
+
 
 int _TIFFFillStriles( TIFF *tif )
 {
