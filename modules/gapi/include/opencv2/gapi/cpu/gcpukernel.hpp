@@ -221,7 +221,7 @@ void postprocess(Outputs&... outs)
 {
     struct
     {
-        void operator()(tracked_cv_mat* bm) { bm->validate();  }        
+        void operator()(tracked_cv_mat* bm) { bm->validate();  }
         void operator()(...)                {                  }
 
     } validate;
