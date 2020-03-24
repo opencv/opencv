@@ -407,14 +407,13 @@ public:
                 else if ( fmt == FileStorage::FORMAT_JSON )
                     puts( "}\n" );
             }
-
-            closeFile();
             if( mem_mode && out )
             {
                 *out = cv::String(outbuf.begin(), outbuf.end());
             }
-            init();
         }
+        closeFile();
+        init();
     }
 
     void analyze_file_name( const std::string& file_name, std::vector<std::string>& params )
@@ -1825,10 +1824,18 @@ FileStorage::~FileStorage()
 
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
 {
-    bool ok = p->open(filename.c_str(), flags, encoding.c_str());
-    if(ok)
-        state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
-    return ok;
+    try
+    {
+        bool ok = p->open(filename.c_str(), flags, encoding.c_str());
+        if(ok)
+            state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+        return ok;
+    }
+    catch (...)
+    {
+        release();
+        throw;  // re-throw
+    }
 }
 
 bool FileStorage::isOpened() const { return p->is_opened; }

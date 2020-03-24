@@ -1711,4 +1711,65 @@ TEST(Core_InputOutput, FileStorage_JSON_VeryLongLines)
     }
 }
 
+TEST(Core_InputOutput, FileStorage_empty_16823)
+{
+    std::string fname = tempfile("test_fs_empty.yml");
+    {
+        // create empty file
+        std::ofstream f(fname.c_str(), std::ios::out);
+    }
+
+    try
+    {
+        FileStorage fs(fname, FileStorage::READ);
+        ADD_FAILURE() << "Exception must be thrown for empty file.";
+    }
+    catch (const cv::Exception&)
+    {
+        // expected way
+        // closed files can be checked manually through 'strace'
+    }
+    catch (const std::exception& e)
+    {
+        ADD_FAILURE() << "Unexpected exception: " << e.what();
+    }
+    catch (...)
+    {
+        ADD_FAILURE() << "Unexpected unknown C++ exception";
+    }
+
+    EXPECT_EQ(0, remove(fname.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_open_empty_16823)
+{
+    std::string fname = tempfile("test_fs_open_empty.yml");
+    {
+        // create empty file
+        std::ofstream f(fname.c_str(), std::ios::out);
+    }
+
+    FileStorage fs;
+    try
+    {
+        fs.open(fname, FileStorage::READ);
+        ADD_FAILURE() << "Exception must be thrown for empty file.";
+    }
+    catch (const cv::Exception&)
+    {
+        // expected way
+        // closed files can be checked manually through 'strace'
+    }
+    catch (const std::exception& e)
+    {
+        ADD_FAILURE() << "Unexpected exception: " << e.what();
+    }
+    catch (...)
+    {
+        ADD_FAILURE() << "Unexpected unknown C++ exception";
+    }
+
+    EXPECT_EQ(0, remove(fname.c_str()));
+}
+
 }} // namespace
