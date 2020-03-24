@@ -408,13 +408,13 @@ public:
                     puts( "}\n" );
             }
 
-            closeFile();
             if( mem_mode && out )
             {
                 *out = cv::String(outbuf.begin(), outbuf.end());
             }
-            init();
         }
+        closeFile();
+        init();
     }
 
     void analyze_file_name( const std::string& file_name, std::vector<std::string>& params )
