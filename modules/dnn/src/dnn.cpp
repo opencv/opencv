@@ -2580,16 +2580,6 @@ struct Net::Impl
                         nextData->type != "Power")
                         break;
 
-                    if (IS_DNN_CUDA_TARGET(preferableTarget) &&
-                        nextData->type != "ReLU" &&
-                        nextData->type != "ReLU6" &&
-                        nextData->type != "Power" &&
-                        nextData->type != "TanH" &&
-                        nextData->type != "Sigmoid" &&
-                        nextData->type != "Swish" &&
-                        nextData->type != "Mish")
-                        break;
-
                     Ptr<ActivationLayer> nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
                     if (nextActivLayer.empty())
                         break;
