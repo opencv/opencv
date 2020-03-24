@@ -1,7 +1,7 @@
 /*
  * jidctred.c
  *
- * This file was part of the Independent JPEG Group's software.
+ * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1998, Thomas G. Lane.
  * libjpeg-turbo Modifications:
  * Copyright (C) 2015, D. R. Commander.
