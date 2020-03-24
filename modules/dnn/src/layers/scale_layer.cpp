@@ -53,7 +53,6 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && axis == 1 && !blobs.empty()) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && axis > 0);
     }
 
@@ -196,37 +195,8 @@ public:
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::Layer l = InferenceEngine::Builder::ScaleShiftLayer(name);
-
-        CV_Assert(!blobs.empty());
-        const size_t numChannels = blobs[0].total();
-        if (hasWeights)
-        {
-            addConstantData("weights", wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C), l);
-        }
-        else
-        {
-            auto weights = InferenceEngine::make_shared_blob<float>({
-                               InferenceEngine::Precision::FP32, {(size_t)numChannels},
-                               InferenceEngine::Layout::C
-                           });
-            weights->allocate();
-            float* buf = weights->buffer().as<float*>();
-            std::fill(buf, buf + numChannels, 1);
-            addConstantData("weights", weights, l);
-        }
-        if (hasBias)
-            addConstantData("biases", wrapToInfEngineBlob(blobs.back(), {numChannels}, InferenceEngine::Layout::C), l);
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto ieInpNode0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto ieInpNode1 = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;

@@ -151,8 +151,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
-               ((((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()))
-                || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && channelsMode == ELTWISE_CHANNNELS_SAME));
+              (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && channelsMode == ELTWISE_CHANNNELS_SAME);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -659,36 +658,8 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::EltwiseLayer ieLayer(name);
-
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
-
-        if (op == SUM)
-            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::SUM);
-        else if (op == PROD)
-            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MUL);
-        else if (op == DIV)
-            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::DIV);
-        else if (op == MAX)
-            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MAX);
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        if (!coeffs.empty())
-            l.getParameters()["coeff"] = coeffs;
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto curr_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         if (!coeffs.empty()) {

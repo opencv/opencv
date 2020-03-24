@@ -113,11 +113,6 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-            return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
-                sliceRanges.size() == 1 && sliceRanges[0].size() == 4;
-#endif
 #ifdef HAVE_DNN_NGRAPH
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return sliceRanges.size() == 1;
@@ -266,66 +261,8 @@ public:
         }
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-        CV_Assert_N(sliceRanges.size() == 1, inputs.size() <= 2);
-
-        std::vector<size_t> axes, offsets, dims;
-        int from, to, step;
-        int numDims = sliceRanges[0].size();
-        if (preferableTarget == DNN_TARGET_MYRIAD)
-        {
-            from = axis;
-            to = numDims;
-            step = 1;
-        }
-        else
-        {
-            from = numDims - 1;
-            to = axis - 1;
-            step = -1;
-        }
-        for (int i = from; i != to; i += step)
-        {
-            axes.push_back(i);
-            offsets.push_back(sliceRanges[0][i].start);
-            dims.push_back(sliceRanges[0][i].size());
-        }
-
-        InferenceEngine::Builder::Layer ieLayer(name);
-        ieLayer.setName(name);
-        ieLayer.setType("Crop");
-        ieLayer.getParameters()["axis"] = axes;
-        ieLayer.getParameters()["dim"] = dims;
-        ieLayer.getParameters()["offset"] = offsets;
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
-        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
-
-        if (inputs.size() != 2)
-        {
-            std::vector<size_t> outShape(numDims);
-            for (int i = 0; i < numDims; ++i)
-                outShape[i] = sliceRanges[0][i].size();
-
-            ieLayer.getInputPorts()[1].setParameter("type", "weights");
-
-            auto shapeSource = InferenceEngine::make_shared_blob<float>({
-                                   InferenceEngine::Precision::FP32, outShape,
-                                   InferenceEngine::Layout::ANY
-                               });
-            shapeSource->allocate();
-            addConstantData("weights", shapeSource, ieLayer);
-        }
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif
-#endif
-
 #ifdef HAVE_DNN_NGRAPH
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert_N(nodes.size() <= 2);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;

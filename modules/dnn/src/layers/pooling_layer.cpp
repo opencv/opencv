@@ -174,25 +174,6 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        {
-            if (computeMaxIdx)
-                return false;
-            if (kernel_size.size() == 3)
-                return preferableTarget == DNN_TARGET_CPU;
-            if (preferableTarget == DNN_TARGET_MYRIAD) {
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-                if (type == MAX && (pad_l == 1 && pad_t == 1) && stride == Size(2, 2) ) {
-                    return !isMyriadX();
-                }
-#endif
-                return type == MAX || type == AVE;
-            }
-            else
-                return type != STOCHASTIC;
-        }
-#endif
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             return !computeMaxIdx && type != STOCHASTIC;
@@ -307,59 +288,8 @@ public:
             return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        if (type == MAX || type == AVE)
-        {
-            InferenceEngine::Builder::PoolingLayer ieLayer(name);
-
-            ieLayer.setKernel(kernel_size);
-            ieLayer.setStrides(strides);
-            ieLayer.setPaddingsBegin(pads_begin);
-            ieLayer.setPaddingsEnd(pads_end);
-
-            ieLayer.setPoolingType(type == MAX ?
-                                   InferenceEngine::Builder::PoolingLayer::PoolingType::MAX :
-                                   InferenceEngine::Builder::PoolingLayer::PoolingType::AVG);
-            ieLayer.setRoundingType(ceilMode ?
-                                    InferenceEngine::Builder::PoolingLayer::RoundingType::CEIL :
-                                    InferenceEngine::Builder::PoolingLayer::RoundingType::FLOOR);
-            ieLayer.setExcludePad(type == AVE && padMode == "SAME");
-
-            InferenceEngine::Builder::Layer l = ieLayer;
-            if (!padMode.empty())
-                l.getParameters()["auto_pad"] = padMode == "VALID" ? std::string("valid") : std::string("same_upper");
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
-        else if (type == ROI)
-        {
-            InferenceEngine::Builder::ROIPoolingLayer ieLayer(name);
-            ieLayer.setSpatialScale(spatialScale);
-            ieLayer.setPooled({pooledSize.height, pooledSize.width});
-            ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
-            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-        }
-        else if (type == PSROI)
-        {
-            InferenceEngine::Builder::PSROIPoolingLayer ieLayer(name);
-            ieLayer.setSpatialScale(spatialScale);
-            ieLayer.setOutputDim(psRoiOutChannels);
-            ieLayer.setGroupSize(pooledSize.width);
-            ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
-            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
-        return Ptr<BackendNode>();
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
-
 #ifdef HAVE_DNN_NGRAPH
-virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                    const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
 {
     CV_Assert_N((inputs.size() == 1 && (type == MAX || type == AVE)) || inputs.size() == 2, nodes.size() == inputs.size());
     auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
