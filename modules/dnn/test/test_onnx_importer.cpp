@@ -432,6 +432,7 @@ TEST_P(Test_ONNX_layers, Squeeze)
 TEST_P(Test_ONNX_layers, ReduceL2)
 {
     testONNXModels("reduceL2");
+    testONNXModels("reduceL2_subgraph");
 }
 
 TEST_P(Test_ONNX_layers, Split)
