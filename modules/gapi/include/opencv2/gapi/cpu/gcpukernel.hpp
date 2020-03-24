@@ -210,9 +210,10 @@ struct tracked_cv_mat{
 
 struct scalar_wrapper
 {
-    scalar_wrapper(cv::Scalar& s) : m_s{s} {};
-    operator cv::Scalar& () { return m_s; }    
-    cv::Scalar m_s;    
+    scalar_wrapper(cv::Scalar& s) : m_org_s(s) {};
+    operator cv::Scalar& () { return m_org_s; }
+
+    cv::Scalar& m_org_s;
 };
 
 template<typename... Outputs>
