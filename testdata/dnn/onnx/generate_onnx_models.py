@@ -726,3 +726,17 @@ save_data_and_model("expand_channels", x, model)
 x = Variable(torch.randn(1, 2, 1, 1))
 model = Expand(shape=[1, 2, 3, 4])
 save_data_and_model("expand_hw", x, model)
+
+class NormL2(nn.Module):
+    def __init__(self):
+        super(NormL2, self).__init__()
+
+    def forward(self, x):
+      norm = torch.norm(x, p=2, dim=1, keepdim=True)
+      clip = torch.clamp(norm, min=0)
+      expand = clip.expand_as(x)
+      return x / expand
+
+model = NormL2()
+x = Variable(torch.randn(1, 2, 3, 4))
+save_data_and_model("reduceL2_subgraph", x, model)
