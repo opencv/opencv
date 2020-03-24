@@ -504,6 +504,33 @@ TEST_P(NV12toBGRTest, AccuracyTest)
     }
 }
 
+TEST_P(NV12toGrayTest, AccuracyTest)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in_y;
+    cv::GMat in_uv;
+    auto out = cv::gapi::NV12toGray(in_y, in_uv);
+
+    // Additional mat for uv
+    cv::Mat in_mat_uv(cv::Size(sz.width / 2, sz.height / 2), CV_8UC2);
+    cv::randn(in_mat_uv, cv::Scalar::all(127), cv::Scalar::all(40.f));
+
+    cv::GComputation c(cv::GIn(in_y, in_uv), cv::GOut(out));
+    c.apply(cv::gin(in_mat1, in_mat_uv), cv::gout(out_mat_gapi), getCompileArgs());
+
+    cv::Mat out_mat_ocv_planar;
+    cv::Mat uv_planar(in_mat1.rows / 2, in_mat1.cols, CV_8UC1, in_mat_uv.data);
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::vconcat(in_mat1, uv_planar, out_mat_ocv_planar);
+        cv::cvtColor(out_mat_ocv_planar, out_mat_ocv, cv::COLOR_YUV2GRAY_NV12);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
 
 static void toPlanar(const cv::Mat& in, cv::Mat& out)
 {
