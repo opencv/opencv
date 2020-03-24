@@ -254,28 +254,59 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
          */
         ConvolutionAlgorithm(
             const Handle& handle,
-            const ConvolutionDescriptor<T>& conv,
-            const FilterDescriptor<T>& filter,
-            const TensorDescriptor<T>& input,
-            const TensorDescriptor<T>& output)
+            const ConvolutionDescriptor<T>& convDesc,
+            const FilterDescriptor<T>& filterDesc,
+            const TensorDescriptor<T>& inputDesc,
+            const TensorDescriptor<T>& outputDesc)
         {
-            CUDA4DNN_CHECK_CUDNN(
-                cudnnGetConvolutionForwardAlgorithm(
-                    handle.get(),
-                    input.get(), filter.get(), conv.get(), output.get(),
-                    CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
-                    0, /* no memory limit */
-                    &algo
-                )
-            );
+            try {
+                int available_algo_count = 0;
+                CUDA4DNN_CHECK_CUDNN(cudnnGetConvolutionForwardAlgorithmMaxCount(handle.get(), &available_algo_count));
 
-            CUDA4DNN_CHECK_CUDNN(
-                cudnnGetConvolutionForwardWorkspaceSize(
-                    handle.get(),
-                    input.get(), filter.get(), conv.get(), output.get(),
-                    algo, &workspace_size
-                )
-            );
+                std::vector<cudnnConvolutionFwdAlgoPerf_t> perfResults;
+                perfResults.resize(available_algo_count);
+
+                int returned_algo_count = 0;
+                CUDA4DNN_CHECK_CUDNN(
+                    cudnnFindConvolutionForwardAlgorithm(
+                        handle.get(),
+                        inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
+                        available_algo_count, &returned_algo_count,
+                        &perfResults[0]
+                    )
+                );
+
+                if (returned_algo_count == 0)
+                    throw 1;
+
+                algo = perfResults[0].algo;
+
+                CUDA4DNN_CHECK_CUDNN(
+                    cudnnGetConvolutionForwardWorkspaceSize(
+                        handle.get(),
+                        inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
+                        algo, &workspace_size
+                    )
+                );
+            } catch(...) {
+                CUDA4DNN_CHECK_CUDNN(
+                    cudnnGetConvolutionForwardAlgorithm(
+                        handle.get(),
+                        inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
+                        CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
+                        0, /* no memory limit */
+                        &algo
+                    )
+                );
+
+                CUDA4DNN_CHECK_CUDNN(
+                    cudnnGetConvolutionForwardWorkspaceSize(
+                        handle.get(),
+                        inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
+                        algo, &workspace_size
+                    )
+                );
+            }
         }
 
         ConvolutionAlgorithm& operator=(const ConvolutionAlgorithm&) = default;
