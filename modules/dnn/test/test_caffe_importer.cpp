@@ -358,7 +358,13 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     {
         Mat pred = outBatch.rowRange(i * numRealDetections, (i + 1) * numRealDetections);
         EXPECT_EQ(countNonZero(pred.col(0) != i), 0);
-        normAssert(pred.colRange(1, 7), out.colRange(1, 7));
+        double l1 = 1e-5, lInf = 1e-4;
+        if (targetId == DNN_TARGET_CUDA_FP16)
+        {
+            l1 = 3e-4;
+            lInf = 0.002;
+        }
+        normAssert(pred.colRange(1, 7), out.colRange(1, 7), "", l1, lInf);
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD, dnnBackendsAndTargets());

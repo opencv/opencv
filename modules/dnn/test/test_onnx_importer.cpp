@@ -537,11 +537,15 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 
 TEST_P(Test_ONNX_layers, LSTM)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, LSTM_bidirectional)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
 }
 
@@ -916,8 +920,8 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     float l1 = 0.0013, lInf = 0.009;
     if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.008;
-        lInf = 0.04;
+        l1 = 0.01;
+        lInf = 0.06;
     }
 
     checkBackend(&input0, &ref0);

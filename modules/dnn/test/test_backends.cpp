@@ -170,10 +170,16 @@ TEST_P(DNNTestNetwork, ENet)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    double l1 = 2e-5, lInf = 0.15;
+    if (target == DNN_TARGET_CUDA)
+    {
+        l1 = 6e-5;
+        lInf = 0.36;
+    }
     processNet("dnn/Enet-model-best.net", "", Size(512, 512), "l367_Deconvolution",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_enet.yml" :
                                              "dnn/halide_scheduler_enet.yml",
-               2e-5, 0.15);
+               l1, lInf);
     expectNoFallbacksFromCUDA(net);
 }
 
@@ -187,6 +193,11 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
     float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 0.0;
     float iouDiff = (target == DNN_TARGET_MYRIAD) ? 0.063  : 0.0;
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.252  : FLT_MIN;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.006;
+        detectionConfThresh = 0.26;
+    }
          processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
                     inp, "detection_out", "", scoreDiff, iouDiff, detectionConfThresh);
     expectNoFallbacksFromIE(net);
@@ -268,7 +279,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 0.007;
+        scoreDiff = 0.008;
         iouDiff = 0.06;
     }
     processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
@@ -470,8 +481,8 @@ TEST_P(DNNTestNetwork, DenseNet_121)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.008;
-        lInf = 0.05;
+        l1 = 0.015;
+        lInf = 0.06;
     }
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)

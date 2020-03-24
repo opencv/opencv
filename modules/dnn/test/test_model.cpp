@@ -254,7 +254,8 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 4e-4;
+        scoreDiff = 0.006;
+        iouDiff = 0.01;
     }
     float confThreshold = FLT_MIN;
     double nmsThreshold = 0.0;

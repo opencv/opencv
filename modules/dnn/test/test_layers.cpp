@@ -417,7 +417,7 @@ TEST_P(Test_Caffe_layers, Conv_Elu)
     if (target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 0.0002;
-        lInf = 0.0005;
+        lInf = 0.005;
     }
     normAssert(ref, out, "", l1, lInf);
 }

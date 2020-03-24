@@ -347,7 +347,13 @@ TEST_P(Test_TensorFlow_layers, pooling_max_pool_odd_same)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    runTensorFlowNet("max_pool_odd_same");
+    double l1 = 0.0, lInf = 0.0;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.006;
+        lInf = 0.1;
+    }
+    runTensorFlowNet("max_pool_odd_same", false, l1, lInf);
 }
 TEST_P(Test_TensorFlow_layers, pooling_reduce_mean)
 {
@@ -562,6 +568,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
+        scoreDiff = 0.005;
         iouDiff = 0.04;
     }
     normAssertDetections(ref, out, "", 0.2, scoreDiff, iouDiff);
@@ -740,7 +747,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 0.006;
+        scoreDiff = 0.02;
         iouDiff = 0.05;
     }
     normAssertDetections(ref, out, "", 0.45, scoreDiff, iouDiff);
@@ -883,6 +890,11 @@ TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_max_pool_odd_same)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
     float l1 = 0.00078, lInf = 0.012;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.004;
+        lInf = 0.08;
+    }
     runTensorFlowNet("fp16_max_pool_odd_same", false, l1, lInf);
 }
 TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_eltwise_add_mul)
@@ -932,7 +944,7 @@ TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_max_pool_odd_valid)
         lInf = 0.024;
     }
     // Reference output values are in range [0.418, 2.297]
-    runTensorFlowNet("fp16_max_pool_odd_valid", false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_valid", false, target == DNN_TARGET_CUDA_FP16 ? 0.002 : l1, lInf);
 }
 
 TEST_P(Test_TensorFlow_layers, fp16_padding_same)

@@ -191,7 +191,7 @@ TEST_P(Test_Torch_layers, run_depth_concat)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        lInf = 0.03;
+        lInf = 0.05;
     }
     runTorchNet("net_depth_concat", "", false, true, true, 0.0, lInf);
 }
@@ -254,8 +254,8 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.0042;
-        lInf = 0.021;
+        l1 = 0.005;
+        lInf = 0.03;
     }
     runTorchNet("net_conv_gemm_lrn", "", false, true, true, l1, lInf);
 }
