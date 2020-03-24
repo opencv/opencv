@@ -1155,7 +1155,7 @@ void ONNXImporter::populateNet(Net dstNet)
                     if (inpShape[i] == 1)
                         broadcast_axes.push_back(i);
                     else
-                        CV_Error(Error::StsError, "Could not be broadcast by axis: " + i);
+                        CV_Error(Error::StsError, format("Could not be broadcast by axis: %d", i));
                 }
             }
 
