@@ -68,10 +68,9 @@ static bool is_param_exist( const std::vector<std::string> & params, const std::
 
 //===========================================================================================
 
-CV_IMPL CvFileStorage*
-cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const char* encoding )
+static
+void cvOpenFileStorage_(CvFileStorage*& fs, const char* query, CvMemStorage* dststorage, int flags, const char* encoding)
 {
-    CvFileStorage* fs = 0;
     int default_block_size = 1 << 18;
     bool append = (flags & 3) == CV_STORAGE_APPEND;
     bool mem = (flags & CV_STORAGE_MEMORY) != 0;
@@ -103,10 +102,6 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
 
     if( mem && append )
         CV_Error( CV_StsBadFlag, "CV_STORAGE_APPEND and CV_STORAGE_MEMORY are not currently compatible" );
-
-    fs = (CvFileStorage*)cvAlloc( sizeof(*fs) );
-    CV_Assert(fs);
-    memset( fs, 0, sizeof(*fs));
 
     fs->memstorage = cvCreateMemStorage( default_block_size );
     fs->dststorage = dststorage ? dststorage : fs->memstorage;
@@ -373,9 +368,12 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         const char* yaml_signature = "%YAML";
         const char* json_signature = "{";
         const char* xml_signature  = "<?xml";
-        char buf[16];
-        icvGets( fs, buf, sizeof(buf)-2 );
-        char* bufPtr = cv_skip_BOM(buf);
+        char buf[16] = { 0 };
+        char* bufPtr = icvGets( fs, buf, sizeof(buf)-2);
+        if (!bufPtr)
+            CV_Error(CV_BADARG_ERR, "Can't read from input stream or input stream is empty");
+        bufPtr = cv_skip_BOM(bufPtr);
+        CV_Assert(bufPtr);
         size_t bufOffset = bufPtr - buf;
 
         if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
@@ -417,21 +415,12 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
 
         //mode = cvGetErrMode();
         //cvSetErrMode( CV_ErrModeSilent );
-        try
+        switch (fs->fmt)
         {
-            switch (fs->fmt)
-            {
-            case CV_STORAGE_FORMAT_XML : { icvXMLParse ( fs ); break; }
-            case CV_STORAGE_FORMAT_YAML: { icvYMLParse ( fs ); break; }
-            case CV_STORAGE_FORMAT_JSON: { icvJSONParse( fs ); break; }
-            default: break;
-            }
-        }
-        catch (...)
-        {
-            fs->is_opened = true;
-            cvReleaseFileStorage( &fs );
-            CV_RETHROW();
+        case CV_STORAGE_FORMAT_XML : { icvXMLParse ( fs ); break; }
+        case CV_STORAGE_FORMAT_YAML: { icvYMLParse ( fs ); break; }
+        case CV_STORAGE_FORMAT_JSON: { icvJSONParse( fs ); break; }
+        default: break;
         }
         //cvSetErrMode( mode );
 
@@ -457,9 +446,28 @@ _exit_:
         }
     }
 
-    return  fs;
+    return;
 }
 
+CV_IMPL CvFileStorage*
+cvOpenFileStorage(const char* query, CvMemStorage* dststorage, int flags, const char* encoding)
+{
+    CvFileStorage* fs = (CvFileStorage*)cvAlloc( sizeof(*fs) );
+    CV_Assert(fs);
+    memset( fs, 0, sizeof(*fs));
+
+    try
+    {
+        cvOpenFileStorage_(fs, query, dststorage, flags, encoding);
+        return fs;
+    }
+    catch (...)
+    {
+        if (fs)
+            cvReleaseFileStorage(&fs);
+        throw;
+    }
+}
 
 /* closes file storage and deallocates buffers */
 CV_IMPL  void
