@@ -22,36 +22,14 @@
 #define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL_FP16         "dnn_skip_ocl_fp16"
-#define CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER       "dnn_skip_ie_nn_builder"
 #define CV_TEST_TAG_DNN_SKIP_IE_NGRAPH           "dnn_skip_ie_ngraph"
 #define CV_TEST_TAG_DNN_SKIP_IE                  "dnn_skip_ie"
-#define CV_TEST_TAG_DNN_SKIP_IE_2018R5           "dnn_skip_ie_2018r5"
-#define CV_TEST_TAG_DNN_SKIP_IE_2019R1           "dnn_skip_ie_2019r1"
-#define CV_TEST_TAG_DNN_SKIP_IE_2019R1_1         "dnn_skip_ie_2019r1_1"
-#define CV_TEST_TAG_DNN_SKIP_IE_2019R2           "dnn_skip_ie_2019r2"
-#define CV_TEST_TAG_DNN_SKIP_IE_2019R3           "dnn_skip_ie_2019r3"
 #define CV_TEST_TAG_DNN_SKIP_IE_OPENCL           "dnn_skip_ie_ocl"
 #define CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16      "dnn_skip_ie_ocl_fp16"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2         "dnn_skip_ie_myriad2"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X         "dnn_skip_ie_myriadx"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD           CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
 
-
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_EQ(2018050000)
-#  define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2018R5
-#elif INF_ENGINE_VER_MAJOR_EQ(2019010000)
-#  if INF_ENGINE_RELEASE < 2019010100
-#    define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1
-#  else
-#    define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1
-#  endif
-#elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
-#  define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R2
-#elif INF_ENGINE_VER_MAJOR_EQ(2019030000)
-#  define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2019R3
-#endif
-#endif // HAVE_INF_ENGINE
 
 #ifndef CV_TEST_TAG_DNN_SKIP_IE_VERSION
 #    define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE
@@ -153,8 +131,7 @@ public:
 
     static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
     {
-        if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            && target == DNN_TARGET_MYRIAD)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         {
             if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
                 inp->size[0] != 1 && inp->size[0] != ref->size[0])
@@ -191,8 +168,6 @@ public:
 
     void expectNoFallbacksFromIE(Net& net)
     {
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-            expectNoFallbacks(net);
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             expectNoFallbacks(net, false);
     }

@@ -25,7 +25,6 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
         case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
         case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
         case DNN_BACKEND_OPENCV: *os << "OCV"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019: *os << "DLIE"; return;
         case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
         default: /* do nothing */;
     } // don't use "default:" to emit compiler warnings
@@ -199,16 +198,6 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
             targets.push_back(make_tuple(DNN_BACKEND_HALIDE, *i));
     }
 #ifdef HAVE_INF_ENGINE
-    if (withInferenceEngine)
-    {
-        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
-        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
-        {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
-                continue;
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
-        }
-    }
     if (withNgraph)
     {
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
@@ -244,16 +233,6 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 
     std::vector< tuple<Backend, Target> > targets;
     std::vector< Target > available;
-
-    {
-        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
-        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
-        {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
-                continue;
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
-        }
-    }
 
     {
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
@@ -370,9 +349,6 @@ void initDNNTests()
 #endif
 #ifdef HAVE_DNN_NGRAPH
         CV_TEST_TAG_DNN_SKIP_IE_NGRAPH,
-#endif
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-        CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
 #endif
         ""
     );
