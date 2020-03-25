@@ -1472,7 +1472,7 @@ struct Net::Impl
     void initNgraphBackend(const std::vector<LayerPin>& blobsToKeep_)
     {
         CV_TRACE_FUNCTION();
-        CV_Assert_N(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE, haveInfEngine());
+        CV_CheckEQ(preferableBackend, DNN_BACKEND_INFERENCE_ENGINE, "");
 
         MapIdToLayerData::iterator it;
         Ptr<InfEngineNgraphNet> net;

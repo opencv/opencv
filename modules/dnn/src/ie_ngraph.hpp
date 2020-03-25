@@ -148,8 +148,6 @@ private:
 
 #endif  // HAVE_INF_ENGINE
 
-bool haveInfEngine();
-
 void forwardNgraph(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                    Ptr<BackendNode>& node, bool isAsync);
 
