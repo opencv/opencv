@@ -4,13 +4,15 @@
 #include <opencv2/highgui.hpp>
 
 #include <iostream>
+
+using namespace cv;
 //! [includes]
 
 int main()
 {
     //! [imread]
-    cv::Mat img;
-    img = cv::imread(cv::samples::findFile("starry_night.jpg"));
+    Mat img;
+    img = imread(samples::findFile("starry_night.jpg"));
     //! [imread]
 
     //! [empty]
@@ -22,14 +24,14 @@ int main()
     //! [empty]
 
     //! [imshow]
-    cv::imshow("Display window", img);
-    int k = cv::waitKey(0); // Wait for a keystroke in the window
+    imshow("Display window", img);
+    int k = waitKey(0); // Wait for a keystroke in the window
     //! [imshow]
 
     //! [imsave]
     if(k == 's')
     {
-        cv::imwrite("starry_night.png", img);
+        imwrite("starry_night.png", img);
     }
     //! [imsave]
 

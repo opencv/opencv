@@ -146,7 +146,7 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     _Languages:_ C++, Python
 
-    _Compatibility:_ \> OpenCV 2.0
+    _Compatibility:_ \> OpenCV 3.4.4
 
     _Author:_ Ana Huamán
 

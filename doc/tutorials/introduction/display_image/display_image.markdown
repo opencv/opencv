@@ -1,4 +1,4 @@
-Getting started with images {#tutorial_display_image}
+Getting Started with Images {#tutorial_display_image}
 ===========================
 
 Goal
@@ -15,7 +15,7 @@ Source Code
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp)
+    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
@@ -23,7 +23,7 @@ Source Code
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/introduction/display_image/display_image.py)
+    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/introduction/display_image/display_image.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/introduction/display_image/display_image.py
@@ -34,7 +34,7 @@ Explanation
 -----------
 
 @add_toggle_cpp
-In OpenCV 2 we have multiple modules. Each one takes care of a different area or approach towards
+In OpenCV 3 we have multiple modules. Each one takes care of a different area or approach towards
 image processing. You could already observe this in the structure of the user guide of these
 tutorials itself. Before you use any of them you first need to include the header files where the
 content of each individual module is declared.
@@ -47,6 +47,8 @@ You'll almost always end up using the:
 
 We also include the *iostream* to facilitate console line output and input.
 
+By declaring `using namespace cv;`, in the following, the library functions can be accessed without explicitly stating the namespace.
+
 @snippet cpp/tutorial_code/introduction/display_image/display_image.cpp includes
 @end_toggle
 
@@ -54,7 +56,7 @@ We also include the *iostream* to facilitate console line output and input.
 As a first step, the OpenCV python library is imported.
 The proper way to do this is to additionally assign it the name *cv*, which is used in the following to reference the library.
 
-@snippet samples/python/tutorial_code/introduction/display_image/display_image.py includes
+@snippet samples/python/tutorial_code/introduction/display_image/display_image.py imports
 @end_toggle
 
 Now, let's analyze the main code.
@@ -62,9 +64,9 @@ As a first step, we read the image "starry_night.jpg" from the OpenCV samples.
 In order to do so, a call to the @ref cv::imread function loads the image using the file path specified by the first argument.
 The second argument is optional and specifies the format in which we want the image. This may be:
 
--   IMREAD_UNCHANGED (\<0) loads the image as is (including the alpha channel if present)
--   IMREAD_GRAYSCALE ( 0) loads the image as an intensity one
--   IMREAD_COLOR (\>0) loads the image in the RGB format. This is the default that is used here.
+-   IMREAD_COLOR loads the image in the BGR 8-bit format. This is the **default** that is used here.
+-   IMREAD_UNCHANGED loads the image as is (including the alpha channel if present)
+-   IMREAD_GRAYSCALE loads the image as an intensity one
 
 After reading in the image data will be stored in a @ref cv::Mat object.
 

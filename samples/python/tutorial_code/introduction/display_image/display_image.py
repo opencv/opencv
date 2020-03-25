@@ -1,6 +1,6 @@
-## [includes]
+## [imports]
 import cv2 as cv
-## [includes]
+## [imports]
 ## [imread]
 img = cv.imread(cv.samples.findFile("starry_night.jpg"))
 ## [imread]
