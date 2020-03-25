@@ -195,7 +195,7 @@ public:
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto ieInpNode0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
@@ -236,7 +236,7 @@ public:
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
     {

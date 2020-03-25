@@ -67,7 +67,7 @@ public:
         blobs[0].copyTo(outputs[0]);
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,

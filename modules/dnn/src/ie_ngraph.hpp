@@ -10,7 +10,7 @@
 
 #include "op_inf_engine.hpp"
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -22,11 +22,11 @@
 #pragma warning(pop)
 #endif
 
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
 namespace cv { namespace dnn {
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 
 class InfEngineNgraphNode;
 
@@ -146,7 +146,7 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
 bool haveInfEngine();
 

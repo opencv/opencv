@@ -136,31 +136,21 @@ private:
 
 #ifdef HAVE_INF_ENGINE
         if (checkIETarget(DNN_TARGET_CPU)) {
-#ifdef HAVE_DNN_NGRAPH
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_CPU));
-#endif
         }
         if (checkIETarget(DNN_TARGET_MYRIAD)) {
-#ifdef HAVE_DNN_NGRAPH
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_MYRIAD));
-#endif
         }
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
         if (checkIETarget(DNN_TARGET_FPGA))
-            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_FPGA));
-#endif
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_FPGA));
 #ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
         {
             if (checkIETarget(DNN_TARGET_OPENCL)) {
-#ifdef HAVE_DNN_NGRAPH
                 backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_OPENCL));
-#endif
             }
             if (checkIETarget(DNN_TARGET_OPENCL_FP16)) {
-#ifdef HAVE_DNN_NGRAPH
                 backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_OPENCL_FP16));
-#endif
             }
         }
 #endif
@@ -988,7 +978,7 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
     }
     else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
         return Ptr<BackendWrapper>(new NgraphBackendWrapper(targetId, m));
 #else
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
@@ -1387,7 +1377,7 @@ struct Net::Impl
             initHalideBackend();
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
             initNgraphBackend(blobsToKeep_);
 #else
             CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
@@ -1452,7 +1442,7 @@ struct Net::Impl
         }
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     void addNgraphOutputs(LayerData &ld)
     {
         CV_TRACE_FUNCTION();
@@ -1774,7 +1764,7 @@ struct Net::Impl
             }
         }
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes)
     {

@@ -658,7 +658,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto curr_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
@@ -684,7 +684,7 @@ public:
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(curr_node));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

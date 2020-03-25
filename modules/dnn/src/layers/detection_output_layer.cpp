@@ -52,7 +52,7 @@
 #include "opencl_kernels_dnn.hpp"
 #endif
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 #include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/detection_output.hpp>
 #endif
@@ -924,7 +924,7 @@ public:
         }
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 3);
@@ -949,7 +949,7 @@ public:
                        proposals, attrs);
         return Ptr<BackendNode>(new InfEngineNgraphNode(det_out));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 };
 
 float util::caffe_box_overlap(const util::NormalizedBBox& a, const util::NormalizedBBox& b)

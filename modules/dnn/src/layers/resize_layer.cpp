@@ -9,7 +9,7 @@
 #include "../op_inf_engine.hpp"
 #include <opencv2/imgproc.hpp>
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 #include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/interpolate.hpp>
 #endif
@@ -161,7 +161,7 @@ public:
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
@@ -186,7 +186,7 @@ public:
         auto interp = std::make_shared<ngraph::op::Interpolate>(ieInpNode, out_shape, attrs);
         return Ptr<BackendNode>(new InfEngineNgraphNode(interp));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
 protected:
     int outWidth, outHeight;

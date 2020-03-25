@@ -117,7 +117,7 @@ public:
         }
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         // Slice second input: from 1x1xNx7 to 1x1xNx5
@@ -149,7 +149,7 @@ public:
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(roiPooling));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
 private:
     int outWidth, outHeight;

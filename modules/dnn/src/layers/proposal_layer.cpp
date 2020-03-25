@@ -8,7 +8,7 @@
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 #include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/proposal.hpp>
 #endif
@@ -327,7 +327,7 @@ public:
         layerOutputs[0].col(2).copyTo(dst);
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 3);
@@ -362,7 +362,7 @@ public:
         auto proposal = std::make_shared<ngraph::op::Proposal>(class_probs, class_logits, reshape, attr);
         return Ptr<BackendNode>(new InfEngineNgraphNode(proposal));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
 private:
     // A first half of channels are background scores. We need only a second one.

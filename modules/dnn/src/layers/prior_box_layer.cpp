@@ -44,7 +44,7 @@
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 #include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/prior_box.hpp>
 #include <ngraph/op/experimental/layers/prior_box_clustered.hpp>
@@ -279,7 +279,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return _explicitSizes || _stepX == _stepY;
 #endif
@@ -492,7 +492,7 @@ public:
         }
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 2);
@@ -551,7 +551,7 @@ public:
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
