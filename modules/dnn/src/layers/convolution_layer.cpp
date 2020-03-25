@@ -473,7 +473,7 @@ public:
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert_N(inputs.size() == 1, nodes.size() == 1);
+        CV_Assert_N(nodes.size() == 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
         CV_Assert(dims.size() == 4 || dims.size() == 5);

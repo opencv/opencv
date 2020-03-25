@@ -1137,7 +1137,7 @@ std::vector< std::vector<int> > list_sizes{ {1, 2, 3}, {3, 2, 1}, {5, 5, 5}, {13
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs_3dim, Combine(
   Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
-  testing::ValuesIn(getAvailableTargets(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)),
+  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)),
   testing::ValuesIn(list_sizes)
 ));
 

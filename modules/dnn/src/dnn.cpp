@@ -1697,7 +1697,7 @@ struct Net::Impl
 
                 if (layer->supportBackend(preferableBackend))
                 {
-                    node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
+                    node = layer->initNgraph(inputNodes);
                     for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                     {
                         InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
@@ -3850,7 +3850,7 @@ Ptr<BackendNode> Layer::initHalide(const std::vector<Ptr<BackendWrapper> > &)
     return Ptr<BackendNode>();
 }
 
-Ptr<BackendNode> Layer::initNgraph(const std::vector<Ptr<BackendWrapper> > & inputs, const std::vector<Ptr<BackendNode> >& nodes)
+Ptr<BackendNode> Layer::initNgraph(const std::vector<Ptr<BackendNode> >& nodes)
 {
     CV_Error(Error::StsNotImplemented, "Inference Engine pipeline of " + type +
                                        " layers is not defined.");
