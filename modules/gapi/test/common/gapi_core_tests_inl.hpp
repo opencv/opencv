@@ -1266,6 +1266,30 @@ TEST_P(SqrtTest, AccuracyTest)
     }
 }
 
+TEST_P(WarpPerspectiveTest, AccuracyTest)
+{
+    cv::Point center{in_mat1.size() / 2};
+    cv::Mat xy = cv::getRotationMatrix2D(center, angle, scale);
+    cv::Matx13d z (0, 0, 1);
+    cv::Mat transform_mat;
+    cv::vconcat(xy, z, transform_mat);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::warpPerspective(in, transform_mat, in_mat1.size(), flags, border_mode, border_value);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::warpPerspective(in_mat1, out_mat_ocv, cv::Mat(transform_mat), in_mat1.size(), flags, border_mode, border_value);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
+}
+
 TEST_P(WarpAffineTest, AccuracyTest)
 {
     cv::Point center{in_mat1.size() / 2};
