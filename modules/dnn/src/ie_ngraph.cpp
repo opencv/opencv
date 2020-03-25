@@ -938,4 +938,13 @@ void forwardNgraph(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
 }
 #endif
 
+bool haveInfEngine()
+{
+#ifdef HAVE_INF_ENGINE
+    return true;
+#else
+    return false;
+#endif  // HAVE_INF_ENGINE
+}
+
 }}

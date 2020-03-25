@@ -274,15 +274,10 @@ TEST_P(DNNTestOpenVINO, models)
     const Backend backendId = get<0>(get<0>(GetParam()));
     const Target targetId = get<1>(get<0>(GetParam()));
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     std::string modelName = get<1>(GetParam());
     bool isFP16 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD);

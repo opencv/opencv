@@ -78,17 +78,6 @@ public:
     {
         if (outputLayer == "detection_out")
         {
-            if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-            {
-                // Inference Engine produces detections terminated by a row which starts from -1.
-                out = out.reshape(1, out.total() / 7);
-                int numDetections = 0;
-                while (numDetections < out.rows && out.at<float>(numDetections, 0) != -1)
-                {
-                    numDetections += 1;
-                }
-                out = out.rowRange(0, numDetections);
-            }
             normAssertDetections(ref, out, msg, detectionConfThresh, l1, lInf);
         }
         else
@@ -142,11 +131,6 @@ TEST_P(DNNTestNetwork, Inception_5h)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     double l1 = default_l1, lInf = default_lInf;
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_CPU || target == DNN_TARGET_OPENCL))
-    {
-        l1 = 1.72e-5;
-        lInf = 8e-4;
-    }
     processNet("dnn/tensorflow_inception_graph.pb", "", Size(224, 224), "softmax2",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_inception_5h.yml" :
                                              "dnn/halide_scheduler_inception_5h.yml",
@@ -157,8 +141,6 @@ TEST_P(DNNTestNetwork, Inception_5h)
 TEST_P(DNNTestNetwork, ENet)
 {
     applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
@@ -189,7 +171,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE)
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
         target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
@@ -223,13 +205,9 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE)
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) &&
         target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
     Mat sample = imread(findDataFile("dnn/street.png"));
@@ -277,11 +255,6 @@ TEST_P(DNNTestNetwork, OpenPose_pose_coco)
                  CV_TEST_TAG_DEBUG_LONG);
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
 
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.0056 : 0.0;
     const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.072 : 0.0;
@@ -296,11 +269,6 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
                  CV_TEST_TAG_DEBUG_VERYLONG);
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
 
     // output range: [-0.001, 0.97]
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.012 : 0.0;
@@ -315,11 +283,6 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
 
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
@@ -330,12 +293,6 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 
 TEST_P(DNNTestNetwork, OpenFace)
 {
-#if defined(INF_ENGINE_RELEASE)
-#if INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-#endif
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.0024 : 0.0;
@@ -360,15 +317,6 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
         CV_TEST_TAG_DEBUG_LONG
     );
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
     Mat sample = imread(findDataFile("dnn/street.png"));
@@ -406,17 +354,8 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-
-#if defined(INF_ENGINE_RELEASE)
-#if INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_OPENCL)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-#endif
 
     Mat img = imread(findDataFile("dnn/googlenet_1.png"));
     Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);
@@ -424,9 +363,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.4 : 4e-5;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7.45 : 2e-3;
     processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", inp, "", "", l1, lInf);
-#if defined(HAVE_INF_ENGINE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     expectNoFallbacksFromIE(net);
-#endif
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false));

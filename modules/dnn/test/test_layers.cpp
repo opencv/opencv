@@ -146,8 +146,6 @@ TEST_P(Test_Caffe_layers, DeConvolution)
 
 TEST_P(Test_Caffe_layers, InnerProduct)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
@@ -236,23 +234,11 @@ TEST_P(Test_Caffe_layers, Dropout)
 
 TEST_P(Test_Caffe_layers, Concat)
 {
-#if defined(INF_ENGINE_RELEASE)
-#if INF_ENGINE_VER_MAJOR_GE(2019010000) && INF_ENGINE_VER_MAJOR_LT(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-                     CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
                      CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 
-#endif
     testLayerUsingCaffeModels("layer_concat");
     testLayerUsingCaffeModels("layer_concat_optim", true, false);
     testLayerUsingCaffeModels("layer_concat_shared_input", true, false);
@@ -260,10 +246,6 @@ TEST_P(Test_Caffe_layers, Concat)
 
 TEST_P(Test_Caffe_layers, Fused_Concat)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-                     CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-
     checkBackend();
 
     // Test case
@@ -306,8 +288,6 @@ TEST_P(Test_Caffe_layers, Fused_Concat)
 
 TEST_P(Test_Caffe_layers, Eltwise)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
     testLayerUsingCaffeModels("layer_eltwise");
 }
 
@@ -330,8 +310,6 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
 
 TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
@@ -353,11 +331,6 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 
 TEST_P(Test_Caffe_layers, Conv_Elu)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE <= 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
     Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
     ASSERT_FALSE(net.empty());
 
@@ -596,8 +569,6 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
@@ -844,8 +815,6 @@ TEST_P(Test_Caffe_layers, PriorBox_repeated)
 // Test PriorBoxLayer in case of no aspect ratios (just squared proposals).
 TEST_P(Test_Caffe_layers, PriorBox_squares)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     LayerParams lp;
@@ -1007,15 +976,10 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
@@ -1047,15 +1011,10 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     int blobSize[] = {2, 6, 75, 113};
     Mat inputs[] = {Mat(4, &blobSize[0], CV_8U), Mat()};
@@ -1084,15 +1043,10 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     std::string xmlPath = _tf("layer_convolution" + suffix + ".xml");
@@ -1183,7 +1137,7 @@ std::vector< std::vector<int> > list_sizes{ {1, 2, 3}, {3, 2, 1}, {5, 5, 5}, {13
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs_3dim, Combine(
   Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
-  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)),
+  testing::ValuesIn(getAvailableTargets(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)),
   testing::ValuesIn(list_sizes)
 ));
 
@@ -1443,9 +1397,6 @@ TEST_P(Test_Caffe_layers, Interp)
 TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (available in OpenCV source tree only)
 #endif
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-
     // Test a custom layer.
     CV_DNN_REGISTER_LAYER_CLASS(Interp, CustomInterpLayer);
     try

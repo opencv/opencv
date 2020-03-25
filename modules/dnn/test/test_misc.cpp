@@ -108,9 +108,7 @@ void test_readNet_IE_do_not_call_setInput(Backend backendId)
     const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
     const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
     else
         FAIL() << "Unknown backendId";
@@ -130,12 +128,6 @@ void test_readNet_IE_do_not_call_setInput(Backend backendId)
     EXPECT_TRUE(res.empty()) << res.size;
 }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-TEST(readNet, do_not_call_setInput_IE_NN_BUILDER_2019)
-{
-    test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
-}
-#endif
 #ifdef HAVE_DNN_NGRAPH
 TEST(readNet, do_not_call_setInput_IE_NGRAPH)
 {
@@ -440,19 +432,14 @@ TEST_P(Async, model_optimizer_pipeline_set_and_forward_single)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
     const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
     const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     Net netSync = readNet(model, proto);
     netSync.setPreferableBackend(backendId);
@@ -499,19 +486,14 @@ TEST_P(Async, model_optimizer_pipeline_set_and_forward_all)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
     const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
     const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     Net netSync = readNet(model, proto);
     netSync.setPreferableBackend(backendId);
@@ -562,18 +544,13 @@ TEST_P(Async, create_layer_pipeline_set_and_forward_all)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     Net netSync;
     Net netAsync;
@@ -677,9 +654,7 @@ TEST_P(Test_Model_Optimizer, forward_two_nets)
     const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
     const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
     else
         FAIL() << "Unknown backendId";
@@ -712,19 +687,14 @@ TEST_P(Test_Model_Optimizer, readFromBuffer)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
     const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     const std::string& weightsFile = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
     const std::string& modelFile = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     Net net1 = readNetFromModelOptimizer(modelFile, weightsFile);
     net1.setPreferableBackend(backendId);
