@@ -179,8 +179,8 @@ TEST_P(Test_ONNX_layers, ReduceMean)
 
 TEST_P(Test_ONNX_layers, ReduceMean3D)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);  // Only CPU on DLIE backend is supported
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
     testONNXModels("reduce_mean3d");
@@ -203,8 +203,8 @@ TEST_P(Test_ONNX_layers, Concatenation)
 
 TEST_P(Test_ONNX_layers, Eltwise3D)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);  // Only CPU on DLIE backend is supported
     testONNXModels("eltwise3d");
 }
 
@@ -215,8 +215,8 @@ TEST_P(Test_ONNX_layers, AveragePooling)
 
 TEST_P(Test_ONNX_layers, MaxPooling3D)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);  // Only CPU on DLIE backend is supported
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
     testONNXModels("max_pool3d", npy, 0, 0, false, false);
@@ -224,8 +224,8 @@ TEST_P(Test_ONNX_layers, MaxPooling3D)
 
 TEST_P(Test_ONNX_layers, AvePooling3D)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);  // Only CPU on DLIE backend is supported
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
     testONNXModels("ave_pool3d");
@@ -233,8 +233,8 @@ TEST_P(Test_ONNX_layers, AvePooling3D)
 
 TEST_P(Test_ONNX_layers, PoolConv3D)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);  // Only CPU on DLIE backend is supported
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
     testONNXModels("pool_conv_3d");
@@ -376,8 +376,8 @@ TEST_P(Test_ONNX_layers, ReduceL2)
 
 TEST_P(Test_ONNX_layers, Split)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
     testONNXModels("split_1");
     testONNXModels("split_2");
     testONNXModels("split_3");
@@ -399,8 +399,8 @@ TEST_P(Test_ONNX_layers, Softmax)
 
 TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
     testONNXModels("split_max");
 }
 
@@ -457,8 +457,8 @@ TEST_P(Test_ONNX_nets, Squeezenet)
 
 TEST_P(Test_ONNX_nets, Googlenet)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     const String model = _tf("models/googlenet.onnx", false);
 
@@ -555,7 +555,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
         throw SkipTestException("Skip unstable test");
 
     if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE);
 
     // output range: [-11; 8]
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : default_l1;
@@ -585,11 +585,11 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 #endif
         CV_TEST_TAG_DEBUG_LONG
     );
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
     {
-        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-        if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE);
+        if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
     }
 
     double l1 = default_l1;
@@ -606,7 +606,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
 {
 #if defined(INF_ENGINE_RELEASE)
     if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE);
 #endif
 
     double l1 = default_l1;
@@ -634,7 +634,7 @@ TEST_P(Test_ONNX_nets, DenseNet121)
 TEST_P(Test_ONNX_nets, Inception_v1)
 {
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 #endif
     testONNXModels("inception_v1", pb);
@@ -647,8 +647,8 @@ TEST_P(Test_ONNX_nets, Shufflenet)
 
 TEST_P(Test_ONNX_nets, Resnet34_kinetics)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);  // Only CPU on DLIE backend is supported
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
 

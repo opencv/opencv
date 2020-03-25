@@ -310,7 +310,7 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     );
 
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
         target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);  // need to update check function
 #endif
@@ -346,7 +346,7 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
         target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);  // need to update check function
 #endif
@@ -382,12 +382,12 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     std::string prefix = get<0>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("No support for async forward");
 
     const int numInputs = 2;
@@ -441,8 +441,8 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
 
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
 
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(9, 7) << 0, 7,  0.952983f, 0.614622f, 0.150257f, 0.901369f, 0.289251f,  // a truck
@@ -462,7 +462,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     std::string weights_file = "yolov3.weights";
 
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD &&
         getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
     {
         scoreDiff = 0.04;

@@ -141,8 +141,8 @@ TEST_P(DNNTestNetwork, Inception_5h)
 TEST_P(DNNTestNetwork, ENet)
 {
     applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     processNet("dnn/Enet-model-best.net", "", Size(512, 512), "l367_Deconvolution",
@@ -171,7 +171,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
         target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
@@ -205,7 +205,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
         target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
@@ -354,8 +354,8 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
 
     Mat img = imread(findDataFile("dnn/googlenet_1.png"));
     Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);

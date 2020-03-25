@@ -146,8 +146,8 @@ TEST_P(Test_Caffe_layers, DeConvolution)
 
 TEST_P(Test_Caffe_layers, InnerProduct)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
@@ -234,10 +234,10 @@ TEST_P(Test_Caffe_layers, Dropout)
 
 TEST_P(Test_Caffe_layers, Concat)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-                     CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+                     CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 
     testLayerUsingCaffeModels("layer_concat");
     testLayerUsingCaffeModels("layer_concat_optim", true, false);
@@ -310,8 +310,8 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
 
 TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
@@ -569,8 +569,8 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
 
@@ -815,8 +815,8 @@ TEST_P(Test_Caffe_layers, PriorBox_repeated)
 // Test PriorBoxLayer in case of no aspect ratios (just squared proposals).
 TEST_P(Test_Caffe_layers, PriorBox_squares)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
     LayerParams lp;
     lp.name = "testPriorBox";
     lp.type = "PriorBox";
@@ -976,10 +976,8 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("No support for async forward");
-
-    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
@@ -1011,10 +1009,8 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("No support for async forward");
-
-    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     int blobSize[] = {2, 6, 75, 113};
     Mat inputs[] = {Mat(4, &blobSize[0], CV_8U), Mat()};
@@ -1043,10 +1039,8 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("No support for async forward");
-
-    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     std::string xmlPath = _tf("layer_convolution" + suffix + ".xml");
@@ -1137,7 +1131,7 @@ std::vector< std::vector<int> > list_sizes{ {1, 2, 3}, {3, 2, 1}, {5, 5, 5}, {13
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs_3dim, Combine(
   Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
-  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)),
+  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
   testing::ValuesIn(list_sizes)
 ));
 

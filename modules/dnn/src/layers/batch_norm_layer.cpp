@@ -158,7 +158,7 @@ public:
     {
         return (backendId == DNN_BACKEND_OPENCV) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide()) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (preferableTarget == DNN_TARGET_CPU || dims == 4));
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && (preferableTarget == DNN_TARGET_CPU || dims == 4));
     }
 
 #ifdef HAVE_OPENCL

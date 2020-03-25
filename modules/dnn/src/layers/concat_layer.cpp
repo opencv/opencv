@@ -106,7 +106,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
     class ChannelConcatInvoker : public ParallelLoopBody

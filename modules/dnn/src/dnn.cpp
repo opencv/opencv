@@ -136,21 +136,21 @@ private:
 
 #ifdef HAVE_INF_ENGINE
         if (checkIETarget(DNN_TARGET_CPU)) {
-            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_CPU));
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU));
         }
         if (checkIETarget(DNN_TARGET_MYRIAD)) {
-            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_MYRIAD));
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD));
         }
         if (checkIETarget(DNN_TARGET_FPGA))
-            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_FPGA));
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_FPGA));
 #ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
         {
             if (checkIETarget(DNN_TARGET_OPENCL)) {
-                backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_OPENCL));
+                backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL));
             }
             if (checkIETarget(DNN_TARGET_OPENCL_FP16)) {
-                backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_OPENCL_FP16));
+                backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16));
             }
         }
 #endif
@@ -180,10 +180,6 @@ std::vector<Target> getAvailableTargets(Backend be)
 {
     if (be == DNN_BACKEND_DEFAULT)
         be = (Backend)PARAM_DNN_BACKEND_DEFAULT;
-#ifdef HAVE_INF_ENGINE
-    if (be == DNN_BACKEND_INFERENCE_ENGINE)
-        be = getInferenceEngineBackendTypeParam();
-#endif
 
     std::vector<Target> result;
     const BackendRegistry::BackendsList all_backends = getAvailableBackends();
@@ -976,12 +972,12 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         return Ptr<BackendWrapper>(new HalideBackendWrapper(targetId, m));
 #endif  // HAVE_HALIDE
     }
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
     {
 #ifdef HAVE_INF_ENGINE
         return Ptr<BackendWrapper>(new NgraphBackendWrapper(targetId, m));
 #else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine");
 #endif
     }
     else
@@ -1070,7 +1066,7 @@ struct Net::Impl
                 return Ptr<BackendWrapper>(new HalideBackendWrapper(baseBuffer, shape));
 #endif
             }
-            else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
             {
                 return wrapMat(preferableBackend, preferableTarget, host);
             }
@@ -1168,10 +1164,6 @@ struct Net::Impl
 
         if (preferableBackend == DNN_BACKEND_DEFAULT)
             preferableBackend = (Backend)PARAM_DNN_BACKEND_DEFAULT;
-#ifdef HAVE_INF_ENGINE
-        if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
-            preferableBackend = getInferenceEngineBackendTypeParam();
-#endif
 
         CV_Assert(preferableBackend != DNN_BACKEND_OPENCV ||
                   preferableTarget == DNN_TARGET_CPU ||
@@ -1180,7 +1172,7 @@ struct Net::Impl
         CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
                   preferableTarget == DNN_TARGET_CPU ||
                   preferableTarget == DNN_TARGET_OPENCL);
-        if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
         {
             CV_Assert(
                   preferableTarget == DNN_TARGET_CPU ||
@@ -1375,12 +1367,12 @@ struct Net::Impl
             CV_Assert(preferableTarget == DNN_TARGET_CPU || IS_DNN_OPENCL_TARGET(preferableTarget));
         else if (preferableBackend == DNN_BACKEND_HALIDE)
             initHalideBackend();
-        else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
         {
 #ifdef HAVE_INF_ENGINE
             initNgraphBackend(blobsToKeep_);
 #else
-            CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
+            CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine");
 #endif
         }
         else
@@ -1480,7 +1472,7 @@ struct Net::Impl
     void initNgraphBackend(const std::vector<LayerPin>& blobsToKeep_)
     {
         CV_TRACE_FUNCTION();
-        CV_Assert_N(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, haveInfEngine());
+        CV_Assert_N(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE, haveInfEngine());
 
         MapIdToLayerData::iterator it;
         Ptr<InfEngineNgraphNet> net;
@@ -1884,7 +1876,7 @@ struct Net::Impl
         CV_TRACE_FUNCTION();
 
         if(!fusion || (preferableBackend != DNN_BACKEND_OPENCV &&
-                       preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH))
+                       preferableBackend != DNN_BACKEND_INFERENCE_ENGINE))
            return;
 
         // scan through all the layers. If there is convolution layer followed by the activation layer,
@@ -2438,7 +2430,7 @@ struct Net::Impl
                 {
                     forwardHalide(ld.outputBlobsWrappers, node);
                 }
-                else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+                else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
                 {
                     forwardNgraph(ld.outputBlobsWrappers, node, isAsync);
                 }
@@ -2668,8 +2660,8 @@ struct Net::Impl
             // Transfer data to CPU if it's require.
             ld.outputBlobsWrappers[pin.oid]->copyToHost();
         }
-        CV_CheckEQ(preferableBackend, DNN_BACKEND_INFERENCE_ENGINE_NGRAPH,
-                   "DNN_BACKEND_INFERENCE_ENGINE_NGRAPH backend is required");
+        CV_CheckEQ(preferableBackend, DNN_BACKEND_INFERENCE_ENGINE,
+                   "DNN_BACKEND_INFERENCE_ENGINE backend is required");
 
         Ptr<NgraphBackendWrapper> wrapper = ld.outputBlobsWrappers[pin.oid].dynamicCast<NgraphBackendWrapper>();
         return std::move(wrapper->futureMat);
@@ -2763,12 +2755,12 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
         cvLayer->type = ieLayer->type;
         ld.layerInstance = cvLayer;
 
-        ld.backendNodes[DNN_BACKEND_INFERENCE_ENGINE_NGRAPH] = backendNode;
+        ld.backendNodes[DNN_BACKEND_INFERENCE_ENGINE] = backendNode;
 
         for (int i = 0; i < inputsNames.size(); ++i)
             cvNet.connect(0, i, lid, i);
     }
-    cvNet.setPreferableBackend(getInferenceEngineBackendTypeParam());
+    cvNet.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
 
     cvNet.impl->skipInfEngineInit = true;
     return cvNet;
@@ -2907,7 +2899,7 @@ AsyncArray Net::forwardAsync(const String& outputName)
     std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
     impl->setUpNet(pins);
 
-    if (impl->preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (impl->preferableBackend != DNN_BACKEND_INFERENCE_ENGINE)
         CV_Error(Error::StsNotImplemented, "DNN: Asynchronous forward is supported for Inference Engine backends only");
 
     impl->isAsync = true;
@@ -3053,11 +3045,6 @@ void Net::setPreferableBackend(int backendId)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG(backendId);
-
-#ifdef HAVE_INF_ENGINE
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        backendId = getInferenceEngineBackendTypeParam();
-#endif
 
     if( impl->preferableBackend != backendId )
     {
@@ -3294,8 +3281,7 @@ string Net::Impl::dump()
     {
         case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
         case DNN_BACKEND_HALIDE: backend = "HALIDE/"; break;
-        case DNN_BACKEND_INFERENCE_ENGINE: // fallthru
-        case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backend = "NGRAPH/"; break;
+        case DNN_BACKEND_INFERENCE_ENGINE: backend = "DLIE/"; break;
         case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
         // don't use default:
     }

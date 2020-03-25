@@ -96,7 +96,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
             return  (preferableTarget != DNN_TARGET_MYRIAD ||
                     (dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0));
 #endif

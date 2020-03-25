@@ -21,51 +21,7 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
-static Backend parseInferenceEngineBackendType(const cv::String& backend)
-{
-    CV_Assert(!backend.empty());
-    if (backend == CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        return DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
-    if (backend == CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API)
-        return DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019;
-    CV_Error(Error::StsBadArg, cv::format("Unknown IE backend: %s", backend.c_str()));
-}
-static const char* dumpInferenceEngineBackendType(Backend backend)
-{
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        return CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        return CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API;
-    CV_Error(Error::StsBadArg, cv::format("Invalid backend ID for IE: %d", backend));
-}
-Backend& getInferenceEngineBackendTypeParam()
-{
-    static Backend param = parseInferenceEngineBackendType(
-        utils::getConfigurationParameterString("OPENCV_DNN_BACKEND_INFERENCE_ENGINE_TYPE",
-#ifdef HAVE_INF_ENGINE
-            CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
-#else
-#error "Build configuration error: nGraph or NN Builder API backend should be enabled"
-#endif
-        )
-    );
-    return param;
-}
-
 CV__DNN_EXPERIMENTAL_NS_BEGIN
-
-cv::String getInferenceEngineBackendType()
-{
-    return dumpInferenceEngineBackendType(getInferenceEngineBackendTypeParam());
-}
-cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
-{
-    Backend newBackend = parseInferenceEngineBackendType(newBackendType);
-    Backend& param = getInferenceEngineBackendTypeParam();
-    Backend old = param;
-    param = newBackend;
-    return dumpInferenceEngineBackendType(old);
-}
 
 CV__DNN_EXPERIMENTAL_NS_END
 
