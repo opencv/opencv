@@ -71,6 +71,13 @@ namespace cv { namespace dnn {
 
 Backend& getInferenceEngineBackendTypeParam();
 
+
+Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
+
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats);
+
+
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 bool isMyriadX();

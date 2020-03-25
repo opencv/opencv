@@ -291,7 +291,7 @@ public:
 #ifdef HAVE_INF_ENGINE
 virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
 {
-    CV_Assert_N((inputs.size() == 1 && (type == MAX || type == AVE)) || inputs.size() == 2, nodes.size() == inputs.size());
+    CV_Assert((nodes.size() == 1 && (type == MAX || type == AVE)) || nodes.size() == 2);
     auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
     ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;

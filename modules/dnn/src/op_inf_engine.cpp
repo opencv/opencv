@@ -69,6 +69,87 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
 
 CV__DNN_EXPERIMENTAL_NS_END
 
+
+Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
+{
+    // NOTE: Inference Engine sizes are reversed.
+    std::vector<size_t> dims = blob->getTensorDesc().getDims();
+    std::vector<int> size(dims.begin(), dims.end());
+    auto precision = blob->getTensorDesc().getPrecision();
+
+    int type = -1;
+    switch (precision)
+    {
+        case InferenceEngine::Precision::FP32: type = CV_32F; break;
+        case InferenceEngine::Precision::U8: type = CV_8U; break;
+        default:
+            CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+    }
+    return Mat(size, type, (void*)blob->buffer());
+}
+
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats)
+{
+    mats.resize(blobs.size());
+    for (int i = 0; i < blobs.size(); ++i)
+        mats[i] = infEngineBlobToMat(blobs[i]);
+}
+
+static bool init_IE_plugins()
+{
+    // load and hold IE plugins
+    static InferenceEngine::Core* init_core = new InferenceEngine::Core();  // 'delete' is never called
+    (void)init_core->GetAvailableDevices();
+    return true;
+}
+static InferenceEngine::Core& retrieveIECore(const std::string& id, std::map<std::string, std::shared_ptr<InferenceEngine::Core> >& cores)
+{
+    AutoLock lock(getInitializationMutex());
+    std::map<std::string, std::shared_ptr<InferenceEngine::Core> >::iterator i = cores.find(id);
+    if (i == cores.end())
+    {
+        std::shared_ptr<InferenceEngine::Core> core = std::make_shared<InferenceEngine::Core>();
+        cores[id] = core;
+        return *core.get();
+    }
+    return *(i->second).get();
+}
+static InferenceEngine::Core& create_IE_Core_instance(const std::string& id)
+{
+    static std::map<std::string, std::shared_ptr<InferenceEngine::Core> > cores;
+    return retrieveIECore(id, cores);
+}
+static InferenceEngine::Core& create_IE_Core_pointer(const std::string& id)
+{
+    // load and hold IE plugins
+    static std::map<std::string, std::shared_ptr<InferenceEngine::Core> >* cores =
+            new std::map<std::string, std::shared_ptr<InferenceEngine::Core> >();
+    return retrieveIECore(id, *cores);
+}
+InferenceEngine::Core& getCore(const std::string& id)
+{
+    // to make happy memory leak tools use:
+    // - OPENCV_DNN_INFERENCE_ENGINE_HOLD_PLUGINS=0
+    // - OPENCV_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
+    static bool param_DNN_INFERENCE_ENGINE_HOLD_PLUGINS = utils::getConfigurationParameterBool("OPENCV_DNN_INFERENCE_ENGINE_HOLD_PLUGINS", true);
+    static bool init_IE_plugins_ = param_DNN_INFERENCE_ENGINE_HOLD_PLUGINS && init_IE_plugins(); CV_UNUSED(init_IE_plugins_);
+
+    static bool param_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND =
+            utils::getConfigurationParameterBool("OPENCV_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND",
+#ifdef _WIN32
+                true
+#else
+                false
+#endif
+            );
+
+    InferenceEngine::Core& core = param_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
+            ? create_IE_Core_pointer(id)
+            : create_IE_Core_instance(id);
+    return core;
+}
+
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 static bool detectMyriadX_()
 {

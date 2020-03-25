@@ -205,7 +205,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) &&
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
         target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
