@@ -131,7 +131,7 @@ public:
 
     static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
     {
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         {
             if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
                 inp->size[0] != 1 && inp->size[0] != ref->size[0])
@@ -168,7 +168,7 @@ public:
 
     void expectNoFallbacksFromIE(Net& net)
     {
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE)
             expectNoFallbacks(net, false);
     }
 

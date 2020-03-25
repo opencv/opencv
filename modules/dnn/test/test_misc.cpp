@@ -108,11 +108,6 @@ void test_readNet_IE_do_not_call_setInput(Backend backendId)
     const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
     const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
-
     Net net = readNet(model, proto);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
@@ -131,7 +126,7 @@ void test_readNet_IE_do_not_call_setInput(Backend backendId)
 #ifdef HAVE_INF_ENGINE
 TEST(readNet, do_not_call_setInput_IE_NGRAPH)
 {
-    test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE);
 }
 #endif
 #endif  // HAVE_INF_ENGINE
@@ -432,14 +427,12 @@ TEST_P(Async, model_optimizer_pipeline_set_and_forward_single)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("No support for async forward");
 
     const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
     const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
-
-    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     Net netSync = readNet(model, proto);
     netSync.setPreferableBackend(backendId);
@@ -486,14 +479,12 @@ TEST_P(Async, model_optimizer_pipeline_set_and_forward_all)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("No support for async forward");
 
     const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
     const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
-
-    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
     Net netSync = readNet(model, proto);
     netSync.setPreferableBackend(backendId);
@@ -544,13 +535,11 @@ TEST_P(Async, create_layer_pipeline_set_and_forward_all)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-
-    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     Net netSync;
     Net netAsync;
@@ -647,17 +636,11 @@ INSTANTIATE_TEST_CASE_P(/**/, Async, Combine(
 typedef testing::TestWithParam<tuple<Backend, Target> > Test_Model_Optimizer;
 TEST_P(Test_Model_Optimizer, forward_two_nets)
 {
-    const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
     const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
     const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
-
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
 
     Net net0 = readNet(model, proto);
     net0.setPreferableTarget(targetId);
@@ -687,19 +670,16 @@ TEST_P(Test_Model_Optimizer, readFromBuffer)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("No support for async forward");
 
     const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     const std::string& weightsFile = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
     const std::string& modelFile = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
 
-    setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-
     Net net1 = readNetFromModelOptimizer(modelFile, weightsFile);
     net1.setPreferableBackend(backendId);
     net1.setPreferableTarget(targetId);
-
 
     std::vector<char> modelConfig;
     readFileContent(modelFile, modelConfig);

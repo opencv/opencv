@@ -258,7 +258,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
@@ -1296,7 +1296,7 @@ public:
         const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or IODHW layout
         const int group = numOutput / outGroupCn;
 
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE) {
             return group == 1;
         }
 #endif  // HAVE_INF_ENGINE

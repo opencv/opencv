@@ -345,7 +345,7 @@ TEST_P(FullyConnected, Accuracy)
     bool hasBias = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (targetId == DNN_TARGET_OPENCL_FP16 ||
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && (targetId == DNN_TARGET_OPENCL_FP16 ||
        (targetId == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X))) {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
@@ -406,8 +406,8 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, SoftMax, Combine(
 //////////////////////////////////////////////////////////////////////////////
 TEST_P(Test_Halide_layers, MaxPoolUnpool)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     LayerParams pool;
     pool.set("pool", "max");
@@ -688,8 +688,8 @@ TEST_P(Eltwise, Accuracy)
     Target targetId = get<1>(get<4>(GetParam()));
 
 #if defined(INF_ENGINE_RELEASE)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && numConv > 1)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && numConv > 1)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
     bool convInputShift = 1;

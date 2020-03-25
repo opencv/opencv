@@ -37,17 +37,6 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-//#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
-//there is no way to suppress warnings from IE only at this moment, so we are forced to suppress warnings globally
-#if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#ifdef _MSC_VER
-#pragma warning(disable: 4996)  // was declared deprecated
-#endif
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
 #if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility push(default)
 #endif
@@ -68,8 +57,6 @@
 namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
-
-Backend& getInferenceEngineBackendTypeParam();
 
 
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);

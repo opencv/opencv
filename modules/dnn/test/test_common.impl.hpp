@@ -23,9 +23,8 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     switch (v) {
         case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
         case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
+        case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE"; return;
         case DNN_BACKEND_OPENCV: *os << "OCV"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
         default: /* do nothing */;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
@@ -200,12 +199,12 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #ifdef HAVE_INF_ENGINE
     if (withNgraph)
     {
-        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
             if (*i == DNN_TARGET_MYRIAD && !withVPU)
                 continue;
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, *i));
         }
 
     }
@@ -235,12 +234,12 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
     std::vector< Target > available;
 
     {
-        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
             if (*i == DNN_TARGET_MYRIAD && !withVPU)
                 continue;
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, *i));
         }
 
     }
@@ -335,21 +334,6 @@ void initDNNTests()
 #if defined(INF_ENGINE_RELEASE)
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_IE,
-#if INF_ENGINE_VER_MAJOR_EQ(2018050000)
-        CV_TEST_TAG_DNN_SKIP_IE_2018R5,
-#elif INF_ENGINE_VER_MAJOR_EQ(2019010000)
-        CV_TEST_TAG_DNN_SKIP_IE_2019R1,
-# if INF_ENGINE_RELEASE == 2019010100
-        CV_TEST_TAG_DNN_SKIP_IE_2019R1_1,
-# endif
-#elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
-        CV_TEST_TAG_DNN_SKIP_IE_2019R2,
-#elif INF_ENGINE_VER_MAJOR_EQ(2019030000)
-        CV_TEST_TAG_DNN_SKIP_IE_2019R3,
-#endif
-#ifdef HAVE_INF_ENGINE
-        CV_TEST_TAG_DNN_SKIP_IE_NGRAPH,
-#endif
         ""
     );
 #endif

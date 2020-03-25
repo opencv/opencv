@@ -81,11 +81,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         DNN_BACKEND_OPENCV,
         // OpenCV 4.x: DNN_BACKEND_VKCOM,
         // OpenCV 4.x: DNN_BACKEND_CUDA,
-
-#ifdef __OPENCV_BUILD
-        DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
-        DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
-#endif
     };
 
     /**

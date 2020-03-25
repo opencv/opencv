@@ -151,7 +151,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
-              (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && channelsMode == ELTWISE_CHANNNELS_SAME);
+              (backendId == DNN_BACKEND_INFERENCE_ENGINE && channelsMode == ELTWISE_CHANNNELS_SAME);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,

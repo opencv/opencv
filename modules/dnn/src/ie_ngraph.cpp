@@ -251,15 +251,15 @@ public:
 
 
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {}
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), node(std::move(_node)) {}
 
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>& _node)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(_node) {}
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), node(_node) {}
 
 InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& nodes,
                                          Ptr<Layer>& cvLayer_, std::vector<Mat*>& inputs,
                                          std::vector<Mat>& outputs, std::vector<Mat>& internals)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), cvLayer(cvLayer_)
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), cvLayer(cvLayer_)
 {
     std::ostringstream oss;
     oss << (size_t)cvLayer.get();
@@ -640,7 +640,7 @@ bool NgraphBackendLayer::supportBackend(int backendId)
 {
     CV_LOG_DEBUG(NULL, "NgraphBackendLayer::supportBackend(" << backendId << ")");
     return backendId == DNN_BACKEND_DEFAULT ||
-           (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+           (backendId == DNN_BACKEND_INFERENCE_ENGINE);
 }
 
 void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs,
@@ -693,14 +693,14 @@ InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, InferenceEngine::Layou
 }
 
 NgraphBackendWrapper::NgraphBackendWrapper(int targetId, const cv::Mat& m)
-    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, targetId)
+    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE, targetId)
 {
     dataPtr = wrapToInfEngineDataNode(m);
     blob = wrapToNgraphBlob(m, estimateLayout(m));
 }
 
 NgraphBackendWrapper::NgraphBackendWrapper(Ptr<BackendWrapper> wrapper)
-    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, wrapper->targetId)
+    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE, wrapper->targetId)
 {
     Ptr<NgraphBackendWrapper> ieWrapper = wrapper.dynamicCast<NgraphBackendWrapper>();
     CV_Assert(!ieWrapper.empty());
