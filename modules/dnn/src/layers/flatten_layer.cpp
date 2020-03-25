@@ -164,7 +164,7 @@ public:
         }
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
 {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
@@ -188,7 +188,7 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes)
         auto reshape = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, shape, true);
         return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
     int _startAxis;
     int _endAxis;

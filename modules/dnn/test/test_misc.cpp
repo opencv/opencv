@@ -128,7 +128,7 @@ void test_readNet_IE_do_not_call_setInput(Backend backendId)
     EXPECT_TRUE(res.empty()) << res.size;
 }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 TEST(readNet, do_not_call_setInput_IE_NGRAPH)
 {
     test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);

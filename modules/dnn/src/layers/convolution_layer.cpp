@@ -470,7 +470,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert_N(inputs.size() == 1, nodes.size() == 1);
@@ -538,7 +538,7 @@ public:
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
     class ParallelConv : public cv::ParallelLoopBody
     {
@@ -1881,7 +1881,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
        const int outGroupCn = blobs[0].size[1];
@@ -1931,7 +1931,7 @@ public:
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(deconv));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

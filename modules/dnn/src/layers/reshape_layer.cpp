@@ -260,7 +260,7 @@ public:
         }
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initNgraph(onst std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(outShapes.size() == 1);
@@ -272,7 +272,7 @@ public:
         auto reshape = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, shape, true);
         return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
     }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
 private:
     std::vector<MatShape> outShapes;

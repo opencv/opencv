@@ -46,7 +46,7 @@
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 #include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/roi_pooling.hpp>
 #include <ngraph/op/experimental/layers/psroi_pooling.hpp>
@@ -288,7 +288,7 @@ public:
             return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
 virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
 {
     CV_Assert_N((inputs.size() == 1 && (type == MAX || type == AVE)) || inputs.size() == 2, nodes.size() == inputs.size());
@@ -327,7 +327,7 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes)
     else
         CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
 }
-#endif  // HAVE_DNN_NGRAPH
+#endif  // HAVE_INF_ENGINE
 
 
     class PoolingInvoker : public ParallelLoopBody

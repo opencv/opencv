@@ -347,7 +347,7 @@ void initDNNTests()
 #elif INF_ENGINE_VER_MAJOR_EQ(2019030000)
         CV_TEST_TAG_DNN_SKIP_IE_2019R3,
 #endif
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
         CV_TEST_TAG_DNN_SKIP_IE_NGRAPH,
 #endif
         ""
