@@ -144,8 +144,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
-               (((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && !blobs.empty()) ||
-                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && axis == 1);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE

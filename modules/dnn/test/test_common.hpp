@@ -22,7 +22,6 @@
 #define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL_FP16         "dnn_skip_ocl_fp16"
-#define CV_TEST_TAG_DNN_SKIP_IE_NGRAPH           "dnn_skip_ie_ngraph"
 #define CV_TEST_TAG_DNN_SKIP_IE                  "dnn_skip_ie"
 #define CV_TEST_TAG_DNN_SKIP_IE_OPENCL           "dnn_skip_ie_ocl"
 #define CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16      "dnn_skip_ie_ocl_fp16"
