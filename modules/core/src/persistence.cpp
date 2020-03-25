@@ -251,9 +251,9 @@ void icvClose( CvFileStorage* fs, cv::String* out )
             else if ( fs->fmt == CV_STORAGE_FORMAT_JSON )
                 icvPuts( fs, "}\n" );
         }
-
-        icvCloseFile(fs);
     }
+
+    icvCloseFile(fs);
 
     if( fs->outbuf && out )
     {
