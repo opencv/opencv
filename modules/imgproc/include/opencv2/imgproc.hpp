@@ -4718,6 +4718,12 @@ public:
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
                   int connectivity = 8, bool forceLeftToRight = false );
+    LineIterator( Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false );
+    LineIterator( Size boundingAreaSize, Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false );
+    LineIterator( Rect boundingAreaRect, Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false );
     /** @brief returns pointer to the current pixel
     */
     uchar* operator *();
@@ -4737,6 +4743,8 @@ public:
     int err, count;
     int minusDelta, plusDelta;
     int minusStep, plusStep;
+    int minusShift, plusShift;
+    Point p;
 };
 
 //! @cond IGNORED
@@ -4754,7 +4762,9 @@ LineIterator& LineIterator::operator ++()
 {
     int mask = err < 0 ? -1 : 0;
     err += minusDelta + (plusDelta & mask);
-    ptr += minusStep + (plusStep & mask);
+    p.x += minusShift + (plusShift & mask);
+    p.y += minusStep + (plusStep & mask);
+    ptr = (uchar*)ptr0 + (size_t)p.y*step + (size_t)p.x*elemSize;
     return *this;
 }
 
@@ -4769,80 +4779,7 @@ LineIterator LineIterator::operator ++(int)
 inline
 Point LineIterator::pos() const
 {
-    Point p;
-    p.y = (int)((ptr - ptr0)/step);
-    p.x = (int)(((ptr - ptr0) - p.y*step)/elemSize);
     return p;
-}
-
-//! @endcond
-
-class CV_EXPORTS LineVirtualIterator
-{
-public:
-    /** @brief initializes the iterator
-
-    creates iterators for the line connecting pt1 and pt2
-    the line will be clipped on the image boundaries
-    the line is 8-connected or 4-connected
-    If forceLeftToRight=true, then the iteration is always done
-    from the left-most point to the right most,
-    not to depend on the ordering of pt1 and pt2 parameters
-    */
-    LineVirtualIterator(const Point& pt1, const Point& pt2,
-                        int connectivity = 8, bool forceLeftToRight = false );
-    LineVirtualIterator(const Size& boundingAreaSize, const Point& pt1, const Point& pt2,
-                        int connectivity = 8, bool forceLeftToRight = false );
-    LineVirtualIterator(const Rect& boundingAreaRect, const Point& pt1, const Point& pt2,
-                        int connectivity = 8, bool forceLeftToRight = false );
-
-    /** @brief alias of pos(), returns coordinates of the current pixel
-    */
-    const Point& operator *() const {return pos();}
-    /** @brief prefix increment operator (++it). shifts iterator to the next pixel
-    */
-    LineVirtualIterator& operator ++();
-    /** @brief postfix increment operator (it++). shifts iterator to the next pixel
-    */
-    LineVirtualIterator operator ++(int);
-    /** @brief returns coordinates of the current pixel
-    */
-    const Point& pos() const {return currentPos;}
-
-    Size size;
-    Point currentPos;
-    Point currentPosOffset;
-    int err, count;
-    int minusDelta, plusDelta;
-    int minusStep, plusStep;
-};
-
-//! @cond IGNORED
-
-// === LineVirtualIterator implementation ===
-
-inline
-LineVirtualIterator& LineVirtualIterator::operator ++()
-{
-    if (size.width)
-    {
-      const int mask = err < 0 ? -1 : 0;
-      err += minusDelta + (plusDelta & mask);
-      const int offset = minusStep + (plusStep & mask);
-      const size_t flattenedCoord = (currentPos.y - currentPosOffset.y) * size.width + (currentPos.x - currentPosOffset.x) + offset;
-      currentPos.y = static_cast<int>((flattenedCoord / size.width) + currentPosOffset.y);
-      currentPos.x = static_cast<int>((flattenedCoord % size.width) + currentPosOffset.x);
-    }//end if (size.width)
-    return *this;
-}
-
-
-inline
-LineVirtualIterator LineVirtualIterator::operator ++(int)
-{
-    LineVirtualIterator it = *this;
-    ++(*this);
-    return it;
 }
 
 //! @endcond
