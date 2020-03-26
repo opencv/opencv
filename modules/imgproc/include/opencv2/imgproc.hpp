@@ -4717,7 +4717,7 @@ public:
     not to depend on the ordering of pt1 and pt2 parameters
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
-                  int connectivity = 8, bool forceLeftToRight = false );
+                  int connectivity = 8, bool leftToRight = false );
     LineIterator( Point pt1, Point pt2,
                   int connectivity = 8, bool leftToRight = false );
     LineIterator( Size boundingAreaSize, Point pt1, Point pt2,
