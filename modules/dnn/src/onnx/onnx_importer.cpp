@@ -400,21 +400,21 @@ void ONNXImporter::populateNet(Net dstNet)
                     outShapes[layerParams.name][axis] = 1;
 
                     LayerParams reshapeLp;
-                    std::string reshapeName = layerParams.name + "/reshape";
-                    CV_Assert(layer_id.find(reshapeName) == layer_id.end());
+                    reshapeLp.name = layerParams.name + "/reshape";
+                    reshapeLp.type = "Reshape";
+                    CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
                     reshapeLp.set("axis", 0);
                     reshapeLp.set("num_axes", 1);
                     int newShape[] = {1, -1};
                     reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], 2));
-                    int reshapeId = dstNet.addLayer(reshapeName, "Reshape", reshapeLp);
-                    layerId = layer_id.find(node_proto.input(0));
-                    CV_Assert(layerId != layer_id.end());
-                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, reshapeId, 0);
-                    layer_id.insert(std::make_pair(reshapeName, LayerInfo(reshapeId, 0)));
+
+                    node_proto.set_output(0, reshapeLp.name);
+                    addLayer(dstNet, reshapeLp, node_proto, layer_id, outShapes);
 
                     LayerParams avgLp;
-                    std::string avgName = layerParams.name + "/avg";
-                    CV_Assert(layer_id.find(avgName) == layer_id.end());
+                    avgLp.name = layerParams.name + "/avg";
+                    avgLp.type = "Pooling";
+                    CV_Assert(layer_id.find(avgLp.name) == layer_id.end());
                     avgLp.set("pool", "ave");
                     if (axes.size() == 2)
                     {
@@ -429,34 +429,31 @@ void ONNXImporter::populateNet(Net dstNet)
                         avgLp.set(axis == 2 ? "kernel_h" : "kernel_w", 1);
                     }
 
-                    int avgId = dstNet.addLayer(avgName, "Pooling", avgLp);
-                    layerId = layer_id.find(reshapeName);
-                    CV_Assert(layerId != layer_id.end());
-                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, avgId, 0);
-                    layer_id.insert(std::make_pair(avgName, LayerInfo(avgId, 0)));
+                    node_proto.set_input(0, reshapeLp.name);
+                    node_proto.set_output(0, avgLp.name);
+                    addLayer(dstNet, avgLp, node_proto, layer_id, outShapes);
 
-                    LayerParams squeezeLp;
-                    squeezeLp.set("axis", 0);
-                    squeezeLp.set("end_axis", 1);
-                    int squeezeId = dstNet.addLayer(layerParams.name, "Flatten", squeezeLp);
-                    layerId = layer_id.find(avgName);
-                    CV_Assert(layerId != layer_id.end());
-                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, squeezeId, 0);
-                    layer_id.insert(std::make_pair(layerParams.name, LayerInfo(squeezeId, 0)));
-                    continue;
+                    layerParams.type = "Flatten";
+                    layerParams.set("axis", 0);
+                    layerParams.set("end_axis", 1);
+
+                    node_proto.set_input(0, avgLp.name);
+                    node_proto.set_output(0, layerParams.name);
                 }
-                if (inpShape.size() != 4 && inpShape.size() != 5)
+                else
+                {
+                    if (inpShape.size() != 4 && inpShape.size() != 5)
                     CV_Error(Error::StsNotImplemented, "Unsupported input shape of reduce_mean operation.");
 
-                CV_Assert(axes.size() <= inpShape.size() - 2);
-                std::vector<int> kernel_size(inpShape.size() - 2, 1);
-                for (int i = 0; i < axes.size(); i++) {
-                    int axis = axes.get<int>(i);
-                    CV_Assert_N(axis >= 2 + i, axis < inpShape.size());
-                    kernel_size[axis - 2] = inpShape[axis];
+                    CV_Assert(axes.size() <= inpShape.size() - 2);
+                    std::vector<int> kernel_size(inpShape.size() - 2, 1);
+                    for (int i = 0; i < axes.size(); i++) {
+                        int axis = axes.get<int>(i);
+                        CV_Assert_N(axis >= 2 + i, axis < inpShape.size());
+                        kernel_size[axis - 2] = inpShape[axis];
+                    }
+                    layerParams.set("kernel_size", DictValue::arrayInt(&kernel_size[0], kernel_size.size()));
                 }
-
-                layerParams.set("kernel_size", DictValue::arrayInt(&kernel_size[0], kernel_size.size()));
             }
         }
         else if (layer_type == "Slice")
