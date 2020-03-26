@@ -111,8 +111,6 @@ class Ellipse
     public:
         Ellipse();
         Ellipse(const cv::Point2f &center, const cv::Size2f &axes, float angle);
-        Ellipse(const Ellipse &other);
-
 
         void draw(cv::InputOutputArray img,const cv::Scalar &color = cv::Scalar::all(120))const;
         bool contains(const cv::Point2f &pt)const;
