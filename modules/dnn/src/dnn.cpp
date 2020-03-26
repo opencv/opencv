@@ -42,7 +42,6 @@
 #include "precomp.hpp"
 #include "op_halide.hpp"
 #include "op_inf_engine.hpp"
-#include "ie_ngraph.hpp"
 
 #include "halide_scheduler.hpp"
 #include <set>

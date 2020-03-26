@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
-#include "../ie_ngraph.hpp"
 
 namespace cv { namespace dnn {
 
