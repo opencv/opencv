@@ -296,23 +296,23 @@ void copyFromMat(const Mat& in, std::vector<OutT*>&& out)
 
 void errorLogCallback(const char* msg, void* /* userData */)
 {
-    CV_LOG_ERROR(nullptr, cv::format("OpenJPEG2000: %s", msg));
+    CV_LOG_ERROR(NULL, cv::format("OpenJPEG2000: %s", msg));
 }
 
 void warningLogCallback(const char* msg, void* /* userData */)
 {
-    CV_LOG_WARNING(nullptr, cv::format("OpenJPEG2000: %s", msg));
+    CV_LOG_WARNING(NULL, cv::format("OpenJPEG2000: %s", msg));
 }
 
 void setupLogCallbacks(opj_codec_t* codec)
 {
     if (!opj_set_error_handler(codec, errorLogCallback, nullptr))
     {
-        CV_LOG_WARNING(nullptr, "OpenJPEG2000: can not set error log handler");
+        CV_LOG_WARNING(NULL, "OpenJPEG2000: can not set error log handler");
     }
     if (!opj_set_warning_handler(codec, warningLogCallback, nullptr))
     {
-        CV_LOG_WARNING(nullptr, "OpenJPEG2000: can not set warning log handler");
+        CV_LOG_WARNING(NULL, "OpenJPEG2000: can not set warning log handler");
     }
 }
 
@@ -333,6 +333,9 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
         {
         case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
             parameters.tcp_rates[0] = 1000.f / std::min(std::max(params[i + 1], 1), 1000);
+            break;
+        default:
+            CV_LOG_WARNING(NULL, "OpenJPEG2000(encoder): skip unsupported parameter: " << params[i]);
             break;
         }
     }
@@ -378,7 +381,7 @@ bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
         copyToMat(std::move(incomps), outImg, shift);
         return true;
     }
-    CV_LOG_ERROR(nullptr,
+    CV_LOG_ERROR(NULL,
                  cv::format("OpenJPEG2000: unsupported conversion from %d components to %d for SRGB image decoding",
                             inChannels, outChannels));
     return false;
@@ -396,7 +399,7 @@ bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shif
         copyToMat(ImageComponents(outChannels, inImg.comps[0].data), outImg, shift);
         return true;
     }
-    CV_LOG_ERROR(nullptr,
+    CV_LOG_ERROR(NULL,
                  cv::format("OpenJPEG2000: unsupported conversion from %d components to %d for Grayscale image decoding",
                             inChannels, outChannels));
     return false;
@@ -421,7 +424,7 @@ bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
         return true;
     }
 
-    CV_LOG_ERROR(nullptr,
+    CV_LOG_ERROR(NULL,
                  cv::format("OpenJPEG2000: unsupported conversion from %d components to %d for YUV image decoding",
                             inChannels, outChannels));
     return false;
@@ -530,7 +533,8 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
     switch (image_->color_space)
     {
     case OPJ_CLRSPC_UNKNOWN:
-        CV_LOG_WARNING(nullptr, "OpenJPEG2000: Image has unknown color space, SRGB is assumed");
+        CV_LOG_WARNING(NULL, "OpenJPEG2000: Image has unknown color space, SRGB is assumed");
+        /* FALLTHRU */
     case OPJ_CLRSPC_SRGB:
         decode = decodeSRGBData;
         break;
@@ -583,6 +587,7 @@ bool Jpeg2KOpjEncoder::write(const Mat& img, const std::vector<int>& params)
     CV_Assert(params.size() % 2 == 0);
 
     const int channels = img.channels();
+    CV_DbgAssert(channels > 0); // passed matrix is not empty
     if (channels > 4)
     {
         CV_Error(Error::StsNotImplemented, "OpenJPEG2000: only BGR(a) and gray (+ alpha) images supported");
