@@ -267,10 +267,10 @@ int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
         Point p2(x2, y2);
         Point offset(x3, y3);
         LineIterator it( m, p1, p2 );
-        LineVirtualIterator vit(Rect(offset.x, offset.y, width, height), p1 + offset, p2 + offset);
+        LineIterator vit(Rect(offset.x, offset.y, width, height), p1 + offset, p2 + offset);
         if (it.count != vit.count)
         {
-           ts->printf( ts->LOG, "LineVirtualIterator works incorrectly" );
+           ts->printf( ts->LOG, "virtual LineIterator works incorrectly" );
            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
            break;
         }
@@ -282,7 +282,7 @@ int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
                 Point pVit = vit.pos() - offset;
                 if (pIt != pVit)
                 {
-                    ts->printf( ts->LOG, "LineVirtualIterator works incorrectly" );
+                    ts->printf( ts->LOG, "virtual LineIterator works incorrectly" );
                     ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
                     break;
                 }
