@@ -1831,7 +1831,7 @@ static void run_sepfilter5x5_char2short(short out[], const uchar *in[], int widt
             for (; l <= length - nlanes; l += nlanes)
             {
                 v_uint16 t[kxLen];
-                v_int16 sum;
+                v_int16 sum = vx_setzero_s16();
 
                 for (int i = 0; i < kxLen; ++i)
                 {
@@ -1862,7 +1862,7 @@ static void run_sepfilter5x5_char2short(short out[], const uchar *in[], int widt
         for (; l <= length - nlanes; l += nlanes)
         {
             v_int16 s[buffSize];
-            v_int16 sum;
+            v_int16 sum = vx_setzero_s16();
 
             for (int i = 0; i < kyLen; ++i)
             {
