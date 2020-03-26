@@ -10,8 +10,10 @@
 #include <opencv2/gapi/imgproc.hpp>
 #include <opencv2/gapi/cpu/imgproc.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
+#include <opencv2/gapi/gcompoundkernel.hpp>
 
 #include "backends/fluid/gfluidimgproc_func.hpp"
+
 
 namespace {
     cv::Mat add_border(const cv::Mat& in, const int ksize, const int borderType, const cv::Scalar& bordVal){
@@ -335,6 +337,57 @@ GAPI_OCV_KERNEL(GCPUNV12toRGBp, cv::gapi::imgproc::GNV12toRGBp)
     }
 };
 
+G_TYPED_KERNEL(GYUV2Gray, <cv::GMat(cv::GMat)>, "yuvtogray") {
+    static cv::GMatDesc outMeta(cv::GMatDesc in) {
+        GAPI_Assert(in.depth  == CV_8U);
+        GAPI_Assert(in.planar == false);
+        GAPI_Assert(in.size.width  % 2 == 0);
+        GAPI_Assert(in.size.height % 3 == 0);
+
+        /* YUV format for this kernel:
+         * Y Y Y Y Y Y Y Y
+         * Y Y Y Y Y Y Y Y
+         * Y Y Y Y Y Y Y Y
+         * Y Y Y Y Y Y Y Y
+         * U V U V U V U V
+         * U V U V U V U V
+         */
+
+        return {CV_8U, 1, cv::gapi::own::Size{in.size.width, in.size.height - (in.size.height / 3)}, false};
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUYUV2Gray, GYUV2Gray)
+{
+    static void run(const cv::Mat& in, cv::Mat& out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_YUV2GRAY_NV12);
+    }
+};
+
+G_TYPED_KERNEL(GConcatYUVPlanes, <cv::GMat(cv::GMat, cv::GMat)>, "concatyuvplanes") {
+    static cv::GMatDesc outMeta(cv::GMatDesc y, cv::GMatDesc uv) {
+        return {CV_8U, 1, cv::gapi::own::Size{y.size.width, y.size.height + uv.size.height}, false};
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUConcatYUVPlanes, GConcatYUVPlanes)
+{
+    static void run(const cv::Mat& in_y, const cv::Mat& in_uv, cv::Mat& out)
+    {
+        cv::Mat uv_planar(in_uv.rows, in_uv.cols * 2, CV_8UC1, in_uv.data);
+        cv::vconcat(in_y, uv_planar, out);
+    }
+};
+
+GAPI_COMPOUND_KERNEL(GCPUNV12toGray, cv::gapi::imgproc::GNV12toGray)
+{
+    static cv::GMat expand(cv::GMat y, cv::GMat uv)
+    {
+        return GYUV2Gray::on(GConcatYUVPlanes::on(y, uv));
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUNV12toBGRp, cv::gapi::imgproc::GNV12toBGRp)
 {
     static void run(const cv::Mat& inY, const cv::Mat& inUV, cv::Mat& out)
@@ -344,7 +397,6 @@ GAPI_OCV_KERNEL(GCPUNV12toBGRp, cv::gapi::imgproc::GNV12toBGRp)
         toPlanar(rgb, out);
     }
 };
-
 
 cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
 {
@@ -376,8 +428,11 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUBayerGR2RGB
         , GCPURGB2HSV
         , GCPURGB2YUV422
+        , GCPUYUV2Gray
         , GCPUNV12toRGBp
         , GCPUNV12toBGRp
+        , GCPUNV12toGray
+        , GCPUConcatYUVPlanes
         >();
     return pkg;
 }

@@ -69,6 +69,8 @@ protected:
     bool TestVec();
     bool TestMatxMultiplication();
     bool TestMatxElementwiseDivison();
+    bool TestDivisionByValue();
+    bool TestInplaceDivisionByValue();
     bool TestMatMatxCastSum();
     bool TestSubMatAccess();
     bool TestExp();
@@ -976,6 +978,50 @@ bool CV_OperationsTest::TestMatxElementwiseDivison()
     return true;
 }
 
+bool CV_OperationsTest::TestDivisionByValue()
+{
+    try
+    {
+        Matx22f mat(2, 4, 6, 8);
+        float alpha = 2.f;
+
+        Matx22f res = mat / alpha;
+
+        if(res(0, 0) != 1.0) throw test_excep();
+        if(res(0, 1) != 2.0) throw test_excep();
+        if(res(1, 0) != 3.0) throw test_excep();
+        if(res(1, 1) != 4.0) throw test_excep();
+    }
+    catch(const test_excep&)
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        return false;
+    }
+    return true;
+}
+
+
+bool CV_OperationsTest::TestInplaceDivisionByValue()
+{
+    try
+    {
+        Matx22f mat(2, 4, 6, 8);
+        float alpha = 2.f;
+
+        mat /= alpha;
+
+        if(mat(0, 0) != 1.0) throw test_excep();
+        if(mat(0, 1) != 2.0) throw test_excep();
+        if(mat(1, 0) != 3.0) throw test_excep();
+        if(mat(1, 1) != 4.0) throw test_excep();
+    }
+    catch(const test_excep&)
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        return false;
+    }
+    return true;
+}
 
 bool CV_OperationsTest::TestVec()
 {
@@ -1202,6 +1248,12 @@ void CV_OperationsTest::run( int /* start_from */)
         return;
 
     if (!TestMatxElementwiseDivison())
+        return;
+
+    if (!TestDivisionByValue())
+        return;
+
+    if (!TestInplaceDivisionByValue())
         return;
 
     if (!TestMatMatxCastSum())
@@ -1467,6 +1519,23 @@ TEST(Core_sortIdx, regression_8941)
         "expected=" << std::endl << expected;
 }
 
+TEST(Core_Mat, augmentation_operations_9688)
+{
+    {
+        Mat x(1, 1, CV_64FC1, 1.0f);
+        Mat p(1, 4, CV_64FC1, 5.0f);
+        EXPECT_ANY_THROW(
+            x += p;
+        ) << x;
+    }
+    {
+        Mat x(1, 1, CV_64FC1, 1.0f);
+        Mat p(1, 4, CV_64FC1, 5.0f);
+        EXPECT_ANY_THROW(
+            x -= p;
+        ) << x;
+    }
+}
 
 //These tests guard regressions against running MatExpr
 //operations on empty operands and giving bogus

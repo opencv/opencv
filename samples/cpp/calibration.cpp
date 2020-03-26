@@ -47,10 +47,10 @@ const char* liveCaptureHelp =
         "  'g' - start capturing images\n"
         "  'u' - switch undistortion on/off\n";
 
-static void help()
+static void help(char** argv)
 {
     printf( "This is a camera calibration sample.\n"
-        "Usage: calibration\n"
+        "Usage: %s\n"
         "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
         "     -h=<board_height>        # the number of inner corners per another board dimension\n"
         "     [-pt=<pattern>]          # the type of pattern: chessboard or circles' grid\n"
@@ -81,7 +81,7 @@ static void help()
         "                              #    the text file can be generated with imagelist_creator\n"
         "                              #  - name of video file with a video of the board\n"
         "                              # if input_data not specified, a live view from the camera is used\n"
-        "\n" );
+        "\n", argv[0] );
     printf("\n%s",usage);
     printf( "\n%s", liveCaptureHelp );
 }
@@ -378,7 +378,7 @@ int main( int argc, char** argv )
         "{@input_data|0|}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     boardSize.width = parser.get<int>( "w" );
@@ -427,7 +427,7 @@ int main( int argc, char** argv )
     }
     if (!parser.check())
     {
-        help();
+        help(argv);
         parser.printErrors();
         return -1;
     }

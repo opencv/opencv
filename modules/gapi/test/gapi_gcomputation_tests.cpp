@@ -83,7 +83,7 @@ namespace opencv_test
                   const auto& ref_mat = std::get<0>(it);
                   const auto& out_mat = std::get<1>(it);
 
-                  EXPECT_EQ(0, cv::countNonZero(ref_mat != out_mat));
+                  EXPECT_EQ(0, cvtest::norm(ref_mat, out_mat, NORM_INF));
               }
           }
       };

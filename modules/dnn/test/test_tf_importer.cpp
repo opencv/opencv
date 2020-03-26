@@ -163,12 +163,12 @@ TEST_P(Test_TensorFlow_layers, padding)
     runTensorFlowNet("spatial_padding");
     runTensorFlowNet("mirror_pad");
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    if (target == DNN_TARGET_MYRIAD)
     {
-        if (target == DNN_TARGET_MYRIAD)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-        if (target == DNN_TARGET_OPENCL_FP16)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     }
 #endif
     runTensorFlowNet("keras_pad_concat");
@@ -184,6 +184,13 @@ TEST_P(Test_TensorFlow_layers, eltwise)
 {
     runTensorFlowNet("eltwise_add_mul");
     runTensorFlowNet("eltwise_sub");
+}
+
+TEST_P(Test_TensorFlow_layers, channel_broadcast)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    runTensorFlowNet("channel_broadcast");
 }
 
 TEST_P(Test_TensorFlow_layers, pad_and_concat)
@@ -864,6 +871,8 @@ TEST_P(Test_TensorFlow_layers, split)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     runTensorFlowNet("split");
 }
 
@@ -994,8 +1003,19 @@ TEST(Test_TensorFlow, two_inputs)
     normAssert(out, firstInput + secondInput);
 }
 
-TEST(Test_TensorFlow, Mask_RCNN)
+TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 {
+    static const double kMaskThreshold = 0.5;
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
+    if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    if (target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+
     applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_VERYLONG);
     Mat img = imread(findDataFile("dnn/street.png"));
     std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt");
@@ -1006,7 +1026,8 @@ TEST(Test_TensorFlow, Mask_RCNN)
     Mat refMasks = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_masks.npy"));
     Mat blob = blobFromImage(img, 1.0f, Size(800, 800), Scalar(), true, false);
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     net.setInput(blob);
 
@@ -1020,7 +1041,10 @@ TEST(Test_TensorFlow, Mask_RCNN)
 
     Mat outDetections = outs[0];
     Mat outMasks = outs[1];
-    normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5);
+
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.019 : 2e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : default_lInf;
+    normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5, scoreDiff, iouDiff);
 
     // Output size of masks is NxCxHxW where
     // N - number of detected boxes
@@ -1044,7 +1068,18 @@ TEST(Test_TensorFlow, Mask_RCNN)
         outMasks(srcRanges).copyTo(masks(dstRanges));
     }
     cv::Range topRefMasks[] = {Range::all(), Range(0, numDetections), Range::all(), Range::all()};
-    normAssert(masks, refMasks(&topRefMasks[0]));
+    refMasks = refMasks(&topRefMasks[0]);
+
+    // make binary masks
+    cv::threshold(masks.reshape(1, 1), masks, kMaskThreshold, 1, THRESH_BINARY);
+    cv::threshold(refMasks.reshape(1, 1), refMasks, kMaskThreshold, 1, THRESH_BINARY);
+
+    double inter = cv::countNonZero(masks & refMasks);
+    double area = cv::countNonZero(masks | refMasks);
+    EXPECT_GE(inter / area, 0.99);
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        expectNoFallbacks(net);
 }
 
 }

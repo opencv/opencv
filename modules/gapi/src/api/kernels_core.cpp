@@ -371,5 +371,17 @@ GMat normalize(const GMat& _src, double a, double b,
     return core::GNormalize::on(_src, a, b, norm_type, ddepth);
 }
 
+GMat warpPerspective(const GMat& src, const Mat& M, const Size& dsize, int flags,
+                     int borderMode, const Scalar& borderValue)
+{
+    return core::GWarpPerspective::on(src, M, dsize, flags, borderMode, borderValue);
+}
+
+GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags,
+                int borderMode, const Scalar& borderValue)
+{
+    return core::GWarpAffine::on(src, M, dsize, flags, borderMode, borderValue);
+}
+
 } //namespace gapi
 } //namespace cv

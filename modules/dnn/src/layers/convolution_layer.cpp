@@ -57,6 +57,9 @@
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
 #endif
+#ifdef HAVE_TENGINE
+#include "../tengine4dnn/include/tengine_graph_convolution.hpp"
+#endif
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/convolution.hpp"
@@ -622,7 +625,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
@@ -683,7 +686,7 @@ public:
 
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -1427,10 +1430,43 @@ public:
             }
         }
 
-        int nstripes = std::max(getNumThreads(), 1);
+#ifdef HAVE_TENGINE
+        int inch = inputs[0].size[1]; 		// inch
+        int in_h = inputs[0].size[2]; 		// in_h
+        int in_w = inputs[0].size[3]; 		// in_w
 
-        ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
-                          kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
+        int out_b = outputs[0].size[0];     // out batch size
+        int outch = outputs[0].size[1]; 	// outch
+        int out_h = outputs[0].size[2]; 	// out_h
+        int out_w = outputs[0].size[3]; 	// out_w
+
+        float *input_  = inputs[0].ptr<float>();
+        float *output_ = outputs[0].ptr<float>();
+        float *kernel_ = weightsMat.ptr<float>();
+        float *teg_bias = &biasvec[0];
+
+        bool tengine_ret = tengine_forward(input_, inch, ngroups, in_h, in_w,
+                                    output_, out_b, outch, out_h, out_w,
+                                    kernel_, kernel_size.size(), kernel.height, kernel.width,
+                                    teg_bias, stride.height, stride.width,
+                                    pad.height,  pad.width, dilation.height, dilation.width,
+                                    weightsMat.step1(), padMode);
+        /* activation */
+        if((true == tengine_ret) && activ )
+        {
+            int out_cstep = out_h * out_w;	    // out_cstep
+
+            ActivationLayer* activ_ = activ.get();
+            activ_->forwardSlice(output_, output_, out_cstep, out_cstep, 0, outch);
+        }
+        if(false == tengine_ret)
+#endif
+        {
+            int nstripes = std::max(getNumThreads(), 1);
+
+            ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
+                            kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -1558,6 +1594,7 @@ public:
             return group == 1;
         }
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
             if (kernel_size.size() == 3 && preferableTarget != DNN_TARGET_CPU) {
@@ -1601,10 +1638,12 @@ public:
                 return std::accumulate(dilations.begin(), dilations.end(), 1, std::multiplies<size_t>()) == 1;
             return true;
         }
-        else
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 #endif  // HAVE_INF_ENGINE
+        {
             return backendId == DNN_BACKEND_CUDA ||
             (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE));
+        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -2244,7 +2283,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &) CV_OVERRIDE
     {
         InferenceEngine::Layout layout = blobs[0].dims == 5? InferenceEngine::Layout::NCDHW :
@@ -2299,7 +2338,7 @@ public:
             addConstantData("biases", wrapToInfEngineBlob(biasesMat, {(size_t)numOutput}, InferenceEngine::Layout::C), l);
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH

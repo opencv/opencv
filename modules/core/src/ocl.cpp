@@ -4702,6 +4702,8 @@ public:
             UMatData::MemoryFlag flags0 = static_cast<UMatData::MemoryFlag>(0);
             getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
 
+            bool copyOnMap = (flags0 & UMatData::COPY_ON_MAP) != 0;
+
             cl_context ctx_handle = (cl_context)ctx.ptr();
             int allocatorFlags = 0;
             UMatData::MemoryFlag tempUMatFlags = static_cast<UMatData::MemoryFlag>(0);
@@ -4761,8 +4763,15 @@ public:
             else
 #endif
             {
+                if( copyOnMap )
+                    accessFlags &= ~ACCESS_FAST;
+
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                if (CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
+                if (
+                #ifdef __APPLE__
+                    !copyOnMap &&
+                #endif
+                    CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
                     // There are OpenCL runtime issues for less aligned data
                     && (CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR != 0
                         && u->origdata == cv::alignPtr(u->origdata, (int)CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR))
@@ -4790,7 +4799,7 @@ public:
             u->handle = handle;
             u->prevAllocator = u->currAllocator;
             u->currAllocator = this;
-            u->flags |= tempUMatFlags;
+            u->flags |= tempUMatFlags | flags0;
             u->allocatorFlags_ = allocatorFlags;
         }
         if (!!(accessFlags & ACCESS_WRITE))
@@ -6442,16 +6451,19 @@ struct Image2D::Impl
                                                 CL_MEM_OBJECT_IMAGE2D, numFormats,
                                                 NULL, &numFormats);
         CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, NULL)");
-        AutoBuffer<cl_image_format> formats(numFormats);
-        err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
-                                         CL_MEM_OBJECT_IMAGE2D, numFormats,
-                                         formats.data(), NULL);
-        CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
-        for (cl_uint i = 0; i < numFormats; ++i)
+        if (numFormats > 0)
         {
-            if (!memcmp(&formats[i], &format, sizeof(format)))
+            AutoBuffer<cl_image_format> formats(numFormats);
+            err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
+                                             CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                             formats.data(), NULL);
+            CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
+            for (cl_uint i = 0; i < numFormats; ++i)
             {
-                return true;
+                if (!memcmp(&formats[i], &format, sizeof(format)))
+                {
+                    return true;
+                }
             }
         }
         return false;

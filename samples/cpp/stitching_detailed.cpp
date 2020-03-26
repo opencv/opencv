@@ -18,6 +18,7 @@
 #include "opencv2/stitching/warpers.hpp"
 
 #ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d.hpp"
 #include "opencv2/xfeatures2d/nonfree.hpp"
 #endif
 
@@ -29,11 +30,11 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
-static void printUsage()
+static void printUsage(char** argv)
 {
     cout <<
         "Rotation model images stitcher.\n\n"
-        "stitching_detailed img1 img2 [...imgN] [flags]\n\n"
+         << argv[0] << " img1 img2 [...imgN] [flags]\n\n"
         "Flags:\n"
         "  --preview\n"
         "      Run stitching in the preview mode. Works faster than usual mode,\n"
@@ -147,14 +148,14 @@ static int parseCmdArgs(int argc, char** argv)
 {
     if (argc == 1)
     {
-        printUsage();
+        printUsage(argv);
         return -1;
     }
     for (int i = 1; i < argc; ++i)
     {
         if (string(argv[i]) == "--help" || string(argv[i]) == "/?")
         {
-            printUsage();
+            printUsage(argv);
             return -1;
         }
         else if (string(argv[i]) == "--preview")

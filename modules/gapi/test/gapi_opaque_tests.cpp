@@ -37,7 +37,7 @@ G_TYPED_KERNEL(PaintPoint, <GMat(GPointOpaque, int, int, cv::Size)>, "test.opaqu
 };
 
 struct MyCustomType{
-    int num;
+    int num = -1;
     std::string s;
 };
 
@@ -124,7 +124,7 @@ TEST(GOpaque, TestOpaqueIn)
     c.apply(cv::gin(fill), cv::gout(mat), cv::compile_args(cv::gapi::kernels<OCVFillMat>()));
 
     auto diff = cv::Mat(sz, CV_MAKETYPE(depth, chan), cv::Scalar(fill)) - mat;
-    EXPECT_EQ(cv::countNonZero(diff), 0);
+    EXPECT_EQ(0, cvtest::norm(diff, NORM_INF));
 }
 
 TEST(GOpaque, TestOpaqueBetween)

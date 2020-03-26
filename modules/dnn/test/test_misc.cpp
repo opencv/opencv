@@ -56,7 +56,10 @@ TEST(imagesFromBlob, Regression)
 
     for (int i = 0; i < nbOfImages; i++)
     {
-        ASSERT_EQ(cv::countNonZero(inputImgs[i] != outputImgs[i]), 0);
+        EXPECT_EQ(0, cvtest::norm(inputImgs[i], outputImgs[i], NORM_INF))
+            << "i=" << i
+            << " inputImgs[i]=" << inputImgs[i].size
+            << " outputImgs[i]=" << outputImgs[i].size;
     }
 }
 
@@ -77,6 +80,69 @@ TEST(readNet, Regression)
                   findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
     EXPECT_FALSE(net.empty());
 }
+
+TEST(readNet, do_not_call_setInput)  // https://github.com/opencv/opencv/issues/16618
+{
+    // 1. load network
+    const string proto = findDataFile("dnn/squeezenet_v1.1.prototxt");
+    const string model = findDataFile("dnn/squeezenet_v1.1.caffemodel", false);
+    Net net = readNetFromCaffe(proto, model);
+
+    // 2. mistake: no inputs are specified through .setInput()
+
+    // 3. try inference
+    Mat res;
+    EXPECT_THROW(
+    {
+        res = net.forward();  // no inputs after loading => should fail
+    }, cv::Exception);
+    EXPECT_TRUE(res.empty()) << res.size;
+}
+
+#ifdef HAVE_INF_ENGINE
+static
+void test_readNet_IE_do_not_call_setInput(Backend backendId)
+{
+    const Target targetId = DNN_TARGET_CPU;
+
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    else
+        FAIL() << "Unknown backendId";
+
+    Net net = readNet(model, proto);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    // 2. mistake: no inputs are specified through .setInput()
+
+    // 3. try inference
+    Mat res;
+    EXPECT_THROW(
+    {
+        res = net.forward();  // no inputs after loading => should fail
+    }, cv::Exception);
+    EXPECT_TRUE(res.empty()) << res.size;
+}
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+TEST(readNet, do_not_call_setInput_IE_NN_BUILDER_2019)
+{
+    test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
+}
+#endif
+#ifdef HAVE_DNN_NGRAPH
+TEST(readNet, do_not_call_setInput_IE_NGRAPH)
+{
+    test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+}
+#endif
+#endif  // HAVE_INF_ENGINE
 
 typedef testing::TestWithParam<tuple<Backend, Target> > dump;
 TEST_P(dump, Regression)

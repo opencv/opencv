@@ -1966,7 +1966,7 @@ TEST(Imgproc_Hist_Calc, badarg)
     Mat img = cv::Mat::zeros(10, 10, CV_8UC1);
     Mat imgInt = cv::Mat::zeros(10, 10, CV_32SC1);
     Mat hist;
-    const int hist_size[] = { 100 };
+    const int hist_size[] = { 100, 100 };
     // base run
     EXPECT_NO_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, 1, hist_size, ranges, true));
     // bad parameters

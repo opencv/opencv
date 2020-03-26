@@ -1115,6 +1115,8 @@ macro(__ocv_parse_test_sources tests_type)
   unset(__currentvar)
 endmacro()
 
+ocv_check_environment_variables(OPENCV_TEST_EXTRA_CXX_FLAGS_Release)
+
 # this is a command for adding OpenCV performance tests to the module
 # ocv_add_perf_tests(<extra_dependencies>)
 function(ocv_add_perf_tests)
@@ -1277,6 +1279,10 @@ function(ocv_add_accuracy_tests)
 
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
+      endif()
+
+      if(OPENCV_TEST_EXTRA_CXX_FLAGS_Release)
+        target_compile_options(${the_target} PRIVATE "$<$<CONFIG:Release>:${OPENCV_TEST_EXTRA_CXX_FLAGS_Release}>")
       endif()
 
       ocv_add_test_from_target("${the_target}" "Accuracy" "${the_target}")

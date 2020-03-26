@@ -177,8 +177,8 @@ std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
                 p = maxLoc;
                 p.x *= (float)frameWidth / width;
                 p.y *= (float)frameHeight / height;
-                points.push_back(p);
             }
+            points.push_back(p);
         }
     }
     // Otherwise the output is a vector of keypoints and we can just return it

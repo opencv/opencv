@@ -37,7 +37,10 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     }
 
     readFromNode(reader["charuco_dict"], mCapParams.charucoDictName);
-    readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLenght);
+    if (readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLength)) {
+        std::cout << "DEPRECATION: Parameter 'charuco_square_lenght' has been deprecated (typo). Use 'charuco_square_length' instead." << std::endl;
+    }
+    readFromNode(reader["charuco_square_length"], mCapParams.charucoSquareLength);
     readFromNode(reader["charuco_marker_size"], mCapParams.charucoMarkerSize);
     readFromNode(reader["camera_resolution"], mCapParams.cameraResolution);
     readFromNode(reader["calibration_step"], mCapParams.calibrationStep);
@@ -51,7 +54,7 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     bool retValue =
             checkAssertion(mCapParams.charucoDictName >= 0, "Dict name must be >= 0") &&
             checkAssertion(mCapParams.charucoMarkerSize > 0, "Marker size must be positive") &&
-            checkAssertion(mCapParams.charucoSquareLenght > 0, "Square size must be positive") &&
+            checkAssertion(mCapParams.charucoSquareLength > 0, "Square size must be positive") &&
             checkAssertion(mCapParams.minFramesNum > 1, "Minimal number of frames for calibration < 1") &&
             checkAssertion(mCapParams.calibrationStep > 0, "Calibration step must be positive") &&
             checkAssertion(mCapParams.maxFramesNum > mCapParams.minFramesNum, "maxFramesNum < minFramesNum") &&
@@ -119,7 +122,7 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
         mCapParams.board = chAruco;
         mCapParams.boardSize = cv::Size(6, 8);
         mCapParams.charucoDictName = 0;
-        mCapParams.charucoSquareLenght = 200;
+        mCapParams.charucoSquareLength = 200;
         mCapParams.charucoMarkerSize = 100;
     }
     else {

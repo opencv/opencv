@@ -247,6 +247,8 @@ LZWSetupDecode(TIFF* tif)
 		/*
 		 * Zero-out the unused entries
                  */
+                /* Silence false positive */
+                /* coverity[overrun-buffer-arg] */
                  _TIFFmemset(&sp->dec_codetab[CODE_CLEAR], 0,
 			     (CODE_FIRST - CODE_CLEAR) * sizeof (code_t));
 	}

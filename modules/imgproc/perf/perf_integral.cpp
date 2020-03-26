@@ -39,10 +39,23 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral,
     Mat sum(sz, sdepth);
 
     declare.in(src, WARMUP_RNG).out(sum);
+    if (sdepth == CV_32F)
+        src *= (1 << 23) / (double)(sz.area() * 256);  // FP32 calculations are not accurate (mantissa is 23-bit)
 
     TEST_CYCLE() integral(src, sum, sdepth);
 
-    SANITY_CHECK(sum, 1e-6);
+    Mat src_roi; src(Rect(src.cols - 4, src.rows - 4, 4, 4)).convertTo(src_roi, sdepth);
+    Mat restored_src_roi =
+           sum(Rect(sum.cols - 4, sum.rows - 4, 4, 4)) + sum(Rect(sum.cols - 5, sum.rows - 5, 4, 4)) -
+           sum(Rect(sum.cols - 4, sum.rows - 5, 4, 4)) - sum(Rect(sum.cols - 5, sum.rows - 4, 4, 4));
+    EXPECT_EQ(0, cvtest::norm(restored_src_roi, src_roi, NORM_INF))
+        << src_roi << endl << restored_src_roi << endl
+        << sum(Rect(sum.cols - 4, sum.rows - 4, 4, 4));
+
+    if (sdepth == CV_32F)
+        SANITY_CHECK_NOTHING();
+    else
+        SANITY_CHECK(sum, 1e-6);
 }
 
 PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,

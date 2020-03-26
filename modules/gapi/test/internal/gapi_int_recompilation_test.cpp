@@ -116,8 +116,8 @@ TEST(GComputationCompile, FluidReshapeResizeDownScale)
     cv::resize(in_mat1, cv_out_mat1, szOut);
     cv::resize(in_mat2, cv_out_mat2, szOut);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != cv_out_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, cv_out_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, cv_out_mat2, NORM_INF));
 }
 
 TEST(GComputationCompile, FluidReshapeSwitchToUpscaleFromDownscale)
@@ -151,9 +151,9 @@ TEST(GComputationCompile, FluidReshapeSwitchToUpscaleFromDownscale)
     cv::resize(in_mat2, cv_out_mat2, szOut);
     cv::resize(in_mat3, cv_out_mat3, szOut);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != cv_out_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
-    EXPECT_EQ(0, cv::countNonZero(out_mat3 != cv_out_mat3));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, cv_out_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, cv_out_mat2, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat3, cv_out_mat3, NORM_INF));
 }
 
 TEST(GComputationCompile, ReshapeBlur)
@@ -181,8 +181,8 @@ TEST(GComputationCompile, ReshapeBlur)
     cv::blur(in_mat1, cv_out_mat1, kernelSize);
     cv::blur(in_mat2, cv_out_mat2, kernelSize);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != cv_out_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, cv_out_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, cv_out_mat2, NORM_INF));
 }
 
 TEST(GComputationCompile, ReshapeRois)
@@ -225,7 +225,7 @@ TEST(GComputationCompile, ReshapeRois)
         cv::blur(in_mat, blur_mat, kernelSize);
         cv::resize(blur_mat, cv_out_mat, szOut);
 
-        EXPECT_EQ(0, cv::countNonZero(out_mat(roi) != cv_out_mat(roi)));
+        EXPECT_EQ(0, cvtest::norm(out_mat(roi), cv_out_mat(roi), NORM_INF));
     }
 }
 

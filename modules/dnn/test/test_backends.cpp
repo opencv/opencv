@@ -263,7 +263,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
     float scoreDiff = 0.0, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
-        scoreDiff = 0.012;
+        scoreDiff = 0.013;
         iouDiff = 0.06;
     }
     else if (target == DNN_TARGET_CUDA_FP16)

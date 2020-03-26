@@ -153,6 +153,10 @@ if(CV_GCC OR CV_CLANG)
     if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
       add_extra_compiler_option(-Wno-missing-field-initializers)  # GCC 4.x emits warnings about {}, fixed in GCC 5+
     endif()
+    if(CV_CLANG AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
+      add_extra_compiler_option(-Wno-deprecated-enum-enum-conversion)
+      add_extra_compiler_option(-Wno-deprecated-anon-enum-enum-conversion)
+    endif()
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 

@@ -2007,6 +2007,40 @@ TEST(Core_MatExpr, issue_13926)
     EXPECT_GE(1e-6, cvtest::norm(M2*M1, M2*M2, NORM_INF)) << Mat(M2*M1) << std::endl << Mat(M2*M2);
 }
 
+TEST(Core_MatExpr, issue_16655)
+{
+    Mat a(Size(5, 5), CV_32FC3, Scalar::all(1));
+    Mat b(Size(5, 5), CV_32FC3, Scalar::all(2));
+    MatExpr ab_expr = a != b;
+    Mat ab_mat = ab_expr;
+    EXPECT_EQ(CV_8UC3, ab_expr.type())
+        << "MatExpr: CV_8UC3 != " << typeToString(ab_expr.type());
+    EXPECT_EQ(CV_8UC3, ab_mat.type())
+        << "Mat: CV_8UC3 != " << typeToString(ab_mat.type());
+}
+
+TEST(Core_MatExpr, issue_16689)
+{
+    Mat a(Size(10, 5), CV_32FC1, 5);
+    Mat b(Size(10, 5), CV_32FC1, 2);
+    Mat bt(Size(5, 10), CV_32FC1, 3);
+    {
+        MatExpr r = a * bt;  // gemm
+        EXPECT_EQ(Mat(r).size(), r.size()) << "[10x5] x [5x10] => [5x5]";
+    }
+    {
+        MatExpr r = a * b.t();  // gemm
+        EXPECT_EQ(Mat(r).size(), r.size()) << "[10x5] x [10x5].t() => [5x5]";
+    }
+    {
+        MatExpr r = a.t() * b;  // gemm
+        EXPECT_EQ(Mat(r).size(), r.size()) << "[10x5].t() x [10x5] => [10x10]";
+    }
+    {
+        MatExpr r = a.t() * bt.t();  // gemm
+        EXPECT_EQ(Mat(r).size(), r.size()) << "[10x5].t() x [5x10].t() => [10x10]";
+    }
+}
 
 #ifdef HAVE_EIGEN
 TEST(Core_Eigen, eigen2cv_check_Mat_type)
@@ -2036,6 +2070,14 @@ TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
 
     cv::Mat dst;
     cv::flip(src, dst, 0);
+}
+
+TEST(Mat, empty_iterator_16855)
+{
+    cv::Mat m;
+    EXPECT_NO_THROW(m.begin<uchar>());
+    EXPECT_NO_THROW(m.end<uchar>());
+    EXPECT_TRUE(m.begin<uchar>() == m.end<uchar>());
 }
 
 }} // namespace

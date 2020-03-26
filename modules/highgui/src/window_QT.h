@@ -76,6 +76,7 @@
 #include <QDate>
 #include <QFileDialog>
 #include <QToolBar>
+#include <QClipboard>
 
 #include <QAction>
 #include <QCheckBox>
@@ -91,6 +92,7 @@ enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
 enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
         shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
         shortcut_save_img		= Qt::CTRL + Qt::Key_S,
+        shortcut_copy_clipbrd   = Qt::CTRL + Qt::Key_C,
         shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
         shortcut_zoom_in 		= Qt::CTRL + Qt::Key_Plus,//QKeySequence(QKeySequence::ZoomIn),
         shortcut_zoom_out		= Qt::CTRL + Qt::Key_Minus,//QKeySequence(QKeySequence::ZoomOut),
@@ -518,6 +520,7 @@ public slots:
     void ZoomOut();
 
     void saveView();
+    void copy2Clipbrd();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event) CV_OVERRIDE;

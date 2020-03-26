@@ -1856,7 +1856,7 @@ void CvWindow::displayStatusBar(QString text, int delayms)
 void CvWindow::enablePropertiesButton()
 {
     if (!vect_QActions.empty())
-        vect_QActions[9]->setDisabled(false);
+        vect_QActions[10]->setDisabled(false);
 }
 
 
@@ -1991,7 +1991,7 @@ void CvWindow::createView()
 
 void CvWindow::createActions()
 {
-    vect_QActions.resize(10);
+    vect_QActions.resize(11);
 
     QWidget* view = myView->getWidget();
 
@@ -2032,18 +2032,22 @@ void CvWindow::createActions()
     vect_QActions[8]->setIconVisibleInMenu(true);
     QObject::connect(vect_QActions[8], SIGNAL(triggered()), view, SLOT(saveView()));
 
-    vect_QActions[9] = new QAction(QIcon(":/properties-icon"), "Display properties window (CTRL+P)", this);
+    vect_QActions[9] = new QAction(QIcon(":/copy_clipbrd-icon"), "Copy image to clipboard (CTRL+C)", this);
     vect_QActions[9]->setIconVisibleInMenu(true);
-    QObject::connect(vect_QActions[9], SIGNAL(triggered()), this, SLOT(displayPropertiesWin()));
+    QObject::connect(vect_QActions[9], SIGNAL(triggered()), view, SLOT(copy2Clipbrd()));
+
+    vect_QActions[10] = new QAction(QIcon(":/properties-icon"), "Display properties window (CTRL+P)", this);
+    vect_QActions[10]->setIconVisibleInMenu(true);
+    QObject::connect(vect_QActions[10], SIGNAL(triggered()), this, SLOT(displayPropertiesWin()));
 
     if (global_control_panel->myLayout->count() == 0)
-        vect_QActions[9]->setDisabled(true);
+        vect_QActions[10]->setDisabled(true);
 }
 
 
 void CvWindow::createShortcuts()
 {
-    vect_QShortcuts.resize(10);
+    vect_QShortcuts.resize(11);
 
     QWidget* view = myView->getWidget();
 
@@ -2074,8 +2078,11 @@ void CvWindow::createShortcuts()
     vect_QShortcuts[8] = new QShortcut(shortcut_save_img, this);
     QObject::connect(vect_QShortcuts[8], SIGNAL(activated()), view, SLOT(saveView()));
 
-    vect_QShortcuts[9] = new QShortcut(shortcut_properties_win, this);
-    QObject::connect(vect_QShortcuts[9], SIGNAL(activated()), this, SLOT(displayPropertiesWin()));
+    vect_QShortcuts[9] = new QShortcut(shortcut_copy_clipbrd, this);
+    QObject::connect(vect_QShortcuts[9], SIGNAL(activated()), view, SLOT(copy2Clipbrd()));
+
+    vect_QShortcuts[10] = new QShortcut(shortcut_properties_win, this);
+    QObject::connect(vect_QShortcuts[10], SIGNAL(activated()), this, SLOT(displayPropertiesWin()));
 }
 
 
@@ -2694,6 +2701,18 @@ void DefaultViewPort::saveView()
 
         CV_Error(CV_StsNullPtr, "file extension not recognized, please choose between JPG, JPEG, BMP or PNG");
     }
+}
+
+
+//copy image to clipboard
+void DefaultViewPort::copy2Clipbrd()
+{
+    // Create a new pixmap to render the viewport into
+    QPixmap viewportPixmap(viewport()->size());
+    viewport()->render(&viewportPixmap);
+
+    QClipboard *pClipboard = QApplication::clipboard();
+    pClipboard->setPixmap(viewportPixmap);
 }
 
 

@@ -41,6 +41,7 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 //#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
 //there is no way to suppress warnings from IE only at this moment, so we are forced to suppress warnings globally
 #if defined(__GNUC__)
@@ -49,6 +50,7 @@
 #ifdef _MSC_VER
 #pragma warning(disable: 4996)  // was declared deprecated
 #endif
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 #if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility push(default)
@@ -73,6 +75,13 @@ namespace cv { namespace dnn {
 #ifdef HAVE_INF_ENGINE
 
 Backend& getInferenceEngineBackendTypeParam();
+
+Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
+
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats);
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 
 class InfEngineBackendNet
 {
@@ -180,11 +189,6 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<s
 
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
 
-Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
-
-void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
-                          std::vector<Mat>& mats);
-
 // Convert Inference Engine blob with FP32 precision to FP16 precision.
 // Allocates memory for a new blob.
 InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob);
@@ -233,6 +237,8 @@ public:
                                               InferenceEngine::ResponseDesc* resp) noexcept;
 };
 
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
 
 CV__DNN_INLINE_NS_BEGIN
 
@@ -240,7 +246,7 @@ bool isMyriadX();
 
 CV__DNN_INLINE_NS_END
 
-InferenceEngine::Core& getCore();
+InferenceEngine::Core& getCore(const std::string& id);
 
 template<typename T = size_t>
 static inline std::vector<T> getShape(const Mat& mat)

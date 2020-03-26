@@ -217,6 +217,8 @@ namespace cv { namespace dnn {
 
         /** @note setting the stream updates the stream for all wrappers which use the same tensor */
         virtual void setStream(cuda4dnn::csl::Stream stream) noexcept = 0;
+
+        virtual void update(const MatShape& shape, std::size_t offset) = 0;
     };
 
     namespace cuda4dnn { namespace detail {
@@ -276,6 +278,7 @@ namespace cv { namespace dnn {
             : CUDABackendWrapper(TargetID)
         {
             shape = cv::dnn::shape(m);
+            offset = 0;
 
             shared_block = std::make_shared<shared_block_type>();
             shared_block->host_dirty = true;
@@ -300,7 +303,23 @@ namespace cv { namespace dnn {
             CV_Assert(base);
 
             shape = shape_;
+            offset = 0;
             shared_block = base->shared_block;
+
+            auto numel = total(shape_);
+            if (numel > shared_block->device.size())
+            {
+                /* if the host memory was already page-locked, release it and register again with the new size */
+                shared_block->memGuard = cuda4dnn::csl::MemoryLockGuard();
+                try {
+                    CV_Assert(shared_block->host.type() == CV_32F);
+                    shared_block->memGuard = cuda4dnn::csl::MemoryLockGuard(shared_block->host.data, numel * sizeof(float));
+                } catch (...) {
+                    /* a common reason for failure is that the host system (for example, a Jetson device) does not support it */
+                    /* we ignore the failure as this is just an optimization and not a requirement */
+                }
+                shared_block->device.reset(numel);
+            }
         }
 
         static Ptr<BackendWrapper> create(Mat& m) {
@@ -313,6 +332,8 @@ namespace cv { namespace dnn {
 
         void copyToHost() override {
             if (shared_block->device_dirty) {
+                CV_Assert(offset == 0); /* we cannot track each piece of the memory separately */
+
                 shared_block->host_dirty = false;
                 shared_block->device_dirty = false;
 
@@ -339,6 +360,8 @@ namespace cv { namespace dnn {
 
         void copyToDevice() override {
             if (shared_block->host_dirty) {
+                CV_Assert(offset == 0); /* we cannot track each piece of the memory separately */
+
                 shared_block->host_dirty = false;
                 shared_block->device_dirty = false;
 
@@ -365,13 +388,24 @@ namespace cv { namespace dnn {
             shared_block->stream = std::move(stream);
         }
 
+        void update(const MatShape& shape_, std::size_t offset_) override {
+            auto total = std::accumulate(std::begin(shape_), std::end(shape_), 1, std::multiplies<MatShape::value_type>());
+            if (offset_ + total > shared_block->device.size()) {
+                CV_Error(Error::BadOffset, "shape and offset provided can potentially leads to OOB access");
+            }
+            shape = shape_;
+            offset = offset_;
+        }
+
         cv::Mat getMutableHostMat() noexcept {
+            CV_Assert(offset == 0); /* we cannot track each piece of the memory separately */
             copyToHost();
             setHostDirty();
             return shared_block->host;
         }
 
         const cv::Mat getImmutableHostMat() const noexcept {
+            CV_Assert(offset == 0); /* we cannot track each piece of the memory separately */
             copyToHost();
             return shared_block->host;
         }
@@ -388,12 +422,12 @@ namespace cv { namespace dnn {
          */
         tensor_span_type getSpan() noexcept {
             setDeviceDirty();
-            return tensor_span_type(shared_block->device.get(), std::begin(shape), std::end(shape));
+            return tensor_span_type(shared_block->device.get() + offset, std::begin(shape), std::end(shape));
         }
 
         tensor_view_type getView() noexcept {
             copyToDevice();
-            return tensor_view_type(shared_block->device.get(), std::begin(shape), std::end(shape));
+            return tensor_view_type(shared_block->device.get() + offset, std::begin(shape), std::end(shape));
         }
 
     private:
@@ -407,6 +441,7 @@ namespace cv { namespace dnn {
          */
 
         MatShape shape;
+        std::size_t offset;
 
         struct shared_block_type {
             bool host_dirty;

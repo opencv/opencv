@@ -504,58 +504,8 @@ public:
         }
     }
 
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(
-        void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
-    ) override
-    {
-        auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        auto feature_map_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-        auto feature_map_shape = feature_map_wrapper->getShape();
-
-        auto image_wrapper = inputs[1].dynamicCast<CUDABackendWrapper>();
-        auto image_shape = image_wrapper->getShape();
-
-        PriorBoxConfiguration config;
-        config.feature_map_width = feature_map_shape.rbegin()[0];
-        config.feature_map_height = feature_map_shape.rbegin()[1];
-        config.image_width = image_shape.rbegin()[0];
-        config.image_height = image_shape.rbegin()[1];
-
-        config.num_priors = _numPriors;
-        config.box_widths = _boxWidths;
-        config.box_heights = _boxHeights;
-        config.offsets_x = _offsetsX;
-        config.offsets_y = _offsetsY;
-        config.stepX = _stepX;
-        config.stepY = _stepY;
-
-        config.variance = _variance;
-
-        config.clip = _clip;
-        config.normalize = _bboxesNormalized;
-
-        return make_cuda_node<cuda4dnn::PriorBoxOp>(preferableTarget, std::move(context->stream), config);
-    }
-#endif
-
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPriorBox(_stepX, _stepY,
-                                                                _clip, _numPriors,
-                                                                _variance, _offsetsX,
-                                                                _offsetsY, _boxWidths,
-                                                                _boxHeights));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
-#endif // HAVE_VULKAN
-        return Ptr<BackendNode>();
-    }
-
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
         if (_explicitSizes)
@@ -615,7 +565,8 @@ public:
             return Ptr<BackendNode>(new InfEngineBackendNode(l));
         }
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
@@ -677,6 +628,58 @@ public:
         }
     }
 #endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto feature_map_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto feature_map_shape = feature_map_wrapper->getShape();
+
+        auto image_wrapper = inputs[1].dynamicCast<CUDABackendWrapper>();
+        auto image_shape = image_wrapper->getShape();
+
+        PriorBoxConfiguration config;
+        config.feature_map_width = feature_map_shape.rbegin()[0];
+        config.feature_map_height = feature_map_shape.rbegin()[1];
+        config.image_width = image_shape.rbegin()[0];
+        config.image_height = image_shape.rbegin()[1];
+
+        config.num_priors = _numPriors;
+        config.box_widths = _boxWidths;
+        config.box_heights = _boxHeights;
+        config.offsets_x = _offsetsX;
+        config.offsets_y = _offsetsY;
+        config.stepX = _stepX;
+        config.stepY = _stepY;
+
+        config.variance = _variance;
+
+        config.clip = _clip;
+        config.normalize = _bboxesNormalized;
+
+        return make_cuda_node<cuda4dnn::PriorBoxOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
+
+
+#ifdef HAVE_VULKAN
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPriorBox(_stepX, _stepY,
+                                                                _clip, _numPriors,
+                                                                _variance, _offsetsX,
+                                                                _offsetsY, _boxWidths,
+                                                                _boxHeights));
+        return Ptr<BackendNode>(new VkComBackendNode(input, op));
+    }
+#endif // HAVE_VULKAN
 
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,

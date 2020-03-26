@@ -13,6 +13,9 @@ ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX)
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java js)
 
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
+if(HAVE_TENGINE)
+  add_definitions(-DHAVE_TENGINE=1)
+endif()
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
@@ -104,6 +107,18 @@ else()
   set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
 
+
+if(HAVE_TENGINE)
+	list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
+	if(EXISTS ${TENGINE_LIBRARIES})
+		list(APPEND libs ${TENGINE_LIBRARIES})
+	else()
+		ocv_add_dependencies(opencv_dnn tengine)
+		list(APPEND libs ${TENGINE_LIBRARIES})
+	endif()
+endif()
+
+
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-suggest-override")  # GCC
@@ -113,9 +128,15 @@ endif()
 
 set(dnn_runtime_libs "")
 if(INF_ENGINE_TARGET)
+  ocv_option(OPENCV_DNN_IE_NN_BUILDER_2019 "Build with Inference Engine NN Builder API support" ON)  # future: NOT HAVE_NGRAPH
+  if(OPENCV_DNN_IE_NN_BUILDER_2019)
+    message(STATUS "DNN: Enabling Inference Engine NN Builder API support")
+    add_definitions(-DHAVE_DNN_IE_NN_BUILDER_2019=1)
+  endif()
   list(APPEND dnn_runtime_libs ${INF_ENGINE_TARGET})
 endif()
 if(HAVE_NGRAPH)
+  message(STATUS "DNN: Enabling Inference Engine nGraph API support")
   add_definitions(-DHAVE_DNN_NGRAPH)
   list(APPEND dnn_runtime_libs ngraph::ngraph)
 endif()
