@@ -1099,14 +1099,6 @@ inline static void recordPropertyVerbose(const std::string & property,
     }
 }
 
-inline static void recordPropertyVerbose(const std::string& property, const std::string& msg,
-                                         const char* value, const char* build_value = NULL)
-{
-    return recordPropertyVerbose(property, msg,
-        value ? std::string(value) : std::string(),
-        build_value ? std::string(build_value) : std::string());
-}
-
 #ifdef _DEBUG
 #define CV_TEST_BUILD_CONFIG "Debug"
 #else
@@ -1120,7 +1112,14 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
     recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
-    recordPropertyVerbose("cv_parallel_framework", "Parallel framework", cv::currentParallelFramework());
+    const char* parallelFramework = cv::currentParallelFramework();
+    if (parallelFramework)
+    {
+        ::testing::Test::RecordProperty("cv_parallel_framework", parallelFramework);
+        int threads = testThreads > 0 ? testThreads : cv::getNumThreads();
+        ::testing::Test::RecordProperty("cv_parallel_threads", threads);
+        std::cout << "Parallel framework: " << parallelFramework << " (nthreads=" << threads << ")" << std::endl;
+    }
     recordPropertyVerbose("cv_cpu_features", "CPU features", cv::getCPUFeaturesLine());
 #ifdef HAVE_IPP
     recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() :  "disabled");

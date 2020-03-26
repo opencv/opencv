@@ -141,6 +141,14 @@ struct BackendOutputAllocationTest : TestWithParamBase<>
 // FIXME: move all tests from this fixture to the base class once all issues are resolved
 struct BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest : BackendOutputAllocationTest {};
 GAPI_TEST_FIXTURE(ReInitOutTest, initNothing, <cv::Size>, 1, out_sz)
+
+GAPI_TEST_FIXTURE(WarpPerspectiveTest, initMatrixRandU,
+        FIXTURE_API(CompareMats, double , double, int, int, cv::Scalar),
+        6, cmpF, angle, scale, flags, border_mode, border_value)
+
+GAPI_TEST_FIXTURE(WarpAffineTest, initMatrixRandU,
+        FIXTURE_API(CompareMats, double , double, int, int, cv::Scalar),
+        6, cmpF, angle, scale, flags, border_mode, border_value)
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

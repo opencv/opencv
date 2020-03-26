@@ -32,6 +32,7 @@ static const int MAX_SYMMETRY_ERRORS = 5;                       // maximal numbe
 /////////////////////////////////////////////////////////////////////////////
 
 // some helper methods
+static float calcSharpness(cv::InputArray _values,float rise_distance);
 static bool isPointOnLine(cv::Point2f l1,cv::Point2f l2,cv::Point2f pt,float min_angle);
 static int testPointSymmetry(const cv::Mat& mat,cv::Point2f pt,float dist,float max_error);
 static float calcSubpixel(const float &x_l,const float &x,const float &x_r);
@@ -40,6 +41,94 @@ static void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order);
 static float calcSignedDistance(const cv::Vec2f &n,const cv::Point2f &a,const cv::Point2f &pt);
 static void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray _new_points);
 static cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst);
+static cv::Mat normalizeVector(cv::InputArray _points);
+
+cv::Mat normalizeVector(cv::InputArray _points)
+{
+    cv::Mat points = _points.getMat();
+    if(points.cols > 1)
+    {
+        if(points.rows == 1)
+            points = points.reshape(points.channels(),points.cols);
+        else if(points.channels() == 1)
+            points = points.reshape(points.cols,points.rows);
+        else
+            CV_Error(Error::StsBadArg, "unsupported format");
+    }
+    return points;
+}
+
+float calcSharpness(cv::InputArray _values,float rise_distance)
+{
+    CV_CheckTypeEQ(_values.type(),CV_8UC1, "values must be of the type CV_8UC1");
+    cv::Mat values = normalizeVector(_values);
+    if(values.empty())
+        return 0;
+    if(values.rows != 1 && values.cols != 1)
+        CV_Error(Error::StsBadArg, "values must be 1xn or nx1");
+    if(rise_distance <= 0.0 || rise_distance > 1.0)
+        CV_Error(Error::StsBadArg, "rise_distance must lie in th interval ]0..1]");
+
+    // find global min max
+    cv::Point min_loc,max_loc;
+    double min_val,max_val;
+    cv::minMaxLoc(values,&min_val,&max_val,&min_loc,&max_loc);
+    int max_pos = std::max(max_loc.x,max_loc.y);
+    int min_pos = std::max(min_loc.x,min_loc.y);
+    if(max_pos == min_pos)
+        return 0;
+
+    // calc new interval according to the rise distance
+    double delta = max_val-min_val;
+    double min_val2 = min_val+delta*0.5*(1.0-rise_distance);
+    double max_val2 = max_val-delta*0.5*(1.0-rise_distance);
+
+    // find new max starting at min pos
+    int dt = 1;
+    if(max_pos < min_pos)
+        dt= -1;
+    int max_pos2 = max_pos;
+    for(int i=min_pos+dt;i != max_pos;i+=dt)
+    {
+        uint8_t val = values.at<uint8_t>(i);
+        if(val >= max_val2)
+        {
+            max_pos2 = i;
+            break;
+        }
+    }
+
+    // find new min starting at max pos
+    int min_pos2 = min_pos;
+    for(int i=max_pos-dt;i != min_pos;i-=dt)
+    {
+        uint8_t val = values.at<uint8_t>(i);
+        if(val <= min_val2)
+        {
+            min_pos2 = i;
+            break;
+        }
+    }
+
+    // calc sub pixel max pos
+    double max_pos3 = max_pos2;
+    uint8_t val1 = values.at<uint8_t>(max_pos2-dt); // <= val2
+    uint8_t val2 = values.at<uint8_t>(max_pos2);
+    double m = (val2-val1)/dt;
+    if(m != 0)
+        max_pos3 = max_pos2+(max_val2-val2)/m;
+
+    // calc sub pixel min pos
+    double min_pos3 = min_pos2;
+    val1 = values.at<uint8_t>(min_pos2); // <= val2
+    val2 = values.at<uint8_t>(min_pos2+dt);
+    m = (val2-val1)/dt;
+    if(m != 0)
+        min_pos3 = min_pos2+(min_val2-val1)/m;
+
+    return float(fabs(max_pos3-min_pos3));
+}
+
 
 void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray _new_points)
 {
@@ -204,7 +293,7 @@ bool isPointOnLine(cv::Point2f l1,cv::Point2f l2,cv::Point2f pt,float min_angle)
 }
 
 // returns how many tests fails out of 10
-int testPointSymmetry(const cv::Mat& mat,cv::Point2f pt,float dist,float max_error)
+int testPointSymmetry(const cv::Mat &mat,cv::Point2f pt,float dist,float max_error)
 {
     cv::Rect image_rect(int(0.5*dist),int(0.5*dist),int(mat.cols-0.5*dist),int(mat.rows-0.5*dist));
     cv::Size size(int(0.5*dist),int(0.5*dist));
@@ -229,7 +318,7 @@ int testPointSymmetry(const cv::Mat& mat,cv::Point2f pt,float dist,float max_err
     return count;
 }
 
-float calcSubpixel(const float &x_l,const float &x,const float &x_r)
+inline float calcSubpixel(const float &x_l,const float &x,const float &x_r)
 {
     // prevent zero values
     if(x_l <= 0)
@@ -248,7 +337,7 @@ float calcSubpixel(const float &x_l,const float &x,const float &x_r)
     return delta;
 }
 
-float calcSubPos(const float &x_l,const float &x,const float &x_r)
+inline float calcSubPos(const float &x_l,const float &x,const float &x_r)
 {
     float val = 2.0F *(x_l-2.0F*x+x_r);
     if(val == 0.0F)
@@ -273,18 +362,18 @@ void FastX::reconfigure(const Parameters &para)
 }
 
 // rotates the image around its center
-void FastX::rotate(float angle,const cv::Mat &img,cv::Size size,cv::Mat &out)const
+void FastX::rotate(float angle,cv::InputArray img,cv::Size size,cv::OutputArray out)const
 {
     if(angle == 0)
     {
-        out = img;
+        img.copyTo(out);
         return;
     }
     else
     {
-        cv::Matx23d m = cv::getRotationMatrix2D(cv::Point2f(float(img.cols*0.5),float(img.rows*0.5)),float(angle/CV_PI*180),1);
-        m(0,2) += 0.5*(size.width-img.cols);
-        m(1,2) += 0.5*(size.height-img.rows);
+        cv::Matx23d m = cv::getRotationMatrix2D(cv::Point2f(float(img.cols()*0.5),float(img.rows()*0.5)),float(angle/CV_PI*180),1);
+        m(0,2) += 0.5*(size.width-img.cols());
+        m(1,2) += 0.5*(size.height-img.rows());
         cv::warpAffine(img,out,m,size);
     }
 }
@@ -386,52 +475,81 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
 
     // assuming all elements of the same channel
     const int channels = rotated_images.front().channels();
-    int channels_1 = channels-1;
-    float resolution = float(CV_PI/channels);
-
-    float angle;
-    float val1,val2,val3,wrap_around;
-    const unsigned char *pimages1,*pimages2,*pimages3,*pimages4;
-    std::vector<std::vector<float> > angles;
-    angles.resize(keypoints.size());
-    float scale = float(parameters.super_resolution)+1.0F;
+    const int channels_1 = channels-1;
+    const float resolution = float(CV_PI/channels);
+    const float scale = float(parameters.super_resolution)+1.0F;
 
     // for each keypoint
-    std::vector<cv::KeyPoint>::iterator pt_iter = keypoints.begin();
-    for(int id=0;pt_iter != keypoints.end();++pt_iter,++id)
+    std::vector<std::vector<float> > angles;
+    angles.resize(keypoints.size());
+    parallel_for_(Range(0,(int)keypoints.size()),[&](const Range& range)
     {
-        int scale_id = pt_iter->octave - parameters.min_scale;
-        if(scale_id>= int(rotated_images.size()) ||scale_id < 0)
-            CV_Error(Error::StsBadArg,"no rotated image for requested keypoint octave");
-        const cv::Mat &s_rotated_images = rotated_images[scale_id];
-
-        float x2 = pt_iter->pt.x*scale;
-        float y2 = pt_iter->pt.y*scale;
-        int row = int(y2);
-        int col = int(x2);
-        x2 -= col;
-        y2 -= row;
-        float x1 = 1.0F-x2; float y1 = 1.0F-y2;
-        float a = x1*y1; float b = x2*y1; float c = x1*y2; float d = x2*y2;
-        pimages1 = s_rotated_images.ptr<unsigned char>(row,col);
-        pimages2 = s_rotated_images.ptr<unsigned char>(row,col+1);
-        pimages3 = s_rotated_images.ptr<unsigned char>(row+1,col);
-        pimages4 = s_rotated_images.ptr<unsigned char>(row+1,col+1);
-        std::vector<float> &angles_i = angles[id];
-
-        //calc rating
-        val1 = a**(pimages1+channels_1)+b**(pimages2+channels_1)+
-            c**(pimages3+channels_1)+d**(pimages4+channels_1);        // wrap around (last value)
-        wrap_around = a**(pimages1++)+b**(pimages2++)+c**(pimages3++)+d**(pimages4++); // first value
-        val2 = wrap_around;                                                             // first value
-        for(int i=0;i<channels-1;++pimages1,++pimages2,++pimages3,++pimages4,++i)
+        float angle;
+        float val1,val2,val3,wrap_around;
+        const unsigned char *pimages1,*pimages2,*pimages3,*pimages4;
+        std::vector<cv::KeyPoint>::iterator pt_iter = keypoints.begin()+range.start;
+        std::vector<cv::KeyPoint>::iterator pt_end = keypoints.begin()+range.end;
+        for(int id=range.start ;pt_iter != pt_end;++pt_iter,++id)
         {
-            val3 = a**(pimages1)+b**(pimages2)+c**(pimages3)+d**(pimages4);
-            if(val1 <= val2)
+            int scale_id = pt_iter->octave - parameters.min_scale;
+            if(scale_id>= int(rotated_images.size()) ||scale_id < 0)
+                CV_Error(Error::StsBadArg,"no rotated image for requested keypoint octave");
+            const cv::Mat &s_rotated_images = rotated_images[scale_id];
+
+            float x2 = pt_iter->pt.x*scale;
+            float y2 = pt_iter->pt.y*scale;
+            int row = int(y2);
+            int col = int(x2);
+            x2 -= col;
+            y2 -= row;
+            float x1 = 1.0F-x2; float y1 = 1.0F-y2;
+            float a = x1*y1; float b = x2*y1; float c = x1*y2; float d = x2*y2;
+            pimages1 = s_rotated_images.ptr<unsigned char>(row,col);
+            pimages2 = s_rotated_images.ptr<unsigned char>(row,col+1);
+            pimages3 = s_rotated_images.ptr<unsigned char>(row+1,col);
+            pimages4 = s_rotated_images.ptr<unsigned char>(row+1,col+1);
+            std::vector<float> &angles_i = angles[id];
+
+            //calc rating
+            val1 = a**(pimages1+channels_1)+b**(pimages2+channels_1)+
+                c**(pimages3+channels_1)+d**(pimages4+channels_1);        // wrap around (last value)
+            wrap_around = a**(pimages1++)+b**(pimages2++)+c**(pimages3++)+d**(pimages4++); // first value
+            val2 = wrap_around;                                                             // first value
+            for(int i=0;i<channels-1;++pimages1,++pimages2,++pimages3,++pimages4,++i)
             {
-                if(val3 < val2)
+                val3 = a**(pimages1)+b**(pimages2)+c**(pimages3)+d**(pimages4);
+                if(val1 <= val2)
+                {
+                    if(val3 < val2)
+                    {
+                        angle = float((calcSubPos(val1,val2,val3)+i)*resolution);
+                        if(angle < 0)
+                            angle += float(CV_PI);
+                        else if(angle > CV_PI)
+                            angle -= float(CV_PI);
+                        angles_i.push_back(angle);
+                        pt_iter->angle = 360.0F-angle*RAD2DEG;
+                    }
+                }
+                else if(val1 > val2 && val3 >= val2)
                 {
                     angle = float((calcSubPos(val1,val2,val3)+i)*resolution);
+                    if(angle < 0)
+                        angle += float(CV_PI);
+                    else if(angle > CV_PI)
+                        angle -= float(CV_PI);
+                    angles_i.push_back(-angle);
+                    pt_iter->angle = 360.0F-angle*RAD2DEG;
+                }
+                val1 = val2;
+                val2 = val3;
+            }
+            // wrap around
+            if(val1 <= val2)
+            {
+                if(wrap_around< val2)
+                {
+                    angle = float((calcSubPos(val1,val2,wrap_around)+channels-1)*resolution);
                     if(angle < 0)
                         angle += float(CV_PI);
                     else if(angle > CV_PI)
@@ -440,9 +558,9 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
                     pt_iter->angle = 360.0F-angle*RAD2DEG;
                 }
             }
-            else if(val1 > val2 && val3 >= val2)
+            else if(val1 > val2 && wrap_around >= val2)
             {
-                angle = float((calcSubPos(val1,val2,val3)+i)*resolution);
+                angle = float((calcSubPos(val1,val2,wrap_around)+channels-1)*resolution);
                 if(angle < 0)
                     angle += float(CV_PI);
                 else if(angle > CV_PI)
@@ -450,34 +568,8 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
                 angles_i.push_back(-angle);
                 pt_iter->angle = 360.0F-angle*RAD2DEG;
             }
-            val1 = val2;
-            val2 = val3;
         }
-        // wrap around
-        if(val1 <= val2)
-        {
-            if(wrap_around< val2)
-            {
-                angle = float((calcSubPos(val1,val2,wrap_around)+channels-1)*resolution);
-                if(angle < 0)
-                    angle += float(CV_PI);
-                else if(angle > CV_PI)
-                    angle -= float(CV_PI);
-                angles_i.push_back(angle);
-                pt_iter->angle = 360.0F-angle*RAD2DEG;
-            }
-        }
-        else if(val1 > val2 && wrap_around >= val2)
-        {
-            angle = float((calcSubPos(val1,val2,wrap_around)+channels-1)*resolution);
-            if(angle < 0)
-                angle += float(CV_PI);
-            else if(angle > CV_PI)
-                angle -= float(CV_PI);
-            angles_i.push_back(-angle);
-            pt_iter->angle = 360.0F-angle*RAD2DEG;
-        }
-    }
+    });
     return angles;
 }
 
@@ -517,11 +609,11 @@ void FastX::findKeyPoints(const std::vector<cv::Mat> &feature_maps, std::vector<
         int window_size2i = cvRound(window_size2);
 
         const cv::Mat &feature_map = feature_maps[scale-parameters.min_scale];
-        int y = ((feature_map.rows)/window_size)-6;
-        int x = ((feature_map.cols)/window_size)-6;
-        for(int row=5;row<y;++row)
+        int y = ((feature_map.rows)/window_size)-2;
+        int x = ((feature_map.cols)/window_size)-2;
+        for(int row=1;row<y;++row)
         {
-            for(int col=5;col<x;++col)
+            for(int col=1;col<x;++col)
             {
                 Rect rect(col*window_size,row*window_size,window_size,window_size);
                 src = feature_map(rect);
@@ -611,37 +703,41 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
     CV_CheckTypeEQ(_gray_image.type(), CV_8UC1, "Unsupported image type");
 
     // up-sample if needed
-    cv::Mat gray_image;
-    int super_res = int(parameters.super_resolution);
+    cv::UMat gray_image;
+    const int super_res = int(parameters.super_resolution);
     if(super_res)
         cv::resize(_gray_image,gray_image,cv::Size(),2,2);
     else
-        gray_image = _gray_image;
+        _gray_image.copyTo(gray_image);
 
     //for each scale
-    int num_scales = parameters.max_scale-parameters.min_scale+1;
+    const int num_scales = parameters.max_scale-parameters.min_scale+1;
+    const int diag = int(sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
+    const cv::Size size(diag,diag);
+    const int num = int(0.5001*CV_PI/parameters.resolution);
+
     rotated_images.resize(num_scales);
     feature_maps.resize(num_scales);
+
     parallel_for_(Range(parameters.min_scale,parameters.max_scale+1),[&](const Range& range){
         for(int scale=range.start;scale < range.end;++scale)
         {
             // calc images
             // for each angle step
             int scale_id = scale-parameters.min_scale;
-            cv::Mat rotated,filtered_h,filtered_v;
-            int diag = int(sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
-            cv::Size size(diag,diag);
-            int num = int(0.5001*CV_PI/parameters.resolution);
-            std::vector<cv::Mat> images;
+            int scale_size = int(pow(2.0,scale+1+super_res));
+            int scale_size2 = int((scale_size/7)*2+1);
+            std::vector<cv::UMat> images;
             images.resize(2*num);
-            int scale_size = int(1+pow(2.0,scale+1+super_res));
-            int scale_size2 = int((scale_size/10)*2+1);
-            for(int i=0;i<num;++i)
+            cv::UMat rotated,filtered_h,filtered_v;
+            cv::boxFilter(gray_image,images[0],-1,cv::Size(scale_size,scale_size2));
+            cv::boxFilter(gray_image,images[num],-1,cv::Size(scale_size2,scale_size));
+            for(int i=1;i<num;++i)
             {
                 float angle = parameters.resolution*i;
                 rotate(-angle,gray_image,size,rotated);
-                cv::blur(rotated,filtered_h,cv::Size(scale_size,scale_size2));
-                cv::blur(rotated,filtered_v,cv::Size(scale_size2,scale_size));
+                cv::boxFilter(rotated,filtered_h,-1,cv::Size(scale_size,scale_size2));
+                cv::boxFilter(rotated,filtered_v,-1,cv::Size(scale_size2,scale_size));
 
                 // rotate filtered images back
                 rotate(angle,filtered_h,gray_image.size(),images[i]);
@@ -651,13 +747,14 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
 
             // calc feature map
             calcFeatureMap(rotated_images[scale_id],feature_maps[scale_id]);
+
             // filter feature map to improve impulse responses
             if(parameters.filter)
             {
                 cv::Mat high,low;
-                cv::blur(feature_maps[scale_id],low,cv::Size(scale_size,scale_size));
+                cv::boxFilter(feature_maps[scale_id],low,-1,cv::Size(scale_size,scale_size));
                 int scale2 = int((scale_size/6))*2+1;
-                cv::blur(feature_maps[scale_id],high,cv::Size(scale2,scale2));
+                cv::boxFilter(feature_maps[scale_id],high,-1,cv::Size(scale2,scale2));
                 feature_maps[scale_id] = high-0.8*low;
             }
         }
@@ -698,6 +795,15 @@ Ellipse::Ellipse(const cv::Point2f &_center, const cv::Size2f &_axes, float _ang
     cosf(cos(-_angle)),
     sinf(sin(-_angle))
 {
+}
+
+Ellipse::Ellipse(const Ellipse &other)
+{
+    center = other.center;
+    axes= other.axes;
+    angle= other.angle;
+    cosf = other.cosf;
+    sinf = other.sinf;
 }
 
 const cv::Size2f &Ellipse::getAxes()const
@@ -758,6 +864,21 @@ cv::Mat Chessboard::getObjectPoints(const cv::Size &pattern_size,float cell_size
     return result;
 }
 
+bool Chessboard::Board::Cell::isInside(const cv::Point2f &pt)const
+{
+    if(empty())
+        return false;
+    float l1 = (pt.x-top_left->x)*(bottom_left->y-top_left->y) - (bottom_left->x-top_left->x)*(pt.y-top_left->y);
+    float  l2 = (pt.x-top_right->x)*(top_left->y-top_right->y) - (top_left->x-top_right->x)*(pt.y-top_right->y);
+    float  l3 = (pt.x-bottom_left->x)*(top_right->y-bottom_left->y) - (top_right->x-bottom_left->x)*(pt.y-bottom_left->y);
+    if((l1>0 && l2>0  && l3>0) || (l1<0 && l2<0 && l3<0))
+        return true;
+    l1 = (pt.x-top_left->x)*(bottom_right->y-top_left->y) - (bottom_right->x-top_left->x)*(pt.y-top_left->y);
+    l2 = (pt.x-top_right->x)*(top_left->y-top_right->y) - (top_left->x-top_right->x)*(pt.y-top_right->y);
+    l3 = (pt.x-bottom_right->x)*(top_right->y-bottom_right->y) - (top_right->x-bottom_right->x)*(pt.y-bottom_right->y);
+    return (l1>0 && l2>0  && l3>0) || (l1<0 && l2<0 && l3<0);
+}
+
 bool Chessboard::Board::Cell::empty()const
 {
     // check if one of its corners has NaN
@@ -780,6 +901,16 @@ int Chessboard::Board::Cell::getRow()const
     return row;
 }
 
+cv::Point2f Chessboard::Board::Cell::getCenter()const
+{
+    if(empty())
+        CV_Error(Error::StsBadArg,"Cell is empty");
+    cv::Point2f center = *top_left+*top_right+*bottom_left+*bottom_right;
+    center.x /=4;
+    center.y /=4;
+    return center;
+}
+
 int Chessboard::Board::Cell::getCol()const
 {
     int col = 0;
@@ -790,7 +921,7 @@ int Chessboard::Board::Cell::getCol()const
 
 Chessboard::Board::Cell::Cell() :
     top_left(NULL), top_right(NULL), bottom_right(NULL), bottom_left(NULL),
-    left(NULL), top(NULL), right(NULL), bottom(NULL),black(false)
+    left(NULL), top(NULL), right(NULL), bottom(NULL),black(false),marker(false)
 {}
 
 Chessboard::Board::PointIter::PointIter(Cell *_cell,CornerIndex _corner_index):
@@ -1131,7 +1262,7 @@ Chessboard::Board::Board(const cv::Size &size, const std::vector<cv::Point2f> &p
     if(!init(ipoints))
         return;
 
-    // add all cols
+    // add all cols if more than 3
     for(int col=3 ; col< data.cols;++col)
     {
         data(cv::Rect(col,0,1,3)).copyTo(temp);
@@ -1139,7 +1270,7 @@ Chessboard::Board::Board(const cv::Size &size, const std::vector<cv::Point2f> &p
         addColumnRight(ipoints);
     }
 
-    // add all rows
+    // add all rows if more than 3
     for(int row=3; row < data.rows;++row)
     {
         data(cv::Rect(0,row,cols,1)).copyTo(temp);
@@ -1153,12 +1284,76 @@ Chessboard::Board::~Board()
     clear();
 }
 
+void Chessboard::Board::setAngles(float white, float black)
+{
+    white_angle = white;
+    black_angle = black;
+}
+
+float Chessboard::Board::getAngle()const
+{
+    if(isEmpty())
+        CV_Error(Error::StsBadArg,"Board is empty");
+    if(colCount() < 3)
+        CV_Error(Error::StsBadArg,"Board is too small");
+
+    cv::Point2f delta = *(top_left->right->top_right)-*(top_left->top_left);
+    cv::Point3f pt(delta.x,delta.y,0);
+    float val;
+    if(fabs(pt.x) > fabs(pt.y))
+    {
+        cv::Point3f ptx(1,0,0);
+        val = float(ptx.dot(pt)/cv::norm(pt));
+        if(val < 0)
+            val = -acos(val);
+        else
+            val = acos(val);
+    }
+    else
+    {
+        cv::Point3f ptx(0,1,0);
+        val = float(ptx.dot(pt)/cv::norm(pt));
+        if(val < 0)
+            val = float(-acos(val)+CV_PI/2);
+        else
+            val = float(acos(val)+CV_PI/2);
+    }
+    return val;
+}
+
+bool Chessboard::Board::isHorizontal()const
+{
+    double angle = getAngle();
+    if((angle < 0.25*CV_PI && angle > -0.25*CV_PI) || angle > 0.75*CV_PI || angle < -0.75*CV_PI)
+        return true;
+    return false;
+}
+
+cv::Mat Chessboard::Board::getObjectPoints(float cell_size)const
+{
+    cv::Mat points = Chessboard::getObjectPoints(getSize(),cell_size);
+
+    // check for any offset due to a found marker
+    for(auto &&cell : cells)
+    {
+        if(cell->marker && !cell->black)
+        {
+            // apply offset
+            cv::Point3f offset(cell->getCol()*cell_size,cell->getRow()*cell_size,0);
+            for(int i =0;i < points.rows;++i)
+                points.at<cv::Point3f>(i) -= offset;
+            break;
+        }
+    }
+    return points;
+}
+
 std::vector<cv::Point2f> Chessboard::Board::getCellCenters()const
 {
     int icols = int(colCount());
     int irows = int(rowCount());
     if(icols < 3 || irows < 3)
-        throw std::runtime_error("getCellCenters: Chessboard must be at least consist of 3 rows and cols to calculate the cell centers");
+        CV_Error(Error::StsBadArg,"Chessboard must be at least consist of 3 rows and cols to calculate the cell centers");
 
     std::vector<cv::Point2f> points;
     cv::Matx33d H(estimateHomography(DUMMY_FIELD_SIZE));
@@ -1175,6 +1370,56 @@ std::vector<cv::Point2f> Chessboard::Board::getCellCenters()const
         }
     }
     return points;
+}
+
+std::vector<cv::Mat> Chessboard::Board::getCells(float shrink_factor,bool bwhite,bool bblack) const
+{
+    std::vector<cv::Mat> result;
+    int icols = int(colCount());
+    int irows = int(rowCount());
+    if(icols < 3 || irows < 3)
+        return result;
+
+    for(int row=0;row<irows-1;++row)
+    {
+        for(int col=0;col<icols-1;++col)
+        {
+            const Cell *cell = getCell(row,col);
+            if(!bwhite && !cell->black)
+                continue;
+            if(!bblack && cell->black)
+                continue;
+            cv::Mat points = cv::Mat(4,1,CV_32FC2);
+            points.at<cv::Point2f>(0) = *cell->top_left;
+            points.at<cv::Point2f>(1) = *cell->top_right;
+            points.at<cv::Point2f>(2) = *cell->bottom_right;
+            points.at<cv::Point2f>(3) = *cell->bottom_left;
+            if(shrink_factor != 1)
+            {
+                cv::Point2f center = *cell->top_left+*cell->top_right+*cell->bottom_left+*cell->bottom_right;
+                center.x /=4;
+                center.y /=4;
+                for(int i=0;i<4;++i)
+                {
+                    auto &pt = points.at<cv::Point2f>(i);
+                    pt = center+(pt-center)*shrink_factor;
+                }
+            }
+            result.push_back(points);
+        }
+    }
+    return result;
+}
+
+cv::Mat Chessboard::Board::warpImage(cv::InputArray image)const
+{
+    cv::Mat H = estimateHomography();
+    cv::Mat mat;
+    cv::Size size = getSize();
+    size.width = (size.width+1)*DUMMY_FIELD_SIZE;
+    size.height= (size.height+1)*DUMMY_FIELD_SIZE;
+    cv::warpPerspective(image,mat,H.inv(),size);
+    return mat;
 }
 
 void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray _H)const
@@ -1202,7 +1447,7 @@ void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray
     {
         for(int col=0;col<icols;++col,++iter1)
         {
-            if(iter1->x != iter1->x)    // NaN check
+            if(!H.empty() && iter1->x != iter1->x)    // NaN check
             {
                 // draw search ellipse
                 Ellipse ellipse = estimateSearchArea(H,row,col,0.4F);
@@ -1222,18 +1467,42 @@ void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray
         for(int col=0;col<icols-1;++col)
         {
             const Cell *cell = getCell(row,col);
-            cv::Point2f center = *cell->top_left+*cell->top_right+*cell->bottom_left+*cell->bottom_right;
-            center.x /=4;
-            center.y /=4;
+            cv::Point2f center = cell->getCenter();
             int size = 4;
             if(row==0&&col==0)
                 size=8;
             if(row==0&&col==1)
                 size=7;
-            if(cell->black)
-                cv::circle(image,center,size,cv::Scalar::all(255),-1);
+
+            if(cell->marker)
+            {
+                if(cell->black)
+                    cv::circle(image,center,2,cv::Scalar::all(0),-1);
+                else
+                {
+                    cv::circle(image,center,2,cv::Scalar::all(255),-1);
+                    // draw coordinate
+                    if(col+1 < icols)
+                    {
+                        const Cell *cell2 = getCell(row,col+1);
+                        cv::Point2f center2 = cell2->getCenter();
+                        cv::line(image,center,center2,cv::Scalar::all(127),2);
+                    }
+                    if(row+1 < irows)
+                    {
+                        const Cell *cell2 = getCell(row+1,col);
+                        cv::Point2f center2 = cell2->getCenter();
+                        cv::line(image,center,center2,cv::Scalar::all(127),2);
+                    }
+                }
+            }
             else
-                cv::circle(image,center,size,cv::Scalar(0,0,10,255),-1);
+            {
+                if(cell->black)
+                    cv::circle(image,center,size,cv::Scalar::all(255),-1);
+                else
+                    cv::circle(image,center,size,cv::Scalar(0,0,10,255),-1);
+            }
         }
     }
 
@@ -1331,6 +1600,7 @@ Chessboard::Board& Chessboard::Board::operator=(const Chessboard::Board &other)
         cell->bottom_right= point_point_mapping[(*iter2)->bottom_right];
         cell->bottom_left = point_point_mapping[(*iter2)->bottom_left];
         cell->black = (*iter2)->black;
+        cell->marker = (*iter2)->marker;
         cell_cell_mapping[*iter2] = cell;
         cells.push_back(cell);
     }
@@ -1348,6 +1618,67 @@ Chessboard::Board& Chessboard::Board::operator=(const Chessboard::Board &other)
     }
     top_left = cell_cell_mapping[other.top_left];
     return *this;
+}
+
+bool Chessboard::Board::normalizeMarkerOrientation()
+{
+    // use row by row fashion as cells must not be arranged correctly
+    Cell *pcell = NULL;
+    int trows = int(rowCount());
+    int tcols = int(colCount());
+    for(int row=0;row != trows && !pcell;++row)
+    {
+        for(int col=0;col != tcols;++col)
+        {
+            Cell* current_cell = getCell(row,col);
+            if(!current_cell->marker || !current_cell->right || !current_cell->right->marker)
+                continue;
+
+            if(current_cell->black)
+            {
+                if(current_cell->right->top && current_cell->right->top->marker)
+                {
+                    rotateLeft();
+                    rotateLeft();
+                    pcell = current_cell->right;
+                    break;
+                }
+                if(current_cell->right->bottom && current_cell->right->bottom->marker)
+                {
+                    rotateLeft();
+                    pcell = current_cell->right;
+                    break;
+                }
+            }
+            else
+            {
+                if(current_cell->top && current_cell->top->marker)
+                {
+                    rotateRight();
+                    pcell = current_cell;
+                    break;
+                }
+                if(current_cell->bottom && current_cell->bottom->marker)
+                {
+                    // correct orientation
+                    pcell = current_cell;
+                    break;
+                }
+            }
+        }
+    }
+    if(pcell)
+    {
+        //check for ambiguity
+        if(rowCount()-pcell->bottom->getRow() > 2)
+        {
+           // std::cout << "FIX board " << pcell->bottom->getRow() << " " << rowCount();
+            flipVertical();
+            rotateRight();
+        }
+        return true;
+    }
+    return false;
 }
 
 void Chessboard::Board::normalizeOrientation(bool bblack)
@@ -1864,6 +2195,91 @@ bool Chessboard::Board::isCellBlack(int row,int col)const
     return getCell(row,col)->black;
 }
 
+bool Chessboard::Board::hasCellMarker(int row,int col)
+{
+    return getCell(row,col)->marker;
+}
+
+int Chessboard::Board::detectMarkers(cv::InputArray image)
+{
+    cv::Mat img = image.getMat();
+    CV_CheckTypeEQ(img.type(), CV_8UC1, "Unsupported source type");
+    if(img.empty())
+        CV_Error(Error::StsBadArg,"image is empty");
+    if(isEmpty())
+        CV_Error(Error::StsBadArg,"board is is empty");
+
+    // get undistorted board
+    cv::Mat board_image = warpImage(image);
+
+    cv::Mat mask = cv::Mat::zeros(DUMMY_FIELD_SIZE,DUMMY_FIELD_SIZE,CV_8UC1);
+    cv::circle(mask,cv::Point(DUMMY_FIELD_SIZE/2,DUMMY_FIELD_SIZE/2),DUMMY_FIELD_SIZE/7,cv::Scalar::all(255),-1);
+    int signal_size = cv::countNonZero(mask);
+    CV_Assert(signal_size > 0);
+
+    cv::Mat mask2 = cv::Mat::zeros(DUMMY_FIELD_SIZE,DUMMY_FIELD_SIZE,CV_8UC1);
+    cv::circle(mask2,cv::Point(DUMMY_FIELD_SIZE/2,DUMMY_FIELD_SIZE/2),DUMMY_FIELD_SIZE/2,cv::Scalar::all(255),-1);
+    cv::circle(mask2,cv::Point(DUMMY_FIELD_SIZE/2,DUMMY_FIELD_SIZE/2),DUMMY_FIELD_SIZE/5,cv::Scalar::all(0),-1);
+    int noise_size = cv::countNonZero(mask2);
+    CV_Assert(noise_size > 0);
+
+    std::vector<cv::Point2f> dst,src;
+    dst.push_back(cv::Point2f(0.0F,0.0F));
+    dst.push_back(cv::Point2f(float(DUMMY_FIELD_SIZE),0.0F));
+    dst.push_back(cv::Point2f(float(DUMMY_FIELD_SIZE),float(DUMMY_FIELD_SIZE)));
+    dst.push_back(cv::Point2f(0.0F,float(DUMMY_FIELD_SIZE)));
+    src.resize(4);
+
+    // check each field
+    int icols = int(colCount()-1);
+    int irows = int(rowCount()-1);
+    int count = 0;
+    cv::Mat temp;
+    for(int y=1;y<irows;++y)
+    {
+        for(int x=1;x<icols;++x)
+        {
+            Cell *cell = getCell(y,x);
+
+            // calculate homography for each field to avoid issues with
+            // distorted images
+            src[0] = *cell->top_left;
+            src[1] = *cell->top_right;
+            src[2] = *cell->bottom_right;
+            src[3] = *cell->bottom_left;
+            cv::Mat H = cv::findHomography(src,dst,cv::LMEDS);
+            cv::Mat field;
+            cv::warpPerspective(image,field,H,cv::Size(DUMMY_FIELD_SIZE,DUMMY_FIELD_SIZE));
+
+            // calc signal and noise value
+            cv::bitwise_and(field,mask,temp);
+            double signal = cv::sum(temp)[0]/signal_size;
+            cv::bitwise_and(field,mask2,temp);
+            double noise= cv::sum(temp)[0]/noise_size;
+
+            // calc refrence value
+            Cell *cell2 = getCell(y,abs(x-1));
+            src[0] = *cell2->top_left;
+            src[1] = *cell2->top_right;
+            src[2] = *cell2->bottom_right;
+            src[3] = *cell2->bottom_left;
+            H = cv::findHomography(src,dst,cv::LMEDS);
+            cv::warpPerspective(image,field,H,cv::Size(DUMMY_FIELD_SIZE,DUMMY_FIELD_SIZE));
+            cv::bitwise_and(field,mask2,temp);
+            double reference = cv::sum(temp)[0]/noise_size;
+            // check if marker is present
+            if(cell->black)
+                cell->marker = signal-noise > (reference-noise)*0.5;
+            else
+                cell->marker = noise-signal > (noise-reference)*0.5;
+            if(cell->marker)
+                count++;
+            // std::cout << x << "/" << y << " signal " << signal << " noise " << noise << " reference " << reference  << " has marker " << int(cell->marker) << std::endl;
+        }
+    }
+    return count;
+}
+
 bool Chessboard::Board::isCellEmpty(int row,int col)
 {
     return getCell(row,col)->empty();
@@ -1915,7 +2331,7 @@ void Chessboard::Board::drawEllipses(const std::vector<Ellipse> &ellipses)
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG
     cv::Mat img;
     draw(debug_image,img);
-    std::vector<Ellipse>::iterator iter;
+    std::vector<Ellipse>::const_iterator iter = ellipses.begin();
     for(;iter != ellipses.end();++iter)
         iter->draw(img);
     cv::imshow("chessboard",img);
@@ -1923,6 +2339,95 @@ void Chessboard::Board::drawEllipses(const std::vector<Ellipse> &ellipses)
 #endif
 }
 
+
+// TODO also delete points
+bool Chessboard::Board::shrinkLeft()
+{
+    if(colCount() < 4)
+        return false;
+
+    // unlink cells on the left side and delete them
+    top_left = top_left->right;
+    PointIter iter(top_left,BOTTOM_RIGHT);
+    do
+    {
+        auto cell = iter.getCell();
+        auto citer = std::find(cells.begin(),cells.end(),cell->left);
+        delete cell->left;
+        cell->left= NULL;
+        cells.erase(citer);
+    }
+    while(iter.bottom());
+    --cols;
+    return true;
+}
+
+bool Chessboard::Board::shrinkRight()
+{
+    if(colCount() < 4)
+        return false;
+
+    // unlink cells on the left side and delete them
+    PointIter iter(top_left,BOTTOM_RIGHT);
+    while(iter.right());
+    iter.left();
+    iter.left();
+    do
+    {
+        auto cell = iter.getCell();
+        auto citer = std::find(cells.begin(),cells.end(),cell->right);
+        delete cell->right;
+        cell->right= NULL;
+        cells.erase(citer);
+    }
+    while(iter.bottom());
+    --cols;
+    return true;
+}
+
+bool Chessboard::Board::shrinkTop()
+{
+    if(rowCount() < 4)
+        return false;
+
+    // unlink cells on the left side and delete them
+    top_left = top_left->bottom;
+    PointIter iter(top_left,BOTTOM_RIGHT);
+    do
+    {
+        auto cell = iter.getCell();
+        auto citer = std::find(cells.begin(),cells.end(),cell->top);
+        delete cell->top;
+        cell->top= NULL;
+        cells.erase(citer);
+    }
+    while(iter.right());
+    --rows;
+    return true;
+}
+
+bool Chessboard::Board::shrinkBottom()
+{
+    if(rowCount() < 4)
+        return false;
+
+    // unlink cells on the left side and delete them
+    PointIter iter(top_left,BOTTOM_RIGHT);
+    while(iter.bottom());
+    iter.top();
+    iter.top();
+    do
+    {
+        auto cell = iter.getCell();
+        auto citer = std::find(cells.begin(),cells.end(),cell->bottom);
+        delete cell->bottom;
+        cell->bottom= NULL;
+        cells.erase(citer);
+    }
+    while(iter.right());
+    --rows;
+    return true;
+}
 
 void Chessboard::Board::growLeft()
 {
@@ -1979,6 +2484,8 @@ bool Chessboard::Board::growLeft(const cv::Mat &map,cv::flann::Index &flann_inde
         {
             ++count;
             points.push_back(ellipse.getCenter());
+            if(points.back().x < 0 || points.back().y <0)
+                return false;
         }
         else if(result != 0)
         {
@@ -2066,6 +2573,8 @@ bool Chessboard::Board::growTop(const cv::Mat &map,cv::flann::Index &flann_index
         {
             ++count;
             points.push_back(ellipse.getCenter());
+            if(points.back().x < 0 || points.back().y <0)
+                return false;
         }
         else if(result != 0)
         {
@@ -2153,6 +2662,8 @@ bool Chessboard::Board::growRight(const cv::Mat &map,cv::flann::Index &flann_ind
         {
             ++count;
             points.push_back(ellipse.getCenter());
+            if(points.back().x < 0 || points.back().y <0)
+                return false;
         }
         else if(result != 0)
         {
@@ -2241,6 +2752,8 @@ bool Chessboard::Board::growBottom(const cv::Mat &map,cv::flann::Index &flann_in
         {
             ++count;
             points.push_back(ellipse.getCenter());
+            if(points.back().x < 0 || points.back().y <0)
+                return false;
         }
         else if(result != 0)
         {
@@ -2588,6 +3101,19 @@ std::vector<cv::Point2f> Chessboard::Board::getContour()const
     return points;
 }
 
+void Chessboard::Board::maskImage(cv::InputOutputArray img,const cv::Scalar &color)const
+{
+    Chessboard::Board temp(*this);
+    temp.growLeft();
+    temp.growRight();
+    temp.growTop();
+    temp.growBottom();
+    cv::Mat contour;
+    cv::Mat(temp.getContour()).convertTo(contour,CV_32S);
+    std::vector<cv::Mat> contours;
+    contours.push_back(contour);
+    cv::drawContours(img,contours,0,color,-1);
+}
 
 cv::Mat Chessboard::Board::estimateHomography(cv::Rect rect,int field_size)const
 {
@@ -2671,30 +3197,43 @@ int Chessboard::Board::grow(const cv::Mat &map,cv::flann::Index &flann_index)
     int count = 0;
     do
     {
-        // grow to the left
-        if(bleft)
-        {
-            bleft = growLeft(map,flann_index);
-            if(bleft)
-                ++count;
-        }
         if(btop)
         {
             btop= growTop(map,flann_index);
             if(btop)
+            {
                 ++count;
-        }
-        if(bright)
-        {
-            bright= growRight(map,flann_index);
-            if(bright)
-                ++count;
+                continue;
+            }
         }
         if(bbottom)
         {
             bbottom= growBottom(map,flann_index);
             if(bbottom)
+            {
                 ++count;
+                continue;
+            }
+        }
+
+        // grow to the left
+        if(bleft)
+        {
+            bleft = growLeft(map,flann_index);
+            if(bleft)
+            {
+                ++count;
+                continue;
+            }
+        }
+        if(bright)
+        {
+            bright= growRight(map,flann_index);
+            if(bright)
+            {
+                ++count;
+                continue;
+            }
         }
     }while(bleft || btop || bright || bbottom );
     return count;
@@ -2753,6 +3292,114 @@ std::vector<cv::KeyPoint> Chessboard::Board::getKeyPoints(bool ball)const
     return keypoints;
 }
 
+
+cv::Scalar Chessboard::Board::calcEdgeSharpness(cv::InputArray _img,float rise_distance,bool vertical,cv::OutputArray _sharpness)
+{
+    cv::Mat img = _img.getMat();
+    if(img.empty())
+        CV_Error(Error::StsBadArg,"image is empty");
+    if(img.type() != CV_8UC1)
+        CV_Error(Error::StsBadArg,"image type is not supported. Expect CV_8UC1");
+
+    int tcols = int(colCount());
+    int trows = int(rowCount());
+    std::vector<cv::Point2f> centers = getCellCenters();
+
+    if(int(centers.size()) != trows*tcols)
+        CV_Error(Error::StsInternal,"internal error - size mismatch");
+
+    // build horizontal lines
+    std::vector<std::pair<cv::Point2f,cv::Point2f> > pairs;
+    if(vertical)
+    {
+        for(int row = 1;row < trows-1;++row)
+        {
+            std::vector<cv::Point2f>::const_iterator iter1 = centers.begin()+row*tcols;
+            std::vector<cv::Point2f>::const_iterator iter2 = iter1+1;
+            for(int col= 0;col< tcols-1;++col,++iter1,++iter2)
+                pairs.push_back(std::make_pair(*iter1,*iter2));
+        }
+    }
+    else
+    {
+        // build vertical lines
+        for(int col = 1;col< tcols-1;++col)
+        {
+            // avoid using iterators to not trigger out of range
+            int i1 = col;
+            int i2 = i1 + tcols;
+            for (int row = 0; row < trows - 1; ++row, i1 += tcols, i2 += tcols)
+            {
+                pairs.push_back(std::make_pair(centers[i1], centers[i2]));
+            }
+        }
+    }
+
+    // calc edge response for each line
+    cv::Rect rect(0,0,img.cols,img.rows);
+    std::vector<std::pair<cv::Point2f,cv::Point2f> >::const_iterator iter =  pairs.begin();
+    int count = 0;
+    float sharpness = 0;
+    float max_val= 0;
+    float min_val= 0;
+    double dmin,dmax;
+    cv::Mat data = cv::Mat::zeros(int(pairs.size()),5,CV_32FC1);
+    for(;iter != pairs.end();++iter)
+    {
+        // get values from the image
+        if(!rect.contains(iter->first) || !rect.contains(iter->second))
+            continue;
+        int delta = int(cv::norm(iter->second-iter->first));
+        if(delta < 10)
+            continue;
+
+        float dx = (iter->second.x-iter->first.x)/delta;
+        float dy = (iter->second.y-iter->first.y)/delta;
+        std::vector<uint8_t> values;
+        cv::Mat patch;
+        for(int i=0;i<delta;++i)
+        {
+            int count2 = 0;
+            float value = 0;
+            cv::Point2f p0(iter->first.x+dx*i,iter->first.y+dy*i);
+            for(int num=-1;num < 2;++num)
+            {
+                cv::Point2f p1(p0.x+dy*num,p0.y-dx*num);
+                if(!rect.contains(p1))
+                    continue;
+                cv::getRectSubPix(img,cv::Size(1,1),p1,patch);
+                value += patch.at<uint8_t>(0,0);
+                ++count2;
+            }
+            values.push_back(count2 > 0 ? uint8_t(value/count2) : 0);
+        }
+
+        float val = calcSharpness(values,rise_distance);
+        sharpness += val;
+        cv::minMaxLoc(values,&dmin,&dmax);
+        max_val+= float(dmax);
+        min_val += float(dmin);
+        data.at<float>(count,0) = iter->first.x+(iter->second.x-iter->first.x)/2;
+        data.at<float>(count,1) = iter->first.y+(iter->second.y-iter->first.y)/2;
+        data.at<float>(count,2) = val;
+        data.at<float>(count,3) = float(dmin);
+        data.at<float>(count,4) = float(dmax);
+        count +=1;
+    }
+    if(count == 0)
+    {
+        std::cout  <<"calcEdgeSharpness: checkerboard too small for calculation." << std::endl;
+        return cv::Scalar::all(9999);
+    }
+    sharpness = sharpness/float(count);
+    max_val = max_val/float(count);
+    min_val = min_val/float(count);
+    if(_sharpness.needed())
+        data.copyTo(_sharpness);
+    return cv::Scalar(sharpness,min_val,max_val);
+}
+
+
 Chessboard::Chessboard(const Parameters &para)
 {
     reconfigure(para);
@@ -2781,7 +3428,7 @@ void Chessboard::findKeyPoints(const cv::Mat& image, std::vector<KeyPoint>& keyp
     FastX::Parameters para;
 
     para.branches = 2;                    // this is always the case for checssboard corners
-    para.strength = 10;                   // minimal threshold
+    para.strength = 150;                  // minimal threshold
     para.resolution = float(CV_PI*0.25);   // this gives the best results taking interpolation into account
     para.filter = 1;
     para.super_resolution = parameters.super_resolution;
@@ -3004,7 +3651,7 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
     std::vector<KeyPoint> keypoints_seed;
     std::vector<std::vector<float> > angles;
     findKeyPoints(gray,keypoints_seed,feature_maps,angles,mask);
-    if(keypoints_seed.empty())
+    if(int(keypoints_seed.size()) < parameters.chessboard_size.width * parameters.chessboard_size.height)
         return Chessboard::Board();
 
     // check how many points are likely a checkerboard corner
@@ -3108,19 +3755,70 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
                 }
                 else
                 {
-                    if(iter_boards->getSize().width*iter_boards->getSize().height < chessboard_size2.width*chessboard_size2.height)
+                    if(iter_boards->getSize().width < chessboard_size2.width || iter_boards->getSize().height < chessboard_size2.height)
                         iter_boards->clear();
                     else if(!parameters.larger)
+                        iter_boards->clear();
+                    else
+                    {
+                        // try to optimize board
+                        while(true)
+                        {
+                            Board temp(*iter_boards);
+                            temp.shrinkRight();
+                            temp.shrinkLeft();
+                            temp.shrinkRight();
+                            temp.shrinkLeft();
+                            temp.growTop(data,flann_index);
+                            temp.growBottom(data,flann_index);
+                            temp.grow(data,flann_index);
+                            if(temp.rowCount()*temp.colCount() > iter_boards->rowCount()*iter_boards->colCount())
+                            {
+                                *iter_boards = temp;
+                                continue;
+                            }
+
+                            temp = (*iter_boards);
+                            temp = (*iter_boards);
+                            temp.shrinkTop();
+                            temp.shrinkBottom();
+                            temp.shrinkTop();
+                            temp.shrinkBottom();
+                            temp.growLeft(data,flann_index);
+                            temp.growRight(data,flann_index);
+                            temp.grow(data,flann_index);
+                            if(temp.rowCount()*temp.colCount() > iter_boards->rowCount()*iter_boards->colCount())
+                            {
+                                *iter_boards = temp;
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // check for markers
+                if(!iter_boards->isEmpty() && parameters.marker)
+                {
+                    auto icount = iter_boards->detectMarkers(gray);
+                    if(3 != icount || !iter_boards->normalizeMarkerOrientation())
                         iter_boards->clear();
                 }
             }
         });
         // check if a good board was found
+        // check if a good board was found and return largest one
+        const Board *best_board = NULL;
         for(const auto &board : boards)
         {
             if(!board.isEmpty())
-                return board;
+            {
+                if(!best_board || best_board->rowCount() * best_board->colCount() < board.colCount()*board.rowCount())
+                    best_board = &board;
+            }
         }
+        if(best_board)
+            return *best_board;
     }
     return Chessboard::Board();
 }
@@ -3153,7 +3851,7 @@ void Chessboard::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, 
 
 // public API
 bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
-                             cv::OutputArray corners_, int flags)
+                             cv::OutputArray corners_, int flags, cv::OutputArray meta_)
 {
     CV_INSTRUMENT_REGION();
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -3176,7 +3874,7 @@ bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     para.chessboard_size = pattern_size;
     para.min_scale = 2;
     para.max_scale = 4;
-    para.max_tests = 25;
+    para.max_tests = 30;
     para.max_points = std::max(100,pattern_size.width*pattern_size.height*2);
     para.super_resolution = false;
 
@@ -3191,7 +3889,7 @@ bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     if(flags & CALIB_CB_EXHAUSTIVE)
     {
         para.max_tests = 100;
-        para.max_points = std::max(500,pattern_size.width*pattern_size.height*2);
+        para.max_points = std::max(1000,pattern_size.width*pattern_size.height*2);
         flags ^= CALIB_CB_EXHAUSTIVE;
     }
     if(flags & CALIB_CB_ACCURACY)
@@ -3199,21 +3897,93 @@ bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
         para.super_resolution = true;
         flags ^= CALIB_CB_ACCURACY;
     }
+    if(flags & CALIB_CB_LARGER)
+    {
+        para.larger = true;
+        flags ^= CALIB_CB_LARGER;
+    }
+    if(flags & CALIB_CB_MARKER)
+    {
+        para.marker = true;
+        para.max_points *= 4;
+        flags ^= CALIB_CB_MARKER;
+    }
     if(flags)
         CV_Error(Error::StsOutOfRange, cv::format("Invalid remaining flags %d", (int)flags));
 
     std::vector<cv::KeyPoint> corners;
-    details::Chessboard board(para);
-    board.detect(img,corners);
+    details::Chessboard detector(para);
+
+    std::vector<cv::Mat> maps;
+    details::Chessboard::Board board = detector.detectImpl(img,maps,cv::Mat());
+    corners = board.getKeyPoints();
     if(corners.empty())
     {
         corners_.release();
+        if(meta_.needed())
+            meta_.release();
         return false;
     }
     std::vector<cv::Point2f> points;
     KeyPoint::convert(corners,points);
     Mat(points).copyTo(corners_);
+
+    // export meta data
+    if(meta_.needed())
+    {
+        meta_.create(int(board.rowCount()),int(board.colCount()),CV_8UC1);
+        cv::Mat meta = meta_.getMat();
+        meta = 0;
+        for(int row =0;row < meta.rows-1;++row)
+        {
+            for(int col=0;col< meta.cols-1;++col)
+            {
+                if(board.isCellBlack(row,col))
+                {
+                    if(board.hasCellMarker(row,col))
+                        meta.at<uint8_t>(row,col) = 3;
+                    else
+                        meta.at<uint8_t>(row,col) = 1;
+                }
+                else
+                {
+                    if(board.hasCellMarker(row,col))
+                        meta.at<uint8_t>(row,col) = 4;   // origin
+                    else
+                        meta.at<uint8_t>(row,col) = 2;
+                }
+            }
+        }
+    }
     return true;
 }
+
+// public API
+cv::Scalar estimateChessboardSharpness(InputArray image_, Size patternSize, InputArray corners_,
+                                       float rise_distance,bool vertical, cv::OutputArray sharpness)
+{
+    CV_INSTRUMENT_REGION();
+    int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_CheckType(type, depth == CV_8U && (cn == 1 || cn == 3),
+            "Only 8-bit grayscale or color images are supported");
+    if(patternSize.width <= 2 || patternSize.height <= 2)
+        CV_Error(Error::StsOutOfRange, "Both width and height of the pattern should have bigger than 2");
+
+    cv::Mat corners = details::normalizeVector(corners_);
+    std::vector<cv::Point2f> points;
+    corners.reshape(2,corners.rows).convertTo(points,CV_32FC2);
+    if(int(points.size()) != patternSize.width * patternSize.height)
+        CV_Error(Error::StsBadArg, "Size mismatch between patternSize and number of provided corners.");
+
+    Mat img;
+    if (image_.channels() != 1)
+        cvtColor(image_, img, COLOR_BGR2GRAY);
+    else
+        img = image_.getMat();
+
+    details::Chessboard::Board board(patternSize,points);
+    return board.calcEdgeSharpness(img,rise_distance,vertical,sharpness);
+}
+
 
 } // namespace cv

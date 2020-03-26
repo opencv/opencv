@@ -115,6 +115,18 @@ TEST(Variant, Assign_Basic)
     EXPECT_EQ(42, util::get<int>(vis));
 }
 
+TEST(Variant, Assign_LValueRef)
+{
+    TestVar vis;
+    EXPECT_EQ(0u, vis.index());
+    EXPECT_EQ(0,  util::get<int>(vis));
+
+    int val = 42;
+    vis = val;
+    EXPECT_EQ(0u, vis.index());
+    EXPECT_EQ(42, util::get<int>(vis));
+}
+
 TEST(Variant, Assign_ValueUpdate_SameType)
 {
     TestVar vis(42);
@@ -135,6 +147,19 @@ TEST(Variant, Assign_ValueUpdate_DiffType)
     EXPECT_EQ(42, util::get<int>(vis));
 
     vis = std::string("42");
+    EXPECT_EQ(1u, vis.index());
+    EXPECT_EQ("42", util::get<std::string>(vis));
+}
+
+TEST(Variant, Assign_LValueRef_DiffType)
+{
+    TestVar vis(42);
+
+    EXPECT_EQ(0u, vis.index());
+    EXPECT_EQ(42, util::get<int>(vis));
+
+    std::string s("42");
+    vis = s;
     EXPECT_EQ(1u, vis.index());
     EXPECT_EQ("42", util::get<std::string>(vis));
 }

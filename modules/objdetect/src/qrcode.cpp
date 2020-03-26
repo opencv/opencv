@@ -122,9 +122,16 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
 
     eps_vertical   = eps_vertical_;
     eps_horizontal = eps_horizontal_;
-    adaptiveThreshold(barcode, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
-    adaptiveThreshold(resized_barcode, resized_bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
 
+    if (!barcode.empty())
+        adaptiveThreshold(barcode, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
+    else
+        bin_barcode.release();
+
+    if (!resized_barcode.empty())
+        adaptiveThreshold(resized_barcode, resized_bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
+    else
+        resized_bin_barcode.release();
 }
 
 vector<Vec3d> QRDetect::searchHorizontalLines()
@@ -1593,6 +1600,8 @@ bool QRDetectMulti::checkPoints(const vector<Point2f>& quadrangle_points)
             li2++;
         }
     }
+    if (count_w == 0)
+        return false;
 
     double frac = double(count_b) / double(count_w);
     double bottom_bound = 0.76;

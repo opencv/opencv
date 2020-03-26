@@ -603,6 +603,8 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!_src.empty());
+
     int type = _src.type();
     Size size = _src.size();
     _dst.create( size, type );

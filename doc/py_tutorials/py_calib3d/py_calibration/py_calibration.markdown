@@ -83,7 +83,7 @@ use 7x6 grid. (Normally a chess board has 8x8 squares and 7x7 internal corners).
 corner points and retval which will be True if pattern is obtained. These corners will be placed in
 an order (from left-to-right, top-to-bottom)
 
-@sa This function may not be able to find the required pattern in all the images. So, one good option
+@note This function may not be able to find the required pattern in all the images. So, one good option
 is to write the code such that, it starts the camera and check each frame for required pattern. Once
 the pattern is obtained, find the corners and store it in a list. Also, provide some interval before
 reading next frame so that we can adjust our chess board in different direction. Continue this
@@ -91,7 +91,7 @@ process until the required number of good patterns are obtained. Even in the exa
 are not sure how many images out of the 14 given are good.  Thus, we must read all the images and take only the good
 ones.
 
-@sa Instead of chess board, we can alternatively use a circular grid.  In this case, we must use the function
+@note Instead of chess board, we can alternatively use a circular grid.  In this case, we must use the function
 **cv.findCirclesGrid()** to find the pattern. Fewer images are sufficient to perform camera calibration using a circular grid.
 
 Once we find the corners, we can increase their accuracy using **cv.cornerSubPix()**. We can also

@@ -164,7 +164,7 @@ Describing the methods goes well beyond the purpose of this tutorial. For that I
 the article introducing it. Nevertheless, you can get a good image of it by looking at the OpenCV
 implementation below.
 
-@sa
+@note
     SSIM is described more in-depth in the: "Z. Wang, A. C. Bovik, H. R. Sheikh and E. P.
     Simoncelli, "Image quality assessment: From error visibility to structural similarity," IEEE
     Transactions on Image Processing, vol. 13, no. 4, pp. 600-612, Apr. 2004." article.

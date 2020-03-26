@@ -114,7 +114,7 @@ public:
     {
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R3)
         // Lightweight detection
-        const std::vector<std::string> devices = getCore().GetAvailableDevices();
+        const std::vector<std::string> devices = getCore("").GetAvailableDevices();
         for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
         {
             if (std::string::npos != i->find("MYRIAD") && target == DNN_TARGET_MYRIAD)
@@ -2580,16 +2580,6 @@ struct Net::Impl
                         nextData->type != "Power")
                         break;
 
-                    if (IS_DNN_CUDA_TARGET(preferableTarget) &&
-                        nextData->type != "ReLU" &&
-                        nextData->type != "ReLU6" &&
-                        nextData->type != "Power" &&
-                        nextData->type != "TanH" &&
-                        nextData->type != "Sigmoid" &&
-                        nextData->type != "Swish" &&
-                        nextData->type != "Mish")
-                        break;
-
                     Ptr<ActivationLayer> nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
                     if (nextActivLayer.empty())
                         break;
@@ -3557,7 +3547,7 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
 
     InferenceEngine::CNNNetwork ieNet = reader.getNetwork();
 #else
-    InferenceEngine::Core& ie = getCore();
+    InferenceEngine::Core& ie = getCore("");
     InferenceEngine::CNNNetwork ieNet = ie.ReadNetwork(xml, bin);
 #endif
 
@@ -3606,7 +3596,7 @@ Net Net::readFromModelOptimizer(
 
     InferenceEngine::CNNNetwork ieNet = reader.getNetwork();
 #else
-    InferenceEngine::Core& ie = getCore();
+    InferenceEngine::Core& ie = getCore("");
 
     std::string model; model.assign((char*)bufferModelConfigPtr, bufferModelConfigSize);
 

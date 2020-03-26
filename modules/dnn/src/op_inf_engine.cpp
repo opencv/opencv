@@ -41,11 +41,13 @@ static const char* dumpInferenceEngineBackendType(Backend backend)
 Backend& getInferenceEngineBackendTypeParam()
 {
     static Backend param = parseInferenceEngineBackendType(
-        utils::getConfigurationParameterString("OPENCV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019_TYPE",
-#ifndef HAVE_DNN_IE_NN_BUILDER_2019
+        utils::getConfigurationParameterString("OPENCV_DNN_BACKEND_INFERENCE_ENGINE_TYPE",
+#ifdef HAVE_DNN_NGRAPH
             CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
-#else
+#elif defined(HAVE_DNN_IE_NN_BUILDER_2019)
             CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API
+#else
+#error "Build configuration error: nGraph or NN Builder API backend should be enabled"
 #endif
         )
     );
@@ -602,18 +604,31 @@ static bool init_IE_plugins()
     (void)init_core->GetAvailableDevices();
     return true;
 }
-static InferenceEngine::Core& create_IE_Core_instance()
+static InferenceEngine::Core& retrieveIECore(const std::string& id, std::map<std::string, std::shared_ptr<InferenceEngine::Core> >& cores)
 {
-    static InferenceEngine::Core core;
-    return core;
+    AutoLock lock(getInitializationMutex());
+    std::map<std::string, std::shared_ptr<InferenceEngine::Core> >::iterator i = cores.find(id);
+    if (i == cores.end())
+    {
+        std::shared_ptr<InferenceEngine::Core> core = std::make_shared<InferenceEngine::Core>();
+        cores[id] = core;
+        return *core.get();
+    }
+    return *(i->second).get();
 }
-static InferenceEngine::Core& create_IE_Core_pointer()
+static InferenceEngine::Core& create_IE_Core_instance(const std::string& id)
+{
+    static std::map<std::string, std::shared_ptr<InferenceEngine::Core> > cores;
+    return retrieveIECore(id, cores);
+}
+static InferenceEngine::Core& create_IE_Core_pointer(const std::string& id)
 {
     // load and hold IE plugins
-    static InferenceEngine::Core* core = new InferenceEngine::Core();  // 'delete' is never called
-    return *core;
+    static std::map<std::string, std::shared_ptr<InferenceEngine::Core> >* cores =
+            new std::map<std::string, std::shared_ptr<InferenceEngine::Core> >();
+    return retrieveIECore(id, *cores);
 }
-InferenceEngine::Core& getCore()
+InferenceEngine::Core& getCore(const std::string& id)
 {
     // to make happy memory leak tools use:
     // - OPENCV_DNN_INFERENCE_ENGINE_HOLD_PLUGINS=0
@@ -629,9 +644,10 @@ InferenceEngine::Core& getCore()
                 false
 #endif
             );
-    static InferenceEngine::Core& core = param_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
-            ? create_IE_Core_pointer()
-            : create_IE_Core_instance();
+
+    InferenceEngine::Core& core = param_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
+            ? create_IE_Core_pointer(id)
+            : create_IE_Core_instance(id);
     return core;
 }
 #endif
@@ -639,9 +655,10 @@ InferenceEngine::Core& getCore()
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 static bool detectMyriadX_()
 {
+    AutoLock lock(getInitializationMutex());
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R3)
     // Lightweight detection
-    InferenceEngine::Core& ie = getCore();
+    InferenceEngine::Core& ie = getCore("MYRIAD");
     const std::vector<std::string> devices = ie.GetAvailableDevices();
     for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
     {
@@ -685,7 +702,6 @@ static bool detectMyriadX_()
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     InferenceEngine::InferenceEnginePluginPtr enginePtr;
     {
-        AutoLock lock(getInitializationMutex());
         auto& sharedPlugins = getSharedPlugins();
         auto pluginIt = sharedPlugins.find("MYRIAD");
         if (pluginIt != sharedPlugins.end()) {
@@ -704,9 +720,9 @@ static bool detectMyriadX_()
     try
     {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R3)
-        auto netExec = getCore().LoadNetwork(cnn, "MYRIAD", {{"VPU_PLATFORM", "VPU_2480"}});
+        auto netExec = getCore("MYRIAD").LoadNetwork(cnn, "MYRIAD", {{"VPU_PLATFORM", "VPU_2480"}});
 #else
-        auto netExec = getCore().LoadNetwork(cnn, "MYRIAD", {{"VPU_MYRIAD_PLATFORM", "VPU_MYRIAD_2480"}});
+        auto netExec = getCore("MYRIAD").LoadNetwork(cnn, "MYRIAD", {{"VPU_MYRIAD_PLATFORM", "VPU_MYRIAD_2480"}});
 #endif
 #endif
         auto infRequest = netExec.CreateInferRequest();
@@ -737,7 +753,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
         }
         else
 #else
-        InferenceEngine::Core& ie = getCore();
+        InferenceEngine::Core& ie = getCore(device_name);
 #endif
         {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
@@ -1122,7 +1138,7 @@ void resetMyriadDevice()
     getSharedPlugins().erase("MYRIAD");
 #else
     // Unregister both "MYRIAD" and "HETERO:MYRIAD,CPU" plugins
-    InferenceEngine::Core& ie = getCore();
+    InferenceEngine::Core& ie = getCore("MYRIAD");
     try
     {
         ie.UnregisterPlugin("MYRIAD");

@@ -2323,4 +2323,37 @@ TEST(Imgproc_Pyrdown, issue_12961)
     ASSERT_EQ(0.0, cv::norm(dst));
 }
 
+
+// https://github.com/opencv/opencv/issues/16857
+TEST(Imgproc, filter_empty_src_16857)
+{
+#define CV_TEST_EXPECT_EMPTY_THROW(statement) CV_TEST_EXPECT_EXCEPTION_MESSAGE(statement, ".empty()")
+
+    Mat src, dst, dst2;
+
+    CV_TEST_EXPECT_EMPTY_THROW(bilateralFilter(src, dst, 5, 50, 20));
+    CV_TEST_EXPECT_EMPTY_THROW(blur(src, dst, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(boxFilter(src, dst, CV_8U, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(sqrBoxFilter(src, dst, CV_8U, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(medianBlur(src, dst, 3));
+    CV_TEST_EXPECT_EMPTY_THROW(GaussianBlur(src, dst, Size(3, 3), 0));
+    CV_TEST_EXPECT_EMPTY_THROW(cv::filter2D(src, dst, CV_8U, Mat_<float>::zeros(Size(3, 3))));
+    CV_TEST_EXPECT_EMPTY_THROW(sepFilter2D(src, dst, CV_8U, Mat_<float>::zeros(Size(3, 1)), Mat_<float>::zeros(Size(1, 3))));
+    CV_TEST_EXPECT_EMPTY_THROW(Sobel(src, dst, CV_8U, 1, 1));
+    CV_TEST_EXPECT_EMPTY_THROW(spatialGradient(src, dst, dst2));
+    CV_TEST_EXPECT_EMPTY_THROW(Scharr(src, dst, CV_8U, 1, 1));
+    CV_TEST_EXPECT_EMPTY_THROW(Laplacian(src, dst, CV_8U));
+
+    CV_TEST_EXPECT_EMPTY_THROW(cv::dilate(src, dst, Mat()));  // cvtest:: by default
+    CV_TEST_EXPECT_EMPTY_THROW(cv::erode(src, dst, Mat()));  // cvtest:: by default
+    CV_TEST_EXPECT_EMPTY_THROW(morphologyEx(src, dst, MORPH_OPEN, Mat()));
+
+    //debug: CV_TEST_EXPECT_EMPTY_THROW(blur(Mat_<uchar>(Size(3,3)), dst, Size(3, 3)));
+
+    EXPECT_TRUE(src.empty());
+    EXPECT_TRUE(dst.empty());
+    EXPECT_TRUE(dst2.empty());
+}
+
+
 }} // namespace

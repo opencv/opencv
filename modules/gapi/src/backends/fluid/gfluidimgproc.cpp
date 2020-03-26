@@ -31,7 +31,7 @@
 #include <opencv2/core/hal/intrin.hpp>
 
 #include <cmath>
-#include <cstdlib>
+#include <algorithm>
 
 namespace cv {
 namespace gapi {
@@ -1800,12 +1800,12 @@ GAPI_FLUID_KERNEL(GFluidBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB, false)
         if (in.y() == -1)
         {
             run_bayergr2rgb_bg_impl(dst[1], src + border_size, width);
-            std::memcpy(dst[0], dst[1], width * 3);
+            std::copy_n(dst[1], width * 3, dst[0]);
         }
         else if (in.y() == height - LPI - 2 * border_size + 1)
         {
             run_bayergr2rgb_gr_impl(dst[0], src, width);
-            std::memcpy(dst[1], dst[0], width * 3);
+            std::copy_n(dst[0], width * 3, dst[1]);
         }
         else
         {
