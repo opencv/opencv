@@ -215,7 +215,13 @@ if(NOT HAVE_CXX11)
   message(FATAL_ERROR "OpenCV 4.x requires C++11")
 endif()
 
-if((HAVE_CXX11
+set(__OPENCV_ENABLE_ATOMIC_LONG_LONG OFF)
+if(HAVE_CXX11 AND (X86 OR X86_64))
+  set(__OPENCV_ENABLE_ATOMIC_LONG_LONG ON)
+endif()
+option(OPENCV_ENABLE_ATOMIC_LONG_LONG "Enable C++ compiler support for atomic<long long>" ${__OPENCV_ENABLE_ATOMIC_LONG_LONG})
+
+if((HAVE_CXX11 AND OPENCV_ENABLE_ATOMIC_LONG_LONG
         AND NOT MSVC
         AND NOT (X86 OR X86_64)
     AND NOT OPENCV_SKIP_LIBATOMIC_COMPILER_CHECK)
@@ -226,9 +232,14 @@ if((HAVE_CXX11
     list(APPEND CMAKE_REQUIRED_LIBRARIES atomic)
     ocv_check_compiler_flag(CXX "" HAVE_CXX_ATOMICS_WITH_LIB "${OpenCV_SOURCE_DIR}/cmake/checks/atomic_check.cpp")
     if(HAVE_CXX_ATOMICS_WITH_LIB)
+      set(HAVE_ATOMIC_LONG_LONG ON)
       list(APPEND OPENCV_LINKER_LIBS atomic)
     else()
-      message(FATAL_ERROR "C++11 compiler must support std::atomic")
+      message(STATUS "Compiler doesn't support std::atomic<long long>")
     endif()
+  else()
+    set(HAVE_ATOMIC_LONG_LONG ON)
   endif()
+else(HAVE_CXX11 AND OPENCV_ENABLE_ATOMIC_LONG_LONG)
+  set(HAVE_ATOMIC_LONG_LONG ${OPENCV_ENABLE_ATOMIC_LONG_LONG})
 endif()

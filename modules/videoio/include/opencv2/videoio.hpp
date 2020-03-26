@@ -177,6 +177,7 @@ enum VideoCaptureProperties {
        CAP_PROP_AUTO_WB       =44, //!< enable/ disable auto white-balance
        CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
        CAP_PROP_CODEC_PIXEL_FORMAT =46,    //!< (read-only) codec's pixel format. 4-character code - see VideoWriter::fourcc . Subset of [AV_PIX_FMT_*](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/raw.c) or -1 if unknown
+       CAP_PROP_BITRATE       =47, //!< (read-only) Video bitrate in kbits/s
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -638,7 +639,8 @@ public:
       documentation of source stream to know the right URL.
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
     implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
-    @sa The list of supported API backends cv::VideoCaptureAPIs
+
+    @sa cv::VideoCaptureAPIs
     */
     CV_WRAP explicit VideoCapture(const String& filename, int apiPreference = CAP_ANY);
 
@@ -650,7 +652,7 @@ public:
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
     implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
 
-    @sa The list of supported API backends cv::VideoCaptureAPIs
+    @sa cv::VideoCaptureAPIs
     */
     CV_WRAP explicit VideoCapture(int index, int apiPreference = CAP_ANY);
 

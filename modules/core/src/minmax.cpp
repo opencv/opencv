@@ -978,6 +978,9 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src, _src2));
 
+    if (depth >= CV_16F)
+        return false;
+
     // disabled following modes since it occasionally fails on AMD devices (e.g. A10-6800K, sep. 2014)
     if ((haveMask || type == CV_32FC1) && dev.isAMD())
         return false;
@@ -1089,6 +1092,7 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
         getMinMaxRes<double>
     };
 
+    CV_Assert(ddepth <= CV_64F);
     getMinMaxResFunc func = functab[ddepth];
 
     int locTemp[2];

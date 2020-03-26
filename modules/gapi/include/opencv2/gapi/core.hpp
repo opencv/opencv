@@ -485,6 +485,22 @@ namespace core {
             return (ddepth < 0 ? in : in.withDepth(ddepth));
         }
     };
+
+    G_TYPED_KERNEL(GWarpPerspective, <GMat(GMat, const Mat&, Size, int, int, const cv::Scalar&)>, "org.opencv.core.warpPerspective") {
+        static GMatDesc outMeta(GMatDesc in, const Mat&, Size dsize, int, int borderMode, const cv::Scalar&) {
+            GAPI_Assert((borderMode == cv::BORDER_CONSTANT || borderMode == cv::BORDER_REPLICATE) &&
+                        "cv::gapi::warpPerspective supports only cv::BORDER_CONSTANT and cv::BORDER_REPLICATE border modes");
+            return in.withType(in.depth, in.chan).withSize(dsize);
+        }
+    };
+
+    G_TYPED_KERNEL(GWarpAffine, <GMat(GMat, const Mat&, Size, int, int, const cv::Scalar&)>, "org.opencv.core.warpAffine") {
+        static GMatDesc outMeta(GMatDesc in, const Mat&, Size dsize, int, int border_mode, const cv::Scalar&) {
+            GAPI_Assert(border_mode != cv::BORDER_TRANSPARENT &&
+                        "cv::BORDER_TRANSPARENT mode is not supported in cv::gapi::warpAffine");
+            return in.withType(in.depth, in.chan).withSize(dsize);
+        }
+    };
 }
 
 //! @addtogroup gapi_math
@@ -1653,6 +1669,55 @@ number of channels as src and the depth =ddepth.
 */
 GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
                             int norm_type, int ddepth = -1);
+
+/** @brief Applies a perspective transformation to an image.
+
+The function warpPerspective transforms the source image using the specified matrix:
+
+\f[\texttt{dst} (x,y) =  \texttt{src} \left ( \frac{M_{11} x + M_{12} y + M_{13}}{M_{31} x + M_{32} y + M_{33}} ,
+     \frac{M_{21} x + M_{22} y + M_{23}}{M_{31} x + M_{32} y + M_{33}} \right )\f]
+
+when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted with invert
+and then put in the formula above instead of M. The function cannot operate in-place.
+
+@param src input image.
+@param M \f$3\times 3\f$ transformation matrix.
+@param dsize size of the output image.
+@param flags combination of interpolation methods (#INTER_LINEAR or #INTER_NEAREST) and the
+optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
+\f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
+@param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
+@param borderValue value used in case of a constant border; by default, it equals 0.
+
+@sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
+ */
+GAPI_EXPORTS GMat warpPerspective(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
+                                  int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
+
+/** @brief Applies an affine transformation to an image.
+
+The function warpAffine transforms the source image using the specified matrix:
+
+\f[\texttt{dst} (x,y) =  \texttt{src} ( \texttt{M} _{11} x +  \texttt{M} _{12} y +  \texttt{M} _{13}, \texttt{M} _{21} x +  \texttt{M} _{22} y +  \texttt{M} _{23})\f]
+
+when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted
+with #invertAffineTransform and then put in the formula above instead of M. The function cannot
+operate in-place.
+
+@param src input image.
+@param M \f$2\times 3\f$ transformation matrix.
+@param dsize size of the output image.
+@param flags combination of interpolation methods (see #InterpolationFlags) and the optional
+flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
+\f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
+@param borderMode pixel extrapolation method (see #BorderTypes);
+borderMode=#BORDER_TRANSPARENT isn't supported
+@param borderValue value used in case of a constant border; by default, it is 0.
+
+@sa  warpPerspective, resize, remap, getRectSubPix, transform
+ */
+GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
+                             int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
 } //namespace gapi

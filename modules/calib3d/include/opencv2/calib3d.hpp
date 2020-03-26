@@ -268,7 +268,9 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_FILTER_QUADS    = 4,
        CALIB_CB_FAST_CHECK      = 8,
        CALIB_CB_EXHAUSTIVE      = 16,
-       CALIB_CB_ACCURACY        = 32
+       CALIB_CB_ACCURACY        = 32,
+       CALIB_CB_LARGER          = 64,
+       CALIB_CB_MARKER          = 128
      };
 
 enum { CALIB_CB_SYMMETRIC_GRID  = 1,
@@ -1248,7 +1250,16 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 -   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before detection.
 -   **CALIB_CB_EXHAUSTIVE** Run an exhaustive search to improve detection rate.
 -   **CALIB_CB_ACCURACY** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
+-   **CALIB_CB_LARGER** The detected pattern is allowed to be larger than patternSize (see description).
+-   **CALIB_CB_MARKER** The detected pattern must have a marker (see description).
 This should be used if an accurate camera calibration is required.
+@param meta Optional output arrray of detected corners (CV_8UC1 and size = cv::Size(columns,rows)).
+Each entry stands for one corner of the pattern and can have one of the following values:
+-   0 = no meta data attached
+-   1 = left-top corner of a black cell
+-   2 = left-top corner of a white cell
+-   3 = left-top corner of a black cell with a white marker dot
+-   4 = left-top corner of a white cell with a black marker dot (pattern origin in case of markers otherwise first corner)
 
 The function is analog to findchessboardCorners but uses a localized radon
 transformation approximated by box filters being more robust to all sort of
@@ -1259,6 +1270,15 @@ Calibration" demonstrating that the returned sub-pixel positions are more
 accurate than the one returned by cornerSubPix allowing a precise camera
 calibration for demanding applications.
 
+In the case, the flags **CALIB_CB_LARGER** or **CALIB_CB_MARKER** are given,
+the result can be recovered from the optional meta array. Both flags are
+helpful to use calibration patterns exceeding the field of view of the camera.
+These oversized patterns allow more accurate calibrations as corners can be
+utilized, which are as close as possible to the image borders.  For a
+consistent coordinate system across all images, the optional marker (see image
+below) can be used to move the origin of the board to the location where the
+black circle is located.
+
 @note The function requires a white boarder with roughly the same width as one
 of the checkerboard fields around the whole board to improve the detection in
 various environments. In addition, because of the localized radon
@@ -1268,7 +1288,48 @@ a sample checkerboard optimized for the detection. However, any other checkerboa
 can be used as well.
 ![Checkerboard](pics/checkerboard_radon.png)
  */
-CV_EXPORTS_W bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,int flags=0);
+CV_EXPORTS_AS(findChessboardCornersSBWithMeta)
+bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,
+                             int flags,OutputArray meta);
+/** @overload */
+CV_EXPORTS_W inline
+bool findChessboardCornersSB(InputArray image, Size patternSize, OutputArray corners,
+                             int flags = 0)
+{
+    return findChessboardCornersSB(image, patternSize, corners, flags, noArray());
+}
+
+/** @brief Estimates the sharpness of a detected chessboard.
+
+Image sharpness, as well as brightness, are a critical parameter for accuracte
+camera calibration. For accessing these parameters for filtering out
+problematic calibraiton images, this method calculates edge profiles by traveling from
+black to white chessboard cell centers. Based on this, the number of pixels is
+calculated required to transit from black to white. This width of the
+transition area is a good indication of how sharp the chessboard is imaged
+and should be below ~3.0 pixels.
+
+@param image Gray image used to find chessboard corners
+@param patternSize Size of a found chessboard pattern
+@param corners Corners found by findChessboardCorners(SB)
+@param rise_distance Rise distance 0.8 means 10% ... 90% of the final signal strength
+@param vertical By default edge responses for horizontal lines are calculated
+@param sharpness Optional output array with a sharpness value for calculated edge responses (see description)
+
+The optional sharpness array is of type CV_32FC1 and has for each calculated
+profile one row with the following five entries:
+* 0 = x coordinate of the underlying edge in the image
+* 1 = y coordinate of the underlying edge in the image
+* 2 = width of the transition area (sharpness)
+* 3 = signal strength in the black cell (min brightness)
+* 4 = signal strength in the white cell (max brightness)
+
+@return Scalar(average sharpness, average min brightness, average max brightness,0)
+*/
+CV_EXPORTS_W Scalar estimateChessboardSharpness(InputArray image, Size patternSize, InputArray corners,
+                                                float rise_distance=0.8F,bool vertical=false,
+                                                OutputArray sharpness=noArray());
+
 
 //! finds subpixel-accurate positions of the chessboard corners
 CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
@@ -2077,6 +2138,7 @@ point localization, image resolution, and the image noise.
 @param confidence Parameter used for the RANSAC and LMedS methods only. It specifies a desirable level
 of confidence (probability) that the estimated matrix is correct.
 @param mask
+@param maxIters The maximum number of robust method iterations.
 
 The epipolar geometry is described by the following equation:
 
@@ -2110,6 +2172,11 @@ stereoRectifyUncalibrated to compute the rectification transformation. :
      findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
 @endcode
  */
+CV_EXPORTS_W Mat findFundamentalMat( InputArray points1, InputArray points2,
+                                     int method, double ransacReprojThreshold, double confidence,
+                                     int maxIters, OutputArray mask = noArray() );
+
+/** @overload */
 CV_EXPORTS_W Mat findFundamentalMat( InputArray points1, InputArray points2,
                                      int method = FM_RANSAC,
                                      double ransacReprojThreshold = 3., double confidence = 0.99,

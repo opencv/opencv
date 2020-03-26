@@ -222,6 +222,21 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12togray") {
+        static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
+            GAPI_Assert(inY.depth   == CV_8U);
+            GAPI_Assert(inUV.depth  == CV_8U);
+            GAPI_Assert(inY.chan    == 1);
+            GAPI_Assert(inY.planar  == false);
+            GAPI_Assert(inUV.chan   == 2);
+            GAPI_Assert(inUV.planar == false);
+
+            GAPI_Assert(inY.size.width  == 2 * inUV.size.width);
+            GAPI_Assert(inY.size.height == 2 * inUV.size.height);
+            return inY.withType(CV_8U, 1);
+        }
+    };
+
     G_TYPED_KERNEL(GNV12toBGRp, <GMatP(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12tobgrp") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth == CV_8U);
@@ -818,6 +833,21 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa YUV2RGB, NV12toBGR
 */
 GAPI_EXPORTS GMat NV12toRGB(const GMat& src_y, const GMat& src_uv);
+
+/** @brief Converts an image from NV12 (YUV420p) color space to gray-scaled.
+The function converts an input image from NV12 color space to gray-scaled.
+The conventional ranges for Y, U, and V channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 1-channel image @ref CV_8UC1.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.nv12togray"
+
+@param src_y input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@param src_uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2.
+
+@sa YUV2RGB, NV12toBGR
+*/
+GAPI_EXPORTS GMat NV12toGray(const GMat& src_y, const GMat& src_uv);
 
 /** @brief Converts an image from NV12 (YUV420p) color space to BGR.
 The function converts an input image from NV12 color space to RGB.

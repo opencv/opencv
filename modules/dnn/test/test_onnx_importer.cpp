@@ -32,29 +32,38 @@ public:
 
     void testONNXModels(const String& basename, const Extension ext = npy,
                         const double l1 = 0, const float lInf = 0, const bool useSoftmax = false,
-                        bool checkNoFallbacks = true)
+                        bool checkNoFallbacks = true, int numInps = 1)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
-        Mat inp, ref;
+        std::vector<Mat> inps(numInps);
+        Mat ref;
         if (ext == npy) {
-            inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+            for (int i = 0; i < numInps; ++i)
+                inps[i] = blobFromNPY(_tf("data/input_" + basename + (numInps > 1 ? format("_%d", i) : "") + ".npy"));
             ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
         }
         else if (ext == pb) {
-            inp = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
+            for (int i = 0; i < numInps; ++i)
+                inps[i] = readTensorFromONNX(_tf("data/input_" + basename + (numInps > 1 ? format("_%d", i) : "") + ".pb"));
             ref = readTensorFromONNX(_tf("data/output_" + basename + ".pb"));
         }
         else
             CV_Error(Error::StsUnsupportedFormat, "Unsupported extension");
 
-        checkBackend(&inp, &ref);
+        checkBackend(&inps[0], &ref);
         Net net = readNetFromONNX(onnxmodel);
         ASSERT_FALSE(net.empty());
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
 
-        net.setInput(inp);
+        std::vector<String> inputNames;
+        for (int i = 0; i < numInps; ++i)
+            inputNames.push_back(format("%d", i));
+        net.setInputsNames(inputNames);
+
+        for (int i = 0; i < numInps; ++i)
+            net.setInput(inps[i], inputNames[i]);
         Mat out = net.forward("");
 
         if (useSoftmax)
@@ -169,6 +178,11 @@ TEST_P(Test_ONNX_layers, Clip)
     testONNXModels("clip", npy);
 }
 
+TEST_P(Test_ONNX_layers, Shape)
+{
+    testONNXModels("shape_of_constant");
+}
+
 TEST_P(Test_ONNX_layers, ReduceMean)
 {
     testONNXModels("reduce_mean");
@@ -193,6 +207,11 @@ TEST_P(Test_ONNX_layers, ReduceMean3D)
 TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 {
     testONNXModels("maxpooling_sigmoid");
+}
+
+TEST_P(Test_ONNX_layers, Cast)
+{
+    testONNXModels("cast");
 }
 
 TEST_P(Test_ONNX_layers, Concatenation)
@@ -352,25 +371,19 @@ TEST_P(Test_ONNX_layers, ResizeUnfused)
 
 TEST_P(Test_ONNX_layers, MultyInputs)
 {
-    const String model =  _tf("models/multy_inputs.onnx");
+    testONNXModels("multy_inputs", npy, 0, 0, false, true, 2);
+}
 
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
+TEST_P(Test_ONNX_layers, Broadcast)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    testONNXModels("channel_broadcast", npy, 0, 0, false, true, 2);
+}
 
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp1 = blobFromNPY(_tf("data/input_multy_inputs_0.npy"));
-    Mat inp2 = blobFromNPY(_tf("data/input_multy_inputs_1.npy"));
-    Mat ref  = blobFromNPY(_tf("data/output_multy_inputs.npy"));
-    checkBackend(&inp1, &ref);
-
-    net.setInput(inp1, "0");
-    net.setInput(inp2, "1");
-    Mat out = net.forward();
-
-    normAssert(ref, out, "", default_l1,  default_lInf);
-    expectNoFallbacksFromIE(net);
+TEST_P(Test_ONNX_layers, DynamicResize)
+{
+    testONNXModels("dynamic_resize", npy, 0, 0, false, true, 2);
 }
 
 TEST_P(Test_ONNX_layers, Div)
@@ -402,13 +415,12 @@ TEST_P(Test_ONNX_layers, Div)
 TEST_P(Test_ONNX_layers, DynamicReshape)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-    {
-        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-    }
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     testONNXModels("dynamic_reshape");
     testONNXModels("dynamic_reshape_opset_11");
     testONNXModels("flatten_by_prod");
+    testONNXModels("flatten_const");
 }
 
 TEST_P(Test_ONNX_layers, Reshape)
@@ -418,6 +430,8 @@ TEST_P(Test_ONNX_layers, Reshape)
 
 TEST_P(Test_ONNX_layers, Squeeze)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("squeeze");
 }
 
@@ -444,6 +458,7 @@ TEST_P(Test_ONNX_layers, Slice)
     testONNXModels("slice", npy, 0, 0, false, false);
 #else
     testONNXModels("slice");
+    testONNXModels("slice_opset_11");
 #endif
 }
 
@@ -461,6 +476,16 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("split_max");
+}
+
+TEST_P(Test_ONNX_layers, LSTM)
+{
+    testONNXModels("lstm", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_bidirectional)
+{
+    testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

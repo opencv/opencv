@@ -235,11 +235,13 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
         String _filename = folder + (String)board_list[idx * 2 + 1];
         bool doesContatinChessboard;
+        float sharpness;
         Mat expected;
         {
             FileStorage fs1(_filename, FileStorage::READ);
             fs1["corners"] >> expected;
             fs1["isFound"] >> doesContatinChessboard;
+            fs1["sharpness"] >> sharpness ;
             fs1.release();
         }
         size_t count_exp = static_cast<size_t>(expected.cols * expected.rows);
@@ -259,6 +261,17 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
                 flags = 0;
         }
         bool result = findChessboardCornersWrapper(gray, pattern_size,v,flags);
+        if(result && sharpness && (pattern == CHESSBOARD_SB || pattern == CHESSBOARD))
+        {
+            Scalar s= estimateChessboardSharpness(gray,pattern_size,v);
+            if(fabs(s[0] - sharpness) > 0.1)
+            {
+                ts->printf(cvtest::TS::LOG, "chessboard image has a wrong sharpness in %s. Expected %f but measured %f\n", img_file.c_str(),sharpness,s[0]);
+                ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+                show_points( gray, expected, v, result  );
+                return;
+            }
+        }
         if(result ^ doesContatinChessboard || (doesContatinChessboard && v.size() != count_exp))
         {
             ts->printf( cvtest::TS::LOG, "chessboard is detected incorrectly in %s\n", img_file.c_str() );

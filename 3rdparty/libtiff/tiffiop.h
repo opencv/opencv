@@ -374,6 +374,8 @@ extern void* _TIFFCheckRealloc(TIFF*, void*, tmsize_t, tmsize_t, const char*);
 extern double _TIFFUInt64ToDouble(uint64);
 extern float _TIFFUInt64ToFloat(uint64);
 
+extern float _TIFFClampDoubleToFloat(double);
+
 extern tmsize_t
 _TIFFReadEncodedStripAndAllocBuffer(TIFF* tif, uint32 strip,
                                     void **buf, tmsize_t bufsizetoalloc,
