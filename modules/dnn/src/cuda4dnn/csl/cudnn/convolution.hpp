@@ -137,6 +137,23 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnFilterDescriptor_t descriptor;
     };
 
+    enum class MathType {
+        DEFAULT_MATH,
+        TENSOR_OP_MATH,
+        TENSOR_OP_MATH_ALLOW_CONVERSION
+    };
+
+    namespace detail {
+        inline cudnnMathType_t get_cudnn_math_type(MathType type) {
+            switch(type) {
+                case MathType::DEFAULT_MATH: return CUDNN_DEFAULT_MATH;
+                case MathType::TENSOR_OP_MATH: return CUDNN_TENSOR_OP_MATH;
+                case MathType::TENSOR_OP_MATH_ALLOW_CONVERSION: return CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION;
+            }
+            return {};
+        }
+    };
+
     /** describes a convolution operation
      *
      * @tparam  T   type of element participating in convolution
@@ -165,9 +182,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             const SequenceContainer& zero_padding,
             const SequenceContainer& stride,
             const SequenceContainer& dilation,
-            std::size_t group_count)
+            std::size_t group_count,
+            MathType math_type
+        )
         {
-            constructor(zero_padding, stride, dilation, group_count);
+            constructor(zero_padding, stride, dilation, group_count, math_type);
         }
 
         ~ConvolutionDescriptor() noexcept {
@@ -192,7 +211,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             const SequenceContainer& zero_padding,
             const SequenceContainer& stride,
             const SequenceContainer& dilation,
-            std::size_t group_count)
+            std::size_t group_count,
+            MathType math_type)
         {
             CV_Assert(zero_padding.size() == stride.size());
             CV_Assert(zero_padding.size() == dilation.size());
@@ -225,8 +245,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                     );
                 }
                 CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionGroupCount(descriptor, group_count));
-                if (std::is_same<T, half>::value)
-                    CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionMathType(descriptor, CUDNN_TENSOR_OP_MATH));
+                CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionMathType(descriptor, detail::get_cudnn_math_type(math_type)));
             } catch (...) {
                 /* cudnnDestroyConvolutionDescriptor will not fail for a valid descriptor object */
                 CUDA4DNN_CHECK_CUDNN(cudnnDestroyConvolutionDescriptor(descriptor));
@@ -237,90 +256,53 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnConvolutionDescriptor_t descriptor;
     };
 
-    /** wrapper around a convolution algorithm
-     *
-     * @tparam  T   type of elements being convolved
-     */
-    template <class T>
-    class ConvolutionAlgorithm {
-    public:
-        ConvolutionAlgorithm() noexcept : workspace_size{ 0 } { }
-        ConvolutionAlgorithm(ConvolutionAlgorithm&) = default;
-        ConvolutionAlgorithm(ConvolutionAlgorithm&&) = default;
-
-        /** selects a good algorithm for convolution for given configuration
-         *
-         * Exception Guarantee: Strong
-         */
-        ConvolutionAlgorithm(
-            const Handle& handle,
-            const ConvolutionDescriptor<T>& convDesc,
-            const FilterDescriptor<T>& filterDesc,
-            const TensorDescriptor<T>& inputDesc,
-            const TensorDescriptor<T>& outputDesc)
-        {
-            try {
-                int available_algo_count = 0;
-                CUDA4DNN_CHECK_CUDNN(cudnnGetConvolutionForwardAlgorithmMaxCount(handle.get(), &available_algo_count));
-
-                std::vector<cudnnConvolutionFwdAlgoPerf_t> perfResults;
-                perfResults.resize(available_algo_count);
-
-                int returned_algo_count = 0;
-                CUDA4DNN_CHECK_CUDNN(
-                    cudnnFindConvolutionForwardAlgorithm(
-                        handle.get(),
-                        inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
-                        available_algo_count, &returned_algo_count,
-                        &perfResults[0]
-                    )
-                );
-
-                if (returned_algo_count == 0)
-                    throw 1;
-
-                algo = perfResults[0].algo;
-
-                CUDA4DNN_CHECK_CUDNN(
-                    cudnnGetConvolutionForwardWorkspaceSize(
-                        handle.get(),
-                        inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
-                        algo, &workspace_size
-                    )
-                );
-            } catch(...) {
-                CUDA4DNN_CHECK_CUDNN(
-                    cudnnGetConvolutionForwardAlgorithm(
-                        handle.get(),
-                        inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
-                        CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
-                        0, /* no memory limit */
-                        &algo
-                    )
-                );
-
-                CUDA4DNN_CHECK_CUDNN(
-                    cudnnGetConvolutionForwardWorkspaceSize(
-                        handle.get(),
-                        inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
-                        algo, &workspace_size
-                    )
-                );
-            }
-        }
-
-        ConvolutionAlgorithm& operator=(const ConvolutionAlgorithm&) = default;
-        ConvolutionAlgorithm& operator=(ConvolutionAlgorithm&& other) = default;
-
-        cudnnConvolutionFwdAlgo_t get() const noexcept { return algo; }
-
-        /** number of bytes of workspace memory required by the algorithm */
-        std::size_t get_workspace_size() const noexcept { return workspace_size; }
-
-    private:
-        cudnnConvolutionFwdAlgo_t algo;
-        std::size_t workspace_size;
+    enum class ConvolutionAlgorithm {
+        IMPLICIT_GEMM,
+        IMPLICIT_PRECOMP_GEMM,
+        GEMM,
+        DIRECT,
+        FFT,
+        FFT_TILING,
+        WINOGRAD,
+        WINOGRAD_NONFUSED,
     };
+
+    namespace detail {
+        inline cudnnConvolutionFwdAlgo_t get_cudnn_conv_fwd_algorithm(ConvolutionAlgorithm algo) {
+            switch(algo) {
+                case ConvolutionAlgorithm::IMPLICIT_GEMM: return CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM;
+                case ConvolutionAlgorithm::IMPLICIT_PRECOMP_GEMM: return CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
+                case ConvolutionAlgorithm::GEMM: return CUDNN_CONVOLUTION_FWD_ALGO_GEMM;
+                case ConvolutionAlgorithm::DIRECT: return CUDNN_CONVOLUTION_FWD_ALGO_DIRECT;
+                case ConvolutionAlgorithm::FFT: return CUDNN_CONVOLUTION_FWD_ALGO_FFT;
+                case ConvolutionAlgorithm::FFT_TILING: return CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING;
+                case ConvolutionAlgorithm::WINOGRAD: return CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD;
+                case ConvolutionAlgorithm::WINOGRAD_NONFUSED: return CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED;
+            }
+            return {};
+        }
+    };
+
+    template <class T>
+    std::size_t get_convolution_workspace_size(
+        const Handle& handle,
+        const ConvolutionDescriptor<T>& convDesc,
+        const FilterDescriptor<T>& filterDesc,
+        const TensorDescriptor<T>& inputDesc,
+        const TensorDescriptor<T>& outputDesc,
+        ConvolutionAlgorithm algo)
+    {
+        size_t bytes;
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnGetConvolutionForwardWorkspaceSize(
+                handle.get(),
+                inputDesc.get(), filterDesc.get(), convDesc.get(), outputDesc.get(),
+                detail::get_cudnn_conv_fwd_algorithm(algo), &bytes
+            )
+        );
+
+        return bytes;
+    }
 
     /** gives the shape of the output tensor of convolution
      *
@@ -383,7 +365,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     void convolve(
         const Handle& handle,
         const ConvolutionDescriptor<T>& convDesc,
-        const ConvolutionAlgorithm<T>& convAlgo,
+        ConvolutionAlgorithm convAlgo,
         WorkspaceInstance workspace,
         const FilterDescriptor<T>& filterDesc,
         DevicePtr<const T> filterPtr,
@@ -400,7 +382,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 handle.get(),
                 &alpha, inputDesc.get(), inputPtr.get(),
                 filterDesc.get(), filterPtr.get(),
-                convDesc.get(), convAlgo.get(),
+                convDesc.get(), detail::get_cudnn_conv_fwd_algorithm(convAlgo),
                 static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
                 &beta, outputDesc.get(), outputPtr.get()
             )
@@ -411,7 +393,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     void convolve(
         const Handle& handle,
         const ConvolutionDescriptor<half>& convDesc,
-        const ConvolutionAlgorithm<half>& convAlgo,
+        ConvolutionAlgorithm convAlgo,
         WorkspaceInstance workspace,
         const FilterDescriptor<half>& filterDesc,
         DevicePtr<const half> filterPtr,
@@ -430,7 +412,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 handle.get(),
                 &alpha_, inputDesc.get(), inputPtr.get(),
                 filterDesc.get(), filterPtr.get(),
-                convDesc.get(), convAlgo.get(),
+                convDesc.get(), detail::get_cudnn_conv_fwd_algorithm(convAlgo),
                 static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
                 &beta_, outputDesc.get(), outputPtr.get()
             )
@@ -465,7 +447,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         const Handle& handle,
         T alpha,
         const ConvolutionDescriptor<T>& convDesc,
-        const ConvolutionAlgorithm<T>& convAlgo,
+        ConvolutionAlgorithm convAlgo,
         WorkspaceInstance workspace,
         const FilterDescriptor<T>& filterDesc,
         DevicePtr<const T> filterPtr,
@@ -484,7 +466,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             handle.get(),
             &alpha, inputDesc.get(), inputPtr.get(),
             filterDesc.get(), filterPtr.get(),
-            convDesc.get(), convAlgo.get(),
+            convDesc.get(), detail::get_cudnn_conv_fwd_algorithm(convAlgo),
             static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
             &alpha2, outputDesc.get(), outputPtr.get(),
             biasDesc.get(), biasPtr.get(),
@@ -497,7 +479,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         const Handle& handle,
         half alpha,
         const ConvolutionDescriptor<half>& convDesc,
-        const ConvolutionAlgorithm<half>& convAlgo,
+        ConvolutionAlgorithm convAlgo,
         WorkspaceInstance workspace,
         const FilterDescriptor<half>& filterDesc,
         DevicePtr<const half> filterPtr,
@@ -516,7 +498,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             handle.get(),
             &alpha_, inputDesc.get(), inputPtr.get(),
             filterDesc.get(), filterPtr.get(),
-            convDesc.get(), convAlgo.get(),
+            convDesc.get(), detail::get_cudnn_conv_fwd_algorithm(convAlgo),
             static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
             &alpha2, outputDesc.get(), outputPtr.get(),
             biasDesc.get(), biasPtr.get(),

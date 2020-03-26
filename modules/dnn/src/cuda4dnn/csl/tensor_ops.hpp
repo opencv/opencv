@@ -130,95 +130,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     }
 
     template <class T>
-    class Convolution {
-        using TensorDescriptor = cudnn::TensorDescriptor<T>;
-        using FilterDescriptor = cudnn::FilterDescriptor<T>;
-        using ConvolutionDescriptor = cudnn::ConvolutionDescriptor<T>;
-        using ConvolutionAlgorithm = cudnn::ConvolutionAlgorithm<T>;
-        using ActivationDescriptor = cudnn::ActivationDescriptor;
-
-    public:
-        using ActivationType = ActivationDescriptor::ActivationType;
-
-        struct params_type {
-            /* convolution */
-            std::vector<std::size_t> input_shape;
-            std::vector<std::size_t> filter_shape;
-            std::vector<std::size_t> padding;
-            std::vector<std::size_t> stride;
-            std::vector<std::size_t> dilation;
-            std::size_t groups;
-
-            /* bias and activation (only RELU supported) */
-            std::vector<std::size_t> bias_shape;
-            ActivationType activation_type; /* MUST BE identity if there is no bias and ReLU if there is bias */
-        };
-
-        Convolution() = default;
-        Convolution(const Convolution&) = delete;
-        Convolution(Convolution&&) = default;
-        Convolution(cudnn::Handle handle, const params_type& params) {
-            cudnnHandle = std::move(handle);
-
-            inputTensorDesc = TensorDescriptor(params.input_shape);
-            filterDesc = FilterDescriptor(params.filter_shape);
-            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups);
-
-            if (!params.bias_shape.empty()) {
-                CV_Assert(params.activation_type == ActivationType::RELU);
-                biasTensorDesc = TensorDescriptor(params.bias_shape);
-                activationDesc = ActivationDescriptor(params.activation_type, 0.0);
-            } else {
-                CV_Assert(params.activation_type == ActivationType::IDENTITY);
-            }
-
-            std::vector<int> output_dims;
-            getConvolutionForwardOutputDim(convDesc, filterDesc, inputTensorDesc, output_dims);
-            outputTensorDesc = TensorDescriptor(output_dims);
-
-            algo = ConvolutionAlgorithm(cudnnHandle, convDesc, filterDesc, inputTensorDesc, outputTensorDesc);
-        }
-
-        Convolution& operator=(const Convolution&) = delete;
-        Convolution& operator=(Convolution&&) = default;
-
-        std::size_t get_workspace_size() const noexcept {
-            return algo.get_workspace_size();
-        }
-
-        void convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, WorkspaceInstance scratchpad) {
-            cudnn::convolve<T>(
-                cudnnHandle,
-                convDesc, algo, scratchpad,
-                filterDesc, filters.get(),
-                inputTensorDesc, input.get(),
-                1.0, 0.0, outputTensorDesc, output.get()
-            );
-        }
-
-        void convolve_with_bias_activation(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, TensorView<T> bias, WorkspaceInstance scratchpad) {
-            cudnn::convolve_with_bias_activation<T>(
-                cudnnHandle,
-                1.0, convDesc, algo, scratchpad,
-                filterDesc, filters.get(),
-                inputTensorDesc, input.get(),
-                biasTensorDesc, bias.get(),
-                activationDesc,
-                outputTensorDesc, output.get()
-            );
-        }
-
-    private:
-        cudnn::Handle cudnnHandle;
-        TensorDescriptor inputTensorDesc, outputTensorDesc;
-        FilterDescriptor filterDesc;
-        ConvolutionDescriptor convDesc;
-        ConvolutionAlgorithm algo;
-        TensorDescriptor biasTensorDesc;
-        ActivationDescriptor activationDesc;
-    };
-
-    template <class T>
     class TransposeConvolution {
         using TensorDescriptor = cudnn::TensorDescriptor<T>;
         using FilterDescriptor = cudnn::FilterDescriptor<T>;
@@ -246,7 +157,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             cudnnHandle = std::move(handle);
 
             filterDesc = FilterDescriptor(params.filter_shape);
-            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups);
+
+            auto math_type = std::is_same<T, half>::value ? cudnn::MathType::TENSOR_OP_MATH : cudnn::MathType::DEFAULT_MATH;
+            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups, math_type);
 
             /* input_shape is the output shape for convolution
              * output_shape is the input shape for convolution

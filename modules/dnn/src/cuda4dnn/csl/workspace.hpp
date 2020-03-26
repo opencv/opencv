@@ -120,6 +120,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             CV_Assert(bytes_remaining % 256 == 0);
         }
 
+        WorkspaceAllocator(WorkspaceInstance& instance) noexcept
+            : current{ instance.get() }, bytes_remaining { instance.size_in_bytes() }
+        {
+            CV_Assert(is_aligned<void>(current, 256));
+            CV_Assert(bytes_remaining % 256 == 0);
+        }
+
         /** allocates a Span<T> of \p count elements from the workspace memory */
         template <class T>
         Span<T> get_span(std::size_t count = 0) {
