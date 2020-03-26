@@ -792,13 +792,8 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     if (templ.type() != mask.type())
     {
         // Assertions above ensured, that depth is the same and only number of channel differ
-        Mat* arr = new Mat[templ.channels()];
-        for (int i = 0; i < templ.channels(); i++)
-        {
-            arr[i] = mask;
-        }
-        merge(arr, templ.channels(), mask);
-        delete[] arr;
+        std::vector<Mat> maskChannels(templ.channels(), mask);
+        merge(maskChannels.data(), templ.channels(), mask);
     }
 
     if (method == CV_TM_SQDIFF || method == CV_TM_SQDIFF_NORMED)
@@ -849,29 +844,26 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
         Mat img_mask_corr(corrSize, img.type()); // Needs separate channels
 
         // CCorr(I, T'*M)
-        crossCorr(img, templx_mask, result, Point(0,0), 0, 0);
+        crossCorr(img, templx_mask, result, Point(0, 0), 0, 0);
         // CCorr(I, M)
-        crossCorr(img, mask, img_mask_corr, Point(0,0), 0, 0);
+        crossCorr(img, mask, img_mask_corr, Point(0, 0), 0, 0);
 
         // CCorr(I', T') = CCorr(I, T'*M) - sum(T'*M)/sum(M)*CCorr(I, M)
-        MatExpr temp_expr = img_mask_corr.mul(sum(templx_mask).div(mask_sum));
+        // It does not matter what to use Mat/MatExpr, it should be evaluated to perform assign subtraction
+        Mat temp_res = img_mask_corr.mul(sum(templx_mask).div(mask_sum));
         if (img.channels() == 1)
         {
-            result -= temp_expr;
+            result -= temp_res;
         }
         else
         {
             // Sum channels of expression
-            Mat temp_result_withcn(temp_expr);
-            temp_result_withcn = temp_result_withcn.reshape(1, result.rows*result.cols);
+            temp_res = temp_res.reshape(1, result.rows * result.cols);
             // channels are now columns
-            Mat temp_result;
-            reduce(temp_result_withcn, temp_result, 1, REDUCE_SUM);
+            reduce(temp_res, temp_res, 1, REDUCE_SUM);
             // transform back, but now with only one channel
-            temp_result = temp_result.reshape(1, result.rows);
-            result -= temp_result;
+            result -= temp_res.reshape(1, result.rows);
         }
-
         if (method == CV_TM_CCOEFF_NORMED)
         {
             // norm(T')
@@ -889,22 +881,21 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
             Mat img_mask2_corr(corrSize, img.type());
             crossCorr(img2, mask2, norm_imgx, Point(0,0), 0, 0);
             crossCorr(img, mask2, img_mask2_corr, Point(0,0), 0, 0);
-            temp_expr = img_mask_corr.mul(Scalar(1.0, 1.0, 1.0, 1.0).div(mask_sum)).mul(
-                            img_mask_corr.mul(mask2_sum.div(mask_sum)) - 2 * img_mask2_corr);
+            temp_res = img_mask_corr.mul(Scalar(1.0, 1.0, 1.0, 1.0).div(mask_sum))
+                           .mul(img_mask_corr.mul(mask2_sum.div(mask_sum)) - 2 * img_mask2_corr);
             if (img.channels() == 1)
-                norm_imgx += temp_expr;
+            {
+                norm_imgx += temp_res;
+            }
             else
             {
                 // Sum channels of expression
-                Mat temp_result_withcn(temp_expr);
-                temp_result_withcn = temp_result_withcn.reshape(1, result.rows*result.cols);
+                temp_res = temp_res.reshape(1, result.rows*result.cols);
                 // channels are now columns
-                Mat temp_result;
                 // reduce sums columns (= channels)
-                reduce(temp_result_withcn, temp_result, 1, REDUCE_SUM);
+                reduce(temp_res, temp_res, 1, REDUCE_SUM);
                 // transform back, but now with only one channel
-                temp_result = temp_result.reshape(1, result.rows);
-                norm_imgx += temp_result;
+                norm_imgx += temp_res.reshape(1, result.rows);
             }
             sqrt(norm_imgx, norm_imgx);
             result /= norm_imgx * norm_templx;
