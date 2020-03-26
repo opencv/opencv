@@ -47,7 +47,6 @@
 #include "../op_inf_engine.hpp"
 
 #ifdef HAVE_INF_ENGINE
-#include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/roi_pooling.hpp>
 #include <ngraph/op/experimental/layers/psroi_pooling.hpp>
 #endif

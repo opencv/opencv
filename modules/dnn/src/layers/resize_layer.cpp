@@ -10,7 +10,6 @@
 #include <opencv2/imgproc.hpp>
 
 #ifdef HAVE_INF_ENGINE
-#include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/interpolate.hpp>
 #endif
 

@@ -45,7 +45,6 @@
 #include "../op_inf_engine.hpp"
 
 #ifdef HAVE_INF_ENGINE
-#include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/prior_box.hpp>
 #include <ngraph/op/experimental/layers/prior_box_clustered.hpp>
 #endif

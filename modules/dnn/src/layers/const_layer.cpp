@@ -8,7 +8,6 @@
 #include "../precomp.hpp"
 #include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
-#include "../ie_ngraph.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"

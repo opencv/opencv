@@ -5,7 +5,7 @@
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
-#include "../ie_ngraph.hpp"
+#include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
 
 namespace cv { namespace dnn {

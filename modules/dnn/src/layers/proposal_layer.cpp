@@ -9,7 +9,6 @@
 #include "../op_inf_engine.hpp"
 
 #ifdef HAVE_INF_ENGINE
-#include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/proposal.hpp>
 #endif
 

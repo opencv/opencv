@@ -41,7 +41,6 @@
 //M*/
 #include "../precomp.hpp"
 #include "../op_inf_engine.hpp"
-#include "../ie_ngraph.hpp"
 
 namespace cv
 {

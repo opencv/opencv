@@ -53,7 +53,6 @@
 #endif
 
 #ifdef HAVE_INF_ENGINE
-#include "../ie_ngraph.hpp"
 #include <ngraph/op/experimental/layers/detection_output.hpp>
 #endif
 
