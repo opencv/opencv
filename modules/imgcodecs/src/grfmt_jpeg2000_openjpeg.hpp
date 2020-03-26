@@ -37,14 +37,32 @@ struct OpjImageDeleter
         opj_image_destroy(image);
     }
 };
+
+struct OpjMemoryBuffer {
+    OPJ_BYTE* pos{nullptr};
+    OPJ_BYTE* begin{nullptr};
+    OPJ_SIZE_T length{0};
+
+    OpjMemoryBuffer() = default;
+
+    explicit OpjMemoryBuffer(cv::Mat& mat)
+        : pos{ mat.ptr() }, begin{ mat.ptr() }, length{ mat.rows * mat.cols * mat.elemSize() }
+    {
+    }
+
+    OPJ_SIZE_T availableBytes() const CV_NOEXCEPT {
+        return begin + length - pos;
+    }
+};
+
+using StreamPtr = std::unique_ptr<opj_stream_t, detail::OpjStreamDeleter>;
+using CodecPtr = std::unique_ptr<opj_codec_t, detail::OpjCodecDeleter>;
+using ImagePtr = std::unique_ptr<opj_image_t, detail::OpjImageDeleter>;
+
 } // namespace detail
 
 class Jpeg2KOpjDecoder CV_FINAL : public BaseImageDecoder
 {
-    using StreamPtr = std::unique_ptr<opj_stream_t, detail::OpjStreamDeleter>;
-    using CodecPtr = std::unique_ptr<opj_codec_t, detail::OpjCodecDeleter>;
-    using ImagePtr = std::unique_ptr<opj_image_t, detail::OpjImageDeleter>;
-
 public:
     Jpeg2KOpjDecoder();
      ~Jpeg2KOpjDecoder() CV_OVERRIDE = default;
@@ -54,19 +72,17 @@ public:
     bool readHeader() CV_OVERRIDE;
 
 private:
-    StreamPtr stream_{nullptr};
-    CodecPtr codec_{nullptr};
-    ImagePtr image_{nullptr};
+    detail::StreamPtr stream_{nullptr};
+    detail::CodecPtr codec_{nullptr};
+    detail::ImagePtr image_{nullptr};
+
+    detail::OpjMemoryBuffer opjBuf_;
 
     OPJ_UINT32 m_maxPrec = 0;
 };
 
 class Jpeg2KOpjEncoder CV_FINAL : public BaseImageEncoder
 {
-    using StreamPtr = std::unique_ptr<opj_stream_t, detail::OpjStreamDeleter>;
-    using CodecPtr = std::unique_ptr<opj_codec_t, detail::OpjCodecDeleter>;
-    using ImagePtr = std::unique_ptr<opj_image_t, detail::OpjImageDeleter>;
-
 public:
     Jpeg2KOpjEncoder();
     ~Jpeg2KOpjEncoder() CV_OVERRIDE = default;
