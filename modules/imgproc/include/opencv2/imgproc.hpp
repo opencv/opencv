@@ -3721,10 +3721,6 @@ is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \t
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method, InputArray mask = noArray() );
 
-CV_EXPORTS   void crossCorr( const Mat& src, const Mat& templ, Mat& dst,
-                             Point anchor=Point(0,0), double delta=0,
-                             int borderType=BORDER_REFLECT_101 );
-
 //! @}
 
 //! @addtogroup imgproc_shape
