@@ -110,13 +110,13 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &) const CV_OVERRIDE
     {
-        CV_Assert((inputs.size() == 1 && !blobs.empty()) || inputs.size() == 2);
-        CV_Assert(blobs.empty() || blobs[0].dims == 2);
-        int numOutput = !blobs.empty() ? blobs[0].size[0] : inputs[1].back();
-        int cAxis = !blobs.empty() ? clamp(axis, inputs[0]) : inputs[0].size() - 1;
-
+        int numOutput, cAxis;
         if (blobs.empty())
         {
+            CV_CheckEQ(inputs.size(), (size_t)2, "");
+            numOutput = inputs[1].back();
+            cAxis = inputs[0].size() - 1;
+            CV_CheckEQ(numOutput, inputs[0][cAxis], "");
             int dims = inputs[0].size();
             CV_CheckEQ(inputs[1].size(), (size_t)dims, "");
             CV_CheckGE(dims, 2, "");
@@ -124,8 +124,14 @@ public:
                 CV_CheckEQ(inputs[0][i], inputs[1][i], "");
             CV_CheckEQ(inputs[0].back(), inputs[1][dims - 2], "");
         }
-        CV_Assert(!bias || ((blobs.empty() && numOutput == inputs[0][cAxis]) ||
-                           (size_t)numOutput == blobs[1].total()));
+        else
+        {
+            CV_CheckEQ(inputs.size(), (size_t)1, "");
+            CV_CheckEQ(blobs[0].dims, 2, "");
+            numOutput = blobs[0].size[0];
+            CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
+            cAxis = clamp(axis, inputs[0]);
+        }
 
         MatShape outShape(cAxis + 1);
         for (int i = 0; i < cAxis; ++i)
@@ -141,7 +147,7 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
                (((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && !blobs.empty()) ||
-                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && axis == 1);
+                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE

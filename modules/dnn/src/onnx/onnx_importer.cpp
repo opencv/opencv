@@ -871,16 +871,9 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.type = "InnerProduct";
             layerParams.set("bias_term", false);
 
-            int constId = -1;
-            for (int i = 0; i < 2; ++i)
+            if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
             {
-                if (constBlobs.find(node_proto.input(i)) != constBlobs.end())
-                    constId = i;
-            }
-
-            if (constId != -1)
-            {
-                Mat blob = getBlob(node_proto, constBlobs, constId);
+                Mat blob = getBlob(node_proto, constBlobs, 1);
                 layerParams.blobs.push_back(blob.t());
                 layerParams.set("num_output", layerParams.blobs[0].size[0]);
             }
