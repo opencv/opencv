@@ -568,6 +568,9 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE);
 
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     checkBackend();
 
     std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
