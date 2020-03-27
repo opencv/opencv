@@ -1159,34 +1159,37 @@ void ONNXImporter::populateNet(Net dstNet)
 
                 Mat inp = Mat::ones(newShapeMat.total(), newShapeMat.ptr<int>(), CV_32F);
                 constParams.blobs.push_back(inp);
-                int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
-                layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
-                outShapes[constParams.name] = shape(inp);
+
+                node_proto.clear_input();
+                node_proto.set_output(0, constParams.name);
+                addLayer(dstNet, constParams, node_proto, layer_id, outShapes);
 
                 layerParams.type = "Scale";
                 layerParams.set("bias_term", false);
-                node_proto.set_input(1, node_proto.input(0));
-                node_proto.set_input(0, constParams.name);
+                node_proto.add_input(constParams.name);
+                node_proto.add_input(shapeIt->first);
             }
             else if (broadcast_axes.size() == 1 && broadcast_axes[0] <= 1)
             {
                 String base_name = layerParams.name + "/copy_";
-                layerId = layer_id.find(node_proto.input(0));
-                CV_Assert(layerId != layer_id.end());
-                node_proto.clear_input();
+                std::vector<std::string> input_names;
                 for (int j = 0; j < targetShape[broadcast_axes[0]]; j++)
                 {
                     std::ostringstream ss;
                     ss << j;
-                    std::string copy_name = base_name + ss.str();
-                    CV_Assert(layer_id.find(copy_name) == layer_id.end());
                     LayerParams copyLP;
+                    copyLP.name = base_name + ss.str();
+                    copyLP.type = "Identity";
+                    CV_Assert(layer_id.find(copyLP.name) == layer_id.end());
+                    input_names.push_back(copyLP.name);
 
-                    int copy_id = dstNet.addLayer(copy_name, "Identity", copyLP);
-                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, copy_id, 0);
-                    layer_id.insert(std::make_pair(copy_name, LayerInfo(copy_id, 0)));
-                    node_proto.add_input(copy_name);
-                    outShapes[copy_name] = inpShape;
+                    node_proto.set_output(0, copyLP.name);
+                    addLayer(dstNet, copyLP, node_proto, layer_id, outShapes);
+                }
+                node_proto.clear_input();
+                for (int i = 0; i < input_names.size(); i++)
+                {
+                    node_proto.add_input(input_names[i]);
                 }
                 layerParams.set("axis", broadcast_axes[0]);
                 layerParams.type = "Concat";
