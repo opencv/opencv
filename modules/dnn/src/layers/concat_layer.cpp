@@ -298,26 +298,29 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_INF_ENGINE
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        ngraph::NodeVector inp_nodes;
-        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node->get_shape().size();
+        InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
+        const int numDims = data->getDims().size();
         const int cAxis = clamp(axis, numDims);
         std::vector<size_t> maxDims(numDims, 0);
 
+        CV_Assert(inputs.size() == nodes.size());
+        ngraph::NodeVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
-            auto node = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
-            inp_nodes.push_back(node);
-            std::vector<size_t> inpShape = node->get_shape();
+            inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);
+
+            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
             for (int i = 0; i < numDims; ++i)
                 maxDims[i] = std::max(maxDims[i], inpShape[i]);
         }
         for (int i = 0; i < inp_nodes.size(); ++i)
         {
             bool needPadding = false;
-            std::vector<size_t> inpShape = inp_nodes[i]->get_shape();
+            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
             std::vector<int64_t> begins(inpShape.size(), 0), ends(inpShape.size(), 0);
             for (int j = 0; j < inpShape.size(); ++j)
             {
@@ -340,7 +343,7 @@ public:
         auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, cAxis);
         return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_NGRAPH
 };
 
 Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)
