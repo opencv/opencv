@@ -95,6 +95,9 @@
 */
 
 #if defined HAVE_TBB
+    #ifndef TBB_SUPPRESS_DEPRECATED_MESSAGES  // supress warning
+    #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
+    #endif
     #include "tbb/tbb.h"
     #include "tbb/task.h"
     #include "tbb/tbb_stddef.h"

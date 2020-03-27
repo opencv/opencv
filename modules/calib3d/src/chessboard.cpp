@@ -797,15 +797,6 @@ Ellipse::Ellipse(const cv::Point2f &_center, const cv::Size2f &_axes, float _ang
 {
 }
 
-Ellipse::Ellipse(const Ellipse &other)
-{
-    center = other.center;
-    axes= other.axes;
-    angle= other.angle;
-    cosf = other.cosf;
-    sinf = other.sinf;
-}
-
 const cv::Size2f &Ellipse::getAxes()const
 {
     return axes;
