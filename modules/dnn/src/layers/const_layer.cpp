@@ -67,7 +67,8 @@ public:
     }
 
 #ifdef HAVE_INF_ENGINE
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
                                                            getShape<size_t>(blobs[0]),

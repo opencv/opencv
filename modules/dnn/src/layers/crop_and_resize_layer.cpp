@@ -118,7 +118,8 @@ public:
     }
 
 #ifdef HAVE_INF_ENGINE
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         // Slice second input: from 1x1xNx7 to 1x1xNx5
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
