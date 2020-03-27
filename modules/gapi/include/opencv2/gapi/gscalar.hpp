@@ -30,8 +30,8 @@ class GAPI_EXPORTS GScalar
 {
 public:
     GScalar();                                         // Empty constructor
-    explicit GScalar(const cv::Scalar& s);  // Constant value constructor from cv::gapi::own::Scalar
-    explicit GScalar(cv::Scalar&& s);       // Constant value move-constructor from cv::gapi::own::Scalar
+    explicit GScalar(const cv::Scalar& s);  // Constant value constructor from cv::Scalar
+    explicit GScalar(cv::Scalar&& s);       // Constant value move-constructor from cv::Scalar
 
     GScalar(double v0);                                // Constant value constructor from double
     GScalar(const GNode &n, std::size_t out);          // Operation result constructor

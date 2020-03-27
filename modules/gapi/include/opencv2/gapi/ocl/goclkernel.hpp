@@ -63,7 +63,7 @@ public:
     cv::UMat&  outMatR(int output); // FIXME: Avoid cv::Mat m = ctx.outMatR()
 
     const cv::Scalar& inVal(int input);
-    cv::Scalar& outValR(int output); // FIXME: Avoid cv::gapi::own::Scalar s = ctx.outValR()
+    cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = ctx.outValR()
     template<typename T> std::vector<T>& outVecR(int output) // FIXME: the same issue
     {
         return outVecRef(output).wref<T>();
@@ -146,15 +146,6 @@ struct tracked_cv_umat{
     }
 };
 
-struct scalar_wrapper_ocl
-{
-    //FIXME reuse CPU (OpenCV) plugin code
-    scalar_wrapper_ocl(cv::Scalar& s) : m_org_s(s) {};
-    operator cv::Scalar& () { return m_org_s; }
-
-    cv::Scalar& m_org_s;
-};
-
 template<typename... Outputs>
 void postprocess_ocl(Outputs&... outs)
 {
@@ -180,10 +171,9 @@ template<> struct ocl_get_out<cv::GMat>
 };
 template<> struct ocl_get_out<cv::GScalar>
 {
-    static scalar_wrapper_ocl get(GOCLContext &ctx, int idx)
+    static cv::Scalar& get(GOCLContext &ctx, int idx)
     {
-        auto& s = ctx.outValR(idx);
-        return{ s };
+        return ctx.outValR(idx);
     }
 };
 template<typename U> struct ocl_get_out<cv::GArray<U> >
