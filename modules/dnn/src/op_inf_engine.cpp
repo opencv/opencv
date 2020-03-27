@@ -21,7 +21,6 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
-
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
 {
     std::vector<size_t> dims = blob->getTensorDesc().getDims();
@@ -183,13 +182,18 @@ cv::String getInferenceEngineVPUType()
     return vpu_type;
 }
 
+#endif  // HAVE_INF_ENGINE
+
 CV__DNN_EXPERIMENTAL_NS_END
 
+
+#ifdef HAVE_INF_ENGINE
 // For networks with input layer which has an empty name, IE generates a name id[some_number].
 // OpenCV lets users use an empty input name and to prevent unexpected naming,
 // we can use some predefined name.
-static std::string kDefaultInpLayerName = "opencv_ngraph_empty_inp_layer_name";
-static constexpr const char* kOpenCVLayersType = "opencv_ngraph_layer";
+static std::string kDefaultInpLayerName = "empty_inp_layer_name";
+static constexpr const char* kOpenCVLayersType = "OpenCVLayer";
+
 
 static std::string shapesToStr(const std::vector<Mat>& mats)
 {
@@ -1075,6 +1079,8 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
 
 #else  // HAVE_INF_ENGINE
 
+CV__DNN_EXPERIMENTAL_NS_BEGIN
+
 cv::String getInferenceEngineBackendType()
 {
     CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
@@ -1088,6 +1094,8 @@ cv::String getInferenceEngineVPUType()
 {
     CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
 }
+
+CV__DNN_EXPERIMENTAL_NS_END
 
 void forwardNgraph(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                    Ptr<BackendNode>& node, bool isAsync)
