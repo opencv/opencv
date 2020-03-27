@@ -51,17 +51,125 @@
 /**
   @defgroup calib3d Camera Calibration and 3D Reconstruction
 
-The functions in this section use a so-called pinhole camera model. In this model, a scene view is
-formed by projecting 3D points into the image plane using a perspective transformation.
+The functions in this section use a so-called pinhole camera model. The view of a scene
+is obtained by projecting a scene's 3D point \f$P_w\f$ into the image plane using a perspective
+transformation which forms the corresponding pixel \f$p\f$. Both \f$P_w\f$ and \f$p\f$ are
+represented in homogeneous coordinates, i.e. as 3D and 2D homogeneous vector respectively. You will
+find a brief introduction to projective geometry, homogeneous vectors and homogeneous
+transformations at the end of this section's introduction. For more succinct notation, we often drop
+the 'homogeneous' and say vector instead of homogeneous vector.
 
-\f[s  \; m' = A [R|t] M'\f]
+The distortion-free projective transformation given by a  pinhole camera model is shown below.
 
-or
+\f[s \; p = A \begin{bmatrix} R|t \end{bmatrix} P_w,\f]
 
-\f[s  \vecthree{u}{v}{1} = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}
+where \f$P_w\f$ is a 3D point expressed with respect to the world coordinate system,
+\f$p\f$ is a 2D pixel in the image plane, \f$A\f$ is the intrinsic camera matrix,
+\f$R\f$ and \f$t\f$ are the rotation and translation that describe the change of coordinates from
+world to camera coordinate systems (or camera frame) and \f$s\f$ is the projective transformation's
+arbitrary scaling and not part of the camera model.
+
+The intrinsic camera matrix \f$A\f$ (notation used as in @cite Zhang2000 and also generally notated
+as \f$K\f$) projects 3D points given in the camera coordinate system to 2D pixel coordinates, i.e.
+
+\f[p = A P_c.\f]
+
+The camera matrix \f$A\f$ is composed of the focal lengths \f$f_x\f$ and \f$f_y\f$, which are
+expressed in pixel units, and the principal point \f$(c_x, c_y)\f$, that is usually close to the
+image center:
+
+\f[A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1},\f]
+
+and thus
+
+\f[s \vecthree{u}{v}{1} = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1} \vecthree{X_c}{Y_c}{Z_c}.\f]
+
+The matrix of intrinsic parameters does not depend on the scene viewed. So, once estimated, it can
+be re-used as long as the focal length is fixed (in case of a zoom lens). Thus, if an image from the
+camera is scaled by a factor, all of these parameters need to be scaled (multiplied/divided,
+respectively) by the same factor.
+
+The joint rotation-translation matrix \f$[R|t]\f$ is the matrix product of a projective
+transformation and a homogeneous transformation. The 3-by-4 projective transformation maps 3D points
+represented in camera coordinates to 2D poins in the image plane and represented in normalized
+camera coordinates \f$x' = X_c / Z_c\f$ and \f$y' = Y_c / Z_c\f$:
+
+\f[Z_c \begin{bmatrix}
+x' \\
+y' \\
+1
+\end{bmatrix} = \begin{bmatrix}
+1 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & 1 & 0
+\end{bmatrix}
 \begin{bmatrix}
-r_{11} & r_{12} & r_{13} & t_x  \\
-r_{21} & r_{22} & r_{23} & t_y  \\
+X_c \\
+Y_c \\
+Z_c \\
+1
+\end{bmatrix}.\f]
+
+The homogeneous transformation is encoded by the extrinsic parameters \f$R\f$ and \f$t\f$ and
+represents the change of basis from world coordinate system \f$w\f$ to the camera coordinate sytem
+\f$c\f$. Thus, given the representation of the point \f$P\f$ in world coordinates, \f$P_w\f$, we
+obtain \f$P\f$'s representation in the camera coordinate system, \f$P_c\f$, by
+
+\f[P_c = \begin{bmatrix}
+R & t \\
+0 & 1
+\end{bmatrix} P_w,\f]
+
+This homogeneous transformation is composed out of \f$R\f$, a 3-by-3 rotation matrix, and \f$t\f$, a
+3-by-1 translation vector:
+
+\f[\begin{bmatrix}
+R & t \\
+0 & 1
+\end{bmatrix} = \begin{bmatrix}
+r_{11} & r_{12} & r_{13} & t_x \\
+r_{21} & r_{22} & r_{23} & t_y \\
+r_{31} & r_{32} & r_{33} & t_z \\
+0 & 0 & 0 & 1
+\end{bmatrix},
+\f]
+
+and therefore
+
+\f[\begin{bmatrix}
+X_c \\
+Y_c \\
+Z_c \\
+1
+\end{bmatrix} = \begin{bmatrix}
+r_{11} & r_{12} & r_{13} & t_x \\
+r_{21} & r_{22} & r_{23} & t_y \\
+r_{31} & r_{32} & r_{33} & t_z \\
+0 & 0 & 0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+X_w \\
+Y_w \\
+Z_w \\
+1
+\end{bmatrix}.\f]
+
+Combining the projective transformation and the homogeneous transformation, we obtain the projective
+transformation that maps 3D points in world coordinates into 2D points in the image plane and in
+normalized camera coordinates:
+
+\f[Z_c \begin{bmatrix}
+x' \\
+y' \\
+1
+\end{bmatrix} = \begin{bmatrix} R|t \end{bmatrix} \begin{bmatrix}
+X_w \\
+Y_w \\
+Z_w \\
+1
+\end{bmatrix} = \begin{bmatrix}
+r_{11} & r_{12} & r_{13} & t_x \\
+r_{21} & r_{22} & r_{23} & t_y \\
 r_{31} & r_{32} & r_{33} & t_z
 \end{bmatrix}
 \begin{bmatrix}
@@ -69,62 +177,97 @@ X_w \\
 Y_w \\
 Z_w \\
 1
+\end{bmatrix},\f]
+
+with \f$x' = X_c / Z_c\f$ and \f$y' = Y_c / Z_c\f$. Putting the equations for instrincs and extrinsics together, we can write out
+\f$s \; p = A \begin{bmatrix} R|t \end{bmatrix} P_w\f$ as
+
+\f[s \vecthree{u}{v}{1} = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}
+\begin{bmatrix}
+r_{11} & r_{12} & r_{13} & t_x \\
+r_{21} & r_{22} & r_{23} & t_y \\
+r_{31} & r_{32} & r_{33} & t_z
+\end{bmatrix}
+\begin{bmatrix}
+X_w \\
+Y_w \\
+Z_w \\
+1
+\end{bmatrix}.\f]
+
+If \f$Z_c \ne 0\f$, the transformation above is equivalent to the following,
+
+\f[\begin{bmatrix}
+u \\
+v
+\end{bmatrix} = \begin{bmatrix}
+f_x X_c/Z_c + c_x \\
+f_y Y_c/Z_c + c_y
 \end{bmatrix}\f]
 
-where:
+with
 
--   \f$(X_w, Y_w, Z_w)\f$ are the coordinates of a 3D point in the world coordinate space
--   \f$(u, v)\f$ are the coordinates of the projection point in pixels
--   \f$A\f$ is a camera matrix, or a matrix of intrinsic parameters
--   \f$(c_x, c_y)\f$ is a principal point that is usually at the image center
--   \f$f_x, f_y\f$ are the focal lengths expressed in pixel units.
-
-Thus, if an image from the camera is scaled by a factor, all of these parameters should be scaled
-(multiplied/divided, respectively) by the same factor. The matrix of intrinsic parameters does not
-depend on the scene viewed. So, once estimated, it can be re-used as long as the focal length is
-fixed (in case of zoom lens). The joint rotation-translation matrix \f$[R|t]\f$ is called a matrix of
-extrinsic parameters. It is used to describe the camera motion around a static scene, or vice versa,
-rigid motion of an object in front of a still camera. That is, \f$[R|t]\f$ translates coordinates of a
-world point \f$(X_w, Y_w, Z_w)\f$ to a coordinate system, fixed with respect to the camera.
-The transformation above is equivalent to the following (when \f$z \ne 0\f$ ):
-
-\f[\begin{array}{l}
-\vecthree{X_c}{Y_c}{Z_c} = R  \vecthree{X_w}{Y_w}{Z_w} + t \\
-x' = X_c/Z_c \\
-y' = Y_c/Z_c \\
-u = f_x \times x' + c_x \\
-v = f_y \times y' + c_y
-\end{array}\f]
+\f[\vecthree{X_c}{Y_c}{Z_c} = \begin{bmatrix}
+R|t
+\end{bmatrix} \begin{bmatrix}
+X_w \\
+Y_w \\
+Z_w \\
+1
+\end{bmatrix}.\f]
 
 The following figure illustrates the pinhole camera model.
 
 ![Pinhole camera model](pics/pinhole_camera_model.png)
 
-Real lenses usually have some distortion, mostly radial distortion and slight tangential distortion.
+Real lenses usually have some distortion, mostly radial distortion, and slight tangential distortion.
 So, the above model is extended as:
 
-\f[\begin{array}{l}
-\vecthree{X_c}{Y_c}{Z_c} = R  \vecthree{X_w}{Y_w}{Z_w} + t \\
-x' = X_c/Z_c \\
-y' = Y_c/Z_c \\
-x'' = x'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\
-y'' = y'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
-\text{where} \quad r^2 = x'^2 + y'^2  \\
-u = f_x \times x'' + c_x \\
-v = f_y \times y'' + c_y
-\end{array}\f]
+\f[\begin{bmatrix}
+u \\
+v
+\end{bmatrix} = \begin{bmatrix}
+f_x x'' + c_x \\
+f_y y'' + c_y
+\end{bmatrix}\f]
 
-\f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$, \f$k_5\f$, and \f$k_6\f$ are radial distortion coefficients. \f$p_1\f$ and \f$p_2\f$ are
-tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
-coefficients. Higher-order coefficients are not considered in OpenCV.
+where
+
+\f[\begin{bmatrix}
+x'' \\
+y''
+\end{bmatrix} = \begin{bmatrix}
+x' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\
+y' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
+\end{bmatrix}\f]
+
+with
+
+\f[r^2 = x'^2 + y'^2\f]
+
+and
+
+\f[\begin{bmatrix}
+x'\\
+y'
+\end{bmatrix} = \begin{bmatrix}
+X_c/Z_c \\
+Y_c/Z_c
+\end{bmatrix},\f]
+
+if \f$Z_c \ne 0\f$.
+
+The distortion parameters are the radial coefficients \f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$, \f$k_5\f$, and \f$k_6\f$
+,\f$p_1\f$ and \f$p_2\f$ are the tangential distortion coefficients, and \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$,
+are the thin prism distortion coefficients. Higher-order coefficients are not considered in OpenCV.
 
 The next figures show two common types of radial distortion: barrel distortion
 (\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically decreasing)
 and pincushion distortion (\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically increasing).
 Radial distortion is always monotonic for real lenses,
-and if the estimator produces a non monotonic result,
+and if the estimator produces a non-monotonic result,
 this should be considered a calibration failure.
-More generally, radial distortion must be monotonic and the distortion function, must be bijective.
+More generally, radial distortion must be monotonic and the distortion function must be bijective.
 A failed estimation result may look deceptively good near the image center
 but will work poorly in e.g. AR/SFM applications.
 The optimization method used in OpenCV camera calibration does not include these constraints as
@@ -134,22 +277,28 @@ See [issue #15992](https://github.com/opencv/opencv/issues/15992) for additional
 ![](pics/distortion_examples.png)
 ![](pics/distortion_examples2.png)
 
-In some cases the image sensor may be tilted in order to focus an oblique plane in front of the
+In some cases, the image sensor may be tilted in order to focus an oblique plane in front of the
 camera (Scheimpflug principle). This can be useful for particle image velocimetry (PIV) or
 triangulation with a laser fan. The tilt causes a perspective distortion of \f$x''\f$ and
-\f$y''\f$. This distortion can be modelled in the following way, see e.g. @cite Louhichi07.
+\f$y''\f$. This distortion can be modeled in the following way, see e.g. @cite Louhichi07.
 
-\f[\begin{array}{l}
-s\vecthree{x'''}{y'''}{1} =
+\f[\begin{bmatrix}
+u \\
+v
+\end{bmatrix} = \begin{bmatrix}
+f_x x''' + c_x \\
+f_y y''' + c_y
+\end{bmatrix},\f]
+
+where
+
+\f[s\vecthree{x'''}{y'''}{1} =
 \vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}(\tau_x, \tau_y)}
 {0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
-{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
-u = f_x \times x''' + c_x \\
-v = f_y \times y''' + c_y
-\end{array}\f]
+{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\f]
 
-where the matrix \f$R(\tau_x, \tau_y)\f$ is defined by two rotations with angular parameter \f$\tau_x\f$
-and \f$\tau_y\f$, respectively,
+and the matrix \f$R(\tau_x, \tau_y)\f$ is defined by two rotations with angular parameter
+\f$\tau_x\f$ and \f$\tau_y\f$, respectively,
 
 \f[
 R(\tau_x, \tau_y) =
@@ -168,8 +317,8 @@ vector. That is, if the vector contains four elements, it means that \f$k_3=0\f$
 coefficients do not depend on the scene viewed. Thus, they also belong to the intrinsic camera
 parameters. And they remain the same regardless of the captured image resolution. If, for example, a
 camera has been calibrated on images of 320 x 240 resolution, absolutely the same distortion
-coefficients can be used for 640 x 480 images from the same camera while \f$f_x\f$, \f$f_y\f$, \f$c_x\f$, and
-\f$c_y\f$ need to be scaled appropriately.
+coefficients can be used for 640 x 480 images from the same camera while \f$f_x\f$, \f$f_y\f$,
+\f$c_x\f$, and \f$c_y\f$ need to be scaled appropriately.
 
 The functions below use the above model to do the following:
 
@@ -181,8 +330,63 @@ pattern (every view is described by several 3D-2D point correspondences).
 -   Estimate the relative position and orientation of the stereo camera "heads" and compute the
 *rectification* transformation that makes the camera optical axes parallel.
 
+<B> Homogeneous Coordinates </B><br>
+Homogeneous Coordinates are a system of coordinates that are used in projective geometry. Their use
+allows to represent points at infinity by finite coordinates and simplifies formulas when compared
+to the cartesian counterparts, e.g. they have the advantage that affine transformations can be
+expressed as linear homogeneous transformation.
+
+One obtains the homogeneous vector \f$P_h\f$ by appending a 1 along an n-dimensional cartesian
+vector \f$P\f$ e.g. for a 3D cartesian vector the mapping \f$P \rightarrow P_h\f$ is:
+
+\f[\begin{bmatrix}
+X \\
+Y \\
+Z
+\end{bmatrix} \rightarrow \begin{bmatrix}
+X \\
+Y \\
+Z \\
+1
+\end{bmatrix}.\f]
+
+For the inverse mapping \f$P_h \rightarrow P\f$, one divides all elements of the homogeneous vector
+by its last element, e.g. for a 3D homogeneous vector one gets its 2D cartesian counterpart by:
+
+\f[\begin{bmatrix}
+X \\
+Y \\
+W
+\end{bmatrix} \rightarrow \begin{bmatrix}
+X / W \\
+Y / W
+\end{bmatrix},\f]
+
+if \f$W \ne 0\f$.
+
+Due to this mapping, all multiples \f$k P_h\f$, for \f$k \ne 0\f$, of a homogeneous point represent
+the same point \f$P_h\f$. An intuitive understanding of this property is that under a projective
+transformation, all multiples of \f$P_h\f$ are mapped to the same point. This is the physical
+observation one does for pinhole cameras, as all points along a ray through the camera's pinhole are
+projected to the same image point, e.g. all points along the red ray in the image of the pinhole
+camera model above would be mapped to the same image coordinate. This property is also the source
+for the scale ambiguity s in the equation of the pinhole camera model.
+
+As mentioned, by using homogeneous coordinates we can express any change of basis parameterized by
+\f$R\f$ and \f$t\f$ as a linear transformation, e.g. for the change of basis from coordinate system
+0 to coordinate system 1 becomes:
+
+\f[P_1 = R P_0 + t \rightarrow P_{h_1} = \begin{bmatrix}
+R & t \\
+0 & 1
+\end{bmatrix} P_{h_0}.\f]
+
 @note
-    -   A calibration sample for 3 cameras in horizontal position can be found at
+    -   Many functions in this module take a camera matrix as an input parameter. Although all
+        functions assume the same structure of this parameter, they may name it differently. The
+        parameter's description, however, will be clear in that a camera matrix with the structure
+        shown above is required.
+    -   A calibration sample for 3 cameras in a horizontal position can be found at
         opencv_source_code/samples/cpp/3calibration.cpp
     -   A calibration sample based on a sequence of images can be found at
         opencv_source_code/samples/cpp/calibration.cpp
@@ -599,10 +803,11 @@ CV_EXPORTS_W void composeRT( InputArray rvec1, InputArray tvec1,
 
 /** @brief Projects 3D points to an image plane.
 
-@param objectPoints Array of object points, 3xN/Nx3 1-channel or 1xN/Nx1 3-channel (or
-vector\<Point3f\> ), where N is the number of points in the view.
-@param rvec Rotation vector. See Rodrigues for details.
-@param tvec Translation vector.
+@param objectPoints Array of object points expressed wrt. the world coordinate frame. A 3xN/Nx3
+1-channel or 1xN/Nx1 3-channel (or vector\<Point3f\> ), where N is the number of points in the view.
+@param rvec The rotation vector (@ref Rodrigues) that, together with tvec, performs a change of
+basis from world to camera coordinate system, see @ref calibrateCamera for details.
+@param tvec The translation vector, see parameter description above.
 @param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
@@ -614,20 +819,21 @@ points with respect to components of the rotation vector, translation vector, fo
 coordinates of the principal point and the distortion coefficients. In the old interface different
 components of the jacobian are returned via different output parameters.
 @param aspectRatio Optional "fixed aspect ratio" parameter. If the parameter is not 0, the
-function assumes that the aspect ratio (*fx/fy*) is fixed and correspondingly adjusts the jacobian
-matrix.
+function assumes that the aspect ratio (\f$f_x / f_y\f$) is fixed and correspondingly adjusts the
+jacobian matrix.
 
-The function computes projections of 3D points to the image plane given intrinsic and extrinsic
-camera parameters. Optionally, the function computes Jacobians - matrices of partial derivatives of
-image points coordinates (as functions of all the input parameters) with respect to the particular
-parameters, intrinsic and/or extrinsic. The Jacobians are used during the global optimization in
-calibrateCamera, solvePnP, and stereoCalibrate . The function itself can also be used to compute a
-re-projection error given the current intrinsic and extrinsic parameters.
+The function computes the 2D projections of 3D points to the image plane, given intrinsic and
+extrinsic camera parameters. Optionally, the function computes Jacobians -matrices of partial
+derivatives of image points coordinates (as functions of all the input parameters) with respect to
+the particular parameters, intrinsic and/or extrinsic. The Jacobians are used during the global
+optimization in @ref calibrateCamera, @ref solvePnP, and @ref stereoCalibrate. The function itself
+can also be used to compute a re-projection error, given the current intrinsic and extrinsic
+parameters.
 
-@note By setting rvec=tvec=(0,0,0) or by setting cameraMatrix to a 3x3 identity matrix, or by
-passing zero distortion coefficients, you can get various useful partial cases of the function. This
-means that you can compute the distorted coordinates for a sparse set of points or apply a
-perspective transformation (and also compute the derivatives) in the ideal zero-distortion setup.
+@note By setting rvec = tvec = \f$[0, 0, 0]\f$, or by setting cameraMatrix to a 3x3 identity matrix,
+or by passing zero distortion coefficients, one can get various useful partial cases of the
+function. This means, one can compute the distorted coordinates for a sparse set of points or apply
+a perspective transformation (and also compute the derivatives) in the ideal zero-distortion setup.
  */
 CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  InputArray rvec, InputArray tvec,
@@ -1442,44 +1648,48 @@ CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags = CALIB_CB_SYMMETRIC_GRID,
                                    const Ptr<FeatureDetector> &blobDetector = SimpleBlobDetector::create());
 
-/** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
+/** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration
+pattern.
 
 @param objectPoints In the new interface it is a vector of vectors of calibration pattern points in
 the calibration pattern coordinate space (e.g. std::vector<std::vector<cv::Vec3f>>). The outer
-vector contains as many elements as the number of the pattern views. If the same calibration pattern
+vector contains as many elements as the number of pattern views. If the same calibration pattern
 is shown in each view and it is fully visible, all the vectors will be the same. Although, it is
-possible to use partially occluded patterns, or even different patterns in different views. Then,
-the vectors will be different. The points are 3D, but since they are in a pattern coordinate system,
-then, if the rig is planar, it may make sense to put the model to a XY coordinate plane so that
-Z-coordinate of each input object point is 0.
+possible to use partially occluded patterns or even different patterns in different views. Then,
+the vectors will be different. Although the points are 3D, they all lie in the calibration pattern's
+XY coordinate plane (thus 0 in the Z-coordinate), if the used calibration pattern is a planar rig.
 In the old interface all the vectors of object points from different views are concatenated
 together.
 @param imagePoints In the new interface it is a vector of vectors of the projections of calibration
 pattern points (e.g. std::vector<std::vector<cv::Vec2f>>). imagePoints.size() and
-objectPoints.size() and imagePoints[i].size() must be equal to objectPoints[i].size() for each i.
-In the old interface all the vectors of object points from different views are concatenated
-together.
+objectPoints.size(), and imagePoints[i].size() and objectPoints[i].size() for each i, must be equal,
+respectively. In the old interface all the vectors of object points from different views are
+concatenated together.
 @param imageSize Size of the image used only to initialize the intrinsic camera matrix.
-@param cameraMatrix Output 3x3 floating-point camera matrix
+@param cameraMatrix Input/output 3x3 floating-point camera matrix
 \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ . If CV\_CALIB\_USE\_INTRINSIC\_GUESS
 and/or CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
-@param distCoeffs Output vector of distortion coefficients
+@param distCoeffs Input/output vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements.
-@param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view
-(e.g. std::vector<cv::Mat>>). That is, each k-th rotation vector together with the corresponding
-k-th translation vector (see the next output parameter description) brings the calibration pattern
-from the model coordinate space (in which object points are specified) to the world coordinate
-space, that is, a real position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
-@param tvecs Output vector of translation vectors estimated for each pattern view.
-@param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
- Order of deviations values:
+@param rvecs Output vector of rotation vectors (@ref Rodrigues ) estimated for each pattern view
+(e.g. std::vector<cv::Mat>>). That is, each i-th rotation vector together with the corresponding
+i-th translation vector (see the next output parameter description) brings the calibration pattern
+from the object coordinate space (in which object points are specified) to the camera coordinate
+space. In more technical terms, the tuple of the i-th rotation and translation vector performs
+a change of basis from object coordinate space to camera coordinate space. Due to its duality, this
+tuple is equivalent to the position of the calibration pattern with respect to the camera coordinate
+space.
+@param tvecs Output vector of translation vectors estimated for each pattern view, see parameter
+describtion above.
+@param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic
+parameters. Order of deviations values:
 \f$(f_x, f_y, c_x, c_y, k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6 , s_1, s_2, s_3,
  s_4, \tau_x, \tau_y)\f$ If one of parameters is not estimated, it's deviation is equals to zero.
-@param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
- Order of deviations values: \f$(R_1, T_1, \dotsc , R_M, T_M)\f$ where M is number of pattern views,
- \f$R_i, T_i\f$ are concatenated 1x3 vectors.
+@param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic
+parameters. Order of deviations values: \f$(R_0, T_0, \dotsc , R_{M - 1}, T_{M - 1})\f$ where M is
+the number of pattern views. \f$R_i, T_i\f$ are concatenated 1x3 vectors.
  @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
 -   **CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
@@ -1490,7 +1700,7 @@ estimate extrinsic parameters. Use solvePnP instead.
 -   **CALIB_FIX_PRINCIPAL_POINT** The principal point is not changed during the global
 optimization. It stays at the center or at a different location specified when
 CALIB_USE_INTRINSIC_GUESS is set too.
--   **CALIB_FIX_ASPECT_RATIO** The functions considers only fy as a free parameter. The
+-   **CALIB_FIX_ASPECT_RATIO** The functions consider only fy as a free parameter. The
 ratio fx/fy stays the same as in the input cameraMatrix . When
 CALIB_USE_INTRINSIC_GUESS is not set, the actual input values of fx and fy are
 ignored, only their ratio is computed and used further.
@@ -1524,10 +1734,10 @@ supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
 views. The algorithm is based on @cite Zhang2000 and @cite BouguetMCT . The coordinates of 3D object
 points and their corresponding 2D projections in each view must be specified. That may be achieved
-by using an object with a known geometry and easily detectable feature points. Such an object is
+by using an object with known geometry and easily detectable feature points. Such an object is
 called a calibration rig or calibration pattern, and OpenCV has built-in support for a chessboard as
-a calibration rig (see findChessboardCorners ). Currently, initialization of intrinsic parameters
-(when CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar calibration
+a calibration rig (see @ref findChessboardCorners). Currently, initialization of intrinsic
+parameters (when CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar calibration
 patterns (where Z-coordinates of the object points must be all zeros). 3D calibration rigs can also
 be used as long as initial cameraMatrix is provided.
 
@@ -1546,14 +1756,15 @@ The algorithm performs the following steps:
     objectPoints. See projectPoints for details.
 
 @note
-   If you use a non-square (=non-NxN) grid and findChessboardCorners for calibration, and
-    calibrateCamera returns bad values (zero distortion coefficients, an image center very far from
-    (w/2-0.5,h/2-0.5), and/or large differences between \f$f_x\f$ and \f$f_y\f$ (ratios of 10:1 or more)),
-    then you have probably used patternSize=cvSize(rows,cols) instead of using
-    patternSize=cvSize(cols,rows) in findChessboardCorners .
+    If you use a non-square (i.e. non-N-by-N) grid and @ref findChessboardCorners for calibration,
+    and @ref calibrateCamera returns bad values (zero distortion coefficients, \f$c_x\f$ and
+    \f$c_y\f$ very far from the image center, and/or large differences between \f$f_x\f$ and
+    \f$f_y\f$ (ratios of 10:1 or more)), then you are probably using patternSize=cvSize(rows,cols)
+    instead of using patternSize=cvSize(cols,rows) in @ref findChessboardCorners.
 
 @sa
-   calibrateCameraRO, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
+   calibrateCameraRO, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate,
+   undistort
  */
 CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
@@ -1677,37 +1888,44 @@ CV_EXPORTS_W void calibrationMatrixValues( InputArray cameraMatrix, Size imageSi
                                            CV_OUT double& focalLength, CV_OUT Point2d& principalPoint,
                                            CV_OUT double& aspectRatio );
 
-/** @brief Calibrates the stereo camera.
+/** @brief Calibrates a stereo camera set up. This function finds the intrinsic parameters
+for each of the two cameras and the extrinsic parameters between the two cameras.
 
-@param objectPoints Vector of vectors of the calibration pattern points.
+@param objectPoints Vector of vectors of the calibration pattern points. The same structure as
+in @ref calibrateCamera. For each pattern view, both cameras need to see the same object
+points. Therefore, objectPoints.size(), imagePoints1.size(), and imagePoints2.size() need to be
+equal as well as objectPoints[i].size(), imagePoints1[i].size(), and imagePoints2[i].size() need to
+be equal for each i.
 @param imagePoints1 Vector of vectors of the projections of the calibration pattern points,
-observed by the first camera.
+observed by the first camera. The same structure as in @ref calibrateCamera.
 @param imagePoints2 Vector of vectors of the projections of the calibration pattern points,
-observed by the second camera.
-@param cameraMatrix1 Input/output first camera matrix:
-\f$\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}\f$ , \f$j = 0,\, 1\f$ . If
-any of CALIB_USE_INTRINSIC_GUESS , CALIB_FIX_ASPECT_RATIO ,
-CALIB_FIX_INTRINSIC , or CALIB_FIX_FOCAL_LENGTH are specified, some or all of the
-matrix components must be initialized. See the flags description for details.
-@param distCoeffs1 Input/output vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. The output vector length depends on the flags.
-@param cameraMatrix2 Input/output second camera matrix. The parameter is similar to cameraMatrix1
-@param distCoeffs2 Input/output lens distortion coefficients for the second camera. The parameter
-is similar to distCoeffs1 .
-@param imageSize Size of the image used only to initialize intrinsic camera matrix.
-@param R Output rotation matrix between the 1st and the 2nd camera coordinate systems.
-@param T Output translation vector between the coordinate systems of the cameras.
+observed by the second camera. The same structure as in @ref calibrateCamera.
+@param cameraMatrix1 Input/output camera matrix for the first camera, the same as in
+@ref calibrateCamera. Furthermore, for the stereo case, additional flags may be used, see below.
+@param distCoeffs1 Input/output vector of distortion coefficients, the same as in
+@ref calibrateCamera.
+@param cameraMatrix2 Input/output second camera matrix for the second camera. See description for
+cameraMatrix1.
+@param distCoeffs2 Input/output lens distortion coefficients for the second camera. See
+description for distCoeffs1.
+@param imageSize Size of the image used only to initialize the intrinsic camera matrices.
+@param R Output rotation matrix. Together with the translation vector T, this matrix brings
+points given in the first camera's coordinate system to points in the second camera's
+coordinate system. In more technical terms, the tuple of R and T performs a change of basis
+from the first camera's coordinate system to the second camera's coordinate system. Due to its
+duality, this tuple is equivalent to the position of the first camera with respect to the
+second camera coordinate system.
+@param T Output translation vector, see description above.
 @param E Output essential matrix.
 @param F Output fundamental matrix.
 @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
--   **CALIB_FIX_INTRINSIC** Fix cameraMatrix? and distCoeffs? so that only R, T, E , and F
+-   **CALIB_FIX_INTRINSIC** Fix cameraMatrix? and distCoeffs? so that only R, T, E, and F
 matrices are estimated.
 -   **CALIB_USE_INTRINSIC_GUESS** Optimize some or all of the intrinsic parameters
 according to the specified flags. Initial values are provided by the user.
--   **CALIB_USE_EXTRINSIC_GUESS** R, T contain valid initial values that are optimized further.
-Otherwise R, T are initialized to the median value of the pattern views (each dimension separately).
+-   **CALIB_USE_EXTRINSIC_GUESS** R and T contain valid initial values that are optimized further.
+Otherwise R and T are initialized to the median value of the pattern views (each dimension separately).
 -   **CALIB_FIX_PRINCIPAL_POINT** Fix the principal points during the optimization.
 -   **CALIB_FIX_FOCAL_LENGTH** Fix \f$f^{(j)}_x\f$ and \f$f^{(j)}_y\f$ .
 -   **CALIB_FIX_ASPECT_RATIO** Optimize \f$f^{(j)}_y\f$ . Fix the ratio \f$f^{(j)}_x/f^{(j)}_y\f$
@@ -1738,29 +1956,49 @@ the optimization. If CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
-The function estimates transformation between two cameras making a stereo pair. If you have a stereo
-camera where the relative position and orientation of two cameras is fixed, and if you computed
-poses of an object relative to the first camera and to the second camera, (R1, T1) and (R2, T2),
-respectively (this can be done with solvePnP ), then those poses definitely relate to each other.
-This means that, given ( \f$R_1\f$,\f$T_1\f$ ), it should be possible to compute ( \f$R_2\f$,\f$T_2\f$ ). You only
-need to know the position and orientation of the second camera relative to the first camera. This is
-what the described function does. It computes ( \f$R\f$,\f$T\f$ ) so that:
+The function estimates the transformation between two cameras making a stereo pair. If one computes
+the poses of an object relative to the first camera and to the second camera,
+( \f$R_1\f$,\f$T_1\f$ ) and (\f$R_2\f$,\f$T_2\f$), respectively, for a stereo camera where the
+relative position and orientation between the two cameras are fixed, then those poses definitely
+relate to each other. This means, if the relative position and orientation (\f$R\f$,\f$T\f$) of the
+two cameras is known, it is possible to compute (\f$R_2\f$,\f$T_2\f$) when (\f$R_1\f$,\f$T_1\f$) is
+given. This is what the described function does. It computes (\f$R\f$,\f$T\f$) such that:
 
-\f[R_2=R*R_1\f]
-\f[T_2=R*T_1 + T,\f]
+\f[R_2=R R_1\f]
+\f[T_2=R T_1 + T.\f]
+
+Therefore, one can compute the coordinate representation of a 3D point for the second camera's
+coordinate system when given the point's coordinate representation in the first camera's coordinate
+system:
+
+\f[\begin{bmatrix}
+X_2 \\
+Y_2 \\
+Z_2 \\
+1
+\end{bmatrix} = \begin{bmatrix}
+R & T \\
+0 & 1
+\end{bmatrix} \begin{bmatrix}
+X_1 \\
+Y_1 \\
+Z_1 \\
+1
+\end{bmatrix}.\f]
+
 
 Optionally, it computes the essential matrix E:
 
-\f[E= \vecthreethree{0}{-T_2}{T_1}{T_2}{0}{-T_0}{-T_1}{T_0}{0} *R\f]
+\f[E= \vecthreethree{0}{-T_2}{T_1}{T_2}{0}{-T_0}{-T_1}{T_0}{0} R\f]
 
-where \f$T_i\f$ are components of the translation vector \f$T\f$ : \f$T=[T_0, T_1, T_2]^T\f$ . And the function
-can also compute the fundamental matrix F:
+where \f$T_i\f$ are components of the translation vector \f$T\f$ : \f$T=[T_0, T_1, T_2]^T\f$ .
+And the function can also compute the fundamental matrix F:
 
 \f[F = cameraMatrix2^{-T} E cameraMatrix1^{-1}\f]
 
 Besides the stereo-related information, the function can also perform a full calibration of each of
-two cameras. However, due to the high dimensionality of the parameter space and noise in the input
-data, the function can diverge from the correct solution. If the intrinsic parameters can be
+the two cameras. However, due to the high dimensionality of the parameter space and noise in the
+input data, the function can diverge from the correct solution. If the intrinsic parameters can be
 estimated with high accuracy for each of the cameras individually (for example, using
 calibrateCamera ), you are recommended to do so and then pass CALIB_FIX_INTRINSIC flag to the
 function along with the computed intrinsic parameters. Otherwise, if all the parameters are
@@ -1768,7 +2006,7 @@ estimated at once, it makes sense to restrict some parameters, for example, pass
 CALIB_SAME_FOCAL_LENGTH and CALIB_ZERO_TANGENT_DIST flags, which is usually a
 reasonable assumption.
 
-Similarly to calibrateCamera , the function minimizes the total re-projection error for all the
+Similarly to calibrateCamera, the function minimizes the total re-projection error for all the
 points in all the available views from both cameras. The function returns the final value of the
 re-projection error.
  */
@@ -1796,15 +2034,25 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 @param cameraMatrix2 Second camera matrix.
 @param distCoeffs2 Second camera distortion parameters.
 @param imageSize Size of the image used for stereo calibration.
-@param R Rotation matrix from the coordinate system of the first camera to the second.
-@param T Translation vector from the coordinate system of the first camera to the second.
-@param R1 Output 3x3 rectification transform (rotation matrix) for the first camera.
-@param R2 Output 3x3 rectification transform (rotation matrix) for the second camera.
+@param R Rotation matrix from the coordinate system of the first camera to the second camera,
+see @ref stereoCalibrate.
+@param T Translation vector from the coordinate system of the first camera to the second camera,
+see @ref stereoCalibrate.
+@param R1 Output 3x3 rectification transform (rotation matrix) for the first camera. This matrix
+brings points given in the unrectified first camera's coordinate system to points in the rectified
+first camera's coordinate system. In more technical terms, it performs a change of basis from the
+unrectified first camera's coordinate system to the rectified first camera's coordinate system.
+@param R2 Output 3x3 rectification transform (rotation matrix) for the second camera. This matrix
+brings points given in the unrectified second camera's coordinate system to points in the rectified
+second camera's coordinate system. In more technical terms, it performs a change of basis from the
+unrectified second camera's coordinate system to the rectified second camera's coordinate system.
 @param P1 Output 3x4 projection matrix in the new (rectified) coordinate systems for the first
-camera.
+camera, i.e. it projects points given in the rectified first camera coordinate system into the
+rectified first camera's image.
 @param P2 Output 3x4 projection matrix in the new (rectified) coordinate systems for the second
-camera.
-@param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see reprojectImageTo3D ).
+camera, i.e. it projects points given in the rectified first camera coordinate system into the
+rectified second camera's image.
+@param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see @ref reprojectImageTo3D).
 @param flags Operation flags that may be zero or CALIB_ZERO_DISPARITY . If the flag is set,
 the function makes the principal points of each camera have the same pixel coordinates in the
 rectified views. And if the flag is not set, the function may still shift the images in the
@@ -1815,11 +2063,11 @@ scaling. Otherwise, the parameter should be between 0 and 1. alpha=0 means that 
 images are zoomed and shifted so that only valid pixels are visible (no black areas after
 rectification). alpha=1 means that the rectified image is decimated and shifted so that all the
 pixels from the original images from the cameras are retained in the rectified images (no source
-image pixels are lost). Obviously, any intermediate value yields an intermediate result between
+image pixels are lost). Any intermediate value yields an intermediate result between
 those two extreme cases.
 @param newImageSize New image resolution after rectification. The same size should be passed to
 initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
-is passed (default), it is set to the original imageSize . Setting it to larger value can help you
+is passed (default), it is set to the original imageSize . Setting it to a larger value can help you
 preserve details in the original image, especially when there is a big radial distortion.
 @param validPixROI1 Optional output rectangles inside the rectified images where all the pixels
 are valid. If alpha=0 , the ROIs cover the whole images. Otherwise, they are likely to be smaller
@@ -1835,27 +2083,43 @@ as input. As output, it provides two rotation matrices and also two projection m
 coordinates. The function distinguishes the following two cases:
 
 -   **Horizontal stereo**: the first and the second camera views are shifted relative to each other
-    mainly along the x axis (with possible small vertical shift). In the rectified images, the
+    mainly along the x-axis (with possible small vertical shift). In the rectified images, the
     corresponding epipolar lines in the left and right cameras are horizontal and have the same
     y-coordinate. P1 and P2 look like:
 
-    \f[\texttt{P1} = \begin{bmatrix} f & 0 & cx_1 & 0 \\ 0 & f & cy & 0 \\ 0 & 0 & 1 & 0 \end{bmatrix}\f]
+    \f[\texttt{P1} = \begin{bmatrix}
+                        f & 0 & cx_1 & 0 \\
+                        0 & f & cy & 0 \\
+                        0 & 0 & 1 & 0
+                     \end{bmatrix}\f]
 
-    \f[\texttt{P2} = \begin{bmatrix} f & 0 & cx_2 & T_x*f \\ 0 & f & cy & 0 \\ 0 & 0 & 1 & 0 \end{bmatrix} ,\f]
+    \f[\texttt{P2} = \begin{bmatrix}
+                        f & 0 & cx_2 & T_x*f \\
+                        0 & f & cy & 0 \\
+                        0 & 0 & 1 & 0
+                     \end{bmatrix} ,\f]
 
     where \f$T_x\f$ is a horizontal shift between the cameras and \f$cx_1=cx_2\f$ if
     CALIB_ZERO_DISPARITY is set.
 
 -   **Vertical stereo**: the first and the second camera views are shifted relative to each other
-    mainly in vertical direction (and probably a bit in the horizontal direction too). The epipolar
+    mainly in the vertical direction (and probably a bit in the horizontal direction too). The epipolar
     lines in the rectified images are vertical and have the same x-coordinate. P1 and P2 look like:
 
-    \f[\texttt{P1} = \begin{bmatrix} f & 0 & cx & 0 \\ 0 & f & cy_1 & 0 \\ 0 & 0 & 1 & 0 \end{bmatrix}\f]
+    \f[\texttt{P1} = \begin{bmatrix}
+                        f & 0 & cx & 0 \\
+                        0 & f & cy_1 & 0 \\
+                        0 & 0 & 1 & 0
+                     \end{bmatrix}\f]
 
-    \f[\texttt{P2} = \begin{bmatrix} f & 0 & cx & 0 \\ 0 & f & cy_2 & T_y*f \\ 0 & 0 & 1 & 0 \end{bmatrix} ,\f]
+    \f[\texttt{P2} = \begin{bmatrix}
+                        f & 0 & cx & 0 \\
+                        0 & f & cy_2 & T_y*f \\
+                        0 & 0 & 1 & 0
+                     \end{bmatrix},\f]
 
-    where \f$T_y\f$ is a vertical shift between the cameras and \f$cy_1=cy_2\f$ if CALIB_ZERO_DISPARITY is
-    set.
+    where \f$T_y\f$ is a vertical shift between the cameras and \f$cy_1=cy_2\f$ if
+    CALIB_ZERO_DISPARITY is set.
 
 As you can see, the first three columns of P1 and P2 will effectively be the new "rectified" camera
 matrices. The matrices, together with R1 and R2 , can then be passed to initUndistortRectifyMap to
@@ -2262,35 +2526,47 @@ CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
 @param R2 Another possible rotation matrix.
 @param t One possible translation.
 
-This function decompose an essential matrix E using svd decomposition @cite HartleyZ00 . Generally 4
-possible poses exists for a given E. They are \f$[R_1, t]\f$, \f$[R_1, -t]\f$, \f$[R_2, t]\f$, \f$[R_2, -t]\f$. By
-decomposing E, you can only get the direction of the translation, so the function returns unit t.
+This function decomposes the essential matrix E using svd decomposition @cite HartleyZ00. In
+general, four possible poses exist for the decomposition of E. They are \f$[R_1, t]\f$,
+\f$[R_1, -t]\f$, \f$[R_2, t]\f$, \f$[R_2, -t]\f$.
+
+If E gives the epipolar constraint \f$[p_2; 1]^T A^{-T} E A^{-1} [p_1; 1] = 0\f$ between the image
+points \f$p_1\f$ in the first image and \f$p_2\f$ in second image, then any of the tuples
+\f$[R_1, t]\f$, \f$[R_1, -t]\f$, \f$[R_2, t]\f$, \f$[R_2, -t]\f$ is a change of basis from the first
+camera's coordinate system to the second camera's coordinate system. However, by decomposing E, one
+can only get the direction of the translation. For this reason, the translation t is returned with
+unit length.
  */
 CV_EXPORTS_W void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t );
 
-/** @brief Recover relative camera rotation and translation from an estimated essential matrix and the
-corresponding points in two images, using cheirality check. Returns the number of inliers which pass
-the check.
+/** @brief Recovers the relative camera rotation and the translation from an estimated essential
+matrix and the corresponding points in two images, using cheirality check. Returns the number of
+inliers that pass the check.
 
 @param E The input essential matrix.
 @param points1 Array of N 2D points from the first image. The point coordinates should be
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
-@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
 same camera matrix.
-@param R Recovered relative rotation.
-@param t Recovered relative translation.
-@param mask Input/output mask for inliers in points1 and points2.
-:   If it is not empty, then it marks inliers in points1 and points2 for then given essential
-matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
-which pass the cheirality check.
-This function decomposes an essential matrix using decomposeEssentialMat and then verifies possible
-pose hypotheses by doing cheirality check. The cheirality check basically means that the
-triangulated 3D points should have positive depth. Some details can be found in @cite Nister03 .
+@param R Output rotation matrix. Together with the translation vector, this matrix makes up a tuple
+that performs a change of basis from the first camera's coordinate system to the second camera's
+coordinate system. Note that, in general, t can not be used for this tuple, see the parameter
+described below.
+@param t Output translation vector. This vector is obtained by @ref decomposeEssentialMat and
+therefore is only known up to scale, i.e. t is the direction of the translation vector and has unit
+length.
+@param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
+inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
+recover pose. In the output mask only inliers which pass the cheirality check.
 
-This function can be used to process output E and mask from findEssentialMat. In this scenario,
-points1 and points2 are the same input for findEssentialMat. :
+This function decomposes an essential matrix using @ref decomposeEssentialMat and then verifies
+possible pose hypotheses by doing cheirality check. The cheirality check means that the
+triangulated 3D points should have positive depth. Some details can be found in @cite Nister03.
+
+This function can be used to process the output E and mask from @ref findEssentialMat. In this
+scenario, points1 and points2 are the same input for findEssentialMat.:
 @code
     // Example. Estimation of fundamental matrix using the RANSAC algorithm
     int point_count = 100;
@@ -2322,20 +2598,24 @@ CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray point
 @param points1 Array of N 2D points from the first image. The point coordinates should be
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
-@param R Recovered relative rotation.
-@param t Recovered relative translation.
+@param R Output rotation matrix. Together with the translation vector, this matrix makes up a tuple
+that performs a change of basis from the first camera's coordinate system to the second camera's
+coordinate system. Note that, in general, t can not be used for this tuple, see the parameter
+description below.
+@param t Output translation vector. This vector is obtained by @ref decomposeEssentialMat and
+therefore is only known up to scale, i.e. t is the direction of the translation vector and has unit
+length.
 @param focal Focal length of the camera. Note that this function assumes that points1 and points2
 are feature points from cameras with same focal length and principal point.
 @param pp principal point of the camera.
-@param mask Input/output mask for inliers in points1 and points2.
-:   If it is not empty, then it marks inliers in points1 and points2 for then given essential
-matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
-which pass the cheirality check.
+@param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
+inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
+recover pose. In the output mask only inliers which pass the cheirality check.
 
 This function differs from the one above that it computes camera matrix from focal length and
 principal point:
 
-\f[K =
+\f[A =
 \begin{bmatrix}
 f & 0 & x_{pp}  \\
 0 & f & y_{pp}  \\
@@ -2352,19 +2632,26 @@ CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray point
 @param points1 Array of N 2D points from the first image. The point coordinates should be
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1.
-@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
 same camera matrix.
-@param R Recovered relative rotation.
-@param t Recovered relative translation.
-@param distanceThresh threshold distance which is used to filter out far away points (i.e. infinite points).
-@param mask Input/output mask for inliers in points1 and points2.
-:   If it is not empty, then it marks inliers in points1 and points2 for then given essential
-matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
-which pass the cheirality check.
-@param triangulatedPoints 3d points which were reconstructed by triangulation.
- */
+@param R Output rotation matrix. Together with the translation vector, this matrix makes up a tuple
+that performs a change of basis from the first camera's coordinate system to the second camera's
+coordinate system. Note that, in general, t can not be used for this tuple, see the parameter
+description below.
+@param t Output translation vector. This vector is obtained by @ref decomposeEssentialMat and
+therefore is only known up to scale, i.e. t is the direction of the translation vector and has unit
+length.
+@param distanceThresh threshold distance which is used to filter out far away points (i.e. infinite
+points).
+@param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
+inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
+recover pose. In the output mask only inliers which pass the cheirality check.
+@param triangulatedPoints 3D points which were reconstructed by triangulation.
 
+This function differs from the one above that it outputs the triangulated 3D point that are used for
+the cheirality check.
+ */
 CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
                             InputArray cameraMatrix, OutputArray R, OutputArray t, double distanceThresh, InputOutputArray mask = noArray(),
                             OutputArray triangulatedPoints = noArray());
@@ -2395,21 +2682,26 @@ Line coefficients are defined up to a scale. They are normalized so that \f$a_i^
 CV_EXPORTS_W void computeCorrespondEpilines( InputArray points, int whichImage,
                                              InputArray F, OutputArray lines );
 
-/** @brief Reconstructs points by triangulation.
+/** @brief This function reconstructs 3-dimensional points (in homogeneous coordinates) by using
+their observations with a stereo camera.
 
-@param projMatr1 3x4 projection matrix of the first camera.
-@param projMatr2 3x4 projection matrix of the second camera.
-@param projPoints1 2xN array of feature points in the first image. In case of c++ version it can
-be also a vector of feature points or two-channel matrix of size 1xN or Nx1.
-@param projPoints2 2xN array of corresponding points in the second image. In case of c++ version
+@param projMatr1 3x4 projection matrix of the first camera, i.e. this matrix projects 3D points
+given in the world's coordinate system into the first image.
+@param projMatr2 3x4 projection matrix of the second camera, i.e. this matrix projects 3D points
+given in the world's coordinate system into the second image.
+@param projPoints1 2xN array of feature points in the first image. In the case of the c++ version,
 it can be also a vector of feature points or two-channel matrix of size 1xN or Nx1.
-@param points4D 4xN array of reconstructed points in homogeneous coordinates.
-
-The function reconstructs 3-dimensional points (in homogeneous coordinates) by using their
-observations with a stereo camera. Projections matrices can be obtained from stereoRectify.
+@param projPoints2 2xN array of corresponding points in the second image. In the case of the c++
+version, it can be also a vector of feature points or two-channel matrix of size 1xN or Nx1.
+@param points4D 4xN array of reconstructed points in homogeneous coordinates. These points are
+returned in the world's coordinate system.
 
 @note
    Keep in mind that all input data should be of float type in order for this function to work.
+
+@note
+   If the projection matrices from @ref stereoRectify are used, then the returned points are
+   represented in the first camera's rectified coordinate system.
 
 @sa
    reprojectImageTo3D
@@ -2465,15 +2757,16 @@ CV_EXPORTS_W void validateDisparity( InputOutputArray disparity, InputArray cost
 /** @brief Reprojects a disparity image to 3D space.
 
 @param disparity Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit
-floating-point disparity image.
-The values of 8-bit / 16-bit signed formats are assumed to have no fractional bits.
-If the disparity is 16-bit signed format as computed by
-StereoBM/StereoSGBM/StereoBinaryBM/StereoBinarySGBM and may be other algorithms,
-it should be divided by 16 (and scaled to float) before being used here.
-@param _3dImage Output 3-channel floating-point image of the same size as disparity . Each
-element of _3dImage(x,y) contains 3D coordinates of the point (x,y) computed from the disparity
-map.
-@param Q \f$4 \times 4\f$ perspective transformation matrix that can be obtained with stereoRectify.
+floating-point disparity image. The values of 8-bit / 16-bit signed formats are assumed to have no
+fractional bits. If the disparity is 16-bit signed format, as computed by @ref StereoBM or
+@ref StereoSGBM and maybe other algorithms, it should be divided by 16 (and scaled to float) before
+being used here.
+@param _3dImage Output 3-channel floating-point image of the same size as disparity. Each element of
+_3dImage(x,y) contains 3D coordinates of the point (x,y) computed from the disparity map. If one
+uses Q obtained by @ref stereoRectify, then the returned points are represented in the first
+camera's rectified coordinate system.
+@param Q \f$4 \times 4\f$ perspective transformation matrix that can be obtained with
+@ref stereoRectify.
 @param handleMissingValues Indicates, whether the function should handle missing values (i.e.
 points where the disparity was not computed). If handleMissingValues=true, then pixels with the
 minimal disparity that corresponds to the outliers (see StereoMatcher::compute ) are transformed
@@ -2485,11 +2778,20 @@ The function transforms a single-channel disparity map to a 3-channel image repr
 surface. That is, for each pixel (x,y) and the corresponding disparity d=disparity(x,y) , it
 computes:
 
-\f[\begin{array}{l} [X \; Y \; Z \; W]^T =  \texttt{Q} *[x \; y \; \texttt{disparity} (x,y) \; 1]^T  \\ \texttt{\_3dImage} (x,y) = (X/W, \; Y/W, \; Z/W) \end{array}\f]
+\f[\begin{bmatrix}
+X \\
+Y \\
+Z \\
+W
+\end{bmatrix} = Q \begin{bmatrix}
+x \\
+y \\
+\texttt{disparity} (x,y) \\
+z
+\end{bmatrix}.\f]
 
-The matrix Q can be an arbitrary \f$4 \times 4\f$ matrix (for example, the one computed by
-stereoRectify). To reproject a sparse set of points {(x,y,d),...} to 3D space, use
-perspectiveTransform .
+@sa
+   To reproject a sparse set of points {(x,y,d),...} to 3D space, use perspectiveTransform.
  */
 CV_EXPORTS_W void reprojectImageTo3D( InputArray disparity,
                                       OutputArray _3dImage, InputArray Q,
@@ -2696,11 +2998,19 @@ Check @ref tutorial_homography "the corresponding tutorial" for more details.
 @param translations Array of translation matrices.
 @param normals Array of plane normal matrices.
 
-This function extracts relative camera motion between two views observing a planar object from the
-homography H induced by the plane. The intrinsic camera matrix K must also be provided. The function
-may return up to four mathematical solution sets. At least two of the solutions may further be
-invalidated if point correspondences are available by applying positive depth constraint (all points
-must be in front of the camera). The decomposition method is described in detail in @cite Malis .
+This function extracts relative camera motion between two views of a planar object and returns up to
+four mathematical solution tuples of rotation, translation, and plane normal. The decomposition of
+the homography matrix H is described in detail in @cite Malis.
+
+If the homography H, induced by the plane, gives the constraint
+\f[s_i \vecthree{x'_i}{y'_i}{1} \sim H \vecthree{x_i}{y_i}{1}\f] on the source image points
+\f$p_i\f$ and the destination image points \f$p'_i\f$, then the tuple of rotations[k] and
+translations[k] is a change of basis from the source camera's coordinate system to the destination
+camera's coordinate system. However, by decomposing H, one can only get the translation normalized
+by the (typically unknown) depth of the scene, i.e. its direction but with normalized length.
+
+If point correspondences are available, at least two solutions may further be invalidated, by
+applying positive depth constraint, i.e. all points must be in front of the camera.
  */
 CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
                                         InputArray K,
