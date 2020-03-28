@@ -156,25 +156,7 @@ bool clipLine( Rect img_rect, Point& pt1, Point& pt2 )
     return inside;
 }
 
-/*
-   Initializes line iterator.
-   Returns number of points on the line or negative number if error.
-*/
-LineIterator::LineIterator( Point pt1, Point pt2, int connectivity, bool leftToRight )
-    : LineIterator(Rect(std::min(pt1.x, pt2.x),
-                        std::min(pt1.y, pt2.y),
-                        std::max(pt1.x, pt2.x) - std::min(pt1.x, pt2.x) + 1,
-                        std::max(pt1.y, pt2.y) - std::min(pt1.y, pt2.y) + 1),
-                   pt1, pt2, connectivity, leftToRight)
-{
-}
-
-LineIterator::LineIterator( Size size, Point pt1, Point pt2, int connectivity, bool leftToRight)
-    : LineIterator(Rect(0, 0, size.width, size.height), pt1, pt2, connectivity, leftToRight)
-{
-}
-
-LineIterator::LineIterator( Rect rect, Point pt1_, Point pt2_, int connectivity, bool leftToRight )
+void LineIterator::init( const Mat* img, Rect rect, Point pt1_, Point pt2_, int connectivity, bool leftToRight )
 {
     CV_Assert( connectivity == 8 || connectivity == 4 );
 
@@ -182,6 +164,7 @@ LineIterator::LineIterator( Rect rect, Point pt1_, Point pt2_, int connectivity,
     p = Point(0, 0);
     ptr0 = ptr = 0;
     step = elemSize = 0;
+    ptmode = !img;
 
     Point pt1 = pt1_ - rect.tl();
     Point pt2 = pt2_ - rect.tl();
@@ -263,20 +246,16 @@ LineIterator::LineIterator( Rect rect, Point pt1_, Point pt2_, int connectivity,
         std::swap(plusStep, plusShift);
         std::swap(minusStep, minusShift);
     }
-    p = pt1;
-}
 
-LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
-                           int connectivity, bool leftToRight)
-    : LineIterator(Rect(0, 0, img.cols, img.rows), pt1, pt2, connectivity, leftToRight)
-{
-    CV_Assert(img.dims == 0 || img.dims == 2);
-    if( count > 0 )
+    p = pt1;
+    if( !ptmode )
     {
-        ptr0 = img.ptr();
-        step = (int)img.step;
-        elemSize = (int)img.elemSize();
+        ptr0 = img->ptr();
+        step = (int)img->step;
+        elemSize = (int)img->elemSize();
         ptr = (uchar*)ptr0 + (size_t)p.y*step + (size_t)p.x*elemSize;
+        plusStep = plusStep*step + plusShift*elemSize;
+        minusStep = minusStep*step + minusShift*elemSize;
     }
 }
 
@@ -294,19 +273,26 @@ Line( Mat& img, Point pt1, Point pt2,
     int pix_size = (int)img.elemSize();
     const uchar* color = (const uchar*)_color;
 
-    for( i = 0; i < count; i++, ++iterator )
+    if( pix_size == 3 )
     {
-        uchar* ptr = *iterator;
-        if( pix_size == 1 )
-            ptr[0] = color[0];
-        else if( pix_size == 3 )
+        for( i = 0; i < count; i++, ++iterator )
         {
+            uchar* ptr = *iterator;
             ptr[0] = color[0];
             ptr[1] = color[1];
             ptr[2] = color[2];
         }
-        else
-            memcpy( *iterator, color, pix_size );
+    }
+    else
+    {
+        for( i = 0; i < count; i++, ++iterator )
+        {
+            uchar* ptr = *iterator;
+            if( pix_size == 1 )
+                ptr[0] = color[0];
+            else
+                memcpy( *iterator, color, pix_size );
+        }
     }
 }
 
