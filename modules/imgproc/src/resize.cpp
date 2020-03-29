@@ -1043,10 +1043,9 @@ public:
             default:
                 for( x = 0; x < dsize.width; x++, D += pix_size )
                 {
-                    const int* _tS = (const int*)(S + x_ofs[x]);
-                    int* _tD = (int*)D;
-                    for( int k = 0; k < pix_size4; k++ )
-                        _tD[k] = _tS[k];
+                    const uchar* _tS = S + x_ofs[x];
+                    for (int k = 0; k < pix_size; k++)
+                        D[k] = _tS[k];
                 }
             }
         }
