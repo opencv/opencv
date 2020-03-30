@@ -535,7 +535,7 @@ struct DataLayer : public Layer
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -1369,7 +1369,7 @@ struct Net::Impl
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
         {
 #ifdef HAVE_INF_ENGINE
-            initNgraphBackend(blobsToKeep_);
+            initInfEngineBackend(blobsToKeep_);
 #else
             CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine");
 #endif
@@ -1468,7 +1468,7 @@ struct Net::Impl
         }
     }
 
-    void initNgraphBackend(const std::vector<LayerPin>& blobsToKeep_)
+    void initInfEngineBackend(const std::vector<LayerPin>& blobsToKeep_)
     {
         CV_TRACE_FUNCTION();
         CV_CheckEQ(preferableBackend, DNN_BACKEND_INFERENCE_ENGINE, "");
