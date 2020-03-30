@@ -41,9 +41,9 @@ content of each individual module is declared.
 
 You'll almost always end up using the:
 
--   *core* section, as here are defined the basic building blocks of the library
--   *imgcodecs* module, which provides functions for reading and writing
--   *highgui* module, as this contains the functions to show an image in a window
+- @ref core "core" section, as here are defined the basic building blocks of the library
+- @ref imgcodecs "imgcodecs" module, which provides functions for reading and writing
+- @ref highgui "highgui" module, as this contains the functions to show an image in a window
 
 We also include the *iostream* to facilitate console line output and input.
 
@@ -112,7 +112,7 @@ The return value is the key that was pressed.
 @end_toggle
 
 In the end, the image is written to a file if the pressed key was the "s"-key.
-For this the @ref cv::imwrite function is called that has the file path and the @ref cv::Mat object as an argument.
+For this the cv::imwrite function is called that has the file path and the cv::Mat object as an argument.
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/introduction/display_image/display_image.cpp imsave
