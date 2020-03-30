@@ -30,6 +30,18 @@ INSTANTIATE_TEST_CASE_P(MathOpTestFluid, MathOpTest,
                                 Values(1.0),
                                 testing::Bool()));
 
+INSTANTIATE_TEST_CASE_P(SubTestFluid, MathOpTest,
+                        Combine(Values(CV_8UC1, CV_16SC1 , CV_32FC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1, CV_8U, CV_32F),
+                                Values(CORE_FLUID),
+                                Values(SUB),
+                                testing::Bool(),
+                                Values (1.0),
+                                testing::Bool()));
+
 INSTANTIATE_TEST_CASE_P(MulSTestFluid, MulDoubleTest,
                         Combine(Values(CV_8UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
@@ -44,6 +56,14 @@ INSTANTIATE_TEST_CASE_P(DivCTestFluid, DivCTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(CV_8U, CV_32F),
+                                Values(CORE_FLUID)));
+
+INSTANTIATE_TEST_CASE_P(MeanTestFluid, MeanTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestFluid, AbsDiffTest,
@@ -99,6 +119,15 @@ INSTANTIATE_TEST_CASE_P(MaxTestFluid, MaxTest,
                                 Values(-1),
                                 Values(CORE_FLUID)));
 
+INSTANTIATE_TEST_CASE_P(SumTestFluid, SumTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(0.0),
+                                Values(CORE_FLUID),
+                                Values(AbsToleranceScalar(1e-5).to_compare_obj())));
+
 INSTANTIATE_TEST_CASE_P(CompareTestFluid, CmpTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1920, 1080),
@@ -118,6 +147,24 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestFluid, AddWeightedTest,
                                 Values(-1, CV_8U, CV_32F),
                                 Values(CORE_FLUID),
                                 Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_P(NormTestFluid, NormTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(0.0),
+                                Values(CORE_FLUID),
+                                Values(AbsToleranceScalar(1e-5).to_compare_obj()),
+                                Values(NORM_INF, NORM_L1, NORM_L2)));
+
+INSTANTIATE_TEST_CASE_P(IntegralTestFluid, IntegralTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(LUTTestFluid, LUTTest,
                         Combine(Values(CV_8UC1, CV_8UC3),
@@ -139,6 +186,22 @@ INSTANTIATE_TEST_CASE_P(ConvertToFluid, ConvertToTest,
                                 Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
                                 Values(2.5, 1.0, -1.0),
                                 Values(250.0, 0.0, -128.0)));
+
+INSTANTIATE_TEST_CASE_P(ConcatHorTestFluid, ConcatHorTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID)));
+
+INSTANTIATE_TEST_CASE_P(ConcatVertTestFluid, ConcatVertTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(Split3TestFluid, Split3Test,
                         Combine(Values(CV_8UC3),
@@ -173,6 +236,32 @@ INSTANTIATE_TEST_CASE_P(Merge4TestFluid, Merge4Test,
                                        cv::Size(128, 128)),
                                 Values(CV_8UC4),
                                 Values(CORE_FLUID)));
+
+INSTANTIATE_TEST_CASE_P(RemapTestFluid, RemapTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID)));
+
+INSTANTIATE_TEST_CASE_P(FlipTestFluid, FlipTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID),
+                                Values(0,1,-1)));
+
+INSTANTIATE_TEST_CASE_P(CropTestFluid, CropTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID),
+                                Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50))));
 
 INSTANTIATE_TEST_CASE_P(SelectTestFluid, SelectTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1),
@@ -230,6 +319,15 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
                                 Values(cv::Scalar(0, 0, 0, 0),
                                        cv::Scalar(100, 100, 100, 100),
                                        cv::Scalar(255, 255, 255, 255))));
+
+INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdOTTest,
+                        Combine(Values(CV_8UC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID),
+                                Values(cv::THRESH_OTSU, cv::THRESH_TRIANGLE)));
 
 INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
