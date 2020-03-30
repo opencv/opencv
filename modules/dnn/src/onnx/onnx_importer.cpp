@@ -1024,22 +1024,6 @@ void ONNXImporter::populateNet(Net dstNet)
                 continue;
             }
         }
-        else if (layer_type == "ReduceL2")
-        {
-            CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
-            CV_Assert(graph_proto.node_size() > li + 1 && graph_proto.node(li + 1).op_type() == "Div");
-            ++li;
-            node_proto = graph_proto.node(li);
-            layerParams.name = node_proto.output(0);
-            layerParams.type = "Normalize";
-
-            DictValue axes_dict = layerParams.get("axes");
-            if (axes_dict.size() != 1)
-                CV_Error(Error::StsNotImplemented, "Multidimensional reduceL2");
-            int axis = axes_dict.getIntValue(0);
-            layerParams.set("axis",axis);
-            layerParams.set("end_axis", axis);
-        }
         else if (layer_type == "Squeeze")
         {
             CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
