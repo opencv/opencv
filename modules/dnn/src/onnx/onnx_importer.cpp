@@ -408,8 +408,10 @@ void ONNXImporter::populateNet(Net dstNet)
                     int newShape[] = {1, -1};
                     reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], 2));
 
-                    node_proto.set_output(0, reshapeLp.name);
-                    addLayer(dstNet, reshapeLp, node_proto, layer_id, outShapes);
+                    opencv_onnx::NodeProto proto;
+                    proto.add_input(node_proto.input(0));
+                    proto.add_output(reshapeLp.name);
+                    addLayer(dstNet, reshapeLp, proto, layer_id, outShapes);
 
                     LayerParams avgLp;
                     avgLp.name = layerParams.name + "/avg";
@@ -1160,14 +1162,14 @@ void ONNXImporter::populateNet(Net dstNet)
                 Mat inp = Mat::ones(newShapeMat.total(), newShapeMat.ptr<int>(), CV_32F);
                 constParams.blobs.push_back(inp);
 
-                node_proto.clear_input();
-                node_proto.set_output(0, constParams.name);
-                addLayer(dstNet, constParams, node_proto, layer_id, outShapes);
+                opencv_onnx::NodeProto proto;
+                proto.add_output(constParams.name);
+                addLayer(dstNet, constParams, proto, layer_id, outShapes);
 
                 layerParams.type = "Scale";
                 layerParams.set("bias_term", false);
-                node_proto.add_input(constParams.name);
-                node_proto.add_input(shapeIt->first);
+                node_proto.set_input(0, constParams.name);
+                node_proto.set_input(1, shapeIt->first);
             }
             else if (broadcast_axes.size() == 1 && broadcast_axes[0] <= 1)
             {
