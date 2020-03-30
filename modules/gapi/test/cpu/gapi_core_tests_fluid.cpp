@@ -124,7 +124,7 @@ INSTANTIATE_TEST_CASE_P(SumTestFluid, SumTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(0.0),
+                                Values(-1),
                                 Values(CORE_FLUID),
                                 Values(AbsToleranceScalar(1e-5).to_compare_obj())));
 
@@ -153,7 +153,7 @@ INSTANTIATE_TEST_CASE_P(NormTestFluid, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(0.0),
+                                Values(-1),
                                 Values(CORE_FLUID),
                                 Values(AbsToleranceScalar(1e-5).to_compare_obj()),
                                 Values(NORM_INF, NORM_L1, NORM_L2)));
