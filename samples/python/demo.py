@@ -114,12 +114,24 @@ class App:
     def on_demo_select(self, evt):
         name = self.demos_lb.get( self.demos_lb.curselection()[0] )
         fn = self.samples[name]
-        loc = {}
+
+        descr = ""
         try:
-            execfile(fn, loc)           # Python 2
-        except NameError:
-            exec(open(fn).read(), loc)  # Python 3
-        descr = loc.get('__doc__', 'no-description')
+            if sys.version_info[0] > 2:
+                # Python 3.x
+                module_globals = {}
+                module_locals = {}
+                with open(fn, 'r') as f:
+                    module_code = f.read()
+                exec(compile(module_code, fn, 'exec'), module_globals, module_locals)
+                descr = module_locals.get('__doc__', 'no-description')
+            else:
+                # Python 2
+                module_globals = {}
+                execfile(fn, module_globals)  # noqa: F821
+                descr = module_globals.get('__doc__', 'no-description')
+        except Exception as e:
+            descr = str(e)
 
         self.linker.reset()
         self.text.config(state='normal')
