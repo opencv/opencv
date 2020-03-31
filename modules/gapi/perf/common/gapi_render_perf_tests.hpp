@@ -20,16 +20,31 @@ namespace opencv_test
 
   using namespace perf;
 
-  //------------------------------------------------------------------------------
+  class RenderTestTexts : public TestPerfParams<tuple<std::string, cv::Size, cv::Point,
+                                                      int, double, cv::Scalar, int, int,
+                                                      bool, MatType>> {};
 
-    class RenderTestTexts : public TestPerfParams<tuple<std::string, cv::Size, compare_f>> {};
-    class RenderTestRects : public TestPerfParams<tuple<cv::Size, compare_f>> {};
-    class RenderTestCircles : public TestPerfParams<tuple<cv::Size, compare_f>> {};
-    class RenderTestLines : public TestPerfParams<tuple<cv::Size, compare_f>> {};
-    class RenderTestMosaics : public TestPerfParams<tuple<cv::Size, compare_f>> {};
-    class RenderTestImages : public TestPerfParams<tuple<cv::Size, compare_f>> {};
-    class RenderTestPolylines : public TestPerfParams<tuple<cv::Size, compare_f>> {};
-    class RenderTestPolyItems : public TestPerfParams<tuple<cv::Size, int, int, int, compare_f>> {};
+  class RenderTestRects : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar,
+                                                      int, int, int, MatType,
+                                                      compare_f>> {};
+
+  class RenderTestCircles : public TestPerfParams<tuple<cv::Size, cv::Point, int,
+                                                        cv::Scalar, int, int, int,
+                                                        MatType>> {};
+
+  class RenderTestLines : public TestPerfParams<tuple<cv::Size, cv::Point, cv::Point,
+                                                      cv::Scalar, int, int, int, MatType>> {};
+
+  class RenderTestMosaics : public TestPerfParams<tuple<cv::Size, cv::Rect, int, int,
+                                                        MatType>> {};
+
+  class RenderTestImages : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar, double,
+                                                       MatType>> {};
+
+  class RenderTestPolylines : public TestPerfParams<tuple<cv::Size, std::vector<cv::Point>,
+                                                          cv::Scalar, int, int, int, MatType>> {};
+
+  class RenderTestPolyItems : public TestPerfParams<tuple<cv::Size, int, int, int>> {};
 
 } // opencv_test
 

@@ -116,54 +116,85 @@ namespace opencv_test
   INSTANTIATE_TEST_CASE_P(RenderTestTexts, RenderTestTexts,
       Combine(Values(std::string("Some text")),
               Values(szVGA, sz720p, sz1080p),
-              Values(AbsExact().to_compare_f())));
+              Values(cv::Point(200, 200)),
+              Values(FONT_HERSHEY_SIMPLEX),
+              Values(2.0),
+              Values(cv::Scalar(0, 255, 0)),
+              Values(2),
+              Values(LINE_8),
+              Values(false),
+              Values(CV_8UC3)));
 
   INSTANTIATE_TEST_CASE_P(RenderTestRects, RenderTestRects,
       Combine(Values(szVGA, sz720p, sz1080p),
+              Values(cv::Rect(100, 100, 200, 200)),
+              Values(cv::Scalar(100, 50, 150)),
+              Values(2),
+              Values(LINE_8),
+              Values(0),
+              Values(CV_8UC3),
               Values(AbsExact().to_compare_f())));
 
   INSTANTIATE_TEST_CASE_P(RenderTestCircles, RenderTestCircles,
       Combine(Values(szVGA, sz720p, sz1080p),
-              Values(AbsExact().to_compare_f())));
+              Values(cv::Point(100, 100)),
+              Values(10),
+              Values(cv::Scalar(100, 50, 150)),
+              Values(2),
+              Values(LINE_8),
+              Values(0),
+              Values(CV_8UC3)));
 
-  INSTANTIATE_TEST_CASE_P(RenderTestLines, RenderTestCircles,
+  INSTANTIATE_TEST_CASE_P(RenderTestLines, RenderTestLines,
       Combine(Values(szVGA, sz720p, sz1080p),
-              Values(AbsExact().to_compare_f())));
+              Values(cv::Point(100, 100)),
+              Values(cv::Point(200, 200)),
+              Values(cv::Scalar(100, 50, 150)),
+              Values(2),
+              Values(LINE_8),
+              Values(0),
+              Values(CV_8UC3)));
 
-  INSTANTIATE_TEST_CASE_P(RenderTestMosaics, RenderTestCircles,
+  INSTANTIATE_TEST_CASE_P(RenderTestMosaics, RenderTestMosaics,
       Combine(Values(szVGA, sz720p, sz1080p),
-              Values(AbsExact().to_compare_f())));
+              Values(cv::Rect(100, 100, 200, 200)),
+              Values(25),
+              Values(0),
+              Values(CV_8UC3)));
 
-  INSTANTIATE_TEST_CASE_P(RenderTestImages, RenderTestCircles,
+  INSTANTIATE_TEST_CASE_P(RenderTestImages, RenderTestImages,
       Combine(Values(szVGA, sz720p, sz1080p),
-              Values(AbsExact().to_compare_f())));
+              Values(cv::Rect(50, 50, 100, 100)),
+              Values(cv::Scalar(100, 150, 60)),
+              Values(1.0),
+              Values(CV_8UC3)));
 
   INSTANTIATE_TEST_CASE_P(RenderTestPolylines, RenderTestPolylines,
       Combine(Values(szVGA, sz720p, sz1080p),
-              Values(AbsExact().to_compare_f())));
+              Values(std::vector<cv::Point> {{100, 100}, {200, 200}, {150, 300}, {400, 150}}),
+              Values(cv::Scalar(100, 150, 60)),
+              Values(2),
+              Values(LINE_8),
+              Values(0),
+              Values(CV_8UC3)));
 
   INSTANTIATE_TEST_CASE_P(RenderTestPolyItems, RenderTestPolyItems,
       Combine(Values(szVGA, sz720p, sz1080p),
               Values(50),
               Values(50),
-              Values(50),
-              Values(AbsExact().to_compare_f())));
+              Values(50)));
 
 PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
 {
-    cv::Point org(200, 200);
-    int ff = FONT_HERSHEY_SIMPLEX;
-    double fs = 2.0;
-    cv::Scalar color(0, 255, 0);
-    int thick = 2;
-    int lt = LINE_8;
-    bool blo = false;
-    MatType type = CV_8UC3;
-
+    cv::Point org;
+    int ff, thick, lt;
+    double fs;
+    cv::Scalar color;
+    bool blo;
+    MatType type;
     std::string text;
     cv::Size sz;
-    compare_f cmpF;
-    std::tie(text, sz, cmpF) = GetParam();
+    std::tie(text, sz, org, ff, fs, color, thick, lt, blo, type) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -193,7 +224,7 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -201,18 +232,15 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
 
 PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
 {
-    cv::Point org(200, 200);
-    int ff = FONT_HERSHEY_SIMPLEX;
-    double fs = 2.0;
-    cv::Scalar color(0, 255, 0);
-    int thick = 2;
-    int lt = LINE_8;
-    bool blo = false;
-
+    cv::Point org;
+    int ff, thick, lt;
+    double fs;
+    cv::Scalar color;
+    bool blo;
+    MatType type;
     std::string text;
     cv::Size sz;
-    compare_f cmpF;
-    std::tie(text, sz, cmpF) = GetParam();
+    std::tie(text, sz, org, ff, fs, color, thick, lt, blo, type) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -247,6 +275,7 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
         // NV12 -> YUV
         cv::Mat yuv;
         cv::gapi::wip::draw::cvtNV12ToYUV(y_ref_mat, uv_ref_mat, yuv);
+
         cv::putText(yuv, text, org, ff, fs, cvtBGRToYUVC(color), thick, lt, blo);
 
         // YUV -> NV12
@@ -255,8 +284,8 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -264,16 +293,14 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
 
 PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
 {
-    cv::Rect rect(100, 100, 200, 200);
-    cv::Scalar color(100, 50, 150);
-    int thick = 2;
-    int lt = LINE_8;
-    int shift = 0;
-    MatType type = CV_8UC3;
+    cv::Rect rect;
+    cv::Scalar color;
+    int thick, lt, shift;
+    MatType type;
 
     cv::Size sz;
     compare_f cmpF;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, rect, color, thick, lt, shift, type, cmpF) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -303,7 +330,7 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -311,15 +338,14 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
 
 PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
 {
-    cv::Rect rect(100, 100, 200, 200);
-    cv::Scalar color(100, 50, 150);
-    int thick = 2;
-    int lt = LINE_8;
-    int shift = 0;
+    cv::Rect rect;
+    cv::Scalar color;
+    int thick, lt, shift;
+    MatType type;
 
     cv::Size sz;
     compare_f cmpF;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, rect, color, thick, lt, shift, type, cmpF) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -363,8 +389,9 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+
     }
 
     SANITY_CHECK_NOTHING();
@@ -372,17 +399,16 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
 
 PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceBGROCVTest)
 {
-    cv::Point center(cv::Point(100, 100));
-    int radius = 10;
-    cv::Scalar color(100, 50, 150);
-    int thick = 2;
-    int lt = LINE_8;
-    int shift = 0;
-    MatType type = CV_8UC3;
+    cv::Point center;
+    int radius;
+    cv::Scalar color;
+    int thick;
+    int lt;
+    int shift;
+    MatType type;
 
-    compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, center, radius, color, thick, lt, shift, type) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -412,26 +438,24 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
 }
 
-
 PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
 {
-    cv::Point center(cv::Point(100, 100));
-    int radius = 10;
-    cv::Scalar color(100, 50, 150);
-    int thick = 2;
-    int lt = LINE_8;
-    int shift = 0;
+    cv::Point center;
+    int radius;
+    cv::Scalar color;
+    int thick;
+    int lt;
+    int shift;
+    MatType type;
 
-    compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
-
+    std::tie(sz, center, radius, color, thick, lt, shift, type) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -475,8 +499,8 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -484,17 +508,17 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
 
 PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
 {
-    cv::Point pt1(100, 100);
-    cv::Point pt2(200, 200);
-    cv::Scalar color(100, 50, 150);
-    int thick = 2;
-    int lt = LINE_8;
-    int shift = 0;
-    MatType type = CV_8UC3;
+    cv::Point pt1;
+    cv::Point pt2;
+    cv::Scalar color;
+    int thick;
+    int lt;
+    int shift;
+    MatType type;
 
     compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, pt1, pt2, color, thick, lt, shift, type) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -524,7 +548,7 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -533,16 +557,17 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
 
 PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
 {
-    cv::Point pt1(100, 100);
-    cv::Point pt2(200, 200);
-    cv::Scalar color(100, 50, 150);
-    int thick = 2;
-    int lt = LINE_8;
-    int shift = 0;
+    cv::Point pt1;
+    cv::Point pt2;
+    cv::Scalar color;
+    int thick;
+    int lt;
+    int shift;
+    MatType type;
 
     compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, pt1, pt2, color, thick, lt, shift, type) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -586,8 +611,9 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+
     }
 
     SANITY_CHECK_NOTHING();
@@ -595,14 +621,13 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
 
 PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
 {
-    cv::Rect mos(100, 100, 200, 200);
-    int cellsz = 25;
-    int decim = 0;
-    MatType type = CV_8UC3;
+    cv::Rect mos;
+    int cellsz;
+    int decim;
+    MatType type;
 
-    compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, mos, cellsz, decim, type) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -632,7 +657,7 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -640,13 +665,13 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
 
 PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
 {
-    cv::Rect mos(100, 100, 200, 200);
-    int cellsz = 25;
-    int decim = 0;
+    cv::Rect mos;
+    int cellsz;
+    int decim;
+    MatType type;
 
-    compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, mos, cellsz, decim, type) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -690,8 +715,9 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+
     }
 
     SANITY_CHECK_NOTHING();
@@ -699,14 +725,13 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
 
 PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
 {
-    cv::Rect rect(100, 100, 200, 200);
-    cv::Scalar color(100, 150, 60);
-    double  transparency = 1.0;
-    MatType type = CV_8UC3;
+    cv::Rect rect;
+    cv::Scalar color;
+    double  transparency;
+    MatType type;
 
-    compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, rect, color, transparency, type) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -742,7 +767,7 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -750,13 +775,13 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
 
 PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
 {
-    cv::Rect rect(100, 100, 200, 200);
-    cv::Scalar color(100, 150, 60);
-    double  transparency = 1.0;
+    cv::Rect rect;
+    cv::Scalar color;
+    double  transparency;
+    MatType type;
 
-    compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, rect, color, transparency, type) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -807,8 +832,8 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -816,16 +841,15 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
 
 PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceBGROCVTest)
 {
-    std::vector<cv::Point> points{{100, 100}, {200, 200}, {150, 300}, {400, 150}};
-    cv::Scalar color(100, 150, 60);
-    int thick = 2;
-    int lt = LINE_8;
-    int shift = 0;
-    MatType type = CV_8UC3;
+    std::vector<cv::Point> points;
+    cv::Scalar color;
+    int thick;
+    int lt;
+    int shift;
+    MatType type;
 
-    compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, points, color, thick, lt, shift, type) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -856,24 +880,23 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
 }
 
-
 PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
 {
-    std::vector<cv::Point> points{{100, 100}, {200, 200}, {150, 300}, {400, 150}};
-    cv::Scalar color(100, 150, 60);
-    int thick = 2;
-    int lt = LINE_8;
-    int shift = 0;
+    std::vector<cv::Point> points;
+    cv::Scalar color;
+    int thick;
+    int lt;
+    int shift;
+    MatType type;
 
-    compare_f cmpF;
     cv::Size sz;
-    std::tie(sz, cmpF) = GetParam();
+    std::tie(sz, points, color, thick, lt, shift, type) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -918,8 +941,8 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(y_out_gapi_mat,  y_ref_mat));
-        EXPECT_TRUE(cmpF(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -934,8 +957,7 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
 
     cv::Size sz;
     int n, m, k;
-    compare_f cmpF;
-    std::tie(sz, n, m, k, cmpF) = GetParam();
+    std::tie(sz, n, m, k) = GetParam();
 
     cv::Mat gapi_mat = cv::Mat(sz, type);
     cv::Mat ref_mat(gapi_mat);
@@ -1007,7 +1029,111 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceNV12OCVTest)
+{
+    int thick = 2;
+    int lt = LINE_8;
+    cv::Scalar color(100, 50, 150);
+
+    cv::Size sz;
+    int n, m, k;
+    std::tie(sz, n, m, k) = GetParam();
+
+    cv::Mat y_ref_mat, uv_ref_mat;
+
+    cv::Mat y_in_gapi_mat (sz, CV_8UC1), uv_in_gapi_mat (sz / 2, CV_8UC2),
+            y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+
+    create_rand_mats(sz,     CV_8UC1, y_ref_mat  , y_in_gapi_mat);
+    create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat , uv_in_gapi_mat);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::gapi::wip::draw::Prims prims;
+
+    // Rects
+    cv::Rect rect(200, 200, 200, 200);
+    int shift = 0;
+
+    for (int i = 0; i < n; ++i)
+        prims.emplace_back(cv::gapi::wip::draw::Rect(rect, color, thick, lt, shift));
+
+
+    // Mosaic
+    cv::Rect mos(200, 200, 200, 200);
+    int cellsz = 25;
+    int decim = 0;
+
+    for (int i = 0; i < n; ++i)
+        prims.emplace_back(cv::gapi::wip::draw::Mosaic(mos, cellsz, decim));
+
+    // Text
+    std::string text = "Some text";
+    cv::Point org(200, 200);
+    int ff = FONT_HERSHEY_SIMPLEX;
+    double fs = 2.0;
+    bool blo = false;
+
+    for (int i = 0; i < m; ++i)
+        prims.emplace_back(cv::gapi::wip::draw::Text(text, org, ff, fs, color, thick, lt, blo));
+
+    // Image
+    cv::Rect rect_img(0, 0, 50, 50);
+    double  transparency = 1.0;
+
+    cv::Mat img(rect_img.size(), CV_8UC3, color);
+    cv::Mat alpha(rect_img.size(), CV_32FC1, transparency);
+    auto tl = rect_img.tl();
+    cv::Point org_img = {tl.x, tl.y + rect_img.size().height};
+
+    for (int i = 0; i < k; ++i)
+        prims.emplace_back(cv::gapi::wip::draw::Image({org_img, img, alpha}));
+
+    cv::GMat y_in, uv_in, y_out, uv_out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    std::tie(y_out, uv_out) = cv::gapi::wip::draw::renderNV12(y_in, uv_in, arr);
+
+    cv::GComputation comp(cv::GIn(y_in, uv_in, arr), cv::GOut(y_out, uv_out));
+
+    // Warm-up graph engine:
+    comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
+               cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
+
+    TEST_CYCLE()
+    {
+       comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
+    }
+
+    // OpenCV code //////////////////////////////////////////////////////////////
+    {
+        // NV12 -> YUV
+        cv::Mat yuv;
+        cv::gapi::wip::draw::cvtNV12ToYUV(y_ref_mat, uv_ref_mat, yuv);
+
+        cv::rectangle(yuv, rect, cvtBGRToYUVC(color), thick, lt, shift);
+
+        drawMosaicRef(yuv, mos, cellsz);
+
+        cv::putText(yuv, text, org, ff, fs, cvtBGRToYUVC(color), thick, lt, blo);
+
+        cv::Mat yuv_img;
+        cv::cvtColor(img, yuv_img, cv::COLOR_BGR2YUV);
+        blendImageRef(yuv, org_img, yuv_img, alpha);
+
+        // YUV -> NV12
+        cv::gapi::wip::draw::cvtYUVToNV12(yuv, y_ref_mat, uv_ref_mat);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat,  y_ref_mat));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
     }
 
     SANITY_CHECK_NOTHING();
