@@ -129,7 +129,7 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     switch (ref.shape)
     {
     case GShape::GMAT:    return GArg(m_res.slot<cv::gapi::own::Mat>()   [ref.id]);
-    case GShape::GSCALAR: return GArg(m_res.slot<cv::gapi::own::Scalar>()[ref.id]);
+    case GShape::GSCALAR: return GArg(m_res.slot<cv::Scalar>()[ref.id]);
     // Note: .at() is intentional for GArray and GOpaque as objects MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));

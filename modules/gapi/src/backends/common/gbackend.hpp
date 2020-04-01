@@ -17,7 +17,6 @@
 #include "opencv2/gapi/own/mat.hpp"
 
 #include "opencv2/gapi/util/optional.hpp"
-#include "opencv2/gapi/own/scalar.hpp"
 
 #include "compiler/gmodel.hpp"
 
@@ -46,9 +45,9 @@ namespace magazine {
 
 } // namespace magazine
 #if !defined(GAPI_STANDALONE)
-using Mag = magazine::Class<cv::gapi::own::Mat, cv::UMat, cv::gapi::own::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
+using Mag = magazine::Class<cv::gapi::own::Mat, cv::UMat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
 #else
-using Mag = magazine::Class<cv::gapi::own::Mat, cv::gapi::own::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
+using Mag = magazine::Class<cv::gapi::own::Mat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
 #endif
 
 namespace magazine
