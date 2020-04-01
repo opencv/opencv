@@ -579,7 +579,7 @@ public:
     virtual bool isOpened() const CV_OVERRIDE { return isOpen; }
     virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; }
 protected:
-    bool configureOutput(MediaType newType, cv::uint32_t outFormat, bool convertToFormat);
+    bool configureOutput(MediaType newType, cv::uint32_t outFormat);
     bool setTime(double time, bool rough);
     bool configureHW(bool enable);
 
@@ -766,7 +766,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
 #endif
 }
 
-bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat, bool convertToFormat)
+bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat)
 {
     FormatStorage formats;
     formats.read(videoFileSource.Get());
@@ -774,7 +774,7 @@ bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat, 
     dwStreamIndex = bestMatch.first.stream;
     nativeFormat = bestMatch.second;
     MediaType newFormat = nativeFormat;
-    if (convertToFormat)
+    if (convertFormat)
     {
         switch (outFormat)
         {
@@ -834,7 +834,7 @@ bool CvCapture_MSMF::open(int index)
     camid = index;
     readCallback = cb;
     duration = 0;
-    if (configureOutput(MediaType::createDefault(), outputFormat, convertFormat))
+    if (configureOutput(MediaType::createDefault(), outputFormat))
     {
         frameStep = captureFormat.getFrameStep();
     }
@@ -855,7 +855,7 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
     {
         isOpen = true;
         sampleTime = 0;
-        if (configureOutput(MediaType(), outputFormat, convertFormat))
+        if (configureOutput(MediaType(), outputFormat))
         {
             frameStep = captureFormat.getFrameStep();
             filename = _filename;
@@ -1298,42 +1298,43 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
                 return false;
             }
         case CV_CAP_PROP_FORMAT:
-            return configureOutput(newFormat, (int)cvRound(value), convertFormat);
+            return configureOutput(newFormat, (int)cvRound(value));
         case CV_CAP_PROP_CONVERT_RGB:
-            return configureOutput(newFormat, outputFormat, value != 0);
+            convertFormat = (value != 0);
+            return configureOutput(newFormat, outputFormat);
         case CV_CAP_PROP_SAR_NUM:
             if (value > 0)
             {
                 newFormat.aspectRatioNum = (UINT32)cvRound(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_SAR_DEN:
             if (value > 0)
             {
                 newFormat.aspectRatioDenom = (UINT32)cvRound(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_FRAME_WIDTH:
             if (value >= 0)
             {
                 newFormat.width = (UINT32)cvRound(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_FRAME_HEIGHT:
             if (value >= 0)
             {
                 newFormat.height = (UINT32)cvRound(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_FPS:
             if (value >= 0)
             {
                 newFormat.setFramerate(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
             case CV_CAP_PROP_FOURCC:
