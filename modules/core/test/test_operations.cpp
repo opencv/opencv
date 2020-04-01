@@ -1551,4 +1551,51 @@ TEST(Core_MatExpr, empty_check_15760)
     EXPECT_THROW(Mat c = Mat().cross(Mat()), cv::Exception);
 }
 
+
+//These test check that a multi-channel scalar (ex: Scalar(255, 0, 0) )
+//and 1-channel scalar (ex: 255 of Scalar(255) ) both add correctly
+//to multi-channel matrix when used in matrix expressions.
+//See issue-16538.
+TEST(Core_MatExpr, issue_16538)
+{
+    Mat multiChannel_2x2__1_2_3(Size(2, 2), CV_8UC3, Scalar(1, 2, 3));
+    Mat multiChannel_2x2__1_2_3_4(Size(2, 2), CV_8UC4, Scalar(1, 2, 3, 4));
+    Mat multiChannel_2x2__6_2_3(Size(2, 2), CV_8UC3, Scalar(6, 2, 3));
+    Mat multiChannel_2x2__7_4_6(Size(2, 2), CV_8UC3, Scalar(7, 4, 6));
+    Mat multiChannel_2x2__11_7_3(Size(2, 2), CV_8UC3, Scalar(11, 7, 3));
+    Mat multiChannel_2x2__6_7_8_9(Size(2, 2), CV_8UC4, Scalar(6, 7, 8, 9));
+    Mat multiChannel_2x2__7_9_11_13(Size(2, 2), CV_8UC4, Scalar(7, 9, 11, 13));
+
+    Scalar s5 = Scalar(5);
+    Scalar sa5 = Scalar::all(5);
+    Scalar s5_0_0_0= Scalar(5, 0, 0, 0);
+
+    Mat res;
+    res = multiChannel_2x2__1_2_3 + s5;
+    //Single multi-channel matrix plus single-channel scalar.
+    EXPECT_DOUBLE_EQ(cvtest::norm(multiChannel_2x2__6_2_3, res, NORM_INF), 0.0);
+    res = multiChannel_2x2__1_2_3 + s5_0_0_0;
+    EXPECT_DOUBLE_EQ(cvtest::norm(multiChannel_2x2__6_2_3, res, NORM_INF), 0.0);
+
+    res = multiChannel_2x2__1_2_3_4 + sa5;
+    //Single multi-channel matrix plus scalar::all.
+    EXPECT_DOUBLE_EQ(cvtest::norm(multiChannel_2x2__6_7_8_9, res, NORM_INF), 0.0);
+
+
+    //Factor times multi-channel matrix plus single-channel scalar.
+    res = 2 * multiChannel_2x2__1_2_3 + s5;
+    EXPECT_DOUBLE_EQ(cvtest::norm(multiChannel_2x2__7_4_6, res, NORM_INF), 0.0);
+    res = 2 * multiChannel_2x2__1_2_3 + s5_0_0_0;
+    EXPECT_DOUBLE_EQ(cvtest::norm(multiChannel_2x2__7_4_6, res, NORM_INF), 0.0);
+
+    res = 2 * multiChannel_2x2__1_2_3_4 + sa5;
+    //Factor times multi-channel matrix plus scalar::all.
+    EXPECT_DOUBLE_EQ(cvtest::norm(multiChannel_2x2__7_9_11_13, res, NORM_INF), 0.0);
+
+    //Multi-channel matrix plus factor times multi-channel scalar.
+    res = multiChannel_2x2__1_2_3 + 5 * Scalar(2, 1, 0);
+    EXPECT_DOUBLE_EQ(cvtest::norm(multiChannel_2x2__11_7_3, res, NORM_INF), 0.0);
+
+}
+
 }} // namespace
