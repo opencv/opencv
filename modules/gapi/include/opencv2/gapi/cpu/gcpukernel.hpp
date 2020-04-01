@@ -99,8 +99,8 @@ public:
     const cv::gapi::own::Mat&   inMat(int input);
     cv::gapi::own::Mat&         outMatR(int output); // FIXME: Avoid cv::gapi::own::Mat m = ctx.outMatR()
 
-    const cv::gapi::own::Scalar& inVal(int input);
-    cv::gapi::own::Scalar& outValR(int output); // FIXME: Avoid cv::gapi::own::Scalar s = ctx.outValR()
+    const cv::Scalar& inVal(int input);
+    cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = ctx.outValR()
     template<typename T> std::vector<T>& outVecR(int output) // FIXME: the same issue
     {
         return outVecRef(output).wref<T>();
@@ -155,7 +155,7 @@ template<> struct get_in<cv::GMatP>
 };
 template<> struct get_in<cv::GScalar>
 {
-    static cv::Scalar get(GCPUContext &ctx, int idx) { return to_ocv(ctx.inVal(idx)); }
+    static cv::Scalar get(GCPUContext &ctx, int idx) { return ctx.inVal(idx); }
 };
 template<typename U> struct get_in<cv::GArray<U> >
 {
@@ -208,23 +208,12 @@ struct tracked_cv_mat{
     }
 };
 
-struct scalar_wrapper
-{
-    scalar_wrapper(cv::gapi::own::Scalar& s) : m_s{cv::gapi::own::to_ocv(s)}, m_org_s(s) {};
-    operator cv::Scalar& () { return m_s; }
-    void writeBack() const  { m_org_s = to_own(m_s); }
-
-    cv::Scalar m_s;
-    cv::gapi::own::Scalar& m_org_s;
-};
-
 template<typename... Outputs>
 void postprocess(Outputs&... outs)
 {
     struct
     {
         void operator()(tracked_cv_mat* bm) { bm->validate();  }
-        void operator()(scalar_wrapper* sw) { sw->writeBack(); }
         void operator()(...)                {                  }
 
     } validate;
@@ -251,10 +240,9 @@ template<> struct get_out<cv::GMatP>
 };
 template<> struct get_out<cv::GScalar>
 {
-    static scalar_wrapper get(GCPUContext &ctx, int idx)
+    static cv::Scalar& get(GCPUContext &ctx, int idx)
     {
-        auto& s = ctx.outValR(idx);
-        return {s};
+        return ctx.outValR(idx);
     }
 };
 template<typename U> struct get_out<cv::GArray<U>>

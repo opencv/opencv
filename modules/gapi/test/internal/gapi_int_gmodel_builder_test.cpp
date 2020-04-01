@@ -166,8 +166,8 @@ TEST(GModelBuilder, Constant_GScalar)
     EXPECT_EQ(9u, static_cast<std::size_t>(g.nodes().size()));          // 6 data nodes (1 -input, 1 output, 2 constant, 2 temp) and 3 op nodes
     EXPECT_EQ(2u, static_cast<std::size_t>(addC_nh->inNodes().size())); // in and 3
     EXPECT_EQ(2u, static_cast<std::size_t>(mulC_nh->inNodes().size())); // addC output and c_s
-    EXPECT_EQ(3, (util::get<cv::gapi::own::Scalar>(gm.metadata(s_3).get<cv::gimpl::ConstValue>().arg))[0]);
-    EXPECT_EQ(5, (util::get<cv::gapi::own::Scalar>(gm.metadata(s_5).get<cv::gimpl::ConstValue>().arg))[0]);
+    EXPECT_EQ(3, (util::get<cv::Scalar>(gm.metadata(s_3).get<cv::gimpl::ConstValue>().arg))[0]);
+    EXPECT_EQ(5, (util::get<cv::Scalar>(gm.metadata(s_5).get<cv::gimpl::ConstValue>().arg))[0]);
 }
 
 TEST(GModelBuilder, Check_Multiple_Outputs)

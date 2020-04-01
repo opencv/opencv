@@ -1248,7 +1248,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
     switch (rc.shape)
     {
     case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
-    case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
+    case GShape::GSCALAR: m_res.slot<cv::Scalar>()[rc.id] = util::get<cv::Scalar>(arg); break;
     case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
     case GShape::GOPAQUE: m_res.slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg); break;
     }
@@ -1301,7 +1301,7 @@ void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_a
         const cv::gimpl::RcDesc &ref = op_arg.get<cv::gimpl::RcDesc>();
         if (ref.shape == GShape::GSCALAR)
         {
-            in_arg = GArg(m_res.slot<cv::gapi::own::Scalar>()[ref.id]);
+            in_arg = GArg(m_res.slot<cv::Scalar>()[ref.id]);
         }
         else if (ref.shape == GShape::GARRAY)
         {

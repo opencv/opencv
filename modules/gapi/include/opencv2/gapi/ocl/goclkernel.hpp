@@ -62,8 +62,8 @@ public:
     const cv::UMat&  inMat(int input);
     cv::UMat&  outMatR(int output); // FIXME: Avoid cv::Mat m = ctx.outMatR()
 
-    const cv::gapi::own::Scalar& inVal(int input);
-    cv::gapi::own::Scalar& outValR(int output); // FIXME: Avoid cv::gapi::own::Scalar s = ctx.outValR()
+    const cv::Scalar& inVal(int input);
+    cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = ctx.outValR()
     template<typename T> std::vector<T>& outVecR(int output) // FIXME: the same issue
     {
         return outVecRef(output).wref<T>();
@@ -110,7 +110,7 @@ template<> struct ocl_get_in<cv::GMat>
 };
 template<> struct ocl_get_in<cv::GScalar>
 {
-    static cv::Scalar get(GOCLContext &ctx, int idx) { return to_ocv(ctx.inVal(idx)); }
+    static cv::Scalar get(GOCLContext &ctx, int idx) { return ctx.inVal(idx); }
 };
 template<typename U> struct ocl_get_in<cv::GArray<U> >
 {
@@ -146,24 +146,12 @@ struct tracked_cv_umat{
     }
 };
 
-struct scalar_wrapper_ocl
-{
-    //FIXME reuse CPU (OpenCV) plugin code
-    scalar_wrapper_ocl(cv::gapi::own::Scalar& s) : m_s{cv::gapi::own::to_ocv(s)}, m_org_s(s) {};
-    operator cv::Scalar& () { return m_s; }
-    void writeBack() const  { m_org_s = to_own(m_s); }
-
-    cv::Scalar m_s;
-    cv::gapi::own::Scalar& m_org_s;
-};
-
 template<typename... Outputs>
 void postprocess_ocl(Outputs&... outs)
 {
     struct
     {
         void operator()(tracked_cv_umat* bm) { bm->validate(); }
-        void operator()(scalar_wrapper_ocl* sw) { sw->writeBack(); }
         void operator()(...) {                  }
 
     } validate;
@@ -183,10 +171,9 @@ template<> struct ocl_get_out<cv::GMat>
 };
 template<> struct ocl_get_out<cv::GScalar>
 {
-    static scalar_wrapper_ocl get(GOCLContext &ctx, int idx)
+    static cv::Scalar& get(GOCLContext &ctx, int idx)
     {
-        auto& s = ctx.outValR(idx);
-        return{ s };
+        return ctx.outValR(idx);
     }
 };
 template<typename U> struct ocl_get_out<cv::GArray<U> >

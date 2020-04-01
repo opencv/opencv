@@ -107,10 +107,9 @@ namespace detail
 #if !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::UMat>              { using type = cv::GMat;      };
-    template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
 #endif // !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
-    template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };
+    template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
     template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>;};
     // FIXME: This is not quite correct since IStreamSource may produce not only Mat but also Scalar
