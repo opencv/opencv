@@ -2,11 +2,19 @@
 SETLOCAL
 
 SET SCRIPT_DIR=%~dp0
-IF NOT EXIST "%SCRIPT_DIR%\..\..\build\setup_vars_opencv4.cmd" (
+SET "OPENCV_SETUPVARS_SCRIPT=setup_vars_opencv4.cmd"
+SET "BUILD_DIR=%SCRIPT_DIR%\..\..\build"
+IF NOT EXIST "%BUILD_DIR%\%OPENCV_SETUPVARS_SCRIPT%" (
+  :: Winpack DLDT
+  SET "BUILD_DIR=%SCRIPT_DIR%\..\..\..\build"
+)
+IF NOT EXIST "%BUILD_DIR%\%OPENCV_SETUPVARS_SCRIPT%" (
   ECHO ERROR: OpenCV Winpack installation is required
   pause
   exit
 )
+:: normalize path
+for %%i in ("%PACKAGE_BUILD_DIR%") do SET "PACKAGE_BUILD_DIR=%%~fi"
 
 :: Detect Python binary
 python -V 2>nul
@@ -80,7 +88,11 @@ echo SRC_FILENAME=%SRC_FILENAME%
 call :dirname "%SRC_FILENAME%" SRC_DIR
 call :dirname "%PYTHON%" PYTHON_DIR
 PUSHD %SRC_DIR%
-CALL "%SCRIPT_DIR%\..\..\build\setup_vars_opencv4.cmd"
+
+CALL "%BUILD_DIR%\%OPENCV_SETUPVARS_SCRIPT%"
+:: repair SCRIPT_DIR
+SET "SCRIPT_DIR=%~dp0"
+
 ECHO Run: %*
 %PYTHON% %*
 SET result=%errorlevel%
@@ -94,17 +106,23 @@ IF %result% NEQ 0 (
     cmd /k echo Current directory: %CD%
   )
 )
+
 POPD
 EXIT /B %result%
 
 :rundemo
 PUSHD "%SCRIPT_DIR%\python"
-CALL "%SCRIPT_DIR%\..\..\build\setup_vars_opencv4.cmd"
+
+CALL "%BUILD_DIR%\%OPENCV_SETUPVARS_SCRIPT%"
+:: repair SCRIPT_DIR
+SET "SCRIPT_DIR=%~dp0"
+
 %PYTHON% demo.py
 SET result=%errorlevel%
 IF %result% NEQ 0 (
   IF NOT DEFINED OPENCV_BATCH_MODE ( pause )
 )
+
 POPD
 EXIT /B %result%
 
