@@ -10,6 +10,7 @@
 // */
 
 #include "precomp.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 namespace cv
 {
@@ -1319,10 +1320,18 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
                 cv::add(dst, e.s, dst);
         }
         else
+        {
+            if (e.a.channels() > 1)
+                CV_LOG_ONCE_WARNING(NULL, "OpenCV/MatExpr: processing of multi-channel arrays might be changed in the future: "
+                                          "https://github.com/opencv/opencv/issues/16739");
             cv::addWeighted(e.a, e.alpha, e.b, e.beta, e.s[0], dst);
+        }
     }
     else if( e.s.isReal() && (dst.data != m.data || fabs(e.alpha) != 1))
     {
+        if (e.a.channels() > 1)
+            CV_LOG_ONCE_WARNING(NULL, "OpenCV/MatExpr: processing of multi-channel arrays might be changed in the future: "
+                                      "https://github.com/opencv/opencv/issues/16739");
         e.a.convertTo(m, _type, e.alpha, e.s[0]);
         return;
     }
