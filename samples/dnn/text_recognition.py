@@ -230,7 +230,7 @@ def main():
             out = recognizer.forward()
             t_recognition, _ = detector.getPerfProfile()
             recognized_text = decode_text(out)
-            center, size, angle = cv.minAreaRect(cnt)
+            center, size, _ = cv.minAreaRect(cnt)
             point = (int(center[0] - size[1]/2), int(center[1] - size[0]/2 ))
             cv.putText(frame,recognized_text, point, cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0))
 
