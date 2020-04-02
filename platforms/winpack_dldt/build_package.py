@@ -402,7 +402,8 @@ class Builder:
                 rm_one(os.path.join(package_opencv, item))
 
         with open(str(self.package_dir / 'README.md'), 'w') as f:
-            f.write('See licensing/copying statements in "build/etc/licenses"')
+            f.write('See licensing/copying statements in "build/etc/licenses"\n')
+            f.write('Wiki page: https://github.com/opencv/opencv/wiki/Intel%27s-Deep-Learning-Inference-Engine-backend\n')
 
         log.info('Package OpenCV sources - DONE')
 
