@@ -353,7 +353,7 @@ G_TYPED_KERNEL(GYUV2Gray, <cv::GMat(cv::GMat)>, "yuvtogray") {
          * U V U V U V U V
          */
 
-        return {CV_8U, 1, cv::gapi::own::Size{in.size.width, in.size.height - (in.size.height / 3)}, false};
+        return {CV_8U, 1, cv::Size{in.size.width, in.size.height - (in.size.height / 3)}, false};
     }
 };
 
@@ -367,7 +367,7 @@ GAPI_OCV_KERNEL(GCPUYUV2Gray, GYUV2Gray)
 
 G_TYPED_KERNEL(GConcatYUVPlanes, <cv::GMat(cv::GMat, cv::GMat)>, "concatyuvplanes") {
     static cv::GMatDesc outMeta(cv::GMatDesc y, cv::GMatDesc uv) {
-        return {CV_8U, 1, cv::gapi::own::Size{y.size.width, y.size.height + uv.size.height}, false};
+        return {CV_8U, 1, cv::Size{y.size.width, y.size.height + uv.size.height}, false};
     }
 };
 
