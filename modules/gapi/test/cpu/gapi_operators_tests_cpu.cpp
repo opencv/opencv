@@ -11,7 +11,7 @@
 
 namespace
 {
-#define CORE_CPU [] () { return cv::compile_args(cv::gapi::core::cpu::kernels()); }
+#define CORE_CPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::cpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test

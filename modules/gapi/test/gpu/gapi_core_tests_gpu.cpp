@@ -10,7 +10,7 @@
 
 namespace
 {
-#define CORE_GPU [] () { return cv::compile_args(cv::gapi::core::gpu::kernels()); }
+#define CORE_GPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::gpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -157,7 +157,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseNotTestGPU, NotTest,
                                 Values(-1),
                                 Values(CORE_GPU)));
 
-INSTANTIATE_TEST_CASE_P(MinTestGPU, MinTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_MinTestGPU, MinTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
@@ -165,7 +165,7 @@ INSTANTIATE_TEST_CASE_P(MinTestGPU, MinTest,
                                 Values(-1),
                                 Values(CORE_GPU)));
 
-INSTANTIATE_TEST_CASE_P(MaxTestGPU, MaxTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_MaxTestGPU, MaxTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),

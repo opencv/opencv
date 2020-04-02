@@ -12,7 +12,7 @@
 
 namespace
 {
-#define IMGPROC_CPU [] () { return cv::compile_args(cv::gapi::imgproc::cpu::kernels()); }
+#define IMGPROC_CPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::imgproc::cpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test
