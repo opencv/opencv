@@ -1871,7 +1871,8 @@ struct Net::Impl
                                           preferableBackend == DNN_BACKEND_OPENCV &&
                                           preferableTarget == DNN_TARGET_OPENCL_FP16);
         ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
-        if (ld.id != 0 || preferableBackend != DNN_BACKEND_INFERENCE_ENGINE)
+        if (ld.id != 0 || preferableBackend != DNN_BACKEND_INFERENCE_ENGINE ||
+           !ld.layerInstance->supportBackend(preferableBackend))
         {
             for (int i = 0; i < ld.outputBlobs.size(); ++i)
             {
