@@ -61,7 +61,7 @@ TEST_F(GCompiledValidateMetaTyped, ValidMeta)
 
 TEST_F(GCompiledValidateMetaTyped, InvalidMeta)
 {
-    auto f = m_cc.compile(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(64,32)},
+    auto f = m_cc.compile(cv::GMatDesc{CV_8U,1,cv::Size(64,32)},
                           cv::empty_scalar_desc());
 
     cv::Scalar sc(33);
@@ -106,7 +106,7 @@ TEST_F(GCompiledValidateMetaUntyped, ValidMeta)
 
 TEST_F(GCompiledValidateMetaUntyped, InvalidMetaValues)
 {
-    auto f = m_ucc.compile(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(64,32)},
+    auto f = m_ucc.compile(cv::GMatDesc{CV_8U,1,cv::Size(64,32)},
                            cv::empty_scalar_desc());
 
     cv::Scalar sc(33);
@@ -131,7 +131,7 @@ TEST_F(GCompiledValidateMetaUntyped, InvalidMetaValues)
 
 TEST_F(GCompiledValidateMetaUntyped, InvalidMetaShape)
 {
-    auto f = m_ucc.compile(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(64,32)},
+    auto f = m_ucc.compile(cv::GMatDesc{CV_8U,1,cv::Size(64,32)},
                            cv::empty_scalar_desc());
 
     cv::Mat in1 = cv::Mat::eye(cv::Size(64,32), CV_8UC1);
