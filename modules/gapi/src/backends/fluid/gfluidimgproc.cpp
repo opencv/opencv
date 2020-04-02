@@ -1525,7 +1525,7 @@ GAPI_FLUID_KERNEL(GFluidErode, cv::gapi::imgproc::GErode, true)
     #if 1
         // TODO: saturate borderValue to image type in general case (not only maximal border)
         GAPI_Assert(borderType == cv::BORDER_CONSTANT && borderValue[0] == DBL_MAX);
-        return { borderType, cv::gapi::own::Scalar::all(INT_MAX) };
+        return { borderType, cv::Scalar::all(INT_MAX) };
     #else
         return { borderType, borderValue };
     #endif
@@ -1611,7 +1611,7 @@ GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
     #if 1
         // TODO: fix borderValue for Dilate in general case (not only minimal border)
         GAPI_Assert(borderType == cv::BORDER_CONSTANT && borderValue[0] == DBL_MAX);
-        return { borderType, cv::gapi::own::Scalar::all(INT_MIN) };
+        return { borderType, cv::Scalar::all(INT_MIN) };
     #else
         return { borderType, borderValue };
     #endif
