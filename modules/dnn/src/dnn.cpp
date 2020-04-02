@@ -535,7 +535,8 @@ struct DataLayer : public Layer
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
+        return backendId == DNN_BACKEND_OPENCV ||
+              (backendId == DNN_BACKEND_INFERENCE_ENGINE && inputsData.size () == 1);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -716,6 +717,34 @@ struct DataLayer : public Layer
                 skip = false;
         }
     }
+
+#ifdef HAVE_INF_ENGINE
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_CheckEQ(nodes.size(), (size_t)1, "");
+        CV_CheckEQ(inputsData[0].dims, 4, "");
+        const size_t numChannels = inputsData[0].size[1];
+        CV_Assert(numChannels <= 4);
+
+        auto inp_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        float scale = scaleFactors[0];
+        auto weights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &scale);
+        auto scale_node = std::make_shared<ngraph::op::v1::Multiply>(inp_node, weights, ngraph::op::AutoBroadcastType::NUMPY);
+
+        std::vector<float> bias_buf(numChannels);
+        for (int i = 0; i < numChannels; ++i)
+        {
+            bias_buf[i] = -means[0][i] * scale;
+        }
+
+        std::vector<size_t> bias_shape(inputsData[0].dims, 1);
+        bias_shape[1] = numChannels;
+        auto bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(bias_shape), bias_buf.data());
+        auto scale_shift_node = std::make_shared<ngraph::op::v1::Add>(scale_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(scale_shift_node));
+    }
+#endif  // HAVE_INF_ENGINE
 
     std::vector<String> outNames;
     std::vector<MatShape> shapes;
@@ -1688,11 +1717,24 @@ struct Net::Impl
 
                 if (layer->supportBackend(preferableBackend))
                 {
-                    node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
-                    for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                    // Data Layer
+                    if (ld.id == 0 && inputNodes.empty() && !ld.inputBlobsWrappers.empty())
                     {
-                        InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                        node.dynamicCast<InfEngineNgraphNode>()->setName(dataPtr->getName());
+                        CV_CheckEQ(ld.inputBlobsWrappers.size(), ld.outputBlobsWrappers.size(), "");
+                        auto inp_name = ld.outputBlobsWrappers[0].dynamicCast<NgraphBackendWrapper>()->dataPtr->getName();
+                        auto inp = net->setInputs(std::vector<cv::Mat>{ld.outputBlobs[0]}, std::vector<std::string>{inp_name});
+                        inputNodes.emplace_back(Ptr<BackendNode>(new InfEngineNgraphNode(inp[0])));
+                    }
+
+                    CV_CheckEQ(ld.inputBlobsWrappers.size(), inputNodes.size(), "");
+                    node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
+                    if (ld.id != 0)
+                    {
+                        for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                        {
+                            InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
+                            node.dynamicCast<InfEngineNgraphNode>()->setName(dataPtr->getName());
+                        }
                     }
                 }
                 else
@@ -1802,6 +1844,8 @@ struct Net::Impl
             for (size_t i = 0; i < ninputs; i++)
             {
                 ld.inputBlobsWrappers[i] = wrap(netInputLayer->inputsData[i]);
+                if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+                    ld.outputBlobsWrappers[i] = ld.inputBlobsWrappers[i];
             }
         }
         else
@@ -1827,9 +1871,12 @@ struct Net::Impl
                                           preferableBackend == DNN_BACKEND_OPENCV &&
                                           preferableTarget == DNN_TARGET_OPENCL_FP16);
         ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
-        for (int i = 0; i < ld.outputBlobs.size(); ++i)
+        if (ld.id != 0 || preferableBackend != DNN_BACKEND_INFERENCE_ENGINE)
         {
-            ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
+            for (int i = 0; i < ld.outputBlobs.size(); ++i)
+            {
+                ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
+            }
         }
         ld.internalBlobsWrappers.resize(ld.internals.size());
         for (int i = 0; i < ld.internals.size(); ++i)
