@@ -159,8 +159,8 @@ class NormalizeSubgraph1 : public Subgraph
 public:
     NormalizeSubgraph1() : axis(1)
     {
-        int input = addNodeToMatch("");
-        int norm = addNodeToMatch("ReduceL2", input);
+        input = addNodeToMatch("");
+        norm = addNodeToMatch("ReduceL2", input);
         addNodeToMatch("Div", input, norm);
         setFusedNode("Normalize", input);
     }
@@ -203,65 +203,22 @@ public:
         end_axis_attr->set_i(axis);
     }
 
-private:
+protected:
+    int input, norm;
     int axis;
 };
 
 
-class NormalizeSubgraph2 : public Subgraph
+class NormalizeSubgraph2 : public NormalizeSubgraph1
 {
 public:
-    NormalizeSubgraph2() : axis(1)
+    NormalizeSubgraph2() : NormalizeSubgraph1()
     {
-        int input = addNodeToMatch("");
-        int norm = addNodeToMatch("ReduceL2", input);
         int clip = addNodeToMatch("Clip", norm);
         int shape = addNodeToMatch("Shape", input);
         int expand = addNodeToMatch("Expand", clip, shape);
         addNodeToMatch("Div", input, expand);
-        setFusedNode("Normalize", input);
     }
-
-    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds) CV_OVERRIDE
-    {
-        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
-        {
-            Ptr<ImportNodeWrapper> norm = net->getNode(matchedNodesIds[0]);
-            opencv_onnx::NodeProto* node = norm.dynamicCast<ONNXNodeWrapper>()->node;
-
-            for (int i = 0; i < node->attribute_size(); i++)
-            {
-                opencv_onnx::AttributeProto attr = node->attribute(i);
-                if (attr.name() != "axes")
-                    continue;
-                if (attr.ints_size() != 1)
-                    CV_Error(Error::StsNotImplemented, format("Unexpected number of axes: %d", attr.ints_size()));
-                axis = attr.ints(0);
-                return true;
-            }
-            CV_Error(Error::StsNotImplemented, "Missed axes attribute");
-        }
-        return false;
-    }
-
-    virtual void finalize(const Ptr<ImportGraphWrapper>&,
-                          const Ptr<ImportNodeWrapper>& fusedNode,
-                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE
-    {
-        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
-        opencv_onnx::AttributeProto* axis_attr = node->add_attribute();
-        axis_attr->set_name("axis");
-        axis_attr->set_i(axis);
-
-        opencv_onnx::AttributeProto* end_axis_attr = node->add_attribute();
-        end_axis_attr->set_name("end_axis");
-        end_axis_attr->set_i(axis);
-    }
-
-private:
-    int axis;
 };
 
 class GatherCastSubgraph : public Subgraph
