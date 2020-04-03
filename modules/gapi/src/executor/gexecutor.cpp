@@ -114,6 +114,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
         break;
 
     case GShape::GARRAY:
+    case GShape::GOPAQUE:
         // Constructed on Reset, do nothing here
         break;
 
