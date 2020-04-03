@@ -20,6 +20,8 @@ from svgfig import *
 
 import sys
 import getopt
+import argparse
+
 
 class PatternMaker:
   def __init__(self, cols,rows,output,units,square_size,radius_rate,page_width,page_height):
@@ -65,61 +67,44 @@ class PatternMaker:
 
 
 def main():
-    # parse command line options, TODO use argparse for better doc
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "Ho:c:r:T:u:s:R:w:h:a:", ["help","output=","columns=","rows=",
-                                                                      "type=","units=","square_size=","radius_rate=",
-                                                                      "page_width=","page_height=", "page_size="])
-    except getopt.error as msg:
-        print(msg)
-        print("for help use --help")
-        sys.exit(2)
-    output = "out.svg"
-    columns = 8
-    rows = 11
-    p_type = "circles"
-    units = "mm"
-    square_size = 20.0
-    radius_rate = 5.0
-    page_size = "A4"
+    # parse command line options
+    parser = argparse.ArgumentParser(description="generate camera-calibration pattern", add_help=False)
+    parser.add_argument("-H", "--help", help="show help", action="store_true", dest="show_help")
+    parser.add_argument("-o", "--output", help="output file", default="out.svg", action="store", dest="output")
+    parser.add_argument("-c", "--columns", help="pattern columns", default="8", action="store", dest="columns", type=int)
+    parser.add_argument("-r", "--rows", help="pattern rows", default="11", action="store", dest="rows", type=int)
+    parser.add_argument("-T", "--type", help="type of pattern", default="circles", action="store", dest="p_type", choices=["circles", "acircles", "checkerboard"])
+    parser.add_argument("-u", "--units", help="length unit", default="mm", action="store", dest="units", choices=["mm", "inches", "px", "m"])
+    parser.add_argument("-s", "--square_size", help="size of squares in pattern", default="20.0", action="store", dest="square_size", type=float)
+    parser.add_argument("-R", "--radius_rate", help="circles_radius = square_size/radius_rate", default="5.0", action="store", dest="radius_rate", type=float)
+    parser.add_argument("-w", "--page_width", help="page width in units", default="216", action="store", dest="page_width", type=int)
+    parser.add_argument("-h", "--page_height", help="page height in units", default="279", action="store", dest="page_width", type=int)
+    parser.add_argument("-a", "--page_size", help="page size, supersedes -h -w arguments", default="A4", action="store", dest="page_size", choices=["A0", "A1", "A2", "A3", "A4", "A5"])
+    args = parser.parse_args()
+
+    show_help = args.show_help
+    if show_help:
+        parser.print_help()
+        return
+    output = args.output 
+    columns = args.columns
+    rows = args.rows
+    p_type = args.p_type
+    units = args.units
+    square_size = args.square_size
+    radius_rate = args.radius_rate
+    page_size = args.page_size
     # page size dict (ISO standard, mm) for easy lookup. format - size: [width, height]
     page_sizes = {"A0": [840, 1188], "A1": [594, 840], "A2": [420, 594], "A3": [297, 420], "A4": [210, 297], "A5": [148, 210]}
     page_width = page_sizes[page_size.upper()][0]
     page_height = page_sizes[page_size.upper()][1]
-    # process options
-    for o, a in opts:
-        if o in ("-H", "--help"):
-            print(__doc__)
-            sys.exit(0)
-        elif o in ("-r", "--rows"):
-            rows = int(a)
-        elif o in ("-c", "--columns"):
-            columns = int(a)
-        elif o in ("-o", "--output"):
-            output = a
-        elif o in ("-T", "--type"):
-            p_type = a
-        elif o in ("-u", "--units"):
-            units = a
-        elif o in ("-s", "--square_size"):
-            square_size = float(a)
-        elif o in ("-R", "--radius_rate"):
-            radius_rate = float(a)
-        elif o in ("-w", "--page_width"):
-            page_width = float(a)
-        elif o in ("-h", "--page_height"):
-            page_height = float(a)
-        elif o in ("-a", "--page_size"):
-            units = "mm"
-            page_size = a.upper()
-            page_width = page_sizes[page_size][0]
-            page_height = page_sizes[page_size][1]
     pm = PatternMaker(columns,rows,output,units,square_size,radius_rate,page_width,page_height)
     #dict for easy lookup of pattern type
     mp = {"circles":pm.makeCirclesPattern,"acircles":pm.makeACirclesPattern,"checkerboard":pm.makeCheckerboardPattern}
     mp[p_type]()
     #this should save pattern to output
     pm.save()
+
 
 if __name__ == "__main__":
     main()
