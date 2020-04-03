@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_GSTREAMING_DESYNC_HPP
 #define OPENCV_GAPI_GSTREAMING_DESYNC_HPP
 
-#include <vector>
+#include <tuple>
 
 #include <opencv2/gapi/util/util.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
@@ -26,13 +26,13 @@ namespace detail {
             return "org.opencv.streaming.desync";
         }
 
+        // An universal yield for desync.
+        // Yields output objects according to the input Types...
+        // Reuses gkernel machinery.
+        // FIXME: This function can be generic and declared in gkernel.hpp
+        //        (it is there already, but a part of GKenrelType[M]
         template<typename... R, int... IIs>
         static std::tuple<R...> yield(cv::GCall &call, cv::detail::Seq<IIs...>) {
-            // An universal yield for desync.
-            // Yields output objects according to the input Types...
-            // Reuses gkernel machinery.
-            // FIXME: This function can be generic and declared in gkernel.hpp
-            //        (it is there already, but a part of GKenrelType[M]
             return std::make_tuple(cv::detail::Yield<R>::yield(call, IIs)...);
         }
     };
@@ -41,11 +41,11 @@ namespace detail {
 /**
  * @brief Starts a desynchronized branch in the graph.
  *
- * This operation takes an arbitrary number of G-API data objects
- * and returns a tuple of duplicates of that objects.
+ * This operation takes a single G-API data object and returns a
+ * graph-level "duplicate" of this object.
  *
- * Operations which use these data objects now may run in a desynchronized
- * fashion from the rest of the graph.
+ * Operations which use this data object can be desynchronized
+ * from the rest of the graph.
  *
  * This operation has no effect when a GComputation is compiled with
  * regular cv::GComputation::compile(), since cv::GCompiled objects
@@ -56,20 +56,20 @@ namespace detail {
  * operation is used and there are desynchronized outputs, the user
  * should use a special version of cv::GStreamingCompiled::pull()
  * which produces an array of cv::util::optional<> objects.
+ *
+ * @note This feature is highly experimental now.
  */
-template<typename... Args>
-std::tuple<typename std::decay<Args>::type...> desync(Args&&... args)
-{
+template<typename G>
+G desync(const G &g) {
     cv::GKernel k{
-          detail::GDesync::id() // kernel id
-        , ""                    // kernel tag
+          detail::GDesync::id()                             // kernel id
+        , ""                                                // kernel tag
         , [](const GMetaArgs &a, const GArgs &) {return a;} // outMeta callback
-        , {cv::detail::GTypeTraits<typename std::decay<Args>::type>::shape...} // out Shapes
+        , {cv::detail::GTypeTraits<G>::shape}               // output Shape
     };
     cv::GCall call(std::move(k));
-    call.pass(args...);
-    return detail::GDesync::yield<typename std::decay<Args>::type...>
-        (call, typename cv::detail::MkSeq<sizeof...(Args)>::type());
+    call.pass(g);
+    return std::get<0>(detail::GDesync::yield<G>(call, cv::detail::MkSeq<1>::type()));
 }
 
 } // namespace streaming

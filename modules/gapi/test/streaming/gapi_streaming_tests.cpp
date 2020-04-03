@@ -987,8 +987,7 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
 
     // FIXME: Unary desync should not require tie!
-    cv::GMat tmp2;
-    std::tie(tmp2) = cv::gapi::streaming::desync(tmp1);
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
     cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
 
     cv::Mat test_in = cv::Mat::eye(cv::Size(32,32), CV_8UC3);
@@ -1005,9 +1004,7 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
 
-    // FIXME: Unary desync should not require tie!
-    cv::GMat tmp2;
-    std::tie(tmp2) = cv::gapi::streaming::desync(tmp1);
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
     cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
 
     cv::Mat test_out1, test_out2;
