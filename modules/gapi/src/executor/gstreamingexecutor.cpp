@@ -1000,7 +1000,8 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
     if (state == State::STOPPED)
         return false;
     GAPI_Assert(state == State::RUNNING);
-    GAPI_Assert(m_sink_queues.size() == outs.size());
+    GAPI_Assert(m_sink_queues.size() == outs.size() &&
+                "Number of data objects in cv::gout() must match the number of graph outputs in cv::GOut()");
 
     Cmd cmd;
     m_out_queue.pop(cmd);

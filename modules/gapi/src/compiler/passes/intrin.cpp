@@ -121,8 +121,7 @@ void traceUp(cv::gimpl::GModel::Graph &g,
     using namespace cv::gimpl;
 
     GAPI_Assert(!nh->inNodes().empty()
-                && "traceUp: a desynchronized part of the graph"
-                   "is not isolated?");
+                && "traceUp: a desynchronized part of the graph is not isolated?");
 
     if (g.metadata(nh).contains<DesyncPath>()) {
         // We may face nodes which have DesyncPath already visited during
