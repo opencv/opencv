@@ -223,6 +223,26 @@ public:
     }
 };
 
+class FlattenProdSubgraph : public Subgraph
+{
+public:
+    FlattenProdSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int shape = addNodeToMatch("Shape", input);
+        int stack = addNodeToMatch("Const");
+        int stack_1 = addNodeToMatch("Const");
+        int stack_2 = addNodeToMatch("Const");
+        int strided_slice = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+        int prod = addNodeToMatch("Prod", strided_slice, addNodeToMatch("Const"));
+        int shape_pack = addNodeToMatch("Const");
+        int pack = addNodeToMatch("Pack", shape_pack, prod);
+        addNodeToMatch("Reshape", input, pack);
+
+        setFusedNode("Flatten", input);
+    }
+};
+
 // K.layers.Softmax
 class SoftMaxKerasSubgraph : public Subgraph
 {
@@ -629,6 +649,36 @@ public:
     }
 };
 
+class PReLUSubgraph : public TFSubgraph
+{
+public:
+    PReLUSubgraph(bool negativeScales_) : negativeScales(negativeScales_)
+    {
+        int input = addNodeToMatch("");
+        int scales = addNodeToMatch("Const");
+        int neg = addNodeToMatch("Neg", input);
+        int relu_neg = addNodeToMatch("Relu", neg);
+        int finalScales = negativeScales ? addNodeToMatch("Neg", scales) : scales;
+        int mul = addNodeToMatch("Mul", finalScales, relu_neg);
+        int relu_pos = addNodeToMatch("Relu", input);
+        addNodeToMatch("Add", relu_pos, mul);
+        setFusedNode("PReLU", input, scales);
+    }
+
+    virtual void finalize(tensorflow::GraphDef&, tensorflow::NodeDef* fusedNode,
+                          std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
+    {
+        if (!negativeScales)
+        {
+            Mat scales = getTensorContent(inputNodes[1]->attr().at("value").tensor(), /*copy*/false);
+            scales *= -1;
+        }
+    }
+
+private:
+    bool negativeScales;
+};
+
 void simplifySubgraphs(tensorflow::GraphDef& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
@@ -649,6 +699,16 @@ void simplifySubgraphs(tensorflow::GraphDef& net)
     subgraphs.push_back(Ptr<Subgraph>(new SoftMaxSlimV2Subgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new ReshapeAsShapeSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new KerasMVNSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new PReLUSubgraph(true)));
+    subgraphs.push_back(Ptr<Subgraph>(new PReLUSubgraph(false)));
+    subgraphs.push_back(Ptr<Subgraph>(new FlattenProdSubgraph()));
+
+    for (int i = 0; i < net.node_size(); ++i)
+    {
+        tensorflow::NodeDef* layer = net.mutable_node(i);
+        if (layer->op() == "AddV2")
+            layer->set_op("Add");
+    }
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new TFGraphWrapper(net)), subgraphs);
 }
