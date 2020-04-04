@@ -63,7 +63,7 @@ int main(int argc, char** argv)
         "{ v video     | vtest.avi | use video as input }"
         "{ g gray      |                | convert image to gray one or not}"
         "{ s scale     | 1.0            | resize the image before detect}"
-        "{ o output    |                | specify output path when input is images}";
+        "{ o output    |   output.avi   | specify output path when input is images}";
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help"))
     {
@@ -174,8 +174,7 @@ void App::run()
                 throw runtime_error(string("can't open image file: " + img_source));
         }
 
-        UMat img_aux, img;
-        Mat img_to_show;
+        UMat img_aux, img, img_to_show;
 
         // Iterate over all frames
         while (running && !frame.empty())
@@ -208,8 +207,7 @@ void App::run()
             // Draw positive classified windows
             for (size_t i = 0; i < found.size(); i++)
             {
-                Rect r = found[i];
-                rectangle(img_to_show, r.tl(), r.br(), Scalar(0, 255, 0), 3);
+                rectangle(img_to_show, found[i], Scalar(0, 255, 0), 3);
             }
 
             putText(img_to_show, ocl::useOpenCL() ? "Mode: OpenCL"  : "Mode: CPU", Point(5, 25), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
@@ -240,7 +238,7 @@ void App::run()
                     if (make_gray) cvtColor(img_to_show, img, COLOR_GRAY2BGR);
                     else cvtColor(img_to_show, img, COLOR_BGRA2BGR);
 
-                    video_writer << img.getMat(ACCESS_READ);
+                    video_writer << img;
                 }
             }
 

@@ -46,10 +46,6 @@
 
 #include <opencv2/core.hpp>
 
-// After this condition removal update blacklist for bindings: modules/python/common.cmake
-#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__) || \
-  defined(CV_CXX11)
-
 #include <vector>
 
 namespace cv
@@ -222,6 +218,5 @@ class CV_EXPORTS DetectionBasedTracker
 //! @} objdetect
 
 } //end of cv namespace
-#endif
 
 #endif

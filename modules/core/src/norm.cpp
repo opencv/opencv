@@ -433,6 +433,9 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     bool doubleSupport = d.doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
 
+    if (depth >= CV_16F)
+        return false;  // TODO: support FP16
+
     if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
          (!doubleSupport && depth == CV_64F))
         return false;
@@ -696,7 +699,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         return result;
     }
 
-    NormFunc func = getNormFunc(normType >> 1, depth);
+    NormFunc func = getNormFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
@@ -742,6 +745,26 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             }
         }
     }
+    else if (depth == CV_16F)
+    {
+        const size_t esz = src.elemSize();
+        const int total = (int)it.size;
+        const int blockSize = std::min(total, divUp(1024, cn));
+        AutoBuffer<float, 1026/*divUp(1024,3)*3*/> fltbuf(blockSize * cn);
+        float* data0 = fltbuf.data();
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            for (int j = 0; j < total; j += blockSize)
+            {
+                int bsz = std::min(total - j, blockSize);
+                hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
+                func((uchar*)data0, ptrs[1], (uchar*)&result.d, bsz, cn);
+                ptrs[0] += bsz*esz;
+                if (ptrs[1])
+                    ptrs[1] += bsz;
+            }
+        }
+    }
     else
     {
         // generic implementation
@@ -753,9 +776,9 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
     if( normType == NORM_INF )
     {
-        if( depth == CV_64F )
+        if(depth == CV_64F || depth == CV_16F)
             return result.d;
-        else if( depth == CV_32F )
+        else if (depth == CV_32F)
             return result.f;
         else
             return result.i;
@@ -1162,7 +1185,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         return result;
     }
 
-    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth);
+    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
@@ -1210,6 +1233,29 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             }
         }
     }
+    else if (depth == CV_16F)
+    {
+        const size_t esz = src1.elemSize();
+        const int total = (int)it.size;
+        const int blockSize = std::min(total, divUp(512, cn));
+        AutoBuffer<float, 1026/*divUp(512,3)*3*2*/> fltbuf(blockSize * cn * 2);
+        float* data0 = fltbuf.data();
+        float* data1 = fltbuf.data() + blockSize * cn;
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            for (int j = 0; j < total; j += blockSize)
+            {
+                int bsz = std::min(total - j, blockSize);
+                hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
+                hal::cvt16f32f((const float16_t*)ptrs[1], data1, bsz * cn);
+                func((uchar*)data0, (uchar*)data1, ptrs[2], (uchar*)&result.d, bsz, cn);
+                ptrs[0] += bsz*esz;
+                ptrs[1] += bsz*esz;
+                if (ptrs[2])
+                    ptrs[2] += bsz;
+            }
+        }
+    }
     else
     {
         // generic implementation
@@ -1221,9 +1267,9 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
     if( normType == NORM_INF )
     {
-        if( depth == CV_64F )
+        if (depth == CV_64F || depth == CV_16F)
             return result.d;
-        else if( depth == CV_32F )
+        else if (depth == CV_32F)
             return result.f;
         else
             return result.u;
@@ -1239,13 +1285,13 @@ cv::Hamming::ResultType cv::Hamming::operator()( const unsigned char* a, const u
     return cv::hal::normHamming(a, b, size);
 }
 
-double cv::PSNR(InputArray _src1, InputArray _src2)
+double cv::PSNR(InputArray _src1, InputArray _src2, double R)
 {
     CV_INSTRUMENT_REGION();
 
     //Input arrays must have depth CV_8U
-    CV_Assert( _src1.depth() == CV_8U && _src2.depth() == CV_8U );
+    CV_Assert( _src1.type() == _src2.type() );
 
     double diff = std::sqrt(norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
-    return 20*log10(255./(diff+DBL_EPSILON));
+    return 20*log10(R/(diff+DBL_EPSILON));
 }

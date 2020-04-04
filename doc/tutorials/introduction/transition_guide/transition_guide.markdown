@@ -62,8 +62,6 @@ Changes intended to ease the migration have been made in OpenCV 3.0, thus the fo
 #include "opencv2/<module>.hpp"
 @endcode
 
-2. If your code is using C API (`cv*` functions, `Cv*` structures or `CV_*` enumerations), include corresponding `*_c.h` headers. Although it is recommended to use C++ API, most of C-functions are still accessible in separate header files (opencv2/core/core_c.h, opencv2/core/types_c.h, opencv2/imgproc/imgproc_c.h, etc.).
-
 Modern way to use algorithm {#tutorial_transition_algorithm}
 ---------------------------
 1.  Algorithm instances must be created with cv::makePtr function or corresponding static factory method if available:
@@ -236,7 +234,10 @@ for(;;){
 
 CUDA {#tutorial_transition_hints_cuda}
 ----
-_cuda_ module has been split into several smaller pieces:
+
+CUDA modules has been moved into opencv_contrib repository.
+
+@cond CUDA_MODULES
 - _cuda_ - @ref cuda
 - _cudaarithm_ - @ref cudaarithm
 - _cudabgsegm_ - @ref cudabgsegm
@@ -249,10 +250,7 @@ _cuda_ module has been split into several smaller pieces:
 - _cudastereo_ - @ref cudastereo
 - _cudawarping_ - @ref cudawarping
 - _cudev_ - @ref cudev
-
-`gpu` namespace has been removed, use cv::cuda namespace instead. Many classes has also been renamed, for example:
-- `gpu::FAST_GPU` -> cv::cuda::FastFeatureDetector
-- `gpu::createBoxFilter_GPU` -> cv::cuda::createBoxFilter
+@endcond
 
 Documentation format {#tutorial_transition_docs}
 --------------------

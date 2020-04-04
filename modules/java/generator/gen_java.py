@@ -70,7 +70,25 @@ type_dict = {
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "int64"   : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
-    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" }
+    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" },
+    'string'  : {  # std::string, see "String" in modules/core/misc/java/gen_dict.json
+        'j_type': 'String',
+        'jn_type': 'String',
+        'jni_name': 'n_%(n)s',
+        'jni_type': 'jstring',
+        'jni_var': 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
+        'suffix': 'Ljava_lang_String_2',
+        'j_import': 'java.lang.String'
+    },
+    'vector_string': {  # std::vector<std::string>, see "vector_String" in modules/core/misc/java/gen_dict.json
+        'j_type': 'List<String>',
+        'jn_type': 'List<String>',
+        'jni_type': 'jobject',
+        'jni_var': 'std::vector< std::string > %(n)s',
+        'suffix': 'Ljava_util_List',
+        'v_type': 'string',
+        'j_import': 'java.lang.String'
+    },
 }
 
 # Defines a rule to add extra prefixes for names from specific namespaces.
@@ -881,7 +899,7 @@ class JavaWrapperGenerator(object):
             elif "v_type" in type_dict[fi.ctype]: # c-tor
                 if type_dict[fi.ctype]["v_type"] in ("Mat", "vector_Mat"):
                     ret = "return (jlong) _retval_;"
-            elif fi.ctype == "String":
+            elif fi.ctype in ['String', 'string']:
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif self.isWrapped(fi.ctype): # wrapped class:
@@ -908,6 +926,8 @@ class JavaWrapperGenerator(object):
                 retval = ""
             elif fi.ctype == "String":
                 retval = "cv::" + self.fullTypeName(fi.ctype) + " _retval_ = "
+            elif fi.ctype == "string":
+                retval = "std::string _retval_ = "
             elif "v_type" in type_dict[fi.ctype]: # vector is returned
                 retval = type_dict[fi.ctype]['jni_var'] % {"n" : '_ret_val_vector_'} + " = "
                 if type_dict[fi.ctype]["v_type"] in ("Mat", "vector_Mat"):
@@ -1033,19 +1053,19 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 #        {1}(int id) {{ this.id = id; }}
 #        {1}({1} _this) {{ this.id = _this.id; }}
 #        public int getValue() {{ return id; }}
-#    }}\n\n""".format((",\n"+" "*8).join(["%s(%s)" % (c.name, const_value(c.value)) for c in consts]), typeName)
+#    }}\n\n""".format((",\n"+" "*8).join(["%s(%s)" % (c.name, c.value) for c in consts]), typeName)
 #                    )
 ################################################################
                     ci.j_code.write("""
     // C++: enum {1}
     public static final int
-            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in consts]), typeName)
+            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in consts]), typeName)
                     )
                 else:
                     ci.j_code.write("""
     // C++: enum <unnamed>
     public static final int
-            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in consts]))
+            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in consts]))
                     )
         # methods
         for fi in ci.getAllMethods():

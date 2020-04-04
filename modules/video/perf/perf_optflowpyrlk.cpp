@@ -89,9 +89,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK_full, testing::Combine(
                              flags, minEigThreshold);
     }
 
-    SANITY_CHECK(outPoints, 0.3);
-    SANITY_CHECK(status);
-    SANITY_CHECK(err, 2);
+    SANITY_CHECK_NOTHING();
 }
 
 typedef tuple<std::string, int, tuple<int, int>, int> Path_Idx_NPoints_WSize_t;
@@ -142,8 +140,7 @@ PERF_TEST_P(Path_Idx_NPoints_WSize, DISABLED_OpticalFlowPyrLK_ovx, testing::Comb
                              flags, minEigThreshold);
     }
 
-    SANITY_CHECK(outPoints, 0.3);
-    SANITY_CHECK(status);
+    SANITY_CHECK_NOTHING();
 }
 
 typedef tuple<std::string, int, int, tuple<int,int>, int, bool> Path_Idx_Cn_NPoints_WSize_Deriv_t;
@@ -222,9 +219,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize_Deriv, OpticalFlowPyrLK_self, testing::Com
                              flags, minEigThreshold);
     }
 
-    SANITY_CHECK(outPoints, 0.3);
-    SANITY_CHECK(status);
-    SANITY_CHECK(err, 2);
+    SANITY_CHECK_NOTHING();
 }
 
 CV_ENUM(PyrBorderMode, BORDER_DEFAULT, BORDER_TRANSPARENT)
@@ -266,7 +261,9 @@ PERF_TEST_P(Path_Win_Deriv_Border_Reuse, OpticalFlowPyrLK_pyr, testing::Combine(
         buildOpticalFlowPyramid(img, pyramid, winSize, maxLevel, withDerivatives, pyrBorder, derivBorder, tryReuseInputImage);
     }
 
-    SANITY_CHECK(pyramid);
+    size_t expected_layers = ((size_t)maxLevel + 1) * (withDerivatives ? 2 : 1);
+    ASSERT_EQ(expected_layers, pyramid.size());
+    SANITY_CHECK_NOTHING();
 }
 
 }} // namespace

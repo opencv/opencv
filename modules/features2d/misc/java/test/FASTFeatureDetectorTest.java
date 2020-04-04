@@ -8,7 +8,8 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.features2d.FeatureDetector;
+import org.opencv.features2d.Feature2D;
+import org.opencv.features2d.FastFeatureDetector;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
@@ -16,7 +17,7 @@ import org.opencv.imgproc.Imgproc;
 
 public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
-    FeatureDetector detector;
+    Feature2D detector;
     KeyPoint[] truth;
 
     private Mat getMaskImg() {
@@ -35,7 +36,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        detector = FeatureDetector.create(FeatureDetector.FAST);
+        detector = FastFeatureDetector.create();
         truth = new KeyPoint[] { new KeyPoint(32, 27, 7, -1, 254, 0, -1), new KeyPoint(27, 32, 7, -1, 254, 0, -1), new KeyPoint(73, 68, 7, -1, 254, 0, -1),
                 new KeyPoint(68, 73, 7, -1, 254, 0, -1) };
     }

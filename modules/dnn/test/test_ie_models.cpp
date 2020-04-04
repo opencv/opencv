@@ -328,5 +328,46 @@ INSTANTIATE_TEST_CASE_P(/**/,
     )
 );
 
+typedef TestWithParam<Target> DNNTestHighLevelAPI;
+TEST_P(DNNTestHighLevelAPI, predict)
+{
+    initDLDTDataPath();
+
+    Target target = (dnn::Target)(int)GetParam();
+    bool isFP16 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD);
+
+    OpenVINOModelTestCaseInfo modelInfo = getOpenVINOTestModels().find("age-gender-recognition-retail-0013")->second;
+
+    std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
+
+    std::string xmlPath = findDataFile(modelPath + ".xml");
+    std::string binPath = findDataFile(modelPath + ".bin");
+
+    Model model(xmlPath, binPath);
+    Mat frame = imread(findDataFile("dnn/googlenet_1.png"));
+    std::vector<Mat> outs;
+    model.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    model.setPreferableTarget(target);
+    model.predict(frame, outs);
+
+    Net net = readNet(xmlPath, binPath);
+    Mat input = blobFromImage(frame, 1.0, Size(62, 62));
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    net.setPreferableTarget(target);
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> refs;
+    net.forward(refs, outNames);
+
+    CV_Assert(refs.size() == outs.size());
+    for (int i = 0; i < refs.size(); ++i)
+        normAssert(outs[i], refs[i]);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    DNNTestHighLevelAPI, testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
+);
+
 }}
 #endif  // HAVE_INF_ENGINE

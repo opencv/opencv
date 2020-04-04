@@ -6,6 +6,5 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/objdetect.hpp"
-#include "opencv2/objdetect/objdetect_c.h"
 
 #endif

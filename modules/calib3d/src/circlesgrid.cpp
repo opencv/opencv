@@ -71,10 +71,6 @@ void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 
 
 void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> &points, const Size &patternSz, std::vector<Point2f> &patternPoints)
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::useTegra() && tegra::hierarchicalClustering(points, patternSz, patternPoints))
-        return;
-#endif
     int j, n = (int)points.size();
     size_t pn = static_cast<size_t>(patternSz.area());
 
@@ -594,13 +590,9 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
 
   minRNGEdgeSwitchDist = 5.f;
   gridType = SYMMETRIC_GRID;
-}
 
-CirclesGridFinderParameters2::CirclesGridFinderParameters2()
-: CirclesGridFinderParameters()
-{
-    squareSize = 1.0f;
-    maxRectifiedDistance = squareSize/2.0f;
+  squareSize = 1.0f;
+  maxRectifiedDistance = squareSize/2.0f;
 }
 
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const std::vector<Point2f> &testKeypoints,

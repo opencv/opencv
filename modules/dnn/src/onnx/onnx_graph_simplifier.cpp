@@ -13,7 +13,7 @@
 #include <queue>
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 // This wrapper can behave differently for fake input nodes and real graph nodes.
 class ONNXNodeWrapper : public ImportNodeWrapper
@@ -370,5 +370,5 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
     return blob;
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

@@ -20,7 +20,7 @@
 #endif
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 void simplifySubgraphs(opencv_onnx::GraphProto& net);
 
@@ -37,7 +37,7 @@ void convertInt64ToInt32(const T1& src, T2& dst, int size)
 
 Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto);
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv
 
 #endif  // __OPENCV_DNN_ONNX_SIMPLIFIER_HPP__

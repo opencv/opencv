@@ -148,6 +148,55 @@ class dnn_test(NewOpenCVTests):
         normAssert(self, blob, target)
 
 
+    def test_model(self):
+        img_path = self.find_dnn_file("dnn/street.png")
+        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy.caffemodel", required=False)
+        config = self.find_dnn_file("dnn/MobileNetSSD_deploy.prototxt", required=False)
+        if weights is None or config is None:
+            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+
+        frame = cv.imread(img_path)
+        model = cv.dnn_DetectionModel(weights, config)
+        model.setInputParams(size=(300, 300), mean=(127.5, 127.5, 127.5), scale=1.0/127.5)
+
+        iouDiff = 0.05
+        confThreshold = 0.0001
+        nmsThreshold = 0
+        scoreDiff = 1e-3
+
+        classIds, confidences, boxes = model.detect(frame, confThreshold, nmsThreshold)
+
+        refClassIds = (7, 15)
+        refConfidences = (0.9998, 0.8793)
+        refBoxes = ((328, 238, 85, 102), (101, 188, 34, 138))
+
+        normAssertDetections(self, refClassIds, refConfidences, refBoxes,
+                             classIds, confidences, boxes,confThreshold, scoreDiff, iouDiff)
+
+        for box in boxes:
+            cv.rectangle(frame, box, (0, 255, 0))
+            cv.rectangle(frame, np.array(box), (0, 255, 0))
+            cv.rectangle(frame, tuple(box), (0, 255, 0))
+            cv.rectangle(frame, list(box), (0, 255, 0))
+
+
+    def test_classification_model(self):
+        img_path = self.find_dnn_file("dnn/googlenet_0.png")
+        weights = self.find_dnn_file("dnn/squeezenet_v1.1.caffemodel", required=False)
+        config = self.find_dnn_file("dnn/squeezenet_v1.1.prototxt")
+        ref = np.load(self.find_dnn_file("dnn/squeezenet_v1.1_prob.npy"))
+        if weights is None or config is None:
+            raise unittest.SkipTest("Missing DNN test files (dnn/squeezenet_v1.1.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+
+        frame = cv.imread(img_path)
+        model = cv.dnn_ClassificationModel(config, weights)
+        model.setInputSize(227, 227)
+        model.setInputCrop(True)
+
+        out = model.predict(frame)
+        normAssert(self, out, ref)
+
+
     def test_face_detection(self):
         proto = self.find_dnn_file('dnn/opencv_face_detector.prototxt')
         model = self.find_dnn_file('dnn/opencv_face_detector.caffemodel', required=False)

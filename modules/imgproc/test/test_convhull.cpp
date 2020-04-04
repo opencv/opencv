@@ -196,7 +196,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void run_func(void);
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
@@ -254,15 +254,15 @@ void CV_BaseShapeDescrTest::clear()
 }
 
 
-int CV_BaseShapeDescrTest::read_params( CvFileStorage* fs )
+int CV_BaseShapeDescrTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    test_case_count = cvReadInt( find_param( fs, "struct_count" ), test_case_count );
-    min_log_size = cvReadInt( find_param( fs, "min_log_size" ), min_log_size );
-    max_log_size = cvReadInt( find_param( fs, "max_log_size" ), max_log_size );
+    read( find_param( fs, "struct_count" ), test_case_count, test_case_count );
+    read( find_param( fs, "min_log_size" ), min_log_size, min_log_size );
+    read( find_param( fs, "max_log_size" ), max_log_size, max_log_size );
 
     min_log_size = cvtest::clipInt( min_log_size, 0, 8 );
     max_log_size = cvtest::clipInt( max_log_size, 0, 10 );

@@ -20,19 +20,19 @@ Code
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp)
 @include samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ShapeDescriptors/bounding_rects_circles/GeneralContoursDemo1.java)
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ShapeDescriptors/bounding_rects_circles/GeneralContoursDemo1.java)
 @include samples/java/tutorial_code/ShapeDescriptors/bounding_rects_circles/GeneralContoursDemo1.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ShapeDescriptors/bounding_rects_circles/generalContours_demo1.py)
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ShapeDescriptors/bounding_rects_circles/generalContours_demo1.py)
 @include samples/python/tutorial_code/ShapeDescriptors/bounding_rects_circles/generalContours_demo1.py
 @end_toggle
 

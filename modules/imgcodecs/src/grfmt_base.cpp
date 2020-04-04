@@ -142,7 +142,7 @@ void BaseImageEncoder::throwOnEror() const
     if(!m_last_error.empty())
     {
         String msg = "Raw image encoder error: " + m_last_error;
-        CV_Error( CV_BadImageSize, msg.c_str() );
+        CV_Error( Error::BadImageSize, msg.c_str() );
     }
 }
 

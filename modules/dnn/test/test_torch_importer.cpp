@@ -112,8 +112,17 @@ public:
 TEST_P(Test_Torch_layers, run_convolution)
 {
     // Output reference values are in range [23.4018, 72.0181]
-    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.08 : default_l1;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.42 : default_lInf;
+    double l1 = default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.08;
+        lInf = 0.42;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.08;
+        lInf = 0.5;
+    }
     runTorchNet("net_conv", "", false, true, true, l1, lInf);
 }
 
@@ -121,7 +130,10 @@ TEST_P(Test_Torch_layers, run_pool_max)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    runTorchNet("net_pool_max", "", true);
+    if (target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    double l1 = 0.0, lInf = 0.0;
+    runTorchNet("net_pool_max", "", true, false, true, l1, lInf);
 }
 
 TEST_P(Test_Torch_layers, run_pool_ave)
@@ -145,9 +157,17 @@ TEST_P(Test_Torch_layers, run_reshape)
 TEST_P(Test_Torch_layers, run_reshape_single_sample)
 {
     // Reference output values in range [14.4586, 18.4492].
-    runTorchNet("net_reshape_single_sample", "", false, false, true,
-                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.033 : default_l1,
-                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.05 : default_lInf);
+    double l1 = default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.033;
+        lInf = 0.05;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.01;
+    }
+    runTorchNet("net_reshape_single_sample", "", false, false, true, l1, lInf);
 }
 
 TEST_P(Test_Torch_layers, run_linear)
@@ -164,8 +184,16 @@ TEST_P(Test_Torch_layers, run_concat)
 
 TEST_P(Test_Torch_layers, run_depth_concat)
 {
-    runTorchNet("net_depth_concat", "", false, true, true, 0.0,
-                target == DNN_TARGET_OPENCL_FP16 ? 0.021 : 0.0);
+    double lInf = 0.0;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        lInf = 0.021;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        lInf = 0.03;
+    }
+    runTorchNet("net_depth_concat", "", false, true, true, 0.0, lInf);
 }
 
 TEST_P(Test_Torch_layers, run_deconv)
@@ -218,9 +246,18 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    runTorchNet("net_conv_gemm_lrn", "", false, true, true,
-                target == DNN_TARGET_OPENCL_FP16 ? 0.046 : 0.0,
-                target == DNN_TARGET_OPENCL_FP16 ? 0.023 : 0.0);
+    double l1 = 0.0, lInf = 0.0;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.046;
+        lInf = 0.023;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.0042;
+        lInf = 0.021;
+    }
+    runTorchNet("net_conv_gemm_lrn", "", false, true, true, l1, lInf);
 }
 
 TEST_P(Test_Torch_layers, net_inception_block)
@@ -230,6 +267,8 @@ TEST_P(Test_Torch_layers, net_inception_block)
 
 TEST_P(Test_Torch_layers, net_normalize)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* only L1 and L2 norms are supported */
     runTorchNet("net_normalize", "", false, true);
 }
 
@@ -296,8 +335,17 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
 
     // Reference output values are in range [-0.17212, 0.263492]
     // on Myriad problem layer: l4_Pooling - does not use pads_begin
-    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2e-3 : 1e-5;
-    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5e-3 : 1e-3;
+    float l1 = 1e-5, lInf = 1e-3;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 2e-3;
+        lInf = 5e-3;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.0004;
+        lInf = 0.0012;
+    }
     Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
     normAssert(out, outRef, "", l1, lInf);
 }
@@ -348,6 +396,8 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     checkBackend();
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("");
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -467,6 +517,10 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
                 EXPECT_LE(normL1, 4.0f);
             else
                 EXPECT_LE(normL1, 0.6f);
+        }
+        else if(target == DNN_TARGET_CUDA_FP16)
+        {
+            normAssert(out, refBlob, "", 0.6, 25);
         }
         else
             normAssert(out, refBlob, "", 0.5, 1.1);

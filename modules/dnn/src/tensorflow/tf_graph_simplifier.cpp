@@ -14,7 +14,7 @@
 #include <queue>
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 using ::google::protobuf::RepeatedField;
 using ::google::protobuf::MapPair;
@@ -964,7 +964,7 @@ void removePhaseSwitches(tensorflow::GraphDef& net)
 }
 
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv
 
 #endif  // HAVE_PROTOBUF

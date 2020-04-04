@@ -16,6 +16,7 @@
 #undef WINVER
 #define WINVER _WIN32_WINNT_WIN8
 #endif
+
 #include <windows.h>
 #include <guiddef.h>
 #include <mfidl.h>
@@ -24,7 +25,7 @@
 #include <mfobjects.h>
 #include <tchar.h>
 #include <strsafe.h>
-#include <Mfreadwrite.h>
+#include <mfreadwrite.h>
 #ifdef HAVE_MSMF_DXVA
 #include <d3d11.h>
 #include <d3d11_4.h>
@@ -76,6 +77,11 @@ struct IMFMediaType;
 struct IMFActivate;
 struct IMFMediaSource;
 struct IMFAttributes;
+
+#define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
 
 namespace
 {
@@ -1137,8 +1143,6 @@ double CvCapture_MSMF::getProperty( int property_id ) const
     if (isOpen)
         switch (property_id)
         {
-        case CV_CAP_PROP_FORMAT:
-                return outputFormat;
         case CV_CAP_PROP_MODE:
                 return captureMode;
         case CV_CAP_PROP_CONVERT_RGB:
@@ -1297,6 +1301,8 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
             default:
                 return false;
             }
+        case CV_CAP_PROP_FOURCC:
+            return configureOutput(newFormat, (int)cvRound(value));
         case CV_CAP_PROP_FORMAT:
             return configureOutput(newFormat, (int)cvRound(value));
         case CV_CAP_PROP_CONVERT_RGB:
@@ -1337,8 +1343,6 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
                 return configureOutput(newFormat, outputFormat);
             }
             break;
-            case CV_CAP_PROP_FOURCC:
-                break;
         case CV_CAP_PROP_FRAME_COUNT:
             break;
         case CV_CAP_PROP_POS_AVI_RATIO:
@@ -1652,13 +1656,13 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
     }
 }
 
-cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const cv::String& filename, int fourcc,
-                                                        double fps, cv::Size frameSize, int isColor )
+cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,
+                                                        double fps, const cv::Size &frameSize, bool isColor )
 {
     cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
     if (writer)
     {
-        writer->open(filename, fourcc, fps, frameSize, isColor != 0);
+        writer->open(filename, fourcc, fps, frameSize, isColor);
         if (writer->isOpened())
             return writer;
     }

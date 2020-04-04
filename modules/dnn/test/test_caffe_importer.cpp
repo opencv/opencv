@@ -150,8 +150,17 @@ TEST_P(Test_Caffe_nets, Axpy)
             }
         }
     }
-    float l1 = (target == DNN_TARGET_OPENCL_FP16) ? 2e-4 : 1e-5;
-    float lInf = (target == DNN_TARGET_OPENCL_FP16) ? 1e-3 : 1e-4;
+    float l1 = 1e-5, lInf = 1e-4;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 2e-4;
+        lInf = 1e-3;
+    }
+    else if(target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.0002;
+        lInf = 0.0007;
+    }
     normAssert(ref, out, "", l1, lInf);
 }
 
@@ -291,8 +300,17 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 
     ASSERT_EQ(out.size[2], 100);
 
-    const float scores_diff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
-    const float boxes_iou_diff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 6.3e-2 : 1e-4;
+    float scores_diff = 1e-5, boxes_iou_diff = 1e-4;
+    if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD)
+    {
+        scores_diff = 1.5e-2;
+        boxes_iou_diff = 6.3e-2;
+    }
+    else if (targetId == DNN_TARGET_CUDA_FP16)
+    {
+        scores_diff = 0.015;
+        boxes_iou_diff = 0.07;
+    }
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
     normAssertDetections(ref, out, "", FLT_MIN, scores_diff, boxes_iou_diff);
 
@@ -483,11 +501,21 @@ TEST_P(Test_Caffe_nets, Colorization)
     Mat out = net.forward();
 
     // Reference output values are in range [-29.1, 69.5]
-    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.25 : 4e-4;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5.3 : 3e-3;
-    if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+    double l1 = 4e-4, lInf = 3e-3;
+    if (target == DNN_TARGET_OPENCL_FP16)
     {
-        l1 = 0.5; lInf = 11;
+        l1 = 0.25;
+        lInf = 5.3;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        l1 = (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X) ? 0.5 : 0.25;
+        lInf = (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X) ? 11 : 5.3;
+    }
+    else if(target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.21;
+        lInf = 4.5;
     }
     normAssert(out, ref, "", l1, lInf);
     expectNoFallbacksFromIE(net);
@@ -498,18 +526,17 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     checkBackend();
     const string proto = findDataFile("dnn/DenseNet_121.prototxt", false);
-    const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
+    const string weights = findDataFile("dnn/DenseNet_121.caffemodel", false);
 
     Mat inp = imread(_tf("dog416.png"));
-    inp = blobFromImage(inp, 1.0 / 255, Size(224, 224), Scalar(), true, true);
+    Model model(proto, weights);
+    model.setInputScale(1.0 / 255).setInputSwapRB(true).setInputCrop(true);
+    std::vector<Mat> outs;
     Mat ref = blobFromNPY(_tf("densenet_121_output.npy"));
 
-    Net net = readNetFromCaffe(proto, model);
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    net.setInput(inp);
-    Mat out = net.forward();
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+    model.predict(inp, outs);
 
     // Reference is an array of 1000 values from a range [-6.16, 7.9]
     float l1 = default_l1, lInf = default_lInf;
@@ -525,9 +552,13 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     {
         l1 = 0.11; lInf = 0.5;
     }
-    normAssert(out, ref, "", l1, lInf);
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.04; lInf = 0.2;
+    }
+    normAssert(outs[0], ref, "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        expectNoFallbacksFromIE(net);
+        expectNoFallbacksFromIE(model);
 }
 
 TEST(Test_Caffe, multiple_inputs)
@@ -683,6 +714,8 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+    if (target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
                                            0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
                                            0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176);
@@ -702,8 +735,17 @@ TEST_P(Test_Caffe_nets, RFCN)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-    double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 4e-3 : default_l1;
-    double iouDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 8e-2 : default_lInf;
+    float scoreDiff = default_l1, iouDiff = default_lInf;
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    {
+        scoreDiff = 4e-3;
+        iouDiff = 8e-2;
+    }
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.0034;
+        iouDiff = 0.11;
+    }
     static Mat ref = (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
                                            0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16);
     testFaster("rfcn_pascal_voc_resnet50.prototxt", "resnet50_rfcn_final.caffemodel", ref, scoreDiff, iouDiff);

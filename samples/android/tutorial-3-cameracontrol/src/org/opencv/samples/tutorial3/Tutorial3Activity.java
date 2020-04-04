@@ -1,11 +1,14 @@
 package org.opencv.samples.tutorial3;
 
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.ListIterator;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraActivity;
+import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
@@ -13,7 +16,6 @@ import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.hardware.Camera.Size;
 import android.os.Bundle;
 import android.os.Environment;
@@ -28,11 +30,14 @@ import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-public class Tutorial3Activity extends Activity implements CvCameraViewListener2, OnTouchListener {
+public class Tutorial3Activity extends CameraActivity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
     private Tutorial3View mOpenCvCameraView;
     private List<Size> mResolutionList;
+    private Menu mMenu;
+    private boolean mCameraStarted = false;
+    private boolean mMenuItemsCreated = false;
     private MenuItem[] mEffectMenuItems;
     private SubMenu mColorEffectsMenu;
     private MenuItem[] mResolutionMenuItems;
@@ -97,13 +102,21 @@ public class Tutorial3Activity extends Activity implements CvCameraViewListener2
         }
     }
 
+    @Override
+    protected List<? extends CameraBridgeViewBase> getCameraViewList() {
+        return Collections.singletonList(mOpenCvCameraView);
+    }
+
     public void onDestroy() {
         super.onDestroy();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
     }
 
+    @Override
     public void onCameraViewStarted(int width, int height) {
+        mCameraStarted = true;
+        setupMenuItems();
     }
 
     public void onCameraViewStopped() {
@@ -115,38 +128,43 @@ public class Tutorial3Activity extends Activity implements CvCameraViewListener2
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        mMenu = menu;
+        setupMenuItems();
+        return true;
+    }
+
+    private void setupMenuItems() {
+        if (mMenu == null || !mCameraStarted || mMenuItemsCreated) {
+            return;
+        }
         List<String> effects = mOpenCvCameraView.getEffectList();
 
         if (effects == null) {
             Log.e(TAG, "Color effects are not supported by device!");
-            return true;
+            return;
         }
 
-        mColorEffectsMenu = menu.addSubMenu("Color Effect");
+        mColorEffectsMenu = mMenu.addSubMenu("Color Effect");
         mEffectMenuItems = new MenuItem[effects.size()];
 
         int idx = 0;
         ListIterator<String> effectItr = effects.listIterator();
-        while(effectItr.hasNext()) {
-           String element = effectItr.next();
-           mEffectMenuItems[idx] = mColorEffectsMenu.add(1, idx, Menu.NONE, element);
-           idx++;
+        for (String effect: effects) {
+            mEffectMenuItems[idx] = mColorEffectsMenu.add(1, idx, Menu.NONE, effect);
+            idx++;
         }
 
-        mResolutionMenu = menu.addSubMenu("Resolution");
+        mResolutionMenu = mMenu.addSubMenu("Resolution");
         mResolutionList = mOpenCvCameraView.getResolutionList();
         mResolutionMenuItems = new MenuItem[mResolutionList.size()];
 
-        ListIterator<Size> resolutionItr = mResolutionList.listIterator();
         idx = 0;
-        while(resolutionItr.hasNext()) {
-            Size element = resolutionItr.next();
+        for (Size resolution: mResolutionList) {
             mResolutionMenuItems[idx] = mResolutionMenu.add(2, idx, Menu.NONE,
-                    Integer.valueOf(element.width).toString() + "x" + Integer.valueOf(element.height).toString());
+                    Integer.valueOf(resolution.width).toString() + "x" + Integer.valueOf(resolution.height).toString());
             idx++;
-         }
-
-        return true;
+        }
+        mMenuItemsCreated = true;
     }
 
     public boolean onOptionsItemSelected(MenuItem item) {

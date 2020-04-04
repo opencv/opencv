@@ -29,6 +29,7 @@
 
 #define MODULESTR "cv2"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #include <numpy/ndarrayobject.h>
 
 #include "opencv2/core/utils/configuration.private.hpp"
@@ -39,6 +40,8 @@
 #include "opencv2/opencv_modules.hpp"
 #include "pycompat.hpp"
 #include <map>
+
+#include <type_traits>  // std::enable_if
 
 #define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
 
@@ -53,8 +56,8 @@ public:
     ArgInfo(const char* name_, bool outputarg_) : name(name_), outputarg(outputarg_) {}
 
 private:
-    ArgInfo(const ArgInfo&); // = delete
-    ArgInfo& operator=(const ArgInfo&); // = delete
+    ArgInfo(const ArgInfo&) = delete;
+    ArgInfo& operator=(const ArgInfo&) = delete;
 };
 
 template<typename T, class TEnable = void>  // TEnable is used for SFINAE checks
@@ -316,6 +319,7 @@ typedef std::vector<std::vector<Mat> > vector_vector_Mat;
 typedef std::vector<UMat> vector_UMat;
 typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
+typedef std::vector<std::string> vector_string;
 typedef std::vector<Scalar> vector_Scalar;
 
 typedef std::vector<std::vector<char> > vector_vector_char;
@@ -344,7 +348,7 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, AccessFlag flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         if( data != 0 )
         {
@@ -373,7 +377,7 @@ public:
         return allocate(o, dims0, sizes, type, step);
     }
 
-    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         return stdAllocator->allocate(u, accessFlags, usageFlags);
     }
@@ -831,6 +835,32 @@ bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info)
     return !CV_HAS_CONVERSION_ERROR(value);
 }
 
+// There is conflict between "size_t" and "unsigned int".
+// They are the same type on some 32-bit platforms.
+template<typename T>
+struct PyOpenCV_Converter
+    < T, typename std::enable_if< std::is_same<unsigned int, T>::value && !std::is_same<unsigned int, size_t>::value >::type >
+{
+    static inline PyObject* from(const unsigned int& value)
+    {
+        return PyLong_FromUnsignedLong(value);
+    }
+
+    static inline bool to(PyObject* obj, unsigned int& value, const ArgInfo& info)
+    {
+        CV_UNUSED(info);
+        if(!obj || obj == Py_None)
+            return true;
+        if(PyInt_Check(obj))
+            value = (unsigned int)PyInt_AsLong(obj);
+        else if(PyLong_Check(obj))
+            value = (unsigned int)PyLong_AsLong(obj);
+        else
+            return false;
+        return value != (unsigned int)-1 || !PyErr_Occurred();
+    }
+};
+
 template<>
 PyObject* pyopencv_from(const uchar& value)
 {
@@ -1003,15 +1033,6 @@ template<>
 PyObject* pyopencv_from(const Size_<float>& sz)
 {
     return Py_BuildValue("(ff)", sz.width, sz.height);
-}
-
-template<>
-bool pyopencv_to(PyObject* obj, Rect& r, const ArgInfo& info)
-{
-    CV_UNUSED(info);
-    if(!obj || obj == Py_None)
-        return true;
-    return PyArg_ParseTuple(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
 }
 
 template<>
@@ -1573,6 +1594,25 @@ template<> struct pyopencvVecConverter<RotatedRect>
         return pyopencv_from_generic_vec(value);
     }
 };
+
+template<>
+bool pyopencv_to(PyObject* obj, Rect& r, const ArgInfo& info)
+{
+    CV_UNUSED(info);
+    if(!obj || obj == Py_None)
+        return true;
+
+    if (PyTuple_Check(obj))
+        return PyArg_ParseTuple(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
+    else
+    {
+        std::vector<int> value(4);
+        pyopencvVecConverter<int>::to(obj, value, info);
+        r = Rect(value[0], value[1], value[2], value[3]);
+        return true;
+    }
+
+}
 
 template<>
 bool pyopencv_to(PyObject *obj, TermCriteria& dst, const ArgInfo& info)

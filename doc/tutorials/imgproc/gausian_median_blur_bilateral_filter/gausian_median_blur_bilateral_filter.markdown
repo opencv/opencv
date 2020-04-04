@@ -98,7 +98,7 @@ Code
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp
@@ -106,7 +106,7 @@ Code
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java
@@ -114,7 +114,7 @@ Code
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/imgProc/Smoothing/smoothing.py)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/Smoothing/smoothing.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/imgProc/Smoothing/smoothing.py
@@ -221,7 +221,7 @@ already known by now.
 Results
 -------
 
--   The code opens an image (in this case [lena.jpg](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/lena.jpg))
+-   The code opens an image (in this case [lena.jpg](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/lena.jpg))
     and display it under the effects of the 4 filters explained.
 -   Here is a snapshot of the image smoothed using *medianBlur*:
 

@@ -1,6 +1,6 @@
-$url = "https://raw.githubusercontent.com/opencv/opencv_3rdparty/@FFMPEG_BINARIES_COMMIT@/ffmpeg/opencv_ffmpeg_64.dll"
+$url = "https://raw.githubusercontent.com/opencv/opencv_3rdparty/@FFMPEG_BINARIES_COMMIT@/ffmpeg/opencv_videoio_ffmpeg_64.dll"
 $expected_md5 = "@FFMPEG_FILE_HASH_BIN64@"
-$output = "$PSScriptRoot\@OPENCV_BIN_INSTALL_PATH@\opencv_ffmpeg@OPENCV_DLLVERSION@_64.dll"
+$output = "$PSScriptRoot\@OPENCV_BIN_INSTALL_PATH@\opencv_videoio_ffmpeg@OPENCV_DLLVERSION@_64.dll"
 
 Write-Output ("=" * 120)
 try {

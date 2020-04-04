@@ -156,7 +156,8 @@ const string exts[] = {
 #ifdef HAVE_JPEG
     "jpg",
 #endif
-#if defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)
+#if (defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)) \
+    || defined(HAVE_OPENJPEG)
     "jp2",
 #endif
 #if 0 /*defined HAVE_OPENEXR && !defined __APPLE__*/
@@ -226,6 +227,10 @@ TEST_P(Imgcodecs_Image, read_write_BGR)
     double psnrThreshold = 100;
     if (ext == "jpg")
         psnrThreshold = 32;
+#ifdef HAVE_JASPER
+    if (ext == "jp2")
+        psnrThreshold = 95;
+#endif
 
     Mat image = generateTestImageBGR();
     EXPECT_NO_THROW(test_image_io(image, fname, ext, IMREAD_COLOR, psnrThreshold));
@@ -248,6 +253,10 @@ TEST_P(Imgcodecs_Image, read_write_GRAYSCALE)
     double psnrThreshold = 100;
     if (ext == "jpg")
         psnrThreshold = 40;
+#ifdef HAVE_JASPER
+    if (ext == "jp2")
+        psnrThreshold = 70;
+#endif
 
     Mat image = generateTestImageGrayscale();
     EXPECT_NO_THROW(test_image_io(image, fname, ext, IMREAD_GRAYSCALE, psnrThreshold));
