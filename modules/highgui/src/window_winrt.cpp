@@ -33,7 +33,7 @@
 #include <assert.h>
 #include <opencv2\highgui.hpp>
 #include <opencv2\highgui\highgui_winrt.hpp>
-#include <window_winrt_bridge.hpp>
+#include "window_winrt_bridge.hpp"
 
 #define CV_WINRT_NO_GUI_ERROR( funcname )       \
 {                                               \
