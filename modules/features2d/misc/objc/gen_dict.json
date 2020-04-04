@@ -1,4 +1,8 @@
 {
+    "enum_fix" : {
+        "FastFeatureDetector" : { "DetectorType": "FastDetectorType" },
+        "AgastFeatureDetector" : { "DetectorType": "AgastDetectorType" }
+    },
     "func_arg_fix" : {
         "(void)compute:(NSArray<Mat*>*)images keypoints:(NSMutableArray<NSMutableArray<KeyPoint*>*>*)keypoints descriptors:(NSMutableArray<Mat*>*)descriptors" : { "compute" : {"name" : "compute2"} },
         "(void)detect:(NSArray<Mat*>*)images keypoints:(NSMutableArray<NSMutableArray<KeyPoint*>*>*)keypoints masks:(NSArray<Mat*>*)masks" : { "detect" : {"name" : "detect2"} },

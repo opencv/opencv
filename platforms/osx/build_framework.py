@@ -45,6 +45,7 @@ if __name__ == "__main__":
     parser.add_argument('--macosx_deployment_target', default=os.environ.get('MACOSX_DEPLOYMENT_TARGET', MACOSX_DEPLOYMENT_TARGET), help='specify MACOSX_DEPLOYMENT_TARGET')
     parser.add_argument('--debug', action='store_true', help='Build "Debug" binaries (CMAKE_BUILD_TYPE=Debug)')
     parser.add_argument('--debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
+    parser.add_argument('--framework_name', default='OpenCV', dest='framework_name', action='store_true', help='Name of OpenCV framework (default: OpenCV, set to opencv2 for compatibility with old version)')
 
     args = parser.parse_args()
 
@@ -54,5 +55,5 @@ if __name__ == "__main__":
     b = OSXBuilder(args.opencv, args.contrib, False, False, args.without, args.disable, args.enablenonfree,
         [
             (["x86_64"], "MacOSX")
-        ], args.debug, args.debug_info)
+        ], args.debug, args.debug_info, args.framework_name)
     b.build(args.out)

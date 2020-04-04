@@ -1,13 +1,11 @@
 //
 //  RangeTest.swift
-//  StitchAppTests
 //
 //  Created by Giles Payne on 2020/01/31.
-//  Copyright © 2020 Xtravision. All rights reserved.
 //
 
 import XCTest
-import StitchApp
+import OpenCV
 
 class RangeTest: OpenCVTestCase {
 

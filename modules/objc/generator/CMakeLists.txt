@@ -55,19 +55,25 @@ set(objc_generated_files
     "${OPENCV_DEPHELPER}/gen_opencv_objc_source"
 )
 
-set(objc_build_dir
-    "${CMAKE_CURRENT_BINARY_DIR}/objc_build"
-)
+#set(objc_build_dir
+#    "${CMAKE_CURRENT_BINARY_DIR}/objc_build"
+#)
 
-set(objc_build_files
-    "${objc_build_dir}/opencv_objc.xcodeproj"
-)
+#set(objc_build_files
+#    "${objc_build_dir}/opencv_objc.xcodeproj"
+#)
 
 string(REPLACE "opencv_" "" MODULES "${OPENCV_OBJC_MODULES}")
 
+if(IOS)
+  set(TARGET "ios")
+else()
+  set(TARGET "osx")
+endif()
+
 add_custom_command(
     OUTPUT ${objc_generated_files}
-    COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${OBJC_SOURCE_DIR}/generator/gen_objc.py" -p "${OBJC_SOURCE_DIR}/../python/src2/gen2.py" -c "${CONFIG_FILE}"
+    COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${OBJC_SOURCE_DIR}/generator/gen_objc.py" -p "${OBJC_SOURCE_DIR}/../python/src2/gen2.py" -c "${CONFIG_FILE}" -t "${TARGET}" -f "${FRAMEWORK_NAME}"
     COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/gen_opencv_objc_source"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${OBJC_SOURCE_DIR}/generator/gen_objc.py"
@@ -79,13 +85,13 @@ add_custom_command(
     COMMENT "Generate files for Objective-C bindings"
 )
 
-add_custom_command(
-    OUTPUT ${objc_build_files}
-    COMMAND ${CMAKE_COMMAND} -GXcode "-DLIBRARY_OUTPUT_PATH=${LIBRARY_OUTPUT_PATH}" "-DMODULES=\"${MODULES}\"" "-DOpenCV_BINARY_DIR=${OpenCV_BINARY_DIR}" "-DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}" "-DCMAKE_MACOSX_BUNDLE=${CMAKE_MACOSX_BUNDLE}" "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=${CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED}" "-DBUILD_WITH_DEBUG_INFO=${BUILD_WITH_DEBUG_INFO}" "-DIOS_ARCH=${IOS_ARCH}" "-DIPHONEOS_DEPLOYMENT_TARGET=8.0" "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}" "-DCPU_BASELINE=${CPU_BASELINE}" "-DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}" "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}" "-DCMAKE_INSTALL_NAME_TOOL=install_name_tool" "${CMAKE_CURRENT_BINARY_DIR}/gen/"
-    WORKING_DIRECTORY "${objc_build_dir}"
-    DEPENDS "${objc_generated_files}"
-    COMMENT "Generate build files for Objective-C bindings"
-)
+#add_custom_command(
+#    OUTPUT ${objc_build_files}
+#    COMMAND ${CMAKE_COMMAND} -GXcode "-DLIBRARY_OUTPUT_PATH=${LIBRARY_OUTPUT_PATH}" "-DMODULES=\"${MODULES}\"" "-DOpenCV_BINARY_DIR=${OpenCV_BINARY_DIR}" "-DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}" "-DCMAKE_MACOSX_BUNDLE=${CMAKE_MACOSX_BUNDLE}" "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=${CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED}" "-DBUILD_WITH_DEBUG_INFO=${BUILD_WITH_DEBUG_INFO}" "-DIOS_ARCH=${IOS_ARCH}" "-DIPHONEOS_DEPLOYMENT_TARGET=8.0" "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}" "-DCPU_BASELINE=${CPU_BASELINE}" "-DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}" "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}" "-DOPENCV_LIB_INSTALL_PATH=${OPENCV_LIB_INSTALL_PATH}" "-DOPENCV_INCLUDE_INSTALL_PATH=${OPENCV_INCLUDE_INSTALL_PATH}" "-DCMAKE_INSTALL_NAME_TOOL=install_name_tool" "${CMAKE_CURRENT_BINARY_DIR}/gen/"
+#    WORKING_DIRECTORY "${objc_build_dir}"
+#    DEPENDS "${objc_generated_files}"
+#    COMMENT "Generate build files for Objective-C bindings"
+#)
 
 add_custom_target(gen_opencv_objc_source DEPENDS ${objc_generated_files}
     SOURCES "${OBJC_SOURCE_DIR}/generator/gen_objc.py"
@@ -93,12 +99,12 @@ add_custom_target(gen_opencv_objc_source DEPENDS ${objc_generated_files}
             "${CMAKE_CURRENT_BINARY_DIR}/gen_objc.json"
 )
 
-add_custom_target(objc_build_files DEPENDS ${objc_build_files}
-    SOURCES "${OBJC_SOURCE_DIR}/generator/gen_objc.py"
-            "${OBJC_SOURCE_DIR}/generator/templates/cmakelists.template"
-            "${CMAKE_CURRENT_BINARY_DIR}/gen_objc.json"
-)
+#add_custom_target(objc_build_files DEPENDS ${objc_build_files}
+#    SOURCES "${OBJC_SOURCE_DIR}/generator/gen_objc.py"
+#            "${OBJC_SOURCE_DIR}/generator/templates/cmakelists.template"
+#            "${CMAKE_CURRENT_BINARY_DIR}/gen_objc.json"
+#)
 
-add_dependencies(objc_build_files gen_opencv_objc_source)
-add_dependencies(opencv_world objc_build_files)
+add_dependencies(opencv_world gen_opencv_objc_source)
+#add_dependencies(opencv_world objc_build_files)
 

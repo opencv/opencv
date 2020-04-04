@@ -1,13 +1,11 @@
 //
 //  OpenCVTestCase.swift
-//  StitchAppTests
 //
 //  Created by Giles Payne on 2020/01/19.
-//  Copyright © 2020 Xtravision. All rights reserved.
 //
 
 import XCTest
-import StitchApp
+import OpenCV
 
 enum OpenCVTestError: Error {
     case unsupportedOperationError(String)

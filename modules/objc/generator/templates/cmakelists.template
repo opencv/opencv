@@ -1,46 +1,41 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(opencv_objc)
+project($framework)
+
+set(MODULES "$modules")
 
 # Enable C++11
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 set (OBJC_ARC_COMPILE_FLAGS "-fobjc-arc -fobjc-weak")
-set (CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${OBJC_ARC_COMPILE_FLAGS}")
+set (CMAKE_CXX_FLAGS  "$${CMAKE_CXX_FLAGS} $${OBJC_ARC_COMPILE_FLAGS}")
 
 # grab the files
 file(GLOB_RECURSE objc_sources "objc/*\.h" "objc/*\.m" "objc/*\.mm" "objc/*\.swift")
+file(GLOB_RECURSE objc_headers "*\.h")
 
-add_library(opencv_objc STATIC ${objc_sources})
+add_library($framework STATIC $${objc_sources})
 
-set_target_properties(opencv_objc PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties($framework PROPERTIES LINKER_LANGUAGE CXX)
 
-target_include_directories(opencv_objc PRIVATE "include")
-foreach(m ${MODULES})
-  target_include_directories(opencv_objc PRIVATE "${OpenCV_BINARY_DIR}/modules/objc/gen/objc/${m}")
+target_include_directories($framework PRIVATE "$${BUILD_ROOT}/install/include")
+target_include_directories($framework PRIVATE "$${BUILD_ROOT}/install/include/opencv2")
+foreach(m $${MODULES})
+  target_include_directories($framework PRIVATE "$${BUILD_ROOT}/modules/objc/gen/objc/$${m}")
 endforeach()
+
+install(TARGETS $framework LIBRARY DESTINATION lib)
 
 enable_language(Swift)
 
 # Additional target properties
-set_target_properties(opencv_objc PROPERTIES
-    OUTPUT_NAME "opencv_objc"
-    XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${OpenCV_BINARY_DIR}/modules/objc/gen/objc/OpenCV-ObjC-Bridge.h"
-    ARCHIVE_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}"
+set_target_properties($framework PROPERTIES
+    OUTPUT_NAME "$framework"
+    ARCHIVE_OUTPUT_DIRECTORY "$${BUILD_ROOT}/lib"
+    XCODE_ATTRIBUTE_SWIFT_VERSION 5.0
+    FRAMEWORK TRUE
+    MACOSX_FRAMEWORK_IDENTIFIER org.opencv.$framework
+    PUBLIC_HEADER "$${objc_headers}"
     DEFINE_SYMBOL CVAPI_EXPORTS
     )
-
-if(NOT XCODE_VERSION VERSION_LESS 10.2)
-  set_target_properties(opencv_objc PROPERTIES
-      XCODE_ATTRIBUTE_SWIFT_VERSION 5.0
-      )
-elseif(NOT XCODE_VERSION VERSION_LESS 9.0)
-  set_target_properties(${the_module} PROPERTIES
-      XCODE_ATTRIBUTE_SWIFT_VERSION 4.0
-      )
-elseif(NOT XCODE_VERSION VERSION_LESS 8.0)
-  set_target_properties(${the_module} PROPERTIES
-      XCODE_ATTRIBUTE_SWIFT_VERSION 3.0
-      )
-endif()

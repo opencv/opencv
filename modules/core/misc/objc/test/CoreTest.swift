@@ -1,13 +1,11 @@
 //
 //  CoreTest.swift
-//  StitchAppTests
 //
 //  Created by Giles Payne on 2020/01/27.
-//  Copyright © 2020 Xtravision. All rights reserved.
 //
 
 import XCTest
-import StitchApp
+import OpenCV
 
 class CoreTest: OpenCVTestCase {
     
@@ -524,7 +522,7 @@ class CoreTest: OpenCVTestCase {
 
     func testGetCPUTickCount() {
         let cpuCountStart = Core.getCPUTickCount()
-        Core.sumElems(src: gray255)
+        Core.sum(src: gray255)
         let actualTickCount = Core.getCPUTickCount()
 
         let expectedTickCount = actualTickCount - cpuCountStart;
@@ -1577,7 +1575,7 @@ class CoreTest: OpenCVTestCase {
     func testSumElems() throws {
         let src = Mat(rows: 4, cols: 4, type: CvType.CV_8U, scalar: Scalar(10))
 
-        let res1 = Core.sumElems(src: src)
+        let res1 = Core.sum(src: src)
 
         assertScalarEqual(Scalar(160), res1, OpenCVTestCase.EPS)
     }

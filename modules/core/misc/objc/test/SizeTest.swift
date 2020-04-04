@@ -5,7 +5,7 @@
 //
 
 import XCTest
-import StitchApp
+import OpenCV
 
 class SizeTest: OpenCVTestCase {
 

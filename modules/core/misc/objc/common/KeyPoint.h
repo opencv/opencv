@@ -1,0 +1,49 @@
+//
+//  KeyPoint.h
+//
+//  Created by Giles Payne on 2019/10/08.
+//  Copyright © 2019 Xtravision. All rights reserved.
+//
+
+#pragma once
+
+#ifdef __cplusplus
+#import "opencv.hpp"
+#endif
+
+#import <Foundation/Foundation.h>
+
+@class Point2f;
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface KeyPoint : NSObject
+
+@property Point2f* pt;
+@property float size;
+@property float angle;
+@property float response;
+@property int octave;
+@property int classId;
+#ifdef __cplusplus
+@property(readonly) cv::KeyPoint& nativeRef;
+#endif
+
+- (instancetype)init;
+- (instancetype)initWithX:(float)x y:(float)y size:(float)size angle:(float)angle response:(float)response octave:(int)octave classId:(int)classId;
+- (instancetype)initWithX:(float)x y:(float)y size:(float)size angle:(float)angle response:(float)response octave:(int)octave;
+- (instancetype)initWithX:(float)x y:(float)y size:(float)size angle:(float)angle response:(float)response;
+- (instancetype)initWithX:(float)x y:(float)y size:(float)size angle:(float)angle;
+- (instancetype)initWithX:(float)x y:(float)y size:(float)size;
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::KeyPoint&)keyPoint;
+#endif
+
+- (KeyPoint*)clone;
+- (BOOL)isEqual:(nullable id)other;
+- (NSUInteger)hash;
+- (NSString*)description;
+
+@end
+
+NS_ASSUME_NONNULL_END

@@ -1,13 +1,11 @@
 //
 //  MatTests.m
-//  StitchAppTests
 //
 //  Created by Giles Payne on 2020/01/25.
-//  Copyright © 2020 Xtravision. All rights reserved.
 //
 
 #import <XCTest/XCTest.h>
-#import "Mat.h"
+#import <OpenCV/OpenCV.h>
 
 #define CV_8U 0
 #define CV_16S 3

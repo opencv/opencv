@@ -4,7 +4,7 @@
 #pragma once
 
 #ifdef __cplusplus
-#import "opencv2/opencv.hpp"
+#import "opencv.hpp"
 $additionalImports
 #endif
 

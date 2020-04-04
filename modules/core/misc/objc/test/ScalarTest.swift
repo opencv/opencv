@@ -1,13 +1,11 @@
 //
 //  ScalarTest.swift
-//  StitchAppTests
 //
 //  Created by Giles Payne on 2020/01/31.
-//  Copyright © 2020 Xtravision. All rights reserved.
 //
 
 import XCTest
-import StitchApp
+import OpenCV
 
 class ScalarTest: OpenCVTestCase {
 
@@ -89,12 +87,6 @@ class ScalarTest: OpenCVTestCase {
         let dstScalar = Scalar(2.0, 5.0, 5.0, 9.0)
         let truth = Scalar(2.0, 5.0, 5.0, 9.0)
         XCTAssertEqual(truth, dstScalar)
-    }
-
-    func testSet() {
-        let vals = [1.0, 1.0, 1.0, 1.0]
-        s1.set(vals: vals as [NSNumber])
-        XCTAssertEqual(s2, s1)
     }
 
     func testToString() {
