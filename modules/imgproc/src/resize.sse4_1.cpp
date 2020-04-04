@@ -59,8 +59,8 @@ class resizeNNInvokerSSE2 :
     public ParallelLoopBody
 {
 public:
-    resizeNNInvokerSSE2(const Mat& _src, Mat &_dst, int *_x_ofs, int _pix_size4, double _ify) :
-        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs), pix_size4(_pix_size4),
+    resizeNNInvokerSSE2(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
         ify(_ify)
     {
     }
@@ -110,9 +110,9 @@ public:
     }
 
 private:
-    const Mat src;
-    Mat dst;
-    int* x_ofs, pix_size4;
+    const Mat& src;
+    Mat& dst;
+    int* x_ofs;
     double ify;
 
     resizeNNInvokerSSE2(const resizeNNInvokerSSE2&);
@@ -123,8 +123,8 @@ class resizeNNInvokerSSE4 :
     public ParallelLoopBody
 {
 public:
-    resizeNNInvokerSSE4(const Mat& _src, Mat &_dst, int *_x_ofs, int _pix_size4, double _ify) :
-        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs), pix_size4(_pix_size4),
+    resizeNNInvokerSSE4(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
         ify(_ify)
     {
     }
@@ -165,24 +165,24 @@ public:
     }
 
 private:
-    const Mat src;
-    Mat dst;
-    int* x_ofs, pix_size4;
+    const Mat& src;
+    Mat& dst;
+    int* x_ofs;
     double ify;
 
     resizeNNInvokerSSE4(const resizeNNInvokerSSE4&);
     resizeNNInvokerSSE4& operator=(const resizeNNInvokerSSE4&);
 };
 
-void resizeNN2_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, int pix_size4, double ify)
+void resizeNN2_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, double ify)
 {
-    resizeNNInvokerSSE2 invoker(src, dst, x_ofs, pix_size4, ify);
+    resizeNNInvokerSSE2 invoker(src, dst, x_ofs, ify);
     parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
 }
 
-void resizeNN4_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, int pix_size4, double ify)
+void resizeNN4_SSE4_1(const Range& range, const Mat& src, Mat &dst, int *x_ofs, double ify)
 {
-    resizeNNInvokerSSE4 invoker(src, dst, x_ofs, pix_size4, ify);
+    resizeNNInvokerSSE4 invoker(src, dst, x_ofs, ify);
     parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
 }
 
