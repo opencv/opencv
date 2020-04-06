@@ -98,8 +98,6 @@ std::vector<cv::gimpl::stream::Q*> input_queues(      ade::Graph &g,
 
 void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
 {
-    namespace own = cv::gapi::own;
-
     for (auto && it : ade::util::zip(ade::util::toRange(outputs),
                                      ade::util::toRange(results)))
     {
@@ -110,13 +108,8 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         using T = cv::GRunArgP;
         switch (out_obj.index())
         {
-#if !defined(GAPI_STANDALONE)
         case T::index_of<cv::Mat*>():
             *cv::util::get<cv::Mat*>(out_obj) = std::move(cv::util::get<cv::Mat>(res_obj));
-            break;
-#endif // !GAPI_STANDALONE
-        case T::index_of<own::Mat*>():
-            *cv::util::get<own::Mat*>(out_obj) = std::move(cv::util::get<own::Mat>(res_obj));
             break;
         case T::index_of<cv::Scalar*>():
             *cv::util::get<cv::Scalar*>(out_obj) = std::move(cv::util::get<cv::Scalar>(res_obj));
@@ -588,7 +581,130 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
     StreamingOutput output(out_metas, out_queues, out_rcs);
     while (!output.done())
     {
+<<<<<<< HEAD
         island->run(input, output);
+=======
+        std::vector<cv::gimpl::GIslandExecutable::InObj> isl_inputs;
+        isl_inputs.resize(in_rcs.size());
+
+        cv::GRunArgs isl_input_args;
+        if (!qr.getInputVector(in_queues, in_constants, isl_input_args))
+        {
+            // Stop received -- broadcast Stop down to the pipeline and quit
+            for (auto &&out_qq : out_queues)
+            {
+                for (auto &&out_q : out_qq) out_q->push(Cmd{Stop{}});
+            }
+            return;
+        }
+        GAPI_Assert(isl_inputs.size() == isl_input_args.size());
+        for (auto &&it : ade::util::indexed(ade::util::zip(ade::util::toRange(in_rcs),
+                                            ade::util::toRange(isl_inputs),
+                                            ade::util::toRange(isl_input_args))))
+        {
+            const auto &value     = ade::util::value(it);
+            const auto &in_rc     = std::get<0>(value);
+            auto       &isl_input = std::get<1>(value);
+            const auto &in_arg    = std::get<2>(value); // FIXME: MOVE PROBLEM
+            isl_input.first = in_rc;
+#if defined(GAPI_STANDALONE)
+            // Standalone mode - simply store input argument in the vector as-is
+            auto id               = ade::util::index(it);
+            isl_inputs[id].second = in_arg;
+#else
+            // Make Islands operate on own:: data types (i.e. in the same
+            // environment as GExecutor provides)
+            // This way several backends (e.g. Fluid) remain OpenCV-independent.
+            switch (in_arg.index()) {
+            case cv::GRunArg::index_of<cv::Mat>():
+                isl_input.second = cv::GRunArg{cv::util::get<cv::Mat>(in_arg)};
+                break;
+            case cv::GRunArg::index_of<cv::Scalar>():
+                isl_input.second = cv::GRunArg{cv::util::get<cv::Scalar>(in_arg)};
+                break;
+            default:
+                isl_input.second = in_arg;
+                break;
+            }
+#endif // GAPI_STANDALONE
+        }
+        // Once the vector is obtained, prepare data for island execution
+        // Note - we first allocate output vector via GRunArg!
+        // Then it is converted to a GRunArgP.
+        std::vector<cv::gimpl::GIslandExecutable::OutObj> isl_outputs;
+        cv::GRunArgs out_data;
+        isl_outputs.resize(out_rcs.size());
+        out_data.resize(out_rcs.size());
+        for (auto &&it : ade::util::indexed(out_rcs))
+        {
+            auto id = ade::util::index(it);
+            auto &r = ade::util::value(it);
+
+            using MatType = cv::Mat;
+            using SclType = cv::Scalar;
+
+            switch (r.shape) {
+                // Allocate a data object based on its shape & meta, and put it into our vectors.
+                // Yes, first we put a cv::Mat GRunArg, and then specify _THAT_
+                // pointer as an output parameter - to make sure that after island completes,
+                // our GRunArg still has the right (up-to-date) value.
+                // Same applies to other types.
+                // FIXME: This is absolutely ugly but seem to work perfectly for its purpose.
+            case cv::GShape::GMAT:
+                {
+                    MatType newMat;
+                    cv::gimpl::createMat(cv::util::get<cv::GMatDesc>(out_metas[id]), newMat);
+                    out_data[id] = cv::GRunArg(std::move(newMat));
+                    isl_outputs[id] = { r, cv::GRunArgP(&cv::util::get<MatType>(out_data[id])) };
+                }
+                break;
+            case cv::GShape::GSCALAR:
+                {
+                    SclType newScl;
+                    out_data[id] = cv::GRunArg(std::move(newScl));
+                    isl_outputs[id] = { r, cv::GRunArgP(&cv::util::get<SclType>(out_data[id])) };
+                }
+                break;
+            case cv::GShape::GARRAY:
+                {
+                    cv::detail::VectorRef newVec;
+                    cv::util::get<cv::detail::ConstructVec>(r.ctor)(newVec);
+                    out_data[id] = cv::GRunArg(std::move(newVec));
+                    // VectorRef is implicitly shared so no pointer is taken here
+                    const auto &rr = cv::util::get<cv::detail::VectorRef>(out_data[id]); // FIXME: that variant MOVE problem again
+                    isl_outputs[id] = { r, cv::GRunArgP(rr) };
+                }
+                break;
+            case cv::GShape::GOPAQUE:
+                {
+                    cv::detail::OpaqueRef newOpaque;
+                    cv::util::get<cv::detail::ConstructOpaque>(r.ctor)(newOpaque);
+                    out_data[id] = cv::GRunArg(std::move(newOpaque));
+                    // OpaqueRef is implicitly shared so no pointer is taken here
+                    const auto &rr = cv::util::get<cv::detail::OpaqueRef>(out_data[id]); // FIXME: that variant MOVE problem again
+                    isl_outputs[id] = { r, cv::GRunArgP(rr) };
+                }
+                break;
+            default:
+                cv::util::throw_error(std::logic_error("Unsupported GShape"));
+                break;
+            }
+        }
+        // Now ask Island to execute on this data
+        island->run(std::move(isl_inputs), std::move(isl_outputs));
+
+        // Once executed, dispatch our results down to the pipeline.
+        for (auto &&it : ade::util::zip(ade::util::toRange(out_queues),
+                                        ade::util::toRange(out_data)))
+        {
+            for (auto &&q : std::get<0>(it))
+            {
+                // FIXME: FATAL VARIANT ISSUE!!
+                const auto tmp = std::get<1>(it);
+                q->push(Cmd{tmp});
+            }
+        }
+>>>>>>> deowned Mat
     }
 }
 

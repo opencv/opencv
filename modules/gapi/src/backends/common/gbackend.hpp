@@ -45,9 +45,9 @@ namespace magazine {
 
 } // namespace magazine
 #if !defined(GAPI_STANDALONE)
-using Mag = magazine::Class<cv::gapi::own::Mat, cv::UMat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
+using Mag = magazine::Class<cv::Mat, cv::UMat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
 #else
-using Mag = magazine::Class<cv::gapi::own::Mat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
+using Mag = magazine::Class<cv::Mat, cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
 #endif
 
 namespace magazine
@@ -98,10 +98,7 @@ inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
     return cv::util::optional<T>();
 }
 
-void createMat(const cv::GMatDesc& desc, cv::gapi::own::Mat& mat);
-#if !defined(GAPI_STANDALONE)
 void createMat(const cv::GMatDesc& desc, cv::Mat& mat);
-#endif
 
 }} // cv::gimpl
 

@@ -250,8 +250,8 @@ public:
     void apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});       // Arg-to-arg overload
 
     /// @private -- Exclude this function from OpenCV documentation
-    void apply(const std::vector<cv::gapi::own::Mat>& ins,                        // Compatibility overload
-               const std::vector<cv::gapi::own::Mat>& outs,
+    void apply(const std::vector<cv::Mat>& ins,                        // Compatibility overload
+               const std::vector<cv::Mat>& outs,
                GCompileArgs &&args = {});
 
     // 2. Syntax sugar and compatibility overloads
