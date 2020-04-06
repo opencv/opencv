@@ -266,7 +266,6 @@ std::ostream& operator<<(std::ostream& os, const cv::GMetaArg &arg)
 }
 } // namespace cv
 
-// TODO: This function requires thorough testing
 const void* cv::gimpl::proto::ptr(const GRunArgP &arg)
 {
     switch (arg.index())

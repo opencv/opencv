@@ -106,6 +106,7 @@ namespace detail
         virtual ~BasicOpaqueRef() {}
 
         virtual void mov(BasicOpaqueRef &ref) = 0;
+        virtual const void* ptr() const = 0;
     };
 
     template<typename T> class OpaqueRefT final: public BasicOpaqueRef
@@ -197,6 +198,8 @@ namespace detail
             GAPI_Assert(tv != nullptr);
             wref() = std::move(tv->wref());
         }
+
+        virtual const void* ptr() const override { return &rref(); }
     };
 
     // This class strips type information from OpaqueRefT<> and makes it usable
@@ -251,7 +254,7 @@ namespace detail
         }
 
         // May be used to uniquely identify this object internally
-        const void *ptr() const { return static_cast<const void*>(m_ref.get()); }
+        const void *ptr() const { return m_ref->ptr(); }
     };
 } // namespace detail
 

@@ -344,6 +344,7 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
         // This kludge should go as a result of de-ownification
         const cv::GRunArg& in_data_orig = std::get<1>(it);
         cv::GRunArg in_data;
+#if !defined(GAPI_STANDALONE)
         switch (in_data_orig.index())
         {
         case cv::GRunArg::index_of<cv::Mat>():
@@ -356,6 +357,9 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
             in_data = in_data_orig;
             break;
         }
+#else
+        in_data = in_data_orig;
+#endif // GAPI_STANDALONE
         in_objs.emplace_back(std::get<0>(it), std::move(in_data));
     }
     for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))

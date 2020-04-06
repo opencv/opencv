@@ -420,8 +420,13 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     // Prepare this object for posting
     virtual cv::GRunArgP get(int idx) override
     {
+#if !defined(GAPI_STANDALONE)
         using MatType = cv::Mat;
         using SclType = cv::Scalar;
+#else
+        using MatType = cv::gapi::own::Mat;
+        using SclType = cv::gapi::own::Scalar;
+#endif // GAPI_STANDALONE
 
         // Allocate a new posting first, then bind this GRunArgP to this item
         auto iter    = m_postings[idx].insert(m_postings[idx].end(), Posting{});
