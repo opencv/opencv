@@ -288,7 +288,7 @@ struct IECallContext
     const cv::Mat&   inMat(std::size_t input) {
         return inArg<cv::Mat>(input);
     }
-    cv::gMat&         outMatR(std::size_t output) {
+    cv::Mat&         outMatR(std::size_t output) {
         return *cv::util::get<cv::Mat*>(results.at(output));
     }
 

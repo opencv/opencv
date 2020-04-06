@@ -195,13 +195,13 @@ void cv::validate_input_arg(const GRunArg& arg)
     case GRunArg::index_of<cv::UMat>():
     {
         const auto desc = cv::descr_of(util::get<cv::UMat>(arg));
-        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of cv::UMat!"); break;
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of UMat!"); break;
     }
 #endif //  !defined(GAPI_STANDALONE)
     case GRunArg::index_of<cv::Mat>():
     {
         const auto desc = cv::descr_of(util::get<cv::Mat>(arg));
-        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of cv::Mat!"); break;
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of Mat!"); break;
     }
     default:
         // No extra handling
