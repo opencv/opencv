@@ -10,7 +10,7 @@
 
 namespace
 {
-#define CORE_GPU [] () { return cv::compile_args(cv::gapi::core::gpu::kernels()); }
+#define CORE_GPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::gpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -98,14 +98,13 @@ INSTANTIATE_TEST_CASE_P(MeanTestGPU, MeanTest,
                                 Values(CORE_GPU)));
 
 //TODO: mask test doesn't work
-#if 0
-INSTANTIATE_TEST_CASE_P(MaskTestGPU, MaskTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_MaskTestGPU, MaskTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(-1),
                                 Values(CORE_GPU)));
-#endif
 
 INSTANTIATE_TEST_CASE_P(SelectTestGPU, SelectTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -158,7 +157,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseNotTestGPU, NotTest,
                                 Values(-1),
                                 Values(CORE_GPU)));
 
-INSTANTIATE_TEST_CASE_P(MinTestGPU, MinTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_MinTestGPU, MinTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
@@ -166,7 +165,7 @@ INSTANTIATE_TEST_CASE_P(MinTestGPU, MinTest,
                                 Values(-1),
                                 Values(CORE_GPU)));
 
-INSTANTIATE_TEST_CASE_P(MaxTestGPU, MaxTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_MaxTestGPU, MaxTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
@@ -415,19 +414,19 @@ INSTANTIATE_TEST_CASE_P(ReInitOutTestGPU, ReInitOutTest,
                                        cv::Size(10, 480))));
 
 //TODO: fix this backend to allow ConcatVertVec ConcatHorVec
-#if 0
-INSTANTIATE_TEST_CASE_P(ConcatVertVecTestGPU, ConcatVertVecTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_ConcatVertVecTestGPU, ConcatVertVecTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(-1),
                                 Values(CORE_GPU)));
 
-INSTANTIATE_TEST_CASE_P(ConcatHorVecTestGPU, ConcatHorVecTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_ConcatHorVecTestGPU, ConcatHorVecTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(-1),
                                 Values(CORE_GPU)));
-#endif
 }
