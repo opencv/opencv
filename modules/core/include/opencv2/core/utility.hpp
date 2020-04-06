@@ -622,7 +622,8 @@ void Mat::forEach_impl(const Functor& operation) {
         //  or (_Tp&, void*)        <- in case you don't need current idx.
     }
 
-    CV_Assert(this->size[this->dims - 1] > 0 && this->total() / this->size[this->dims - 1] <= INT_MAX);
+    CV_Assert(!empty());
+    CV_Assert(this->total() / this->size[this->dims - 1] <= INT_MAX);
     const int LINES = static_cast<int>(this->total() / this->size[this->dims - 1]);
 
     class PixelOperationWrapper :public ParallelLoopBody
