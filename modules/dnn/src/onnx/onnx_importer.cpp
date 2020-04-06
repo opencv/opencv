@@ -721,6 +721,15 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.type = "ReLU";
             replaceLayerParam(layerParams, "alpha", "negative_slope");
         }
+        else if (layer_type == "Relu")
+        {
+            layerParams.type = "ReLU";
+        }
+        else if (layer_type == "PRelu")
+        {
+            layerParams.type = "PReLU";
+            layerParams.blobs.push_back(getBlob(node_proto, constBlobs, 1));
+        }
         else if (layer_type == "LRN")
         {
             replaceLayerParam(layerParams, "size", "local_size");
@@ -1285,10 +1294,10 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.set("zoom_factor_x", scales.at<float>(3));
             }
         }
-        else if (layer_type == "LogSoftmax")
+        else if (layer_type == "SoftMax" || layer_type == "LogSoftmax")
         {
             layerParams.type = "Softmax";
-            layerParams.set("log_softmax", true);
+            layerParams.set("log_softmax", layer_type == "LogSoftmax");
         }
         else
         {
