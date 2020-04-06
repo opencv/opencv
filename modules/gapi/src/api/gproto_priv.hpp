@@ -28,7 +28,8 @@ GAPI_EXPORTS const GOrigin& origin_of (const GArg      &arg);
 bool           is_dynamic(const GArg      &arg);
 GProtoArg      rewrap    (const GArg      &arg);
 
-const void*    ptr       (const GRunArgP  &arg);
+// FIXME:: GAPI_EXPORTS because of tests only!!
+GAPI_EXPORTS const void*    ptr       (const GRunArgP  &arg);
 
 } // proto
 } // gimpl
