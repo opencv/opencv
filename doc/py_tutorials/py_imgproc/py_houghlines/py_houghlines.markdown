@@ -80,7 +80,7 @@ Probabilistic Hough Transform
 In the hough transform, you can see that even for a line with two arguments, it takes a lot of
 computation. Probabilistic Hough Transform is an optimization of the Hough Transform we saw. It doesn't
 take all the points into consideration. Instead, it takes only a random subset of points which is
-sufficient for line detection. Just we have to decrease the threshold. See image below which compares
+sufficient for line detection. We just have to decrease the threshold. See image below which compares
 Hough Transform and Probabilistic Hough Transform in Hough space. (Image Courtesy :
 [Franck Bettinger's home page](http://phdfb1.free.fr/robot/mscthesis/node14.html) )
 
