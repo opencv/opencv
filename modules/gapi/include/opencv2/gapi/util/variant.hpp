@@ -36,11 +36,14 @@ namespace util
             static const constexpr std::size_t value = I;
         };
 
+        template< bool B, class T = void >
+        using enable_if_t = typename std::enable_if<B,T>::type;
 
-        template<class T, class U, class V> using are_different =
-            std::enable_if<!std::is_same<typename std::decay<T>::type,
-                                         typename std::decay<U>::type>::value,
-                           V>;
+        template<class T, class U, class V = void>
+        using are_different_t = enable_if_t<
+                !std::is_same<typename std::decay<T>::type,
+                              typename std::decay<U>::type>::value,
+                 V>;
     }
 
     template<typename Target, typename... Types>
@@ -157,10 +160,17 @@ namespace util
         variant(const variant& other);
         variant(variant&& other) noexcept;
         template<typename T> explicit variant(const T& t);
-        // are_different is a SFINAE trick to avoid variant(T &&t) with T=variant
+        // are_different_t is a SFINAE trick to avoid variant(T &&t) with T=variant
         // for some reason, this version is called instead of variant(variant&& o) when
-        // variant is used in STL containers (examples: vector assignment)
-        template<typename T> explicit variant(T&& t, typename detail::are_different<variant, T, int>::type = 0);
+        // variant is used in STL containers (examples: vector assignment).
+        // detail::enable_if_t<! std::is_lvalue_reference<T>::value> is a SFINAE
+        // trick to limit this constructor only to rvalue reference argument
+        template<
+            typename T,
+            typename = detail::are_different_t<variant, T>,
+            typename = detail::enable_if_t<! std::is_lvalue_reference<T>::value>
+        >
+        explicit variant(T&& t);
         // template<class T, class... Args> explicit variant(Args&&... args);
         // FIXME: other constructors
 
@@ -172,9 +182,11 @@ namespace util
         variant& operator=(variant &&rhs) noexcept;
 
         // SFINAE trick to avoid operator=(T&&) with T=variant<>, see comment above
-        template<class T>
-        typename detail::are_different<variant, T, variant&>
-        ::type operator=(T&& t) noexcept;
+        template<
+            typename T,
+            typename = detail::are_different_t<variant, T>
+        >
+        variant& operator=(T&& t) noexcept;
 
         // Observers
         std::size_t index() const noexcept;
@@ -232,8 +244,8 @@ namespace util
     }
 
     template<typename... Ts>
-    template<class T>
-    variant<Ts...>::variant(T&& t, typename detail::are_different<variant, T, int>::type)
+    template<class T, typename , typename>
+    variant<Ts...>::variant(T&& t)
         : m_index(util::type_list_index<typename std::remove_reference<T>::type, Ts...>::value)
     {
         (mctrs()[m_index])(memory, &t);
@@ -278,8 +290,8 @@ namespace util
     }
 
     template<typename... Ts>
-    template<class T> typename detail::are_different<variant<Ts...>, T, variant<Ts...>&>
-    ::type variant<Ts...>::operator=(T&& t) noexcept
+    template<typename T, typename>
+    variant<Ts...>& variant<Ts...>::operator=(T&& t) noexcept
     {
         using decayed_t = typename std::decay<T>::type;
         // FIXME: No version with implicit type conversion available!
@@ -288,10 +300,10 @@ namespace util
 
         if (t_index == m_index)
         {
-            util::get<decayed_t>(*this) = std::move(t);
+            util::get<decayed_t>(*this) = std::forward<T>(t);
             return *this;
         }
-        else return (*this = variant(std::move(t)));
+        else return (*this = variant(std::forward<T>(t)));
     }
 
     template<typename... Ts>
