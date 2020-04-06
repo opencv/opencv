@@ -146,6 +146,26 @@ TEST(GOpaque, TestOpaqueBetween)
     EXPECT_EQ(painted, 77);
 }
 
+TEST(GOpaque, TestOpaqueBetweenIslands)
+{
+    cv::Size sz = {50, 50};
+    int depth = CV_8U;
+    int chan = 1;
+    cv::Mat mat_in = cv::Mat::zeros(sz, CV_MAKETYPE(depth, chan));
+    cv::Mat mat_out = cv::Mat::zeros(sz, CV_MAKETYPE(depth, chan));
+
+    cv::GMat in, out;
+    auto betw = ThisTest::GeneratePoint::on(in);
+    out = ThisTest::PaintPoint::on(betw, depth, chan, sz);
+
+    cv::gapi::island("test", cv::GIn(in), cv::GOut(betw));
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(mat_in), cv::gout(mat_out), cv::compile_args(cv::gapi::kernels<OCVGeneratePoint, OCVPaintPoint>()));
+
+    int painted = mat_out.at<uint8_t>(42, 42);
+    EXPECT_EQ(painted, 77);
+}
+
 TEST(GOpaque, TestOpaqueCustomOut2)
 {
     cv::Mat input1 = cv::Mat(52, 52, CV_8U);
