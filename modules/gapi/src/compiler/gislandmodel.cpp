@@ -118,8 +118,7 @@ ade::NodeHandle GIsland::producer(const ade::Graph &g,
     }
     // Consistency: A GIsland requested for producer() of slot_nh should
     // always had the appropriate GModel node handle in its m_out_ops vector.
-    GAPI_Assert(false);
-    return ade::NodeHandle();
+    GAPI_Assert(false && "Broken GIslandModel ?.");
 }
 
 std::string GIsland::name() const
