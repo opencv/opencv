@@ -36,6 +36,7 @@ namespace detail
         GOBJREF,      // <internal> reference to object
         GMAT,         // a cv::GMat
         GMATP,        // a cv::GMatP
+        GFRAME,       // a cv::GFrame
         GSCALAR,      // a cv::GScalar
         GARRAY,       // a cv::GArrayU  (note - exactly GArrayU,  not GArray<T>!)
         GOPAQUE,      // a cv::GOpaqueU (note - exactly GOpaqueU, not GOpaque<T>!)
@@ -58,6 +59,11 @@ namespace detail
     template<>           struct GTypeTraits<cv::GMatP>
     {
         static constexpr const ArgKind kind = ArgKind::GMATP;
+        static constexpr const GShape shape = GShape::GMAT;
+    };
+    template<>           struct GTypeTraits<cv::GFrame>
+    {
+        static constexpr const ArgKind kind = ArgKind::GFRAME;
         static constexpr const GShape shape = GShape::GMAT;
     };
     template<>           struct GTypeTraits<cv::GScalar>
