@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "../perf_precomp.hpp"
@@ -133,6 +133,28 @@ INSTANTIATE_TEST_CASE_P(CannyPerfTestCPU, CannyPerfTest,
         Values(3, 5),
         Values(true, false),
         Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(GoodFeaturesPerfTestCPU, GoodFeaturesPerfTest,
+    Combine(Values(AbsExactVector<cv::Point2f>().to_compare_f()),
+            Values("cv/shared/pic5.png", "stitching/a1.png"),
+            Values(CV_32FC1, CV_8UC1),
+            Values(100, 500),
+            Values(0.1, 0.01),
+            Values(1.0),
+            Values(3, 5),
+            Values(true, false),
+            Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalPerfTestCPU, GoodFeaturesPerfTest,
+    Combine(Values(AbsExactVector<cv::Point2f>().to_compare_f()),
+            Values("cv/cascadeandhog/images/audrybt1.png"),
+            Values(CV_32FC1, CV_8UC1),
+            Values(100),
+            Values(0.0000001),
+            Values(5.0),
+            Values(3),
+            Values(true),
+            Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(EqHistPerfTestCPU, EqHistPerfTest,
     Combine(Values(AbsExact().to_compare_f()),

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -195,6 +195,29 @@ INSTANTIATE_TEST_CASE_P(CannyTestCPU, CannyTest,
                                 Values(125.0, 240.0),
                                 Values(3, 5),
                                 testing::Bool()));
+
+INSTANTIATE_TEST_CASE_P(GoodFeaturesTestCPU, GoodFeaturesTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(AbsExactVector<cv::Point2f>().to_compare_obj()),
+                                Values("cv/shared/fruits.png"),
+                                Values(CV_32FC1, CV_8UC1),
+                                Values(50, 100),
+                                Values(0.01),
+                                Values(10.0),
+                                Values(3),
+                                testing::Bool()));
+
+INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalTestCPU, GoodFeaturesTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(AbsExactVector<cv::Point2f>().to_compare_obj()),
+                                Values("cv/cascadeandhog/images/audrybt1.png"),
+                                Values(CV_32FC1, CV_8UC1),
+                                Values(100),
+                                Values(0.0000001),
+                                Values(5.0),
+                                Values(3),
+                                Values(true)));
+
 
 INSTANTIATE_TEST_CASE_P(RGB2GrayTestCPU, RGB2GrayTest,
                         Combine(Values(CV_8UC3),
