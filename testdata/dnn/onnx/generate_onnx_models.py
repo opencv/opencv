@@ -680,3 +680,63 @@ save_data_and_model("lstm", input, lstm)
 input = Variable(torch.randn(seq_len, batch, features))
 lstm = LSTM(features, hidden, batch, bidirectional=True)
 save_data_and_model("lstm_bidirectional", input, lstm)
+
+class MatMul(nn.Module):
+    def __init__(self):
+        super(MatMul, self).__init__()
+
+    def forward(self, x):
+      axis = len(x.shape)
+      return x @ x.transpose(axis - 1, axis - 2)
+
+model = MatMul()
+x = Variable(torch.randn(2, 4))
+save_data_and_model("matmul_2d", x, model)
+
+x = Variable(torch.randn(3, 2, 4))
+save_data_and_model("matmul_3d", x, model)
+
+x = Variable(torch.randn(1, 3, 2, 4))
+save_data_and_model("matmul_4d", x, model)
+
+x = np.random.rand(1, 3, 2)
+output = np.mean(x, axis=1, keepdims=True)
+save_onnx_data_and_model(x, output, 'reduce_mean_axis1', 'ReduceMean', axes=(1), keepdims=True)
+
+x = np.random.rand(1, 3, 2)
+output = np.mean(x, axis=2, keepdims=True)
+save_onnx_data_and_model(x, output, 'reduce_mean_axis2', 'ReduceMean', axes=(2), keepdims=True)
+
+class Expand(nn.Module):
+    def __init__(self, shape):
+        super(Expand, self).__init__()
+        self.shape = shape
+
+    def forward(self, x):
+      return x.expand(self.shape)
+
+x = Variable(torch.randn(1, 1, 2, 2))
+model = Expand(shape=[2, 1, 2, 2])
+save_data_and_model("expand_batch", x, model)
+
+x = Variable(torch.randn(1, 1, 2, 2))
+model = Expand(shape=[1, 3, 2, 2])
+save_data_and_model("expand_channels", x, model)
+
+x = Variable(torch.randn(1, 2, 1, 1))
+model = Expand(shape=[1, 2, 3, 4])
+save_data_and_model("expand_hw", x, model)
+
+class NormL2(nn.Module):
+    def __init__(self):
+        super(NormL2, self).__init__()
+
+    def forward(self, x):
+      norm = torch.norm(x, p=2, dim=1, keepdim=True)
+      clip = torch.clamp(norm, min=0)
+      expand = clip.expand_as(x)
+      return x / expand
+
+model = NormL2()
+x = Variable(torch.randn(1, 2, 3, 4))
+save_data_and_model("reduceL2_subgraph", x, model)
