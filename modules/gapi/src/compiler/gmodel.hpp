@@ -225,6 +225,12 @@ struct DesyncEdge
     static const char *name() { return "DesynchronizedEdge"; }
 };
 
+// This flag marks the island graph as "desynchronized"
+struct Desynchronized
+{
+    static const char *name() { return "Desynchronized"; }
+};
+
 namespace GModel
 {
     using Graph = ade::TypedGraph
@@ -248,6 +254,7 @@ namespace GModel
         , HasIntrinsics
         , DesyncPath
         , DesyncEdge
+        , Desynchronized
         >;
 
     // FIXME: How to define it based on GModel???
@@ -272,6 +279,7 @@ namespace GModel
         , HasIntrinsics
         , DesyncPath
         , DesyncEdge
+        , Desynchronized
         >;
 
     // FIXME:

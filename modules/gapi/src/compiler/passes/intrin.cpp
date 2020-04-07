@@ -245,6 +245,11 @@ void apply(cv::gimpl::GModel::Graph &g) {
             } // if (desync)
         } // if (Op)
     } // for(nodes)
+
+    // Stage 2. Put a synchronized tag if there were changes applied
+    if (total_desync > 0) {
+        g.metadata().set(Desynchronized{});
+    }
 }
 
 // Probably the simplest case: desync makes no sense in the regular

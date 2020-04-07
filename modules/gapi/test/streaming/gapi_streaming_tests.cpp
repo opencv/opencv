@@ -1015,8 +1015,9 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
     sc.start();
 
     std::size_t test_frames = 0u;
-    cv::Mat test_out1, test_out2;
+    cv::optional<cv::Mat> test_out1, test_out2;
     while (sc.pull(cv::gout(test_out1, test_out2))) {
+        GAPI_Assert(test_out1 || test_out2);
         test_frames++;
     }
     EXPECT_EQ(100u, test_frames);
@@ -1047,8 +1048,9 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
     sc.start();
 
     std::size_t test_frames = 0u;
-    cv::Mat test_out1, test_out2, test_out3;
+    cv::optional<cv::Mat> test_out1, test_out2, test_out3;
     while (sc.pull(cv::gout(test_out1, test_out2, test_out3))) {
+        GAPI_Assert(test_out1 || test_out2 || test_out3);
         test_frames++;
     }
     EXPECT_EQ(100u, test_frames);
@@ -1150,6 +1152,55 @@ TEST(GAPI_Streaming_Desync, Negative_OtherDesync_Tier1)
     // This shouldn't compile
     EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
                      .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp1;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    cv::Mat o1, o2;
+    EXPECT_ANY_THROW(sc.pull(cv::gout(o1, o2)));
+}
+
+TEST(GAPI_Streaming_Desync, UseSpecialPull)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp1;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    cv::optional<cv::Mat> o1, o2;
+    std::size_t num_frames = 0u;
+
+    while (sc.pull(cv::gout(o1, o2))) {
+        if (o1) num_frames++;
+    }
+    EXPECT_EQ(100u, num_frames);
 }
 
 } // namespace opencv_test
