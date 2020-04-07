@@ -34,7 +34,7 @@ String colorspaceName(COLOR_SPACE colorspace)
     case OPJ_CLRSPC_UNSPECIFIED:
         return "unspecified";
     default:
-        CV_Assert(!"Invalid colorspace");
+        CV_Error(Error::StsNotImplemented, "Invalid colorspace");
     }
 }
 
@@ -141,7 +141,7 @@ public:
         return ChannelsIterator<Traits>(*this) += n;
     }
 
-    difference_type operator-(const ChannelsIterator<Traits>& other)
+    difference_type operator-(const ChannelsIterator<Traits>& other) const
     {
         return (ptr_ - other.ptr_) / step_;
     }
@@ -214,7 +214,7 @@ void copyToMatImpl(std::vector<InT*>&& in, Mat& out, uint8_t shift)
                 const auto first = in[c];
                 const auto last = first + size.width;
                 auto dOut = ChannelsIt(rowPtr, c, channelsCount);
-                std::transform(first, last, dOut, [shift](InT val) -> OutT { return val >> shift; });
+                std::transform(first, last, dOut, [shift](InT val) -> OutT { return static_cast<OutT>(val >> shift); });
                 in[c] += size.width;
             }
         }
@@ -229,7 +229,7 @@ void copyToMatImpl(std::vector<InT*>&& in, Mat& out, uint8_t shift)
                 const auto first = in[c];
                 const auto last = first + size.width;
                 auto dOut = ChannelsIt(rowPtr, c, channelsCount);
-                std::copy(first, last, dOut);
+                std::transform(first, last, dOut, [](InT val) -> OutT { return static_cast<OutT>(val); });
                 in[c] += size.width;
             }
         }
@@ -558,8 +558,12 @@ bool Jpeg2KOpjDecoder::readHeader()
             CV_Error(Error::StsNotImplemented, cv::format("OpenJPEG2000: Component %d/%d is duplicate alpha channel", i, numcomps));
         }
 
-        hasAlpha |= comp.alpha;
+        hasAlpha |= (bool)comp.alpha;
 
+        if (comp.prec > 64)
+        {
+            CV_Error(Error::StsNotImplemented, "OpenJPEG2000: precision > 64 is not supported");
+        }
         m_maxPrec = std::max(m_maxPrec, comp.prec);
     }
 
@@ -623,7 +627,7 @@ bool Jpeg2KOpjDecoder::readData( Mat& img )
         CV_Error(Error::StsNotImplemented,
                  cv::format("OpenJPEG2000: output precision > 16 not supported: target depth %d", depth));
     }();
-    const uint8_t shift = outPrec > m_maxPrec ? 0 : m_maxPrec - outPrec;
+    const uint8_t shift = outPrec > m_maxPrec ? 0 : (uint8_t)(m_maxPrec - outPrec); // prec <= 64
     return decode(*image_, img, shift);
 }
 
