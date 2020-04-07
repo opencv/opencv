@@ -179,6 +179,8 @@ TEST_P(Test_ONNX_layers, Shape)
 TEST_P(Test_ONNX_layers, ReduceMean)
 {
     testONNXModels("reduce_mean");
+    testONNXModels("reduce_mean_axis1");
+    testONNXModels("reduce_mean_axis2");
 }
 
 TEST_P(Test_ONNX_layers, ReduceMean3D)
@@ -308,6 +310,30 @@ TEST_P(Test_ONNX_layers, Multiplication)
     testONNXModels("mul");
 }
 
+TEST_P(Test_ONNX_layers, MatMul)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
+    testONNXModels("matmul_2d");
+    testONNXModels("matmul_3d");
+    testONNXModels("matmul_4d");
+}
+
+TEST_P(Test_ONNX_layers, Expand)
+{
+    testONNXModels("expand_batch");
+    testONNXModels("expand_channels");
+}
+
+TEST_P(Test_ONNX_layers, ExpandHW)
+{
+    // ngraph::op::v1::Multiply bug
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("expand_hw");
+}
+
 TEST_P(Test_ONNX_layers, Constant)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
@@ -413,6 +439,7 @@ TEST_P(Test_ONNX_layers, Squeeze)
 TEST_P(Test_ONNX_layers, ReduceL2)
 {
     testONNXModels("reduceL2");
+    testONNXModels("reduceL2_subgraph");
 }
 
 TEST_P(Test_ONNX_layers, Split)
