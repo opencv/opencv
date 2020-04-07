@@ -8,7 +8,7 @@
 #define CV_VERSION_MAJOR    4
 #define CV_VERSION_MINOR    3
 #define CV_VERSION_REVISION 0
-#define CV_VERSION_STATUS   "-openvino"
+#define CV_VERSION_STATUS   "-openvino-2020.3.0"
 
 #define CVAUX_STR_EXP(__A)  #__A
 #define CVAUX_STR(__A)      CVAUX_STR_EXP(__A)
