@@ -833,7 +833,8 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                  
       m_num_int_buffers (traverse_res.m_mat_count),
       m_scratch_users   (traverse_res.m_scratch_users),
       m_id_map          (traverse_res.m_id_map),
-      m_all_gmat_ids    (traverse_res.m_all_gmat_ids)
+      m_all_gmat_ids    (traverse_res.m_all_gmat_ids),
+      m_buffers(m_num_int_buffers + m_scratch_users.size())
 {
     GConstFluidModel fg(m_g);
 
@@ -857,9 +858,6 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                  
     // Actually initialize Fluid buffers
     GAPI_LOG_INFO(NULL, "Initializing " << m_num_int_buffers << " fluid buffer(s)" << std::endl);
 
-    const std::size_t num_scratch = m_scratch_users.size();
-    m_buffers.resize(m_num_int_buffers + num_scratch);
-
     // After buffers are allocated, repack: ...
     for (auto &agent : m_agents)
     {
@@ -882,10 +880,10 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                  
                 auto inEdge = GModel::getInEdgeByPort(m_g, agent->op_handle, in_idx);
                 auto ownStorage = fg.metadata(inEdge).get<FluidUseOwnBorderBuffer>().use;
 
-                gapi::fluid::View view = buffer.mkView(fu.border_size, ownStorage);
                 // NB: It is safe to keep ptr as view lifetime is buffer lifetime
-                agent->in_views[in_idx] = view;
-                agent->in_args[in_idx]  = GArg(view);
+                agent->in_views[in_idx] = buffer.mkView(fu.border_size, ownStorage);
+                agent->in_args[in_idx]  = GArg(&agent->in_views[in_idx]);
+                buffer.addView(&agent->in_views[in_idx]);
             }
             else
             {
@@ -905,6 +903,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                  
     }
 
     // After parameters are there, initialize scratch buffers
+    const std::size_t num_scratch = m_scratch_users.size();
     if (num_scratch)
     {
         GAPI_LOG_INFO(NULL, "Initializing " << num_scratch << " scratch buffer(s)" << std::endl);
@@ -932,8 +931,8 @@ std::size_t cv::gimpl::GFluidExecutable::total_buffers_size() const
     for (const auto &i : ade::util::indexed(m_buffers))
     {
         // Check that all internal and scratch buffers are allocated
-        const auto idx = ade::util::index(i);
-        const auto b   = ade::util::value(i);
+        const auto  idx = ade::util::index(i);
+        const auto& b   = ade::util::value(i);
         if (idx >= m_num_int_buffers ||
             fg.metadata(m_all_gmat_ids.at(idx)).get<FluidData>().internal == true)
         {

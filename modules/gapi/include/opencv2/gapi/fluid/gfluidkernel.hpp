@@ -171,7 +171,7 @@ template<> struct fluid_get_in<cv::GMat>
 {
     static const cv::gapi::fluid::View& get(const cv::GArgs &in_args, int idx)
     {
-        return in_args[idx].unsafe_get<cv::gapi::fluid::View>();
+        return *in_args[idx].unsafe_get<cv::gapi::fluid::View*>();
     }
 };
 

@@ -125,7 +125,6 @@ class GFluidExecutable final: public GIslandExecutable
     GModel::ConstGraph m_gm;
 
     std::vector<std::unique_ptr<FluidAgent>> m_agents;
-    std::vector<cv::gapi::fluid::Buffer> m_buffers;
 
     std::vector<FluidAgent*> m_script;
 
@@ -137,6 +136,8 @@ class GFluidExecutable final: public GIslandExecutable
 
     std::unordered_map<int, std::size_t> m_id_map; // GMat id -> buffer idx map
     std::map<std::size_t, ade::NodeHandle> m_all_gmat_ids;
+
+    std::vector<cv::gapi::fluid::Buffer> m_buffers;
 
     void bindInArg (const RcDesc &rc, const GRunArg &arg);
     void bindOutArg(const RcDesc &rc, const GRunArgP &arg);
