@@ -576,7 +576,7 @@ bool fluid::Buffer::Priv::full() const
     {
         // reset with maximum possible value and then find minimum
         slowest_y = m_desc.size.height;
-        for (const auto &v : m_views) slowest_y = std::min(slowest_y, v.y());
+        for (const auto &v : m_views) slowest_y = std::min(slowest_y, v->y());
     }
 
     return m_write_caret + lpi() - slowest_y > m_storage->rows();
@@ -608,7 +608,7 @@ void fluid::Buffer::Priv::reset()
 int fluid::Buffer::Priv::size() const
 {
     std::size_t view_sz = 0;
-    for (const auto &v : m_views) view_sz += v.priv().size();
+    for (const auto &v : m_views) view_sz += v->priv().size();
 
     auto total = view_sz;
     if (m_storage) total += m_storage->size();
@@ -679,6 +679,9 @@ fluid::Buffer::Buffer(const cv::gapi::own::Mat &data, bool is_input)
     m_priv->bindTo(data, is_input);
 }
 
+fluid::Buffer::~Buffer() = default;
+fluid::Buffer& fluid::Buffer::operator=(fluid::Buffer&&) = default;
+
 int fluid::Buffer::linesReady() const
 {
     return m_priv->linesReady();
@@ -689,17 +692,24 @@ int fluid::Buffer::lpi() const
     return m_priv->lpi();
 }
 
-fluid::View::View(Priv* p)
-    : m_priv(p), m_cache(&p->cache())
+fluid::View::View(std::unique_ptr<Priv>&& p)
+    : m_priv(std::move(p)), m_cache(&m_priv->cache())
 { /* nothing */ }
+
+fluid::View::View(View&&) = default;
+fluid::View& fluid::View::operator=(View&&) = default;
+fluid::View::~View() = default;
 
 fluid::View fluid::Buffer::mkView(int borderSize, bool ownStorage)
 {
     // FIXME: logic outside of Priv (because View takes pointer to Buffer)
-    auto view = ownStorage ? View(new ViewPrivWithOwnBorder(this, borderSize))
-                           : View(new ViewPrivWithoutOwnBorder(this, borderSize));
-    m_priv->addView(view);
-    return view;
+    return ownStorage ? View(std::unique_ptr<ViewPrivWithOwnBorder>(new ViewPrivWithOwnBorder(this, borderSize)))
+                      : View(std::unique_ptr<ViewPrivWithoutOwnBorder>(new ViewPrivWithoutOwnBorder(this, borderSize)));
+}
+
+void fluid::Buffer::addView(const View* v)
+{
+    m_priv->addView(v);
 }
 
 void fluid::debugBufferPriv(const fluid::Buffer& buffer, std::ostream &os)
@@ -713,7 +723,7 @@ void fluid::debugBufferPriv(const fluid::Buffer& buffer, std::ostream &os)
        <<" (phys " << "[" << p.storage().cols() << " x " <<  p.storage().rows() << "]" << ") :"
        << "  w: " << p.m_write_caret
        << ", r: [";
-    for (const auto &v : p.m_views) { os << &v.priv() << ":" << v.y() << " "; }
+    for (const auto &v : p.m_views) { os << &v->priv() << ":" << v->y() << " "; }
     os << "], avail: " << buffer.linesReady()
        << std::endl;
 }
