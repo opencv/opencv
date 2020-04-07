@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_IMGPROC_PERF_TESTS_INL_HPP
@@ -614,6 +614,53 @@ PERF_TEST_P_(CannyPerfTest, TestPerformance)
     {
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+
+    SANITY_CHECK_NOTHING();
+
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(GoodFeaturesPerfTest, TestPerformance)
+{
+    double k = 0.04;
+
+    compare_vector_f<cv::Point2f> cmpF;
+    std::string fileName = "";
+    int type = -1, maxCorners = -1, blockSize = -1;
+    double qualityLevel = 0.0, minDistance = 0.0;
+    bool useHarrisDetector = false;
+    cv::GCompileArgs compileArgs;
+    std::tie(cmpF, fileName, type, maxCorners, qualityLevel,
+             minDistance, blockSize, useHarrisDetector, compileArgs) = GetParam();
+
+    initMatFromImage(type, fileName);
+    std::vector<cv::Point2f> outVecOCV, outVecGAPI;
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::goodFeaturesToTrack(in_mat1, outVecOCV, maxCorners, qualityLevel, minDistance,
+                                cv::noArray(), blockSize, useHarrisDetector, k);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::goodFeaturesToTrack(in, maxCorners, qualityLevel, minDistance, cv::Mat(),
+                                             blockSize, useHarrisDetector, k);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Warm-up graph engine:
+    c.apply(cv::gin(in_mat1), cv::gout(outVecGAPI), std::move(compileArgs));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(outVecGAPI));
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(outVecGAPI, outVecOCV));
     }
 
     SANITY_CHECK_NOTHING();

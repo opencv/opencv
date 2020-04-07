@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_IMGPROC_TESTS_INL_HPP
@@ -377,6 +377,34 @@ TEST_P(CannyTest, AccuracyTest)
     {
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
+
+TEST_P(GoodFeaturesTest, AccuracyTest)
+{
+    double k = 0.04;
+
+    initMatFromImage(type, fileName);
+
+    std::vector<cv::Point2f> outVecOCV, outVecGAPI;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::goodFeaturesToTrack(in, maxCorners, qualityLevel, minDistance, cv::Mat(),
+                                             blockSize, useHarrisDetector, k);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(outVecGAPI), getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::goodFeaturesToTrack(in_mat1, outVecOCV, maxCorners, qualityLevel, minDistance,
+                                cv::noArray(), blockSize, useHarrisDetector, k);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(outVecGAPI, outVecOCV));
     }
 }
 
