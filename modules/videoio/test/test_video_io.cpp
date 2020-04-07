@@ -323,7 +323,7 @@ static const VideoCaptureAPIs backend_params[] = {
    CAP_AVFOUNDATION,
 #endif
 
-#ifdef HAVE_MSMF
+#ifdef _WIN32
     CAP_MSMF,
 #endif
 
@@ -366,7 +366,7 @@ inline static std::ostream &operator<<(std::ostream &out, const Ext_Fourcc_PSNR 
 
 static Ext_Fourcc_PSNR synthetic_params[] = {
 
-#ifdef HAVE_MSMF
+#ifdef _WIN32
 #if !defined(_M_ARM)
     {"wmv", "WMV1", 30.f, CAP_MSMF},
     {"wmv", "WMV2", 30.f, CAP_MSMF},
