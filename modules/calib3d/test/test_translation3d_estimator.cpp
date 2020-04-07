@@ -7,42 +7,8 @@
 
 namespace opencv_test { namespace {
 
-class CV_Translation3D_EstTest : public cvtest::BaseTest
+TEST(Calib3d_EstimateTranslation3D, test4Points)
 {
-public:
-    CV_Translation3D_EstTest();
-    ~CV_Translation3D_EstTest();
-protected:
-    void run(int);
-
-    bool test4Points();
-    bool testNPoints();
-};
-
-CV_Translation3D_EstTest::CV_Translation3D_EstTest()
-{
-}
-CV_Translation3D_EstTest::~CV_Translation3D_EstTest() {}
-
-
-float rngIn(float from, float to) { return from + (to-from) * (float)theRNG(); }
-
-
-struct WrapTrans
-{
-    const Matx13d * F;
-    WrapTrans(const Matx13d& trans) { F = &trans; }
-    Point3f operator()(const Point3f& p)
-    {
-        return Point3f( (float)(p.x + (*F)(0, 0)),
-                        (float)(p.y + (*F)(0, 1)),
-                        (float)(p.z + (*F)(0, 2))  );
-    }
-};
-
-bool CV_Translation3D_EstTest::test4Points()
-{
-
     Matx13d trans;
     cv::randu(trans, Scalar(1), Scalar(3));
 
@@ -51,40 +17,34 @@ bool CV_Translation3D_EstTest::test4Points()
     Mat fpts(1, 4, CV_32FC3);
     Mat tpts(1, 4, CV_32FC3);
 
-    fpts.ptr<Point3f>()[0] = Point3f( rngIn(1,2), rngIn(1,2), rngIn(5, 6) );
-    fpts.ptr<Point3f>()[1] = Point3f( rngIn(3,4), rngIn(3,4), rngIn(5, 6) );
-    fpts.ptr<Point3f>()[2] = Point3f( rngIn(1,2), rngIn(3,4), rngIn(5, 6) );
-    fpts.ptr<Point3f>()[3] = Point3f( rngIn(3,4), rngIn(1,2), rngIn(5, 6) );
+    RNG& rng = theRNG();
+    fpts.at<Point3f>(0) = Point3f(rng.uniform(1.0f, 2.0f), rng.uniform(1.0f, 2.0f), rng.uniform(5.0f, 6.0f));
+    fpts.at<Point3f>(1) = Point3f(rng.uniform(3.0f, 4.0f), rng.uniform(3.0f, 4.0f), rng.uniform(5.0f, 6.0f));
+    fpts.at<Point3f>(2) = Point3f(rng.uniform(1.0f, 2.0f), rng.uniform(3.0f, 4.0f), rng.uniform(5.0f, 6.0f));
+    fpts.at<Point3f>(3) = Point3f(rng.uniform(3.0f, 4.0f), rng.uniform(1.0f, 2.0f), rng.uniform(5.0f, 6.0f));
 
-    std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + 4, tpts.ptr<Point3f>(), WrapTrans(trans));
+    std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + 4, tpts.ptr<Point3f>(),
+        [&] (const Point3f& p) -> Point3f
+        {
+            return Point3f((float)(p.x + trans(0, 0)),
+                           (float)(p.y + trans(0, 1)),
+                           (float)(p.z + trans(0, 2)));
+        }
+    );
 
     Matx13d trans_est;
     vector<uchar> outliers;
-    estimateTranslation3D(fpts, tpts, trans_est, outliers);
+    int res = estimateTranslation3D(fpts, tpts, trans_est, outliers);
+    EXPECT_GT(res, 0);
 
     const double thres = 1e-3;
-    if (cvtest::norm(trans_est, trans, NORM_INF) > thres)
-    {
-        //cout << cvtest::norm(aff_est, aff, NORM_INF) << endl;
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        return false;
-    }
 
-    return true;
+    EXPECT_LE(cvtest::norm(trans_est, trans, NORM_INF), thres)
+        << "aff est: " << trans_est << endl
+        << "aff ref: " << trans;
 }
 
-struct Noise
-{
-    float l;
-    Noise(float level) : l(level) {}
-    Point3f operator()(const Point3f& p)
-    {
-        RNG& rng = theRNG();
-        return Point3f( p.x + l * (float)rng,  p.y + l * (float)rng,  p.z + l * (float)rng);
-    }
-};
-
-bool CV_Translation3D_EstTest::testNPoints()
+TEST(Calib3d_EstimateTranslation3D, testNPoints)
 {
     Matx13d trans;
     cv::randu(trans, Scalar(-2), Scalar(2));
@@ -100,75 +60,41 @@ bool CV_Translation3D_EstTest::testNPoints()
     Mat tpts(1, n, CV_32FC3);
 
     randu(fpts, Scalar::all(0), Scalar::all(100));
-    std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + n, tpts.ptr<Point3f>(), WrapTrans(trans));
+    std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + n, tpts.ptr<Point3f>(),
+        [&] (const Point3f& p) -> Point3f
+        {
+            return Point3f((float)(p.x + trans(0, 0)),
+                           (float)(p.y + trans(0, 1)),
+                           (float)(p.z + trans(0, 2)));
+        }
+    );
 
     /* adding noise*/
-#ifdef CV_CXX11
     std::transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m,
-        [=] (const Point3f& pt) -> Point3f { return Noise(noise_level)(pt + shift_outl); });
-#else
-    std::transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m, std::bind2nd(std::plus<Point3f>(), shift_outl));
-    std::transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m, Noise(noise_level));
-#endif
+        [&] (const Point3f& pt) -> Point3f
+        {
+            Point3f p = pt + shift_outl;
+            RNG& rng = theRNG();
+            return Point3f(p.x + noise_level * (float)rng,
+                           p.y + noise_level * (float)rng,
+                           p.z + noise_level * (float)rng);
+        }
+    );
 
     Matx13d trans_est;
     vector<uchar> outl;
     int res = estimateTranslation3D(fpts, tpts, trans_est, outl);
-
-    if (!res)
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        return false;
-    }
+    EXPECT_GT(res, 0);
 
     const double thres = 1e-4;
-    if (cvtest::norm(trans_est, trans, NORM_INF) > thres)
-    {
-        cout << "aff est: " << trans_est << endl;
-        cout << "aff ref: " << trans << endl;
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        return false;
-    }
+    EXPECT_LE(cvtest::norm(trans_est, trans, NORM_INF), thres)
+        << "aff est: " << trans_est << endl
+        << "aff ref: " << trans;
 
     bool outl_good = count(outl.begin(), outl.end(), 1) == m &&
         m == accumulate(outl.begin(), outl.begin() + m, 0);
 
-    if (!outl_good)
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        return false;
-    }
-    return true;
-}
-
-
-void CV_Translation3D_EstTest::run( int /* start_from */)
-{
-    cvtest::DefaultRngAuto dra;
-
-    if (!test4Points())
-        return;
-
-    if (!testNPoints())
-        return;
-
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
-TEST(Calib3d_EstimateTranslation3D, accuracy) { CV_Translation3D_EstTest test; test.safe_run(); }
-
-TEST(Calib3d_EstimateTranslation3D, regression_16007)
-{
-    std::vector<cv::Point3f> m1, m2;
-    m1.push_back(Point3f(1.0f, 0.0f, 0.0f)); m2.push_back(Point3f(1.0f, 1.0f, 0.0f));
-    m1.push_back(Point3f(1.0f, 0.0f, 1.0f)); m2.push_back(Point3f(1.0f, 1.0f, 1.0f));
-    m1.push_back(Point3f(0.5f, 0.0f, 0.5f)); m2.push_back(Point3f(0.5f, 1.0f, 0.5f));
-    m1.push_back(Point3f(2.5f, 0.0f, 2.5f)); m2.push_back(Point3f(2.5f, 1.0f, 2.5f));
-    m1.push_back(Point3f(2.0f, 0.0f, 1.0f)); m2.push_back(Point3f(2.0f, 1.0f, 1.0f));
-
-    cv::Mat m3D, inl;
-    int res = cv::estimateTranslation3D(m1, m2, m3D, inl);
-    EXPECT_EQ(1, res);
+    EXPECT_TRUE(outl_good);
 }
 
 }} // namespace

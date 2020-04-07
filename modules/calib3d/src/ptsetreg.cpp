@@ -519,7 +519,7 @@ public:
  *      t2
  *      t3
  */
-class Translation3DEstimatorCallback : public PointSetRegistrator::Callback
+class Translation3DEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 public:
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
@@ -529,8 +529,7 @@ public:
         const Point3f* from = m1.ptr<Point3f>();
         const Point3f* to   = m2.ptr<Point3f>();
 
-        double buf[3] = {0, 0, 0};
-        Matx13d T(buf);
+        Matx13d T;
 
         // The optimal translation is the mean of the pointwise displacements
         for(int i = 0; i < 4; i++)
