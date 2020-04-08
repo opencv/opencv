@@ -46,6 +46,7 @@ public:
     template<typename T, typename std::enable_if<!detail::is_garg<T>::value, int>::type = 0>
     explicit GArg(const T &t)
         : kind(detail::GTypeTraits<T>::kind)
+        , opaque_kind(detail::GOpaqueTraits<T>::kind)
         , value(detail::wrap_gapi_helper<T>::wrap(t))
     {
     }
@@ -53,6 +54,7 @@ public:
     template<typename T, typename std::enable_if<!detail::is_garg<T>::value, int>::type = 0>
     explicit GArg(T &&t)
         : kind(detail::GTypeTraits<typename std::decay<T>::type>::kind)
+        , opaque_kind(detail::GOpaqueTraits<typename std::decay<T>::type>::kind)
         , value(detail::wrap_gapi_helper<T>::wrap(t))
     {
     }
@@ -78,6 +80,7 @@ public:
     }
 
     detail::ArgKind kind = detail::ArgKind::OPAQUE_VAL;
+    detail::OpaqueKind opaque_kind = detail::OpaqueKind::CV_UNKNOWN;
 
 protected:
     util::any value;

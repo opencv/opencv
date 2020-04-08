@@ -156,6 +156,7 @@ if(OPENCV_GAPI_INF_ENGINE)
   list(APPEND __test_extra_deps ${INF_ENGINE_TARGET})
 endif()
 ocv_add_accuracy_tests(${__test_extra_deps})
+
 # FIXME: test binary is linked with ADE directly since ADE symbols
 # are not exported from libopencv_gapi.so in any form - thus
 # there're two copies of ADE code in memory when tests run (!)
@@ -163,6 +164,9 @@ ocv_add_accuracy_tests(${__test_extra_deps})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+if(WIN32)
+  target_link_libraries(opencv_test_gapi PRIVATE wsock32 ws2_32)
+endif()
 endif()
 
 if(HAVE_FREETYPE)

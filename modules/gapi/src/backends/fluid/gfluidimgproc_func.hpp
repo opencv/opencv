@@ -9,6 +9,7 @@
 #if !defined(GAPI_STANDALONE)
 
 #include <opencv2/core.hpp>
+#include <opencv2/gapi/own/exports.hpp>
 
 namespace cv {
 namespace gapi {
@@ -52,7 +53,8 @@ void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef
 
 void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef[4]);
 
-void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width);
+//FIXME: exprt was added for serialization backend test implementation
+void GAPI_EXPORTS run_rgb2yuv422_impl(uchar out[], const uchar in[], int width);
 
 //-------------------------
 //

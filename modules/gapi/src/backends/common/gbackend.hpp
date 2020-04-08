@@ -54,10 +54,10 @@ namespace magazine
     void         GAPI_EXPORTS bindInArg (Mag& mag, const RcDesc &rc, const GRunArg  &arg, bool is_umat = false);
     void         GAPI_EXPORTS bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat = false);
 
-    void         resetInternalData(Mag& mag, const Data &d);
+    void         GAPI_EXPORTS resetInternalData(Mag& mag, const Data &d);
     cv::GRunArg  getArg    (const Mag& mag, const RcDesc &ref);
-    cv::GRunArgP getObjPtr (      Mag& mag, const RcDesc &rc, bool is_umat = false);
-    void         writeBack (const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat = false);
+    cv::GRunArgP GAPI_EXPORTS getObjPtr (      Mag& mag, const RcDesc &rc, bool is_umat = false);
+    void         GAPI_EXPORTS writeBack (const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat = false);
 } // namespace magazine
 
 namespace detail
@@ -97,7 +97,7 @@ inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
     return cv::util::optional<T>();
 }
 
-void createMat(const cv::GMatDesc& desc, cv::Mat& mat);
+GAPI_EXPORTS void createMat(const cv::GMatDesc& desc, cv::Mat& mat);
 
 }} // cv::gimpl
 
