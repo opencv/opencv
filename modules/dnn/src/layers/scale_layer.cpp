@@ -303,7 +303,7 @@ public:
     {
         setParamsFrom(params);
         recompute_mean = params.get<int>("recompute_mean", 1);
-        CV_Assert(recompute_mean > 0);
+        CV_CheckGT(recompute_mean, 0, "");
         mean_per_pixel = params.get<bool>("mean_per_pixel", false);
     }
 
@@ -322,7 +322,6 @@ public:
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        num_iter = 0;
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
     }
@@ -337,12 +336,10 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert_N(outputs.size() == 1, blobs.size() == 3, inputs.size() == 1);
+        int num_iter = 0;
 
-        Mat &inpBlob = inputs[0];
-        Mat &outBlob = outputs[0];
-
-        float* inpData = (float*)inpBlob.data;
-        float* outData = (float*)outBlob.data;
+        float* inpData = inputs[0].ptr<float>();
+        float* outData = outputs[0].ptr<float>();
 
         Mat data_mean_cpu = blobs[1].clone();
         Mat data_mean_per_channel_cpu = blobs[2].clone();
@@ -374,9 +371,9 @@ public:
             data_mean_per_channel_cpu *= (1.0 / area);
         }
 
-        MatShape inpShape = shape(inpBlob);
+        MatShape inpShape = shape(inputs[0]);
 
-        inpData = (float*)inpBlob.data;
+        inpData = inputs[0].ptr<float>();
         if (mean_per_pixel)
         {
             int numSlices = inputs[0].size[0];
@@ -409,7 +406,6 @@ public:
     }
 
 private:
-    int num_iter;
     int recompute_mean;
     bool mean_per_pixel;
 };

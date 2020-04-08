@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2020, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
@@ -84,8 +84,8 @@ public:
         const int area     = height * width;
         const int pad_area = (width + 2 * pad) * (height + 2 * pad);
 
-        const float* in = (float*)input.data;
-        float* out = (float*)output.data;
+        const float* in = input.ptr<float>();
+        float* out = output.ptr<float>();
         for (int n = 0; n < num; n++)
         {
             for (int ch = 0; ch < channels; ch++)
@@ -116,9 +116,9 @@ public:
         int neighborhood_grid_radius = max_displacement / stride_2;
         int neighborhood_grid_width  = neighborhood_grid_radius * 2 + 1;
 
-        float* inp0_data = (float*)input0.data;
-        float* inp1_data = (float*)input1.data;
-        float* out_data  = (float*)output.data;
+        const float* inp0_data = input0.ptr<float>();
+        const float* inp1_data = input1.ptr<float>();
+        float* out_data  = output.ptr<float>();
         int sumelems = kernel * kernel * inp_c;
         std::vector<float> patch_data(sumelems, 0);
         for (int y = 0; y < out_h; y++)

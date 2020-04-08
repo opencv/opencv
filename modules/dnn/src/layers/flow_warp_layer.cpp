@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2020, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
@@ -29,14 +29,10 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
-        const int inp_n = inputs[0][0];
-        const int inp_c = inputs[0][1];
-        const int inp_h = inputs[0][2];
-        const int inp_w = inputs[0][3];
-        CV_Assert_N(inp_n == inputs[1][0], inputs[1][1] == 2, inp_h == inputs[1][2], inp_w == inputs[1][3]);
+        CV_Assert_N(inputs[0][0] == inputs[1][0], inputs[1][1] == 2,
+                    inputs[0][2] == inputs[1][2], inputs[0][3] == inputs[1][3]);
 
-        int size[] = {inp_n, inp_c, inp_h, inp_w};
-        outputs.assign(1, std::vector<int>(size, size + 4));
+        outputs.assign(1, inputs[0]);
         return false;
     }
 
@@ -57,9 +53,9 @@ public:
         const int area = out_w * out_h;
         const int total = area * out_c;
 
-        const float* image_data = (float*)inputs[0].data;
-        const float* flow_data  = (float*)inputs[1].data;
-        float* out_data = (float*)outputs[0].data;
+        const float* image_data = inputs[0].ptr<float>();
+        const float* flow_data  = inputs[1].ptr<float>();
+        float* out_data = outputs[0].ptr<float>();
 
         for (int n = 0; n < out_n; n++)
         {

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2020, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
@@ -100,11 +100,11 @@ public:
             --inp_size;
         }
 
-        float* out_data = (float*)outputs[0].data;
+        float* out_data = outputs[0].ptr<float>();
         int cntChannelsOfPrevious = 0;
         for (int i = 0; i < inp_size; i++)
         {
-            float* inp_data = (float*)inputs[i].data;
+            float* inp_data = inputs[i].ptr<float>();
             int total = inputs[i].total();
 
             const int num   = inputs[i].size[0];

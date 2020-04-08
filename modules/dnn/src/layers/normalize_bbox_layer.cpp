@@ -390,8 +390,8 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const float* inpData = (float*)inputs[0].data;
-        float* outData       = (float*)outputs[0].data;
+        const float* inpData = inputs[0].ptr<float>();
+        float* outData       = outputs[0].ptr<float>();
 
         const int out_n = outputs[0].size[0];
         const int inp_c = inputs[0].size[1];
