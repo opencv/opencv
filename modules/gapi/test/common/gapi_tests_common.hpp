@@ -196,24 +196,31 @@ public:
         }
     }
 
+    void initMatsFromImages(int channels, const std::string& pattern, int imgNum)
+    {
+        initTestDataPath();
+        GAPI_Assert(channels == 1 || channels == 3 || channels == 4);
+        const int flags = (channels == 1) ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR;
+
+        cv::Mat m1 = cv::imread(findDataFile(cv::format(pattern.c_str(), imgNum)), flags);
+        cv::Mat m2 = cv::imread(findDataFile(cv::format(pattern.c_str(), imgNum + 1)), flags);
+        if (channels == 4)
+        {
+            cvtColor(m1, in_mat1, cv::COLOR_BGR2BGRA);
+            cvtColor(m2, in_mat2, cv::COLOR_BGR2BGRA);
+        }
+        else
+        {
+            std::tie(in_mat1, in_mat2) = std::make_tuple(m1, m2);
+        }
+    }
+
     // empty function intended to show that nothing is to be initialized via TestFunctional methods
     void initNothing(int, cv::Size, int, bool = true) {}
 };
 
 template<class T>
-class TestParams: public TestFunctional, public TestWithParam<T>{};
-
-template<class T>
 class TestPerfParams: public TestFunctional, public perf::TestBaseWithParam<T>{};
-
-using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
-
-using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
-
-template<typename Elem>
-using compare_vector_f = std::function<bool(const std::vector<Elem> &a,
-                                            const std::vector<Elem> &b)>;
-
 
 // FIXME: re-use MatType. current problem: "special values" interpreted incorrectly (-1 is printed
 //        as 16FC512)
@@ -367,6 +374,14 @@ struct TestWithParamsSpecific : public TestWithParamsBase<ParamsSpecific<Specifi
 // Wrapper for test fixture API. Use to specify multiple types.
 // Example: FIXTURE_API(int, bool) expands to <int, bool>
 #define FIXTURE_API(...) <__VA_ARGS__>
+
+
+using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
+using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
+
+template<typename Elem>
+using compare_vector_f = std::function<bool(const std::vector<Elem> &a,
+                                            const std::vector<Elem> &b)>;
 
 template<typename T1, typename T2>
 struct CompareF
