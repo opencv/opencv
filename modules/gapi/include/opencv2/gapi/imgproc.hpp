@@ -261,7 +261,6 @@ namespace imgproc {
 
 } //namespace imgproc
 
-
 //! @addtogroup gapi_filters
 //! @{
 /** @brief Applies a separable linear filter to a matrix(image).

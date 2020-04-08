@@ -49,5 +49,6 @@ class YUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCo
 class RGB2HSVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BayerGR2RGBPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class RGB2YUV422PerfTest  : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-}
+} // opencv_test
+
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP
