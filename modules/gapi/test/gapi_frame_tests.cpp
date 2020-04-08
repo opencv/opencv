@@ -23,7 +23,7 @@ GAPI_OCV_KERNEL(OCVBlurFrame, GBlurFrame)
         cv::blur(in, out, cv::Size{3,3});
     }
 };
-
+#if 0
 struct GFrameTest : public ::testing::Test
 {
     cv::Size sz{32,32};
@@ -57,5 +57,5 @@ TEST_F(GFrameTest, Input)
 
     check();
 }
-
+#endif
 } // namespace opencv_test
