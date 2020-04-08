@@ -220,4 +220,4 @@ INSTANTIATE_TEST_CASE_P(RGB2YUV422PerfTestCPU, RGB2YUV422PerfTest,
         Combine(Values(ToleranceColor(1e-3).to_compare_f()),
             Values(szVGA, sz720p, sz1080p),
             Values(cv::compile_args(IMGPROC_CPU))));
-}
+} // opencv_test
