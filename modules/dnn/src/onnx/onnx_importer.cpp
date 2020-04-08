@@ -777,6 +777,10 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             layerParams.type = "ReLU";
         }
+        else if (layer_type == "Elu")
+        {
+            layerParams.type = "ELU";
+        }
         else if (layer_type == "PRelu")
         {
             layerParams.type = "PReLU";
