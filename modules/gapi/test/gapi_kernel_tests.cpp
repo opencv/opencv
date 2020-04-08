@@ -6,7 +6,6 @@
 
 
 #include "test_precomp.hpp"
-#include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include "gapi_mock_kernels.hpp"
 
 #include <opencv2/gapi/cpu/gcpukernel.hpp>     // cpu::backend
@@ -101,7 +100,7 @@ namespace
         GAPI_FLUID_KERNEL(GClone, I::GClone, false)
         {
             static const int Window = 1;
-            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer)
+            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer&)
             {
                 HeteroGraph::registerCallKernel(KernelTags::FLUID_CUSTOM_CLONE);
             }

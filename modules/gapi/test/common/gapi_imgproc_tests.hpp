@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_IMGPROC_TESTS_HPP
@@ -14,6 +14,7 @@
 
 namespace opencv_test
 {
+
 // Create new value-parameterized test fixture:
 // Filter2DTest - fixture name
 // initMatrixRandN - function that is used to initialize input/output data
@@ -52,6 +53,11 @@ GAPI_TEST_FIXTURE(SobelXYTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int,
 GAPI_TEST_FIXTURE(EqHistTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(CannyTest, initMatrixRandN, FIXTURE_API(CompareMats,double,double,int,bool), 5,
     cmpF, thrLow, thrUp, apSize, l2gr)
+GAPI_TEST_FIXTURE_SPEC_PARAMS(GoodFeaturesTest,
+                              FIXTURE_API(CompareVectors<cv::Point2f>,std::string,int,int,double,
+                                          double,int,bool),
+                              8, cmpF, fileName, type, maxCorners, qualityLevel, minDistance,
+                              blockSize, useHarrisDetector)
 GAPI_TEST_FIXTURE(RGB2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(BGR2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(RGB2YUVTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)

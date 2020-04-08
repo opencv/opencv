@@ -38,7 +38,7 @@ TEST_P(PartialComputation, Test)
     cv::Mat out_mat_ocv = cv::Mat::zeros(sz, CV_8UC1);
 
     // Run G-API
-    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{to_own(roi)}}));
+    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{roi}}));
     cc(cv::gin(in_mat), cv::gout(out_mat_gapi));
 
     // Check with OpenCV
@@ -72,7 +72,7 @@ TEST_P(PartialComputationAddC, Test)
     cv::Mat out_mat_ocv = cv::Mat::zeros(sz, CV_8UC1);
 
     // Run G-API
-    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{to_own(roi)}}));
+    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{roi}}));
     cc(cv::gin(in_mat), cv::gout(out_mat_gapi));
 
     // Check with OpenCV
@@ -110,7 +110,7 @@ TEST_P(SequenceOfBlursRoiTest, Test)
     Mat out_mat_gapi = Mat::zeros(sz_in, CV_8UC1);
 
     GComputation c(GIn(in), GOut(out));
-    auto cc = c.compile(descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{to_own(roi)}}));
+    auto cc = c.compile(descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{roi}}));
     cc(gin(in_mat), gout(out_mat_gapi));
 
     cv::Mat mid_mat_ocv = Mat::zeros(sz_in, CV_8UC1);

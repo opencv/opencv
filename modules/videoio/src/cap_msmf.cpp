@@ -585,7 +585,7 @@ public:
     virtual bool isOpened() const CV_OVERRIDE { return isOpen; }
     virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; }
 protected:
-    bool configureOutput(MediaType newType, cv::uint32_t outFormat, bool convertToFormat);
+    bool configureOutput(MediaType newType, cv::uint32_t outFormat);
     bool setTime(double time, bool rough);
     bool configureHW(bool enable);
 
@@ -772,7 +772,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
 #endif
 }
 
-bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat, bool convertToFormat)
+bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat)
 {
     FormatStorage formats;
     formats.read(videoFileSource.Get());
@@ -780,7 +780,7 @@ bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat, 
     dwStreamIndex = bestMatch.first.stream;
     nativeFormat = bestMatch.second;
     MediaType newFormat = nativeFormat;
-    if (convertToFormat)
+    if (convertFormat)
     {
         switch (outFormat)
         {
@@ -840,7 +840,7 @@ bool CvCapture_MSMF::open(int index)
     camid = index;
     readCallback = cb;
     duration = 0;
-    if (configureOutput(MediaType::createDefault(), outputFormat, convertFormat))
+    if (configureOutput(MediaType::createDefault(), outputFormat))
     {
         frameStep = captureFormat.getFrameStep();
     }
@@ -861,7 +861,7 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
     {
         isOpen = true;
         sampleTime = 0;
-        if (configureOutput(MediaType(), outputFormat, convertFormat))
+        if (configureOutput(MediaType(), outputFormat))
         {
             frameStep = captureFormat.getFrameStep();
             filename = _filename;
@@ -1302,44 +1302,45 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
                 return false;
             }
         case CV_CAP_PROP_FOURCC:
-            return configureOutput(newFormat, (int)cvRound(value), convertFormat);
+            return configureOutput(newFormat, (int)cvRound(value));
         case CV_CAP_PROP_FORMAT:
-            return configureOutput(newFormat, (int)cvRound(value), convertFormat);
+            return configureOutput(newFormat, (int)cvRound(value));
         case CV_CAP_PROP_CONVERT_RGB:
-            return configureOutput(newFormat, outputFormat, value != 0);
+            convertFormat = (value != 0);
+            return configureOutput(newFormat, outputFormat);
         case CV_CAP_PROP_SAR_NUM:
             if (value > 0)
             {
                 newFormat.aspectRatioNum = (UINT32)cvRound(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_SAR_DEN:
             if (value > 0)
             {
                 newFormat.aspectRatioDenom = (UINT32)cvRound(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_FRAME_WIDTH:
             if (value >= 0)
             {
                 newFormat.width = (UINT32)cvRound(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_FRAME_HEIGHT:
             if (value >= 0)
             {
                 newFormat.height = (UINT32)cvRound(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_FPS:
             if (value >= 0)
             {
                 newFormat.setFramerate(value);
-                return configureOutput(newFormat, outputFormat, convertFormat);
+                return configureOutput(newFormat, outputFormat);
             }
             break;
         case CV_CAP_PROP_FRAME_COUNT:
@@ -1569,7 +1570,7 @@ bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
         SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_AVG_BITRATE, bitRate)) &&
         SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive)) &&
         SUCCEEDED(MFSetAttributeSize(mediaTypeOut.Get(), MF_MT_FRAME_SIZE, videoWidth, videoHeight)) &&
-        SUCCEEDED(MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_FRAME_RATE, (UINT32)fps, 1)) &&
+        SUCCEEDED(MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_FRAME_RATE, (UINT32)(fps * 1000), 1000)) &&
         SUCCEEDED(MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1)) &&
         // Set the input media type.
         SUCCEEDED(MFCreateMediaType(&mediaTypeIn)) &&
@@ -1578,7 +1579,7 @@ bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
         SUCCEEDED(mediaTypeIn->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive)) &&
         SUCCEEDED(mediaTypeIn->SetUINT32(MF_MT_DEFAULT_STRIDE, 4 * videoWidth)) && //Assume BGR32 input
         SUCCEEDED(MFSetAttributeSize(mediaTypeIn.Get(), MF_MT_FRAME_SIZE, videoWidth, videoHeight)) &&
-        SUCCEEDED(MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_FRAME_RATE, (UINT32)fps, 1)) &&
+        SUCCEEDED(MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_FRAME_RATE, (UINT32)(fps * 1000), 1000)) &&
         SUCCEEDED(MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1)) &&
         // Set sink writer parameters
         SUCCEEDED(MFCreateAttributes(&spAttr, 10)) &&
@@ -1599,7 +1600,7 @@ bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
             {
                 initiated = true;
                 rtStart = 0;
-                MFFrameRateToAverageTimePerFrame((UINT32)fps, 1, &rtDuration);
+                MFFrameRateToAverageTimePerFrame((UINT32)(fps * 1000), 1000, &rtDuration);
                 return true;
             }
         }

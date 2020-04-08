@@ -184,7 +184,7 @@ GAPI_FLUID_KERNEL(FBlur3x3, TBlur3x3, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc &/*src*/, int borderType, cv::Scalar borderValue)
     {
-        return { borderType, to_own(borderValue)};
+        return { borderType, borderValue};
     }
 };
 
@@ -200,7 +200,7 @@ GAPI_FLUID_KERNEL(FBlur5x5, TBlur5x5, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc &/*src*/, int borderType, cv::Scalar borderValue)
     {
-        return { borderType, to_own(borderValue)};
+        return { borderType, borderValue};
     }
 };
 
@@ -217,7 +217,7 @@ GAPI_FLUID_KERNEL(FBlur3x3_2lpi, TBlur3x3_2lpi, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc &/*src*/, int borderType, cv::Scalar borderValue)
     {
-        return { borderType, to_own(borderValue)};
+        return { borderType, borderValue};
     }
 };
 
@@ -234,7 +234,7 @@ GAPI_FLUID_KERNEL(FBlur5x5_2lpi, TBlur5x5_2lpi, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc &/*src*/, int borderType, cv::Scalar borderValue)
     {
-        return { borderType, to_own(borderValue )};
+        return { borderType, borderValue};
     }
 };
 
@@ -261,7 +261,7 @@ GAPI_FLUID_KERNEL(FIdentity, TId, false)
 
     static gapi::fluid::Border getBorder(const cv::GMatDesc &)
     {
-        return { cv::BORDER_REPLICATE, cv::gapi::own::Scalar{} };
+        return { cv::BORDER_REPLICATE, cv::Scalar{} };
     }
 };
 
@@ -308,7 +308,7 @@ GAPI_FLUID_KERNEL(FId7x7, TId7x7, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc&/* src*/)
     {
-        return { cv::BORDER_REPLICATE, cv::gapi::own::Scalar{} };
+        return { cv::BORDER_REPLICATE, cv::Scalar{} };
     }
 };
 

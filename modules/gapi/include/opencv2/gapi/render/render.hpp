@@ -17,7 +17,6 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 #include <opencv2/gapi/own/exports.hpp>
-#include <opencv2/gapi/own/scalar.hpp>
 
 
 /** \defgroup gapi_draw G-API Drawing and composition functionality

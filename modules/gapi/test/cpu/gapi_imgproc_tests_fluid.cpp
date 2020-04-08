@@ -10,7 +10,7 @@
 
 namespace
 {
-#define IMGPROC_FLUID [] () { return cv::compile_args(cv::gapi::imgproc::fluid::kernels()); }
+#define IMGPROC_FLUID [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::imgproc::fluid::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test
