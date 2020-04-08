@@ -947,6 +947,11 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear)
     runTensorFlowNet("resize_bilinear_factor");
 }
 
+TEST_P(Test_TensorFlow_layers, tf2_keras)
+{
+    runTensorFlowNet("tf2_dense");
+}
+
 TEST_P(Test_TensorFlow_layers, squeeze)
 {
 #if defined(INF_ENGINE_RELEASE)

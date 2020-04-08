@@ -78,32 +78,34 @@ public:
     FullyConnectedLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
-
-        int numOutput = params.get<int>("num_output");
-        int innerSize = (int)blobs[0].total() / numOutput;
         bias = params.get<bool>("bias_term", true);
         axis = params.get<int>("axis", 1);
-
-        CV_Assert(blobs[0].dims >= 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
-        CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
-
-        weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
-        int vecsize = weightsMat.cols;
-        if( vecsize % VEC_ALIGN != 0 )
+        if (!blobs.empty())
         {
-            int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
-            Mat weightsBuf(weightsMat.rows, vecsize_aligned, weightsMat.type());
-            Mat wpadding = weightsBuf.colRange(vecsize, vecsize_aligned);
-            wpadding.setTo(Scalar::all(0.));
-            weightsMat = weightsBuf.colRange(0, vecsize);
-            blobs[0].copyTo(weightsMat);
-        }
+            CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
+            int numOutput = params.get<int>("num_output");
+            int innerSize = (int)blobs[0].total() / numOutput;
 
-        if (bias)
-            biasMat = blobs[1] = blobs[1].reshape(1, 1);
-        else
-            biasMat = Mat::zeros(1, numOutput, weightsMat.type());
+            CV_Assert(blobs[0].dims >= 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
+            CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
+
+            weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
+            int vecsize = weightsMat.cols;
+            if (vecsize % VEC_ALIGN != 0)
+            {
+                int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
+                Mat weightsBuf(weightsMat.rows, vecsize_aligned, weightsMat.type());
+                Mat wpadding = weightsBuf.colRange(vecsize, vecsize_aligned);
+                wpadding.setTo(Scalar::all(0.));
+                weightsMat = weightsBuf.colRange(0, vecsize);
+                blobs[0].copyTo(weightsMat);
+            }
+
+            if (bias)
+                biasMat = blobs[1] = blobs[1].reshape(1, 1);
+            else
+                biasMat = Mat::zeros(1, numOutput, weightsMat.type());
+        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -111,20 +113,35 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
-        CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
-        CV_Assert(blobs[0].dims == 2);
+        int numOutput, cAxis;
+        if (blobs.empty())
+        {
+            CV_CheckEQ(inputs.size(), (size_t)2, "");
+            numOutput = inputs[1].back();
+            cAxis = inputs[0].size() - 1;
+            CV_CheckEQ(numOutput, inputs[0][cAxis - 1], "");
+            int dims = inputs[0].size();
+            CV_CheckEQ(inputs[1].size(), (size_t)dims, "");
+            CV_CheckGE(dims, 2, "");
+            for (int i = 0; i < dims - 2; i++)
+                CV_CheckEQ(inputs[0][i], inputs[1][i], "");
+            CV_CheckEQ(inputs[0].back(), inputs[1][dims - 2], "");
+        }
+        else
+        {
+            CV_CheckEQ(inputs.size(), (size_t)1, "");
+            CV_CheckEQ(blobs[0].dims, 2, "");
+            numOutput = blobs[0].size[0];
+            CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
+            cAxis = clamp(axis, inputs[0]);
+        }
 
-        int cAxis = clamp(axis, inputs[0]);
-        int numOutput = blobs[0].size[0];
         MatShape outShape(cAxis + 1);
         for (int i = 0; i < cAxis; ++i)
             outShape[i] = inputs[0][i];
         outShape.back() = numOutput;
 
-        outputs.resize(inputs.size(), outShape);
-
-        CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
+        outputs.resize(1, outShape);
         return false;
     }
 
@@ -133,7 +150,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && axis == 1);
+               (((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && !blobs.empty()) ||
+                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -292,6 +310,51 @@ public:
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
+        if (inputs.size() == 2)
+        {
+            int dims = outputs[0].dims;
+            int m = inputs[0].size[dims - 2];
+            int n = inputs[0].size[dims - 1];
+            int k = inputs[1].size[dims - 1];
+            int rows = inputs[0].total() / (m * n);
+
+            MatShape sh_A = shape(rows, m * n);
+            MatShape sh_B = shape(rows, n * k);
+            MatShape sh_C = shape(rows, m * k);
+            UMat inp = inputs[0].reshape(1, sh_A.size(), &sh_A[0]);
+            UMat weight = inputs[1].reshape(1, sh_B.size(), &sh_B[0]);
+            UMat out = outputs[0].reshape(1, sh_C.size(), &sh_C[0]);
+
+            UMat A, B, C, A_fp32, B_fp32, C_fp32;
+            for (int i = 0; i < rows; ++i)
+            {
+                A = inp.row(i).reshape(1, m);
+                B = weight.row(i).reshape(1, n);
+                C = out.row(i).reshape(1, m);
+
+                if (use_half)
+                {
+                    convertFp16(A, A_fp32);
+                    convertFp16(B, B_fp32);
+                    convertFp16(C, C_fp32);
+                }
+                else
+                {
+                    A_fp32 = A;
+                    B_fp32 = B;
+                    C_fp32 = C;
+                }
+                cv::gemm(A_fp32, B_fp32, 1, noArray(), 0, C_fp32);
+                if (use_half)
+                {
+                    convertFp16(A_fp32, A);
+                    convertFp16(B_fp32, B);
+                    convertFp16(C_fp32, C);
+                }
+            }
+            return true;
+        }
+
         int axisCan = clamp(axis, inputs[0].dims);
         int numOutput = blobs[0].size[0];
         int innerSize = blobs[0].size[1];
@@ -411,16 +474,42 @@ public:
         inputs_arr.getMatVector(input);
         outputs_arr.getMatVector(output);
 
-        int axisCan = clamp(axis, input[0].dims);
-        int outerSize = input[0].total(0, axisCan);
-
-        for (size_t i = 0; i < input.size(); i++)
+        if (!blobs.empty())
         {
-            Mat srcMat = input[i].reshape(1, outerSize);
-            Mat dstMat = output[i].reshape(1, outerSize);
+            int axisCan = clamp(axis, input[0].dims);
+            int outerSize = input[0].total(0, axisCan);
 
-            const int nstripes = getNumThreads();
-            FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
+            for (size_t i = 0; i < input.size(); i++)
+            {
+                Mat srcMat = input[i].reshape(1, outerSize);
+                Mat dstMat = output[i].reshape(1, outerSize);
+
+                const int nstripes = getNumThreads();
+                FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
+            }
+        }
+        else
+        {
+            float* inpData = input[0].ptr<float>();
+            float* weightData = input[1].ptr<float>();
+            float* outData = output[0].ptr<float>();
+
+            int dims = output[0].dims;
+            int numSlice = output[0].total() / output[0].total(dims - 2);
+            int m = input[0].size[dims - 2];
+            int n = input[0].size[dims - 1];
+            int k = input[1].size[dims - 1];
+            for (int i = 0; i < numSlice; i++)
+            {
+                Mat inpSlice(m, n, CV_32F, inpData);
+                Mat weightSlice(n, k, CV_32F, weightData);
+                Mat outSlice(m, k, CV_32F, outData);
+
+                outSlice = inpSlice * weightSlice;
+                inpData += inpSlice.total();
+                weightData += weightSlice.total();
+                outData += outSlice.total();
+            }
         }
     }
 
@@ -489,20 +578,28 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        int batch = ieInpNode->get_shape()[0];
+        std::shared_ptr<ngraph::Node> matmul;
 
-        std::vector<size_t> data = {(size_t)batch, (size_t)blobs[0].size[1]};
-        auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
-        auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
+        if (nodes.size() == 2)
+        {
+            auto& inp2 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, false, false);
+        }
+        else
+        {
+            std::vector<size_t> data = {(size_t)ieInpNode->get_shape()[0], (size_t)blobs[0].size[1]};
+            auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
+            auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
 
-        std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
-        auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-        auto matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, false, true);
+            std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+            auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
+            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, false, true);
+        }
+
         if (bias) {
             auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
                                               ngraph::Shape{(size_t)blobs[1].size[1]}, blobs[1].data);
-            auto fc = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node, ngraph::op::AutoBroadcastType::NUMPY);
-            return Ptr<BackendNode>(new InfEngineNgraphNode(fc));
+            matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node, ngraph::op::AutoBroadcastType::NUMPY);
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
     }
