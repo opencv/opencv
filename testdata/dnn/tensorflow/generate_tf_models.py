@@ -84,7 +84,7 @@ def save(inp, out, name, quantize=False, optimize=True):
     # representation but the last one is indicated the end of encoding. This way
     # float16 might takes 1 or 2 or 3 bytes depends on value. To impove compression,
     # we replace all `half_val` values to `tensor_content` using only 2 bytes for everyone.
-    with tf.gfile.FastGFile(name + '_net.pb') as f:
+    with tf.gfile.FastGFile(name + '_net.pb', 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
         for node in graph_def.node:
@@ -850,9 +850,14 @@ pool = tf.layers.average_pooling2d(inp, pool_size=(2, 3), strides=1, padding='VA
 out = inp * pool
 save(inp, out, 'channel_broadcast', optimize=False)
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+resized = tf.image.resize_bilinear(inp, size=[3, 5], name='resize_bilinear', align_corners=True)
+conv = tf.layers.conv2d(resized, filters=4, kernel_size=[1, 1])
+save(inp, conv, 'fused_resize_conv')
+################################################################################
 
 # Uncomment to print the final graph.
-# with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
+# with tf.gfile.FastGFile('fused_batch_norm_net.pb', 'rb') as f:
 #     graph_def = tf.GraphDef()
 #     graph_def.ParseFromString(f.read())
-#     print graph_def
+#     print(graph_def)
