@@ -5,7 +5,7 @@
 # VA_INTEL_IOCL_ROOT - root of Intel OCL installation
 
 if(UNIX AND NOT ANDROID)
-    if($ENV{VA_INTEL_IOCL_ROOT})
+    if(DEFINED ENV{VA_INTEL_IOCL_ROOT})
         set(VA_INTEL_IOCL_ROOT $ENV{VA_INTEL_IOCL_ROOT})
     else()
         set(VA_INTEL_IOCL_ROOT "/opt/intel/opencl")
