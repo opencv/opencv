@@ -29,7 +29,6 @@ namespace cv
 // (user-inaccessible) classes.
 class GNode;
 struct GOrigin;
-
 template<typename T> class GArray;
 
 /**
@@ -116,6 +115,7 @@ namespace detail
         virtual ~BasicVectorRef() {}
 
         virtual void mov(BasicVectorRef &ref) = 0;
+        virtual const void* ptr() const = 0;
     };
 
     template<typename T> class VectorRefT final: public BasicVectorRef
@@ -208,6 +208,8 @@ namespace detail
             GAPI_Assert(tv != nullptr);
             wref() = std::move(tv->wref());
         }
+
+        virtual const void* ptr() const override { return &rref(); }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -262,6 +264,9 @@ namespace detail
         {
             return m_ref->m_desc;
         }
+
+        // May be used to uniquely identify this object internally
+        const void *ptr() const { return m_ref->ptr(); }
     };
 
     // Helper (FIXME: work-around?)
