@@ -323,10 +323,10 @@ public:
         std::vector<size_t> maxDims(numDims, 0);
 
         CV_Assert(inputs.size() == nodes.size());
-        ngraph::NodeVector inp_nodes;
+        ngraph::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
-            inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);
+            inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->GetOidOutput());
 
             std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
             for (int i = 0; i < numDims; ++i)
@@ -352,7 +352,7 @@ public:
                     inp_nodes[i],
                     std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{begins.size()}, begins.data()),
                     std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{ends.size()}, ends.data()),
-                    ngraph::op::PadMode::CONSTANT);
+                    ngraph::op::PadMode::CONSTANT)->output(0);
             }
         }
         auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, cAxis);

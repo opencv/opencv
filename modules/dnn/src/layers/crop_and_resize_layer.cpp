@@ -122,10 +122,10 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         // Slice second input: from 1x1xNx7 to 1x1xNx5
-        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto rois = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        auto rois = nodes[1].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
 
-        std::vector<size_t> dims = rois->get_shape(), offsets(4, 0);
+        std::vector<size_t> dims = rois.get_shape(), offsets(4, 0);
         offsets[3] = 2;
         dims[3] = 7;
 

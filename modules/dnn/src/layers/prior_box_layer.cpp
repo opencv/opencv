@@ -560,8 +560,8 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 2);
-        auto layer = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto image = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto layer = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        auto image = nodes[1].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
         auto layer_shape = std::make_shared<ngraph::op::ShapeOf>(layer);
         auto image_shape = std::make_shared<ngraph::op::ShapeOf>(image);
 

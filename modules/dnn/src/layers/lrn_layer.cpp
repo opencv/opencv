@@ -411,12 +411,12 @@ public:
         if (!normBySize)
             alphaSize *= (type == SPATIAL_NRM ? size*size : size);
 
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
         std::vector<int64_t> axes;
         if (type != SPATIAL_NRM) {
             axes = {1};
         } else {
-            axes.resize(ieInpNode->get_shape().size() - 2);
+            axes.resize(ieInpNode.get_shape().size() - 2);
             std::iota(axes.begin(), axes.end(), 2);
         }
         auto ngraph_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes.data());

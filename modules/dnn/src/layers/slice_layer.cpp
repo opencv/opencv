@@ -328,8 +328,8 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert_N(nodes.size() <= 2);
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        CV_Assert(sliceRanges[0].size() == ieInpNode->get_shape().size());
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        CV_Assert(sliceRanges[0].size() == ieInpNode.get_shape().size());
 
         std::vector<int64_t> offsets, dims;
         for (int i = 0; i < sliceRanges[0].size(); ++i)

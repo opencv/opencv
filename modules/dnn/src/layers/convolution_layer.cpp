@@ -538,8 +538,8 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert_N(inputs.size() == 1, nodes.size() == 1);
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::vector<size_t> dims = ieInpNode->get_shape();
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        std::vector<size_t> dims = ieInpNode.get_shape();
         CV_Assert(dims.size() == 4 || dims.size() == 5);
         const int inpCn = dims[1];
         const int outCn = blobs[0].size[0];
@@ -2057,7 +2057,7 @@ public:
        const int group = numOutput / outGroupCn;
        CV_Assert(group == 1);
 
-       auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+       auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
        std::vector<size_t> kernel_shape = getShape<size_t>(blobs[0]);
        auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, kernel_shape, blobs[0].data);
 

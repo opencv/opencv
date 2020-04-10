@@ -316,22 +316,23 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        const size_t batch = ieInpNode->get_shape()[0];
-        const size_t numChannels = ieInpNode->get_shape()[1];
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        auto inp_shape = ieInpNode.get_shape();
+        const size_t batch = inp_shape[0];
+        const size_t numChannels = inp_shape[1];
 
         std::vector<int64_t> axes_data;
         if (!acrossSpatial) {
             axes_data.push_back(1);
         } else {
-            axes_data.resize(ieInpNode->get_shape().size());
+            axes_data.resize(inp_shape.size());
             std::iota(axes_data.begin(), axes_data.end(), 0);
         }
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_data.size()}, axes_data);
         auto norm = std::make_shared<ngraph::op::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
 
         CV_Assert(blobs.empty() || numChannels == blobs[0].total());
-        std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
+        std::vector<size_t> shape(inp_shape.size(), 1);
         shape[0] = blobs.empty() ? 1 : batch;
         shape[1] = numChannels;
         std::shared_ptr<ngraph::op::Constant> weight;

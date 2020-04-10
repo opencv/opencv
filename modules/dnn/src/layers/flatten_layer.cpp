@@ -182,8 +182,8 @@ public:
 virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                     const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
 {
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::vector<size_t> dims = ieInpNode->get_shape();
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        std::vector<size_t> dims = ieInpNode.get_shape();
 
         int numAxes = dims.size();
         int startAxis = clamp(_startAxis, numAxes);

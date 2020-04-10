@@ -91,16 +91,18 @@ class InfEngineNgraphNode : public BackendNode
 {
 public:
     InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& nodes, Ptr<Layer>& layer,
-                        std::vector<Mat*>& inputs, std::vector<Mat>& outputs,
+                        std::vector<Mat*>& inputs, std::vector<Mat>& outMats,
                         std::vector<Mat>& internals);
 
     InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node);
     InfEngineNgraphNode(std::shared_ptr<ngraph::Node>& _node);
 
     void setName(const std::string& name);
+    ngraph::Output<ngraph::Node> GetOidOutput() const;
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
     std::shared_ptr<ngraph::Node> node;
+    int oid;
     Ptr<InfEngineNgraphNet> net;
     Ptr<dnn::Layer> cvLayer;
 };

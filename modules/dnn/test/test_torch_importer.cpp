@@ -387,7 +387,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     // Due to numerical instability in Pooling-Unpooling layers (indexes jittering)
     // thresholds for ENet must be changed. Accuracy of results was checked on
     // Cityscapes dataset and difference in mIOU with Torch is 10E-4%
-    normAssert(ref, out, "", 0.00044, /*target == DNN_TARGET_CPU ? 0.453 : */0.552);
+    normAssert(ref, out, "", 0.00048, /*target == DNN_TARGET_CPU ? 0.453 : */0.552);
     normAssertSegmentation(ref, out);
 
     const int N = 3;
@@ -395,7 +395,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     {
         net.setInput(inputBlob, "");
         Mat out = net.forward();
-        normAssert(ref, out, "", 0.00044, /*target == DNN_TARGET_CPU ? 0.453 : */0.552);
+        normAssert(ref, out, "", 0.00048, /*target == DNN_TARGET_CPU ? 0.453 : */0.552);
         normAssertSegmentation(ref, out);
     }
 }

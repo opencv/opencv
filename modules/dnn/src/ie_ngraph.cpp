@@ -84,6 +84,15 @@ public:
         constructor_validate_and_infer_types();
     }
 
+#if INF_ENGINE_VER_MAJOR_GT(2020020000)
+     NgraphCustomOp(const ngraph::OutputVector& inputs,
+                    const std::map<std::string, InferenceEngine::Parameter>& params = {}) :
+        Op(inputs), params(params)
+    {
+        constructor_validate_and_infer_types();
+    }
+#endif
+
     ~NgraphCustomOp()
     {
         // nothing
@@ -105,6 +114,13 @@ public:
     {
         return std::make_shared<NgraphCustomOp>(new_args, params);
     }
+
+#if INF_ENGINE_VER_MAJOR_GT(2020020000)
+    virtual std::shared_ptr<ngraph::Node> clone_with_new_inputs(const ngraph::OutputVector& new_args) const override
+    {
+        return std::make_shared<NgraphCustomOp>(new_args, params);
+    }
+#endif
 
     bool visit_attributes(ngraph::AttributeVisitor& visitor) override
     {
@@ -251,14 +267,14 @@ public:
 
 
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {}
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)), oid(0) {}
 
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>& _node)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(_node) {}
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(_node), oid(0) {}
 
 InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& nodes,
                                          Ptr<Layer>& cvLayer_, std::vector<Mat*>& inputs,
-                                         std::vector<Mat>& outputs, std::vector<Mat>& internals)
+                                         std::vector<Mat>& outMats, std::vector<Mat>& internals)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), cvLayer(cvLayer_)
 {
     std::ostringstream oss;
@@ -266,17 +282,28 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
 
     std::map<std::string, InferenceEngine::Parameter> params = {
         {"impl", oss.str()},
-        {"outputs", shapesToStr(outputs)},
+        {"outputs", shapesToStr(outMats)},
         {"internals", shapesToStr(internals)}
     };
 
-    ngraph::NodeVector inp_nodes;
-    for (const auto& node : nodes)
-        inp_nodes.emplace_back(node.dynamicCast<InfEngineNgraphNode>()->node);
+    ngraph::OutputVector inp_nodes;
+    for (const auto& node : nodes) {
+        inp_nodes.emplace_back(node.dynamicCast<InfEngineNgraphNode>()->GetOidOutput());
+    }
+
+#if INF_ENGINE_VER_MAJOR_GT(2020020000)
     node = std::make_shared<NgraphCustomOp>(inp_nodes, params);
+#else
+    node = std::make_shared<NgraphCustomOp>(as_node_vector(inp_nodes), params);
+#endif
+    oid = 0;
 
     CV_Assert(!cvLayer->name.empty());
     setName(cvLayer->name);
+}
+
+ngraph::Output<ngraph::Node> InfEngineNgraphNode::GetOidOutput() const {
+    return node->output(oid);
 }
 
 void InfEngineNgraphNode::setName(const std::string& name) {

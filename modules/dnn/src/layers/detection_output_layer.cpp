@@ -953,9 +953,9 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 3);
-        auto& box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+        auto box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        auto class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        auto proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
 
         ngraph::op::DetectionOutputAttrs attrs;
         attrs.num_classes                = _numClasses;

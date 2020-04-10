@@ -275,7 +275,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(outShapes.size() == 1);
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
 
         std::vector<int64_t> out(outShapes[0].begin(), outShapes[0].end());
         auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,

@@ -328,8 +328,8 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        int axis = clamp(axisRaw, ieInpNode->get_shape().size());
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        int axis = clamp(axisRaw, ieInpNode.get_shape().size());
         auto softmax = std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis);
         if (logSoftMax)
             return Ptr<BackendNode>(new InfEngineNgraphNode(std::make_shared<ngraph::op::v0::Log>(softmax)));

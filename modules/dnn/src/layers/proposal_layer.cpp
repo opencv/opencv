@@ -377,14 +377,14 @@ public:
             scalesVec[i] = scales.get<float>(i);
         attr.scale = scalesVec;
 
-        auto& class_probs  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& class_logits = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& image_shape  = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+        auto class_probs  = nodes[0].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        auto class_logits = nodes[1].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
+        auto image_shape  = nodes[2].dynamicCast<InfEngineNgraphNode>()->GetOidOutput();
 
-        CV_Assert_N(image_shape->get_shape().size() == 2, image_shape->get_shape().front() == 1);
+        CV_Assert_N(image_shape.get_shape().size() == 2, image_shape.get_shape().front() == 1);
         auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
                        ngraph::Shape{1},
-                       std::vector<int64_t>{(int64_t)image_shape->get_shape().back()});
+                       std::vector<int64_t>{(int64_t)image_shape.get_shape().back()});
         auto reshape = std::make_shared<ngraph::op::v1::Reshape>(image_shape, shape, true);
 
         auto proposal = std::make_shared<ngraph::op::Proposal>(class_probs, class_logits, reshape, attr);

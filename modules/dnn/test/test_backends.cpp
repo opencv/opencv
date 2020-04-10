@@ -252,7 +252,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 2e-5;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.062 : 0.0;
     processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "dnn/ssd_mobilenet_v2_coco_2018_03_29.pbtxt",
-               inp, "detection_out", "", l1, lInf, 0.25);
+               inp, "detection_out", "", l1, lInf, 0.28);
     expectNoFallbacksFromIE(net);
 }
 
