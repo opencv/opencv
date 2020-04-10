@@ -369,6 +369,7 @@ TEST_P(Test_ONNX_layers, ResizeUnfused)
     testONNXModels("upsample_unfused_opset9_torch1.4");
     testONNXModels("resize_nearest_unfused_opset11_torch1.4");
     testONNXModels("resize_nearest_unfused_opset11_torch1.3");
+    testONNXModels("resize_bilinear_unfused_opset11_torch1.4");
 }
 
 TEST_P(Test_ONNX_layers, MultyInputs)
