@@ -815,6 +815,10 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
     }
 };
 
+// FIXME: (GAPI_Streaming_Types,   InputOpaque) test is missing here!
+// FIXME: (GAPI_Streaming_Types, XChangeOpaque) test is missing here!
+// FIXME: (GAPI_Streaming_Types,  OutputOpaque) test is missing here!
+
 TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
 {
     const auto c_ptr = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(findDataFile("cv/video/768x576.avi"));
