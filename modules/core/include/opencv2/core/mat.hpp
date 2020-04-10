@@ -3580,6 +3580,8 @@ public:
     Mat cross(const Mat& m) const;
     double dot(const Mat& m) const;
 
+    void swap(MatExpr& b);
+
     const MatOp* op;
     int flags;
 
