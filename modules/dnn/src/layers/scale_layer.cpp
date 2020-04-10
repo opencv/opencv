@@ -320,12 +320,6 @@ public:
         return true;
     }
 
-    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
-    {
-        std::vector<Mat> inputs;
-        inputs_arr.getMatVector(inputs);
-    }
-
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();

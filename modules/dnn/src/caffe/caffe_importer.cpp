@@ -470,7 +470,7 @@ public:
                 CV_Assert(layer.bottom_size() == 1 || layer.bottom_size() == 2);
                 type = "Resize";
                 String interp = layerParams.get<String>("type").toLowerCase();
-                layerParams.set("interpolation", "caffe_" + interp);
+                layerParams.set("interpolation", interp == "linear" ? "bilinear" : interp);
 
                 if (layerParams.has("factor"))
                 {
