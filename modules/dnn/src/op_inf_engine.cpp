@@ -465,23 +465,6 @@ void InfEngineNgraphNet::addOutput(const std::string& name)
     requestedOutputs.push_back(name);
 }
 
-void InfEngineNgraphNet::setNodePtr(std::shared_ptr<ngraph::Node>* ptr) {
-    all_nodes.emplace((*ptr)->get_friendly_name(), ptr);
-}
-
- void InfEngineNgraphNet::release() {
-     for (auto& node : components.back()) {
-         if (!(node->is_parameter() || node->is_output() || node->is_constant()) ) {
-             auto it = all_nodes.find(node->get_friendly_name());
-             if (it != all_nodes.end()) {
-                 unconnectedNodes.erase(*(it->second));
-                 it->second->reset();
-                 all_nodes.erase(it);
-             }
-         }
-     }
- }
-
 void InfEngineNgraphNet::dfs(std::shared_ptr<ngraph::Node>& node,
                              std::vector<std::shared_ptr<ngraph::Node>>& comp,
                              std::unordered_map<std::string, bool>& used) {
@@ -550,12 +533,10 @@ void InfEngineNgraphNet::createNet(Target targetId) {
                 isInit = false;
                 CV_Assert_N(!inps.empty(), !outputs.empty());
                 ngraph_function = std::make_shared<ngraph::Function>(outputs, inps);
-                release();
                 components.pop_back();
                 init(targetId);
             }
         } else {
-            release();
             components.clear();
             init(targetId);
         }

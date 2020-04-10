@@ -98,7 +98,6 @@ private:
     ngraph::ParameterVector inputs_vec;
     std::shared_ptr<ngraph::Function> ngraph_function;
     std::vector<std::vector<std::shared_ptr<ngraph::Node>>> components;
-    std::unordered_map<std::string, std::shared_ptr<ngraph::Node>* > all_nodes;
 
     InferenceEngine::ExecutableNetwork netExec;
     InferenceEngine::BlobMap allBlobs;
