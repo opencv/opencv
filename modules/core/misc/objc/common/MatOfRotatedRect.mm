@@ -65,9 +65,9 @@ const int _channels = 5;
 
 - (NSArray<RotatedRect*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<RotatedRect*>* ret = [NSMutableArray allocateWithSize:length fillValue:[RotatedRect new]];
+    NSMutableArray<RotatedRect*>* ret = createArrayWithSize(length, [RotatedRect new]);
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
+        NSMutableArray<NSNumber*>* data = createArrayWithSize([self length], @0.0);
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[RotatedRect alloc] initWithCenter:[[Point2f alloc] initWithX:data[index * _channels].floatValue y:data[index * _channels + 1].floatValue] size:[[Size2f alloc] initWithWidth:data[index * _channels + 2].floatValue height:data[index * _channels + 3].floatValue] angle:data[index * _channels + 4].floatValue];

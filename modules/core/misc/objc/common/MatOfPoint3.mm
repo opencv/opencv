@@ -60,9 +60,9 @@ const int _channels = 3;
 
 - (NSArray<Point3i*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<Point3i*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Point3i new]];
+    NSMutableArray<Point3i*>* ret = createArrayWithSize(length, [Point3i new]);
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
+        NSMutableArray<NSNumber*>* data = createArrayWithSize([self length], @0.0);
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[Point3i alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue z:data[index * _channels + 2].intValue];

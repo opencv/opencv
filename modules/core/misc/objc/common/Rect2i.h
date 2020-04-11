@@ -52,4 +52,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+typedef Rect2i CvRect;
+
 NS_ASSUME_NONNULL_END

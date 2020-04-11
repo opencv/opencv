@@ -1,16 +1,16 @@
 //
-//  MatOfPoint.mm
+//  MatOfPoint2i.mm
 //
 //  Created by Giles Payne on 2019/12/27.
 //
 
-#import "MatOfPoint.h"
+#import "MatOfPoint2i.h"
 #import "Range.h"
 #import "Point2i.h"
 #import "CvType.h"
 #import "ArrayUtil.h"
 
-@implementation MatOfPoint
+@implementation MatOfPoint2i
 
 const int _depth = CV_32S;
 const int _channels = 2;
@@ -59,9 +59,9 @@ const int _channels = 2;
 
 - (NSArray<Point2i*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<Point2i*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Point2i new]];
+    NSMutableArray<Point2i*>* ret = createArrayWithSize(length, [Point2i new]);
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
+        NSMutableArray<NSNumber*>* data = createArrayWithSize([self length], @0.0);
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[Point2i alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue];

@@ -1,16 +1,16 @@
 //
-//  MatOfDMatch.m
+//  MatOfRect2i.m
 //
 //  Created by Giles Payne on 2019/12/27.
 //
 
-#import "MatOfRect.h"
+#import "MatOfRect2i.h"
 #import "Range.h"
 #import "Rect2i.h"
 #import "CvType.h"
 #import "ArrayUtil.h"
 
-@implementation MatOfRect
+@implementation MatOfRect2i
 
 const int _depth = CV_32S;
 const int _channels = 4;
@@ -61,9 +61,9 @@ const int _channels = 4;
 
 - (NSArray<Rect2i*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<Rect2i*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Rect2i new]];
+    NSMutableArray<Rect2i*>* ret = createArrayWithSize(length, [Rect2i new]);
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
+        NSMutableArray<NSNumber*>* data = createArrayWithSize([self length], @0.0);
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[Rect2i alloc] initWithX:data[index * _channels].intValue y:data[index * _channels + 1].intValue width:data[index * _channels + 2].intValue height:data[index * _channels + 3].intValue];

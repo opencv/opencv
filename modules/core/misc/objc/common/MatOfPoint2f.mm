@@ -59,9 +59,9 @@ const int _channels = 2;
 
 - (NSArray<Point2f*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<Point2f*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Point2f new]];
+    NSMutableArray<Point2f*>* ret = createArrayWithSize(length, [Point2f new]);
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
+        NSMutableArray<NSNumber*>* data = createArrayWithSize([self length], @0.0);
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[Point2f alloc] initWithX:data[index * _channels].floatValue y:data[index * _channels + 1].floatValue];

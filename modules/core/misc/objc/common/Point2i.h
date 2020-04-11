@@ -43,4 +43,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString *)description;
 @end
 
+typedef Point2i CvPoint;
+
 NS_ASSUME_NONNULL_END

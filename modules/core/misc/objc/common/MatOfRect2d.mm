@@ -1,5 +1,5 @@
 //
-//  MatOfRect2d.m
+//  MatOfRect2d.mm
 //
 //  Created by Giles Payne on 2019/12/27.
 //
@@ -66,9 +66,9 @@ const int _channels = 4;
 
 - (NSArray<Rect2d*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<Rect2d*>* ret = [NSMutableArray allocateWithSize:length fillValue:[Rect2d new]];
+    NSMutableArray<Rect2d*>* ret = createArrayWithSize(length, [Rect2d new]);
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
+        NSMutableArray<NSNumber*>* data = createArrayWithSize([self length], @0.0);
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[Rect2d alloc] initWithX:data[index * _channels].doubleValue y:data[index * _channels + 1].doubleValue width:data[index * _channels + 2].doubleValue height:data[index * _channels + 3].doubleValue];

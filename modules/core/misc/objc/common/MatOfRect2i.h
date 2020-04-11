@@ -1,5 +1,5 @@
 //
-//  MatOfDMatch.h
+//  MatOfRect2i.h
 //
 //  Created by Giles Payne on 2019/12/27.
 //
@@ -12,7 +12,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface MatOfRect : Mat
+@interface MatOfRect2i : Mat
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat;
@@ -28,5 +28,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (int)length;
 
 @end
+
+typedef MatOfRect2i MatOfRect;
 
 NS_ASSUME_NONNULL_END

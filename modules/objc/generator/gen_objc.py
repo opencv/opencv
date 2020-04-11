@@ -221,10 +221,10 @@ class ClassInfo(GeneralInfo):
         return Template("CLASS $namespace::$classpath.$name : $base").substitute(**self.__dict__)
 
     def getImports(self, module):
-        return ["#import \"%s.h\"" % c for c in sorted(self.imports)]
+        return ["#import \"%s.h\"" % c for c in sorted(filter(lambda m: m != self.name, map(lambda m: type_dict[m]["import_module"] if m in type_dict and "import_module" in type_dict[m] else m, self.imports)))]
 
     def getForwardDeclarations(self, module):
-        return ["@class %s;" % c for c in sorted(self.imports)]
+        return ["typedef NS_ENUM(int, %s);" % c if c in type_dict and "is_enum" in type_dict[c] and type_dict[c]["is_enum"] else "@class %s;" % c for c in sorted(self.imports)]
 
     def addImports(self, ctype, is_out_type):
         if ctype == self.cname:
@@ -567,7 +567,19 @@ class ObjectiveCWrapperGenerator(object):
             enumType = None
         else:
             ctype = normalize_class_name(enumType)
-            type_dict[ctype] = { "cast_from" : "int", "cast_to" : get_cname(enumType), "objc_type" : "int" }
+            constinfo = ConstInfo(decl[3][0], namespaces=self.namespaces, enumType=enumType)
+            objc_type = enumType.rsplit(".", 1)[-1]
+            import_module = constinfo.classname if constinfo.classname and constinfo.classname != objc_type else self.Module
+            type_dict[ctype] = { "cast_from" : "int",
+                                 "cast_to" : get_cname(enumType),
+                                 "objc_type" : objc_type,
+                                 "is_enum" : True,
+                                 "import_module" : import_module,
+                                 "from_cpp" : "(" + objc_type + ")%(n)s"}
+            type_dict[objc_type] = { "cast_to" : get_cname(enumType),
+                                     "objc_type": objc_type,
+                                     "is_enum": True,
+                                     "import_module": import_module}
         const_decls = decl[3]
 
         for decl in const_decls:
@@ -1024,24 +1036,6 @@ def copy_objc_files(objc_files_dir, objc_base_path, module_path, include = False
             copyfile(src, dest)
             updated_files += 1
 
-#def copy_header_files(include_src_dir, include_dst_dir, module):
-#    header_files = []
-#    re_filter = re.compile(r'^.+\.(h|hpp)$')
-#    for root, dirnames, filenames in os.walk(include_src_dir):
-#       header_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
-
-#    re_prefix = re.compile(r'^' + include_src_dir)
-#    for header_file in header_files:
-#        src = header_file
-#        dest = re_prefix.sub(include_dst_dir, header_file)
-#        mkdir_p(os.path.dirname(dest))
-#        if (not os.path.exists(dest)) or (os.stat(src).st_mtime - os.stat(dest).st_mtime > 1):
-#            copyfile(src, dest)
-
-#    opencv_hpp = open(os.path.join(include_dst_dir, 'opencv.hpp'), 'a')
-#    opencv_hpp.write("#include <opencv2/" + module + ".hpp>\n")
-#    opencv_hpp.close()
-
 def sanitize_documentation_string(doc, type):
     lines = doc.splitlines()
 
@@ -1086,24 +1080,12 @@ if __name__ == "__main__":
     ROOT_DIR = config['rootdir']; assert os.path.exists(ROOT_DIR)
 
     dstdir = "./gen"
+    testdir = "./test"
     objc_base_path = os.path.join(dstdir, 'objc'); mkdir_p(objc_base_path)
-    objc_test_base_path = os.path.join(dstdir, 'test'); mkdir_p(objc_test_base_path)
-    #opencv2_inc_path = os.path.join(dstdir, 'include', 'opencv2'); mkdir_p(opencv2_inc_path)
-    #opencv_hpp = open(os.path.join(opencv2_inc_path, "opencv.hpp"), "w+")
-    #opencv_hpp.write("//\n//This file is auto-generated. Please don't modify it\n//\n\n")
-    #opencv_hpp.write("#pragma once\n\n")
-    #opencv_hpp.close()
-    #opencv_modules_hpp = open(os.path.join(opencv2_inc_path, "opencv_modules.hpp"), "w+")
-    #opencv_modules_hpp.write("// Dummy file\n")
-    #opencv_modules_hpp.close()
-
-    #for (subdir, target_subdir) in [('src/objc', 'objc')]:
-    #    if target_subdir is None:
-    #        target_subdir = subdir
-    #    objc_files_dir = os.path.join(SCRIPT_DIR, subdir)
-    #    if os.path.exists(objc_files_dir):
-    #        target_path = os.path.join(dstdir, target_subdir); mkdir_p(target_path)
-    #        copy_objc_files(objc_files_dir, target_path)
+    objc_test_base_path = os.path.join(testdir, 'objc'); mkdir_p(objc_test_base_path)
+    copy_objc_files(os.path.join(SCRIPT_DIR, '../test/test'), objc_test_base_path, 'test', False)
+    copy_objc_files(os.path.join(SCRIPT_DIR, '../test/dummy'), objc_test_base_path, 'dummy', False)
+    copyfile(os.path.join(SCRIPT_DIR, '../test/cmakelists.template'), os.path.join(objc_test_base_path, 'CMakeLists.txt'))
 
     # launch Objective-C Wrapper generator
     generator = ObjectiveCWrapperGenerator()
@@ -1123,7 +1105,6 @@ if __name__ == "__main__":
         common_headers = []
 
         misc_location = os.path.join(module_location, 'misc/objc')
-        #header_location = os.path.join(module_location, 'include/opencv2')
 
         srcfiles_fname = os.path.join(misc_location, 'filelist')
         if os.path.exists(srcfiles_fname):
@@ -1173,7 +1154,8 @@ if __name__ == "__main__":
 
         objc_test_files_dir = os.path.join(misc_location, 'test')
         if os.path.exists(objc_test_files_dir):
-            copy_objc_files(objc_test_files_dir, objc_test_base_path, 'test' + module, False)
+            copy_objc_files(objc_test_files_dir, objc_test_base_path, 'test', False)
+
 
         if len(srcfiles) > 0:
             generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers)

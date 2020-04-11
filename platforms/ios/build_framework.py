@@ -281,6 +281,8 @@ class Builder:
                 "arm64": "arm64-apple-ios",
                 "i386": "i386-apple-ios-simulator",
                 "x86_64": "x86_64-apple-ios-simulator",
+            } if builddirs[0].find("iphone") != -1 else {
+                "x86_64": "x86_64-apple-macos",
             }
         for d in builddirs:
             copy_tree(os.path.join(d, "install", "lib", name + ".framework", "Modules"), os.path.join(dstdir, "Modules"))

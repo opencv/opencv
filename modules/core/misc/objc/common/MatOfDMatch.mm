@@ -61,9 +61,9 @@ const int _channels = 4;
 
 - (NSArray<DMatch*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<DMatch*>* ret = [NSMutableArray allocateWithSize:length fillValue:[DMatch new]];
+    NSMutableArray<DMatch*>* ret = createArrayWithSize(length, [DMatch new]);
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
+        NSMutableArray<NSNumber*>* data = createArrayWithSize([self length], @0.0);
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[DMatch alloc] initWithQueryIdx:data[index * _channels].intValue trainIdx:data[index * _channels + 1].intValue imgIdx:data[index * _channels + 2].intValue distance:data[index * _channels + 3].floatValue];

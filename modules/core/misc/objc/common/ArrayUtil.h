@@ -6,6 +6,4 @@
 
 #pragma once
 
-@interface NSMutableArray (Autosizing)
-+(NSMutableArray*)allocateWithSize:(NSInteger)size fillValue:(NSObject*)val;
-@end
+NSMutableArray* createArrayWithSize(int size, NSObject* val);

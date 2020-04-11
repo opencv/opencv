@@ -53,7 +53,7 @@ const int _channels = 1;
 
 - (NSArray<NSNumber*>*)toArray {
     int length = [self length];
-    NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:length fillValue:@0.0];
+    NSMutableArray<NSNumber*>* data = createArrayWithSize(length, @0.0);
     [self get:0 col:0 data:data];
     return data;
 }

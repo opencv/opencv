@@ -1,5 +1,5 @@
 //
-//  MatOfPoint.h
+//  MatOfPoint2i.h
 //
 //  Created by Giles Payne on 2019/12/27.
 //
@@ -12,7 +12,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface MatOfPoint : Mat
+@interface MatOfPoint2i : Mat
 
 #ifdef __cplusplus
 - (instancetype)initWithNativeMat:(cv::Mat*)nativeMat;
@@ -28,5 +28,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (int)length;
 
 @end
+
+typedef MatOfPoint2i MatOfPoint;
 
 NS_ASSUME_NONNULL_END

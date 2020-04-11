@@ -65,9 +65,9 @@ const int _channels = 7;
 
 - (NSArray<KeyPoint*>*)toArray {
     int length = [self length] / _channels;
-    NSMutableArray<KeyPoint*>* ret = [NSMutableArray allocateWithSize:length fillValue:[KeyPoint new]];
+    NSMutableArray<KeyPoint*>* ret = createArrayWithSize(length, [KeyPoint new]);
     if (length > 0) {
-        NSMutableArray<NSNumber*>* data = [NSMutableArray allocateWithSize:[self length] fillValue:@0.0];
+        NSMutableArray<NSNumber*>* data = createArrayWithSize([self length], @0.0);
         [self get:0 col:0 data:data];
         for (int index = 0; index < length; index++) {
             ret[index] = [[KeyPoint alloc] initWithX:data[index * _channels].floatValue y:data[index * _channels + 1].floatValue size:data[index * _channels + 2].floatValue angle:data[index * _channels + 3].floatValue response:data[index * _channels + 4].floatValue octave:data[index * _channels + 5].intValue classId:data[index * _channels + 6].intValue];
