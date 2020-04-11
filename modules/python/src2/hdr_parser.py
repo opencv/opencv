@@ -690,7 +690,7 @@ class CppHeaderParser(object):
                     classname, bases, modlist = self.parse_class_decl(stmt[len("typedef "):])
                 except:
                     print("Error at %s:%d" % (self.hname, self.lineno))
-                    exit(1)
+                    exit(-1)
                 if classname.startswith("_Ipl"):
                     classname = classname[1:]
                 decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, [], None, docstring]
@@ -705,7 +705,7 @@ class CppHeaderParser(object):
                         classname, bases, modlist = self.parse_class_decl(stmt)
                     except:
                         print("Error at %s:%d" % (self.hname, self.lineno))
-                        exit(1)
+                        exit(-1)
                     decl = []
                     if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode):# and ("CV_EXPORTS" in stmt)):
                         decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, [], None, docstring]
