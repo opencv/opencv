@@ -41,7 +41,7 @@ struct v_uint8x16
     typedef v128_t vector_type;
     enum { nlanes = 16 };
 
-    v_uint8x16() : val(wasm_i8x16_splat(0)) {}
+    v_uint8x16() {}
     explicit v_uint8x16(v128_t v) : val(v) {}
     v_uint8x16(uchar v0, uchar v1, uchar v2, uchar v3, uchar v4, uchar v5, uchar v6, uchar v7,
             uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
@@ -49,6 +49,7 @@ struct v_uint8x16
         uchar v[] = {v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15};
         val = wasm_v128_load(v);
     }
+
     uchar get0() const
     {
         return (uchar)wasm_i8x16_extract_lane(val, 0);
@@ -63,7 +64,7 @@ struct v_int8x16
     typedef v128_t vector_type;
     enum { nlanes = 16 };
 
-    v_int8x16() : val(wasm_i8x16_splat(0)) {}
+    v_int8x16() {}
     explicit v_int8x16(v128_t v) : val(v) {}
     v_int8x16(schar v0, schar v1, schar v2, schar v3, schar v4, schar v5, schar v6, schar v7,
             schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
@@ -71,6 +72,7 @@ struct v_int8x16
         schar v[] = {v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15};
         val = wasm_v128_load(v);
     }
+
     schar get0() const
     {
         return wasm_i8x16_extract_lane(val, 0);
@@ -85,13 +87,14 @@ struct v_uint16x8
     typedef v128_t vector_type;
     enum { nlanes = 8 };
 
-    v_uint16x8() : val(wasm_i16x8_splat(0)) {}
+    v_uint16x8() {}
     explicit v_uint16x8(v128_t v) : val(v) {}
     v_uint16x8(ushort v0, ushort v1, ushort v2, ushort v3, ushort v4, ushort v5, ushort v6, ushort v7)
     {
         ushort v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
         val = wasm_v128_load(v);
     }
+
     ushort get0() const
     {
         return (ushort)wasm_i16x8_extract_lane(val, 0);    // wasm_u16x8_extract_lane() unimplemented yet
@@ -106,13 +109,14 @@ struct v_int16x8
     typedef v128_t vector_type;
     enum { nlanes = 8 };
 
-    v_int16x8() : val(wasm_i16x8_splat(0)) {}
+    v_int16x8() {}
     explicit v_int16x8(v128_t v) : val(v) {}
     v_int16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
     {
         short v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
         val = wasm_v128_load(v);
     }
+
     short get0() const
     {
         return wasm_i16x8_extract_lane(val, 0);
@@ -127,13 +131,14 @@ struct v_uint32x4
     typedef v128_t vector_type;
     enum { nlanes = 4 };
 
-    v_uint32x4() : val(wasm_i32x4_splat(0)) {}
+    v_uint32x4() {}
     explicit v_uint32x4(v128_t v) : val(v) {}
     v_uint32x4(unsigned v0, unsigned v1, unsigned v2, unsigned v3)
     {
         unsigned v[] = {v0, v1, v2, v3};
         val = wasm_v128_load(v);
     }
+
     unsigned get0() const
     {
         return (unsigned)wasm_i32x4_extract_lane(val, 0);
@@ -148,13 +153,14 @@ struct v_int32x4
     typedef v128_t vector_type;
     enum { nlanes = 4 };
 
-    v_int32x4() : val(wasm_i32x4_splat(0)) {}
+    v_int32x4() {}
     explicit v_int32x4(v128_t v) : val(v) {}
     v_int32x4(int v0, int v1, int v2, int v3)
     {
         int v[] = {v0, v1, v2, v3};
         val = wasm_v128_load(v);
     }
+
     int get0() const
     {
         return wasm_i32x4_extract_lane(val, 0);
@@ -169,13 +175,14 @@ struct v_float32x4
     typedef v128_t vector_type;
     enum { nlanes = 4 };
 
-    v_float32x4() : val(wasm_f32x4_splat(0)) {}
+    v_float32x4() {}
     explicit v_float32x4(v128_t v) : val(v) {}
     v_float32x4(float v0, float v1, float v2, float v3)
     {
         float v[] = {v0, v1, v2, v3};
         val = wasm_v128_load(v);
     }
+
     float get0() const
     {
         return wasm_f32x4_extract_lane(val, 0);
@@ -190,17 +197,14 @@ struct v_uint64x2
     typedef v128_t vector_type;
     enum { nlanes = 2 };
 
-#ifdef __wasm_unimplemented_simd128__
-    v_uint64x2() : val(wasm_i64x2_splat(0)) {}
-#else
-    v_uint64x2() : val(wasm_i32x4_splat(0)) {}
-#endif
+    v_uint64x2() {}
     explicit v_uint64x2(v128_t v) : val(v) {}
     v_uint64x2(uint64 v0, uint64 v1)
     {
         uint64 v[] = {v0, v1};
         val = wasm_v128_load(v);
     }
+
     uint64 get0() const
     {
 #ifdef __wasm_unimplemented_simd128__
@@ -221,17 +225,14 @@ struct v_int64x2
     typedef v128_t vector_type;
     enum { nlanes = 2 };
 
-#ifdef __wasm_unimplemented_simd128__
-    v_int64x2() : val(wasm_i64x2_splat(0)) {}
-#else
-    v_int64x2() : val(wasm_i32x4_splat(0)) {}
-#endif
+    v_int64x2() {}
     explicit v_int64x2(v128_t v) : val(v) {}
     v_int64x2(int64 v0, int64 v1)
     {
         int64 v[] = {v0, v1};
         val = wasm_v128_load(v);
     }
+
     int64 get0() const
     {
 #ifdef __wasm_unimplemented_simd128__
@@ -252,17 +253,14 @@ struct v_float64x2
     typedef v128_t vector_type;
     enum { nlanes = 2 };
 
-#ifdef __wasm_unimplemented_simd128__
-    v_float64x2() : val(wasm_f64x2_splat(0)) {}
-#else
-    v_float64x2() : val(wasm_f32x4_splat(0)) {}
-#endif
+    v_float64x2() {}
     explicit v_float64x2(v128_t v) : val(v) {}
     v_float64x2(double v0, double v1)
     {
         double v[] = {v0, v1};
         val = wasm_v128_load(v);
     }
+
     double get0() const
     {
 #ifdef __wasm_unimplemented_simd128__
