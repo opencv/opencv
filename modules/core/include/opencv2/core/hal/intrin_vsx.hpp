@@ -28,7 +28,7 @@ struct v_uint8x16
 
     explicit v_uint8x16(const vec_uchar16& v) : val(v)
     {}
-    v_uint8x16() : val(vec_uchar16_z)
+    v_uint8x16()
     {}
     v_uint8x16(vec_bchar16 v) : val(vec_uchar16_c(v))
     {}
@@ -36,6 +36,9 @@ struct v_uint8x16
                uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
         : val(vec_uchar16_set(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15))
     {}
+
+    static inline v_uint8x16 zero() { return v_uint8x16(vec_uchar16_z); }
+
     uchar get0() const
     { return vec_extract(val, 0); }
 };
@@ -48,7 +51,7 @@ struct v_int8x16
 
     explicit v_int8x16(const vec_char16& v) : val(v)
     {}
-    v_int8x16() : val(vec_char16_z)
+    v_int8x16()
     {}
     v_int8x16(vec_bchar16 v) : val(vec_char16_c(v))
     {}
@@ -56,6 +59,9 @@ struct v_int8x16
               schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
         : val(vec_char16_set(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15))
     {}
+
+    static inline v_int8x16 zero() { return v_int8x16(vec_char16_z); }
+
     schar get0() const
     { return vec_extract(val, 0); }
 };
@@ -68,13 +74,16 @@ struct v_uint16x8
 
     explicit v_uint16x8(const vec_ushort8& v) : val(v)
     {}
-    v_uint16x8() : val(vec_ushort8_z)
+    v_uint16x8()
     {}
     v_uint16x8(vec_bshort8 v) : val(vec_ushort8_c(v))
     {}
     v_uint16x8(ushort v0, ushort v1, ushort v2, ushort v3, ushort v4, ushort v5, ushort v6, ushort v7)
         : val(vec_ushort8_set(v0, v1, v2, v3, v4, v5, v6, v7))
     {}
+
+    static inline v_uint16x8 zero() { return v_uint16x8(vec_ushort8_z); }
+
     ushort get0() const
     { return vec_extract(val, 0); }
 };
@@ -87,13 +96,16 @@ struct v_int16x8
 
     explicit v_int16x8(const vec_short8& v) : val(v)
     {}
-    v_int16x8() : val(vec_short8_z)
+    v_int16x8()
     {}
     v_int16x8(vec_bshort8 v) : val(vec_short8_c(v))
     {}
     v_int16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
         : val(vec_short8_set(v0, v1, v2, v3, v4, v5, v6, v7))
     {}
+
+    static inline v_int16x8 zero() { return v_int16x8(vec_short8_z); }
+
     short get0() const
     { return vec_extract(val, 0); }
 };
@@ -106,12 +118,15 @@ struct v_uint32x4
 
     explicit v_uint32x4(const vec_uint4& v) : val(v)
     {}
-    v_uint32x4() : val(vec_uint4_z)
+    v_uint32x4()
     {}
     v_uint32x4(vec_bint4 v) : val(vec_uint4_c(v))
     {}
     v_uint32x4(unsigned v0, unsigned v1, unsigned v2, unsigned v3) : val(vec_uint4_set(v0, v1, v2, v3))
     {}
+
+    static inline v_uint32x4 zero() { return v_uint32x4(vec_uint4_z); }
+
     uint get0() const
     { return vec_extract(val, 0); }
 };
@@ -124,12 +139,15 @@ struct v_int32x4
 
     explicit v_int32x4(const vec_int4& v) : val(v)
     {}
-    v_int32x4() : val(vec_int4_z)
+    v_int32x4()
     {}
     v_int32x4(vec_bint4 v) : val(vec_int4_c(v))
     {}
     v_int32x4(int v0, int v1, int v2, int v3) : val(vec_int4_set(v0, v1, v2, v3))
     {}
+
+    static inline v_int32x4 zero() { return v_int32x4(vec_int4_z); }
+
     int get0() const
     { return vec_extract(val, 0); }
 };
@@ -142,12 +160,15 @@ struct v_float32x4
 
     explicit v_float32x4(const vec_float4& v) : val(v)
     {}
-    v_float32x4() : val(vec_float4_z)
+    v_float32x4()
     {}
     v_float32x4(vec_bint4 v) : val(vec_float4_c(v))
     {}
     v_float32x4(float v0, float v1, float v2, float v3) : val(vec_float4_set(v0, v1, v2, v3))
     {}
+
+    static inline v_float32x4 zero() { return v_float32x4(vec_float4_z); }
+
     float get0() const
     { return vec_extract(val, 0); }
 };
@@ -160,12 +181,15 @@ struct v_uint64x2
 
     explicit v_uint64x2(const vec_udword2& v) : val(v)
     {}
-    v_uint64x2() : val(vec_udword2_z)
+    v_uint64x2()
     {}
     v_uint64x2(vec_bdword2 v) : val(vec_udword2_c(v))
     {}
     v_uint64x2(uint64 v0, uint64 v1) : val(vec_udword2_set(v0, v1))
     {}
+
+    static inline v_uint64x2 zero() { return v_uint64x2(vec_udword2_z); }
+
     uint64 get0() const
     { return vec_extract(val, 0); }
 };
@@ -178,12 +202,15 @@ struct v_int64x2
 
     explicit v_int64x2(const vec_dword2& v) : val(v)
     {}
-    v_int64x2() : val(vec_dword2_z)
+    v_int64x2()
     {}
     v_int64x2(vec_bdword2 v) : val(vec_dword2_c(v))
     {}
     v_int64x2(int64 v0, int64 v1) : val(vec_dword2_set(v0, v1))
     {}
+
+    static inline v_int64x2 zero() { return v_int64x2(vec_dword2_z); }
+
     int64 get0() const
     { return vec_extract(val, 0); }
 };
@@ -196,12 +223,15 @@ struct v_float64x2
 
     explicit v_float64x2(const vec_double2& v) : val(v)
     {}
-    v_float64x2() : val(vec_double2_z)
+    v_float64x2()
     {}
     v_float64x2(vec_bdword2 v) : val(vec_double2_c(v))
     {}
     v_float64x2(double v0, double v1) : val(vec_double2_set(v0, v1))
     {}
+
+    static inline v_float64x2 zero() { return v_float64x2(vec_double2_z); }
+
     double get0() const
     { return vec_extract(val, 0); }
 };
@@ -229,7 +259,7 @@ OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float64x2, double)
  * if vec_xxx_c defined as C++ cast, clang-5 will pass it
 */
 #define OPENCV_HAL_IMPL_VSX_INITVEC(_Tpvec, _Tp, suffix, cast)                        \
-inline _Tpvec v_setzero_##suffix() { return _Tpvec(); }                               \
+inline _Tpvec v_setzero_##suffix() { return _Tpvec(vec_splats((_Tp)0)); }             \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(vec_splats((_Tp)v));}          \
 template<typename _Tpvec0> inline _Tpvec v_reinterpret_as_##suffix(const _Tpvec0 &a)  \
 { return _Tpvec((cast)a.val); }
@@ -660,7 +690,7 @@ inline _Tpvec v_rotate_##suffix(const _Tpvec& a)                                
 {                                                                               \
     const int wd = imm * sizeof(typename _Tpvec::lane_type);                    \
     if (wd > 15)                                                                \
-        return _Tpvec();                                                        \
+        return _Tpvec::zero();                                                  \
     return _Tpvec((cast)shf(vec_uchar16_c(a.val), vec_uchar16_sp(wd << 3)));    \
 }
 
@@ -973,7 +1003,7 @@ inline int v_scan_forward(const v_float64x2& a) { return trailingZeros32(v_signm
 
 template<typename _Tpvec>
 inline bool v_check_all(const _Tpvec& a)
-{ return vec_all_lt(a.val, _Tpvec().val); }
+{ return vec_all_lt(a.val, _Tpvec::zero().val); }
 inline bool v_check_all(const v_uint8x16& a)
 { return v_check_all(v_reinterpret_as_s8(a)); }
 inline bool v_check_all(const v_uint16x8& a)
@@ -989,7 +1019,7 @@ inline bool v_check_all(const v_float64x2& a)
 
 template<typename _Tpvec>
 inline bool v_check_any(const _Tpvec& a)
-{ return vec_any_lt(a.val, _Tpvec().val); }
+{ return vec_any_lt(a.val, _Tpvec::zero().val); }
 inline bool v_check_any(const v_uint8x16& a)
 { return v_check_any(v_reinterpret_as_s8(a)); }
 inline bool v_check_any(const v_uint16x8& a)
