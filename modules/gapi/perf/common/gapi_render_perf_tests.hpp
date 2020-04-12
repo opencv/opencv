@@ -20,6 +20,11 @@ namespace opencv_test
 
   using namespace perf;
 
+  #ifdef HAVE_FREETYPE
+  class RenderTestFTexts : public TestPerfParams<tuple<std::wstring, cv::Size, cv::Point,
+                                                       int, cv::Scalar, MatType>> {};
+  #endif // HAVE_FREETYPE
+
   class RenderTestTexts : public TestPerfParams<tuple<std::string, cv::Size, cv::Point,
                                                       int, double, cv::Scalar, int, int,
                                                       bool, MatType>> {};
