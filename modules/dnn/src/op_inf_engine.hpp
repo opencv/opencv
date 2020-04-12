@@ -58,7 +58,9 @@
 
 #include <inference_engine.hpp>
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 #include <ie_builders.hpp>
+#endif
 
 #if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
 #pragma GCC visibility pop
