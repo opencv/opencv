@@ -1,6 +1,7 @@
 from __future__ import print_function
 import torch
 from torch.autograd import Variable
+import torch.nn.init as init
 import torch.nn as nn
 import numpy as np
 import os.path
@@ -740,6 +741,7 @@ class NormL2(nn.Module):
 model = NormL2()
 x = Variable(torch.randn(1, 2, 3, 4))
 save_data_and_model("reduceL2_subgraph", x, model)
+
 model = nn.ZeroPad2d(1)
 model.eval()
 input = torch.rand(1, 3, 2, 4)
@@ -749,3 +751,27 @@ model = nn.ReflectionPad2d(1)
 model.eval()
 input = torch.rand(1, 3, 2, 4)
 save_data_and_model("ReflectionPad2d", input, model, version = 11)
+
+# source: https://github.com/amdegroot/ssd.pytorch/blob/master/layers/modules/l2norm.py
+class L2Norm(nn.Module):
+    def __init__(self,n_channels, scale):
+        super(L2Norm,self).__init__()
+        self.n_channels = n_channels
+        self.gamma = scale or None
+        self.eps = 1e-10
+        self.weight = nn.Parameter(torch.Tensor(self.n_channels))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        init.constant_(self.weight,self.gamma)
+
+    def forward(self, x):
+        norm = x.pow(2).sum(dim=1, keepdim=True).sqrt()+self.eps
+        #x /= norm
+        x = torch.div(x,norm)
+        out = self.weight.view(1, -1, 1, 1) * x
+        return x
+
+model = L2Norm(2, 20)
+x = Variable(torch.randn(1, 2, 3, 4))
+save_data_and_model("reduceL2_subgraph_2", x, model)
