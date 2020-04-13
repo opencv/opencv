@@ -255,6 +255,7 @@ public:
                GCompileArgs &&args = {});
 
     // 2. Syntax sugar and compatibility overloads
+#if !defined(GAPI_STANDALONE)
     /**
      * @brief Execute an unary computation (with compilation on the fly)
      *
@@ -319,6 +320,7 @@ public:
     void apply(const std::vector<cv::Mat>& ins,         // Compatibility overload
                      std::vector<cv::Mat>& outs,
                GCompileArgs &&args = {});
+#endif // !defined(GAPI_STANDALONE)
     // Various versions of compile(): //////////////////////////////////////////
     // 1. Generic compile() - requires metas to be passed as vector
     /**

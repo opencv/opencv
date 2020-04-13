@@ -95,65 +95,11 @@ TEST(GAPI_MetaDesc, CanDescribe)
     EXPECT_TRUE (md11.canDescribe(m1));
 }
 
-TEST(GAPI_MetaDesc, OwnMatDescOneCh)
+TEST(GAPI_MetaDesc, AdlVecMatDesc)
 {
-    cv::gapi::own::Mat mat(240, 320, CV_8U, nullptr);
-
-    const auto desc = cv::gapi::own::descr_of(mat);
-
-    EXPECT_EQ(CV_8U, desc.depth);
-    EXPECT_EQ(1,     desc.chan);
-    EXPECT_EQ(320,   desc.size.width);
-    EXPECT_EQ(240,   desc.size.height);
-    EXPECT_FALSE(desc.isND());
-}
-
-TEST(GAPI_MetaDesc, OwnMatDescThreeCh)
-{
-    cv::gapi::own::Mat mat(480, 640, CV_8UC3, nullptr);
-
-    const auto desc = cv::gapi::own::descr_of(mat);
-
-    EXPECT_EQ(CV_8U,   desc.depth);
-    EXPECT_EQ(3,       desc.chan);
-    EXPECT_EQ(640,     desc.size.width);
-    EXPECT_EQ(480,     desc.size.height);
-    EXPECT_FALSE(desc.isND());
-}
-
-TEST(GAPI_MetaDesc, OwnMatDescND)
-{
-    std::vector<int> dims = {1,3,224,224};
-    cv::gapi::own::Mat m(dims, CV_32F, nullptr);
-
-    const auto desc = cv::gapi::own::descr_of(m);
-
-    EXPECT_EQ(CV_32F, desc.depth);
-    EXPECT_EQ(-1,     desc.chan);
-    EXPECT_EQ(1,      desc.dims[0]);
-    EXPECT_EQ(3,      desc.dims[1]);
-    EXPECT_EQ(224,    desc.dims[2]);
-    EXPECT_EQ(224,    desc.dims[3]);
-    EXPECT_TRUE(desc.isND());
-}
-
-TEST(GAPI_MetaDesc, VecOwnMatDesc)
-{
-    std::vector<cv::gapi::own::Mat> vec = {
-    cv::gapi::own::Mat(240, 320, CV_8U, nullptr),
-    cv::gapi::own::Mat(480, 640, CV_8UC3, nullptr)};
-
-    const auto desc = cv::gapi::own::descrs_of(vec);
-
-    EXPECT_EQ((GMatDesc{CV_8U, 1, {320, 240}}), get<GMatDesc>(desc[0]));
-    EXPECT_EQ((GMatDesc{CV_8U, 3, {640, 480}}), get<GMatDesc>(desc[1]));
-}
-
-TEST(GAPI_MetaDesc, AdlVecOwnMatDesc)
-{
-    std::vector<cv::gapi::own::Mat> vec = {
-    cv::gapi::own::Mat(240, 320, CV_8U, nullptr),
-    cv::gapi::own::Mat(480, 640, CV_8UC3, nullptr)};
+    std::vector<cv::Mat> vec = {
+    cv::Mat(240, 320, CV_8U),
+    cv::Mat(480, 640, CV_8UC3)};
 
     const auto desc = descrs_of(vec);
 

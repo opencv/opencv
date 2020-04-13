@@ -94,6 +94,7 @@ public:
      * cv::gin()/cv::gout() wrappers instead.
      */
     void operator() (GRunArgs &&ins, GRunArgsP &&outs);          // Generic arg-to-arg
+#if !defined(GAPI_STANDALONE)
 
     /**
      * @brief Execute an unary computation
@@ -152,6 +153,7 @@ public:
      */
     void operator() (const std::vector<cv::Mat> &ins,            // Compatibility overload
                      const std::vector<cv::Mat> &outs);
+#endif  // !defined(GAPI_STANDALONE)
     /// @private
     Priv& priv();
 

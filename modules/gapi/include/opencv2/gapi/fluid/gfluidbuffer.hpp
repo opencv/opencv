@@ -113,7 +113,7 @@ public:
            int wlpi,
            BorderOpt border);
     // Constructor for in/out buffers (for tests)
-    Buffer(const cv::gapi::own::Mat &data, bool is_input);
+    Buffer(const cv::Mat &data, bool is_input);
     ~Buffer();
     Buffer& operator=(Buffer&&);
 

@@ -318,9 +318,9 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat)
         uchar* out_arg_data = nullptr;
         switch (g_arg.index())
         {
-            case GRunArgP::index_of<cv::Mat*>()            : out_arg_data = util::get<cv::Mat*>(g_arg)->data; break; break;
+            case GRunArgP::index_of<cv::Mat*>() : out_arg_data = util::get<cv::Mat*>(g_arg)->data; break;
 #if !defined(GAPI_STANDALONE)
-            case GRunArgP::index_of<cv::UMat*>()           : out_arg_data = (util::get<cv::UMat*>(g_arg))->getMat(ACCESS_RW).data; break;
+            case GRunArgP::index_of<cv::UMat*>() : out_arg_data = (util::get<cv::UMat*>(g_arg))->getMat(ACCESS_RW).data; break;
 #endif //  !defined(GAPI_STANDALONE)
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }

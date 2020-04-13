@@ -255,15 +255,13 @@ const void* cv::gimpl::proto::ptr(const GRunArgP &arg)
     switch (arg.index())
     {
 #if !defined(GAPI_STANDALONE)
+    case GRunArgP::index_of<cv::UMat*>():
+        return static_cast<const void*>(cv::util::get<cv::UMat*>(arg));
+#endif
     case GRunArgP::index_of<cv::Mat*>():
         return static_cast<const void*>(cv::util::get<cv::Mat*>(arg));
     case GRunArgP::index_of<cv::Scalar*>():
         return static_cast<const void*>(cv::util::get<cv::Scalar*>(arg));
-    case GRunArgP::index_of<cv::UMat*>():
-        return static_cast<const void*>(cv::util::get<cv::UMat*>(arg));
-#endif
-    case GRunArgP::index_of<cv::gapi::own::Mat*>():
-        return static_cast<const void*>(cv::util::get<cv::gapi::own::Mat*>(arg));
     case GRunArgP::index_of<cv::detail::VectorRef>():
         return cv::util::get<cv::detail::VectorRef>(arg).ptr();
     case GRunArgP::index_of<cv::detail::OpaqueRef>():
