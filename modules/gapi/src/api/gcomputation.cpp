@@ -146,7 +146,6 @@ void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
     apply(std::move(call_ins), std::move(call_outs), std::move(args));
 }
 
-#if !defined(GAPI_STANDALONE)
 void cv::GComputation::apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args)
 {
     apply(cv::gin(in), cv::gout(out), std::move(args));
@@ -182,7 +181,6 @@ void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
 
     apply(std::move(call_ins), std::move(call_outs), std::move(args));
 }
-#endif // !defined(GAPI_STANDALONE)
 
 cv::GComputation::Priv& cv::GComputation::priv()
 {
