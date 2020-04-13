@@ -465,6 +465,7 @@ TEST_P(Test_ONNX_layers, ReduceL2)
 {
     testONNXModels("reduceL2");
     testONNXModels("reduceL2_subgraph");
+    testONNXModels("reduceL2_subgraph_2");
 }
 
 TEST_P(Test_ONNX_layers, Split)
@@ -513,6 +514,12 @@ TEST_P(Test_ONNX_layers, LSTM)
 TEST_P(Test_ONNX_layers, LSTM_bidirectional)
 {
     testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, Pad2d_Unfused)
+{
+    testONNXModels("ReflectionPad2d");
+    testONNXModels("ZeroPad2d");
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

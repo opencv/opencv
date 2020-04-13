@@ -1821,4 +1821,37 @@ MatExpr Mat::eye(Size size, int type)
     return e;
 }
 
+void MatExpr::swap(MatExpr& other)
+{
+    using std::swap;
+
+    swap(op, other.op);
+    swap(flags, other.flags);
+
+    swap(a, other.a);
+    swap(b, other.b);
+    swap(c, other.c);
+
+    swap(alpha, other.alpha);
+    swap(beta, other.beta);
+
+    swap(s, other.s);
+}
+
+_InputArray::_InputArray(const MatExpr& expr)
+{
+#if 1
+    if (!isIdentity(expr))
+    {
+        Mat result = expr;  // TODO improve through refcount == 1 of expr.a (inplace operation is possible - except gemm?)
+        MatExpr result_expr(result);
+        swap(const_cast<MatExpr&>(expr), result_expr);
+    }
+    CV_Assert(isIdentity(expr));
+    init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_READ, &expr.a);
+#else
+    init(FIXED_TYPE + FIXED_SIZE + EXPR + ACCESS_READ, &expr);
+#endif
+}
+
 } // cv::
