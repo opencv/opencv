@@ -740,3 +740,12 @@ class NormL2(nn.Module):
 model = NormL2()
 x = Variable(torch.randn(1, 2, 3, 4))
 save_data_and_model("reduceL2_subgraph", x, model)
+model = nn.ZeroPad2d(1)
+model.eval()
+input = torch.rand(1, 3, 2, 4)
+save_data_and_model("ZeroPad2d", input, model, version = 11)
+
+model = nn.ReflectionPad2d(1)
+model.eval()
+input = torch.rand(1, 3, 2, 4)
+save_data_and_model("ReflectionPad2d", input, model, version = 11)
