@@ -82,6 +82,14 @@ public:
         return false;
     }
 
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        LayerParams resizeParams;
+        resizeParams.set("interpolation", "bilinear");
+        resizeParams.set("align_corners", true);
+        resize = ResizeLayer::create(resizeParams);
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -91,66 +99,30 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const int out_c = outputs[0].size[1];
         const int out_h = outputs[0].size[2];
         const int out_w = outputs[0].size[3];
-        int out_count = outputs[0].total(1);
-        int inp_size = inputs.size();
-        if (have_reference) {
-            --inp_size;
-        }
-
         float* out_data = outputs[0].ptr<float>();
-        int cntChannelsOfPrevious = 0;
-        for (int i = 0; i < inp_size; i++)
+        std::vector<int> sizes(&outputs[0].size[0], &outputs[0].size[0] + outputs[0].size.dims());
+        for (int i = 0; i < inputs.size() - have_reference; i++)
         {
-            float* inp_data = inputs[i].ptr<float>();
-            int total = inputs[i].total();
+            sizes[1] = inputs[i].size[1];
+            Mat outSlice(sizes, CV_32F, out_data);
 
-            const int num   = inputs[i].size[0];
-            const int inp_c = inputs[i].size[1];
-            const int inp_h = inputs[i].size[2];
-            const int inp_w = inputs[i].size[3];
-
-            float* top_data_chanoffsetptr = out_data + cntChannelsOfPrevious * out_h * out_w;
-            for (int n = 0; n < num; n++)
+            if (out_h == inputs[i].size[2] && out_w == inputs[i].size[3])
             {
-                for (int c = 0; c < inp_c; c++)
-                {
-                    int cn = n * inp_c + c;
-                    for (int h = 0; h < out_h; h++)
-                    {
-                        for (int w = 0; w < out_w; w++)
-                        {
-                            float xpos = w / static_cast<float>(out_w - 1) * (inp_w - 1);
-                            float ypos = h / static_cast<float>(out_h - 1) * (inp_h - 1);
-
-                            // Get interpolated sample
-                            float tlx = floor(xpos);
-                            float tly = floor(ypos);
-                            float xdist = xpos - tlx;
-                            float ydist = ypos - tly;
-                            int src_idx = inp_w * (inp_h * cn + tly) + tlx;
-
-                            float sampleTL = inp_data[src_idx];
-                            float sampleTR = inp_data[min(src_idx + 1, total)];
-                            float sampleBL = inp_data[min(src_idx + inp_w, total)];
-                            float sampleBR = inp_data[min(src_idx + 1 + inp_w, total)];
-
-                            float sample = (1 - xdist) * (1 - ydist) * sampleTL +
-                                           (1 - xdist) * ydist       * sampleBL +
-                                            xdist      * (1 - ydist) * sampleTR +
-                                            xdist      * ydist       * sampleBR;
-
-                            int dst_idx = w + (out_w * h) + (out_w * out_h * c) + out_count * n;
-                            top_data_chanoffsetptr[dst_idx] = sample;
-                        }
-                    }
-                }
+                inputs[i].copyTo(outSlice);
             }
-            cntChannelsOfPrevious += inp_c;
+            else
+            {
+                std::vector<Mat> inp_slices, out_slices;
+                inp_slices.push_back(inputs[i]);
+                out_slices.push_back(outSlice);
+
+                resize->finalize(inp_slices, out_slices);
+                resize->forward(inp_slices, out_slices, internals_arr);
+            }
+            out_data += outSlice.total(1);
         }
-        CV_Assert(cntChannelsOfPrevious == out_c);
     }
 
 private:
@@ -158,6 +130,7 @@ private:
     int top_width;
     int divisor;
     bool have_reference;
+    Ptr<ResizeLayer> resize;
 };
 
 Ptr<AccumLayer> AccumLayer::create(const LayerParams& params)
