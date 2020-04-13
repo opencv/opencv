@@ -150,6 +150,9 @@ namespace util
     protected:
         template<typename T, typename... Us> friend T& get(variant<Us...> &v);
         template<typename T, typename... Us> friend const T& get(const variant<Us...> &v);
+        template<typename T, typename... Us> friend T* get_if(variant<Us...> *v) noexcept;
+        template<typename T, typename... Us> friend const T* get_if(const variant<Us...> *v) noexcept;
+
         template<typename... Us> friend bool operator==(const variant<Us...> &lhs,
                                                         const variant<Us...> &rhs);
         Memory memory;
@@ -201,6 +204,11 @@ namespace util
     };
 
     // FIMXE: visit
+    template<typename T, typename... Types>
+    T* get_if(util::variant<Types...>* v) noexcept;
+
+    template<typename T, typename... Types>
+    const T* get_if(const util::variant<Types...>* v) noexcept;
 
     template<typename T, typename... Types>
     T& get(util::variant<Types...> &v);
@@ -335,14 +343,34 @@ namespace util
     }
 
     template<typename T, typename... Types>
-    T& get(util::variant<Types...> &v)
+    T* get_if(util::variant<Types...>* v) noexcept
     {
         const constexpr std::size_t t_index =
             util::type_list_index<T, Types...>::value;
 
-        if (v.index() == t_index)
-            return *(T*)(&v.memory);  // workaround for ICC 2019
+        if (v && v->index() == t_index)
+            return (T*)(&v->memory);  // workaround for ICC 2019
             // original code: return reinterpret_cast<T&>(v.memory);
+        return nullptr;
+    }
+
+    template<typename T, typename... Types>
+    const T* get_if(const util::variant<Types...>* v) noexcept
+    {
+        const constexpr std::size_t t_index =
+            util::type_list_index<T, Types...>::value;
+
+        if (v && v->index() == t_index)
+            return (const T*)(&v->memory);  // workaround for ICC 2019
+            // original code: return reinterpret_cast<const T&>(v.memory);
+        return nullptr;
+    }
+
+    template<typename T, typename... Types>
+    T& get(util::variant<Types...> &v)
+    {
+        if (auto* p = get_if<T>(&v))
+            return *p;
         else
             throw_error(bad_variant_access());
     }
@@ -350,12 +378,8 @@ namespace util
     template<typename T, typename... Types>
     const T& get(const util::variant<Types...> &v)
     {
-        const constexpr std::size_t t_index =
-            util::type_list_index<T, Types...>::value;
-
-        if (v.index() == t_index)
-            return *(const T*)(&v.memory);  // workaround for ICC 2019
-            // original code: return reinterpret_cast<const T&>(v.memory);
+        if (auto* p = get_if<T>(&v))
+            return *p;
         else
             throw_error(bad_variant_access());
     }
