@@ -268,6 +268,17 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
 
+    /*class CV_EXPORTS TopKLayer : public Layer
+    {
+    public:
+        int axis;
+        int largest;
+        int sorted;
+        int k;
+
+        static Ptr<TopKLayer> create(const LayerParams& params);
+    };*/
+
     class CV_EXPORTS SoftmaxLayer : public Layer
     {
     public:
@@ -588,11 +599,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     public:
         bool hasBias;
         int axis;
+        String mode;
 
         static Ptr<ScaleLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS ShiftLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS CompareLayer : public Layer
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);

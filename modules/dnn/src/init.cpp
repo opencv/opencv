@@ -139,6 +139,8 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Padding,        PaddingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Proposal,       ProposalLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Scale,          ScaleLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Compare,        CompareLayer);
+    //CV_DNN_REGISTER_LAYER_CLASS(TopK,           TopKLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
 }

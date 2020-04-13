@@ -560,6 +560,31 @@ TEST_P(Test_ONNX_layers, Elementwise_not)
     testONNXModels("not");
 }
 
+TEST_P(Test_ONNX_layers, Compare)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("equal");
+    testONNXModels("greater");
+    testONNXModels("less");
+}
+
+TEST_P(Test_ONNX_layers, CompareSameDims)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("equal_same_dims", npy, 0, 0, false, true, 2);
+    testONNXModels("greater_same_dims", npy, 0, 0, false, true, 2);
+    testONNXModels("less_same_dims", npy, 0, 0, false, true, 2);
+    const double l1 = 5e-04;
+    const double lInf = 2e-03;
+    testONNXModels("and_same_dims", npy, l1, lInf, false, true, 2);
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers

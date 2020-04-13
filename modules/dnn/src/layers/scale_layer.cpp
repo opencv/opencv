@@ -31,6 +31,7 @@ public:
         hasBias = params.get<bool>("bias_term", false);
         axis = params.get<int>("axis", 1);
         hasWeights = false;
+        mode = params.get<String>("mode", "scale");
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -114,7 +115,25 @@ public:
                     float b = biasesData ? biasesData[j] : 0;
                     Mat inpSlice(1, spatialSize, CV_32F, inpData);
                     Mat outSlice(1, spatialSize, CV_32F, outData);
-                    inpSlice.convertTo(outSlice, CV_32F, w, b);
+
+                    Mat out(1, spatialSize, CV_32F);
+                    if (mode == "scale")
+                        inpSlice.convertTo(outSlice, CV_32F, w, b);
+                    else if (mode == "equal")
+                        compare(inpSlice, b, out, CMP_EQ);
+                    else if (mode == "greater")
+                        compare(inpSlice, b, out, CMP_GT);
+                    else if (mode == "less")
+                        compare(inpSlice, b, out, CMP_LT);
+                    else
+                        bitwise_and(inpSlice, b, out);
+
+                    if (mode != "scale")
+                    {
+                        out = out / 255;
+                        out.convertTo(outSlice, CV_32F);
+                    }
+
                     inpData += spatialSize;
                     outData += spatialSize;
                 }
@@ -126,6 +145,7 @@ public:
             {
                 Mat inpSlice(1, numWeights, CV_32F, inpData);
                 Mat outSlice(1, numWeights, CV_32F, outData);
+                Mat out(1, numWeights, CV_32F);
                 if (!weights.empty())
                 {
                     multiply(inpSlice, weights, outSlice);
@@ -133,7 +153,24 @@ public:
                         add(outSlice, bias, outSlice);
                 }
                 else if (hasBias)
-                    add(inpSlice, bias, outSlice);
+                {
+                    if (mode == "scale")
+                        add(inpSlice, bias, outSlice);
+                    else if (mode == "equal")
+                        compare(inpSlice, bias, out, CMP_EQ);
+                    else if (mode == "greater")
+                        compare(inpSlice, bias, out, CMP_GT);
+                    else if (mode == "less")
+                        compare(inpSlice, bias, out, CMP_LT);
+                    else
+                        bitwise_and(inpSlice, bias, out);
+
+                    if (mode != "scale")
+                    {
+                        out = out / 255;
+                        out.convertTo(outSlice, CV_32F);
+                    }
+                }
                 inpData += numWeights;
                 outData += numWeights;
             }
@@ -305,6 +342,18 @@ Ptr<Layer> ShiftLayer::create(const LayerParams& params)
     scaleParams.set("bias_term", true);
     scaleParams.set("axis", 0);
     return Ptr<ScaleLayer>(new ScaleLayerImpl(scaleParams));
+}
+
+Ptr<Layer> CompareLayer::create(const LayerParams& params)
+{
+    LayerParams compareParams;
+    compareParams.name = params.name;
+    compareParams.type = "Scale";
+    compareParams.blobs = params.blobs;
+    compareParams.set("bias_term", true);
+    compareParams.set("axis", 0);
+    compareParams.set("mode", params.get<String>("mode"));
+    return Ptr<ScaleLayer>(new ScaleLayerImpl(compareParams));
 }
 
 }  // namespace dnn

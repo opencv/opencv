@@ -334,6 +334,7 @@ void ONNXImporter::populateNet(Net dstNet)
         for (int j = 0; j < inpShape.size(); ++j)
         {
             inpShape[j] = tensorShape.dim(j).dim_value();
+            inpShape[j] = inpShape[j] ? inpShape[j] : (j == inpShape.size() - 3 ? 3 : 800);
         }
         outShapes[valueInfoProto.name()] = inpShape;
     }
@@ -998,6 +999,31 @@ void ONNXImporter::populateNet(Net dstNet)
                 continue;
             }
         }
+        else if (layer_type == "Equal" || layer_type == "Greater" || layer_type == "Less" || layer_type == "And")
+        {
+            CV_Assert(node_proto.input_size() == 2);
+
+            bool is_const_0 = layer_id.find(node_proto.input(0)) == layer_id.end();
+            bool is_const_1 = layer_id.find(node_proto.input(1)) == layer_id.end();
+
+            if (is_const_0 || is_const_1)
+            {
+                Mat blob = getBlob(node_proto, constBlobs, 1);
+                blob = blob.reshape(1, 1);
+                layerParams.blobs.push_back(blob);
+            }
+
+            layerParams.type = "Compare";
+
+            if (layer_type == "Equal")
+                layerParams.set("mode", "equal");
+            else if (layer_type == "Greater")
+                layerParams.set("mode", "greater");
+            else if (layer_type == "Less")
+                layerParams.set("mode", "less");
+            else
+                layerParams.set("mode", "and");
+        }
         else if (layer_type == "Conv")
         {
             CV_Assert(node_proto.input_size() >= 2);
@@ -1400,15 +1426,25 @@ void ONNXImporter::populateNet(Net dstNet)
             for (int i = 1; i < node_proto.input_size(); i++)
                 CV_Assert(layer_id.find(node_proto.input(i)) == layer_id.end());
 
-            String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
-            CV_Assert_N(interp_mode != "tf_crop_and_resize", interp_mode != "asymmetric",
-                        interp_mode != "tf_half_pixel_for_nn");
+            if (layerParams.has("coordinate_transformation_mode"))
+            {
+                String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
+                CV_Assert_N(interp_mode != "tf_crop_and_resize", interp_mode != "tf_half_pixel_for_nn");
 
-            layerParams.set("align_corners", interp_mode == "align_corners");
+                layerParams.set("align_corners", interp_mode == "align_corners");
+                if (layerParams.get<String>("mode") == "linear")
+                {
+                    layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
+                                            "opencv_linear" : "bilinear");
+                }
+            }
+            if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
+                layerParams.set("mode", "opencv_linear");
+
             Mat shapes = getBlob(node_proto, constBlobs, node_proto.input_size() - 1);
             CV_CheckEQ(shapes.size[0], 4, "");
             CV_CheckEQ(shapes.size[1], 1, "");
-            CV_CheckTypeEQ(shapes.depth(), CV_32S, "");
+            //CV_CheckTypeEQ(shapes.depth(), CV_32S, "");
             int height = shapes.at<int>(2);
             int width  = shapes.at<int>(3);
             if (node_proto.input_size() == 3)
@@ -1422,14 +1458,26 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("width", width);
             layerParams.set("height", height);
 
-            if (layerParams.get<String>("mode") == "linear") {
-                layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
-                                        "opencv_linear" : "bilinear");
-            }
             replaceLayerParam(layerParams, "mode", "interpolation");
         }
         else if (layer_type == "Upsample")
         {
+            //fused from Resize Subgraph
+            if (layerParams.has("coordinate_transformation_mode"))
+            {
+                String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
+                CV_Assert_N(interp_mode != "tf_crop_and_resize", interp_mode != "tf_half_pixel_for_nn");
+
+                layerParams.set("align_corners", interp_mode == "align_corners");
+                if (layerParams.get<String>("mode") == "linear")
+                {
+                    layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
+                                            "opencv_linear" : "bilinear");
+                }
+            }
+            if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
+                layerParams.set("mode", "opencv_linear");
+
             layerParams.type = "Resize";
             if (layerParams.has("scales"))
             {
@@ -1439,22 +1487,21 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.set("zoom_factor_y", scales.getIntValue(2));
                 layerParams.set("zoom_factor_x", scales.getIntValue(3));
             }
-            else
+            else if (layerParams.has("height_scale") && layerParams.has("width_scale"))
             {
                 // Caffe2 layer
                 replaceLayerParam(layerParams, "height_scale", "zoom_factor_y");
                 replaceLayerParam(layerParams, "width_scale", "zoom_factor_x");
             }
-            replaceLayerParam(layerParams, "mode", "interpolation");
-
-            if (layerParams.get<String>("interpolation") == "linear" && framework_name == "pytorch") {
-                layerParams.type = "Resize";
+            else
+            {
+                // scales as input
                 Mat scales = getBlob(node_proto, constBlobs, 1);
                 CV_Assert(scales.total() == 4);
-                layerParams.set("interpolation", "opencv_linear");
                 layerParams.set("zoom_factor_y", scales.at<float>(2));
                 layerParams.set("zoom_factor_x", scales.at<float>(3));
             }
+            replaceLayerParam(layerParams, "mode", "interpolation");
         }
         else if (layer_type == "SoftMax" || layer_type == "LogSoftmax")
         {
@@ -1479,6 +1526,39 @@ void ONNXImporter::populateNet(Net dstNet)
 
                 node_proto.set_input(2, constParams.name);
             }
+        }
+        else if (layer_type == "ReduceMin")
+        {
+            CV_Assert(node_proto.input_size() == 1);
+            Mat input = getBlob(node_proto, constBlobs, 0);
+
+            if (layerParams.get<int>("keepdims") == 0 && !layerParams.has("axis"))
+            {
+                double min, max;
+                cv::minMaxLoc(input, &min, &max);
+                Mat tensor(1, 1,  CV_32F, Scalar(min));
+
+                addConstant(layerParams.name, tensor, constBlobs, outShapes);
+                continue;
+            }
+            else
+                CV_Error(Error::StsNotImplemented, "Unsupported mode of ReduceMin operation.");
+        }
+        else if (layer_type == "NonZero")
+        {
+            CV_Assert(node_proto.input_size() == 1);
+            Mat input = getBlob(node_proto, constBlobs, 0);
+
+            input.convertTo(input, CV_8UC1);
+            Mat non_zero;
+            findNonZero(input, non_zero);
+            Mat output = Mat(Size(non_zero.total(), 1), CV_32SC1);
+            for (int i = 0; i < non_zero.total(); i++ )
+            {
+                output.at<int>(0 ,i) = non_zero.at<Point>(i).y;
+            }
+            addConstant(layerParams.name, output, constBlobs, outShapes);
+            continue;
         }
         else
         {
