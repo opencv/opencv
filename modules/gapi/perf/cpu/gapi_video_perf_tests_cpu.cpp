@@ -27,6 +27,29 @@ namespace
 
 namespace opencv_test
 {
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildOptFlowPyramidPerfTestCPU),
+                              BuildOptFlowPyramidPerfTest,
+                              Combine(Values("cv/optflow/rock_1.bmp",
+                                             "cv/optflow/frames/1080p_01.png"),
+                                      Values(7, 11),
+                                      Values(1000),
+                                      testing::Bool(),
+                                      Values(BORDER_DEFAULT, BORDER_TRANSPARENT),
+                                      Values(BORDER_DEFAULT, BORDER_TRANSPARENT),
+                                      testing::Bool(),
+                                      Values(cv::compile_args(VIDEO_CPU))));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildOptFlowPyramidInternalPerfTestCPU),
+                              BuildOptFlowPyramidPerfTest,
+                              Combine(Values("cv/optflow/rock_1.bmp"),
+                                      Values(15),
+                                      Values(3),
+                                      Values(true),
+                                      Values(BORDER_REFLECT_101),
+                                      Values(BORDER_CONSTANT),
+                                      Values(true),
+                                      Values(cv::compile_args(VIDEO_CPU))));
+
 INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(OptFlowLKPerfTestCPU), OptFlowLKPerfTest,
                               Combine(Values("cv/optflow/rock_%01d.bmp",
                                              "cv/optflow/frames/1080p_%02d.png"),
@@ -59,6 +82,22 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(OptFlowLKInternalPerfTestCPU),
                                       Values(cv::TermCriteria(cv::TermCriteria::COUNT |
                                                               cv::TermCriteria::EPS,
                                                               21, 0.05)),
+                                      Values(true),
+                                      Values(cv::compile_args(VIDEO_CPU))));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelinePerfTestCPU),
+                              BuildPyr_CalcOptFlow_PipelinePerfTest,
+                              Combine(Values("cv/optflow/frames/1080p_%02d.png"),
+                                      Values(7, 11),
+                                      Values(1000),
+                                      Values(true, false),
+                                      Values(cv::compile_args(VIDEO_CPU))));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelineInternalTestPerfCPU),
+                              BuildPyr_CalcOptFlow_PipelinePerfTest,
+                              Combine(Values("cv/optflow/rock_%01d.bmp"),
+                                      Values(15),
+                                      Values(3),
                                       Values(true),
                                       Values(cv::compile_args(VIDEO_CPU))));
 } // opencv_test
