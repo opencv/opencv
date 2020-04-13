@@ -249,12 +249,17 @@ class BuilderDLDT:
 
         cmake_vars = dict(
             CMAKE_BUILD_TYPE=build_config,
+            TREAT_WARNING_AS_ERROR='OFF',
             ENABLE_SAMPLES='OFF',
             ENABLE_TESTS='OFF',
             BUILD_TESTS='OFF',
             ENABLE_OPENCV='OFF',
             ENABLE_GNA='OFF',
+            NGRAPH_DOC_BUILD_ENABLE='OFF',
             NGRAPH_UNIT_TEST_ENABLE='OFF',
+            NGRAPH_UNIT_TEST_OPENVINO_ENABLE='OFF',
+            NGRAPH_TEST_UTIL_ENABLE='OFF',
+            NGRAPH_ONNX_IMPORT_ENABLE='OFF',
             CMAKE_INSTALL_PREFIX=str(self.build_dir / 'install'),
         )
 
@@ -263,17 +268,32 @@ class BuilderDLDT:
             cmd += self.config.cmake_option_dldt
 
         cmd.append(str(self.srcdir))
-        execute(cmd, cwd=self.build_dir)
 
-        # build
-        cmd = [self.cmake_path, '--build', '.', '--config', build_config, # '--target', 'install',
-                '--', '/v:n', '/m:2', '/consoleloggerparameters:NoSummary'
-        ]
-        execute(cmd, cwd=self.build_dir)
+        build_dir = self.build_dir
+        if self.config.build_subst_drive:
+            if os.path.exists(self.config.build_subst_drive + ':\\'):
+                execute(['subst', self.config.build_subst_drive + ':', '/D'])
+            def fix_path(p):
+                return str(p).replace(str(self.outdir), self.config.build_subst_drive + ':')
+            execute(['subst', self.config.build_subst_drive + ':', str(self.outdir)])
+            cmd = [fix_path(c) for c in cmd]
+            build_dir = Path(fix_path(build_dir))
+        try:
+            execute(cmd, cwd=build_dir)
 
-        # install ngraph only
-        cmd = [self.cmake_path, '-DBUILD_TYPE=' + build_config, '-P', 'cmake_install.cmake']
-        execute(cmd, cwd=self.build_dir / 'ngraph')
+            # build
+            cmd = [self.cmake_path, '--build', '.', '--config', build_config, # '--target', 'install',
+                    '--', '/v:n', '/m:2', '/consoleloggerparameters:NoSummary'
+            ]
+            execute(cmd, cwd=build_dir)
+
+            # install ngraph only
+            cmd = [self.cmake_path, '-DBUILD_TYPE=' + build_config, '-P', 'cmake_install.cmake']
+            execute(cmd, cwd=build_dir / 'ngraph')
+        except:
+            if self.config.build_subst_drive:
+                execute(['subst', self.config.build_subst_drive + ':', '/D'])
+            raise
 
         log.info('DLDT build completed')
 
@@ -413,10 +433,11 @@ class Builder:
 def main():
 
     dldt_src_url = 'https://github.com/opencv/dldt.git'
-    dldt_src_commit = '2020.1'
-    dldt_release = '2020010000'
+    dldt_src_commit = '2020.2'
+    dldt_release = '2020020000'
 
     build_cache_dir_default = os.environ.get('BUILD_CACHE_DIR', '.build_cache')
+    build_subst_drive = os.environ.get('BUILD_SUBST_DRIVE', None)
 
     parser = argparse.ArgumentParser(
             description='Build OpenCV Windows package with Inference Engine (DLDT)',
@@ -424,6 +445,7 @@ def main():
     parser.add_argument('output_dir', nargs='?', default='.', help='Output directory')
     parser.add_argument('opencv_dir', nargs='?', default=os.path.join(SCRIPT_DIR, '../..'), help='Path to OpenCV source dir')
     parser.add_argument('--build_cache_dir', default=build_cache_dir_default, help='Build cache directory (sources and binaries cache of build dependencies, default = "%s")' % build_cache_dir_default)
+    parser.add_argument('--build_subst_drive', default=build_subst_drive, help='Drive letter to workaround Windows limit for 260 symbols in path (error MSB3491)')
 
     parser.add_argument('--cmake_option', action='append', help='Append OpenCV CMake option')
     parser.add_argument('--cmake_option_dldt', action='append', help='Append CMake option for DLDT project')
