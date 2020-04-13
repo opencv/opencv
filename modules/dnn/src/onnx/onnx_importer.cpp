@@ -1457,6 +1457,25 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.type = "Softmax";
             layerParams.set("log_softmax", layer_type == "LogSoftmax");
         }
+        else if (layer_type == "DetectionOutput")
+        {
+            CV_CheckEQ(node_proto.input_size(), 3, "");
+            if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
+            {
+                Mat priors = getBlob(node_proto, constBlobs, 2);
+
+                LayerParams constParams;
+                constParams.name = layerParams.name + "/priors";
+                constParams.type = "Const";
+                constParams.blobs.push_back(priors);
+
+                opencv_onnx::NodeProto priorsProto;
+                priorsProto.add_output(constParams.name);
+                addLayer(dstNet, constParams, priorsProto, layer_id, outShapes);
+
+                node_proto.set_input(2, constParams.name);
+            }
+        }
         else
         {
             for (int j = 0; j < node_proto.input_size(); j++) {

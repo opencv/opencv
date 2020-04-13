@@ -440,6 +440,7 @@ TEST_P(Test_ONNX_layers, ReduceL2)
 {
     testONNXModels("reduceL2");
     testONNXModels("reduceL2_subgraph");
+    testONNXModels("reduceL2_subgraph_2");
 }
 
 TEST_P(Test_ONNX_layers, Split)
