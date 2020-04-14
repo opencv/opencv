@@ -289,6 +289,22 @@ TEST(Variant, Swap_DiffIndex)
     EXPECT_EQ(3.14f, util::get<float>(tv1));
 }
 
+TEST(Variant, GetIf)
+{
+    const TestVar cv(42);
+
+    // Test const& get_if()
+    EXPECT_EQ(nullptr, util::get_if<std::string>(&cv));
+    ASSERT_NE(nullptr, util::get_if<int>(&cv));
+    EXPECT_EQ(42, *util::get_if<int>(&cv));
+
+    // Test &get_if
+    TestVar cv2(std::string("42"));
+    EXPECT_EQ(nullptr, util::get_if<int>(&cv2));
+    ASSERT_NE(nullptr, util::get_if<std::string>(&cv2));
+    EXPECT_EQ("42", *util::get_if<std::string>(&cv2));
+}
+
 TEST(Variant, Get)
 {
     const TestVar cv(42);
