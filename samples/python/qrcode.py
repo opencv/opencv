@@ -1,7 +1,6 @@
 from __future__ import print_function
 import argparse
 import sys
-from glob import glob
 import cv2 as cv
 import numpy as np
 
@@ -10,16 +9,17 @@ if PY3:
     xrange = range
 
 
-# Input From the camera is to be implemented
-
 class QrSample:
     def __init__(self, args):
         self.fname = ''
         self.fext = ''
+        self.fsaveid = 0
         self.input = args.input
         self.detect = args.detect
         self.out = args.out
         self.multi = args.multi
+        self.saveDetections = args.save_detections
+        self.saveAll = args.save_all
 
     def getQRModeString(self):
         msg1 = "multi" if self.multi else ""
@@ -113,6 +113,79 @@ class QrSample:
         cv.waitKey(0)
         print("Exit")
 
+    def processQRCodeDetection(self, qrcode, frame):
+        if len(frame.shape) == 2:
+            result = cv.cvtColor(frame, cv.COLOR_GRAY2BGR)
+        else:
+            result = frame
+        msg = 'Run {:s} on image [{:d}x{:d}]'.format(
+            self.getQRModeString(), frame.shape[0], frame.shape[1])
+        print(msg)
+        timer = cv.TickMeter()
+        timer.start()
+        points, decode_info = self.runQR(qrcode, frame)
+        timer.stop()
+
+        fps = 1 / timer.getTimeSec()
+        self.drawQRCodeResults(result, points, decode_info, fps)
+        return fps, result, points
+
+    def DetectQRFrmCamera(self):
+        cap = cv.VideoCapture(0)
+        if not cap.isOpened():
+            print("Cannot open the camera\n")
+            return
+        print("Press 'm' to switch between detectAndDecode and detectAndDecodeMulti\n")
+        print("Press 'd' to switch between decoder and detector\n")
+        print("Press ' ' (space) to save result into images\n")
+        print("Press 'ESC' to exit\n")
+
+        qrcode = cv.QRCodeDetector()
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("End of video stream\n")
+                break
+            forcesave = self.saveAll
+            result = frame
+            try:
+                fps, result, corners = self.processQRCodeDetection(
+                    qrcode, frame)
+                print("FPS: ", fps)
+                forcesave = forcesave or (
+                    self.saveDetections and (
+                        len(corners) != 0))
+            except cv.error as e:
+                print("Error exception: ", e)
+                forcesave = True
+            cv.imshow("QR code", result)
+            code = cv.waitKey(1)
+            if code < 0 and (not forcesave):
+                continue
+            if(code == ord(' ') or forcesave):
+                fsuffix = '-{:05d}'.format(self.fsaveid)
+                self.fsaveid += 1
+                fname_in = self.fname + fsuffix + "_input.png"
+                print("Saving QR code detection result: '", fname_in, "' ...")
+                cv.imwrite(fname_in, frame)
+
+                print("Saved")
+            if code == ord('m'):
+                self.multi = not self.multi
+                msg = 'Switching QR code mode ==> {:s}'.format(
+                    "detectAndDecodeMulti" if self.multi else "detectAndDecode")
+                print(msg)
+            if code == ord('d'):
+                self.detect = not self.detect
+                msg = 'Switching QR code mode ==> {:s}'.format(
+                    "detect" if self.detect else "decode")
+                print(msg)
+            if code == 27:
+                print("'ESC' is pressed. Exiting...")
+                break
+        print("Exit.")
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -121,7 +194,7 @@ def main():
         '-i',
         '--input',
         help="input image path (default input file path is 'opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png",
-        default="../../../opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png",
+        default="",
         metavar="")
     parser.add_argument(
         '-d',
@@ -132,13 +205,21 @@ def main():
         '-m',
         '--multi',
         help="used to disable multiple qr-codes detection and enable single qr detection",
-        action='store_false')
+        action='store_true')
     parser.add_argument(
         '-o',
         '--out',
         help="path to result file (default output filename is qr_code.png)",
         default="qr_code.png",
         metavar="")
+    parser.add_argument(
+        '--save_detections',
+        help="save all QR detections (video mode only)",
+        action='store_true')
+    parser.add_argument(
+        '--save_all',
+        help="save all processed frames (video mode only)",
+        action='store_true')
     args = parser.parse_args()
     qrinst = QrSample(args)
     if args.out != '':
@@ -149,8 +230,10 @@ def main():
         else:
             qrinst.fname = args.out
             qrinst.fext = ".png"
-    for fn in glob(args.input):
-        qrinst.DetectQRFrmImage(fn)
+    if args.input != '':
+        qrinst.DetectQRFrmImage(args.input)
+    else:
+        qrinst.DetectQRFrmCamera()
 
 
 if __name__ == '__main__':
