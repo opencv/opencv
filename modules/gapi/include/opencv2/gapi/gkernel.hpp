@@ -202,10 +202,11 @@ public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R...>;
 
+    // TODO: Args&&... here?
     static std::tuple<R...> on(Args... args)
     {
         cv::GCall call(GKernel{K::id(), K::tag(), &K::getOutMeta, {detail::GTypeTraits<R>::shape...}});
-        call.pass(args...);
+        call.pass(args...); // TODO: std::forward() here?
         return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
     }
 };
