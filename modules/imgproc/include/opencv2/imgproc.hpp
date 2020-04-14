@@ -261,6 +261,8 @@ enum InterpolationFlags{
     /** flag, fills all of the destination image pixels. If some of them correspond to outliers in the
     source image, they are set to zero */
     WARP_FILL_OUTLIERS   = 8,
+    /** PIL nearest neighbor interpolation */
+    INTER_NEAREST_PIL = 9,
     /** flag, inverse transformation
 
     For example, #linearPolar or #logPolar transforms:
