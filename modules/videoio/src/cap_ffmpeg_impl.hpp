@@ -77,6 +77,11 @@ extern "C" {
 
 #include <libavutil/mathematics.h>
 
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
+  #include <libavutil/hwcontext.h>
+  #include <libavutil/pixfmt.h>
+#endif
+
 #if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(51,11,0)
   #include <libavutil/opt.h>
 #endif
@@ -88,6 +93,7 @@ extern "C" {
 
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+
 
 #ifdef __cplusplus
 }
@@ -487,7 +493,6 @@ struct CvCapture_FFMPEG
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
 
     void init();
-    int init_hw(AVCodecContext *ctx, const char *hwaccel_device);
 
     void    seek(int64_t frame_number);
     void    seek(double sec);
@@ -513,9 +518,12 @@ struct CvCapture_FFMPEG
     AVPacket          packet;
     Image_FFMPEG      frame;
     SwsContext      * img_convert_ctx;
-    AVBufferRef     * hw_device_ctx;
-
     int64_t frame_number, first_frame_number;
+
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
+    int init_hw(AVCodecContext *ctx, const char *hwaccel_device);
+    AVBufferRef     * hw_device_ctx;
+#endif
 
     double eps_zero;
 /*
@@ -574,7 +582,9 @@ void CvCapture_FFMPEG::init()
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
     hw_device_ctx = NULL;
+#endif
 }
 
 
@@ -657,10 +667,10 @@ void CvCapture_FFMPEG::close()
         av_bitstream_filter_close(bsfc);
 #endif
     }
-
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
     if (hw_device_ctx)
        av_buffer_unref(&hw_device_ctx);
-
+#endif
     init();
 }
 
@@ -893,6 +903,7 @@ public:
     }
 };
 
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
 int CvCapture_FFMPEG::init_hw(AVCodecContext *ctx, const char *hwaccel_device)
 {
     int err = 0;
@@ -906,6 +917,7 @@ int CvCapture_FFMPEG::init_hw(AVCodecContext *ctx, const char *hwaccel_device)
 
     return err;
 }
+#endif
 
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
@@ -1026,6 +1038,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             } else {
                 codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
             }
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
             if (av_dict_get(dict, "hwaccel_device", NULL, 0) != NULL)
             {
                 const char *hwaccel_device =
@@ -1037,6 +1050,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
                     goto exit_func;
                 }
             }
+#endif
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
                 avcodec_open2(enc, codec, NULL)
@@ -1260,8 +1274,10 @@ bool CvCapture_FFMPEG::grabFrame()
 
         // Decode video frame
         #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
+        #if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
             if (video_st->codec->pix_fmt == AV_PIX_FMT_CUDA)
                 video_st->codec->pix_fmt = AV_PIX_FMT_NV12;
+        #endif
             avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
         #elif LIBAVFORMAT_BUILD > 4628
                 avcodec_decode_video(video_st->codec,
