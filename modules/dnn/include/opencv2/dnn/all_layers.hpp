@@ -580,13 +580,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<FlowWarpLayer> create(const LayerParams& params);
     };
 
-    class CV_EXPORTS ChannelNormLayer : public Layer
-    {
-    public:
-        static Ptr<ChannelNormLayer> create(const LayerParams& params);
-    };
-
-
     class CV_EXPORTS PriorBoxLayer : public Layer
     {
     public:
