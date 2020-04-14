@@ -107,7 +107,13 @@ endif()
 
 set(dnn_runtime_libs "")
 if(INF_ENGINE_TARGET)
-  ocv_option(OPENCV_DNN_IE_NN_BUILDER_2019 "Build with Inference Engine NN Builder API support" ON)  # future: NOT HAVE_NGRAPH
+  set(use_nn_builder OFF)
+  if(TARGET inference_engine_nn_builder OR # custom imported target
+     TARGET IE::inference_engine_nn_builder OR # default imported target via InferenceEngineConfig.cmake
+     INF_ENGINE_RELEASE VERSION_LESS "2020000000") # compatibility with older versions on IE
+    set(use_nn_builder ON)
+  endif()
+  ocv_option(OPENCV_DNN_IE_NN_BUILDER_2019 "Build with Inference Engine NN Builder API support" ${use_nn_builder})  # future: NOT HAVE_NGRAPH
   if(OPENCV_DNN_IE_NN_BUILDER_2019)
     message(STATUS "DNN: Enabling Inference Engine NN Builder API support")
     add_definitions(-DHAVE_DNN_IE_NN_BUILDER_2019=1)
