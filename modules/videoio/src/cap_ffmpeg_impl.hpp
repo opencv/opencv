@@ -487,6 +487,7 @@ struct CvCapture_FFMPEG
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
 
     void init();
+    int init_hw(AVCodecContext *ctx, const char *hwaccel_device);
 
     void    seek(int64_t frame_number);
     void    seek(double sec);
@@ -511,7 +512,8 @@ struct CvCapture_FFMPEG
 
     AVPacket          packet;
     Image_FFMPEG      frame;
-    struct SwsContext *img_convert_ctx;
+    SwsContext      * img_convert_ctx;
+    AVBufferRef     * hw_device_ctx;
 
     int64_t frame_number, first_frame_number;
 
@@ -572,6 +574,7 @@ void CvCapture_FFMPEG::init()
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
+    hw_device_ctx = NULL;
 }
 
 
@@ -654,6 +657,9 @@ void CvCapture_FFMPEG::close()
         av_bitstream_filter_close(bsfc);
 #endif
     }
+
+    if (hw_device_ctx)
+       av_buffer_unref(&hw_device_ctx);
 
     init();
 }
@@ -887,6 +893,20 @@ public:
     }
 };
 
+int CvCapture_FFMPEG::init_hw(AVCodecContext *ctx, const char *hwaccel_device)
+{
+    int err = 0;
+
+    if ((err = av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_CUDA, hwaccel_device,
+                                                    NULL, 0)) < 0)
+        av_log(ctx, AV_LOG_ERROR, "Failed to create specified HW device: %s\n",
+            hwaccel_device);
+    else
+        ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+
+    return err;
+}
+
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
     InternalFFMpegRegister::init();
@@ -1005,6 +1025,17 @@ bool CvCapture_FFMPEG::open( const char* _filename )
                 codec = avcodec_find_decoder(enc->codec_id);
             } else {
                 codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
+            }
+            if (av_dict_get(dict, "hwaccel_device", NULL, 0) != NULL)
+            {
+                const char *hwaccel_device =
+                    av_dict_get(dict, "hwaccel_device", NULL, 0)->value;
+
+                if (init_hw(enc, hwaccel_device) < 0)
+                {
+                    av_buffer_unref(&hw_device_ctx);
+                    goto exit_func;
+                }
             }
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
@@ -1229,6 +1260,8 @@ bool CvCapture_FFMPEG::grabFrame()
 
         // Decode video frame
         #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
+            if (video_st->codec->pix_fmt == AV_PIX_FMT_CUDA)
+                video_st->codec->pix_fmt = AV_PIX_FMT_NV12;
             avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
         #elif LIBAVFORMAT_BUILD > 4628
                 avcodec_decode_video(video_st->codec,
@@ -1301,10 +1334,12 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
         int buffer_width = video_st->codec->coded_width, buffer_height = video_st->codec->coded_height;
 
+        AVPixelFormat picture_format = static_cast<AVPixelFormat>(picture->format);
+
         img_convert_ctx = sws_getCachedContext(
                 img_convert_ctx,
                 buffer_width, buffer_height,
-                video_st->codec->pix_fmt,
+                picture_format,
                 buffer_width, buffer_height,
                 AV_PIX_FMT_BGR24,
                 SWS_BICUBIC,
