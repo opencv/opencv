@@ -23,7 +23,8 @@ std::string qrcode_images_monitor[] = {
 };
 std::string qrcode_images_multiple[] = {
   "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
-   "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
+  "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png",
+  "14_qrcodes.png"
 };
 //#define UPDATE_QRCODE_TEST_DATA
 #ifdef  UPDATE_QRCODE_TEST_DATA
@@ -138,7 +139,6 @@ TEST(Objdetect_QRCode_Monitor, generate_test_data)
     file_config.release();
 }
 
-
 TEST(Objdetect_QRCode_Multi, generate_test_data)
 {
     const std::string root = "qrcode/multiple/";
@@ -155,11 +155,12 @@ TEST(Objdetect_QRCode_Multi, generate_test_data)
 
         ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
         std::vector<Point> corners;
-        EXPECT_TRUE(detectQRCodeMulti(src, corners));
+        QRCodeDetector qrcode;
+        EXPECT_TRUE(qrcode.detectMulti(src, corners));
 #ifdef HAVE_QUIRC
         std::vector<cv::String> decoded_info;
         std::vector<Mat> straight_barcode;
-        EXPECT_TRUE(decodeQRCodeMulti(src, corners, decoded_info, straight_barcode));
+        EXPECT_TRUE(qrcode.decodeMulti(src, corners, decoded_info, straight_barcode));
 #endif
         file_config << "x" << "[:";
         for(size_t j = 0; j < corners.size(); j += 4)
@@ -499,6 +500,24 @@ TEST(Objdetect_QRCode_decodeMulti, decode_regression_16491)
     QRCodeDetector mat_qrcode;
     EXPECT_NO_THROW(mat_qrcode.decodeMulti(zero_image, mat_corners, decoded_info, straight_barcode));
 #endif
+}
+
+TEST(Objdetect_QRCode_detectMulti, detect_regression_16961)
+{
+    const std::string name_current_image = "14_qrcodes.png";
+    const std::string root = "qrcode/multiple/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    size_t expect_corners_size = 56;
+
+    ASSERT_TRUE(qrcode.detectMulti(src, corners));
+    ASSERT_FALSE(corners.empty());
+    std::cout << corners.size() << std::endl;
+    EXPECT_EQ(corners.size(), expect_corners_size);
 }
 
 TEST(Objdetect_QRCode_basic, not_found_qrcode)
