@@ -32,7 +32,7 @@ static bool checkQRInputImage(InputArray img, Mat& gray)
         return false;  // image data is not enough for providing reliable results
     }
     int incn = img.channels();
-    CV_Check(incn, incn == 1 || incn == 3 || incn == 3, "");
+    CV_Check(incn, incn == 1 || incn == 3 || incn == 4, "");
     if (incn == 3 || incn == 4)
     {
         cvtColor(img, gray, COLOR_BGR2GRAY);
