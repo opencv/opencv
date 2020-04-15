@@ -155,6 +155,14 @@ GAPI_OCV_KERNEL(GCPUSobel, cv::gapi::imgproc::GSobel)
     }
 };
 
+GAPI_OCV_KERNEL(GCPULaplacian, cv::gapi::imgproc::GLaplacian)
+{
+    static void run(const cv::Mat& in, int ddepth, cv::Mat &out)
+    {
+        cv::Laplacian(in,out,ddepth);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUSobelXY, cv::gapi::imgproc::GSobelXY)
 {
     static void run(const cv::Mat& in, int ddepth, int order, int ksize, double scale, double delta, int borderType,
@@ -422,6 +430,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUDilate
         , GCPUSobel
         , GCPUSobelXY
+        , GCPULaplacian
         , GCPUCanny
         , GCPUGoodFeatures
         , GCPUEqualizeHist

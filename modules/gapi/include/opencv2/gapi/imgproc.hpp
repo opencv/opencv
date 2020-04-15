@@ -90,6 +90,12 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GLaplacian, <GMat(GMat,int)>, "org.opencv.imgproc.filters.laplacian") {
+        static GMatDesc outMeta(GMatDesc in, int) {
+            return in;
+        }
+    };
+
     G_TYPED_KERNEL(GEqHist, <GMat(GMat)>, "org.opencv.imgproc.equalizeHist"){
         static GMatDesc outMeta(GMatDesc in) {
             return in.withType(CV_8U, 1);
@@ -642,6 +648,8 @@ GAPI_EXPORTS std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int ord
                         double scale = 1, double delta = 0,
                         int borderType = BORDER_DEFAULT,
                         const Scalar& borderValue = Scalar(0));
+
+GAPI_EXPORTS GMat Laplacian(const GMat& src, int ksize);
 
 /** @brief Finds edges in an image using the Canny algorithm.
 

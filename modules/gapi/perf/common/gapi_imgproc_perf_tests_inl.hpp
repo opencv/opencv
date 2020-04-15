@@ -579,6 +579,47 @@ PERF_TEST_P_(SobelXYPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(LaplacianPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    MatType type = 0;
+    int kernSize = 0, dtype = 0, dx = 0, dy = 0;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, kernSize, sz, dtype, dx, dy, compile_args) = GetParam();
+
+    initMatrixRandN(type, sz, dtype, false);
+
+    // // OpenCV code /////////////////////////////////////////////////////////////
+    // {
+    //     cv::Laplacian(in_mat1, out_mat_ocv, dtype);
+    // }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::Laplacian(in, dtype);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        cv::Laplacian(in_mat1, out_mat_ocv, dtype);
+        // c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // // Comparison //////////////////////////////////////////////////////////////
+    // {
+    //     EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    //     EXPECT_EQ(out_mat_gapi.size(), sz);
+    // }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(CannyPerfTest, TestPerformance)
 {
     compare_f cmpF;

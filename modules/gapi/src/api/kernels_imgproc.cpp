@@ -87,6 +87,11 @@ std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize
     return imgproc::GSobelXY::on(src, ddepth, order, ksize, scale, delta, borderType, bordVal);
 }
 
+GMat Laplacian (const GMat& src, int ksize)
+{
+    return imgproc::GLaplacian::on(src, ksize);
+}
+
 GMat equalizeHist(const GMat& src)
 {
     return imgproc::GEqHist::on(src);
