@@ -1,8 +1,21 @@
+#!/usr/bin/env python
+
+'''
+This program detects the QR-codes using OpenCV Library.
+
+Usage:
+   qrcode.py
+'''
+
+
+# Python 2/3 compatibility
 from __future__ import print_function
+
+import numpy as np
+import cv2 as cv
+
 import argparse
 import sys
-import cv2 as cv
-import numpy as np
 
 PY3 = sys.version_info[0] == 3
 if PY3:
@@ -22,9 +35,9 @@ class QrSample:
         self.saveAll = args.save_all
 
     def getQRModeString(self):
-        msg1 = "multi" if self.multi else ""
+        msg1 = "multi " if self.multi else ""
         msg2 = "detector" if self.detect else "decoder"
-        msg = "QR {:s} {:s}".format(msg1, msg2)
+        msg = "QR {:s}{:s}".format(msg1, msg2)
         return msg
 
     def drawFPS(self, result, fps):
@@ -35,18 +48,13 @@ class QrSample:
     def drawQRCodeContours(self, image, cnt):
         if cnt.size != 0:
             rows, cols, _ = image.shape
-            show_radius = (2.813 * rows) / cols if (rows >
-                                                    cols) else (2.813 * cols) / rows
+            show_radius = 2.813 * ((rows / cols) if rows > cols else (cols / rows))
             contour_radius = show_radius * 0.4
-            cv.drawContours(
-                image, [cnt], 0, (0, 255, 0), int(
-                    round(contour_radius)))
+            cv.drawContours(image, [cnt], 0, (0, 255, 0), int(round(contour_radius)))
             tpl = cnt.reshape((-1, 2))
             for x in tuple(tpl.tolist()):
                 color = (255, 0, 0)
-                cv.circle(
-                    image, tuple(x), int(
-                        round(contour_radius)), color, -1)
+                cv.circle(image, tuple(x), int(round(contour_radius)), color, -1)
 
     def drawQRCodeResults(self, result, points, decode_info, fps):
         n = len(points)
@@ -56,8 +64,8 @@ class QrSample:
             for i in range(n):
                 cnt = np.array(points[i]).reshape((-1, 1, 2)).astype(np.int32)
                 self.drawQRCodeContours(result, cnt)
-                msg = 'QR[{:d}]@{} :'.format(i, *(cnt.reshape(1, -1).tolist()))
-                print (msg, end="")
+                msg = 'QR[{:d}]@{} : '.format(i, *(cnt.reshape(1, -1).tolist()))
+                print(msg, end="")
                 if len(decode_info) > i:
                     if decode_info[i]:
                         print("'", decode_info[i], "'")
@@ -66,7 +74,7 @@ class QrSample:
                 else:
                     print("Decode information is not available (disabled)")
         else:
-            print ("QRCode not  detected!")
+            print("QRCode not detected!")
         self.drawFPS(result, fps)
 
     def runQR(self, qrCode, inputimg):
@@ -91,6 +99,11 @@ class QrSample:
 
     def DetectQRFrmImage(self, inputfile):
         inputimg = cv.imread(inputfile, cv.IMREAD_COLOR)
+        if inputimg is None:
+            print('ERROR: Can not read image: {}'.format(inputfile))
+            return
+        print('Run {:s} on image [{:d}x{:d}]'.format(
+            self.getQRModeString(), inputimg.shape[1], inputimg.shape[0]))
         qrCode = cv.QRCodeDetector()
         count = 10
         timer = cv.TickMeter()
@@ -99,14 +112,14 @@ class QrSample:
             points, decode_info = self.runQR(qrCode, inputimg)
             timer.stop()
         fps = count / timer.getTimeSec()
-        print("FPS: ", fps)
+        print('FPS: {}'.format(fps))
         result = inputimg
         self.drawQRCodeResults(result, points, decode_info, fps)
         cv.imshow("QR", result)
         cv.waitKey(1)
         if self.out != '':
             outfile = self.fname + self.fext
-            print ("Saving Result: ", outfile)
+            print("Saving Result: {}".format(outfile))
             cv.imwrite(outfile, result)
 
         print("Press any key to exit ...")
@@ -118,9 +131,8 @@ class QrSample:
             result = cv.cvtColor(frame, cv.COLOR_GRAY2BGR)
         else:
             result = frame
-        msg = 'Run {:s} on image [{:d}x{:d}]'.format(
-            self.getQRModeString(), frame.shape[0], frame.shape[1])
-        print(msg)
+        print('Run {:s} on video frame [{:d}x{:d}]'.format(
+            self.getQRModeString(), frame.shape[1], frame.shape[0]))
         timer = cv.TickMeter()
         timer.start()
         points, decode_info = self.runQR(qrcode, frame)
@@ -133,29 +145,26 @@ class QrSample:
     def DetectQRFrmCamera(self):
         cap = cv.VideoCapture(0)
         if not cap.isOpened():
-            print("Cannot open the camera\n")
+            print("Cannot open the camera")
             return
-        print("Press 'm' to switch between detectAndDecode and detectAndDecodeMulti\n")
-        print("Press 'd' to switch between decoder and detector\n")
-        print("Press ' ' (space) to save result into images\n")
-        print("Press 'ESC' to exit\n")
+        print("Press 'm' to switch between detectAndDecode and detectAndDecodeMulti")
+        print("Press 'd' to switch between decoder and detector")
+        print("Press ' ' (space) to save result into images")
+        print("Press 'ESC' to exit")
 
         qrcode = cv.QRCodeDetector()
 
         while True:
             ret, frame = cap.read()
             if not ret:
-                print("End of video stream\n")
+                print("End of video stream")
                 break
             forcesave = self.saveAll
             result = frame
             try:
-                fps, result, corners = self.processQRCodeDetection(
-                    qrcode, frame)
-                print("FPS: ", fps)
-                forcesave = forcesave or (
-                    self.saveDetections and (
-                        len(corners) != 0))
+                fps, result, corners = self.processQRCodeDetection(qrcode, frame)
+                print('FPS: {:.2f}'.format(fps))
+                forcesave |= self.saveDetections and (len(corners) != 0)
             except cv.error as e:
                 print("Error exception: ", e)
                 forcesave = True
@@ -163,13 +172,12 @@ class QrSample:
             code = cv.waitKey(1)
             if code < 0 and (not forcesave):
                 continue
-            if(code == ord(' ') or forcesave):
+            if code == ord(' ') or forcesave:
                 fsuffix = '-{:05d}'.format(self.fsaveid)
                 self.fsaveid += 1
                 fname_in = self.fname + fsuffix + "_input.png"
-                print("Saving QR code detection result: '", fname_in, "' ...")
+                print("Saving QR code detection result: '{}' ...".format(fname_in))
                 cv.imwrite(fname_in, frame)
-
                 print("Saved")
             if code == ord('m'):
                 self.multi = not self.multi
@@ -193,23 +201,23 @@ def main():
     parser.add_argument(
         '-i',
         '--input',
-        help="input image path (default input file path is 'opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png",
+        help="input image path (for example, 'opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png)",
         default="",
         metavar="")
     parser.add_argument(
         '-d',
         '--detect',
-        help="detect QR code only (skip decoding) (default value is False)",
+        help="detect QR code only (skip decoding) (default: False)",
         action='store_true')
     parser.add_argument(
         '-m',
         '--multi',
-        help="used to disable multiple qr-codes detection and enable single qr detection",
+        help="enable multiple qr-codes detection",
         action='store_true')
     parser.add_argument(
         '-o',
         '--out',
-        help="path to result file (default output filename is qr_code.png)",
+        help="path to result file (default: qr_code.png)",
         default="qr_code.png",
         metavar="")
     parser.add_argument(
