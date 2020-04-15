@@ -14,7 +14,6 @@
 #include <cstdint> // uint8_t
 
 #include <opencv2/gapi/opencv_includes.hpp>
-#include <opencv2/gapi/own/mat.hpp>
 #include <opencv2/gapi/gmat.hpp>
 
 #include <opencv2/gapi/util/optional.hpp>

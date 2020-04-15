@@ -14,7 +14,7 @@
 #include <ade/node.hpp>
 
 #include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/own/mat.hpp"
+// #include "opencv2/gapi/own/mat.hpp"
 
 #include "opencv2/gapi/util/optional.hpp"
 

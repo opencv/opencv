@@ -42,7 +42,7 @@ namespace{
         cv::GMetaArgs vec_descr;
         vec_descr.reserve(vec.size());
         for(auto& mat : vec){
-            vec_descr.emplace_back(cv::descr_of(mat));
+            vec_descr.emplace_back(descr_of(mat));
         }
         return vec_descr;
     }
@@ -67,6 +67,13 @@ cv::GMatDesc cv::descr_of(const cv::Mat &mat)
         ? GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}}
         : GMatDesc{mat.depth(), mat.dims};
 #endif
+}
+
+cv::GMatDesc cv::gapi::own::descr_of(const Mat &mat)
+{
+    return (mat.dims.empty())
+        ? GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}}
+        : GMatDesc{mat.depth(), mat.dims};
 }
 
 #if !defined(GAPI_STANDALONE)
