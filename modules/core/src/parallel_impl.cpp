@@ -53,6 +53,12 @@ DECLARE_CV_PAUSE
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("pause" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __PPC64__
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("or 27,27,27" ::: "memory"); } } while (0)
+# elif defined __GNUC__ && defined __riscv
+// PAUSE HINT is not part of RISC-V ISA yet, but is under discussion now. For details see:
+// https://github.com/riscv/riscv-isa-manual/pull/398
+// https://github.com/riscv/riscv-isa-manual/issues/43
+// #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("pause"); } } while (0)
+#   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("nop"); } } while (0)
 # else
 #   warning "Can't detect 'pause' (CPU-yield) instruction on the target platform. Specify CV_PAUSE() definition via compiler flags."
 #   define CV_PAUSE(...) do { /* no-op: works, but not effective */ } while (0)
