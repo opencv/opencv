@@ -123,6 +123,7 @@ protected:
 Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
                      double _contrastThreshold, double _edgeThreshold, double _sigma )
 {
+    CV_TRACE_FUNCTION();
     return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma);
 }
 
@@ -186,6 +187,8 @@ unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
 
 static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma )
 {
+    CV_TRACE_FUNCTION();
+
     Mat gray, gray_fpt;
     if( img.channels() == 3 || img.channels() == 4 )
     {
@@ -220,6 +223,8 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
 
 void SIFT_Impl::buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, int nOctaves ) const
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<double> sig(nOctaveLayers + 3);
     pyr.resize(nOctaves*(nOctaveLayers + 3));
 
@@ -271,6 +276,8 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
+        CV_TRACE_FUNCTION();
+
         const int begin = range.start;
         const int end = range.end;
 
@@ -294,6 +301,8 @@ private:
 
 void SIFT_Impl::buildDoGPyramid( const std::vector<Mat>& gpyr, std::vector<Mat>& dogpyr ) const
 {
+    CV_TRACE_FUNCTION();
+
     int nOctaves = (int)gpyr.size()/(nOctaveLayers + 3);
     dogpyr.resize( nOctaves*(nOctaveLayers + 2) );
 
@@ -304,6 +313,8 @@ void SIFT_Impl::buildDoGPyramid( const std::vector<Mat>& gpyr, std::vector<Mat>&
 static float calcOrientationHist( const Mat& img, Point pt, int radius,
                                   float sigma, float* hist, int n )
 {
+    CV_TRACE_FUNCTION();
+
     int i, j, k, len = (radius*2+1)*(radius*2+1);
 
     float expf_scale = -1.f/(2.f * sigma * sigma);
@@ -442,6 +453,8 @@ static bool adjustLocalExtrema( const std::vector<Mat>& dog_pyr, KeyPoint& kpt, 
                                 int& layer, int& r, int& c, int nOctaveLayers,
                                 float contrastThreshold, float edgeThreshold, float sigma )
 {
+    CV_TRACE_FUNCTION();
+
     const float img_scale = 1.f/(255*SIFT_FIXPT_SCALE);
     const float deriv_scale = img_scale*0.5f;
     const float second_deriv_scale = img_scale;
@@ -574,6 +587,8 @@ public:
           tls_kpts_struct(_tls_kpts_struct) { }
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
+        CV_TRACE_FUNCTION();
+
         const int begin = range.start;
         const int end = range.end;
 
@@ -618,6 +633,8 @@ public:
                      val <= prevptr[c-step-1] && val <= prevptr[c-step] && val <= prevptr[c-step+1] &&
                      val <= prevptr[c+step-1] && val <= prevptr[c+step] && val <= prevptr[c+step+1])))
                 {
+                    CV_TRACE_REGION("pixel_candidate");
+
                     int r1 = r, c1 = c, layer = i;
                     if( !adjustLocalExtrema(dog_pyr, kpt, o, layer, r1, c1,
                                             nOctaveLayers, (float)contrastThreshold,
@@ -670,6 +687,8 @@ private:
 void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
                                   std::vector<KeyPoint>& keypoints ) const
 {
+    CV_TRACE_FUNCTION();
+
     const int nOctaves = (int)gauss_pyr.size()/(nOctaveLayers + 3);
     const int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
 
@@ -705,6 +724,8 @@ void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const 
 static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float scl,
                                int d, int n, float* dst )
 {
+    CV_TRACE_FUNCTION();
+
     Point pt(cvRound(ptf.x), cvRound(ptf.y));
     float cos_t = cosf(ori*(float)(CV_PI/180));
     float sin_t = sinf(ori*(float)(CV_PI/180));
@@ -1015,6 +1036,8 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
+        CV_TRACE_FUNCTION();
+
         const int begin = range.start;
         const int end = range.end;
 
@@ -1048,6 +1071,7 @@ private:
 static void calcDescriptors(const std::vector<Mat>& gpyr, const std::vector<KeyPoint>& keypoints,
                             Mat& descriptors, int nOctaveLayers, int firstOctave )
 {
+    CV_TRACE_FUNCTION();
     parallel_for_(Range(0, static_cast<int>(keypoints.size())), calcDescriptorsComputer(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave));
 }
 
@@ -1081,6 +1105,8 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
                       OutputArray _descriptors,
                       bool useProvidedKeypoints)
 {
+    CV_TRACE_FUNCTION();
+
     int firstOctave = -1, actualNOctaves = 0, actualNLayers = 0;
     Mat image = _image.getMat(), mask = _mask.getMat();
 
