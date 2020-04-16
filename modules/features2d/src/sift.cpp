@@ -209,14 +209,16 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
 #else
         resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR);
 #endif
-        GaussianBlur(dbl, dbl, Size(), sig_diff, sig_diff);
-        return dbl;
+        Mat result;
+        GaussianBlur(dbl, result, Size(), sig_diff, sig_diff);
+        return result;
     }
     else
     {
         sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA, 0.01f) );
-        GaussianBlur(gray_fpt, gray_fpt, Size(), sig_diff, sig_diff);
-        return gray_fpt;
+        Mat result;
+        GaussianBlur(gray_fpt, result, Size(), sig_diff, sig_diff);
+        return result;
     }
 }
 
