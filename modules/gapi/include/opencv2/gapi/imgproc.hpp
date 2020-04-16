@@ -672,7 +672,6 @@ with the following \f$3 \times 3\f$ aperture:
 @note Function textual ID is "org.opencv.imgproc.filters.laplacian"
 
 @param src Source image.
-@param dst Destination image of the same size and the same number of channels as src .
 @param ddepth Desired depth of the destination image.
 @param ksize Aperture size used to compute the second-derivative filters. See #getDerivKernels for
 details. The size must be positive and odd.
@@ -704,7 +703,6 @@ This filter does not work inplace.
 @note Function textual ID is "org.opencv.imgproc.filters.bilateralfilter"
 
 @param src Source 8-bit or floating-point, 1-channel or 3-channel image.
-@param dst Destination image of the same size and type as src .
 @param d Diameter of each pixel neighborhood that is used during filtering. If it is non-positive,
 it is computed from sigmaSpace.
 @param sigmaColor Filter sigma in the color space. A larger value of the parameter means that
