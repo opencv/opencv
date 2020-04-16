@@ -155,14 +155,6 @@ GAPI_OCV_KERNEL(GCPUSobel, cv::gapi::imgproc::GSobel)
     }
 };
 
-GAPI_OCV_KERNEL(GCPULaplacian, cv::gapi::imgproc::GLaplacian)
-{
-    static void run(const cv::Mat& in, int ddepth, cv::Mat &out)
-    {
-        cv::Laplacian(in,out,ddepth);
-    }
-};
-
 GAPI_OCV_KERNEL(GCPUSobelXY, cv::gapi::imgproc::GSobelXY)
 {
     static void run(const cv::Mat& in, int ddepth, int order, int ksize, double scale, double delta, int borderType,
@@ -171,6 +163,24 @@ GAPI_OCV_KERNEL(GCPUSobelXY, cv::gapi::imgproc::GSobelXY)
         cv::Mat temp_in = add_border(in, ksize, borderType, bordVal);
         cv::Sobel(temp_in, out_dx, ddepth, order, 0, ksize, scale, delta, borderType);
         cv::Sobel(temp_in, out_dy, ddepth, 0, order, ksize, scale, delta, borderType);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPULaplacian, cv::gapi::imgproc::GLaplacian)
+{
+    static void run(const cv::Mat& in, int ddepth, int ksize, double scale,
+                    double delta, int borderType, cv::Mat &out)
+    {
+        cv::Laplacian(in, out, ddepth, ksize, scale, delta, borderType);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBilateralFilter, cv::gapi::imgproc::GBilateralFilter)
+{
+    static void run(const cv::Mat& in, int d, double sigmaColor,
+                    double sigmaSpace, int borderType, cv::Mat &out)
+    {
+        cv::bilateralFilter(in, out, d, sigmaColor, sigmaSpace, borderType);
     }
 };
 
@@ -431,6 +441,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUSobel
         , GCPUSobelXY
         , GCPULaplacian
+        , GCPUBilateralFilter
         , GCPUCanny
         , GCPUGoodFeatures
         , GCPUEqualizeHist

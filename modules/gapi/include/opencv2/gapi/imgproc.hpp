@@ -90,8 +90,16 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GLaplacian, <GMat(GMat,int)>, "org.opencv.imgproc.filters.laplacian") {
-        static GMatDesc outMeta(GMatDesc in, int) {
+    G_TYPED_KERNEL(GLaplacian, <GMat(GMat,int, int, double, double, int)>,
+                   "org.opencv.imgproc.filters.laplacian") {
+        static GMatDesc outMeta(GMatDesc in, int ddepth, int, double, double, int) {
+            return in.withDepth(ddepth);
+        }
+    };
+
+    G_TYPED_KERNEL(GBilateralFilter, <GMat(GMat,int, double, double, int)>,
+                   "org.opencv.imgproc.filters.bilateralfilter") {
+        static GMatDesc outMeta(GMatDesc in, int, double, double, int) {
             return in;
         }
     };
@@ -649,7 +657,67 @@ GAPI_EXPORTS std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int ord
                         int borderType = BORDER_DEFAULT,
                         const Scalar& borderValue = Scalar(0));
 
-GAPI_EXPORTS GMat Laplacian(const GMat& src, int ksize);
+/** @brief Calculates the Laplacian of an image.
+
+The function calculates the Laplacian of the source image by adding up the second x and y
+derivatives calculated using the Sobel operator:
+
+\f[\texttt{dst} =  \Delta \texttt{src} =  \frac{\partial^2 \texttt{src}}{\partial x^2} +  \frac{\partial^2 \texttt{src}}{\partial y^2}\f]
+
+This is done when `ksize > 1`. When `ksize == 1`, the Laplacian is computed by filtering the image
+with the following \f$3 \times 3\f$ aperture:
+
+\f[\vecthreethree {0}{1}{0}{1}{-4}{1}{0}{1}{0}\f]
+
+@note Function textual ID is "org.opencv.imgproc.filters.laplacian"
+
+@param src Source image.
+@param dst Destination image of the same size and the same number of channels as src .
+@param ddepth Desired depth of the destination image.
+@param ksize Aperture size used to compute the second-derivative filters. See #getDerivKernels for
+details. The size must be positive and odd.
+@param scale Optional scale factor for the computed Laplacian values. By default, no scaling is
+applied. See #getDerivKernels for details.
+@param delta Optional delta value that is added to the results prior to storing them in dst .
+@param borderType Pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@sa  Sobel, Scharr
+ */
+GAPI_EXPORTS GMat Laplacian(const GMat& src, int ddepth, int ksize = 1,
+                            double scale = 1, double delta = 0, int borderType = BORDER_DEFAULT);
+
+/** @brief Applies the bilateral filter to an image.
+
+The function applies bilateral filtering to the input image, as described in
+http://www.dai.ed.ac.uk/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html
+bilateralFilter can reduce unwanted noise very well while keeping edges fairly sharp. However, it is
+very slow compared to most filters.
+
+_Sigma values_: For simplicity, you can set the 2 sigma values to be the same. If they are small (\<
+10), the filter will not have much effect, whereas if they are large (\> 150), they will have a very
+strong effect, making the image look "cartoonish".
+
+_Filter size_: Large filters (d \> 5) are very slow, so it is recommended to use d=5 for real-time
+applications, and perhaps d=9 for offline applications that need heavy noise filtering.
+
+This filter does not work inplace.
+
+@note Function textual ID is "org.opencv.imgproc.filters.bilateralfilter"
+
+@param src Source 8-bit or floating-point, 1-channel or 3-channel image.
+@param dst Destination image of the same size and type as src .
+@param d Diameter of each pixel neighborhood that is used during filtering. If it is non-positive,
+it is computed from sigmaSpace.
+@param sigmaColor Filter sigma in the color space. A larger value of the parameter means that
+farther colors within the pixel neighborhood (see sigmaSpace) will be mixed together, resulting
+in larger areas of semi-equal color.
+@param sigmaSpace Filter sigma in the coordinate space. A larger value of the parameter means that
+farther pixels will influence each other as long as their colors are close enough (see sigmaColor
+). When d\>0, it specifies the neighborhood size regardless of sigmaSpace. Otherwise, d is
+proportional to sigmaSpace.
+@param borderType border mode used to extrapolate pixels outside of the image, see #BorderTypes
+ */
+GAPI_EXPORTS GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace,
+                                  int borderType = BORDER_DEFAULT);
 
 /** @brief Finds edges in an image using the Canny algorithm.
 

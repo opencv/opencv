@@ -126,6 +126,25 @@ INSTANTIATE_TEST_CASE_P(SobelPerfTestGPU32F, SobelPerfTest,
                                 Values(1, 2),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
+INSTANTIATE_TEST_CASE_P(LaplacianPerfTestGPU, LaplacianPerfTest,
+                        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
+                                Values(CV_8UC1, CV_8UC3, CV_16SC1),
+                                Values(3, 5),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(-1, CV_16S, CV_32F),
+                                Values(cv::compile_args(IMGPROC_GPU))));
+
+INSTANTIATE_TEST_CASE_P(BilateralFilterPerfTestGPU, BilateralFilterPerfTest,
+                        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
+                                Values(CV_8UC1, CV_8UC3),
+                                Values(-1, CV_16S, CV_32F),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(1.5, 2.0),
+                                Values(8.0, 7.0),
+                                Values(8, 7),
+                                Values(BORDER_DEFAULT),
+                                Values(cv::compile_args(IMGPROC_GPU))));
+
 INSTANTIATE_TEST_CASE_P(CannyPerfTestGPU, CannyPerfTest,
                         Combine(Values(AbsSimilarPoints(1, 0.05).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3),

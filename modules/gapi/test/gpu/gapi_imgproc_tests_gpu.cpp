@@ -152,6 +152,27 @@ INSTANTIATE_TEST_CASE_P(SobelTestGPU32F, SobelTest,
                                 Values(0, 1),
                                 Values(1, 2)));
 
+INSTANTIATE_TEST_CASE_P(LaplacianTestGPU, LaplacianTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1, CV_16S, CV_32F),
+                                Values(IMGPROC_GPU),
+                                Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
+                                Values(3, 5)));
+
+INSTANTIATE_TEST_CASE_P(BilateralFilterTestGPU, BilateralFilterTest,
+                        Combine(Values(CV_8UC1, CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1, CV_16S, CV_32F),
+                                Values(IMGPROC_GPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(1.5, 2.0),
+                                Values(8.0, 7.0),
+                                Values(8, 7),
+                                Values(BORDER_DEFAULT)));
+
 INSTANTIATE_TEST_CASE_P(EqHistTestGPU, EqHistTest,
                         Combine(Values(CV_8UC1),
                                 Values(cv::Size(1280, 720),
