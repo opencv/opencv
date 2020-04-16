@@ -1154,7 +1154,7 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
     actual_hog->compute(img, actual_descriptors, winStride, padding, locations);
 
     double diff_norm = cvtest::norm(actual_descriptors, descriptors, NORM_L2 + NORM_RELATIVE);
-    const double eps = FLT_EPSILON * 100;
+    const double eps = 2.0e-3;
     if (diff_norm > eps)
     {
         ts->printf(cvtest::TS::SUMMARY, "Norm of the difference: %lf\n", diff_norm);
@@ -1299,7 +1299,7 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     const char* args[] = { "Gradient's", "Qangles's" };
     actual_hog->computeGradient(img, actual_mats[0], actual_mats[1], paddingTL, paddingBR);
 
-    const double eps = FLT_EPSILON * 100;
+    const double eps = 8.0e-3;
     for (i = 0; i < 2; ++i)
     {
        double diff_norm = cvtest::norm(actual_mats[i], reference_mats[i], NORM_L2 + NORM_RELATIVE);
