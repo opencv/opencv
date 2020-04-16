@@ -1,8 +1,7 @@
 //
-//  Rect.h
+//  Rect2i.h
 //
 //  Created by Giles Payne on 2019/10/09.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #pragma once
@@ -18,6 +17,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+NS_SWIFT_NAME(Rect)
 @interface Rect2i : NSObject
 
 @property int x;
@@ -51,7 +51,5 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString *)description;
 
 @end
-
-typedef Rect2i CvRect;
 
 NS_ASSUME_NONNULL_END

@@ -7,6 +7,7 @@ import codecs
 from shutil import copyfile
 from pprint import pformat
 from string import Template
+from distutils.dir_util import copy_tree
 
 if sys.version_info[0] >= 3:
     from io import StringIO
@@ -1013,6 +1014,7 @@ typedef NS_ENUM(int, {2}) {{
         cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name)
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
         mkdir_p("./framework_build")
+        mkdir_p("./test_build")
 
 def copy_objc_files(objc_files_dir, objc_base_path, module_path, include = False):
     global total_files, updated_files
@@ -1082,7 +1084,7 @@ if __name__ == "__main__":
     dstdir = "./gen"
     testdir = "./test"
     objc_base_path = os.path.join(dstdir, 'objc'); mkdir_p(objc_base_path)
-    objc_test_base_path = os.path.join(testdir, 'objc'); mkdir_p(objc_test_base_path)
+    objc_test_base_path = testdir; mkdir_p(objc_test_base_path)
     copy_objc_files(os.path.join(SCRIPT_DIR, '../test/test'), objc_test_base_path, 'test', False)
     copy_objc_files(os.path.join(SCRIPT_DIR, '../test/dummy'), objc_test_base_path, 'dummy', False)
     copyfile(os.path.join(SCRIPT_DIR, '../test/cmakelists.template'), os.path.join(objc_test_base_path, 'CMakeLists.txt'))
@@ -1155,7 +1157,9 @@ if __name__ == "__main__":
         objc_test_files_dir = os.path.join(misc_location, 'test')
         if os.path.exists(objc_test_files_dir):
             copy_objc_files(objc_test_files_dir, objc_test_base_path, 'test', False)
-
+            objc_test_resources_dir = os.path.join(objc_test_files_dir, 'resources')
+            if os.path.exists(objc_test_resources_dir):
+                copy_tree(objc_test_resources_dir, os.path.join(objc_test_base_path, 'test', 'resources'))
 
         if len(srcfiles) > 0:
             generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers)

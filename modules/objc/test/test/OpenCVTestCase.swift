@@ -65,9 +65,14 @@ open class OpenCVTestCase: XCTestCase {
 
     let rgba0 = Mat(rows: matSize, cols: matSize, type: CvType.CV_8UC4, scalar: Scalar.all(0))
     let rgba128 = Mat(rows: matSize, cols: matSize, type: CvType.CV_8UC4, scalar: Scalar.all(128))
-    
-    let rgbLena = Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"lena", ofType:"png", inDirectory:"resources")!)
-    let grayChess = Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"chessboard", ofType:"jpg", inDirectory:"resources")!)
+
+    let rgbLena: Mat = {
+        return Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"lena", ofType:"png", inDirectory:"resources")!)
+    }()
+
+    let grayChess: Mat = {
+        return Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"chessboard", ofType:"jpg", inDirectory:"resources")!)
+    }()
 
     let gray255_32f_3d = Mat(sizes: [matSize, matSize, matSize] as [NSNumber], type: CvType.CV_32F, scalar: Scalar(255.0))
 
@@ -103,7 +108,7 @@ open class OpenCVTestCase: XCTestCase {
         try compareMats(expected, actual, eps, false, file:file, line:line);
     }
     
-    func assertSizeEquals(_ expected:Size2i,_ actual: Size2i, file: StaticString = #file, line: UInt = #line) {
+    func assertSizeEquals(_ expected:Size,_ actual: Size, file: StaticString = #file, line: UInt = #line) {
         let msg = "expected:<\(expected)> but was:<\(actual)>"
         XCTAssertEqual(expected.width, actual.width,  msg, file:file, line:line)
         XCTAssertEqual(expected.height, actual.height,  msg, file:file, line:line)
@@ -121,7 +126,7 @@ open class OpenCVTestCase: XCTestCase {
         XCTAssertEqual(expected.height, actual.height, accuracy:eps, msg, file:file, line:line)
     }
 
-    func assertPointEquals(_ expected:Point2i, _ actual: Point2i, file: StaticString = #file, line: UInt = #line) {
+    func assertPointEquals(_ expected:Point, _ actual: Point, file: StaticString = #file, line: UInt = #line) {
         let msg = "expected:<\(expected)> but was:<\(actual)>"
         XCTAssertEqual(expected.x, actual.x, msg, file:file, line:line)
         XCTAssertEqual(expected.y, actual.y, msg, file:file, line:line)
@@ -187,7 +192,7 @@ open class OpenCVTestCase: XCTestCase {
 
         let diff = Mat()
         Core.absdiff(src1: expected, src2: actual, dst: diff)
-        let maxDiff = Core.norm(src1: diff, normType: NormTypes.NORM_INF.rawValue)
+        let maxDiff = Core.norm(src1: diff, normType: .NORM_INF)
 
         if isEqualityMeasured {
             XCTAssertTrue(maxDiff <= eps, "Max difference between expected and actual Mats is \(maxDiff), that bigger than \(eps)", file:file, line:line)

@@ -68,6 +68,11 @@
                          "stddev" : {"ctype" : "vector_double"} },
         "mixChannels" : { "dst" : {"attrib" : []} },
         "norm" : { "normType" : {"ctype" : "NormTypes"} },
+        "batchDistance" : { "normType" : {"ctype" : "NormTypes"} },
+        "normalize" : { "norm_type" : {"ctype" : "NormTypes"} },
+        "compare" : { "cmpop" : {"ctype" : "CmpTypes"} },
+        "copyMakeBorder" : { "borderType" : {"ctype" : "BorderTypes"} },
+        "borderInterpolate" : { "borderType" : {"ctype" : "BorderTypes"} },
         "(void)divide:(double)scale src2:(Mat*)src2 dst:(Mat*)dst dtype:(int)dtype" : { "src2" : {"name" : "src"} }
     },
     "type_dict" : {
@@ -239,7 +244,7 @@
         },
         "vector_Point3": {
             "objc_type": "Point3i*",
-            "v_type": "Point"
+            "v_type": "Point3i"
         },
         "vector_Point3f": {
             "objc_type": "Point3f*",

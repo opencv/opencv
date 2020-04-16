@@ -16,6 +16,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+NS_SWIFT_NAME(Size)
 @interface Size2i : NSObject
 
 @property int width;
@@ -44,7 +45,5 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString*)description;
 
 @end
-
-typedef Size2i CvSize;
 
 NS_ASSUME_NONNULL_END

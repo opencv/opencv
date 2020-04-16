@@ -68,7 +68,7 @@ class Point3Test: OpenCVTestCase {
     }
 
     func testPoint3Point() {
-        let p = Point2i(x: 2, y: 3)
+        let p = Point(x: 2, y: 3)
         let p1 = Point3i(point: p)
 
         XCTAssertEqual(2, p1.x)

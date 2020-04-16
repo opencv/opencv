@@ -12,6 +12,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+NS_SWIFT_NAME(MatOfRect)
 @interface MatOfRect2i : Mat
 
 #ifdef __cplusplus
@@ -28,7 +29,5 @@ NS_ASSUME_NONNULL_BEGIN
 - (int)length;
 
 @end
-
-typedef MatOfRect2i MatOfRect;
 
 NS_ASSUME_NONNULL_END

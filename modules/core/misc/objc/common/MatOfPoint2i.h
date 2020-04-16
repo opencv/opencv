@@ -12,6 +12,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+NS_SWIFT_NAME(MatOfPoint)
 @interface MatOfPoint2i : Mat
 
 #ifdef __cplusplus
@@ -28,7 +29,5 @@ NS_ASSUME_NONNULL_BEGIN
 - (int)length;
 
 @end
-
-typedef MatOfPoint2i MatOfPoint;
 
 NS_ASSUME_NONNULL_END

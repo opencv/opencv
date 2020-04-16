@@ -7,7 +7,11 @@
         "CV_YUV420(i|sp|p)2.+",
         "CV_L?(BGRA?|RGBA?|GRAY|XYZ|YCrCb|Luv|Lab|HLS|YUV|HSV)\\d*2L?(BGRA?|RGBA?|GRAY|XYZ|YCrCb|Luv|Lab|HLS|YUV|HSV).*",
         "CV_FLOODFILL_.+",
-        "CV_ADAPTIVE_THRESH_.+"
+        "CV_ADAPTIVE_THRESH_.+",
+        "CV_DIST_.+",
+        "CV_HOUGH_.+",
+        "CV_CONTOURS_MATCH_.+",
+        "CV_COMP_.+"
     ],
     "const_private_list" : [
         "CV_MOP_.+",
@@ -29,36 +33,16 @@
             ]
         }
     },
-    "ManualFuncs" : {
-        "Imgproc" : {
-            "getTextSize" : {
-                "declaration" : [
-                    "",
-                    "// C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);",
-                    "+ (Size2i*)getTextSize:(NSString*)text fontFace:(int)fontFace fontScale:(double)fontScale thickness:(int)thickness baseLine:(IntOut*)baseLine;",
-                    ""
-                ],
-                "implementation" : [
-                    "",
-                    "// C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);",
-                    "+ (Size2i*)getTextSize:(NSString*)text fontFace:(int)fontFace fontScale:(double)fontScale thickness:(int)thickness baseLine:(IntOut*)baseLine {",
-                    "",
-                    "    cv::Size rsize = cv::getTextSize(cv::String(text.UTF8String), fontFace, fontScale, thickness, baseLine.ptr);",
-                    "",
-                    "    return [Size2i fromNative: rsize];",
-                    "",
-                    "}"
-                ]
-            }
-        }
-    },
     "func_arg_fix" : {
         "goodFeaturesToTrack" : { "corners" : {"ctype" : "vector_Point"} },
         "minEnclosingCircle" : { "points" : {"ctype" : "vector_Point2f"} },
         "fitEllipse" : { "points" : {"ctype" : "vector_Point2f"} },
-        "fillPoly"   : { "pts" : {"ctype" : "vector_vector_Point"} },
-        "polylines"  : { "pts" : {"ctype" : "vector_vector_Point"} },
-        "fillConvexPoly" : { "points" : {"ctype" : "vector_Point"} },
+        "fillPoly"   : { "pts" : {"ctype" : "vector_vector_Point"},
+                         "lineType" : {"ctype" : "LineTypes"}},
+        "polylines"  : { "pts" : {"ctype" : "vector_vector_Point"},
+                         "lineType" : {"ctype" : "LineTypes"} },
+        "fillConvexPoly" : { "points" : {"ctype" : "vector_Point"},
+                             "lineType" : {"ctype" : "LineTypes"} },
         "approxPolyDP" : { "curve"       : {"ctype" : "vector_Point2f"},
                            "approxCurve" : {"ctype" : "vector_Point2f"} },
         "arcLength" : { "curve" : {"ctype" : "vector_Point2f"} },
@@ -78,6 +62,7 @@
         "convexHull" : { "points" : {"ctype" : "vector_Point"},
                          "hull"   : {"ctype" : "vector_int"},
                          "returnPoints" : {"ctype" : ""} },
+        "getStructuringElement" : { "shape" : {"ctype" : "MorphShapes"} },
         "EMD" : {"lowerBound" : {"defval" : "cv::Ptr<float>()"},
                  "distType" : {"ctype" : "DistanceTypes"}},
         "createLineSegmentDetector" : { "_refine" : {"ctype" : "LineSegmentDetectorModes"}},
@@ -89,7 +74,7 @@
         "HoughCircles" : { "method" : {"ctype" : "HoughModes"}},
         "Laplacian" : { "borderType" : {"ctype" : "BorderTypes"}},
         "Scharr" : { "borderType" : {"ctype" : "BorderTypes"}},
-        "Sobel" : { "code" : {"borderType" : "BorderTypes"}},
+        "Sobel" : { "borderType" : {"ctype" : "BorderTypes"}},
         "adaptiveThreshold" : { "adaptiveMethod" : {"ctype" : "AdaptiveThresholdTypes"},
                                 "thresholdType" : {"ctype" : "ThresholdTypes"}},
         "applyColorMap" : { "colormap" : {"ctype" : "ColormapTypes"}},
@@ -112,15 +97,12 @@
                          "line_type" : {"ctype" : "LineTypes"}},
         "ellipse" : { "lineType" : {"ctype" : "LineTypes"}},
         "erode" : { "borderType" : {"ctype" : "BorderTypes"}},
-        "fillConvexPoly" : { "lineType" : {"ctype" : "LineTypes"}},
-        "fillPoly" : { "lineType" : {"ctype" : "LineTypes"}},
         "filter2D" : { "borderType" : {"ctype" : "BorderTypes"}},
         "fitLine" : { "distType" : {"ctype" : "DistanceTypes"}},
         "line" : { "lineType" : {"ctype" : "LineTypes"}},
         "matchTemplate" : { "method" : {"ctype" : "TemplateMatchModes"}},
         "morphologyEx" : { "op" : {"ctype" : "MorphTypes"},
                            "borderType" : {"ctype" : "BorderTypes"}},
-        "polylines" : { "lineType" : {"ctype" : "LineTypes"}},
         "preCornerDetect" : { "borderType" : {"ctype" : "BorderTypes"}},
         "putText" : { "fontFace" : {"ctype" : "HersheyFonts"},
                       "lineType" : {"ctype" : "LineTypes"}},
@@ -133,6 +115,7 @@
         "sqrBoxFilter" : { "borderType" : {"ctype" : "BorderTypes"}},
         "warpAffine" : { "borderMode": {"ctype" : "BorderTypes"}},
         "warpPerspective" : { "borderMode": {"ctype" : "BorderTypes"}},
+        "getTextSize" : { "fontFace": {"ctype" : "HersheyFonts"}},
         "(void)insert:(NSArray<Point2f*>*)ptvec" : { "insert" : {"name" : "insertVector"} }
     }
 }

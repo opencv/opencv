@@ -9,9 +9,9 @@ import OpenCV
 
 class ImgprocTest: OpenCVTestCase {
 
-    let anchorPoint = Point2i(x: 2, y: 2)
+    let anchorPoint = Point(x: 2, y: 2)
     let imgprocSz: Int32 = 2
-    let size = Size2i(width: 3, height: 3)
+    let size = Size(width: 3, height: 3)
 
     func testAccumulateMatMat() throws {
         let src = getMat(CvType.CV_64F, vals: [2])
@@ -117,7 +117,7 @@ class ImgprocTest: OpenCVTestCase {
         let src = makeMask(getMat(CvType.CV_8U, vals: [50]), vals:[20])
         let dst = Mat()
 
-        Imgproc.adaptiveThreshold(src: src, dst: dst, maxValue: 1, adaptiveMethod: AdaptiveThresholdTypes.ADAPTIVE_THRESH_MEAN_C.rawValue, thresholdType: ThresholdTypes.THRESH_BINARY.rawValue, blockSize: 3, C: 0)
+        Imgproc.adaptiveThreshold(src: src, dst: dst, maxValue: 1, adaptiveMethod: .ADAPTIVE_THRESH_MEAN_C, thresholdType: .THRESH_BINARY, blockSize: 3, C: 0)
 
         XCTAssertEqual(src.rows(), Core.countNonZero(src: dst))
     }
@@ -149,7 +149,7 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testBilateralFilterMatMatIntDoubleDoubleInt() throws {
-        Imgproc.bilateralFilter(src: gray255, dst: dst, d: 5, sigmaColor: 10, sigmaSpace: 5, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.bilateralFilter(src: gray255, dst: dst, d: 5, sigmaColor: 10, sigmaSpace: 5, borderType: .BORDER_REFLECT)
 
         try assertMatEqual(gray255, dst)
     }
@@ -168,14 +168,14 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testBlurMatMatSizePointInt() throws {
-        Imgproc.blur(src: gray0, dst: dst, ksize: size, anchor: anchorPoint, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.blur(src: gray0, dst: dst, ksize: size, anchor: anchorPoint, borderType: .BORDER_REFLECT)
         try assertMatEqual(gray0, dst)
     }
 
     func testBoundingRect() {
-        let points = [Point2i(x: 0, y: 0), Point2i(x: 0, y: 4), Point2i(x: 4, y: 0), Point2i(x: 4, y: 4)]
-        let p1 = Point2i(x: 1, y: 1)
-        let p2 = Point2i(x: -5, y: -2)
+        let points = [Point(x: 0, y: 0), Point(x: 0, y: 4), Point(x: 4, y: 0), Point(x: 4, y: 4)]
+        let p1 = Point(x: 1, y: 1)
+        let p2 = Point(x: -5, y: -2)
 
         let bbox = Imgproc.boundingRect(array: MatOfPoint(array: points))
 
@@ -184,7 +184,7 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testBoxFilterMatMatIntSize() throws {
-        let size = Size2i(width: 3, height: 3)
+        let size = Size(width: 3, height: 3)
         Imgproc.boxFilter(src: gray0, dst: dst, ddepth: 8, ksize: size)
         try assertMatEqual(gray0, dst)
     }
@@ -195,7 +195,7 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testBoxFilterMatMatIntSizePointBooleanInt() throws {
-        Imgproc.boxFilter(src: gray255, dst: dst, ddepth: 8, ksize: size, anchor: anchorPoint, normalize: false, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.boxFilter(src: gray255, dst: dst, ddepth: 8, ksize: size, anchor: anchorPoint, normalize: false, borderType: .BORDER_REFLECT)
         try assertMatEqual(gray255, dst)
     }
 
@@ -310,7 +310,7 @@ class ImgprocTest: OpenCVTestCase {
         H1.put(row: 0, col: 0, data: [1, 2, 3])
         H2.put(row: 0, col: 0, data: [4, 5, 6])
 
-        let distance = Imgproc.compareHist(H1: H1, H2: H2, method: Imgproc.CV_COMP_CORREL)
+        let distance = Imgproc.compareHist(H1: H1, H2: H2, method: .HISTCMP_CORREL)
 
         XCTAssertEqual(1.0, distance, accuracy: OpenCVTestCase.EPS)
     }
@@ -365,12 +365,12 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testConvexHullMatMat() {
-        let points = [Point2i(x: 20, y: 0),
-                    Point2i(x: 40, y: 0),
-                    Point2i(x: 30, y: 20),
-                    Point2i(x: 0,  y: 20),
-                    Point2i(x: 20, y: 10),
-                    Point2i(x: 30, y: 10)]
+        let points = [Point(x: 20, y: 0),
+                    Point(x: 40, y: 0),
+                    Point(x: 30, y: 20),
+                    Point(x: 0,  y: 20),
+                    Point(x: 20, y: 10),
+                    Point(x: 30, y: 10)]
 
         let hull = IntVector()
 
@@ -381,12 +381,12 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testConvexHullMatMatBooleanBoolean() {
-        let points = [Point2i(x: 2, y: 0),
-                      Point2i(x: 4, y: 0),
-                      Point2i(x: 3, y: 2),
-                      Point2i(x: 0, y: 2),
-                      Point2i(x: 2, y: 1),
-                      Point2i(x: 3, y: 1)]
+        let points = [Point(x: 2, y: 0),
+                      Point(x: 4, y: 0),
+                      Point(x: 3, y: 2),
+                      Point(x: 0, y: 2),
+                      Point(x: 2, y: 1),
+                      Point(x: 3, y: 1)]
 
         let hull = IntVector()
 
@@ -397,12 +397,12 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testConvexityDefects() throws {
-        let points = [Point2i(x: 20, y: 0),
-                      Point2i(x: 40, y: 0),
-                      Point2i(x: 30, y: 20),
-                      Point2i(x: 0,  y: 20),
-                      Point2i(x: 20, y: 10),
-                      Point2i(x: 30, y: 10)]
+        let points = [Point(x: 20, y: 0),
+                      Point(x: 40, y: 0),
+                      Point(x: 30, y: 20),
+                      Point(x: 0,  y: 20),
+                      Point(x: 20, y: 10),
+                      Point(x: 30, y: 10)]
 
         let hull = IntVector()
         Imgproc.convexHull(points: points, hull: hull)
@@ -435,7 +435,7 @@ class ImgprocTest: OpenCVTestCase {
 
         truth = Mat(rows: 4, cols: 4, type: CvType.CV_32FC(6), scalar: Scalar(0))
 
-        Imgproc.cornerEigenValsAndVecs(src: src, dst: dst, blockSize: blockSize, ksize: ksize, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.cornerEigenValsAndVecs(src: src, dst: dst, blockSize: blockSize, ksize: ksize, borderType: .BORDER_REFLECT)
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -453,7 +453,7 @@ class ImgprocTest: OpenCVTestCase {
         let blockSize:Int32 = 5
         let ksize:Int32 = 7
         let k = 0.1
-        Imgproc.cornerHarris(src: gray255, dst: dst, blockSize: blockSize, ksize: ksize, k: k, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.cornerHarris(src: gray255, dst: dst, blockSize: blockSize, ksize: ksize, k: k, borderType: .BORDER_REFLECT)
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -493,7 +493,7 @@ class ImgprocTest: OpenCVTestCase {
         let blockSize:Int32 = 3
         let ksize:Int32 = 5
 
-        Imgproc.cornerMinEigenVal(src: src, dst: dst, blockSize: blockSize, ksize: ksize, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.cornerMinEigenVal(src: src, dst: dst, blockSize: blockSize, ksize: ksize, borderType: .BORDER_REFLECT)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32FC1)
         truth!.put(row: 0, col: 0, data: [0.68055558, 0.92708349, 0.5868057])
@@ -504,13 +504,13 @@ class ImgprocTest: OpenCVTestCase {
 
     func testCornerSubPix() {
         let img = Mat(rows: OpenCVTestCase.matSize, cols: OpenCVTestCase.matSize, type: CvType.CV_8U, scalar: Scalar(128))
-        let truthPosition = Point2i(x: img.cols() / 2, y: img.rows() / 2)
+        let truthPosition = Point(x: img.cols() / 2, y: img.rows() / 2)
 
-        let r = Rect2i(point: Point2i(x: 0, y: 0), point: truthPosition)
-        Imgproc.rectangle(img: img, pt1: r.tl(), pt2: r.br(), color: Scalar(0), thickness: LineTypes.FILLED.rawValue)
+        let r = Rect(point: Point(x: 0, y: 0), point: truthPosition)
+        Imgproc.rectangle(img: img, pt1: r.tl(), pt2: r.br(), color: Scalar(0), thickness: Core.FILLED)
         let corners = MatOfPoint2f(array: [Point2f(x: Float(truthPosition.x + 1), y: Float(truthPosition.y + 1))])
-        let winSize = Size2i(width: 2, height: 2)
-        let zeroZone = Size2i(width: -1, height: -1)
+        let winSize = Size(width: 2, height: 2)
+        let zeroZone = Size(width: -1, height: -1)
         let criteria = TermCriteria(type: TermCriteria.eps, maxCount: 0, epsilon: 0.01)
 
         Imgproc.cornerSubPix(image: img, corners: corners, winSize: winSize, zeroZone: zeroZone, criteria: criteria)
@@ -534,7 +534,7 @@ class ImgprocTest: OpenCVTestCase {
         let dstLables = getMat(CvType.CV_32SC1, vals: [0])
         let labels = Mat()
 
-        Imgproc.distanceTransform(src: gray128, dst: dst, labels: labels, distanceType: Imgproc.CV_DIST_L2, maskSize: 3)
+        Imgproc.distanceTransform(src: gray128, dst: dst, labels: labels, distanceType: .DIST_L2, maskSize: .DIST_MASK_3)
 
         try assertMatEqual(dstLables, labels)
         try assertMatEqual(getMat(CvType.CV_32FC1, vals: [8192]), dst, OpenCVTestCase.EPS)
@@ -542,22 +542,22 @@ class ImgprocTest: OpenCVTestCase {
 
     func testDrawContoursMatListOfMatIntScalar() {
         let gray0clone = gray0.clone()
-        Imgproc.rectangle(img: gray0clone, pt1: Point2i(x: 1, y: 2), pt2: Point2i(x: 7, y: 8), color: Scalar(100))
+        Imgproc.rectangle(img: gray0clone, pt1: Point(x: 1, y: 2), pt2: Point(x: 7, y: 8), color: Scalar(100))
         let contours = NSMutableArray()
-        Imgproc.findContours(image: gray0clone, contours: contours, hierarchy: Mat(), mode: RetrievalModes.RETR_EXTERNAL.rawValue, method: ContourApproximationModes.CHAIN_APPROX_SIMPLE.rawValue)
+        Imgproc.findContours(image: gray0clone, contours: contours, hierarchy: Mat(), mode: .RETR_EXTERNAL, method: .CHAIN_APPROX_SIMPLE)
 
-        Imgproc.drawContours(image: gray0clone, contours: contours as! [[Point2i]], contourIdx: -1, color: Scalar(0))
+        Imgproc.drawContours(image: gray0clone, contours: contours as! [[Point]], contourIdx: -1, color: Scalar(0))
 
         XCTAssertEqual(0, Core.countNonZero(src: gray0clone))
     }
 
     func testDrawContoursMatListOfMatIntScalarInt() {
         let gray0clone = gray0.clone()
-        Imgproc.rectangle(img: gray0clone, pt1: Point2i(x: 1, y: 2), pt2: Point2i(x: 7, y: 8), color: Scalar(100))
+        Imgproc.rectangle(img: gray0clone, pt1: Point(x: 1, y: 2), pt2: Point(x: 7, y: 8), color: Scalar(100))
         let contours = NSMutableArray()
-        Imgproc.findContours(image: gray0clone, contours: contours, hierarchy: Mat(), mode: RetrievalModes.RETR_EXTERNAL.rawValue, method: ContourApproximationModes.CHAIN_APPROX_SIMPLE.rawValue)
+        Imgproc.findContours(image: gray0clone, contours: contours, hierarchy: Mat(), mode: .RETR_EXTERNAL, method: .CHAIN_APPROX_SIMPLE)
 
-        Imgproc.drawContours(image: gray0clone, contours: contours as! [[Point2i]], contourIdx: -1, color: Scalar(0), thickness: LineTypes.FILLED.rawValue)
+        Imgproc.drawContours(image: gray0clone, contours: contours as! [[Point]], contourIdx: -1, color: Scalar(0), thickness: Core.FILLED)
 
         XCTAssertEqual(0, Core.countNonZero(src: gray0clone))
     }
@@ -600,7 +600,7 @@ class ImgprocTest: OpenCVTestCase {
         let kernel = Mat()
         let sc = Scalar(3, 3)
 
-        Imgproc.erode(src: src, dst: dst, kernel: kernel, anchor: anchorPoint, iterations: 10, borderType: BorderTypes.BORDER_REFLECT.rawValue, borderValue: sc)
+        Imgproc.erode(src: src, dst: dst, kernel: kernel, anchor: anchorPoint, iterations: 10, borderType: .BORDER_REFLECT, borderValue: sc)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_8U, scalar: Scalar(8))
         try assertMatEqual(truth!, dst)
@@ -622,9 +622,9 @@ class ImgprocTest: OpenCVTestCase {
 
     func testFilter2DMatMatIntMatPointDoubleInt() throws {
         let kernel = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32F, scalar: Scalar(0))
-        let point = Point2i(x: 0, y: 0)
+        let point = Point(x: 0, y: 0)
 
-        Imgproc.filter2D(src: gray128, dst: dst, ddepth: -1, kernel: kernel, anchor: point, delta: 2, borderType: BorderTypes.BORDER_CONSTANT.rawValue)
+        Imgproc.filter2D(src: gray128, dst: dst, ddepth: -1, kernel: kernel, anchor: point, delta: 2, borderType: .BORDER_CONSTANT)
 
         try assertMatEqual(gray2, dst)
     }
@@ -634,16 +634,16 @@ class ImgprocTest: OpenCVTestCase {
         let contours = NSMutableArray()
         let hierarchy = Mat()
 
-        Imgproc.findContours(image: img, contours: contours, hierarchy: hierarchy, mode: RetrievalModes.RETR_EXTERNAL.rawValue, method: ContourApproximationModes.CHAIN_APPROX_SIMPLE.rawValue)
+        Imgproc.findContours(image: img, contours: contours, hierarchy: hierarchy, mode: .RETR_EXTERNAL, method: .CHAIN_APPROX_SIMPLE)
 
         // no contours on empty image
         XCTAssertEqual(contours.count, 0)
         XCTAssertEqual(contours.count, hierarchy.total())
 
-        Imgproc.rectangle(img: img, pt1: Point2i(x: 10, y: 20), pt2: Point2i(x: 20, y: 30), color: Scalar(100), thickness: 3, lineType: LineTypes.LINE_AA.rawValue, shift: 0)
-        Imgproc.rectangle(img: img, pt1: Point2i(x: 30, y: 35), pt2: Point2i(x: 40, y: 45), color: Scalar(200))
+        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 20), pt2: Point(x: 20, y: 30), color: Scalar(100), thickness: 3, lineType: .LINE_AA, shift: 0)
+        Imgproc.rectangle(img: img, pt1: Point(x: 30, y: 35), pt2: Point(x: 40, y: 45), color: Scalar(200))
 
-        Imgproc.findContours(image: img, contours: contours, hierarchy: hierarchy, mode: RetrievalModes.RETR_EXTERNAL.rawValue, method: ContourApproximationModes.CHAIN_APPROX_SIMPLE.rawValue)
+        Imgproc.findContours(image: img, contours: contours, hierarchy: hierarchy, mode: .RETR_EXTERNAL, method: .CHAIN_APPROX_SIMPLE)
 
         // two contours of two rectangles
         XCTAssertEqual(contours.count, 2)
@@ -657,14 +657,14 @@ class ImgprocTest: OpenCVTestCase {
         let contours2 = NSMutableArray()
         let hierarchy = Mat()
 
-        Imgproc.rectangle(img: img, pt1: Point2i(x: 10, y: 20), pt2: Point2i(x: 20, y: 30), color: Scalar(100), thickness: 3, lineType: LineTypes.LINE_AA.rawValue, shift: 0)
-        Imgproc.rectangle(img: img, pt1: Point2i(x: 30, y: 35), pt2: Point2i(x: 40, y: 45), color: Scalar(200))
+        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 20), pt2: Point(x: 20, y: 30), color: Scalar(100), thickness: 3, lineType: .LINE_AA, shift: 0)
+        Imgproc.rectangle(img: img, pt1: Point(x: 30, y: 35), pt2: Point(x: 40, y: 45), color: Scalar(200))
 
-        Imgproc.findContours(image: img, contours: contours, hierarchy: hierarchy, mode: RetrievalModes.RETR_EXTERNAL.rawValue, method: ContourApproximationModes.CHAIN_APPROX_SIMPLE.rawValue)
-        Imgproc.findContours(image: img2, contours: contours2, hierarchy: hierarchy, mode: RetrievalModes.RETR_EXTERNAL.rawValue, method: ContourApproximationModes.CHAIN_APPROX_SIMPLE.rawValue, offset: Point2i(x: 3, y: 5))
+        Imgproc.findContours(image: img, contours: contours, hierarchy: hierarchy, mode: .RETR_EXTERNAL, method: .CHAIN_APPROX_SIMPLE)
+        Imgproc.findContours(image: img2, contours: contours2, hierarchy: hierarchy, mode: .RETR_EXTERNAL, method: .CHAIN_APPROX_SIMPLE, offset: Point(x: 3, y: 5))
 
         XCTAssertEqual(contours.count, contours2.count)
-        XCTAssert(contours[0] as! [Point2i] == contours2[0] as! [Point2i])
+        XCTAssert(contours[0] as! [Point] == contours2[0] as! [Point])
     }
 
     func testFitEllipse() {
@@ -681,10 +681,9 @@ class ImgprocTest: OpenCVTestCase {
         points.put(row: 0, col: 0, data: [0, 0, 2, 3, 3, 4, 5, 8])
 
         let linePoints = Mat(rows: 4, cols: 1, type: CvType.CV_32FC1)
-        linePoints.put(row: 0, col: 0, data: [0.53196341, 0.84676737, 2.496531, 3.7467217])
+        linePoints.put(row: 0, col: 0, data: [0.53198653, 0.84675282, 2.5, 3.75])
 
-        Imgproc.fitLine(points: points, line: dst, distType: Imgproc.CV_DIST_L12, param: 0, reps: 0.01, aeps: 0.01)
-        print(dst.dump())
+        Imgproc.fitLine(points: points, line: dst, distType: .DIST_L12, param: 0, reps: 0.01, aeps: 0.01)
         
         try assertMatEqual(linePoints, dst, OpenCVTestCase.EPS)
     }
@@ -692,24 +691,24 @@ class ImgprocTest: OpenCVTestCase {
     func testFloodFillMatMatPointScalar() throws {
         let mask = Mat(rows: OpenCVTestCase.matSize + 2, cols: OpenCVTestCase.matSize + 2, type: CvType.CV_8U, scalar: Scalar(0))
         let img = gray0
-        Imgproc.circle(img: mask, center: Point2i(x: OpenCVTestCase.matSize / 2 + 1, y: OpenCVTestCase.matSize / 2 + 1), radius: 3, color: Scalar(2))
+        Imgproc.circle(img: mask, center: Point(x: OpenCVTestCase.matSize / 2 + 1, y: OpenCVTestCase.matSize / 2 + 1), radius: 3, color: Scalar(2))
 
-        let retval = Imgproc.floodFill(image: img, mask: mask, seedPoint: Point2i(x: OpenCVTestCase.matSize / 2, y: OpenCVTestCase.matSize / 2), newVal: Scalar(1))
+        let retval = Imgproc.floodFill(image: img, mask: mask, seedPoint: Point(x: OpenCVTestCase.matSize / 2, y: OpenCVTestCase.matSize / 2), newVal: Scalar(1))
 
         XCTAssertEqual(Core.countNonZero(src: img), retval)
-        Imgproc.circle(img: mask, center: Point2i(x: OpenCVTestCase.matSize / 2 + 1, y: OpenCVTestCase.matSize / 2 + 1), radius: 3, color: Scalar(0))
+        Imgproc.circle(img: mask, center: Point(x: OpenCVTestCase.matSize / 2 + 1, y: OpenCVTestCase.matSize / 2 + 1), radius: 3, color: Scalar(0))
         XCTAssertEqual(retval + 4 * (OpenCVTestCase.matSize + 1), Core.countNonZero(src: mask))
         try assertMatEqual(mask.submat(rowStart: 1, rowEnd: OpenCVTestCase.matSize + 1, colStart: 1, colEnd: OpenCVTestCase.matSize + 1), img)
     }
 
     func testFloodFillMatMatPointScalar_WithoutMask() {
         let img = gray0
-        Imgproc.circle(img: img, center: Point2i(x: OpenCVTestCase.matSize / 2, y: OpenCVTestCase.matSize / 2), radius: 3, color: Scalar(2))
+        Imgproc.circle(img: img, center: Point(x: OpenCVTestCase.matSize / 2, y: OpenCVTestCase.matSize / 2), radius: 3, color: Scalar(2))
 
         // TODO: ideally we should pass null instead of "new Mat()"
-        let retval = Imgproc.floodFill(image: img, mask: Mat(), seedPoint: Point2i(x: OpenCVTestCase.matSize / 2, y: OpenCVTestCase.matSize / 2), newVal: Scalar(1))
+        let retval = Imgproc.floodFill(image: img, mask: Mat(), seedPoint: Point(x: OpenCVTestCase.matSize / 2, y: OpenCVTestCase.matSize / 2), newVal: Scalar(1))
 
-        Imgproc.circle(img: img, center: Point2i(x: OpenCVTestCase.matSize / 2, y: OpenCVTestCase.matSize / 2), radius: 3, color: Scalar(0))
+        Imgproc.circle(img: img, center: Point(x: OpenCVTestCase.matSize / 2, y: OpenCVTestCase.matSize / 2), radius: 3, color: Scalar(0))
         XCTAssertEqual(Core.countNonZero(src: img), retval)
     }
 
@@ -728,7 +727,7 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testGaussianBlurMatMatSizeDoubleDoubleInt() throws {
-        Imgproc.GaussianBlur(src: gray2, dst: dst, ksize: size, sigmaX: 1, sigmaY: 3, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.GaussianBlur(src: gray2, dst: dst, ksize: size, sigmaX: 1, sigmaY: 3, borderType: .BORDER_REFLECT)
 
         try assertMatEqual(gray2, dst)
     }
@@ -799,7 +798,7 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testGetRectSubPixMatSizePointMat() throws {
-        let size = Size2i(width: 3, height: 3)
+        let size = Size(width: 3, height: 3)
         let center = Point2f(x: Float(gray255.cols() / 2), y: Float(gray255.rows() / 2))
 
         Imgproc.getRectSubPix(image: gray255, patchSize: size, center: center, patch: dst)
@@ -810,7 +809,7 @@ class ImgprocTest: OpenCVTestCase {
 
     func testGetRectSubPixMatSizePointMatInt() throws {
         let src = Mat(rows: 10, cols: 10, type: CvType.CV_32F, scalar: Scalar(2))
-        let patchSize = Size2i(width: 5, height: 5)
+        let patchSize = Size(width: 5, height: 5)
         let center = Point2f(x: Float(src.cols() / 2), y: Float(src.rows() / 2))
 
         Imgproc.getRectSubPix(image: src, patchSize: patchSize, center: center, patch: dst)
@@ -832,14 +831,14 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testGetStructuringElementIntSize() throws {
-        dst = Imgproc.getStructuringElement(shape: MorphShapes.MORPH_RECT.rawValue, ksize: size)
+        dst = Imgproc.getStructuringElement(shape: .MORPH_RECT, ksize: size)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_8UC1, scalar: Scalar(1))
         try assertMatEqual(truth!, dst)
     }
 
     func testGetStructuringElementIntSizePoint() throws {
-        dst = Imgproc.getStructuringElement(shape: MorphShapes.MORPH_CROSS.rawValue, ksize: size, anchor: anchorPoint)
+        dst = Imgproc.getStructuringElement(shape: .MORPH_CROSS, ksize: size, anchor: anchorPoint)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_8UC1)
         truth!.put(row: 0, col: 0, data: [0, 0, 1])
@@ -850,7 +849,7 @@ class ImgprocTest: OpenCVTestCase {
 
     func testGoodFeaturesToTrackMatListOfPointIntDoubleDouble() {
         let src = gray0
-        Imgproc.rectangle(img: src, pt1: Point2i(x: 2, y: 2), pt2: Point2i(x: 8, y: 8), color: Scalar(100), thickness: -1)
+        Imgproc.rectangle(img: src, pt1: Point(x: 2, y: 2), pt2: Point(x: 8, y: 8), color: Scalar(100), thickness: -1)
         let lp = NSMutableArray()
 
         Imgproc.goodFeaturesToTrack(image: src, corners: lp, maxCorners: 100, qualityLevel: 0.01, minDistance: 3)
@@ -860,7 +859,7 @@ class ImgprocTest: OpenCVTestCase {
 
     func testGoodFeaturesToTrackMatListOfPointIntDoubleDoubleMatIntBooleanDouble() {
         let src = gray0
-        Imgproc.rectangle(img: src, pt1: Point2i(x: 2, y: 2), pt2: Point2i(x: 8, y: 8), color: Scalar(100), thickness: -1)
+        Imgproc.rectangle(img: src, pt1: Point(x: 2, y: 2), pt2: Point(x: 8, y: 8), color: Scalar(100), thickness: -1)
         let lp = NSMutableArray()
 
         Imgproc.goodFeaturesToTrack(image: src, corners: lp, maxCorners: 100, qualityLevel: 0.01, minDistance: 3, mask: gray1, blockSize: 4, gradientSize: 3, useHarrisDetector: true, k: 0)
@@ -873,7 +872,7 @@ class ImgprocTest: OpenCVTestCase {
         let img = Mat(rows: sz, cols: sz, type: CvType.CV_8U, scalar: Scalar(128))
         let circles = Mat()
 
-        Imgproc.HoughCircles(image: img, circles: circles, method: Imgproc.CV_HOUGH_GRADIENT, dp: 2.0, minDist: Double(img.rows() / 4))
+        Imgproc.HoughCircles(image: img, circles: circles, method: .HOUGH_GRADIENT, dp: 2.0, minDist: Double(img.rows() / 4))
 
         XCTAssertEqual(0, circles.cols())
     }
@@ -883,11 +882,11 @@ class ImgprocTest: OpenCVTestCase {
         let img = Mat(rows: sz, cols: sz, type: CvType.CV_8U, scalar: Scalar(128))
         let circles = Mat()
 
-        let center = Point2i(x: img.cols() / 2, y: img.rows() / 2)
+        let center = Point(x: img.cols() / 2, y: img.rows() / 2)
         let radius = min(img.cols() / 4, img.rows() / 4)
         Imgproc.circle(img: img, center: center, radius: radius, color: colorBlack, thickness: 3)
 
-        Imgproc.HoughCircles(image: img, circles: circles, method: Imgproc.CV_HOUGH_GRADIENT, dp: 2.0, minDist: Double(img.rows() / 4))
+        Imgproc.HoughCircles(image: img, circles: circles, method: .HOUGH_GRADIENT, dp: 2.0, minDist: Double(img.rows() / 4))
 
         XCTAssertEqual(1, circles.cols())
     }
@@ -895,8 +894,8 @@ class ImgprocTest: OpenCVTestCase {
     func testHoughLinesMatMatDoubleDoubleInt() {
         let sz:Int32 = 512
         let img = Mat(rows: sz, cols: sz, type: CvType.CV_8U, scalar: Scalar(0))
-        let point1 = Point2i(x: 50, y: 50)
-        let point2 = Point2i(x: img.cols() / 2, y: img.rows() / 2)
+        let point1 = Point(x: 50, y: 50)
+        let point2 = Point(x: img.cols() / 2, y: img.rows() / 2)
         Imgproc.line(img: img, pt1: point1, pt2: point2, color: colorWhite, thickness: 1)
         let lines = Mat()
 
@@ -908,10 +907,10 @@ class ImgprocTest: OpenCVTestCase {
     func testHoughLinesPMatMatDoubleDoubleInt() {
         let sz:Int32 = 512
         let img = Mat(rows: sz, cols: sz, type: CvType.CV_8U, scalar: Scalar(0))
-        let point1 = Point2i(x: 0, y: 0)
-        let point2 = Point2i(x: sz, y: sz)
-        let point3 = Point2i(x: sz, y: 0)
-        let point4 = Point2i(x: 2*sz/3, y: sz/3)
+        let point1 = Point(x: 0, y: 0)
+        let point2 = Point(x: sz, y: sz)
+        let point3 = Point(x: sz, y: 0)
+        let point4 = Point(x: 2*sz/3, y: sz/3)
         Imgproc.line(img: img, pt1: point1, pt2: point2, color: Scalar.all(255), thickness: 1)
         Imgproc.line(img: img, pt1: point3, pt2: point4, color: Scalar.all(255), thickness: 1)
         let lines = Mat()
@@ -1051,11 +1050,11 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testIsContourConvex() {
-        let contour1 = [Point2i(x: 0, y: 0), Point2i(x: 10, y: 0), Point2i(x: 10, y: 10), Point2i(x: 5, y: 4)]
+        let contour1 = [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 10), Point(x: 5, y: 4)]
 
         XCTAssertFalse(Imgproc.isContourConvex(contour: contour1))
 
-        let contour2 = [Point2i(x: 0, y: 0), Point2i(x: 10, y: 0), Point2i(x: 10, y: 10), Point2i(x: 5, y: 6)]
+        let contour2 = [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 10), Point(x: 5, y: 6)]
 
         XCTAssert(Imgproc.isContourConvex(contour: contour2))
     }
@@ -1080,7 +1079,7 @@ class ImgprocTest: OpenCVTestCase {
     func testLaplacianMatMatIntIntDoubleDoubleInt() throws {
         let src = Mat(rows: 3, cols: 3, type: CvType.CV_32F, scalar: Scalar(2))
 
-        Imgproc.Laplacian(src: src, dst: dst, ddepth: CvType.CV_32F, ksize: 1, scale: 2, delta: OpenCVTestCase.EPS, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.Laplacian(src: src, dst: dst, ddepth: CvType.CV_32F, ksize: 1, scale: 2, delta: OpenCVTestCase.EPS, borderType: .BORDER_REFLECT)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F, scalar: Scalar(0.00099945068))
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
@@ -1092,7 +1091,7 @@ class ImgprocTest: OpenCVTestCase {
         contour1.put(row: 0, col: 0, data: [1, 1, 5, 1, 4, 3, 6, 2])
         contour2.put(row: 0, col: 0, data: [1, 1, 6, 1, 4, 1, 2, 5])
 
-        let distance = Imgproc.matchShapes(contour1: contour1, contour2: contour2, method: Imgproc.CV_CONTOURS_MATCH_I1, parameter: 1)
+        let distance = Imgproc.matchShapes(contour1: contour1, contour2: contour2, method: .CONTOURS_MATCH_I1, parameter: 1)
 
         XCTAssertEqual(2.81109697365334, distance, accuracy:OpenCVTestCase.EPS)
     }
@@ -1103,12 +1102,12 @@ class ImgprocTest: OpenCVTestCase {
         image.put(row: 0, col: 0, data: [1, 2, 3, 4])
         templ.put(row: 0, col: 0, data: [5, 6, 7, 8])
 
-        Imgproc.matchTemplate(image: image, templ: templ, result: dst, method: TemplateMatchModes.TM_CCORR.rawValue)
+        Imgproc.matchTemplate(image: image, templ: templ, result: dst, method: .TM_CCORR)
 
         truth = Mat(rows: 1, cols: 1, type: CvType.CV_32F, scalar: Scalar(70))
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
 
-        Imgproc.matchTemplate(image: gray255, templ: gray0, result: dst, method: TemplateMatchModes.TM_CCORR.rawValue)
+        Imgproc.matchTemplate(image: gray255, templ: gray0, result: dst, method: .TM_CCORR)
 
         truth = Mat(rows: 1, cols: 1, type: CvType.CV_32F, scalar: Scalar(0))
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
@@ -1145,7 +1144,7 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testMorphologyExMatMatIntMat() throws {
-        Imgproc.morphologyEx(src: gray255, dst: dst, op: MorphTypes.MORPH_GRADIENT.rawValue, kernel: gray0)
+        Imgproc.morphologyEx(src: gray255, dst: dst, op: MorphTypes.MORPH_GRADIENT, kernel: gray0)
 
         try assertMatEqual(gray0, dst)
     }
@@ -1154,9 +1153,9 @@ class ImgprocTest: OpenCVTestCase {
         let src = Mat.eye(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U)
 
         let kernel = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U, scalar: Scalar(0))
-        let point = Point2i(x: 0, y: 0)
+        let point = Point(x: 0, y: 0)
 
-        Imgproc.morphologyEx(src: src, dst: dst, op: MorphTypes.MORPH_CLOSE.rawValue, kernel: kernel, anchor: point, iterations: 10)
+        Imgproc.morphologyEx(src: src, dst: dst, op: MorphTypes.MORPH_CLOSE, kernel: kernel, anchor: point, iterations: 10)
 
         truth = Mat.eye(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U)
         try assertMatEqual(truth!, dst)
@@ -1169,10 +1168,10 @@ class ImgprocTest: OpenCVTestCase {
         src.put(row: 1, col: 0, data: [2, 1])
 
         let kernel = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U, scalar: Scalar(1))
-        let point = Point2i(x: 1, y: 1)
+        let point = Point(x: 1, y: 1)
         let sc = Scalar(3, 3)
 
-        Imgproc.morphologyEx(src: src, dst: dst, op: MorphTypes.MORPH_TOPHAT.rawValue, kernel: kernel, anchor: point, iterations: 10, borderType: BorderTypes.BORDER_REFLECT.rawValue, borderValue: sc)
+        Imgproc.morphologyEx(src: src, dst: dst, op: MorphTypes.MORPH_TOPHAT, kernel: kernel, anchor: point, iterations: 10, borderType: .BORDER_REFLECT, borderValue: sc)
         truth = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U)
         truth!.put(row: 0, col: 0, data: [1, 0])
         truth!.put(row: 1, col: 0, data: [1, 0])
@@ -1202,7 +1201,7 @@ class ImgprocTest: OpenCVTestCase {
         let src = Mat(rows: 4, cols: 4, type: CvType.CV_32F, scalar: Scalar(1))
         let ksize:Int32 = 3
 
-        Imgproc.preCornerDetect(src: src, dst: dst, ksize: ksize, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.preCornerDetect(src: src, dst: dst, ksize: ksize, borderType: .BORDER_REFLECT)
 
         truth = Mat(rows: 4, cols: 4, type: CvType.CV_32F, scalar: Scalar(0))
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
@@ -1229,7 +1228,7 @@ class ImgprocTest: OpenCVTestCase {
         src.put(row: 1, col: 0, data: [3, 2, 6, 8])
         src.put(row: 2, col: 0, data: [4, 6, 8, 10])
         src.put(row: 3, col: 0, data: [12, 32, 6, 18])
-        let dstSize = Size2i(width: 2, height: 2)
+        let dstSize = Size(width: 2, height: 2)
 
         Imgproc.pyrDown(src: src, dst: dst, dstsize: dstSize)
 
@@ -1290,13 +1289,13 @@ class ImgprocTest: OpenCVTestCase {
 
         truth = Mat(rows: 1, cols: 3, type: CvType.CV_32F, scalar: Scalar(2))
 
-        Imgproc.remap(src: src, dst: dst, map1: map1, map2: map2, interpolation: InterpolationFlags.INTER_LINEAR.rawValue, borderMode: BorderTypes.BORDER_REFLECT.rawValue, borderValue: sc)
+        Imgproc.remap(src: src, dst: dst, map1: map1, map2: map2, interpolation: InterpolationFlags.INTER_LINEAR.rawValue, borderMode: .BORDER_REFLECT, borderValue: sc)
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
     func testResizeMatMatSize() throws {
         let src = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8UC1, scalar: Scalar(1))
-        let dsize = Size2i(width: 1, height: 1)
+        let dsize = Size(width: 1, height: 1)
 
         Imgproc.resize(src: src, dst: dst, dsize: dsize, fx: 0, fy: 0, interpolation: InterpolationFlags.INTER_LINEAR_EXACT.rawValue)
 
@@ -1305,7 +1304,7 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testResizeMatMatSizeDoubleDoubleInt() throws {
-        Imgproc.resize(src: gray255, dst: dst, dsize: Size2i(width: 2, height: 2), fx: 0, fy: 0, interpolation: InterpolationFlags.INTER_AREA.rawValue)
+        Imgproc.resize(src: gray255, dst: dst, dsize: Size(width: 2, height: 2), fx: 0, fy: 0, interpolation: InterpolationFlags.INTER_AREA.rawValue)
 
         truth = Mat(rows: 2, cols: 2, type: CvType.CV_8UC1, scalar: Scalar(255))
         try assertMatEqual(truth!, dst)
@@ -1332,7 +1331,7 @@ class ImgprocTest: OpenCVTestCase {
     func testScharrMatMatIntIntIntDoubleDoubleInt() throws {
         let src = Mat.eye(rows: 3, cols: 3, type: CvType.CV_32F)
 
-        Imgproc.Scharr(src: src, dst: dst, ddepth: CvType.CV_32F, dx: 1, dy: 0, scale: 1.5, delta: 0, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.Scharr(src: src, dst: dst, ddepth: CvType.CV_32F, dx: 1, dy: 0, scale: 1.5, delta: 0, borderType: .BORDER_REFLECT)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
         truth!.put(row: 0, col: 0, data: [-15, -19.5, -4.5])
@@ -1374,7 +1373,7 @@ class ImgprocTest: OpenCVTestCase {
         let kernelY = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
         kernelY.put(row: 0, col: 0, data: [1, 1, 1])
 
-        Imgproc.sepFilter2D(src: gray0, dst: dst, ddepth: CvType.CV_32F, kernelX: kernelX, kernelY: kernelY, anchor: anchorPoint, delta: OpenCVTestCase.weakEPS, borderType: BorderTypes.BORDER_REFLECT.rawValue)
+        Imgproc.sepFilter2D(src: gray0, dst: dst, ddepth: CvType.CV_32F, kernelX: kernelX, kernelY: kernelY, anchor: anchorPoint, delta: OpenCVTestCase.weakEPS, borderType: .BORDER_REFLECT)
 
         truth = Mat(rows: 10, cols: 10, type: CvType.CV_32F, scalar: Scalar(OpenCVTestCase.weakEPS))
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
@@ -1397,8 +1396,7 @@ class ImgprocTest: OpenCVTestCase {
         src.put(row: 1, col: 0, data: [6, 4, 3])
         src.put(row: 2, col: 0, data: [1, 0, 2])
 
-        Imgproc.Sobel(src: src, dst: dst, ddepth: CvType.CV_32F, dx: 1, dy: 0, ksize: 3, scale: 2, delta: 0, borderType: BorderTypes.BORDER_REPLICATE.rawValue)
-        print(dst.dump())
+        Imgproc.Sobel(src: src, dst: dst, ddepth: CvType.CV_32F, dx: 1, dy: 0, ksize: 3, scale: 2, delta: 0, borderType: .BORDER_REPLICATE)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
         truth!.put(row: 0, col: 0, data: [-16, -12, 4])
@@ -1408,13 +1406,13 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testThreshold() throws {
-        Imgproc.threshold(src: makeMask(gray0.clone(), vals: [10]), dst: dst, thresh: 5, maxval: 255, type: ThresholdTypes.THRESH_TRUNC.rawValue)
+        Imgproc.threshold(src: makeMask(gray0.clone(), vals: [10]), dst: dst, thresh: 5, maxval: 255, type: .THRESH_TRUNC)
         try assertMatEqual(makeMask(gray0.clone(), vals: [5]), dst)
 
-        Imgproc.threshold(src: makeMask(gray2.clone(), vals: [10]), dst: dst, thresh: 1, maxval: 255, type: ThresholdTypes.THRESH_BINARY.rawValue)
+        Imgproc.threshold(src: makeMask(gray2.clone(), vals: [10]), dst: dst, thresh: 1, maxval: 255, type: .THRESH_BINARY)
         try assertMatEqual(gray255, dst)
 
-        Imgproc.threshold(src: makeMask(gray2.clone(), vals: [10]), dst: dst, thresh: 3, maxval: 255, type: ThresholdTypes.THRESH_BINARY_INV.rawValue)
+        Imgproc.threshold(src: makeMask(gray2.clone(), vals: [10]), dst: dst, thresh: 3, maxval: 255, type: .THRESH_BINARY_INV)
         try assertMatEqual(makeMask(gray255.clone(), vals: [0]), dst)
     }
 
@@ -1427,7 +1425,7 @@ class ImgprocTest: OpenCVTestCase {
         M.put(row: 0, col: 0, data: [1, 0, 1])
         M.put(row: 1, col: 0, data: [0, 1, 1])
 
-        Imgproc.warpAffine(src: src, dst: dst, M: M, dsize: Size2i(width: 3, height: 3))
+        Imgproc.warpAffine(src: src, dst: dst, M: M, dsize: Size(width: 3, height: 3))
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
         truth!.put(row: 0, col: 0, data: [0, 0, 0])
@@ -1445,7 +1443,7 @@ class ImgprocTest: OpenCVTestCase {
         M.put(row: 0, col: 0, data: [1, 0, 0])
         M.put(row: 1, col: 0, data: [0, 0, 1])
 
-        Imgproc.warpAffine(src: src, dst: dst, M: M, dsize: Size2i(width: 2, height: 2), flags: InterpolationFlags.WARP_INVERSE_MAP.rawValue)
+        Imgproc.warpAffine(src: src, dst: dst, M: M, dsize: Size(width: 2, height: 2), flags: InterpolationFlags.WARP_INVERSE_MAP.rawValue)
 
         truth = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
         truth!.put(row: 0, col: 0, data: [6, 4])
@@ -1463,7 +1461,7 @@ class ImgprocTest: OpenCVTestCase {
         M.put(row: 1, col: 0, data: [0, 1, 1])
         M.put(row: 2, col: 0, data: [0, 0, 1])
 
-        Imgproc.warpPerspective(src: src, dst: dst, M: M, dsize: Size2i(width: 3, height: 3))
+        Imgproc.warpPerspective(src: src, dst: dst, M: M, dsize: Size(width: 3, height: 3))
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
         truth!.put(row: 0, col: 0, data: [0, 0, 0])
@@ -1492,8 +1490,8 @@ class ImgprocTest: OpenCVTestCase {
         let thickness:Int32 = 3
         let baseLine = IntOut()
 
-        Imgproc.getTextSize(text, fontFace: HersheyFonts.FONT_HERSHEY_SCRIPT_SIMPLEX.rawValue, fontScale: Double(fontScale), thickness: thickness, baseLine: IntOut())
-        let res = Imgproc.getTextSize(text, fontFace: HersheyFonts.FONT_HERSHEY_SCRIPT_SIMPLEX.rawValue, fontScale: Double(fontScale), thickness: thickness, baseLine: baseLine)
+        Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: IntOut())
+        let res = Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: baseLine)
 
         XCTAssertEqual(431, res.width)
         XCTAssertEqual(44, res.height)
@@ -1502,7 +1500,7 @@ class ImgprocTest: OpenCVTestCase {
 
     func testCircleMatPointIntScalar() {
         let gray0clone = gray0.clone()
-        let center = Point2i(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
+        let center = Point(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
         let radius = min(gray0clone.cols() / 4, gray0clone.rows() / 4)
         let color = Scalar(128)
 
@@ -1513,47 +1511,47 @@ class ImgprocTest: OpenCVTestCase {
 
     func testCircleMatPointIntScalarInt() {
         let gray0clone = gray0.clone()
-        let center = Point2i(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
+        let center = Point(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
         let radius = min(gray0clone.cols() / 4, gray0clone.rows() / 4)
         let color = Scalar(128)
 
-        Imgproc.circle(img: gray0clone, center: center, radius: radius, color: color, thickness: LineTypes.FILLED.rawValue)
+        Imgproc.circle(img: gray0clone, center: center, radius: radius, color: color, thickness: Core.FILLED)
 
         XCTAssert(0 != Core.countNonZero(src: gray0clone))
     }
 
     func testCircleMatPointIntScalarIntIntInt() {
         let gray0clone = gray0.clone()
-        let center = Point2i(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
-        let center2 = Point2i(x: gray0clone.cols(), y: gray0clone.rows())
+        let center = Point(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
+        let center2 = Point(x: gray0clone.cols(), y: gray0clone.rows())
         let radius = min(gray0clone.cols() / 4, gray0clone.rows() / 4)
         let color128 = Scalar(128)
         let color0 = Scalar(0)
 
-        Imgproc.circle(img: gray0clone, center: center2, radius: radius * 2, color: color128, thickness: 2, lineType: LineTypes.LINE_4.rawValue, shift: 1)
+        Imgproc.circle(img: gray0clone, center: center2, radius: radius * 2, color: color128, thickness: 2, lineType: .LINE_4, shift: 1)
         XCTAssertFalse(0 == Core.countNonZero(src: gray0clone))
 
-        Imgproc.circle(img: gray0clone, center: center, radius: radius, color: color0, thickness: 2, lineType: LineTypes.LINE_4.rawValue, shift: 0)
+        Imgproc.circle(img: gray0clone, center: center, radius: radius, color: color0, thickness: 2, lineType: .LINE_4, shift: 0)
 
         XCTAssert(0 == Core.countNonZero(src: gray0clone))
     }
 
     func testClipLine() {
-        let r = Rect2i(x: 10, y: 10, width: 10, height: 10)
-        var pt1 = Point2i(x: 5, y: 15)
-        var pt2 = Point2i(x: 25, y: 15)
+        let r = Rect(x: 10, y: 10, width: 10, height: 10)
+        var pt1 = Point(x: 5, y: 15)
+        var pt2 = Point(x: 25, y: 15)
 
         XCTAssert(Imgproc.clipLine(imgRect: r, pt1: pt1, pt2: pt2))
 
-        var pt1Clipped = Point2i(x: 10, y: 15)
-        var pt2Clipped = Point2i(x: 19, y: 15)
+        var pt1Clipped = Point(x: 10, y: 15)
+        var pt2Clipped = Point(x: 19, y: 15)
         XCTAssertEqual(pt1Clipped, pt1)
         XCTAssertEqual(pt2Clipped, pt2)
 
-        pt1 = Point2i(x: 5, y: 5)
-        pt2 = Point2i(x: 25, y: 5)
-        pt1Clipped = Point2i(x: 5, y: 5)
-        pt2Clipped = Point2i(x: 25, y: 5)
+        pt1 = Point(x: 5, y: 5)
+        pt2 = Point(x: 25, y: 5)
+        pt1Clipped = Point(x: 5, y: 5)
+        pt2Clipped = Point(x: 25, y: 5)
 
         XCTAssertFalse(Imgproc.clipLine(imgRect: r, pt1: pt1, pt2: pt2))
 
@@ -1562,8 +1560,8 @@ class ImgprocTest: OpenCVTestCase {
     }
 
     func testEllipse2Poly() {
-        let center = Point2i(x: 4, y: 4)
-        let axes = Size2i(width: 2, height: 2)
+        let center = Point(x: 4, y: 4)
+        let axes = Size(width: 2, height: 2)
         let angle:Int32 = 30
         let arcStart:Int32 = 30
         let arcEnd:Int32 = 60
@@ -1572,14 +1570,14 @@ class ImgprocTest: OpenCVTestCase {
 
         Imgproc.ellipse2Poly(center: center, axes: axes, angle: angle, arcStart: arcStart, arcEnd: arcEnd, delta: delta, pts: pts)
 
-        let truth = [Point2i(x: 5, y: 6), Point2i(x: 4, y: 6)]
-        XCTAssert(truth == pts as! [Point2i])
+        let truth = [Point(x: 5, y: 6), Point(x: 4, y: 6)]
+        XCTAssert(truth == pts as! [Point])
     }
 
     func testEllipseMatPointSizeDoubleDoubleDoubleScalar() {
         let gray0clone = gray0.clone()
-        let center = Point2i(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
-        let axes = Size2i(width: 2, height: 2)
+        let center = Point(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
+        let axes = Size(width: 2, height: 2)
         let angle = 30.0, startAngle = 60.0, endAngle = 90.0
 
         Imgproc.ellipse(img: gray0clone, center: center, axes: axes, angle: angle, startAngle: startAngle, endAngle: endAngle, color: colorWhite)
@@ -1589,28 +1587,28 @@ class ImgprocTest: OpenCVTestCase {
 
     func testEllipseMatPointSizeDoubleDoubleDoubleScalarInt() {
         let gray0clone = gray0.clone()
-        let center = Point2i(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
-        let axes = Size2i(width: 2, height: 2)
+        let center = Point(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
+        let axes = Size(width: 2, height: 2)
         let angle = 30.0, startAngle = 60.0, endAngle = 90.0
 
-        Imgproc.ellipse(img: gray0clone, center: center, axes: axes, angle: angle, startAngle: startAngle, endAngle: endAngle, color: colorWhite, thickness: LineTypes.FILLED.rawValue)
+        Imgproc.ellipse(img: gray0clone, center: center, axes: axes, angle: angle, startAngle: startAngle, endAngle: endAngle, color: colorWhite, thickness: Core.FILLED)
 
         XCTAssert(0 != Core.countNonZero(src: gray0clone))
     }
 
     func testEllipseMatPointSizeDoubleDoubleDoubleScalarIntIntInt() {
         let gray0clone = gray0.clone()
-        let center = Point2i(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
-        let axes = Size2i(width: 2, height: 2)
-        let center2 = Point2i(x: gray0clone.cols(), y: gray0clone.rows())
-        let axes2 = Size2i(width: 4, height: 4)
+        let center = Point(x: gray0clone.cols() / 2, y: gray0clone.rows() / 2)
+        let axes = Size(width: 2, height: 2)
+        let center2 = Point(x: gray0clone.cols(), y: gray0clone.rows())
+        let axes2 = Size(width: 4, height: 4)
         let angle = 30.0, startAngle = 0.0, endAngle = 30.0
 
-        Imgproc.ellipse(img: gray0clone, center: center, axes: axes, angle: angle, startAngle: startAngle, endAngle: endAngle, color: colorWhite, thickness: LineTypes.FILLED.rawValue, lineType: LineTypes.LINE_4.rawValue, shift: 0)
+        Imgproc.ellipse(img: gray0clone, center: center, axes: axes, angle: angle, startAngle: startAngle, endAngle: endAngle, color: colorWhite, thickness: Core.FILLED, lineType: .LINE_4, shift: 0)
 
         XCTAssert(0 != Core.countNonZero(src: gray0clone))
 
-        Imgproc.ellipse(img: gray0clone, center: center2, axes: axes2, angle: angle, startAngle: startAngle, endAngle: endAngle, color: colorBlack, thickness: LineTypes.FILLED.rawValue, lineType: LineTypes.LINE_4.rawValue, shift: 1)
+        Imgproc.ellipse(img: gray0clone, center: center2, axes: axes2, angle: angle, startAngle: startAngle, endAngle: endAngle, color: colorBlack, thickness: Core.FILLED, lineType: .LINE_4, shift: 1)
 
         XCTAssertEqual(0, Core.countNonZero(src: gray0clone))
     }
@@ -1645,7 +1643,7 @@ class ImgprocTest: OpenCVTestCase {
         let size = Size2f(width: Float(OpenCVTestCase.matSize / 4), height: Float(OpenCVTestCase.matSize / 2))
         let box = RotatedRect(center: center, size: size, angle: 45)
 
-        Imgproc.ellipse(img: gray0clone, box: box, color: Scalar(1), thickness: LineTypes.FILLED.rawValue)
+        Imgproc.ellipse(img: gray0clone, box: box, color: Scalar(1), thickness: Core.FILLED)
         Imgproc.ellipse(img: gray0clone, box: box, color: Scalar(0))
 
         XCTAssert(0 < Core.countNonZero(src: gray0clone))
@@ -1657,15 +1655,15 @@ class ImgprocTest: OpenCVTestCase {
         let size = Size2f(width: 2, height: Float(OpenCVTestCase.matSize * 2 / 3))
         let box = RotatedRect(center: center, size: size, angle: 20)
 
-        Imgproc.ellipse(img: gray0clone, box: box, color: Scalar(9), thickness: 1, lineType: LineTypes.LINE_AA.rawValue)
-        Imgproc.ellipse(img: gray0clone, box: box, color: Scalar(0), thickness: 1, lineType: LineTypes.LINE_4.rawValue)
+        Imgproc.ellipse(img: gray0clone, box: box, color: Scalar(9), thickness: 1, lineType: .LINE_AA)
+        Imgproc.ellipse(img: gray0clone, box: box, color: Scalar(0), thickness: 1, lineType: .LINE_4)
 
         XCTAssert(0 < Core.countNonZero(src: gray0clone))
     }
 
     func testPolylinesMatListOfListOfPointBooleanScalar() {
         let img = gray0.clone()
-        let polyline = [[Point2i(x: 1, y: 1), Point2i(x: 7, y: 1), Point2i(x: 7, y: 6), Point2i(x: 1, y: 6)]]
+        let polyline = [[Point(x: 1, y: 1), Point(x: 7, y: 1), Point(x: 7, y: 6), Point(x: 1, y: 6)]]
 
         Imgproc.polylines(img: img, pts: polyline, isClosed: true, color: Scalar(100))
 
@@ -1678,7 +1676,7 @@ class ImgprocTest: OpenCVTestCase {
 
     func testPolylinesMatListOfListOfPointBooleanScalarInt() {
         let img = gray0.clone()
-        let polyline = [[Point2i(x: 1, y: 1), Point2i(x: 7, y: 1), Point2i(x: 7, y: 6), Point2i(x: 1, y: 6)]]
+        let polyline = [[Point(x: 1, y: 1), Point(x: 7, y: 1), Point(x: 7, y: 6), Point(x: 1, y: 6)]]
 
         Imgproc.polylines(img: img, pts: polyline, isClosed: true, color: Scalar(100), thickness: 2)
 
@@ -1687,58 +1685,58 @@ class ImgprocTest: OpenCVTestCase {
 
     func testPolylinesMatListOfListOfPointBooleanScalarIntIntInt() {
         let img = gray0.clone()
-        let polyline1 = [[Point2i(x: 1, y: 1), Point2i(x: 7, y: 1), Point2i(x: 7, y: 6), Point2i(x: 1, y: 6)]]
-        let polyline2 = [[Point2i(x: 2, y: 2), Point2i(x: 14, y: 2), Point2i(x: 14, y: 12), Point2i(x: 2, y: 12)]]
+        let polyline1 = [[Point(x: 1, y: 1), Point(x: 7, y: 1), Point(x: 7, y: 6), Point(x: 1, y: 6)]]
+        let polyline2 = [[Point(x: 2, y: 2), Point(x: 14, y: 2), Point(x: 14, y: 12), Point(x: 2, y: 12)]]
 
-        Imgproc.polylines(img: img, pts: polyline1, isClosed: true, color: Scalar(100), thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 0)
+        Imgproc.polylines(img: img, pts: polyline1, isClosed: true, color: Scalar(100), thickness: 2, lineType: .LINE_8, shift: 0)
 
         XCTAssert(Core.countNonZero(src: img) > 0)
 
-        Imgproc.polylines(img: img, pts: polyline2, isClosed: true, color: Scalar(0), thickness: 2, lineType: LineTypes.LINE_8.rawValue, shift: 1)
+        Imgproc.polylines(img: img, pts: polyline2, isClosed: true, color: Scalar(0), thickness: 2, lineType: .LINE_8, shift: 1)
 
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }
 
     func testPutTextMatStringPointIntDoubleScalar() {
         let text = "Hello World"
-        let labelSize = Size2i(width: 175, height: 22)
+        let labelSize = Size(width: 175, height: 22)
         let img = Mat(rows: 20 + labelSize.height, cols: 20 + labelSize.width, type: CvType.CV_8U, scalar: colorBlack)
-        let origin = Point2i(x: 10, y: labelSize.height + 10)
+        let origin = Point(x: 10, y: labelSize.height + 10)
 
-        Imgproc.putText(img: img, text: text, org: origin, fontFace: HersheyFonts.FONT_HERSHEY_SIMPLEX.rawValue, fontScale: 1.0, color: colorWhite)
+        Imgproc.putText(img: img, text: text, org: origin, fontFace: .FONT_HERSHEY_SIMPLEX, fontScale: 1.0, color: colorWhite)
 
         XCTAssert(Core.countNonZero(src: img) > 0)
         // check that border is not corrupted
-        Imgproc.rectangle(img: img, pt1: Point2i(x: 11, y: 11), pt2: Point2i(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: LineTypes.FILLED.rawValue)
+        Imgproc.rectangle(img: img, pt1: Point(x: 11, y: 11), pt2: Point(x: labelSize.width + 10, y: labelSize.height + 10), color: colorBlack, thickness: Core.FILLED)
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }
 
     func testPutTextMatStringPointIntDoubleScalarInt() {
         let text = "Hello World"
-        let labelSize = Size2i(width: 176, height: 22)
+        let labelSize = Size(width: 176, height: 22)
         let img = Mat(rows: 20 + labelSize.height, cols: 20 + labelSize.width, type: CvType.CV_8U, scalar: colorBlack)
-        let origin = Point2i(x: 10, y: labelSize.height + 10)
+        let origin = Point(x: 10, y: labelSize.height + 10)
 
-        Imgproc.putText(img: img, text: text, org: origin, fontFace: HersheyFonts.FONT_HERSHEY_SIMPLEX.rawValue, fontScale: 1.0, color: colorWhite, thickness: 2)
+        Imgproc.putText(img: img, text: text, org: origin, fontFace: .FONT_HERSHEY_SIMPLEX, fontScale: 1.0, color: colorWhite, thickness: 2)
 
         XCTAssert(Core.countNonZero(src: img) > 0)
         // check that border is not corrupted
-        Imgproc.rectangle(img: img, pt1: Point2i(x: 10, y: 10), pt2: Point2i(x: labelSize.width + 10 + 1, y: labelSize.height + 10 + 1), color: colorBlack, thickness: LineTypes.FILLED.rawValue)
+        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 10 + 1, y: labelSize.height + 10 + 1), color: colorBlack, thickness: Core.FILLED)
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }
 
     func testPutTextMatStringPointIntDoubleScalarIntIntBoolean() {
         let text = "Hello World"
-        let labelSize = Size2i(width: 175, height: 22)
+        let labelSize = Size(width: 175, height: 22)
 
         let img = Mat(rows: 20 + labelSize.height, cols: 20 + labelSize.width, type: CvType.CV_8U, scalar: colorBlack)
-        let origin = Point2i(x: 10, y: 10)
+        let origin = Point(x: 10, y: 10)
 
-        Imgproc.putText(img: img, text: text, org: origin, fontFace: HersheyFonts.FONT_HERSHEY_SIMPLEX.rawValue, fontScale: 1.0, color: colorWhite, thickness: 1, lineType: LineTypes.LINE_8.rawValue, bottomLeftOrigin: true)
+        Imgproc.putText(img: img, text: text, org: origin, fontFace: .FONT_HERSHEY_SIMPLEX, fontScale: 1.0, color: colorWhite, thickness: 1, lineType: .LINE_8, bottomLeftOrigin: true)
 
         XCTAssert(Core.countNonZero(src: img) > 0)
         // check that border is not corrupted
-        Imgproc.rectangle(img: img, pt1: Point2i(x: 10, y: 10), pt2: Point2i(x: labelSize.width + 9, y: labelSize.height + 9), color: colorBlack, thickness: LineTypes.FILLED.rawValue)
+        Imgproc.rectangle(img: img, pt1: Point(x: 10, y: 10), pt2: Point(x: labelSize.width + 9, y: labelSize.height + 9), color: colorBlack, thickness: Core.FILLED)
         XCTAssertEqual(0, Core.countNonZero(src: img))
     }
 

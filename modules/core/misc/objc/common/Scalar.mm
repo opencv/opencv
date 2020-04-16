@@ -7,6 +7,10 @@
 #import "Scalar.h"
 #import "CVObjcUtil.h"
 
+double getVal(NSArray<NSNumber*>* vals, int index) {
+    return [vals count] > index ? vals[index].doubleValue : 0;
+}
+
 @implementation Scalar {
     cv::Scalar native;
 }
@@ -22,7 +26,7 @@
 #endif
 
 - (instancetype)initWithVals:(NSArray<NSNumber*> *)vals {
-    return [self initWithV0:vals[0].doubleValue v1:vals[1].doubleValue v2:vals[2].doubleValue v3:vals[3].doubleValue];
+    return [self initWithV0:getVal(vals, 0) v1:getVal(vals, 1) v2:getVal(vals, 2) v3:getVal(vals, 3)];
 }
 
 - (instancetype)initWithV0:(double)v0 v1:(double)v1 v2:(double)v2 v3:(double)v3 {

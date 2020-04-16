@@ -1,8 +1,7 @@
 //
-//  Point.h
+//  Point2i.h
 //
 //  Created by Giles Payne on 2019/10/09.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #pragma once
@@ -17,6 +16,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+NS_SWIFT_NAME(Point)
 @interface Point2i : NSObject
 
 @property int x;
@@ -42,7 +42,5 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSUInteger)hash;
 - (NSString *)description;
 @end
-
-typedef Point2i CvPoint;
 
 NS_ASSUME_NONNULL_END
