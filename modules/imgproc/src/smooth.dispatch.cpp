@@ -470,9 +470,14 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
 #endif
 
-#if 0 //defined HAVE_IPP
+#if defined ENABLE_IPP_GAUSSIAN_BLUR  // see CMake's OPENCV_IPP_GAUSSIAN_BLUR option
+
+#define IPP_DISABLE_GAUSSIAN_BLUR_LARGE_KERNELS_1TH 1
+#define IPP_DISABLE_GAUSSIAN_BLUR_16SC4_1TH 1
+#define IPP_DISABLE_GAUSSIAN_BLUR_32FC4_1TH 1
+
 // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
-#if IPP_DISABLE_GAUSSIANBLUR_PARALLEL
+#if IPP_VERSION_X100 < 201900
 #define IPP_GAUSSIANBLUR_PARALLEL 0
 #else
 #define IPP_GAUSSIANBLUR_PARALLEL 1
@@ -555,6 +560,14 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             return false;
 
         const int threads = ippiSuggestThreadsNum(iwDst, 2);
+
+        if (IPP_DISABLE_GAUSSIAN_BLUR_LARGE_KERNELS_1TH && (threads == 1 && ksize.width > 25))
+            return false;
+        if (IPP_DISABLE_GAUSSIAN_BLUR_16SC4_1TH && (threads == 1 && src.type() == CV_16SC4))
+            return false;
+        if (IPP_DISABLE_GAUSSIAN_BLUR_32FC4_1TH && (threads == 1 && src.type() == CV_32FC4))
+            return false;
+
         if(IPP_GAUSSIANBLUR_PARALLEL && threads > 1) {
             bool ok;
             ipp_gaussianBlurParallel invoker(iwSrc, iwDst, ksize.width, (float) sigma1, ippBorder, &ok);
@@ -655,8 +668,6 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     CV_OVX_RUN(true,
                openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
 
-    //CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
-
     if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
     {
         std::vector<ufixedpoint16> fkx, fky;
@@ -680,6 +691,11 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             return;
         }
     }
+
+#if defined ENABLE_IPP_GAUSSIAN_BLUR
+    // IPP is not bit-exact to OpenCV implementation
+    CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
+#endif
 
     sepFilter2D(src, dst, sdepth, kx, ky, Point(-1, -1), 0, borderType);
 }
