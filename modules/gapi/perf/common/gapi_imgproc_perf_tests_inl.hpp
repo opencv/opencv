@@ -584,15 +584,16 @@ PERF_TEST_P_(LaplacianPerfTest, TestPerformance)
     compare_f cmpF;
     MatType type = 0;
     int kernSize = 0, dtype = 0;
+    double scale = 0;
     cv::Size sz;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, kernSize, sz, dtype, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, dtype, scale, compile_args) = GetParam();
 
     initMatrixRandN(type, sz, dtype, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
-        cv::Laplacian(in_mat1, out_mat_ocv, dtype, kernSize);
+        cv::Laplacian(in_mat1, out_mat_ocv, dtype, kernSize, scale);
     }
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -634,8 +635,7 @@ PERF_TEST_P_(BilateralFilterPerfTest, TestPerformance)
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
-        cv::bilateralFilter(in_mat1, out_mat_ocv, d, sigmaColor, sigmaSpace,
-                            borderType);
+        cv::bilateralFilter(in_mat1, out_mat_ocv, d, sigmaColor, sigmaSpace, borderType);
     }
 
     // G-API code //////////////////////////////////////////////////////////////

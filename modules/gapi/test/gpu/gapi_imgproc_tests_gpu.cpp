@@ -153,25 +153,28 @@ INSTANTIATE_TEST_CASE_P(SobelTestGPU32F, SobelTest,
                                 Values(1, 2)));
 
 INSTANTIATE_TEST_CASE_P(LaplacianTestGPU, LaplacianTest,
-                        Combine(Values(CV_8UC1, CV_8UC3, CV_16SC1),
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(-1, CV_16S, CV_32F),
+                                Values(-1),
                                 Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
-                                Values(3, 5)));
+                                Values(1, 3, 5),
+                                Values(1.0, 0.2, 3.0),
+                                Values(10),
+                                Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
 
 INSTANTIATE_TEST_CASE_P(BilateralFilterTestGPU, BilateralFilterTest,
-                        Combine(Values(CV_8UC1, CV_8UC3),
+                        Combine(Values(CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(-1, CV_16S, CV_32F),
+                                Values(-1),
                                 Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
-                                Values(1.5, 2.0),
-                                Values(8.0, 7.0),
-                                Values(8, 7),
-                                Values(BORDER_DEFAULT)));
+                                Values(3, 5, 9),
+                                Values(20, 40, 100),
+                                Values(10, 20, 40),
+                                Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
 
 INSTANTIATE_TEST_CASE_P(EqHistTestGPU, EqHistTest,
                         Combine(Values(CV_8UC1),

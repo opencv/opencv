@@ -679,6 +679,7 @@ details. The size must be positive and odd.
 applied. See #getDerivKernels for details.
 @param delta Optional delta value that is added to the results prior to storing them in dst .
 @param borderType Pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@return Destination image of the same size and the same number of channels as src.
 @sa  Sobel, Scharr
  */
 GAPI_EXPORTS GMat Laplacian(const GMat& src, int ddepth, int ksize = 1,
@@ -713,6 +714,7 @@ farther pixels will influence each other as long as their colors are close enoug
 ). When d\>0, it specifies the neighborhood size regardless of sigmaSpace. Otherwise, d is
 proportional to sigmaSpace.
 @param borderType border mode used to extrapolate pixels outside of the image, see #BorderTypes
+@return Destination image of the same size and type as src.
  */
 GAPI_EXPORTS GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace,
                                   int borderType = BORDER_DEFAULT);

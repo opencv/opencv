@@ -161,8 +161,7 @@ GAPI_OCL_KERNEL(GOCLBilateralFilter, cv::gapi::imgproc::GBilateralFilter)
     static void run(const cv::UMat& in, int ddepth, double sigmaColor,
                     double sigmaSpace, int borderType, cv::UMat &out)
     {
-        cv::bilateralFilter(in, out, ddepth, sigmaColor, sigmaSpace,
-                            borderType);
+        cv::bilateralFilter(in, out, ddepth, sigmaColor, sigmaSpace, borderType);
     }
 };
 

@@ -87,18 +87,14 @@ std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize
     return imgproc::GSobelXY::on(src, ddepth, order, ksize, scale, delta, borderType, bordVal);
 }
 
-GMat Laplacian(const GMat& src, int ddepth, int ksize, double scale,
-               double delta, int borderType)
+GMat Laplacian(const GMat& src, int ddepth, int ksize, double scale, double delta, int borderType)
 {
-    return imgproc::GLaplacian::on(src, ddepth, ksize, scale, delta,
-                                   borderType);
+    return imgproc::GLaplacian::on(src, ddepth, ksize, scale, delta, borderType);
 }
 
-GMat bilateralFilter(const GMat& src, int d, double sigmaColor,
-                     double sigmaSpace, int borderType)
+GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace, int borderType)
 {
-    return imgproc::GBilateralFilter::on(src, d, sigmaColor, sigmaSpace,
-                                         borderType);
+    return imgproc::GBilateralFilter::on(src, d, sigmaColor, sigmaSpace, borderType);
 }
 
 GMat equalizeHist(const GMat& src)
