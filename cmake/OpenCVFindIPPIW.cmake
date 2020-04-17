@@ -114,6 +114,14 @@ macro(ippiw_setup PATH BUILD)
             IMPORTED_LOCATION "${FILE}"
           )
 
+          if (NOT BUILD_SHARED_LIBS AND ";${OPENCV_INSTALL_EXTERNAL_DEPENDENCIES};" MATCHES ";ipp;")
+            # CMake doesn't support "install(TARGETS ${name} ...)" command with imported targets
+            install(FILES "${FILE}"
+                    DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+            set(IPPIW_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_3P_LIB_INSTALL_PATH}/${CMAKE_STATIC_LIBRARY_PREFIX}ipp_iw${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE INTERNAL "" FORCE)
+            set(IPPIW_LOCATION_PATH "${FILE}" CACHE INTERNAL "" FORCE)
+          endif()
+
           set(IPP_IW_INCLUDES "${IPP_IW_PATH}/include")
           set(IPP_IW_LIBRARIES ipp_iw)
 
