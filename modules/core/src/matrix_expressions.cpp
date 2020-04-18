@@ -1739,13 +1739,7 @@ MatExpr Mat::mul(InputArray m, double scale) const
     CV_INSTRUMENT_REGION();
 
     MatExpr e;
-    if(m.kind() == _InputArray::EXPR)
-    {
-        const MatExpr& me = *(const MatExpr*)m.getObj();
-        me.op->multiply(MatExpr(*this), me, e, scale);
-    }
-    else
-        MatOp_Bin::makeExpr(e, '*', *this, m.getMat(), scale);
+    MatOp_Bin::makeExpr(e, '*', *this, m.getMat(), scale);
     return e;
 }
 
@@ -1840,7 +1834,6 @@ void MatExpr::swap(MatExpr& other)
 
 _InputArray::_InputArray(const MatExpr& expr)
 {
-#if 1
     if (!isIdentity(expr))
     {
         Mat result = expr;  // TODO improve through refcount == 1 of expr.a (inplace operation is possible - except gemm?)
@@ -1849,9 +1842,6 @@ _InputArray::_InputArray(const MatExpr& expr)
     }
     CV_Assert(isIdentity(expr));
     init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_READ, &expr.a);
-#else
-    init(FIXED_TYPE + FIXED_SIZE + EXPR + ACCESS_READ, &expr);
-#endif
 }
 
 } // cv::
