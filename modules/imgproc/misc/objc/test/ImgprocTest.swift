@@ -376,7 +376,7 @@ class ImgprocTest: OpenCVTestCase {
 
         Imgproc.convexHull(points: points, hull: hull)
 
-        let expHull = IntVector([1, 2, 3, 0])
+        let expHull = IntVector([0, 1, 2, 3])
         XCTAssert(expHull.array == hull.array)
     }
 
