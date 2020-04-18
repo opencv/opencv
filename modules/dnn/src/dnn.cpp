@@ -1629,6 +1629,7 @@ struct Net::Impl
 
             Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
             CV_Assert(!ieNode.empty());
+            ieNode->net->reset();
 
             for (it = layers.begin(); it != layers.end(); ++it)
             {
@@ -1930,6 +1931,7 @@ struct Net::Impl
 
             Ptr<InfEngineNgraphNode> ieNode = node.dynamicCast<InfEngineNgraphNode>();
             CV_Assert(!ieNode.empty());
+            ieNode->net->reset();
 
             for (it = layers.begin(); it != layers.end(); ++it)
             {
