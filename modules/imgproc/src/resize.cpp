@@ -1157,7 +1157,7 @@ static void resizeNNPIL(const Mat& src, Mat& dst, double fx, double fy) {
     int x;
     double xo = ifx / 2;
 
-    int xmin = ssize.width;
+    int xmin = ssize.width, xmax = 0;
 
     for( x = 0; x < dsize.width; x++ )
     {
