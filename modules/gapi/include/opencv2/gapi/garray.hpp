@@ -115,6 +115,7 @@ namespace detail
         virtual ~BasicVectorRef() {}
 
         virtual void mov(BasicVectorRef &ref) = 0;
+        virtual std::size_t size() const = 0;
         virtual const void* ptr() const = 0;
     };
 
@@ -209,6 +210,7 @@ namespace detail
             wref() = std::move(tv->wref());
         }
 
+        virtual std::size_t size() const override { return rref().size(); }
         virtual const void* ptr() const override { return &rref(); }
     };
 
@@ -255,6 +257,14 @@ namespace detail
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
         }
 
+        // Check if was created for/from std::vector<T>
+        template <typename T> bool holds() const
+        {
+            if (!m_ref) return false;
+            using U = typename std::decay<T>::type;
+            return dynamic_cast<VectorRefT<T>*>(m_ref.get()) != nullptr;
+        }
+
         void mov(VectorRef &v)
         {
             m_ref->mov(*v.m_ref);
@@ -263,6 +273,11 @@ namespace detail
         cv::GArrayDesc descr_of() const
         {
             return m_ref->m_desc;
+        }
+
+        std::size_t size() const
+        {
+            return m_ref->size();
         }
 
         // May be used to uniquely identify this object internally

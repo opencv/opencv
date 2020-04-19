@@ -263,6 +263,10 @@ template<typename U> struct get_out<cv::GOpaque<U>>
         return ctx.outOpaqueR<U>(idx);
     }
 };
+//FIXME(dm): GArray<Mat>/GArray<GMat> conversion should be done more gracefully in the system
+template<> struct get_out<cv::GArray<cv::GMat> >: public get_out<cv::GArray<cv::Mat> >
+{
+};
 
 template<typename, typename, typename>
 struct OCVCallHelper;
