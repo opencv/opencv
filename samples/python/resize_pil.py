@@ -15,6 +15,8 @@ import cv2 as cv
 
 import sys
 
+from PIL import Image
+
 def main():
 
     try:

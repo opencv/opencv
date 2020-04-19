@@ -1117,7 +1117,7 @@ public:
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
-        int y, x, pix_size = (int)src.elemSize();
+        int y, x;
         double yo = ify / 2;
 
         for( y = range.start; y < range.end; y++ )
@@ -1153,12 +1153,11 @@ static void resizeNNPIL(const Mat& src, Mat& dst, double fx, double fy) {
     Size ssize = src.size(), dsize = dst.size();
     AutoBuffer<int> _x_ofs(dsize.width);
     int* x_ofs = _x_ofs.data();
-    int pix_size = (int)src.elemSize();
     double ifx = 1. / fx, ify = 1. / fy;
     int x;
     double xo = ifx / 2;
 
-    int xmin = ssize.width, xmax = 0;
+    int xmin = ssize.width;
 
     for( x = 0; x < dsize.width; x++ )
     {
