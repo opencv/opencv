@@ -44,6 +44,7 @@ function(ocv_create_builtin_videoio_plugin name target)
   )
 
   if(WIN32)
+    set_target_properties(${name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
     install(TARGETS ${name} OPTIONAL LIBRARY DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT plugins)
   else()
     install(TARGETS ${name} OPTIONAL LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT plugins)

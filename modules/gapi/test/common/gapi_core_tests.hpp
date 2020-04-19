@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_TESTS_HPP
@@ -128,7 +128,7 @@ GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degre
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(CompareMats,double,double,int,MatType2), 5,
     cmpF, a, b, norm_type, ddepth)
-struct BackendOutputAllocationTest : TestWithParamBase<>
+struct BackendOutputAllocationTest : TestWithParams<>
 {
     BackendOutputAllocationTest()
     {

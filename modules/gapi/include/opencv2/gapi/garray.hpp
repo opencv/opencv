@@ -116,6 +116,7 @@ namespace detail
 
         virtual void mov(BasicVectorRef &ref) = 0;
         virtual std::size_t size() const = 0;
+        virtual const void* ptr() const = 0;
     };
 
     template<typename T> class VectorRefT final: public BasicVectorRef
@@ -209,9 +210,8 @@ namespace detail
             wref() = std::move(tv->wref());
         }
 
-        virtual std::size_t size() const {
-            return rref().size();
-        }
+        virtual std::size_t size() const override { return rref().size(); }
+        virtual const void* ptr() const override { return &rref(); }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -281,7 +281,7 @@ namespace detail
         }
 
         // May be used to uniquely identify this object internally
-        const void *ptr() const { return static_cast<const void*>(m_ref.get()); }
+        const void *ptr() const { return m_ref->ptr(); }
     };
 
     // Helper (FIXME: work-around?)

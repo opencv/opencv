@@ -358,7 +358,7 @@ public:
         std::vector<size_t> maxDims(numDims, 0);
 
         CV_Assert(inputs.size() == nodes.size());
-        ngraph::NodeVector inp_nodes;
+        ngraph::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
             inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);

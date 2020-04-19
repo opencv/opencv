@@ -216,7 +216,7 @@ TEST(GComputationCompile, ReshapeRois)
         int roiH = szOut.height / niter;
         cv::Rect roi{x, y, roiW, roiH};
 
-        cc.apply(in_mat, out_mat, cv::compile_args(cv::GFluidOutputRois{{to_own(roi)}}));
+        cc.apply(in_mat, out_mat, cv::compile_args(cv::GFluidOutputRois{{roi}}));
         auto comp = cc.priv().m_lastCompiled;
 
         EXPECT_EQ(&first_comp.priv(), &comp.priv());

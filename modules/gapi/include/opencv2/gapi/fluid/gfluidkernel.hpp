@@ -17,7 +17,6 @@
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/garg.hpp>
-#include <opencv2/gapi/own/types.hpp>
 
 #include <opencv2/gapi/fluid/gfluidbuffer.hpp>
 
@@ -109,7 +108,7 @@ public:
  */
 struct GFluidOutputRois
 {
-    std::vector<cv::gapi::own::Rect> rois;
+    std::vector<cv::Rect> rois;
 };
 
 /**
@@ -172,7 +171,7 @@ template<> struct fluid_get_in<cv::GMat>
 {
     static const cv::gapi::fluid::View& get(const cv::GArgs &in_args, int idx)
     {
-        return in_args[idx].unsafe_get<cv::gapi::fluid::View>();
+        return *in_args[idx].unsafe_get<cv::gapi::fluid::View*>();
     }
 };
 

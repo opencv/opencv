@@ -2040,7 +2040,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::core::GResize, true)
         cv::GMatDesc desc;
         desc.chan  = 1;
         desc.depth = CV_8UC1;
-        desc.size  = to_own(scratch_size);
+        desc.size  = scratch_size;
 
         cv::gapi::fluid::Buffer buffer(desc);
         scratch = std::move(buffer);

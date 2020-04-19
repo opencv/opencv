@@ -1413,7 +1413,7 @@ TEST(Resize, lanczos4_regression_16192)
     EXPECT_EQ(cvtest::norm(dst, expected, NORM_INF), 0) << dst(Rect(0,0,8,8));
 }
 
-TEST(Resize, DISABLED_nearest_regression_15075)  // reverted https://github.com/opencv/opencv/pull/16497
+TEST(Resize, nearest_regression_15075)
 {
     const int C = 5;
     const int i1 = 5, j1 = 5;

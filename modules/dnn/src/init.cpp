@@ -95,6 +95,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LRN,            LRNLayer);
     CV_DNN_REGISTER_LAYER_CLASS(InnerProduct,   InnerProductLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softmax,        SoftmaxLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(SoftMax,        SoftmaxLayer);  // For compatibility. See https://github.com/opencv/opencv/issues/16877
     CV_DNN_REGISTER_LAYER_CLASS(MVN,            MVNLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(ReLU,           ReLULayer);

@@ -4602,6 +4602,17 @@ public:
         return u;
     }
 
+    static bool isOpenCLMapForced()  // force clEnqueueMapBuffer / clEnqueueUnmapMemObject OpenCL API
+    {
+        static bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_BUFFER_FORCE_MAPPING", false);
+        return value;
+    }
+    static bool isOpenCLCopyingForced()  // force clEnqueueReadBuffer[Rect] / clEnqueueWriteBuffer[Rect] OpenCL API
+    {
+        static bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_BUFFER_FORCE_COPYING", false);
+        return value;
+    }
+
     void getBestFlags(const Context& ctx, AccessFlag /*flags*/, UMatUsageFlags usageFlags, int& createFlags, UMatData::MemoryFlag& flags0) const
     {
         const Device& dev = ctx.device(0);
@@ -4609,7 +4620,15 @@ public:
         if ((usageFlags & USAGE_ALLOCATE_HOST_MEMORY) != 0)
             createFlags |= CL_MEM_ALLOC_HOST_PTR;
 
-        if( dev.hostUnifiedMemory() )
+        if (!isOpenCLCopyingForced() &&
+            (isOpenCLMapForced() ||
+                (dev.hostUnifiedMemory()
+#ifndef __APPLE__
+                || dev.isIntel()
+#endif
+                )
+            )
+        )
             flags0 = static_cast<UMatData::MemoryFlag>(0);
         else
             flags0 = UMatData::COPY_ON_MAP;

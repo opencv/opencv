@@ -156,96 +156,107 @@ bool clipLine( Rect img_rect, Point& pt1, Point& pt2 )
     return inside;
 }
 
-/*
-   Initializes line iterator.
-   Returns number of points on the line or negative number if error.
-*/
-LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
-                           int connectivity, bool left_to_right)
+void LineIterator::init( const Mat* img, Rect rect, Point pt1_, Point pt2_, int connectivity, bool leftToRight )
 {
-    count = -1;
-
     CV_Assert( connectivity == 8 || connectivity == 4 );
 
-    if( (unsigned)pt1.x >= (unsigned)(img.cols) ||
-        (unsigned)pt2.x >= (unsigned)(img.cols) ||
-        (unsigned)pt1.y >= (unsigned)(img.rows) ||
-        (unsigned)pt2.y >= (unsigned)(img.rows) )
+    count = -1;
+    p = Point(0, 0);
+    ptr0 = ptr = 0;
+    step = elemSize = 0;
+    ptmode = !img;
+
+    Point pt1 = pt1_ - rect.tl();
+    Point pt2 = pt2_ - rect.tl();
+
+    if( (unsigned)pt1.x >= (unsigned)(rect.width) ||
+        (unsigned)pt2.x >= (unsigned)(rect.width) ||
+        (unsigned)pt1.y >= (unsigned)(rect.height) ||
+        (unsigned)pt2.y >= (unsigned)(rect.height) )
     {
-        if( !clipLine( img.size(), pt1, pt2 ) )
+        if( !clipLine(Size(rect.width, rect.height), pt1, pt2) )
         {
-            ptr = img.data;
-            err = plusDelta = minusDelta = plusStep = minusStep = count = 0;
-            ptr0 = 0;
-            step = 0;
-            elemSize = 0;
+            err = plusDelta = minusDelta = plusStep = minusStep = plusShift = minusShift = count = 0;
             return;
         }
     }
 
-    size_t bt_pix0 = img.elemSize(), bt_pix = bt_pix0;
-    size_t istep = img.step;
+    pt1 += rect.tl();
+    pt2 += rect.tl();
 
+    int delta_x = 1, delta_y = 1;
     int dx = pt2.x - pt1.x;
     int dy = pt2.y - pt1.y;
-    int s = dx < 0 ? -1 : 0;
 
-    if( left_to_right )
+    if( dx < 0 )
     {
-        dx = (dx ^ s) - s;
-        dy = (dy ^ s) - s;
-        pt1.x ^= (pt1.x ^ pt2.x) & s;
-        pt1.y ^= (pt1.y ^ pt2.y) & s;
+        if( leftToRight )
+        {
+            dx = -dx;
+            dy = -dy;
+            pt1 = pt2;
+        }
+        else
+        {
+            dx = -dx;
+            delta_x = -1;
+        }
     }
-    else
+
+    if( dy < 0 )
     {
-        dx = (dx ^ s) - s;
-        bt_pix = (bt_pix ^ s) - s;
+        dy = -dy;
+        delta_y = -1;
     }
 
-    ptr = (uchar*)(img.data + pt1.y * istep + pt1.x * bt_pix0);
+    bool vert = dy > dx;
+    if( vert )
+    {
+        std::swap(dx, dy);
+        std::swap(delta_x, delta_y);
+    }
 
-    s = dy < 0 ? -1 : 0;
-    dy = (dy ^ s) - s;
-    istep = (istep ^ s) - s;
-
-    s = dy > dx ? -1 : 0;
-
-    /* conditional swaps */
-    dx ^= dy & s;
-    dy ^= dx & s;
-    dx ^= dy & s;
-
-    bt_pix ^= istep & s;
-    istep ^= bt_pix & s;
-    bt_pix ^= istep & s;
+    CV_Assert( dx >= 0 && dy >= 0 );
 
     if( connectivity == 8 )
     {
-        assert( dx >= 0 && dy >= 0 );
-
         err = dx - (dy + dy);
         plusDelta = dx + dx;
         minusDelta = -(dy + dy);
-        plusStep = (int)istep;
-        minusStep = (int)bt_pix;
+        minusShift = delta_x;
+        plusShift = 0;
+        minusStep = 0;
+        plusStep = delta_y;
         count = dx + 1;
     }
     else /* connectivity == 4 */
     {
-        assert( dx >= 0 && dy >= 0 );
-
         err = 0;
         plusDelta = (dx + dx) + (dy + dy);
         minusDelta = -(dy + dy);
-        plusStep = (int)(istep - bt_pix);
-        minusStep = (int)bt_pix;
+        minusShift = delta_x;
+        plusShift = -delta_x;
+        minusStep = 0;
+        plusStep = delta_y;
         count = dx + dy + 1;
     }
 
-    this->ptr0 = img.ptr();
-    this->step = (int)img.step;
-    this->elemSize = (int)bt_pix0;
+    if( vert )
+    {
+        std::swap(plusStep, plusShift);
+        std::swap(minusStep, minusShift);
+    }
+
+    p = pt1;
+    if( !ptmode )
+    {
+        ptr0 = img->ptr();
+        step = (int)img->step;
+        elemSize = (int)img->elemSize();
+        ptr = (uchar*)ptr0 + (size_t)p.y*step + (size_t)p.x*elemSize;
+        plusStep = plusStep*step + plusShift*elemSize;
+        minusStep = minusStep*step + minusShift*elemSize;
+    }
 }
 
 static void
@@ -262,19 +273,26 @@ Line( Mat& img, Point pt1, Point pt2,
     int pix_size = (int)img.elemSize();
     const uchar* color = (const uchar*)_color;
 
-    for( i = 0; i < count; i++, ++iterator )
+    if( pix_size == 3 )
     {
-        uchar* ptr = *iterator;
-        if( pix_size == 1 )
-            ptr[0] = color[0];
-        else if( pix_size == 3 )
+        for( i = 0; i < count; i++, ++iterator )
         {
+            uchar* ptr = *iterator;
             ptr[0] = color[0];
             ptr[1] = color[1];
             ptr[2] = color[2];
         }
-        else
-            memcpy( *iterator, color, pix_size );
+    }
+    else
+    {
+        for( i = 0; i < count; i++, ++iterator )
+        {
+            uchar* ptr = *iterator;
+            if( pix_size == 1 )
+                ptr[0] = color[0];
+            else
+                memcpy( *iterator, color, pix_size );
+        }
     }
 }
 

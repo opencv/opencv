@@ -505,6 +505,86 @@ public:
     }
 };
 
+
+/*
+ * Compute
+ *  x      X     t1
+ *  y  =   Y  +  t2
+ *  z      Z     t3
+ *
+ *  - every element in _m1 contains (X,Y,Z), which are called source points
+ *  - every element in _m2 contains (x,y,z), which are called destination points
+ *  - _model is of size 3x1, which contains
+ *      t1
+ *      t2
+ *      t3
+ */
+class Translation3DEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
+{
+public:
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
+    {
+
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        const Point3f* from = m1.ptr<Point3f>();
+        const Point3f* to   = m2.ptr<Point3f>();
+
+        Matx13d T;
+
+        // The optimal translation is the mean of the pointwise displacements
+        for(int i = 0; i < 4; i++)
+        {
+            const Point3f& f = from[i];
+            const Point3f& t = to[i];
+
+            T(0, 0) = T(0, 0) + t.x - f.x;
+            T(0, 1) = T(0, 1) + t.y - f.y;
+            T(0, 2) = T(0, 2) + t.z - f.z;
+        }
+        T *= (1.0f / 4);
+        Mat(T, false).copyTo(_model);
+        return 1;
+    }
+
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
+        const Point3f* from = m1.ptr<Point3f>();
+        const Point3f* to   = m2.ptr<Point3f>();
+        const double* F = model.ptr<double>();
+
+        int count = m1.checkVector(3);
+        CV_Assert( count > 0 );
+
+        _err.create(count, 1, CV_32F);
+        Mat err = _err.getMat();
+        float* errptr = err.ptr<float>();
+
+        for(int i = 0; i < count; i++ )
+        {
+            const Point3f& f = from[i];
+            const Point3f& t = to[i];
+
+            double a = F[0] + f.x - t.x;
+            double b = F[1] + f.y - t.y;
+            double c = F[2] + f.z - t.z;
+
+            errptr[i] = (float)(a*a + b*b + c*c);
+        }
+    }
+
+    // not doing SVD, no degeneracy concerns, can simply return true
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
+    {
+        // voids to suppress compiler warnings
+        (void)_ms1;
+        (void)_ms2;
+        (void)count;
+        return true;
+    }
+};
+
+
 /*
  * Compute
  *  x     a  b   X    c
@@ -816,6 +896,30 @@ int estimateAffine3D(InputArray _from, InputArray _to,
     confidence = (confidence < epsilon) ? 0.99 : (confidence > 1 - epsilon) ? 0.99 : confidence;
 
     return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, ransacThreshold, confidence)->run(dFrom, dTo, _out, _inliers);
+}
+
+int estimateTranslation3D(InputArray _from, InputArray _to,
+                          OutputArray _out, OutputArray _inliers,
+                          double ransacThreshold, double confidence)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat from = _from.getMat(), to = _to.getMat();
+    int count = from.checkVector(3);
+
+    CV_Assert( count >= 0 && to.checkVector(3) == count );
+
+    Mat dFrom, dTo;
+    from.convertTo(dFrom, CV_32F);
+    to.convertTo(dTo, CV_32F);
+    dFrom = dFrom.reshape(3, count);
+    dTo = dTo.reshape(3, count);
+
+    const double epsilon = DBL_EPSILON;
+    ransacThreshold = ransacThreshold <= 0 ? 3 : ransacThreshold;
+    confidence = (confidence < epsilon) ? 0.99 : (confidence > 1 - epsilon) ? 0.99 : confidence;
+
+    return createRANSACPointSetRegistrator(makePtr<Translation3DEstimatorCallback>(), 4, ransacThreshold, confidence)->run(dFrom, dTo, _out, _inliers);
 }
 
 Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,

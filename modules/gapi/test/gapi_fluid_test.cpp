@@ -754,7 +754,7 @@ TEST_P(NV12RoiTest, Test)
     auto rgb = cv::gapi::NV12toRGB(y, uv);
     cv::GComputation c(cv::GIn(y, uv), cv::GOut(rgb));
 
-    c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat), cv::compile_args(fluidTestPackage, cv::GFluidOutputRois{{to_own(roi)}}));
+    c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat), cv::compile_args(fluidTestPackage, cv::GFluidOutputRois{{roi}}));
 
     cv::cvtColor(in_mat, out_mat_ocv, cv::COLOR_YUV2RGB_NV12);
 
@@ -835,7 +835,7 @@ TEST(Fluid, InvalidROIs)
     };
 
     const auto compile_args = [] (cv::Rect roi) {
-        return cv::compile_args(cv::gapi::core::fluid::kernels(), GFluidOutputRois{{to_own(roi)}});
+        return cv::compile_args(cv::gapi::core::fluid::kernels(), GFluidOutputRois{{roi}});
     };
 
     for (const auto& roi : invalid_rois)

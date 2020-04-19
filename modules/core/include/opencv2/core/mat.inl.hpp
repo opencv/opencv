@@ -144,9 +144,6 @@ _InputArray::_InputArray(const Mat_<_Tp>& m)
 inline _InputArray::_InputArray(const double& val)
 { init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, &val, Size(1,1)); }
 
-inline _InputArray::_InputArray(const MatExpr& expr)
-{ init(FIXED_TYPE + FIXED_SIZE + EXPR + ACCESS_READ, &expr); }
-
 inline _InputArray::_InputArray(const cuda::GpuMat& d_mat)
 { init(CUDA_GPU_MAT + ACCESS_READ, &d_mat); }
 
@@ -3999,6 +3996,9 @@ inline void UMatData::markDeviceCopyObsolete(bool flag)
 }
 
 //! @endcond
+
+static inline
+void swap(MatExpr& a, MatExpr& b) { a.swap(b); }
 
 } //cv
 
