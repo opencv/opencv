@@ -1797,7 +1797,7 @@ CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps
     {
         wrt = new WriterT();
         Size sz(width, height);
-        if (wrt && wrt->open(filename, fourcc, fps, sz, isColor))
+        if (wrt && wrt->open(filename, fourcc, fps, sz, isColor != 0))
         {
             *handle = (CvPluginWriter)wrt;
             return CV_ERROR_OK;
