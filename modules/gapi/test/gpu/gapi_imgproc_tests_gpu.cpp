@@ -11,7 +11,7 @@
 
 namespace
 {
-#define IMGPROC_GPU [] () { return cv::compile_args(cv::gapi::imgproc::gpu::kernels()); }
+#define IMGPROC_GPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::imgproc::gpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test

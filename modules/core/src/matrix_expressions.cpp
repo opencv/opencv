@@ -10,6 +10,7 @@
 // */
 
 #include "precomp.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 namespace cv
 {
@@ -1319,10 +1320,18 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
                 cv::add(dst, e.s, dst);
         }
         else
+        {
+            if (e.a.channels() > 1)
+                CV_LOG_ONCE_WARNING(NULL, "OpenCV/MatExpr: processing of multi-channel arrays might be changed in the future: "
+                                          "https://github.com/opencv/opencv/issues/16739");
             cv::addWeighted(e.a, e.alpha, e.b, e.beta, e.s[0], dst);
+        }
     }
     else if( e.s.isReal() && (dst.data != m.data || fabs(e.alpha) != 1))
     {
+        if (e.a.channels() > 1)
+            CV_LOG_ONCE_WARNING(NULL, "OpenCV/MatExpr: processing of multi-channel arrays might be changed in the future: "
+                                      "https://github.com/opencv/opencv/issues/16739");
         e.a.convertTo(m, _type, e.alpha, e.s[0]);
         return;
     }
@@ -1810,6 +1819,39 @@ MatExpr Mat::eye(Size size, int type)
     MatExpr e;
     MatOp_Initializer::makeExpr(e, 'I', size, type);
     return e;
+}
+
+void MatExpr::swap(MatExpr& other)
+{
+    using std::swap;
+
+    swap(op, other.op);
+    swap(flags, other.flags);
+
+    swap(a, other.a);
+    swap(b, other.b);
+    swap(c, other.c);
+
+    swap(alpha, other.alpha);
+    swap(beta, other.beta);
+
+    swap(s, other.s);
+}
+
+_InputArray::_InputArray(const MatExpr& expr)
+{
+#if 1
+    if (!isIdentity(expr))
+    {
+        Mat result = expr;  // TODO improve through refcount == 1 of expr.a (inplace operation is possible - except gemm?)
+        MatExpr result_expr(result);
+        swap(const_cast<MatExpr&>(expr), result_expr);
+    }
+    CV_Assert(isIdentity(expr));
+    init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_READ, &expr.a);
+#else
+    init(FIXED_TYPE + FIXED_SIZE + EXPR + ACCESS_READ, &expr);
+#endif
 }
 
 } // cv::

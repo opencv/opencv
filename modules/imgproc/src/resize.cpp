@@ -970,8 +970,8 @@ class resizeNNInvoker :
     public ParallelLoopBody
 {
 public:
-    resizeNNInvoker(const Mat& _src, Mat &_dst, int *_x_ofs, int _pix_size4, double _ify) :
-        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs), pix_size4(_pix_size4),
+    resizeNNInvoker(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
         ify(_ify)
     {
     }
@@ -1043,19 +1043,18 @@ public:
             default:
                 for( x = 0; x < dsize.width; x++, D += pix_size )
                 {
-                    const int* _tS = (const int*)(S + x_ofs[x]);
-                    int* _tD = (int*)D;
-                    for( int k = 0; k < pix_size4; k++ )
-                        _tD[k] = _tS[k];
+                    const uchar* _tS = S + x_ofs[x];
+                    for (int k = 0; k < pix_size; k++)
+                        D[k] = _tS[k];
                 }
             }
         }
     }
 
 private:
-    const Mat src;
-    Mat dst;
-    int* x_ofs, pix_size4;
+    const Mat& src;
+    Mat& dst;
+    int* x_ofs;
     double ify;
 
     resizeNNInvoker(const resizeNNInvoker&);
@@ -1069,7 +1068,6 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     AutoBuffer<int> _x_ofs(dsize.width);
     int* x_ofs = _x_ofs.data();
     int pix_size = (int)src.elemSize();
-    int pix_size4 = (int)(pix_size / sizeof(int));
     double ifx = 1./fx, ify = 1./fy;
     int x;
 
@@ -1084,9 +1082,9 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     if(CV_CPU_HAS_SUPPORT_AVX2 && ((pix_size == 2) || (pix_size == 4)))
     {
         if(pix_size == 2)
-            opt_AVX2::resizeNN2_AVX2(range, src, dst, x_ofs, pix_size4, ify);
+            opt_AVX2::resizeNN2_AVX2(range, src, dst, x_ofs, ify);
         else
-            opt_AVX2::resizeNN4_AVX2(range, src, dst, x_ofs, pix_size4, ify);
+            opt_AVX2::resizeNN4_AVX2(range, src, dst, x_ofs, ify);
     }
     else
 #endif
@@ -1094,14 +1092,14 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     if(CV_CPU_HAS_SUPPORT_SSE4_1 && ((pix_size == 2) || (pix_size == 4)))
     {
         if(pix_size == 2)
-            opt_SSE4_1::resizeNN2_SSE4_1(range, src, dst, x_ofs, pix_size4, ify);
+            opt_SSE4_1::resizeNN2_SSE4_1(range, src, dst, x_ofs, ify);
         else
-            opt_SSE4_1::resizeNN4_SSE4_1(range, src, dst, x_ofs, pix_size4, ify);
+            opt_SSE4_1::resizeNN4_SSE4_1(range, src, dst, x_ofs, ify);
     }
     else
 #endif
     {
-        resizeNNInvoker invoker(src, dst, x_ofs, pix_size4, ify);
+        resizeNNInvoker invoker(src, dst, x_ofs, ify);
         parallel_for_(range, invoker, dst.total()/(double)(1<<16));
     }
 }

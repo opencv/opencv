@@ -778,7 +778,9 @@ void DpSeamFinder::computeCosts(
     {
         for (int x = roi.x; x < roi.br().x+1; ++x)
         {
-            if (labels_(y, x) == l && x > 0 && labels_(y, x-1) == l)
+            if (x > 0 && x < labels_.cols &&
+                labels_(y, x) == l && labels_(y, x-1) == l
+            )
             {
                 float costColor = (diff(image1, y + dy1, x + dx1 - 1, image2, y + dy2, x + dx2) +
                                    diff(image1, y + dy1, x + dx1, image2, y + dy2, x + dx2 - 1)) / 2;
@@ -802,7 +804,9 @@ void DpSeamFinder::computeCosts(
     {
         for (int x = roi.x; x < roi.br().x; ++x)
         {
-            if (labels_(y, x) == l && y > 0 && labels_(y-1, x) == l)
+            if (y > 0 && y < labels_.rows &&
+                labels_(y, x) == l && labels_(y-1, x) == l
+            )
             {
                 float costColor = (diff(image1, y + dy1 - 1, x + dx1, image2, y + dy2, x + dx2) +
                                    diff(image1, y + dy1, x + dx1, image2, y + dy2 - 1, x + dx2)) / 2;

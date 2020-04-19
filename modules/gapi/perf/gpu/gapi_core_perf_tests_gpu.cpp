@@ -81,12 +81,10 @@ INSTANTIATE_TEST_CASE_P(DivRCPerfTestGPU, DivRCPerfTest,
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(cv::compile_args(CORE_GPU))));
 //TODO: mask test doesn't work
-#if 0
-INSTANTIATE_TEST_CASE_P(MaskPerfTestGPU, MaskPerfTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_MaskPerfTestGPU, MaskPerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::compile_args(CORE_GPU))));
-#endif
 
 INSTANTIATE_TEST_CASE_P(MeanPerfTestGPU, MeanPerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
@@ -242,18 +240,16 @@ INSTANTIATE_TEST_CASE_P(ConcatVertPerfTestGPU, ConcatVertPerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 //TODO: fix this backend to allow ConcatVertVec ConcatHorVec
-#if 0
-INSTANTIATE_TEST_CASE_P(ConcatHorVecPerfTestGPU, ConcatHorVecPerfTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_ConcatHorVecPerfTestGPU, ConcatHorVecPerfTest,
     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
         Values(cv::compile_args(CORE_GPU))));
 
 
-INSTANTIATE_TEST_CASE_P(ConcatVertVecPerfTestGPU, ConcatVertVecPerfTest,
+INSTANTIATE_TEST_CASE_P(DISABLED_ConcatVertVecPerfTestGPU, ConcatVertVecPerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::compile_args(CORE_GPU))));
-#endif
 
 INSTANTIATE_TEST_CASE_P(LUTPerfTestGPU, LUTPerfTest,
                         Combine(Values(CV_8UC1, CV_8UC3),
