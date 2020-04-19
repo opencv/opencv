@@ -780,6 +780,13 @@ void forwardNgraph(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
     ieNode->net->forward(outBlobsWrappers, isAsync);
 }
 
+void InfEngineNgraphNet::reset()
+{
+    allBlobs.clear();
+    infRequests.clear();
+    isInit = false;
+}
+
 void InfEngineNgraphNet::addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs)
 {
     auto wrappers = ngraphWrappers(ptrs);

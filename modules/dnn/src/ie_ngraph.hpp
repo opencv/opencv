@@ -52,6 +52,8 @@ public:
 
     void createNet(Target targetId);
     void setNodePtr(std::shared_ptr<ngraph::Node>* ptr);
+
+    void reset();
 private:
     void release();
     int getNumComponents();
