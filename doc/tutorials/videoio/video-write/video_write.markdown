@@ -31,7 +31,7 @@ The source code
 
 You may also find the source code and these video file in the
 `samples/cpp/tutorial_code/videoio/video-write/` folder of the OpenCV source library or [download it
-from here ](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/videoio/video-write/video-write.cpp).
+from here ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/videoio/video-write/video-write.cpp).
 
 @include cpp/tutorial_code/videoio/video-write/video-write.cpp
 

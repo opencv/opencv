@@ -97,6 +97,12 @@ Building OpenCV from Source Using CMake
     -   It is useful also to unset BUILD_EXAMPLES, BUILD_TESTS, BUILD_PERF_TESTS - as they all
         will be statically linked with OpenCV and can take a lot of memory.
 
+-#  [optional] Generate pkg-config info
+    -   Add this flag when running CMake: `-DOPENCV_GENERATE_PKGCONFIG=ON`
+    -   Will generate the .pc file for pkg-config and install it.
+    -   Useful if not using CMake in projects that use OpenCV
+    -   Installed as `opencv4`, usage: `pkg-config --cflags --libs opencv4`
+
 -#  Build. From build directory execute *make*, it is recommended to do this in several threads
 
     For example

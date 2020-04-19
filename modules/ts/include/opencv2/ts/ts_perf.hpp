@@ -160,7 +160,7 @@ private:
     };                                                                                  \
     static inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
-CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTYPE1)
+CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F)
 
 /*****************************************************************************************\
 *                 Regression control utility for performance testing                      *
@@ -694,11 +694,7 @@ namespace comparators
 {
 
 template<typename T>
-#ifdef CV_CXX11
 struct RectLess_
-#else
-struct RectLess_ : public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
-#endif
 {
   bool operator()(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2) const
   {
@@ -711,11 +707,7 @@ struct RectLess_ : public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
 
 typedef RectLess_<int> RectLess;
 
-#ifdef CV_CXX11
 struct KeypointGreater
-#else
-struct KeypointGreater : public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
-#endif
 {
     bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
     {

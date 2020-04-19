@@ -1,7 +1,6 @@
 /*  Snippet code for Operations with images tutorial (not intended to be run but should built successfully) */
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/core_c.h"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
@@ -127,15 +126,6 @@ int main(int,char**)
             //! [Select ROI]
             CV_UNUSED(smallImg);
         }
-    }
-    {
-        //! [C-API conversion]
-        Mat img = imread("image.jpg");
-        IplImage img1 = cvIplImage(img);
-        CvMat m = cvMat(img);
-        //! [C-API conversion]
-        CV_UNUSED(img1);
-        CV_UNUSED(m);
     }
     {
         //! [BGR to Gray]

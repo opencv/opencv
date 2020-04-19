@@ -54,7 +54,7 @@ Backend& getInferenceEngineBackendTypeParam()
     return param;
 }
 
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 cv::String getInferenceEngineBackendType()
 {
@@ -69,7 +69,7 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
     return dumpInferenceEngineBackendType(old);
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 
 
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
@@ -1128,7 +1128,7 @@ void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
 #endif  // HAVE_INF_ENGINE
 }
 
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 void resetMyriadDevice()
 {
@@ -1211,5 +1211,5 @@ cv::String getInferenceEngineVPUType()
 #endif  // HAVE_INF_ENGINE
 
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv

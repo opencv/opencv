@@ -381,8 +381,7 @@ class ArgInfo(object):
         self.py_outputarg = False
 
     def isbig(self):
-        return self.tp == "Mat" or self.tp == "vector_Mat" or self.tp == "cuda::GpuMat"\
-               or self.tp == "UMat" or self.tp == "vector_UMat" # or self.tp.startswith("vector")
+        return self.tp in ["Mat", "vector_Mat", "cuda::GpuMat", "GpuMat", "vector_GpuMat", "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
@@ -979,7 +978,7 @@ class PythonWrapperGenerator(object):
 
         code = ""
         if re.sub(r"^cv\.", "", enum_name) != wname:
-            code += "typedef enum {0} {1};\n".format(cname, wname)
+            code += "typedef {0} {1};\n".format(cname, wname)
         code += "CV_PY_FROM_ENUM({0});\nCV_PY_TO_ENUM({0});\n\n".format(wname)
         self.code_enums.write(code)
 
@@ -994,7 +993,7 @@ class PythonWrapperGenerator(object):
 
     def gen(self, srcfiles, output_path):
         self.clear()
-        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=False)
+        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:

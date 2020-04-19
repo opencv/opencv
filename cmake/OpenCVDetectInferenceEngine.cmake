@@ -17,12 +17,6 @@
 # INF_ENGINE_TARGET - set to name of imported library target representing InferenceEngine
 #
 
-if(NOT HAVE_CXX11)
-    message(WARNING "DL Inference engine requires C++11. You can turn it on via ENABLE_CXX11=ON CMake flag.")
-    return()
-endif()
-
-# =======================
 
 macro(ocv_ie_find_extra_libraries find_prefix find_suffix)
   file(GLOB libraries "${INF_ENGINE_LIB_DIRS}/${find_prefix}inference_engine*${find_suffix}")
@@ -135,9 +129,9 @@ endif()
 
 if(INF_ENGINE_TARGET)
   if(NOT INF_ENGINE_RELEASE)
-    message(WARNING "InferenceEngine version has not been set, 2020.1 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
+    message(WARNING "InferenceEngine version has not been set, 2020.2 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
   endif()
-  set(INF_ENGINE_RELEASE "2020010000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2020.1.0.2 -> 2020010002)")
+  set(INF_ENGINE_RELEASE "2020020000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2020.1.0.2 -> 2020010002)")
   set_target_properties(${INF_ENGINE_TARGET} PROPERTIES
     INTERFACE_COMPILE_DEFINITIONS "HAVE_INF_ENGINE=1;INF_ENGINE_RELEASE=${INF_ENGINE_RELEASE}"
   )

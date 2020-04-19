@@ -64,7 +64,7 @@ class SURFFLANNMatchingHomography {
         //-- Draw matches
         Mat imgMatches = new Mat();
         Features2d.drawMatches(imgObject, keypointsObject, imgScene, keypointsScene, goodMatches, imgMatches, Scalar.all(-1),
-                Scalar.all(-1), new MatOfByte(), Features2d.NOT_DRAW_SINGLE_POINTS);
+                Scalar.all(-1), new MatOfByte(), Features2d.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS);
 
         //-- Localize the object
         List<Point> obj = new ArrayList<>();

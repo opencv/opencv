@@ -8,6 +8,25 @@ if(DEFINED ANDROID_NDK_REVISION AND ANDROID_NDK_REVISION MATCHES "(1[56])([0-9]+
   set(ANDROID_NDK_REVISION "${ANDROID_NDK_REVISION}" CACHE INTERNAL "Android NDK revision")
 endif()
 
+# fixup -g option: https://github.com/opencv/opencv/issues/8460#issuecomment-434249750
+if(INSTALL_CREATE_DISTRIB
+  AND (NOT BUILD_WITH_DEBUG_INFO AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+  AND NOT OPENCV_SKIP_ANDROID_G_OPTION_FIX
+)
+  if(" ${CMAKE_CXX_FLAGS} " MATCHES " -g ")
+    message(STATUS "Android: fixup -g compiler option from Android toolchain")
+  endif()
+  string(REPLACE " -g " " " CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ")
+  string(REPLACE " -g " " " CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} ")
+  string(REPLACE " -g " " " CMAKE_ASM_FLAGS " ${CMAKE_ASM_FLAGS} ")
+  if(NOT " ${CMAKE_CXX_FLAGS_DEBUG}" MATCHES " -g")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+  endif()
+  if(NOT " ${CMAKE_C_FLAGS_DEBUG}" MATCHES " -g")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+  endif()
+endif()
+
 # https://developer.android.com/studio/command-line/variables.html
 ocv_check_environment_variables(ANDROID_SDK_ROOT ANDROID_HOME ANDROID_SDK)
 

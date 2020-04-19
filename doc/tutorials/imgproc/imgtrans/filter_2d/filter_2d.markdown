@@ -68,19 +68,19 @@ The tutorial code's is shown in the lines below.
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp)
 @include cpp/tutorial_code/ImgTrans/filter2D_demo.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgTrans/Filter2D/Filter2D_Demo.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/Filter2D/Filter2D_Demo.java)
 @include java/tutorial_code/ImgTrans/Filter2D/Filter2D_Demo.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/Filter2D/filter2D.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/Filter2D/filter2D.py)
 @include python/tutorial_code/ImgTrans/Filter2D/filter2D.py
 @end_toggle
 

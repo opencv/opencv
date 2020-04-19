@@ -1005,7 +1005,7 @@ void DigitalCameraCapture::readFrameFromFile(CameraFile * file, OutputArray outp
         Mat buf = Mat(1, size, CV_8UC1, (void *) data);
         if(!buf.empty())
         {
-            frame = imdecode(buf, CV_LOAD_IMAGE_UNCHANGED);
+            frame = imdecode(buf, IMREAD_UNCHANGED);
         }
         frame.copyTo(outputFrame);
     }
@@ -1207,7 +1207,7 @@ Ptr<IVideoCapture> createGPhoto2Capture(int index)
  *
  * @param deviceName is a substring in digital camera model name.
  */
-Ptr<IVideoCapture> createGPhoto2Capture(const String & deviceName)
+Ptr<IVideoCapture> createGPhoto2Capture(const std::string & deviceName)
 {
     Ptr<IVideoCapture> capture = makePtr<gphoto2::DigitalCameraCapture>(deviceName);
 

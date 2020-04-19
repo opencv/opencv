@@ -41,6 +41,7 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 
@@ -49,6 +50,11 @@
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/slice.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -122,7 +128,8 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return sliceRanges.size() == 1;
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -266,6 +273,7 @@ public:
         }
     }
 
+
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
@@ -323,6 +331,7 @@ public:
 #endif
 #endif
 
+
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
@@ -351,6 +360,29 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(slice));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        std::vector<std::vector<std::size_t>> offsets;
+        for (const auto& ranges : sliceRanges)
+        {
+            std::vector<std::size_t> offsets_i;
+            for (const auto& range : ranges)
+                offsets_i.push_back(range.start);
+            offsets.push_back(std::move(offsets_i));
+        }
+
+        return make_cuda_node<cuda4dnn::SliceOp>(preferableTarget, std::move(context->stream), std::move(offsets));
+    }
+#endif
 
 };
 

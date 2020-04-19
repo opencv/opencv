@@ -13,7 +13,7 @@
 #include <queue>
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 // This wrapper can behave differently for fake input nodes and real graph nodes.
 class ONNXNodeWrapper : public ImportNodeWrapper
@@ -152,6 +152,98 @@ public:
 
 private:
     int axis;
+};
+
+class NormalizeSubgraphBase : public Subgraph
+{
+public:
+    NormalizeSubgraphBase(int _normNodeOrder = 0) : axis(1), normNodeOrder(_normNodeOrder) {}
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        {
+            Ptr<ImportNodeWrapper> norm = net->getNode(matchedNodesIds[normNodeOrder]);
+            opencv_onnx::NodeProto* node = norm.dynamicCast<ONNXNodeWrapper>()->node;
+
+            for (int i = 0; i < node->attribute_size(); i++)
+            {
+                opencv_onnx::AttributeProto attr = node->attribute(i);
+                if (attr.name() != "axes")
+                    continue;
+                if (attr.ints_size() != 1)
+                    CV_Error(Error::StsNotImplemented, format("Unexpected number of axes: %d", attr.ints_size()));
+                axis = attr.ints(0);
+                return true;
+            }
+            CV_Error(Error::StsNotImplemented, "Missed axes attribute");
+        }
+        return false;
+    }
+
+    virtual void finalize(const Ptr<ImportGraphWrapper>&,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE
+    {
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        opencv_onnx::AttributeProto* axis_attr = node->add_attribute();
+        axis_attr->set_name("axis");
+        axis_attr->set_i(axis);
+
+        opencv_onnx::AttributeProto* end_axis_attr = node->add_attribute();
+        end_axis_attr->set_name("end_axis");
+        end_axis_attr->set_i(axis);
+    }
+
+protected:
+    int axis, normNodeOrder;
+};
+
+class NormalizeSubgraph1 : public NormalizeSubgraphBase
+{
+public:
+    NormalizeSubgraph1()
+    {
+        int input = addNodeToMatch("");
+        int norm = addNodeToMatch("ReduceL2", input);
+        addNodeToMatch("Div", input, norm);
+        setFusedNode("Normalize", input);
+    }
+};
+
+class NormalizeSubgraph2 : public NormalizeSubgraphBase
+{
+public:
+    NormalizeSubgraph2()
+    {
+        int input = addNodeToMatch("");
+        int norm = addNodeToMatch("ReduceL2", input);
+        int clip = addNodeToMatch("Clip", norm);
+        int shape = addNodeToMatch("Shape", input);
+        int expand = addNodeToMatch("Expand", clip, shape);
+        addNodeToMatch("Div", input, expand);
+        setFusedNode("Normalize", input);
+    }
+};
+
+class NormalizeSubgraph3 : public NormalizeSubgraphBase
+{
+public:
+    NormalizeSubgraph3() : NormalizeSubgraphBase(1)
+    {
+        int input = addNodeToMatch("");
+        int power = addNodeToMatch("Constant");
+        int squared = addNodeToMatch("Pow", input, power);
+        int sum = addNodeToMatch("ReduceSum", squared);
+        int sqrtNode = addNodeToMatch("Sqrt", sum);
+        int eps = addNodeToMatch("Constant");
+        int add = addNodeToMatch("Add", sqrtNode, eps);
+
+        addNodeToMatch("Div", input, add);
+        setFusedNode("Normalize", input);
+    }
 };
 
 class GatherCastSubgraph : public Subgraph
@@ -299,6 +391,9 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<ResizeSubgraph1>());
     subgraphs.push_back(makePtr<ResizeSubgraph2>());
     subgraphs.push_back(makePtr<SoftMaxSubgraph>());
+    subgraphs.push_back(makePtr<NormalizeSubgraph1>());
+    subgraphs.push_back(makePtr<NormalizeSubgraph2>());
+    subgraphs.push_back(makePtr<NormalizeSubgraph3>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
@@ -370,5 +465,5 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
     return blob;
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

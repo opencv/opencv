@@ -16,18 +16,19 @@
 #include <opencv2/core/utils/logger.hpp>
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
 {
     switch (v) {
-        case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
-        case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
-        case DNN_BACKEND_OPENCV: *os << "OCV"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019: *os << "DLIE"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
-        default: /* do nothing */;
+    case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
+    case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
+    case DNN_BACKEND_VKCOM: *os << "VKCOM"; return;
+    case DNN_BACKEND_OPENCV: *os << "OCV"; return;
+    case DNN_BACKEND_CUDA: *os << "CUDA"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019: *os << "DLIE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -39,7 +40,10 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_OPENCL: *os << "OCL"; return;
     case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
+    case DNN_TARGET_VULKAN: *os << "VULKAN"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
+    case DNN_TARGET_CUDA: *os << "CUDA"; return;
+    case DNN_TARGET_CUDA_FP16: *os << "CUDA_FP16"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -51,7 +55,7 @@ void PrintTo(const tuple<cv::dnn::Backend, cv::dnn::Target> v, std::ostream* os)
     PrintTo(get<1>(v), os);
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
 
 
@@ -183,6 +187,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withInferenceEngine /*= true*/,
         bool withHalide /*= false*/,
         bool withCpuOCV /*= true*/,
+        bool withVkCom /*= true*/,
+        bool withCUDA /*= true*/,
         bool withNgraph /*= true*/
 )
 {
@@ -223,6 +229,21 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #else
     CV_UNUSED(withInferenceEngine);
 #endif
+    if (withVkCom)
+    {
+        available = getAvailableTargets(DNN_BACKEND_VKCOM);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+            targets.push_back(make_tuple(DNN_BACKEND_VKCOM, *i));
+    }
+
+#ifdef HAVE_CUDA
+    if(withCUDA)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
+            targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
+    }
+#endif
+
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
@@ -381,6 +402,17 @@ void initDNNTests()
         // see validateVPUType(): CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
         CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
     );
+#ifdef HAVE_VULKAN
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_VULKAN
+    );
+#endif
+
+#ifdef HAVE_CUDA
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP32, CV_TEST_TAG_DNN_SKIP_CUDA_FP16
+    );
+#endif
 }
 
 } // namespace

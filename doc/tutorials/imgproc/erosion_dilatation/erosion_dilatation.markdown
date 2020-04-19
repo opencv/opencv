@@ -65,19 +65,19 @@ Code
 
 @add_toggle_cpp
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java)
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java)
 @include samples/java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java
 @end_toggle
 
 @add_toggle_python
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py)
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py)
 @include samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py
 @end_toggle
 

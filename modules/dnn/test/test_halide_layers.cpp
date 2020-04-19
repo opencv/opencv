@@ -16,7 +16,7 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace testing;
 
-static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false, bool randInput = true)
+static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false, bool randInput = true, double l1 = 0.0, double lInf = 0.0)
 {
     DNNTestLayer::checkBackend(backendId, targetId);
     if (randInput)
@@ -33,8 +33,12 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool 
     if (skipCheck)
         return;
 
-    double l1, lInf;
-    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+    double default_l1, default_lInf;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &default_l1, &default_lInf);
+    if (l1 == 0.0)
+        l1 = default_l1;
+    if (lInf == 0.0)
+        lInf = default_lInf;
 #if 0
     std::cout << "l1=" << l1 << "  lInf=" << lInf << std::endl;
     std::cout << outputDefault.reshape(1, outputDefault.total()).t() << std::endl;
@@ -43,11 +47,11 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool 
     normAssert(outputDefault, outputHalide, "", l1, lInf);
 }
 
-static void test(LayerParams& params, Mat& input, Backend backendId, Target targetId, bool skipCheck = false)
+static void test(LayerParams& params, Mat& input, Backend backendId, Target targetId, bool skipCheck = false, double l1 = 0.0, double lInf = 0.0)
 {
     Net net;
     net.addLayerToPrev(params.name, params.type, params);
-    test(input, net, backendId, targetId, skipCheck);
+    test(input, net, backendId, targetId, skipCheck, true, l1, lInf);
 }
 
 static inline testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsWithHalide()
@@ -173,6 +177,9 @@ TEST_P(Deconvolution, Accuracy)
             && stride == Size(1, 1) && dilation == Size(1, 1))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
+
+    if (targetId == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
 
     int sz[] = {inChannels, outChannels / group, kernel.height, kernel.width};
     Mat weights(4, &sz[0], CV_32F);
@@ -410,7 +417,11 @@ TEST_P(FullyConnected, Accuracy)
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
     Mat input(4, &sz[0], CV_32F);
-    test(lp, input, backendId, targetId);
+
+    double l1 = 0.0;
+    if (targetId == DNN_TARGET_CUDA_FP16)
+        l1 = 0.015;
+    test(lp, input, backendId, targetId, false, true, l1);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, FullyConnected, Combine(
@@ -431,7 +442,7 @@ TEST_P(SoftMax, Accuracy)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
     LayerParams lp;
-    lp.type = "SoftMax";
+    lp.type = "Softmax";
     lp.name = "testLayer";
 
     int sz[] = {1, inChannels, 1, 1};
@@ -493,7 +504,7 @@ TEST_P(Test_Halide_layers, MaxPoolUnpool)
 ////////////////////////////////////////////////////////////////////////////////
 static const int kNumChannels = 3;
 
-void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId)
+void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId, double l1 = 0.0, double lInf = 0.0)
 {
     EXPECT_FALSE(lp.name.empty());
 
@@ -513,7 +524,7 @@ void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId)
 
     int sz[] = {1, kNumChannels, 10, 10};
     Mat input(4, &sz[0], CV_32F);
-    test(input, net, backendId, targetId);
+    test(input, net, backendId, targetId, false, true, l1, lInf);
 }
 
 typedef TestWithParam<tuple<bool, bool, float, tuple<Backend, Target> > > BatchNorm;

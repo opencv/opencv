@@ -318,7 +318,7 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
             saveFrameData();
             bool isFrameBad = checkLastFrame();
             if (!isFrameBad) {
-                std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibData->imagePoints.size(),
+                std::string displayMessage = cv::format("Frame # %zu captured", std::max(mCalibData->imagePoints.size(),
                                                                                         mCalibData->allCharucoCorners.size()));
                 if(!showOverlayMessage(displayMessage))
                     showCaptureMessage(frame, displayMessage);

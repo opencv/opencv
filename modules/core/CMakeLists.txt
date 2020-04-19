@@ -36,6 +36,9 @@ if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
 endif()
 
 if(HAVE_CUDA)
+  if(NOT HAVE_opencv_cudev)
+    message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
+  endif()
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
@@ -103,6 +106,10 @@ ocv_target_link_libraries(${the_module} PRIVATE
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"
 )
+
+if(HAVE_HPX)
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
+endif()
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()

@@ -42,12 +42,19 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_vkcom.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/concat.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -105,9 +112,11 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !padding) ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
     }
 
     class ChannelConcatInvoker : public ParallelLoopBody
@@ -277,6 +286,32 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto concat_axis = clamp(axis, input_wrapper->getRank());
+        return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(context->stream), concat_axis, padding);
+    }
+#endif
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        vkcom::Tensor in = VkComTensor(input[0]);
+        int cAxis = clamp(axis, in.dimNum());
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpConcat(cAxis));
+        return Ptr<BackendNode>(new VkComBackendNode(input, op));
+#endif // HAVE_VULKAN
+        return Ptr<BackendNode>();
+    }
+
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
@@ -323,7 +358,7 @@ public:
         std::vector<size_t> maxDims(numDims, 0);
 
         CV_Assert(inputs.size() == nodes.size());
-        ngraph::NodeVector inp_nodes;
+        ngraph::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
             inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);

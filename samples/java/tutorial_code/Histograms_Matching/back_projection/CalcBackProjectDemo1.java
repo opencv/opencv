@@ -145,7 +145,7 @@ class CalcBackProject1 {
         hist.get(0, 0, histData);
         for (int i = 0; i < bins; i++) {
             Imgproc.rectangle(histImg, new Point(i * binW, h),
-                    new Point((i + 1) * binW, h - Math.round(histData[i] * h / 255.0)), new Scalar(0, 0, 255), Core.FILLED);
+                    new Point((i + 1) * binW, h - Math.round(histData[i] * h / 255.0)), new Scalar(0, 0, 255), Imgproc.FILLED);
         }
         Image histImage = HighGui.toBufferedImage(histImg);
         histImgLabel.setIcon(new ImageIcon(histImage));

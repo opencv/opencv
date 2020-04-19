@@ -81,19 +81,19 @@ Code
 
 @add_toggle_cpp
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp)
     @include samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp
 @end_toggle
 
 @add_toggle_java
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java)
     @include samples/java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java
 @end_toggle
 
 @add_toggle_python
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py)
     @include samples/python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py
 @end_toggle
 

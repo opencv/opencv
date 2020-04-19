@@ -127,7 +127,7 @@ int main(int argc, char** argv)
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
-    size_t async = parser.get<int>("async");
+    size_t asyncNumReq = parser.get<int>("async");
     CV_Assert(parser.has("model"));
     std::string modelPath = findFile(parser.get<String>("model"));
     std::string configPath = findFile(parser.get<String>("config"));
@@ -196,9 +196,9 @@ int main(int argc, char** argv)
                 if (!framesQueue.empty())
                 {
                     frame = framesQueue.get();
-                    if (async)
+                    if (asyncNumReq)
                     {
-                        if (futureOutputs.size() == async)
+                        if (futureOutputs.size() == asyncNumReq)
                             frame = Mat();
                     }
                     else
@@ -212,7 +212,7 @@ int main(int argc, char** argv)
                 preprocess(frame, net, Size(inpWidth, inpHeight), scale, mean, swapRB);
                 processedFramesQueue.push(frame);
 
-                if (async)
+                if (asyncNumReq)
                 {
                     futureOutputs.push(net.forwardAsync());
                 }
@@ -266,7 +266,7 @@ int main(int argc, char** argv)
     processingThread.join();
 
 #else  // CV_CXX11
-    if (async)
+    if (asyncNumReq)
         CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
 
     // Process frames.

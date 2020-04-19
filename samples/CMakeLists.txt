@@ -38,7 +38,7 @@ endif()
 if(UNIX AND NOT ANDROID AND (HAVE_VA OR HAVE_VA_INTEL))
   add_subdirectory(va_intel)
 endif()
-if(ANDROID AND BUILD_ANDROID_EXAMPLES)
+if(ANDROID AND (BUILD_ANDROID_EXAMPLES OR INSTALL_ANDROID_EXAMPLES))
   add_subdirectory(android)
 endif()
 if(INSTALL_PYTHON_EXAMPLES)
@@ -56,7 +56,7 @@ else()
 #  Standalone mode
 #
 #===================================================================================================
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 
 project(samples C CXX)
 option(BUILD_EXAMPLES "Build samples" ON)

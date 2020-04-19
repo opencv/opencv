@@ -9,4 +9,8 @@
 #include "opencv2/stitching/detail/matchers.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
 
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d/nonfree.hpp"
+#endif
+
 #endif

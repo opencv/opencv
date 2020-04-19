@@ -51,7 +51,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 using namespace TH;
 
@@ -865,15 +865,10 @@ struct TorchImporter
                 layerParams.set("indices_blob_id", tensorParams["indices"].first);
                 curModule->modules.push_back(newModule);
             }
-            else if (nnName == "SoftMax")
+            else if (nnName == "LogSoftMax" || nnName == "SoftMax")
             {
-                newModule->apiType = "SoftMax";
-                curModule->modules.push_back(newModule);
-            }
-            else if (nnName == "LogSoftMax")
-            {
-                newModule->apiType = "SoftMax";
-                layerParams.set("log_softmax", true);
+                newModule->apiType = "Softmax";
+                layerParams.set("log_softmax", nnName == "LogSoftMax");
                 curModule->modules.push_back(newModule);
             }
             else if (nnName == "SpatialCrossMapLRN")
@@ -1263,5 +1258,5 @@ Net readNetFromTorch(const String &model, bool isBinary, bool evaluate)
     return net;
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace

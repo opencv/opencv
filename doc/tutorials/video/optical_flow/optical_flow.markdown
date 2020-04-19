@@ -95,7 +95,7 @@ below:
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/video/optical_flow/optical_flow.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/video/optical_flow/optical_flow.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/video/optical_flow/optical_flow.cpp
@@ -103,7 +103,7 @@ below:
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/optical_flow/optical_flow.py)
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/video/optical_flow/optical_flow.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/video/optical_flow/optical_flow.py
@@ -112,7 +112,7 @@ below:
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java)
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java
@@ -145,7 +145,7 @@ corresponds to Value plane. See the code below:
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp
@@ -153,7 +153,7 @@ corresponds to Value plane. See the code below:
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py)
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py
@@ -162,7 +162,7 @@ corresponds to Value plane. See the code below:
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java)
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java
