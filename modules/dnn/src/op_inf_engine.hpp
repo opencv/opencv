@@ -112,6 +112,8 @@ public:
 
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
+    void reset();
+
 private:
     InferenceEngine::Builder::Network netBuilder;
 
