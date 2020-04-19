@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -38,8 +38,9 @@
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
-#include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core
-#include <opencv2/gapi/cpu/imgproc.hpp> // ...and Imgproc kernel implementations
+#include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core,
+#include <opencv2/gapi/cpu/imgproc.hpp> // ...Imgproc
+#include <opencv2/gapi/cpu/video.hpp>   // ...and Video kernel implementations
 #include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
@@ -66,9 +67,9 @@ namespace
 
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
-            // FIXME add N-arg version combine
-            combine(combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels()),
+            combine(cv::gapi::core::cpu::kernels(),
+                    cv::gapi::imgproc::cpu::kernels(),
+                    cv::gapi::video::cpu::kernels(),
                     cv::gapi::render::ocv::kernels());
 #else
             cv::gapi::GKernelPackage();

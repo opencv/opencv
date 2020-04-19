@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -182,6 +182,17 @@ GAPI_OCV_KERNEL(GCPUCanny, cv::gapi::imgproc::GCanny)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUGoodFeatures, cv::gapi::imgproc::GGoodFeatures)
+{
+    static void run(const cv::Mat& image, int maxCorners, double qualityLevel, double minDistance,
+                    const cv::Mat& mask, int blockSize, bool useHarrisDetector, double k,
+                    std::vector<cv::Point2f> &out)
+    {
+        cv::goodFeaturesToTrack(image, out, maxCorners, qualityLevel, minDistance,
+                                mask, blockSize, useHarrisDetector, k);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPURGB2YUV, cv::gapi::imgproc::GRGB2YUV)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
@@ -353,7 +364,7 @@ G_TYPED_KERNEL(GYUV2Gray, <cv::GMat(cv::GMat)>, "yuvtogray") {
          * U V U V U V U V
          */
 
-        return {CV_8U, 1, cv::gapi::own::Size{in.size.width, in.size.height - (in.size.height / 3)}, false};
+        return {CV_8U, 1, cv::Size{in.size.width, in.size.height - (in.size.height / 3)}, false};
     }
 };
 
@@ -367,7 +378,7 @@ GAPI_OCV_KERNEL(GCPUYUV2Gray, GYUV2Gray)
 
 G_TYPED_KERNEL(GConcatYUVPlanes, <cv::GMat(cv::GMat, cv::GMat)>, "concatyuvplanes") {
     static cv::GMatDesc outMeta(cv::GMatDesc y, cv::GMatDesc uv) {
-        return {CV_8U, 1, cv::gapi::own::Size{y.size.width, y.size.height + uv.size.height}, false};
+        return {CV_8U, 1, cv::Size{y.size.width, y.size.height + uv.size.height}, false};
     }
 };
 
@@ -412,6 +423,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUSobel
         , GCPUSobelXY
         , GCPUCanny
+        , GCPUGoodFeatures
         , GCPUEqualizeHist
         , GCPURGB2YUV
         , GCPUYUV2RGB

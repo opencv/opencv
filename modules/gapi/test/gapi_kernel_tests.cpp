@@ -100,7 +100,7 @@ namespace
         GAPI_FLUID_KERNEL(GClone, I::GClone, false)
         {
             static const int Window = 1;
-            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer)
+            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer&)
             {
                 HeteroGraph::registerCallKernel(KernelTags::FLUID_CUSTOM_CLONE);
             }

@@ -10,7 +10,6 @@
 #include <ade/util/iota_range.hpp>
 #include <ade/util/algorithm.hpp>
 
-#include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/own/mat.hpp> //gapi::own::Mat
 #include <opencv2/gapi/gmat.hpp>
 

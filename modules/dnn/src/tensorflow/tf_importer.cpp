@@ -1402,9 +1402,17 @@ void TFImporter::populateNet(Net dstNet)
                 netInputsNames.push_back(name);
                 layer_id[name] = 0;
             }
+            tensorflow::TensorShapeProto shape;
             if (hasLayerAttr(layer, "shape"))
+                shape = getLayerAttr(layer, "shape").shape();
+            else if (hasLayerAttr(layer, "_output_shapes"))
             {
-                const tensorflow::TensorShapeProto& shape = getLayerAttr(layer, "shape").shape();
+                tensorflow::AttrValue_ListValue list = getLayerAttr(layer, "_output_shapes").list();
+                if (list.shape_size())
+                    shape = list.shape()[0];
+            }
+            if (shape.dim_size())
+            {
                 MatShape dims(shape.dim_size());
                 for (int i = 0; i < dims.size(); ++i)
                     dims[i] = shape.dim(i).size();
@@ -1868,8 +1876,31 @@ void TFImporter::populateNet(Net dstNet)
             connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
             data_layouts[name] = DATA_LAYOUT_UNKNOWN;
         }
-        else if (type == "ResizeNearestNeighbor" || type == "ResizeBilinear")
+        else if (type == "ResizeNearestNeighbor" || type == "ResizeBilinear" || type == "FusedResizeAndPadConv2D")
         {
+            std::string convWeights = "";
+            if (type == "FusedResizeAndPadConv2D")
+            {
+                // input: "mul_1"
+                // input: "decoder/ResizeBilinear/size"
+                // input: "decoder/decoder_conv0/Conv2D_dummy_paddings"
+                // input: "decoder/decoder_conv0/weights"
+                CV_CheckEQ(layer.input_size(), 4, "Number of input for FusedResizeAndPadConv2D");
+
+                Mat paddings = getTensorContent(getConstBlob(layer, value_id, 2));
+                CV_CheckEQ(countNonZero(paddings), 0, "Unsupported mode");
+
+                convWeights = layer.input(3);
+                layer.mutable_input()->DeleteSubrange(2, 2);
+                name = name + "/resize";
+
+                if (hasLayerAttr(layer, "resize_align_corners"))
+                {
+                    layer.mutable_attr()->insert(
+                        ::google::protobuf::MapPair<std::string, tensorflow::AttrValue>("align_corners",
+                                                                                        getLayerAttr(layer, "resize_align_corners")));
+                }
+            }
             if (layer.input_size() == 2)
             {
                 Mat outSize = getTensorContent(getConstBlob(layer, value_id, 1));
@@ -1901,6 +1932,17 @@ void TFImporter::populateNet(Net dstNet)
             layer_id[name] = id;
 
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
+            // Step back to add convolution
+            if (type == "FusedResizeAndPadConv2D")
+            {
+                tensorflow::NodeDef* conv = net.mutable_node(li);
+                conv->clear_input();
+                conv->add_input(name);
+                conv->add_input(convWeights);
+                conv->set_op("Conv2D");
+                li -= 1;
+            }
         }
         else if (type == "L2Normalize")
         {

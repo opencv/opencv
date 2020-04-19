@@ -10,7 +10,7 @@
 
 namespace
 {
-#define CORE_GPU [] () { return cv::compile_args(cv::gapi::core::gpu::kernels()); }
+#define CORE_GPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::gpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test

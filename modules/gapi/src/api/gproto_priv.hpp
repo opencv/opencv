@@ -24,11 +24,10 @@ namespace proto {
 // FIXME: Possible dangling reference alert!!!
 GAPI_EXPORTS const GOrigin& origin_of (const GProtoArg &arg);
 GAPI_EXPORTS const GOrigin& origin_of (const GArg      &arg);
+GAPI_EXPORTS const void*    ptr       (const GRunArgP  &arg);
 
 bool           is_dynamic(const GArg      &arg);
 GProtoArg      rewrap    (const GArg      &arg);
-
-const void*    ptr       (const GRunArgP  &arg);
 
 } // proto
 } // gimpl

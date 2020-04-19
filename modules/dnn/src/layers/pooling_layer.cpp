@@ -473,7 +473,7 @@ public:
             ieLayer.setRoundingType(ceilMode ?
                                     InferenceEngine::Builder::PoolingLayer::RoundingType::CEIL :
                                     InferenceEngine::Builder::PoolingLayer::RoundingType::FLOOR);
-            ieLayer.setExcludePad(type == AVE && padMode == "SAME");
+            ieLayer.setExcludePad(!avePoolPaddedArea);
 
             InferenceEngine::Builder::Layer l = ieLayer;
             if (!padMode.empty())

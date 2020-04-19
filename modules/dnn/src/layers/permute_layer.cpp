@@ -352,7 +352,7 @@ public:
                 CV_Assert(out.dims == numAxes && out.size == outputs[0].size);
 
                 CV_Assert(inp.isContinuous() && out.isContinuous());
-                CV_Assert(inp.type() == CV_32F && out.type() == CV_32F);
+                // CV_Assert(inp.type() == CV_32F && out.type() == CV_32F);
 
                 if( numAxes == 4 )
                 {

@@ -22,7 +22,7 @@ namespace {
     cv::GFluidParallelOutputRois asGFluidParallelOutputRois(const std::vector<cv::Rect>& rois){
         cv::GFluidParallelOutputRois parallel_rois;
         for (auto const& roi : rois) {
-            parallel_rois.parallel_rois.emplace_back(GFluidOutputRois{{to_own(roi)}});
+            parallel_rois.parallel_rois.emplace_back(GFluidOutputRois{{roi}});
         }
         return parallel_rois;
     }
