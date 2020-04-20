@@ -12,10 +12,30 @@
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/gapi/util/optional.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
 
 namespace cv {
+
+template<class T> using optional = cv::util::optional<T>;
+
+// TODO: Keep it in sync with GRunArgP (derive the type automatically?)
+using GOptRunArgP = util::variant<
+#if !defined(GAPI_STANDALONE)
+    optional<cv::Mat>*,
+#endif // !defined(GAPI_STANDALONE)
+    optional<cv::gapi::own::Mat>*,
+    optional<cv::Scalar>*
+    // FIXME: array??
+    // FIXME: opaque??
+>;
+using GOptRunArgsP = std::vector<GOptRunArgP>;
+
+template<typename... Ts> inline GOptRunArgsP gout(optional<Ts>&... args)
+{
+    return GOptRunArgsP{ GOptRunArgP{&args}... };
+}
 
 /**
  * \addtogroup gapi_main_classes
@@ -149,6 +169,44 @@ public:
      *    false marks end of the stream.
      */
     bool pull(cv::GRunArgsP &&outs);
+
+    /**
+     * @brief Get some next available data from the pipeline.
+     *
+     * This method takes a vector of cv::optional object. An object is
+     * assigned to some value if this value is available (ready) at
+     * the time of the call, and resets the object to empty() if it is
+     * not.
+     *
+     * This is a blocking method which guarantees that some data has
+     * been written to the output vector on return.
+     *
+     * Using this method only makes sense if the graph has
+     * desynchronized parts (see cv::gapi::desync). If there is no
+     * desynchronized parts in the graph, the behavior of this
+     * method is identical to the regular pull() (all data objects are
+     * produced synchronously in the output vector).
+     *
+     * Use gout() to create an output parameter vector.
+     *
+     * Output vectors must have the same number of elements as defined
+     * in the cv::GComputation protocol (at the moment of its
+     * construction). Shapes of elements also must conform to protocol
+     * (e.g. cv::optional<cv::Mat> needs to be passed where cv::GMat
+     * has been declared as output, and so on). Run-time exception is
+     * generated on type mismatch.
+     *
+     * This method writes new data into objects passed via output
+     * vector.  If there is no data ready yet, this method blocks. Use
+     * try_pull() if you need a non-blocking version.
+     *
+     * @param outs vector of output parameters to obtain.
+     * @return true if next result has been obtained,
+     *    false marks end of the stream.
+     *
+     * @sa cv::gapi::desync
+     */
+    bool pull(cv::GOptRunArgsP &&outs);
 
     /**
      * @brief Try to get the next processed frame from the pipeline.

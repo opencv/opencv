@@ -134,6 +134,45 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
     }
 }
 
+// FIXME: Is there a way to derive function from its GRunArgsP version?
+template<class C> using O = cv::util::optional<C>;
+void sync_data(cv::GRunArgs &results, cv::GOptRunArgsP &outputs)
+{
+    namespace own = cv::gapi::own;
+
+    for (auto && it : ade::util::zip(ade::util::toRange(outputs),
+                                     ade::util::toRange(results)))
+    {
+        auto &out_obj = std::get<0>(it);
+        auto &res_obj = std::get<1>(it);
+
+        // FIXME: this conversion should be unified
+        using T = cv::GOptRunArgP;
+        switch (out_obj.index())
+        {
+#if !defined(GAPI_STANDALONE)
+        case T::index_of<O<cv::Mat>*>():
+            *cv::util::get<O<cv::Mat>*>(out_obj)
+                = cv::util::make_optional(std::move(cv::util::get<cv::Mat>(res_obj)));
+            break;
+#endif // !GAPI_STANDALONE
+        case T::index_of<O<own::Mat>*>():
+            *cv::util::get<O<own::Mat>*>(out_obj)
+                = cv::util::make_optional(std::move(cv::util::get<own::Mat>(res_obj)));
+            break;
+        case T::index_of<O<cv::Scalar>*>():
+            *cv::util::get<O<cv::Scalar>*>(out_obj)
+                = cv::util::make_optional(std::move(cv::util::get<cv::Scalar>(res_obj)));
+            break;
+        default:
+            // ...maybe because of STANDALONE mode.
+            GAPI_Assert(false && "This value type is not supported!");
+            break;
+        }
+    }
+}
+
+
 // Pops an item from every input queue and combine it to the final
 // result.  Blocks the current thread.  Returns true if the vector has
 // been obtained successfully and false if a Stop message has been
@@ -619,6 +658,8 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
     , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
                      .get<IslandModel>().model)
     , m_gim(*m_island_graph)
+    , m_desync(GModel::Graph(*m_orig_graph).metadata()
+               .contains<Desynchronized>())
 {
     GModel::Graph gm(*m_orig_graph);
     // NB: Right now GIslandModel is acyclic, and all the below code assumes that.
@@ -1001,10 +1042,16 @@ void cv::gimpl::GStreamingExecutor::wait_shutdown()
 
 bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
 {
+    // This pull() can only be called when there's no desynchronized
+    // parts in the graph.
+    GAPI_Assert(!m_desync &&
+                "This graph has desynchronized parts! Please use another pull()");
+
     if (state == State::STOPPED)
         return false;
     GAPI_Assert(state == State::RUNNING);
-    GAPI_Assert(m_sink_queues.size() == outs.size());
+    GAPI_Assert(m_sink_queues.size() == outs.size() &&
+                "Number of data objects in cv::gout() must match the number of graph outputs in cv::GOut()");
 
     Cmd cmd;
     m_out_queue.pop(cmd);
@@ -1019,6 +1066,34 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
     sync_data(this_result, outs);
     return true;
 }
+
+bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
+{
+    // This pull() can only be called in both cases: if there are
+    // desyncrhonized parts or not.
+
+    // FIXME: so far it is a full duplicate of standard pull except
+    // the sync_data version called.
+    if (state == State::STOPPED)
+        return false;
+    GAPI_Assert(state == State::RUNNING);
+    GAPI_Assert(m_sink_queues.size() == outs.size() &&
+                "Number of data objects in cv::gout() must match the number of graph outputs in cv::GOut()");
+
+    Cmd cmd;
+    m_out_queue.pop(cmd);
+    if (cv::util::holds_alternative<Stop>(cmd))
+    {
+        wait_shutdown();
+        return false;
+    }
+
+    GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(cmd));
+    cv::GRunArgs &this_result = cv::util::get<cv::GRunArgs>(cmd);
+    sync_data(this_result, outs);
+    return true;
+}
+
 
 bool cv::gimpl::GStreamingExecutor::try_pull(cv::GRunArgsP &&outs)
 {

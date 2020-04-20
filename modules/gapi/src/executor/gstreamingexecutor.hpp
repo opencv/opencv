@@ -87,6 +87,7 @@ protected:
     util::optional<bool> m_reshapable;
 
     cv::gimpl::GIslandModel::Graph m_gim; // FIXME: make const?
+    const bool m_desync;
 
     // FIXME: Naive executor details are here for now
     // but then it should be moved to another place
@@ -131,6 +132,7 @@ public:
     void setSource(GRunArgs &&args);
     void start();
     bool pull(cv::GRunArgsP &&outs);
+    bool pull(cv::GOptRunArgsP &&outs);
     bool try_pull(cv::GRunArgsP &&outs);
     void stop();
     bool running() const;

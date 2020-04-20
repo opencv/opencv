@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -18,6 +18,7 @@
 #include <opencv2/gapi/ocl/imgproc.hpp>
 
 #include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/gapi/streaming/desync.hpp>
 
 namespace opencv_test
 {
@@ -977,6 +978,229 @@ TEST_F(GAPI_Streaming_Unit, SetSource_After_Completion)
     // Test against new ref
     ref(cv::gin(eye, m), cv::gout(out_ref));
     EXPECT_EQ(0., cv::norm(out, out_ref, cv::NORM_INF));
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    // FIXME: Unary desync should not require tie!
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    cv::Mat test_in = cv::Mat::eye(cv::Size(32,32), CV_8UC3);
+    cv::Mat test_out1, test_out2;
+    cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .apply(cv::gin(test_in), cv::gout(test_out1, test_out2));
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    std::size_t test_frames = 0u;
+    cv::optional<cv::Mat> test_out1, test_out2;
+    while (sc.pull(cv::gout(test_out1, test_out2))) {
+        GAPI_Assert(test_out1 || test_out2);
+        test_frames++;
+    }
+    EXPECT_EQ(100u, test_frames);
+}
+
+TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+    cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = tmp2 / cv::gapi::Sobel(tmp2, CV_8U, 1, 1);
+
+    // Desynchronized path 2
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out3 = 0.5*tmp3 +  0.5*cv::gapi::medianBlur(tmp3, 7);
+
+    // The code should compile and execute well (desynchronized parts don't cross)
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2, out3))
+        .compileStreaming();
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    std::size_t test_frames = 0u;
+    cv::optional<cv::Mat> test_out1, test_out2, test_out3;
+    while (sc.pull(cv::gout(test_out1, test_out2, test_out3))) {
+        GAPI_Assert(test_out1 || test_out2 || test_out3);
+        test_frames++;
+    }
+    EXPECT_EQ(100u, test_frames);
+}
+
+TEST(GAPI_Streaming_Desync, Negative_NestedDesync_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = cv::gapi::medianBlur(tmp2, 3);
+
+    // Desynchronized path 2, nested from 1 (directly from desync)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp2);
+    cv::GMat out2 = 0.5*tmp3;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_NestedDesync_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = cv::gapi::medianBlur(tmp2, 3);
+
+    // Desynchronized path 2, nested from 1 (indirectly from desync)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp3;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossMainPart_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path: depends on both tmp1 and tmp2
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp1 + 0.5*tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(in, out1).compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossMainPart_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path: depends on both tmp1 and tmp2
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp1 + 0.5*cv::gapi::medianBlur(tmp2, 3);
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(in, out1).compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier0)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp2;
+
+    // Desynchronized path 2 (depends on 1)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = 0.5*tmp3 + tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_OtherDesync_Tier1)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    // Desynchronized path 1
+    cv::GMat tmp2 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out1 = 0.5*tmp2;
+
+    // Desynchronized path 2 (depends on 1)
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat out2 = 0.5*cv::gapi::medianBlur(tmp3,3) + 1.0*tmp2;
+
+    // This shouldn't compile
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+                     .compileStreaming());
+}
+
+TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp1;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    cv::Mat o1, o2;
+    EXPECT_ANY_THROW(sc.pull(cv::gout(o1, o2)));
+}
+
+TEST(GAPI_Streaming_Desync, UseSpecialPull)
+{
+    initTestDataPath();
+
+    cv::GMat in;
+    cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
+
+    cv::GMat tmp1 = cv::gapi::streaming::desync(out1);
+    cv::GMat out2 = 0.5*tmp1;
+
+    auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out1, out2))
+        .compileStreaming();
+
+    auto sc_file = findDataFile("cv/video/768x576.avi");
+    auto sc_src = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(sc_file);
+    sc.setSource(cv::gin(sc_src));
+    sc.start();
+
+    cv::optional<cv::Mat> o1, o2;
+    std::size_t num_frames = 0u;
+
+    while (sc.pull(cv::gout(o1, o2))) {
+        if (o1) num_frames++;
+    }
+    EXPECT_EQ(100u, num_frames);
 }
 
 } // namespace opencv_test

@@ -54,6 +54,11 @@ namespace
         // Also check the cases backend can't handle
         // (e.x. GScalar connecting two fluid ops should split the graph)
         const GModel::ConstGraph g(src_graph);
+        if (g.metadata().contains<HasIntrinsics>()) {
+            // Fusion of a graph having unassigned (top-level) intrinsics
+            // is definitely non-trivial
+            return false;
+        }
         const auto& active_backends = g.metadata().get<ActiveBackends>().backends;
         return active_backends.size() == 1 &&
                 ade::util::all_of(g.nodes(), [&](ade::NodeHandle nh) {

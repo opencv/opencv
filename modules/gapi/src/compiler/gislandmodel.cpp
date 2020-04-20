@@ -253,6 +253,9 @@ void GIslandModel::syncIslandTags(Graph &g, ade::Graph &orig_g)
 void GIslandModel::compileIslands(Graph &g, const ade::Graph &orig_g, const GCompileArgs &args)
 {
     GModel::ConstGraph gm(orig_g);
+    if (gm.metadata().contains<HasIntrinsics>()) {
+        util::throw_error(std::logic_error("FATAL: The graph has unresolved intrinsics"));
+    }
 
     auto original_sorted = gm.metadata().get<ade::passes::TopologicalSortData>();
     for (auto nh : g.nodes())
