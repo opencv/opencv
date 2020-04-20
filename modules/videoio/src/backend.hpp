@@ -9,6 +9,7 @@
 #include "opencv2/videoio/registry.hpp"
 
 namespace cv {
+
 // TODO: move to public interface
 // TODO: allow runtime backend registration
 class IBackend
