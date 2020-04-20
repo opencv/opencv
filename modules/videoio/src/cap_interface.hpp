@@ -43,7 +43,7 @@ public:
     struct VideoWriterParameter {
         VideoWriterParameter() = default;
 
-        VideoWriterParameter(int key, int value) : key(key), value(value) {}
+        VideoWriterParameter(int key_, int value_) : key(key_), value(value_) {}
 
         int key{-1};
         int value{-1};
@@ -88,6 +88,18 @@ public:
         {
             return defaultValue;
         }
+    }
+
+    std::vector<int> getUnused() const CV_NOEXCEPT {
+        std::vector<int> unusedParams;
+        for (const auto &param : params_)
+        {
+            if (!param.isConsumed)
+            {
+                unusedParams.push_back(param.key);
+            }
+        }
+        return unusedParams;
     }
 private:
     std::vector<VideoWriterParameter> params_;

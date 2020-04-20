@@ -535,6 +535,15 @@ bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, do
                         CV_WRITER_LOG_DEBUG(NULL,
                                             cv::format("VIDEOIO(%s): created, isOpened=%d",
                                                        info.name, iwriter->isOpened()));
+                        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG)
+                        {
+                            for (int key: parameters.getUnused())
+                            {
+                                CV_LOG_WARNING(NULL,
+                                               cv::format("VIDEOIO(%s): parameter with key '%d' was unused",
+                                                          info.name, key));
+                            }
+                        }
                         if (iwriter->isOpened())
                         {
                             return true;
