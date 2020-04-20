@@ -530,6 +530,8 @@ TEST_P(Test_Darknet_layers, avgpool_softmax)
 
 TEST_P(Test_Darknet_layers, region)
 {
+     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testDarknetLayer("region");
 }
 
