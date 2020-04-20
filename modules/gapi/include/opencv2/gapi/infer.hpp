@@ -39,6 +39,10 @@ public:
 
     using ResultL = std::tuple< cv::GArray<R>... >;
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
+    // APIList2 is also template to allow different calling options
+    // (GArray<cv::Rect> vs GArray<cv::GMat> per input)
+    // FIXME: Verify the Ts... with the networks signature!!
+    template<class... Ts> using APIList2 = std::function<ResultL(cv::GMat, cv::GArray<Ts>...)>;
 };
 
 // Single-return-value network definition (specialized base class)
@@ -54,6 +58,7 @@ public:
 
     using ResultL = cv::GArray<R>;
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
+    template<class... Ts> using APIList2 = std::function<ResultL(cv::GMat, cv::GArray<Ts>...)>;
 };
 
 // Base "Infer" kernel. Note - for whatever network, kernel ID
@@ -77,10 +82,21 @@ struct GInferBase {
 // All notes from "Infer" kernel apply here as well.
 struct GInferListBase {
     static constexpr const char * id() {
-        return "org.opencv.dnn.infer-roi"; // Universal stub
+        return "org.opencv.dnn.infer-roi";      // Universal stub
     }
     static GMetaArgs getOutMeta(const GMetaArgs &, const GArgs &) {
-        return GMetaArgs{};                // One more universal stub
+        return GMetaArgs{};                     // One more universal stub
+    }
+};
+
+// Base "Infer list 2" kernel.
+// All notes from "Infer" kernel apply here as well.
+struct GInferList2Base {
+    static constexpr const char * id() {
+        return "org.opencv.dnn.infer-roi-list"; // Universal stub
+    }
+    static GMetaArgs getOutMeta(const GMetaArgs &, const GArgs &) {
+        return GMetaArgs{};                     // One more universal stub
     }
 };
 
@@ -105,6 +121,21 @@ struct GInferList final
     , public detail::KernelTypeMedium< GInferList<Net>
                                      , typename Net::APIList > {
     using GInferListBase::getOutMeta; // FIXME: name lookup conflict workaround?
+
+    static constexpr const char* tag() { return Net::tag(); }
+};
+
+// An even more generic roi-list inference kernel. API (::on()) is
+// derived from the Net template parameter (see more in infer<>
+// overload).
+// Takes an extra variadic template list to reflect how this network
+// was called (with Rects or GMats as array parameters)
+template<typename Net, typename... Args>
+struct GInferList2 final
+    : public GInferList2Base
+    , public detail::KernelTypeMedium< GInferList2<Net>
+                                     , typename Net::template APIList2<Args...> > {
+    using GInferList2Base::getOutMeta; // FIXME: name lookup conflict workaround?
 
     static constexpr const char* tag() { return Net::tag(); }
 };
@@ -137,6 +168,31 @@ namespace gapi {
 template<typename Net, typename... Args>
 typename Net::ResultL infer(cv::GArray<cv::Rect> roi, Args&&... args) {
     return GInferList<Net>::on(roi, std::forward<Args>(args)...);
+}
+
+/** @brief Calculates responses for the specified network (template
+ *     parameter) for every region in the source image, extended version.
+ *
+ * @tparam A network type defined with G_API_NET() macro.
+ * @param image A source image containing regions of interest
+ * @param args GArray<> objects of cv::Rect or cv::GMat, one per every
+ * network input:
+ * - If a cv::GArray<cv::Rect> is passed, the appropriate
+ *   regions are taken from `image` and preprocessed to this particular
+ *   network input;
+ * - If a cv::GArray<cv::GMat> is passed, the underlying image data is
+ *   preprocessed to this input; if the GMat is a tensor, it is passed
+ *   as-is.
+ * @return a list of objects of return type as defined in G_API_NET().
+ *   If a network has multiple return values (defined with a tuple), a tuple of
+ *   GArray<> objects is returned with the appropriate types inside.
+ * @sa  G_API_NET()
+ */
+template<typename Net, typename... Args>
+typename Net::ResultL infer2(cv::GMat image, cv::GArray<Args>... args) {
+    // FIXME: Declared as "2" because in the current form it steals
+    // overloads from the regular infer
+    return GInferList2<Net, Args...>::on(image, args...);
 }
 
 /**

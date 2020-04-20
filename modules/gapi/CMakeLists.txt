@@ -15,7 +15,12 @@ endif()
 
 set(the_description "OpenCV G-API Core Module")
 
-ocv_add_module(gapi opencv_imgproc)
+ocv_add_module(gapi
+    REQUIRED
+      opencv_imgproc
+    OPTIONAL
+      opencv_video
+)
 
 if(MSVC)
   # Disable obsollete warning C4503 popping up on MSVC <<2017
@@ -55,6 +60,7 @@ set(gapi_srcs
     src/api/operators.cpp
     src/api/kernels_core.cpp
     src/api/kernels_imgproc.cpp
+    src/api/kernels_video.cpp
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
@@ -88,6 +94,7 @@ set(gapi_srcs
     src/backends/cpu/gcpubackend.cpp
     src/backends/cpu/gcpukernel.cpp
     src/backends/cpu/gcpuimgproc.cpp
+    src/backends/cpu/gcpuvideo.cpp
     src/backends/cpu/gcpucore.cpp
 
     # Fluid Backend (also built-in, FIXME:move away)

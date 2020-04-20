@@ -118,8 +118,7 @@ ade::NodeHandle GIsland::producer(const ade::Graph &g,
     }
     // Consistency: A GIsland requested for producer() of slot_nh should
     // always had the appropriate GModel node handle in its m_out_ops vector.
-    GAPI_Assert(false);
-    return ade::NodeHandle();
+    GAPI_Assert(false && "Broken GIslandModel ?.");
 }
 
 std::string GIsland::name() const
@@ -348,17 +347,15 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
         // This kludge should go as a result of de-ownification
         const cv::GRunArg& in_data_orig = std::get<1>(it);
         cv::GRunArg in_data;
-        switch (in_data_orig.index())
+#if !defined(GAPI_STANDALONE)
+        if (cv::util::holds_alternative<cv::Mat>(in_data_orig))
         {
-        case cv::GRunArg::index_of<cv::Mat>():
             in_data = cv::GRunArg{cv::to_own(cv::util::get<cv::Mat>(in_data_orig))};
-            break;
-        case cv::GRunArg::index_of<cv::Scalar>():
-            in_data = cv::GRunArg{(cv::util::get<cv::Scalar>(in_data_orig))};
-            break;
-        default:
+        }
+        else
+#endif // GAPI_STANDALONE
+        {
             in_data = in_data_orig;
-            break;
         }
         in_objs.emplace_back(std::get<0>(it), std::move(in_data));
     }

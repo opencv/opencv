@@ -744,7 +744,7 @@ TEST_P(NV12PlusResizeTest, Test)
     auto pkg = cv::gapi::combine(fluidTestPackage, cv::gapi::core::fluid::kernels());
 
     c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat)
-           ,cv::compile_args(pkg, cv::GFluidOutputRois{{to_own(roi)}}));
+           ,cv::compile_args(pkg, cv::GFluidOutputRois{{roi}}));
 
     cv::Mat rgb_mat;
     cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);
@@ -823,7 +823,7 @@ TEST_P(Preproc4lpiTest, Test)
                                  fluidResizeTestPackage(interp, in_sz, out_sz, 4));
 
     c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat)
-           ,cv::compile_args(pkg, cv::GFluidOutputRois{{to_own(roi)}}));
+           ,cv::compile_args(pkg, cv::GFluidOutputRois{{roi}}));
 
     cv::Mat rgb_mat;
     cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);

@@ -442,7 +442,7 @@ TEST_P(SoftMax, Accuracy)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
     LayerParams lp;
-    lp.type = "SoftMax";
+    lp.type = "Softmax";
     lp.name = "testLayer";
 
     int sz[] = {1, inChannels, 1, 1};

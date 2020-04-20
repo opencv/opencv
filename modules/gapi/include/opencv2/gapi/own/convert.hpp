@@ -11,7 +11,6 @@
 #if !defined(GAPI_STANDALONE)
 
 #include <opencv2/gapi/opencv_includes.hpp>
-#include <opencv2/gapi/own/types.hpp>
 #include <opencv2/gapi/own/mat.hpp>
 
 namespace cv
@@ -33,12 +32,6 @@ namespace cv
             ?  cv::gapi::own::Mat{m.rows, m.cols, m.type(), m.data, m.step}
             :  cv::gapi::own::Mat{to_own<int>(m.size), m.type(), m.data};
     };
-
-    inline cv::gapi::own::Size to_own (const Size& s) { return {s.width, s.height}; };
-
-    inline cv::gapi::own::Rect to_own (const Rect& r) { return {r.x, r.y, r.width, r.height}; };
-
-
 namespace gapi
 {
 namespace own
@@ -49,10 +42,6 @@ namespace own
             : cv::Mat{m.dims, m.type(), m.data};
     }
            cv::Mat to_ocv(Mat&&)    = delete;
-    inline cv::Size to_ocv (const Size& s) { return cv::Size(s.width, s.height); };
-
-    inline cv::Rect to_ocv (const Rect& r) { return cv::Rect(r.x, r.y, r.width, r.height); };
-
 } // namespace own
 } // namespace gapi
 } // namespace cv

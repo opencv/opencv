@@ -34,7 +34,7 @@ TEST(IslandFusion, TwoOps_OneIsland)
     cv::GComputation cc(in, out);
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Foo>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -77,7 +77,7 @@ TEST(IslandFusion, TwoOps_TwoIslands)
     cv::GComputation cc(in, out);
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Foo, S::Bar>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -142,8 +142,8 @@ TEST(IslandFusion, ConsumerHasTwoInputs)
     cv::GComputation cc(cv::GIn(in[0], in[1]), cv::GOut(out));
 
     // Prepare compilation parameters manually
-    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)}),
-                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)})};
+    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)}),
+                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)})};
     const auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -211,7 +211,7 @@ TEST(IslandFusion, DataNodeUsedDifferentBackend)
     cv::GComputation cc(cv::GIn(in), cv::GOut(out0, out1));
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Foo, S::Baz>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -272,7 +272,7 @@ TEST(IslandFusion, LoopBetweenDifferentBackends)
     cv::GComputation cc(cv::GIn(in), cv::GOut(out1, out0));
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Baz, J::Quux, S::Foo, S::Qux>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -334,8 +334,8 @@ TEST(IslandsFusion, PartionOverlapUserIsland)
     cv::GComputation cc(cv::GIn(in[0], in[1]), cv::GOut(out));
 
     // Prepare compilation parameters manually
-    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)}),
-                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)})};
+    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)}),
+                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)})};
     const auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -391,8 +391,8 @@ TEST(IslandsFusion, DISABLED_IslandContainsDifferentBackends)
     cv::GComputation cc(cv::GIn(in[0], in[1]), cv::GOut(out));
 
     // Prepare compilation parameters manually
-    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)}),
-                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)})};
+    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)}),
+                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)})};
     const auto pkg = cv::gapi::kernels<J::Foo, S::Bar>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -424,7 +424,7 @@ TEST(IslandFusion, WithLoop)
     cv::GComputation cc(in, out);
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Foo, J::Baz, J::Qux>();
 
     // Directly instantiate G-API graph compiler and run partial compilation

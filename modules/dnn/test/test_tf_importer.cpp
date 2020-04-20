@@ -891,6 +891,11 @@ TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor)
     runTensorFlowNet("keras_upsampling2d");
 }
 
+TEST_P(Test_TensorFlow_layers, fused_resize_conv)
+{
+    runTensorFlowNet("fused_resize_conv");
+}
+
 TEST_P(Test_TensorFlow_layers, slice)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 &&
@@ -945,6 +950,11 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear)
 {
     runTensorFlowNet("resize_bilinear");
     runTensorFlowNet("resize_bilinear_factor");
+}
+
+TEST_P(Test_TensorFlow_layers, tf2_keras)
+{
+    runTensorFlowNet("tf2_dense");
 }
 
 TEST_P(Test_TensorFlow_layers, squeeze)
