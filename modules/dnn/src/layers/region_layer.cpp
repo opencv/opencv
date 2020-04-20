@@ -110,7 +110,11 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+#ifdef HAVE_DNN_NGRAPH
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2);
+#endif
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     float logistic_activate(float x) { return 1.F / (1.F + exp(-x)); }
