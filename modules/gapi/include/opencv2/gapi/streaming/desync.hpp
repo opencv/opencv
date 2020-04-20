@@ -30,7 +30,7 @@ namespace detail {
         // Yields output objects according to the input Types...
         // Reuses gkernel machinery.
         // FIXME: This function can be generic and declared in gkernel.hpp
-        //        (it is there already, but a part of GKenrelType[M]
+        //        (it is there already, but a part of GKernelType[M]
         template<typename... R, int... IIs>
         static std::tuple<R...> yield(cv::GCall &call, cv::detail::Seq<IIs...>) {
             return std::make_tuple(cv::detail::Yield<R>::yield(call, IIs)...);
