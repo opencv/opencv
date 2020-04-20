@@ -174,7 +174,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
                                                            double fps, const cv::Size& frameSize,
                                                            const VideoWriterParameters& params)
 {
-    const bool isColor = params.at(VIDEOWRITER_PROP_IS_COLOR) != 0;
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor);
     if (writer && writer->isOpened())
         return writer;

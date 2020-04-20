@@ -496,7 +496,7 @@ public:
         {
             CV_Assert(plugin_api->Writer_release);
             CV_Assert(!filename.empty());
-            const bool isColor = params.at(VIDEOWRITER_PROP_IS_COLOR) != 0;
+            const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
             if (CV_ERROR_OK == plugin_api->Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
             {
                 CV_Assert(writer);

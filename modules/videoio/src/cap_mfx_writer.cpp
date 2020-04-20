@@ -256,7 +256,7 @@ Ptr<IVideoWriter> cv::create_MFX_writer(const std::string& filename, int _fourcc
 {
     if (codecIdByFourCC(_fourcc) > 0)
     {
-        const bool isColor = params.at(VIDEOWRITER_PROP_IS_COLOR) != 0;
+        const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
         Ptr<VideoWriter_IntelMFX> a = makePtr<VideoWriter_IntelMFX>(filename, _fourcc, fps, frameSize, isColor);
         if (a->isOpened())
             return a;

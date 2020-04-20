@@ -10,8 +10,6 @@
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/videoio_c.h"
 
-#include <map>
-
 //===================================================
 
 // Legacy structs
@@ -39,7 +37,61 @@ struct CvVideoWriter
 
 namespace cv
 {
-using VideoWriterParameters = std::map<int, int>;
+class VideoWriterParameters
+{
+public:
+    struct VideoWriterParameter {
+        VideoWriterParameter() = default;
+
+        VideoWriterParameter(int key, int value) : key(key), value(value) {}
+
+        int key{-1};
+        int value{-1};
+        mutable bool isConsumed{false};
+    };
+
+    VideoWriterParameters() = default;
+
+    explicit VideoWriterParameters(const std::vector<int>& params)
+    {
+        const auto count = params.size();
+        if (count % 2 != 0)
+        {
+            CV_Error_(Error::StsVecLengthErr,
+                      ("Vector of VideoWriter parameters should have even length"));
+        }
+        params_.reserve(count / 2);
+        for (std::size_t i = 0; i < count; i += 2)
+        {
+            add(params[i], params[i + 1]);
+        }
+    }
+
+    void add(int key, int value)
+    {
+        params_.emplace_back(key, value);
+    }
+
+    template<class ValueType>
+    ValueType get(int key, ValueType defaultValue) const CV_NOEXCEPT
+    {
+        auto it = std::find_if(params_.begin(), params_.end(),
+                               [key](const VideoWriterParameter &param) {
+                                   return param.key == key;
+                               });
+        if (it != params_.end())
+        {
+            it->isConsumed = true;
+            return static_cast<ValueType>(it->value);
+        }
+        else
+        {
+            return defaultValue;
+        }
+    }
+private:
+    std::vector<VideoWriterParameter> params_;
+};
 
 class IVideoCapture
 {

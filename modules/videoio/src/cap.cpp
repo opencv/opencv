@@ -45,9 +45,6 @@
 #include "videoio_registry.hpp"
 
 namespace cv {
-namespace detail {
-static VideoWriterParameters parseVideoWriterParameters(const std::vector<int>& params);
-} // namespace detail
 
 static bool param_VIDEOIO_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_DEBUG", false);
 static bool param_VIDEOCAPTURE_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOCAPTURE_DEBUG", false);
@@ -514,7 +511,7 @@ bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, do
         release();
     }
 
-    const auto parameters = detail::parseVideoWriterParameters(params);
+    const VideoWriterParameters parameters(params);
     for (const auto& info : videoio_registry::getAvailableBackends_Writer())
     {
         if (apiPreference == CAP_ANY || apiPreference == info.id)
@@ -524,7 +521,7 @@ bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, do
                                            "fourcc=0x%08x fps=%g sz=%dx%d isColor=%d...",
                                            info.name, filename.c_str(), (unsigned)fourcc, fps,
                                            frameSize.width, frameSize.height,
-                                           parameters.at(VIDEOWRITER_PROP_IS_COLOR)));
+                                           parameters.get(VIDEOWRITER_PROP_IS_COLOR, true)));
             CV_Assert(!info.backendFactory.empty());
             const Ptr<IBackend> backend = info.backendFactory->getBackend();
             if (!backend.empty())
@@ -657,38 +654,5 @@ int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
 {
     return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
-
-namespace detail {
-static void fillRequiredVideoWriterParametersWithDefaults(VideoWriterParameters& parameters)
-{
-    static VideoWriterParameters defaultParameters { { VIDEOWRITER_PROP_IS_COLOR,
-                                                       static_cast<int>(true) } };
-
-    for (const auto& defaultParam : defaultParameters)
-    {
-        const auto paramIt = parameters.find(defaultParam.first);
-        if (paramIt != parameters.cend())
-        {
-            parameters[defaultParam.first] = defaultParam.second;
-        }
-    }
-}
-
-static VideoWriterParameters parseVideoWriterParameters(const std::vector<int>& params)
-{
-    if (params.size() % 2 != 0)
-    {
-        CV_Error_(Error::StsVecLengthErr, ("Vector of parameters should have even length"));
-    }
-    VideoWriterParameters parsedParams;
-    const auto count = params.size() / 2;
-    for (size_t i = 0; i < count; i += 2)
-    {
-        parsedParams[params[i]] = params[i + 1];
-    }
-    fillRequiredVideoWriterParametersWithDefaults(parsedParams);
-    return parsedParams;
-}
-} // namespace detail
 
 } // namespace cv

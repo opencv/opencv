@@ -226,7 +226,7 @@ cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& file
                                                          const cv::VideoWriterParameters& params)
 {
     CvSize sz = { frameSize.width, frameSize.height };
-    const bool isColor = params.at(VIDEOWRITER_PROP_IS_COLOR) != 0;
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, sz, isColor);
     return cv::makePtr<cv::LegacyWriter>(wrt);
 }

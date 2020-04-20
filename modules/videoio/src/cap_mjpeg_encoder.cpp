@@ -1539,7 +1539,7 @@ Ptr<IVideoWriter> createMotionJpegWriter(const std::string& filename, int fourcc
     if (fourcc != CV_FOURCC('M', 'J', 'P', 'G'))
         return Ptr<IVideoWriter>();
 
-    const bool isColor = params.at(VIDEOWRITER_PROP_IS_COLOR) != 0;
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     Ptr<IVideoWriter> iwriter = makePtr<mjpeg::MotionJpegWriter>(filename, fps, frameSize, isColor);
     if( !iwriter->isOpened() )
         iwriter.release();

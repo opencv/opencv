@@ -1677,7 +1677,7 @@ Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourc
                                           const cv::Size& frameSize, const VideoWriterParameters& params)
 {
     CvVideoWriter_GStreamer* wrt = new CvVideoWriter_GStreamer;
-    const bool isColor = params.at(VIDEOWRITER_PROP_IS_COLOR) != 0;
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     try
     {
         if (wrt->open(filename, fourcc, fps, frameSize, isColor))
