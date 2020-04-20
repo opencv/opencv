@@ -37,6 +37,21 @@ struct CvVideoWriter
 
 namespace cv
 {
+namespace
+{
+template <class T>
+inline T castParameterTo(int paramValue)
+{
+    return static_cast<T>(paramValue);
+}
+
+template <>
+inline bool castParameterTo(int paramValue)
+{
+    return paramValue != 0;
+}
+}
+
 class VideoWriterParameters
 {
 public:
@@ -72,7 +87,7 @@ public:
         params_.emplace_back(key, value);
     }
 
-    template<class ValueType>
+    template <class ValueType>
     ValueType get(int key, ValueType defaultValue) const CV_NOEXCEPT
     {
         auto it = std::find_if(params_.begin(), params_.end(),
@@ -82,7 +97,7 @@ public:
         if (it != params_.end())
         {
             it->isConsumed = true;
-            return static_cast<ValueType>(it->value);
+            return castParameterTo<ValueType>(it->value);
         }
         else
         {
