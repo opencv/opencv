@@ -584,16 +584,15 @@ PERF_TEST_P_(LaplacianPerfTest, TestPerformance)
     compare_f cmpF;
     MatType type = 0;
     int kernSize = 0, dtype = 0;
-    double scale = 0;
     cv::Size sz;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, kernSize, sz, dtype, scale, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, dtype, compile_args) = GetParam();
 
     initMatrixRandN(type, sz, dtype, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
-        cv::Laplacian(in_mat1, out_mat_ocv, dtype, kernSize, scale);
+        cv::Laplacian(in_mat1, out_mat_ocv, dtype, kernSize);
     }
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -624,11 +623,11 @@ PERF_TEST_P_(BilateralFilterPerfTest, TestPerformance)
 {
     compare_f cmpF;
     MatType type = 0;
-    int dtype = 0, d = 0, borderType = 0;
+    int dtype = 0, d = 0, borderType = BORDER_DEFAULT;
     double sigmaColor = 0, sigmaSpace = 0;
     cv::Size sz;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, dtype, sz, d, sigmaColor, sigmaSpace, borderType,
+    std::tie(cmpF, type, dtype, sz, d, sigmaColor, sigmaSpace,
              compile_args) = GetParam();
 
     initMatrixRandN(type, sz, dtype, false);
@@ -640,8 +639,7 @@ PERF_TEST_P_(BilateralFilterPerfTest, TestPerformance)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::bilateralFilter(in, d, sigmaColor, sigmaSpace,
-                                         borderType);
+    auto out = cv::gapi::bilateralFilter(in, d, sigmaColor, sigmaSpace, borderType);
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:

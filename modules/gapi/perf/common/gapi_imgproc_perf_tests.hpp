@@ -32,9 +32,9 @@ class DilatePerfTest          : public TestPerfParams<tuple<compare_f, MatType,i
 class Dilate3x3PerfTest       : public TestPerfParams<tuple<compare_f, MatType,cv::Size,int, cv::GCompileArgs>> {};
 class SobelPerfTest           : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int,int, cv::GCompileArgs>> {};
 class SobelXYPerfTest         : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
-class LaplacianPerfTest       : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,double,
+class LaplacianPerfTest       : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,
                                                             cv::GCompileArgs>> {};
-class BilateralFilterPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, double,double, int,
+class BilateralFilterPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, double,double,
                                                             cv::GCompileArgs>> {};
 class CannyPerfTest           : public TestPerfParams<tuple<compare_f, MatType,cv::Size,double,double,int,bool,
                                                             cv::GCompileArgs>> {};

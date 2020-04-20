@@ -51,8 +51,8 @@ GAPI_TEST_FIXTURE(SobelTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int,in
 GAPI_TEST_FIXTURE(SobelXYTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int,int,int), 5,
     cmpF, kernSize, order, border_type, border_val)
 GAPI_TEST_FIXTURE(LaplacianTest, initMatrixRandN,
-                  FIXTURE_API(CompareMats,int, double,double,int), 5,
-                  cmpF, kernSize, scale, delta, borderType)
+                  FIXTURE_API(CompareMats,int,double,int), 4,
+                  cmpF, kernSize, scale, borderType)
 GAPI_TEST_FIXTURE(BilateralFilterTest, initMatrixRandN,
                   FIXTURE_API(CompareMats,int,double,double,int), 5,
                   cmpF, d, sigmaColor, sigmaSpace, borderType)

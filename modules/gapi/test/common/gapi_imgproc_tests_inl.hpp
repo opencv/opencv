@@ -344,6 +344,7 @@ TEST_P(SobelXYTest, AccuracyTest)
 
 TEST_P(LaplacianTest, AccuracyTest)
 {
+    double delta = 10;
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
     auto out = cv::gapi::Laplacian(in, dtype, kernSize, scale, delta, borderType);
