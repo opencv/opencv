@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -42,10 +42,14 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfInt64.h>
+#include "ImfInt64.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
+
 #include <string>
 
-namespace Imf {
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 //-----------------------------------------------------------
 // class IStream -- an abstract base class for input streams.
@@ -59,9 +63,10 @@ class IStream
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~IStream ();
-
-
+    
+    
     //-------------------------------------------------
     // Does this input stream support memory-mapped IO?
     //
@@ -71,6 +76,7 @@ class IStream
     // into a buffer supplied by the caller.
     //-------------------------------------------------
 
+    IMF_EXPORT
     virtual bool        isMemoryMapped () const;
 
 
@@ -85,8 +91,8 @@ class IStream
     //------------------------------------------------------
 
     virtual bool	read (char c[/*n*/], int n) = 0;
-
-
+    
+    
     //---------------------------------------------------
     // Read from a memory-mapped stream:
     //
@@ -95,9 +101,10 @@ class IStream
     // returned pointer remains valid until the stream
     // is closed.  If there are less than n byte left to
     // read in the stream or if the stream is not memory-
-    // mapped, readMemoryMapped(n) throws an exception.
+    // mapped, readMemoryMapped(n) throws an exception.  
     //---------------------------------------------------
 
+    IMF_EXPORT
     virtual char *	readMemoryMapped (int n);
 
 
@@ -122,6 +129,7 @@ class IStream
     // Clear error conditions after an operation has failed.
     //------------------------------------------------------
 
+    IMF_EXPORT
     virtual void	clear ();
 
 
@@ -129,10 +137,12 @@ class IStream
     // Get the name of the file associated with this stream.
     //------------------------------------------------------
 
+    IMF_EXPORT
     const char *	fileName () const;
 
   protected:
 
+    IMF_EXPORT
     IStream (const char fileName[]);
 
   private:
@@ -156,8 +166,9 @@ class OStream
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~OStream ();
-
+  
 
     //----------------------------------------------------------
     // Write to the stream:
@@ -192,10 +203,12 @@ class OStream
     // Get the name of the file associated with this stream.
     //------------------------------------------------------
 
+    IMF_EXPORT
     const char *	fileName () const;
 
   protected:
 
+    IMF_EXPORT
     OStream (const char fileName[]);
 
   private:
@@ -216,13 +229,13 @@ struct StreamIO
     static void
     writeChars (OStream &os, const char c[/*n*/], int n)
     {
-    os.write (c, n);
+        os.write (c, n);
     }
 
     static bool
     readChars (IStream &is, char c[/*n*/], int n)
     {
-    return is.read (c, n);
+        return is.read (c, n);
     }
 };
 
@@ -232,21 +245,20 @@ struct CharPtrIO
     static void
     writeChars (char *&op, const char c[/*n*/], int n)
     {
-    while (n--)
-        *op++ = *c++;
+        while (n--)
+            *op++ = *c++;
     }
 
     static bool
     readChars (const char *&ip, char c[/*n*/], int n)
     {
-    while (n--)
-        *c++ = *ip++;
+        while (n--)
+            *c++ = *ip++;
 
-    return true;
+        return true;
     }
 };
 
-
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

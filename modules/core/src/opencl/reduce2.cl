@@ -108,7 +108,10 @@ __kernel void reduce_horz_opt(__global const uchar * srcptr, int src_step, int s
         int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * cn, src_offset));
 
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
-        bufT tmp[cn] = { INIT_VALUE };
+        bufT tmp[cn];
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            tmp[c] = INIT_VALUE;
 
         int src_step_mul = BUF_COLS * cn;
         for (int idx = x; idx < cols; idx += BUF_COLS, src += src_step_mul)
@@ -140,7 +143,10 @@ __kernel void reduce_horz_opt(__global const uchar * srcptr, int src_step, int s
         int dst_index = mad24(y, dst_step, dst_offset);
 
         __global dstT * dst = (__global dstT *)(dstptr + dst_index);
-        bufT tmp[cn] = { INIT_VALUE };
+        bufT tmp[cn];
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            tmp[c] = INIT_VALUE;
 
         #pragma unroll
         for (int xin = 0; xin < BUF_COLS / 2; xin ++)
@@ -179,7 +185,10 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
         int dst_index = mad24(x, (int)sizeof(dstT0) * cn, dst_offset);
 
         __global dstT0 * dst = (__global dstT0 *)(dstptr + dst_index);
-        dstT tmp[cn] = { INIT_VALUE };
+        dstT tmp[cn];
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            tmp[c] = INIT_VALUE;
 
         for (int y = 0; y < rows; ++y, src_index += src_step)
         {
@@ -209,7 +218,10 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
 
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
         __global dstT * dst = (__global dstT *)(dstptr + dst_index);
-        dstT tmp[cn] = { INIT_VALUE };
+        dstT tmp[cn];
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            tmp[c] = INIT_VALUE;
 
         for (int x = 0; x < cols; ++x, src += cn)
         {

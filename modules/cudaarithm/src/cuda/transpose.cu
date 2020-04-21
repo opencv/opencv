@@ -52,18 +52,19 @@
 #include "opencv2/cudev.hpp"
 #include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 void cv::cuda::transpose(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     const size_t elemSize = src.elemSize();
 
     CV_Assert( elemSize == 1 || elemSize == 4 || elemSize == 8 );
 
-    _dst.create( src.cols, src.rows, src.type() );
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.cols, src.rows, src.type(), stream);
 
     if (elemSize == 1)
     {
@@ -87,6 +88,8 @@ void cv::cuda::transpose(InputArray _src, OutputArray _dst, Stream& stream)
     {
         gridTranspose(globPtr<double>(src), globPtr<double>(dst), stream);
     }
+
+    syncOutput(dst, _dst, stream);
 }
 
 #endif

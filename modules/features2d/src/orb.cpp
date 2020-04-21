@@ -38,6 +38,10 @@
 #include "opencl_kernels_features2d.hpp"
 #include <iterator>
 
+#ifndef CV_IMPL_ADD
+#define CV_IMPL_ADD(x)
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace cv
@@ -49,9 +53,11 @@ template<typename _Tp> inline void copyVectorToUMat(const std::vector<_Tp>& v, O
 {
     if(v.empty())
         um.release();
-    Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
+    else
+        Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
 }
 
+#ifdef HAVE_OPENCL
 static bool
 ocl_HarrisResponses(const UMat& imgbuf,
                     const UMat& layerinfo,
@@ -59,7 +65,7 @@ ocl_HarrisResponses(const UMat& imgbuf,
                     UMat& responses,
                     int nkeypoints, int blockSize, float harris_k)
 {
-    size_t globalSize[] = {nkeypoints};
+    size_t globalSize[] = {(size_t)nkeypoints};
 
     float scale = 1.f/((1 << 2) * blockSize * 255.f);
     float scale_sq_sq = scale * scale * scale * scale;
@@ -81,7 +87,7 @@ ocl_ICAngles(const UMat& imgbuf, const UMat& layerinfo,
              const UMat& keypoints, UMat& responses,
              const UMat& umax, int nkeypoints, int half_k)
 {
-    size_t globalSize[] = {nkeypoints};
+    size_t globalSize[] = {(size_t)nkeypoints};
 
     ocl::Kernel icangle_ker("ORB_ICAngle", ocl::features2d::orb_oclsrc, "-D ORB_ANGLES");
     if( icangle_ker.empty() )
@@ -99,12 +105,12 @@ ocl_ICAngles(const UMat& imgbuf, const UMat& layerinfo,
 static bool
 ocl_computeOrbDescriptors(const UMat& imgbuf, const UMat& layerInfo,
                           const UMat& keypoints, UMat& desc, const UMat& pattern,
-                          int nkeypoints, int dsize, int WTA_K)
+                          int nkeypoints, int dsize, int wta_k)
 {
-    size_t globalSize[] = {nkeypoints};
+    size_t globalSize[] = {(size_t)nkeypoints};
 
     ocl::Kernel desc_ker("ORB_computeDescriptor", ocl::features2d::orb_oclsrc,
-                         format("-D ORB_DESCRIPTORS -D WTA_K=%d", WTA_K));
+                         format("-D ORB_DESCRIPTORS -D WTA_K=%d", wta_k));
     if( desc_ker.empty() )
         return false;
 
@@ -115,7 +121,7 @@ ocl_computeOrbDescriptors(const UMat& imgbuf, const UMat& layerInfo,
                          ocl::KernelArg::PtrReadOnly(pattern),
                          nkeypoints, dsize).run(1, globalSize, 0, true);
 }
-
+#endif
 
 /**
  * Function that computes the Harris responses in a
@@ -137,7 +143,7 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
     float scale_sq_sq = scale * scale * scale * scale;
 
     AutoBuffer<int> ofsbuf(blockSize*blockSize);
-    int* ofs = ofsbuf;
+    int* ofs = ofsbuf.data();
     for( int i = 0; i < blockSize; i++ )
         for( int j = 0; j < blockSize; j++ )
             ofs[i*blockSize + j] = (int)(i*step + j);
@@ -208,7 +214,7 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
 static void
 computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerInfo,
                        const std::vector<float>& layerScale, std::vector<KeyPoint>& keypoints,
-                       Mat& descriptors, const std::vector<Point>& _pattern, int dsize, int WTA_K )
+                       Mat& descriptors, const std::vector<Point>& _pattern, int dsize, int wta_k )
 {
     int step = (int)imagePyramid.step;
     int j, i, nkeypoints = (int)keypoints.size();
@@ -247,7 +253,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
                     center[iy*step + ix+1]*x*(1-y) + center[(iy+1)*step + ix+1]*x*y))
     #endif
 
-        if( WTA_K == 2 )
+        if( wta_k == 2 )
         {
             for (i = 0; i < dsize; ++i, pattern += 16)
             {
@@ -272,7 +278,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
                 desc[i] = (uchar)val;
             }
         }
-        else if( WTA_K == 3 )
+        else if( wta_k == 3 )
         {
             for (i = 0; i < dsize; ++i, pattern += 12)
             {
@@ -292,7 +298,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
                 desc[i] = (uchar)val;
             }
         }
-        else if( WTA_K == 4 )
+        else if( wta_k == 4 )
         {
             for (i = 0; i < dsize; ++i, pattern += 16)
             {
@@ -333,7 +339,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
             }
         }
         else
-            CV_Error( Error::StsBadSize, "Wrong WTA_K. It can be only 2, 3 or 4." );
+            CV_Error( Error::StsBadSize, "Wrong wta_k. It can be only 2, 3 or 4." );
         #undef GET_VALUE
     }
 }
@@ -644,43 +650,93 @@ static inline float getScale(int level, int firstLevel, double scaleFactor)
     return (float)std::pow(scaleFactor, (double)(level - firstLevel));
 }
 
-/** Constructor
- * @param detector_params parameters to use
- */
-ORB::ORB(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
-         int _firstLevel, int _WTA_K, int _scoreType, int _patchSize) :
-    nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
-    edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), WTA_K(_WTA_K),
-    scoreType(_scoreType), patchSize(_patchSize)
-{}
 
+class ORB_Impl CV_FINAL : public ORB
+{
+public:
+    explicit ORB_Impl(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
+             int _firstLevel, int _WTA_K, int _scoreType, int _patchSize, int _fastThreshold) :
+        nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
+        edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), wta_k(_WTA_K),
+        scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
+    {}
 
-int ORB::descriptorSize() const
+    void setMaxFeatures(int maxFeatures) CV_OVERRIDE { nfeatures = maxFeatures; }
+    int getMaxFeatures() const CV_OVERRIDE { return nfeatures; }
+
+    void setScaleFactor(double scaleFactor_) CV_OVERRIDE { scaleFactor = scaleFactor_; }
+    double getScaleFactor() const CV_OVERRIDE { return scaleFactor; }
+
+    void setNLevels(int nlevels_) CV_OVERRIDE { nlevels = nlevels_; }
+    int getNLevels() const CV_OVERRIDE { return nlevels; }
+
+    void setEdgeThreshold(int edgeThreshold_) CV_OVERRIDE { edgeThreshold = edgeThreshold_; }
+    int getEdgeThreshold() const CV_OVERRIDE { return edgeThreshold; }
+
+    void setFirstLevel(int firstLevel_) CV_OVERRIDE { CV_Assert(firstLevel_ >= 0);  firstLevel = firstLevel_; }
+    int getFirstLevel() const CV_OVERRIDE { return firstLevel; }
+
+    void setWTA_K(int wta_k_) CV_OVERRIDE { wta_k = wta_k_; }
+    int getWTA_K() const CV_OVERRIDE { return wta_k; }
+
+    void setScoreType(int scoreType_) CV_OVERRIDE { scoreType = scoreType_; }
+    int getScoreType() const CV_OVERRIDE { return scoreType; }
+
+    void setPatchSize(int patchSize_) CV_OVERRIDE { patchSize = patchSize_; }
+    int getPatchSize() const CV_OVERRIDE { return patchSize; }
+
+    void setFastThreshold(int fastThreshold_) CV_OVERRIDE { fastThreshold = fastThreshold_; }
+    int getFastThreshold() const CV_OVERRIDE { return fastThreshold; }
+
+    // returns the descriptor size in bytes
+    int descriptorSize() const CV_OVERRIDE;
+    // returns the descriptor type
+    int descriptorType() const CV_OVERRIDE;
+    // returns the default norm type
+    int defaultNorm() const CV_OVERRIDE;
+
+    // Compute the ORB_Impl features and descriptors on an image
+    void detectAndCompute( InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+                     OutputArray descriptors, bool useProvidedKeypoints=false ) CV_OVERRIDE;
+
+protected:
+
+    int nfeatures;
+    double scaleFactor;
+    int nlevels;
+    int edgeThreshold;
+    int firstLevel;
+    int wta_k;
+    int scoreType;
+    int patchSize;
+    int fastThreshold;
+};
+
+int ORB_Impl::descriptorSize() const
 {
     return kBytes;
 }
 
-int ORB::descriptorType() const
+int ORB_Impl::descriptorType() const
 {
     return CV_8U;
 }
 
-int ORB::defaultNorm() const
+int ORB_Impl::defaultNorm() const
 {
-    return NORM_HAMMING;
+    switch (wta_k)
+    {
+    case 2:
+        return NORM_HAMMING;
+    case 3:
+    case 4:
+        return NORM_HAMMING2;
+    default:
+        return -1;
+    }
 }
 
-/** Compute the ORB features and descriptors on an image
- * @param img the image to compute the features and descriptors on
- * @param mask the mask to apply
- * @param keypoints the resulting keypoints
- */
-void ORB::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
-{
-    (*this)(image, mask, keypoints, noArray(), false);
-}
-
-
+#ifdef HAVE_OPENCL
 static void uploadORBKeypoints(const std::vector<KeyPoint>& src, std::vector<Vec3i>& buf, OutputArray dst)
 {
     size_t i, n = src.size();
@@ -713,9 +769,9 @@ static void uploadORBKeypoints(const std::vector<KeyPoint>& src,
     }
     copyVectorToUMat(buf, dst);
 }
+#endif
 
-
-/** Compute the ORB keypoints on an image
+/** Compute the ORB_Impl keypoints on an image
  * @param image_pyramid the image pyramid to compute the features and descriptors on
  * @param mask_pyramid the masks to apply at every level
  * @param keypoints the resulting keypoints, clustered per level
@@ -729,8 +785,12 @@ static void computeKeyPoints(const Mat& imagePyramid,
                              std::vector<KeyPoint>& allKeypoints,
                              int nfeatures, double scaleFactor,
                              int edgeThreshold, int patchSize, int scoreType,
-                             bool useOCL )
+                             bool useOCL, int fastThreshold  )
 {
+#ifndef HAVE_OPENCL
+    CV_UNUSED(uimagePyramid);CV_UNUSED(ulayerInfo);CV_UNUSED(useOCL);
+#endif
+
     int i, nkeypoints, level, nlevels = (int)layerInfo.size();
     std::vector<int> nfeaturesPerLevel(nlevels);
 
@@ -780,14 +840,16 @@ static void computeKeyPoints(const Mat& imagePyramid,
         Mat mask = maskPyramid.empty() ? Mat() : maskPyramid(layerInfo[level]);
 
         // Detect FAST features, 20 is a good threshold
-        FastFeatureDetector fd(20, true);
-        fd.detect(img, keypoints, mask);
+        {
+        Ptr<FastFeatureDetector> fd = FastFeatureDetector::create(fastThreshold, true);
+        fd->detect(img, keypoints, mask);
+        }
 
         // Remove keypoints very close to the border
         KeyPointsFilter::runByImageBorder(keypoints, img.size(), edgeThreshold);
 
         // Keep more points than necessary as FAST does not give amazing corners
-        KeyPointsFilter::retainBest(keypoints, scoreType == ORB::HARRIS_SCORE ? 2 * featuresNum : featuresNum);
+        KeyPointsFilter::retainBest(keypoints, scoreType == ORB_Impl::HARRIS_SCORE ? 2 * featuresNum : featuresNum);
 
         nkeypoints = (int)keypoints.size();
         counters[level] = nkeypoints;
@@ -805,12 +867,17 @@ static void computeKeyPoints(const Mat& imagePyramid,
     std::vector<Vec3i> ukeypoints_buf;
 
     nkeypoints = (int)allKeypoints.size();
+    if(nkeypoints == 0)
+    {
+        return;
+    }
     Mat responses;
     UMat ukeypoints, uresponses(1, nkeypoints, CV_32F);
 
     // Select best features using the Harris cornerness (better scoring than FAST)
-    if( scoreType == ORB::HARRIS_SCORE )
+    if( scoreType == ORB_Impl::HARRIS_SCORE )
     {
+#ifdef HAVE_OPENCL
         if( useOCL )
         {
             uploadORBKeypoints(allKeypoints, ukeypoints_buf, ukeypoints);
@@ -818,6 +885,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
                                           uresponses, nkeypoints, 7, HARRIS_K );
             if( useOCL )
             {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 uresponses.copyTo(responses);
                 for( i = 0; i < nkeypoints; i++ )
                     allKeypoints[i].response = responses.at<float>(i);
@@ -825,6 +893,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
         }
 
         if( !useOCL )
+#endif
             HarrisResponses(imagePyramid, layerInfo, allKeypoints, 7, HARRIS_K);
 
         std::vector<KeyPoint> newAllKeypoints;
@@ -850,6 +919,8 @@ static void computeKeyPoints(const Mat& imagePyramid,
     }
 
     nkeypoints = (int)allKeypoints.size();
+
+#ifdef HAVE_OPENCL
     if( useOCL )
     {
         UMat uumax;
@@ -862,6 +933,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 
         if( useOCL )
         {
+            CV_IMPL_ADD(CV_IMPL_OCL);
             uresponses.copyTo(responses);
             for( i = 0; i < nkeypoints; i++ )
                 allKeypoints[i].angle = responses.at<float>(i);
@@ -869,6 +941,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
     }
 
     if( !useOCL )
+#endif
     {
         ICAngles(imagePyramid, layerInfo, allKeypoints, umax, halfPatchSize);
     }
@@ -881,7 +954,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 }
 
 
-/** Compute the ORB features and descriptors on an image
+/** Compute the ORB_Impl features and descriptors on an image
  * @param img the image to compute the features and descriptors on
  * @param mask the mask to apply
  * @param keypoints the resulting keypoints
@@ -889,9 +962,12 @@ static void computeKeyPoints(const Mat& imagePyramid,
  * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
  * @param do_descriptors if true, also computes the descriptors
  */
-void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
-                      OutputArray _descriptors, bool useProvidedKeypoints ) const
+void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
+                                 std::vector<KeyPoint>& keypoints,
+                                 OutputArray _descriptors, bool useProvidedKeypoints )
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(patchSize >= 2);
 
     bool do_keypoints = !useProvidedKeypoints;
@@ -903,9 +979,11 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
     //ROI handling
     const int HARRIS_BLOCK_SIZE = 9;
     int halfPatchSize = patchSize / 2;
-    int border = std::max(edgeThreshold, std::max(halfPatchSize, HARRIS_BLOCK_SIZE/2))+1;
+    // sqrt(2.0) is for handling patch rotation
+    int descPatchSize = cvCeil(halfPatchSize*sqrt(2.0));
+    int border = std::max(edgeThreshold, std::max(descPatchSize, HARRIS_BLOCK_SIZE/2))+1;
 
-    bool useOCL = ocl::useOpenCL();
+    bool useOCL = ocl::isOpenCLActivated() && OCL_FORCE_CHECK(_image.isUMat() || _descriptors.isUMat());
 
     Mat image = _image.getMat(), mask = _mask.getMat();
     if( image.type() != CV_8UC1 )
@@ -945,7 +1023,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
 
     int level_dy = image.rows + border*2;
     Point level_ofs(0,0);
-    Size bufSize((image.cols + border*2 + 15) & -16, 0);
+    Size bufSize((cvRound(image.cols/getScale(0, firstLevel, scaleFactor)) + border*2 + 15) & -16, 0);
 
     for( level = 0; level < nLevels; level++ )
     {
@@ -991,10 +1069,10 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
         // Compute the resized image
         if( level != firstLevel )
         {
-            resize(prevImg, currImg, sz, 0, 0, INTER_LINEAR);
+            resize(prevImg, currImg, sz, 0, 0, INTER_LINEAR_EXACT);
             if( !mask.empty() )
             {
-                resize(prevMask, currMask, sz, 0, 0, INTER_LINEAR);
+                resize(prevMask, currMask, sz, 0, 0, INTER_LINEAR_EXACT);
                 if( level > firstLevel )
                     threshold(currMask, currMask, 254, 0, THRESH_TOZERO);
             }
@@ -1013,8 +1091,11 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
                 copyMakeBorder(mask, extMask, border, border, border, border,
                                BORDER_CONSTANT+BORDER_ISOLATED);
         }
-        prevImg = currImg;
-        prevMask = currMask;
+        if (level > firstLevel)
+        {
+            prevImg = currImg;
+            prevMask = currMask;
+        }
     }
 
     if( useOCL )
@@ -1028,7 +1109,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
         // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
         computeKeyPoints(imagePyramid, uimagePyramid, maskPyramid,
                          layerInfo, ulayerInfo, layerScale, keypoints,
-                         nfeatures, scaleFactor, edgeThreshold, patchSize, scoreType, useOCL);
+                         nfeatures, scaleFactor, edgeThreshold, patchSize, scoreType, useOCL, fastThreshold);
     }
     else
     {
@@ -1074,14 +1155,14 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
             makeRandomPattern(patchSize, patternbuf, npoints);
         }
 
-        CV_Assert( WTA_K == 2 || WTA_K == 3 || WTA_K == 4 );
+        CV_Assert( wta_k == 2 || wta_k == 3 || wta_k == 4 );
 
-        if( WTA_K == 2 )
+        if( wta_k == 2 )
             std::copy(pattern0, pattern0 + npoints, std::back_inserter(pattern));
         else
         {
             int ntuples = descriptorSize()*4;
-            initializeOrbPattern(pattern0, pattern, ntuples, WTA_K, npoints);
+            initializeOrbPattern(pattern0, pattern, ntuples, wta_k, npoints);
         }
 
         for( level = 0; level < nLevels; level++ )
@@ -1093,6 +1174,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
             GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
         }
 
+#ifdef HAVE_OPENCL
         if( useOCL )
         {
             imagePyramid.copyTo(uimagePyramid);
@@ -1104,26 +1186,34 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
             UMat udescriptors = _descriptors.getUMat();
             useOCL = ocl_computeOrbDescriptors(uimagePyramid, ulayerInfo,
                                                ukeypoints, udescriptors, upattern,
-                                               nkeypoints, dsize, WTA_K);
+                                               nkeypoints, dsize, wta_k);
+            if(useOCL)
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
+            }
         }
 
         if( !useOCL )
+#endif
         {
             Mat descriptors = _descriptors.getMat();
             computeOrbDescriptors(imagePyramid, layerInfo, layerScale,
-                                  keypoints, descriptors, pattern, dsize, WTA_K);
+                                  keypoints, descriptors, pattern, dsize, wta_k);
         }
     }
 }
 
-void ORB::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
+Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThreshold,
+           int firstLevel, int wta_k, int scoreType, int patchSize, int fastThreshold)
 {
-    (*this)(image.getMat(), mask.getMat(), keypoints, noArray(), false);
+    CV_Assert(firstLevel >= 0);
+    return makePtr<ORB_Impl>(nfeatures, scaleFactor, nlevels, edgeThreshold,
+                             firstLevel, wta_k, scoreType, patchSize, fastThreshold);
 }
 
-void ORB::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
+String ORB::getDefaultName() const
 {
-    (*this)(image, Mat(), keypoints, descriptors, true);
+    return (Feature2D::getDefaultName() + ".ORB");
 }
 
 }

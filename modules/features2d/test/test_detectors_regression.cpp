@@ -40,10 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
@@ -115,7 +113,7 @@ bool CV_FeatureDetectorTest::isSimilarKeypoints( const KeyPoint& p1, const KeyPo
     const float maxAngleDif = 2.f;
     const float maxResponseDif = 0.1f;
 
-    float dist = (float)norm( p1.pt - p2.pt );
+    float dist = (float)cv::norm( p1.pt - p2.pt );
     return (dist < maxPtDif &&
             fabs(p1.size - p2.size) < maxSizeDif &&
             abs(p1.angle - p2.angle) < maxAngleDif &&
@@ -148,7 +146,7 @@ void CV_FeatureDetectorTest::compareKeypointSets( const vector<KeyPoint>& validK
         for( size_t c = 0; c < calcKeypoints.size(); c++ )
         {
             progress = update_progress( progress, (int)(v*calcKeypoints.size() + c), progressCount, 0 );
-            float curDist = (float)norm( calcKeypoints[c].pt - validKeypoints[v].pt );
+            float curDist = (float)cv::norm( calcKeypoints[c].pt - validKeypoints[v].pt );
             if( curDist < minDist )
             {
                 minDist = curDist;
@@ -249,66 +247,64 @@ void CV_FeatureDetectorTest::run( int /*start_from*/ )
 
 TEST( Features2d_Detector_BRISK, regression )
 {
-    CV_FeatureDetectorTest test( "detector-brisk", FeatureDetector::create("BRISK") );
+    CV_FeatureDetectorTest test( "detector-brisk", BRISK::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_FAST, regression )
 {
-    CV_FeatureDetectorTest test( "detector-fast", FeatureDetector::create("FAST") );
+    CV_FeatureDetectorTest test( "detector-fast", FastFeatureDetector::create() );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_AGAST, regression )
+{
+    CV_FeatureDetectorTest test( "detector-agast", AgastFeatureDetector::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_GFTT, regression )
 {
-    CV_FeatureDetectorTest test( "detector-gftt", FeatureDetector::create("GFTT") );
+    CV_FeatureDetectorTest test( "detector-gftt", GFTTDetector::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_Harris, regression )
 {
-    CV_FeatureDetectorTest test( "detector-harris", FeatureDetector::create("HARRIS") );
+    Ptr<GFTTDetector> gftt = GFTTDetector::create();
+    gftt->setHarrisDetector(true);
+    CV_FeatureDetectorTest test( "detector-harris", gftt);
     test.safe_run();
 }
 
 TEST( Features2d_Detector_MSER, DISABLED_regression )
 {
-    CV_FeatureDetectorTest test( "detector-mser", FeatureDetector::create("MSER") );
-    test.safe_run();
-}
-
-TEST( Features2d_Detector_STAR, regression )
-{
-    CV_FeatureDetectorTest test( "detector-star", FeatureDetector::create("STAR") );
+    CV_FeatureDetectorTest test( "detector-mser", MSER::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_ORB, regression )
 {
-    CV_FeatureDetectorTest test( "detector-orb", FeatureDetector::create("ORB") );
+    CV_FeatureDetectorTest test( "detector-orb", ORB::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_KAZE, regression )
 {
-    CV_FeatureDetectorTest test( "detector-kaze", FeatureDetector::create("KAZE") );
+    CV_FeatureDetectorTest test( "detector-kaze", KAZE::create() );
     test.safe_run();
 }
 
 TEST( Features2d_Detector_AKAZE, regression )
 {
-    CV_FeatureDetectorTest test( "detector-akaze", FeatureDetector::create("AKAZE") );
+    CV_FeatureDetectorTest test( "detector-akaze", AKAZE::create() );
     test.safe_run();
 }
 
-TEST( Features2d_Detector_GridFAST, regression )
+TEST( Features2d_Detector_AKAZE_DESCRIPTOR_KAZE, regression )
 {
-    CV_FeatureDetectorTest test( "detector-grid-fast", FeatureDetector::create("GridFAST") );
+    CV_FeatureDetectorTest test( "detector-akaze-with-kaze-desc", AKAZE::create(AKAZE::DESCRIPTOR_KAZE) );
     test.safe_run();
 }
 
-TEST( Features2d_Detector_PyramidFAST, regression )
-{
-    CV_FeatureDetectorTest test( "detector-pyramid-fast", FeatureDetector::create("PyramidFAST") );
-    test.safe_run();
-}
+}} // namespace

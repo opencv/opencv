@@ -34,10 +34,10 @@ public:
     int getProfileIDX() const;
 public:
     virtual bool initStream(PXCSession *session)            = 0;
-    virtual double getProperty(int propIdx);
+    virtual double getProperty(int propIdx) const;
     virtual bool setProperty(int propIdx, double propVal);
 protected:
-    PXCSmartPtr<PXCCapture::Device> m_device;
+    mutable PXCSmartPtr<PXCCapture::Device> m_device;
     bool initDevice(PXCSession *session);
 
     PXCSmartPtr<PXCCapture::VideoStream> m_stream;
@@ -62,7 +62,7 @@ public:
     virtual ~IntelPerCStreamImage();
 
     virtual bool initStream(PXCSession *session);
-    virtual double getProperty(int propIdx);
+    virtual double getProperty(int propIdx) const;
     virtual bool setProperty(int propIdx, double propVal);
 public:
     bool retrieveAsOutputArray(OutputArray image);
@@ -76,7 +76,7 @@ public:
     virtual ~IntelPerCStreamDepth();
 
     virtual bool initStream(PXCSession *session);
-    virtual double getProperty(int propIdx);
+    virtual double getProperty(int propIdx) const;
     virtual bool setProperty(int propIdx, double propVal);
 public:
     bool retrieveDepthAsOutputArray(OutputArray image);
@@ -94,13 +94,13 @@ public:
     VideoCapture_IntelPerC();
     virtual ~VideoCapture_IntelPerC();
 
-    virtual double getProperty(int propIdx);
-    virtual bool setProperty(int propIdx, double propVal);
+    virtual double getProperty(int propIdx) const CV_OVERRIDE;
+    virtual bool setProperty(int propIdx, double propVal) CV_OVERRIDE;
 
-    virtual bool grabFrame();
-    virtual bool retrieveFrame(int outputType, OutputArray frame);
-    virtual int getCaptureDomain();
-    bool isOpened() const;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual bool retrieveFrame(int outputType, OutputArray frame) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE;
+    virtual bool isOpened() const CV_OVERRIDE;
 protected:
     bool m_contextOpened;
 

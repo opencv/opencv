@@ -42,7 +42,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "../precomp.hpp"
 
 namespace cv { namespace viz
 {
@@ -128,7 +128,7 @@ int cv::viz::vtkCloudMatSource::SetColorCloudNormals(InputArray _cloud, InputArr
     else if (n.depth() == CV_64F && c.depth() == CV_64F)
         filterNanNormalsCopy<double, double>(n, c, total);
     else
-        CV_Assert(!"Unsupported normals/cloud type");
+        CV_Error(Error::StsError, "Unsupported normals/cloud type");
 
     return total;
 }
@@ -155,7 +155,7 @@ int cv::viz::vtkCloudMatSource::SetColorCloudNormalsTCoords(InputArray _cloud, I
     else if (tc.depth() == CV_64F && cl.depth() == CV_64F)
         filterNanTCoordsCopy<double, double>(tc, cl, total);
     else
-        CV_Assert(!"Unsupported tcoords/cloud type");
+        CV_Error(Error::StsError, "Unsupported tcoords/cloud type");
 
     return total;
 }
@@ -235,7 +235,7 @@ void cv::viz::vtkCloudMatSource::filterNanColorsCopy(const Mat& cloud_colors, co
     scalars->SetName("Colors");
     scalars->SetNumberOfComponents(3);
     scalars->SetNumberOfTuples(total);
-    scalars->SetArray(array->val, total * 3, 0);
+    scalars->SetArray(array->val, total * 3, 0, vtkUnsignedCharArray::VTK_DATA_ARRAY_DELETE);
 }
 
 template<typename _Tn, typename _Msk>

@@ -72,7 +72,7 @@
     #pragma warning( disable: 4611 )
 #endif
 
-// the following defines are a hack to avoid multiple problems with frame ponter handling and setjmp
+// the following defines are a hack to avoid multiple problems with frame pointer handling and setjmp
 // see http://gcc.gnu.org/ml/gcc/2011-10/msg00324.html for some details
 #define mingw_getsp(...) 0
 #define __builtin_frame_address(...) 0
@@ -91,6 +91,7 @@ PngDecoder::PngDecoder()
     m_f = 0;
     m_buf_supported = true;
     m_buf_pos = 0;
+    m_bit_depth = 0;
 }
 
 
@@ -134,13 +135,13 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, uchar* dst, size_t size )
         png_error(png_ptr, "PNG input buffer is incomplete");
         return;
     }
-    memcpy( dst, &decoder->m_buf.data[decoder->m_buf_pos], size );
+    memcpy( dst, decoder->m_buf.ptr() + decoder->m_buf_pos, size );
     decoder->m_buf_pos += size;
 }
 
 bool  PngDecoder::readHeader()
 {
-    bool result = false;
+    volatile bool result = false;
     close();
 
     png_structp png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
@@ -190,16 +191,14 @@ bool  PngDecoder::readHeader()
                         switch(color_type)
                         {
                             case PNG_COLOR_TYPE_RGB:
-                                m_type = CV_8UC3;
-                                break;
                             case PNG_COLOR_TYPE_PALETTE:
-                                png_get_tRNS( png_ptr, info_ptr, &trans, &num_trans, &trans_values);
-                                //Check if there is a transparency value in the palette
-                                if ( num_trans > 0 )
+                                png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, &trans_values);
+                                if( num_trans > 0 )
                                     m_type = CV_8UC4;
                                 else
                                     m_type = CV_8UC3;
                                 break;
+                            case PNG_COLOR_TYPE_GRAY_ALPHA:
                             case PNG_COLOR_TYPE_RGB_ALPHA:
                                 m_type = CV_8UC4;
                                 break;
@@ -224,19 +223,17 @@ bool  PngDecoder::readHeader()
 
 bool  PngDecoder::readData( Mat& img )
 {
-    bool result = false;
+    volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);
-    uchar** buffer = _buffer;
-    int color = img.channels() > 1;
-    uchar* data = img.data;
-    int step = (int)img.step;
+    uchar** buffer = _buffer.data();
+    bool color = img.channels() > 1;
+
+    png_structp png_ptr = (png_structp)m_png_ptr;
+    png_infop info_ptr = (png_infop)m_info_ptr;
+    png_infop end_info = (png_infop)m_end_info;
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
-        png_structp png_ptr = (png_structp)m_png_ptr;
-        png_infop info_ptr = (png_infop)m_info_ptr;
-        png_infop end_info = (png_infop)m_end_info;
-
         if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
         {
             int y;
@@ -257,12 +254,13 @@ bool  PngDecoder::readData( Mat& img )
                  * stripping alpha..  18.11.2004 Axel Walthelm
                  */
                  png_set_strip_alpha( png_ptr );
-            }
+            } else
+                png_set_tRNS_to_alpha( png_ptr );
 
             if( m_color_type == PNG_COLOR_TYPE_PALETTE )
                 png_set_palette_to_rgb( png_ptr );
 
-            if( m_color_type == PNG_COLOR_TYPE_GRAY && m_bit_depth < 8 )
+            if( (m_color_type & PNG_COLOR_MASK_COLOR) == 0 && m_bit_depth < 8 )
 #if (PNG_LIBPNG_VER_MAJOR*10000 + PNG_LIBPNG_VER_MINOR*100 + PNG_LIBPNG_VER_RELEASE >= 10209) || \
     (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR == 0 && PNG_LIBPNG_VER_RELEASE >= 18)
                 png_set_expand_gray_1_2_4_to_8( png_ptr );
@@ -270,7 +268,7 @@ bool  PngDecoder::readData( Mat& img )
                 png_set_gray_1_2_4_to_8( png_ptr );
 #endif
 
-            if( CV_MAT_CN(m_type) > 1 && color )
+            if( (m_color_type & PNG_COLOR_MASK_COLOR) && color )
                 png_set_bgr( png_ptr ); // convert RGB to BGR
             else if( color )
                 png_set_gray_to_rgb( png_ptr ); // Gray->RGB
@@ -281,7 +279,7 @@ bool  PngDecoder::readData( Mat& img )
             png_read_update_info( png_ptr, info_ptr );
 
             for( y = 0; y < m_height; y++ )
-                buffer[y] = data + y*step;
+                buffer[y] = img.data + y*img.step;
 
             png_read_image( png_ptr, buffer );
             png_read_end( png_ptr, end_info );
@@ -342,10 +340,10 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
     png_infop info_ptr = 0;
-    FILE* f = 0;
+    FILE * volatile f = 0;
     int y, width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();
-    bool result = false;
+    volatile bool result = false;
     AutoBuffer<uchar*> buffer;
 
     if( depth != CV_8U && depth != CV_16U )
@@ -368,26 +366,27 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                 {
                     f = fopen( m_filename.c_str(), "wb" );
                     if( f )
-                        png_init_io( png_ptr, f );
+                        png_init_io( png_ptr, (png_FILE_p)f );
                 }
 
                 int compression_level = -1; // Invalid value to allow setting 0-9 as valid
-                int compression_strategy = Z_RLE; // Default strategy
+                int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
                 bool isBilevel = false;
 
                 for( size_t i = 0; i < params.size(); i += 2 )
                 {
-                    if( params[i] == CV_IMWRITE_PNG_COMPRESSION )
+                    if( params[i] == IMWRITE_PNG_COMPRESSION )
                     {
+                        compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
                         compression_level = params[i+1];
                         compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
                     }
-                    if( params[i] == CV_IMWRITE_PNG_STRATEGY )
+                    if( params[i] == IMWRITE_PNG_STRATEGY )
                     {
                         compression_strategy = params[i+1];
                         compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
                     }
-                    if( params[i] == CV_IMWRITE_PNG_BILEVEL )
+                    if( params[i] == IMWRITE_PNG_BILEVEL )
                     {
                         isBilevel = params[i+1] != 0;
                     }
@@ -427,7 +426,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     for( y = 0; y < height; y++ )
                         buffer[y] = img.data + y*img.step;
 
-                    png_write_image( png_ptr, buffer );
+                    png_write_image( png_ptr, buffer.data() );
                     png_write_end( png_ptr, info_ptr );
 
                     result = true;
@@ -437,7 +436,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     }
 
     png_destroy_write_struct( &png_ptr, &info_ptr );
-    if(f) fclose( f );
+    if(f) fclose( (FILE*)f );
 
     return result;
 }

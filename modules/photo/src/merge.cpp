@@ -47,17 +47,19 @@
 namespace cv
 {
 
-class MergeDebevecImpl : public MergeDebevec
+class MergeDebevecImpl CV_FINAL : public MergeDebevec
 {
 public:
     MergeDebevecImpl() :
         name("MergeDebevec"),
-        weights(tringleWeights())
+        weights(triangleWeights())
     {
     }
 
-    void process(InputArrayOfArrays src, OutputArray dst, InputArray _times, InputArray input_response)
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray _times, InputArray input_response) CV_OVERRIDE
     {
+        CV_INSTRUMENT_REGION();
+
         std::vector<Mat> images;
         src.getMatVector(images);
         Mat times = _times.getMat();
@@ -79,11 +81,13 @@ public:
             response = linearResponse(channels);
             response.at<Vec3f>(0) = response.at<Vec3f>(1);
         }
-        log(response, response);
-        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 &&
-                  response.channels() == channels);
 
-        Mat exp_values(times);
+        Mat log_response;
+        log(response, log_response);
+        CV_Assert(log_response.rows == LDR_SIZE && log_response.cols == 1 &&
+                  log_response.channels() == channels);
+
+        Mat exp_values(times.clone());
         log(exp_values, exp_values);
 
         result = Mat::zeros(size, CV_32FCC);
@@ -103,7 +107,7 @@ public:
             w /= channels;
 
             Mat response_img;
-            LUT(images[i], response, response_img);
+            LUT(images[i], log_response, response_img);
             split(response_img, splitted);
             for(int c = 0; c < channels; c++) {
                 result_split[c] += w.mul(splitted[c] - exp_values.at<float>((int)i));
@@ -118,8 +122,10 @@ public:
         exp(result, result);
     }
 
-    void process(InputArrayOfArrays src, OutputArray dst, InputArray times)
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray times) CV_OVERRIDE
     {
+        CV_INSTRUMENT_REGION();
+
         process(src, dst, times, Mat());
     }
 
@@ -133,7 +139,7 @@ Ptr<MergeDebevec> createMergeDebevec()
     return makePtr<MergeDebevecImpl>();
 }
 
-class MergeMertensImpl : public MergeMertens
+class MergeMertensImpl CV_FINAL : public MergeMertens
 {
 public:
     MergeMertensImpl(float _wcon, float _wsat, float _wexp) :
@@ -144,13 +150,17 @@ public:
     {
     }
 
-    void process(InputArrayOfArrays src, OutputArrayOfArrays dst, InputArray, InputArray)
+    void process(InputArrayOfArrays src, OutputArrayOfArrays dst, InputArray, InputArray) CV_OVERRIDE
     {
+        CV_INSTRUMENT_REGION();
+
         process(src, dst);
     }
 
-    void process(InputArrayOfArrays src, OutputArray dst)
+    void process(InputArrayOfArrays src, OutputArray dst) CV_OVERRIDE
     {
+        CV_INSTRUMENT_REGION();
+
         std::vector<Mat> images;
         src.getMatVector(images);
         checkImageDimensions(images);
@@ -194,10 +204,11 @@ public:
 
             wellexp = Mat::ones(size, CV_32F);
             for(int c = 0; c < channels; c++) {
-                Mat exp = splitted[c] - 0.5f;
-                pow(exp, 2.0f, exp);
-                exp = -exp / 0.08f;
-                wellexp = wellexp.mul(exp);
+                Mat expo = splitted[c] - 0.5f;
+                pow(expo, 2.0f, expo);
+                expo = -expo / 0.08f;
+                exp(expo, expo);
+                wellexp = wellexp.mul(expo);
             }
 
             pow(contrast, wcon, contrast);
@@ -248,27 +259,28 @@ public:
             res_pyr[lvl - 1] += up;
         }
         dst.create(size, CV_32FCC);
-        res_pyr[0].copyTo(dst.getMat());
+        res_pyr[0].copyTo(dst);
     }
 
-    float getContrastWeight() const { return wcon; }
-    void setContrastWeight(float val) { wcon = val; }
+    float getContrastWeight() const CV_OVERRIDE { return wcon; }
+    void setContrastWeight(float val) CV_OVERRIDE { wcon = val; }
 
-    float getSaturationWeight() const { return wsat; }
-    void setSaturationWeight(float val) { wsat = val; }
+    float getSaturationWeight() const CV_OVERRIDE { return wsat; }
+    void setSaturationWeight(float val) CV_OVERRIDE { wsat = val; }
 
-    float getExposureWeight() const { return wexp; }
-    void setExposureWeight(float val) { wexp = val; }
+    float getExposureWeight() const CV_OVERRIDE { return wexp; }
+    void setExposureWeight(float val) CV_OVERRIDE { wexp = val; }
 
-    void write(FileStorage& fs) const
+    void write(FileStorage& fs) const CV_OVERRIDE
     {
+        writeFormat(fs);
         fs << "name" << name
            << "contrast_weight" << wcon
            << "saturation_weight" << wsat
            << "exposure_weight" << wexp;
     }
 
-    void read(const FileNode& fn)
+    void read(const FileNode& fn) CV_OVERRIDE
     {
         FileNode n = fn["name"];
         CV_Assert(n.isString() && String(n) == name);
@@ -287,7 +299,7 @@ Ptr<MergeMertens> createMergeMertens(float wcon, float wsat, float wexp)
     return makePtr<MergeMertensImpl>(wcon, wsat, wexp);
 }
 
-class MergeRobertsonImpl : public MergeRobertson
+class MergeRobertsonImpl CV_FINAL : public MergeRobertson
 {
 public:
     MergeRobertsonImpl() :
@@ -296,8 +308,10 @@ public:
     {
     }
 
-    void process(InputArrayOfArrays src, OutputArray dst, InputArray _times, InputArray input_response)
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray _times, InputArray input_response) CV_OVERRIDE
     {
+        CV_INSTRUMENT_REGION();
+
         std::vector<Mat> images;
         src.getMatVector(images);
         Mat times = _times.getMat();
@@ -333,8 +347,10 @@ public:
         result = result.mul(1 / wsum);
     }
 
-    void process(InputArrayOfArrays src, OutputArray dst, InputArray times)
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray times) CV_OVERRIDE
     {
+        CV_INSTRUMENT_REGION();
+
         process(src, dst, times, Mat());
     }
 

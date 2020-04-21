@@ -30,6 +30,8 @@
 #ifndef OPENCV_FLANN_PARAMS_H_
 #define OPENCV_FLANN_PARAMS_H_
 
+//! @cond IGNORED
+
 #include "any.h"
 #include "general.h"
 #include <iostream>
@@ -95,5 +97,6 @@ inline void print_params(const IndexParams& params)
 
 }
 
+//! @endcond
 
 #endif /* OPENCV_FLANN_PARAMS_H_ */

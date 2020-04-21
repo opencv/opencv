@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_REDUCE_TO_VEC_HPP__
-#define __OPENCV_CUDEV_GRID_REDUCE_TO_VEC_HPP__
+#ifndef OPENCV_CUDEV_GRID_REDUCE_TO_VEC_HPP
+#define OPENCV_CUDEV_GRID_REDUCE_TO_VEC_HPP
 
 #include "../common.hpp"
 #include "../util/vec_traits.hpp"
@@ -58,6 +58,9 @@
 #include "detail/reduce_to_row.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <typename T> struct Sum : plus<T>
 {
@@ -179,7 +182,7 @@ __host__ void gridReduceToColumn_(const SrcPtr& src, GpuMat_<ResType>& dst, cons
 
     CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
 
-    dst.create(1, rows);
+    cuda::createContinuous(rows, 1, dst.type(), dst);
 
     grid_reduce_to_vec_detail::reduceToColumn<Reductor, Policy>(shrinkPtr(src),
                                                                 dst[0],
@@ -194,7 +197,7 @@ __host__ void gridReduceToColumn_(const SrcPtr& src, GpuMat_<ResType>& dst, Stre
     const int rows = getRows(src);
     const int cols = getCols(src);
 
-    dst.create(1, rows);
+    cuda::createContinuous(rows, 1, dst.type(), dst);
 
     grid_reduce_to_vec_detail::reduceToColumn<Reductor, Policy>(shrinkPtr(src),
                                                                 dst[0],
@@ -224,6 +227,8 @@ __host__ void gridReduceToColumn(const SrcPtr& src, GpuMat_<ResType>& dst, Strea
 {
     gridReduceToColumn_<Reductor, DefaultReduceToVecPolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

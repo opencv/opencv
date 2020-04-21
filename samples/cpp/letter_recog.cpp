@@ -1,5 +1,5 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/ml/ml.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/ml.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -9,7 +9,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::ml;
 
-static void help()
+static void help(char** argv)
 {
     printf("\nThe sample demonstrates how to train Random Trees classifier\n"
     "(or Boosting classifier, or MLP, or Knearest, or Nbayes, or Support Vector Machines - see main()) using the provided dataset.\n"
@@ -28,10 +28,10 @@ static void help()
     "and the remaining 4000 (10000 for boosting) - to test the classifier.\n"
     "======================================================\n");
     printf("\nThis is letter recognition sample.\n"
-            "The usage: letter_recog [-data <path to letter-recognition.data>] \\\n"
-            "  [-save <output XML file for the classifier>] \\\n"
-            "  [-load <XML file with the pre-trained classifier>] \\\n"
-            "  [-boost|-mlp|-knearest|-nbayes|-svm] # to use boost/mlp/knearest/SVM classifier instead of default Random Trees\n" );
+            "The usage: %s [-data=<path to letter-recognition.data>] \\\n"
+            "  [-save=<output XML file for the classifier>] \\\n"
+            "  [-load=<XML file with the pre-trained classifier>] \\\n"
+            "  [-boost|-mlp|-knearest|-nbayes|-svm] # to use boost/mlp/knearest/SVM classifier instead of default Random Trees\n", argv[0] );
 }
 
 // This function reads data and responses from the file <filename>
@@ -178,8 +178,23 @@ build_rtrees_classifier( const string& data_filename,
     {
         // create classifier by using <data> and <responses>
         cout << "Training the classifier ...\n";
+//        Params( int maxDepth, int minSampleCount,
+//                   double regressionAccuracy, bool useSurrogates,
+//                   int maxCategories, const Mat& priors,
+//                   bool calcVarImportance, int nactiveVars,
+//                   TermCriteria termCrit );
         Ptr<TrainData> tdata = prepare_train_data(data, responses, ntrain_samples);
-        model = StatModel::train<RTrees>(tdata, RTrees::Params(10,10,0,false,15,Mat(),true,4,TC(100,0.01f)));
+        model = RTrees::create();
+        model->setMaxDepth(10);
+        model->setMinSampleCount(10);
+        model->setRegressionAccuracy(0);
+        model->setUseSurrogates(false);
+        model->setMaxCategories(15);
+        model->setPriors(Mat());
+        model->setCalculateVarImportance(true);
+        model->setActiveVarCount(4);
+        model->setTermCriteria(TC(100,0.01f));
+        model->train(tdata);
         cout << endl;
     }
 
@@ -269,7 +284,14 @@ build_boost_classifier( const string& data_filename,
         priors[1] = 26;
 
         cout << "Training the classifier (may take a few minutes)...\n";
-        model = StatModel::train<Boost>(tdata, Boost::Params(Boost::GENTLE, 100, 0.95, 5, false, Mat(priors) ));
+        model = Boost::create();
+        model->setBoostType(Boost::GENTLE);
+        model->setWeakCount(100);
+        model->setWeightTrimRate(0.95);
+        model->setMaxDepth(5);
+        model->setUseSurrogates(false);
+        model->setPriors(Mat(priors));
+        model->train(tdata);
         cout << endl;
     }
 
@@ -374,11 +396,11 @@ build_mlp_classifier( const string& data_filename,
         Mat layer_sizes( 1, nlayers, CV_32S, layer_sz );
 
 #if 1
-        int method = ANN_MLP::Params::BACKPROP;
+        int method = ANN_MLP::BACKPROP;
         double method_param = 0.001;
         int max_iter = 300;
 #else
-        int method = ANN_MLP::Params::RPROP;
+        int method = ANN_MLP::RPROP;
         double method_param = 0.1;
         int max_iter = 1000;
 #endif
@@ -386,7 +408,12 @@ build_mlp_classifier( const string& data_filename,
         Ptr<TrainData> tdata = TrainData::create(train_data, ROW_SAMPLE, train_responses);
 
         cout << "Training the classifier (may take a few minutes)...\n";
-        model = StatModel::train<ANN_MLP>(tdata, ANN_MLP::Params(layer_sizes, ANN_MLP::SIGMOID_SYM, 0, 0, TC(max_iter,0), method, method_param));
+        model = ANN_MLP::create();
+        model->setLayerSizes(layer_sizes);
+        model->setActivationFunction(ANN_MLP::SIGMOID_SYM, 0, 0);
+        model->setTermCriteria(TC(max_iter,0));
+        model->setTrainMethod(method, method_param);
+        model->train(tdata);
         cout << endl;
     }
 
@@ -403,7 +430,6 @@ build_knearest_classifier( const string& data_filename, int K )
     if( !ok )
         return ok;
 
-    Ptr<KNearest> model;
 
     int nsamples_all = data.rows;
     int ntrain_samples = (int)(nsamples_all*0.8);
@@ -411,7 +437,10 @@ build_knearest_classifier( const string& data_filename, int K )
     // create classifier by using <data> and <responses>
     cout << "Training the classifier ...\n";
     Ptr<TrainData> tdata = prepare_train_data(data, responses, ntrain_samples);
-    model = StatModel::train<KNearest>(tdata, KNearest::Params(K, true));
+    Ptr<KNearest> model = KNearest::create();
+    model->setDefaultK(K);
+    model->setIsClassifier(true);
+    model->train(tdata);
     cout << endl;
 
     test_and_save_classifier(model, data, responses, ntrain_samples, 0, string());
@@ -435,7 +464,8 @@ build_nbayes_classifier( const string& data_filename )
     // create classifier by using <data> and <responses>
     cout << "Training the classifier ...\n";
     Ptr<TrainData> tdata = prepare_train_data(data, responses, ntrain_samples);
-    model = StatModel::train<NormalBayesClassifier>(tdata, NormalBayesClassifier::Params());
+    model = NormalBayesClassifier::create();
+    model->train(tdata);
     cout << endl;
 
     test_and_save_classifier(model, data, responses, ntrain_samples, 0, string());
@@ -471,13 +501,11 @@ build_svm_classifier( const string& data_filename,
         // create classifier by using <data> and <responses>
         cout << "Training the classifier ...\n";
         Ptr<TrainData> tdata = prepare_train_data(data, responses, ntrain_samples);
-
-        SVM::Params params;
-        params.svmType = SVM::C_SVC;
-        params.kernelType = SVM::LINEAR;
-        params.C = 1;
-
-        model = StatModel::train<SVM>(tdata, params);
+        model = SVM::create();
+        model->setType(SVM::C_SVC);
+        model->setKernel(SVM::LINEAR);
+        model->setC(1);
+        model->train(tdata);
         cout << endl;
     }
 
@@ -489,53 +517,30 @@ int main( int argc, char *argv[] )
 {
     string filename_to_save = "";
     string filename_to_load = "";
-    string data_filename = "./letter-recognition.data";
+    string data_filename;
     int method = 0;
 
-    int i;
-    for( i = 1; i < argc; i++ )
-    {
-        if( strcmp(argv[i],"-data") == 0 ) // flag "-data letter_recognition.xml"
-        {
-            i++;
-            data_filename = argv[i];
-        }
-        else if( strcmp(argv[i],"-save") == 0 ) // flag "-save filename.xml"
-        {
-            i++;
-            filename_to_save = argv[i];
-        }
-        else if( strcmp(argv[i],"-load") == 0) // flag "-load filename.xml"
-        {
-            i++;
-            filename_to_load = argv[i];
-        }
-        else if( strcmp(argv[i],"-boost") == 0)
-        {
-            method = 1;
-        }
-        else if( strcmp(argv[i],"-mlp") == 0 )
-        {
-            method = 2;
-        }
-        else if( strcmp(argv[i], "-knearest") == 0 || strcmp(argv[i], "-knn") == 0 )
-        {
-            method = 3;
-        }
-        else if( strcmp(argv[i], "-nbayes") == 0)
-        {
-            method = 4;
-        }
-        else if( strcmp(argv[i], "-svm") == 0)
-        {
-            method = 5;
-        }
-        else
-            break;
-    }
+    cv::CommandLineParser parser(argc, argv, "{data|letter-recognition.data|}{save||}{load||}{boost||}"
+            "{mlp||}{knn knearest||}{nbayes||}{svm||}");
+    data_filename = samples::findFile(parser.get<string>("data"));
+    if (parser.has("save"))
+        filename_to_save = parser.get<string>("save");
+    if (parser.has("load"))
+        filename_to_load = samples::findFile(parser.get<string>("load"));
+    if (parser.has("boost"))
+        method = 1;
+    else if (parser.has("mlp"))
+        method = 2;
+    else if (parser.has("knearest"))
+        method = 3;
+    else if (parser.has("nbayes"))
+        method = 4;
+    else if (parser.has("svm"))
+        method = 5;
 
-    if( i < argc ||
-        (method == 0 ?
+    help(argv);
+
+    if( (method == 0 ?
         build_rtrees_classifier( data_filename, filename_to_save, filename_to_load ) :
         method == 1 ?
         build_boost_classifier( data_filename, filename_to_save, filename_to_load ) :
@@ -548,8 +553,6 @@ int main( int argc, char *argv[] )
         method == 5 ?
         build_svm_classifier( data_filename, filename_to_save, filename_to_load ):
         -1) < 0)
-    {
-        help();
-    }
+
     return 0;
 }

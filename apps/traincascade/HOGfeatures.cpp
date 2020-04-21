@@ -146,7 +146,7 @@ void CvHOGEvaluator::Feature::write(FileStorage &fs) const
 //}
 
 //cell[0] and featComponent idx writing. By cell[0] it's possible to recover all block
-//All block is nessesary for block normalization
+//All block is necessary for block normalization
 void CvHOGEvaluator::Feature::write(FileStorage &fs, int featComponentIdx) const
 {
     fs << CC_RECT << "[:" << rect[0].x << rect[0].y <<
@@ -165,7 +165,7 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
     Mat qangle(gradSize, CV_8U);
 
     AutoBuffer<int> mapbuf(gradSize.width + gradSize.height + 4);
-    int* xmap = (int*)mapbuf + 1;
+    int* xmap = mapbuf.data() + 1;
     int* ymap = xmap + gradSize.width + 2;
 
     const int borderType = (int)BORDER_REPLICATE;
@@ -177,7 +177,7 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
 
     int width = gradSize.width;
     AutoBuffer<float> _dbuf(width*4);
-    float* dbuf = _dbuf;
+    float* dbuf = _dbuf.data();
     Mat Dx(1, width, CV_32F, dbuf);
     Mat Dy(1, width, CV_32F, dbuf + width);
     Mat Mag(1, width, CV_32F, dbuf + width*2);
@@ -187,11 +187,11 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
 
     for( y = 0; y < gradSize.height; y++ )
     {
-        const uchar* currPtr = img.data + img.step*ymap[y];
-        const uchar* prevPtr = img.data + img.step*ymap[y-1];
-        const uchar* nextPtr = img.data + img.step*ymap[y+1];
-        float* gradPtr = (float*)grad.ptr(y);
-        uchar* qanglePtr = (uchar*)qangle.ptr(y);
+        const uchar* currPtr = img.ptr(ymap[y]);
+        const uchar* prevPtr = img.ptr(ymap[y-1]);
+        const uchar* nextPtr = img.ptr(ymap[y+1]);
+        float* gradPtr = grad.ptr<float>(y);
+        uchar* qanglePtr = qangle.ptr(y);
 
         for( x = 0; x < width; x++ )
         {
@@ -226,9 +226,9 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
     int magStep = (int)( grad.step / sizeof(float) );
     for( binIdx = 0; binIdx < nbins; binIdx++ )
     {
-        histBuf = (float*)histogram[binIdx].data;
-        magBuf = (const float*)grad.data;
-        binsBuf = (const uchar*)qangle.data;
+        histBuf = histogram[binIdx].ptr<float>();
+        magBuf = grad.ptr<float>();
+        binsBuf = qangle.ptr();
 
         memset( histBuf, 0, histSize.width * sizeof(histBuf[0]) );
         histBuf += histStep + 1;

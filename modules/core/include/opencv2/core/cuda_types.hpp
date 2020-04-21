@@ -40,12 +40,25 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CUDA_TYPES_HPP__
-#define __OPENCV_CORE_CUDA_TYPES_HPP__
+#ifndef OPENCV_CORE_CUDA_TYPES_HPP
+#define OPENCV_CORE_CUDA_TYPES_HPP
 
 #ifndef __cplusplus
 #  error cuda_types.hpp header must be compiled as C++
 #endif
+
+#if defined(__OPENCV_BUILD) && defined(__clang__)
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
+#if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 #ifdef __CUDACC__
     #define __CV_CUDA_HOST_DEVICE__ __host__ __device__ __forceinline__
@@ -57,6 +70,7 @@ namespace cv
 {
     namespace cuda
     {
+
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
@@ -90,7 +104,6 @@ namespace cv
             __CV_CUDA_HOST_DEVICE__ PtrStep() : step(0) {}
             __CV_CUDA_HOST_DEVICE__ PtrStep(T* data_, size_t step_) : DevPtr<T>(data_), step(step_) {}
 
-            //! stride between two consecutive rows in bytes. Step is stored always and everywhere in bytes!!!
             size_t step;
 
             __CV_CUDA_HOST_DEVICE__       T* ptr(int y = 0)       { return (      T*)( (      char*)DevPtr<T>::data + y * step); }
@@ -114,13 +127,18 @@ namespace cv
         };
 
         typedef PtrStepSz<unsigned char> PtrStepSzb;
+        typedef PtrStepSz<unsigned short> PtrStepSzus;
         typedef PtrStepSz<float> PtrStepSzf;
         typedef PtrStepSz<int> PtrStepSzi;
 
         typedef PtrStep<unsigned char> PtrStepb;
+        typedef PtrStep<unsigned short> PtrStepus;
         typedef PtrStep<float> PtrStepf;
         typedef PtrStep<int> PtrStepi;
+
     }
 }
 
-#endif /* __OPENCV_CORE_CUDA_TYPES_HPP__ */
+//! @endcond
+
+#endif /* OPENCV_CORE_CUDA_TYPES_HPP */

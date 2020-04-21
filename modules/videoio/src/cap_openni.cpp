@@ -44,10 +44,6 @@
 
 #ifdef HAVE_OPENNI
 
-#if defined TBB_INTERFACE_VERSION && TBB_INTERFACE_VERSION < 5000
-# undef HAVE_TBB
-#endif
-
 #include <queue>
 
 #ifndef i386
@@ -105,9 +101,6 @@ public:
         context(_context), depthGenerator(_depthGenerator), imageGenerator(_imageGenerator),
         maxBufferSize(_maxBufferSize), isCircleBuffer(_isCircleBuffer), maxTimeDuration(_maxTimeDuration)
     {
-#ifdef HAVE_TBB
-        task = 0;
-#endif
 
         CV_Assert( depthGenerator.IsValid() );
         CV_Assert( imageGenerator.IsValid() );
@@ -116,9 +109,6 @@ public:
     void setMaxBufferSize( int _maxBufferSize )
     {
         maxBufferSize = _maxBufferSize;
-#ifdef HAVE_TBB
-        task->setMaxBufferSize();
-#endif
     }
     inline int getMaxBufferSize() const { return maxBufferSize; }
 
@@ -136,9 +126,7 @@ public:
 
         while( task->grab(depthMetaData, imageMetaData) == false )
         {
-#ifndef HAVE_TBB
             task->spin();
-#endif
         }
         return true;
 
@@ -148,22 +136,12 @@ public:
     {
         CV_Assert( depthGenerator.IsValid() );
         CV_Assert( imageGenerator.IsValid() );
-#ifdef HAVE_TBB
-        task = new( tbb::task::allocate_root() ) TBBApproximateSynchronizerTask( *this );
-        tbb::task::enqueue(*task);
-#else
         task.reset( new ApproximateSynchronizer( *this ) );
-#endif
     }
 
     void finish()
     {
-#ifdef HAVE_TBB
-        if( task )
-            tbb::task::destroy( *task );
-#else
         task.release();
-#endif
     }
 
     bool isRun() const { return task != 0; }
@@ -266,26 +244,26 @@ private:
             ApproximateSynchronizerBase(_approxSyncGrabber)
         {}
 
-        virtual bool isSpinContinue() const
+        virtual bool isSpinContinue() const CV_OVERRIDE
         {
             int maxBufferSize = approxSyncGrabber.getMaxBufferSize();
             return (maxBufferSize <= 0) || (static_cast<int>(depthQueue.size()) < maxBufferSize &&
                                            static_cast<int>(imageQueue.size()) < maxBufferSize); // "<" to may push
         }
 
-        virtual inline void pushDepthMetaData( xn::DepthMetaData& depthMetaData )
+        virtual inline void pushDepthMetaData( xn::DepthMetaData& depthMetaData ) CV_OVERRIDE
         {
             cv::Ptr<xn::DepthMetaData> depthPtr = cv::makePtr<xn::DepthMetaData>();
             depthPtr->CopyFrom(depthMetaData);
             depthQueue.push(depthPtr);
         }
-        virtual inline void pushImageMetaData( xn::ImageMetaData& imageMetaData )
+        virtual inline void pushImageMetaData( xn::ImageMetaData& imageMetaData ) CV_OVERRIDE
         {
             cv::Ptr<xn::ImageMetaData> imagePtr = cv::makePtr<xn::ImageMetaData>();
             imagePtr->CopyFrom(imageMetaData);
             imageQueue.push(imagePtr);
         }
-        virtual inline bool popDepthMetaData( xn::DepthMetaData& depthMetaData )
+        virtual inline bool popDepthMetaData( xn::DepthMetaData& depthMetaData ) CV_OVERRIDE
         {
             if( depthQueue.empty() )
                 return false;
@@ -294,7 +272,7 @@ private:
             depthQueue.pop();
             return true;
         }
-        virtual inline bool popImageMetaData( xn::ImageMetaData& imageMetaData )
+        virtual inline bool popImageMetaData( xn::ImageMetaData& imageMetaData ) CV_OVERRIDE
         {
             if( imageQueue.empty() )
                 return false;
@@ -309,120 +287,7 @@ private:
         std::queue<cv::Ptr<xn::ImageMetaData> > imageQueue;
     };
 
-#ifdef HAVE_TBB
-    // If there is TBB the synchronization will be executed in own thread.
-    class TBBApproximateSynchronizer: public ApproximateSynchronizerBase
-    {
-    public:
-        TBBApproximateSynchronizer( ApproximateSyncGrabber& _approxSyncGrabber ) :
-            ApproximateSynchronizerBase(_approxSyncGrabber)
-        {
-            setMaxBufferSize();
-        }
-
-        void setMaxBufferSize()
-        {
-            int maxBufferSize = approxSyncGrabber.getMaxBufferSize();
-            if( maxBufferSize >= 0 )
-            {
-                depthQueue.set_capacity( maxBufferSize );
-                imageQueue.set_capacity( maxBufferSize );
-            }
-        }
-
-        virtual inline bool isSpinContinue() const { return true; }
-
-        virtual inline void pushDepthMetaData( xn::DepthMetaData& depthMetaData )
-        {
-            cv::Ptr<xn::DepthMetaData> depthPtr = cv::makePtr<xn::DepthMetaData>(), tmp;
-            depthPtr->CopyFrom(depthMetaData);
-
-            tbb::mutex mtx;
-            mtx.lock();
-            if( depthQueue.try_push(depthPtr) == false )
-            {
-                if( approxSyncGrabber.getIsCircleBuffer() )
-                {
-                    CV_Assert( depthQueue.try_pop(tmp) );
-                    CV_Assert( depthQueue.try_push(depthPtr) );
-                }
-            }
-            mtx.unlock();
-        }
-
-        virtual inline void pushImageMetaData( xn::ImageMetaData& imageMetaData )
-        {
-            cv::Ptr<xn::ImageMetaData> imagePtr = cv::makePtr<xn::ImageMetaData>(), tmp;
-            imagePtr->CopyFrom(imageMetaData);
-
-            tbb::mutex mtx;
-            mtx.lock();
-            if( imageQueue.try_push(imagePtr) == false )
-            {
-                if( approxSyncGrabber.getIsCircleBuffer() )
-                {
-                    CV_Assert( imageQueue.try_pop(tmp) );
-                    CV_Assert( imageQueue.try_push(imagePtr) );
-                }
-            }
-            mtx.unlock();
-        }
-
-        virtual inline bool popDepthMetaData( xn::DepthMetaData& depthMetaData )
-        {
-            cv::Ptr<xn::DepthMetaData> depthPtr;
-            bool isPop = depthQueue.try_pop(depthPtr);
-            if( isPop )
-                depthMetaData.CopyFrom(*depthPtr);
-            return isPop;
-        }
-        virtual inline bool popImageMetaData( xn::ImageMetaData& imageMetaData )
-        {
-            cv::Ptr<xn::ImageMetaData> imagePtr;
-            bool isPop = imageQueue.try_pop(imagePtr);
-            if( isPop )
-                imageMetaData.CopyFrom(*imagePtr);
-            return isPop;
-        }
-
-    private:
-        tbb::concurrent_bounded_queue<cv::Ptr<xn::DepthMetaData> > depthQueue;
-        tbb::concurrent_bounded_queue<cv::Ptr<xn::ImageMetaData> > imageQueue;
-    };
-
-    class TBBApproximateSynchronizerTask: public tbb::task
-    {
-    public:
-        TBBApproximateSynchronizerTask( ApproximateSyncGrabber& approxSyncGrabber ) :
-            synchronizer(approxSyncGrabber)
-        {}
-
-        void setMaxBufferSize()
-        {
-            synchronizer.setMaxBufferSize();
-        }
-
-        bool grab( xn::DepthMetaData& depthMetaData,
-                   xn::ImageMetaData& imageMetaData )
-        {
-            return synchronizer.grab( depthMetaData, imageMetaData );
-        }
-
-    private:
-        tbb::task* execute()
-        {
-            synchronizer.spin();
-            return 0;
-        }
-        TBBApproximateSynchronizer synchronizer;
-    };
-#endif // HAVE_TBB
-
-#ifdef HAVE_TBB
-    TBBApproximateSynchronizerTask* task;
-#else
     cv::Ptr<ApproximateSynchronizer> task;
-#endif
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -434,11 +299,7 @@ public:
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
 
-#ifdef HAVE_TBB
-    static const int DEFAULT_MAX_BUFFER_SIZE = 8;
-#else
     static const int DEFAULT_MAX_BUFFER_SIZE = 2;
-#endif
     static const int DEFAULT_IS_CIRCLE_BUFFER = 0;
     static const int DEFAULT_MAX_TIME_DURATION = 20;
 
@@ -446,10 +307,10 @@ public:
     CvCapture_OpenNI(const char * filename);
     virtual ~CvCapture_OpenNI();
 
-    virtual double getProperty(int propIdx);
-    virtual bool setProperty(int probIdx, double propVal);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int outputType);
+    virtual double getProperty(int propIdx) const CV_OVERRIDE;
+    virtual bool setProperty(int probIdx, double propVal) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int outputType) CV_OVERRIDE;
 
     bool isOpened() const;
 
@@ -477,11 +338,11 @@ protected:
 
     bool readCamerasParams();
 
-    double getDepthGeneratorProperty(int propIdx);
+    double getDepthGeneratorProperty(int propIdx) const;
     bool setDepthGeneratorProperty(int propIdx, double propVal);
-    double getImageGeneratorProperty(int propIdx);
+    double getImageGeneratorProperty(int propIdx) const;
     bool setImageGeneratorProperty(int propIdx, double propVal);
-    double getCommonProperty(int propIdx);
+    double getCommonProperty(int propIdx) const;
     bool setCommonProperty(int propIdx, double propVal);
 
     // OpenNI context
@@ -521,7 +382,7 @@ IplImage* CvCapture_OpenNI::OutputMap::getIplImagePtr()
     if( mat.empty() )
         return 0;
 
-    iplHeader = IplImage(mat);
+    iplHeader = cvIplImage(mat);
     return &iplHeader;
 }
 
@@ -771,7 +632,7 @@ bool CvCapture_OpenNI::readCamerasParams()
     return true;
 }
 
-double CvCapture_OpenNI::getProperty( int propIdx )
+double CvCapture_OpenNI::getProperty( int propIdx ) const
 {
     double propValue = 0;
 
@@ -820,7 +681,7 @@ bool CvCapture_OpenNI::setProperty( int propIdx, double propValue )
     return isSet;
 }
 
-double CvCapture_OpenNI::getCommonProperty( int propIdx )
+double CvCapture_OpenNI::getCommonProperty( int propIdx ) const
 {
     double propValue = 0;
 
@@ -917,7 +778,7 @@ bool CvCapture_OpenNI::setCommonProperty( int propIdx, double propValue )
     return isSet;
 }
 
-double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
+double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx ) const
 {
     double propValue = 0;
     if( !depthGenerator.IsValid() )
@@ -953,7 +814,7 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
         propValue = (double)depthFocalLength_VGA;
         break;
     case CV_CAP_PROP_OPENNI_REGISTRATION :
-        propValue = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
+        propValue = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(const_cast<CvCapture_OpenNI *>(this)->imageGenerator) ? 1.0 : 0.0;
         break;
     case CV_CAP_PROP_POS_MSEC :
         propValue = (double)depthGenerator.GetTimestamp();
@@ -981,7 +842,7 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
             if( propValue != 0.0 ) // "on"
             {
                 // if there isn't image generator (i.e. ASUS XtionPro doesn't have it)
-                // then the property isn't avaliable
+                // then the property isn't available
                 if( imageGenerator.IsValid() )
                 {
                     if( !depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) )
@@ -1018,7 +879,7 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
     return isSet;
 }
 
-double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
+double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx ) const
 {
     double propValue = 0.;
     if( !imageGenerator.IsValid() )

@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_WARPING_HPP__
-#define __OPENCV_CUDEV_EXPR_WARPING_HPP__
+#ifndef OPENCV_CUDEV_EXPR_WARPING_HPP
+#define OPENCV_CUDEV_EXPR_WARPING_HPP
 
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"
@@ -56,6 +56,9 @@
 #include "expr.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // resize
 
@@ -165,6 +168,8 @@ transpose_(const SrcPtr& src)
     body.src = src;
     return makeExpr(body);
 }
+
+//! @}
 
 }}
 

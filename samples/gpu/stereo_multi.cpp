@@ -1,7 +1,7 @@
 // This sample demonstrates working on one piece of data using two GPUs.
 // It splits input into two parts and processes them separately on different GPUs.
 
-#ifdef WIN32
+#ifdef _WIN32
     #define NOMINMAX
     #include <windows.h>
 #else
@@ -15,7 +15,6 @@
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/contrib.hpp"
 #include "opencv2/cudastereo.hpp"
 
 using namespace std;
@@ -26,7 +25,7 @@ using namespace cv::cuda;
 // Thread
 // OS-specific wrappers for multi-threading
 
-#ifdef WIN32
+#ifdef _WIN32
 class Thread
 {
     struct UserData
@@ -277,7 +276,7 @@ public:
     StereoMultiGpuStream();
     ~StereoMultiGpuStream();
 
-    void compute(const CudaMem& leftFrame, const CudaMem& rightFrame, CudaMem& disparity);
+    void compute(const HostMem& leftFrame, const HostMem& rightFrame, HostMem& disparity);
 
 private:
     GpuMat d_leftFrames[2];
@@ -315,7 +314,7 @@ StereoMultiGpuStream::~StereoMultiGpuStream()
     streams[1].release();
 }
 
-void StereoMultiGpuStream::compute(const CudaMem& leftFrame, const CudaMem& rightFrame, CudaMem& disparity)
+void StereoMultiGpuStream::compute(const HostMem& leftFrame, const HostMem& rightFrame, HostMem& disparity)
 {
     disparity.create(leftFrame.size(), CV_8UC1);
 
@@ -356,7 +355,7 @@ int main(int argc, char** argv)
 {
     if (argc != 3)
     {
-        cerr << "Usage: stereo_multi_gpu <left_video> <right_video>" << endl;
+        cerr << "Usage: stereo_multi <left_video> <right_video>" << endl;
         return -1;
     }
 
@@ -372,7 +371,7 @@ int main(int argc, char** argv)
         DeviceInfo devInfo(i);
         if (!devInfo.isCompatible())
         {
-            cerr << "CUDA module was't built for GPU #" << i << " ("
+            cerr << "CUDA module wasn't built for GPU #" << i << " ("
                  << devInfo.name() << ", CC " << devInfo.majorVersion()
                  << devInfo.minorVersion() << endl;
             return -1;
@@ -402,7 +401,7 @@ int main(int argc, char** argv)
     cout << endl;
 
     Mat leftFrame, rightFrame;
-    CudaMem leftGrayFrame, rightGrayFrame;
+    HostMem leftGrayFrame, rightGrayFrame;
 
     StereoSingleGpu gpu0Alg(0);
     StereoSingleGpu gpu1Alg(1);
@@ -412,7 +411,7 @@ int main(int argc, char** argv)
     Mat disparityGpu0;
     Mat disparityGpu1;
     Mat disparityMultiThread;
-    CudaMem disparityMultiStream;
+    HostMem disparityMultiStream;
 
     Mat disparityGpu0Show;
     Mat disparityGpu1Show;

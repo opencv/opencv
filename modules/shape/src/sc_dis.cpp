@@ -72,50 +72,49 @@ public:
         shapeContextWeight=1.0f;
         sigma=10.0f;
         name_ = "ShapeDistanceExtractor.SCD";
+        costFlag = 0;
     }
 
     /* Destructor */
-    ~ShapeContextDistanceExtractorImpl()
+    ~ShapeContextDistanceExtractorImpl() CV_OVERRIDE
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
-    virtual float computeDistance(InputArray contour1, InputArray contour2);
+    virtual float computeDistance(InputArray contour1, InputArray contour2) CV_OVERRIDE;
 
     //! Setters/Getters
-    virtual void setAngularBins(int _nAngularBins){CV_Assert(_nAngularBins>0); nAngularBins=_nAngularBins;}
-    virtual int getAngularBins() const {return nAngularBins;}
+    virtual void setAngularBins(int _nAngularBins) CV_OVERRIDE { CV_Assert(_nAngularBins>0); nAngularBins=_nAngularBins; }
+    virtual int getAngularBins() const CV_OVERRIDE { return nAngularBins; }
 
-    virtual void setRadialBins(int _nRadialBins){CV_Assert(_nRadialBins>0); nRadialBins=_nRadialBins;}
-    virtual int getRadialBins() const {return nRadialBins;}
+    virtual void setRadialBins(int _nRadialBins) CV_OVERRIDE { CV_Assert(_nRadialBins>0); nRadialBins=_nRadialBins; }
+    virtual int getRadialBins() const CV_OVERRIDE { return nRadialBins; }
 
-    virtual void setInnerRadius(float _innerRadius) {CV_Assert(_innerRadius>0); innerRadius=_innerRadius;}
-    virtual float getInnerRadius() const {return innerRadius;}
+    virtual void setInnerRadius(float _innerRadius) CV_OVERRIDE { CV_Assert(_innerRadius>0); innerRadius=_innerRadius; }
+    virtual float getInnerRadius() const CV_OVERRIDE { return innerRadius; }
 
-    virtual void setOuterRadius(float _outerRadius) {CV_Assert(_outerRadius>0); outerRadius=_outerRadius;}
-    virtual float getOuterRadius() const {return outerRadius;}
+    virtual void setOuterRadius(float _outerRadius) CV_OVERRIDE { CV_Assert(_outerRadius>0); outerRadius=_outerRadius; }
+    virtual float getOuterRadius() const CV_OVERRIDE { return outerRadius; }
 
-    virtual void setRotationInvariant(bool _rotationInvariant) {rotationInvariant=_rotationInvariant;}
-    virtual bool getRotationInvariant() const {return rotationInvariant;}
+    virtual void setRotationInvariant(bool _rotationInvariant) CV_OVERRIDE { rotationInvariant=_rotationInvariant; }
+    virtual bool getRotationInvariant() const CV_OVERRIDE { return rotationInvariant; }
 
-    virtual void setCostExtractor(Ptr<HistogramCostExtractor> _comparer) { comparer = _comparer; }
-    virtual Ptr<HistogramCostExtractor> getCostExtractor() const { return comparer; }
+    virtual void setCostExtractor(Ptr<HistogramCostExtractor> _comparer) CV_OVERRIDE { comparer = _comparer; }
+    virtual Ptr<HistogramCostExtractor> getCostExtractor() const CV_OVERRIDE { return comparer; }
 
-    virtual void setShapeContextWeight(float _shapeContextWeight) {shapeContextWeight=_shapeContextWeight;}
-    virtual float getShapeContextWeight() const {return shapeContextWeight;}
+    virtual void setShapeContextWeight(float _shapeContextWeight) CV_OVERRIDE { shapeContextWeight=_shapeContextWeight; }
+    virtual float getShapeContextWeight() const CV_OVERRIDE { return shapeContextWeight; }
 
-    virtual void setImageAppearanceWeight(float _imageAppearanceWeight) {imageAppearanceWeight=_imageAppearanceWeight;}
-    virtual float getImageAppearanceWeight() const {return imageAppearanceWeight;}
+    virtual void setImageAppearanceWeight(float _imageAppearanceWeight) CV_OVERRIDE { imageAppearanceWeight=_imageAppearanceWeight; }
+    virtual float getImageAppearanceWeight() const CV_OVERRIDE { return imageAppearanceWeight; }
 
-    virtual void setBendingEnergyWeight(float _bendingEnergyWeight) {bendingEnergyWeight=_bendingEnergyWeight;}
-    virtual float getBendingEnergyWeight() const {return bendingEnergyWeight;}
+    virtual void setBendingEnergyWeight(float _bendingEnergyWeight) CV_OVERRIDE { bendingEnergyWeight=_bendingEnergyWeight; }
+    virtual float getBendingEnergyWeight() const CV_OVERRIDE { return bendingEnergyWeight; }
 
-    virtual void setStdDev(float _sigma) {sigma=_sigma;}
-    virtual float getStdDev() const {return sigma;}
+    virtual void setStdDev(float _sigma) CV_OVERRIDE { sigma=_sigma; }
+    virtual float getStdDev() const CV_OVERRIDE { return sigma; }
 
-    virtual void setImages(InputArray _image1, InputArray _image2)
+    virtual void setImages(InputArray _image1, InputArray _image2) CV_OVERRIDE
     {
         Mat image1_=_image1.getMat(), image2_=_image2.getMat();
         CV_Assert((image1_.depth()==0) && (image2_.depth()==0));
@@ -123,24 +122,23 @@ public:
         image2=image2_;
     }
 
-    virtual void getImages(OutputArray _image1, OutputArray _image2) const
+    virtual void getImages(OutputArray _image1, OutputArray _image2) const CV_OVERRIDE
     {
         CV_Assert((!image1.empty()) && (!image2.empty()));
-        _image1.create(image1.size(), image1.type());
-        _image2.create(image2.size(), image2.type());
-        _image1.getMat()=image1;
-        _image2.getMat()=image2;
+        image1.copyTo(_image1);
+        image2.copyTo(_image2);
     }
 
-    virtual void setIterations(int _iterations) {CV_Assert(_iterations>0); iterations=_iterations;}
-    virtual int getIterations() const {return iterations;}
+    virtual void setIterations(int _iterations) CV_OVERRIDE {CV_Assert(_iterations>0); iterations=_iterations;}
+    virtual int getIterations() const CV_OVERRIDE {return iterations;}
 
-    virtual void setTransformAlgorithm(Ptr<ShapeTransformer> _transformer) {transformer=_transformer;}
-    virtual Ptr<ShapeTransformer> getTransformAlgorithm() const {return transformer;}
+    virtual void setTransformAlgorithm(Ptr<ShapeTransformer> _transformer) CV_OVERRIDE {transformer=_transformer;}
+    virtual Ptr<ShapeTransformer> getTransformAlgorithm() const CV_OVERRIDE {return transformer;}
 
     //! write/read
-    virtual void write(FileStorage& fs) const
+    virtual void write(FileStorage& fs) const CV_OVERRIDE
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "nRads" << nRadialBins
            << "nAngs" << nAngularBins
@@ -155,7 +153,7 @@ public:
            << "sigma" << sigma;
     }
 
-    virtual void read(const FileNode& fn)
+    virtual void read(const FileNode& fn) CV_OVERRIDE
     {
         CV_Assert( (String)fn["name"] == name_ );
         nRadialBins = (int)fn["nRads"];
@@ -189,6 +187,8 @@ protected:
 
 float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, InputArray contour2)
 {
+    CV_INSTRUMENT_REGION();
+
     // Checking //
     Mat sset1=contour1.getMat(), sset2=contour2.getMat(), set1, set2;
     if (set1.type() != CV_32F)
@@ -199,10 +199,17 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
     if (set2.type() != CV_32F)
         sset2.convertTo(set2, CV_32F);
     else
-        sset1.copyTo(set2);
+        sset2.copyTo(set2);
 
     CV_Assert((set1.channels()==2) && (set1.cols>0));
     CV_Assert((set2.channels()==2) && (set2.cols>0));
+
+    // Force vectors column-based
+    if (set1.dims > 1)
+        set1 = set1.reshape(2, 1);
+    if (set2.dims > 1)
+        set2 = set2.reshape(2, 1);
+
     if (imageAppearanceWeight!=0)
     {
         CV_Assert((!image1.empty()) && (!image2.empty()));
@@ -274,13 +281,13 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
         // compute appearance cost
         if ( !transDown.empty() )
         {
-            resize(warpedImage, warpedImage, image1.size());
+            resize(warpedImage, warpedImage, image1.size(), 0, 0, INTER_LINEAR_EXACT);
             Mat temp=(warpedImage-image1);
             multiply(temp, temp, diffIm);
         }
         else
         {
-            resize(warpedImage, warpedImage, image2.size());
+            resize(warpedImage, warpedImage, image2.size(), 0, 0, INTER_LINEAR_EXACT);
             Mat temp=(warpedImage-image2);
             multiply(temp, temp, diffIm);
         }
@@ -495,6 +502,8 @@ void SCDMatcher::matchDescriptors(cv::Mat &descriptors1, cv::Mat &descriptors2, 
 void SCDMatcher::buildCostMatrix(const cv::Mat &descriptors1, const cv::Mat &descriptors2,
                                  cv::Mat &costMatrix, cv::Ptr<cv::HistogramCostExtractor> &comparer) const
 {
+    CV_INSTRUMENT_REGION();
+
     comparer->buildCostMatrix(descriptors1, descriptors2, costMatrix);
 }
 
@@ -734,6 +743,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
 
     // calculate symmetric shape context cost
     cv::Mat trueCostMatrix(costMatrix, cv::Rect(0,0,sizeScd1, sizeScd2));
+    CV_Assert(!trueCostMatrix.empty());
     float leftcost = 0;
     for (int nrow=0; nrow<trueCostMatrix.rows; nrow++)
     {
@@ -765,7 +775,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
     inliers1.reserve(sizeScd1);
     for (size_t kc = 0; kc<inliers1.size(); kc++)
     {
-        if (rowsol[kc]<sizeScd1) // if a real match
+        if (rowsol[kc]<sizeScd2) // if a real match
             inliers1[kc]=1;
         else
             inliers1[kc]=0;
@@ -773,7 +783,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
     inliers2.reserve(sizeScd2);
     for (size_t kc = 0; kc<inliers2.size(); kc++)
     {
-        if (colsol[kc]<sizeScd2) // if a real match
+        if (colsol[kc]<sizeScd1) // if a real match
             inliers2[kc]=1;
         else
             inliers2[kc]=0;

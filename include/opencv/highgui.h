@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OLD_HIGHGUI_H__
-#define __OPENCV_OLD_HIGHGUI_H__
+#ifndef OPENCV_OLD_HIGHGUI_H
+#define OPENCV_OLD_HIGHGUI_H
 
 #include "opencv2/core/core_c.h"
 #include "opencv2/highgui/highgui_c.h"

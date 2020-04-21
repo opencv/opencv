@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_WARP_REDUCE_DETAIL_HPP__
-#define __OPENCV_CUDEV_WARP_REDUCE_DETAIL_HPP__
+#ifndef OPENCV_CUDEV_WARP_REDUCE_DETAIL_HPP
+#define OPENCV_CUDEV_WARP_REDUCE_DETAIL_HPP
 
 #include "../../common.hpp"
 #include "../../util/tuple.hpp"
@@ -193,8 +193,8 @@ namespace warp_reduce_detail
         __device__ static void reduce(Pointer smem, Reference val, uint tid, Op op)
         {
         #if CV_CUDEV_ARCH >= 300
-            (void) smem;
-            (void) tid;
+            CV_UNUSED(smem);
+            CV_UNUSED(tid);
 
             mergeShfl(val, 16, 32, op);
             mergeShfl(val, 8, 32, op);

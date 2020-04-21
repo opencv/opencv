@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -44,7 +44,7 @@
 
 #include "ImathMatrixAlgo.h"
 #include <cmath>
-#include <algorithm> // for std::max()
+#include <algorithm>
 
 #if defined(OPENEXR_DLL)
     #define EXPORT_CONST __declspec(dllexport)
@@ -52,25 +52,25 @@
     #define EXPORT_CONST const
 #endif
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 EXPORT_CONST M33f identity33f ( 1, 0, 0,
-                0, 1, 0,
-                0, 0, 1);
+				0, 1, 0,
+				0, 0, 1);
 
 EXPORT_CONST M33d identity33d ( 1, 0, 0,
-                0, 1, 0,
-                0, 0, 1);
+				0, 1, 0,
+				0, 0, 1);
 
 EXPORT_CONST M44f identity44f ( 1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
+				0, 1, 0, 0,
+				0, 0, 1, 0,
+				0, 0, 0, 1);
 
 EXPORT_CONST M44d identity44d ( 1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
+				0, 1, 0, 0,
+				0, 0, 1, 0,
+				0, 0, 0, 1);
 
 namespace
 {
@@ -166,7 +166,7 @@ procrustesRotationAndTranslation (const Vec3<T>* A, const Vec3<T>* B, const T* w
 
     M33d U, V;
     V3d S;
-    jacobiSVD (C, U, S, V, Imath::limits<double>::epsilon(), true);
+    jacobiSVD (C, U, S, V, IMATH_INTERNAL_NAMESPACE::limits<double>::epsilon(), true);
 
     // We want Q.transposed() here since we are going to be using it in the
     // Imath style (multiplying vectors on the right, v' = v*A^T):
@@ -176,10 +176,10 @@ procrustesRotationAndTranslation (const Vec3<T>* A, const Vec3<T>* B, const T* w
     if (doScale && numPoints > 1)
     {
         // Finding a uniform scale: let us assume the Q is completely fixed
-        // at this point (solving for both simultaneously seems much harder).
+        // at this point (solving for both simultaneously seems much harder).  
         // We are trying to compute (again, per Golub and van Loan)
         //    min || s*A*Q - B ||_F
-        // Notice that we've jammed a uniform scale in front of the Q.
+        // Notice that we've jammed a uniform scale in front of the Q.  
         // Now, the Frobenius norm (the least squares norm over matrices)
         // has the neat property that it is equivalent to minimizing the trace
         // of M^T*M (see your friendly neighborhood linear algebra text for a
@@ -232,7 +232,7 @@ procrustesRotationAndTranslation (const Vec3<T>* A, const Vec3<T>* B, const T* w
     //   [ 0 1 0 tb ] [  s*Q  0 ] [ 0 1 0 -ta ] = [ 0 1 0 tb ] [  s*Q  -s*Q*ta ] = [   Q   tb-s*Q*ta ]
     //   [ 0 0 1  | ] [       0 ] [ 0 0 1  |  ]   [ 0 0 1  | ] [           |   ]   [                 ]
     //   [ 0 0 0  1 ] [ 0 0 0 1 ] [ 0 0 0  1  ]   [ 0 0 0  1 ] [ 0 0 0     1   ]   [ 0 0 0    1      ]
-    // (ofc the whole thing is transposed for Imath).
+    // (ofc the whole thing is transposed for Imath).  
     const V3d translate = Bcenter - s*Acenter*Qt;
 
     return M44d (s*Qt.x[0][0], s*Qt.x[0][1], s*Qt.x[0][2], T(0),
@@ -249,10 +249,10 @@ procrustesRotationAndTranslation (const Vec3<T>* A, const Vec3<T>* B, const size
 } // procrustesRotationAndTranslation
 
 
-template M44d procrustesRotationAndTranslation (const V3d* from, const V3d* to, const size_t numPoints, const bool doScale);
-template M44d procrustesRotationAndTranslation (const V3f* from, const V3f* to, const size_t numPoints, const bool doScale);
-template M44d procrustesRotationAndTranslation (const V3d* from, const V3d* to, const double* weights, const size_t numPoints, const bool doScale);
-template M44d procrustesRotationAndTranslation (const V3f* from, const V3f* to, const float* weights, const size_t numPoints, const bool doScale);
+template IMATH_EXPORT M44d procrustesRotationAndTranslation (const V3d* from, const V3d* to, const size_t numPoints, const bool doScale);
+template IMATH_EXPORT M44d procrustesRotationAndTranslation (const V3f* from, const V3f* to, const size_t numPoints, const bool doScale);
+template IMATH_EXPORT M44d procrustesRotationAndTranslation (const V3d* from, const V3d* to, const double* weights, const size_t numPoints, const bool doScale);
+template IMATH_EXPORT M44d procrustesRotationAndTranslation (const V3f* from, const V3f* to, const float* weights, const size_t numPoints, const bool doScale);
 
 
 namespace
@@ -266,10 +266,10 @@ namespace
 //   J * A
 // for the Jacobi rotation J and the matrix A.  This is efficient because we
 // only need to touch exactly the 2 columns that are affected, so we never
-// need to explicitly construct the J matrix.
+// need to explicitly construct the J matrix.  
 template <typename T, int j, int k>
 void
-jacobiRotateRight (Imath::Matrix33<T>& A,
+jacobiRotateRight (IMATH_INTERNAL_NAMESPACE::Matrix33<T>& A,
                    const T c,
                    const T s)
 {
@@ -284,7 +284,7 @@ jacobiRotateRight (Imath::Matrix33<T>& A,
 
 template <typename T>
 void
-jacobiRotateRight (Imath::Matrix44<T>& A,
+jacobiRotateRight (IMATH_INTERNAL_NAMESPACE::Matrix44<T>& A,
                    const int j,
                    const int k,
                    const T c,
@@ -313,12 +313,12 @@ jacobiRotateRight (Imath::Matrix44<T>& A,
 //    'Computation of the Singular Value Decomposition using Mesh-Connected Processors'
 //    by Richard P. Brent, Franklin T. Luk, and Charles Van Loan
 // It breaks the computation into two steps: the first symmetrizes the matrix,
-// and the second diagonalizes the symmetric matrix.
+// and the second diagonalizes the symmetric matrix.  
 template <typename T, int j, int k, int l>
 bool
-twoSidedJacobiRotation (Imath::Matrix33<T>& A,
-                        Imath::Matrix33<T>& U,
-                        Imath::Matrix33<T>& V,
+twoSidedJacobiRotation (IMATH_INTERNAL_NAMESPACE::Matrix33<T>& A,
+                        IMATH_INTERNAL_NAMESPACE::Matrix33<T>& U,
+                        IMATH_INTERNAL_NAMESPACE::Matrix33<T>& V,
                         const T tol)
 {
     // Load everything into local variables to make things easier on the
@@ -403,7 +403,7 @@ twoSidedJacobiRotation (Imath::Matrix33<T>& A,
     const T d_2 = s_1*(w*s_2 + x*c_2) + c_1*(y*s_2 + z*c_2);
 
     // For the entries we just zeroed out, we'll just set them to 0, since
-    // they should be 0 up to machine precision.
+    // they should be 0 up to machine precision.  
     A[j][j] = d_1;
     A[k][k] = d_2;
     A[k][j] = 0;
@@ -416,7 +416,7 @@ twoSidedJacobiRotation (Imath::Matrix33<T>& A,
         //    [ -s1 c1 0 ]    or  [   0 1  0 ]    or  [ 0  c1 s1 ]
         //    [   0  0 1 ]        [ -s1 0 c1 ]        [ 0 -s1 c1 ]
         // This has the effect of adding the (weighted) ith and jth _rows_ to
-        // each other.
+        // each other.  
         const T tau1 = A[j][l];
         const T tau2 = A[k][l];
         A[j][l] = c_1 * tau1 - s_1 * tau2;
@@ -429,7 +429,7 @@ twoSidedJacobiRotation (Imath::Matrix33<T>& A,
         //    [ -s2 c2 0 ]  or  [   0 1  0 ]  or  [ 0  c2 s2 ]
         //    [   0  0 1 ]      [ -s2 0 c2 ]      [ 0 -s2 c2 ]
         // This has the effect of adding the (weighted) ith and jth _columns_ to
-        // each other.
+        // each other.  
         const T tau1 = A[l][j];
         const T tau2 = A[l][k];
         A[l][j] = c_2 * tau1 - s_2 * tau2;
@@ -437,7 +437,7 @@ twoSidedJacobiRotation (Imath::Matrix33<T>& A,
     }
 
     // Now apply the rotations to U and V:
-    // Remember that we have
+    // Remember that we have 
     //    R1^T * A * R2 = D
     // This is in the 2x2 case, but after doing a bunch of these
     // we will get something like this for the 3x3 case:
@@ -455,11 +455,11 @@ twoSidedJacobiRotation (Imath::Matrix33<T>& A,
 
 template <typename T>
 bool
-twoSidedJacobiRotation (Imath::Matrix44<T>& A,
+twoSidedJacobiRotation (IMATH_INTERNAL_NAMESPACE::Matrix44<T>& A,
                         int j,
                         int k,
-                        Imath::Matrix44<T>& U,
-                        Imath::Matrix44<T>& V,
+                        IMATH_INTERNAL_NAMESPACE::Matrix44<T>& U,
+                        IMATH_INTERNAL_NAMESPACE::Matrix44<T>& V,
                         const T tol)
 {
     // Load everything into local variables to make things easier on the
@@ -544,7 +544,7 @@ twoSidedJacobiRotation (Imath::Matrix44<T>& A,
     const T d_2 = s_1*(w*s_2 + x*c_2) + c_1*(y*s_2 + z*c_2);
 
     // For the entries we just zeroed out, we'll just set them to 0, since
-    // they should be 0 up to machine precision.
+    // they should be 0 up to machine precision.  
     A[j][j] = d_1;
     A[k][k] = d_2;
     A[k][j] = 0;
@@ -567,7 +567,7 @@ twoSidedJacobiRotation (Imath::Matrix44<T>& A,
         //          j    k
         //
         // This has the effect of adding the (weighted) ith and jth _rows_ to
-        // each other.
+        // each other.  
         const T tau1 = A[j][l];
         const T tau2 = A[k][l];
         A[j][l] = c_1 * tau1 - s_1 * tau2;
@@ -591,7 +591,7 @@ twoSidedJacobiRotation (Imath::Matrix44<T>& A,
         //          j    k
         //
         // This has the effect of adding the (weighted) ith and jth _columns_ to
-        // each other.
+        // each other.  
         const T tau1 = A[l][j];
         const T tau2 = A[l][k];
         A[l][j] = c_2 * tau1 - s_2 * tau2;
@@ -599,7 +599,7 @@ twoSidedJacobiRotation (Imath::Matrix44<T>& A,
     }
 
     // Now apply the rotations to U and V:
-    // Remember that we have
+    // Remember that we have 
     //    R1^T * A * R2 = D
     // This is in the 2x2 case, but after doing a bunch of these
     // we will get something like this for the 3x3 case:
@@ -617,7 +617,7 @@ twoSidedJacobiRotation (Imath::Matrix44<T>& A,
 
 template <typename T>
 void
-swapColumns (Imath::Matrix33<T>& A, int j, int k)
+swapColumns (IMATH_INTERNAL_NAMESPACE::Matrix33<T>& A, int j, int k)
 {
     for (int i = 0; i < 3; ++i)
         std::swap (A[i][j], A[i][k]);
@@ -625,7 +625,7 @@ swapColumns (Imath::Matrix33<T>& A, int j, int k)
 
 template <typename T>
 T
-maxOffDiag (const Imath::Matrix33<T>& A)
+maxOffDiag (const IMATH_INTERNAL_NAMESPACE::Matrix33<T>& A)
 {
     T result = 0;
     result = std::max (result, std::abs (A[0][1]));
@@ -639,7 +639,7 @@ maxOffDiag (const Imath::Matrix33<T>& A)
 
 template <typename T>
 T
-maxOffDiag (const Imath::Matrix44<T>& A)
+maxOffDiag (const IMATH_INTERNAL_NAMESPACE::Matrix44<T>& A)
 {
     T result = 0;
     for (int i = 0; i < 4; ++i)
@@ -656,10 +656,10 @@ maxOffDiag (const Imath::Matrix44<T>& A)
 
 template <typename T>
 void
-twoSidedJacobiSVD (Imath::Matrix33<T> A,
-                   Imath::Matrix33<T>& U,
-                   Imath::Vec3<T>& S,
-                   Imath::Matrix33<T>& V,
+twoSidedJacobiSVD (IMATH_INTERNAL_NAMESPACE::Matrix33<T> A,
+                   IMATH_INTERNAL_NAMESPACE::Matrix33<T>& U,
+                   IMATH_INTERNAL_NAMESPACE::Vec3<T>& S,
+                   IMATH_INTERNAL_NAMESPACE::Matrix33<T>& V,
                    const T tol,
                    const bool forcePositiveDeterminant)
 {
@@ -680,7 +680,7 @@ twoSidedJacobiSVD (Imath::Matrix33<T> A,
     //  [-s1 c1  ] [  * *] [-s2 c2  ] = [* * *]
     //  [       1] [* * *] [       1]   [  * *]
     // However, if we keep doing this, we'll find that the off-diagonal entries
-    // converge to 0 fairly quickly (convergence should be roughly cubic).  The
+    // converge to 0 fairly quickly (convergence should be roughly cubic).  The 
     // result is a diagonal A matrix and a bunch of orthogonal transforms:
     //               [* * *]                [*    ]
     //  L1 L2 ... Ln [* * *] Rn ... R2 R1 = [  *  ]
@@ -691,7 +691,7 @@ twoSidedJacobiSVD (Imath::Matrix33<T> A,
     // are extremely stable to compute and apply (this is why QR factorization
     // works so well, FWIW) and because (2) by applying everything to the original
     // matrix A instead of computing (A^T * A) we avoid any precision loss that
-    // would result from that.
+    // would result from that.  
     U.makeIdentity();
     V.makeIdentity();
 
@@ -770,7 +770,7 @@ twoSidedJacobiSVD (Imath::Matrix33<T> A,
                 U[i][2] = -U[i][2];
             S.z = -S.z;
         }
-
+   
         if (V.determinant() < 0)
         {
             for (int i = 0; i < 3; ++i)
@@ -782,10 +782,10 @@ twoSidedJacobiSVD (Imath::Matrix33<T> A,
 
 template <typename T>
 void
-twoSidedJacobiSVD (Imath::Matrix44<T> A,
-                   Imath::Matrix44<T>& U,
-                   Imath::Vec4<T>& S,
-                   Imath::Matrix44<T>& V,
+twoSidedJacobiSVD (IMATH_INTERNAL_NAMESPACE::Matrix44<T> A,
+                   IMATH_INTERNAL_NAMESPACE::Matrix44<T>& U,
+                   IMATH_INTERNAL_NAMESPACE::Vec4<T>& S,
+                   IMATH_INTERNAL_NAMESPACE::Matrix44<T>& V,
                    const T tol,
                    const bool forcePositiveDeterminant)
 {
@@ -837,8 +837,8 @@ twoSidedJacobiSVD (Imath::Matrix44<T> A,
     // Order the singular values from largest to smallest using insertion sort:
     for (int i = 1; i < 4; ++i)
     {
-        const Imath::Vec4<T> uCol (U[0][i], U[1][i], U[2][i], U[3][i]);
-        const Imath::Vec4<T> vCol (V[0][i], V[1][i], V[2][i], V[3][i]);
+        const IMATH_INTERNAL_NAMESPACE::Vec4<T> uCol (U[0][i], U[1][i], U[2][i], U[3][i]);
+        const IMATH_INTERNAL_NAMESPACE::Vec4<T> vCol (V[0][i], V[1][i], V[2][i], V[3][i]);
         const T sVal = S[i];
 
         int j = i - 1;
@@ -882,7 +882,7 @@ twoSidedJacobiSVD (Imath::Matrix44<T> A,
                 U[i][3] = -U[i][3];
             S[3] = -S[3];
         }
-
+   
         if (V.determinant() < 0)
         {
             for (int i = 0; i < 4; ++i)
@@ -896,10 +896,10 @@ twoSidedJacobiSVD (Imath::Matrix44<T> A,
 
 template <typename T>
 void
-jacobiSVD (const Imath::Matrix33<T>& A,
-           Imath::Matrix33<T>& U,
-           Imath::Vec3<T>& S,
-           Imath::Matrix33<T>& V,
+jacobiSVD (const IMATH_INTERNAL_NAMESPACE::Matrix33<T>& A,
+           IMATH_INTERNAL_NAMESPACE::Matrix33<T>& U,
+           IMATH_INTERNAL_NAMESPACE::Vec3<T>& S,
+           IMATH_INTERNAL_NAMESPACE::Matrix33<T>& V,
            const T tol,
            const bool forcePositiveDeterminant)
 {
@@ -908,46 +908,46 @@ jacobiSVD (const Imath::Matrix33<T>& A,
 
 template <typename T>
 void
-jacobiSVD (const Imath::Matrix44<T>& A,
-           Imath::Matrix44<T>& U,
-           Imath::Vec4<T>& S,
-           Imath::Matrix44<T>& V,
+jacobiSVD (const IMATH_INTERNAL_NAMESPACE::Matrix44<T>& A,
+           IMATH_INTERNAL_NAMESPACE::Matrix44<T>& U,
+           IMATH_INTERNAL_NAMESPACE::Vec4<T>& S,
+           IMATH_INTERNAL_NAMESPACE::Matrix44<T>& V,
            const T tol,
            const bool forcePositiveDeterminant)
 {
     twoSidedJacobiSVD (A, U, S, V, tol, forcePositiveDeterminant);
 }
 
-template void jacobiSVD (const Imath::Matrix33<float>& A,
-                         Imath::Matrix33<float>& U,
-                         Imath::Vec3<float>& S,
-                         Imath::Matrix33<float>& V,
-                         const float tol,
-                         const bool forcePositiveDeterminant);
-template void jacobiSVD (const Imath::Matrix33<double>& A,
-                         Imath::Matrix33<double>& U,
-                         Imath::Vec3<double>& S,
-                         Imath::Matrix33<double>& V,
-                         const double tol,
-                         const bool forcePositiveDeterminant);
-template void jacobiSVD (const Imath::Matrix44<float>& A,
-                         Imath::Matrix44<float>& U,
-                         Imath::Vec4<float>& S,
-                         Imath::Matrix44<float>& V,
-                         const float tol,
-                         const bool forcePositiveDeterminant);
-template void jacobiSVD (const Imath::Matrix44<double>& A,
-                         Imath::Matrix44<double>& U,
-                         Imath::Vec4<double>& S,
-                         Imath::Matrix44<double>& V,
-                         const double tol,
-                         const bool forcePositiveDeterminant);
+template IMATH_EXPORT void jacobiSVD (const IMATH_INTERNAL_NAMESPACE::Matrix33<float>& A,
+                                      IMATH_INTERNAL_NAMESPACE::Matrix33<float>& U,
+                                      IMATH_INTERNAL_NAMESPACE::Vec3<float>& S,
+                                      IMATH_INTERNAL_NAMESPACE::Matrix33<float>& V,
+                                      const float tol,
+                                      const bool forcePositiveDeterminant);
+template IMATH_EXPORT void jacobiSVD (const IMATH_INTERNAL_NAMESPACE::Matrix33<double>& A,
+                                      IMATH_INTERNAL_NAMESPACE::Matrix33<double>& U,
+                                      IMATH_INTERNAL_NAMESPACE::Vec3<double>& S,
+                                      IMATH_INTERNAL_NAMESPACE::Matrix33<double>& V,
+                                      const double tol,
+                                      const bool forcePositiveDeterminant);
+template IMATH_EXPORT void jacobiSVD (const IMATH_INTERNAL_NAMESPACE::Matrix44<float>& A,
+                                      IMATH_INTERNAL_NAMESPACE::Matrix44<float>& U,
+                                      IMATH_INTERNAL_NAMESPACE::Vec4<float>& S,
+                                      IMATH_INTERNAL_NAMESPACE::Matrix44<float>& V,
+                                      const float tol,
+                                      const bool forcePositiveDeterminant);
+template IMATH_EXPORT void jacobiSVD (const IMATH_INTERNAL_NAMESPACE::Matrix44<double>& A,
+                                      IMATH_INTERNAL_NAMESPACE::Matrix44<double>& U,
+                                      IMATH_INTERNAL_NAMESPACE::Vec4<double>& S,
+                                      IMATH_INTERNAL_NAMESPACE::Matrix44<double>& V,
+                                      const double tol,
+                                      const bool forcePositiveDeterminant);
 
 namespace
 {
 
 template <int j, int k, typename TM>
-inline
+inline 
 void
 jacobiRotateRight (TM& A,
                    const typename TM::BaseType s,
@@ -1006,7 +1006,7 @@ jacobiRotation (Matrix33<T>& A,
     A[k][k] += h;
 
     // For the entries we just zeroed out, we'll just set them to 0, since
-    // they should be 0 up to machine precision.
+    // they should be 0 up to machine precision.  
     A[j][k] = 0;
 
     // We only update upper triagnular elements of A, since
@@ -1016,7 +1016,7 @@ jacobiRotation (Matrix33<T>& A,
     const T nu1 = offd1;
     const T nu2 = offd2;
     offd1 = nu1 - s * (nu2 + tau * nu1);
-    offd2 = nu2 + s * (nu1 - tau * nu2);
+    offd2 = nu2 + s * (nu1 - tau * nu2); 
 
     // Apply rotation to V
     jacobiRotateRight<j, k> (V, s, tau);
@@ -1039,7 +1039,7 @@ jacobiRotation (Matrix44<T>& A,
     const T mu2 = T(2) * y;
 
     // Let's see if rho^(-1) = mu2 / mu1 is less than tol
-    // This test also checks if rho^2 will overflow
+    // This test also checks if rho^2 will overflow 
     // when tol^(-1) < sqrt(limits<T>::max()).
     if (std::abs(mu2) <= tol*std::abs(mu1))
     {
@@ -1066,7 +1066,7 @@ jacobiRotation (Matrix44<T>& A,
         const T nu1 = offd1;
         const T nu2 = offd2;
         offd1 -= s * (nu2 + tau * nu1);
-        offd2 += s * (nu1 - tau * nu2);
+        offd2 += s * (nu1 - tau * nu2); 
     }
 
     {
@@ -1075,7 +1075,7 @@ jacobiRotation (Matrix44<T>& A,
         const T nu1 = offd1;
         const T nu2 = offd2;
         offd1 -= s * (nu2 + tau * nu1);
-        offd2 += s * (nu1 - tau * nu2);
+        offd2 += s * (nu1 - tau * nu2); 
     }
 
     jacobiRotateRight<j, k> (V, s, tau);
@@ -1120,8 +1120,8 @@ jacobiEigenSolver (Matrix33<T>& A,
         {
             // Z is for accumulating small changes (h) to diagonal entries
             // of A for one sweep. Adding h's directly to A might cause
-            // a cancellation effect when h is relatively very small to
-            // the corresponding diagonal entry of A and
+            // a cancellation effect when h is relatively very small to 
+            // the corresponding diagonal entry of A and 
             // this will increase numerical errors
             Vec3<T> Z(0, 0, 0);
             ++numIter;
@@ -1214,39 +1214,39 @@ minEigenVector (TM& A, TV& V)
         V[i] = MV[i][minIdx];
 }
 
-template void jacobiEigenSolver (Matrix33<float>& A,
-                                 Vec3<float>& S,
-                                 Matrix33<float>& V,
-                                 const float tol);
-template void jacobiEigenSolver (Matrix33<double>& A,
-                                 Vec3<double>& S,
-                                 Matrix33<double>& V,
-                                 const double tol);
-template void jacobiEigenSolver (Matrix44<float>& A,
-                                 Vec4<float>& S,
-                                 Matrix44<float>& V,
-                                 const float tol);
-template void jacobiEigenSolver (Matrix44<double>& A,
-                                 Vec4<double>& S,
-                                 Matrix44<double>& V,
-                                 const double tol);
+template IMATH_EXPORT void jacobiEigenSolver (Matrix33<float>& A,
+                                              Vec3<float>& S,
+                                              Matrix33<float>& V,
+                                              const float tol);
+template IMATH_EXPORT void jacobiEigenSolver (Matrix33<double>& A,
+                                              Vec3<double>& S,
+                                              Matrix33<double>& V,
+                                              const double tol);
+template IMATH_EXPORT void jacobiEigenSolver (Matrix44<float>& A,
+                                              Vec4<float>& S,
+                                              Matrix44<float>& V,
+                                              const float tol);
+template IMATH_EXPORT void jacobiEigenSolver (Matrix44<double>& A,
+                                              Vec4<double>& S,
+                                              Matrix44<double>& V,
+                                              const double tol);
 
-template void maxEigenVector (Matrix33<float>& A,
-                              Vec3<float>& S);
-template void maxEigenVector (Matrix44<float>& A,
-                              Vec4<float>& S);
-template void maxEigenVector (Matrix33<double>& A,
-                              Vec3<double>& S);
-template void maxEigenVector (Matrix44<double>& A,
-                              Vec4<double>& S);
+template IMATH_EXPORT void maxEigenVector (Matrix33<float>& A,
+                                           Vec3<float>& S);
+template IMATH_EXPORT void maxEigenVector (Matrix44<float>& A,
+                                           Vec4<float>& S);
+template IMATH_EXPORT void maxEigenVector (Matrix33<double>& A,
+                                           Vec3<double>& S);
+template IMATH_EXPORT void maxEigenVector (Matrix44<double>& A,
+                                           Vec4<double>& S);
 
-template void minEigenVector (Matrix33<float>& A,
-                              Vec3<float>& S);
-template void minEigenVector (Matrix44<float>& A,
-                              Vec4<float>& S);
-template void minEigenVector (Matrix33<double>& A,
-                              Vec3<double>& S);
-template void minEigenVector (Matrix44<double>& A,
-                              Vec4<double>& S);
+template IMATH_EXPORT void minEigenVector (Matrix33<float>& A,
+                                           Vec3<float>& S);
+template IMATH_EXPORT void minEigenVector (Matrix44<float>& A,
+                                           Vec4<float>& S);
+template IMATH_EXPORT void minEigenVector (Matrix33<double>& A,
+                                           Vec3<double>& S);
+template IMATH_EXPORT void minEigenVector (Matrix44<double>& A,
+                                           Vec4<double>& S);
 
-} // namespace Imath
+IMATH_INTERNAL_NAMESPACE_SOURCE_EXIT

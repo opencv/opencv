@@ -42,21 +42,20 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/core/affine.hpp"
-#include "opencv2/calib3d.hpp"
-#include <iostream>
+
+namespace opencv_test { namespace {
 
 TEST(Calib3d_Affine3f, accuracy)
 {
+    const double eps = 1e-5;
     cv::Vec3d rvec(0.2, 0.5, 0.3);
     cv::Affine3d affine(rvec);
 
     cv::Mat expected;
     cv::Rodrigues(rvec, expected);
 
-
-    ASSERT_EQ(0, cvtest::norm(cv::Mat(affine.matrix, false).colRange(0, 3).rowRange(0, 3) != expected, cv::NORM_L2));
-    ASSERT_EQ(0, cvtest::norm(cv::Mat(affine.linear()) != expected, cv::NORM_L2));
-
+    ASSERT_LE(cvtest::norm(cv::Mat(affine.matrix, false).colRange(0, 3).rowRange(0, 3), expected, cv::NORM_L2), eps);
+    ASSERT_LE(cvtest::norm(cv::Mat(affine.linear()), expected, cv::NORM_L2), eps);
 
     cv::Matx33d R = cv::Matx33d::eye();
 
@@ -106,3 +105,5 @@ TEST(Calib3d_Affine3f, accuracy_rvec)
         ASSERT_LT(cvtest::norm(va, vo, cv::NORM_L2), 1e-9);
     }
 }
+
+}} // namespace

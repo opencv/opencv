@@ -42,11 +42,43 @@
 #include "precomp.hpp"
 #include <list>
 #include <map>
+#include <deque>
+#include <set>
 #include <string>
 #include <sstream>
 #include <iostream> // std::cerr
+#include <fstream>
+#if !(defined _MSC_VER) || (defined _MSC_VER && _MSC_VER > 1700)
+#include <inttypes.h>
+#endif
 
-#define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
+#include <opencv2/core/utils/configuration.private.hpp>
+
+#include <opencv2/core/utils/logger.defines.hpp>
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
+#include <opencv2/core/utils/logger.hpp>
+
+#include "opencv2/core/ocl_genbase.hpp"
+#include "opencl_kernels_core.hpp"
+
+#include "opencv2/core/utils/lock.private.hpp"
+#include "opencv2/core/utils/filesystem.hpp"
+#include "opencv2/core/utils/filesystem.private.hpp"
+
+#define CV__ALLOCATOR_STATS_LOG(...) CV_LOG_VERBOSE(NULL, 0, "OpenCL allocator: " << __VA_ARGS__)
+#include "opencv2/core/utils/allocator_stats.impl.hpp"
+#undef CV__ALLOCATOR_STATS_LOG
+
+#define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG          0
+
+#define CV_OPENCL_SHOW_RUN_KERNELS               0
+#define CV_OPENCL_TRACE_CHECK                    0
+
+#define CV_OPENCL_VALIDATE_BINARY_PROGRAMS       1
+
+#define CV_OPENCL_SHOW_SVM_ERROR_LOG             1
+#define CV_OPENCL_SHOW_SVM_LOG                   0
 
 #include "opencv2/core/bufferpool.hpp"
 #ifndef LOG_BUFFER_POOL
@@ -57,58 +89,19 @@
 # endif
 #endif
 
-
-// TODO Move to some common place
-static bool getBoolParameter(const char* name, bool defaultValue)
-{
-    const char* envValue = getenv(name);
-    if (envValue == NULL)
-    {
-        return defaultValue;
-    }
-    cv::String value = envValue;
-    if (value == "1" || value == "True" || value == "true" || value == "TRUE")
-    {
-        return true;
-    }
-    if (value == "0" || value == "False" || value == "false" || value == "FALSE")
-    {
-        return false;
-    }
-    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
-}
-
-
-// TODO Move to some common place
-static size_t getConfigurationParameterForSize(const char* name, size_t defaultValue)
-{
-#ifdef HAVE_WINRT
-    const char* envValue = NULL;
+#if CV_OPENCL_SHOW_SVM_LOG
+// TODO add timestamp logging
+#define CV_OPENCL_SVM_TRACE_P printf("line %d (ocl.cpp): ", __LINE__); printf
 #else
-    const char* envValue = getenv(name);
+#define CV_OPENCL_SVM_TRACE_P(...)
 #endif
-    if (envValue == NULL)
-    {
-        return defaultValue;
-    }
-    cv::String value = envValue;
-    size_t pos = 0;
-    for (; pos < value.size(); pos++)
-    {
-        if (!isdigit(value[pos]))
-            break;
-    }
-    cv::String valueStr = value.substr(0, pos);
-    cv::String suffixStr = value.substr(pos, value.length() - pos);
-    int v = atoi(valueStr.c_str());
-    if (suffixStr.length() == 0)
-        return v;
-    else if (suffixStr == "MB" || suffixStr == "Mb" || suffixStr == "mb")
-        return v * 1024 * 1024;
-    else if (suffixStr == "KB" || suffixStr == "Kb" || suffixStr == "kb")
-        return v * 1024;
-    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
-}
+
+#if CV_OPENCL_SHOW_SVM_ERROR_LOG
+// TODO add timestamp logging
+#define CV_OPENCL_SVM_TRACE_ERROR_P printf("Error on line %d (ocl.cpp): ", __LINE__); printf
+#else
+#define CV_OPENCL_SVM_TRACE_ERROR_P(...)
+#endif
 
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
@@ -116,1232 +109,168 @@ static size_t getConfigurationParameterForSize(const char* name, size_t defaultV
 #ifdef HAVE_OPENCL
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #else
+#if defined(_MSC_VER)
+    #pragma warning(push)
+    #pragma warning(disable : 4100)
+    #pragma warning(disable : 4702)
+#elif defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wunused-parameter"
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 // TODO FIXIT: This file can't be build without OPENCL
+#include "ocl_deprecated.hpp"
+#endif // HAVE_OPENCL
 
-/*
-  Part of the file is an extract from the standard OpenCL headers from Khronos site.
-  Below is the original copyright.
-*/
-
-/*******************************************************************************
- * Copyright (c) 2008 - 2012 The Khronos Group Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and/or associated documentation files (the
- * "Materials"), to deal in the Materials without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Materials, and to
- * permit persons to whom the Materials are furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
- *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
- ******************************************************************************/
-
-#if 0 //defined __APPLE__
-#define HAVE_OPENCL 1
-#else
-#undef HAVE_OPENCL
+#ifdef HAVE_OPENCL_SVM
+#include "opencv2/core/opencl/runtime/opencl_svm_20.hpp"
+#include "opencv2/core/opencl/runtime/opencl_svm_hsa_extension.hpp"
+#include "opencv2/core/opencl/opencl_svm.hpp"
 #endif
 
-#define OPENCV_CL_NOT_IMPLEMENTED -1000
+#include "umatrix.hpp"
 
-#ifdef HAVE_OPENCL
+namespace cv { namespace ocl {
 
-#if defined __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/opencl.h>
-#endif
+#define IMPLEMENT_REFCOUNTABLE() \
+    void addref() { CV_XADD(&refcount, 1); } \
+    void release() { if( CV_XADD(&refcount, -1) == 1 && !cv::__termination) delete this; } \
+    int refcount
 
-static const bool g_haveOpenCL = true;
+static cv::utils::AllocatorStatistics opencl_allocator_stats;
 
-#else
-
-extern "C" {
-
-struct _cl_platform_id { int dummy; };
-struct _cl_device_id { int dummy; };
-struct _cl_context { int dummy; };
-struct _cl_command_queue { int dummy; };
-struct _cl_mem { int dummy; };
-struct _cl_program { int dummy; };
-struct _cl_kernel { int dummy; };
-struct _cl_event { int dummy; };
-struct _cl_sampler { int dummy; };
-
-typedef struct _cl_platform_id *    cl_platform_id;
-typedef struct _cl_device_id *      cl_device_id;
-typedef struct _cl_context *        cl_context;
-typedef struct _cl_command_queue *  cl_command_queue;
-typedef struct _cl_mem *            cl_mem;
-typedef struct _cl_program *        cl_program;
-typedef struct _cl_kernel *         cl_kernel;
-typedef struct _cl_event *          cl_event;
-typedef struct _cl_sampler *        cl_sampler;
-
-typedef int cl_int;
-typedef unsigned cl_uint;
-#if defined (_WIN32) && defined(_MSC_VER)
-    typedef __int64 cl_long;
-    typedef unsigned __int64 cl_ulong;
-#else
-    typedef long cl_long;
-    typedef unsigned long cl_ulong;
-#endif
-
-typedef cl_uint             cl_bool; /* WARNING!  Unlike cl_ types in cl_platform.h, cl_bool is not guaranteed to be the same size as the bool in kernels. */
-typedef cl_ulong            cl_bitfield;
-typedef cl_bitfield         cl_device_type;
-typedef cl_uint             cl_platform_info;
-typedef cl_uint             cl_device_info;
-typedef cl_bitfield         cl_device_fp_config;
-typedef cl_uint             cl_device_mem_cache_type;
-typedef cl_uint             cl_device_local_mem_type;
-typedef cl_bitfield         cl_device_exec_capabilities;
-typedef cl_bitfield         cl_command_queue_properties;
-typedef intptr_t            cl_device_partition_property;
-typedef cl_bitfield         cl_device_affinity_domain;
-
-typedef intptr_t            cl_context_properties;
-typedef cl_uint             cl_context_info;
-typedef cl_uint             cl_command_queue_info;
-typedef cl_uint             cl_channel_order;
-typedef cl_uint             cl_channel_type;
-typedef cl_bitfield         cl_mem_flags;
-typedef cl_uint             cl_mem_object_type;
-typedef cl_uint             cl_mem_info;
-typedef cl_bitfield         cl_mem_migration_flags;
-typedef cl_uint             cl_image_info;
-typedef cl_uint             cl_buffer_create_type;
-typedef cl_uint             cl_addressing_mode;
-typedef cl_uint             cl_filter_mode;
-typedef cl_uint             cl_sampler_info;
-typedef cl_bitfield         cl_map_flags;
-typedef cl_uint             cl_program_info;
-typedef cl_uint             cl_program_build_info;
-typedef cl_uint             cl_program_binary_type;
-typedef cl_int              cl_build_status;
-typedef cl_uint             cl_kernel_info;
-typedef cl_uint             cl_kernel_arg_info;
-typedef cl_uint             cl_kernel_arg_address_qualifier;
-typedef cl_uint             cl_kernel_arg_access_qualifier;
-typedef cl_bitfield         cl_kernel_arg_type_qualifier;
-typedef cl_uint             cl_kernel_work_group_info;
-typedef cl_uint             cl_event_info;
-typedef cl_uint             cl_command_type;
-typedef cl_uint             cl_profiling_info;
-
-
-typedef struct _cl_image_format {
-    cl_channel_order        image_channel_order;
-    cl_channel_type         image_channel_data_type;
-} cl_image_format;
-
-typedef struct _cl_image_desc {
-    cl_mem_object_type      image_type;
-    size_t                  image_width;
-    size_t                  image_height;
-    size_t                  image_depth;
-    size_t                  image_array_size;
-    size_t                  image_row_pitch;
-    size_t                  image_slice_pitch;
-    cl_uint                 num_mip_levels;
-    cl_uint                 num_samples;
-    cl_mem                  buffer;
-} cl_image_desc;
-
-typedef struct _cl_buffer_region {
-    size_t                  origin;
-    size_t                  size;
-} cl_buffer_region;
-
-
-//////////////////////////////////////////////////////////
-
-#define CL_SUCCESS                                  0
-#define CL_DEVICE_NOT_FOUND                         -1
-#define CL_DEVICE_NOT_AVAILABLE                     -2
-#define CL_COMPILER_NOT_AVAILABLE                   -3
-#define CL_MEM_OBJECT_ALLOCATION_FAILURE            -4
-#define CL_OUT_OF_RESOURCES                         -5
-#define CL_OUT_OF_HOST_MEMORY                       -6
-#define CL_PROFILING_INFO_NOT_AVAILABLE             -7
-#define CL_MEM_COPY_OVERLAP                         -8
-#define CL_IMAGE_FORMAT_MISMATCH                    -9
-#define CL_IMAGE_FORMAT_NOT_SUPPORTED               -10
-#define CL_BUILD_PROGRAM_FAILURE                    -11
-#define CL_MAP_FAILURE                              -12
-#define CL_MISALIGNED_SUB_BUFFER_OFFSET             -13
-#define CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST -14
-#define CL_COMPILE_PROGRAM_FAILURE                  -15
-#define CL_LINKER_NOT_AVAILABLE                     -16
-#define CL_LINK_PROGRAM_FAILURE                     -17
-#define CL_DEVICE_PARTITION_FAILED                  -18
-#define CL_KERNEL_ARG_INFO_NOT_AVAILABLE            -19
-
-#define CL_INVALID_VALUE                            -30
-#define CL_INVALID_DEVICE_TYPE                      -31
-#define CL_INVALID_PLATFORM                         -32
-#define CL_INVALID_DEVICE                           -33
-#define CL_INVALID_CONTEXT                          -34
-#define CL_INVALID_QUEUE_PROPERTIES                 -35
-#define CL_INVALID_COMMAND_QUEUE                    -36
-#define CL_INVALID_HOST_PTR                         -37
-#define CL_INVALID_MEM_OBJECT                       -38
-#define CL_INVALID_IMAGE_FORMAT_DESCRIPTOR          -39
-#define CL_INVALID_IMAGE_SIZE                       -40
-#define CL_INVALID_SAMPLER                          -41
-#define CL_INVALID_BINARY                           -42
-#define CL_INVALID_BUILD_OPTIONS                    -43
-#define CL_INVALID_PROGRAM                          -44
-#define CL_INVALID_PROGRAM_EXECUTABLE               -45
-#define CL_INVALID_KERNEL_NAME                      -46
-#define CL_INVALID_KERNEL_DEFINITION                -47
-#define CL_INVALID_KERNEL                           -48
-#define CL_INVALID_ARG_INDEX                        -49
-#define CL_INVALID_ARG_VALUE                        -50
-#define CL_INVALID_ARG_SIZE                         -51
-#define CL_INVALID_KERNEL_ARGS                      -52
-#define CL_INVALID_WORK_DIMENSION                   -53
-#define CL_INVALID_WORK_GROUP_SIZE                  -54
-#define CL_INVALID_WORK_ITEM_SIZE                   -55
-#define CL_INVALID_GLOBAL_OFFSET                    -56
-#define CL_INVALID_EVENT_WAIT_LIST                  -57
-#define CL_INVALID_EVENT                            -58
-#define CL_INVALID_OPERATION                        -59
-#define CL_INVALID_GL_OBJECT                        -60
-#define CL_INVALID_BUFFER_SIZE                      -61
-#define CL_INVALID_MIP_LEVEL                        -62
-#define CL_INVALID_GLOBAL_WORK_SIZE                 -63
-#define CL_INVALID_PROPERTY                         -64
-#define CL_INVALID_IMAGE_DESCRIPTOR                 -65
-#define CL_INVALID_COMPILER_OPTIONS                 -66
-#define CL_INVALID_LINKER_OPTIONS                   -67
-#define CL_INVALID_DEVICE_PARTITION_COUNT           -68
-
-/*#define CL_VERSION_1_0                              1
-#define CL_VERSION_1_1                              1
-#define CL_VERSION_1_2                              1*/
-
-#define CL_FALSE                                    0
-#define CL_TRUE                                     1
-#define CL_BLOCKING                                 CL_TRUE
-#define CL_NON_BLOCKING                             CL_FALSE
-
-#define CL_PLATFORM_PROFILE                         0x0900
-#define CL_PLATFORM_VERSION                         0x0901
-#define CL_PLATFORM_NAME                            0x0902
-#define CL_PLATFORM_VENDOR                          0x0903
-#define CL_PLATFORM_EXTENSIONS                      0x0904
-
-#define CL_DEVICE_TYPE_DEFAULT                      (1 << 0)
-#define CL_DEVICE_TYPE_CPU                          (1 << 1)
-#define CL_DEVICE_TYPE_GPU                          (1 << 2)
-#define CL_DEVICE_TYPE_ACCELERATOR                  (1 << 3)
-#define CL_DEVICE_TYPE_CUSTOM                       (1 << 4)
-#define CL_DEVICE_TYPE_ALL                          0xFFFFFFFF
-#define CL_DEVICE_TYPE                              0x1000
-#define CL_DEVICE_VENDOR_ID                         0x1001
-#define CL_DEVICE_MAX_COMPUTE_UNITS                 0x1002
-#define CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS          0x1003
-#define CL_DEVICE_MAX_WORK_GROUP_SIZE               0x1004
-#define CL_DEVICE_MAX_WORK_ITEM_SIZES               0x1005
-#define CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR       0x1006
-#define CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT      0x1007
-#define CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT        0x1008
-#define CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG       0x1009
-#define CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT      0x100A
-#define CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE     0x100B
-#define CL_DEVICE_MAX_CLOCK_FREQUENCY               0x100C
-#define CL_DEVICE_ADDRESS_BITS                      0x100D
-#define CL_DEVICE_MAX_READ_IMAGE_ARGS               0x100E
-#define CL_DEVICE_MAX_WRITE_IMAGE_ARGS              0x100F
-#define CL_DEVICE_MAX_MEM_ALLOC_SIZE                0x1010
-#define CL_DEVICE_IMAGE2D_MAX_WIDTH                 0x1011
-#define CL_DEVICE_IMAGE2D_MAX_HEIGHT                0x1012
-#define CL_DEVICE_IMAGE3D_MAX_WIDTH                 0x1013
-#define CL_DEVICE_IMAGE3D_MAX_HEIGHT                0x1014
-#define CL_DEVICE_IMAGE3D_MAX_DEPTH                 0x1015
-#define CL_DEVICE_IMAGE_SUPPORT                     0x1016
-#define CL_DEVICE_MAX_PARAMETER_SIZE                0x1017
-#define CL_DEVICE_MAX_SAMPLERS                      0x1018
-#define CL_DEVICE_MEM_BASE_ADDR_ALIGN               0x1019
-#define CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE          0x101A
-#define CL_DEVICE_SINGLE_FP_CONFIG                  0x101B
-#define CL_DEVICE_GLOBAL_MEM_CACHE_TYPE             0x101C
-#define CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE         0x101D
-#define CL_DEVICE_GLOBAL_MEM_CACHE_SIZE             0x101E
-#define CL_DEVICE_GLOBAL_MEM_SIZE                   0x101F
-#define CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE          0x1020
-#define CL_DEVICE_MAX_CONSTANT_ARGS                 0x1021
-#define CL_DEVICE_LOCAL_MEM_TYPE                    0x1022
-#define CL_DEVICE_LOCAL_MEM_SIZE                    0x1023
-#define CL_DEVICE_ERROR_CORRECTION_SUPPORT          0x1024
-#define CL_DEVICE_PROFILING_TIMER_RESOLUTION        0x1025
-#define CL_DEVICE_ENDIAN_LITTLE                     0x1026
-#define CL_DEVICE_AVAILABLE                         0x1027
-#define CL_DEVICE_COMPILER_AVAILABLE                0x1028
-#define CL_DEVICE_EXECUTION_CAPABILITIES            0x1029
-#define CL_DEVICE_QUEUE_PROPERTIES                  0x102A
-#define CL_DEVICE_NAME                              0x102B
-#define CL_DEVICE_VENDOR                            0x102C
-#define CL_DRIVER_VERSION                           0x102D
-#define CL_DEVICE_PROFILE                           0x102E
-#define CL_DEVICE_VERSION                           0x102F
-#define CL_DEVICE_EXTENSIONS                        0x1030
-#define CL_DEVICE_PLATFORM                          0x1031
-#define CL_DEVICE_DOUBLE_FP_CONFIG                  0x1032
-#define CL_DEVICE_HALF_FP_CONFIG                    0x1033
-#define CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF       0x1034
-#define CL_DEVICE_HOST_UNIFIED_MEMORY               0x1035
-#define CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR          0x1036
-#define CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT         0x1037
-#define CL_DEVICE_NATIVE_VECTOR_WIDTH_INT           0x1038
-#define CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG          0x1039
-#define CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT         0x103A
-#define CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE        0x103B
-#define CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF          0x103C
-#define CL_DEVICE_OPENCL_C_VERSION                  0x103D
-#define CL_DEVICE_LINKER_AVAILABLE                  0x103E
-#define CL_DEVICE_BUILT_IN_KERNELS                  0x103F
-#define CL_DEVICE_IMAGE_MAX_BUFFER_SIZE             0x1040
-#define CL_DEVICE_IMAGE_MAX_ARRAY_SIZE              0x1041
-#define CL_DEVICE_PARENT_DEVICE                     0x1042
-#define CL_DEVICE_PARTITION_MAX_SUB_DEVICES         0x1043
-#define CL_DEVICE_PARTITION_PROPERTIES              0x1044
-#define CL_DEVICE_PARTITION_AFFINITY_DOMAIN         0x1045
-#define CL_DEVICE_PARTITION_TYPE                    0x1046
-#define CL_DEVICE_REFERENCE_COUNT                   0x1047
-#define CL_DEVICE_PREFERRED_INTEROP_USER_SYNC       0x1048
-#define CL_DEVICE_PRINTF_BUFFER_SIZE                0x1049
-#define CL_DEVICE_IMAGE_PITCH_ALIGNMENT             0x104A
-#define CL_DEVICE_IMAGE_BASE_ADDRESS_ALIGNMENT      0x104B
-
-#define CL_FP_DENORM                                (1 << 0)
-#define CL_FP_INF_NAN                               (1 << 1)
-#define CL_FP_ROUND_TO_NEAREST                      (1 << 2)
-#define CL_FP_ROUND_TO_ZERO                         (1 << 3)
-#define CL_FP_ROUND_TO_INF                          (1 << 4)
-#define CL_FP_FMA                                   (1 << 5)
-#define CL_FP_SOFT_FLOAT                            (1 << 6)
-#define CL_FP_CORRECTLY_ROUNDED_DIVIDE_SQRT         (1 << 7)
-
-#define CL_NONE                                     0x0
-#define CL_READ_ONLY_CACHE                          0x1
-#define CL_READ_WRITE_CACHE                         0x2
-#define CL_LOCAL                                    0x1
-#define CL_GLOBAL                                   0x2
-#define CL_EXEC_KERNEL                              (1 << 0)
-#define CL_EXEC_NATIVE_KERNEL                       (1 << 1)
-#define CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE      (1 << 0)
-#define CL_QUEUE_PROFILING_ENABLE                   (1 << 1)
-
-#define CL_CONTEXT_REFERENCE_COUNT                  0x1080
-#define CL_CONTEXT_DEVICES                          0x1081
-#define CL_CONTEXT_PROPERTIES                       0x1082
-#define CL_CONTEXT_NUM_DEVICES                      0x1083
-#define CL_CONTEXT_PLATFORM                         0x1084
-#define CL_CONTEXT_INTEROP_USER_SYNC                0x1085
-
-#define CL_DEVICE_PARTITION_EQUALLY                 0x1086
-#define CL_DEVICE_PARTITION_BY_COUNTS               0x1087
-#define CL_DEVICE_PARTITION_BY_COUNTS_LIST_END      0x0
-#define CL_DEVICE_PARTITION_BY_AFFINITY_DOMAIN      0x1088
-#define CL_DEVICE_AFFINITY_DOMAIN_NUMA                     (1 << 0)
-#define CL_DEVICE_AFFINITY_DOMAIN_L4_CACHE                 (1 << 1)
-#define CL_DEVICE_AFFINITY_DOMAIN_L3_CACHE                 (1 << 2)
-#define CL_DEVICE_AFFINITY_DOMAIN_L2_CACHE                 (1 << 3)
-#define CL_DEVICE_AFFINITY_DOMAIN_L1_CACHE                 (1 << 4)
-#define CL_DEVICE_AFFINITY_DOMAIN_NEXT_PARTITIONABLE       (1 << 5)
-#define CL_QUEUE_CONTEXT                            0x1090
-#define CL_QUEUE_DEVICE                             0x1091
-#define CL_QUEUE_REFERENCE_COUNT                    0x1092
-#define CL_QUEUE_PROPERTIES                         0x1093
-#define CL_MEM_READ_WRITE                           (1 << 0)
-#define CL_MEM_WRITE_ONLY                           (1 << 1)
-#define CL_MEM_READ_ONLY                            (1 << 2)
-#define CL_MEM_USE_HOST_PTR                         (1 << 3)
-#define CL_MEM_ALLOC_HOST_PTR                       (1 << 4)
-#define CL_MEM_COPY_HOST_PTR                        (1 << 5)
-// reserved                                         (1 << 6)
-#define CL_MEM_HOST_WRITE_ONLY                      (1 << 7)
-#define CL_MEM_HOST_READ_ONLY                       (1 << 8)
-#define CL_MEM_HOST_NO_ACCESS                       (1 << 9)
-#define CL_MIGRATE_MEM_OBJECT_HOST                  (1 << 0)
-#define CL_MIGRATE_MEM_OBJECT_CONTENT_UNDEFINED     (1 << 1)
-
-#define CL_R                                        0x10B0
-#define CL_A                                        0x10B1
-#define CL_RG                                       0x10B2
-#define CL_RA                                       0x10B3
-#define CL_RGB                                      0x10B4
-#define CL_RGBA                                     0x10B5
-#define CL_BGRA                                     0x10B6
-#define CL_ARGB                                     0x10B7
-#define CL_INTENSITY                                0x10B8
-#define CL_LUMINANCE                                0x10B9
-#define CL_Rx                                       0x10BA
-#define CL_RGx                                      0x10BB
-#define CL_RGBx                                     0x10BC
-#define CL_DEPTH                                    0x10BD
-#define CL_DEPTH_STENCIL                            0x10BE
-
-#define CL_SNORM_INT8                               0x10D0
-#define CL_SNORM_INT16                              0x10D1
-#define CL_UNORM_INT8                               0x10D2
-#define CL_UNORM_INT16                              0x10D3
-#define CL_UNORM_SHORT_565                          0x10D4
-#define CL_UNORM_SHORT_555                          0x10D5
-#define CL_UNORM_INT_101010                         0x10D6
-#define CL_SIGNED_INT8                              0x10D7
-#define CL_SIGNED_INT16                             0x10D8
-#define CL_SIGNED_INT32                             0x10D9
-#define CL_UNSIGNED_INT8                            0x10DA
-#define CL_UNSIGNED_INT16                           0x10DB
-#define CL_UNSIGNED_INT32                           0x10DC
-#define CL_HALF_FLOAT                               0x10DD
-#define CL_FLOAT                                    0x10DE
-#define CL_UNORM_INT24                              0x10DF
-
-#define CL_MEM_OBJECT_BUFFER                        0x10F0
-#define CL_MEM_OBJECT_IMAGE2D                       0x10F1
-#define CL_MEM_OBJECT_IMAGE3D                       0x10F2
-#define CL_MEM_OBJECT_IMAGE2D_ARRAY                 0x10F3
-#define CL_MEM_OBJECT_IMAGE1D                       0x10F4
-#define CL_MEM_OBJECT_IMAGE1D_ARRAY                 0x10F5
-#define CL_MEM_OBJECT_IMAGE1D_BUFFER                0x10F6
-
-#define CL_MEM_TYPE                                 0x1100
-#define CL_MEM_FLAGS                                0x1101
-#define CL_MEM_SIZE                                 0x1102
-#define CL_MEM_HOST_PTR                             0x1103
-#define CL_MEM_MAP_COUNT                            0x1104
-#define CL_MEM_REFERENCE_COUNT                      0x1105
-#define CL_MEM_CONTEXT                              0x1106
-#define CL_MEM_ASSOCIATED_MEMOBJECT                 0x1107
-#define CL_MEM_OFFSET                               0x1108
-
-#define CL_IMAGE_FORMAT                             0x1110
-#define CL_IMAGE_ELEMENT_SIZE                       0x1111
-#define CL_IMAGE_ROW_PITCH                          0x1112
-#define CL_IMAGE_SLICE_PITCH                        0x1113
-#define CL_IMAGE_WIDTH                              0x1114
-#define CL_IMAGE_HEIGHT                             0x1115
-#define CL_IMAGE_DEPTH                              0x1116
-#define CL_IMAGE_ARRAY_SIZE                         0x1117
-#define CL_IMAGE_BUFFER                             0x1118
-#define CL_IMAGE_NUM_MIP_LEVELS                     0x1119
-#define CL_IMAGE_NUM_SAMPLES                        0x111A
-
-#define CL_ADDRESS_NONE                             0x1130
-#define CL_ADDRESS_CLAMP_TO_EDGE                    0x1131
-#define CL_ADDRESS_CLAMP                            0x1132
-#define CL_ADDRESS_REPEAT                           0x1133
-#define CL_ADDRESS_MIRRORED_REPEAT                  0x1134
-
-#define CL_FILTER_NEAREST                           0x1140
-#define CL_FILTER_LINEAR                            0x1141
-
-#define CL_SAMPLER_REFERENCE_COUNT                  0x1150
-#define CL_SAMPLER_CONTEXT                          0x1151
-#define CL_SAMPLER_NORMALIZED_COORDS                0x1152
-#define CL_SAMPLER_ADDRESSING_MODE                  0x1153
-#define CL_SAMPLER_FILTER_MODE                      0x1154
-
-#define CL_MAP_READ                                 (1 << 0)
-#define CL_MAP_WRITE                                (1 << 1)
-#define CL_MAP_WRITE_INVALIDATE_REGION              (1 << 2)
-
-#define CL_PROGRAM_REFERENCE_COUNT                  0x1160
-#define CL_PROGRAM_CONTEXT                          0x1161
-#define CL_PROGRAM_NUM_DEVICES                      0x1162
-#define CL_PROGRAM_DEVICES                          0x1163
-#define CL_PROGRAM_SOURCE                           0x1164
-#define CL_PROGRAM_BINARY_SIZES                     0x1165
-#define CL_PROGRAM_BINARIES                         0x1166
-#define CL_PROGRAM_NUM_KERNELS                      0x1167
-#define CL_PROGRAM_KERNEL_NAMES                     0x1168
-#define CL_PROGRAM_BUILD_STATUS                     0x1181
-#define CL_PROGRAM_BUILD_OPTIONS                    0x1182
-#define CL_PROGRAM_BUILD_LOG                        0x1183
-#define CL_PROGRAM_BINARY_TYPE                      0x1184
-#define CL_PROGRAM_BINARY_TYPE_NONE                 0x0
-#define CL_PROGRAM_BINARY_TYPE_COMPILED_OBJECT      0x1
-#define CL_PROGRAM_BINARY_TYPE_LIBRARY              0x2
-#define CL_PROGRAM_BINARY_TYPE_EXECUTABLE           0x4
-
-#define CL_BUILD_SUCCESS                            0
-#define CL_BUILD_NONE                               -1
-#define CL_BUILD_ERROR                              -2
-#define CL_BUILD_IN_PROGRESS                        -3
-
-#define CL_KERNEL_FUNCTION_NAME                     0x1190
-#define CL_KERNEL_NUM_ARGS                          0x1191
-#define CL_KERNEL_REFERENCE_COUNT                   0x1192
-#define CL_KERNEL_CONTEXT                           0x1193
-#define CL_KERNEL_PROGRAM                           0x1194
-#define CL_KERNEL_ATTRIBUTES                        0x1195
-#define CL_KERNEL_ARG_ADDRESS_QUALIFIER             0x1196
-#define CL_KERNEL_ARG_ACCESS_QUALIFIER              0x1197
-#define CL_KERNEL_ARG_TYPE_NAME                     0x1198
-#define CL_KERNEL_ARG_TYPE_QUALIFIER                0x1199
-#define CL_KERNEL_ARG_NAME                          0x119A
-#define CL_KERNEL_ARG_ADDRESS_GLOBAL                0x119B
-#define CL_KERNEL_ARG_ADDRESS_LOCAL                 0x119C
-#define CL_KERNEL_ARG_ADDRESS_CONSTANT              0x119D
-#define CL_KERNEL_ARG_ADDRESS_PRIVATE               0x119E
-#define CL_KERNEL_ARG_ACCESS_READ_ONLY              0x11A0
-#define CL_KERNEL_ARG_ACCESS_WRITE_ONLY             0x11A1
-#define CL_KERNEL_ARG_ACCESS_READ_WRITE             0x11A2
-#define CL_KERNEL_ARG_ACCESS_NONE                   0x11A3
-#define CL_KERNEL_ARG_TYPE_NONE                     0
-#define CL_KERNEL_ARG_TYPE_CONST                    (1 << 0)
-#define CL_KERNEL_ARG_TYPE_RESTRICT                 (1 << 1)
-#define CL_KERNEL_ARG_TYPE_VOLATILE                 (1 << 2)
-#define CL_KERNEL_WORK_GROUP_SIZE                   0x11B0
-#define CL_KERNEL_COMPILE_WORK_GROUP_SIZE           0x11B1
-#define CL_KERNEL_LOCAL_MEM_SIZE                    0x11B2
-#define CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE 0x11B3
-#define CL_KERNEL_PRIVATE_MEM_SIZE                  0x11B4
-#define CL_KERNEL_GLOBAL_WORK_SIZE                  0x11B5
-
-#define CL_EVENT_COMMAND_QUEUE                      0x11D0
-#define CL_EVENT_COMMAND_TYPE                       0x11D1
-#define CL_EVENT_REFERENCE_COUNT                    0x11D2
-#define CL_EVENT_COMMAND_EXECUTION_STATUS           0x11D3
-#define CL_EVENT_CONTEXT                            0x11D4
-
-#define CL_COMMAND_NDRANGE_KERNEL                   0x11F0
-#define CL_COMMAND_TASK                             0x11F1
-#define CL_COMMAND_NATIVE_KERNEL                    0x11F2
-#define CL_COMMAND_READ_BUFFER                      0x11F3
-#define CL_COMMAND_WRITE_BUFFER                     0x11F4
-#define CL_COMMAND_COPY_BUFFER                      0x11F5
-#define CL_COMMAND_READ_IMAGE                       0x11F6
-#define CL_COMMAND_WRITE_IMAGE                      0x11F7
-#define CL_COMMAND_COPY_IMAGE                       0x11F8
-#define CL_COMMAND_COPY_IMAGE_TO_BUFFER             0x11F9
-#define CL_COMMAND_COPY_BUFFER_TO_IMAGE             0x11FA
-#define CL_COMMAND_MAP_BUFFER                       0x11FB
-#define CL_COMMAND_MAP_IMAGE                        0x11FC
-#define CL_COMMAND_UNMAP_MEM_OBJECT                 0x11FD
-#define CL_COMMAND_MARKER                           0x11FE
-#define CL_COMMAND_ACQUIRE_GL_OBJECTS               0x11FF
-#define CL_COMMAND_RELEASE_GL_OBJECTS               0x1200
-#define CL_COMMAND_READ_BUFFER_RECT                 0x1201
-#define CL_COMMAND_WRITE_BUFFER_RECT                0x1202
-#define CL_COMMAND_COPY_BUFFER_RECT                 0x1203
-#define CL_COMMAND_USER                             0x1204
-#define CL_COMMAND_BARRIER                          0x1205
-#define CL_COMMAND_MIGRATE_MEM_OBJECTS              0x1206
-#define CL_COMMAND_FILL_BUFFER                      0x1207
-#define CL_COMMAND_FILL_IMAGE                       0x1208
-
-#define CL_COMPLETE                                 0x0
-#define CL_RUNNING                                  0x1
-#define CL_SUBMITTED                                0x2
-#define CL_QUEUED                                   0x3
-#define CL_BUFFER_CREATE_TYPE_REGION                0x1220
-
-#define CL_PROFILING_COMMAND_QUEUED                 0x1280
-#define CL_PROFILING_COMMAND_SUBMIT                 0x1281
-#define CL_PROFILING_COMMAND_START                  0x1282
-#define CL_PROFILING_COMMAND_END                    0x1283
-
-#define CL_CALLBACK CV_STDCALL
-
-static volatile bool g_haveOpenCL = false;
-static const char* oclFuncToCheck = "clEnqueueReadBufferRect";
-
-#if defined(__APPLE__)
-#include <dlfcn.h>
-
-static void* initOpenCLAndLoad(const char* funcname)
+CV_EXPORTS cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics();
+cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics()
 {
-    static bool initialized = false;
-    static void* handle = 0;
-    if (!handle)
-    {
-        if(!initialized)
-        {
-            const char* oclpath = getenv("OPENCV_OPENCL_RUNTIME");
-            oclpath = oclpath && strlen(oclpath) > 0 ? oclpath :
-                "/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL";
-            handle = dlopen(oclpath, RTLD_LAZY);
-            initialized = true;
-            g_haveOpenCL = handle != 0 && dlsym(handle, oclFuncToCheck) != 0;
-            if( g_haveOpenCL )
-                fprintf(stderr, "Successfully loaded OpenCL v1.1+ runtime from %s\n", oclpath);
-            else
-                fprintf(stderr, "Failed to load OpenCL runtime\n");
-        }
-        if(!handle)
-            return 0;
-    }
-
-    return funcname && handle ? dlsym(handle, funcname) : 0;
+    return opencl_allocator_stats;
 }
 
-#elif defined WIN32 || defined _WIN32
-
-#ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
-  #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
-#endif
-#include <windows.h>
-#if (_WIN32_WINNT >= 0x0602)
-  #include <synchapi.h>
-#endif
-#undef small
-#undef min
-#undef max
-#undef abs
-
-static void* initOpenCLAndLoad(const char* funcname)
+#ifndef HAVE_OPENCL
+#define CV_OPENCL_NO_SUPPORT() CV_Error(cv::Error::OpenCLApiCallError, "OpenCV build without OpenCL support")
+namespace {
+struct DummyImpl
 {
-    static bool initialized = false;
-    static HMODULE handle = 0;
-    if (!handle)
-    {
-#ifndef HAVE_WINRT
-        if(!initialized)
-        {
-            handle = LoadLibraryA("OpenCL.dll");
-            initialized = true;
-            g_haveOpenCL = handle != 0 && GetProcAddress(handle, oclFuncToCheck) != 0;
-        }
-#endif
-        if(!handle)
-            return 0;
-    }
-
-    return funcname ? (void*)GetProcAddress(handle, funcname) : 0;
-}
-
-#elif defined(__linux)
-
-#include <dlfcn.h>
-#include <stdio.h>
-
-static void* initOpenCLAndLoad(const char* funcname)
-{
-    static bool initialized = false;
-    static void* handle = 0;
-    if (!handle)
-    {
-        if(!initialized)
-        {
-            handle = dlopen("libOpenCL.so", RTLD_LAZY);
-            if(!handle)
-                handle = dlopen("libCL.so", RTLD_LAZY);
-            initialized = true;
-            g_haveOpenCL = handle != 0 && dlsym(handle, oclFuncToCheck) != 0;
-        }
-        if(!handle)
-            return 0;
-    }
-
-    return funcname ? (void*)dlsym(handle, funcname) : 0;
-}
-
-#else
-
-static void* initOpenCLAndLoad(const char*)
-{
-    return 0;
-}
-
-#endif
-
-
-#define OCL_FUNC(rettype, funcname, argsdecl, args) \
-    typedef rettype (CV_STDCALL * funcname##_t) argsdecl; \
-    static rettype funcname argsdecl \
-    { \
-        static funcname##_t funcname##_p = 0; \
-        if( !funcname##_p ) \
-        { \
-            funcname##_p = (funcname##_t)initOpenCLAndLoad(#funcname); \
-            if( !funcname##_p ) \
-                return OPENCV_CL_NOT_IMPLEMENTED; \
-        } \
-        return funcname##_p args; \
-    }
-
-
-#define OCL_FUNC_P(rettype, funcname, argsdecl, args) \
-    typedef rettype (CV_STDCALL * funcname##_t) argsdecl; \
-    static rettype funcname argsdecl \
-    { \
-        static funcname##_t funcname##_p = 0; \
-        if( !funcname##_p ) \
-        { \
-            funcname##_p = (funcname##_t)initOpenCLAndLoad(#funcname); \
-            if( !funcname##_p ) \
-            { \
-                if( errcode_ret ) \
-                    *errcode_ret = OPENCV_CL_NOT_IMPLEMENTED; \
-                return 0; \
-            } \
-        } \
-        return funcname##_p args; \
-    }
-
-OCL_FUNC(cl_int, clGetPlatformIDs,
-    (cl_uint num_entries, cl_platform_id* platforms, cl_uint* num_platforms),
-    (num_entries, platforms, num_platforms))
-
-OCL_FUNC(cl_int, clGetPlatformInfo,
-    (cl_platform_id platform, cl_platform_info param_name,
-    size_t param_value_size, void * param_value,
-    size_t * param_value_size_ret),
-    (platform, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clGetDeviceInfo,
-         (cl_device_id device,
-          cl_device_info param_name,
-          size_t param_value_size,
-          void * param_value,
-          size_t * param_value_size_ret),
-         (device, param_name, param_value_size, param_value, param_value_size_ret))
-
-
-OCL_FUNC(cl_int, clGetDeviceIDs,
-    (cl_platform_id platform,
-    cl_device_type device_type,
-    cl_uint num_entries,
-    cl_device_id * devices,
-    cl_uint * num_devices),
-    (platform, device_type, num_entries, devices, num_devices))
-
-OCL_FUNC_P(cl_context, clCreateContext,
-    (const cl_context_properties * properties,
-    cl_uint num_devices,
-    const cl_device_id * devices,
-    void (CL_CALLBACK * pfn_notify)(const char *, const void *, size_t, void *),
-    void * user_data,
-    cl_int * errcode_ret),
-    (properties, num_devices, devices, pfn_notify, user_data, errcode_ret))
-
-OCL_FUNC(cl_int, clReleaseContext, (cl_context context), (context))
-
-/*
-OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
-
-OCL_FUNC_P(cl_context, clCreateContextFromType,
-    (const cl_context_properties * properties,
-    cl_device_type device_type,
-    void (CL_CALLBACK * pfn_notify)(const char *, const void *, size_t, void *),
-    void * user_data,
-    cl_int * errcode_ret),
-    (properties, device_type, pfn_notify, user_data, errcode_ret))
-
-OCL_FUNC(cl_int, clGetContextInfo,
-    (cl_context context,
-    cl_context_info param_name,
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (context, param_name, param_value_size,
-    param_value, param_value_size_ret))
-*/
-OCL_FUNC_P(cl_command_queue, clCreateCommandQueue,
-    (cl_context context,
-    cl_device_id device,
-    cl_command_queue_properties properties,
-    cl_int * errcode_ret),
-    (context, device, properties, errcode_ret))
-
-OCL_FUNC(cl_int, clReleaseCommandQueue, (cl_command_queue command_queue), (command_queue))
-
-OCL_FUNC_P(cl_mem, clCreateBuffer,
-    (cl_context context,
-    cl_mem_flags flags,
-    size_t size,
-    void * host_ptr,
-    cl_int * errcode_ret),
-    (context, flags, size, host_ptr, errcode_ret))
-
-/*
-OCL_FUNC(cl_int, clRetainCommandQueue, (cl_command_queue command_queue), (command_queue))
-
-OCL_FUNC(cl_int, clGetCommandQueueInfo,
- (cl_command_queue command_queue,
- cl_command_queue_info param_name,
- size_t param_value_size,
- void * param_value,
- size_t * param_value_size_ret),
- (command_queue, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC_P(cl_mem, clCreateSubBuffer,
-    (cl_mem buffer,
-    cl_mem_flags flags,
-    cl_buffer_create_type buffer_create_type,
-    const void * buffer_create_info,
-    cl_int * errcode_ret),
-    (buffer, flags, buffer_create_type, buffer_create_info, errcode_ret))
-*/
-
-OCL_FUNC_P(cl_mem, clCreateImage,
-    (cl_context context,
-    cl_mem_flags flags,
-    const cl_image_format * image_format,
-    const cl_image_desc * image_desc,
-    void * host_ptr,
-    cl_int * errcode_ret),
-    (context, flags, image_format, image_desc, host_ptr, errcode_ret))
-
-OCL_FUNC_P(cl_mem, clCreateImage2D,
-    (cl_context context,
-    cl_mem_flags flags,
-    const cl_image_format * image_format,
-    size_t image_width,
-    size_t image_height,
-    size_t image_row_pitch,
-    void * host_ptr,
-    cl_int *errcode_ret),
-    (context, flags, image_format, image_width, image_height, image_row_pitch, host_ptr, errcode_ret))
-
-OCL_FUNC(cl_int, clGetSupportedImageFormats,
- (cl_context context,
- cl_mem_flags flags,
- cl_mem_object_type image_type,
- cl_uint num_entries,
- cl_image_format * image_formats,
- cl_uint * num_image_formats),
- (context, flags, image_type, num_entries, image_formats, num_image_formats))
-
-/*
-OCL_FUNC(cl_int, clGetMemObjectInfo,
- (cl_mem memobj,
- cl_mem_info param_name,
- size_t param_value_size,
- void * param_value,
- size_t * param_value_size_ret),
- (memobj, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clGetImageInfo,
- (cl_mem image,
- cl_image_info param_name,
- size_t param_value_size,
- void * param_value,
- size_t * param_value_size_ret),
- (image, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clCreateKernelsInProgram,
- (cl_program program,
- cl_uint num_kernels,
- cl_kernel * kernels,
- cl_uint * num_kernels_ret),
- (program, num_kernels, kernels, num_kernels_ret))
-
-OCL_FUNC(cl_int, clRetainKernel, (cl_kernel kernel), (kernel))
-
-OCL_FUNC(cl_int, clGetKernelArgInfo,
- (cl_kernel kernel,
- cl_uint arg_indx,
- cl_kernel_arg_info param_name,
- size_t param_value_size,
- void * param_value,
- size_t * param_value_size_ret),
- (kernel, arg_indx, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clEnqueueReadImage,
- (cl_command_queue command_queue,
- cl_mem image,
- cl_bool blocking_read,
- const size_t * origin[3],
- const size_t * region[3],
- size_t row_pitch,
- size_t slice_pitch,
- void * ptr,
- cl_uint num_events_in_wait_list,
- const cl_event * event_wait_list,
- cl_event * event),
- (command_queue, image, blocking_read, origin, region,
- row_pitch, slice_pitch,
- ptr,
- num_events_in_wait_list,
- event_wait_list,
- event))
-
-OCL_FUNC(cl_int, clEnqueueWriteImage,
- (cl_command_queue command_queue,
- cl_mem image,
- cl_bool blocking_write,
- const size_t * origin[3],
- const size_t * region[3],
- size_t input_row_pitch,
- size_t input_slice_pitch,
- const void * ptr,
- cl_uint num_events_in_wait_list,
- const cl_event * event_wait_list,
- cl_event * event),
- (command_queue, image, blocking_write, origin, region, input_row_pitch,
- input_slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueFillImage,
- (cl_command_queue command_queue,
- cl_mem image,
- const void * fill_color,
- const size_t * origin[3],
- const size_t * region[3],
- cl_uint num_events_in_wait_list,
- const cl_event * event_wait_list,
- cl_event * event),
- (command_queue, image, fill_color, origin, region,
- num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueCopyImage,
- (cl_command_queue command_queue,
- cl_mem src_image,
- cl_mem dst_image,
- const size_t * src_origin[3],
- const size_t * dst_origin[3],
- const size_t * region[3],
- cl_uint num_events_in_wait_list,
- const cl_event * event_wait_list,
- cl_event * event),
- (command_queue, src_image, dst_image, src_origin, dst_origin,
- region, num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueCopyImageToBuffer,
- (cl_command_queue command_queue,
- cl_mem src_image,
- cl_mem dst_buffer,
- const size_t * src_origin[3],
- const size_t * region[3],
- size_t dst_offset,
- cl_uint num_events_in_wait_list,
- const cl_event * event_wait_list,
- cl_event * event),
- (command_queue, src_image, dst_buffer, src_origin, region, dst_offset,
- num_events_in_wait_list, event_wait_list, event))
-*/
-
-OCL_FUNC(cl_int, clEnqueueCopyBufferToImage,
- (cl_command_queue command_queue,
- cl_mem src_buffer,
- cl_mem dst_image,
- size_t src_offset,
- const size_t dst_origin[3],
- const size_t region[3],
- cl_uint num_events_in_wait_list,
- const cl_event * event_wait_list,
- cl_event * event),
- (command_queue, src_buffer, dst_image, src_offset, dst_origin,
- region, num_events_in_wait_list, event_wait_list, event))
-
- OCL_FUNC(cl_int, clFlush,
- (cl_command_queue command_queue),
- (command_queue))
-
-/*
-OCL_FUNC_P(void*, clEnqueueMapImage,
- (cl_command_queue command_queue,
- cl_mem image,
- cl_bool blocking_map,
- cl_map_flags map_flags,
- const size_t * origin[3],
- const size_t * region[3],
- size_t * image_row_pitch,
- size_t * image_slice_pitch,
- cl_uint num_events_in_wait_list,
- const cl_event * event_wait_list,
- cl_event * event,
- cl_int * errcode_ret),
- (command_queue, image, blocking_map, map_flags, origin, region,
- image_row_pitch, image_slice_pitch, num_events_in_wait_list,
- event_wait_list, event, errcode_ret))
-*/
-
-/*
-OCL_FUNC(cl_int, clRetainProgram, (cl_program program), (program))
-
-OCL_FUNC(cl_int, clGetKernelInfo,
- (cl_kernel kernel,
- cl_kernel_info param_name,
- size_t param_value_size,
- void * param_value,
- size_t * param_value_size_ret),
- (kernel, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
-
-*/
-
-OCL_FUNC(cl_int, clReleaseMemObject, (cl_mem memobj), (memobj))
-
-
-OCL_FUNC_P(cl_program, clCreateProgramWithSource,
-    (cl_context context,
-    cl_uint count,
-    const char ** strings,
-    const size_t * lengths,
-    cl_int * errcode_ret),
-    (context, count, strings, lengths, errcode_ret))
-
-OCL_FUNC_P(cl_program, clCreateProgramWithBinary,
-    (cl_context context,
-    cl_uint num_devices,
-    const cl_device_id * device_list,
-    const size_t * lengths,
-    const unsigned char ** binaries,
-    cl_int * binary_status,
-    cl_int * errcode_ret),
-    (context, num_devices, device_list, lengths, binaries, binary_status, errcode_ret))
-
-OCL_FUNC(cl_int, clReleaseProgram, (cl_program program), (program))
-
-OCL_FUNC(cl_int, clBuildProgram,
-    (cl_program program,
-    cl_uint num_devices,
-    const cl_device_id * device_list,
-    const char * options,
-    void (CL_CALLBACK * pfn_notify)(cl_program, void *),
-    void * user_data),
-    (program, num_devices, device_list, options, pfn_notify, user_data))
-
-OCL_FUNC(cl_int, clGetProgramInfo,
-    (cl_program program,
-    cl_program_info param_name,
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (program, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clGetProgramBuildInfo,
-    (cl_program program,
-    cl_device_id device,
-    cl_program_build_info param_name,
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (program, device, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC_P(cl_kernel, clCreateKernel,
-    (cl_program program,
-    const char * kernel_name,
-    cl_int * errcode_ret),
-    (program, kernel_name, errcode_ret))
-
-OCL_FUNC(cl_int, clReleaseKernel, (cl_kernel kernel), (kernel))
-
-OCL_FUNC(cl_int, clSetKernelArg,
-    (cl_kernel kernel,
-    cl_uint arg_index,
-    size_t arg_size,
-    const void * arg_value),
-    (kernel, arg_index, arg_size, arg_value))
-
-OCL_FUNC(cl_int, clGetKernelWorkGroupInfo,
-    (cl_kernel kernel,
-    cl_device_id device,
-    cl_kernel_work_group_info param_name,
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (kernel, device, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clFinish, (cl_command_queue command_queue), (command_queue))
-
-OCL_FUNC(cl_int, clEnqueueReadBuffer,
-    (cl_command_queue command_queue,
-    cl_mem buffer,
-    cl_bool blocking_read,
-    size_t offset,
-    size_t size,
-    void * ptr,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, buffer, blocking_read, offset, size, ptr,
-    num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueReadBufferRect,
-    (cl_command_queue command_queue,
-    cl_mem buffer,
-    cl_bool blocking_read,
-    const size_t * buffer_offset,
-    const size_t * host_offset,
-    const size_t * region,
-    size_t buffer_row_pitch,
-    size_t buffer_slice_pitch,
-    size_t host_row_pitch,
-    size_t host_slice_pitch,
-    void * ptr,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, buffer, blocking_read, buffer_offset, host_offset, region, buffer_row_pitch,
-    buffer_slice_pitch, host_row_pitch, host_slice_pitch, ptr, num_events_in_wait_list,
-    event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueWriteBuffer,
-    (cl_command_queue command_queue,
-    cl_mem buffer,
-    cl_bool blocking_write,
-    size_t offset,
-    size_t size,
-    const void * ptr,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, buffer, blocking_write, offset, size, ptr,
-    num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueWriteBufferRect,
-    (cl_command_queue command_queue,
-    cl_mem buffer,
-    cl_bool blocking_write,
-    const size_t * buffer_offset,
-    const size_t * host_offset,
-    const size_t * region,
-    size_t buffer_row_pitch,
-    size_t buffer_slice_pitch,
-    size_t host_row_pitch,
-    size_t host_slice_pitch,
-    const void * ptr,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, buffer, blocking_write, buffer_offset, host_offset,
-    region, buffer_row_pitch, buffer_slice_pitch, host_row_pitch,
-    host_slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event))
-
-/*OCL_FUNC(cl_int, clEnqueueFillBuffer,
-    (cl_command_queue command_queue,
-    cl_mem buffer,
-    const void * pattern,
-    size_t pattern_size,
-    size_t offset,
-    size_t size,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, buffer, pattern, pattern_size, offset, size,
-    num_events_in_wait_list, event_wait_list, event))*/
-
-OCL_FUNC(cl_int, clEnqueueCopyBuffer,
-    (cl_command_queue command_queue,
-    cl_mem src_buffer,
-    cl_mem dst_buffer,
-    size_t src_offset,
-    size_t dst_offset,
-    size_t size,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, src_buffer, dst_buffer, src_offset, dst_offset,
-    size, num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueCopyBufferRect,
-    (cl_command_queue command_queue,
-    cl_mem src_buffer,
-    cl_mem dst_buffer,
-    const size_t * src_origin,
-    const size_t * dst_origin,
-    const size_t * region,
-    size_t src_row_pitch,
-    size_t src_slice_pitch,
-    size_t dst_row_pitch,
-    size_t dst_slice_pitch,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, src_buffer, dst_buffer, src_origin, dst_origin,
-    region, src_row_pitch, src_slice_pitch, dst_row_pitch, dst_slice_pitch,
-    num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC_P(void*, clEnqueueMapBuffer,
-    (cl_command_queue command_queue,
-    cl_mem buffer,
-    cl_bool blocking_map,
-    cl_map_flags map_flags,
-    size_t offset,
-    size_t size,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event,
-    cl_int * errcode_ret),
-    (command_queue, buffer, blocking_map, map_flags, offset, size,
-    num_events_in_wait_list, event_wait_list, event, errcode_ret))
-
-OCL_FUNC(cl_int, clEnqueueUnmapMemObject,
-    (cl_command_queue command_queue,
-    cl_mem memobj,
-    void * mapped_ptr,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, memobj, mapped_ptr, num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueNDRangeKernel,
-    (cl_command_queue command_queue,
-    cl_kernel kernel,
-    cl_uint work_dim,
-    const size_t * global_work_offset,
-    const size_t * global_work_size,
-    const size_t * local_work_size,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, kernel, work_dim, global_work_offset, global_work_size,
-    local_work_size, num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueTask,
-    (cl_command_queue command_queue,
-    cl_kernel kernel,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, kernel, num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clSetEventCallback,
-    (cl_event event,
-    cl_int command_exec_callback_type ,
-    void (CL_CALLBACK  *pfn_event_notify) (cl_event event, cl_int event_command_exec_status, void *user_data),
-    void *user_data),
-    (event, command_exec_callback_type, pfn_event_notify, user_data))
-
-OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
-
-}
-
-#endif
-
-#ifndef CL_VERSION_1_2
-#define CL_VERSION_1_2
-#endif
-
-#endif
-
-#ifdef _DEBUG
-#define CV_OclDbgAssert CV_DbgAssert
-#else
+    DummyImpl() { CV_OPENCL_NO_SUPPORT(); }
+    ~DummyImpl() { /* do not throw in desctructors */ }
+    IMPLEMENT_REFCOUNTABLE();
+};
+} // namespace
+
+// TODO Replace to empty body (without HAVE_OPENCL)
+#define CV_OCL_TRACE_CHECK_RESULT(status, message) /* nothing */
+#define CV_OCL_API_ERROR_MSG(check_result, msg) cv::String()
+#define CV_OCL_CHECK_RESULT(check_result, msg) (void)check_result
+#define CV_OCL_CHECK_(expr, check_result) expr; (void)check_result
+#define CV_OCL_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_CHECK_RESULT(__cl_result, #expr); } while (0)
+#define CV_OCL_DBG_CHECK_RESULT(check_result, msg) (void)check_result
+#define CV_OCL_DBG_CHECK_(expr, check_result) expr; (void)check_result
+#define CV_OCL_DBG_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_CHECK_RESULT(__cl_result, #expr); } while (0)
+
+static const bool CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS = false;
+
+#else // HAVE_OPENCL
+
+#ifndef _DEBUG
 static bool isRaiseError()
 {
     static bool initialized = false;
     static bool value = false;
     if (!initialized)
     {
-        value = getBoolParameter("OPENCV_OPENCL_RAISE_ERROR", false);
+        value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_RAISE_ERROR", false);
         initialized = true;
     }
     return value;
 }
-#define CV_OclDbgAssert(expr) do { if (isRaiseError()) { CV_Assert(expr); } else { (void)(expr); } } while ((void)0, 0)
 #endif
 
-namespace cv { namespace ocl {
+#if CV_OPENCL_TRACE_CHECK
+static inline
+void traceOpenCLCheck(cl_int status, const char* message)
+{
+    std::cout << "OpenCV(OpenCL:" << status << "): " << message << std::endl << std::flush;
+}
+#define CV_OCL_TRACE_CHECK_RESULT(status, message) traceOpenCLCheck(status, message)
+#else
+#define CV_OCL_TRACE_CHECK_RESULT(status, message) /* nothing */
+#endif
+
+#define CV_OCL_API_ERROR_MSG(check_result, msg) \
+    cv::format("OpenCL error %s (%d) during call: %s", getOpenCLErrorString(check_result), check_result, msg)
+
+#define CV_OCL_CHECK_RESULT(check_result, msg) \
+    do { \
+        CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
+        if (check_result != CL_SUCCESS) \
+        { \
+            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
+            cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
+            CV_Error(Error::OpenCLApiCallError, error_msg); \
+        } \
+    } while (0)
+
+#define CV_OCL_CHECK_(expr, check_result) do { expr; CV_OCL_CHECK_RESULT(check_result, #expr); } while (0)
+
+#define CV_OCL_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_CHECK_RESULT(__cl_result, #expr); } while (0)
+
+#ifdef _DEBUG
+#define CV_OCL_DBG_CHECK_RESULT(check_result, msg) CV_OCL_CHECK_RESULT(check_result, msg)
+#define CV_OCL_DBG_CHECK(expr) CV_OCL_CHECK(expr)
+#define CV_OCL_DBG_CHECK_(expr, check_result) CV_OCL_CHECK_(expr, check_result)
+#else
+#define CV_OCL_DBG_CHECK_RESULT(check_result, msg) \
+    do { \
+        CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
+        if (check_result != CL_SUCCESS && isRaiseError()) \
+        { \
+            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
+            cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
+            CV_Error(Error::OpenCLApiCallError, error_msg); \
+        } \
+    } while (0)
+#define CV_OCL_DBG_CHECK_(expr, check_result) do { expr; CV_OCL_DBG_CHECK_RESULT(check_result, #expr); } while (0)
+#define CV_OCL_DBG_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_DBG_CHECK_RESULT(__cl_result, #expr); } while (0)
+#endif
+
+
+static const bool CV_OPENCL_CACHE_ENABLE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_ENABLE", true);
+static const bool CV_OPENCL_CACHE_WRITE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_WRITE", true);
+static const bool CV_OPENCL_CACHE_LOCK_ENABLE = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_LOCK_ENABLE", true);
+static const bool CV_OPENCL_CACHE_CLEANUP = utils::getConfigurationParameterBool("OPENCV_OPENCL_CACHE_CLEANUP", true);
+
+#if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
+static const bool CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE = utils::getConfigurationParameterBool("OPENCV_OPENCL_VALIDATE_BINARY_PROGRAMS", false);
+#endif
+
+// Option to disable calls clEnqueueReadBufferRect / clEnqueueWriteBufferRect / clEnqueueCopyBufferRect
+static const bool CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS = utils::getConfigurationParameterBool("OPENCV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS",
+#ifdef __APPLE__
+        true
+#else
+        false
+#endif
+);
+
+static const String getBuildExtraOptions()
+{
+    static String param_buildExtraOptions;
+    static bool initialized = false;
+    if (!initialized)
+    {
+        param_buildExtraOptions = utils::getConfigurationParameterString("OPENCV_OPENCL_BUILD_EXTRA_OPTIONS", "");
+        initialized = true;
+        if (!param_buildExtraOptions.empty())
+            CV_LOG_WARNING(NULL, "OpenCL: using extra build options: '" << param_buildExtraOptions << "'");
+    }
+    return param_buildExtraOptions;
+}
+
+static const bool CV_OPENCL_ENABLE_MEM_USE_HOST_PTR = utils::getConfigurationParameterBool("OPENCV_OPENCL_ENABLE_MEM_USE_HOST_PTR", true);
+static const size_t CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR", 4);
+
+#endif // HAVE_OPENCL
 
 struct UMat2D
 {
@@ -1402,36 +331,569 @@ static uint64 crc64( const uchar* data, size_t size, uint64 crc0=0 )
     return ~crc;
 }
 
-struct HashKey
+#if defined HAVE_OPENCL && OPENCV_HAVE_FILESYSTEM_SUPPORT
+struct OpenCLBinaryCacheConfigurator
 {
-    typedef uint64 part;
-    HashKey(part _a, part _b) : a(_a), b(_b) {}
-    part a, b;
+    cv::String cache_path_;
+    cv::String cache_lock_filename_;
+    cv::Ptr<utils::fs::FileLock> cache_lock_;
+
+    typedef std::map<std::string, std::string> ContextCacheType;
+    ContextCacheType prepared_contexts_;
+    Mutex mutex_prepared_contexts_;
+
+    OpenCLBinaryCacheConfigurator()
+    {
+        CV_LOG_DEBUG(NULL, "Initializing OpenCL cache configuration...");
+        if (!CV_OPENCL_CACHE_ENABLE)
+        {
+            CV_LOG_INFO(NULL, "OpenCL cache is disabled");
+            return;
+        }
+        cache_path_ = utils::fs::getCacheDirectory("opencl_cache", "OPENCV_OPENCL_CACHE_DIR");
+        if (cache_path_.empty())
+        {
+            CV_LOG_INFO(NULL, "Specify OPENCV_OPENCL_CACHE_DIR configuration parameter to enable OpenCL cache");
+        }
+        do
+        {
+            try
+            {
+                if (cache_path_.empty())
+                    break;
+                if (cache_path_ == "disabled")
+                    break;
+                if (!utils::fs::createDirectories(cache_path_))
+                {
+                    CV_LOG_DEBUG(NULL, "Can't use OpenCL cache directory: " << cache_path_);
+                    clear();
+                    break;
+                }
+
+                if (CV_OPENCL_CACHE_LOCK_ENABLE)
+                {
+                    cache_lock_filename_ = cache_path_ + ".lock";
+                    if (!utils::fs::exists(cache_lock_filename_))
+                    {
+                        CV_LOG_DEBUG(NULL, "Creating lock file... (" << cache_lock_filename_ << ")");
+                        std::ofstream lock_filename(cache_lock_filename_.c_str(), std::ios::out);
+                        if (!lock_filename.is_open())
+                        {
+                            CV_LOG_WARNING(NULL, "Can't create lock file for OpenCL program cache: " << cache_lock_filename_);
+                            break;
+                        }
+                    }
+
+                    try
+                    {
+                        cache_lock_ = makePtr<utils::fs::FileLock>(cache_lock_filename_.c_str());
+                        CV_LOG_VERBOSE(NULL, 0, "Checking cache lock... (" << cache_lock_filename_ << ")");
+                        {
+                            utils::shared_lock_guard<utils::fs::FileLock> lock(*cache_lock_);
+                        }
+                        CV_LOG_VERBOSE(NULL, 0, "Checking cache lock... Done!");
+                    }
+                    catch (const cv::Exception& e)
+                    {
+                        CV_LOG_WARNING(NULL, "Can't create OpenCL program cache lock: " << cache_lock_filename_ << std::endl << e.what());
+                    }
+                    catch (...)
+                    {
+                        CV_LOG_WARNING(NULL, "Can't create OpenCL program cache lock: " << cache_lock_filename_);
+                    }
+                }
+                else
+                {
+                    if (CV_OPENCL_CACHE_WRITE)
+                    {
+                        CV_LOG_WARNING(NULL, "OpenCL cache lock is disabled while cache write is allowed "
+                                "(not safe for multiprocess environment)");
+                    }
+                    else
+                    {
+                        CV_LOG_INFO(NULL, "OpenCL cache lock is disabled");
+                    }
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_WARNING(NULL, "Can't prepare OpenCL program cache: " << cache_path_ << std::endl << e.what());
+                clear();
+            }
+        } while (0);
+        if (!cache_path_.empty())
+        {
+            if (cache_lock_.empty() && CV_OPENCL_CACHE_LOCK_ENABLE)
+            {
+                CV_LOG_WARNING(NULL, "Initialized OpenCL cache directory, but interprocess synchronization lock is not available. "
+                        "Consider to disable OpenCL cache: OPENCV_OPENCL_CACHE_DIR=disabled");
+            }
+            else
+            {
+                CV_LOG_INFO(NULL, "Successfully initialized OpenCL cache directory: " << cache_path_);
+            }
+        }
+    }
+
+    void clear()
+    {
+        cache_path_.clear();
+        cache_lock_filename_.clear();
+        cache_lock_.release();
+    }
+
+    std::string prepareCacheDirectoryForContext(const std::string& ctx_prefix,
+            const std::string& cleanup_prefix)
+    {
+        if (cache_path_.empty())
+            return std::string();
+
+        AutoLock lock(mutex_prepared_contexts_);
+
+        ContextCacheType::iterator found_it = prepared_contexts_.find(ctx_prefix);
+        if (found_it != prepared_contexts_.end())
+            return found_it->second;
+
+        CV_LOG_INFO(NULL, "Preparing OpenCL cache configuration for context: " << ctx_prefix);
+
+        std::string target_directory = cache_path_ + ctx_prefix + "/";
+        bool result = utils::fs::isDirectory(target_directory);
+        if (!result)
+        {
+            try
+            {
+                CV_LOG_VERBOSE(NULL, 0, "Creating directory: " << target_directory);
+                if (utils::fs::createDirectories(target_directory))
+                {
+                    result = true;
+                }
+                else
+                {
+                    CV_LOG_WARNING(NULL, "Can't create directory: " << target_directory);
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_ERROR(NULL, "Can't create OpenCL program cache directory for context: " << target_directory << std::endl << e.what());
+            }
+        }
+        target_directory = result ? target_directory : std::string();
+        prepared_contexts_.insert(std::pair<std::string, std::string>(ctx_prefix, target_directory));
+
+        if (result && CV_OPENCL_CACHE_CLEANUP && CV_OPENCL_CACHE_WRITE && !cleanup_prefix.empty())
+        {
+            try
+            {
+                std::vector<String> entries;
+                utils::fs::glob_relative(cache_path_, cleanup_prefix + "*", entries, false, true);
+                std::vector<String> remove_entries;
+                for (size_t i = 0; i < entries.size(); i++)
+                {
+                    const String& name = entries[i];
+                    if (0 == name.find(cleanup_prefix))
+                    {
+                        if (0 == name.find(ctx_prefix))
+                            continue; // skip current
+                        remove_entries.push_back(name);
+                    }
+                }
+                if (!remove_entries.empty())
+                {
+                    CV_LOG_WARNING(NULL, (remove_entries.size() == 1
+                            ? "Detected OpenCL cache directory for other version of OpenCL device."
+                            : "Detected OpenCL cache directories for other versions of OpenCL device.")
+                            << " We assume that these directories are obsolete after OpenCL runtime/drivers upgrade.");
+                    CV_LOG_WARNING(NULL, "Trying to remove these directories...");
+                    for (size_t i = 0; i < remove_entries.size(); i++)
+                    {
+                        CV_LOG_WARNING(NULL, "- " << remove_entries[i]);
+                    }
+                    CV_LOG_WARNING(NULL, "Note: You can disable this behavior via this option: OPENCV_OPENCL_CACHE_CLEANUP=0");
+
+                    for (size_t i = 0; i < remove_entries.size(); i++)
+                    {
+                        const String& name = remove_entries[i];
+                        cv::String path = utils::fs::join(cache_path_, name);
+                        try
+                        {
+                            utils::fs::remove_all(path);
+                            CV_LOG_WARNING(NULL, "Removed: " << path);
+                        }
+                        catch (const cv::Exception& e)
+                        {
+                            CV_LOG_ERROR(NULL, "Exception during removal of obsolete OpenCL cache directory: " << path << std::endl << e.what());
+                        }
+                    }
+                }
+            }
+            catch (...)
+            {
+                CV_LOG_WARNING(NULL, "Can't check for obsolete OpenCL cache directories");
+            }
+        }
+
+        CV_LOG_VERBOSE(NULL, 1, "  Result: " << (target_directory.empty() ? std::string("Failed") : target_directory));
+        return target_directory;
+    }
+
+    static OpenCLBinaryCacheConfigurator& getSingletonInstance()
+    {
+        CV_SINGLETON_LAZY_INIT_REF(OpenCLBinaryCacheConfigurator, new OpenCLBinaryCacheConfigurator());
+    }
 };
-
-inline bool operator == (const HashKey& h1, const HashKey& h2)
+class BinaryProgramFile
 {
-    return h1.a == h2.a && h1.b == h2.b;
-}
+    enum { MAX_ENTRIES = 64 };
 
-inline bool operator < (const HashKey& h1, const HashKey& h2)
-{
-    return h1.a < h2.a || (h1.a == h2.a && h1.b < h2.b);
-}
+    typedef unsigned int uint32_t;
 
+    struct CV_DECL_ALIGNED(4) FileHeader
+    {
+        uint32_t sourceSignatureSize;
+        //char sourceSignature[];
+    };
+
+    struct CV_DECL_ALIGNED(4) FileTable
+    {
+        uint32_t numberOfEntries;
+        //uint32_t firstEntryOffset[];
+    };
+
+    struct CV_DECL_ALIGNED(4) FileEntry
+    {
+        uint32_t nextEntryFileOffset; // 0 for the last entry in chain
+        uint32_t keySize;
+        uint32_t dataSize;
+        //char key[];
+        //char data[];
+    };
+
+    const std::string fileName_;
+    const char* const sourceSignature_;
+    const size_t sourceSignatureSize_;
+
+    std::fstream f;
+
+    uint32_t entryOffsets[MAX_ENTRIES];
+
+    uint32_t getHash(const std::string& options)
+    {
+        uint64 hash = crc64((const uchar*)options.c_str(), options.size(), 0);
+        return hash & (MAX_ENTRIES - 1);
+    }
+
+    inline size_t getFileSize()
+    {
+        size_t pos = (size_t)f.tellg();
+        f.seekg(0, std::fstream::end);
+        size_t fileSize = (size_t)f.tellg();
+        f.seekg(pos, std::fstream::beg);
+        return fileSize;
+    }
+    inline uint32_t readUInt32()
+    {
+        uint32_t res = 0;
+        f.read((char*)&res, sizeof(uint32_t));
+        CV_Assert(!f.fail());
+        return res;
+    }
+    inline void writeUInt32(const uint32_t value)
+    {
+        uint32_t v = value;
+        f.write((char*)&v, sizeof(uint32_t));
+        CV_Assert(!f.fail());
+    }
+
+    inline void seekReadAbsolute(size_t pos)
+    {
+        f.seekg(pos, std::fstream::beg);
+        CV_Assert(!f.fail());
+    }
+    inline void seekReadRelative(size_t pos)
+    {
+        f.seekg(pos, std::fstream::cur);
+        CV_Assert(!f.fail());
+    }
+
+    inline void seekWriteAbsolute(size_t pos)
+    {
+        f.seekp(pos, std::fstream::beg);
+        CV_Assert(!f.fail());
+    }
+
+    void clearFile()
+    {
+        f.close();
+        if (0 != remove(fileName_.c_str()))
+            CV_LOG_ERROR(NULL, "Can't remove: " << fileName_);
+        return;
+    }
+
+public:
+    BinaryProgramFile(const std::string& fileName, const char* sourceSignature)
+        : fileName_(fileName), sourceSignature_(sourceSignature), sourceSignatureSize_(sourceSignature_ ? strlen(sourceSignature_) : 0)
+    {
+        CV_StaticAssert(sizeof(uint32_t) == 4, "");
+        CV_Assert(sourceSignature_ != NULL);
+        CV_Assert(sourceSignatureSize_ > 0);
+        memset(entryOffsets, 0, sizeof(entryOffsets));
+
+        f.rdbuf()->pubsetbuf(0, 0); // disable buffering
+        f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
+        if(f.is_open() && getFileSize() > 0)
+        {
+            bool isValid = false;
+            try
+            {
+                uint32_t fileSourceSignatureSize = readUInt32();
+                if (fileSourceSignatureSize == sourceSignatureSize_)
+                {
+                    cv::AutoBuffer<char> fileSourceSignature(fileSourceSignatureSize + 1);
+                    f.read(fileSourceSignature.data(), fileSourceSignatureSize);
+                    if (f.eof())
+                    {
+                        CV_LOG_ERROR(NULL, "Unexpected EOF");
+                    }
+                    else if (memcmp(sourceSignature, fileSourceSignature.data(), fileSourceSignatureSize) == 0)
+                    {
+                        isValid = true;
+                    }
+                }
+                if (!isValid)
+                {
+                    CV_LOG_ERROR(NULL, "Source code signature/hash mismatch (program source code has been changed/updated)");
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_ERROR(NULL, "Can't open binary program file: " << fileName << " : " << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_ERROR(NULL, "Can't open binary program file: " << fileName << " : Unknown error");
+            }
+            if (!isValid)
+            {
+                clearFile();
+            }
+            else
+            {
+                seekReadAbsolute(0);
+            }
+        }
+    }
+
+    bool read(const std::string& key, std::vector<char>& buf)
+    {
+        if (!f.is_open())
+            return false;
+
+        size_t fileSize = getFileSize();
+        if (fileSize == 0)
+        {
+            CV_LOG_ERROR(NULL, "Invalid file (empty): " << fileName_);
+            clearFile();
+            return false;
+        }
+        seekReadAbsolute(0);
+
+        // bypass FileHeader
+        uint32_t fileSourceSignatureSize = readUInt32();
+        CV_Assert(fileSourceSignatureSize > 0);
+        seekReadRelative(fileSourceSignatureSize);
+
+        uint32_t numberOfEntries = readUInt32();
+        CV_Assert(numberOfEntries > 0);
+        if (numberOfEntries != MAX_ENTRIES)
+        {
+            CV_LOG_ERROR(NULL, "Invalid file: " << fileName_);
+            clearFile();
+            return false;
+        }
+        f.read((char*)&entryOffsets[0], sizeof(entryOffsets));
+        CV_Assert(!f.fail());
+
+        uint32_t entryNum = getHash(key);
+
+        uint32_t entryOffset = entryOffsets[entryNum];
+        FileEntry entry;
+        while (entryOffset > 0)
+        {
+            seekReadAbsolute(entryOffset);
+            //CV_StaticAssert(sizeof(entry) == sizeof(uint32_t) * 3, "");
+            f.read((char*)&entry, sizeof(entry));
+            CV_Assert(!f.fail());
+            cv::AutoBuffer<char> fileKey(entry.keySize + 1);
+            if (key.size() == entry.keySize)
+            {
+                if (entry.keySize > 0)
+                {
+                    f.read(fileKey.data(), entry.keySize);
+                    CV_Assert(!f.fail());
+                }
+                if (memcmp(fileKey.data(), key.c_str(), entry.keySize) == 0)
+                {
+                    buf.resize(entry.dataSize);
+                    f.read(&buf[0], entry.dataSize);
+                    CV_Assert(!f.fail());
+                    seekReadAbsolute(0);
+                    CV_LOG_VERBOSE(NULL, 0, "Read...");
+                    return true;
+                }
+            }
+            if (entry.nextEntryFileOffset == 0)
+                break;
+            entryOffset = entry.nextEntryFileOffset;
+        }
+        return false;
+    }
+
+    bool write(const std::string& key, std::vector<char>& buf)
+    {
+        if (!f.is_open())
+        {
+            f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
+            if (!f.is_open())
+            {
+                f.open(fileName_.c_str(), std::ios::out|std::ios::binary);
+                if (!f.is_open())
+                {
+                    CV_LOG_ERROR(NULL, "Can't create file: " << fileName_);
+                    return false;
+                }
+            }
+        }
+
+        size_t fileSize = getFileSize();
+        if (fileSize == 0)
+        {
+            // Write header
+            seekWriteAbsolute(0);
+            writeUInt32((uint32_t)sourceSignatureSize_);
+            f.write(sourceSignature_, sourceSignatureSize_);
+            CV_Assert(!f.fail());
+
+            writeUInt32(MAX_ENTRIES);
+            memset(entryOffsets, 0, sizeof(entryOffsets));
+            f.write((char*)entryOffsets, sizeof(entryOffsets));
+            CV_Assert(!f.fail());
+            f.flush();
+            CV_Assert(!f.fail());
+            f.close();
+            f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
+            CV_Assert(f.is_open());
+            fileSize = getFileSize();
+        }
+        seekReadAbsolute(0);
+
+        // bypass FileHeader
+        uint32_t fileSourceSignatureSize = readUInt32();
+        CV_Assert(fileSourceSignatureSize == sourceSignatureSize_);
+        seekReadRelative(fileSourceSignatureSize);
+
+        uint32_t numberOfEntries = readUInt32();
+        CV_Assert(numberOfEntries > 0);
+        if (numberOfEntries != MAX_ENTRIES)
+        {
+            CV_LOG_ERROR(NULL, "Invalid file: " << fileName_);
+            clearFile();
+            return false;
+        }
+        size_t tableEntriesOffset = (size_t)f.tellg();
+        f.read((char*)&entryOffsets[0], sizeof(entryOffsets));
+        CV_Assert(!f.fail());
+
+        uint32_t entryNum = getHash(key);
+
+        uint32_t entryOffset = entryOffsets[entryNum];
+        FileEntry entry;
+        while (entryOffset > 0)
+        {
+            seekReadAbsolute(entryOffset);
+            //CV_StaticAssert(sizeof(entry) == sizeof(uint32_t) * 3, "");
+            f.read((char*)&entry, sizeof(entry));
+            CV_Assert(!f.fail());
+            cv::AutoBuffer<char> fileKey(entry.keySize + 1);
+            if (key.size() == entry.keySize)
+            {
+                if (entry.keySize > 0)
+                {
+                    f.read(fileKey.data(), entry.keySize);
+                    CV_Assert(!f.fail());
+                }
+                if (0 == memcmp(fileKey.data(), key.c_str(), entry.keySize))
+                {
+                    // duplicate
+                    CV_LOG_VERBOSE(NULL, 0, "Duplicate key ignored: " << fileName_);
+                    return false;
+                }
+            }
+            if (entry.nextEntryFileOffset == 0)
+                break;
+            entryOffset = entry.nextEntryFileOffset;
+        }
+        seekReadAbsolute(0);
+        if (entryOffset > 0)
+        {
+            seekWriteAbsolute(entryOffset);
+            entry.nextEntryFileOffset = (uint32_t)fileSize;
+            f.write((char*)&entry, sizeof(entry));
+            CV_Assert(!f.fail());
+        }
+        else
+        {
+            entryOffsets[entryNum] = (uint32_t)fileSize;
+            seekWriteAbsolute(tableEntriesOffset);
+            f.write((char*)entryOffsets, sizeof(entryOffsets));
+            CV_Assert(!f.fail());
+        }
+        seekWriteAbsolute(fileSize);
+        entry.nextEntryFileOffset = 0;
+        entry.dataSize = (uint32_t)buf.size();
+        entry.keySize = (uint32_t)key.size();
+        f.write((char*)&entry, sizeof(entry));
+        CV_Assert(!f.fail());
+        f.write(key.c_str(), entry.keySize);
+        CV_Assert(!f.fail());
+        f.write(&buf[0], entry.dataSize);
+        CV_Assert(!f.fail());
+        f.flush();
+        CV_Assert(!f.fail());
+        CV_LOG_VERBOSE(NULL, 0, "Write... (" << buf.size() << " bytes)");
+        return true;
+    }
+};
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
+
+
+// true if we have initialized OpenCL subsystem with available platforms
+static bool g_isOpenCVActivated = false;
 
 bool haveOpenCL()
 {
+    CV_TRACE_FUNCTION();
 #ifdef HAVE_OPENCL
     static bool g_isOpenCLInitialized = false;
     static bool g_isOpenCLAvailable = false;
 
     if (!g_isOpenCLInitialized)
     {
+        CV_TRACE_REGION("Init_OpenCL_Runtime");
+        const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
+        if (envPath)
+        {
+            if (cv::String(envPath) == "disabled")
+            {
+                g_isOpenCLAvailable = false;
+                g_isOpenCLInitialized = true;
+            }
+        }
+        CV_LOG_INFO(NULL, "Initialize OpenCL runtime...");
         try
         {
             cl_uint n = 0;
             g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
+            g_isOpenCVActivated = n > 0;
         }
         catch (...)
         {
@@ -1447,27 +909,42 @@ bool haveOpenCL()
 
 bool useOpenCL()
 {
-    CoreTLSData* data = coreTlsData.get();
-    if( data->useOpenCL < 0 )
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useOpenCL < 0)
     {
         try
         {
-            data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
+            data.useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
         }
         catch (...)
         {
-            data->useOpenCL = 0;
+            data.useOpenCL = 0;
         }
     }
-    return data->useOpenCL > 0;
+    return data.useOpenCL > 0;
 }
+
+#ifdef HAVE_OPENCL
+bool isOpenCLActivated()
+{
+    if (!g_isOpenCVActivated)
+        return false; // prevent unnecessary OpenCL activation via useOpenCL()->haveOpenCL() calls
+    return useOpenCL();
+}
+#endif
 
 void setUseOpenCL(bool flag)
 {
-    if( haveOpenCL() )
+    CV_TRACE_FUNCTION();
+
+    CoreTLSData& data = getCoreTlsData();
+    if (!flag)
     {
-        CoreTLSData* data = coreTlsData.get();
-        data->useOpenCL = (flag && Device::getDefault().ptr() != NULL) ? 1 : 0;
+        data.useOpenCL = 0;
+    }
+    else if( haveOpenCL() )
+    {
+        data.useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
     }
 }
 
@@ -1478,8 +955,7 @@ class AmdBlasHelper
 public:
     static AmdBlasHelper & getInstance()
     {
-        static AmdBlasHelper amdBlas;
-        return amdBlas;
+        CV_SINGLETON_LAZY_INIT_REF(AmdBlasHelper, new AmdBlasHelper())
     }
 
     bool isAvailable() const
@@ -1501,35 +977,36 @@ protected:
     {
         if (!g_isAmdBlasInitialized)
         {
-            AutoLock lock(m);
+            AutoLock lock(getInitializationMutex());
 
-            if (!g_isAmdBlasInitialized && haveOpenCL())
+            if (!g_isAmdBlasInitialized)
             {
-                try
+                if (haveOpenCL())
                 {
-                    g_isAmdBlasAvailable = clAmdBlasSetup() == clAmdBlasSuccess;
+                    try
+                    {
+                        g_isAmdBlasAvailable = clAmdBlasSetup() == clAmdBlasSuccess;
+                    }
+                    catch (...)
+                    {
+                        g_isAmdBlasAvailable = false;
+                    }
                 }
-                catch (...)
-                {
+                else
                     g_isAmdBlasAvailable = false;
-                }
-            }
-            else
-                g_isAmdBlasAvailable = false;
 
-            g_isAmdBlasInitialized = true;
+                g_isAmdBlasInitialized = true;
+            }
         }
     }
 
 private:
-    static Mutex m;
     static bool g_isAmdBlasInitialized;
     static bool g_isAmdBlasAvailable;
 };
 
 bool AmdBlasHelper::g_isAmdBlasAvailable = false;
 bool AmdBlasHelper::g_isAmdBlasInitialized = false;
-Mutex AmdBlasHelper::m;
 
 bool haveAmdBlas()
 {
@@ -1552,8 +1029,7 @@ class AmdFftHelper
 public:
     static AmdFftHelper & getInstance()
     {
-        static AmdFftHelper amdFft;
-        return amdFft;
+        CV_SINGLETON_LAZY_INIT_REF(AmdFftHelper, new AmdFftHelper())
     }
 
     bool isAvailable() const
@@ -1575,30 +1051,36 @@ protected:
     {
         if (!g_isAmdFftInitialized)
         {
-            AutoLock lock(m);
+            AutoLock lock(getInitializationMutex());
 
-            if (!g_isAmdFftInitialized && haveOpenCL())
+            if (!g_isAmdFftInitialized)
             {
-                try
+                if (haveOpenCL())
                 {
-                    CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
-                    g_isAmdFftAvailable = true;
-                }
-                catch (const Exception &)
-                {
-                    g_isAmdFftAvailable = false;
-                }
-            }
-            else
-                g_isAmdFftAvailable = false;
+                    try
+                    {
+                        cl_uint major, minor, patch;
+                        CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
 
-            g_isAmdFftInitialized = true;
+                        // it throws exception in case AmdFft binaries are not found
+                        CV_Assert(clAmdFftGetVersion(&major, &minor, &patch) == CLFFT_SUCCESS);
+                        g_isAmdFftAvailable = true;
+                    }
+                    catch (const Exception &)
+                    {
+                        g_isAmdFftAvailable = false;
+                    }
+                }
+                else
+                    g_isAmdFftAvailable = false;
+
+                g_isAmdFftInitialized = true;
+            }
         }
     }
 
 private:
     static clAmdFftSetupData setupData;
-    static Mutex m;
     static bool g_isAmdFftInitialized;
     static bool g_isAmdFftAvailable;
 };
@@ -1606,7 +1088,6 @@ private:
 clAmdFftSetupData AmdFftHelper::setupData;
 bool AmdFftHelper::g_isAmdFftAvailable = false;
 bool AmdFftHelper::g_isAmdFftInitialized = false;
-Mutex AmdFftHelper::m;
 
 bool haveAmdFft()
 {
@@ -1622,15 +1103,19 @@ bool haveAmdFft()
 
 #endif
 
+bool haveSVM()
+{
+#ifdef HAVE_OPENCL_SVM
+    return true;
+#else
+    return false;
+#endif
+}
+
 void finish()
 {
     Queue::getDefault().finish();
 }
-
-#define IMPLEMENT_REFCOUNTABLE() \
-    void addref() { CV_XADD(&refcount, 1); } \
-    void release() { if( CV_XADD(&refcount, -1) == 1 && !cv::__termination) delete this; } \
-    int refcount
 
 /////////////////////////////////////////// Platform /////////////////////////////////////////////
 
@@ -1657,7 +1142,7 @@ struct Platform::Impl
             {
                 char buf[1000];
                 size_t len = 0;
-                CV_OclDbgAssert(clGetPlatformInfo(handle, CL_PLATFORM_VENDOR, sizeof(buf), buf, &len) == CL_SUCCESS);
+                CV_OCL_DBG_CHECK(clGetPlatformInfo(handle, CL_PLATFORM_VENDOR, sizeof(buf), buf, &len));
                 buf[len] = '\0';
                 vendor = String(buf);
             }
@@ -1751,26 +1236,63 @@ struct Device::Impl
 
         name_ = getStrProp(CL_DEVICE_NAME);
         version_ = getStrProp(CL_DEVICE_VERSION);
+        extensions_ = getStrProp(CL_DEVICE_EXTENSIONS);
         doubleFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG);
         hostUnifiedMemory_ = getBoolProp(CL_DEVICE_HOST_UNIFIED_MEMORY);
         maxComputeUnits_ = getProp<cl_uint, int>(CL_DEVICE_MAX_COMPUTE_UNITS);
         maxWorkGroupSize_ = getProp<size_t, size_t>(CL_DEVICE_MAX_WORK_GROUP_SIZE);
         type_ = getProp<cl_device_type, int>(CL_DEVICE_TYPE);
         driverVersion_ = getStrProp(CL_DRIVER_VERSION);
+        addressBits_ = getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS);
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
         parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
+
+        size_t pos = 0;
+        while (pos < extensions_.size())
+        {
+            size_t pos2 = extensions_.find(' ', pos);
+            if (pos2 == String::npos)
+                pos2 = extensions_.size();
+            if (pos2 > pos)
+            {
+                std::string extensionName = extensions_.substr(pos, pos2 - pos);
+                extensions_set_.insert(extensionName);
+            }
+            pos = pos2 + 1;
+        }
+
+        intelSubgroupsSupport_ = isExtensionSupported("cl_intel_subgroups");
 
         vendorName_ = getStrProp(CL_DEVICE_VENDOR);
         if (vendorName_ == "Advanced Micro Devices, Inc." ||
             vendorName_ == "AMD")
             vendorID_ = VENDOR_AMD;
-        else if (vendorName_ == "Intel(R) Corporation")
+        else if (vendorName_ == "Intel(R) Corporation" || vendorName_ == "Intel" || strstr(name_.c_str(), "Iris") != 0)
             vendorID_ = VENDOR_INTEL;
         else if (vendorName_ == "NVIDIA Corporation")
             vendorID_ = VENDOR_NVIDIA;
         else
             vendorID_ = UNKNOWN_VENDOR;
+
+        const size_t CV_OPENCL_DEVICE_MAX_WORK_GROUP_SIZE = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_DEVICE_MAX_WORK_GROUP_SIZE", 0);
+        if (CV_OPENCL_DEVICE_MAX_WORK_GROUP_SIZE > 0)
+        {
+            const size_t new_maxWorkGroupSize = std::min(maxWorkGroupSize_, CV_OPENCL_DEVICE_MAX_WORK_GROUP_SIZE);
+            if (new_maxWorkGroupSize != maxWorkGroupSize_)
+                CV_LOG_WARNING(NULL, "OpenCL: using workgroup size: " << new_maxWorkGroupSize << " (was " << maxWorkGroupSize_ << ")");
+            maxWorkGroupSize_ = new_maxWorkGroupSize;
+        }
+#if 0
+        if (isExtensionSupported("cl_khr_spir"))
+        {
+#ifndef CL_DEVICE_SPIR_VERSIONS
+#define CL_DEVICE_SPIR_VERSIONS                     0x40E0
+#endif
+            cv::String spir_versions = getStrProp(CL_DEVICE_SPIR_VERSIONS);
+            std::cout << spir_versions << std::endl;
+        }
+#endif
     }
 
     template<typename _TpCL, typename _TpOut>
@@ -1794,27 +1316,39 @@ struct Device::Impl
 
     String getStrProp(cl_device_info prop) const
     {
-        char buf[1024];
+        char buf[4096];
         size_t sz=0;
         return clGetDeviceInfo(handle, prop, sizeof(buf)-16, buf, &sz) == CL_SUCCESS &&
             sz < sizeof(buf) ? String(buf) : String();
     }
 
+    bool isExtensionSupported(const std::string& extensionName) const
+    {
+        return extensions_set_.count(extensionName) > 0;
+    }
+
+
     IMPLEMENT_REFCOUNTABLE();
+
     cl_device_id handle;
 
     String name_;
     String version_;
+    std::string extensions_;
     int doubleFPConfig_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
     size_t maxWorkGroupSize_;
     int type_;
+    int addressBits_;
     int deviceVersionMajor_;
     int deviceVersionMinor_;
     String driverVersion_;
     String vendorName_;
     int vendorID_;
+    bool intelSubgroupsSupport_;
+
+    std::set<std::string> extensions_set_;
 };
 
 
@@ -1869,7 +1403,10 @@ String Device::name() const
 { return p ? p->name_ : String(); }
 
 String Device::extensions() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? String(p->extensions_) : String(); }
+
+bool Device::isExtensionSupported(const String& extensionName) const
+{ return p ? p->isExtensionSupported(extensionName) : false; }
 
 String Device::version() const
 { return p ? p->version_ : String(); }
@@ -1884,7 +1421,7 @@ String Device::OpenCL_C_Version() const
 { return p ? p->getStrProp(CL_DEVICE_OPENCL_C_VERSION) : String(); }
 
 String Device::OpenCLVersion() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? p->getStrProp(CL_DEVICE_VERSION) : String(); }
 
 int Device::deviceVersionMajor() const
 { return p ? p->deviceVersionMajor_ : 0; }
@@ -1899,7 +1436,7 @@ int Device::type() const
 { return p ? p->type_ : 0; }
 
 int Device::addressBits() const
-{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS) : 0; }
+{ return p ? p->addressBits_ : 0; }
 
 bool Device::available() const
 { return p ? p->getBoolProp(CL_DEVICE_AVAILABLE) : false; }
@@ -1962,16 +1499,7 @@ bool Device::imageSupport() const
 
 bool Device::imageFromBufferSupport() const
 {
-    bool ret = false;
-    if (p)
-    {
-        size_t pos = p->getStrProp(CL_DEVICE_EXTENSIONS).find("cl_khr_image2d_from_buffer");
-        if (pos != String::npos)
-        {
-            ret = true;
-        }
-    }
-    return ret;
+    return p ? p->isExtensionSupported("cl_khr_image2d_from_buffer") : false;
 }
 
 uint Device::imagePitchAlignment() const
@@ -2021,6 +1549,9 @@ size_t Device::imageMaxArraySize() const
 { CV_REQUIRE_OPENCL_1_2_ERROR; }
 #endif
 
+bool Device::intelSubgroupsSupport() const
+{ return p ? p->intelSubgroupsSupport_ : false; }
+
 int Device::maxClockFrequency() const
 { return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_CLOCK_FREQUENCY) : 0; }
 
@@ -2060,8 +1591,8 @@ void Device::maxWorkItemSizes(size_t* sizes) const
     {
         const int MAX_DIMS = 32;
         size_t retsz = 0;
-        CV_OclDbgAssert(clGetDeviceInfo(p->handle, CL_DEVICE_MAX_WORK_ITEM_SIZES,
-                MAX_DIMS*sizeof(sizes[0]), &sizes[0], &retsz) == CL_SUCCESS);
+        CV_OCL_DBG_CHECK(clGetDeviceInfo(p->handle, CL_DEVICE_MAX_WORK_ITEM_SIZES,
+                MAX_DIMS*sizeof(sizes[0]), &sizes[0], &retsz));
     }
 }
 
@@ -2124,8 +1655,9 @@ size_t Device::profilingTimerResolution() const
 const Device& Device::getDefault()
 {
     const Context& ctx = Context::getDefault();
-    int idx = coreTlsData.get()->device;
-    return ctx.device(idx);
+    int idx = getCoreTlsData().device;
+    const Device& device = ctx.device(idx);
+    return device;
 }
 
 ////////////////////////////////////// Context ///////////////////////////////////////////////////
@@ -2142,7 +1674,7 @@ inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string
     if (required > 0)
     {
         AutoBuffer<char> buf(required + 1);
-        char* ptr = (char*)buf; // cleanup is not needed
+        char* ptr = buf.data(); // cleanup is not needed
         err = f(obj, name, required, ptr, NULL);
         if (err != CL_SUCCESS)
             return err;
@@ -2193,19 +1725,27 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     return true;
 }
 
-#ifdef HAVE_WINRT
+#if defined WINRT || defined _WIN32_WCE
 static cl_device_id selectOpenCLDevice()
 {
     return NULL;
 }
 #else
+// std::tolower is int->int
+static char char_tolower(char ch)
+{
+    return (char)std::tolower((int)ch);
+}
 static cl_device_id selectOpenCLDevice()
 {
     std::string platform, deviceName;
     std::vector<std::string> deviceTypes;
 
     const char* configuration = getenv("OPENCV_OPENCL_DEVICE");
-    if (configuration && !parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName))
+    if (configuration &&
+            (strcmp(configuration, "disabled") == 0 ||
+             !parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName)
+            ))
         return NULL;
 
     bool isID = false;
@@ -2237,12 +1777,12 @@ static cl_device_id selectOpenCLDevice()
     std::vector<cl_platform_id> platforms;
     {
         cl_uint numPlatforms = 0;
-        CV_OclDbgAssert(clGetPlatformIDs(0, NULL, &numPlatforms) == CL_SUCCESS);
+        CV_OCL_DBG_CHECK(clGetPlatformIDs(0, NULL, &numPlatforms));
 
         if (numPlatforms == 0)
             return NULL;
         platforms.resize((size_t)numPlatforms);
-        CV_OclDbgAssert(clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms) == CL_SUCCESS);
+        CV_OCL_DBG_CHECK(clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms));
         platforms.resize(numPlatforms);
     }
 
@@ -2252,7 +1792,7 @@ static cl_device_id selectOpenCLDevice()
         for (size_t i = 0; i < platforms.size(); i++)
         {
             std::string name;
-            CV_OclDbgAssert(getStringInfo(clGetPlatformInfo, platforms[i], CL_PLATFORM_NAME, name) == CL_SUCCESS);
+            CV_OCL_DBG_CHECK(getStringInfo(clGetPlatformInfo, platforms[i], CL_PLATFORM_NAME, name));
             if (name.find(platform) != std::string::npos)
             {
                 selectedPlatform = (int)i;
@@ -2280,7 +1820,7 @@ static cl_device_id selectOpenCLDevice()
     {
         int deviceType = 0;
         std::string tempStrDeviceType = deviceTypes[t];
-        std::transform( tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), tolower );
+        std::transform(tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), char_tolower);
 
         if (tempStrDeviceType == "gpu" || tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
             deviceType = Device::TYPE_GPU;
@@ -2303,13 +1843,19 @@ static cl_device_id selectOpenCLDevice()
         {
             cl_uint count = 0;
             cl_int status = clGetDeviceIDs(platforms[i], deviceType, 0, NULL, &count);
-            CV_OclDbgAssert(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND);
+            if (!(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND))
+            {
+                CV_OCL_DBG_CHECK_RESULT(status, "clGetDeviceIDs get count");
+            }
             if (count == 0)
                 continue;
             size_t base = devices.size();
             devices.resize(base + count);
             status = clGetDeviceIDs(platforms[i], deviceType, count, &devices[base], &count);
-            CV_OclDbgAssert(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND);
+            if (!(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND))
+            {
+                CV_OCL_DBG_CHECK_RESULT(status, "clGetDeviceIDs get IDs");
+            }
         }
 
         for (size_t i = (isID ? deviceID : 0);
@@ -2317,12 +1863,12 @@ static cl_device_id selectOpenCLDevice()
              i++)
         {
             std::string name;
-            CV_OclDbgAssert(getStringInfo(clGetDeviceInfo, devices[i], CL_DEVICE_NAME, name) == CL_SUCCESS);
+            CV_OCL_DBG_CHECK(getStringInfo(clGetDeviceInfo, devices[i], CL_DEVICE_NAME, name));
             cl_bool useGPU = true;
             if(tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
             {
                 cl_bool isIGPU = CL_FALSE;
-                clGetDeviceInfo(devices[i], CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(isIGPU), &isIGPU, NULL);
+                CV_OCL_DBG_CHECK(clGetDeviceInfo(devices[i], CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(isIGPU), &isIGPU, NULL));
                 useGPU = tempStrDeviceType == "dgpu" ? !isIGPU : isIGPU;
             }
             if ( (isID || name.find(deviceName) != std::string::npos) && useGPU)
@@ -2334,24 +1880,114 @@ static cl_device_id selectOpenCLDevice()
     }
 
 not_found:
-    std::cerr << "ERROR: Required OpenCL device not found, check configuration: " << (configuration == NULL ? "" : configuration) << std::endl
+    if (!configuration)
+        return NULL; // suppress messages on stderr
+
+    std::cerr << "ERROR: Requested OpenCL device not found, check configuration: " << configuration << std::endl
             << "    Platform: " << (platform.length() == 0 ? "any" : platform) << std::endl
             << "    Device types: ";
     for (size_t t = 0; t < deviceTypes.size(); t++)
         std::cerr << deviceTypes[t] << " ";
 
     std::cerr << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName) << std::endl;
-    CV_Error(CL_INVALID_DEVICE, "Requested OpenCL device is not found");
     return NULL;
+}
+#endif
+
+#ifdef HAVE_OPENCL_SVM
+namespace svm {
+
+enum AllocatorFlags { // don't use first 16 bits
+        OPENCL_SVM_COARSE_GRAIN_BUFFER = 1 << 16, // clSVMAlloc + SVM map/unmap
+        OPENCL_SVM_FINE_GRAIN_BUFFER = 2 << 16, // clSVMAlloc
+        OPENCL_SVM_FINE_GRAIN_SYSTEM = 3 << 16, // direct access
+        OPENCL_SVM_BUFFER_MASK = 3 << 16,
+        OPENCL_SVM_BUFFER_MAP = 4 << 16
+};
+
+static bool checkForceSVMUmatUsage()
+{
+    static bool initialized = false;
+    static bool force = false;
+    if (!initialized)
+    {
+        force = utils::getConfigurationParameterBool("OPENCV_OPENCL_SVM_FORCE_UMAT_USAGE", false);
+        initialized = true;
+    }
+    return force;
+}
+static bool checkDisableSVMUMatUsage()
+{
+    static bool initialized = false;
+    static bool force = false;
+    if (!initialized)
+    {
+        force = utils::getConfigurationParameterBool("OPENCV_OPENCL_SVM_DISABLE_UMAT_USAGE", false);
+        initialized = true;
+    }
+    return force;
+}
+static bool checkDisableSVM()
+{
+    static bool initialized = false;
+    static bool force = false;
+    if (!initialized)
+    {
+        force = utils::getConfigurationParameterBool("OPENCV_OPENCL_SVM_DISABLE", false);
+        initialized = true;
+    }
+    return force;
+}
+// see SVMCapabilities
+static unsigned int getSVMCapabilitiesMask()
+{
+    static bool initialized = false;
+    static unsigned int mask = 0;
+    if (!initialized)
+    {
+        const char* envValue = getenv("OPENCV_OPENCL_SVM_CAPABILITIES_MASK");
+        if (envValue == NULL)
+        {
+            return ~0U; // all bits 1
+        }
+        mask = atoi(envValue);
+        initialized = true;
+    }
+    return mask;
+}
+} // namespace
+#endif
+
+#ifdef HAVE_OPENCL
+static size_t getProgramCountLimit()
+{
+    static bool initialized = false;
+    static size_t count = 0;
+    if (!initialized)
+    {
+        count = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_PROGRAM_CACHE", 0);
+        initialized = true;
+    }
+    return count;
 }
 #endif
 
 struct Context::Impl
 {
-    Impl()
+    static Context::Impl* get(Context& context) { return context.p; }
+
+    void __init()
     {
         refcount = 1;
         handle = 0;
+#ifdef HAVE_OPENCL_SVM
+        svmInitialized = false;
+#endif
+    }
+
+    Impl()
+    {
+        __init();
     }
 
     void setDefault()
@@ -2364,7 +2000,7 @@ struct Context::Impl
             return;
 
         cl_platform_id pl = NULL;
-        CV_OclDbgAssert(clGetDeviceInfo(d, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &pl, NULL) == CL_SUCCESS);
+        CV_OCL_DBG_CHECK(clGetDeviceInfo(d, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &pl, NULL));
 
         cl_context_properties prop[] =
         {
@@ -2377,6 +2013,7 @@ struct Context::Impl
         cl_int status;
 
         handle = clCreateContext(prop, nd, &d, 0, 0, &status);
+        CV_OCL_DBG_CHECK_RESULT(status, "clCreateContext");
 
         bool ok = handle != 0 && status == CL_SUCCESS;
         if( ok )
@@ -2390,8 +2027,7 @@ struct Context::Impl
 
     Impl(int dtype0)
     {
-        refcount = 1;
-        handle = 0;
+        __init();
 
         cl_int retval = 0;
         cl_platform_id pl = (cl_platform_id)Platform::getDefault().ptr();
@@ -2401,16 +2037,25 @@ struct Context::Impl
             0
         };
 
-        cl_uint i, nd0 = 0, nd = 0;
+        cl_uint nd0 = 0;
         int dtype = dtype0 & 15;
-        CV_OclDbgAssert(clGetDeviceIDs( pl, dtype, 0, 0, &nd0 ) == CL_SUCCESS);
+        cl_int status = clGetDeviceIDs(pl, dtype, 0, NULL, &nd0);
+        if (status != CL_DEVICE_NOT_FOUND) // Not an error if platform has no devices
+        {
+            CV_OCL_DBG_CHECK_RESULT(status,
+                cv::format("clGetDeviceIDs(platform=%p, device_type=%d, num_entries=0, devices=NULL, numDevices=%p)", pl, dtype, &nd0).c_str());
+        }
+
+        if (nd0 == 0)
+            return;
 
         AutoBuffer<void*> dlistbuf(nd0*2+1);
-        cl_device_id* dlist = (cl_device_id*)(void**)dlistbuf;
+        cl_device_id* dlist = (cl_device_id*)dlistbuf.data();
         cl_device_id* dlist_new = dlist + nd0;
-        CV_OclDbgAssert(clGetDeviceIDs(	pl, dtype, nd0, dlist, &nd0 ) == CL_SUCCESS);
-        String name0;
+        CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, nd0, dlist, &nd0));
 
+        cl_uint i, nd = 0;
+        String name0;
         for(i = 0; i < nd0; i++)
         {
             Device d(dlist[i]);
@@ -2434,6 +2079,7 @@ struct Context::Impl
         nd = 1;
 
         handle = clCreateContext(prop, nd, dlist_new, 0, 0, &retval);
+        CV_OCL_DBG_CHECK_RESULT(retval, "clCreateContext");
         bool ok = handle != 0 && retval == CL_SUCCESS;
         if( ok )
         {
@@ -2447,25 +2093,83 @@ struct Context::Impl
     {
         if(handle)
         {
-            clReleaseContext(handle);
+            CV_OCL_DBG_CHECK(clReleaseContext(handle));
             handle = NULL;
         }
         devices.clear();
     }
 
-    Program getProg(const ProgramSource& src,
-                    const String& buildflags, String& errmsg)
+    Program getProg(const ProgramSource& src, const String& buildflags, String& errmsg);
+
+    void unloadProg(Program& prog)
     {
-        String prefix = Program::getPrefix(buildflags);
-        HashKey k(src.hash(), crc64((const uchar*)prefix.c_str(), prefix.size()));
-        phash_t::iterator it = phash.find(k);
-        if( it != phash.end() )
-            return it->second;
-        //String filename = format("%08x%08x_%08x%08x.clb2",
-        Program prog(src, buildflags, errmsg);
-        if(prog.ptr())
-            phash.insert(std::pair<HashKey,Program>(k, prog));
-        return prog;
+        cv::AutoLock lock(program_cache_mutex);
+        for (CacheList::iterator i = cacheList.begin(); i != cacheList.end(); ++i)
+        {
+              phash_t::iterator it = phash.find(*i);
+              if (it != phash.end())
+              {
+                  if (it->second.ptr() == prog.ptr())
+                  {
+                      phash.erase(*i);
+                      cacheList.erase(i);
+                      return;
+                  }
+              }
+        }
+    }
+
+    std::string& getPrefixString()
+    {
+        if (prefix.empty())
+        {
+            cv::AutoLock lock(program_cache_mutex);
+            if (prefix.empty())
+            {
+                CV_Assert(!devices.empty());
+                const Device& d = devices[0];
+                int bits = d.addressBits();
+                if (bits > 0 && bits != 64)
+                    prefix = cv::format("%d-bit--", bits);
+                prefix += d.vendorName() + "--" + d.name() + "--" + d.driverVersion();
+                // sanitize chars
+                for (size_t i = 0; i < prefix.size(); i++)
+                {
+                    char c = prefix[i];
+                    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'))
+                    {
+                        prefix[i] = '_';
+                    }
+                }
+            }
+        }
+        return prefix;
+    }
+
+    std::string& getPrefixBase()
+    {
+        if (prefix_base.empty())
+        {
+            cv::AutoLock lock(program_cache_mutex);
+            if (prefix_base.empty())
+            {
+                const Device& d = devices[0];
+                int bits = d.addressBits();
+                if (bits > 0 && bits != 64)
+                    prefix_base = cv::format("%d-bit--", bits);
+                prefix_base += d.vendorName() + "--" + d.name() + "--";
+                // sanitize chars
+                for (size_t i = 0; i < prefix_base.size(); i++)
+                {
+                    char c = prefix_base[i];
+                    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'))
+                    {
+                        prefix_base[i] = '_';
+                    }
+                }
+            }
+        }
+        return prefix_base;
     }
 
     IMPLEMENT_REFCOUNTABLE();
@@ -2473,18 +2177,153 @@ struct Context::Impl
     cl_context handle;
     std::vector<Device> devices;
 
-    typedef ProgramSource::hash_t hash_t;
+    std::string prefix;
+    std::string prefix_base;
 
-    struct HashKey
-    {
-        HashKey(hash_t _a, hash_t _b) : a(_a), b(_b) {}
-        bool operator < (const HashKey& k) const { return a < k.a || (a == k.a && b < k.b); }
-        bool operator == (const HashKey& k) const { return a == k.a && b == k.b; }
-        bool operator != (const HashKey& k) const { return a != k.a || b != k.b; }
-        hash_t a, b;
-    };
-    typedef std::map<HashKey, Program> phash_t;
+    cv::Mutex program_cache_mutex;
+    typedef std::map<std::string, Program> phash_t;
     phash_t phash;
+    typedef std::list<cv::String> CacheList;
+    CacheList cacheList;
+
+#ifdef HAVE_OPENCL_SVM
+    bool svmInitialized;
+    bool svmAvailable;
+    bool svmEnabled;
+    svm::SVMCapabilities svmCapabilities;
+    svm::SVMFunctions svmFunctions;
+
+    void svmInit()
+    {
+        CV_Assert(handle != NULL);
+        const Device& device = devices[0];
+        cl_device_svm_capabilities deviceCaps = 0;
+        CV_Assert(((void)0, CL_DEVICE_SVM_CAPABILITIES == CL_DEVICE_SVM_CAPABILITIES_AMD)); // Check assumption
+        cl_int status = clGetDeviceInfo((cl_device_id)device.ptr(), CL_DEVICE_SVM_CAPABILITIES, sizeof(deviceCaps), &deviceCaps, NULL);
+        if (status != CL_SUCCESS)
+        {
+            CV_OPENCL_SVM_TRACE_ERROR_P("CL_DEVICE_SVM_CAPABILITIES via clGetDeviceInfo failed: %d\n", status);
+            goto noSVM;
+        }
+        CV_OPENCL_SVM_TRACE_P("CL_DEVICE_SVM_CAPABILITIES returned: 0x%x\n", (int)deviceCaps);
+        CV_Assert(((void)0, CL_DEVICE_SVM_COARSE_GRAIN_BUFFER == CL_DEVICE_SVM_COARSE_GRAIN_BUFFER_AMD)); // Check assumption
+        svmCapabilities.value_ =
+                ((deviceCaps & CL_DEVICE_SVM_COARSE_GRAIN_BUFFER) ? svm::SVMCapabilities::SVM_COARSE_GRAIN_BUFFER : 0) |
+                ((deviceCaps & CL_DEVICE_SVM_FINE_GRAIN_BUFFER) ? svm::SVMCapabilities::SVM_FINE_GRAIN_BUFFER : 0) |
+                ((deviceCaps & CL_DEVICE_SVM_FINE_GRAIN_SYSTEM) ? svm::SVMCapabilities::SVM_FINE_GRAIN_SYSTEM : 0) |
+                ((deviceCaps & CL_DEVICE_SVM_ATOMICS) ? svm::SVMCapabilities::SVM_ATOMICS : 0);
+        svmCapabilities.value_ &= svm::getSVMCapabilitiesMask();
+        if (svmCapabilities.value_ == 0)
+        {
+            CV_OPENCL_SVM_TRACE_ERROR_P("svmCapabilities is empty\n");
+            goto noSVM;
+        }
+        try
+        {
+            // Try OpenCL 2.0
+            CV_OPENCL_SVM_TRACE_P("Try SVM from OpenCL 2.0 ...\n");
+            void* ptr = clSVMAlloc(handle, CL_MEM_READ_WRITE, 100, 0);
+            if (!ptr)
+            {
+                CV_OPENCL_SVM_TRACE_ERROR_P("clSVMAlloc returned NULL...\n");
+                CV_Error(Error::StsBadArg, "clSVMAlloc returned NULL");
+            }
+            try
+            {
+                bool error = false;
+                cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+                if (CL_SUCCESS != clEnqueueSVMMap(q, CL_TRUE, CL_MAP_WRITE, ptr, 100, 0, NULL, NULL))
+                {
+                    CV_OPENCL_SVM_TRACE_ERROR_P("clEnqueueSVMMap failed...\n");
+                    CV_Error(Error::StsBadArg, "clEnqueueSVMMap FAILED");
+                }
+                clFinish(q);
+                try
+                {
+                    ((int*)ptr)[0] = 100;
+                }
+                catch (...)
+                {
+                    CV_OPENCL_SVM_TRACE_ERROR_P("SVM buffer access test FAILED\n");
+                    error = true;
+                }
+                if (CL_SUCCESS != clEnqueueSVMUnmap(q, ptr, 0, NULL, NULL))
+                {
+                    CV_OPENCL_SVM_TRACE_ERROR_P("clEnqueueSVMUnmap failed...\n");
+                    CV_Error(Error::StsBadArg, "clEnqueueSVMUnmap FAILED");
+                }
+                clFinish(q);
+                if (error)
+                {
+                    CV_Error(Error::StsBadArg, "OpenCL SVM buffer access test was FAILED");
+                }
+            }
+            catch (...)
+            {
+                CV_OPENCL_SVM_TRACE_ERROR_P("OpenCL SVM buffer access test was FAILED\n");
+                clSVMFree(handle, ptr);
+                throw;
+            }
+            clSVMFree(handle, ptr);
+            svmFunctions.fn_clSVMAlloc = clSVMAlloc;
+            svmFunctions.fn_clSVMFree = clSVMFree;
+            svmFunctions.fn_clSetKernelArgSVMPointer = clSetKernelArgSVMPointer;
+            //svmFunctions.fn_clSetKernelExecInfo = clSetKernelExecInfo;
+            //svmFunctions.fn_clEnqueueSVMFree = clEnqueueSVMFree;
+            svmFunctions.fn_clEnqueueSVMMemcpy = clEnqueueSVMMemcpy;
+            svmFunctions.fn_clEnqueueSVMMemFill = clEnqueueSVMMemFill;
+            svmFunctions.fn_clEnqueueSVMMap = clEnqueueSVMMap;
+            svmFunctions.fn_clEnqueueSVMUnmap = clEnqueueSVMUnmap;
+        }
+        catch (...)
+        {
+            CV_OPENCL_SVM_TRACE_P("clSVMAlloc failed, trying HSA extension...\n");
+            try
+            {
+                // Try HSA extension
+                String extensions = device.extensions();
+                if (extensions.find("cl_amd_svm") == String::npos)
+                {
+                    CV_OPENCL_SVM_TRACE_P("Device extension doesn't have cl_amd_svm: %s\n", extensions.c_str());
+                    goto noSVM;
+                }
+                cl_platform_id p = NULL;
+                CV_OCL_CHECK(status = clGetDeviceInfo((cl_device_id)device.ptr(), CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &p, NULL));
+                svmFunctions.fn_clSVMAlloc = (clSVMAllocAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clSVMAllocAMD");
+                svmFunctions.fn_clSVMFree = (clSVMFreeAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clSVMFreeAMD");
+                svmFunctions.fn_clSetKernelArgSVMPointer = (clSetKernelArgSVMPointerAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clSetKernelArgSVMPointerAMD");
+                //svmFunctions.fn_clSetKernelExecInfo = (clSetKernelExecInfoAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clSetKernelExecInfoAMD");
+                //svmFunctions.fn_clEnqueueSVMFree = (clEnqueueSVMFreeAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clEnqueueSVMFreeAMD");
+                svmFunctions.fn_clEnqueueSVMMemcpy = (clEnqueueSVMMemcpyAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clEnqueueSVMMemcpyAMD");
+                svmFunctions.fn_clEnqueueSVMMemFill = (clEnqueueSVMMemFillAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clEnqueueSVMMemFillAMD");
+                svmFunctions.fn_clEnqueueSVMMap = (clEnqueueSVMMapAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clEnqueueSVMMapAMD");
+                svmFunctions.fn_clEnqueueSVMUnmap = (clEnqueueSVMUnmapAMD_fn)clGetExtensionFunctionAddressForPlatform(p, "clEnqueueSVMUnmapAMD");
+                CV_Assert(svmFunctions.isValid());
+            }
+            catch (...)
+            {
+                CV_OPENCL_SVM_TRACE_P("Something is totally wrong\n");
+                goto noSVM;
+            }
+        }
+
+        svmAvailable = true;
+        svmEnabled = !svm::checkDisableSVM();
+        svmInitialized = true;
+        CV_OPENCL_SVM_TRACE_P("OpenCV OpenCL SVM support initialized\n");
+        return;
+    noSVM:
+        CV_OPENCL_SVM_TRACE_P("OpenCL SVM is not detected\n");
+        svmAvailable = false;
+        svmEnabled = false;
+        svmCapabilities.value_ = 0;
+        svmInitialized = true;
+        svmFunctions.fn_clSVMAlloc = NULL;
+        return;
+    }
+#endif
+
+    friend class Program;
 };
 
 
@@ -2599,6 +2438,148 @@ Program Context::getProg(const ProgramSource& prog,
     return p ? p->getProg(prog, buildopts, errmsg) : Program();
 }
 
+void Context::unloadProg(Program& prog)
+{
+    if (p)
+        p->unloadProg(prog);
+}
+
+#ifdef HAVE_OPENCL_SVM
+bool Context::useSVM() const
+{
+    Context::Impl* i = p;
+    CV_Assert(i);
+    if (!i->svmInitialized)
+        i->svmInit();
+    return i->svmEnabled;
+}
+void Context::setUseSVM(bool enabled)
+{
+    Context::Impl* i = p;
+    CV_Assert(i);
+    if (!i->svmInitialized)
+        i->svmInit();
+    if (enabled && !i->svmAvailable)
+    {
+        CV_Error(Error::StsError, "OpenCL Shared Virtual Memory (SVM) is not supported by OpenCL device");
+    }
+    i->svmEnabled = enabled;
+}
+#else
+bool Context::useSVM() const { return false; }
+void Context::setUseSVM(bool enabled) { CV_Assert(!enabled); }
+#endif
+
+#ifdef HAVE_OPENCL_SVM
+namespace svm {
+
+const SVMCapabilities getSVMCapabilitites(const ocl::Context& context)
+{
+    Context::Impl* i = context.p;
+    CV_Assert(i);
+    if (!i->svmInitialized)
+        i->svmInit();
+    return i->svmCapabilities;
+}
+
+CV_EXPORTS const SVMFunctions* getSVMFunctions(const ocl::Context& context)
+{
+    Context::Impl* i = context.p;
+    CV_Assert(i);
+    CV_Assert(i->svmInitialized); // getSVMCapabilitites() must be called first
+    CV_Assert(i->svmFunctions.fn_clSVMAlloc != NULL);
+    return &i->svmFunctions;
+}
+
+CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
+{
+    if (checkForceSVMUmatUsage())
+        return true;
+    if (checkDisableSVMUMatUsage())
+        return false;
+    if ((usageFlags & USAGE_ALLOCATE_SHARED_MEMORY) != 0)
+        return true;
+    return false; // don't use SVM by default
+}
+
+} // namespace cv::ocl::svm
+#endif // HAVE_OPENCL_SVM
+
+
+static void get_platform_name(cl_platform_id id, String& name)
+{
+    // get platform name string length
+    size_t sz = 0;
+    CV_OCL_CHECK(clGetPlatformInfo(id, CL_PLATFORM_NAME, 0, 0, &sz));
+
+    // get platform name string
+    AutoBuffer<char> buf(sz + 1);
+    CV_OCL_CHECK(clGetPlatformInfo(id, CL_PLATFORM_NAME, sz, buf.data(), 0));
+
+    // just in case, ensure trailing zero for ASCIIZ string
+    buf[sz] = 0;
+
+    name = buf.data();
+}
+
+/*
+// Attaches OpenCL context to OpenCV
+*/
+void attachContext(const String& platformName, void* platformID, void* context, void* deviceID)
+{
+    cl_uint cnt = 0;
+
+    CV_OCL_CHECK(clGetPlatformIDs(0, 0, &cnt));
+
+    if (cnt == 0)
+        CV_Error(cv::Error::OpenCLApiCallError, "no OpenCL platform available!");
+
+    std::vector<cl_platform_id> platforms(cnt);
+
+    CV_OCL_CHECK(clGetPlatformIDs(cnt, &platforms[0], 0));
+
+    bool platformAvailable = false;
+
+    // check if external platformName contained in list of available platforms in OpenCV
+    for (unsigned int i = 0; i < cnt; i++)
+    {
+        String availablePlatformName;
+        get_platform_name(platforms[i], availablePlatformName);
+        // external platform is found in the list of available platforms
+        if (platformName == availablePlatformName)
+        {
+            platformAvailable = true;
+            break;
+        }
+    }
+
+    if (!platformAvailable)
+        CV_Error(cv::Error::OpenCLApiCallError, "No matched platforms available!");
+
+    // check if platformID corresponds to platformName
+    String actualPlatformName;
+    get_platform_name((cl_platform_id)platformID, actualPlatformName);
+    if (platformName != actualPlatformName)
+        CV_Error(cv::Error::OpenCLApiCallError, "No matched platforms available!");
+
+    // do not initialize OpenCL context
+    Context ctx = Context::getDefault(false);
+
+    // attach supplied context to OpenCV
+    initializeContextFromHandle(ctx, platformID, context, deviceID);
+
+    CV_OCL_CHECK(clRetainContext((cl_context)context));
+
+    // clear command queue, if any
+    CoreTLSData& data = getCoreTlsData();
+    data.oclQueue.finish();
+    Queue q;
+    data.oclQueue = q;
+
+    return;
+} // attachContext()
+
+
 void initializeContextFromHandle(Context& ctx, void* platform, void* _context, void* _device)
 {
     cl_context context = (cl_context)_context;
@@ -2608,7 +2589,7 @@ void initializeContextFromHandle(Context& ctx, void* platform, void* _context, v
     Context::Impl * impl = ctx.p;
     if (impl->handle)
     {
-        CV_OclDbgAssert(clReleaseContext(impl->handle) == CL_SUCCESS);
+        CV_OCL_DBG_CHECK(clReleaseContext(impl->handle));
     }
     impl->devices.clear();
 
@@ -2625,9 +2606,34 @@ void initializeContextFromHandle(Context& ctx, void* platform, void* _context, v
 
 struct Queue::Impl
 {
-    Impl(const Context& c, const Device& d)
+    inline void __init()
     {
         refcount = 1;
+        handle = 0;
+        isProfilingQueue_ = false;
+    }
+
+    Impl(cl_command_queue q)
+    {
+        __init();
+        handle = q;
+
+        cl_command_queue_properties props = 0;
+        CV_OCL_CHECK(clGetCommandQueueInfo(handle, CL_QUEUE_PROPERTIES, sizeof(cl_command_queue_properties), &props, NULL));
+        isProfilingQueue_ = !!(props & CL_QUEUE_PROFILING_ENABLE);
+    }
+
+    Impl(cl_command_queue q, bool isProfilingQueue)
+    {
+        __init();
+        handle = q;
+        isProfilingQueue_ = isProfilingQueue;
+    }
+
+    Impl(const Context& c, const Device& d, bool withProfiling = false)
+    {
+        __init();
+
         const Context* pc = &c;
         cl_context ch = (cl_context)pc->ptr();
         if( !ch )
@@ -2639,8 +2645,9 @@ struct Queue::Impl
         if( !dh )
             dh = (cl_device_id)pc->device(0).ptr();
         cl_int retval = 0;
-        handle = clCreateCommandQueue(ch, dh, 0, &retval);
-        CV_OclDbgAssert(retval == CL_SUCCESS);
+        cl_command_queue_properties props = withProfiling ? CL_QUEUE_PROFILING_ENABLE : 0;
+        CV_OCL_DBG_CHECK_(handle = clCreateCommandQueue(ch, dh, props, &retval), retval);
+        isProfilingQueue_ = withProfiling;
     }
 
     ~Impl()
@@ -2651,16 +2658,44 @@ struct Queue::Impl
         {
             if(handle)
             {
-                clFinish(handle);
-                clReleaseCommandQueue(handle);
+                CV_OCL_DBG_CHECK(clFinish(handle));
+                CV_OCL_DBG_CHECK(clReleaseCommandQueue(handle));
                 handle = NULL;
             }
         }
     }
 
+    const cv::ocl::Queue& getProfilingQueue(const cv::ocl::Queue& self)
+    {
+        if (isProfilingQueue_)
+            return self;
+
+        if (profiling_queue_.ptr())
+            return profiling_queue_;
+
+        cl_context ctx = 0;
+        CV_OCL_CHECK(clGetCommandQueueInfo(handle, CL_QUEUE_CONTEXT, sizeof(cl_context), &ctx, NULL));
+
+        cl_device_id device = 0;
+        CV_OCL_CHECK(clGetCommandQueueInfo(handle, CL_QUEUE_DEVICE, sizeof(cl_device_id), &device, NULL));
+
+        cl_int result = CL_SUCCESS;
+        cl_command_queue_properties props = CL_QUEUE_PROFILING_ENABLE;
+        cl_command_queue q = clCreateCommandQueue(ctx, device, props, &result);
+        CV_OCL_DBG_CHECK_RESULT(result, "clCreateCommandQueue(with CL_QUEUE_PROFILING_ENABLE)");
+
+        Queue queue;
+        queue.p = new Impl(q, true);
+        profiling_queue_ = queue;
+
+        return profiling_queue_;
+    }
+
     IMPLEMENT_REFCOUNTABLE();
 
     cl_command_queue handle;
+    bool isProfilingQueue_;
+    cv::ocl::Queue profiling_queue_;
 };
 
 Queue::Queue()
@@ -2710,8 +2745,14 @@ void Queue::finish()
 {
     if(p && p->handle)
     {
-        CV_OclDbgAssert(clFinish(p->handle) == CL_SUCCESS);
+        CV_OCL_DBG_CHECK(clFinish(p->handle));
     }
+}
+
+const Queue& Queue::getProfilingQueue() const
+{
+    CV_Assert(p);
+    return p->getProfilingQueue(*this);
 }
 
 void* Queue::ptr() const
@@ -2721,7 +2762,7 @@ void* Queue::ptr() const
 
 Queue& Queue::getDefault()
 {
-    Queue& q = coreTlsData.get()->oclQueue;
+    Queue& q = getCoreTlsData().oclQueue;
     if( !q.p && haveOpenCL() )
         q.create(Context::getDefault());
     return q;
@@ -2745,12 +2786,13 @@ KernelArg::KernelArg()
 KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, int _iwscale, const void* _obj, size_t _sz)
     : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale), iwscale(_iwscale)
 {
+    CV_Assert(_flags == LOCAL || _flags == CONSTANT || _m != NULL);
 }
 
 KernelArg KernelArg::Constant(const Mat& m)
 {
     CV_Assert(m.isContinuous());
-    return KernelArg(CONSTANT, 0, 0, 0, m.data, m.total()*m.elemSize());
+    return KernelArg(CONSTANT, 0, 0, 0, m.ptr(), m.total()*m.elemSize());
 }
 
 /////////////////////////////////////////// Kernel /////////////////////////////////////////////
@@ -2758,16 +2800,20 @@ KernelArg KernelArg::Constant(const Mat& m)
 struct Kernel::Impl
 {
     Impl(const char* kname, const Program& prog) :
-        refcount(1), e(0), nu(0)
+        refcount(1), handle(NULL), isInProgress(false), nu(0)
     {
         cl_program ph = (cl_program)prog.ptr();
         cl_int retval = 0;
-        handle = ph != 0 ?
-            clCreateKernel(ph, kname, &retval) : 0;
-        CV_OclDbgAssert(retval == CL_SUCCESS);
+        name = kname;
+        if (ph)
+        {
+            handle = clCreateKernel(ph, kname, &retval);
+            CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateKernel('%s')", kname).c_str());
+        }
         for( int i = 0; i < MAX_ARRS; i++ )
             u[i] = 0;
         haveTempDstUMats = false;
+        haveTempSrcUMats = false;
     }
 
     void cleanupUMats()
@@ -2776,11 +2822,15 @@ struct Kernel::Impl
             if( u[i] )
             {
                 if( CV_XADD(&u[i]->urefcount, -1) == 1 )
+                {
+                    u[i]->flags |= UMatData::ASYNC_CLEANUP;
                     u[i]->currAllocator->deallocate(u[i]);
+                }
                 u[i] = 0;
             }
         nu = 0;
         haveTempDstUMats = false;
+        haveTempSrcUMats = false;
     }
 
     void addUMat(const UMat& m, bool dst)
@@ -2791,6 +2841,8 @@ struct Kernel::Impl
         nu++;
         if(dst && m.u->tempUMat())
             haveTempDstUMats = true;
+        if(m.u->originalUMatData == NULL && m.u->tempUMat())
+            haveTempSrcUMats = true;  // UMat is created on RAW memory (without proper lifetime management, even from Mat)
     }
 
     void addImage(const Image2D& image)
@@ -2798,38 +2850,61 @@ struct Kernel::Impl
         images.push_back(image);
     }
 
-    void finit()
+    void finit(cl_event e)
     {
+        CV_UNUSED(e);
         cleanupUMats();
         images.clear();
-        if(e) { clReleaseEvent(e); e = 0; }
+        isInProgress = false;
         release();
     }
+
+    bool run(int dims, size_t _globalsize[], size_t _localsize[],
+            bool sync, int64* timeNS, const Queue& q);
 
     ~Impl()
     {
         if(handle)
-            clReleaseKernel(handle);
+        {
+            CV_OCL_DBG_CHECK(clReleaseKernel(handle));
+        }
     }
 
     IMPLEMENT_REFCOUNTABLE();
 
+    cv::String name;
     cl_kernel handle;
-    cl_event e;
     enum { MAX_ARRS = 16 };
     UMatData* u[MAX_ARRS];
+    bool isInProgress;
     int nu;
     std::list<Image2D> images;
     bool haveTempDstUMats;
+    bool haveTempSrcUMats;
 };
 
-}}
+}} // namespace cv::ocl
 
-extern "C"
+extern "C" {
+
+static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
 {
-static void CL_CALLBACK oclCleanupCallback(cl_event, cl_int, void *p)
-{
-    ((cv::ocl::Kernel::Impl*)p)->finit();
+    try
+    {
+        ((cv::ocl::Kernel::Impl*)p)->finit(e);
+    }
+    catch (const cv::Exception& exc)
+    {
+        CV_LOG_ERROR(NULL, "OCL: Unexpected OpenCV exception in OpenCL callback: " << exc.what());
+    }
+    catch (const std::exception& exc)
+    {
+        CV_LOG_ERROR(NULL, "OCL: Unexpected C++ exception in OpenCL callback: " << exc.what());
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "OCL: Unexpected unknown C++ exception in OpenCL callback");
+    }
 }
 
 }
@@ -2888,6 +2963,9 @@ bool Kernel::create(const char* kname, const Program& prog)
         p->release();
         p = 0;
     }
+#ifdef CV_OPENCL_RUN_ASSERT // check kernel compilation fails
+    CV_Assert(p);
+#endif
     return p != 0;
 }
 
@@ -2901,7 +2979,7 @@ bool Kernel::create(const char* kname, const ProgramSource& src,
     }
     String tempmsg;
     if( !errmsg ) errmsg = &tempmsg;
-    const Program& prog = Context::getDefault().getProg(src, buildopts, *errmsg);
+    const Program prog = Context::getDefault().getProg(src, buildopts, *errmsg);
     return create(kname, prog);
 }
 
@@ -2925,7 +3003,7 @@ int Kernel::set(int i, const void* value, size_t sz)
         p->cleanupUMats();
 
     cl_int retval = clSetKernelArg(p->handle, (cl_uint)i, sz, value);
-    CV_OclDbgAssert(retval == CL_SUCCESS);
+    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clSetKernelArg('%s', arg_index=%d, size=%d, value=%p)", p->name.c_str(), (int)i, (int)sz, (void*)value).c_str());
     if (retval != CL_SUCCESS)
         return -1;
     return i+1;
@@ -2940,7 +3018,7 @@ int Kernel::set(int i, const Image2D& image2D)
 
 int Kernel::set(int i, const UMat& m)
 {
-    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
+    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m));
 }
 
 int Kernel::set(int i, const KernelArg& arg)
@@ -2948,124 +3026,242 @@ int Kernel::set(int i, const KernelArg& arg)
     if( !p || !p->handle )
         return -1;
     if (i < 0)
+    {
+        CV_LOG_ERROR(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): negative arg_index",
+                p->name.c_str(), (int)i));
         return i;
+    }
     if( i == 0 )
         p->cleanupUMats();
+    cl_int status = 0;
     if( arg.m )
     {
         int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
                           ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
         bool ptronly = (arg.flags & KernelArg::PTR_ONLY) != 0;
+        if (ptronly && arg.m->empty())
+        {
+            cl_mem h_null = (cl_mem)NULL;
+            status = clSetKernelArg(p->handle, (cl_uint)i, sizeof(h_null), &h_null);
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, cl_mem=NULL)", p->name.c_str(), (int)i).c_str());
+            return i + 1;
+        }
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
 
         if (!h)
         {
+            CV_LOG_ERROR(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d, flags=%d): can't create cl_mem handle for passed UMat buffer (addr=%p)",
+                    p->name.c_str(), (int)i, (int)arg.flags, arg.m));
             p->release();
             p = 0;
             return -1;
         }
 
+#ifdef HAVE_OPENCL_SVM
+        if ((arg.m->u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+        {
+            const Context& ctx = Context::getDefault();
+            const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+            uchar*& svmDataPtr = (uchar*&)arg.m->u->handle;
+            CV_OPENCL_SVM_TRACE_P("clSetKernelArgSVMPointer: %p\n", svmDataPtr);
+#if 1 // TODO
+            status = svmFns->fn_clSetKernelArgSVMPointer(p->handle, (cl_uint)i, svmDataPtr);
+#else
+            status = svmFns->fn_clSetKernelArgSVMPointer(p->handle, (cl_uint)i, &svmDataPtr);
+#endif
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArgSVMPointer('%s', arg_index=%d, ptr=%p)", p->name.c_str(), (int)i, (void*)svmDataPtr).c_str());
+        }
+        else
+#endif
+        {
+            status = clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, cl_mem=%p)", p->name.c_str(), (int)i, (void*)h).c_str());
+        }
+
         if (ptronly)
-            CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i++, sizeof(h), &h) == CL_SUCCESS);
+        {
+            i++;
+        }
         else if( arg.m->dims <= 2 )
         {
             UMat2D u2d(*arg.m);
-            CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h) == CL_SUCCESS);
-            CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step) == CL_SUCCESS);
-            CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset) == CL_SUCCESS);
+            status = clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step);
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, step_value=%d)", p->name.c_str(), (int)(i+1), (int)u2d.step).c_str());
+            status = clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset);
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, offset_value=%d)", p->name.c_str(), (int)(i+2), (int)u2d.offset).c_str());
             i += 3;
 
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
                 int cols = u2d.cols*arg.wscale/arg.iwscale;
-                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows) == CL_SUCCESS);
-                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(cols), &cols) == CL_SUCCESS);
+                status = clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows);
+                CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, rows_value=%d)", p->name.c_str(), (int)i, (int)u2d.rows).c_str());
+                status = clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(cols), &cols);
+                CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, cols_value=%d)", p->name.c_str(), (int)(i+1), (int)cols).c_str());
                 i += 2;
             }
         }
         else
         {
             UMat3D u3d(*arg.m);
-            CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h) == CL_SUCCESS);
-            CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.slicestep), &u3d.slicestep) == CL_SUCCESS);
-            CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.step), &u3d.step) == CL_SUCCESS);
-            CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(u3d.offset), &u3d.offset) == CL_SUCCESS);
+            status = clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.slicestep), &u3d.slicestep);
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, slicestep_value=%d)", p->name.c_str(), (int)(i+1), (int)u3d.slicestep).c_str());
+            status = clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.step), &u3d.step);
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, step_value=%d)", p->name.c_str(), (int)(i+2), (int)u3d.step).c_str());
+            status = clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(u3d.offset), &u3d.offset);
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, offset_value=%d)", p->name.c_str(), (int)(i+3), (int)u3d.offset).c_str());
             i += 4;
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
                 int cols = u3d.cols*arg.wscale/arg.iwscale;
-                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows) == CL_SUCCESS);
-                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows) == CL_SUCCESS);
-                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols) == CL_SUCCESS);
+                status = clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.slices);
+                CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, slices_value=%d)", p->name.c_str(), (int)i, (int)u3d.slices).c_str());
+                status = clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows);
+                CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, rows_value=%d)", p->name.c_str(), (int)(i+1), (int)u3d.rows).c_str());
+                status = clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols);
+                CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, cols_value=%d)", p->name.c_str(), (int)(i+2), (int)cols).c_str());
                 i += 3;
             }
         }
         p->addUMat(*arg.m, (accessFlags & ACCESS_WRITE) != 0);
         return i;
     }
-    CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj) == CL_SUCCESS);
+    status = clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
+    CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, size=%d, obj=%p)", p->name.c_str(), (int)i, (int)arg.sz, (void*)arg.obj).c_str());
     return i+1;
 }
-
 
 bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                  bool sync, const Queue& q)
 {
-    if(!p || !p->handle || p->e != 0)
+    if (!p)
         return false;
 
-    cl_command_queue qq = getQueue(q);
-    size_t offset[CV_MAX_DIM] = {0}, globalsize[CV_MAX_DIM] = {1,1,1};
+    size_t globalsize[CV_MAX_DIM] = {1,1,1};
     size_t total = 1;
-    CV_Assert(_globalsize != 0);
+    CV_Assert(_globalsize != NULL);
     for (int i = 0; i < dims; i++)
     {
         size_t val = _localsize ? _localsize[i] :
             dims == 1 ? 64 : dims == 2 ? (i == 0 ? 256 : 8) : dims == 3 ? (8>>(int)(i>0)) : 1;
         CV_Assert( val > 0 );
         total *= _globalsize[i];
-        globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
+        if (_globalsize[i] == 1 && !_localsize)
+            val = 1;
+        globalsize[i] = divUp(_globalsize[i], (unsigned int)val) * val;
     }
-    if( total == 0 )
-        return true;
-    if( p->haveTempDstUMats )
+    CV_Assert(total > 0);
+
+    return p->run(dims, globalsize, _localsize, sync, NULL, q);
+}
+
+
+bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
+        bool sync, int64* timeNS, const Queue& q)
+{
+    CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
+
+    if (!handle || isInProgress)
+        return false;
+
+    cl_command_queue qq = getQueue(q);
+    if (haveTempDstUMats)
         sync = true;
-    cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           offset, globalsize, _localsize, 0, 0,
-                                           sync ? 0 : &p->e);
-    if( sync || retval != CL_SUCCESS )
+    if (haveTempSrcUMats)
+        sync = true;
+    if (timeNS)
+        sync = true;
+    cl_event asyncEvent = 0;
+    cl_int retval = clEnqueueNDRangeKernel(qq, handle, (cl_uint)dims,
+                                           NULL, globalsize, localsize, 0, 0,
+                                           (sync && !timeNS) ? 0 : &asyncEvent);
+#if !CV_OPENCL_SHOW_RUN_KERNELS
+    if (retval != CL_SUCCESS)
+#endif
     {
-        CV_OclDbgAssert(clFinish(qq) == CL_SUCCESS);
-        p->cleanupUMats();
+        cv::String msg = cv::format("clEnqueueNDRangeKernel('%s', dims=%d, globalsize=%dx%dx%d, localsize=%s) sync=%s", name.c_str(), (int)dims,
+                        globalsize[0], (dims > 1 ? globalsize[1] : 1), (dims > 2 ? globalsize[2] : 1),
+                        (localsize ? cv::format("%dx%dx%d", localsize[0], (dims > 1 ? localsize[1] : 1), (dims > 2 ? localsize[2] : 1)) : cv::String("NULL")).c_str(),
+                        sync ? "true" : "false"
+                        );
+        if (retval != CL_SUCCESS)
+        {
+            msg = CV_OCL_API_ERROR_MSG(retval, msg.c_str());
+        }
+#if CV_OPENCL_TRACE_CHECK
+        CV_OCL_TRACE_CHECK_RESULT(retval, msg.c_str());
+#else
+        printf("%s\n", msg.c_str());
+        fflush(stdout);
+#endif
+    }
+    if (sync || retval != CL_SUCCESS)
+    {
+        CV_OCL_DBG_CHECK(clFinish(qq));
+        if (timeNS)
+        {
+            if (retval == CL_SUCCESS)
+            {
+                CV_OCL_DBG_CHECK(clWaitForEvents(1, &asyncEvent));
+                cl_ulong startTime, stopTime;
+                CV_OCL_CHECK(clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_START, sizeof(startTime), &startTime, NULL));
+                CV_OCL_CHECK(clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_END, sizeof(stopTime), &stopTime, NULL));
+                *timeNS = (int64)(stopTime - startTime);
+            }
+            else
+            {
+                *timeNS = -1;
+            }
+        }
+        cleanupUMats();
     }
     else
     {
-        p->addref();
-        CV_OclDbgAssert(clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
+        addref();
+        isInProgress = true;
+        CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this));
     }
+    if (asyncEvent)
+        CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
     return retval == CL_SUCCESS;
 }
 
 bool Kernel::runTask(bool sync, const Queue& q)
 {
-    if(!p || !p->handle || p->e != 0)
+    if(!p || !p->handle || p->isInProgress)
         return false;
 
     cl_command_queue qq = getQueue(q);
-    cl_int retval = clEnqueueTask(qq, p->handle, 0, 0, sync ? 0 : &p->e);
-    if( sync || retval != CL_SUCCESS )
+    cl_event asyncEvent = 0;
+    cl_int retval = clEnqueueTask(qq, p->handle, 0, 0, sync ? 0 : &asyncEvent);
+    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clEnqueueTask('%s') sync=%s", p->name.c_str(), sync ? "true" : "false").c_str());
+    if (sync || retval != CL_SUCCESS)
     {
-        CV_OclDbgAssert(clFinish(qq) == CL_SUCCESS);
+        CV_OCL_DBG_CHECK(clFinish(qq));
         p->cleanupUMats();
     }
     else
     {
         p->addref();
-        CV_OclDbgAssert(clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
+        p->isInProgress = true;
+        CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, p));
     }
+    if (asyncEvent)
+        CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
     return retval == CL_SUCCESS;
 }
 
+int64 Kernel::runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q_)
+{
+    CV_Assert(p && p->handle && !p->isInProgress);
+    Queue q = q_.ptr() ? q_ : Queue::getDefault();
+    CV_Assert(q.ptr());
+    q.finish(); // call clFinish() on base queue
+    Queue profilingQueue = q.getProfilingQueue();
+    int64 timeNs = -1;
+    bool res = p->run(dims, globalsize, localsize, true, &timeNs, profilingQueue);
+    return res ? timeNs : -1;
+}
 
 size_t Kernel::workGroupSize() const
 {
@@ -3073,8 +3269,9 @@ size_t Kernel::workGroupSize() const
         return 0;
     size_t val = 0, retsz = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
-    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_WORK_GROUP_SIZE,
-                                    sizeof(val), &val, &retsz) == CL_SUCCESS ? val : 0;
+    cl_int status = clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_WORK_GROUP_SIZE, sizeof(val), &val, &retsz);
+    CV_OCL_CHECK_RESULT(status, "clGetKernelWorkGroupInfo(CL_KERNEL_WORK_GROUP_SIZE)");
+    return status == CL_SUCCESS ? val : 0;
 }
 
 size_t Kernel::preferedWorkGroupSizeMultiple() const
@@ -3083,8 +3280,9 @@ size_t Kernel::preferedWorkGroupSizeMultiple() const
         return 0;
     size_t val = 0, retsz = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
-    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
-                                    sizeof(val), &val, &retsz) == CL_SUCCESS ? val : 0;
+    cl_int status = clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(val), &val, &retsz);
+    CV_OCL_CHECK_RESULT(status, "clGetKernelWorkGroupInfo(CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE)");
+    return status == CL_SUCCESS ? val : 0;
 }
 
 bool Kernel::compileWorkGroupSize(size_t wsz[]) const
@@ -3093,8 +3291,9 @@ bool Kernel::compileWorkGroupSize(size_t wsz[]) const
         return 0;
     size_t retsz = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
-    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_COMPILE_WORK_GROUP_SIZE,
-                                    sizeof(wsz[0]*3), wsz, &retsz) == CL_SUCCESS;
+    cl_int status = clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_COMPILE_WORK_GROUP_SIZE, sizeof(wsz[0])*3, wsz, &retsz);
+    CV_OCL_CHECK_RESULT(status, "clGetKernelWorkGroupInfo(CL_KERNEL_COMPILE_WORK_GROUP_SIZE)");
+    return status == CL_SUCCESS;
 }
 
 size_t Kernel::localMemSize() const
@@ -3104,124 +3303,648 @@ size_t Kernel::localMemSize() const
     size_t retsz = 0;
     cl_ulong val = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
-    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_LOCAL_MEM_SIZE,
-                                    sizeof(val), &val, &retsz) == CL_SUCCESS ? (size_t)val : 0;
+    cl_int status = clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_LOCAL_MEM_SIZE, sizeof(val), &val, &retsz);
+    CV_OCL_CHECK_RESULT(status, "clGetKernelWorkGroupInfo(CL_KERNEL_LOCAL_MEM_SIZE)");
+    return status == CL_SUCCESS ? (size_t)val : 0;
 }
+
+
+
+///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
+
+struct ProgramSource::Impl
+{
+    IMPLEMENT_REFCOUNTABLE();
+
+    enum KIND {
+        PROGRAM_SOURCE_CODE = 0,
+        PROGRAM_BINARIES,
+        PROGRAM_SPIR,
+        PROGRAM_SPIRV
+    } kind_;
+
+    Impl(const String& src)
+    {
+        init(PROGRAM_SOURCE_CODE, cv::String(), cv::String());
+        initFromSource(src, cv::String());
+    }
+    Impl(const String& module, const String& name, const String& codeStr, const String& codeHash)
+    {
+        init(PROGRAM_SOURCE_CODE, module, name);
+        initFromSource(codeStr, codeHash);
+    }
+
+    /// reset fields
+    void init(enum KIND kind, const String& module, const String& name)
+    {
+        refcount = 1;
+        kind_ = kind;
+        module_ = module;
+        name_ = name;
+
+        sourceAddr_ = NULL;
+        sourceSize_ = 0;
+        isHashUpdated = false;
+    }
+
+    void initFromSource(const String& codeStr, const String& codeHash)
+    {
+        codeStr_ = codeStr;
+        sourceHash_ = codeHash;
+        if (sourceHash_.empty())
+        {
+            updateHash();
+        }
+        else
+        {
+            isHashUpdated = true;
+        }
+    }
+
+    void updateHash(const char* hashStr = NULL)
+    {
+        if (hashStr)
+        {
+            sourceHash_ = cv::String(hashStr);
+            isHashUpdated = true;
+            return;
+        }
+        uint64 hash = 0;
+        switch (kind_)
+        {
+        case PROGRAM_SOURCE_CODE:
+            if (sourceAddr_)
+            {
+                CV_Assert(codeStr_.empty());
+                hash = crc64(sourceAddr_, sourceSize_); // static storage
+            }
+            else
+            {
+                CV_Assert(!codeStr_.empty());
+                hash = crc64((uchar*)codeStr_.c_str(), codeStr_.size());
+            }
+            break;
+        case PROGRAM_BINARIES:
+        case PROGRAM_SPIR:
+        case PROGRAM_SPIRV:
+            hash = crc64(sourceAddr_, sourceSize_);
+            break;
+        default:
+            CV_Error(Error::StsInternal, "Internal error");
+        }
+        sourceHash_ = cv::format("%08llx", hash);
+        isHashUpdated = true;
+    }
+
+    Impl(enum KIND kind,
+            const String& module, const String& name,
+            const unsigned char* binary, const size_t size,
+            const cv::String& buildOptions = cv::String())
+    {
+        init(kind, module, name);
+
+        sourceAddr_ = binary;
+        sourceSize_ = size;
+
+        buildOptions_ = buildOptions;
+    }
+
+    static ProgramSource fromSourceWithStaticLifetime(const String& module, const String& name,
+            const char* sourceCodeStaticStr, const char* hashStaticStr,
+            const cv::String& buildOptions)
+    {
+        ProgramSource result;
+        result.p = new Impl(PROGRAM_SOURCE_CODE, module, name,
+                (const unsigned char*)sourceCodeStaticStr, strlen(sourceCodeStaticStr), buildOptions);
+        result.p->updateHash(hashStaticStr);
+        return result;
+    }
+
+    static ProgramSource fromBinary(const String& module, const String& name,
+            const unsigned char* binary, const size_t size,
+            const cv::String& buildOptions)
+    {
+        ProgramSource result;
+        result.p = new Impl(PROGRAM_BINARIES, module, name, binary, size, buildOptions);
+        return result;
+    }
+
+    static ProgramSource fromSPIR(const String& module, const String& name,
+            const unsigned char* binary, const size_t size,
+            const cv::String& buildOptions)
+    {
+        ProgramSource result;
+        result.p = new Impl(PROGRAM_SPIR, module, name, binary, size, buildOptions);
+        return result;
+    }
+
+    String module_;
+    String name_;
+
+    // TODO std::vector<ProgramSource> includes_;
+    String codeStr_; // PROGRAM_SOURCE_CODE only
+
+    const unsigned char* sourceAddr_;
+    size_t sourceSize_;
+
+    cv::String buildOptions_;
+
+    String sourceHash_;
+    bool isHashUpdated;
+
+    friend struct Program::Impl;
+    friend struct internal::ProgramEntry;
+    friend struct Context::Impl;
+};
+
+
+ProgramSource::ProgramSource()
+{
+    p = 0;
+}
+
+ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash)
+{
+    p = new Impl(module, name, codeStr, codeHash);
+}
+
+ProgramSource::ProgramSource(const char* prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::ProgramSource(const String& prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::~ProgramSource()
+{
+    if(p)
+        p->release();
+}
+
+ProgramSource::ProgramSource(const ProgramSource& prog)
+{
+    p = prog.p;
+    if(p)
+        p->addref();
+}
+
+ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
+{
+    Impl* newp = (Impl*)prog.p;
+    if(newp)
+        newp->addref();
+    if(p)
+        p->release();
+    p = newp;
+    return *this;
+}
+
+const String& ProgramSource::source() const
+{
+    CV_Assert(p);
+    CV_Assert(p->kind_ == Impl::PROGRAM_SOURCE_CODE);
+    CV_Assert(p->sourceAddr_ == NULL); // method returns reference - can't construct temporary object
+    return p->codeStr_;
+}
+
+ProgramSource::hash_t ProgramSource::hash() const
+{
+    CV_Error(Error::StsNotImplemented, "Removed method: ProgramSource::hash()");
+}
+
+ProgramSource ProgramSource::fromBinary(const String& module, const String& name,
+        const unsigned char* binary, const size_t size,
+        const cv::String& buildOptions)
+{
+    CV_Assert(binary);
+    CV_Assert(size > 0);
+    return Impl::fromBinary(module, name, binary, size, buildOptions);
+}
+
+ProgramSource ProgramSource::fromSPIR(const String& module, const String& name,
+        const unsigned char* binary, const size_t size,
+        const cv::String& buildOptions)
+{
+    CV_Assert(binary);
+    CV_Assert(size > 0);
+    return Impl::fromBinary(module, name, binary, size, buildOptions);
+}
+
+
+internal::ProgramEntry::operator ProgramSource&() const
+{
+    if (this->pProgramSource == NULL)
+    {
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (this->pProgramSource == NULL)
+        {
+            ProgramSource ps = ProgramSource::Impl::fromSourceWithStaticLifetime(this->module, this->name, this->programCode, this->programHash, cv::String());
+            ProgramSource* ptr = new ProgramSource(ps);
+            const_cast<ProgramEntry*>(this)->pProgramSource = ptr;
+        }
+    }
+    return *this->pProgramSource;
+}
+
+
 
 /////////////////////////////////////////// Program /////////////////////////////////////////////
 
+#ifdef HAVE_OPENCL
+
+static
+cv::String joinBuildOptions(const cv::String& a, const cv::String& b)
+{
+    if (b.empty())
+        return a;
+    if (a.empty())
+        return b;
+    if (b[0] == ' ')
+        return a + b;
+    return a + (cv::String(" ") + b);
+}
+
 struct Program::Impl
 {
-    Impl(const ProgramSource& _src,
-         const String& _buildflags, String& errmsg)
+    IMPLEMENT_REFCOUNTABLE();
+
+    Impl(const ProgramSource& src,
+         const String& _buildflags, String& errmsg) :
+         refcount(1),
+         handle(NULL),
+         buildflags(_buildflags)
     {
-        refcount = 1;
-        const Context& ctx = Context::getDefault();
-        src = _src;
-        buildflags = _buildflags;
-        const String& srcstr = src.source();
-        const char* srcptr = srcstr.c_str();
-        size_t srclen = srcstr.size();
+        const ProgramSource::Impl* src_ = src.getImpl();
+        CV_Assert(src_);
+        sourceModule_ = src_->module_;
+        sourceName_ = src_->name_;
+        const Context ctx = Context::getDefault();
+        Device device = ctx.device(0);
+        if (ctx.ptr() == NULL || device.ptr() == NULL)
+            return;
+        buildflags = joinBuildOptions(buildflags, src_->buildOptions_);
+        if (src.getImpl()->kind_ == ProgramSource::Impl::PROGRAM_SOURCE_CODE)
+        {
+            if (device.isAMD())
+                buildflags = joinBuildOptions(buildflags, " -D AMD_DEVICE");
+            else if (device.isIntel())
+                buildflags = joinBuildOptions(buildflags, " -D INTEL_DEVICE");
+            const String param_buildExtraOptions = getBuildExtraOptions();
+            if (!param_buildExtraOptions.empty())
+                buildflags = joinBuildOptions(buildflags, param_buildExtraOptions);
+        }
+        compile(ctx, src_, errmsg);
+    }
+
+    bool compile(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
+    {
+        CV_Assert(ctx.getImpl());
+        CV_Assert(src_);
+
+        // We don't cache OpenCL binaries
+        if (src_->kind_ == ProgramSource::Impl::PROGRAM_BINARIES)
+        {
+            CV_LOG_VERBOSE(NULL, 0, "Load program binary... " << src_->module_.c_str() << "/" << src_->name_.c_str());
+            bool isLoaded = createFromBinary(ctx, src_->sourceAddr_, src_->sourceSize_, errmsg);
+            return isLoaded;
+        }
+        return compileWithCache(ctx, src_, errmsg);
+    }
+
+    bool compileWithCache(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
+    {
+        CV_Assert(ctx.getImpl());
+        CV_Assert(src_);
+        CV_Assert(src_->kind_ != ProgramSource::Impl::PROGRAM_BINARIES);
+
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+        OpenCLBinaryCacheConfigurator& config = OpenCLBinaryCacheConfigurator::getSingletonInstance();
+        const std::string base_dir = config.prepareCacheDirectoryForContext(
+                ctx.getImpl()->getPrefixString(),
+                ctx.getImpl()->getPrefixBase()
+        );
+        const String& hash_str = src_->sourceHash_;
+        cv::String fname;
+        if (!base_dir.empty() && !src_->module_.empty() && !src_->name_.empty())
+        {
+            CV_Assert(!hash_str.empty());
+            fname = src_->module_ + "--" + src_->name_ + "_" + hash_str + ".bin";
+            fname = utils::fs::join(base_dir, fname);
+        }
+        const cv::Ptr<utils::fs::FileLock> fileLock = config.cache_lock_; // can be empty
+        if (!fname.empty() && CV_OPENCL_CACHE_ENABLE)
+        {
+            try
+            {
+                std::vector<char> binaryBuf;
+                bool res = false;
+                {
+                    cv::utils::optional_shared_lock_guard<cv::utils::fs::FileLock> lock_fs(fileLock.get());
+                    BinaryProgramFile file(fname, hash_str.c_str());
+                    res = file.read(buildflags, binaryBuf);
+                }
+                if (res)
+                {
+                    CV_Assert(!binaryBuf.empty());
+                    CV_LOG_VERBOSE(NULL, 0, "Load program binary from cache: " << src_->module_.c_str() << "/" << src_->name_.c_str());
+                    bool isLoaded = createFromBinary(ctx, binaryBuf, errmsg);
+                    if (isLoaded)
+                        return true;
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_UNUSED(e);
+                CV_LOG_VERBOSE(NULL, 0, "Can't load OpenCL binary: " + fname << std::endl << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_VERBOSE(NULL, 0, "Can't load OpenCL binary: " + fname);
+            }
+        }
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
+        CV_Assert(handle == NULL);
+        if (src_->kind_ == ProgramSource::Impl::PROGRAM_SOURCE_CODE)
+        {
+            if (!buildFromSources(ctx, src_, errmsg))
+            {
+                return false;
+            }
+        }
+        else if (src_->kind_ == ProgramSource::Impl::PROGRAM_SPIR)
+        {
+            buildflags = joinBuildOptions(buildflags, " -x spir");
+            if ((cv::String(" ") + buildflags).find(" -spir-std=") == cv::String::npos)
+            {
+                buildflags = joinBuildOptions(buildflags, " -spir-std=1.2");
+            }
+            CV_LOG_VERBOSE(NULL, 0, "Load program SPIR binary... " << src_->module_.c_str() << "/" << src_->name_.c_str());
+            bool isLoaded = createFromBinary(ctx, src_->sourceAddr_, src_->sourceSize_, errmsg);
+            if (!isLoaded)
+                return false;
+        }
+        else if (src_->kind_ == ProgramSource::Impl::PROGRAM_SPIRV)
+        {
+            CV_Error(Error::StsNotImplemented, "OpenCL: SPIR-V is not supported");
+        }
+        else
+        {
+            CV_Error(Error::StsInternal, "Internal error");
+        }
+        CV_Assert(handle != NULL);
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+        if (!fname.empty() && CV_OPENCL_CACHE_WRITE)
+        {
+            try
+            {
+                std::vector<char> binaryBuf;
+                getProgramBinary(binaryBuf);
+                {
+                    cv::utils::optional_lock_guard<cv::utils::fs::FileLock> lock_fs(fileLock.get());
+                    BinaryProgramFile file(fname, hash_str.c_str());
+                    file.write(buildflags, binaryBuf);
+                }
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_WARNING(NULL, "Can't save OpenCL binary into cache: " + fname << std::endl << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_WARNING(NULL, "Can't save OpenCL binary into cache: " + fname);
+            }
+        }
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
+#if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
+        if (CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE)
+        {
+            std::vector<char> binaryBuf;
+            getProgramBinary(binaryBuf);
+            if (!binaryBuf.empty())
+            {
+                CV_OCL_DBG_CHECK(clReleaseProgram(handle));
+                handle = NULL;
+                createFromBinary(ctx, binaryBuf, errmsg);
+            }
+        }
+#endif
+        return handle != NULL;
+    }
+
+    void dumpBuildLog_(cl_int result, const cl_device_id* deviceList, String& errmsg)
+    {
+        AutoBuffer<char, 4096> buffer; buffer[0] = 0;
+
+        size_t retsz = 0;
+        cl_int log_retval = clGetProgramBuildInfo(handle, deviceList[0],
+                                                  CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
+        if (log_retval == CL_SUCCESS && retsz > 1)
+        {
+            buffer.resize(retsz + 16);
+            log_retval = clGetProgramBuildInfo(handle, deviceList[0],
+                                               CL_PROGRAM_BUILD_LOG, retsz+1, buffer.data(), &retsz);
+            if (log_retval == CL_SUCCESS)
+            {
+                if (retsz < buffer.size())
+                    buffer[retsz] = 0;
+                else
+                    buffer[buffer.size() - 1] = 0;
+            }
+            else
+            {
+                buffer[0] = 0;
+            }
+        }
+
+        errmsg = String(buffer.data());
+        printf("OpenCL program build log: %s/%s\nStatus %d: %s\n%s\n%s\n",
+                sourceModule_.c_str(), sourceName_.c_str(),
+                result, getOpenCLErrorString(result),
+                buildflags.c_str(), errmsg.c_str());
+        fflush(stdout);
+    }
+
+    bool buildFromSources(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
+    {
+        CV_Assert(src_);
+        CV_Assert(src_->kind_ == ProgramSource::Impl::PROGRAM_SOURCE_CODE);
+        CV_Assert(handle == NULL);
+        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Build OpenCL program: %s/%s %s options: %s",
+                sourceModule_.c_str(), sourceName_.c_str(),
+                src_->sourceHash_.c_str(), buildflags.c_str()).c_str());
+
+        CV_LOG_VERBOSE(NULL, 0, "Compile... " << sourceModule_.c_str() << "/" << sourceName_.c_str());
+
+        const char* srcptr = src_->sourceAddr_ ? ((const char*)src_->sourceAddr_) : src_->codeStr_.c_str();
+        size_t srclen = src_->sourceAddr_ ? src_->sourceSize_ : src_->codeStr_.size();
+        CV_Assert(srcptr != NULL);
+        CV_Assert(srclen > 0);
+
         cl_int retval = 0;
 
         handle = clCreateProgramWithSource((cl_context)ctx.ptr(), 1, &srcptr, &srclen, &retval);
-        if( handle && retval == CL_SUCCESS )
+        CV_OCL_DBG_CHECK_RESULT(retval, "clCreateProgramWithSource");
+        CV_Assert(handle || retval != CL_SUCCESS);
+        if (handle && retval == CL_SUCCESS)
         {
-            int i, n = (int)ctx.ndevices();
-            AutoBuffer<void*> deviceListBuf(n+1);
-            void** deviceList = deviceListBuf;
-            for( i = 0; i < n; i++ )
-                deviceList[i] = ctx.device(i).ptr();
+            size_t n = ctx.ndevices();
+            AutoBuffer<cl_device_id, 4> deviceListBuf(n + 1);
+            cl_device_id* deviceList = deviceListBuf.data();
+            for (size_t i = 0; i < n; i++)
+            {
+                deviceList[i] = (cl_device_id)(ctx.device(i).ptr());
+            }
 
-            Device device = Device::getDefault();
-            if (device.isAMD())
-                buildflags += " -D AMD_DEVICE";
-            else if (device.isIntel())
-                buildflags += " -D INTEL_DEVICE";
-
-            retval = clBuildProgram(handle, n,
-                                    (const cl_device_id*)deviceList,
-                                    buildflags.c_str(), 0, 0);
+            retval = clBuildProgram(handle, (cl_uint)n, deviceList, buildflags.c_str(), 0, 0);
+            CV_OCL_TRACE_CHECK_RESULT(/*don't throw: retval*/CL_SUCCESS, cv::format("clBuildProgram(source: %s)", buildflags.c_str()).c_str());
 #if !CV_OPENCL_ALWAYS_SHOW_BUILD_LOG
-            if( retval != CL_SUCCESS )
+            if (retval != CL_SUCCESS)
 #endif
             {
-                size_t retsz = 0;
-                cl_int buildInfo_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
-                                               CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
-                if (buildInfo_retval == CL_SUCCESS && retsz > 1)
-                {
-                    AutoBuffer<char> bufbuf(retsz + 16);
-                    char* buf = bufbuf;
-                    buildInfo_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
-                                                   CL_PROGRAM_BUILD_LOG, retsz+1, buf, &retsz);
-                    if (buildInfo_retval == CL_SUCCESS)
-                    {
-                        // TODO It is useful to see kernel name & program file name also
-                        errmsg = String(buf);
-                        printf("OpenCL program build log: %s\n%s\n", buildflags.c_str(), errmsg.c_str());
-                        fflush(stdout);
-                    }
-                }
+                dumpBuildLog_(retval, deviceList, errmsg);
+
+                // don't remove "retval != CL_SUCCESS" condition here:
+                // it would break CV_OPENCL_ALWAYS_SHOW_BUILD_LOG mode
                 if (retval != CL_SUCCESS && handle)
                 {
-                    clReleaseProgram(handle);
+                    CV_OCL_DBG_CHECK(clReleaseProgram(handle));
+                    handle = NULL;
+                }
+            }
+#if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
+            if (handle && CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE)
+            {
+                CV_LOG_INFO(NULL, "OpenCL: query kernel names (build from sources)...");
+                size_t retsz = 0;
+                char kernels_buffer[4096] = {0};
+                cl_int result = clGetProgramInfo(handle, CL_PROGRAM_KERNEL_NAMES, sizeof(kernels_buffer), &kernels_buffer[0], &retsz);
+                if (retsz < sizeof(kernels_buffer))
+                    kernels_buffer[retsz] = 0;
+                else
+                    kernels_buffer[0] = 0;
+                CV_LOG_INFO(NULL, result << ": Kernels='" << kernels_buffer << "'");
+            }
+#endif
+
+        }
+        return handle != NULL;
+    }
+
+    void getProgramBinary(std::vector<char>& buf)
+    {
+        CV_Assert(handle);
+        size_t sz = 0;
+        CV_OCL_CHECK(clGetProgramInfo(handle, CL_PROGRAM_BINARY_SIZES, sizeof(sz), &sz, NULL));
+        buf.resize(sz);
+        uchar* ptr = (uchar*)&buf[0];
+        CV_OCL_CHECK(clGetProgramInfo(handle, CL_PROGRAM_BINARIES, sizeof(ptr), &ptr, NULL));
+    }
+
+    bool createFromBinary(const Context& ctx, const std::vector<char>& buf, String& errmsg)
+    {
+        return createFromBinary(ctx, (const unsigned char*)&buf[0], buf.size(), errmsg);
+    }
+
+    bool createFromBinary(const Context& ctx, const unsigned char* binaryAddr, const size_t binarySize, String& errmsg)
+    {
+        CV_Assert(handle == NULL);
+        CV_INSTRUMENT_REGION_OPENCL_COMPILE("Load OpenCL program");
+        CV_LOG_VERBOSE(NULL, 0, "Load from binary... (" << binarySize << " bytes)");
+
+        CV_Assert(binarySize > 0);
+
+        size_t ndevices = (int)ctx.ndevices();
+        AutoBuffer<cl_device_id> devices_(ndevices);
+        AutoBuffer<const uchar*> binaryPtrs_(ndevices);
+        AutoBuffer<size_t> binarySizes_(ndevices);
+
+        cl_device_id* devices = devices_.data();
+        const uchar** binaryPtrs = binaryPtrs_.data();
+        size_t* binarySizes = binarySizes_.data();
+        for (size_t i = 0; i < ndevices; i++)
+        {
+            devices[i] = (cl_device_id)ctx.device(i).ptr();
+            binaryPtrs[i] = binaryAddr;
+            binarySizes[i] = binarySize;
+        }
+
+        cl_int result = 0;
+        handle = clCreateProgramWithBinary((cl_context)ctx.ptr(), (cl_uint)ndevices, devices_.data(),
+                                           binarySizes, binaryPtrs, NULL, &result);
+        if (result != CL_SUCCESS)
+        {
+            CV_LOG_ERROR(NULL, CV_OCL_API_ERROR_MSG(result, "clCreateProgramWithBinary"));
+            if (handle)
+            {
+                CV_OCL_DBG_CHECK(clReleaseProgram(handle));
+                handle = NULL;
+            }
+        }
+        if (!handle)
+        {
+            return false;
+        }
+        // call clBuildProgram()
+        {
+            result = clBuildProgram(handle, (cl_uint)ndevices, devices_.data(), buildflags.c_str(), 0, 0);
+            CV_OCL_DBG_CHECK_RESULT(result, cv::format("clBuildProgram(binary: %s/%s)", sourceModule_.c_str(), sourceName_.c_str()).c_str());
+            if (result != CL_SUCCESS)
+            {
+                dumpBuildLog_(result, devices, errmsg);
+                if (handle)
+                {
+                    CV_OCL_DBG_CHECK(clReleaseProgram(handle));
+                    handle = NULL;
+                }
+                return false;
+            }
+        }
+        // check build status
+        {
+            cl_build_status build_status = CL_BUILD_NONE;
+            size_t retsz = 0;
+            CV_OCL_DBG_CHECK(result = clGetProgramBuildInfo(handle, devices[0], CL_PROGRAM_BUILD_STATUS,
+                    sizeof(build_status), &build_status, &retsz));
+            if (result == CL_SUCCESS)
+            {
+                if (build_status == CL_BUILD_SUCCESS)
+                {
+                    return true;
+                }
+                else
+                {
+                    CV_LOG_WARNING(NULL, "clGetProgramBuildInfo() returns " << build_status);
+                    return false;
+                }
+            }
+            else
+            {
+                CV_LOG_ERROR(NULL, CV_OCL_API_ERROR_MSG(result, "clGetProgramBuildInfo()"));
+                if (handle)
+                {
+                    CV_OCL_DBG_CHECK(clReleaseProgram(handle));
                     handle = NULL;
                 }
             }
         }
-    }
-
-    Impl(const String& _buf, const String& _buildflags)
-    {
-        refcount = 1;
-        handle = 0;
-        buildflags = _buildflags;
-        if(_buf.empty())
-            return;
-        String prefix0 = Program::getPrefix(buildflags);
-        const Context& ctx = Context::getDefault();
-        const Device& dev = Device::getDefault();
-        const char* pos0 = _buf.c_str();
-        const char* pos1 = strchr(pos0, '\n');
-        if(!pos1)
-            return;
-        const char* pos2 = strchr(pos1+1, '\n');
-        if(!pos2)
-            return;
-        const char* pos3 = strchr(pos2+1, '\n');
-        if(!pos3)
-            return;
-        size_t prefixlen = (pos3 - pos0)+1;
-        String prefix(pos0, prefixlen);
-        if( prefix != prefix0 )
-            return;
-        const uchar* bin = (uchar*)(pos3+1);
-        void* devid = dev.ptr();
-        size_t codelen = _buf.length() - prefixlen;
-        cl_int binstatus = 0, retval = 0;
-        handle = clCreateProgramWithBinary((cl_context)ctx.ptr(), 1, (cl_device_id*)&devid,
-                                           &codelen, &bin, &binstatus, &retval);
-        CV_OclDbgAssert(retval == CL_SUCCESS);
-    }
-
-    String store()
-    {
-        if(!handle)
-            return String();
-        size_t progsz = 0, retsz = 0;
-        String prefix = Program::getPrefix(buildflags);
-        size_t prefixlen = prefix.length();
-        if(clGetProgramInfo(handle, CL_PROGRAM_BINARY_SIZES, sizeof(progsz), &progsz, &retsz) != CL_SUCCESS)
-            return String();
-        AutoBuffer<uchar> bufbuf(prefixlen + progsz + 16);
-        uchar* buf = bufbuf;
-        memcpy(buf, prefix.c_str(), prefixlen);
-        buf += prefixlen;
-        if(clGetProgramInfo(handle, CL_PROGRAM_BINARIES, sizeof(buf), &buf, &retsz) != CL_SUCCESS)
-            return String();
-        buf[progsz] = (uchar)'\0';
-        return String((const char*)(uchar*)bufbuf, prefixlen + progsz);
+#if CV_OPENCL_VALIDATE_BINARY_PROGRAMS
+        if (handle && CV_OPENCL_VALIDATE_BINARY_PROGRAMS_VALUE)
+        {
+            CV_LOG_INFO(NULL, "OpenCL: query kernel names (binary)...");
+            size_t retsz = 0;
+            char kernels_buffer[4096] = {0};
+            result = clGetProgramInfo(handle, CL_PROGRAM_KERNEL_NAMES, sizeof(kernels_buffer), &kernels_buffer[0], &retsz);
+            if (retsz < sizeof(kernels_buffer))
+                kernels_buffer[retsz] = 0;
+            else
+                kernels_buffer[0] = 0;
+            CV_LOG_INFO(NULL, result << ": Kernels='" << kernels_buffer << "'");
+        }
+#endif
+        return handle != NULL;
     }
 
     ~Impl()
@@ -3238,12 +3961,16 @@ struct Program::Impl
         }
     }
 
-    IMPLEMENT_REFCOUNTABLE();
-
-    ProgramSource src;
-    String buildflags;
     cl_program handle;
+
+    String buildflags;
+    String sourceModule_;
+    String sourceName_;
 };
+
+#else // HAVE_OPENCL
+struct Program::Impl : public DummyImpl {};
+#endif // HAVE_OPENCL
 
 
 Program::Program() { p = 0; }
@@ -3283,7 +4010,11 @@ bool Program::create(const ProgramSource& src,
             const String& buildflags, String& errmsg)
 {
     if(p)
+    {
         p->release();
+        p = NULL;
+    }
+#ifdef HAVE_OPENCL
     p = new Impl(src, buildflags, errmsg);
     if(!p->handle)
     {
@@ -3291,160 +4022,186 @@ bool Program::create(const ProgramSource& src,
         p = 0;
     }
     return p != 0;
-}
-
-const ProgramSource& Program::source() const
-{
-    static ProgramSource dummy;
-    return p ? p->src : dummy;
+#else
+    CV_OPENCL_NO_SUPPORT();
+#endif
 }
 
 void* Program::ptr() const
 {
+#ifdef HAVE_OPENCL
     return p ? p->handle : 0;
+#else
+    CV_OPENCL_NO_SUPPORT();
+#endif
+}
+
+#ifndef OPENCV_REMOVE_DEPRECATED_API
+const ProgramSource& Program::source() const
+{
+    CV_Error(Error::StsNotImplemented, "Removed API");
 }
 
 bool Program::read(const String& bin, const String& buildflags)
 {
-    if(p)
-        p->release();
-    p = new Impl(bin, buildflags);
-    return p->handle != 0;
+    CV_UNUSED(bin); CV_UNUSED(buildflags);
+    CV_Error(Error::StsNotImplemented, "Removed API");
 }
 
 bool Program::write(String& bin) const
 {
-    if(!p)
-        return false;
-    bin = p->store();
-    return !bin.empty();
+    CV_UNUSED(bin);
+    CV_Error(Error::StsNotImplemented, "Removed API");
 }
 
 String Program::getPrefix() const
 {
+#ifdef HAVE_OPENCL
     if(!p)
         return String();
-    return getPrefix(p->buildflags);
+    Context::Impl* ctx_ = Context::getDefault().getImpl();
+    CV_Assert(ctx_);
+    return cv::format("opencl=%s\nbuildflags=%s", ctx_->getPrefixString().c_str(), p->buildflags.c_str());
+#else
+    CV_OPENCL_NO_SUPPORT();
+#endif
 }
 
 String Program::getPrefix(const String& buildflags)
 {
-    const Context& ctx = Context::getDefault();
-    const Device& dev = ctx.device(0);
-    return format("name=%s\ndriver=%s\nbuildflags=%s\n",
-                  dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
+#ifdef HAVE_OPENCL
+        Context::Impl* ctx_ = Context::getDefault().getImpl();
+        CV_Assert(ctx_);
+        return cv::format("opencl=%s\nbuildflags=%s", ctx_->getPrefixString().c_str(), buildflags.c_str());
+#else
+    CV_OPENCL_NO_SUPPORT();
+#endif
+}
+#endif
+
+void Program::getBinary(std::vector<char>& binary) const
+{
+#ifdef HAVE_OPENCL
+    CV_Assert(p && "Empty program");
+    p->getProgramBinary(binary);
+#else
+    binary.clear();
+    CV_OPENCL_NO_SUPPORT();
+#endif
 }
 
-///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
-
-struct ProgramSource::Impl
+Program Context::Impl::getProg(const ProgramSource& src,
+                               const String& buildflags, String& errmsg)
 {
-    Impl(const char* _src)
+#ifdef HAVE_OPENCL
+    size_t limit = getProgramCountLimit();
+    const ProgramSource::Impl* src_ = src.getImpl();
+    CV_Assert(src_);
+    String key = cv::format("module=%s name=%s codehash=%s\nopencl=%s\nbuildflags=%s",
+            src_->module_.c_str(), src_->name_.c_str(), src_->sourceHash_.c_str(),
+            getPrefixString().c_str(),
+            buildflags.c_str());
     {
-        init(String(_src));
+        cv::AutoLock lock(program_cache_mutex);
+        phash_t::iterator it = phash.find(key);
+        if (it != phash.end())
+        {
+            // TODO LRU cache
+            CacheList::iterator i = std::find(cacheList.begin(), cacheList.end(), key);
+            if (i != cacheList.end() && i != cacheList.begin())
+            {
+                cacheList.erase(i);
+                cacheList.push_front(key);
+            }
+            return it->second;
+        }
+        { // cleanup program cache
+            size_t sz = phash.size();
+            if (limit > 0 && sz >= limit)
+            {
+                static bool warningFlag = false;
+                if (!warningFlag)
+                {
+                    printf("\nWARNING: OpenCV-OpenCL:\n"
+                        "    In-memory cache for OpenCL programs is full, older programs will be unloaded.\n"
+                        "    You can change cache size via OPENCV_OPENCL_PROGRAM_CACHE environment variable\n\n");
+                    warningFlag = true;
+                }
+                while (!cacheList.empty())
+                {
+                    size_t c = phash.erase(cacheList.back());
+                    cacheList.pop_back();
+                    if (c != 0)
+                        break;
+                }
+            }
+        }
     }
-    Impl(const String& _src)
+    Program prog(src, buildflags, errmsg);
+    // Cache result of build failures too (to prevent unnecessary compiler invocations)
     {
-        init(_src);
+        cv::AutoLock lock(program_cache_mutex);
+        phash.insert(std::pair<std::string, Program>(key, prog));
+        cacheList.push_front(key);
     }
-    void init(const String& _src)
-    {
-        refcount = 1;
-        src = _src;
-        h = crc64((uchar*)src.c_str(), src.size());
-    }
-
-    IMPLEMENT_REFCOUNTABLE();
-    String src;
-    ProgramSource::hash_t h;
-};
-
-
-ProgramSource::ProgramSource()
-{
-    p = 0;
+    return prog;
+#else
+    CV_OPENCL_NO_SUPPORT();
+#endif
 }
 
-ProgramSource::ProgramSource(const char* prog)
-{
-    p = new Impl(prog);
-}
-
-ProgramSource::ProgramSource(const String& prog)
-{
-    p = new Impl(prog);
-}
-
-ProgramSource::~ProgramSource()
-{
-    if(p)
-        p->release();
-}
-
-ProgramSource::ProgramSource(const ProgramSource& prog)
-{
-    p = prog.p;
-    if(p)
-        p->addref();
-}
-
-ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
-{
-    Impl* newp = (Impl*)prog.p;
-    if(newp)
-        newp->addref();
-    if(p)
-        p->release();
-    p = newp;
-    return *this;
-}
-
-const String& ProgramSource::source() const
-{
-    static String dummy;
-    return p ? p->src : dummy;
-}
-
-ProgramSource::hash_t ProgramSource::hash() const
-{
-    return p ? p->h : 0;
-}
 
 //////////////////////////////////////////// OpenCLAllocator //////////////////////////////////////////////////
 
+template<typename T>
 class OpenCLBufferPool
 {
 protected:
     ~OpenCLBufferPool() { }
 public:
-    virtual cl_mem allocate(size_t size, CV_OUT size_t& capacity) = 0;
-    virtual void release(cl_mem handle, size_t capacity) = 0;
+    virtual T allocate(size_t size) = 0;
+    virtual void release(T buffer) = 0;
 };
 
-class OpenCLBufferPoolImpl : public BufferPoolController, public OpenCLBufferPool
+template <typename Derived, typename BufferEntry, typename T>
+class OpenCLBufferPoolBaseImpl : public BufferPoolController, public OpenCLBufferPool<T>
 {
-public:
-    struct BufferEntry
-    {
-        cl_mem clBuffer_;
-        size_t capacity_;
-    };
+private:
+    inline Derived& derived() { return *static_cast<Derived*>(this); }
 protected:
     Mutex mutex_;
 
     size_t currentReservedSize;
     size_t maxReservedSize;
 
-    std::list<BufferEntry> reservedEntries_; // LRU order
+    std::list<BufferEntry> allocatedEntries_; // Allocated and used entries
+    std::list<BufferEntry> reservedEntries_; // LRU order. Allocated, but not used entries
+
+    // synchronized
+    bool _findAndRemoveEntryFromAllocatedList(CV_OUT BufferEntry& entry, T buffer)
+    {
+        typename std::list<BufferEntry>::iterator i = allocatedEntries_.begin();
+        for (; i != allocatedEntries_.end(); ++i)
+        {
+            BufferEntry& e = *i;
+            if (e.clBuffer_ == buffer)
+            {
+                entry = e;
+                allocatedEntries_.erase(i);
+                return true;
+            }
+        }
+        return false;
+    }
 
     // synchronized
     bool _findAndRemoveEntryFromReservedList(CV_OUT BufferEntry& entry, const size_t size)
     {
         if (reservedEntries_.empty())
             return false;
-        std::list<BufferEntry>::iterator i = reservedEntries_.begin();
-        std::list<BufferEntry>::iterator result_pos = reservedEntries_.end();
-        BufferEntry result = {NULL, 0};
+        typename std::list<BufferEntry>::iterator i = reservedEntries_.begin();
+        typename std::list<BufferEntry>::iterator result_pos = reservedEntries_.end();
+        BufferEntry result;
         size_t minDiff = (size_t)(-1);
         for (; i != reservedEntries_.end(); ++i)
         {
@@ -3452,7 +4209,7 @@ protected:
             if (e.capacity_ >= size)
             {
                 size_t diff = e.capacity_ - size;
-                if (diff < size / 8 && (result_pos == reservedEntries_.end() || diff < minDiff))
+                if (diff < std::max((size_t)4096, size / 8) && (result_pos == reservedEntries_.end() || diff < minDiff))
                 {
                     minDiff = diff;
                     result_pos = i;
@@ -3468,6 +4225,7 @@ protected:
             reservedEntries_.erase(result_pos);
             entry = result;
             currentReservedSize -= entry.capacity_;
+            allocatedEntries_.push_back(entry);
             return true;
         }
         return false;
@@ -3482,7 +4240,7 @@ protected:
             const BufferEntry& entry = reservedEntries_.back();
             CV_DbgAssert(currentReservedSize >= entry.capacity_);
             currentReservedSize -= entry.capacity_;
-            _releaseBufferEntry(entry);
+            derived()._releaseBufferEntry(entry);
             reservedEntries_.pop_back();
         }
     }
@@ -3490,96 +4248,69 @@ protected:
     inline size_t _allocationGranularity(size_t size)
     {
         // heuristic values
-        if (size < 1024)
-            return 16;
-        else if (size < 64*1024)
-            return 64;
-        else if (size < 1024*1024)
-            return 4096;
+        if (size < 1024*1024)
+            return 4096;  // don't work with buffers smaller than 4Kb (hidden allocation overhead issue)
         else if (size < 16*1024*1024)
             return 64*1024;
         else
             return 1024*1024;
     }
 
-    void _allocateBufferEntry(BufferEntry& entry, size_t size)
-    {
-        CV_DbgAssert(entry.clBuffer_ == NULL);
-        entry.capacity_ = alignSize(size, (int)_allocationGranularity(size));
-        Context& ctx = Context::getDefault();
-        cl_int retval = CL_SUCCESS;
-        entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE, entry.capacity_, 0, &retval);
-        CV_Assert(retval == CL_SUCCESS);
-        CV_Assert(entry.clBuffer_ != NULL);
-        LOG_BUFFER_POOL("OpenCL allocate %lld (0x%llx) bytes: %p\n",
-                (long long)entry.capacity_, (long long)entry.capacity_, entry.clBuffer_);
-    }
-
-    void _releaseBufferEntry(const BufferEntry& entry)
-    {
-        CV_Assert(entry.capacity_ != 0);
-        CV_Assert(entry.clBuffer_ != NULL);
-        LOG_BUFFER_POOL("OpenCL release buffer: %p, %lld (0x%llx) bytes\n",
-                entry.clBuffer_, (long long)entry.capacity_, (long long)entry.capacity_);
-        clReleaseMemObject(entry.clBuffer_);
-    }
 public:
-    OpenCLBufferPoolImpl()
-        : currentReservedSize(0), maxReservedSize(0)
+    OpenCLBufferPoolBaseImpl()
+        : currentReservedSize(0),
+          maxReservedSize(0)
     {
-        int poolSize = ocl::Device::getDefault().isIntel() ? 1 << 27 : 0;
-        maxReservedSize = getConfigurationParameterForSize("OPENCV_OPENCL_BUFFERPOOL_LIMIT", poolSize);
+        // nothing
     }
-    virtual ~OpenCLBufferPoolImpl()
+    virtual ~OpenCLBufferPoolBaseImpl()
     {
         freeAllReservedBuffers();
         CV_Assert(reservedEntries_.empty());
     }
 public:
-    virtual cl_mem allocate(size_t size, CV_OUT size_t& capacity)
+    virtual T allocate(size_t size) CV_OVERRIDE
     {
-        BufferEntry entry = {NULL, 0};
-        if (maxReservedSize > 0)
+        AutoLock locker(mutex_);
+        BufferEntry entry;
+        if (maxReservedSize > 0 && _findAndRemoveEntryFromReservedList(entry, size))
         {
-            AutoLock locker(mutex_);
-            if (_findAndRemoveEntryFromReservedList(entry, size))
-            {
-                CV_DbgAssert(size <= entry.capacity_);
-                LOG_BUFFER_POOL("Reuse reserved buffer: %p\n", entry.clBuffer_);
-                capacity = entry.capacity_;
-                return entry.clBuffer_;
-            }
-        }
-        _allocateBufferEntry(entry, size);
-        capacity = entry.capacity_;
-        return entry.clBuffer_;
-    }
-    virtual void release(cl_mem handle, size_t capacity)
-    {
-        BufferEntry entry = {handle, capacity};
-        if (maxReservedSize == 0 || entry.capacity_ > maxReservedSize / 8)
-        {
-            _releaseBufferEntry(entry);
+            CV_DbgAssert(size <= entry.capacity_);
+            LOG_BUFFER_POOL("Reuse reserved buffer: %p\n", entry.clBuffer_);
         }
         else
         {
-            AutoLock locker(mutex_);
+            derived()._allocateBufferEntry(entry, size);
+        }
+        return entry.clBuffer_;
+    }
+    virtual void release(T buffer) CV_OVERRIDE
+    {
+        AutoLock locker(mutex_);
+        BufferEntry entry;
+        CV_Assert(_findAndRemoveEntryFromAllocatedList(entry, buffer));
+        if (maxReservedSize == 0 || entry.capacity_ > maxReservedSize / 8)
+        {
+            derived()._releaseBufferEntry(entry);
+        }
+        else
+        {
             reservedEntries_.push_front(entry);
             currentReservedSize += entry.capacity_;
             _checkSizeOfReservedEntries();
         }
     }
 
-    virtual size_t getReservedSize() const { return currentReservedSize; }
-    virtual size_t getMaxReservedSize() const { return maxReservedSize; }
-    virtual void setMaxReservedSize(size_t size)
+    virtual size_t getReservedSize() const CV_OVERRIDE { return currentReservedSize; }
+    virtual size_t getMaxReservedSize() const CV_OVERRIDE { return maxReservedSize; }
+    virtual void setMaxReservedSize(size_t size) CV_OVERRIDE
     {
         AutoLock locker(mutex_);
         size_t oldMaxReservedSize = maxReservedSize;
         maxReservedSize = size;
         if (maxReservedSize < oldMaxReservedSize)
         {
-            std::list<BufferEntry>::iterator i = reservedEntries_.begin();
+            typename std::list<BufferEntry>::iterator i = reservedEntries_.begin();
             for (; i != reservedEntries_.end();)
             {
                 const BufferEntry& entry = *i;
@@ -3587,7 +4318,7 @@ public:
                 {
                     CV_DbgAssert(currentReservedSize >= entry.capacity_);
                     currentReservedSize -= entry.capacity_;
-                    _releaseBufferEntry(entry);
+                    derived()._releaseBufferEntry(entry);
                     i = reservedEntries_.erase(i);
                     continue;
                 }
@@ -3596,22 +4327,127 @@ public:
             _checkSizeOfReservedEntries();
         }
     }
-    virtual void freeAllReservedBuffers()
+    virtual void freeAllReservedBuffers() CV_OVERRIDE
     {
         AutoLock locker(mutex_);
-        std::list<BufferEntry>::const_iterator i = reservedEntries_.begin();
+        typename std::list<BufferEntry>::const_iterator i = reservedEntries_.begin();
         for (; i != reservedEntries_.end(); ++i)
         {
             const BufferEntry& entry = *i;
-            _releaseBufferEntry(entry);
+            derived()._releaseBufferEntry(entry);
         }
         reservedEntries_.clear();
+        currentReservedSize = 0;
     }
 };
 
-#if defined _MSC_VER
-#pragma warning(disable:4127) // conditional expression is constant
+struct CLBufferEntry
+{
+    cl_mem clBuffer_;
+    size_t capacity_;
+    CLBufferEntry() : clBuffer_((cl_mem)NULL), capacity_(0) { }
+};
+
+class OpenCLBufferPoolImpl CV_FINAL : public OpenCLBufferPoolBaseImpl<OpenCLBufferPoolImpl, CLBufferEntry, cl_mem>
+{
+public:
+    typedef struct CLBufferEntry BufferEntry;
+protected:
+    int createFlags_;
+public:
+    OpenCLBufferPoolImpl(int createFlags = 0)
+        : createFlags_(createFlags)
+    {
+    }
+
+    void _allocateBufferEntry(BufferEntry& entry, size_t size)
+    {
+        CV_DbgAssert(entry.clBuffer_ == NULL);
+        entry.capacity_ = alignSize(size, (int)_allocationGranularity(size));
+        Context& ctx = Context::getDefault();
+        cl_int retval = CL_SUCCESS;
+        entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE|createFlags_, entry.capacity_, 0, &retval);
+        CV_OCL_CHECK_RESULT(retval, cv::format("clCreateBuffer(capacity=%lld) => %p", (long long int)entry.capacity_, (void*)entry.clBuffer_).c_str());
+        CV_Assert(entry.clBuffer_ != NULL);
+        if(retval == CL_SUCCESS)
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL);
+        }
+        LOG_BUFFER_POOL("OpenCL allocate %lld (0x%llx) bytes: %p\n",
+                (long long)entry.capacity_, (long long)entry.capacity_, entry.clBuffer_);
+        allocatedEntries_.push_back(entry);
+    }
+
+    void _releaseBufferEntry(const BufferEntry& entry)
+    {
+        CV_Assert(entry.capacity_ != 0);
+        CV_Assert(entry.clBuffer_ != NULL);
+        LOG_BUFFER_POOL("OpenCL release buffer: %p, %lld (0x%llx) bytes\n",
+                entry.clBuffer_, (long long)entry.capacity_, (long long)entry.capacity_);
+        CV_OCL_DBG_CHECK(clReleaseMemObject(entry.clBuffer_));
+    }
+};
+
+#ifdef HAVE_OPENCL_SVM
+struct CLSVMBufferEntry
+{
+    void* clBuffer_;
+    size_t capacity_;
+    CLSVMBufferEntry() : clBuffer_(NULL), capacity_(0) { }
+};
+class OpenCLSVMBufferPoolImpl CV_FINAL : public OpenCLBufferPoolBaseImpl<OpenCLSVMBufferPoolImpl, CLSVMBufferEntry, void*>
+{
+public:
+    typedef struct CLSVMBufferEntry BufferEntry;
+public:
+    OpenCLSVMBufferPoolImpl()
+    {
+    }
+
+    void _allocateBufferEntry(BufferEntry& entry, size_t size)
+    {
+        CV_DbgAssert(entry.clBuffer_ == NULL);
+        entry.capacity_ = alignSize(size, (int)_allocationGranularity(size));
+
+        Context& ctx = Context::getDefault();
+        const svm::SVMCapabilities svmCaps = svm::getSVMCapabilitites(ctx);
+        bool isFineGrainBuffer = svmCaps.isSupportFineGrainBuffer();
+        cl_svm_mem_flags memFlags = CL_MEM_READ_WRITE |
+                (isFineGrainBuffer ? CL_MEM_SVM_FINE_GRAIN_BUFFER : 0);
+
+        const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+        CV_DbgAssert(svmFns->isValid());
+
+        CV_OPENCL_SVM_TRACE_P("clSVMAlloc: %d\n", (int)entry.capacity_);
+        void *buf = svmFns->fn_clSVMAlloc((cl_context)ctx.ptr(), memFlags, entry.capacity_, 0);
+        CV_Assert(buf);
+
+        entry.clBuffer_ = buf;
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL);
+        }
+        LOG_BUFFER_POOL("OpenCL SVM allocate %lld (0x%llx) bytes: %p\n",
+                (long long)entry.capacity_, (long long)entry.capacity_, entry.clBuffer_);
+        allocatedEntries_.push_back(entry);
+    }
+
+    void _releaseBufferEntry(const BufferEntry& entry)
+    {
+        CV_Assert(entry.capacity_ != 0);
+        CV_Assert(entry.clBuffer_ != NULL);
+        LOG_BUFFER_POOL("OpenCL release SVM buffer: %p, %lld (0x%llx) bytes\n",
+                entry.clBuffer_, (long long)entry.capacity_, (long long)entry.capacity_);
+        Context& ctx = Context::getDefault();
+        const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+        CV_DbgAssert(svmFns->isValid());
+        CV_OPENCL_SVM_TRACE_P("clSVMFree: %p\n",  entry.clBuffer_);
+        svmFns->fn_clSVMFree((cl_context)ctx.ptr(), entry.clBuffer_);
+    }
+};
 #endif
+
+
+
 template <bool readAccess, bool writeAccess>
 class AlignedDataPtr
 {
@@ -3627,6 +4463,7 @@ public:
         : size_(size), originPtr_(ptr), alignment_(alignment), ptr_(ptr), allocatedPtr_(NULL)
     {
         CV_DbgAssert((alignment & (alignment - 1)) == 0); // check for 2^n
+        CV_DbgAssert(!readAccess || ptr);
         if (((size_t)ptr_ & (alignment - 1)) != 0)
         {
             allocatedPtr_ = new uchar[size_ + alignment - 1];
@@ -3661,29 +4498,124 @@ private:
     AlignedDataPtr(const AlignedDataPtr&); // disabled
     AlignedDataPtr& operator=(const AlignedDataPtr&); // disabled
 };
-#if defined _MSC_VER
-#pragma warning(default:4127) // conditional expression is constant
-#endif
+
+template <bool readAccess, bool writeAccess>
+class AlignedDataPtr2D
+{
+protected:
+    const size_t size_;
+    uchar* const originPtr_;
+    const size_t alignment_;
+    uchar* ptr_;
+    uchar* allocatedPtr_;
+    size_t rows_;
+    size_t cols_;
+    size_t step_;
+
+public:
+    AlignedDataPtr2D(uchar* ptr, size_t rows, size_t cols, size_t step, size_t alignment, size_t extrabytes=0)
+        : size_(rows*step), originPtr_(ptr), alignment_(alignment), ptr_(ptr), allocatedPtr_(NULL), rows_(rows), cols_(cols), step_(step)
+    {
+        CV_DbgAssert((alignment & (alignment - 1)) == 0); // check for 2^n
+        CV_DbgAssert(!readAccess || ptr != NULL);
+        if (ptr == 0 || ((size_t)ptr_ & (alignment - 1)) != 0)
+        {
+            allocatedPtr_ = new uchar[size_ + extrabytes + alignment - 1];
+            ptr_ = (uchar*)(((uintptr_t)allocatedPtr_ + (alignment - 1)) & ~(alignment - 1));
+            if (readAccess)
+            {
+                for (size_t i = 0; i < rows_; i++)
+                    memcpy(ptr_ + i*step_, originPtr_ + i*step_, cols_);
+            }
+        }
+    }
+
+    uchar* getAlignedPtr() const
+    {
+        CV_DbgAssert(((size_t)ptr_ & (alignment_ - 1)) == 0);
+        return ptr_;
+    }
+
+    ~AlignedDataPtr2D()
+    {
+        if (allocatedPtr_)
+        {
+            if (writeAccess)
+            {
+                for (size_t i = 0; i < rows_; i++)
+                    memcpy(originPtr_ + i*step_, ptr_ + i*step_, cols_);
+            }
+            delete[] allocatedPtr_;
+            allocatedPtr_ = NULL;
+        }
+        ptr_ = NULL;
+    }
+private:
+    AlignedDataPtr2D(const AlignedDataPtr2D&); // disabled
+    AlignedDataPtr2D& operator=(const AlignedDataPtr2D&); // disabled
+};
 
 #ifndef CV_OPENCL_DATA_PTR_ALIGNMENT
 #define CV_OPENCL_DATA_PTR_ALIGNMENT 16
 #endif
 
-class OpenCLAllocator : public MatAllocator
+class OpenCLAllocator CV_FINAL : public MatAllocator
 {
     mutable OpenCLBufferPoolImpl bufferPool;
+    mutable OpenCLBufferPoolImpl bufferPoolHostPtr;
+#ifdef  HAVE_OPENCL_SVM
+    mutable OpenCLSVMBufferPoolImpl bufferPoolSVM;
+#endif
+
+public:
     enum AllocatorFlags
     {
-        ALLOCATOR_FLAGS_BUFFER_POOL_USED = 1 << 0
+        ALLOCATOR_FLAGS_BUFFER_POOL_USED = 1 << 0,
+        ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED = 1 << 1,
+#ifdef HAVE_OPENCL_SVM
+        ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED = 1 << 2,
+#endif
+        ALLOCATOR_FLAGS_EXTERNAL_BUFFER = 1 << 3  // convertFromBuffer()
     };
-public:
-    OpenCLAllocator() { matStdAllocator = Mat::getStdAllocator(); }
+
+    OpenCLAllocator()
+        : bufferPool(0),
+          bufferPoolHostPtr(CL_MEM_ALLOC_HOST_PTR)
+    {
+        size_t defaultPoolSize, poolSize;
+        defaultPoolSize = ocl::Device::getDefault().isIntel() ? 1 << 27 : 0;
+        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_BUFFERPOOL_LIMIT", defaultPoolSize);
+        bufferPool.setMaxReservedSize(poolSize);
+        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_HOST_PTR_BUFFERPOOL_LIMIT", defaultPoolSize);
+        bufferPoolHostPtr.setMaxReservedSize(poolSize);
+#ifdef HAVE_OPENCL_SVM
+        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_SVM_BUFFERPOOL_LIMIT", defaultPoolSize);
+        bufferPoolSVM.setMaxReservedSize(poolSize);
+#endif
+
+        matStdAllocator = Mat::getDefaultAllocator();
+    }
+    ~OpenCLAllocator()
+    {
+        flushCleanupQueue();
+    }
 
     UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step,
             int flags, UMatUsageFlags usageFlags) const
     {
         UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags, usageFlags);
         return u;
+    }
+
+    static bool isOpenCLMapForced()  // force clEnqueueMapBuffer / clEnqueueUnmapMemObject OpenCL API
+    {
+        static bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_BUFFER_FORCE_MAPPING", false);
+        return value;
+    }
+    static bool isOpenCLCopyingForced()  // force clEnqueueReadBuffer[Rect] / clEnqueueWriteBuffer[Rect] OpenCL API
+    {
+        static bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_BUFFER_FORCE_COPYING", false);
+        return value;
     }
 
     void getBestFlags(const Context& ctx, int /*flags*/, UMatUsageFlags usageFlags, int& createFlags, int& flags0) const
@@ -3693,14 +4625,22 @@ public:
         if ((usageFlags & USAGE_ALLOCATE_HOST_MEMORY) != 0)
             createFlags |= CL_MEM_ALLOC_HOST_PTR;
 
-        if( dev.hostUnifiedMemory() )
+        if (!isOpenCLCopyingForced() &&
+            (isOpenCLMapForced() ||
+                (dev.hostUnifiedMemory()
+#ifndef __APPLE__
+                || dev.isIntel()
+#endif
+                )
+            )
+        )
             flags0 = 0;
         else
             flags0 = UMatData::COPY_ON_MAP;
     }
 
     UMatData* allocate(int dims, const int* sizes, int type,
-                       void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
+                       void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         if(!useOpenCL())
             return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
@@ -3714,43 +4654,66 @@ public:
         }
 
         Context& ctx = Context::getDefault();
+        flushCleanupQueue();
+
         int createFlags = 0, flags0 = 0;
         getBestFlags(ctx, flags, usageFlags, createFlags, flags0);
 
-        size_t capacity = 0;
         void* handle = NULL;
         int allocatorFlags = 0;
+
+#ifdef HAVE_OPENCL_SVM
+        const svm::SVMCapabilities svmCaps = svm::getSVMCapabilitites(ctx);
+        if (ctx.useSVM() && svm::useSVM(usageFlags) && !svmCaps.isNoSVMSupport())
+        {
+            allocatorFlags = ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED;
+            handle = bufferPoolSVM.allocate(total);
+
+            // this property is constant, so single buffer pool can be used here
+            bool isFineGrainBuffer = svmCaps.isSupportFineGrainBuffer();
+            allocatorFlags |= isFineGrainBuffer ? svm::OPENCL_SVM_FINE_GRAIN_BUFFER : svm::OPENCL_SVM_COARSE_GRAIN_BUFFER;
+        }
+        else
+#endif
         if (createFlags == 0)
         {
-            handle = bufferPool.allocate(total, capacity);
-            if (!handle)
-                return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
             allocatorFlags = ALLOCATOR_FLAGS_BUFFER_POOL_USED;
+            handle = bufferPool.allocate(total);
+        }
+        else if (createFlags == CL_MEM_ALLOC_HOST_PTR)
+        {
+            allocatorFlags = ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED;
+            handle = bufferPoolHostPtr.allocate(total);
         }
         else
         {
-            capacity = total;
-            cl_int retval = 0;
-            handle = clCreateBuffer((cl_context)ctx.ptr(),
-                                          CL_MEM_READ_WRITE|createFlags, total, 0, &retval);
-            if( !handle || retval != CL_SUCCESS )
-                return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
+            CV_Assert(handle != NULL); // Unsupported, throw
         }
+
+        if (!handle)
+            return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
+
         UMatData* u = new UMatData(this);
         u->data = 0;
         u->size = total;
-        u->capacity = capacity;
         u->handle = handle;
         u->flags = flags0;
         u->allocatorFlags_ = allocatorFlags;
         CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency in deallocate()
+        u->markHostCopyObsolete(true);
+        opencl_allocator_stats.onAllocate(u->size);
         return u;
     }
 
-    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
+    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
+#ifndef HAVE_OPENCL
+        return false;
+#else
         if(!u)
             return false;
+
+        flushCleanupQueue();
 
         UMatDataAutoLock lock(u);
 
@@ -3761,27 +4724,111 @@ public:
             int createFlags = 0, flags0 = 0;
             getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
 
-            cl_context ctx_handle = (cl_context)ctx.ptr();
-            cl_int retval = 0;
-            int tempUMatFlags = UMatData::TEMP_UMAT;
-            u->handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|CL_MEM_READ_WRITE,
-                                       u->size, u->origdata, &retval);
-            if((!u->handle || retval != CL_SUCCESS) && !(accessFlags & ACCESS_FAST))
-            {
-                u->handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags,
-                                           u->size, u->origdata, &retval);
-                tempUMatFlags = UMatData::TEMP_COPIED_UMAT;
+            bool copyOnMap = (flags0 & UMatData::COPY_ON_MAP) != 0;
 
+            cl_context ctx_handle = (cl_context)ctx.ptr();
+            int allocatorFlags = 0;
+            int tempUMatFlags = 0;
+            void* handle = NULL;
+            cl_int retval = CL_SUCCESS;
+
+#ifdef HAVE_OPENCL_SVM
+            svm::SVMCapabilities svmCaps = svm::getSVMCapabilitites(ctx);
+            bool useSVM = ctx.useSVM() && svm::useSVM(usageFlags);
+            if (useSVM && svmCaps.isSupportFineGrainSystem())
+            {
+                allocatorFlags = svm::OPENCL_SVM_FINE_GRAIN_SYSTEM;
+                tempUMatFlags = UMatData::TEMP_UMAT;
+                handle = u->origdata;
+                CV_OPENCL_SVM_TRACE_P("Use fine grain system: %d (%p)\n", (int)u->size, handle);
             }
-            if(!u->handle || retval != CL_SUCCESS)
+            else if (useSVM && (svmCaps.isSupportFineGrainBuffer() || svmCaps.isSupportCoarseGrainBuffer()))
+            {
+                if (!(accessFlags & ACCESS_FAST)) // memcpy used
+                {
+                    bool isFineGrainBuffer = svmCaps.isSupportFineGrainBuffer();
+
+                    cl_svm_mem_flags memFlags = createFlags |
+                            (isFineGrainBuffer ? CL_MEM_SVM_FINE_GRAIN_BUFFER : 0);
+
+                    const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+                    CV_DbgAssert(svmFns->isValid());
+
+                    CV_OPENCL_SVM_TRACE_P("clSVMAlloc + copy: %d\n", (int)u->size);
+                    handle = svmFns->fn_clSVMAlloc((cl_context)ctx.ptr(), memFlags, u->size, 0);
+                    CV_Assert(handle);
+
+                    cl_command_queue q = NULL;
+                    if (!isFineGrainBuffer)
+                    {
+                        q = (cl_command_queue)Queue::getDefault().ptr();
+                        CV_OPENCL_SVM_TRACE_P("clEnqueueSVMMap: %p (%d)\n", handle, (int)u->size);
+                        cl_int status = svmFns->fn_clEnqueueSVMMap(q, CL_TRUE, CL_MAP_WRITE,
+                                handle, u->size,
+                                0, NULL, NULL);
+                        CV_OCL_CHECK_RESULT(status, "clEnqueueSVMMap()");
+
+                    }
+                    memcpy(handle, u->origdata, u->size);
+                    if (!isFineGrainBuffer)
+                    {
+                        CV_OPENCL_SVM_TRACE_P("clEnqueueSVMUnmap: %p\n", handle);
+                        cl_int status = svmFns->fn_clEnqueueSVMUnmap(q, handle, 0, NULL, NULL);
+                        CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
+                    }
+
+                    tempUMatFlags = UMatData::TEMP_UMAT | UMatData::TEMP_COPIED_UMAT;
+                    allocatorFlags |= isFineGrainBuffer ? svm::OPENCL_SVM_FINE_GRAIN_BUFFER
+                                                : svm::OPENCL_SVM_COARSE_GRAIN_BUFFER;
+                }
+            }
+            else
+#endif
+            {
+                if( copyOnMap )
+                    accessFlags &= ~ACCESS_FAST;
+
+                tempUMatFlags = UMatData::TEMP_UMAT;
+                if (
+                #ifdef __APPLE__
+                    !copyOnMap &&
+                #endif
+                    CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
+                    // There are OpenCL runtime issues for less aligned data
+                    && (CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR != 0
+                        && u->origdata == cv::alignPtr(u->origdata, (int)CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR))
+                    // Avoid sharing of host memory between OpenCL buffers
+                    && !(u->originalUMatData && u->originalUMatData->handle)
+                )
+                {
+                    handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
+                                            u->size, u->origdata, &retval);
+                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer(CL_MEM_USE_HOST_PTR|createFlags, sz=%lld, origdata=%p) => %p",
+                            (long long int)u->size, u->origdata, (void*)handle).c_str());
+                }
+                if((!handle || retval < 0) && !(accessFlags & ACCESS_FAST))
+                {
+                    handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags,
+                                               u->size, u->origdata, &retval);
+                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer(CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags, sz=%lld, origdata=%p) => %p",
+                            (long long int)u->size, u->origdata, (void*)handle).c_str());
+                    tempUMatFlags |= UMatData::TEMP_COPIED_UMAT;
+                }
+            }
+            CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer() => %p", (void*)handle).c_str());
+            if(!handle || retval != CL_SUCCESS)
                 return false;
+            u->handle = handle;
             u->prevAllocator = u->currAllocator;
             u->currAllocator = this;
-            u->flags |= tempUMatFlags;
+            u->flags |= tempUMatFlags | flags0;
+            u->allocatorFlags_ = allocatorFlags;
         }
         if(accessFlags & ACCESS_WRITE)
             u->markHostCopyObsolete(true);
+        opencl_allocator_stats.onAllocate(u->size);
         return true;
+#endif  // HAVE_OPENCL
     }
 
     /*void sync(UMatData* u) const
@@ -3814,109 +4861,263 @@ public:
         }
     }*/
 
-    void deallocate(UMatData* u) const
+    void deallocate(UMatData* u) const CV_OVERRIDE
     {
         if(!u)
             return;
 
-        CV_Assert(u->urefcount >= 0);
-        CV_Assert(u->refcount >= 0);
+        CV_Assert(u->urefcount == 0);
+        CV_Assert(u->refcount == 0 && "UMat deallocation error: some derived Mat is still alive");
 
-        // TODO: !!! when we add Shared Virtual Memory Support,
-        // this function (as well as the others) should be corrected
-        CV_Assert(u->handle != 0 && u->urefcount == 0);
+        CV_Assert(u->handle != 0);
+        CV_Assert(u->mapcount == 0);
+
+        if (u->flags & UMatData::ASYNC_CLEANUP)
+            addToCleanupQueue(u);
+        else
+            deallocate_(u);
+    }
+
+    void deallocate_(UMatData* u) const
+    {
+        CV_Assert(u);
+        CV_Assert(u->handle);
+        if ((u->allocatorFlags_ & ALLOCATOR_FLAGS_EXTERNAL_BUFFER) == 0)
+        {
+            opencl_allocator_stats.onFree(u->size);
+        }
+
+#ifdef _WIN32
+        if (cv::__termination)  // process is not in consistent state (after ExitProcess call) and terminating
+            return;             // avoid any OpenCL calls
+#endif
         if(u->tempUMat())
         {
+            CV_Assert(u->origdata);
 //            UMatDataAutoLock lock(u);
-            if( u->hostCopyObsolete() && u->refcount > 0 )
+
+            if (u->hostCopyObsolete())
             {
-                cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-                if( u->tempCopiedUMat() )
+#ifdef HAVE_OPENCL_SVM
+                if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
                 {
-                    AlignedDataPtr<false, true> alignedPtr(u->origdata, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
-                    CV_OclDbgAssert(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                        u->size, alignedPtr.getAlignedPtr(), 0, 0, 0) == CL_SUCCESS);
+                    Context& ctx = Context::getDefault();
+                    const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+                    CV_DbgAssert(svmFns->isValid());
+
+                    if( u->tempCopiedUMat() )
+                    {
+                        CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_BUFFER ||
+                                (u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER);
+                        bool isFineGrainBuffer = (u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_BUFFER;
+                        cl_command_queue q = NULL;
+                        if (!isFineGrainBuffer)
+                        {
+                            CV_DbgAssert(((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MAP) == 0));
+                            q = (cl_command_queue)Queue::getDefault().ptr();
+                            CV_OPENCL_SVM_TRACE_P("clEnqueueSVMMap: %p (%d)\n", u->handle, (int)u->size);
+                            cl_int status = svmFns->fn_clEnqueueSVMMap(q, CL_FALSE, CL_MAP_READ,
+                                    u->handle, u->size,
+                                    0, NULL, NULL);
+                            CV_OCL_CHECK_RESULT(status, "clEnqueueSVMMap()");
+                        }
+                        clFinish(q);
+                        memcpy(u->origdata, u->handle, u->size);
+                        if (!isFineGrainBuffer)
+                        {
+                            CV_OPENCL_SVM_TRACE_P("clEnqueueSVMUnmap: %p\n", u->handle);
+                            cl_int status = svmFns->fn_clEnqueueSVMUnmap(q, u->handle, 0, NULL, NULL);
+                            CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
+                        }
+                    }
+                    else
+                    {
+                        CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM);
+                        // nothing
+                    }
                 }
                 else
+#endif
                 {
-                    cl_int retval = 0;
-                    void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                                                    (CL_MAP_READ | CL_MAP_WRITE),
-                                                    0, u->size, 0, 0, 0, &retval);
-                    CV_OclDbgAssert(retval == CL_SUCCESS);
-                    CV_OclDbgAssert(clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0) == CL_SUCCESS);
-                    CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
+                    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+                    if( u->tempCopiedUMat() )
+                    {
+                        AlignedDataPtr<false, true> alignedPtr(u->origdata, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
+                        CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                            u->size, alignedPtr.getAlignedPtr(), 0, 0, 0));
+                    }
+                    else
+                    {
+                        cl_int retval = 0;
+                        if (u->tempUMat())
+                        {
+                            CV_Assert(u->mapcount == 0);
+                            flushCleanupQueue(); // workaround for CL_OUT_OF_RESOURCES problem (#9960)
+                            void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                (CL_MAP_READ | CL_MAP_WRITE),
+                                0, u->size, 0, 0, 0, &retval);
+                            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(handle=%p, sz=%lld) => %p", (void*)u->handle, (long long int)u->size, data).c_str());
+                            CV_Assert(u->origdata == data && "Details: https://github.com/opencv/opencv/issues/6293");
+                            if (u->originalUMatData)
+                            {
+                                CV_Assert(u->originalUMatData->data == data);
+                            }
+                            retval = clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0);
+                            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueUnmapMemObject(handle=%p, data=%p, [sz=%lld])", (void*)u->handle, data, (long long int)u->size).c_str());
+                            CV_OCL_DBG_CHECK(clFinish(q));
+                        }
+                    }
                 }
-            }
-            u->markHostCopyObsolete(false);
-            clReleaseMemObject((cl_mem)u->handle);
-            u->handle = 0;
-            u->currAllocator = u->prevAllocator;
-            if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
-                fastFree(u->data);
-            u->data = u->origdata;
-            if(u->refcount == 0)
-                u->currAllocator->deallocate(u);
-        }
-        else
-        {
-            CV_Assert(u->refcount == 0);
-            if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
-            {
-                fastFree(u->data);
-                u->data = 0;
-            }
-            if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_USED)
-            {
-                bufferPool.release((cl_mem)u->handle, u->capacity);
+                u->markHostCopyObsolete(false);
             }
             else
             {
-                clReleaseMemObject((cl_mem)u->handle);
+                // nothing
+            }
+#ifdef HAVE_OPENCL_SVM
+            if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+            {
+                if( u->tempCopiedUMat() )
+                {
+                    Context& ctx = Context::getDefault();
+                    const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+                    CV_DbgAssert(svmFns->isValid());
+
+                    CV_OPENCL_SVM_TRACE_P("clSVMFree: %p\n", u->handle);
+                    svmFns->fn_clSVMFree((cl_context)ctx.ptr(), u->handle);
+                }
+            }
+            else
+#endif
+            {
+                cl_int retval = clReleaseMemObject((cl_mem)u->handle);
+                CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clReleaseMemObject(ptr=%p)", (void*)u->handle).c_str());
             }
             u->handle = 0;
-            u->capacity = 0;
-            delete u;
+            u->markDeviceCopyObsolete(true);
+            u->currAllocator = u->prevAllocator;
+            u->prevAllocator = NULL;
+            if(u->data && u->copyOnMap() && u->data != u->origdata)
+                fastFree(u->data);
+            u->data = u->origdata;
+            u->currAllocator->deallocate(u);
+            u = NULL;
         }
+        else
+        {
+            CV_Assert(u->origdata == NULL);
+            if(u->data && u->copyOnMap() && u->data != u->origdata)
+            {
+                fastFree(u->data);
+                u->data = 0;
+                u->markHostCopyObsolete(true);
+            }
+            if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_USED)
+            {
+                bufferPool.release((cl_mem)u->handle);
+            }
+            else if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED)
+            {
+                bufferPoolHostPtr.release((cl_mem)u->handle);
+            }
+#ifdef HAVE_OPENCL_SVM
+            else if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED)
+            {
+                if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM)
+                {
+                    //nothing
+                }
+                else if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_BUFFER ||
+                        (u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
+                {
+                    Context& ctx = Context::getDefault();
+                    const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+                    CV_DbgAssert(svmFns->isValid());
+                    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
+                    if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MAP) != 0)
+                    {
+                        CV_OPENCL_SVM_TRACE_P("clEnqueueSVMUnmap: %p\n", u->handle);
+                        cl_int status = svmFns->fn_clEnqueueSVMUnmap(q, u->handle, 0, NULL, NULL);
+                        CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
+                    }
+                }
+                bufferPoolSVM.release((void*)u->handle);
+            }
+#endif
+            else
+            {
+                CV_OCL_DBG_CHECK(clReleaseMemObject((cl_mem)u->handle));
+            }
+            u->handle = 0;
+            u->markDeviceCopyObsolete(true);
+            delete u;
+            u = NULL;
+        }
+        CV_Assert(u == NULL);
     }
 
-    void map(UMatData* u, int accessFlags) const
+    // synchronized call (external UMatDataAutoLock, see UMat::getMat)
+    void map(UMatData* u, int accessFlags) const CV_OVERRIDE
     {
-        if(!u)
-            return;
-
-        CV_Assert( u->handle != 0 );
-
-        UMatDataAutoLock autolock(u);
+        CV_Assert(u && u->handle);
 
         if(accessFlags & ACCESS_WRITE)
             u->markDeviceCopyObsolete(true);
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
-        // FIXIT Workaround for UMat synchronization issue
-        // if( u->refcount == 0 )
         {
             if( !u->copyOnMap() )
             {
-                if (u->data) // FIXIT Workaround for UMat synchronization issue
-                {
-                    //CV_Assert(u->hostCopyObsolete() == false);
-                    return;
-                }
+                // TODO
                 // because there can be other map requests for the same UMat with different access flags,
                 // we use the universal (read-write) access mode.
-                cl_int retval = 0;
-                u->data = (uchar*)clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                                                     (CL_MAP_READ | CL_MAP_WRITE),
-                                                     0, u->size, 0, 0, 0, &retval);
-                if(u->data && retval == CL_SUCCESS)
+#ifdef HAVE_OPENCL_SVM
+                if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+                {
+                    if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
+                    {
+                        Context& ctx = Context::getDefault();
+                        const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+                        CV_DbgAssert(svmFns->isValid());
+
+                        if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MAP) == 0)
+                        {
+                            CV_OPENCL_SVM_TRACE_P("clEnqueueSVMMap: %p (%d)\n", u->handle, (int)u->size);
+                            cl_int status = svmFns->fn_clEnqueueSVMMap(q, CL_FALSE, CL_MAP_READ | CL_MAP_WRITE,
+                                    u->handle, u->size,
+                                    0, NULL, NULL);
+                            CV_OCL_CHECK_RESULT(status, "clEnqueueSVMMap()");
+                            u->allocatorFlags_ |= svm::OPENCL_SVM_BUFFER_MAP;
+                        }
+                    }
+                    clFinish(q);
+                    u->data = (uchar*)u->handle;
+                    u->markHostCopyObsolete(false);
+                    u->markDeviceMemMapped(true);
+                    return;
+                }
+#endif
+
+                cl_int retval = CL_SUCCESS;
+                if (!u->deviceMemMapped())
+                {
+                    CV_Assert(u->refcount == 1);
+                    CV_Assert(u->mapcount++ == 0);
+                    u->data = (uchar*)clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                         (CL_MAP_READ | CL_MAP_WRITE),
+                                                         0, u->size, 0, 0, 0, &retval);
+                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(handle=%p, sz=%lld) => %p", (void*)u->handle, (long long int)u->size, u->data).c_str());
+                }
+                if (u->data && retval == CL_SUCCESS)
                 {
                     u->markHostCopyObsolete(false);
                     u->markDeviceMemMapped(true);
                     return;
                 }
 
+                // TODO Is it really a good idea and was it tested well?
                 // if map failed, switch to copy-on-map mode for the particular buffer
                 u->flags |= UMatData::COPY_ON_MAP;
             }
@@ -3931,13 +5132,18 @@ public:
         if( (accessFlags & ACCESS_READ) != 0 && u->hostCopyObsolete() )
         {
             AlignedDataPtr<false, true> alignedPtr(u->data, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
-            CV_Assert( clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                           u->size, alignedPtr.getAlignedPtr(), 0, 0, 0) == CL_SUCCESS );
+#ifdef HAVE_OPENCL_SVM
+            CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == 0);
+#endif
+            cl_int retval = clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                    0, u->size, alignedPtr.getAlignedPtr(), 0, 0, 0);
+            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueReadBuffer(q, handle=%p, CL_TRUE, 0, sz=%lld, data=%p, 0, 0, 0)",
+                    (void*)u->handle, (long long int)u->size, alignedPtr.getAlignedPtr()).c_str());
             u->markHostCopyObsolete(false);
         }
     }
 
-    void unmap(UMatData* u) const
+    void unmap(UMatData* u) const CV_OVERRIDE
     {
         if(!u)
             return;
@@ -3947,29 +5153,66 @@ public:
 
         UMatDataAutoLock autolock(u);
 
-        // FIXIT Workaround for UMat synchronization issue
-        if(u->refcount > 0)
-            return;
-
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
         cl_int retval = 0;
         if( !u->copyOnMap() && u->deviceMemMapped() )
         {
             CV_Assert(u->data != NULL);
-            u->markDeviceMemMapped(false);
-            CV_Assert( (retval = clEnqueueUnmapMemObject(q,
-                                (cl_mem)u->handle, u->data, 0, 0, 0)) == CL_SUCCESS );
-            CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
-            u->data = 0;
+#ifdef HAVE_OPENCL_SVM
+            if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+            {
+                if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
+                {
+                    Context& ctx = Context::getDefault();
+                    const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+                    CV_DbgAssert(svmFns->isValid());
+
+                    CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MAP) != 0);
+                    {
+                        CV_OPENCL_SVM_TRACE_P("clEnqueueSVMUnmap: %p\n", u->handle);
+                        cl_int status = svmFns->fn_clEnqueueSVMUnmap(q, u->handle,
+                                0, NULL, NULL);
+                        CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
+                        clFinish(q);
+                        u->allocatorFlags_ &= ~svm::OPENCL_SVM_BUFFER_MAP;
+                    }
+                }
+                if (u->refcount == 0)
+                    u->data = 0;
+                u->markDeviceCopyObsolete(false);
+                u->markHostCopyObsolete(true);
+                return;
+            }
+#endif
+            if (u->refcount == 0)
+            {
+                CV_Assert(u->mapcount-- == 1);
+                retval = clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0);
+                CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueUnmapMemObject(handle=%p, data=%p, [sz=%lld])", (void*)u->handle, u->data, (long long int)u->size).c_str());
+                if (Device::getDefault().isAMD())
+                {
+                    // required for multithreaded applications (see stitching test)
+                    CV_OCL_DBG_CHECK(clFinish(q));
+                }
+                u->markDeviceMemMapped(false);
+                u->data = 0;
+                u->markDeviceCopyObsolete(false);
+                u->markHostCopyObsolete(true);
+            }
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() )
         {
             AlignedDataPtr<true, false> alignedPtr(u->data, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
-            CV_Assert( (retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                u->size, alignedPtr.getAlignedPtr(), 0, 0, 0)) == CL_SUCCESS );
+#ifdef HAVE_OPENCL_SVM
+            CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == 0);
+#endif
+            retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                0, u->size, alignedPtr.getAlignedPtr(), 0, 0, 0);
+            CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueWriteBuffer(q, handle=%p, CL_TRUE, 0, sz=%lld, data=%p, 0, 0, 0)",
+                    (void*)u->handle, (long long int)u->size, alignedPtr.getAlignedPtr()).c_str());
+            u->markDeviceCopyObsolete(false);
+            u->markHostCopyObsolete(true);
         }
-        u->markDeviceCopyObsolete(false);
-        u->markHostCopyObsolete(false);
     }
 
     bool checkContinuous(int dims, const size_t sz[],
@@ -4048,7 +5291,7 @@ public:
 
     void download(UMatData* u, void* dstptr, int dims, const size_t sz[],
                   const size_t srcofs[], const size_t srcstep[],
-                  const size_t dststep[]) const
+                  const size_t dststep[]) const CV_OVERRIDE
     {
         if(!u)
             return;
@@ -4056,7 +5299,7 @@ public:
 
         if( u->data && !u->hostCopyObsolete() )
         {
-            Mat::getStdAllocator()->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
+            Mat::getDefaultAllocator()->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
             return;
         }
         CV_Assert( u->handle != 0 );
@@ -4072,23 +5315,106 @@ public:
                                             srcrawofs, new_srcofs, new_srcstep,
                                             dstrawofs, new_dstofs, new_dststep);
 
-        AlignedDataPtr<false, true> alignedPtr((uchar*)dstptr, sz[0] * dststep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
-        if( iscontinuous )
+#ifdef HAVE_OPENCL_SVM
+        if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
         {
-            CV_Assert( clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                                           srcrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0) == CL_SUCCESS );
+            CV_DbgAssert(u->data == NULL || u->data == u->handle);
+            Context& ctx = Context::getDefault();
+            const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+            CV_DbgAssert(svmFns->isValid());
+
+            CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MAP) == 0);
+            if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
+            {
+                CV_OPENCL_SVM_TRACE_P("clEnqueueSVMMap: %p (%d)\n", u->handle, (int)u->size);
+                cl_int status = svmFns->fn_clEnqueueSVMMap(q, CL_FALSE, CL_MAP_READ,
+                        u->handle, u->size,
+                        0, NULL, NULL);
+                CV_OCL_CHECK_RESULT(status, "clEnqueueSVMMap()");
+            }
+            clFinish(q);
+            if( iscontinuous )
+            {
+                memcpy(dstptr, (uchar*)u->handle + srcrawofs, total);
+            }
+            else
+            {
+                // This code is from MatAllocator::download()
+                int isz[CV_MAX_DIM];
+                uchar* srcptr = (uchar*)u->handle;
+                for( int i = 0; i < dims; i++ )
+                {
+                    CV_Assert( sz[i] <= (size_t)INT_MAX );
+                    if( sz[i] == 0 )
+                    return;
+                    if( srcofs )
+                    srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
+                    isz[i] = (int)sz[i];
+                }
+
+                Mat src(dims, isz, CV_8U, srcptr, srcstep);
+                Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+                const Mat* arrays[] = { &src, &dst };
+                uchar* ptrs[2];
+                NAryMatIterator it(arrays, ptrs, 2);
+                size_t j, planesz = it.size;
+
+                for( j = 0; j < it.nplanes; j++, ++it )
+                    memcpy(ptrs[1], ptrs[0], planesz);
+            }
+            if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
+            {
+                CV_OPENCL_SVM_TRACE_P("clEnqueueSVMUnmap: %p\n", u->handle);
+                cl_int status = svmFns->fn_clEnqueueSVMUnmap(q, u->handle,
+                        0, NULL, NULL);
+                CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
+                clFinish(q);
+            }
         }
         else
+#endif
         {
-            CV_Assert( clEnqueueReadBufferRect(q, (cl_mem)u->handle, CL_TRUE,
-                            new_srcofs, new_dstofs, new_sz, new_srcstep[0], new_srcstep[1],
-                            new_dststep[0], new_dststep[1], alignedPtr.getAlignedPtr(), 0, 0, 0) == CL_SUCCESS );
+            if( iscontinuous )
+            {
+                AlignedDataPtr<false, true> alignedPtr((uchar*)dstptr, total, CV_OPENCL_DATA_PTR_ALIGNMENT);
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                    srcrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0));
+            }
+            else if (CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS)
+            {
+                const size_t padding = CV_OPENCL_DATA_PTR_ALIGNMENT;
+                size_t new_srcrawofs = srcrawofs & ~(padding-1);
+                size_t membuf_ofs = srcrawofs - new_srcrawofs;
+                AlignedDataPtr2D<false, false> alignedPtr(0, new_sz[1], new_srcstep[0], new_srcstep[0],
+                                                          CV_OPENCL_DATA_PTR_ALIGNMENT, padding*2);
+                uchar* ptr = alignedPtr.getAlignedPtr();
+
+                CV_Assert(new_srcstep[0] >= new_sz[0]);
+                total = alignSize(new_srcstep[0]*new_sz[1] + membuf_ofs, padding);
+                total = std::min(total, u->size - new_srcrawofs);
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                 new_srcrawofs, total, ptr, 0, 0, 0));
+                for( size_t i = 0; i < new_sz[1]; i++ )
+                    memcpy( (uchar*)dstptr + i*new_dststep[0], ptr + i*new_srcstep[0] + membuf_ofs, new_sz[0]);
+            }
+            else
+            {
+                AlignedDataPtr2D<false, true> alignedPtr((uchar*)dstptr, new_sz[1], new_sz[0], new_dststep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
+                uchar* ptr = alignedPtr.getAlignedPtr();
+
+                CV_OCL_CHECK(clEnqueueReadBufferRect(q, (cl_mem)u->handle, CL_TRUE,
+                    new_srcofs, new_dstofs, new_sz,
+                    new_srcstep[0], 0,
+                    new_dststep[0], 0,
+                    ptr, 0, 0, 0));
+            }
         }
     }
 
     void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
                 const size_t dstofs[], const size_t dststep[],
-                const size_t srcstep[]) const
+                const size_t srcstep[]) const CV_OVERRIDE
     {
         if(!u)
             return;
@@ -4114,7 +5440,7 @@ public:
         //    2. we overwrite part of the matrix, but the GPU copy is out-of-date
         if( u->data && (u->hostCopyObsolete() < u->deviceCopyObsolete() || total == u->size))
         {
-            Mat::getStdAllocator()->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
+            Mat::getDefaultAllocator()->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
             u->markHostCopyObsolete(false);
             u->markDeviceCopyObsolete(true);
             return;
@@ -4123,26 +5449,126 @@ public:
         CV_Assert( u->handle != 0 );
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
-        AlignedDataPtr<true, false> alignedPtr((uchar*)srcptr, sz[0] * srcstep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
-        if( iscontinuous )
+#ifdef HAVE_OPENCL_SVM
+        if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
         {
-            CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle,
-                CL_TRUE, dstrawofs, total, srcptr, 0, 0, 0) == CL_SUCCESS );
+            CV_DbgAssert(u->data == NULL || u->data == u->handle);
+            Context& ctx = Context::getDefault();
+            const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+            CV_DbgAssert(svmFns->isValid());
+
+            CV_DbgAssert((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MAP) == 0);
+            if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
+            {
+                CV_OPENCL_SVM_TRACE_P("clEnqueueSVMMap: %p (%d)\n", u->handle, (int)u->size);
+                cl_int status = svmFns->fn_clEnqueueSVMMap(q, CL_FALSE, CL_MAP_WRITE,
+                        u->handle, u->size,
+                        0, NULL, NULL);
+                CV_OCL_CHECK_RESULT(status, "clEnqueueSVMMap()");
+            }
+            clFinish(q);
+            if( iscontinuous )
+            {
+                memcpy((uchar*)u->handle + dstrawofs, srcptr, total);
+            }
+            else
+            {
+                // This code is from MatAllocator::upload()
+                int isz[CV_MAX_DIM];
+                uchar* dstptr = (uchar*)u->handle;
+                for( int i = 0; i < dims; i++ )
+                {
+                    CV_Assert( sz[i] <= (size_t)INT_MAX );
+                    if( sz[i] == 0 )
+                    return;
+                    if( dstofs )
+                    dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+                    isz[i] = (int)sz[i];
+                }
+
+                Mat src(dims, isz, CV_8U, (void*)srcptr, srcstep);
+                Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+                const Mat* arrays[] = { &src, &dst };
+                uchar* ptrs[2];
+                NAryMatIterator it(arrays, ptrs, 2);
+                size_t j, planesz = it.size;
+
+                for( j = 0; j < it.nplanes; j++, ++it )
+                    memcpy(ptrs[1], ptrs[0], planesz);
+            }
+            if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
+            {
+                CV_OPENCL_SVM_TRACE_P("clEnqueueSVMUnmap: %p\n", u->handle);
+                cl_int status = svmFns->fn_clEnqueueSVMUnmap(q, u->handle,
+                        0, NULL, NULL);
+                CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
+                clFinish(q);
+            }
         }
         else
+#endif
         {
-            CV_Assert( clEnqueueWriteBufferRect(q, (cl_mem)u->handle, CL_TRUE,
-                new_dstofs, new_srcofs, new_sz, new_dststep[0], new_dststep[1],
-                new_srcstep[0], new_srcstep[1], srcptr, 0, 0, 0) == CL_SUCCESS );
-        }
+            if( iscontinuous )
+            {
+                AlignedDataPtr<true, false> alignedPtr((uchar*)srcptr, total, CV_OPENCL_DATA_PTR_ALIGNMENT);
+                cl_int retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                    dstrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0);
+                CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueWriteBuffer(q, handle=%p, CL_TRUE, offset=%lld, sz=%lld, data=%p, 0, 0, 0)",
+                        (void*)u->handle, (long long int)dstrawofs, (long long int)u->size, alignedPtr.getAlignedPtr()).c_str());
+            }
+            else if (CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS)
+            {
+                const size_t padding = CV_OPENCL_DATA_PTR_ALIGNMENT;
+                size_t new_dstrawofs = dstrawofs & ~(padding-1);
+                size_t membuf_ofs = dstrawofs - new_dstrawofs;
+                AlignedDataPtr2D<false, false> alignedPtr(0, new_sz[1], new_dststep[0], new_dststep[0],
+                                                          CV_OPENCL_DATA_PTR_ALIGNMENT, padding*2);
+                uchar* ptr = alignedPtr.getAlignedPtr();
 
+                CV_Assert(new_dststep[0] >= new_sz[0] && new_srcstep[0] >= new_sz[0]);
+                total = alignSize(new_dststep[0]*new_sz[1] + membuf_ofs, padding);
+                total = std::min(total, u->size - new_dstrawofs);
+                /*printf("new_sz0=%d, new_sz1=%d, membuf_ofs=%d, total=%d (%08x), new_dstrawofs=%d (%08x)\n",
+                       (int)new_sz[0], (int)new_sz[1], (int)membuf_ofs,
+                       (int)total, (int)total, (int)new_dstrawofs, (int)new_dstrawofs);*/
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                 new_dstrawofs, total, ptr, 0, 0, 0));
+                for( size_t i = 0; i < new_sz[1]; i++ )
+                    memcpy( ptr + i*new_dststep[0] + membuf_ofs, (uchar*)srcptr + i*new_srcstep[0], new_sz[0]);
+                CV_OCL_CHECK(clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                 new_dstrawofs, total, ptr, 0, 0, 0));
+            }
+            else
+            {
+                AlignedDataPtr2D<true, false> alignedPtr((uchar*)srcptr, new_sz[1], new_sz[0], new_srcstep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
+                uchar* ptr = alignedPtr.getAlignedPtr();
+
+                CV_OCL_CHECK(clEnqueueWriteBufferRect(q, (cl_mem)u->handle, CL_TRUE,
+                    new_dstofs, new_srcofs, new_sz,
+                    new_dststep[0], 0,
+                    new_srcstep[0], 0,
+                    ptr, 0, 0, 0));
+            }
+        }
         u->markHostCopyObsolete(true);
+#ifdef HAVE_OPENCL_SVM
+        if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_BUFFER ||
+                (u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM)
+        {
+            // nothing
+        }
+        else
+#endif
+        {
+            u->markHostCopyObsolete(true);
+        }
         u->markDeviceCopyObsolete(false);
     }
 
     void copy(UMatData* src, UMatData* dst, int dims, const size_t sz[],
               const size_t srcofs[], const size_t srcstep[],
-              const size_t dstofs[], const size_t dststep[], bool _sync) const
+              const size_t dstofs[], const size_t dststep[], bool _sync) const CV_OVERRIDE
     {
         if(!src || !dst)
             return;
@@ -4156,8 +5582,7 @@ public:
                                             srcrawofs, new_srcofs, new_srcstep,
                                             dstrawofs, new_dstofs, new_dststep);
 
-        UMatDataAutoLock src_autolock(src);
-        UMatDataAutoLock dst_autolock(dst);
+        UMatDataAutoLock src_autolock(src, dst);
 
         if( !src->handle || (src->data && src->hostCopyObsolete() < src->deviceCopyObsolete()) )
         {
@@ -4168,7 +5593,17 @@ public:
         {
             download(src, dst->data + dstrawofs, dims, sz, srcofs, srcstep, dststep);
             dst->markHostCopyObsolete(false);
-            dst->markDeviceCopyObsolete(true);
+#ifdef HAVE_OPENCL_SVM
+            if ((dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_BUFFER ||
+                    (dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM)
+            {
+                // nothing
+            }
+            else
+#endif
+            {
+                dst->markDeviceCopyObsolete(true);
+            }
             return;
         }
 
@@ -4176,48 +5611,382 @@ public:
         CV_Assert(dst->refcount == 0);
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
-        if( iscontinuous )
+        cl_int retval = CL_SUCCESS;
+#ifdef HAVE_OPENCL_SVM
+        if ((src->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0 ||
+                (dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
         {
-            CV_Assert( clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
-                                           srcrawofs, dstrawofs, total, 0, 0, 0) == CL_SUCCESS );
+            if ((src->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0 &&
+                            (dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+            {
+                Context& ctx = Context::getDefault();
+                const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
+                CV_DbgAssert(svmFns->isValid());
+
+                if( iscontinuous )
+                {
+                    CV_OPENCL_SVM_TRACE_P("clEnqueueSVMMemcpy: %p <-- %p (%d)\n",
+                            (uchar*)dst->handle + dstrawofs, (uchar*)src->handle + srcrawofs, (int)total);
+                    cl_int status = svmFns->fn_clEnqueueSVMMemcpy(q, CL_TRUE,
+                            (uchar*)dst->handle + dstrawofs, (uchar*)src->handle + srcrawofs,
+                            total, 0, NULL, NULL);
+                    CV_OCL_CHECK_RESULT(status, "clEnqueueSVMMemcpy()");
+                }
+                else
+                {
+                    clFinish(q);
+                    // This code is from MatAllocator::download()/upload()
+                    int isz[CV_MAX_DIM];
+                    uchar* srcptr = (uchar*)src->handle;
+                    for( int i = 0; i < dims; i++ )
+                    {
+                        CV_Assert( sz[i] <= (size_t)INT_MAX );
+                        if( sz[i] == 0 )
+                        return;
+                        if( srcofs )
+                        srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
+                        isz[i] = (int)sz[i];
+                    }
+                    Mat m_src(dims, isz, CV_8U, srcptr, srcstep);
+
+                    uchar* dstptr = (uchar*)dst->handle;
+                    for( int i = 0; i < dims; i++ )
+                    {
+                        if( dstofs )
+                        dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+                    }
+                    Mat m_dst(dims, isz, CV_8U, dstptr, dststep);
+
+                    const Mat* arrays[] = { &m_src, &m_dst };
+                    uchar* ptrs[2];
+                    NAryMatIterator it(arrays, ptrs, 2);
+                    size_t j, planesz = it.size;
+
+                    for( j = 0; j < it.nplanes; j++, ++it )
+                        memcpy(ptrs[1], ptrs[0], planesz);
+                }
+            }
+            else
+            {
+                if ((src->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
+                {
+                    map(src, ACCESS_READ);
+                    upload(dst, src->data + srcrawofs, dims, sz, dstofs, dststep, srcstep);
+                    unmap(src);
+                }
+                else
+                {
+                    map(dst, ACCESS_WRITE);
+                    download(src, dst->data + dstrawofs, dims, sz, srcofs, srcstep, dststep);
+                    unmap(dst);
+                }
+            }
         }
         else
+#endif
         {
-            cl_int retval;
-            CV_Assert( (retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
-                                               new_srcofs, new_dstofs, new_sz,
-                                               new_srcstep[0], new_srcstep[1],
-                                               new_dststep[0], new_dststep[1],
-                                               0, 0, 0)) == CL_SUCCESS );
+            if( iscontinuous )
+            {
+                retval = clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+                                               srcrawofs, dstrawofs, total, 0, 0, 0);
+                CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueCopyBuffer(q, src=%p, dst=%p, src_offset=%lld, dst_offset=%lld, sz=%lld, 0, 0, 0)",
+                        (void*)src->handle, (void*)dst->handle, (long long int)srcrawofs, (long long int)dstrawofs, (long long int)total).c_str());
+            }
+            else if (CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS)
+            {
+                const size_t padding = CV_OPENCL_DATA_PTR_ALIGNMENT;
+                size_t new_srcrawofs = srcrawofs & ~(padding-1);
+                size_t srcmembuf_ofs = srcrawofs - new_srcrawofs;
+                size_t new_dstrawofs = dstrawofs & ~(padding-1);
+                size_t dstmembuf_ofs = dstrawofs - new_dstrawofs;
+
+                AlignedDataPtr2D<false, false> srcBuf(0, new_sz[1], new_srcstep[0], new_srcstep[0],
+                                                      CV_OPENCL_DATA_PTR_ALIGNMENT, padding*2);
+                AlignedDataPtr2D<false, false> dstBuf(0, new_sz[1], new_dststep[0], new_dststep[0],
+                                                      CV_OPENCL_DATA_PTR_ALIGNMENT, padding*2);
+                uchar* srcptr = srcBuf.getAlignedPtr();
+                uchar* dstptr = dstBuf.getAlignedPtr();
+
+                CV_Assert(new_dststep[0] >= new_sz[0] && new_srcstep[0] >= new_sz[0]);
+
+                size_t src_total = alignSize(new_srcstep[0]*new_sz[1] + srcmembuf_ofs, padding);
+                src_total = std::min(src_total, src->size - new_srcrawofs);
+                size_t dst_total = alignSize(new_dststep[0]*new_sz[1] + dstmembuf_ofs, padding);
+                dst_total = std::min(dst_total, dst->size - new_dstrawofs);
+
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)src->handle, CL_TRUE,
+                                                 new_srcrawofs, src_total, srcptr, 0, 0, 0));
+                CV_OCL_CHECK(clEnqueueReadBuffer(q, (cl_mem)dst->handle, CL_TRUE,
+                                                 new_dstrawofs, dst_total, dstptr, 0, 0, 0));
+
+                for( size_t i = 0; i < new_sz[1]; i++ )
+                    memcpy( dstptr + dstmembuf_ofs + i*new_dststep[0],
+                            srcptr + srcmembuf_ofs + i*new_srcstep[0], new_sz[0]);
+                CV_OCL_CHECK(clEnqueueWriteBuffer(q, (cl_mem)dst->handle, CL_TRUE,
+                                                  new_dstrawofs, dst_total, dstptr, 0, 0, 0));
+            }
+            else
+            {
+                CV_OCL_CHECK(retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+                                                   new_srcofs, new_dstofs, new_sz,
+                                                   new_srcstep[0], 0,
+                                                   new_dststep[0], 0,
+                                                   0, 0, 0));
+            }
+        }
+        if (retval == CL_SUCCESS)
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL)
         }
 
-        dst->markHostCopyObsolete(true);
+#ifdef HAVE_OPENCL_SVM
+        if ((dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_BUFFER ||
+            (dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM)
+        {
+            // nothing
+        }
+        else
+#endif
+        {
+            dst->markHostCopyObsolete(true);
+        }
         dst->markDeviceCopyObsolete(false);
 
         if( _sync )
         {
-            CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
+            CV_OCL_DBG_CHECK(clFinish(q));
         }
     }
 
-    BufferPoolController* getBufferPoolController() const { return &bufferPool; }
+    BufferPoolController* getBufferPoolController(const char* id) const CV_OVERRIDE {
+#ifdef HAVE_OPENCL_SVM
+        if ((svm::checkForceSVMUmatUsage() && (id == NULL || strcmp(id, "OCL") == 0)) || (id != NULL && strcmp(id, "SVM") == 0))
+        {
+            return &bufferPoolSVM;
+        }
+#endif
+        if (id != NULL && strcmp(id, "HOST_ALLOC") == 0)
+        {
+            return &bufferPoolHostPtr;
+        }
+        if (id != NULL && strcmp(id, "OCL") != 0)
+        {
+            CV_Error(cv::Error::StsBadArg, "getBufferPoolController(): unknown BufferPool ID\n");
+        }
+        return &bufferPool;
+    }
 
     MatAllocator* matStdAllocator;
+
+    mutable cv::Mutex cleanupQueueMutex;
+    mutable std::deque<UMatData*> cleanupQueue;
+
+    void flushCleanupQueue() const
+    {
+        if (!cleanupQueue.empty())
+        {
+            std::deque<UMatData*> q;
+            {
+                cv::AutoLock lock(cleanupQueueMutex);
+                q.swap(cleanupQueue);
+            }
+            for (std::deque<UMatData*>::const_iterator i = q.begin(); i != q.end(); ++i)
+            {
+                deallocate_(*i);
+            }
+        }
+    }
+    void addToCleanupQueue(UMatData* u) const
+    {
+        //TODO: Validation check: CV_Assert(!u->tempUMat());
+        {
+            cv::AutoLock lock(cleanupQueueMutex);
+            cleanupQueue.push_back(u);
+        }
+    }
 };
 
+static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
+{
+    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destructor call (using of this object is too wide)
+    g_isOpenCVActivated = true;
+    return g_allocator;
+}
 MatAllocator* getOpenCLAllocator()
 {
-    static MatAllocator * allocator = new OpenCLAllocator();
-    return allocator;
+    CV_SINGLETON_LAZY_INIT(MatAllocator, getOpenCLAllocator_())
 }
+
+}} // namespace cv::ocl
+
+
+namespace cv {
+
+// three funcs below are implemented in umatrix.cpp
+void setSize( UMat& m, int _dims, const int* _sz, const size_t* _steps,
+              bool autoSteps = false );
+void finalizeHdr(UMat& m);
+
+} // namespace cv
+
+
+namespace cv { namespace ocl {
+
+/*
+// Convert OpenCL buffer memory to UMat
+*/
+void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst)
+{
+    int d = 2;
+    int sizes[] = { rows, cols };
+
+    CV_Assert(0 <= d && d <= CV_MAX_DIM);
+
+    dst.release();
+
+    dst.flags      = (type & Mat::TYPE_MASK) | Mat::MAGIC_VAL;
+    dst.usageFlags = USAGE_DEFAULT;
+
+    setSize(dst, d, sizes, 0, true);
+    dst.offset = 0;
+
+    cl_mem             memobj = (cl_mem)cl_mem_buffer;
+    cl_mem_object_type mem_type = 0;
+
+    CV_OCL_CHECK(clGetMemObjectInfo(memobj, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0));
+
+    CV_Assert(CL_MEM_OBJECT_BUFFER == mem_type);
+
+    size_t total = 0;
+    CV_OCL_CHECK(clGetMemObjectInfo(memobj, CL_MEM_SIZE, sizeof(size_t), &total, 0));
+
+    CV_OCL_CHECK(clRetainMemObject(memobj));
+
+    CV_Assert((int)step >= cols * CV_ELEM_SIZE(type));
+    CV_Assert(total >= rows * step);
+
+    // attach clBuffer to UMatData
+    dst.u = new UMatData(getOpenCLAllocator());
+    dst.u->data            = 0;
+    dst.u->allocatorFlags_ = OpenCLAllocator::ALLOCATOR_FLAGS_EXTERNAL_BUFFER;  // not allocated from any OpenCV buffer pool
+    dst.u->flags           = 0;
+    dst.u->handle          = cl_mem_buffer;
+    dst.u->origdata        = 0;
+    dst.u->prevAllocator   = 0;
+    dst.u->size            = total;
+
+    finalizeHdr(dst);
+    dst.addref();
+
+    return;
+} // convertFromBuffer()
+
+
+/*
+// Convert OpenCL image2d_t memory to UMat
+*/
+void convertFromImage(void* cl_mem_image, UMat& dst)
+{
+    cl_mem             clImage = (cl_mem)cl_mem_image;
+    cl_mem_object_type mem_type = 0;
+
+    CV_OCL_CHECK(clGetMemObjectInfo(clImage, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0));
+
+    CV_Assert(CL_MEM_OBJECT_IMAGE2D == mem_type);
+
+    cl_image_format fmt = { 0, 0 };
+    CV_OCL_CHECK(clGetImageInfo(clImage, CL_IMAGE_FORMAT, sizeof(cl_image_format), &fmt, 0));
+
+    int depth = CV_8U;
+    switch (fmt.image_channel_data_type)
+    {
+    case CL_UNORM_INT8:
+    case CL_UNSIGNED_INT8:
+        depth = CV_8U;
+        break;
+
+    case CL_SNORM_INT8:
+    case CL_SIGNED_INT8:
+        depth = CV_8S;
+        break;
+
+    case CL_UNORM_INT16:
+    case CL_UNSIGNED_INT16:
+        depth = CV_16U;
+        break;
+
+    case CL_SNORM_INT16:
+    case CL_SIGNED_INT16:
+        depth = CV_16S;
+        break;
+
+    case CL_SIGNED_INT32:
+        depth = CV_32S;
+        break;
+
+    case CL_FLOAT:
+        depth = CV_32F;
+        break;
+
+    default:
+        CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_data_type");
+    }
+
+    int type = CV_8UC1;
+    switch (fmt.image_channel_order)
+    {
+    case CL_R:
+        type = CV_MAKE_TYPE(depth, 1);
+        break;
+
+    case CL_RGBA:
+    case CL_BGRA:
+    case CL_ARGB:
+        type = CV_MAKE_TYPE(depth, 4);
+        break;
+
+    default:
+        CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_order");
+        break;
+    }
+
+    size_t step = 0;
+    CV_OCL_CHECK(clGetImageInfo(clImage, CL_IMAGE_ROW_PITCH, sizeof(size_t), &step, 0));
+
+    size_t w = 0;
+    CV_OCL_CHECK(clGetImageInfo(clImage, CL_IMAGE_WIDTH, sizeof(size_t), &w, 0));
+
+    size_t h = 0;
+    CV_OCL_CHECK(clGetImageInfo(clImage, CL_IMAGE_HEIGHT, sizeof(size_t), &h, 0));
+
+    dst.create((int)h, (int)w, type);
+
+    cl_mem clBuffer = (cl_mem)dst.handle(ACCESS_READ);
+
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
+    size_t offset = 0;
+    size_t src_origin[3] = { 0, 0, 0 };
+    size_t region[3] = { w, h, 1 };
+    CV_OCL_CHECK(clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL));
+
+    CV_OCL_CHECK(clFinish(q));
+
+    return;
+} // convertFromImage()
+
 
 ///////////////////////////////////////////// Utility functions /////////////////////////////////////////////////
 
 static void getDevices(std::vector<cl_device_id>& devices, cl_platform_id platform)
 {
     cl_uint numDevices = 0;
-    CV_OclDbgAssert(clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL,
-                                0, NULL, &numDevices) == CL_SUCCESS);
+    cl_int status = clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, 0, NULL, &numDevices);
+    if (status != CL_DEVICE_NOT_FOUND) // Not an error if platform has no devices
+    {
+        CV_OCL_DBG_CHECK_RESULT(status,
+            cv::format("clGetDeviceIDs(platform, Device::TYPE_ALL, num_entries=0, devices=NULL, numDevices=%p)", &numDevices).c_str());
+    }
 
     if (numDevices == 0)
     {
@@ -4226,8 +5995,7 @@ static void getDevices(std::vector<cl_device_id>& devices, cl_platform_id platfo
     }
 
     devices.resize((size_t)numDevices);
-    CV_OclDbgAssert(clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL,
-                                numDevices, &devices[0], &numDevices) == CL_SUCCESS);
+    CV_OCL_DBG_CHECK(clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, numDevices, &devices[0], &numDevices));
 }
 
 struct PlatformInfo::Impl
@@ -4239,7 +6007,7 @@ struct PlatformInfo::Impl
         getDevices(devices, handle);
     }
 
-    String getStrProp(cl_device_info prop) const
+    String getStrProp(cl_platform_info prop) const
     {
         char buf[1024];
         size_t sz=0;
@@ -4318,7 +6086,7 @@ String PlatformInfo::version() const
 static void getPlatforms(std::vector<cl_platform_id>& platforms)
 {
     cl_uint numPlatforms = 0;
-    CV_OclDbgAssert(clGetPlatformIDs(0, NULL, &numPlatforms) == CL_SUCCESS);
+    CV_OCL_DBG_CHECK(clGetPlatformIDs(0, NULL, &numPlatforms));
 
     if (numPlatforms == 0)
     {
@@ -4327,7 +6095,7 @@ static void getPlatforms(std::vector<cl_platform_id>& platforms)
     }
 
     platforms.resize((size_t)numPlatforms);
-    CV_OclDbgAssert(clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms) == CL_SUCCESS);
+    CV_OCL_DBG_CHECK(clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms));
 }
 
 void getPlatfomsInfo(std::vector<PlatformInfo>& platformsInfo)
@@ -4373,6 +6141,23 @@ const char* memopTypeToStr(int type)
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
+const char* vecopTypeToStr(int type)
+{
+    static const char* tab[] =
+    {
+        "uchar", "short", "uchar3", "int", 0, 0, 0, "int2", 0, 0, 0, 0, 0, 0, 0, "int4",
+        "char", "short", "char3", "int", 0, 0, 0, "int2", 0, 0, 0, 0, 0, 0, 0, "int4",
+        "ushort", "int", "ushort3", "int2",0, 0, 0, "int4", 0, 0, 0, 0, 0, 0, 0, "int8",
+        "short", "int", "short3", "int2", 0, 0, 0, "int4", 0, 0, 0, 0, 0, 0, 0, "int8",
+        "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
+        "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
+        "ulong", "ulong2", "ulong3", "ulong4", 0, 0, 0, "ulong8", 0, 0, 0, 0, 0, 0, 0, "ulong16",
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
+    };
+    int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    return cn > 16 ? "?" : tab[depth*16 + cn-1];
+}
+
 const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 {
     if( sdepth == ddepth )
@@ -4393,11 +6178,94 @@ const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
     return buf;
 }
 
+const char* getOpenCLErrorString(int errorCode)
+{
+#define CV_OCL_CODE(id) case id: return #id
+#define CV_OCL_CODE_(id, name) case id: return #name
+    switch (errorCode)
+    {
+    CV_OCL_CODE(CL_SUCCESS);
+    CV_OCL_CODE(CL_DEVICE_NOT_FOUND);
+    CV_OCL_CODE(CL_DEVICE_NOT_AVAILABLE);
+    CV_OCL_CODE(CL_COMPILER_NOT_AVAILABLE);
+    CV_OCL_CODE(CL_MEM_OBJECT_ALLOCATION_FAILURE);
+    CV_OCL_CODE(CL_OUT_OF_RESOURCES);
+    CV_OCL_CODE(CL_OUT_OF_HOST_MEMORY);
+    CV_OCL_CODE(CL_PROFILING_INFO_NOT_AVAILABLE);
+    CV_OCL_CODE(CL_MEM_COPY_OVERLAP);
+    CV_OCL_CODE(CL_IMAGE_FORMAT_MISMATCH);
+    CV_OCL_CODE(CL_IMAGE_FORMAT_NOT_SUPPORTED);
+    CV_OCL_CODE(CL_BUILD_PROGRAM_FAILURE);
+    CV_OCL_CODE(CL_MAP_FAILURE);
+    CV_OCL_CODE(CL_MISALIGNED_SUB_BUFFER_OFFSET);
+    CV_OCL_CODE(CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST);
+    CV_OCL_CODE(CL_COMPILE_PROGRAM_FAILURE);
+    CV_OCL_CODE(CL_LINKER_NOT_AVAILABLE);
+    CV_OCL_CODE(CL_LINK_PROGRAM_FAILURE);
+    CV_OCL_CODE(CL_DEVICE_PARTITION_FAILED);
+    CV_OCL_CODE(CL_KERNEL_ARG_INFO_NOT_AVAILABLE);
+    CV_OCL_CODE(CL_INVALID_VALUE);
+    CV_OCL_CODE(CL_INVALID_DEVICE_TYPE);
+    CV_OCL_CODE(CL_INVALID_PLATFORM);
+    CV_OCL_CODE(CL_INVALID_DEVICE);
+    CV_OCL_CODE(CL_INVALID_CONTEXT);
+    CV_OCL_CODE(CL_INVALID_QUEUE_PROPERTIES);
+    CV_OCL_CODE(CL_INVALID_COMMAND_QUEUE);
+    CV_OCL_CODE(CL_INVALID_HOST_PTR);
+    CV_OCL_CODE(CL_INVALID_MEM_OBJECT);
+    CV_OCL_CODE(CL_INVALID_IMAGE_FORMAT_DESCRIPTOR);
+    CV_OCL_CODE(CL_INVALID_IMAGE_SIZE);
+    CV_OCL_CODE(CL_INVALID_SAMPLER);
+    CV_OCL_CODE(CL_INVALID_BINARY);
+    CV_OCL_CODE(CL_INVALID_BUILD_OPTIONS);
+    CV_OCL_CODE(CL_INVALID_PROGRAM);
+    CV_OCL_CODE(CL_INVALID_PROGRAM_EXECUTABLE);
+    CV_OCL_CODE(CL_INVALID_KERNEL_NAME);
+    CV_OCL_CODE(CL_INVALID_KERNEL_DEFINITION);
+    CV_OCL_CODE(CL_INVALID_KERNEL);
+    CV_OCL_CODE(CL_INVALID_ARG_INDEX);
+    CV_OCL_CODE(CL_INVALID_ARG_VALUE);
+    CV_OCL_CODE(CL_INVALID_ARG_SIZE);
+    CV_OCL_CODE(CL_INVALID_KERNEL_ARGS);
+    CV_OCL_CODE(CL_INVALID_WORK_DIMENSION);
+    CV_OCL_CODE(CL_INVALID_WORK_GROUP_SIZE);
+    CV_OCL_CODE(CL_INVALID_WORK_ITEM_SIZE);
+    CV_OCL_CODE(CL_INVALID_GLOBAL_OFFSET);
+    CV_OCL_CODE(CL_INVALID_EVENT_WAIT_LIST);
+    CV_OCL_CODE(CL_INVALID_EVENT);
+    CV_OCL_CODE(CL_INVALID_OPERATION);
+    CV_OCL_CODE(CL_INVALID_GL_OBJECT);
+    CV_OCL_CODE(CL_INVALID_BUFFER_SIZE);
+    CV_OCL_CODE(CL_INVALID_MIP_LEVEL);
+    CV_OCL_CODE(CL_INVALID_GLOBAL_WORK_SIZE);
+    // OpenCL 1.1
+    CV_OCL_CODE(CL_INVALID_PROPERTY);
+    // OpenCL 1.2
+    CV_OCL_CODE(CL_INVALID_IMAGE_DESCRIPTOR);
+    CV_OCL_CODE(CL_INVALID_COMPILER_OPTIONS);
+    CV_OCL_CODE(CL_INVALID_LINKER_OPTIONS);
+    CV_OCL_CODE(CL_INVALID_DEVICE_PARTITION_COUNT);
+    // OpenCL 2.0
+    CV_OCL_CODE_(-69, CL_INVALID_PIPE_SIZE);
+    CV_OCL_CODE_(-70, CL_INVALID_DEVICE_QUEUE);
+    // Extensions
+    CV_OCL_CODE_(-1000, CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR);
+    CV_OCL_CODE_(-1001, CL_PLATFORM_NOT_FOUND_KHR);
+    CV_OCL_CODE_(-1002, CL_INVALID_D3D10_DEVICE_KHR);
+    CV_OCL_CODE_(-1003, CL_INVALID_D3D10_RESOURCE_KHR);
+    CV_OCL_CODE_(-1004, CL_D3D10_RESOURCE_ALREADY_ACQUIRED_KHR);
+    CV_OCL_CODE_(-1005, CL_D3D10_RESOURCE_NOT_ACQUIRED_KHR);
+    default: return "Unknown OpenCL error";
+    }
+#undef CV_OCL_CODE
+#undef CV_OCL_CODE_
+}
+
 template <typename T>
 static std::string kerToStr(const Mat & k)
 {
     int width = k.cols - 1, depth = k.depth();
-    const T * const data = reinterpret_cast<const T *>(k.data);
+    const T * const data = k.ptr<T>();
 
     std::ostringstream stream;
     stream.precision(10);
@@ -4451,42 +6319,58 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
         if (!src.empty()) \
         { \
             CV_Assert(src.isMat() || src.isUMat()); \
-            int ctype = src.type(), ccn = CV_MAT_CN(ctype); \
             Size csize = src.size(); \
-            cols.push_back(ccn * csize.width); \
-            if (ctype != type) \
+            int ctype = src.type(), ccn = CV_MAT_CN(ctype), cdepth = CV_MAT_DEPTH(ctype), \
+                ckercn = vectorWidths[cdepth], cwidth = ccn * csize.width; \
+            if (cwidth < ckercn || ckercn <= 0) \
+                return 1; \
+            cols.push_back(cwidth); \
+            if (strat == OCL_VECTOR_OWN && ctype != ref_type) \
                 return 1; \
             offsets.push_back(src.offset()); \
             steps.push_back(src.step()); \
+            dividers.push_back(ckercn * CV_ELEM_SIZE1(ctype)); \
+            kercns.push_back(ckercn); \
         } \
     } \
     while ((void)0, 0)
 
 int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
                               InputArray src4, InputArray src5, InputArray src6,
-                              InputArray src7, InputArray src8, InputArray src9)
+                              InputArray src7, InputArray src8, InputArray src9,
+                              OclVectorStrategy strat)
 {
-    int type = src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz1 = CV_ELEM_SIZE1(depth);
-    Size ssize = src1.size();
     const ocl::Device & d = ocl::Device::getDefault();
 
     int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
-        d.preferredVectorWidthDouble(), -1 }, kercn = vectorWidths[depth];
+        d.preferredVectorWidthDouble(), -1 };
 
     // if the device says don't use vectors
     if (vectorWidths[0] == 1)
     {
         // it's heuristic
-        int vectorWidthsOthers[] = { 16, 16, 8, 8, 1, 1, 1, -1 };
-        kercn = vectorWidthsOthers[depth];
+        vectorWidths[CV_8U] = vectorWidths[CV_8S] = 4;
+        vectorWidths[CV_16U] = vectorWidths[CV_16S] = 2;
+        vectorWidths[CV_32S] = vectorWidths[CV_32F] = vectorWidths[CV_64F] = 1;
     }
 
-    if (ssize.width * cn < kercn || kercn <= 0)
-        return 1;
+    return checkOptimalVectorWidth(vectorWidths, src1, src2, src3, src4, src5, src6, src7, src8, src9, strat);
+}
+
+int checkOptimalVectorWidth(const int *vectorWidths,
+                            InputArray src1, InputArray src2, InputArray src3,
+                            InputArray src4, InputArray src5, InputArray src6,
+                            InputArray src7, InputArray src8, InputArray src9,
+                            OclVectorStrategy strat)
+{
+    CV_Assert(vectorWidths);
+
+    int ref_type = src1.type();
 
     std::vector<size_t> offsets, steps, cols;
+    std::vector<int> dividers, kercns;
     PROCESS_SRC(src1);
     PROCESS_SRC(src2);
     PROCESS_SRC(src3);
@@ -4498,25 +6382,22 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     PROCESS_SRC(src9);
 
     size_t size = offsets.size();
-    int wsz = kercn * esz1;
-    std::vector<int> dividers(size, wsz);
 
     for (size_t i = 0; i < size; ++i)
-        while (offsets[i] % dividers[i] != 0 || steps[i] % dividers[i] != 0 || cols[i] % dividers[i] != 0)
-            dividers[i] >>= 1;
+        while (offsets[i] % dividers[i] != 0 || steps[i] % dividers[i] != 0 || cols[i] % kercns[i] != 0)
+            dividers[i] >>= 1, kercns[i] >>= 1;
 
     // default strategy
-    for (size_t i = 0; i < size; ++i)
-        if (dividers[i] != wsz)
-        {
-            kercn = 1;
-            break;
-        }
-
-    // another strategy
-//    width = *std::min_element(dividers.begin(), dividers.end());
+    int kercn = *std::min_element(kercns.begin(), kercns.end());
 
     return kercn;
+}
+
+int predictOptimalVectorWidthMax(InputArray src1, InputArray src2, InputArray src3,
+                                 InputArray src4, InputArray src5, InputArray src6,
+                                 InputArray src7, InputArray src8, InputArray src9)
+{
+    return predictOptimalVectorWidth(src1, src2, src3, src4, src5, src6, src7, src8, src9, OCL_VECTOR_MAX);
 }
 
 #undef PROCESS_SRC
@@ -4573,22 +6454,29 @@ struct Image2D::Impl
 
     static bool isFormatSupported(cl_image_format format)
     {
+        if (!haveOpenCL())
+            CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
+
         cl_context context = (cl_context)Context::getDefault().ptr();
         // Figure out how many formats are supported by this context.
         cl_uint numFormats = 0;
         cl_int err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
                                                 CL_MEM_OBJECT_IMAGE2D, numFormats,
                                                 NULL, &numFormats);
-        AutoBuffer<cl_image_format> formats(numFormats);
-        err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
-                                         CL_MEM_OBJECT_IMAGE2D, numFormats,
-                                         formats, NULL);
-        CV_OclDbgAssert(err == CL_SUCCESS);
-        for (cl_uint i = 0; i < numFormats; ++i)
+        CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, NULL)");
+        if (numFormats > 0)
         {
-            if (!memcmp(&formats[i], &format, sizeof(format)))
+            AutoBuffer<cl_image_format> formats(numFormats);
+            err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
+                                             CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                             formats.data(), NULL);
+            CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
+            for (cl_uint i = 0; i < numFormats; ++i)
             {
-                return true;
+                if (!memcmp(&formats[i], &format, sizeof(format)))
+                {
+                    return true;
+                }
             }
         }
         return false;
@@ -4596,6 +6484,10 @@ struct Image2D::Impl
 
     void init(const UMat &src, bool norm, bool alias)
     {
+        if (!haveOpenCL())
+            CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
+
+        CV_Assert(!src.empty());
         CV_Assert(ocl::Device::getDefault().imageSupport());
 
         int err, depth = src.depth(), cn = src.channels();
@@ -4604,6 +6496,9 @@ struct Image2D::Impl
 
         if (!isFormatSupported(format))
             CV_Error(Error::OpenCLApiCallError, "Image format is not supported");
+
+        if (alias && !src.handle(ACCESS_RW))
+            CV_Error(Error::OpenCLApiCallError, "Incorrect UMat, handle is null");
 
         cl_context context = (cl_context)Context::getDefault().ptr();
         cl_command_queue queue = (cl_command_queue)Queue::getDefault().ptr();
@@ -4637,7 +6532,7 @@ struct Image2D::Impl
             handle = clCreateImage2D(context, CL_MEM_READ_WRITE, &format, src.cols, src.rows, 0, NULL, &err);
             CV_SUPPRESS_DEPRECATED_END
         }
-        CV_OclDbgAssert(err == CL_SUCCESS);
+        CV_OCL_DBG_CHECK_RESULT(err, "clCreateImage()");
 
         size_t origin[] = { 0, 0, 0 };
         size_t region[] = { static_cast<size_t>(src.cols), static_cast<size_t>(src.rows), 1 };
@@ -4646,12 +6541,14 @@ struct Image2D::Impl
         if (!alias && !src.isContinuous())
         {
             devData = clCreateBuffer(context, CL_MEM_READ_ONLY, src.cols * src.rows * src.elemSize(), NULL, &err);
-            CV_OclDbgAssert(err == CL_SUCCESS);
+            CV_OCL_CHECK_RESULT(err, cv::format("clCreateBuffer(CL_MEM_READ_ONLY, sz=%lld) => %p",
+                    (long long int)(src.cols * src.rows * src.elemSize()), (void*)devData
+                ).c_str());
 
             const size_t roi[3] = {static_cast<size_t>(src.cols) * src.elemSize(), static_cast<size_t>(src.rows), 1};
-            CV_Assert(clEnqueueCopyBufferRect(queue, (cl_mem)src.handle(ACCESS_READ), devData, origin, origin,
-                roi, src.step, 0, src.cols * src.elemSize(), 0, 0, NULL, NULL) == CL_SUCCESS);
-            CV_OclDbgAssert(clFlush(queue) == CL_SUCCESS);
+            CV_OCL_CHECK(clEnqueueCopyBufferRect(queue, (cl_mem)src.handle(ACCESS_READ), devData, origin, origin,
+                roi, src.step, 0, src.cols * src.elemSize(), 0, 0, NULL, NULL));
+            CV_OCL_DBG_CHECK(clFlush(queue));
         }
         else
         {
@@ -4661,11 +6558,11 @@ struct Image2D::Impl
 
         if (!alias)
         {
-            CV_OclDbgAssert(clEnqueueCopyBufferToImage(queue, devData, handle, 0, origin, region, 0, NULL, 0) == CL_SUCCESS);
+            CV_OCL_CHECK(clEnqueueCopyBufferToImage(queue, devData, handle, 0, origin, region, 0, NULL, 0));
             if (!src.isContinuous())
             {
-                CV_OclDbgAssert(clFlush(queue) == CL_SUCCESS);
-                CV_OclDbgAssert(clReleaseMemObject(devData) == CL_SUCCESS);
+                CV_OCL_DBG_CHECK(clFlush(queue));
+                CV_OCL_DBG_CHECK(clReleaseMemObject(devData));
             }
         }
     }
@@ -4689,7 +6586,7 @@ bool Image2D::canCreateAlias(const UMat &m)
 {
     bool ret = false;
     const Device & d = ocl::Device::getDefault();
-    if (d.imageFromBufferSupport())
+    if (d.imageFromBufferSupport() && !m.empty())
     {
         // This is the required pitch alignment in pixels
         uint pitchAlign = d.imagePitchAlignment();
@@ -4744,16 +6641,115 @@ void* Image2D::ptr() const
     return p ? p->handle : 0;
 }
 
-bool isPerformanceCheckBypassed()
+bool internal::isOpenCLForced()
 {
     static bool initialized = false;
     static bool value = false;
     if (!initialized)
     {
-        value = getBoolParameter("OPENCV_OPENCL_PERF_CHECK_BYPASS", false);
+        value = utils::getConfigurationParameterBool("OPENCV_OPENCL_FORCE", false);
         initialized = true;
     }
     return value;
 }
 
-}}
+bool internal::isPerformanceCheckBypassed()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = utils::getConfigurationParameterBool("OPENCV_OPENCL_PERF_CHECK_BYPASS", false);
+        initialized = true;
+    }
+    return value;
+}
+
+bool internal::isCLBuffer(UMat& u)
+{
+    void* h = u.handle(ACCESS_RW);
+    if (!h)
+        return true;
+    CV_DbgAssert(u.u->currAllocator == getOpenCLAllocator());
+#if 1
+    if ((u.u->allocatorFlags_ & 0xffff0000) != 0) // OpenCL SVM flags are stored here
+        return false;
+#else
+    cl_mem_object_type type = 0;
+    cl_int ret = clGetMemObjectInfo((cl_mem)h, CL_MEM_TYPE, sizeof(type), &type, NULL);
+    if (ret != CL_SUCCESS || type != CL_MEM_OBJECT_BUFFER)
+        return false;
+#endif
+    return true;
+}
+
+struct Timer::Impl
+{
+    const Queue queue;
+
+    Impl(const Queue& q)
+        : queue(q)
+    {
+    }
+
+    ~Impl(){}
+
+    void start()
+    {
+#ifdef HAVE_OPENCL
+        CV_OCL_DBG_CHECK(clFinish((cl_command_queue)queue.ptr()));
+        timer.start();
+#endif
+    }
+
+    void stop()
+    {
+#ifdef HAVE_OPENCL
+        CV_OCL_DBG_CHECK(clFinish((cl_command_queue)queue.ptr()));
+        timer.stop();
+#endif
+    }
+
+    uint64 durationNS() const
+    {
+#ifdef HAVE_OPENCL
+        return (uint64)(timer.getTimeSec() * 1e9);
+#else
+        return 0;
+#endif
+    }
+
+    TickMeter timer;
+};
+
+Timer::Timer(const Queue& q) : p(new Impl(q)) { }
+Timer::~Timer() { delete p; }
+
+void Timer::start()
+{
+    CV_Assert(p);
+    p->start();
+}
+
+void Timer::stop()
+{
+    CV_Assert(p);
+    p->stop();
+}
+
+uint64 Timer::durationNS() const
+{
+    CV_Assert(p);
+    return p->durationNS();
+}
+
+#ifndef HAVE_OPENCL
+#if defined(_MSC_VER)
+    #pragma warning(pop)
+#elif defined(__clang__)
+    #pragma clang diagnostic pop
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic pop
+#endif
+#endif
+}} // namespace

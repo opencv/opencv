@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_OUTLIER_REJECTION_HPP__
-#define __OPENCV_VIDEOSTAB_OUTLIER_REJECTION_HPP__
+#ifndef OPENCV_VIDEOSTAB_OUTLIER_REJECTION_HPP
+#define OPENCV_VIDEOSTAB_OUTLIER_REJECTION_HPP
 
 #include <vector>
 #include "opencv2/core.hpp"
@@ -51,6 +51,9 @@ namespace cv
 {
 namespace videostab
 {
+
+//! @addtogroup videostab
+//! @{
 
 class CV_EXPORTS IOutlierRejector
 {
@@ -65,7 +68,7 @@ class CV_EXPORTS NullOutlierRejector : public IOutlierRejector
 {
 public:
     virtual void process(
-            Size frameSize, InputArray points0, InputArray points1, OutputArray mask);
+            Size frameSize, InputArray points0, InputArray points1, OutputArray mask) CV_OVERRIDE;
 };
 
 class CV_EXPORTS TranslationBasedLocalOutlierRejector : public IOutlierRejector
@@ -80,7 +83,7 @@ public:
     RansacParams ransacParams() const { return ransacParams_; }
 
     virtual void process(
-            Size frameSize, InputArray points0, InputArray points1, OutputArray mask);
+            Size frameSize, InputArray points0, InputArray points1, OutputArray mask) CV_OVERRIDE;
 
 private:
     Size cellSize_;
@@ -89,6 +92,8 @@ private:
     typedef std::vector<int> Cell;
     std::vector<Cell> grid_;
 };
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

@@ -1,10 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
 PERF_TEST_P(Size_MatType, pyrDown, testing::Combine(
                 testing::Values(sz1080p, sz720p, szVGA, szQVGA, szODD),
@@ -23,6 +22,27 @@ PERF_TEST_P(Size_MatType, pyrDown, testing::Combine(
     declare.in(src, WARMUP_RNG).out(dst);
 
     TEST_CYCLE() pyrDown(src, dst);
+
+    SANITY_CHECK(dst, eps, error_type);
+}
+
+PERF_TEST_P(Size_MatType, DISABLED_pyrDown_ovx, testing::Combine(
+    testing::Values(sz1080p, sz720p, szVGA, szQVGA, szODD),
+    testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4)
+)
+)
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
+    perf::ERROR_TYPE error_type = CV_MAT_DEPTH(matType) <= CV_32S ? ERROR_ABSOLUTE : ERROR_RELATIVE;
+
+    Mat src(sz, matType);
+    Mat dst((sz.height + 1) / 2, (sz.width + 1) / 2, matType);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() pyrDown(src, dst, cv::Size(), BORDER_REPLICATE);
 
     SANITY_CHECK(dst, eps, error_type);
 }
@@ -74,3 +94,5 @@ PERF_TEST_P(Size_MatType, buildPyramid, testing::Combine(
     SANITY_CHECK(dst3, eps, error_type);
     SANITY_CHECK(dst4, eps, error_type);
 }
+
+} // namespace

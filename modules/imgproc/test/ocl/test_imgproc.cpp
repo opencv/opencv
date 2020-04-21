@@ -52,12 +52,11 @@
 //M*/
 
 #include "../test_precomp.hpp"
-#include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -81,7 +80,7 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,
         useRoi = GET_PARAM(3);
     }
 
-    virtual void random_roi()
+    void random_roi()
     {
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
@@ -193,7 +192,7 @@ OCL_TEST_P(EqualizeHist, Mat)
 struct CornerTestBase :
         public ImgprocTestBase
 {
-    virtual void random_roi()
+    void random_roi()
     {
         Mat image = readImageType("../gpu/stereobm/aloe-L.png", type);
         ASSERT_FALSE(image.empty());
@@ -296,7 +295,7 @@ struct Integral :
         useRoi = GET_PARAM(3);
     }
 
-    virtual void random_roi()
+    void random_roi()
     {
         ASSERT_EQ(CV_MAT_CN(type), 1);
 
@@ -492,6 +491,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
                                    (BorderType)BORDER_WRAP, (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

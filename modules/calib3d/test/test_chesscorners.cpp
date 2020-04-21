@@ -43,37 +43,35 @@
 #include "test_chessboardgenerator.hpp"
 
 #include <functional>
-#include <limits>
-#include <numeric>
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 #define _L2_ERR
 
-void show_points( const Mat& gray, const Mat& u, const vector<Point2f>& v, Size pattern_size, bool was_found )
+//#define DEBUG_CHESSBOARD
+
+#ifdef DEBUG_CHESSBOARD
+void show_points( const Mat& gray, const Mat& expected, const vector<Point2f>& actual, bool was_found )
 {
     Mat rgb( gray.size(), CV_8U);
     merge(vector<Mat>(3, gray), rgb);
 
-    for(size_t i = 0; i < v.size(); i++ )
-        circle( rgb, v[i], 3, Scalar(255, 0, 0), FILLED);
+    for(size_t i = 0; i < actual.size(); i++ )
+        circle( rgb, actual[i], 5, Scalar(0, 0, 200), 1, LINE_AA);
 
-    if( !u.empty() )
+    if( !expected.empty() )
     {
-        const Point2f* u_data = u.ptr<Point2f>();
-        size_t count = u.cols * u.rows;
+        const Point2f* u_data = expected.ptr<Point2f>();
+        size_t count = expected.cols * expected.rows;
         for(size_t i = 0; i < count; i++ )
-            circle( rgb, u_data[i], 3, Scalar(0, 255, 0), FILLED);
+            circle(rgb, u_data[i], 4, Scalar(0, 240, 0), 1, LINE_AA);
     }
-    if (!v.empty())
-    {
-        Mat corners((int)v.size(), 1, CV_32FC2, (void*)&v[0]);
-        drawChessboardCorners( rgb, pattern_size, corners, was_found );
-    }
-    //namedWindow( "test", 0 ); imshow( "test", rgb ); waitKey(0);
+    putText(rgb, was_found ? "FOUND !!!" : "NOT FOUND", Point(5, 20), FONT_HERSHEY_PLAIN, 1, Scalar(0, 240, 0));
+    imshow( "test", rgb ); while ((uchar)waitKey(0) != 'q') {};
 }
-
+#else
+#define show_points(...)
+#endif
 
 enum Pattern { CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
 
@@ -101,7 +99,7 @@ double calcError(const vector<Point2f>& v, const Mat& u)
     int count_exp = u.cols * u.rows;
     const Point2f* u_data = u.ptr<Point2f>();
 
-    double err = numeric_limits<double>::max();
+    double err = std::numeric_limits<double>::max();
     for( int k = 0; k < 2; ++k )
     {
         double err1 = 0;
@@ -200,7 +198,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
     if( !fs.isOpened() || board_list.empty() || !board_list.isSeq() || board_list.size() % 2 != 0 )
     {
-        ts->printf( cvtest::TS::LOG, "%s can not be readed or is not valid\n", (folder + filename).c_str() );
+        ts->printf( cvtest::TS::LOG, "%s can not be read or is not valid\n", (folder + filename).c_str() );
         ts->printf( cvtest::TS::LOG, "fs.isOpened=%d, board_list.empty=%d, board_list.isSeq=%d,board_list.size()%2=%d\n",
             fs.isOpened(), (int)board_list.empty(), board_list.isSeq(), board_list.size()%2);
         ts->set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
@@ -253,7 +251,6 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
                 result = findCirclesGrid(gray, pattern_size, v, CALIB_CB_ASYMMETRIC_GRID | algorithmFlags);
                 break;
         }
-        show_points( gray, Mat(), v, pattern_size, result );
 
         if( result ^ doesContatinChessboard || v.size() != count_exp )
         {
@@ -267,36 +264,30 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
 #ifndef WRITE_POINTS
             double err = calcError(v, expected);
-#if 0
-            if( err > rough_success_error_level )
-            {
-                ts.printf( cvtest::TS::LOG, "bad accuracy of corner guesses\n" );
-                ts.set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-                continue;
-            }
-#endif
             max_rough_error = MAX( max_rough_error, err );
 #endif
             if( pattern == CHESSBOARD )
                 cornerSubPix( gray, v, Size(5, 5), Size(-1,-1), TermCriteria(TermCriteria::EPS|TermCriteria::MAX_ITER, 30, 0.1));
             //find4QuadCornerSubpix(gray, v, Size(5, 5));
-            show_points( gray, expected, v, pattern_size, result  );
+            show_points( gray, expected, v, result  );
 #ifndef WRITE_POINTS
     //        printf("called find4QuadCornerSubpix\n");
             err = calcError(v, expected);
             sum_error += err;
             count++;
-#if 1
             if( err > precise_success_error_level )
             {
                 ts->printf( cvtest::TS::LOG, "Image %s: bad accuracy of adjusted corners %f\n", img_file.c_str(), err );
                 ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
                 return;
             }
-#endif
             ts->printf(cvtest::TS::LOG, "Error on %s is %f\n", img_file.c_str(), err);
             max_precise_error = MAX( max_precise_error, err );
 #endif
+        }
+        else
+        {
+            show_points( gray, Mat(), v, result );
         }
 
 #ifdef WRITE_POINTS
@@ -341,21 +332,21 @@ bool validateData(const ChessBoardGenerator& cbg, const Size& imgSz,
         {
             const Point2f& cur = mat(i, j);
 
-            tmp = norm( cur - mat(i + 1, j + 1) );
+            tmp = cv::norm(cur - mat(i + 1, j + 1)); // TODO cvtest
             if (tmp < minNeibDist)
-                tmp = minNeibDist;
+                minNeibDist = tmp;
 
-            tmp = norm( cur - mat(i - 1, j + 1 ) );
+            tmp = cv::norm(cur - mat(i - 1, j + 1)); // TODO cvtest
             if (tmp < minNeibDist)
-                tmp = minNeibDist;
+                minNeibDist = tmp;
 
-            tmp = norm( cur - mat(i + 1, j - 1) );
+            tmp = cv::norm(cur - mat(i + 1, j - 1)); // TODO cvtest
             if (tmp < minNeibDist)
-                tmp = minNeibDist;
+                minNeibDist = tmp;
 
-            tmp = norm( cur - mat(i - 1, j - 1) );
+            tmp = cv::norm(cur - mat(i - 1, j - 1)); // TODO cvtest
             if (tmp < minNeibDist)
-                tmp = minNeibDist;
+                minNeibDist = tmp;
         }
 
     const double threshold = 0.25;
@@ -368,8 +359,6 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 {
     bool res = true;
 
-// for some reason, this test sometimes fails on Ubuntu
-#if (defined __APPLE__ && defined __x86_64__) || defined _MSC_VER
     //theRNG() = 0x58e6e895b9913160;
     //cv::DefaultRngAuto dra;
     //theRNG() = *ts->get_rng();
@@ -445,7 +434,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
         if (found)
             res = false;
 
-        Point2f c = std::accumulate(cg.begin(), cg.end(), Point2f(), plus<Point2f>()) * (1.f/cg.size());
+        Point2f c = std::accumulate(cg.begin(), cg.end(), Point2f(), std::plus<Point2f>()) * (1.f/cg.size());
 
         Mat_<double> aff(2, 3);
         aff << 1.0, 0.0, -(double)c.x, 0.0, 1.0, 0.0;
@@ -468,7 +457,6 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 
         cv::drawChessboardCorners(cb, cbg.cornersSize(), Mat(corners_found), found);
     }
-#endif
 
     return res;
 }
@@ -476,6 +464,28 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 TEST(Calib3d_ChessboardDetector, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD ); test.safe_run(); }
 TEST(Calib3d_CirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( CIRCLES_GRID ); test.safe_run(); }
 TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID ); test.safe_run(); }
+#ifdef HAVE_OPENCV_FLANN
 TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, CALIB_CB_CLUSTERING ); test.safe_run(); }
+#endif
 
+TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
+{
+    cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/circles/";
+
+    cv::Mat expected;
+    FileStorage fs(dataDir + "circles_corners15.dat", FileStorage::READ);
+    fs["corners"] >> expected;
+    fs.release();
+
+    cv::Mat image = cv::imread(dataDir + "circles15.png");
+
+    std::vector<Point2f> centers;
+    cv::findCirclesGrid(image, Size(10, 8), centers, CALIB_CB_SYMMETRIC_GRID | CALIB_CB_CLUSTERING);
+    ASSERT_EQ(expected.total(), centers.size());
+
+    double error = calcError(centers, expected);
+    ASSERT_LE(error, precise_success_error_level);
+}
+
+}} // namespace
 /* End of file. */

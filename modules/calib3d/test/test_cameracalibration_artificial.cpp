@@ -41,18 +41,9 @@
 //M*/
 
 #include "test_precomp.hpp"
-
-#include <string>
-#include <limits>
-#include <vector>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-
 #include "test_chessboardgenerator.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 //template<class T> ostream& operator<<(ostream& out, const Mat_<T>& mat)
 //{
@@ -75,10 +66,10 @@ Mat calcRvec(const vector<Point3f>& points, const Size& cornerSize)
     Mat rot(3, 3, CV_64F);
     *rot.ptr<Vec3d>(0) = ex;
     *rot.ptr<Vec3d>(1) = ey;
-    *rot.ptr<Vec3d>(2) = ez * (1.0/norm(ez));
+    *rot.ptr<Vec3d>(2) = ez * (1.0/cv::norm(ez)); // TODO cvtest
 
     Mat res;
-    Rodrigues(rot.t(), res);
+    cvtest::Rodrigues(rot.t(), res);
     return res.reshape(1, 1);
 }
 
@@ -154,7 +145,7 @@ protected:
 
         if (fail)
         {
-            // commented according to vp123's recomendation. TODO - improve accuaracy
+            // commented according to vp123's recommendation. TODO - improve accuracy
             //ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY); ss
         }
         ts->printf( cvtest::TS::LOG, "%d) DistCoeff exp=(%.2f, %.2f, %.4f, %.4f %.2f)\n", r, k1, k2, p1, p2, k3);
@@ -174,7 +165,9 @@ protected:
             const Point3d& tvec = *tvecs[i].ptr<Point3d>();
             const Point3d& tvec_est = *tvecs_est[i].ptr<Point3d>();
 
-            if (norm(tvec_est - tvec) > eps* (norm(tvec) + dlt))
+            double n1 = cv::norm(tvec_est - tvec); // TODO cvtest
+            double n2 = cv::norm(tvec); // TODO cvtest
+            if (n1 > eps* (n2 + dlt))
             {
                 if (err_count++ < errMsgNum)
                 {
@@ -183,7 +176,7 @@ protected:
                     else
                     {
                         ts->printf( cvtest::TS::LOG, "%d) Bad accuracy in returned tvecs. Index = %d\n", r, i);
-                        ts->printf( cvtest::TS::LOG, "%d) norm(tvec_est - tvec) = %f, norm(tvec_exp) = %f \n", r, norm(tvec_est - tvec), norm(tvec));
+                        ts->printf( cvtest::TS::LOG, "%d) norm(tvec_est - tvec) = %f, norm(tvec_exp) = %f \n", r, n1, n2);
                     }
                 }
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
@@ -201,8 +194,8 @@ protected:
         const int errMsgNum = 4;
         for(size_t i = 0; i < rvecs.size(); ++i)
         {
-            Rodrigues(rvecs[i], rmat);
-            Rodrigues(rvecs_est[i], rmat_est);
+            cvtest::Rodrigues(rvecs[i], rmat);
+            cvtest::Rodrigues(rvecs_est[i], rmat_est);
 
             if (cvtest::norm(rmat_est, rmat, NORM_L2) > eps* (cvtest::norm(rmat, NORM_L2) + dlt))
             {
@@ -237,7 +230,7 @@ protected:
             projectPoints(_chessboard3D, _rvecs_exp[i], _tvecs_exp[i], eye33, zero15, uv_exp);
             projectPoints(_chessboard3D, rvecs_est[i], tvecs_est[i], eye33, zero15, uv_est);
             for(size_t j = 0; j < cb3d.size(); ++j)
-                res += norm(uv_exp[i] - uv_est[i]);
+                res += cv::norm(uv_exp[i] - uv_est[i]); // TODO cvtest
         }
         return res;
     }
@@ -360,7 +353,7 @@ protected:
         rvecs_spnp.resize(brdsNum);
         tvecs_spnp.resize(brdsNum);
         for(size_t i = 0; i < brdsNum; ++i)
-            solvePnP(Mat(objectPoints[i]), Mat(imagePoints[i]), camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
+            solvePnP(objectPoints[i], imagePoints[i], camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
 
         compareShiftVecs(tvecs_exp, tvecs_spnp);
         compareRotationVecs(rvecs_exp, rvecs_spnp);
@@ -429,3 +422,5 @@ protected:
 };
 
 TEST(Calib3d_CalibrateCamera_CPP, DISABLED_accuracy_on_artificial_data) { CV_CalibrateCameraArtificialTest test; test.safe_run(); }
+
+}} // namespace

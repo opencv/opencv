@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_WOBBLE_SUPPRESSION_HPP__
-#define __OPENCV_VIDEOSTAB_WOBBLE_SUPPRESSION_HPP__
+#ifndef OPENCV_VIDEOSTAB_WOBBLE_SUPPRESSION_HPP
+#define OPENCV_VIDEOSTAB_WOBBLE_SUPPRESSION_HPP
 
 #include <vector>
 #include "opencv2/core.hpp"
@@ -53,6 +53,9 @@ namespace cv
 {
 namespace videostab
 {
+
+//! @addtogroup videostab
+//! @{
 
 class CV_EXPORTS WobbleSuppressorBase
 {
@@ -92,7 +95,7 @@ protected:
 class CV_EXPORTS NullWobbleSuppressor : public WobbleSuppressorBase
 {
 public:
-    virtual void suppress(int idx, const Mat &frame, Mat &result);
+    virtual void suppress(int idx, const Mat &frame, Mat &result) CV_OVERRIDE;
 };
 
 class CV_EXPORTS MoreAccurateMotionWobbleSuppressorBase : public WobbleSuppressorBase
@@ -110,24 +113,26 @@ protected:
 class CV_EXPORTS MoreAccurateMotionWobbleSuppressor : public MoreAccurateMotionWobbleSuppressorBase
 {
 public:
-    virtual void suppress(int idx, const Mat &frame, Mat &result);
+    virtual void suppress(int idx, const Mat &frame, Mat &result) CV_OVERRIDE;
 
 private:
     Mat_<float> mapx_, mapy_;
 };
 
-#if defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAWARPING)
+#if defined(HAVE_OPENCV_CUDAWARPING)
 class CV_EXPORTS MoreAccurateMotionWobbleSuppressorGpu : public MoreAccurateMotionWobbleSuppressorBase
 {
 public:
     void suppress(int idx, const cuda::GpuMat &frame, cuda::GpuMat &result);
-    virtual void suppress(int idx, const Mat &frame, Mat &result);
+    virtual void suppress(int idx, const Mat &frame, Mat &result) CV_OVERRIDE;
 
 private:
     cuda::GpuMat frameDevice_, resultDevice_;
     cuda::GpuMat mapx_, mapy_;
 };
 #endif
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

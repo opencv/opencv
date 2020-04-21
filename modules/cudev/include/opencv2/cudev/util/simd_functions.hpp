@@ -73,8 +73,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_SIMD_FUNCTIONS_HPP__
-#define __OPENCV_CUDEV_UTIL_SIMD_FUNCTIONS_HPP__
+#ifndef OPENCV_CUDEV_UTIL_SIMD_FUNCTIONS_HPP
+#define OPENCV_CUDEV_UTIL_SIMD_FUNCTIONS_HPP
 
 #include "../common.hpp"
 
@@ -127,6 +127,9 @@
 */
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // 2
 
@@ -907,6 +910,8 @@ __device__ __forceinline__ uint vmin4(uint a, uint b)
 
     return r;
 }
+
+//! @}
 
 }}
 

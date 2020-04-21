@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_HISTOGRAM_HPP__
-#define __OPENCV_CUDEV_GRID_HISTOGRAM_HPP__
+#ifndef OPENCV_CUDEV_GRID_HISTOGRAM_HPP
+#define OPENCV_CUDEV_GRID_HISTOGRAM_HPP
 
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"
@@ -53,6 +53,9 @@
 #include "detail/histogram.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <int BIN_COUNT, class Policy, class SrcPtr, typename ResType, class MaskPtr>
 __host__ void gridHistogram_(const SrcPtr& src, GpuMat_<ResType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
@@ -113,6 +116,8 @@ __host__ void gridHistogram(const SrcPtr& src, GpuMat_<ResType>& dst, Stream& st
 {
     gridHistogram_<BIN_COUNT, DefaultHistogramPolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

@@ -46,7 +46,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -82,11 +82,11 @@ OCL_TEST_P(OpticalFlowTVL1, Mat)
     cv::Mat flow; cv::UMat uflow;
 
     //create algorithm
-    cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+    cv::Ptr<cv::DualTVL1OpticalFlow> alg = cv::createOptFlow_DualTVL1();
 
     //set parameters
-    alg->set("scaleStep", scaleStep);
-    alg->setInt("medianFiltering", medianFiltering);
+    alg->setScaleStep(scaleStep);
+    alg->setMedianFiltering(medianFiltering);
 
     //create initial flow as result of algorithm calculation
     if (useInitFlow)
@@ -96,7 +96,7 @@ OCL_TEST_P(OpticalFlowTVL1, Mat)
     }
 
     //set flag to use initial flow as it is ready to use
-    alg->setBool("useInitialFlow", useInitFlow);
+    alg->setUseInitialFlow(useInitFlow);
 
     OCL_OFF(alg->calc(frame0, frame1, flow));
     OCL_ON(alg->calc(frame0, frame1, uflow));
@@ -112,6 +112,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Video, OpticalFlowTVL1,
     )
     );
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

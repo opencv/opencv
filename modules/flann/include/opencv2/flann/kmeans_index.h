@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_KMEANS_INDEX_H_
 #define OPENCV_FLANN_KMEANS_INDEX_H_
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <map>
 #include <cassert>
@@ -266,10 +268,60 @@ public:
 
 public:
 
-    flann_algorithm_t getType() const
+    flann_algorithm_t getType() const CV_OVERRIDE
     {
         return FLANN_INDEX_KMEANS;
     }
+
+    class KMeansDistanceComputer : public cv::ParallelLoopBody
+    {
+    public:
+        KMeansDistanceComputer(Distance _distance, const Matrix<ElementType>& _dataset,
+            const int _branching, const int* _indices, const Matrix<double>& _dcenters, const size_t _veclen,
+            std::vector<int> &_new_centroids, std::vector<DistanceType> &_sq_dists)
+            : distance(_distance)
+            , dataset(_dataset)
+            , branching(_branching)
+            , indices(_indices)
+            , dcenters(_dcenters)
+            , veclen(_veclen)
+            , new_centroids(_new_centroids)
+            , sq_dists(_sq_dists)
+        {
+        }
+
+        void operator()(const cv::Range& range) const CV_OVERRIDE
+        {
+            const int begin = range.start;
+            const int end = range.end;
+
+            for( int i = begin; i<end; ++i)
+            {
+                DistanceType sq_dist(distance(dataset[indices[i]], dcenters[0], veclen));
+                int new_centroid(0);
+                for (int j=1; j<branching; ++j) {
+                    DistanceType new_sq_dist = distance(dataset[indices[i]], dcenters[j], veclen);
+                    if (sq_dist>new_sq_dist) {
+                        new_centroid = j;
+                        sq_dist = new_sq_dist;
+                    }
+                }
+                sq_dists[i] = sq_dist;
+                new_centroids[i] = new_centroid;
+            }
+        }
+
+    private:
+        Distance distance;
+        const Matrix<ElementType>& dataset;
+        const int branching;
+        const int* indices;
+        const Matrix<double>& dcenters;
+        const size_t veclen;
+        std::vector<int> &new_centroids;
+        std::vector<DistanceType> &sq_dists;
+        KMeansDistanceComputer& operator=( const KMeansDistanceComputer & ) { return *this; }
+    };
 
     /**
      * Index constructor
@@ -333,7 +385,7 @@ public:
     /**
      *  Returns size of index.
      */
-    size_t size() const
+    size_t size() const CV_OVERRIDE
     {
         return size_;
     }
@@ -341,7 +393,7 @@ public:
     /**
      * Returns the length of an index feature.
      */
-    size_t veclen() const
+    size_t veclen() const CV_OVERRIDE
     {
         return veclen_;
     }
@@ -356,7 +408,7 @@ public:
      * Computes the inde memory usage
      * Returns: memory used by the index
      */
-    int usedMemory() const
+    int usedMemory() const CV_OVERRIDE
     {
         return pool_.usedMemory+pool_.wastedMemory+memoryCounter_;
     }
@@ -364,7 +416,7 @@ public:
     /**
      * Builds the index
      */
-    void buildIndex()
+    void buildIndex() CV_OVERRIDE
     {
         if (branching_<2) {
             throw FLANNException("Branching factor must be at least 2");
@@ -376,12 +428,14 @@ public:
         }
 
         root_ = pool_.allocate<KMeansNode>();
+        std::memset(root_, 0, sizeof(KMeansNode));
+
         computeNodeStatistics(root_, indices_, (int)size_);
         computeClustering(root_, indices_, (int)size_, branching_,0);
     }
 
 
-    void saveIndex(FILE* stream)
+    void saveIndex(FILE* stream) CV_OVERRIDE
     {
         save_value(stream, branching_);
         save_value(stream, iterations_);
@@ -393,7 +447,7 @@ public:
     }
 
 
-    void loadIndex(FILE* stream)
+    void loadIndex(FILE* stream) CV_OVERRIDE
     {
         load_value(stream, branching_);
         load_value(stream, iterations_);
@@ -428,7 +482,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     searchParams = parameters that influence the search algorithm (checks, cb_index)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
 
         int maxChecks = get_param(searchParams,"checks",32);
@@ -487,7 +541,7 @@ public:
         return clusterCount;
     }
 
-    IndexParams getParameters() const
+    IndexParams getParameters() const CV_OVERRIDE
     {
         return index_params_;
     }
@@ -495,7 +549,7 @@ public:
 
 private:
     /**
-     * Struture representing a node in the hierarchical k-means tree.
+     * Structure representing a node in the hierarchical k-means tree.
      */
     struct KMeansNode
     {
@@ -658,7 +712,8 @@ private:
             return;
         }
 
-        int* centers_idx = new int[branching];
+        cv::AutoBuffer<int> centers_idx_buf(branching);
+        int* centers_idx = centers_idx_buf.data();
         int centers_length;
         (this->*chooseCenters)(branching, indices, indices_length, centers_idx, centers_length);
 
@@ -666,29 +721,30 @@ private:
             node->indices = indices;
             std::sort(node->indices,node->indices+indices_length);
             node->childs = NULL;
-            delete [] centers_idx;
             return;
         }
 
 
-        Matrix<double> dcenters(new double[branching*veclen_],branching,veclen_);
+        cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
+        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
         for (int i=0; i<centers_length; ++i) {
             ElementType* vec = dataset_[centers_idx[i]];
             for (size_t k=0; k<veclen_; ++k) {
                 dcenters[i][k] = double(vec[k]);
             }
         }
-        delete[] centers_idx;
 
         std::vector<DistanceType> radiuses(branching);
-        int* count = new int[branching];
+        cv::AutoBuffer<int> count_buf(branching);
+        int* count = count_buf.data();
         for (int i=0; i<branching; ++i) {
             radiuses[i] = 0;
             count[i] = 0;
         }
 
         //	assign points to clusters
-        int* belongs_to = new int[indices_length];
+        cv::AutoBuffer<int> belongs_to_buf(indices_length);
+        int* belongs_to = belongs_to_buf.data();
         for (int i=0; i<indices_length; ++i) {
 
             DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0], veclen_);
@@ -731,25 +787,23 @@ private:
                 }
             }
 
+            std::vector<int> new_centroids(indices_length);
+            std::vector<DistanceType> sq_dists(indices_length);
+
             // reassign points to clusters
-            for (int i=0; i<indices_length; ++i) {
-                DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0], veclen_);
-                int new_centroid = 0;
-                for (int j=1; j<branching; ++j) {
-                    DistanceType new_sq_dist = distance_(dataset_[indices[i]], dcenters[j], veclen_);
-                    if (sq_dist>new_sq_dist) {
-                        new_centroid = j;
-                        sq_dist = new_sq_dist;
-                    }
-                }
-                if (sq_dist>radiuses[new_centroid]) {
+            KMeansDistanceComputer invoker(distance_, dataset_, branching, indices, dcenters, veclen_, new_centroids, sq_dists);
+            parallel_for_(cv::Range(0, (int)indices_length), invoker);
+
+            for (int i=0; i < (int)indices_length; ++i) {
+                DistanceType sq_dist(sq_dists[i]);
+                int new_centroid(new_centroids[i]);
+                if (sq_dist > radiuses[new_centroid]) {
                     radiuses[new_centroid] = sq_dist;
                 }
                 if (new_centroid != belongs_to[i]) {
                     count[belongs_to[i]]--;
                     count[new_centroid]++;
                     belongs_to[i] = new_centroid;
-
                     converged = false;
                 }
             }
@@ -815,19 +869,16 @@ private:
             variance -= distance_(centers[c], ZeroIterator<ElementType>(), veclen_);
 
             node->childs[c] = pool_.allocate<KMeansNode>();
+            std::memset(node->childs[c], 0, sizeof(KMeansNode));
             node->childs[c]->radius = radiuses[c];
             node->childs[c]->pivot = centers[c];
             node->childs[c]->variance = variance;
             node->childs[c]->mean_radius = mean_radius;
-            node->childs[c]->indices = NULL;
             computeClustering(node->childs[c],indices+start, end-start, branching, level+1);
             start=end;
         }
 
-        delete[] dcenters.data;
         delete[] centers;
-        delete[] count;
-        delete[] belongs_to;
     }
 
 
@@ -1005,7 +1056,7 @@ private:
 
 
     /**
-     * Helper function the descends in the hierarchical k-means tree by spliting those clusters that minimize
+     * Helper function the descends in the hierarchical k-means tree by splitting those clusters that minimize
      * the overall variance of the clustering.
      * Params:
      *     root = root node
@@ -1119,5 +1170,7 @@ private:
 };
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_KMEANS_INDEX_H_

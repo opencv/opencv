@@ -13,7 +13,7 @@
  //                           License Agreement
  //                For Open Source Computer Vision Library
  //
- // Copyright (C) 2014, Samson Yilma¸ (samson_yilma@yahoo.com), all rights reserved.
+ // Copyright (C) 2014, Samson Yilma (samson_yilma@yahoo.com), all rights reserved.
  //
  // Third party copyrights are property of their respective owners.
  //
@@ -44,11 +44,8 @@
  //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/calib3d.hpp"
-#include <vector>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_HomographyDecompTest: public cvtest::BaseTest {
 
@@ -118,9 +115,9 @@ private:
              riter != rotations.end() && titer != translations.end() && niter != normals.end();
              ++riter, ++titer, ++niter) {
 
-            double rdist = norm(*riter, _R, NORM_INF);
-            double tdist = norm(*titer, _t, NORM_INF);
-            double ndist = norm(*niter, _n, NORM_INF);
+            double rdist = cvtest::norm(*riter, _R, NORM_INF);
+            double tdist = cvtest::norm(*titer, _t, NORM_INF);
+            double ndist = cvtest::norm(*niter, _n, NORM_INF);
 
             if (   rdist < max_error
                 && tdist < max_error
@@ -136,3 +133,37 @@ private:
 };
 
 TEST(Calib3d_DecomposeHomography, regression) { CV_HomographyDecompTest test; test.safe_run(); }
+
+
+TEST(Calib3d_DecomposeHomography, issue_4978)
+{
+    Matx33d K(
+        1.0,   0.0,    0.0,
+        0.0,   1.0,    0.0,
+        0.0,   0.0,    1.0
+    );
+
+    Matx33d H(
+        -0.102896, 0.270191,   -0.0031153,
+        0.0406387, 1.19569,    -0.0120456,
+        0.445351,  0.0410889,  1
+    );
+
+    vector<Mat> rotations;
+    vector<Mat> translations;
+    vector<Mat> normals;
+
+    decomposeHomographyMat(H, K, rotations, translations, normals);
+
+    ASSERT_GT(rotations.size(), (size_t)0u);
+    for (size_t i = 0; i < rotations.size(); i++)
+    {
+        // check: det(R) = 1
+        EXPECT_TRUE(std::fabs(cv::determinant(rotations[i]) - 1.0) < 0.01)
+            << "R: det=" << cv::determinant(rotations[0]) << std::endl << rotations[i] << std::endl
+            << "T:" << std::endl << translations[i] << std::endl;
+    }
+}
+
+
+}} // namespace

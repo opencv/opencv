@@ -42,12 +42,12 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // BlendLinear
+
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
 
 PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
             Combine(CUDA_TYPICAL_MAT_SIZES,
@@ -84,3 +84,5 @@ PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
         FAIL_NO_CPU();
     }
 }
+
+}} // namespace

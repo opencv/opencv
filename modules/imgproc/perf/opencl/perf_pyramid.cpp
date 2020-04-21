@@ -49,7 +49,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// PyrDown //////////////////////
@@ -129,6 +129,6 @@ OCL_PERF_TEST_P(BuildPyramidFixture, BuildPyramid,
     SANITY_CHECK(dst4, eps);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

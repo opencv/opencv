@@ -1,5 +1,14 @@
+#ifndef OPENCV_CVCONFIG_H_INCLUDED
+#define OPENCV_CVCONFIG_H_INCLUDED
+
 /* OpenCV compiled as static or dynamic libs */
 #cmakedefine BUILD_SHARED_LIBS
+
+/* OpenCV intrinsics optimized code */
+#cmakedefine CV_ENABLE_INTRINSICS
+
+/* OpenCV additional optimized code */
+#cmakedefine CV_DISABLE_OPTIMIZATION
 
 /* Compile for 'real' NVIDIA GPU architectures */
 #define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
@@ -40,13 +49,13 @@
 /* C= */
 #cmakedefine HAVE_CSTRIPES
 
-/* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
+/* NVIDIA CUDA Basic Linear Algebra Subprograms (BLAS) API*/
 #cmakedefine HAVE_CUBLAS
 
-/* NVidia Cuda Runtime API*/
+/* NVIDIA CUDA Runtime API*/
 #cmakedefine HAVE_CUDA
 
-/* NVidia Cuda Fast Fourier Transform (FFT) API*/
+/* NVIDIA CUDA Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
 
 /* IEEE1394 capturing support */
@@ -57,6 +66,7 @@
 
 /* DirectX */
 #cmakedefine HAVE_DIRECTX
+#cmakedefine HAVE_DIRECTX_NV12
 #cmakedefine HAVE_D3D11
 #cmakedefine HAVE_D3D10
 #cmakedefine HAVE_D3D9
@@ -70,11 +80,8 @@
 /* FFMpeg video library */
 #cmakedefine HAVE_FFMPEG
 
-/* ffmpeg's libswscale */
-#cmakedefine HAVE_FFMPEG_SWSCALE
-
-/* ffmpeg in Gentoo */
-#cmakedefine HAVE_GENTOO_FFMPEG
+/* Geospatial Data Abstraction Library */
+#cmakedefine HAVE_GDAL
 
 /* GStreamer multimedia framework */
 #cmakedefine HAVE_GSTREAMER
@@ -85,6 +92,9 @@
 /* GTK+ 2.x toolkit */
 #cmakedefine HAVE_GTK
 
+/* Halide support */
+#cmakedefine HAVE_HALIDE
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
@@ -93,10 +103,9 @@
 
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
-#cmakedefine HAVE_IPP_ICV_ONLY
-
-/* Intel IPP Async */
-#cmakedefine HAVE_IPP_A
+#cmakedefine HAVE_IPP_ICV
+#cmakedefine HAVE_IPP_IW
+#cmakedefine HAVE_IPP_IW_LL
 
 /* JPEG-2000 codec */
 #cmakedefine HAVE_JASPER
@@ -107,18 +116,28 @@
 /* libpng/png.h needs to be included */
 #cmakedefine HAVE_LIBPNG_PNG_H
 
+/* GDCM DICOM codec */
+#cmakedefine HAVE_GDCM
+
 /* V4L/V4L2 capturing support via libv4l */
 #cmakedefine HAVE_LIBV4L
 
 /* Microsoft Media Foundation Capture library */
 #cmakedefine HAVE_MSMF
 
-/* NVidia Video Decoding API*/
+/* NVIDIA Video Decoding API*/
 #cmakedefine HAVE_NVCUVID
+
+/* NVIDIA Video Encoding API*/
+#cmakedefine HAVE_NVCUVENC
 
 /* OpenCL Support */
 #cmakedefine HAVE_OPENCL
 #cmakedefine HAVE_OPENCL_STATIC
+#cmakedefine HAVE_OPENCL_SVM
+
+/* NVIDIA OpenCL D3D Extensions support */
+#cmakedefine HAVE_OPENCL_D3D11_NV
 
 /* OpenEXR codec */
 #cmakedefine HAVE_OPENEXR
@@ -134,6 +153,12 @@
 
 /* PNG codec */
 #cmakedefine HAVE_PNG
+
+/* Posix threads (pthreads) */
+#cmakedefine HAVE_PTHREAD
+
+/* parallel_for with pthreads */
+#cmakedefine HAVE_PTHREADS_PF
 
 /* Qt support */
 #cmakedefine HAVE_QT
@@ -165,9 +190,6 @@
 /* Win32 UI */
 #cmakedefine HAVE_WIN32UI
 
-/* Windows Runtime support */
-#cmakedefine HAVE_WINRT
-
 /* XIMEA camera support */
 #cmakedefine HAVE_XIMEA
 
@@ -177,3 +199,53 @@
 /* Define if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #cmakedefine WORDS_BIGENDIAN
+
+/* gPhoto2 library */
+#cmakedefine HAVE_GPHOTO2
+
+/* VA library (libva) */
+#cmakedefine HAVE_VA
+
+/* Intel VA-API/OpenCL */
+#cmakedefine HAVE_VA_INTEL
+
+/* Intel Media SDK */
+#cmakedefine HAVE_MFX
+
+/* Lapack */
+#cmakedefine HAVE_LAPACK
+
+/* Library was compiled with functions instrumentation */
+#cmakedefine ENABLE_INSTRUMENTATION
+
+/* OpenVX */
+#cmakedefine HAVE_OPENVX
+
+#if defined(HAVE_XINE)         || \
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_QTKIT)        || \
+    defined(HAVE_AVFOUNDATION) || \
+    /*defined(HAVE_OPENNI)     || too specialized */ \
+    defined(HAVE_FFMPEG)       || \
+    defined(HAVE_MSMF)
+#define HAVE_VIDEO_INPUT
+#endif
+
+#if /*defined(HAVE_XINE)       || */\
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_QTKIT)        || \
+    defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_FFMPEG)       || \
+    defined(HAVE_MSMF)
+#define HAVE_VIDEO_OUTPUT
+#endif
+
+/* OpenCV trace utilities */
+#cmakedefine OPENCV_TRACE
+
+/* Library QR-code decoding */
+#cmakedefine HAVE_QUIRC
+
+#endif // OPENCV_CVCONFIG_H_INCLUDED

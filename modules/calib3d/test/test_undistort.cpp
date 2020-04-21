@@ -43,8 +43,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_DefaultNewCameraMatrixTest : public cvtest::ArrayTest
 {
@@ -67,7 +66,7 @@ private:
 
     static const int MAX_X = 2048;
     static const int MAX_Y = 2048;
-    static const int MAX_VAL = 10000;
+    //static const int MAX_VAL = 10000;
 };
 
 CV_DefaultNewCameraMatrixTest::CV_DefaultNewCameraMatrixTest()
@@ -411,7 +410,7 @@ void CV_UndistortPointsTest::prepare_to_validation(int /*test_case_idx*/)
     {
         if (useDstMat)
         {
-            CvMat temp = dst_points_mat;
+            CvMat temp = cvMat(dst_points_mat);
             for (int i=0;i<N_POINTS*2;i++)
             {
                 points[i] = temp.data.fl[i];
@@ -470,14 +469,14 @@ void CV_UndistortPointsTest::run_func()
     }
     else
     {
-        CvMat _input0 = test_mat[INPUT][0], _input1 = test_mat[INPUT][1], _input2, _input3, _input4;
-        CvMat _output = test_mat[TEMP][0];
+        CvMat _input0 = cvMat(test_mat[INPUT][0]), _input1 = cvMat(test_mat[INPUT][1]), _input2, _input3, _input4;
+        CvMat _output = cvMat(test_mat[TEMP][0]);
         if(!zero_distortion)
-            _input2 = test_mat[INPUT][2];
+            _input2 = cvMat(test_mat[INPUT][2]);
         if(!zero_R)
-            _input3 = test_mat[INPUT][3];
+            _input3 = cvMat(test_mat[INPUT][3]);
         if(!zero_new_cam)
-            _input4 = test_mat[INPUT][4];
+            _input4 = cvMat(test_mat[INPUT][4]);
         cvUndistortPoints(&_input0, &_output, &_input1,
                           zero_distortion ? 0 : &_input2,
                           zero_R ? 0 : &_input3,
@@ -854,10 +853,10 @@ void CV_InitUndistortRectifyMapTest::prepare_to_validation(int/* test_case_idx*/
     CvMat _new_cam = cvMat(test_mat[INPUT][4].rows,test_mat[INPUT][4].cols,CV_64F,new_cam);
     CvMat _points= cvMat(test_mat[INPUT][0].rows,test_mat[INPUT][0].cols,CV_64FC2,points);
 
-    CvMat _input1 = test_mat[INPUT][1];
-    CvMat _input2 = test_mat[INPUT][2];
-    CvMat _input3 = test_mat[INPUT][3];
-    CvMat _input4 = test_mat[INPUT][4];
+    CvMat _input1 = cvMat(test_mat[INPUT][1]);
+    CvMat _input2 = cvMat(test_mat[INPUT][2]);
+    CvMat _input3 = cvMat(test_mat[INPUT][3]);
+    CvMat _input4 = cvMat(test_mat[INPUT][4]);
 
     cvtest::convert(cvarrToMat(&_input1), cvarrToMat(&_camera), -1);
     cvtest::convert(cvarrToMat(&_input2), cvarrToMat(&_distort), -1);
@@ -872,8 +871,8 @@ void CV_InitUndistortRectifyMapTest::prepare_to_validation(int/* test_case_idx*/
     }
     cv::Mat map1,map2;
     cv::convertMaps(mapx,mapy,map1,map2,CV_32FC1);
-    CvMat _map1 = map1;
-    CvMat _map2 = map2;
+    CvMat _map1 = cvMat(map1);
+    CvMat _map2 = cvMat(map2);
     for (int i=0;i<N_POINTS;i++)
     {
         double u = test_mat[INPUT][0].ptr<double>()[2*i];
@@ -887,7 +886,7 @@ void CV_InitUndistortRectifyMapTest::prepare_to_validation(int/* test_case_idx*/
     cvUndistortPoints(&_points,&ref_points,&_camera,
                       zero_distortion ? 0 : &_distort, zero_R ? 0 : &_rot, zero_new_cam ? &_camera : &_new_cam);
     //cvTsDistortPoints(&_points,&ref_points,&_camera,&_distort,&_rot,&_new_cam);
-    CvMat dst = test_mat[REF_OUTPUT][0];
+    CvMat dst = cvMat(test_mat[REF_OUTPUT][0]);
     cvtest::convert(cvarrToMat(&ref_points), cvarrToMat(&dst), -1);
 
     cvtest::copy(test_mat[INPUT][0],test_mat[OUTPUT][0]);
@@ -913,13 +912,13 @@ void CV_InitUndistortRectifyMapTest::run_func()
     }
     else
     {
-        CvMat input1 = test_mat[INPUT][1], input2, input3, input4;
+        CvMat input1 = cvMat(test_mat[INPUT][1]), input2, input3, input4;
         if( !zero_distortion )
-            input2 = test_mat[INPUT][2];
+            input2 = cvMat(test_mat[INPUT][2]);
         if( !zero_R )
-            input3 = test_mat[INPUT][3];
+            input3 = cvMat(test_mat[INPUT][3]);
         if( !zero_new_cam )
-            input4 = test_mat[INPUT][4];
+            input4 = cvMat(test_mat[INPUT][4]);
         cvInitUndistortRectifyMap(&input1,
                                   zero_distortion ? 0 : &input2,
                                   zero_R ? 0 : &input3,
@@ -938,3 +937,249 @@ double CV_InitUndistortRectifyMapTest::get_success_error_level( int /*test_case_
 TEST(Calib3d_DefaultNewCameraMatrix, accuracy) { CV_DefaultNewCameraMatrixTest test; test.safe_run(); }
 TEST(Calib3d_UndistortPoints, accuracy) { CV_UndistortPointsTest test; test.safe_run(); }
 TEST(Calib3d_InitUndistortRectifyMap, accuracy) { CV_InitUndistortRectifyMapTest test; test.safe_run(); }
+
+TEST(Calib3d_UndistortPoints, inputShape)
+{
+    //https://github.com/opencv/opencv/issues/14423
+    Matx33d cameraMatrix = Matx33d::eye();
+    {
+        //2xN 1-channel
+        Mat imagePoints(2, 3, CV_32FC1);
+        imagePoints.at<float>(0,0) = 320; imagePoints.at<float>(1,0) = 240;
+        imagePoints.at<float>(0,1) = 0;   imagePoints.at<float>(1,1) = 240;
+        imagePoints.at<float>(0,2) = 320; imagePoints.at<float>(1,2) = 0;
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(normalized.size()), imagePoints.cols);
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints.at<float>(0,i), std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints.at<float>(1,i), std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //Nx2 1-channel
+        Mat imagePoints(3, 2, CV_32FC1);
+        imagePoints.at<float>(0,0) = 320; imagePoints.at<float>(0,1) = 240;
+        imagePoints.at<float>(1,0) = 0;   imagePoints.at<float>(1,1) = 240;
+        imagePoints.at<float>(2,0) = 320; imagePoints.at<float>(2,1) = 0;
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(normalized.size()), imagePoints.rows);
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints.at<float>(i,0), std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints.at<float>(i,1), std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //1xN 2-channel
+        Mat imagePoints(1, 3, CV_32FC2);
+        imagePoints.at<Vec2f>(0,0) = Vec2f(320, 240);
+        imagePoints.at<Vec2f>(0,1) = Vec2f(0, 240);
+        imagePoints.at<Vec2f>(0,2) = Vec2f(320, 0);
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(normalized.size()), imagePoints.cols);
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints.at<Vec2f>(0,i)(0), std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints.at<Vec2f>(0,i)(1), std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //Nx1 2-channel
+        Mat imagePoints(3, 1, CV_32FC2);
+        imagePoints.at<Vec2f>(0,0) = Vec2f(320, 240);
+        imagePoints.at<Vec2f>(1,0) = Vec2f(0, 240);
+        imagePoints.at<Vec2f>(2,0) = Vec2f(320, 0);
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(normalized.size()), imagePoints.rows);
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints.at<Vec2f>(i,0)(0), std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints.at<Vec2f>(i,0)(1), std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //vector<Point2f>
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(normalized.size(), imagePoints.size());
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //vector<Point2d>
+        vector<Point2d> imagePoints;
+        imagePoints.push_back(Point2d(320, 240));
+        imagePoints.push_back(Point2d(0,   240));
+        imagePoints.push_back(Point2d(320, 0));
+
+        vector<Point2d> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(normalized.size(), imagePoints.size());
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints[i].x, std::numeric_limits<double>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints[i].y, std::numeric_limits<double>::epsilon());
+        }
+    }
+}
+
+TEST(Calib3d_UndistortPoints, outputShape)
+{
+    Matx33d cameraMatrix = Matx33d::eye();
+    {
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        //Mat --> will be Nx1 2-channel
+        Mat normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(imagePoints.size()), normalized.rows);
+        for (int i = 0; i < normalized.rows; i++) {
+            EXPECT_NEAR(normalized.at<Vec2f>(i,0)(0), imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized.at<Vec2f>(i,0)(1), imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        //Nx1 2-channel
+        Mat normalized(static_cast<int>(imagePoints.size()), 1, CV_32FC2);
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(imagePoints.size()), normalized.rows);
+        for (int i = 0; i < normalized.rows; i++) {
+            EXPECT_NEAR(normalized.at<Vec2f>(i,0)(0), imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized.at<Vec2f>(i,0)(1), imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        //1xN 2-channel
+        Mat normalized(1, static_cast<int>(imagePoints.size()), CV_32FC2);
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(imagePoints.size()), normalized.cols);
+        for (int i = 0; i < normalized.rows; i++) {
+            EXPECT_NEAR(normalized.at<Vec2f>(0,i)(0), imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized.at<Vec2f>(0,i)(1), imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        //vector<Point2f>
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(imagePoints.size(), normalized.size());
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        vector<Point2d> imagePoints;
+        imagePoints.push_back(Point2d(320, 240));
+        imagePoints.push_back(Point2d(0,   240));
+        imagePoints.push_back(Point2d(320, 0));
+
+        //vector<Point2d>
+        vector<Point2d> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(imagePoints.size(), normalized.size());
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints[i].x, std::numeric_limits<double>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints[i].y, std::numeric_limits<double>::epsilon());
+        }
+    }
+}
+
+TEST(Imgproc_undistort, regression_15286)
+{
+    double kmat_data[9] = { 3217, 0, 1592, 0, 3217, 1201, 0, 0, 1 };
+    Mat kmat(3, 3, CV_64F, kmat_data);
+    double dist_coeff_data[5] = { 0.04, -0.4, -0.01, 0.04, 0.7 };
+    Mat dist_coeffs(5, 1, CV_64F, dist_coeff_data);
+
+    Mat img = Mat::zeros(512, 512, CV_8UC1);
+    img.at<uchar>(128, 128) = 255;
+    img.at<uchar>(128, 384) = 255;
+    img.at<uchar>(384, 384) = 255;
+    img.at<uchar>(384, 128) = 255;
+
+    Mat ref = Mat::zeros(512, 512, CV_8UC1);
+    ref.at<uchar>(Point(24, 98)) = 78;
+    ref.at<uchar>(Point(24, 99)) = 114;
+    ref.at<uchar>(Point(25, 98)) = 36;
+    ref.at<uchar>(Point(25, 99)) = 60;
+    ref.at<uchar>(Point(27, 361)) = 6;
+    ref.at<uchar>(Point(28, 361)) = 188;
+    ref.at<uchar>(Point(28, 362)) = 49;
+    ref.at<uchar>(Point(29, 361)) = 44;
+    ref.at<uchar>(Point(29, 362)) = 16;
+    ref.at<uchar>(Point(317, 366)) = 134;
+    ref.at<uchar>(Point(317, 367)) = 78;
+    ref.at<uchar>(Point(318, 366)) = 40;
+    ref.at<uchar>(Point(318, 367)) = 29;
+    ref.at<uchar>(Point(310, 104)) = 106;
+    ref.at<uchar>(Point(310, 105)) = 30;
+    ref.at<uchar>(Point(311, 104)) = 112;
+    ref.at<uchar>(Point(311, 105)) = 38;
+
+    Mat img_undist;
+    undistort(img, img_undist, kmat, dist_coeffs);
+
+    ASSERT_EQ(0.0, cvtest::norm(img_undist, ref, cv::NORM_INF));
+}
+
+TEST(Calib3d_initUndistortRectifyMap, regression_14467)
+{
+    Size size_w_h(512 + 3, 512);
+    Matx33f k(
+        6200, 0, size_w_h.width / 2.0f,
+        0, 6200, size_w_h.height / 2.0f,
+        0, 0, 1
+    );
+
+    Mat mesh_uv(size_w_h, CV_32FC2);
+    for (int i = 0; i < size_w_h.height; i++)
+    {
+        for (int j = 0; j < size_w_h.width; j++)
+        {
+            mesh_uv.at<Vec2f>(i, j) = Vec2f((float)j, (float)i);
+        }
+    }
+
+    Matx<double, 1, 14> d(
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0,
+        0.09, 0.0
+    );
+    Mat mapxy, dst;
+    initUndistortRectifyMap(k, d, noArray(), k, size_w_h, CV_32FC2, mapxy, noArray());
+    undistortPoints(mapxy.reshape(2, (int)mapxy.total()), dst, k, d, noArray(), k);
+    dst = dst.reshape(2, mapxy.rows);
+    EXPECT_LE(cvtest::norm(dst, mesh_uv, NORM_INF), 1e-3);
+}
+
+}} // namespace

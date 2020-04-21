@@ -73,13 +73,16 @@ namespace cv
           void WriteData();
           int FillInputPortInformation(int port, vtkInformation *info);
 
-          _OutputArray cloud, colors, normals, tcoords;
+          _OutputArray cloud; //!< point coordinates of type CV_32FC3 or CV_64FC3 with only 1 row
+          _OutputArray colors; //!< point color of type CV_8UC3 or CV_8UC4 with only 1 row
+          _OutputArray normals; //!< point normal of type CV_32FC3, CV_32FC4, CV_64FC3 or CV_64FC4 with only 1 row
+          _OutputArray tcoords; //!< texture coordinates of type CV_32FC2 or CV_64FC2 with only 1 row
 
         private:
           vtkCloudMatSink(const vtkCloudMatSink&);  // Not implemented.
           void operator=(const vtkCloudMatSink&);  // Not implemented.
         };
-    }
-}
+    } // end namespace viz
+} // end namespace cv
 
 #endif

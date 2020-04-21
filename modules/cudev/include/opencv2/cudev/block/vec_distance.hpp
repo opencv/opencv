@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_BLOCK_VEC_DISTANCE_HPP__
-#define __OPENCV_CUDEV_BLOCK_VEC_DISTANCE_HPP__
+#ifndef OPENCV_CUDEV_BLOCK_VEC_DISTANCE_HPP
+#define OPENCV_CUDEV_BLOCK_VEC_DISTANCE_HPP
 
 #include "../common.hpp"
 #include "../functional/functional.hpp"
@@ -52,6 +52,9 @@
 #include "reduce.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // NormL1
 
@@ -178,6 +181,8 @@ struct NormHamming
         return mySum;
     }
 };
+
+//! @}
 
 }}
 

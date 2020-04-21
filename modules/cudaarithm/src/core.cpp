@@ -57,8 +57,6 @@ void cv::cuda::transpose(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::cuda::flip(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray) { throw_no_cuda(); return Ptr<LookUpTable>(); }
-
 void cv::cuda::copyMakeBorder(InputArray, OutputArray, int, int, int, int, int, Scalar, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
@@ -119,15 +117,17 @@ void cv::cuda::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& str
         {NppMirror<CV_32F, nppiMirror_32f_C1R>::call, 0, NppMirror<CV_32F, nppiMirror_32f_C3R>::call, NppMirror<CV_32F, nppiMirror_32f_C4R>::call}
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S || src.depth() == CV_32F);
     CV_Assert(src.channels() == 1 || src.channels() == 3 || src.channels() == 4);
 
     _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
     funcs[src.depth()][src.channels() - 1](src, dst, flipCode, StreamAccessor::getStream(stream));
+
+    syncOutput(dst, _dst, stream);
 }
 
 #endif /* !defined (HAVE_CUDA) */

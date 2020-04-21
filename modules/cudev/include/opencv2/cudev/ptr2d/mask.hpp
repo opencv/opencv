@@ -43,13 +43,16 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_MASK_HPP__
-#define __OPENCV_CUDEV_PTR2D_MASK_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_MASK_HPP
+#define OPENCV_CUDEV_PTR2D_MASK_HPP
 
 #include "../common.hpp"
 #include "traits.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 struct WithOutMask
 {
@@ -97,6 +100,8 @@ singleMaskChannels(const MaskPtr& mask, int channels)
 template <class MaskPtr> struct PtrTraits< SingleMaskChannelsSz<MaskPtr> > : PtrTraitsBase<SingleMaskChannelsSz<MaskPtr>, SingleMaskChannels<MaskPtr> >
 {
 };
+
+//! @}
 
 }}
 

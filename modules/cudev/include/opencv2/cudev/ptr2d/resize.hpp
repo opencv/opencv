@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_RESIZE_HPP__
-#define __OPENCV_CUDEV_PTR2D_RESIZE_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_RESIZE_HPP
+#define OPENCV_CUDEV_PTR2D_RESIZE_HPP
 
 #include "opencv2/core/base.hpp"
 #include "../common.hpp"
@@ -53,6 +53,9 @@
 #include "gpumat.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class SrcPtr> struct ResizePtr
 {
@@ -97,6 +100,8 @@ __host__ ResizePtrSz<typename PtrTraits<SrcPtr>::ptr_type> resizePtr(const SrcPt
 template <class SrcPtr> struct PtrTraits< ResizePtrSz<SrcPtr> > : PtrTraitsBase<ResizePtrSz<SrcPtr>, ResizePtr<SrcPtr> >
 {
 };
+
+//! @}
 
 }}
 

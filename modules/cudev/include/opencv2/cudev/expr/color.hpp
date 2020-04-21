@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_COLOR_HPP__
-#define __OPENCV_CUDEV_EXPR_COLOR_HPP__
+#ifndef OPENCV_CUDEV_EXPR_COLOR_HPP
+#define OPENCV_CUDEV_EXPR_COLOR_HPP
 
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"
@@ -53,6 +53,9 @@
 #include "expr.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 #define CV_CUDEV_EXPR_CVTCOLOR_INST(name) \
     template <class SrcPtr> \
@@ -276,6 +279,8 @@ CV_CUDEV_EXPR_CVTCOLOR_INST(Luv_to_LBGRA)
 CV_CUDEV_EXPR_CVTCOLOR_INST(Luv4_to_LBGRA)
 
 #undef CV_CUDEV_EXPR_CVTCOLOR_INST
+
+//! @}
 
 }}
 

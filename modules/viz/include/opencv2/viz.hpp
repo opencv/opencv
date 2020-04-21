@@ -43,12 +43,42 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_HPP__
-#define __OPENCV_VIZ_HPP__
+#ifndef OPENCV_VIZ_HPP
+#define OPENCV_VIZ_HPP
 
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
 #include <opencv2/viz/viz3d.hpp>
 #include <opencv2/viz/vizcore.hpp>
 
-#endif /* __OPENCV_VIZ_HPP__ */
+/**
+  @defgroup viz 3D Visualizer
+
+This section describes 3D visualization window as well as classes and methods that are used to
+interact with it.
+
+3D visualization window (see Viz3d) is used to display widgets (see Widget), and it provides several
+methods to interact with scene and widgets.
+
+  @{
+    @defgroup viz_widget Widget
+
+In this section, the widget framework is explained. Widgets represent 2D or 3D objects, varying from
+simple ones such as lines to complex ones such as point clouds and meshes.
+
+Widgets are **implicitly shared**. Therefore, one can add a widget to the scene, and modify the
+widget without re-adding the widget.
+
+@code
+// Create a cloud widget
+viz::WCloud cw(cloud, viz::Color::red());
+// Display it in a window
+myWindow.showWidget("CloudWidget1", cw);
+// Modify it, and it will be modified in the window.
+cw.setColor(viz::Color::yellow());
+@endcode
+
+  @}
+*/
+
+#endif /* OPENCV_VIZ_HPP */

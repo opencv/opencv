@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CUDA_HPP__
-#define __OPENCV_CORE_CUDA_HPP__
+#ifndef OPENCV_CORE_CUDA_HPP
+#define OPENCV_CORE_CUDA_HPP
 
 #ifndef __cplusplus
 #  error cuda.hpp header must be compiled as C++
@@ -51,13 +51,57 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda_types.hpp"
 
+/**
+  @defgroup cuda CUDA-accelerated Computer Vision
+  @{
+    @defgroup cudacore Core part
+    @{
+      @defgroup cudacore_init Initialization and Information
+      @defgroup cudacore_struct Data Structures
+    @}
+  @}
+ */
+
 namespace cv { namespace cuda {
 
-//////////////////////////////// GpuMat ///////////////////////////////
+//! @addtogroup cudacore_struct
+//! @{
 
-// Smart pointer for GPU memory with reference counting.
-// Its interface is mostly similar with cv::Mat.
+//===================================================================================
+// GpuMat
+//===================================================================================
 
+/** @brief Base storage class for GPU memory with reference counting.
+
+Its interface matches the Mat interface with the following limitations:
+
+-   no arbitrary dimensions support (only 2D)
+-   no functions that return references to their data (because references on GPU are not valid for
+    CPU)
+-   no expression templates technique support
+
+Beware that the latter limitation may lead to overloaded matrix operators that cause memory
+allocations. The GpuMat class is convertible to cuda::PtrStepSz and cuda::PtrStep so it can be
+passed directly to the kernel.
+
+@note In contrast with Mat, in most cases GpuMat::isContinuous() == false . This means that rows are
+aligned to a size depending on the hardware. Single-row GpuMat is always a continuous matrix.
+
+@note You are not recommended to leave static or global GpuMat variables allocated, that is, to rely
+on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory
+release function returns error if the CUDA context has been destroyed before.
+
+Some member functions are described as a "Blocking Call" while some are described as a
+"Non-Blocking Call". Blocking functions are synchronous to host. It is guaranteed that the GPU
+operation is finished when the function returns. However, non-blocking functions are asynchronous to
+host. Those functions may return even if the GPU operation is not finished.
+
+Compared to their blocking counterpart, non-blocking functions accept Stream as an additional
+argument. If a non-default stream is passed, the GPU operation may overlap with operations in other
+streams.
+
+@sa Mat
+ */
 class CV_EXPORTS GpuMat
 {
 public:
@@ -82,7 +126,7 @@ public:
     GpuMat(int rows, int cols, int type, Allocator* allocator = defaultAllocator());
     GpuMat(Size size, int type, Allocator* allocator = defaultAllocator());
 
-    //! constucts GpuMat and fills it with the specified value _s
+    //! constructs GpuMat and fills it with the specified value _s
     GpuMat(int rows, int cols, int type, Scalar s, Allocator* allocator = defaultAllocator());
     GpuMat(Size size, int type, Scalar s, Allocator* allocator = defaultAllocator());
 
@@ -116,16 +160,38 @@ public:
     //! swaps with other smart pointer
     void swap(GpuMat& mat);
 
-    //! pefroms upload data to GpuMat (Blocking call)
+    /** @brief Performs data upload to GpuMat (Blocking call)
+
+    This function copies data from host memory to device memory. As being a blocking call, it is
+    guaranteed that the copy operation is finished when this function returns.
+    */
     void upload(InputArray arr);
 
-    //! pefroms upload data to GpuMat (Non-Blocking call)
+    /** @brief Performs data upload to GpuMat (Non-Blocking call)
+
+    This function copies data from host memory to device memory. As being a non-blocking call, this
+    function may return even if the copy operation is not finished.
+
+    The copy operation may be overlapped with operations in other non-default streams if \p stream is
+    not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
+    */
     void upload(InputArray arr, Stream& stream);
 
-    //! pefroms download data from device to host memory (Blocking call)
+    /** @brief Performs data download from GpuMat (Blocking call)
+
+    This function copies data from device memory to host memory. As being a blocking call, it is
+    guaranteed that the copy operation is finished when this function returns.
+    */
     void download(OutputArray dst) const;
 
-    //! pefroms download data from device to host memory (Non-Blocking call)
+    /** @brief Performs data download from GpuMat (Non-Blocking call)
+
+    This function copies data from device memory to host memory. As being a non-blocking call, this
+    function may return even if the copy operation is not finished.
+
+    The copy operation may be overlapped with operations in other non-default streams if \p stream is
+    not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
+    */
     void download(OutputArray dst, Stream& stream) const;
 
     //! returns deep copy of the GpuMat, i.e. the data is copied
@@ -239,6 +305,9 @@ public:
     //! returns true if GpuMat data is NULL
     bool empty() const;
 
+    //! internal use method: updates the continuity flag
+    void updateContinuityFlag();
+
     /*! includes several bit-fields:
     - the magic signature
     - continuity flag
@@ -261,73 +330,245 @@ public:
     int* refcount;
 
     //! helper fields used in locateROI and adjustROI
-    const uchar* datastart;
+    uchar* datastart;
     const uchar* dataend;
 
     //! allocator
     Allocator* allocator;
 };
 
-//! creates continuous matrix
+/** @brief Creates a continuous matrix.
+
+@param rows Row count.
+@param cols Column count.
+@param type Type of the matrix.
+@param arr Destination matrix. This parameter changes only if it has a proper type and area (
+\f$\texttt{rows} \times \texttt{cols}\f$ ).
+
+Matrix is called continuous if its elements are stored continuously, that is, without gaps at the
+end of each row.
+ */
 CV_EXPORTS void createContinuous(int rows, int cols, int type, OutputArray arr);
 
-//! ensures that size of the given matrix is not less than (rows, cols) size
-//! and matrix type is match specified one too
+/** @brief Ensures that the size of a matrix is big enough and the matrix has a proper type.
+
+@param rows Minimum desired number of rows.
+@param cols Minimum desired number of columns.
+@param type Desired matrix type.
+@param arr Destination matrix.
+
+The function does not reallocate memory if the matrix has proper attributes already.
+ */
 CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
 
-CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat& mat);
+/** @brief BufferPool for use with CUDA streams
+
+BufferPool utilizes Stream's allocator to create new buffers for GpuMat's. It is
+only useful when enabled with #setBufferPoolUsage.
+
+@code
+    setBufferPoolUsage(true);
+@endcode
+
+@note #setBufferPoolUsage must be called \em before any Stream declaration.
+
+Users may specify custom allocator for Stream and may implement their own stream based
+functions utilizing the same underlying GPU memory management.
+
+If custom allocator is not specified, BufferPool utilizes StackAllocator by
+default. StackAllocator allocates a chunk of GPU device memory beforehand,
+and when GpuMat is declared later on, it is given the pre-allocated memory.
+This kind of strategy reduces the number of calls for memory allocating APIs
+such as cudaMalloc or cudaMallocPitch.
+
+Below is an example that utilizes BufferPool with StackAllocator:
+
+@code
+    #include <opencv2/opencv.hpp>
+
+    using namespace cv;
+    using namespace cv::cuda
+
+    int main()
+    {
+        setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
+        setBufferPoolConfig(getDevice(), 1024 * 1024 * 64, 2);  // Allocate 64 MB, 2 stacks (default is 10 MB, 5 stacks)
+
+        Stream stream1, stream2;                                // Each stream uses 1 stack
+        BufferPool pool1(stream1), pool2(stream2);
+
+        GpuMat d_src1 = pool1.getBuffer(4096, 4096, CV_8UC1);   // 16MB
+        GpuMat d_dst1 = pool1.getBuffer(4096, 4096, CV_8UC3);   // 48MB, pool1 is now full
+
+        GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
+        GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
+
+        cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
+        cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+    }
+@endcode
+
+If we allocate another GpuMat on pool1 in the above example, it will be carried out by
+the DefaultAllocator since the stack for pool1 is full.
+
+@code
+    GpuMat d_add1 = pool1.getBuffer(1024, 1024, CV_8UC1);   // Stack for pool1 is full, memory is allocated with DefaultAllocator
+@endcode
+
+If a third stream is declared in the above example, allocating with #getBuffer
+within that stream will also be carried out by the DefaultAllocator because we've run out of
+stacks.
+
+@code
+    Stream stream3;                                         // Only 2 stacks were allocated, we've run out of stacks
+    BufferPool pool3(stream3);
+    GpuMat d_src3 = pool3.getBuffer(1024, 1024, CV_8UC1);   // Memory is allocated with DefaultAllocator
+@endcode
+
+@warning When utilizing StackAllocator, deallocation order is important.
+
+Just like a stack, deallocation must be done in LIFO order. Below is an example of
+erroneous usage that violates LIFO rule. If OpenCV is compiled in Debug mode, this
+sample code will emit CV_Assert error.
+
+@code
+    int main()
+    {
+        setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
+        Stream stream;                                          // A default size (10 MB) stack is allocated to this stream
+        BufferPool pool(stream);
+
+        GpuMat mat1 = pool.getBuffer(1024, 1024, CV_8UC1);      // Allocate mat1 (1MB)
+        GpuMat mat2 = pool.getBuffer(1024, 1024, CV_8UC1);      // Allocate mat2 (1MB)
+
+        mat1.release();                                         // erroneous usage : mat2 must be deallocated before mat1
+    }
+@endcode
+
+Since C++ local variables are destroyed in the reverse order of construction,
+the code sample below satisfies the LIFO rule. Local GpuMat's are deallocated
+and the corresponding memory is automatically returned to the pool for later usage.
+
+@code
+    int main()
+    {
+        setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
+        setBufferPoolConfig(getDevice(), 1024 * 1024 * 64, 2);  // Allocate 64 MB, 2 stacks (default is 10 MB, 5 stacks)
+
+        Stream stream1, stream2;                                // Each stream uses 1 stack
+        BufferPool pool1(stream1), pool2(stream2);
+
+        for (int i = 0; i < 10; i++)
+        {
+            GpuMat d_src1 = pool1.getBuffer(4096, 4096, CV_8UC1);   // 16MB
+            GpuMat d_dst1 = pool1.getBuffer(4096, 4096, CV_8UC3);   // 48MB, pool1 is now full
+
+            GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
+            GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
+
+            d_src1.setTo(Scalar(i), stream1);
+            d_src2.setTo(Scalar(i), stream2);
+
+            cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
+            cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+                                                                    // The order of destruction of the local variables is:
+                                                                    //   d_dst2 => d_src2 => d_dst1 => d_src1
+                                                                    // LIFO rule is satisfied, this code runs without error
+        }
+    }
+@endcode
+ */
+class CV_EXPORTS BufferPool
+{
+public:
+
+    //! Gets the BufferPool for the given stream.
+    explicit BufferPool(Stream& stream);
+
+    //! Allocates a new GpuMat of given size and type.
+    GpuMat getBuffer(int rows, int cols, int type);
+
+    //! Allocates a new GpuMat of given size and type.
+    GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+
+    //! Returns the allocator associated with the stream.
+    Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
+
+private:
+    Ptr<GpuMat::Allocator> allocator_;
+};
 
 //! BufferPool management (must be called before Stream creation)
 CV_EXPORTS void setBufferPoolUsage(bool on);
 CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount);
 
-//////////////////////////////// CudaMem ////////////////////////////////
+//===================================================================================
+// HostMem
+//===================================================================================
 
-// CudaMem is limited cv::Mat with page locked memory allocation.
-// Page locked memory is only needed for async and faster coping to GPU.
-// It is convertable to cv::Mat header without reference counting
-// so you can use it with other opencv functions.
+/** @brief Class with reference counting wrapping special memory type allocation functions from CUDA.
 
-class CV_EXPORTS CudaMem
+Its interface is also Mat-like but with additional memory type parameters.
+
+-   **PAGE_LOCKED** sets a page locked memory type used commonly for fast and asynchronous
+    uploading/downloading data from/to GPU.
+-   **SHARED** specifies a zero copy memory allocation that enables mapping the host memory to GPU
+    address space, if supported.
+-   **WRITE_COMBINED** sets the write combined buffer that is not cached by CPU. Such buffers are
+    used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache
+    utilization.
+
+@note Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2
+Pinned Memory APIs* document or *CUDA C Programming Guide*.
+ */
+class CV_EXPORTS HostMem
 {
 public:
     enum AllocType { PAGE_LOCKED = 1, SHARED = 2, WRITE_COMBINED = 4 };
 
-    explicit CudaMem(AllocType alloc_type = PAGE_LOCKED);
+    static MatAllocator* getAllocator(AllocType alloc_type = PAGE_LOCKED);
 
-    CudaMem(const CudaMem& m);
+    explicit HostMem(AllocType alloc_type = PAGE_LOCKED);
 
-    CudaMem(int rows, int cols, int type, AllocType alloc_type = PAGE_LOCKED);
-    CudaMem(Size size, int type, AllocType alloc_type = PAGE_LOCKED);
+    HostMem(const HostMem& m);
+
+    HostMem(int rows, int cols, int type, AllocType alloc_type = PAGE_LOCKED);
+    HostMem(Size size, int type, AllocType alloc_type = PAGE_LOCKED);
 
     //! creates from host memory with coping data
-    explicit CudaMem(InputArray arr, AllocType alloc_type = PAGE_LOCKED);
+    explicit HostMem(InputArray arr, AllocType alloc_type = PAGE_LOCKED);
 
-    ~CudaMem();
+    ~HostMem();
 
-    CudaMem& operator =(const CudaMem& m);
+    HostMem& operator =(const HostMem& m);
 
     //! swaps with other smart pointer
-    void swap(CudaMem& b);
+    void swap(HostMem& b);
 
     //! returns deep copy of the matrix, i.e. the data is copied
-    CudaMem clone() const;
+    HostMem clone() const;
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     void create(int rows, int cols, int type);
     void create(Size size, int type);
 
-    //! creates alternative CudaMem header for the same data, with different
+    //! creates alternative HostMem header for the same data, with different
     //! number of channels and/or different number of rows
-    CudaMem reshape(int cn, int rows = 0) const;
+    HostMem reshape(int cn, int rows = 0) const;
 
     //! decrements reference counter and released memory if needed.
     void release();
 
-    //! returns matrix header with disabled reference counting for CudaMem data.
+    //! returns matrix header with disabled reference counting for HostMem data.
     Mat createMatHeader() const;
 
-    //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.
+    /** @brief Maps CPU memory to GPU address space and creates the cuda::GpuMat header without reference counting
+    for it.
+
+    This can be done only if memory was allocated with the SHARED flag and if it is supported by the
+    hardware. Laptops often share video and CPU memory, so address spaces can be mapped, which
+    eliminates an extra copy.
+     */
     GpuMat createGpuMatHeader() const;
 
     // Please see cv::Mat for descriptions
@@ -349,24 +590,55 @@ public:
     uchar* data;
     int* refcount;
 
-    const uchar* datastart;
+    uchar* datastart;
     const uchar* dataend;
 
     AllocType alloc_type;
 };
 
-//! page-locks the matrix m memory and maps it for the device(s)
+/** @brief Page-locks the memory of matrix and maps it for the device(s).
+
+@param m Input matrix.
+ */
 CV_EXPORTS void registerPageLocked(Mat& m);
 
-//! unmaps the memory of matrix m, and makes it pageable again
+/** @brief Unmaps the memory of matrix and makes it pageable again.
+
+@param m Input matrix.
+ */
 CV_EXPORTS void unregisterPageLocked(Mat& m);
 
-///////////////////////////////// Stream //////////////////////////////////
+//===================================================================================
+// Stream
+//===================================================================================
 
-// Encapculates Cuda Stream. Provides interface for async coping.
-// Passed to each function that supports async kernel execution.
-// Reference counting is enabled.
+/** @brief This class encapsulates a queue of asynchronous calls.
 
+@note Currently, you may face problems if an operation is enqueued twice with different data. Some
+functions use the constant GPU memory, and next call may update the memory before the previous one
+has been finished. But calling different operations asynchronously is safe because each operation
+has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are
+also safe.
+
+@note The Stream class is not thread-safe. Please use different Stream objects for different CPU threads.
+
+@code
+void thread1()
+{
+    cv::cuda::Stream stream1;
+    cv::cuda::func1(..., stream1);
+}
+
+void thread2()
+{
+    cv::cuda::Stream stream2;
+    cv::cuda::func2(..., stream2);
+}
+@endcode
+
+@note By default all CUDA routines are launched in Stream::Null() object, if the stream is not specified by user.
+In multi-threading environment the stream objects must be passed explicitly (see previous note).
+ */
 class CV_EXPORTS Stream
 {
     typedef void (Stream::*bool_type)() const;
@@ -378,16 +650,29 @@ public:
     //! creates a new asynchronous stream
     Stream();
 
-    //! queries an asynchronous stream for completion status
+    //! creates a new asynchronous stream with custom allocator
+    Stream(const Ptr<GpuMat::Allocator>& allocator);
+
+    /** @brief Returns true if the current stream queue is finished. Otherwise, it returns false.
+    */
     bool queryIfComplete() const;
 
-    //! waits for stream tasks to complete
+    /** @brief Blocks the current CPU thread until all operations in the stream are complete.
+    */
     void waitForCompletion();
 
-    //! makes a compute stream wait on an event
+    /** @brief Makes a compute stream wait on an event.
+    */
     void waitEvent(const Event& event);
 
-    //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
+    /** @brief Adds a callback to be called on the host after all currently enqueued items in the stream have
+    completed.
+
+    @note Callbacks must not make any CUDA API calls. Callbacks must not perform any synchronization
+    that may depend on outstanding device work or other callbacks that are not mandated to run earlier.
+    Callbacks without a mandated order (in independent streams) execute in undefined order and may be
+    serialized.
+     */
     void enqueueHostCallback(StreamCallback callback, void* userData);
 
     //! return Stream object for default CUDA stream
@@ -404,6 +689,7 @@ private:
 
     friend struct StreamAccessor;
     friend class BufferPool;
+    friend class DefaultDeviceInitializer;
 };
 
 class CV_EXPORTS Event
@@ -435,25 +721,49 @@ public:
 
 private:
     Ptr<Impl> impl_;
+    Event(const Ptr<Impl>& impl);
 
     friend struct EventAccessor;
 };
 
-//////////////////////////////// Initialization & Info ////////////////////////
+//! @} cudacore_struct
 
-//! this is the only function that do not throw exceptions if the library is compiled without CUDA
+//===================================================================================
+// Initialization & Info
+//===================================================================================
+
+//! @addtogroup cudacore_init
+//! @{
+
+/** @brief Returns the number of installed CUDA-enabled devices.
+
+Use this function before any other CUDA functions calls. If OpenCV is compiled without CUDA support,
+this function returns 0. If the CUDA driver is not installed, or is incompatible, this function
+returns -1.
+ */
 CV_EXPORTS int getCudaEnabledDeviceCount();
 
-//! set device to be used for GPU executions for the calling host thread
+/** @brief Sets a device and initializes it for the current thread.
+
+@param device System index of a CUDA device starting with 0.
+
+If the call of this function is omitted, a default device is initialized at the fist CUDA usage.
+ */
 CV_EXPORTS void setDevice(int device);
 
-//! returns which device is currently being used for the calling host thread
+/** @brief Returns the current device index set by cuda::setDevice or initialized by default.
+ */
 CV_EXPORTS int getDevice();
 
-//! explicitly destroys and cleans up all resources associated with the current device in the current process
-//! any subsequent API call to this device will reinitialize the device
+/** @brief Explicitly destroys and cleans up all resources associated with the current device in the current
+process.
+
+Any subsequent API call to this device will reinitialize the device.
+ */
 CV_EXPORTS void resetDevice();
 
+/** @brief Enumeration providing CUDA computing features.
+ */
 enum FeatureSet
 {
     FEATURE_SET_COMPUTE_10 = 10,
@@ -463,7 +773,9 @@ enum FeatureSet
     FEATURE_SET_COMPUTE_20 = 20,
     FEATURE_SET_COMPUTE_21 = 21,
     FEATURE_SET_COMPUTE_30 = 30,
+    FEATURE_SET_COMPUTE_32 = 32,
     FEATURE_SET_COMPUTE_35 = 35,
+    FEATURE_SET_COMPUTE_50 = 50,
 
     GLOBAL_ATOMICS = FEATURE_SET_COMPUTE_11,
     SHARED_ATOMICS = FEATURE_SET_COMPUTE_12,
@@ -475,12 +787,27 @@ enum FeatureSet
 //! checks whether current device supports the given feature
 CV_EXPORTS bool deviceSupports(FeatureSet feature_set);
 
-//! information about what GPU archs this OpenCV CUDA module was compiled for
+/** @brief Class providing a set of static methods to check what NVIDIA\* card architecture the CUDA module was
+built for.
+
+According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute
+capability can always be compiled to binary code of greater or equal compute capability".
+ */
 class CV_EXPORTS TargetArchs
 {
 public:
+    /** @brief The following method checks whether the module was built with the support of the given feature:
+
+    @param feature_set Features to be checked. See :ocvcuda::FeatureSet.
+     */
     static bool builtWith(FeatureSet feature_set);
 
+    /** @brief There is a set of methods to check whether the module contains intermediate (PTX) or binary CUDA
+    code for the given architecture(s):
+
+    @param major Major compute capability version.
+    @param minor Minor compute capability version.
+     */
     static bool has(int major, int minor);
     static bool hasPtx(int major, int minor);
     static bool hasBin(int major, int minor);
@@ -491,17 +818,25 @@ public:
     static bool hasEqualOrGreaterBin(int major, int minor);
 };
 
-//! information about the given GPU.
+/** @brief Class providing functionality for querying the specified GPU properties.
+ */
 class CV_EXPORTS DeviceInfo
 {
 public:
     //! creates DeviceInfo object for the current GPU
     DeviceInfo();
 
-    //! creates DeviceInfo object for the given GPU
+    /** @brief The constructors.
+
+    @param device_id System index of the CUDA device starting with 0.
+
+    Constructs the DeviceInfo object for the specified device. If device_id parameter is missed, it
+    constructs an object for the current device.
+     */
     DeviceInfo(int device_id);
 
-    //! device number.
+    /** @brief Returns system index of the CUDA device starting with 0.
+    */
     int deviceID() const;
 
     //! ASCII string identifying device
@@ -563,10 +898,10 @@ public:
 
     enum ComputeMode
     {
-        ComputeModeDefault,         /**< default compute mode (Multiple threads can use ::cudaSetDevice() with this device) */
-        ComputeModeExclusive,       /**< compute-exclusive-thread mode (Only one thread in one process will be able to use ::cudaSetDevice() with this device) */
-        ComputeModeProhibited,      /**< compute-prohibited mode (No threads can use ::cudaSetDevice() with this device) */
-        ComputeModeExclusiveProcess /**< compute-exclusive-process mode (Many threads in one process will be able to use ::cudaSetDevice() with this device) */
+        ComputeModeDefault,         /**< default compute mode (Multiple threads can use cudaSetDevice with this device) */
+        ComputeModeExclusive,       /**< compute-exclusive-thread mode (Only one thread in one process will be able to use cudaSetDevice with this device) */
+        ComputeModeProhibited,      /**< compute-prohibited mode (No threads can use cudaSetDevice with this device) */
+        ComputeModeExclusiveProcess /**< compute-exclusive-process mode (Many threads in one process will be able to use cudaSetDevice with this device) */
     };
 
     //! compute mode
@@ -673,10 +1008,19 @@ public:
     size_t freeMemory() const;
     size_t totalMemory() const;
 
-    //! checks whether device supports the given feature
+    /** @brief Provides information on CUDA feature support.
+
+    @param feature_set Features to be checked. See cuda::FeatureSet.
+
+    This function returns true if the device has the specified CUDA feature. Otherwise, it returns false
+     */
     bool supports(FeatureSet feature_set) const;
 
-    //! checks whether the CUDA module can be run on the given device
+    /** @brief Checks the CUDA module and device compatibility.
+
+    This function returns true if the CUDA module can be run on the specified device. Otherwise, it
+    returns false .
+     */
     bool isCompatible() const;
 
 private:
@@ -686,9 +1030,20 @@ private:
 CV_EXPORTS void printCudaDeviceInfo(int device);
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
+/** @brief Converts an array to half precision floating number.
+
+@param _src input array.
+@param _dst output array.
+@param stream Stream for the asynchronous version.
+@sa convertFp16
+*/
+CV_EXPORTS void convertFp16(InputArray _src, OutputArray _dst, Stream& stream = Stream::Null());
+
+//! @} cudacore_init
+
 }} // namespace cv { namespace cuda {
 
 
 #include "opencv2/core/cuda.inl.hpp"
 
-#endif /* __OPENCV_CORE_CUDA_HPP__ */
+#endif /* OPENCV_CORE_CUDA_HPP */

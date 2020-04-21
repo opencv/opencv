@@ -13,11 +13,12 @@ import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
 
 import android.util.Log;
 
 public class CameraCalibrator {
-    private static final String TAG = "OCVSample::CameraCalibrator";
+    private static final String TAG = "OCV::CameraCalibrator";
 
     private final Size mPatternSize = new Size(4, 11);
     private final int mCornersSize = (int)(mPatternSize.width * mPatternSize.height);
@@ -80,7 +81,7 @@ public class CameraCalibrator {
 
     private void calcBoardCornerPositions(Mat corners) {
         final int cn = 3;
-        float positions[] = new float[mCornersSize * cn];
+        float[] positions = new float[mCornersSize * cn];
 
         for (int i = 0; i < mPatternSize.height; i++) {
             for (int j = 0; j < mPatternSize.width * cn; j += cn) {
@@ -100,7 +101,7 @@ public class CameraCalibrator {
         MatOfPoint2f cornersProjected = new MatOfPoint2f();
         double totalError = 0;
         double error;
-        float viewErrors[] = new float[objectPoints.size()];
+        float[] viewErrors = new float[objectPoints.size()];
 
         MatOfDouble distortionCoefficients = new MatOfDouble(mDistortionCoefficients);
         int totalPoints = 0;
@@ -139,7 +140,7 @@ public class CameraCalibrator {
     private void renderFrame(Mat rgbaFrame) {
         drawPoints(rgbaFrame);
 
-        Core.putText(rgbaFrame, "Captured: " + mCornersBuffer.size(), new Point(rgbaFrame.cols() / 3 * 2, rgbaFrame.rows() * 0.1),
+        Imgproc.putText(rgbaFrame, "Captured: " + mCornersBuffer.size(), new Point(rgbaFrame.cols() / 3 * 2, rgbaFrame.rows() * 0.1),
                 Core.FONT_HERSHEY_SIMPLEX, 1.0, new Scalar(255, 255, 0));
     }
 

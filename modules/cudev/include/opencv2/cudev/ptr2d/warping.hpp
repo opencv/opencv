@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_WARPING_HPP__
-#define __OPENCV_CUDEV_PTR2D_WARPING_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_WARPING_HPP
+#define OPENCV_CUDEV_PTR2D_WARPING_HPP
 
 #include "../common.hpp"
 #include "traits.hpp"
@@ -52,6 +52,9 @@
 #include "gpumat.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // affine
 
@@ -146,6 +149,8 @@ warpPerspectivePtr(const SrcPtr& src, Size dstSize, const GpuMat_<float>& warpMa
 {
     return remapPtr(src, perspectiveMap(dstSize, warpMat));
 }
+
+//! @}
 
 }}
 

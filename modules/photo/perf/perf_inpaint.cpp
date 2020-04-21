@@ -1,13 +1,10 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test
+{
 
 CV_ENUM(InpaintingMethod, INPAINT_NS, INPAINT_TELEA)
-typedef std::tr1::tuple<Size, InpaintingMethod> InpaintArea_InpaintingMethod_t;
+typedef tuple<Size, InpaintingMethod> InpaintArea_InpaintingMethod_t;
 typedef perf::TestBaseWithParam<InpaintArea_InpaintingMethod_t> InpaintArea_InpaintingMethod;
 
 
@@ -36,3 +33,5 @@ PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
     Mat inpaintedArea = result(inpaintArea);
     SANITY_CHECK(inpaintedArea);
 }
+
+} // namespace

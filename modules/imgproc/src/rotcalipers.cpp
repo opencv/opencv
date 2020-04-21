@@ -74,7 +74,7 @@ enum { CALIPERS_MAXHEIGHT=0, CALIPERS_MINAREARECT=1, CALIPERS_MAXDIST=2 };
  //                    In case CV_CALIPERS_MINAREARECT
  //                    ((CvPoint2D32f*)out)[0] - corner
  //                    ((CvPoint2D32f*)out)[1] - vector1
- //                    ((CvPoint2D32f*)out)[0] - corner2
+ //                    ((CvPoint2D32f*)out)[2] - vector2
  //
  //                      ^
  //                      |
@@ -96,7 +96,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     char buffer[32] = {};
     int i, k;
     AutoBuffer<float> abuf(n*3);
-    float* inv_vect_length = abuf;
+    float* inv_vect_length = abuf.data();
     Point2f* vect = (Point2f*)(inv_vect_length + n);
     int left = 0, bottom = 0, right = 0, top = 0;
     int seq[4] = { -1, -1, -1, -1 };
@@ -104,7 +104,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     /* rotating calipers sides will always have coordinates
      (a,b) (-b,a) (-a,-b) (b, -a)
      */
-    /* this is a first base bector (a,b) initialized by (1,0) */
+    /* this is a first base vector (a,b) initialized by (1,0) */
     float orientation = 0;
     float base_a;
     float base_b = 0;
@@ -184,24 +184,28 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
 
         /* compute cosine of angle between calipers side and polygon edge */
         /* dp - dot product */
-        float dp0 = base_a * vect[seq[0]].x + base_b * vect[seq[0]].y;
-        float dp1 = -base_b * vect[seq[1]].x + base_a * vect[seq[1]].y;
-        float dp2 = -base_a * vect[seq[2]].x - base_b * vect[seq[2]].y;
-        float dp3 = base_b * vect[seq[3]].x - base_a * vect[seq[3]].y;
+        float dp[4] = {
+            +base_a * vect[seq[0]].x + base_b * vect[seq[0]].y,
+            -base_b * vect[seq[1]].x + base_a * vect[seq[1]].y,
+            -base_a * vect[seq[2]].x - base_b * vect[seq[2]].y,
+            +base_b * vect[seq[3]].x - base_a * vect[seq[3]].y,
+        };
 
-        float cosalpha = dp0 * inv_vect_length[seq[0]];
-        float maxcos = cosalpha;
+        float maxcos = dp[0] * inv_vect_length[seq[0]];
 
         /* number of calipers edges, that has minimal angle with edge */
         int main_element = 0;
 
         /* choose minimal angle */
-        cosalpha = dp1 * inv_vect_length[seq[1]];
-        maxcos = (cosalpha > maxcos) ? (main_element = 1, cosalpha) : maxcos;
-        cosalpha = dp2 * inv_vect_length[seq[2]];
-        maxcos = (cosalpha > maxcos) ? (main_element = 2, cosalpha) : maxcos;
-        cosalpha = dp3 * inv_vect_length[seq[3]];
-        maxcos = (cosalpha > maxcos) ? (main_element = 3, cosalpha) : maxcos;
+        for ( i = 1; i < 4; ++i )
+        {
+            float cosalpha = dp[i] * inv_vect_length[seq[i]];
+            if (cosalpha > maxcos)
+            {
+                main_element = i;
+                maxcos = cosalpha;
+            }
+        }
 
         /*rotate calipers*/
         {
@@ -239,7 +243,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
         {
         case CALIPERS_MAXHEIGHT:
             {
-            /* now main element lies on edge alligned to calipers side */
+            /* now main element lies on edge aligned to calipers side */
 
             /* find opposite element i.e. transform  */
             /* 0->2, 1->3, 2->0, 3->1                */
@@ -342,6 +346,8 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
 
 cv::RotatedRect cv::minAreaRect( InputArray _points )
 {
+    CV_INSTRUMENT_REGION();
+
     Mat hull;
     Point2f out[3];
     RotatedRect box;
@@ -356,7 +362,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     }
 
     int n = hull.checkVector(2);
-    const Point2f* hpoints = (const Point2f*)hull.data;
+    const Point2f* hpoints = hull.ptr<Point2f>();
 
     if( n > 2 )
     {
@@ -395,12 +401,14 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* /*storage*/ )
     cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
 
     cv::RotatedRect rr = cv::minAreaRect(points);
-    return (CvBox2D)rr;
+    return cvBox2D(rr);
 }
 
 void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
 {
+    CV_INSTRUMENT_REGION();
+
     _pts.create(4, 2, CV_32F);
     Mat pts = _pts.getMat();
-    box.points((Point2f*)pts.data);
+    box.points(pts.ptr<Point2f>());
 }

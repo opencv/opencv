@@ -50,7 +50,10 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 namespace
@@ -125,7 +128,7 @@ namespace
 
 void cv::cuda::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, int dtype, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.channels() <= 4 );
     CV_Assert( dim == 0 || dim == 1 );
@@ -134,8 +137,7 @@ void cv::cuda::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, 
     if (dtype < 0)
         dtype = src.depth();
 
-    _dst.create(1, dim == 0 ? src.cols : src.rows, CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()));
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()), stream);
 
     if (dim == 0)
     {
@@ -292,6 +294,8 @@ void cv::cuda::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, 
 
         func(src, dst, reduceOp, stream);
     }
+
+    syncOutput(dst, _dst, stream);
 }
 
 #endif

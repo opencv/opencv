@@ -94,13 +94,14 @@ public:
                 const CvCascadeParams& _cascadeParams,
                 const CvFeatureParams& _featureParams,
                 const CvCascadeBoostParams& _stageParams,
-                bool baseFormatSave = false );
+                bool baseFormatSave = false,
+                double acceptanceRatioBreakValue = -1.0 );
 private:
     int predict( int sampleIdx );
     void save( const std::string cascadeDirName, bool baseFormat = false );
     bool load( const std::string cascadeDirName );
-    bool updateTrainingSet( double& acceptanceRatio );
-    int fillPassedSamples( int first, int count, bool isPositive, int64& consumed );
+    bool updateTrainingSet( double minimumAcceptanceRatio, double& acceptanceRatio );
+    int fillPassedSamples( int first, int count, bool isPositive, double requiredAcceptanceRatio, int64& consumed );
 
     void writeParams( cv::FileStorage &fs ) const;
     void writeStages( cv::FileStorage &fs, const cv::Mat& featureMap ) const;

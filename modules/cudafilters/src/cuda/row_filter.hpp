@@ -52,10 +52,8 @@ namespace row_filter
 {
     #define MAX_KERNEL_SIZE 32
 
-    __constant__ float c_kernel[MAX_KERNEL_SIZE];
-
     template <int KSIZE, typename T, typename D, typename B>
-    __global__ void linearRowFilter(const PtrStepSz<T> src, PtrStep<D> dst, const int anchor, const B brd)
+    __global__ void linearRowFilter(const PtrStepSz<T> src, PtrStep<D> dst, const float* kernel, const int anchor, const B brd)
     {
         #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 200)
             const int BLOCK_DIM_X = 32;
@@ -135,7 +133,7 @@ namespace row_filter
 
                 #pragma unroll
                 for (int k = 0; k < KSIZE; ++k)
-                    sum = sum + smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X - anchor + k] * c_kernel[k];
+                    sum = sum + smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X - anchor + k] * kernel[k];
 
                 dst(y, x) = saturate_cast<D>(sum);
             }
@@ -143,7 +141,7 @@ namespace row_filter
     }
 
     template <int KSIZE, typename T, typename D, template<typename> class B>
-    void caller(PtrStepSz<T> src, PtrStepSz<D> dst, int anchor, int cc, cudaStream_t stream)
+    void caller(PtrStepSz<T> src, PtrStepSz<D> dst, const float* kernel, int anchor, int cc, cudaStream_t stream)
     {
         int BLOCK_DIM_X;
         int BLOCK_DIM_Y;
@@ -167,7 +165,7 @@ namespace row_filter
 
         B<T> brd(src.cols);
 
-        linearRowFilter<KSIZE, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, brd);
+        linearRowFilter<KSIZE, T, D><<<grid, block, 0, stream>>>(src, dst, kernel, anchor, brd);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
@@ -180,7 +178,7 @@ namespace filter
     template <typename T, typename D>
     void linearRow(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream)
     {
-        typedef void (*caller_t)(PtrStepSz<T> src, PtrStepSz<D> dst, int anchor, int cc, cudaStream_t stream);
+        typedef void (*caller_t)(PtrStepSz<T> src, PtrStepSz<D> dst, const float* kernel, int anchor, int cc, cudaStream_t stream);
 
         static const caller_t callers[5][33] =
         {
@@ -361,11 +359,6 @@ namespace filter
             }
         };
 
-        if (stream == 0)
-            cudaSafeCall( cudaMemcpyToSymbol(row_filter::c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
-        else
-            cudaSafeCall( cudaMemcpyToSymbolAsync(row_filter::c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
-
-        callers[brd_type][ksize]((PtrStepSz<T>)src, (PtrStepSz<D>)dst, anchor, cc, stream);
+        callers[brd_type][ksize]((PtrStepSz<T>)src, (PtrStepSz<D>)dst, kernel, anchor, cc, stream);
     }
 }

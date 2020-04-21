@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_DERIV_HPP__
-#define __OPENCV_CUDEV_PTR2D_DERIV_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_DERIV_HPP
+#define OPENCV_CUDEV_PTR2D_DERIV_HPP
 
 #include "../common.hpp"
 #include "../grid/copy.hpp"
@@ -52,6 +52,9 @@
 #include "gpumat.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // derivX
 
@@ -387,6 +390,8 @@ __host__ LaplacianPtrSz<ksize, typename PtrTraits<SrcPtr>::ptr_type> laplacianPt
 template <int ksize, class SrcPtr> struct PtrTraits< LaplacianPtrSz<ksize, SrcPtr> > : PtrTraitsBase<LaplacianPtrSz<ksize, SrcPtr>, LaplacianPtr<ksize, SrcPtr> >
 {
 };
+
+//! @}
 
 }}
 

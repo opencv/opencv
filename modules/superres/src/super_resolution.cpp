@@ -45,11 +45,6 @@
 using namespace cv;
 using namespace cv::superres;
 
-bool cv::superres::initModule_superres()
-{
-    return !createSuperResolution_BTVL1().empty();
-}
-
 cv::superres::SuperResolution::SuperResolution()
 {
     frameSource_ = createFrameSource_Empty();
@@ -66,6 +61,8 @@ void cv::superres::SuperResolution::setInput(const Ptr<FrameSource>& frameSource
 
 void cv::superres::SuperResolution::nextFrame(OutputArray frame)
 {
+    CV_INSTRUMENT_REGION();
+
     isUmat_ = frame.isUMat();
 
     if (firstCall_)

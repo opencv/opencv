@@ -53,8 +53,8 @@
 #ifdef HAVE_OPENCV_FEATURES2D
 #include "opencv2/features2d.hpp"
 #endif
-#ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree.hpp"
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d/nonfree.hpp"
 #endif
 
 #include "opencv2/world.hpp"

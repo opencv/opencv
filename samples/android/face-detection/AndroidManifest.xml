@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="org.opencv.samples.facedetect"
-          android:versionCode="21"
-          android:versionName="2.1">
+          android:versionCode="301"
+          android:versionName="3.01">
 
     <application
         android:label="@string/app_name"

@@ -243,7 +243,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         for (int i=1; i<n; ++i)
         {
             int k = 0;
-            while ((int(orig_response->data.fl[i]) - class_labels->data.i[k]) && (k<j))
+            while ((k<j) && (int(orig_response->data.fl[i]) - class_labels->data.i[k]))
                 k++;
             if (k == j)
             {
@@ -253,7 +253,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         }
     }
 
-    // inside gbt learning proccess only regression decision trees are built
+    // inside gbt learning process only regression decision trees are built
     data->is_classifier = false;
 
     // preproccessing sample indices
@@ -268,6 +268,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
                 sample_idx = cvCreateMat( 1, sample_idx_len, CV_32S );
                 for (int i=0; i<sample_idx_len; ++i)
                     sample_idx->data.i[i] = _sample_idx->data.i[i];
+                std::sort(sample_idx->data.i, sample_idx->data.i + sample_idx_len);
             } break;
             case CV_8S:
             case CV_8U:
@@ -284,7 +285,6 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
             } break;
             default: CV_Error(CV_StsUnmatchedFormats, "_sample_idx should be a 32sC1, 8sC1 or 8uC1 vector.");
         }
-        std::sort(sample_idx->data.fl, sample_idx->data.fl + sample_idx_len);
     }
     else
     {
@@ -1274,13 +1274,18 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         return -FLT_MAX;
 
     float* pred_resp = 0;
+    bool needsFreeing = false;
+
     if (resp)
     {
         resp->resize(n);
         pred_resp = &((*resp)[0]);
     }
     else
+    {
         pred_resp = new float[n];
+        needsFreeing = true;
+    }
 
     Sample_predictor predictor = Sample_predictor(this, pred_resp, _data->get_values(),
             _data->get_missing(), _sample_idx);
@@ -1312,6 +1317,9 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         }
         err = err / (float)n;
     }
+
+    if (needsFreeing)
+        delete[]pred_resp;
 
     return err;
 }

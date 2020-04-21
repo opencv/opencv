@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HistEven
@@ -134,6 +134,49 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CalcHist, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES));
 
+PARAM_TEST_CASE(CalcHistWithMask, cv::cuda::DeviceInfo, cv::Size)
+{
+    cv::cuda::DeviceInfo devInfo;
+
+    cv::Size size;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+CUDA_TEST_P(CalcHistWithMask, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+    cv::Mat mask = randomMat(size, CV_8UC1);
+    cv::Mat(mask, cv::Rect(0, 0, size.width / 2, size.height / 2)).setTo(0);
+
+    cv::cuda::GpuMat hist;
+    cv::cuda::calcHist(loadMat(src), loadMat(mask), hist);
+
+    cv::Mat hist_gold;
+
+    const int hbins = 256;
+    const float hranges[] = {0.0f, 256.0f};
+    const int histSize[] = {hbins};
+    const float* ranges[] = {hranges};
+    const int channels[] = {0};
+
+    cv::calcHist(&src, 1, channels, mask, hist_gold, 1, histSize, ranges);
+    hist_gold = hist_gold.reshape(1, 1);
+    hist_gold.convertTo(hist_gold, CV_32S);
+
+    EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CalcHistWithMask, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES));
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // EqualizeHist
 
@@ -150,6 +193,23 @@ PARAM_TEST_CASE(EqualizeHist, cv::cuda::DeviceInfo, cv::Size)
         cv::cuda::setDevice(devInfo.deviceID());
     }
 };
+
+CUDA_TEST_P(EqualizeHist, Async)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::cuda::Stream stream;
+
+    cv::cuda::GpuMat dst;
+    cv::cuda::equalizeHist(loadMat(src), dst, stream);
+
+    stream.waitForCompletion();
+
+    cv::Mat dst_gold;
+    cv::equalizeHist(src, dst_gold);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 3.0);
+}
 
 CUDA_TEST_P(EqualizeHist, Accuracy)
 {
@@ -176,17 +236,19 @@ namespace
     IMPLEMENT_PARAM_CLASS(ClipLimit, double)
 }
 
-PARAM_TEST_CASE(CLAHE, cv::cuda::DeviceInfo, cv::Size, ClipLimit)
+PARAM_TEST_CASE(CLAHE, cv::cuda::DeviceInfo, cv::Size, ClipLimit, MatType)
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     double clipLimit;
+    int type;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
         clipLimit = GET_PARAM(2);
+        type = GET_PARAM(3);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -194,7 +256,11 @@ PARAM_TEST_CASE(CLAHE, cv::cuda::DeviceInfo, cv::Size, ClipLimit)
 
 CUDA_TEST_P(CLAHE, Accuracy)
 {
-    cv::Mat src = randomMat(size, CV_8UC1);
+    cv::Mat src;
+    if (type == CV_8UC1)
+        src = randomMat(size, type);
+    else if (type == CV_16UC1)
+        src = randomMat(size, type, 0, 65535);
 
     cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(clipLimit);
     cv::cuda::GpuMat dst;
@@ -210,6 +276,9 @@ CUDA_TEST_P(CLAHE, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CLAHE, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(0.0, 40.0)));
+    testing::Values(0.0, 5.0, 10.0, 20.0, 40.0),
+    testing::Values(MatType(CV_8UC1), MatType(CV_16UC1))));
 
+
+}} // namespace
 #endif // HAVE_CUDA

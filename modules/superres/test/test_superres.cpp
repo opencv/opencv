@@ -41,7 +41,15 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "cvconfig.h"
+#include "../src/input_array_utility.hpp"
 #include "opencv2/ts/ocl_test.hpp"
+
+namespace opencv_test {
+
+#ifdef HAVE_VIDEO_INPUT
+
+namespace {
 
 class AllignedFrameSource : public cv::superres::FrameSource
 {
@@ -222,11 +230,11 @@ void SuperResolution::RunTest(cv::Ptr<cv::superres::SuperResolution> superRes)
 
     ASSERT_FALSE( superRes.empty() );
 
-    const int btvKernelSize = superRes->getInt("btvKernelSize");
+    const int btvKernelSize = superRes->getKernelSize();
 
-    superRes->set("scale", scale);
-    superRes->set("iterations", iterations);
-    superRes->set("temporalAreaRadius", temporalAreaRadius);
+    superRes->setScale(scale);
+    superRes->setIterations(iterations);
+    superRes->setTemporalAreaRadius(temporalAreaRadius);
 
     cv::Ptr<cv::superres::FrameSource> goldSource(new AllignedFrameSource(cv::superres::createFrameSource_Video(inputVideoName), scale));
     cv::Ptr<cv::superres::FrameSource> lowResSource(new DegradeFrameSource(
@@ -279,9 +287,10 @@ TEST_F(SuperResolution, BTVL1_CUDA)
 
 #endif
 
+} // namespace
+
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
 namespace ocl {
 
 OCL_TEST_F(SuperResolution, BTVL1)
@@ -289,6 +298,10 @@ OCL_TEST_F(SuperResolution, BTVL1)
     RunTest<cv::UMat>(cv::superres::createSuperResolution_BTVL1());
 }
 
-} } // namespace cvtest::ocl
+} // namespace opencv_test::ocl
 
 #endif
+
+#endif // HAVE_VIDEO_INPUT
+
+} // namespace

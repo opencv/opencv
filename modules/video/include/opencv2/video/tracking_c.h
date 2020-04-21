@@ -41,14 +41,18 @@
 //
 //M*/
 
-#ifndef __OPENCV_TRACKING_C_H__
-#define __OPENCV_TRACKING_C_H__
+#ifndef OPENCV_TRACKING_C_H
+#define OPENCV_TRACKING_C_H
 
 #include "opencv2/imgproc/types_c.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** @addtogroup video_c
+  @{
+*/
 
 /****************************************************************************************\
 *                                  Motion Analysis                                       *
@@ -218,10 +222,11 @@ CVAPI(const CvMat*)  cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement
 #define cvKalmanUpdateByTime  cvKalmanPredict
 #define cvKalmanUpdateByMeasurement cvKalmanCorrect
 
+/** @} video_c */
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
 
-#endif // __OPENCV_TRACKING_C_H__
+#endif // OPENCV_TRACKING_C_H

@@ -39,19 +39,10 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
-
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
+#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) && !defined(__aarch64__) && !defined(__powerpc64__)
     #include <fpu_control.h>
 #endif
 
@@ -73,6 +64,8 @@
 #include "opencv2/highgui.hpp"
 
 #include "opencv2/core/private.cuda.hpp"
+
+#include "opencv2/opencv_modules.hpp"
 
 #include "cvconfig.h"
 

@@ -42,8 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_POSITTest : public cvtest::BaseTest
 {
@@ -95,7 +94,7 @@ void CV_POSITTest::run( int start_from )
     const float flFocalLength = 760.f;
     const float flEpsilon = 0.5f;
 
-    /* Initilization */
+    /* Initialization */
     criteria.type = CV_TERMCRIT_EPS|CV_TERMCRIT_ITER;
     criteria.epsilon = flEpsilon;
     criteria.max_iter = 10000;
@@ -219,4 +218,5 @@ void CV_POSITTest::run( int start_from )
 
 TEST(Calib3d_POSIT, accuracy) { CV_POSITTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

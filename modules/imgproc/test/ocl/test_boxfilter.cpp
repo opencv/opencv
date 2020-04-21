@@ -46,7 +46,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ////////////////////////////////////////// boxFilter ///////////////////////////////////////////////////////
@@ -157,6 +157,80 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SqrBoxFilter,
                            );
 
 
-} } // namespace cvtest::ocl
+PARAM_TEST_CASE(BoxFilter3x3_cols16_rows2_Base, MatDepth, Channels, BorderType, bool, bool)
+{
+    int depth, cn, borderType;
+    Size ksize, dsize;
+    Point anchor;
+    bool normalize, useRoi;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        borderType = GET_PARAM(2); // only not isolated border tested, because CPU module doesn't support isolated border case.
+        normalize = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+    }
+
+    void random_roi()
+    {
+        int type = CV_MAKE_TYPE(depth, cn);
+        ksize = Size(3,3);
+
+        Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
+        roiSize.width = std::max(ksize.width + 13, roiSize.width & (~0xf));
+        roiSize.height = std::max(ksize.height + 1, roiSize.height & (~0x1));
+        Border srcBorder = {0, 0, 0, 0};
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
+
+        Border dstBorder = {0, 0, 0, 0};
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
+
+        anchor.x = -1;
+        anchor.y = -1;
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+    }
+
+    void Near(double threshold = 0.0)
+    {
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
+    }
+};
+
+typedef BoxFilter3x3_cols16_rows2_Base BoxFilter3x3_cols16_rows2;
+
+OCL_TEST_P(BoxFilter3x3_cols16_rows2, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::boxFilter(src_roi, dst_roi, -1, ksize, anchor, normalize, borderType));
+        OCL_ON(cv::boxFilter(usrc_roi, udst_roi, -1, ksize, anchor, normalize, borderType));
+
+        Near(depth <= CV_32S ? 1 : 3e-3);
+    }
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter3x3_cols16_rows2,
+                            Combine(
+                                Values((MatDepth)CV_8U),
+                                Values((Channels)1),
+                                Values((BorderType)BORDER_CONSTANT,
+                                       (BorderType)BORDER_REPLICATE,
+                                       (BorderType)BORDER_REFLECT,
+                                       (BorderType)BORDER_REFLECT_101),
+                                Bool(),
+                                Values(false) // ROI
+                                )
+                           );
+
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

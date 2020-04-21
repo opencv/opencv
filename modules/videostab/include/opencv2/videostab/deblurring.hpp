@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_DEBLURRING_HPP__
-#define __OPENCV_VIDEOSTAB_DEBLURRING_HPP__
+#ifndef OPENCV_VIDEOSTAB_DEBLURRING_HPP
+#define OPENCV_VIDEOSTAB_DEBLURRING_HPP
 
 #include <vector>
 #include "opencv2/core.hpp"
@@ -50,6 +50,9 @@ namespace cv
 {
 namespace videostab
 {
+
+//! @addtogroup videostab
+//! @{
 
 CV_EXPORTS float calcBlurriness(const Mat &frame);
 
@@ -87,7 +90,7 @@ protected:
 class CV_EXPORTS NullDeblurer : public DeblurerBase
 {
 public:
-    virtual void deblur(int /*idx*/, Mat &/*frame*/) {}
+    virtual void deblur(int /*idx*/, Mat &/*frame*/) CV_OVERRIDE {}
 };
 
 class CV_EXPORTS WeightingDeblurer : public DeblurerBase
@@ -98,12 +101,14 @@ public:
     void setSensitivity(float val) { sensitivity_ = val; }
     float sensitivity() const { return sensitivity_; }
 
-    virtual void deblur(int idx, Mat &frame);
+    virtual void deblur(int idx, Mat &frame) CV_OVERRIDE;
 
 private:
     float sensitivity_;
     Mat_<float> bSum_, gSum_, rSum_, wSum_;
 };
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

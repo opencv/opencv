@@ -47,6 +47,11 @@
 #import <ImageIO/ImageIO.h>
 #include "opencv2/core/core.hpp"
 
-UIImage* MatToUIImage(const cv::Mat& image);
-void UIImageToMat(const UIImage* image,
-                         cv::Mat& m, bool alphaExist = false);
+//! @addtogroup imgcodecs_ios
+//! @{
+
+CV_EXPORTS UIImage* MatToUIImage(const cv::Mat& image);
+CV_EXPORTS void UIImageToMat(const UIImage* image,
+                             cv::Mat& m, bool alphaExist = false);
+
+//! @}

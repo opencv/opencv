@@ -72,7 +72,7 @@ static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int 
     UMat result = _result.getUMat();
 
 
-    size_t globalsize[2] = {result.cols, (result.rows+pxPerWIy-1)/pxPerWIy};
+    size_t globalsize[2] = {(size_t)result.cols, ((size_t)result.rows+pxPerWIy-1)/pxPerWIy};
     return k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::WriteOnly(result)).run( 2, globalsize, NULL, false);
 }
 
@@ -135,7 +135,7 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     const double blockScale = 4.5;
     const int minBlockSize = 256;
 
-    block_size.width = cvRound(result_size.width*blockScale);
+    block_size.width = cvRound(templ_size.width*blockScale);
     block_size.width = std::max( block_size.width, minBlockSize - templ_size.width + 1 );
     block_size.width = std::min( block_size.width, result_size.width );
     block_size.height = cvRound(templ_size.height*blockScale);
@@ -286,7 +286,7 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
     k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::ReadOnly(templ),
            ocl::KernelArg::WriteOnly(result));
 
-    size_t globalsize[2] = { (result.cols+pxPerWIx-1)/pxPerWIx, result.rows};
+    size_t globalsize[2] = { ((size_t)result.cols+pxPerWIx-1)/pxPerWIx, (size_t)result.rows};
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -338,7 +338,7 @@ static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, Out
     k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::ReadWrite(result),
            templ.rows, templ.cols, ocl::KernelArg::PtrReadOnly(templ_sqsum));
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -363,7 +363,7 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
     k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::ReadOnly(templ),
            ocl::KernelArg::WriteOnly(result));
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -396,7 +396,7 @@ static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArr
         k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::ReadWrite(result),
            templ.rows, templ.cols, ocl::KernelArg::PtrReadOnly(templ_sqsum));
 
-        size_t globalsize[2] = { result.cols, result.rows };
+        size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
 
         return k.run(2, globalsize, NULL, false);
     }
@@ -427,7 +427,7 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
     k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::ReadWrite(result),
            templ.rows, templ.cols, ocl::KernelArg::PtrReadOnly(templ_sqsum));
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
 
     return k.run(2, globalsize, NULL, false);
 }
@@ -465,7 +465,7 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);    }
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -477,6 +477,7 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
     integral(_image, image_sums, image_sqsums, CV_32F, CV_32F);
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(cn >= 1 && cn <= 4);
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
         format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
@@ -533,7 +534,7 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
                    ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, scale,
                    templ_sum, templ_sqsum_sum);    }
 
-    size_t globalsize[2] = { result.cols, result.rows };
+    size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -560,80 +561,9 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 
 #endif
 
-#if defined HAVE_IPP
-
-typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, const void*, int, IppiSize, Ipp32f* , int , IppEnum , Ipp8u*);
-
-static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst)
-{
-    IppStatus status;
-
-    IppiSize srcRoiSize = {src.cols,src.rows};
-    IppiSize tplRoiSize = {tpl.cols,tpl.rows};
-
-    Ipp8u *pBuffer;
-    int bufSize=0;
-
-    int depth = src.depth();
-
-    ippimatchTemplate ippFunc =
-            depth==CV_8U ? (ippimatchTemplate)ippiCrossCorrNorm_8u32f_C1R:
-            depth==CV_32F? (ippimatchTemplate)ippiCrossCorrNorm_32f_C1R: 0;
-
-    if (ippFunc==0)
-        return false;
-
-    IppEnum funCfg = (IppEnum)(ippAlgAuto | ippiNormNone | ippiROIValid);
-
-    status = ippiCrossCorrNormGetBufferSize(srcRoiSize, tplRoiSize, funCfg, &bufSize);
-    if ( status < 0 )
-        return false;
-
-    pBuffer = ippsMalloc_8u( bufSize );
-
-    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, (int)dst.step, funCfg, pBuffer);
-
-    ippsFree( pBuffer );
-    return status >= 0;
-}
-
-static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
-{
-    IppStatus status;
-
-    IppiSize srcRoiSize = {src.cols,src.rows};
-    IppiSize tplRoiSize = {tpl.cols,tpl.rows};
-
-    Ipp8u *pBuffer;
-    int bufSize=0;
-
-    int depth = src.depth();
-
-    ippimatchTemplate ippFunc =
-            depth==CV_8U ? (ippimatchTemplate)ippiSqrDistanceNorm_8u32f_C1R:
-            depth==CV_32F? (ippimatchTemplate)ippiSqrDistanceNorm_32f_C1R: 0;
-
-    if (ippFunc==0)
-        return false;
-
-    IppEnum funCfg = (IppEnum)(ippAlgAuto | ippiNormNone | ippiROIValid);
-
-    status = ippiSqrDistanceNormGetBufferSize(srcRoiSize, tplRoiSize, funCfg, &bufSize);
-    if ( status < 0 )
-        return false;
-
-    pBuffer = ippsMalloc_8u( bufSize );
-
-    status = ippFunc(src.data, (int)src.step, srcRoiSize, tpl.data, (int)tpl.step, tplRoiSize, (Ipp32f*)dst.data, (int)dst.step, funCfg, pBuffer);
-
-    ippsFree( pBuffer );
-    return status >= 0;
-}
-
-#endif
+#include "opencv2/core/hal/hal.hpp"
 
 void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
-                Size corrsize, int ctype,
                 Point anchor, double delta, int borderType )
 {
     const double blockScale = 4.5;
@@ -643,7 +573,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     Mat templ = _templ;
     int depth = img.depth(), cn = img.channels();
     int tdepth = templ.depth(), tcn = templ.channels();
-    int cdepth = CV_MAT_DEPTH(ctype), ccn = CV_MAT_CN(ctype);
+    int cdepth = corr.depth(), ccn = corr.channels();
 
     CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
 
@@ -654,12 +584,10 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     }
 
     CV_Assert( depth == tdepth || tdepth == CV_32F);
-    CV_Assert( corrsize.height <= img.rows + templ.rows - 1 &&
-               corrsize.width <= img.cols + templ.cols - 1 );
+    CV_Assert( corr.rows <= img.rows + templ.rows - 1 &&
+               corr.cols <= img.cols + templ.cols - 1 );
 
     CV_Assert( ccn == 1 || delta == 0 );
-
-    corr.create(corrsize, ctype);
 
     int maxDepth = depth > CV_8S ? CV_64F : std::max(std::max(CV_32F, tdepth), cdepth);
     Size blocksize, dftsize;
@@ -698,6 +626,8 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
     buf.resize(bufSize);
 
+    Ptr<hal::DFT2D> c = hal::DFT2D::create(dftsize.width, dftsize.height, dftTempl.depth(), 1, 1, CV_HAL_DFT_IS_INPLACE, templ.rows);
+
     // compute DFT of each template plane
     for( k = 0; k < tcn; k++ )
     {
@@ -721,7 +651,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             Mat part(dst, Range(0, templ.rows), Range(templ.cols, dst.cols));
             part = Scalar::all(0);
         }
-        dft(dst, dst, 0, templ.rows);
+        c->apply(dst.data, (int)dst.step, dst.data, (int)dst.step);
     }
 
     int tileCountX = (corr.cols + blocksize.width - 1)/blocksize.width;
@@ -739,6 +669,12 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                        roiofs.x, wholeSize.width-img.cols-roiofs.x);
     }
     borderType |= BORDER_ISOLATED;
+
+    Ptr<hal::DFT2D> cF, cR;
+    int f = CV_HAL_DFT_IS_INPLACE;
+    int f_inv = f | CV_HAL_DFT_INVERSE | CV_HAL_DFT_SCALE;
+    cF = hal::DFT2D::create(dftsize.width, dftsize.height, maxDepth, 1, 1, f, blocksize.height + templ.rows - 1);
+    cR = hal::DFT2D::create(dftsize.width, dftsize.height, maxDepth, 1, 1, f_inv, blocksize.height);
 
     // calculate correlation by blocks
     for( i = 0; i < tileCount; i++ )
@@ -777,11 +713,19 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 copyMakeBorder(dst1, dst, y1-y0, dst.rows-dst1.rows-(y1-y0),
                                x1-x0, dst.cols-dst1.cols-(x1-x0), borderType);
 
-            dft( dftImg, dftImg, 0, dsz.height );
+            if (bsz.height == blocksize.height)
+                cF->apply(dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+            else
+                dft( dftImg, dftImg, 0, dsz.height );
+
             Mat dftTempl1(dftTempl, Rect(0, tcn > 1 ? k*dftsize.height : 0,
                                          dftsize.width, dftsize.height));
             mulSpectrums(dftImg, dftTempl1, dftImg, 0, true);
-            dft( dftImg, dftImg, DFT_INVERSE + DFT_SCALE, bsz.height );
+
+            if (bsz.height == blocksize.height)
+                cR->apply(dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+            else
+                dft( dftImg, dftImg, DFT_INVERSE + DFT_SCALE, bsz.height );
 
             src = dftImg(Rect(0, 0, bsz.width, bsz.height));
 
@@ -814,70 +758,96 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
         }
     }
 }
-}
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method )
+static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
     int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
     CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
 
-    bool needswap = _img.size().height < _templ.size().height || _img.size().width < _templ.size().width;
-    if (needswap)
+    Mat img = _img.getMat(), templ = _templ.getMat(), mask = _mask.getMat();
+    int ttype = templ.type(), tdepth = CV_MAT_DEPTH(ttype), tcn = CV_MAT_CN(ttype);
+    int mtype = img.type(), mdepth = CV_MAT_DEPTH(type), mcn = CV_MAT_CN(mtype);
+
+    if (depth == CV_8U)
     {
-        CV_Assert(_img.size().height <= _templ.size().height && _img.size().width <= _templ.size().width);
+        depth = CV_32F;
+        type = CV_MAKETYPE(CV_32F, cn);
+        img.convertTo(img, type, 1.0 / 255);
     }
 
-    CV_OCL_RUN(_img.dims() <= 2 && _result.isUMat(),
-               (!needswap ? ocl_matchTemplate(_img, _templ, _result, method) : ocl_matchTemplate(_templ, _img, _result, method)))
+    if (tdepth == CV_8U)
+    {
+        tdepth = CV_32F;
+        ttype = CV_MAKETYPE(CV_32F, tcn);
+        templ.convertTo(templ, ttype, 1.0 / 255);
+    }
+
+    if (mdepth == CV_8U)
+    {
+        mdepth = CV_32F;
+        mtype = CV_MAKETYPE(CV_32F, mcn);
+        compare(mask, Scalar::all(0), mask, CMP_NE);
+        mask.convertTo(mask, mtype, 1.0 / 255);
+    }
+
+    Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
+    _result.create(corrSize, CV_32F);
+    Mat result = _result.getMat();
+
+    Mat img2 = img.mul(img);
+    Mat mask2 = mask.mul(mask);
+    Mat mask_templ = templ.mul(mask);
+    Scalar templMean, templSdv;
+
+    double templSum2 = 0;
+    meanStdDev( mask_templ, templMean, templSdv );
+
+    templSum2 = templSdv[0]*templSdv[0] + templSdv[1]*templSdv[1] + templSdv[2]*templSdv[2] + templSdv[3]*templSdv[3];
+    templSum2 += templMean[0]*templMean[0] + templMean[1]*templMean[1] + templMean[2]*templMean[2] + templMean[3]*templMean[3];
+    templSum2 *= ((double)templ.rows * templ.cols);
+
+    if (method == CV_TM_SQDIFF)
+    {
+        Mat mask2_templ = templ.mul(mask2);
+
+        Mat corr(corrSize, CV_32F);
+        crossCorr( img, mask2_templ, corr, Point(0,0), 0, 0 );
+        crossCorr( img2, mask, result, Point(0,0), 0, 0 );
+
+        result -= corr * 2;
+        result += templSum2;
+    }
+    else if (method == CV_TM_CCORR_NORMED)
+    {
+        if (templSum2 < DBL_EPSILON)
+        {
+            result = Scalar::all(1);
+            return;
+        }
+
+        Mat corr(corrSize, CV_32F);
+        crossCorr( img2, mask2, corr, Point(0,0), 0, 0 );
+        crossCorr( img, mask_templ, result, Point(0,0), 0, 0 );
+
+        sqrt(corr, corr);
+        result = result.mul(1/corr);
+        result /= std::sqrt(templSum2);
+    }
+    else
+        CV_Error(Error::StsNotImplemented, "");
+}
+
+static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method, int cn )
+{
+    if( method == CV_TM_CCORR )
+        return;
 
     int numType = method == CV_TM_CCORR || method == CV_TM_CCORR_NORMED ? 0 :
                   method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED ? 1 : 2;
     bool isNormed = method == CV_TM_CCORR_NORMED ||
                     method == CV_TM_SQDIFF_NORMED ||
                     method == CV_TM_CCOEFF_NORMED;
-
-    Mat img = _img.getMat(), templ = _templ.getMat();
-    if (needswap)
-        std::swap(img, templ);
-
-    Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
-    _result.create(corrSize, CV_32F);
-    Mat result = _result.getMat();
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::matchTemplate(img, templ, result, method))
-        return;
-#endif
-
-#if defined HAVE_IPP
-    bool useIppMT = (templ.rows < img.rows/2 && templ.cols < img.cols/2);
-
-    if (method == CV_TM_SQDIFF && cn == 1 && useIppMT)
-    {
-        if (ipp_sqrDistance(img, templ, result))
-            return;
-        setIppErrorStatus();
-    }
-#endif
-
-#if defined HAVE_IPP
-    if (cn == 1 && useIppMT)
-    {
-        if (!ipp_crossCorr(img, templ, result))
-        {
-            setIppErrorStatus();
-            crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
-        }
-    }
-    else
-#endif
-    crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
-
-    if( method == CV_TM_CCORR )
-        return;
 
     double invArea = 1./((double)templ.rows * templ.cols);
 
@@ -916,12 +886,14 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         templNorm = std::sqrt(templNorm);
         templNorm /= std::sqrt(invArea); // care of accuracy here
 
+        CV_Assert(sqsum.data != NULL);
         q0 = (double*)sqsum.data;
         q1 = q0 + templ.cols*cn;
         q2 = (double*)(sqsum.data + templ.rows*sqsum.step);
         q3 = q2 + templ.cols*cn;
     }
 
+    CV_Assert(sum.data != NULL);
     double* p0 = (double*)sum.data;
     double* p1 = p0 + templ.cols*cn;
     double* p2 = (double*)(sum.data + templ.rows*sum.step);
@@ -934,7 +906,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 
     for( i = 0; i < result.rows; i++ )
     {
-        float* rrow = (float*)(result.data + i*result.step);
+        float* rrow = result.ptr<float>(i);
         int idx = i * sumstep;
         int idx2 = i * sqstep;
 
@@ -972,7 +944,12 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 
             if( isNormed )
             {
-                t = std::sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
+                double diff2 = MAX(wndSum2 - wndMean2, 0);
+                if (diff2 <= std::min(0.5, 10 * FLT_EPSILON * wndSum2))
+                    t = 0; // avoid rounding errors
+                else
+                    t = std::sqrt(diff2)*templNorm;
+
                 if( fabs(num) < t )
                     num /= t;
                 else if( fabs(num) < t*1.125 )
@@ -985,7 +962,175 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         }
     }
 }
+}
 
+
+#if defined HAVE_IPP
+namespace cv
+{
+typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, const void*, int, IppiSize, Ipp32f* , int , IppEnum , Ipp8u*);
+
+static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst, bool normed)
+{
+    CV_INSTRUMENT_REGION_IPP();
+
+    IppStatus status;
+
+    IppiSize srcRoiSize = {src.cols,src.rows};
+    IppiSize tplRoiSize = {tpl.cols,tpl.rows};
+
+    IppAutoBuffer<Ipp8u> buffer;
+    int bufSize=0;
+
+    int depth = src.depth();
+
+    ippimatchTemplate ippiCrossCorrNorm =
+            depth==CV_8U ? (ippimatchTemplate)ippiCrossCorrNorm_8u32f_C1R:
+            depth==CV_32F? (ippimatchTemplate)ippiCrossCorrNorm_32f_C1R: 0;
+
+    if (ippiCrossCorrNorm==0)
+        return false;
+
+    IppEnum funCfg = (IppEnum)(ippAlgAuto | ippiROIValid);
+    if(normed)
+        funCfg |= ippiNorm;
+    else
+        funCfg |= ippiNormNone;
+
+    status = ippiCrossCorrNormGetBufferSize(srcRoiSize, tplRoiSize, funCfg, &bufSize);
+    if ( status < 0 )
+        return false;
+
+    buffer.allocate( bufSize );
+
+    status = CV_INSTRUMENT_FUN_IPP(ippiCrossCorrNorm, src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, buffer);
+    return status >= 0;
+}
+
+static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
+{
+    CV_INSTRUMENT_REGION_IPP();
+
+    IppStatus status;
+
+    IppiSize srcRoiSize = {src.cols,src.rows};
+    IppiSize tplRoiSize = {tpl.cols,tpl.rows};
+
+    IppAutoBuffer<Ipp8u> buffer;
+    int bufSize=0;
+
+    int depth = src.depth();
+
+    ippimatchTemplate ippiSqrDistanceNorm =
+            depth==CV_8U ? (ippimatchTemplate)ippiSqrDistanceNorm_8u32f_C1R:
+            depth==CV_32F? (ippimatchTemplate)ippiSqrDistanceNorm_32f_C1R: 0;
+
+    if (ippiSqrDistanceNorm==0)
+        return false;
+
+    IppEnum funCfg = (IppEnum)(ippAlgAuto | ippiROIValid | ippiNormNone);
+    status = ippiSqrDistanceNormGetBufferSize(srcRoiSize, tplRoiSize, funCfg, &bufSize);
+    if ( status < 0 )
+        return false;
+
+    buffer.allocate( bufSize );
+
+    status = CV_INSTRUMENT_FUN_IPP(ippiSqrDistanceNorm, src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, buffer);
+    return status >= 0;
+}
+
+static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method)
+{
+    CV_INSTRUMENT_REGION_IPP();
+
+    if(img.channels() != 1)
+        return false;
+
+    // These functions are not efficient if template size is comparable with image size
+    if(templ.size().area()*4 > img.size().area())
+        return false;
+
+    if(method == CV_TM_SQDIFF)
+    {
+        if(ipp_sqrDistance(img, templ, result))
+            return true;
+    }
+    else if(method == CV_TM_SQDIFF_NORMED)
+    {
+        if(ipp_crossCorr(img, templ, result, false))
+        {
+            common_matchTemplate(img, templ, result, CV_TM_SQDIFF_NORMED, 1);
+            return true;
+        }
+    }
+    else if(method == CV_TM_CCORR)
+    {
+        if(ipp_crossCorr(img, templ, result, false))
+            return true;
+    }
+    else if(method == CV_TM_CCORR_NORMED)
+    {
+        if(ipp_crossCorr(img, templ, result, true))
+            return true;
+    }
+    else if(method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED)
+    {
+        if(ipp_crossCorr(img, templ, result, false))
+        {
+            common_matchTemplate(img, templ, result, method, 1);
+            return true;
+        }
+    }
+
+    return false;
+}
+}
+#endif
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
+{
+    CV_INSTRUMENT_REGION();
+
+    if (!_mask.empty())
+    {
+        cv::matchTemplateMask(_img, _templ, _result, method, _mask);
+        return;
+    }
+
+    int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
+    CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
+
+    bool needswap = _img.size().height < _templ.size().height || _img.size().width < _templ.size().width;
+    if (needswap)
+    {
+        CV_Assert(_img.size().height <= _templ.size().height && _img.size().width <= _templ.size().width);
+    }
+
+    CV_OCL_RUN(_img.dims() <= 2 && _result.isUMat(),
+               (!needswap ? ocl_matchTemplate(_img, _templ, _result, method) : ocl_matchTemplate(_templ, _img, _result, method)))
+
+    Mat img = _img.getMat(), templ = _templ.getMat();
+    if (needswap)
+        std::swap(img, templ);
+
+    Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
+    _result.create(corrSize, CV_32F);
+    Mat result = _result.getMat();
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::useTegra() && tegra::matchTemplate(img, templ, result, method))
+        return;
+#endif
+
+    CV_IPP_RUN_FAST(ipp_matchTemplate(img, templ, result, method))
+
+    crossCorr( img, templ, result, Point(0,0), 0, 0);
+
+    common_matchTemplate(img, templ, result, method, cn);
+}
 
 CV_IMPL void
 cvMatchTemplate( const CvArr* _img, const CvArr* _templ, CvArr* _result, int method )

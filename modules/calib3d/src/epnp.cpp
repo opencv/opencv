@@ -2,7 +2,10 @@
 #include "precomp.hpp"
 #include "epnp.h"
 
-epnp::epnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& ipoints)
+namespace cv
+{
+
+epnp::epnp(const Mat& cameraMatrix, const Mat& opoints, const Mat& ipoints)
 {
   if (cameraMatrix.depth() == CV_32F)
       init_camera_parameters<float>(cameraMatrix);
@@ -17,14 +20,14 @@ epnp::epnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& i
   if (opoints.depth() == ipoints.depth())
   {
     if (opoints.depth() == CV_32F)
-      init_points<cv::Point3f,cv::Point2f>(opoints, ipoints);
+      init_points<Point3f,Point2f>(opoints, ipoints);
     else
-      init_points<cv::Point3d,cv::Point2d>(opoints, ipoints);
+      init_points<Point3d,Point2d>(opoints, ipoints);
   }
   else if (opoints.depth() == CV_32F)
-    init_points<cv::Point3f,cv::Point2d>(opoints, ipoints);
+    init_points<Point3f,Point2d>(opoints, ipoints);
   else
-    init_points<cv::Point3d,cv::Point2f>(opoints, ipoints);
+    init_points<Point3d,Point2f>(opoints, ipoints);
 
   alphas.resize(4 * number_of_correspondences);
   pcs.resize(3 * number_of_correspondences);
@@ -57,7 +60,7 @@ void epnp::choose_control_points(void)
   // Take C1, C2, and C3 from PCA on the reference points:
   CvMat * PW0 = cvCreateMat(number_of_correspondences, 3, CV_64F);
 
-  double pw0tpw0[3 * 3], dc[3], uct[3 * 3];
+  double pw0tpw0[3 * 3] = {}, dc[3] = {}, uct[3 * 3] = {};
   CvMat PW0tPW0 = cvMat(3, 3, CV_64F, pw0tpw0);
   CvMat DC      = cvMat(3, 1, CV_64F, dc);
   CvMat UCt     = cvMat(3, 3, CV_64F, uct);
@@ -80,7 +83,7 @@ void epnp::choose_control_points(void)
 
 void epnp::compute_barycentric_coordinates(void)
 {
-  double cc[3 * 3], cc_inv[3 * 3];
+  double cc[3 * 3] = {}, cc_inv[3 * 3] = {};
   CvMat CC     = cvMat(3, 3, CV_64F, cc);
   CvMat CC_inv = cvMat(3, 3, CV_64F, cc_inv);
 
@@ -95,10 +98,12 @@ void epnp::compute_barycentric_coordinates(void)
     double * a = &alphas[0] + 4 * i;
 
     for(int j = 0; j < 3; j++)
+    {
       a[1 + j] =
-  ci[3 * j    ] * (pi[0] - cws[0][0]) +
-  ci[3 * j + 1] * (pi[1] - cws[0][1]) +
-  ci[3 * j + 2] * (pi[2] - cws[0][2]);
+          ci[3 * j    ] * (pi[0] - cws[0][0]) +
+          ci[3 * j + 1] * (pi[1] - cws[0][1]) +
+          ci[3 * j + 2] * (pi[2] - cws[0][2]);
+    }
     a[0] = 1.0f - a[1] - a[2] - a[3];
   }
 }
@@ -129,7 +134,7 @@ void epnp::compute_ccs(const double * betas, const double * ut)
     const double * v = ut + 12 * (11 - i);
     for(int j = 0; j < 4; j++)
       for(int k = 0; k < 3; k++)
-  ccs[j][k] += betas[i] * v[3 * j + k];
+        ccs[j][k] += betas[i] * v[3 * j + k];
   }
 }
 
@@ -144,7 +149,7 @@ void epnp::compute_pcs(void)
   }
 }
 
-void epnp::compute_pose(cv::Mat& R, cv::Mat& t)
+void epnp::compute_pose(Mat& R, Mat& t)
 {
   choose_control_points();
   compute_barycentric_coordinates();
@@ -154,7 +159,7 @@ void epnp::compute_pose(cv::Mat& R, cv::Mat& t)
   for(int i = 0; i < number_of_correspondences; i++)
     fill_M(M, 2 * i, &alphas[0] + 4 * i, us[2 * i], us[2 * i + 1]);
 
-  double mtm[12 * 12], d[12], ut[12 * 12];
+  double mtm[12 * 12] = {}, d[12] = {}, ut[12 * 12] = {};
   CvMat MtM = cvMat(12, 12, CV_64F, mtm);
   CvMat D   = cvMat(12,  1, CV_64F, d);
   CvMat Ut  = cvMat(12, 12, CV_64F, ut);
@@ -163,15 +168,15 @@ void epnp::compute_pose(cv::Mat& R, cv::Mat& t)
   cvSVD(&MtM, &D, &Ut, 0, CV_SVD_MODIFY_A | CV_SVD_U_T);
   cvReleaseMat(&M);
 
-  double l_6x10[6 * 10], rho[6];
+  double l_6x10[6 * 10] = {}, rho[6] = {};
   CvMat L_6x10 = cvMat(6, 10, CV_64F, l_6x10);
   CvMat Rho    = cvMat(6,  1, CV_64F, rho);
 
   compute_L_6x10(ut, l_6x10);
   compute_rho(rho);
 
-  double Betas[4][4], rep_errors[4];
-  double Rs[4][3][3], ts[4][3];
+  double Betas[4][4] = {}, rep_errors[4] = {};
+  double Rs[4][3][3] = {}, ts[4][3] = {};
 
   find_betas_approx_1(&L_6x10, &Rho, Betas[1]);
   gauss_newton(&L_6x10, &Rho, Betas[1]);
@@ -189,8 +194,8 @@ void epnp::compute_pose(cv::Mat& R, cv::Mat& t)
   if (rep_errors[2] < rep_errors[1]) N = 2;
   if (rep_errors[3] < rep_errors[N]) N = 3;
 
-  cv::Mat(3, 1, CV_64F, ts[N]).copyTo(t);
-  cv::Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
+  Mat(3, 1, CV_64F, ts[N]).copyTo(t);
+  Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
 }
 
 void epnp::copy_R_and_t(const double R_src[3][3], const double t_src[3],
@@ -218,7 +223,7 @@ double epnp::dot(const double * v1, const double * v2)
 
 void epnp::estimate_R_and_t(double R[3][3], double t[3])
 {
-  double pc0[3], pw0[3];
+  double pc0[3] = {}, pw0[3] = {};
 
   pc0[0] = pc0[1] = pc0[2] = 0.0;
   pw0[0] = pw0[1] = pw0[2] = 0.0;
@@ -237,7 +242,7 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
     pw0[j] /= number_of_correspondences;
   }
 
-  double abt[3 * 3], abt_d[3], abt_u[3 * 3], abt_v[3 * 3];
+  double abt[3 * 3] = {}, abt_d[3] = {}, abt_u[3 * 3] = {}, abt_v[3 * 3] = {};
   CvMat ABt   = cvMat(3, 3, CV_64F, abt);
   CvMat ABt_D = cvMat(3, 1, CV_64F, abt_d);
   CvMat ABt_U = cvMat(3, 3, CV_64F, abt_u);
@@ -281,7 +286,7 @@ void epnp::solve_for_sign(void)
   if (pcs[2] < 0.0) {
     for(int i = 0; i < 4; i++)
       for(int j = 0; j < 3; j++)
-  ccs[i][j] = -ccs[i][j];
+        ccs[i][j] = -ccs[i][j];
 
     for(int i = 0; i < number_of_correspondences; i++) {
       pcs[3 * i    ] = -pcs[3 * i];
@@ -329,7 +334,7 @@ double epnp::reprojection_error(const double R[3][3], const double t[3])
 void epnp::find_betas_approx_1(const CvMat * L_6x10, const CvMat * Rho,
              double * betas)
 {
-  double l_6x4[6 * 4], b4[4];
+  double l_6x4[6 * 4] = {}, b4[4] = {};
   CvMat L_6x4 = cvMat(6, 4, CV_64F, l_6x4);
   CvMat B4    = cvMat(4, 1, CV_64F, b4);
 
@@ -361,7 +366,7 @@ void epnp::find_betas_approx_1(const CvMat * L_6x10, const CvMat * Rho,
 void epnp::find_betas_approx_2(const CvMat * L_6x10, const CvMat * Rho,
              double * betas)
 {
-  double l_6x3[6 * 3], b3[3];
+  double l_6x3[6 * 3] = {}, b3[3] = {};
   CvMat L_6x3  = cvMat(6, 3, CV_64F, l_6x3);
   CvMat B3     = cvMat(3, 1, CV_64F, b3);
 
@@ -393,7 +398,7 @@ void epnp::find_betas_approx_2(const CvMat * L_6x10, const CvMat * Rho,
 void epnp::find_betas_approx_3(const CvMat * L_6x10, const CvMat * Rho,
              double * betas)
 {
-  double l_6x5[6 * 5], b5[5];
+  double l_6x5[6 * 5] = {}, b5[5] = {};
   CvMat L_6x5 = cvMat(6, 5, CV_64F, l_6x5);
   CvMat B5    = cvMat(5, 1, CV_64F, b5);
 
@@ -428,7 +433,7 @@ void epnp::compute_L_6x10(const double * ut, double * l_6x10)
   v[2] = ut + 12 *  9;
   v[3] = ut + 12 *  8;
 
-  double dv[4][6][3];
+  double dv[4][6][3] = {};
 
   for(int i = 0; i < 4; i++) {
     int a = 0, b = 1;
@@ -439,8 +444,8 @@ void epnp::compute_L_6x10(const double * ut, double * l_6x10)
 
       b++;
       if (b > 3) {
-  a++;
-  b = a + 1;
+        a++;
+        b = a + 1;
       }
     }
   }
@@ -503,7 +508,7 @@ void epnp::gauss_newton(const CvMat * L_6x10, const CvMat * Rho, double betas[4]
 {
   const int iterations_number = 5;
 
-  double a[6*4], b[6], x[4];
+  double a[6*4] = {}, b[6] = {}, x[4] = {};
   CvMat A = cvMat(6, 4, CV_64F, a);
   CvMat B = cvMat(6, 1, CV_64F, b);
   CvMat X = cvMat(4, 1, CV_64F, x);
@@ -522,6 +527,8 @@ void epnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
 {
   const int nr = A->rows;
   const int nc = A->cols;
+  if (nc <= 0 || nr <= 0)
+      return;
 
   if (max_nr != 0 && max_nr < nr)
   {
@@ -620,4 +627,6 @@ void epnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
     }
     pX[i] = (pb[i] - sum) / A2[i];
   }
+}
+
 }

@@ -41,6 +41,10 @@
 //M*/
 
 #include "precomp.hpp"
+#ifdef HAVE_EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#endif
 
 namespace cv {
 namespace detail {
@@ -54,7 +58,6 @@ Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
     if (type == GAIN_BLOCKS)
         return makePtr<BlocksGainCompensator>();
     CV_Error(Error::StsBadArg, "unsupported exposure compensation method");
-    return Ptr<ExposureCompensator>();
 }
 
 
@@ -63,7 +66,7 @@ void ExposureCompensator::feed(const std::vector<Point> &corners, const std::vec
 {
     std::vector<std::pair<UMat,uchar> > level_masks;
     for (size_t i = 0; i < masks.size(); ++i)
-        level_masks.push_back(std::make_pair(masks[i], 255));
+        level_masks.push_back(std::make_pair(masks[i], (uchar)255));
     feed(corners, images, level_masks);
 }
 
@@ -81,6 +84,7 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
     const int num_images = static_cast<int>(images.size());
     Mat_<int> N(num_images, num_images); N.setTo(0);
     Mat_<double> I(num_images, num_images); I.setTo(0);
+    Mat_<bool> skip(num_images, 1); skip.setTo(true);
 
     //Rect dst_roi = resultRoi(corners, images);
     Mat subimg1, subimg2;
@@ -100,7 +104,19 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
                 submask2 = masks[j].first(Rect(roi.tl() - corners[j], roi.br() - corners[j])).getMat(ACCESS_READ);
                 intersect = (submask1 == masks[i].second) & (submask2 == masks[j].second);
 
-                N(i, j) = N(j, i) = std::max(1, countNonZero(intersect));
+                int intersect_count = countNonZero(intersect);
+                N(i, j) = N(j, i) = std::max(1, intersect_count);
+
+                // Don't compute Isums if subimages do not intersect anyway
+                if (intersect_count == 0)
+                    continue;
+
+                // Don't skip images that intersect with at least one other image
+                if (i != j)
+                {
+                    skip(i, 0) = false;
+                    skip(j, 0) = false;
+                }
 
                 double Isum1 = 0, Isum2 = 0;
                 for (int y = 0; y < roi.height; ++y)
@@ -124,22 +140,62 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
 
     double alpha = 0.01;
     double beta = 100;
+    int num_eq = num_images - countNonZero(skip);
 
-    Mat_<double> A(num_images, num_images); A.setTo(0);
-    Mat_<double> b(num_images, 1); b.setTo(0);
-    for (int i = 0; i < num_images; ++i)
+    Mat_<double> A(num_eq, num_eq); A.setTo(0);
+    Mat_<double> b(num_eq, 1); b.setTo(0);
+    for (int i = 0, ki = 0; i < num_images; ++i)
     {
-        for (int j = 0; j < num_images; ++j)
+        if (skip(i, 0))
+            continue;
+
+        for (int j = 0, kj = 0; j < num_images; ++j)
         {
-            b(i, 0) += beta * N(i, j);
-            A(i, i) += beta * N(i, j);
-            if (j == i) continue;
-            A(i, i) += 2 * alpha * I(i, j) * I(i, j) * N(i, j);
-            A(i, j) -= 2 * alpha * I(i, j) * I(j, i) * N(i, j);
+            if (skip(j, 0))
+                continue;
+
+            b(ki, 0) += beta * N(i, j);
+            A(ki, ki) += beta * N(i, j);
+            if (j != i)
+            {
+                A(ki, ki) += 2 * alpha * I(i, j) * I(i, j) * N(i, j);
+                A(ki, kj) -= 2 * alpha * I(i, j) * I(j, i) * N(i, j);
+            }
+            ++kj;
         }
+        ++ki;
     }
 
-    solve(A, b, gains_);
+    Mat_<double> l_gains;
+
+#ifdef HAVE_EIGEN
+    Eigen::MatrixXf eigen_A, eigen_b, eigen_x;
+    cv2eigen(A, eigen_A);
+    cv2eigen(b, eigen_b);
+
+    Eigen::LLT<Eigen::MatrixXf> solver(eigen_A);
+#if ENABLE_LOG
+    if (solver.info() != Eigen::ComputationInfo::Success)
+        LOGLN("Failed to solve exposure compensation system");
+#endif
+    eigen_x = solver.solve(eigen_b);
+
+    Mat_<float> l_gains_float;
+    eigen2cv(eigen_x, l_gains_float);
+    l_gains_float.convertTo(l_gains, CV_64FC1);
+#else
+    solve(A, b, l_gains);
+#endif
+    CV_CheckTypeEQ(l_gains.type(), CV_64FC1, "");
+
+    gains_.create(num_images, 1);
+    for (int i = 0, j = 0; i < num_images; ++i)
+    {
+        if (skip(i, 0))
+            gains_.at<double>(i, 0) = 1;
+        else
+            gains_.at<double>(i, 0) = l_gains(j++, 0);
+    }
 
     LOGLN("Exposure compensation, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
@@ -147,6 +203,8 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
 
 void GainCompensator::apply(int index, Point /*corner*/, InputOutputArray image, InputArray /*mask*/)
 {
+    CV_INSTRUMENT_REGION();
+
     multiply(image, gains_(index, 0), image);
 }
 
@@ -225,6 +283,8 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
 
 void BlocksGainCompensator::apply(int index, Point /*corner*/, InputOutputArray _image, InputArray /*mask*/)
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(_image.type() == CV_8UC3);
 
     UMat u_gain_map;

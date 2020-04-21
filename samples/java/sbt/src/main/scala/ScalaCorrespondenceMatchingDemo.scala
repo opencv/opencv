@@ -21,8 +21,8 @@ object ScalaCorrespondenceMatchingDemo {
     def detectAndExtract(mat: Mat) = {
       // A special container class for KeyPoint.
       val keyPoints = new MatOfKeyPoint
-      // We're using the SURF detector.
-      val detector = FeatureDetector.create(FeatureDetector.SURF)
+      // We're using the ORB detector.
+      val detector = FeatureDetector.create(FeatureDetector.ORB)
       detector.detect(mat, keyPoints)
 
       println(s"There were ${keyPoints.toArray.size} KeyPoints detected")
@@ -34,8 +34,8 @@ object ScalaCorrespondenceMatchingDemo {
       // arguments.
       val bestKeyPoints: MatOfKeyPoint = new MatOfKeyPoint(sorted: _*)
 
-      // We're using the SURF descriptor.
-      val extractor = DescriptorExtractor.create(DescriptorExtractor.SURF)
+      // We're using the ORB descriptor.
+      val extractor = DescriptorExtractor.create(DescriptorExtractor.ORB)
       val descriptors = new Mat
       extractor.compute(mat, bestKeyPoints, descriptors)
 

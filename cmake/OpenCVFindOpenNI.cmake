@@ -18,7 +18,7 @@ if(NOT "${OPENNI_PRIME_SENSOR_MODULE_BIN_DIR}" STREQUAL "${OPENNI_PRIME_SENSOR_M
 endif()
 
 if(WIN32)
-    if(NOT (MSVC64 OR MINGW64))
+    if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
         find_file(OPENNI_INCLUDES "XnCppWrapper.h" PATHS "$ENV{OPEN_NI_INSTALL_PATH}Include" DOC "OpenNI c++ interface header")
         find_library(OPENNI_LIBRARY "OpenNI" PATHS $ENV{OPEN_NI_LIB} DOC "OpenNI library")
     else()
@@ -34,7 +34,7 @@ if(OPENNI_LIBRARY AND OPENNI_INCLUDES)
     set(HAVE_OPENNI TRUE)
     # the check: are PrimeSensor Modules for OpenNI installed
     if(WIN32)
-    if(NOT (MSVC64 OR MINGW64))
+        if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
             find_file(OPENNI_PRIME_SENSOR_MODULE "XnCore.dll" PATHS "$ENV{OPEN_NI_INSTALL_PATH}../PrimeSense/Sensor/Bin" "$ENV{OPEN_NI_INSTALL_PATH}../PrimeSense/SensorKinect/Bin" DOC "Core library of PrimeSensor Modules for OpenNI")
         else()
             find_file(OPENNI_PRIME_SENSOR_MODULE "XnCore64.dll" PATHS "$ENV{OPEN_NI_INSTALL_PATH64}../PrimeSense/Sensor/Bin64" "$ENV{OPEN_NI_INSTALL_PATH64}../PrimeSense/SensorKinect/Bin64" DOC "Core library of PrimeSensor Modules for OpenNI")

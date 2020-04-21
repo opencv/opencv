@@ -40,12 +40,18 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_VEC_DISTANCE_HPP__
-#define __OPENCV_CUDA_VEC_DISTANCE_HPP__
+#ifndef OPENCV_CUDA_VEC_DISTANCE_HPP
+#define OPENCV_CUDA_VEC_DISTANCE_HPP
 
 #include "reduce.hpp"
 #include "functional.hpp"
 #include "detail/vec_distance_detail.hpp"
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -221,4 +227,6 @@ namespace cv { namespace cuda { namespace device
     };
 }}} // namespace cv { namespace cuda { namespace cudev
 
-#endif // __OPENCV_CUDA_VEC_DISTANCE_HPP__
+//! @endcond
+
+#endif // OPENCV_CUDA_VEC_DISTANCE_HPP

@@ -16,7 +16,7 @@ For Release:  OpenCV-Linux Beta4  opencv-0.9.6
 Tested On:    LMLBT44 with 8 video inputs
 Problems?     Post your questions at answers.opencv.org,
               Report bugs at code.opencv.org,
-              Submit your fixes at https://github.com/Itseez/opencv/
+              Submit your fixes at https://github.com/opencv/opencv/
 Patched Comments:
 
 TW: The cv cam utils that came with the initial release of OpenCV for LINUX Beta4
@@ -61,7 +61,7 @@ Second Patch:   August 28, 2004 Sfuncia Fabio fiblan@yahoo.it
 For Release:  OpenCV-Linux Beta4 Opencv-0.9.6
 
 FS: this patch fix not sequential index of device (unplugged device), and real numCameras.
-    for -1 index (icvOpenCAM_V4L) i dont use /dev/video but real device available, because
+    for -1 index (icvOpenCAM_V4L) I don't use /dev/video but real device available, because
     if /dev/video is a link to /dev/video0 and i unplugged device on /dev/video0, /dev/video
     is a bad link. I search the first available device with indexList.
 
@@ -102,7 +102,7 @@ I modified the following:
     autosetup_capture_mode_v4l2 -> autodetect capture modes for v4l2
   - Modifications are according with Video4Linux old codes
   - Video4Linux handling is automatically if it does not recognize a Video4Linux2 device
-  - Tested succesful with Logitech Quickcam Express (V4L), Creative Vista (V4L) and Genius VideoCam Notebook (V4L2)
+  - Tested successfully with Logitech Quickcam Express (V4L), Creative Vista (V4L) and Genius VideoCam Notebook (V4L2)
   - Correct source lines with compiler warning messages
   - Information message from v4l/v4l2 detection
 
@@ -113,7 +113,7 @@ I modified the following:
   - SN9C10x chip based webcams support
   - New methods are internal:
     bayer2rgb24, sonix_decompress -> decoder routines for SN9C10x decoding from Takafumi Mizuno <taka-qce@ls-a.jp> with his pleasure :)
-  - Tested succesful with Genius VideoCam Notebook (V4L2)
+  - Tested successfully with Genius VideoCam Notebook (V4L2)
 
 Sixth Patch: Sept 10, 2005 Csaba Kertesz sign@freemail.hu
 For Release:  OpenCV-Linux Beta5 OpenCV-0.9.7
@@ -123,7 +123,7 @@ I added the following:
   - Get and change V4L capture controls (hue, saturation, brightness, contrast)
   - New method is internal:
     icvSetControl -> set capture controls
-  - Tested succesful with Creative Vista (V4L)
+  - Tested successfully with Creative Vista (V4L)
 
 Seventh Patch: Sept 10, 2005 Csaba Kertesz sign@freemail.hu
 For Release:  OpenCV-Linux Beta5 OpenCV-0.9.7
@@ -132,7 +132,7 @@ I added the following:
   - Detect, get and change V4L2 capture controls (hue, saturation, brightness, contrast, gain)
   - New methods are internal:
     v4l2_scan_controls_enumerate_menu, v4l2_scan_controls -> detect capture control intervals
-  - Tested succesful with Genius VideoCam Notebook (V4L2)
+  - Tested successfully with Genius VideoCam Notebook (V4L2)
 
 8th patch: Jan 5, 2006, Olivier.Bornet@idiap.ch
 Add support of V4L2_PIX_FMT_YUYV and V4L2_PIX_FMT_MJPEG.
@@ -159,8 +159,10 @@ the symptoms were damaged image and 'Corrupt JPEG data: premature end of data se
 11th patch: April 2, 2013, Forrest Reiling forrest.reiling@gmail.com
 Added v4l2 support for getting capture property CV_CAP_PROP_POS_MSEC.
 Returns the millisecond timestamp of the last frame grabbed or 0 if no frames have been grabbed
-Used to successfully synchonize 2 Logitech C310 USB webcams to within 16 ms of one another
+Used to successfully synchronize 2 Logitech C310 USB webcams to within 16 ms of one another
 
+12th patch: March 9, 2018, Taylor Lanclos <tlanclos@live.com>
+ added support for CV_CAP_PROP_BUFFERSIZE
 
 make & enjoy!
 
@@ -209,9 +211,7 @@ make & enjoy!
 
 #include "precomp.hpp"
 
-#if !defined WIN32 && (defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO)
-
-#define CLEAR(x) memset (&(x), 0, sizeof (x))
+#if !defined _WIN32 && (defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO)
 
 #include <stdio.h>
 #include <unistd.h>
@@ -221,15 +221,12 @@ make & enjoy!
 #include <sys/types.h>
 #include <sys/mman.h>
 
-#ifdef HAVE_CAMV4L
-#include <linux/videodev.h>
-#endif
-
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <limits>
 
 #ifdef HAVE_CAMV4L2
 #include <asm/types.h>          /* for videodev2.h */
@@ -237,17 +234,44 @@ make & enjoy!
 #endif
 
 #ifdef HAVE_VIDEOIO
+// NetBSD compatibility layer with V4L2
 #include <sys/videoio.h>
-#define HAVE_CAMV4L2
+#endif
+
+// https://github.com/opencv/opencv/issues/13335
+#ifndef V4L2_CID_ISO_SENSITIVITY
+#define V4L2_CID_ISO_SENSITIVITY (V4L2_CID_CAMERA_CLASS_BASE+23)
+#endif
+
+// https://github.com/opencv/opencv/issues/13929
+#ifndef V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT
+#define V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT (V4L2_CID_MPEG_BASE+364)
+#endif
+#ifndef V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH
+#define V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH (V4L2_CID_MPEG_BASE+365)
+#endif
+
+#ifndef V4L2_CID_ROTATE
+#define V4L2_CID_ROTATE (V4L2_CID_BASE+34)
+#endif
+#ifndef V4L2_CID_IRIS_ABSOLUTE
+#define V4L2_CID_IRIS_ABSOLUTE (V4L2_CID_CAMERA_CLASS_BASE+17)
+#endif
+
+#ifndef V4L2_PIX_FMT_Y10
+#define V4L2_PIX_FMT_Y10 v4l2_fourcc('Y', '1', '0', ' ')
+#endif
+
+#ifndef V4L2_PIX_FMT_Y12
+#define V4L2_PIX_FMT_Y12 v4l2_fourcc('Y', '1', '2', ' ')
 #endif
 
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
+#define DEFAULT_V4L_FPS 30
 
-#define CHANNEL_NUMBER 1
 #define MAX_CAMERAS 8
-
 
 // default and maximum number of V4L buffers, not including last, 'special' buffer
 #define MAX_V4L_BUFFERS 10
@@ -256,1123 +280,778 @@ make & enjoy!
 // if enabled, then bad JPEG warnings become errors and cause NULL returned instead of image
 #define V4L_ABORT_BADJPEG
 
-#define MAX_DEVICE_DRIVER_NAME 80
+namespace cv {
+
+static const char* decode_ioctl_code(unsigned long ioctlCode)
+{
+    switch (ioctlCode)
+    {
+#define CV_ADD_IOCTL_CODE(id) case id: return #id
+    CV_ADD_IOCTL_CODE(VIDIOC_G_FMT);
+    CV_ADD_IOCTL_CODE(VIDIOC_S_FMT);
+    CV_ADD_IOCTL_CODE(VIDIOC_REQBUFS);
+    CV_ADD_IOCTL_CODE(VIDIOC_DQBUF);
+    CV_ADD_IOCTL_CODE(VIDIOC_QUERYCAP);
+    CV_ADD_IOCTL_CODE(VIDIOC_S_PARM);
+    CV_ADD_IOCTL_CODE(VIDIOC_G_PARM);
+    CV_ADD_IOCTL_CODE(VIDIOC_QUERYBUF);
+    CV_ADD_IOCTL_CODE(VIDIOC_QBUF);
+    CV_ADD_IOCTL_CODE(VIDIOC_STREAMON);
+    CV_ADD_IOCTL_CODE(VIDIOC_STREAMOFF);
+    CV_ADD_IOCTL_CODE(VIDIOC_ENUMINPUT);
+    CV_ADD_IOCTL_CODE(VIDIOC_G_INPUT);
+    CV_ADD_IOCTL_CODE(VIDIOC_S_INPUT);
+    CV_ADD_IOCTL_CODE(VIDIOC_G_CTRL);
+    CV_ADD_IOCTL_CODE(VIDIOC_S_CTRL);
+#undef CV_ADD_IOCTL_CODE
+    }
+    return "unknown";
+}
 
 /* Device Capture Objects */
-
-#ifdef HAVE_CAMV4L2
-
 /* V4L2 structure */
-struct buffer
+struct Buffer
 {
-  void *  start;
-  size_t  length;
+    void *  start;
+    size_t  length;
+    // This is dequeued buffer. It used for to put it back in the queue.
+    // The buffer is valid only if capture->bufferIndex >= 0
+    v4l2_buffer buffer;
+
+    Buffer() : start(NULL), length(0)
+    {
+        buffer = v4l2_buffer();
+    }
 };
 
-static unsigned int n_buffers = 0;
-
-/* Additional V4L2 pixelformats support for Sonix SN9C10x base webcams */
-#ifndef V4L2_PIX_FMT_SBGGR8
-#define V4L2_PIX_FMT_SBGGR8  v4l2_fourcc('B','A','8','1') /* 8 BGBG.. GRGR.. */
-#endif
-#ifndef V4L2_PIX_FMT_SN9C10X
-#define V4L2_PIX_FMT_SN9C10X  v4l2_fourcc('S','9','1','0') /* SN9C10x cmpr. */
-#endif
-
-#ifndef V4L2_PIX_FMT_SGBRG
-#define V4L2_PIX_FMT_SGBRG v4l2_fourcc('G','B','R','G') /* bayer GBRG   GBGB.. RGRG.. */
-#endif
-
-#endif  /* HAVE_CAMV4L2 */
-
-enum PALETTE_TYPE {
-  PALETTE_BGR24 = 1,
-  PALETTE_YVU420,
-  PALETTE_YUV411P,
-  PALETTE_YUYV,
-  PALETTE_UYVY,
-  PALETTE_SBGGR8,
-  PALETTE_SN9C10X,
-  PALETTE_MJPEG,
-  PALETTE_SGBRG
-};
-
-typedef struct CvCaptureCAM_V4L
+struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 {
+    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_V4L; }
+
     int deviceHandle;
+    bool v4l_buffersRequested;
+    bool v4l_streamStarted;
+
     int bufferIndex;
-    int FirstCapture;
-#ifdef HAVE_CAMV4L
-    struct video_capability capability;
-    struct video_window     captureWindow;
-    struct video_picture    imageProperties;
-    struct video_mbuf       memoryBuffer;
-    struct video_mmap       *mmaps;
-#endif /* HAVE_CAMV4L */
-    char *memoryMap;
+    bool FirstCapture;
+    String deviceName;
+
     IplImage frame;
 
-#ifdef HAVE_CAMV4L2
-   enum PALETTE_TYPE palette;
-   /* V4L2 variables */
-   buffer buffers[MAX_V4L_BUFFERS + 1];
-   struct v4l2_capability cap;
-   struct v4l2_input inp;
-   struct v4l2_format form;
-   struct v4l2_crop crop;
-   struct v4l2_cropcap cropcap;
-   struct v4l2_requestbuffers req;
-   struct v4l2_control control;
-   enum v4l2_buf_type type;
-   struct v4l2_queryctrl queryctrl;
+    __u32 palette;
+    int width, height;
+    int width_set, height_set;
+    int bufferSize;
+    __u32 fps;
+    bool convert_rgb;
+    bool frame_allocated;
+    bool returnFrame;
+    // To select a video input set cv::CAP_PROP_CHANNEL to channel number.
+    // If the new channel number is than 0, then a video input will not change
+    int channelNumber;
+    // Normalize properties. If set parameters will be converted to/from [0,1) range.
+    // Enabled by default (as OpenCV 3.x does).
+    // Value is initialized from the environment variable `OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED`:
+    // To select real parameters mode after devise is open set cv::CAP_PROP_MODE to 0
+    // any other value revert the backward compatibility mode (with normalized properties).
+    // Range normalization affects the following parameters:
+    // cv::CAP_PROP_*: BRIGHTNESS,CONTRAST,SATURATION,HUE,GAIN,EXPOSURE,FOCUS,AUTOFOCUS,AUTO_EXPOSURE.
+    bool normalizePropRange;
 
-   struct timeval timestamp;
+    /* V4L2 variables */
+    Buffer buffers[MAX_V4L_BUFFERS + 1];
+    v4l2_capability capability;
+    v4l2_input videoInput;
+    v4l2_format form;
+    v4l2_requestbuffers req;
+    v4l2_buf_type type;
 
-   /* V4L2 control variables */
-   int v4l2_brightness, v4l2_brightness_min, v4l2_brightness_max;
-   int v4l2_contrast, v4l2_contrast_min, v4l2_contrast_max;
-   int v4l2_saturation, v4l2_saturation_min, v4l2_saturation_max;
-   int v4l2_hue, v4l2_hue_min, v4l2_hue_max;
-   int v4l2_gain, v4l2_gain_min, v4l2_gain_max;
-   int v4l2_exposure, v4l2_exposure_min, v4l2_exposure_max;
+    timeval timestamp;
 
-#endif /* HAVE_CAMV4L2 */
+    bool open(int _index);
+    bool open(const char* deviceName);
+    bool isOpened() const;
 
-}
-CvCaptureCAM_V4L;
+    void closeDevice();
 
-#ifdef HAVE_CAMV4L2
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
 
-int V4L2_SUPPORT = 0;
+    CvCaptureCAM_V4L();
+    virtual ~CvCaptureCAM_V4L();
+    bool requestBuffers();
+    bool requestBuffers(unsigned int buffer_number);
+    bool createBuffers();
+    void releaseBuffers();
+    bool initCapture();
+    bool streaming(bool startStream);
+    bool setFps(int value);
+    bool tryIoctl(unsigned long ioctlCode, void *parameter, bool failIfBusy = true, int attempts = 10) const;
+    bool controlInfo(int property_id, __u32 &v4l2id, cv::Range &range) const;
+    bool icvControl(__u32 v4l2id, int &value, bool isSet) const;
 
-#endif /* HAVE_CAMV4L2 */
-
-static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture );
-
-static int icvGrabFrameCAM_V4L( CvCaptureCAM_V4L* capture );
-static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int );
-
-static double icvGetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id );
-static int    icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id, double value );
-
-static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h);
+    bool icvSetFrameSize(int _width, int _height);
+    bool v4l2_reset();
+    bool setVideoInputChannel();
+    bool try_palette_v4l2();
+    bool try_init_v4l2();
+    bool autosetup_capture_mode_v4l2();
+    void v4l2_create_frame();
+    bool read_frame_v4l2();
+    bool convertableToRgb() const;
+    void convertToRgb(const Buffer &currentBuffer);
+    void releaseFrame();
+};
 
 /***********************   Implementations  ***************************************/
 
-static int numCameras = 0;
-static int indexList = 0;
-
-/* Simple test program: Find number of Video Sources available.
-   Start from 0 and go to MAX_CAMERAS while checking for the device with that name.
-   If it fails on the first attempt of /dev/video0, then check if /dev/video is valid.
-   Returns the global numCameras with the correct value (we hope) */
-
-static void icvInitCapture_V4L() {
-   int deviceHandle;
-   int CameraNumber;
-   char deviceName[MAX_DEVICE_DRIVER_NAME];
-
-   CameraNumber = 0;
-   while(CameraNumber < MAX_CAMERAS) {
-      /* Print the CameraNumber at the end of the string with a width of one character */
-      sprintf(deviceName, "/dev/video%1d", CameraNumber);
-      /* Test using an open to see if this new device name really does exists. */
-      deviceHandle = open(deviceName, O_RDONLY);
-      if (deviceHandle != -1) {
-         /* This device does indeed exist - add it to the total so far */
-    // add indexList
-    indexList|=(1 << CameraNumber);
-        numCameras++;
-    }
-    if (deviceHandle != -1)
-      close(deviceHandle);
-      /* Set up to test the next /dev/video source in line */
-      CameraNumber++;
-   } /* End while */
-
-}; /* End icvInitCapture_V4L */
-
-#ifdef HAVE_CAMV4L
-
-static int
-try_palette(int fd,
-            struct video_picture *cam_pic,
-            int pal,
-            int depth)
+CvCaptureCAM_V4L::CvCaptureCAM_V4L() :
+    deviceHandle(-1),
+    v4l_buffersRequested(false),
+    v4l_streamStarted(false),
+    bufferIndex(-1),
+    FirstCapture(true),
+    palette(0),
+    width(0), height(0), width_set(0), height_set(0),
+    bufferSize(DEFAULT_V4L_BUFFERS),
+    fps(0), convert_rgb(0), frame_allocated(false), returnFrame(false),
+    channelNumber(-1), normalizePropRange(false),
+    type(V4L2_BUF_TYPE_VIDEO_CAPTURE)
 {
-  cam_pic->palette = pal;
-  cam_pic->depth = depth;
-  if (ioctl(fd, VIDIOCSPICT, cam_pic) < 0)
-    return 0;
-  if (ioctl(fd, VIDIOCGPICT, cam_pic) < 0)
-    return 0;
-  if (cam_pic->palette == pal)
-    return 1;
-  return 0;
+    frame = cvIplImage();
+    memset(&timestamp, 0, sizeof(timestamp));
 }
 
-#endif /* HAVE_CAMV4L */
-
-#ifdef HAVE_CAMV4L2
-
-static int try_palette_v4l2(CvCaptureCAM_V4L* capture, unsigned long colorspace)
+CvCaptureCAM_V4L::~CvCaptureCAM_V4L()
 {
-  CLEAR (capture->form);
-
-  capture->form.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  capture->form.fmt.pix.pixelformat = colorspace;
-  capture->form.fmt.pix.field       = V4L2_FIELD_ANY;
-  capture->form.fmt.pix.width = DEFAULT_V4L_WIDTH;
-  capture->form.fmt.pix.height = DEFAULT_V4L_HEIGHT;
-
-  if (-1 == ioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form))
-      return -1;
-
-
-  if (colorspace != capture->form.fmt.pix.pixelformat)
-    return -1;
-  else
-    return 0;
-}
-
-#endif /* HAVE_CAMV4L2 */
-
-#ifdef HAVE_CAMV4L
-
-static int try_init_v4l(CvCaptureCAM_V4L* capture, char *deviceName)
-{
-
-  // if detect = -1 then unable to open device
-  // if detect = 0 then detected nothing
-  // if detect = 1 then V4L device
-  int detect = 0;
-
-
-  // Test device for V4L compability
-
-  /* Test using an open to see if this new device name really does exists. */
-  /* No matter what the name - it still must be opened! */
-  capture->deviceHandle = open(deviceName, O_RDWR);
-
-  if (capture->deviceHandle == 0)
-  {
-    detect = -1;
-
-    icvCloseCAM_V4L(capture);
-  }
-
-  if (detect == 0)
-  {
-    /* Query the newly opened device for its capabilities */
-    if (ioctl(capture->deviceHandle, VIDIOCGCAP, &capture->capability) < 0)
+    try
     {
-      detect = 0;
-      icvCloseCAM_V4L(capture);
+        closeDevice();
     }
-      else
+    catch (...)
     {
-      detect = 1;
+        CV_LOG_WARNING(NULL, "VIDEOIO(V4L2): unable properly close device: " << deviceName);
+        if (deviceHandle != -1)
+            close(deviceHandle);
     }
-  }
-
-  return detect;
-
 }
 
-#endif /* HAVE_CAMV4L */
-
-#ifdef HAVE_CAMV4L2
-
-static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
+void CvCaptureCAM_V4L::closeDevice()
 {
-  // Test device for V4L2 compability
-  // Return value:
-  // -1 then unable to open device
-  //  0 then detected nothing
-  //  1 then V4L2 device
-
-  int deviceIndex;
-
-  /* Open and test V4L2 device */
-  capture->deviceHandle = open (deviceName, O_RDWR /* required */ | O_NONBLOCK, 0);
-  if (-1 == capture->deviceHandle)
-  {
-#ifndef NDEBUG
-    fprintf(stderr, "(DEBUG) try_init_v4l2 open \"%s\": %s\n", deviceName, strerror(errno));
-#endif
-    icvCloseCAM_V4L(capture);
-    return -1;
-  }
-
-  CLEAR (capture->cap);
-  if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->cap))
-  {
-#ifndef NDEBUG
-    fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_QUERYCAP \"%s\": %s\n", deviceName, strerror(errno));
-#endif
-    icvCloseCAM_V4L(capture);
-    return 0;
-  }
-
-  /* Query channels number */
-  if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_INPUT, &deviceIndex))
-  {
-#ifndef NDEBUG
-    fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_G_INPUT \"%s\": %s\n", deviceName, strerror(errno));
-#endif
-    icvCloseCAM_V4L(capture);
-    return 0;
-  }
-
-  /* Query information about current input */
-  CLEAR (capture->inp);
-  capture->inp.index = deviceIndex;
-  if (-1 == ioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
-  {
-#ifndef NDEBUG
-    fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_ENUMINPUT \"%s\": %s\n", deviceName, strerror(errno));
-#endif
-    icvCloseCAM_V4L(capture);
-    return 0;
-  }
-
-  return 1;
-
+    if (v4l_streamStarted)
+        streaming(false);
+    if (v4l_buffersRequested)
+        releaseBuffers();
+    if(deviceHandle != -1)
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): close(" << deviceHandle << ")");
+        close(deviceHandle);
+    }
+    deviceHandle = -1;
 }
 
-static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
+bool CvCaptureCAM_V4L::isOpened() const
 {
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_BGR24) == 0)
-  {
-    capture->palette = PALETTE_BGR24;
-  }
-  else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_YVU420) == 0)
-  {
-    capture->palette = PALETTE_YVU420;
-  }
-  else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUV411P) == 0)
-  {
-    capture->palette = PALETTE_YUV411P;
-  }
-  else
+    return deviceHandle != -1;
+}
 
+bool CvCaptureCAM_V4L::try_palette_v4l2()
+{
+    form = v4l2_format();
+    form.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    form.fmt.pix.pixelformat = palette;
+    form.fmt.pix.field       = V4L2_FIELD_ANY;
+    form.fmt.pix.width       = width;
+    form.fmt.pix.height      = height;
+    if (!tryIoctl(VIDIOC_S_FMT, &form, true))
+    {
+        return false;
+    }
+    return palette == form.fmt.pix.pixelformat;
+}
+
+bool CvCaptureCAM_V4L::setVideoInputChannel()
+{
+    if(channelNumber < 0)
+        return true;
+    /* Query channels number */
+    int channel = 0;
+    if (!tryIoctl(VIDIOC_G_INPUT, &channel))
+        return false;
+
+    if(channel == channelNumber)
+        return true;
+
+    /* Query information about new input channel */
+    videoInput = v4l2_input();
+    videoInput.index = channelNumber;
+    if (!tryIoctl(VIDIOC_ENUMINPUT, &videoInput))
+        return false;
+
+    //To select a video input applications store the number of the desired input in an integer
+    // and call the VIDIOC_S_INPUT ioctl with a pointer to this integer. Side effects are possible.
+    // For example inputs may support different video standards, so the driver may implicitly
+    // switch the current standard.
+    // It is good practice to select an input before querying or negotiating any other parameters.
+    return tryIoctl(VIDIOC_S_INPUT, &channelNumber);
+}
+
+bool CvCaptureCAM_V4L::try_init_v4l2()
+{
+    /* The following code sets the CHANNEL_NUMBER of the video input.  Some video sources
+    have sub "Channel Numbers".  For a typical V4L TV capture card, this is usually 1.
+    I myself am using a simple NTSC video input capture card that uses the value of 1.
+    If you are not in North America or have a different video standard, you WILL have to change
+    the following settings and recompile/reinstall.  This set of settings is based on
+    the most commonly encountered input video source types (like my bttv card) */
+
+    // The cv::CAP_PROP_MODE used for set the video input channel number
+    if (!setVideoInputChannel())
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): Unable to set Video Input Channel");
+        return false;
+    }
+
+    // Test device for V4L2 compatibility
+    capability = v4l2_capability();
+    if (!tryIoctl(VIDIOC_QUERYCAP, &capability))
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): Unable to query capability");
+        return false;
+    }
+
+    if ((capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0)
+    {
+        /* Nope. */
+        CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): not supported - device is unable to capture video (missing V4L2_CAP_VIDEO_CAPTURE)");
+        return false;
+    }
+    return true;
+}
+
+bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
+{
+    //in case palette is already set and works, no need to setup.
+    if (palette != 0)
+    {
+        if (try_palette_v4l2())
+        {
+            return true;
+        }
+        else if (errno == EBUSY)
+        {
+            CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): device is busy");
+            closeDevice();
+            return false;
+        }
+    }
+    __u32 try_order[] = {
+            V4L2_PIX_FMT_BGR24,
+            V4L2_PIX_FMT_RGB24,
+            V4L2_PIX_FMT_YVU420,
+            V4L2_PIX_FMT_YUV420,
+            V4L2_PIX_FMT_YUV411P,
+            V4L2_PIX_FMT_YUYV,
+            V4L2_PIX_FMT_UYVY,
+            V4L2_PIX_FMT_NV12,
+            V4L2_PIX_FMT_NV21,
+            V4L2_PIX_FMT_SBGGR8,
+            V4L2_PIX_FMT_SGBRG8,
+            V4L2_PIX_FMT_SN9C10X,
 #ifdef HAVE_JPEG
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_MJPEG) == 0 ||
-      try_palette_v4l2(capture, V4L2_PIX_FMT_JPEG) == 0)
-  {
-    capture->palette = PALETTE_MJPEG;
-  }
-  else
+            V4L2_PIX_FMT_MJPEG,
+            V4L2_PIX_FMT_JPEG,
 #endif
+            V4L2_PIX_FMT_Y16,
+            V4L2_PIX_FMT_Y12,
+            V4L2_PIX_FMT_Y10,
+            V4L2_PIX_FMT_GREY,
+    };
 
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUYV) == 0)
-  {
-    capture->palette = PALETTE_YUYV;
-  }
-  else if (try_palette_v4l2(capture, V4L2_PIX_FMT_UYVY) == 0)
-  {
-    capture->palette = PALETTE_UYVY;
-  }
-  else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_SN9C10X) == 0)
-  {
-    capture->palette = PALETTE_SN9C10X;
-  } else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_SBGGR8) == 0)
-  {
-    capture->palette = PALETTE_SBGGR8;
-  } else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_SGBRG) == 0)
-  {
-    capture->palette = PALETTE_SGBRG;
-  }
-      else
-  {
-    fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
-    icvCloseCAM_V4L(capture);
-    return -1;
-  }
-
-  return 0;
-
+    for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
+        palette = try_order[i];
+        if (try_palette_v4l2()) {
+            return true;
+        } else if (errno == EBUSY) {
+            CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): device is busy");
+            closeDevice();
+            return false;
+        }
+    }
+    return false;
 }
 
-#endif /* HAVE_CAMV4L2 */
-
-#ifdef HAVE_CAMV4L
-
-static int autosetup_capture_mode_v4l(CvCaptureCAM_V4L* capture)
+bool CvCaptureCAM_V4L::setFps(int value)
 {
+    if (!isOpened())
+        return false;
 
-  if(ioctl(capture->deviceHandle, VIDIOCGPICT, &capture->imageProperties) < 0) {
-     fprintf( stderr, "VIDEOIO ERROR: V4L: Unable to determine size of incoming image\n");
-     icvCloseCAM_V4L(capture);
-     return -1;
-  }
-
-  /* Yet MORE things that might have to be changes with your frame capture card */
-  /* This sets the scale to the center of a 2^16 number */
-  if (try_palette(capture->deviceHandle, &capture->imageProperties, VIDEO_PALETTE_RGB24, 24)) {
-      //printf("negotiated palette RGB24\n");
-  }
-  else if (try_palette(capture->deviceHandle, &capture->imageProperties, VIDEO_PALETTE_YUV420P, 16)) {
-      //printf("negotiated palette YUV420P\n");
-  }
-  else if (try_palette(capture->deviceHandle, &capture->imageProperties, VIDEO_PALETTE_YUV420, 16)) {
-      //printf("negotiated palette YUV420\n");
-  }
-  else if (try_palette(capture->deviceHandle, &capture->imageProperties, VIDEO_PALETTE_YUV411P, 16)) {
-      //printf("negotiated palette YUV420P\n");
-  }
-  else {
-    fprintf(stderr, "VIDEOIO ERROR: V4L: Pixel format of incoming image is unsupported by OpenCV\n");
-    icvCloseCAM_V4L(capture);
-    return -1;
-  }
-
-  return 0;
-
-}
-
-#endif /* HAVE_CAMV4L */
-
-#ifdef HAVE_CAMV4L2
-
-
-static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
-{
-
-  __u32 ctrl_id;
-
-  for (ctrl_id = V4L2_CID_BASE;
-       ctrl_id < V4L2_CID_LASTP1;
-       ctrl_id++)
-  {
-
-    /* set the id we will query now */
-    CLEAR (capture->queryctrl);
-    capture->queryctrl.id = ctrl_id;
-
-    if (0 == ioctl (capture->deviceHandle, VIDIOC_QUERYCTRL,
-                     &capture->queryctrl))
+    v4l2_streamparm streamparm = v4l2_streamparm();
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    streamparm.parm.capture.timeperframe.numerator = 1;
+    streamparm.parm.capture.timeperframe.denominator = __u32(value);
+    if (!tryIoctl(VIDIOC_S_PARM, &streamparm) || !tryIoctl(VIDIOC_G_PARM, &streamparm))
     {
-
-      if (capture->queryctrl.flags & V4L2_CTRL_FLAG_DISABLED)
-        continue;
-
-      if (capture->queryctrl.id == V4L2_CID_BRIGHTNESS)
-      {
-        capture->v4l2_brightness = 1;
-        capture->v4l2_brightness_min = capture->queryctrl.minimum;
-        capture->v4l2_brightness_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_CONTRAST)
-      {
-        capture->v4l2_contrast = 1;
-        capture->v4l2_contrast_min = capture->queryctrl.minimum;
-        capture->v4l2_contrast_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_SATURATION)
-      {
-        capture->v4l2_saturation = 1;
-        capture->v4l2_saturation_min = capture->queryctrl.minimum;
-        capture->v4l2_saturation_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_HUE)
-      {
-        capture->v4l2_hue = 1;
-        capture->v4l2_hue_min = capture->queryctrl.minimum;
-        capture->v4l2_hue_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_GAIN)
-      {
-        capture->v4l2_gain = 1;
-        capture->v4l2_gain_min = capture->queryctrl.minimum;
-        capture->v4l2_gain_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_EXPOSURE)
-      {
-        capture->v4l2_exposure = 1;
-        capture->v4l2_exposure_min = capture->queryctrl.minimum;
-        capture->v4l2_exposure_max = capture->queryctrl.maximum;
-      }
-
-
-    } else {
-
-      if (errno == EINVAL)
-        continue;
-
-      perror ("VIDIOC_QUERYCTRL");
-
+        CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't set FPS: " << value);
+        return false;
     }
 
-  }
-
-  for (ctrl_id = V4L2_CID_PRIVATE_BASE;;ctrl_id++)
-  {
-
-    /* set the id we will query now */
-    CLEAR (capture->queryctrl);
-    capture->queryctrl.id = ctrl_id;
-
-    if (0 == ioctl (capture->deviceHandle, VIDIOC_QUERYCTRL,
-                     &capture->queryctrl))
-    {
-
-      if (capture->queryctrl.flags & V4L2_CTRL_FLAG_DISABLED)
-        continue;
-
-      if (capture->queryctrl.id == V4L2_CID_BRIGHTNESS)
-      {
-        capture->v4l2_brightness = 1;
-        capture->v4l2_brightness_min = capture->queryctrl.minimum;
-        capture->v4l2_brightness_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_CONTRAST)
-      {
-        capture->v4l2_contrast = 1;
-        capture->v4l2_contrast_min = capture->queryctrl.minimum;
-        capture->v4l2_contrast_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_SATURATION)
-      {
-        capture->v4l2_saturation = 1;
-        capture->v4l2_saturation_min = capture->queryctrl.minimum;
-        capture->v4l2_saturation_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_HUE)
-      {
-        capture->v4l2_hue = 1;
-        capture->v4l2_hue_min = capture->queryctrl.minimum;
-        capture->v4l2_hue_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_GAIN)
-      {
-        capture->v4l2_gain = 1;
-        capture->v4l2_gain_min = capture->queryctrl.minimum;
-        capture->v4l2_gain_max = capture->queryctrl.maximum;
-      }
-
-      if (capture->queryctrl.id == V4L2_CID_EXPOSURE)
-      {
-        capture->v4l2_exposure = 1;
-        capture->v4l2_exposure_min = capture->queryctrl.minimum;
-        capture->v4l2_exposure_max = capture->queryctrl.maximum;
-      }
-
-    } else {
-
-      if (errno == EINVAL)
-        break;
-
-      perror ("VIDIOC_QUERYCTRL");
-
-    }
-
-  }
-
+    CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): FPS="
+            << streamparm.parm.capture.timeperframe.denominator << "/"
+            << streamparm.parm.capture.timeperframe.numerator);
+    fps = streamparm.parm.capture.timeperframe.denominator;  // TODO use numerator
+    return true;
 }
 
-static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
+bool CvCaptureCAM_V4L::convertableToRgb() const
 {
-   int detect_v4l2 = 0;
-
-   detect_v4l2 = try_init_v4l2(capture, deviceName);
-
-   if (detect_v4l2 != 1) {
-       /* init of the v4l2 device is not OK */
-       return -1;
-   }
-
-   /* starting from here, we assume we are in V4L2 mode */
-   V4L2_SUPPORT = 1;
-
-   /* Init V4L2 control variables */
-   capture->v4l2_brightness = 0;
-   capture->v4l2_contrast = 0;
-   capture->v4l2_saturation = 0;
-   capture->v4l2_hue = 0;
-   capture->v4l2_gain = 0;
-   capture->v4l2_exposure = 0;
-
-   capture->v4l2_brightness_min = 0;
-   capture->v4l2_contrast_min = 0;
-   capture->v4l2_saturation_min = 0;
-   capture->v4l2_hue_min = 0;
-   capture->v4l2_gain_min = 0;
-   capture->v4l2_exposure_min = 0;
-
-   capture->v4l2_brightness_max = 0;
-   capture->v4l2_contrast_max = 0;
-   capture->v4l2_saturation_max = 0;
-   capture->v4l2_hue_max = 0;
-   capture->v4l2_gain_max = 0;
-   capture->v4l2_exposure_max = 0;
-
-   capture->timestamp.tv_sec = 0;
-   capture->timestamp.tv_usec = 0;
-
-   /* Scan V4L2 controls */
-   v4l2_scan_controls(capture);
-
-   if ((capture->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
-      /* Nope. */
-      fprintf( stderr, "VIDEOIO ERROR: V4L2: device %s is unable to capture video memory.\n",deviceName);
-      icvCloseCAM_V4L(capture);
-      return -1;
-   }
-
-   /* The following code sets the CHANNEL_NUMBER of the video input.  Some video sources
-   have sub "Channel Numbers".  For a typical V4L TV capture card, this is usually 1.
-   I myself am using a simple NTSC video input capture card that uses the value of 1.
-   If you are not in North America or have a different video standard, you WILL have to change
-   the following settings and recompile/reinstall.  This set of settings is based on
-   the most commonly encountered input video source types (like my bttv card) */
-
-   if(capture->inp.index > 0) {
-       CLEAR (capture->inp);
-       capture->inp.index = CHANNEL_NUMBER;
-       /* Set only channel number to CHANNEL_NUMBER */
-       /* V4L2 have a status field from selected video mode */
-       if (-1 == ioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
-       {
-         fprintf (stderr, "VIDEOIO ERROR: V4L2: Aren't able to set channel number\n");
-         icvCloseCAM_V4L (capture);
-         return -1;
-       }
-   } /* End if */
-
-   /* Find Window info */
-   CLEAR (capture->form);
-   capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-   if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
-       fprintf( stderr, "VIDEOIO ERROR: V4L2: Could not obtain specifics of capture window.\n\n");
-       icvCloseCAM_V4L(capture);
-       return -1;
-   }
-
-   if (V4L2_SUPPORT == 0)
-   {
-   }
-
-   if (autosetup_capture_mode_v4l2(capture) == -1)
-       return -1;
-
-   icvSetVideoSize(capture, DEFAULT_V4L_WIDTH, DEFAULT_V4L_HEIGHT);
-
-   unsigned int min;
-
-   /* Buggy driver paranoia. */
-   min = capture->form.fmt.pix.width * 2;
-
-   if (capture->form.fmt.pix.bytesperline < min)
-       capture->form.fmt.pix.bytesperline = min;
-
-   min = capture->form.fmt.pix.bytesperline * capture->form.fmt.pix.height;
-
-   if (capture->form.fmt.pix.sizeimage < min)
-       capture->form.fmt.pix.sizeimage = min;
-
-   CLEAR (capture->req);
-
-   unsigned int buffer_number = DEFAULT_V4L_BUFFERS;
-
-   try_again:
-
-   capture->req.count = buffer_number;
-   capture->req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-   capture->req.memory = V4L2_MEMORY_MMAP;
-
-   if (-1 == ioctl (capture->deviceHandle, VIDIOC_REQBUFS, &capture->req))
-   {
-       if (EINVAL == errno)
-       {
-         fprintf (stderr, "%s does not support memory mapping\n", deviceName);
-       } else {
-         perror ("VIDIOC_REQBUFS");
-       }
-       /* free capture, and returns an error code */
-       icvCloseCAM_V4L (capture);
-       return -1;
-   }
-
-   if (capture->req.count < buffer_number)
-   {
-       if (buffer_number == 1)
-       {
-           fprintf (stderr, "Insufficient buffer memory on %s\n", deviceName);
-
-           /* free capture, and returns an error code */
-           icvCloseCAM_V4L (capture);
-           return -1;
-       } else {
-         buffer_number--;
-     fprintf (stderr, "Insufficient buffer memory on %s -- decreaseing buffers\n", deviceName);
-
-     goto try_again;
-       }
-   }
-
-   for (n_buffers = 0; n_buffers < capture->req.count; ++n_buffers)
-   {
-       struct v4l2_buffer buf;
-
-       CLEAR (buf);
-
-       buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-       buf.memory = V4L2_MEMORY_MMAP;
-       buf.index = n_buffers;
-
-       if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYBUF, &buf)) {
-           perror ("VIDIOC_QUERYBUF");
-
-           /* free capture, and returns an error code */
-           icvCloseCAM_V4L (capture);
-           return -1;
-       }
-
-       capture->buffers[n_buffers].length = buf.length;
-       capture->buffers[n_buffers].start =
-         mmap (NULL /* start anywhere */,
-               buf.length,
-               PROT_READ | PROT_WRITE /* required */,
-               MAP_SHARED /* recommended */,
-               capture->deviceHandle, buf.m.offset);
-
-       if (MAP_FAILED == capture->buffers[n_buffers].start) {
-           perror ("mmap");
-
-           /* free capture, and returns an error code */
-           icvCloseCAM_V4L (capture);
-           return -1;
-       }
-
-       if (n_buffers == 0) {
-     capture->buffers[MAX_V4L_BUFFERS].start = malloc( buf.length );
-     capture->buffers[MAX_V4L_BUFFERS].length = buf.length;
-       }
-   }
-
-   /* Set up Image data */
-   cvInitImageHeader( &capture->frame,
-                      cvSize( capture->form.fmt.pix.width,
-                              capture->form.fmt.pix.height ),
-                      IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
-   /* Allocate space for RGBA data */
-   capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
-
-   return 1;
-}; /* End _capture_V4L2 */
-
-#endif /* HAVE_CAMV4L2 */
-
-#ifdef HAVE_CAMV4L
-
-static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
-{
-   int detect_v4l = 0;
-
-   detect_v4l = try_init_v4l(capture, deviceName);
-
-   if ((detect_v4l == -1)
-       )
-   {
-     fprintf (stderr, "VIDEOIO ERROR: V4L"
-              ": device %s: Unable to open for READ ONLY\n", deviceName);
-
-     return -1;
-   }
-
-   if ((detect_v4l <= 0)
-       )
-   {
-     fprintf (stderr, "VIDEOIO ERROR: V4L"
-              ": device %s: Unable to query number of channels\n", deviceName);
-
-     return -1;
-   }
-
-   {
-     if ((capture->capability.type & VID_TYPE_CAPTURE) == 0) {
-       /* Nope. */
-       fprintf( stderr, "VIDEOIO ERROR: V4L: "
-                "device %s is unable to capture video memory.\n",deviceName);
-       icvCloseCAM_V4L(capture);
-       return -1;
-     }
-
-   }
-
-
-   /* The following code sets the CHANNEL_NUMBER of the video input.  Some video sources
-   have sub "Channel Numbers".  For a typical V4L TV capture card, this is usually 1.
-   I myself am using a simple NTSC video input capture card that uses the value of 1.
-   If you are not in North America or have a different video standard, you WILL have to change
-   the following settings and recompile/reinstall.  This set of settings is based on
-   the most commonly encountered input video source types (like my bttv card) */
-
-   {
-
-     if(capture->capability.channels>0) {
-
-       struct video_channel selectedChannel;
-       memset(&selectedChannel, 0, sizeof(selectedChannel));
-
-       selectedChannel.channel=CHANNEL_NUMBER;
-       if (ioctl(capture->deviceHandle, VIDIOCGCHAN , &selectedChannel) != -1) {
-          /* set the video mode to ( VIDEO_MODE_PAL, VIDEO_MODE_NTSC, VIDEO_MODE_SECAM) */
-//           selectedChannel.norm = VIDEO_MODE_NTSC;
-          if (ioctl(capture->deviceHandle, VIDIOCSCHAN , &selectedChannel) == -1) {
-             /* Could not set selected channel - Oh well */
-             //printf("\n%d, %s not NTSC capable.\n",selectedChannel.channel, selectedChannel.name);
-          } /* End if */
-       } /* End if */
-     } /* End if */
-
-   }
-
-   {
-
-     if(ioctl(capture->deviceHandle, VIDIOCGWIN, &capture->captureWindow) == -1) {
-       fprintf( stderr, "VIDEOIO ERROR: V4L: "
-                "Could not obtain specifics of capture window.\n\n");
-       icvCloseCAM_V4L(capture);
-       return -1;
-     }
-
-   }
-
-   {
-
-     if (autosetup_capture_mode_v4l(capture) == -1)
-       return -1;
-
-   }
-
-   {
-
-     ioctl(capture->deviceHandle, VIDIOCGMBUF, &capture->memoryBuffer);
-     capture->memoryMap  = (char *)mmap(0,
-                                   capture->memoryBuffer.size,
-                                   PROT_READ | PROT_WRITE,
-                                   MAP_SHARED,
-                                   capture->deviceHandle,
-                                   0);
-     if (capture->memoryMap == MAP_FAILED) {
-        fprintf( stderr, "VIDEOIO ERROR: V4L: Mapping Memmory from video source error: %s\n", strerror(errno));
-        icvCloseCAM_V4L(capture);
-     }
-
-     /* Set up video_mmap structure pointing to this memory mapped area so each image may be
-        retrieved from an index value */
-     capture->mmaps = (struct video_mmap *)
-                 (malloc(capture->memoryBuffer.frames * sizeof(struct video_mmap)));
-     if (!capture->mmaps) {
-        fprintf( stderr, "VIDEOIO ERROR: V4L: Could not memory map video frames.\n");
-        icvCloseCAM_V4L(capture);
-        return -1;
-     }
-
-   }
-
-   /* Set up Image data */
-   cvInitImageHeader( &capture->frame,
-                      cvSize( capture->captureWindow.width,
-                              capture->captureWindow.height ),
-                      IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
-   /* Allocate space for RGBA data */
-   capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
-
-   return 1;
-}; /* End _capture_V4L */
-
-#endif /* HAVE_CAMV4L */
-
-static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
-{
-   static int autoindex;
-   autoindex = 0;
-
-   char deviceName[MAX_DEVICE_DRIVER_NAME];
-
-   if (!numCameras)
-      icvInitCapture_V4L(); /* Havent called icvInitCapture yet - do it now! */
-   if (!numCameras)
-     return NULL; /* Are there any /dev/video input sources? */
-
-   //search index in indexList
-   if ( (index>-1) && ! ((1 << index) & indexList) )
-   {
-     fprintf( stderr, "VIDEOIO ERROR: V4L: index %d is not correct!\n",index);
-     return NULL; /* Did someone ask for not correct video source number? */
-   }
-   /* Allocate memory for this humongus CvCaptureCAM_V4L structure that contains ALL
-      the handles for V4L processing */
-   CvCaptureCAM_V4L * capture = (CvCaptureCAM_V4L*)cvAlloc(sizeof(CvCaptureCAM_V4L));
-   if (!capture) {
-      fprintf( stderr, "VIDEOIO ERROR: V4L: Could not allocate memory for capture process.\n");
-      return NULL;
-   }
-   /* Select camera, or rather, V4L video source */
-   if (index<0) { // Asking for the first device available
-     for (; autoindex<MAX_CAMERAS;autoindex++)
-    if (indexList & (1<<autoindex))
+    switch (palette) {
+    case V4L2_PIX_FMT_YVU420:
+    case V4L2_PIX_FMT_YUV420:
+    case V4L2_PIX_FMT_NV12:
+    case V4L2_PIX_FMT_NV21:
+    case V4L2_PIX_FMT_YUV411P:
+#ifdef HAVE_JPEG
+    case V4L2_PIX_FMT_MJPEG:
+    case V4L2_PIX_FMT_JPEG:
+#endif
+    case V4L2_PIX_FMT_YUYV:
+    case V4L2_PIX_FMT_UYVY:
+    case V4L2_PIX_FMT_SBGGR8:
+    case V4L2_PIX_FMT_SN9C10X:
+    case V4L2_PIX_FMT_SGBRG8:
+    case V4L2_PIX_FMT_RGB24:
+    case V4L2_PIX_FMT_Y16:
+    case V4L2_PIX_FMT_Y10:
+    case V4L2_PIX_FMT_GREY:
+    case V4L2_PIX_FMT_BGR24:
+        return true;
+    default:
         break;
-     if (autoindex==MAX_CAMERAS)
-    return NULL;
-     index=autoindex;
-     autoindex++;// i can recall icvOpenCAM_V4l with index=-1 for next camera
-   }
-   /* Print the CameraNumber at the end of the string with a width of one character */
-   sprintf(deviceName, "/dev/video%1d", index);
+    }
+    return false;
+}
 
-   /* w/o memset some parts  arent initialized - AKA: Fill it with zeros so it is clean */
-   memset(capture,0,sizeof(CvCaptureCAM_V4L));
-   /* Present the routines needed for V4L funtionality.  They are inserted as part of
-      the standard set of cv calls promoting transparency.  "Vector Table" insertion. */
-   capture->FirstCapture = 1;
+void CvCaptureCAM_V4L::v4l2_create_frame()
+{
+    CV_Assert(form.fmt.pix.width <= (uint)std::numeric_limits<int>::max());
+    CV_Assert(form.fmt.pix.height <= (uint)std::numeric_limits<int>::max());
+    CvSize size = {(int)form.fmt.pix.width, (int)form.fmt.pix.height};
+    int channels = 3;
+    int depth = IPL_DEPTH_8U;
 
-#ifdef HAVE_CAMV4L2
-   if (_capture_V4L2 (capture, deviceName) == -1) {
-       icvCloseCAM_V4L(capture);
-       V4L2_SUPPORT = 0;
-#endif  /* HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-       if (_capture_V4L (capture, deviceName) == -1) {
-           icvCloseCAM_V4L(capture);
-           return NULL;
-       }
-#endif  /* HAVE_CAMV4L */
-#ifdef HAVE_CAMV4L2
-   } else {
-       V4L2_SUPPORT = 1;
-   }
-#endif  /* HAVE_CAMV4L2 */
+    if (!convert_rgb) {
+        switch (palette) {
+        case V4L2_PIX_FMT_BGR24:
+        case V4L2_PIX_FMT_RGB24:
+            break;
+        case V4L2_PIX_FMT_YUYV:
+        case V4L2_PIX_FMT_UYVY:
+            channels = 2;
+            break;
+        case V4L2_PIX_FMT_YVU420:
+        case V4L2_PIX_FMT_YUV420:
+        case V4L2_PIX_FMT_NV12:
+        case V4L2_PIX_FMT_NV21:
+            channels = 1;
+            size.height = size.height * 3 / 2; // "1.5" channels
+            break;
+        case V4L2_PIX_FMT_Y16:
+        case V4L2_PIX_FMT_Y12:
+        case V4L2_PIX_FMT_Y10:
+            depth = IPL_DEPTH_16U;
+            /* fallthru */
+        case V4L2_PIX_FMT_GREY:
+            channels = 1;
+            break;
+        case V4L2_PIX_FMT_MJPEG:
+        case V4L2_PIX_FMT_JPEG:
+        default:
+            channels = 1;
+            if(bufferIndex < 0)
+                size = cvSize(buffers[MAX_V4L_BUFFERS].length, 1);
+            else
+                size = cvSize(buffers[bufferIndex].buffer.bytesused, 1);
+            break;
+        }
+    }
 
-   return capture;
-}; /* End icvOpenCAM_V4L */
+    /* Set up Image data */
+    cvInitImageHeader(&frame, size, depth, channels);
 
-#ifdef HAVE_CAMV4L2
+    /* Allocate space for pixelformat we convert to.
+     * If we do not convert frame is just points to the buffer
+     */
+    releaseFrame();
+    // we need memory iff convert_rgb is true
+    if (convert_rgb) {
+        frame.imageData = (char *)cvAlloc(frame.imageSize);
+        frame_allocated = true;
+    }
+}
 
-static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
-    struct v4l2_buffer buf;
+bool CvCaptureCAM_V4L::initCapture()
+{
+    if (!isOpened())
+        return false;
 
-    CLEAR (buf);
+    if (!try_init_v4l2())
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): init failed: errno=" << errno << " (" << strerror(errno) << ")");
+        return false;
+    }
 
+    /* Find Window info */
+    form = v4l2_format();
+    form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    if (!tryIoctl(VIDIOC_G_FMT, &form))
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): Could not obtain specifics of capture window (VIDIOC_G_FMT): errno=" << errno << " (" << strerror(errno) << ")");
+        return false;
+    }
+
+    if (!autosetup_capture_mode_v4l2())
+    {
+        if (errno != EBUSY)
+        {
+            CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): Pixel format of incoming image is unsupported by OpenCV");
+        }
+        return false;
+    }
+
+    /* try to set framerate */
+    setFps(fps);
+
+    unsigned int min;
+
+    /* Buggy driver paranoia. */
+    min = form.fmt.pix.width * 2;
+
+    if (form.fmt.pix.bytesperline < min)
+        form.fmt.pix.bytesperline = min;
+
+    min = form.fmt.pix.bytesperline * form.fmt.pix.height;
+
+    if (form.fmt.pix.sizeimage < min)
+        form.fmt.pix.sizeimage = min;
+
+    if (!requestBuffers())
+        return false;
+
+    if (!createBuffers()) {
+        /* free capture, and returns an error code */
+        releaseBuffers();
+        return false;
+    }
+
+    v4l2_create_frame();
+
+    // reinitialize buffers
+    FirstCapture = true;
+
+    return true;
+};
+
+bool CvCaptureCAM_V4L::requestBuffers()
+{
+    unsigned int buffer_number = bufferSize;
+    while (buffer_number > 0) {
+        if (requestBuffers(buffer_number) && req.count >= buffer_number)
+        {
+            break;
+        }
+
+        buffer_number--;
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): Insufficient buffer memory -- decreasing buffers: " << buffer_number);
+    }
+    if (buffer_number < 1) {
+        CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): Insufficient buffer memory");
+        return false;
+    }
+    bufferSize = req.count;
+    return true;
+}
+
+bool CvCaptureCAM_V4L::requestBuffers(unsigned int buffer_number)
+{
+    if (!isOpened())
+        return false;
+
+    req = v4l2_requestbuffers();
+    req.count = buffer_number;
+    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.memory = V4L2_MEMORY_MMAP;
+
+    if (!tryIoctl(VIDIOC_REQBUFS, &req)) {
+        int err = errno;
+        if (EINVAL == err)
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): no support for memory mapping");
+        }
+        else
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_REQBUFS: errno=" << err << " (" << strerror(err) << ")");
+        }
+        return false;
+    }
+    v4l_buffersRequested = true;
+    return true;
+}
+
+bool CvCaptureCAM_V4L::createBuffers()
+{
+    size_t maxLength = 0;
+    for (unsigned int n_buffers = 0; n_buffers < req.count; ++n_buffers) {
+        v4l2_buffer buf = v4l2_buffer();
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = V4L2_MEMORY_MMAP;
+        buf.index = n_buffers;
+
+        if (!tryIoctl(VIDIOC_QUERYBUF, &buf)) {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_QUERYBUF: errno=" << errno << " (" << strerror(errno) << ")");
+            return false;
+        }
+
+        buffers[n_buffers].length = buf.length;
+        buffers[n_buffers].start =
+            mmap(NULL /* start anywhere */,
+                buf.length,
+                PROT_READ /* required */,
+                MAP_SHARED /* recommended */,
+                deviceHandle, buf.m.offset);
+
+        if (MAP_FAILED == buffers[n_buffers].start) {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed mmap(" << buf.length << "): errno=" << errno << " (" << strerror(errno) << ")");
+            return false;
+        }
+        maxLength = maxLength > buf.length ? maxLength : buf.length;
+    }
+    if (maxLength > 0) {
+        buffers[MAX_V4L_BUFFERS].start = malloc(maxLength);
+        buffers[MAX_V4L_BUFFERS].length = maxLength;
+    }
+    return buffers[MAX_V4L_BUFFERS].start != 0;
+}
+
+/**
+ * some properties can not be changed while the device is in streaming mode.
+ * this method closes and re-opens the device to re-start the stream.
+ * this also causes buffers to be reallocated if the frame size was changed.
+ */
+bool CvCaptureCAM_V4L::v4l2_reset()
+{
+    streaming(false);
+    releaseBuffers();
+    return initCapture();
+}
+
+bool CvCaptureCAM_V4L::open(int _index)
+{
+    cv::String name;
+    /* Select camera, or rather, V4L video source */
+    if (_index < 0) // Asking for the first device available
+    {
+        for (int autoindex = 0; autoindex < MAX_CAMERAS; ++autoindex)
+        {
+            name = cv::format("/dev/video%d", autoindex);
+            /* Test using an open to see if this new device name really does exists. */
+            int h = ::open(name.c_str(), O_RDONLY);
+            if (h != -1)
+            {
+                ::close(h);
+                _index = autoindex;
+                break;
+            }
+        }
+        if (_index < 0)
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2): can't find camera device");
+            name.clear();
+            return false;
+        }
+    }
+    else
+    {
+        name = cv::format("/dev/video%d", _index);
+    }
+
+    bool res = open(name.c_str());
+    if (!res)
+    {
+        CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't open camera by index");
+    }
+    return res;
+}
+
+bool CvCaptureCAM_V4L::open(const char* _deviceName)
+{
+    CV_Assert(_deviceName);
+    CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << _deviceName << "): opening...");
+    FirstCapture = true;
+    width = DEFAULT_V4L_WIDTH;
+    height = DEFAULT_V4L_HEIGHT;
+    width_set = height_set = 0;
+    bufferSize = DEFAULT_V4L_BUFFERS;
+    fps = DEFAULT_V4L_FPS;
+    convert_rgb = true;
+    frame_allocated = false;
+    deviceName = _deviceName;
+    returnFrame = true;
+    normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", true);
+    channelNumber = -1;
+    bufferIndex = -1;
+
+    deviceHandle = ::open(deviceName.c_str(), O_RDWR /* required */ | O_NONBLOCK, 0);
+    CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << _deviceName << "): deviceHandle=" << deviceHandle);
+    if (deviceHandle == -1)
+        return false;
+
+    return initCapture();
+}
+
+bool CvCaptureCAM_V4L::read_frame_v4l2()
+{
+    v4l2_buffer buf = v4l2_buffer();
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_DQBUF, &buf)) {
-        switch (errno) {
-        case EAGAIN:
-            return 0;
-
-        case EIO:
-        if (!(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE)))
-        {
-          if (ioctl(capture->deviceHandle, VIDIOC_QBUF, &buf) == -1)
-          {
-            return 0;
-          }
+    while (!tryIoctl(VIDIOC_DQBUF, &buf)) {
+        int err = errno;
+        if (err == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE))) {
+            // Maybe buffer not in the queue? Try to put there
+            if (!tryIoctl(VIDIOC_QBUF, &buf))
+                return false;
+            continue;
         }
-        return 0;
+        /* display the error and stop processing */
+        returnFrame = false;
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't read frame (VIDIOC_DQBUF): errno=" << err << " (" << strerror(err) << ")");
+        return false;
+    }
 
-        default:
-            /* display the error and stop processing */
-            perror ("VIDIOC_DQBUF");
-            return 1;
-        }
-   }
+    assert(buf.index < req.count);
+    assert(buffers[buf.index].length == buf.length);
 
-   assert(buf.index < capture->req.count);
+    //We shouldn't use this buffer in the queue while not retrieve frame from it.
+    buffers[buf.index].buffer = buf;
+    bufferIndex = buf.index;
 
-   memcpy(capture->buffers[MAX_V4L_BUFFERS].start,
-      capture->buffers[buf.index].start,
-      capture->buffers[MAX_V4L_BUFFERS].length );
-   capture->bufferIndex = MAX_V4L_BUFFERS;
-   //printf("got data in buff %d, len=%d, flags=0x%X, seq=%d, used=%d)\n",
-   //	  buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
-
-   if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf))
-       perror ("VIDIOC_QBUF");
-
-   //set timestamp in capture struct to be timestamp of most recent frame
-   capture->timestamp = buf.timestamp;
-
-   return 1;
+    //set timestamp in capture struct to be timestamp of most recent frame
+    timestamp = buf.timestamp;
+    return true;
 }
 
-static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
-    unsigned int count;
+bool CvCaptureCAM_V4L::tryIoctl(unsigned long ioctlCode, void *parameter, bool failIfBusy, int attempts) const
+{
+    CV_Assert(attempts > 0);
+    CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): tryIoctl(" << deviceHandle << ", "
+            << decode_ioctl_code(ioctlCode) << "(" << ioctlCode << "), failIfBusy=" << failIfBusy << ")"
+    );
+    while (true)
+    {
+        errno = 0;
+        int result = ioctl(deviceHandle, ioctlCode, parameter);
+        int err = errno;
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): call ioctl(" << deviceHandle << ", "
+                << decode_ioctl_code(ioctlCode) << "(" << ioctlCode << "), ...) => "
+                << result << "    errno=" << err << " (" << strerror(err) << ")"
+        );
 
-    count = 1;
+        if (result != -1)
+            return true;  // success
 
-    while (count-- > 0) {
-        for (;;) {
-            fd_set fds;
-            struct timeval tv;
-            int r;
+        const bool isBusy = (err == EBUSY);
+        if (isBusy && failIfBusy)
+        {
+            CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): ioctl returns with errno=EBUSY");
+            return false;
+        }
+        if (!(isBusy || errno == EAGAIN))
+            return false;
 
-            FD_ZERO (&fds);
-            FD_SET (capture->deviceHandle, &fds);
+        if (--attempts == 0) {
+            return false;
+        }
 
-            /* Timeout. */
-            tv.tv_sec = 10;
-            tv.tv_usec = 0;
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(deviceHandle, &fds);
 
-            r = select (capture->deviceHandle+1, &fds, NULL, NULL, &tv);
+        /* Timeout. */
+        static int param_v4l_select_timeout = (int)utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_V4L_SELECT_TIMEOUT", 10);
+        struct timeval tv;
+        tv.tv_sec = param_v4l_select_timeout;
+        tv.tv_usec = 0;
 
-            if (-1 == r) {
-                if (EINTR == errno)
-                    continue;
+        errno = 0;
+        result = select(deviceHandle + 1, &fds, NULL, NULL, &tv);
+        err = errno;
 
-                perror ("select");
-            }
+        if (0 == result)
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): select() timeout.");
+            return false;
+        }
 
-            if (0 == r) {
-                fprintf (stderr, "select timeout\n");
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): select(" << deviceHandle << ") => "
+                << result << "   errno = " << err << " (" << strerror(err) << ")"
+        );
 
-                /* end the infinite loop */
-                break;
-            }
-
-            if (read_frame_v4l2 (capture))
-                break;
+        if (EINTR == err)  // don't loop if signal occurred, like Ctrl+C
+        {
+            return false;
         }
     }
+    return true;
 }
 
-#endif /* HAVE_CAMV4L2 */
+bool CvCaptureCAM_V4L::grabFrame()
+{
+    if (FirstCapture) {
+        /* Some general initialization must take place the first time through */
 
-static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
-
-   if (capture->FirstCapture) {
-      /* Some general initialization must take place the first time through */
-
-      /* This is just a technicality, but all buffers must be filled up before any
+        /* This is just a technicality, but all buffers must be filled up before any
          staggered SYNC is applied.  SO, filler up. (see V4L HowTo) */
+        bufferIndex = -1;
+        for (__u32 index = 0; index < req.count; ++index) {
+            v4l2_buffer buf = v4l2_buffer();
 
-#ifdef HAVE_CAMV4L2
+            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            buf.memory = V4L2_MEMORY_MMAP;
+            buf.index = index;
 
-#ifdef HAVE_CAMV4L
-      if (V4L2_SUPPORT == 1)
-#endif
-      {
-
-        for (capture->bufferIndex = 0;
-             capture->bufferIndex < ((int)capture->req.count);
-             ++capture->bufferIndex)
-        {
-
-          struct v4l2_buffer buf;
-
-          CLEAR (buf);
-
-          buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-          buf.memory      = V4L2_MEMORY_MMAP;
-          buf.index       = (unsigned long)capture->bufferIndex;
-
-          if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf)) {
-              perror ("VIDIOC_QBUF");
-              return 0;
-          }
+            if (!tryIoctl(VIDIOC_QBUF, &buf)) {
+                CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_QBUF (buffer=" << index << "): errno=" << errno << " (" << strerror(errno) << ")");
+                return false;
+            }
         }
 
-        /* enable the streaming */
-        capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        if (-1 == ioctl (capture->deviceHandle, VIDIOC_STREAMON,
-                          &capture->type)) {
-            /* error enabling the stream */
-            perror ("VIDIOC_STREAMON");
-            return 0;
-        }
-      }
-#endif /* HAVE_CAMV4L2 */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-      else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-      {
-
-        for (capture->bufferIndex = 0;
-         capture->bufferIndex < (capture->memoryBuffer.frames-1);
-         ++capture->bufferIndex) {
-
-          capture->mmaps[capture->bufferIndex].frame  = capture->bufferIndex;
-          capture->mmaps[capture->bufferIndex].width  = capture->captureWindow.width;
-          capture->mmaps[capture->bufferIndex].height = capture->captureWindow.height;
-          capture->mmaps[capture->bufferIndex].format = capture->imageProperties.palette;
-
-          if (ioctl(capture->deviceHandle, VIDIOCMCAPTURE, &capture->mmaps[capture->bufferIndex]) == -1) {
-            fprintf( stderr, "VIDEOIO ERROR: V4L: Initial Capture Error: Unable to load initial memory buffers.\n");
-            return 0;
-          }
+        if (!streaming(true)) {
+            return false;
         }
 
-      }
-#endif /* HAVE_CAMV4L */
-
-#if defined(V4L_ABORT_BADJPEG) && defined(HAVE_CAMV4L2)
-     if (V4L2_SUPPORT == 1)
-     {
+#if defined(V4L_ABORT_BADJPEG)
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
-        mainloop_v4l2(capture);
-     }
+        if (!read_frame_v4l2())
+            return false;
 #endif
 
-      /* preparation is ok */
-      capture->FirstCapture = 0;
-   }
-
-#ifdef HAVE_CAMV4L2
-
-   if (V4L2_SUPPORT == 1)
-   {
-
-     mainloop_v4l2(capture);
-
-   }
-#endif /* HAVE_CAMV4L2 */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-     else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-   {
-
-     capture->mmaps[capture->bufferIndex].frame  = capture->bufferIndex;
-     capture->mmaps[capture->bufferIndex].width  = capture->captureWindow.width;
-     capture->mmaps[capture->bufferIndex].height = capture->captureWindow.height;
-     capture->mmaps[capture->bufferIndex].format = capture->imageProperties.palette;
-
-     if (ioctl (capture->deviceHandle, VIDIOCMCAPTURE,
-        &capture->mmaps[capture->bufferIndex]) == -1) {
-     /* capture is on the way, so just exit */
-     return 1;
-     }
-
-     ++capture->bufferIndex;
-     if (capture->bufferIndex == capture->memoryBuffer.frames) {
-        capture->bufferIndex = 0;
-     }
-
-   }
-#endif /* HAVE_CAMV4L */
-
-   return(1);
+        /* preparation is ok */
+        FirstCapture = false;
+    }
+    // In the case that the grab frame was without retrieveFrame
+    if (bufferIndex >= 0)
+    {
+        if (!tryIoctl(VIDIOC_QBUF, &buffers[bufferIndex].buffer))
+        {
+            CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_QBUF (buffer=" << bufferIndex << "): errno=" << errno << " (" << strerror(errno) << ")");
+        }
+    }
+    return read_frame_v4l2();
 }
 
 /*
@@ -1405,47 +1084,8 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 #define LIMIT(x) ((x)>0xffffff?0xff: ((x)<=0xffff?0:((x)>>16)))
 
 static inline void
-move_420_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
-               int rowPixels, unsigned char * rgb)
-{
-    const int rvScale = 91881;
-    const int guScale = -22553;
-    const int gvScale = -46801;
-    const int buScale = 116129;
-    const int yScale  = 65536;
-    int r, g, b;
-
-    g = guScale * u + gvScale * v;
-//  if (force_rgb) {
-//      r = buScale * u;
-//      b = rvScale * v;
-//  } else {
-        r = rvScale * v;
-        b = buScale * u;
-//  }
-
-    yTL *= yScale; yTR *= yScale;
-    yBL *= yScale; yBR *= yScale;
-
-    /* Write out top two pixels */
-    rgb[0] = LIMIT(b+yTL); rgb[1] = LIMIT(g+yTL);
-    rgb[2] = LIMIT(r+yTL);
-
-    rgb[3] = LIMIT(b+yTR); rgb[4] = LIMIT(g+yTR);
-    rgb[5] = LIMIT(r+yTR);
-
-    /* Skip down to next line to write out bottom two pixels */
-    rgb += 3 * rowPixels;
-    rgb[0] = LIMIT(b+yBL); rgb[1] = LIMIT(g+yBL);
-    rgb[2] = LIMIT(r+yBL);
-
-    rgb[3] = LIMIT(b+yBR); rgb[4] = LIMIT(g+yBR);
-    rgb[5] = LIMIT(r+yBR);
-}
-
-static inline void
 move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
-               int /*rowPixels*/, unsigned char * rgb)
+        int /*rowPixels*/, unsigned char * rgb)
 {
     const int rvScale = 91881;
     const int guScale = -22553;
@@ -1455,13 +1095,13 @@ move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
     int r, g, b;
 
     g = guScale * u + gvScale * v;
-//  if (force_rgb) {
-//      r = buScale * u;
-//      b = rvScale * v;
-//  } else {
-        r = rvScale * v;
-        b = buScale * u;
-//  }
+    //  if (force_rgb) {
+    //      r = buScale * u;
+    //      b = rvScale * v;
+    //  } else {
+    r = rvScale * v;
+    b = buScale * u;
+    //  }
 
     yTL *= yScale; yTR *= yScale;
     yBL *= yScale; yBR *= yScale;
@@ -1482,108 +1122,6 @@ move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
     rgb[5] = LIMIT(r+yBR);
 }
 
-// Consider a YUV420P image of 8x2 pixels.
-//
-// A plane of Y values    A B C D E F G H
-//                        I J K L M N O P
-//
-// A plane of U values    1   2   3   4
-// A plane of V values    1   2   3   4 ....
-//
-// The U1/V1 samples correspond to the ABIJ pixels.
-//     U2/V2 samples correspond to the CDKL pixels.
-//
-/* Converts from planar YUV420P to RGB24. */
-static void
-yuv420p_to_rgb24(int width, int height,
-           unsigned char *pIn0, unsigned char *pOut0)
-{
-    const int numpix = width * height;
-    const int bytes = 24 >> 3;
-    int i, j, y00, y01, y10, y11, u, v;
-    unsigned char *pY = pIn0;
-    unsigned char *pU = pY + numpix;
-    unsigned char *pV = pU + numpix / 4;
-    unsigned char *pOut = pOut0;
-
-    for (j = 0; j <= height - 2; j += 2) {
-        for (i = 0; i <= width - 2; i += 2) {
-            y00 = *pY;
-            y01 = *(pY + 1);
-            y10 = *(pY + width);
-            y11 = *(pY + width + 1);
-            u = (*pU++) - 128;
-            v = (*pV++) - 128;
-
-            move_420_block(y00, y01, y10, y11, u, v,
-                       width, pOut);
-
-            pY += 2;
-            pOut += 2 * bytes;
-
-        }
-        pY += width;
-        pOut += width * bytes;
-    }
-}
-
-// Consider a YUV420 image of 6x2 pixels.
-//
-// A B C D U1 U2
-// I J K L V1 V2
-//
-// The U1/V1 samples correspond to the ABIJ pixels.
-//     U2/V2 samples correspond to the CDKL pixels.
-//
-/* Converts from interlaced YUV420 to RGB24. */
-/* [FD] untested... */
-#ifdef HAVE_CAMV4L
-static void
-yuv420_to_rgb24(int width, int height,
-        unsigned char *pIn0, unsigned char *pOut0)
-{
-    const int bytes = 24 >> 3;
-    int i, j, y00, y01, y10, y11, u, v;
-    unsigned char *pY = pIn0;
-    unsigned char *pU = pY + 4;
-    unsigned char *pV = pU + width;
-    unsigned char *pOut = pOut0;
-
-    for (j = 0; j <= height - 2; j += 2) {
-        for (i = 0; i <= width - 4; i += 4) {
-            y00 = *pY;
-            y01 = *(pY + 1);
-            y10 = *(pY + width);
-            y11 = *(pY + width + 1);
-            u = (*pU++) - 128;
-            v = (*pV++) - 128;
-
-            move_420_block(y00, y01, y10, y11, u, v,
-                       width, pOut);
-
-            pY += 2;
-            pOut += 2 * bytes;
-
-            y00 = *pY;
-            y01 = *(pY + 1);
-            y10 = *(pY + width);
-            y11 = *(pY + width + 1);
-            u = (*pU++) - 128;
-            v = (*pV++) - 128;
-
-            move_420_block(y00, y01, y10, y11, u, v,
-                       width, pOut);
-
-            pY += 4; // skip UV
-            pOut += 2 * bytes;
-
-        }
-        pY += width;
-        pOut += width * bytes;
-    }
-}
-#endif //HAVE_CAMV4L
-
 // Consider a YUV411P image of 8x2 pixels.
 //
 // A plane of Y values as before.
@@ -1601,7 +1139,7 @@ yuv420_to_rgb24(int width, int height,
 /* [FD] untested... */
 static void
 yuv411p_to_rgb24(int width, int height,
-           unsigned char *pIn0, unsigned char *pOut0)
+        unsigned char *pIn0, unsigned char *pOut0)
 {
     const int numpix = width * height;
     const int bytes = 24 >> 3;
@@ -1621,7 +1159,7 @@ yuv411p_to_rgb24(int width, int height,
             v = (*pV++) - 128;
 
             move_411_block(y00, y01, y10, y11, u, v,
-                       width, pOut);
+                    width, pOut);
 
             pY += 4;
             pOut += 4 * bytes;
@@ -1630,122 +1168,6 @@ yuv411p_to_rgb24(int width, int height,
     }
 }
 
-/* convert from 4:2:2 YUYV interlaced to RGB24 */
-/* based on ccvt_yuyv_bgr32() from camstream */
-#define SAT(c) \
-        if (c & (~255)) { if (c < 0) c = 0; else c = 255; }
-
-#ifdef HAVE_CAMV4L2
-static void
-yuyv_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
-{
-   unsigned char *s;
-   unsigned char *d;
-   int l, c;
-   int r, g, b, cr, cg, cb, y1, y2;
-
-   l = height;
-   s = src;
-   d = dst;
-   while (l--) {
-      c = width >> 1;
-      while (c--) {
-         y1 = *s++;
-         cb = ((*s - 128) * 454) >> 8;
-         cg = (*s++ - 128) * 88;
-         y2 = *s++;
-         cr = ((*s - 128) * 359) >> 8;
-         cg = (cg + (*s++ - 128) * 183) >> 8;
-
-         r = y1 + cr;
-         b = y1 + cb;
-         g = y1 - cg;
-         SAT(r);
-         SAT(g);
-         SAT(b);
-
-     *d++ = b;
-     *d++ = g;
-     *d++ = r;
-
-         r = y2 + cr;
-         b = y2 + cb;
-         g = y2 - cg;
-         SAT(r);
-         SAT(g);
-         SAT(b);
-
-     *d++ = b;
-     *d++ = g;
-     *d++ = r;
-      }
-   }
-}
-
-static void
-uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
-{
-   unsigned char *s;
-   unsigned char *d;
-   int l, c;
-   int r, g, b, cr, cg, cb, y1, y2;
-
-   l = height;
-   s = src;
-   d = dst;
-   while (l--) {
-      c = width >> 1;
-      while (c--) {
-         cb = ((*s - 128) * 454) >> 8;
-         cg = (*s++ - 128) * 88;
-         y1 = *s++;
-         cr = ((*s - 128) * 359) >> 8;
-         cg = (cg + (*s++ - 128) * 183) >> 8;
-         y2 = *s++;
-
-         r = y1 + cr;
-         b = y1 + cb;
-         g = y1 - cg;
-         SAT(r);
-         SAT(g);
-         SAT(b);
-
-     *d++ = b;
-     *d++ = g;
-     *d++ = r;
-
-         r = y2 + cr;
-         b = y2 + cb;
-         g = y2 - cg;
-         SAT(r);
-         SAT(g);
-         SAT(b);
-
-     *d++ = b;
-     *d++ = g;
-     *d++ = r;
-      }
-   }
-}
-#endif //HAVE_CAMV4L2
-
-#ifdef HAVE_JPEG
-
-/* convert from mjpeg to rgb24 */
-static bool
-mjpeg_to_rgb24 (int width, int height,
-        unsigned char *src, int length,
-        unsigned char *dst)
-{
-  cv::Mat temp=cv::imdecode(cv::Mat(std::vector<uchar>(src, src + length)), 1);
-  if( !temp.data || temp.cols != width || temp.rows != height )
-    return false;
-  memcpy(dst, temp.data, width*height*3);
-  return true;
-}
-
-#endif
-
 /*
  * BAYER2RGB24 ROUTINE TAKEN FROM:
  *
@@ -1753,8 +1175,6 @@ mjpeg_to_rgb24 (int width, int height,
  * Takafumi Mizuno <taka-qce@ls-a.jp>
  *
  */
-
-#ifdef HAVE_CAMV4L2
 static void bayer2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
 {
     long int i;
@@ -1766,64 +1186,64 @@ static void bayer2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, uns
     size = WIDTH*HEIGHT;
 
     for ( i = 0; i < size; i++ ) {
-  if ( (i/WIDTH) % 2 == 0 ) {
-      if ( (i % 2) == 0 ) {
-    /* B */
-    if ( (i > WIDTH) && ((i % WIDTH) > 0) ) {
-        *scanpt++ = (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+
-         *(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;  /* R */
-        *scanpt++ = (*(rawpt-1)+*(rawpt+1)+
-         *(rawpt+WIDTH)+*(rawpt-WIDTH))/4;      /* G */
-        *scanpt++ = *rawpt;                                     /* B */
-    } else {
-        /* first line or left column */
-        *scanpt++ = *(rawpt+WIDTH+1);           /* R */
-        *scanpt++ = (*(rawpt+1)+*(rawpt+WIDTH))/2;      /* G */
-        *scanpt++ = *rawpt;                             /* B */
-    }
-      } else {
-    /* (B)G */
-    if ( (i > WIDTH) && ((i % WIDTH) < (WIDTH-1)) ) {
-        *scanpt++ = (*(rawpt+WIDTH)+*(rawpt-WIDTH))/2;  /* R */
-        *scanpt++ = *rawpt;                                     /* G */
-        *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;          /* B */
-    } else {
-        /* first line or right column */
-        *scanpt++ = *(rawpt+WIDTH);     /* R */
-        *scanpt++ = *rawpt;             /* G */
-        *scanpt++ = *(rawpt-1); /* B */
-    }
-      }
-  } else {
-      if ( (i % 2) == 0 ) {
-    /* G(R) */
-    if ( (i < (WIDTH*(HEIGHT-1))) && ((i % WIDTH) > 0) ) {
-        *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;          /* R */
-        *scanpt++ = *rawpt;                                     /* G */
-        *scanpt++ = (*(rawpt+WIDTH)+*(rawpt-WIDTH))/2;  /* B */
-    } else {
-        /* bottom line or left column */
-        *scanpt++ = *(rawpt+1);         /* R */
-        *scanpt++ = *rawpt;                     /* G */
-        *scanpt++ = *(rawpt-WIDTH);             /* B */
-    }
-      } else {
-    /* R */
-    if ( i < (WIDTH*(HEIGHT-1)) && ((i % WIDTH) < (WIDTH-1)) ) {
-        *scanpt++ = *rawpt;                                     /* R */
-        *scanpt++ = (*(rawpt-1)+*(rawpt+1)+
-         *(rawpt-WIDTH)+*(rawpt+WIDTH))/4;      /* G */
-        *scanpt++ = (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+
-         *(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;  /* B */
-    } else {
-        /* bottom line or right column */
-        *scanpt++ = *rawpt;                             /* R */
-        *scanpt++ = (*(rawpt-1)+*(rawpt-WIDTH))/2;      /* G */
-        *scanpt++ = *(rawpt-WIDTH-1);           /* B */
-    }
-      }
-  }
-  rawpt++;
+        if ( (i/WIDTH) % 2 == 0 ) {
+            if ( (i % 2) == 0 ) {
+                /* B */
+                if ( (i > WIDTH) && ((i % WIDTH) > 0) ) {
+                    *scanpt++ = (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+
+                            *(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;  /* R */
+                    *scanpt++ = (*(rawpt-1)+*(rawpt+1)+
+                            *(rawpt+WIDTH)+*(rawpt-WIDTH))/4;      /* G */
+                    *scanpt++ = *rawpt;                                     /* B */
+                } else {
+                    /* first line or left column */
+                    *scanpt++ = *(rawpt+WIDTH+1);           /* R */
+                    *scanpt++ = (*(rawpt+1)+*(rawpt+WIDTH))/2;      /* G */
+                    *scanpt++ = *rawpt;                             /* B */
+                }
+            } else {
+                /* (B)G */
+                if ( (i > WIDTH) && ((i % WIDTH) < (WIDTH-1)) ) {
+                    *scanpt++ = (*(rawpt+WIDTH)+*(rawpt-WIDTH))/2;  /* R */
+                    *scanpt++ = *rawpt;                                     /* G */
+                    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;          /* B */
+                } else {
+                    /* first line or right column */
+                    *scanpt++ = *(rawpt+WIDTH);     /* R */
+                    *scanpt++ = *rawpt;             /* G */
+                    *scanpt++ = *(rawpt-1); /* B */
+                }
+            }
+        } else {
+            if ( (i % 2) == 0 ) {
+                /* G(R) */
+                if ( (i < (WIDTH*(HEIGHT-1))) && ((i % WIDTH) > 0) ) {
+                    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;          /* R */
+                    *scanpt++ = *rawpt;                                     /* G */
+                    *scanpt++ = (*(rawpt+WIDTH)+*(rawpt-WIDTH))/2;  /* B */
+                } else {
+                    /* bottom line or left column */
+                    *scanpt++ = *(rawpt+1);         /* R */
+                    *scanpt++ = *rawpt;                     /* G */
+                    *scanpt++ = *(rawpt-WIDTH);             /* B */
+                }
+            } else {
+                /* R */
+                if ( i < (WIDTH*(HEIGHT-1)) && ((i % WIDTH) < (WIDTH-1)) ) {
+                    *scanpt++ = *rawpt;                                     /* R */
+                    *scanpt++ = (*(rawpt-1)+*(rawpt+1)+
+                            *(rawpt-WIDTH)+*(rawpt+WIDTH))/4;      /* G */
+                    *scanpt++ = (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+
+                            *(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;  /* B */
+                } else {
+                    /* bottom line or right column */
+                    *scanpt++ = *rawpt;                             /* R */
+                    *scanpt++ = (*(rawpt-1)+*(rawpt-WIDTH))/2;      /* G */
+                    *scanpt++ = *(rawpt-WIDTH-1);           /* B */
+                }
+            }
+        }
+        rawpt++;
     }
 
 }
@@ -1856,11 +1276,11 @@ static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, uns
                     *scanpt++ = (*(rawpt-WIDTH) + *(rawpt+WIDTH))/2;      /* B */
                 } else
                 {
-                  /* first line or left column */
+                    /* first line or left column */
 
-                  *scanpt++ = *(rawpt+1);           /* R */
-                  *scanpt++ = *(rawpt);             /* G */
-                  *scanpt++ =  *(rawpt+WIDTH);      /* B */
+                    *scanpt++ = *(rawpt+1);           /* R */
+                    *scanpt++ = *(rawpt);             /* G */
+                    *scanpt++ =  *(rawpt+WIDTH);      /* B */
                 }
             } else //odd pixel
             {
@@ -1919,9 +1339,9 @@ static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, uns
 #define CLAMP(x)        ((x)<0?0:((x)>255)?255:(x))
 
 typedef struct {
-  int is_abs;
-  int len;
-  int val;
+    int is_abs;
+    int len;
+    int val;
 } code_table_t;
 
 
@@ -1938,68 +1358,68 @@ static int init_done = 0;
   Each entry at index x in the table represents the codeword
   present at the MSB of byte x.
 
-*/
+ */
 static void sonix_decompress_init(void)
 {
-  int i;
-  int is_abs, val, len;
+    int i;
+    int is_abs, val, len;
 
-  for (i = 0; i < 256; i++) {
-    is_abs = 0;
-    val = 0;
-    len = 0;
-    if ((i & 0x80) == 0) {
-      /* code 0 */
-      val = 0;
-      len = 1;
+    for (i = 0; i < 256; i++) {
+        is_abs = 0;
+        val = 0;
+        len = 0;
+        if ((i & 0x80) == 0) {
+            /* code 0 */
+            val = 0;
+            len = 1;
+        }
+        else if ((i & 0xE0) == 0x80) {
+            /* code 100 */
+            val = +4;
+            len = 3;
+        }
+        else if ((i & 0xE0) == 0xA0) {
+            /* code 101 */
+            val = -4;
+            len = 3;
+        }
+        else if ((i & 0xF0) == 0xD0) {
+            /* code 1101 */
+            val = +11;
+            len = 4;
+        }
+        else if ((i & 0xF0) == 0xF0) {
+            /* code 1111 */
+            val = -11;
+            len = 4;
+        }
+        else if ((i & 0xF8) == 0xC8) {
+            /* code 11001 */
+            val = +20;
+            len = 5;
+        }
+        else if ((i & 0xFC) == 0xC0) {
+            /* code 110000 */
+            val = -20;
+            len = 6;
+        }
+        else if ((i & 0xFC) == 0xC4) {
+            /* code 110001xx: unknown */
+            val = 0;
+            len = 8;
+        }
+        else if ((i & 0xF0) == 0xE0) {
+            /* code 1110xxxx */
+            is_abs = 1;
+            val = (i & 0x0F) << 4;
+            len = 8;
+        }
+        table[i].is_abs = is_abs;
+        table[i].val = val;
+        table[i].len = len;
     }
-    else if ((i & 0xE0) == 0x80) {
-      /* code 100 */
-      val = +4;
-      len = 3;
-    }
-    else if ((i & 0xE0) == 0xA0) {
-      /* code 101 */
-      val = -4;
-      len = 3;
-    }
-    else if ((i & 0xF0) == 0xD0) {
-      /* code 1101 */
-      val = +11;
-      len = 4;
-    }
-    else if ((i & 0xF0) == 0xF0) {
-      /* code 1111 */
-      val = -11;
-      len = 4;
-    }
-    else if ((i & 0xF8) == 0xC8) {
-      /* code 11001 */
-      val = +20;
-      len = 5;
-    }
-    else if ((i & 0xFC) == 0xC0) {
-      /* code 110000 */
-      val = -20;
-      len = 6;
-    }
-    else if ((i & 0xFC) == 0xC4) {
-      /* code 110001xx: unknown */
-      val = 0;
-      len = 8;
-    }
-    else if ((i & 0xF0) == 0xE0) {
-      /* code 1110xxxx */
-      is_abs = 1;
-      val = (i & 0x0F) << 4;
-      len = 8;
-    }
-    table[i].is_abs = is_abs;
-    table[i].val = val;
-    table[i].len = len;
-  }
 
-  init_done = 1;
+    init_done = 1;
 }
 
 
@@ -2016,900 +1436,713 @@ static void sonix_decompress_init(void)
   Returns 0 if the operation was successful.
   Returns <0 if operation failed.
 
-*/
+ */
 static int sonix_decompress(int width, int height, unsigned char *inp, unsigned char *outp)
 {
-  int row, col;
-  int val;
-  int bitpos;
-  unsigned char code;
-  unsigned char *addr;
+    int row, col;
+    int val;
+    int bitpos;
+    unsigned char code;
+    unsigned char *addr;
 
-  if (!init_done) {
-    /* do sonix_decompress_init first! */
-    return -1;
-  }
-
-  bitpos = 0;
-  for (row = 0; row < height; row++) {
-
-    col = 0;
-
-
-
-    /* first two pixels in first two rows are stored as raw 8-bit */
-    if (row < 2) {
-      addr = inp + (bitpos >> 3);
-      code = (addr[0] << (bitpos & 7)) | (addr[1] >> (8 - (bitpos & 7)));
-      bitpos += 8;
-      *outp++ = code;
-
-      addr = inp + (bitpos >> 3);
-      code = (addr[0] << (bitpos & 7)) | (addr[1] >> (8 - (bitpos & 7)));
-      bitpos += 8;
-      *outp++ = code;
-
-      col += 2;
+    if (!init_done) {
+        /* do sonix_decompress_init first! */
+        return -1;
     }
 
-    while (col < width) {
-      /* get bitcode from bitstream */
-      addr = inp + (bitpos >> 3);
-      code = (addr[0] << (bitpos & 7)) | (addr[1] >> (8 - (bitpos & 7)));
+    bitpos = 0;
+    for (row = 0; row < height; row++) {
 
-      /* update bit position */
-      bitpos += table[code].len;
+        col = 0;
 
-      /* calculate pixel value */
-      val = table[code].val;
-      if (!table[code].is_abs) {
-        /* value is relative to top and left pixel */
-        if (col < 2) {
-          /* left column: relative to top pixel */
-          val += outp[-2*width];
+
+
+        /* first two pixels in first two rows are stored as raw 8-bit */
+        if (row < 2) {
+            addr = inp + (bitpos >> 3);
+            code = (addr[0] << (bitpos & 7)) | (addr[1] >> (8 - (bitpos & 7)));
+            bitpos += 8;
+            *outp++ = code;
+
+            addr = inp + (bitpos >> 3);
+            code = (addr[0] << (bitpos & 7)) | (addr[1] >> (8 - (bitpos & 7)));
+            bitpos += 8;
+            *outp++ = code;
+
+            col += 2;
         }
-        else if (row < 2) {
-          /* top row: relative to left pixel */
-          val += outp[-2];
+
+        while (col < width) {
+            /* get bitcode from bitstream */
+            addr = inp + (bitpos >> 3);
+            code = (addr[0] << (bitpos & 7)) | (addr[1] >> (8 - (bitpos & 7)));
+
+            /* update bit position */
+            bitpos += table[code].len;
+
+            /* calculate pixel value */
+            val = table[code].val;
+            if (!table[code].is_abs) {
+                /* value is relative to top and left pixel */
+                if (col < 2) {
+                    /* left column: relative to top pixel */
+                    val += outp[-2*width];
+                }
+                else if (row < 2) {
+                    /* top row: relative to left pixel */
+                    val += outp[-2];
+                }
+                else {
+                    /* main area: average of left pixel and top pixel */
+                    val += (outp[-2] + outp[-2*width]) / 2;
+                }
+            }
+
+            /* store pixel */
+            *outp++ = CLAMP(val);
+            col++;
         }
-        else {
-          /* main area: average of left pixel and top pixel */
-          val += (outp[-2] + outp[-2*width]) / 2;
-        }
-      }
-
-      /* store pixel */
-      *outp++ = CLAMP(val);
-      col++;
-    }
-  }
-
-  return 0;
-}
-#endif //HAVE_CAMV4L2
-
-static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
-
-#ifdef HAVE_CAMV4L2
-  if (V4L2_SUPPORT == 0)
-#endif /* HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-  {
-
-    /* [FD] this really belongs here */
-    if (ioctl(capture->deviceHandle, VIDIOCSYNC, &capture->mmaps[capture->bufferIndex].frame) == -1) {
-      fprintf( stderr, "VIDEOIO ERROR: V4L: Could not SYNC to video stream. %s\n", strerror(errno));
-    }
-
-  }
-#endif /* HAVE_CAMV4L */
-
-   /* Now get what has already been captured as a IplImage return */
-
-   /* First, reallocate imageData if the frame size changed */
-
-#ifdef HAVE_CAMV4L2
-
-  if (V4L2_SUPPORT == 1)
-  {
-
-    if(((unsigned long)capture->frame.width != capture->form.fmt.pix.width)
-       || ((unsigned long)capture->frame.height != capture->form.fmt.pix.height)) {
-        cvFree(&capture->frame.imageData);
-        cvInitImageHeader( &capture->frame,
-              cvSize( capture->form.fmt.pix.width,
-                  capture->form.fmt.pix.height ),
-              IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
-       capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
-    }
-
-  }
-#endif /* HAVE_CAMV4L2 */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-    else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-  {
-
-    if((capture->frame.width != capture->mmaps[capture->bufferIndex].width)
-      || (capture->frame.height != capture->mmaps[capture->bufferIndex].height)) {
-       cvFree(&capture->frame.imageData);
-       cvInitImageHeader( &capture->frame,
-              cvSize( capture->captureWindow.width,
-                  capture->captureWindow.height ),
-              IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
-       capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
-    }
-
-  }
-#endif /* HAVE_CAMV4L */
-
-#ifdef HAVE_CAMV4L2
-
-  if (V4L2_SUPPORT == 1)
-  {
-    switch (capture->palette)
-    {
-    case PALETTE_BGR24:
-        memcpy((char *)capture->frame.imageData,
-               (char *)capture->buffers[capture->bufferIndex].start,
-               capture->frame.imageSize);
-        break;
-
-    case PALETTE_YVU420:
-        yuv420p_to_rgb24(capture->form.fmt.pix.width,
-                 capture->form.fmt.pix.height,
-                 (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-                 (unsigned char*)capture->frame.imageData);
-        break;
-
-    case PALETTE_YUV411P:
-        yuv411p_to_rgb24(capture->form.fmt.pix.width,
-                 capture->form.fmt.pix.height,
-                 (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-                 (unsigned char*)capture->frame.imageData);
-        break;
-#ifdef HAVE_JPEG
-    case PALETTE_MJPEG:
-        if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
-                    capture->form.fmt.pix.height,
-                    (unsigned char*)(capture->buffers[capture->bufferIndex]
-                             .start),
-                    capture->buffers[capture->bufferIndex].length,
-                    (unsigned char*)capture->frame.imageData))
-          return 0;
-        break;
-#endif
-
-    case PALETTE_YUYV:
-        yuyv_to_rgb24(capture->form.fmt.pix.width,
-                  capture->form.fmt.pix.height,
-                  (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-                  (unsigned char*)capture->frame.imageData);
-        break;
-    case PALETTE_UYVY:
-        uyvy_to_rgb24(capture->form.fmt.pix.width,
-                  capture->form.fmt.pix.height,
-                  (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-                  (unsigned char*)capture->frame.imageData);
-        break;
-    case PALETTE_SBGGR8:
-        bayer2rgb24(capture->form.fmt.pix.width,
-                capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[capture->bufferIndex].start,
-                (unsigned char*)capture->frame.imageData);
-        break;
-
-    case PALETTE_SN9C10X:
-        sonix_decompress_init();
-        sonix_decompress(capture->form.fmt.pix.width,
-                 capture->form.fmt.pix.height,
-                 (unsigned char*)capture->buffers[capture->bufferIndex].start,
-                 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start);
-
-        bayer2rgb24(capture->form.fmt.pix.width,
-                capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
-                (unsigned char*)capture->frame.imageData);
-        break;
-
-    case PALETTE_SGBRG:
-        sgbrg2rgb24(capture->form.fmt.pix.width,
-                capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
-                (unsigned char*)capture->frame.imageData);
-        break;
-    }
-  }
-#endif /* HAVE_CAMV4L2 */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-    else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-  {
-
-    switch(capture->imageProperties.palette)
-    {
-    case VIDEO_PALETTE_RGB24:
-        memcpy((char *)capture->frame.imageData,
-           (char *)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
-           capture->frame.imageSize);
-        break;
-    case VIDEO_PALETTE_YUV420P:
-        yuv420p_to_rgb24(capture->captureWindow.width,
-             capture->captureWindow.height,
-             (unsigned char*)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
-             (unsigned char*)capture->frame.imageData);
-        break;
-    case VIDEO_PALETTE_YUV420:
-        yuv420_to_rgb24(capture->captureWindow.width,
-          capture->captureWindow.height,
-          (unsigned char*)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
-          (unsigned char*)capture->frame.imageData);
-        break;
-    case VIDEO_PALETTE_YUV411P:
-        yuv411p_to_rgb24(capture->captureWindow.width,
-          capture->captureWindow.height,
-          (unsigned char*)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
-          (unsigned char*)capture->frame.imageData);
-        break;
-    default:
-        fprintf( stderr,
-                 "VIDEOIO ERROR: V4L: Cannot convert from palette %d to RGB\n",
-                 capture->imageProperties.palette);
-
-        return 0;
-    }
-
-  }
-#endif /* HAVE_CAMV4L */
-
-   return(&capture->frame);
-}
-
-static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
-                                     int property_id ) {
-
-#ifdef HAVE_CAMV4L2
-
-#ifdef HAVE_CAMV4L
-  if (V4L2_SUPPORT == 1)
-#endif
-  {
-
-      /* default value for min and max */
-      int v4l2_min = 0;
-      int v4l2_max = 255;
-
-      CLEAR (capture->form);
-      capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-      if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
-          /* display an error message, and return an error code */
-          perror ("VIDIOC_G_FMT");
-          return -1;
-      }
-
-      switch (property_id) {
-      case CV_CAP_PROP_FRAME_WIDTH:
-          return capture->form.fmt.pix.width;
-      case CV_CAP_PROP_FRAME_HEIGHT:
-          return capture->form.fmt.pix.height;
-      }
-
-      /* initialize the control structure */
-
-      switch (property_id) {
-      case CV_CAP_PROP_POS_MSEC:
-          if (capture->FirstCapture) {
-            return 0;
-          } else {
-            return 1000 * capture->timestamp.tv_sec + ((double) capture->timestamp.tv_usec) / 1000;
-          }
-          break;
-      case CV_CAP_PROP_BRIGHTNESS:
-          capture->control.id = V4L2_CID_BRIGHTNESS;
-          break;
-      case CV_CAP_PROP_CONTRAST:
-          capture->control.id = V4L2_CID_CONTRAST;
-          break;
-      case CV_CAP_PROP_SATURATION:
-          capture->control.id = V4L2_CID_SATURATION;
-          break;
-      case CV_CAP_PROP_HUE:
-          capture->control.id = V4L2_CID_HUE;
-          break;
-      case CV_CAP_PROP_GAIN:
-          capture->control.id = V4L2_CID_GAIN;
-          break;
-      case CV_CAP_PROP_EXPOSURE:
-          capture->control.id = V4L2_CID_EXPOSURE;
-          break;
-      default:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L2: getting property #%d is not supported\n",
-                property_id);
-        return -1;
-      }
-
-      if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_CTRL,
-                        &capture->control)) {
-
-          fprintf( stderr, "VIDEOIO ERROR: V4L2: ");
-          switch (property_id) {
-          case CV_CAP_PROP_BRIGHTNESS:
-              fprintf (stderr, "Brightness");
-              break;
-          case CV_CAP_PROP_CONTRAST:
-              fprintf (stderr, "Contrast");
-              break;
-          case CV_CAP_PROP_SATURATION:
-              fprintf (stderr, "Saturation");
-              break;
-          case CV_CAP_PROP_HUE:
-              fprintf (stderr, "Hue");
-              break;
-          case CV_CAP_PROP_GAIN:
-              fprintf (stderr, "Gain");
-              break;
-          case CV_CAP_PROP_EXPOSURE:
-              fprintf (stderr, "Exposure");
-              break;
-          }
-          fprintf (stderr, " is not supported by your device\n");
-
-          return -1;
-      }
-
-      /* get the min/max values */
-      switch (property_id) {
-
-      case CV_CAP_PROP_BRIGHTNESS:
-          v4l2_min = capture->v4l2_brightness_min;
-          v4l2_max = capture->v4l2_brightness_max;
-          break;
-      case CV_CAP_PROP_CONTRAST:
-          v4l2_min = capture->v4l2_contrast_min;
-          v4l2_max = capture->v4l2_contrast_max;
-          break;
-      case CV_CAP_PROP_SATURATION:
-          v4l2_min = capture->v4l2_saturation_min;
-          v4l2_max = capture->v4l2_saturation_max;
-          break;
-      case CV_CAP_PROP_HUE:
-          v4l2_min = capture->v4l2_hue_min;
-          v4l2_max = capture->v4l2_hue_max;
-          break;
-      case CV_CAP_PROP_GAIN:
-          v4l2_min = capture->v4l2_gain_min;
-          v4l2_max = capture->v4l2_gain_max;
-          break;
-      case CV_CAP_PROP_EXPOSURE:
-          v4l2_min = capture->v4l2_exposure_min;
-          v4l2_max = capture->v4l2_exposure_max;
-          break;
-      }
-
-      /* all was OK, so convert to 0.0 - 1.0 range, and return the value */
-      return ((float)capture->control.value - v4l2_min + 1) / (v4l2_max - v4l2_min);
-
-  }
-#endif /* HAVE_CAMV4L2 */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-    else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-  {
-
-    int retval = -1;
-
-    if (ioctl (capture->deviceHandle,
-               VIDIOCGWIN, &capture->captureWindow) < 0) {
-        fprintf (stderr,
-                 "VIDEOIO ERROR: V4L: "
-                 "Unable to determine size of incoming image\n");
-        icvCloseCAM_V4L(capture);
-        return -1;
-    }
-
-    switch (property_id) {
-    case CV_CAP_PROP_FRAME_WIDTH:
-        retval = capture->captureWindow.width;
-        break;
-    case CV_CAP_PROP_FRAME_HEIGHT:
-        retval = capture->captureWindow.height;
-        break;
-    case CV_CAP_PROP_BRIGHTNESS:
-        retval = capture->imageProperties.brightness;
-        break;
-    case CV_CAP_PROP_CONTRAST:
-        retval = capture->imageProperties.contrast;
-        break;
-    case CV_CAP_PROP_SATURATION:
-        retval = capture->imageProperties.colour;
-        break;
-    case CV_CAP_PROP_HUE:
-        retval = capture->imageProperties.hue;
-        break;
-    case CV_CAP_PROP_GAIN:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L: Gain control in V4L is not supported\n");
-        return -1;
-        break;
-    case CV_CAP_PROP_EXPOSURE:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L: Exposure control in V4L is not supported\n");
-        return -1;
-        break;
-    default:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L: getting property #%d is not supported\n",
-                property_id);
-    }
-
-    if (retval == -1) {
-        /* there was a problem */
-        return -1;
-    }
-
-    /* all was OK, so convert to 0.0 - 1.0 range, and return the value */
-    return float (retval) / 0xFFFF;
-
-  }
-#endif /* HAVE_CAMV4L */
-
-};
-
-static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
-
-#ifdef HAVE_CAMV4L2
-
-  if (V4L2_SUPPORT == 1)
-  {
-
-    CLEAR (capture->cropcap);
-    capture->cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-    if (ioctl (capture->deviceHandle, VIDIOC_CROPCAP, &capture->cropcap) < 0) {
-        fprintf(stderr, "VIDEOIO ERROR: V4L/V4L2: VIDIOC_CROPCAP\n");
-    } else {
-
-        CLEAR (capture->crop);
-        capture->crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        capture->crop.c= capture->cropcap.defrect;
-
-        /* set the crop area, but don't exit if the device don't support croping */
-        if (ioctl (capture->deviceHandle, VIDIOC_S_CROP, &capture->crop) < 0) {
-            fprintf(stderr, "VIDEOIO ERROR: V4L/V4L2: VIDIOC_S_CROP\n");
-        }
-    }
-
-    CLEAR (capture->form);
-    capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-    /* read the current setting, mainly to retreive the pixelformat information */
-    ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form);
-
-    /* set the values we want to change */
-    capture->form.fmt.pix.width = w;
-    capture->form.fmt.pix.height = h;
-    capture->form.fmt.win.chromakey = 0;
-    capture->form.fmt.win.field = V4L2_FIELD_ANY;
-    capture->form.fmt.win.clips = 0;
-    capture->form.fmt.win.clipcount = 0;
-    capture->form.fmt.pix.field = V4L2_FIELD_ANY;
-
-    /* ask the device to change the size
-     * don't test if the set of the size is ok, because some device
-     * don't allow changing the size, and we will get the real size
-     * later */
-    ioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form);
-
-    /* try to set framerate to 30 fps */
-    struct v4l2_streamparm setfps;
-    memset (&setfps, 0, sizeof(struct v4l2_streamparm));
-    setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    setfps.parm.capture.timeperframe.numerator = 1;
-    setfps.parm.capture.timeperframe.denominator = 30;
-    ioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
-
-    /* we need to re-initialize some things, like buffers, because the size has
-     * changed */
-    capture->FirstCapture = 1;
-
-    /* Get window info again, to get the real value */
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form))
-    {
-      fprintf(stderr, "VIDEOIO ERROR: V4L/V4L2: Could not obtain specifics of capture window.\n\n");
-
-      icvCloseCAM_V4L(capture);
-
-      return 0;
     }
 
     return 0;
-
-  }
-#endif /* HAVE_CAMV4L2 */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-    else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-  {
-
-    if (capture==0) return 0;
-     if (w>capture->capability.maxwidth) {
-       w=capture->capability.maxwidth;
-     }
-     if (h>capture->capability.maxheight) {
-       h=capture->capability.maxheight;
-     }
-
-     capture->captureWindow.width=w;
-     capture->captureWindow.height=h;
-
-     if (ioctl(capture->deviceHandle, VIDIOCSWIN, &capture->captureWindow) < 0) {
-       icvCloseCAM_V4L(capture);
-       return 0;
-     }
-
-     if (ioctl(capture->deviceHandle, VIDIOCGWIN, &capture->captureWindow) < 0) {
-       icvCloseCAM_V4L(capture);
-       return 0;
-     }
-
-     capture->FirstCapture = 1;
-
-  }
-#endif /* HAVE_CAMV4L */
-
-  return 0;
-
 }
 
-static int icvSetControl (CvCaptureCAM_V4L* capture,
-                          int property_id, double value) {
+void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
+{
+    cv::Size imageSize(form.fmt.pix.width, form.fmt.pix.height);
+    // Not found conversion
+    switch (palette)
+    {
+    case V4L2_PIX_FMT_YUV411P:
+        yuv411p_to_rgb24(imageSize.width, imageSize.height,
+                (unsigned char*)(currentBuffer.start),
+                (unsigned char*)frame.imageData);
+        return;
+    case V4L2_PIX_FMT_SBGGR8:
+        bayer2rgb24(imageSize.width, imageSize.height,
+                (unsigned char*)currentBuffer.start,
+                (unsigned char*)frame.imageData);
+        return;
 
-  /* limitation of the input value */
-  if (value < 0.0) {
-    value = 0.0;
-  } else if (value > 1.0) {
-    value = 1.0;
-  }
+    case V4L2_PIX_FMT_SN9C10X:
+        sonix_decompress_init();
+        sonix_decompress(imageSize.width, imageSize.height,
+                (unsigned char*)currentBuffer.start,
+                (unsigned char*)buffers[MAX_V4L_BUFFERS].start);
 
-#ifdef HAVE_CAMV4L2
-
-  if (V4L2_SUPPORT == 1)
-  {
-
-    /* default value for min and max */
-    int v4l2_min = 0;
-    int v4l2_max = 255;
-
-    /* initialisations */
-    CLEAR (capture->control);
-
-    /* set which control we want to set */
-    switch (property_id) {
-
-    case CV_CAP_PROP_BRIGHTNESS:
-        capture->control.id = V4L2_CID_BRIGHTNESS;
-        break;
-    case CV_CAP_PROP_CONTRAST:
-        capture->control.id = V4L2_CID_CONTRAST;
-        break;
-    case CV_CAP_PROP_SATURATION:
-        capture->control.id = V4L2_CID_SATURATION;
-        break;
-    case CV_CAP_PROP_HUE:
-        capture->control.id = V4L2_CID_HUE;
-        break;
-    case CV_CAP_PROP_GAIN:
-        capture->control.id = V4L2_CID_GAIN;
-        break;
-    case CV_CAP_PROP_EXPOSURE:
-        capture->control.id = V4L2_CID_EXPOSURE;
-        break;
+        bayer2rgb24(imageSize.width, imageSize.height,
+                (unsigned char*)buffers[MAX_V4L_BUFFERS].start,
+                (unsigned char*)frame.imageData);
+        return;
+    case V4L2_PIX_FMT_SGBRG8:
+        sgbrg2rgb24(imageSize.width, imageSize.height,
+                (unsigned char*)currentBuffer.start,
+                (unsigned char*)frame.imageData);
+        return;
     default:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L2: setting property #%d is not supported\n",
-                property_id);
-        return -1;
-    }
-
-    /* get the min and max values */
-    if (-1 == ioctl (capture->deviceHandle,
-                      VIDIOC_G_CTRL, &capture->control)) {
-//          perror ("VIDIOC_G_CTRL for getting min/max values");
-          return -1;
-    }
-
-    /* get the min/max values */
-    switch (property_id) {
-
-    case CV_CAP_PROP_BRIGHTNESS:
-        v4l2_min = capture->v4l2_brightness_min;
-        v4l2_max = capture->v4l2_brightness_max;
-        break;
-    case CV_CAP_PROP_CONTRAST:
-        v4l2_min = capture->v4l2_contrast_min;
-        v4l2_max = capture->v4l2_contrast_max;
-        break;
-    case CV_CAP_PROP_SATURATION:
-        v4l2_min = capture->v4l2_saturation_min;
-        v4l2_max = capture->v4l2_saturation_max;
-        break;
-    case CV_CAP_PROP_HUE:
-        v4l2_min = capture->v4l2_hue_min;
-        v4l2_max = capture->v4l2_hue_max;
-        break;
-    case CV_CAP_PROP_GAIN:
-        v4l2_min = capture->v4l2_gain_min;
-        v4l2_max = capture->v4l2_gain_max;
-        break;
-    case CV_CAP_PROP_EXPOSURE:
-        v4l2_min = capture->v4l2_exposure_min;
-        v4l2_max = capture->v4l2_exposure_max;
         break;
     }
-
-    /* initialisations */
-    CLEAR (capture->control);
-
-    /* set which control we want to set */
-    switch (property_id) {
-
-    case CV_CAP_PROP_BRIGHTNESS:
-        capture->control.id = V4L2_CID_BRIGHTNESS;
+    // Converted by cvtColor or imdecode
+    cv::Mat destination(imageSize, CV_8UC3, frame.imageData);
+    switch (palette) {
+    case V4L2_PIX_FMT_YVU420:
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, currentBuffer.start), destination,
+                     COLOR_YUV2BGR_YV12);
+        return;
+    case V4L2_PIX_FMT_YUV420:
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, currentBuffer.start), destination,
+                     COLOR_YUV2BGR_IYUV);
+        return;
+    case V4L2_PIX_FMT_NV12:
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, currentBuffer.start), destination,
+                     COLOR_YUV2RGB_NV12);
+        return;
+    case V4L2_PIX_FMT_NV21:
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, currentBuffer.start), destination,
+                     COLOR_YUV2RGB_NV21);
+        return;
+#ifdef HAVE_JPEG
+    case V4L2_PIX_FMT_MJPEG:
+    case V4L2_PIX_FMT_JPEG:
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): decoding JPEG frame: size=" << currentBuffer.buffer.bytesused);
+        cv::imdecode(Mat(1, currentBuffer.buffer.bytesused, CV_8U, currentBuffer.start), IMREAD_COLOR, &destination);
+        return;
+#endif
+    case V4L2_PIX_FMT_YUYV:
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC2, currentBuffer.start), destination, COLOR_YUV2BGR_YUYV);
+        return;
+    case V4L2_PIX_FMT_UYVY:
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC2, currentBuffer.start), destination, COLOR_YUV2BGR_UYVY);
+        return;
+    case V4L2_PIX_FMT_RGB24:
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC3, currentBuffer.start), destination, COLOR_RGB2BGR);
+        return;
+    case V4L2_PIX_FMT_Y16:
+    {
+        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
+        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 256);
+        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_Y12:
+    {
+        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
+        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 16);
+        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_Y10:
+    {
+        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
+        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 4);
+        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_GREY:
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, currentBuffer.start), destination, COLOR_GRAY2BGR);
         break;
-    case CV_CAP_PROP_CONTRAST:
-        capture->control.id = V4L2_CID_CONTRAST;
-        break;
-    case CV_CAP_PROP_SATURATION:
-        capture->control.id = V4L2_CID_SATURATION;
-        break;
-    case CV_CAP_PROP_HUE:
-        capture->control.id = V4L2_CID_HUE;
-        break;
-    case CV_CAP_PROP_GAIN:
-        capture->control.id = V4L2_CID_GAIN;
-        break;
-    case CV_CAP_PROP_EXPOSURE:
-        capture->control.id = V4L2_CID_EXPOSURE;
-        break;
+    case V4L2_PIX_FMT_BGR24:
     default:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L2: setting property #%d is not supported\n",
-                property_id);
-        return -1;
+        memcpy((char *)frame.imageData, (char *)currentBuffer.start,
+               std::min(frame.imageSize, (int)currentBuffer.buffer.bytesused));
+        break;
     }
+}
 
-    /* set the value we want to set to the scaled the value */
-    capture->control.value = (int)(value * (v4l2_max - v4l2_min) + v4l2_min);
+static inline cv::String capPropertyName(int prop)
+{
+    switch (prop) {
+    case cv::CAP_PROP_POS_MSEC:
+        return "pos_msec";
+    case cv::CAP_PROP_POS_FRAMES:
+        return "pos_frames";
+    case cv::CAP_PROP_POS_AVI_RATIO:
+        return "pos_avi_ratio";
+    case cv::CAP_PROP_FRAME_COUNT:
+        return "frame_count";
+    case cv::CAP_PROP_FRAME_HEIGHT:
+        return "height";
+    case cv::CAP_PROP_FRAME_WIDTH:
+        return "width";
+    case cv::CAP_PROP_CONVERT_RGB:
+        return "convert_rgb";
+    case cv::CAP_PROP_FORMAT:
+        return "format";
+    case cv::CAP_PROP_MODE:
+        return "mode";
+    case cv::CAP_PROP_FOURCC:
+        return "fourcc";
+    case cv::CAP_PROP_AUTO_EXPOSURE:
+        return "auto_exposure";
+    case cv::CAP_PROP_EXPOSURE:
+        return "exposure";
+    case cv::CAP_PROP_TEMPERATURE:
+        return "temperature";
+    case cv::CAP_PROP_FPS:
+        return "fps";
+    case cv::CAP_PROP_BRIGHTNESS:
+        return "brightness";
+    case cv::CAP_PROP_CONTRAST:
+        return "contrast";
+    case cv::CAP_PROP_SATURATION:
+        return "saturation";
+    case cv::CAP_PROP_HUE:
+        return "hue";
+    case cv::CAP_PROP_GAIN:
+        return "gain";
+    case cv::CAP_PROP_RECTIFICATION:
+        return "rectification";
+    case cv::CAP_PROP_MONOCHROME:
+        return "monochrome";
+    case cv::CAP_PROP_SHARPNESS:
+        return "sharpness";
+    case cv::CAP_PROP_GAMMA:
+        return "gamma";
+    case cv::CAP_PROP_TRIGGER:
+        return "trigger";
+    case cv::CAP_PROP_TRIGGER_DELAY:
+        return "trigger_delay";
+    case cv::CAP_PROP_WHITE_BALANCE_RED_V:
+        return "white_balance_red_v";
+    case cv::CAP_PROP_ZOOM:
+        return "zoom";
+    case cv::CAP_PROP_FOCUS:
+        return "focus";
+    case cv::CAP_PROP_GUID:
+        return "guid";
+    case cv::CAP_PROP_ISO_SPEED:
+        return "iso_speed";
+    case cv::CAP_PROP_BACKLIGHT:
+        return "backlight";
+    case cv::CAP_PROP_PAN:
+        return "pan";
+    case cv::CAP_PROP_TILT:
+        return "tilt";
+    case cv::CAP_PROP_ROLL:
+        return "roll";
+    case cv::CAP_PROP_IRIS:
+        return "iris";
+    case cv::CAP_PROP_SETTINGS:
+        return "dialog_settings";
+    case cv::CAP_PROP_BUFFERSIZE:
+        return "buffersize";
+    case cv::CAP_PROP_AUTOFOCUS:
+        return "autofocus";
+    case cv::CAP_PROP_WHITE_BALANCE_BLUE_U:
+        return "white_balance_blue_u";
+    case cv::CAP_PROP_SAR_NUM:
+        return "sar_num";
+    case cv::CAP_PROP_SAR_DEN:
+        return "sar_den";
+    case CAP_PROP_AUTO_WB:
+        return "auto wb";
+    case CAP_PROP_WB_TEMPERATURE:
+        return "wb temperature";
+    default:
+        return "unknown";
+    }
+}
+
+static inline int capPropertyToV4L2(int prop)
+{
+    switch (prop) {
+    case cv::CAP_PROP_FPS:
+        return -1;
+    case cv::CAP_PROP_FOURCC:
+        return -1;
+    case cv::CAP_PROP_FRAME_COUNT:
+        return V4L2_CID_MPEG_VIDEO_B_FRAMES;
+    case cv::CAP_PROP_FORMAT:
+        return -1;
+    case cv::CAP_PROP_MODE:
+        return -1;
+    case cv::CAP_PROP_BRIGHTNESS:
+        return V4L2_CID_BRIGHTNESS;
+    case cv::CAP_PROP_CONTRAST:
+        return V4L2_CID_CONTRAST;
+    case cv::CAP_PROP_SATURATION:
+        return V4L2_CID_SATURATION;
+    case cv::CAP_PROP_HUE:
+        return V4L2_CID_HUE;
+    case cv::CAP_PROP_GAIN:
+        return V4L2_CID_GAIN;
+    case cv::CAP_PROP_EXPOSURE:
+        return V4L2_CID_EXPOSURE_ABSOLUTE;
+    case cv::CAP_PROP_CONVERT_RGB:
+        return -1;
+    case cv::CAP_PROP_WHITE_BALANCE_BLUE_U:
+        return V4L2_CID_BLUE_BALANCE;
+    case cv::CAP_PROP_RECTIFICATION:
+        return -1;
+    case cv::CAP_PROP_MONOCHROME:
+        return -1;
+    case cv::CAP_PROP_SHARPNESS:
+        return V4L2_CID_SHARPNESS;
+    case cv::CAP_PROP_AUTO_EXPOSURE:
+        return V4L2_CID_EXPOSURE_AUTO;
+    case cv::CAP_PROP_GAMMA:
+        return V4L2_CID_GAMMA;
+    case cv::CAP_PROP_TEMPERATURE:
+        return V4L2_CID_WHITE_BALANCE_TEMPERATURE;
+    case cv::CAP_PROP_TRIGGER:
+        return -1;
+    case cv::CAP_PROP_TRIGGER_DELAY:
+        return -1;
+    case cv::CAP_PROP_WHITE_BALANCE_RED_V:
+        return V4L2_CID_RED_BALANCE;
+    case cv::CAP_PROP_ZOOM:
+        return V4L2_CID_ZOOM_ABSOLUTE;
+    case cv::CAP_PROP_FOCUS:
+        return V4L2_CID_FOCUS_ABSOLUTE;
+    case cv::CAP_PROP_GUID:
+        return -1;
+    case cv::CAP_PROP_ISO_SPEED:
+        return V4L2_CID_ISO_SENSITIVITY;
+    case cv::CAP_PROP_BACKLIGHT:
+        return V4L2_CID_BACKLIGHT_COMPENSATION;
+    case cv::CAP_PROP_PAN:
+        return V4L2_CID_PAN_ABSOLUTE;
+    case cv::CAP_PROP_TILT:
+        return V4L2_CID_TILT_ABSOLUTE;
+    case cv::CAP_PROP_ROLL:
+        return V4L2_CID_ROTATE;
+    case cv::CAP_PROP_IRIS:
+        return V4L2_CID_IRIS_ABSOLUTE;
+    case cv::CAP_PROP_SETTINGS:
+        return -1;
+    case cv::CAP_PROP_BUFFERSIZE:
+        return -1;
+    case cv::CAP_PROP_AUTOFOCUS:
+        return V4L2_CID_FOCUS_AUTO;
+    case cv::CAP_PROP_SAR_NUM:
+        return V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT;
+    case cv::CAP_PROP_SAR_DEN:
+        return V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH;
+    case CAP_PROP_AUTO_WB:
+        return V4L2_CID_AUTO_WHITE_BALANCE;
+    case CAP_PROP_WB_TEMPERATURE:
+        return V4L2_CID_WHITE_BALANCE_TEMPERATURE;
+    default:
+        break;
+    }
+    return -1;
+}
+
+static inline bool compatibleRange(int property_id)
+{
+    switch (property_id) {
+    case cv::CAP_PROP_BRIGHTNESS:
+    case cv::CAP_PROP_CONTRAST:
+    case cv::CAP_PROP_SATURATION:
+    case cv::CAP_PROP_HUE:
+    case cv::CAP_PROP_GAIN:
+    case cv::CAP_PROP_EXPOSURE:
+    case cv::CAP_PROP_FOCUS:
+    case cv::CAP_PROP_AUTOFOCUS:
+    case cv::CAP_PROP_AUTO_EXPOSURE:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+
+bool CvCaptureCAM_V4L::controlInfo(int property_id, __u32 &_v4l2id, cv::Range &range) const
+{
+    /* initialisations */
+    int v4l2id = capPropertyToV4L2(property_id);
+    v4l2_queryctrl queryctrl = v4l2_queryctrl();
+    queryctrl.id = __u32(v4l2id);
+    if (v4l2id == -1 || !tryIoctl(VIDIOC_QUERYCTRL, &queryctrl)) {
+        CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): property " << capPropertyName(property_id) << " is not supported");
+        return false;
+    }
+    _v4l2id = __u32(v4l2id);
+    range = cv::Range(queryctrl.minimum, queryctrl.maximum);
+    if (normalizePropRange) {
+        switch(property_id)
+        {
+        case CAP_PROP_WB_TEMPERATURE:
+        case CAP_PROP_AUTO_WB:
+        case CAP_PROP_AUTOFOCUS:
+            range = Range(0, 1); // do not convert
+            break;
+        case CAP_PROP_AUTO_EXPOSURE:
+            range = Range(0, 4);
+        default:
+            break;
+        }
+    }
+    return true;
+}
+
+bool CvCaptureCAM_V4L::icvControl(__u32 v4l2id, int &value, bool isSet) const
+{
+    /* set which control we want to set */
+    v4l2_control control = v4l2_control();
+    control.id = v4l2id;
+    control.value = value;
 
     /* The driver may clamp the value or return ERANGE, ignored here */
-    if (-1 == ioctl (capture->deviceHandle,
-                      VIDIOC_S_CTRL, &capture->control) && errno != ERANGE) {
-        perror ("VIDIOC_S_CTRL");
-        return -1;
+    if (!tryIoctl(isSet ? VIDIOC_S_CTRL : VIDIOC_G_CTRL, &control)) {
+        int err = errno;
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed " << (isSet ? "VIDIOC_S_CTRL" : "VIDIOC_G_CTRL") << ": errno=" << err << " (" << strerror(err) << ")");
+        switch (err) {
+#ifndef NDEBUG
+        case EINVAL:
+            fprintf(stderr,
+                "The struct v4l2_control id is invalid or the value is inappropriate for the given control (i.e. "
+                "if a menu item is selected that is not supported by the driver according to VIDIOC_QUERYMENU).");
+            break;
+        case ERANGE:
+            fprintf(stderr, "The struct v4l2_control value is out of bounds.");
+            break;
+        case EACCES:
+            fprintf(stderr, "Attempt to set a read-only control or to get a write-only control.");
+            break;
+#endif
+        default:
+            break;
+        }
+        return false;
     }
-  }
-#endif /* HAVE_CAMV4L2 */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-    else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-  {
-
-    int v4l_value;
-
-    /* scale the value to the wanted integer one */
-    v4l_value = (int)(0xFFFF * value);
-
-    switch (property_id) {
-    case CV_CAP_PROP_BRIGHTNESS:
-      capture->imageProperties.brightness = v4l_value;
-      break;
-    case CV_CAP_PROP_CONTRAST:
-      capture->imageProperties.contrast = v4l_value;
-      break;
-    case CV_CAP_PROP_SATURATION:
-      capture->imageProperties.colour = v4l_value;
-      break;
-    case CV_CAP_PROP_HUE:
-      capture->imageProperties.hue = v4l_value;
-      break;
-    case CV_CAP_PROP_GAIN:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L: Gain control in V4L is not supported\n");
-        return -1;
-    case CV_CAP_PROP_EXPOSURE:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L: Exposure control in V4L is not supported\n");
-        return -1;
-    default:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L: property #%d is not supported\n",
-                property_id);
-        return -1;
-    }
-
-    if (ioctl(capture->deviceHandle, VIDIOCSPICT, &capture->imageProperties)
-        < 0)
-    {
-       fprintf(stderr,
-               "VIDEOIO ERROR: V4L: Unable to set video informations\n");
-       icvCloseCAM_V4L(capture);
-       return -1;
-    }
-  }
-#endif /* HAVE_CAMV4L */
-
-  /* all was OK */
-  return 0;
-
+    if (!isSet)
+        value = control.value;
+    return true;
 }
 
-static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
-                                  int property_id, double value ){
-    static int width = 0, height = 0;
-    int retval;
+double CvCaptureCAM_V4L::getProperty(int property_id) const
+{
+    switch (property_id) {
+    case cv::CAP_PROP_FRAME_WIDTH:
+        return form.fmt.pix.width;
+    case cv::CAP_PROP_FRAME_HEIGHT:
+        return form.fmt.pix.height;
+    case cv::CAP_PROP_FOURCC:
+        return palette;
+    case cv::CAP_PROP_FORMAT:
+        return CV_MAKETYPE(IPL2CV_DEPTH(frame.depth), frame.nChannels);
+    case cv::CAP_PROP_MODE:
+        if (normalizePropRange)
+            return palette;
+        return normalizePropRange;
+    case cv::CAP_PROP_CONVERT_RGB:
+        return convert_rgb;
+    case cv::CAP_PROP_BUFFERSIZE:
+        return bufferSize;
+    case cv::CAP_PROP_FPS:
+    {
+        v4l2_streamparm sp = v4l2_streamparm();
+        sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        if (!tryIoctl(VIDIOC_G_PARM, &sp)) {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): Unable to get camera FPS");
+            return -1;
+        }
+        return sp.parm.capture.timeperframe.denominator / (double)sp.parm.capture.timeperframe.numerator;
+    }
+    case cv::CAP_PROP_POS_MSEC:
+        if (FirstCapture)
+            return 0;
 
-    /* initialization */
-    retval = 0;
+        return 1000 * timestamp.tv_sec + ((double)timestamp.tv_usec) / 1000;
+    case cv::CAP_PROP_CHANNEL:
+        return channelNumber;
+    default:
+    {
+        cv::Range range;
+        __u32 v4l2id;
+        if(!controlInfo(property_id, v4l2id, range))
+            return -1.0;
+        int value = 0;
+        if(!icvControl(v4l2id, value, false))
+            return -1.0;
+        if (normalizePropRange && compatibleRange(property_id))
+            return ((double)value - range.start) / range.size();
+        return  value;
+    }
+    }
+}
+
+bool CvCaptureCAM_V4L::icvSetFrameSize(int _width, int _height)
+{
+    if (_width > 0)
+        width_set = _width;
+
+    if (_height > 0)
+        height_set = _height;
 
     /* two subsequent calls setting WIDTH and HEIGHT will change
        the video size */
-    /* the first one will return an error, though. */
+    if (width_set <= 0 || height_set <= 0)
+        return true;
 
+    width = width_set;
+    height = height_set;
+    width_set = height_set = 0;
+    return v4l2_reset();
+}
+
+bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
+{
+    int value = cvRound(_value);
     switch (property_id) {
-    case CV_CAP_PROP_FRAME_WIDTH:
-        width = cvRound(value);
-        if(width !=0 && height != 0) {
-            retval = icvSetVideoSize( capture, width, height);
-            width = height = 0;
+    case cv::CAP_PROP_FRAME_WIDTH:
+        return icvSetFrameSize(value, 0);
+    case cv::CAP_PROP_FRAME_HEIGHT:
+        return icvSetFrameSize(0, value);
+    case cv::CAP_PROP_FPS:
+        if (fps == static_cast<__u32>(value))
+            return true;
+        return setFps(value);
+    case cv::CAP_PROP_CONVERT_RGB:
+        if (bool(value)) {
+            convert_rgb = convertableToRgb();
+            return convert_rgb;
+        }else{
+            convert_rgb = false;
+            releaseFrame();
+            return true;
         }
-        break;
-    case CV_CAP_PROP_FRAME_HEIGHT:
-        height = cvRound(value);
-        if(width !=0 && height != 0) {
-            retval = icvSetVideoSize( capture, width, height);
-            width = height = 0;
-        }
-        break;
-    case CV_CAP_PROP_BRIGHTNESS:
-    case CV_CAP_PROP_CONTRAST:
-    case CV_CAP_PROP_SATURATION:
-    case CV_CAP_PROP_HUE:
-    case CV_CAP_PROP_GAIN:
-    case CV_CAP_PROP_EXPOSURE:
-        retval = icvSetControl(capture, property_id, value);
-        break;
-    default:
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L: setting property #%d is not supported\n",
-                property_id);
-    }
-
-    /* return the the status */
-    return retval;
-}
-
-static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
-   /* Deallocate space - Hopefully, no leaks */
-
-   if (capture)
-   {
-
-#ifdef HAVE_CAMV4L2
-     if (V4L2_SUPPORT == 0)
-#endif /* HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-     {
-
-       if (capture->mmaps)
-         free(capture->mmaps);
-       if (capture->memoryMap)
-         munmap(capture->memoryMap, capture->memoryBuffer.size);
-
-     }
-#endif /* HAVE_CAMV4L */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-     else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L2
-       {
-       capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-       if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
-           perror ("Unable to stop the stream.");
-       }
-
-       for (unsigned int n_buffers_ = 0; n_buffers_ < capture->req.count; ++n_buffers_)
-       {
-           if (-1 == munmap (capture->buffers[n_buffers_].start, capture->buffers[n_buffers_].length)) {
-               perror ("munmap");
-           }
-       }
-
-       if (capture->buffers[MAX_V4L_BUFFERS].start)
-       {
-           free(capture->buffers[MAX_V4L_BUFFERS].start);
-           capture->buffers[MAX_V4L_BUFFERS].start = 0;
-       }
-     }
-#endif /* HAVE_CAMV4L2 */
-
-     if (capture->deviceHandle != -1)
-       close(capture->deviceHandle);
-
-     if (capture->frame.imageData) cvFree(&capture->frame.imageData);
-      //cvFree((void **)capture);
-   }
-};
-
-
-class CvCaptureCAM_V4L_CPP : CvCapture
-{
-public:
-    CvCaptureCAM_V4L_CPP() { captureV4L = 0; }
-    virtual ~CvCaptureCAM_V4L_CPP() { close(); }
-
-    virtual bool open( int index );
-    virtual void close();
-
-    virtual double getProperty(int);
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-protected:
-
-    CvCaptureCAM_V4L* captureV4L;
-};
-
-bool CvCaptureCAM_V4L_CPP::open( int index )
-{
-    close();
-    captureV4L = icvCaptureFromCAM_V4L(index);
-    return captureV4L != 0;
-}
-
-void CvCaptureCAM_V4L_CPP::close()
-{
-    if( captureV4L )
+    case cv::CAP_PROP_FOURCC:
     {
-        icvCloseCAM_V4L( captureV4L );
-        cvFree( &captureV4L );
+        if (palette == static_cast<__u32>(value))
+            return true;
+
+        __u32 old_palette = palette;
+        palette = static_cast<__u32>(value);
+        if (v4l2_reset())
+            return true;
+
+        palette = old_palette;
+        v4l2_reset();
+        return false;
+    }
+    case cv::CAP_PROP_MODE:
+        normalizePropRange = bool(value);
+        return true;
+    case cv::CAP_PROP_BUFFERSIZE:
+        if (bufferSize == value)
+            return true;
+
+        if (value > MAX_V4L_BUFFERS || value < 1) {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): Bad buffer size " << value << ", buffer size must be from 1 to " << MAX_V4L_BUFFERS);
+            return false;
+        }
+        bufferSize = value;
+        return v4l2_reset();
+    case cv::CAP_PROP_CHANNEL:
+    {
+        if (value < 0) {
+            channelNumber = -1;
+            return true;
+        }
+        if (channelNumber == value)
+            return true;
+
+        int old_channel = channelNumber;
+        channelNumber = value;
+        if (v4l2_reset())
+            return true;
+
+        channelNumber = old_channel;
+        v4l2_reset();
+        return false;
+    }
+    default:
+    {
+        cv::Range range;
+        __u32 v4l2id;
+        if (!controlInfo(property_id, v4l2id, range))
+            return false;
+        if (normalizePropRange && compatibleRange(property_id))
+            value = cv::saturate_cast<int>(_value * range.size() + range.start);
+        return icvControl(v4l2id, value, true);
+    }
+    }
+    return false;
+}
+
+void CvCaptureCAM_V4L::releaseFrame()
+{
+    if (frame_allocated && frame.imageData) {
+        cvFree(&frame.imageData);
+        frame_allocated = false;
     }
 }
 
-bool CvCaptureCAM_V4L_CPP::grabFrame()
+void CvCaptureCAM_V4L::releaseBuffers()
 {
-    return captureV4L ? icvGrabFrameCAM_V4L( captureV4L ) != 0 : false;
+    releaseFrame();
+
+    if (buffers[MAX_V4L_BUFFERS].start) {
+        free(buffers[MAX_V4L_BUFFERS].start);
+        buffers[MAX_V4L_BUFFERS].start = 0;
+    }
+
+    bufferIndex = -1;
+    FirstCapture = true;
+
+    if (!v4l_buffersRequested)
+        return;
+    v4l_buffersRequested = false;
+
+    for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers) {
+        if (buffers[n_buffers].start) {
+            if (-1 == munmap(buffers[n_buffers].start, buffers[n_buffers].length)) {
+                CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed munmap(): errno=" << errno << " (" << strerror(errno) << ")");
+            } else {
+                buffers[n_buffers].start = 0;
+            }
+        }
+    }
+    //Applications can call ioctl VIDIOC_REQBUFS again to change the number of buffers,
+    // however this cannot succeed when any buffers are still mapped. A count value of zero
+    // frees all buffers, after aborting or finishing any DMA in progress, an implicit VIDIOC_STREAMOFF.
+    requestBuffers(0);
+};
+
+bool CvCaptureCAM_V4L::streaming(bool startStream)
+{
+    if (startStream != v4l_streamStarted)
+    {
+        if (!isOpened())
+        {
+            CV_Assert(v4l_streamStarted == false);
+            return !startStream;
+        }
+
+        type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        bool result = tryIoctl(startStream ? VIDIOC_STREAMON : VIDIOC_STREAMOFF, &type);
+        if (result)
+        {
+            v4l_streamStarted = startStream;
+            return true;
+        }
+        if (startStream)
+        {
+            CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_STREAMON: errno=" << errno << " (" << strerror(errno) << ")");
+        }
+        return false;
+    }
+    return startStream;
 }
 
-IplImage* CvCaptureCAM_V4L_CPP::retrieveFrame(int)
+IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
 {
-    return captureV4L ? icvRetrieveFrameCAM_V4L( captureV4L, 0 ) : 0;
+    if (bufferIndex < 0)
+        return &frame;
+
+    /* Now get what has already been captured as a IplImage return */
+    const Buffer &currentBuffer = buffers[bufferIndex];
+    if (convert_rgb) {
+        if (!frame_allocated)
+            v4l2_create_frame();
+
+        convertToRgb(currentBuffer);
+    } else {
+        // for mjpeg streams the size might change in between, so we have to change the header
+        // We didn't allocate memory when not convert_rgb, but we have to recreate the header
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): buffer input size=" << currentBuffer.buffer.bytesused);
+        if (frame.imageSize != (int)currentBuffer.buffer.bytesused)
+            v4l2_create_frame();
+
+        frame.imageData = (char *)buffers[MAX_V4L_BUFFERS].start;
+        memcpy(buffers[MAX_V4L_BUFFERS].start, currentBuffer.start,
+               std::min(buffers[MAX_V4L_BUFFERS].length, (size_t)currentBuffer.buffer.bytesused));
+    }
+    //Revert buffer to the queue
+    if (!tryIoctl(VIDIOC_QBUF, &buffers[bufferIndex].buffer))
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed VIDIOC_QBUF: errno=" << errno << " (" << strerror(errno) << ")");
+    }
+
+    bufferIndex = -1;
+    return &frame;
 }
 
-double CvCaptureCAM_V4L_CPP::getProperty( int propId )
-{
-    return captureV4L ? icvGetPropertyCAM_V4L( captureV4L, propId ) : 0.0;
-}
-
-bool CvCaptureCAM_V4L_CPP::setProperty( int propId, double value )
-{
-    return captureV4L ? icvSetPropertyCAM_V4L( captureV4L, propId, value ) != 0 : false;
-}
+} // end namespace cv
 
 CvCapture* cvCreateCameraCapture_V4L( int index )
 {
-    CvCaptureCAM_V4L_CPP* capture = new CvCaptureCAM_V4L_CPP;
+    cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if( capture->open( index ))
-        return (CvCapture*)capture;
+    if(capture->open(index)) {
+        return capture;
+    }
 
     delete capture;
-    return 0;
+    return NULL;
+}
+
+CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
+{
+    cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
+
+    if(capture->open( deviceName ))
+        return capture;
+
+    delete capture;
+    return NULL;
 }
 
 #endif

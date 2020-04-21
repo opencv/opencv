@@ -46,8 +46,7 @@
 
 OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
 
-using namespace cvtest;
-using namespace testing;
+namespace opencv_test { namespace {
 
 struct NVidiaTest : TestWithParam<cv::cuda::DeviceInfo>
 {
@@ -148,4 +147,6 @@ CUDA_TEST_P(NCV, Visualization)
 INSTANTIATE_TEST_CASE_P(CUDA_Legacy, NPPST, ALL_DEVICES);
 INSTANTIATE_TEST_CASE_P(CUDA_Legacy, NCV, ALL_DEVICES);
 
+
+}} // namespace
 #endif // HAVE_CUDA

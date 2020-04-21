@@ -43,9 +43,9 @@
 
 #include "precomp.hpp"
 
-namespace
+namespace cv
 {
-    class FormattedImpl : public cv::Formatted
+    class FormattedImpl CV_FINAL : public Formatted
     {
         enum { STATE_PROLOGUE, STATE_EPILOGUE, STATE_INTERLUDE,
                STATE_ROW_OPEN, STATE_ROW_CLOSE, STATE_CN_OPEN, STATE_CN_CLOSE, STATE_VALUE, STATE_FINISHED,
@@ -55,7 +55,7 @@ namespace
         char floatFormat[8];
         char buf[32];   // enough for double with precision up to 20
 
-        cv::Mat mtx;
+        Mat mtx;
         int mcn; // == mtx.channels()
         bool singleLine;
         bool alignOrder;    // true when cn first order
@@ -65,8 +65,8 @@ namespace
         int col;
         int cn;
 
-        cv::String prologue;
-        cv::String epilogue;
+        String prologue;
+        String epilogue;
         char braces[5];
 
         void (FormattedImpl::*valueToStr)();
@@ -81,7 +81,7 @@ namespace
 
     public:
 
-        FormattedImpl(cv::String pl, cv::String el, cv::Mat m, char br[5], bool sLine, bool aOrder, int precision)
+        FormattedImpl(String pl, String el, Mat m, char br[5], bool sLine, bool aOrder, int precision)
         {
             CV_Assert(m.dims <= 2);
 
@@ -103,7 +103,7 @@ namespace
             }
             else
             {
-                sprintf(floatFormat, "%%.%dg", std::min(precision, 20));
+                cv_snprintf(floatFormat, sizeof(floatFormat), "%%.%dg", std::min(precision, 20));
             }
 
             switch(mtx.depth())
@@ -119,12 +119,12 @@ namespace
             }
         }
 
-        void reset()
+        void reset() CV_OVERRIDE
         {
             state = STATE_PROLOGUE;
         }
 
-        const char* next()
+        const char* next() CV_OVERRIDE
         {
             switch(state)
             {
@@ -253,22 +253,22 @@ namespace
         }
     };
 
-    class FormatterBase : public cv::Formatter
+    class FormatterBase : public Formatter
     {
     public:
         FormatterBase() : prec32f(8), prec64f(16), multiline(true) {}
 
-        void set32fPrecision(int p)
+        void set32fPrecision(int p) CV_OVERRIDE
         {
             prec32f = p;
         }
 
-        void set64fPrecision(int p)
+        void set64fPrecision(int p) CV_OVERRIDE
         {
             prec64f = p;
         }
 
-        void setMultiline(bool ml)
+        void setMultiline(bool ml) CV_OVERRIDE
         {
             multiline = ml;
         }
@@ -278,93 +278,89 @@ namespace
         int prec64f;
         int multiline;
     };
-    class DefaultFormatter : public FormatterBase
+
+    class DefaultFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'\0', '\0', ';', '\0', '\0'};
-            return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
+            return makePtr<FormattedImpl>("[", "]", mtx, &*braces,
                 mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
-    class MatlabFormatter : public FormatterBase
+    class MatlabFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'\0', '\0', ';', '\0', '\0'};
-            return cv::makePtr<FormattedImpl>("", "", mtx, &*braces,
+            return makePtr<FormattedImpl>("", "", mtx, &*braces,
                 mtx.rows == 1 || !multiline, true, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
-    class PythonFormatter : public FormatterBase
+    class PythonFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
-            char braces[5] = {'[', ']', '\0', '[', ']'};
+            char braces[5] = {'[', ']', ',', '[', ']'};
             if (mtx.cols == 1)
                 braces[0] = braces[1] = '\0';
-            return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
+            return makePtr<FormattedImpl>("[", "]", mtx, &*braces,
                 mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
-    class NumpyFormatter : public FormatterBase
+    class NumpyFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             static const char* numpyTypes[] =
             {
                 "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "uint64"
             };
-            char braces[5] = {'[', ']', '\0', '[', ']'};
+            char braces[5] = {'[', ']', ',', '[', ']'};
             if (mtx.cols == 1)
                 braces[0] = braces[1] = '\0';
-            return cv::makePtr<FormattedImpl>("array([",
-                cv::format("], type='%s')", numpyTypes[mtx.depth()]), mtx, &*braces,
+            return makePtr<FormattedImpl>("array([",
+                cv::format("], dtype='%s')", numpyTypes[mtx.depth()]), mtx, &*braces,
                 mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
-    class CSVFormatter : public FormatterBase
+    class CSVFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'\0', '\0', '\0', '\0', '\0'};
-            return cv::makePtr<FormattedImpl>(cv::String(),
-                mtx.rows > 1 ? cv::String("\n") : cv::String(), mtx, &*braces,
+            return makePtr<FormattedImpl>(String(),
+                mtx.rows > 1 ? String("\n") : String(), mtx, &*braces,
                 mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
-    class CFormatter : public FormatterBase
+    class CFormatter CV_FINAL : public FormatterBase
     {
     public:
 
-        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        Ptr<Formatted> format(const Mat& mtx) const CV_OVERRIDE
         {
             char braces[5] = {'\0', '\0', ',', '\0', '\0'};
-            return cv::makePtr<FormattedImpl>("{", "}", mtx, &*braces,
+            return makePtr<FormattedImpl>("{", "}", mtx, &*braces,
                 mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
 
-} // namespace
-
-
-namespace cv
-{
     Formatted::~Formatted() {}
     Formatter::~Formatter() {}
 

@@ -40,13 +40,19 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SCAN_HPP__
-#define __OPENCV_CUDA_SCAN_HPP__
+#ifndef OPENCV_CUDA_SCAN_HPP
+#define OPENCV_CUDA_SCAN_HPP
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/utility.hpp"
 #include "opencv2/core/cuda/warp.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -55,7 +61,7 @@ namespace cv { namespace cuda { namespace device
     template <ScanKind Kind, typename T, typename F> struct WarpScan
     {
         __device__ __forceinline__ WarpScan() {}
-        __device__ __forceinline__ WarpScan(const WarpScan& other) { (void)other; }
+        __device__ __forceinline__ WarpScan(const WarpScan& other) { CV_UNUSED(other); }
 
         __device__ __forceinline__ T operator()( volatile T *ptr , const unsigned int idx)
         {
@@ -89,7 +95,7 @@ namespace cv { namespace cuda { namespace device
     template <ScanKind Kind , typename T, typename F> struct WarpScanNoComp
     {
         __device__ __forceinline__ WarpScanNoComp() {}
-        __device__ __forceinline__ WarpScanNoComp(const WarpScanNoComp& other) { (void)other; }
+        __device__ __forceinline__ WarpScanNoComp(const WarpScanNoComp& other) { CV_UNUSED(other); }
 
         __device__ __forceinline__ T operator()( volatile T *ptr , const unsigned int idx)
         {
@@ -129,7 +135,7 @@ namespace cv { namespace cuda { namespace device
     template <ScanKind Kind , typename T, typename Sc, typename F> struct BlockScan
     {
         __device__ __forceinline__ BlockScan() {}
-        __device__ __forceinline__ BlockScan(const BlockScan& other) { (void)other; }
+        __device__ __forceinline__ BlockScan(const BlockScan& other) { CV_UNUSED(other); }
 
         __device__ __forceinline__ T operator()(volatile T *ptr)
         {
@@ -247,4 +253,6 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // __OPENCV_CUDA_SCAN_HPP__
+//! @endcond
+
+#endif // OPENCV_CUDA_SCAN_HPP

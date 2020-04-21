@@ -47,7 +47,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/utility.hpp"
-
+#include <thrust/execution_policy.h>
 namespace cv { namespace cuda { namespace device
 {
     namespace gfft
@@ -91,12 +91,12 @@ namespace cv { namespace cuda { namespace device
             }
         }
 
-        int findCorners_gpu(PtrStepSzf eig, float threshold, PtrStepSzb mask, float2* corners, int max_count)
+        int findCorners_gpu(PtrStepSzf eig, float threshold, PtrStepSzb mask, float2* corners, int max_count, cudaStream_t stream)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
+            cudaSafeCall( cudaMemsetAsync(counter_ptr, 0, sizeof(int), stream) );
 
             bindTexture(&eigTex, eig);
 
@@ -104,17 +104,18 @@ namespace cv { namespace cuda { namespace device
             dim3 grid(divUp(eig.cols, block.x), divUp(eig.rows, block.y));
 
             if (mask.data)
-                findCorners<<<grid, block>>>(threshold, SingleMask(mask), corners, max_count, eig.rows, eig.cols);
+                findCorners<<<grid, block, 0, stream>>>(threshold, SingleMask(mask), corners, max_count, eig.rows, eig.cols);
             else
-                findCorners<<<grid, block>>>(threshold, WithOutMask(), corners, max_count, eig.rows, eig.cols);
+                findCorners<<<grid, block, 0, stream>>>(threshold, WithOutMask(), corners, max_count, eig.rows, eig.cols);
 
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
-
             int count;
-            cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
-
+            cudaSafeCall( cudaMemcpyAsync(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost, stream) );
+            if (stream)
+                cudaSafeCall(cudaStreamSynchronize(stream));
+            else
+                cudaSafeCall( cudaDeviceSynchronize() );
             return std::min(count, max_count);
         }
 
@@ -128,13 +129,19 @@ namespace cv { namespace cuda { namespace device
         };
 
 
-        void sortCorners_gpu(PtrStepSzf eig, float2* corners, int count)
+        void sortCorners_gpu(PtrStepSzf eig, float2* corners, int count, cudaStream_t stream)
         {
             bindTexture(&eigTex, eig);
 
             thrust::device_ptr<float2> ptr(corners);
-
+#if THRUST_VERSION >= 100802
+            if (stream)
+                thrust::sort(thrust::cuda::par(ThrustAllocator::getAllocator()).on(stream), ptr, ptr + count, EigGreater());
+            else
+                thrust::sort(thrust::cuda::par(ThrustAllocator::getAllocator()), ptr, ptr + count, EigGreater());
+#else
             thrust::sort(ptr, ptr + count, EigGreater());
+#endif
         }
     } // namespace optical_flow
 }}}

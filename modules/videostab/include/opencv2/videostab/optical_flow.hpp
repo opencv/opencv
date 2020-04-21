@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP__
-#define __OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP__
+#ifndef OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP
+#define OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/opencv_modules.hpp"
@@ -54,6 +54,9 @@ namespace cv
 {
 namespace videostab
 {
+
+//! @addtogroup videostab
+//! @{
 
 class CV_EXPORTS ISparseOptFlowEstimator
 {
@@ -96,7 +99,7 @@ class CV_EXPORTS SparsePyrLkOptFlowEstimator
 public:
     virtual void run(
             InputArray frame0, InputArray frame1, InputArray points0, InputOutputArray points1,
-            OutputArray status, OutputArray errors);
+            OutputArray status, OutputArray errors) CV_OVERRIDE;
 };
 
 #ifdef HAVE_OPENCV_CUDAOPTFLOW
@@ -109,7 +112,7 @@ public:
 
     virtual void run(
             InputArray frame0, InputArray frame1, InputArray points0, InputOutputArray points1,
-            OutputArray status, OutputArray errors);
+            OutputArray status, OutputArray errors) CV_OVERRIDE;
 
     void run(const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, const cuda::GpuMat &points0, cuda::GpuMat &points1,
              cuda::GpuMat &status, cuda::GpuMat &errors);
@@ -118,7 +121,7 @@ public:
              cuda::GpuMat &status);
 
 private:
-    cuda::PyrLKOpticalFlow optFlowEstimator_;
+    Ptr<cuda::SparsePyrLKOpticalFlow> optFlowEstimator_;
     cuda::GpuMat frame0_, frame1_, points0_, points1_, status_, errors_;
 };
 
@@ -130,14 +133,16 @@ public:
 
     virtual void run(
             InputArray frame0, InputArray frame1, InputOutputArray flowX, InputOutputArray flowY,
-            OutputArray errors);
+            OutputArray errors) CV_OVERRIDE;
 
 private:
-    cuda::PyrLKOpticalFlow optFlowEstimator_;
+    Ptr<cuda::DensePyrLKOpticalFlow> optFlowEstimator_;
     cuda::GpuMat frame0_, frame1_, flowX_, flowY_, errors_;
 };
 
 #endif
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_BINARY_FUNC_HPP__
-#define __OPENCV_CUDEV_EXPR_BINARY_FUNC_HPP__
+#ifndef OPENCV_CUDEV_EXPR_BINARY_FUNC_HPP
+#define OPENCV_CUDEV_EXPR_BINARY_FUNC_HPP
 
 #include "../common.hpp"
 #include "../util/type_traits.hpp"
@@ -54,6 +54,9 @@
 #include "expr.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 #define CV_CUDEV_EXPR_BINARY_FUNC(name) \
     template <class SrcPtr1, class SrcPtr2> \
@@ -69,6 +72,8 @@ CV_CUDEV_EXPR_BINARY_FUNC(atan2)
 CV_CUDEV_EXPR_BINARY_FUNC(absdiff)
 
 #undef CV_CUDEV_EXPR_BINARY_FUNC
+
+//! @}
 
 }}
 

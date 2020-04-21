@@ -38,8 +38,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_ML_HPP__
-#define __OPENCV_ML_HPP__
+#ifndef OPENCV_OLD_ML_HPP
+#define OPENCV_OLD_ML_HPP
 
 #ifdef __cplusplus
 #  include "opencv2/core.hpp"
@@ -54,7 +54,7 @@
 #include <iostream>
 
 // Apple defines a check() macro somewhere in the debug headers
-// that interferes with a method definiton in this header
+// that interferes with a method definition in this header
 #undef check
 
 /****************************************************************************************\
@@ -88,7 +88,7 @@ struct CvVectors
 #if 0
 /* A structure, representing the lattice range of statmodel parameters.
    It is used for optimizing statmodel parameters by cross-validation method.
-   The lattice is logarithmic, so <step> must be greater then 1. */
+   The lattice is logarithmic, so <step> must be greater than 1. */
 typedef struct CvParamLattice
 {
     double min_val;
@@ -122,7 +122,6 @@ CV_INLINE CvParamLattice cvDefaultParamLattice( void )
 #define CV_TYPE_NAME_ML_SVM         "opencv-ml-svm"
 #define CV_TYPE_NAME_ML_KNN         "opencv-ml-knn"
 #define CV_TYPE_NAME_ML_NBAYES      "opencv-ml-bayesian"
-#define CV_TYPE_NAME_ML_EM          "opencv-ml-em"
 #define CV_TYPE_NAME_ML_BOOSTING    "opencv-ml-boost-tree"
 #define CV_TYPE_NAME_ML_TREE        "opencv-ml-tree"
 #define CV_TYPE_NAME_ML_ANN_MLP     "opencv-ml-ann-mlp"
@@ -159,7 +158,7 @@ protected:
 /* The structure, representing the grid range of statmodel parameters.
    It is used for optimizing statmodel accuracy by varying model parameters,
    the accuracy estimate being computed by cross-validation.
-   The grid is logarithmic, so <step> must be greater then 1. */
+   The grid is logarithmic, so <step> must be greater than 1. */
 
 class CvMLData;
 
@@ -561,100 +560,6 @@ private:
     CvSVM(const CvSVM&);
     CvSVM& operator = (const CvSVM&);
 };
-
-/****************************************************************************************\
-*                              Expectation - Maximization                                *
-\****************************************************************************************/
-namespace cv
-{
-class EM : public Algorithm
-{
-public:
-    // Type of covariation matrices
-    enum {COV_MAT_SPHERICAL=0, COV_MAT_DIAGONAL=1, COV_MAT_GENERIC=2, COV_MAT_DEFAULT=COV_MAT_DIAGONAL};
-
-    // Default parameters
-    enum {DEFAULT_NCLUSTERS=5, DEFAULT_MAX_ITERS=100};
-
-    // The initial step
-    enum {START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0};
-
-    CV_WRAP EM(int nclusters=EM::DEFAULT_NCLUSTERS, int covMatType=EM::COV_MAT_DIAGONAL,
-       const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS,
-                                                 EM::DEFAULT_MAX_ITERS, FLT_EPSILON));
-
-    virtual ~EM();
-    CV_WRAP virtual void clear();
-
-    CV_WRAP virtual bool train(InputArray samples,
-                       OutputArray logLikelihoods=noArray(),
-                       OutputArray labels=noArray(),
-                       OutputArray probs=noArray());
-
-    CV_WRAP virtual bool trainE(InputArray samples,
-                        InputArray means0,
-                        InputArray covs0=noArray(),
-                        InputArray weights0=noArray(),
-                        OutputArray logLikelihoods=noArray(),
-                        OutputArray labels=noArray(),
-                        OutputArray probs=noArray());
-
-    CV_WRAP virtual bool trainM(InputArray samples,
-                        InputArray probs0,
-                        OutputArray logLikelihoods=noArray(),
-                        OutputArray labels=noArray(),
-                        OutputArray probs=noArray());
-
-    CV_WRAP Vec2d predict(InputArray sample,
-                OutputArray probs=noArray()) const;
-
-    CV_WRAP bool isTrained() const;
-
-    AlgorithmInfo* info() const;
-    virtual void read(const FileNode& fn);
-
-protected:
-
-    virtual void setTrainData(int startStep, const Mat& samples,
-                              const Mat* probs0,
-                              const Mat* means0,
-                              const std::vector<Mat>* covs0,
-                              const Mat* weights0);
-
-    bool doTrain(int startStep,
-                 OutputArray logLikelihoods,
-                 OutputArray labels,
-                 OutputArray probs);
-    virtual void eStep();
-    virtual void mStep();
-
-    void clusterTrainSamples();
-    void decomposeCovs();
-    void computeLogWeightDivDet();
-
-    Vec2d computeProbabilities(const Mat& sample, Mat* probs) const;
-
-    // all inner matrices have type CV_64FC1
-    CV_PROP_RW int nclusters;
-    CV_PROP_RW int covMatType;
-    CV_PROP_RW int maxIters;
-    CV_PROP_RW double epsilon;
-
-    Mat trainSamples;
-    Mat trainProbs;
-    Mat trainLogLikelihoods;
-    Mat trainLabels;
-
-    CV_PROP Mat weights;
-    CV_PROP Mat means;
-    CV_PROP std::vector<Mat> covs;
-
-    std::vector<Mat> covsEigenValues;
-    std::vector<Mat> covsRotateMats;
-    std::vector<Mat> invCovsEigenValues;
-    Mat logWeightDivDet;
-};
-} // namespace cv
 
 /****************************************************************************************\
 *                                      Decision Tree                                     *
@@ -1338,9 +1243,9 @@ struct CvGBTreesParams : public CvDTreeParams
 // weak             - array[0..(class_count-1)] of CvSeq
 //                    for storing tree ensembles
 // orig_response    - original responses of the training set samples
-// sum_response     - predicitons of the current model on the training dataset.
+// sum_response     - predictions of the current model on the training dataset.
 //                    this matrix is updated on every iteration.
-// sum_response_tmp - predicitons of the model on the training set on the next
+// sum_response_tmp - predictions of the model on the training set on the next
 //                    step. On every iteration values of sum_responses_tmp are
 //                    computed via sum_responses values. When the current
 //                    step is complete sum_response values become equal to
@@ -1365,7 +1270,7 @@ struct CvGBTreesParams : public CvDTreeParams
 //                    matrix has the same size as train_data. 1 - missing
 //                    value, 0 - not a missing value.
 // class_labels     - output class labels map.
-// rng              - random number generator. Used for spliting the
+// rng              - random number generator. Used for splitting the
 //                    training set.
 // class_count      - count of output classes.
 //                    class_count == 1 in the case of regression,
@@ -1631,7 +1536,7 @@ public:
     // type  - defines which error is to compute: train (CV_TRAIN_ERROR) or
     //         test (CV_TEST_ERROR).
     // OUTPUT
-    // resp  - vector of predicitons
+    // resp  - vector of predictions
     // RESULT
     // Error value.
     */
@@ -1991,32 +1896,6 @@ protected:
 };
 
 /****************************************************************************************\
-*                           Auxilary functions declarations                              *
-\****************************************************************************************/
-
-/* Generates <sample> from multivariate normal distribution, where <mean> - is an
-   average row vector, <cov> - symmetric covariation matrix */
-CVAPI(void) cvRandMVNormal( CvMat* mean, CvMat* cov, CvMat* sample,
-                           CvRNG* rng CV_DEFAULT(0) );
-
-/* Generates sample from gaussian mixture distribution */
-CVAPI(void) cvRandGaussMixture( CvMat* means[],
-                               CvMat* covs[],
-                               float weights[],
-                               int clsnum,
-                               CvMat* sample,
-                               CvMat* sampClasses CV_DEFAULT(0) );
-
-#define CV_TS_CONCENTRIC_SPHERES 0
-
-/* creates test set */
-CVAPI(void) cvCreateTestSet( int type, CvMat** samples,
-                 int num_samples,
-                 int num_features,
-                 CvMat** responses,
-                 int num_classes, ... );
-
-/****************************************************************************************\
 *                                      Data                                             *
 \****************************************************************************************/
 
@@ -2155,11 +2034,9 @@ typedef CvGBTreesParams GradientBoostingTreeParams;
 typedef CvGBTrees GradientBoostingTrees;
 
 template<> void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const;
-
-bool initModule_ml(void);
 }
 
 #endif // __cplusplus
-#endif // __OPENCV_ML_HPP__
+#endif // OPENCV_OLD_ML_HPP
 
 /* End of file. */

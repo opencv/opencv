@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Add_Array
@@ -1329,7 +1329,7 @@ CUDA_TEST_P(Divide_Scalar_First, Accuracy)
         try
         {
             cv::cuda::GpuMat dst;
-            cv::cuda::divide(scale, loadMat(mat), dst, depth.second);
+            cv::cuda::divide(scale, loadMat(mat), dst, 1.0, depth.second);
         }
         catch (const cv::Exception& e)
         {
@@ -1339,7 +1339,7 @@ CUDA_TEST_P(Divide_Scalar_First, Accuracy)
     else
     {
         cv::cuda::GpuMat dst = createMat(size, depth.second, useRoi);
-        cv::cuda::divide(scale, loadMat(mat, useRoi), dst, depth.second);
+        cv::cuda::divide(scale, loadMat(mat, useRoi), dst, 1.0, depth.second);
 
         cv::Mat dst_gold;
         cv::divide(scale, mat, dst_gold, depth.second);
@@ -2532,11 +2532,12 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, AddWeighted, testing::Combine(
 CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
 #define ALL_THRESH_OPS testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV))
 
-PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, ThreshOp, UseRoi)
+PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, Channels, ThreshOp, UseRoi)
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
+    int channel;
     int threshOp;
     bool useRoi;
 
@@ -2545,8 +2546,9 @@ PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, ThreshOp, Us
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
         type = GET_PARAM(2);
-        threshOp = GET_PARAM(3);
-        useRoi = GET_PARAM(4);
+        channel = GET_PARAM(3);
+        threshOp = GET_PARAM(4);
+        useRoi = GET_PARAM(5);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -2554,7 +2556,7 @@ PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, ThreshOp, Us
 
 CUDA_TEST_P(Threshold, Accuracy)
 {
-    cv::Mat src = randomMat(size, type);
+    cv::Mat src = randomMat(size, CV_MAKE_TYPE(type, channel));
     double maxVal = randomDouble(20.0, 127.0);
     double thresh = randomDouble(0.0, maxVal);
 
@@ -2570,7 +2572,8 @@ CUDA_TEST_P(Threshold, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Threshold, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_16SC1), MatType(CV_32FC1)),
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16S), MatDepth(CV_32F)),
+    ALL_CHANNELS,
     ALL_THRESH_OPS,
     WHOLE_SUBMAT));
 
@@ -2751,10 +2754,11 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, CartToPolar, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // polarToCart
 
-PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, UseRoi)
+PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, MatType, AngleInDegrees, UseRoi)
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Size size;
+    int type;
     bool angleInDegrees;
     bool useRoi;
 
@@ -2762,8 +2766,9 @@ PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, Use
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
-        angleInDegrees = GET_PARAM(2);
-        useRoi = GET_PARAM(3);
+        type = GET_PARAM(2);
+        angleInDegrees = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -2771,25 +2776,28 @@ PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, Use
 
 CUDA_TEST_P(PolarToCart, Accuracy)
 {
-    cv::Mat magnitude = randomMat(size, CV_32FC1);
-    cv::Mat angle = randomMat(size, CV_32FC1);
+    cv::Mat magnitude = randomMat(size, type);
+    cv::Mat angle = randomMat(size, type);
+    const double tol = (type == CV_32FC1 ? 1.6e-4 : 1e-4) * (angleInDegrees ? 1.0 : 19.0);
 
-    cv::cuda::GpuMat x = createMat(size, CV_32FC1, useRoi);
-    cv::cuda::GpuMat y = createMat(size, CV_32FC1, useRoi);
+    cv::cuda::GpuMat x = createMat(size, type, useRoi);
+    cv::cuda::GpuMat y = createMat(size, type, useRoi);
     cv::cuda::polarToCart(loadMat(magnitude, useRoi), loadMat(angle, useRoi), x, y, angleInDegrees);
 
     cv::Mat x_gold;
     cv::Mat y_gold;
     cv::polarToCart(magnitude, angle, x_gold, y_gold, angleInDegrees);
 
-    EXPECT_MAT_NEAR(x_gold, x, 1e-4);
-    EXPECT_MAT_NEAR(y_gold, y, 1e-4);
+    EXPECT_MAT_NEAR(x_gold, x, tol);
+    EXPECT_MAT_NEAR(y_gold, y, tol);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, PolarToCart, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+    testing::Values(CV_32FC1, CV_64FC1),
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
     WHOLE_SUBMAT));
 
+}} // namespace
 #endif // HAVE_CUDA

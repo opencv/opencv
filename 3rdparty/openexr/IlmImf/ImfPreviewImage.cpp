@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2003, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -39,16 +39,17 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfPreviewImage.h>
-#include <ImfCheckedArithmetic.h>
+#include "ImfPreviewImage.h"
+#include "ImfCheckedArithmetic.h"
 #include "Iex.h"
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 
 PreviewImage::PreviewImage (unsigned int width,
-                unsigned int height,
-                const PreviewRgba pixels[])
+			    unsigned int height,
+			    const PreviewRgba pixels[])
 {
     _width = width;
     _height = height;
@@ -57,13 +58,13 @@ PreviewImage::PreviewImage (unsigned int width,
 
     if (pixels)
     {
-    for (unsigned int i = 0; i < _width * _height; ++i)
-        _pixels[i] = pixels[i];
+	for (unsigned int i = 0; i < _width * _height; ++i)
+	    _pixels[i] = pixels[i];
     }
     else
     {
-    for (unsigned int i = 0; i < _width * _height; ++i)
-        _pixels[i] = PreviewRgba();
+	for (unsigned int i = 0; i < _width * _height; ++i)
+	    _pixels[i] = PreviewRgba();
     }
 }
 
@@ -74,7 +75,7 @@ PreviewImage::PreviewImage (const PreviewImage &other):
     _pixels (new PreviewRgba [other._width * other._height])
 {
     for (unsigned int i = 0; i < _width * _height; ++i)
-    _pixels[i] = other._pixels[i];
+	_pixels[i] = other._pixels[i];
 }
 
 
@@ -94,10 +95,10 @@ PreviewImage::operator = (const PreviewImage &other)
     _pixels = new PreviewRgba [other._width * other._height];
 
     for (unsigned int i = 0; i < _width * _height; ++i)
-    _pixels[i] = other._pixels[i];
+	_pixels[i] = other._pixels[i];
 
     return *this;
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

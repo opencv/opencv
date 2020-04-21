@@ -61,13 +61,15 @@
 
 #include "opencv2/cudalegacy/NCV.hpp"
 
+//! @addtogroup cudalegacy
+//! @{
 
 //==============================================================================
 //
 // Guaranteed size cross-platform classifier structures
 //
 //==============================================================================
-#if defined __GNUC__ && __GNUC__ > 2 && __GNUC_MINOR__  > 4
+#if defined __GNUC__ && (__GNUC__*100 + __GNUC_MINOR__ > 204)
 typedef Ncv32f __attribute__((__may_alias__)) Ncv32f_a;
 #else
 typedef Ncv32f Ncv32f_a;
@@ -206,7 +208,7 @@ struct HaarClassifierNodeDescriptor32
     }
 };
 
-#if defined __GNUC__ && __GNUC__ > 2 && __GNUC_MINOR__  > 4
+#if defined __GNUC__ && (__GNUC__*100 + __GNUC_MINOR__ > 204)
 typedef Ncv32u __attribute__((__may_alias__)) Ncv32u_a;
 #else
 typedef Ncv32u Ncv32u_a;
@@ -456,6 +458,6 @@ CV_EXPORTS NCVStatus ncvHaarStoreNVBIN_host(const cv::String &filename,
                                              NCVVector<HaarClassifierNode128> &h_HaarNodes,
                                              NCVVector<HaarFeature64> &h_HaarFeatures);
 
-
+//! @}
 
 #endif // _ncvhaarobjectdetection_hpp_

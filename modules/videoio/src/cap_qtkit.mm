@@ -93,6 +93,8 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
 - (int)updateImage;
 - (IplImage*)getOutput;
 
+- (void)doFireTimer:(NSTimer *)timer;
+
 @end
 
 /*****************************************************************************
@@ -109,7 +111,7 @@ public:
     ~CvCaptureCAM();
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id);
+    virtual double getProperty(int property_id) const;
     virtual bool setProperty(int property_id, double value);
     virtual int didStart();
 
@@ -151,7 +153,7 @@ public:
     ~CvCaptureFile();
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id);
+    virtual double getProperty(int property_id) const;
     virtual bool setProperty(int property_id, double value);
     virtual int didStart();
 
@@ -196,6 +198,8 @@ public:
                    int is_color=1);
     ~CvVideoWriter_QT();
     bool writeFrame(const IplImage* image);
+
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_QT; }
 private:
     IplImage* argbimage;
     QTMovie* mMovie;
@@ -268,8 +272,6 @@ CvCaptureCAM::CvCaptureCAM(int cameraNum) {
 
 CvCaptureCAM::~CvCaptureCAM() {
     stopCaptureDevice();
-
-    std::cout << "Cleaned up camera." << std::endl;
 }
 
 int CvCaptureCAM::didStart() {
@@ -294,7 +296,7 @@ bool CvCaptureCAM::grabFrame(double timeOut) {
     // method exits immediately"
     // using usleep() is not a good alternative, because it may block the GUI.
     // Create a dummy timer so that runUntilDate does not exit immediately:
-    [NSTimer scheduledTimerWithTimeInterval:100 target:nil selector:@selector(doFireTimer:) userInfo:nil repeats:YES];
+    [NSTimer scheduledTimerWithTimeInterval:100 target:capture selector:@selector(doFireTimer:) userInfo:nil repeats:YES];
     while (![capture updateImage] && (total += sleepTime)<=timeOut) {
         [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:sleepTime]];
     }
@@ -439,7 +441,7 @@ void CvCaptureCAM::setWidthHeight() {
 }
 
 
-double CvCaptureCAM::getProperty(int property_id){
+double CvCaptureCAM::getProperty(int property_id) const{
     int retval;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
@@ -620,6 +622,11 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
     CVBufferRelease(pixels);
 
     return 1;
+}
+
+- (void)doFireTimer:(NSTimer *)timer {
+    (void)timer;
+    // dummy
 }
 
 @end
@@ -832,7 +839,7 @@ double CvCaptureFile::getFPS() {
     return retval;
 }
 
-double CvCaptureFile::getProperty(int property_id){
+double CvCaptureFile::getProperty(int property_id) const{
     if (mCaptureSession == nil) return 0;
 
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];

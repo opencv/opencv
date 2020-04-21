@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // Canny
@@ -86,3 +84,5 @@ PERF_TEST_P(Image_AppertureSz_L2gradient, Canny,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

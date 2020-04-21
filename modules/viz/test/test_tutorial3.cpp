@@ -1,12 +1,14 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 /**
  * @function main
  */
-void tutorial3(bool camera_pov)
+static void tutorial3(bool camera_pov)
 {
     /// Create a window
     viz::Viz3d myWindow("Coordinate Frame");
@@ -58,3 +60,5 @@ TEST(Viz, tutorial3_camera_view)
 {
     tutorial3(true);
 }
+
+}} // namespace

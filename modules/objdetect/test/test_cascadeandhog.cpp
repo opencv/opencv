@@ -40,11 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/objdetect/objdetect_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 //#define GET_STAT
 
@@ -209,8 +206,7 @@ void CV_DetectorTest::run( int )
         vector<string>::const_iterator it = imageFilenames.begin();
         for( int ii = 0; it != imageFilenames.end(); ++it, ii++ )
         {
-            char buf[10];
-            sprintf( buf, "%s%d", "img_", ii );
+            //String buf = cv::format("img_%d", ii);
             //cvWriteComment( validationFS.fs, buf, 0 );
             validationFS << *it;
         }
@@ -265,9 +261,8 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
         Mat image = images[ii];
         if( image.empty() )
         {
-            char msg[30];
-            sprintf( msg, "%s %d %s", "image ", ii, " can not be read" );
-            ts->printf( cvtest::TS::LOG, msg );
+            String msg = cv::format("image %d is empty", ii);
+            ts->printf( cvtest::TS::LOG, msg.c_str() );
             return cvtest::TS::FAIL_INVALID_TEST_DATA;
         }
         int code = detectMultiScale( detectorIdx, image, imgObjects );
@@ -278,9 +273,7 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
 
         if( write_results )
         {
-            char buf[10];
-            sprintf( buf, "%s%d", "img_", ii );
-            string imageIdxStr = buf;
+            String imageIdxStr = cv::format("img_%d", ii);
             validationFS << imageIdxStr << "[:";
             for( vector<Rect>::const_iterator it = imgObjects.begin();
                     it != imgObjects.end(); ++it )
@@ -294,7 +287,7 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
 }
 
 
-bool isZero( uchar i ) {return i == 0;}
+static bool isZero( uchar i ) {return i == 0;}
 
 int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
 {
@@ -313,9 +306,7 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
         int noPair = 0;
 
         // read validation rectangles
-        char buf[10];
-        sprintf( buf, "%s%d", "img_", imageIdx );
-        string imageIdxStr = buf;
+        String imageIdxStr = cv::format("img_%d", imageIdx);
         FileNode node = validationFS.getFirstTopLevelNode()[VALIDATION][detectorNames[detectorIdx]][imageIdxStr];
         vector<Rect> valRects;
         if( node.size() != 0 )
@@ -337,12 +328,12 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
             // find nearest rectangle
             Point2f cp1 = Point2f( cr->x + (float)cr->width/2.0f, cr->y + (float)cr->height/2.0f );
             int minIdx = -1, vi = 0;
-            float minDist = (float)norm( Point(imgSize.width, imgSize.height) );
+            float minDist = (float)cv::norm( Point(imgSize.width, imgSize.height) );
             for( vector<Rect>::const_iterator vr = valRects.begin();
                 vr != valRects.end(); ++vr, vi++ )
             {
                 Point2f cp2 = Point2f( vr->x + (float)vr->width/2.0f, vr->y + (float)vr->height/2.0f );
-                float curDist = (float)norm(cp1-cp2);
+                float curDist = (float)cv::norm(cp1-cp2);
                 if( curDist < minDist )
                 {
                     minIdx = vi;
@@ -439,7 +430,7 @@ int CV_CascadeDetectorTest::detectMultiScale_C( const string& filename,
     cvtColor( img, grayImg, COLOR_BGR2GRAY );
     equalizeHist( grayImg, grayImg );
 
-    CvMat c_gray = grayImg;
+    CvMat c_gray = cvMat(grayImg);
     CvSeq* rs = cvHaarDetectObjects(&c_gray, c_cascade, storage, 1.1, 3, flags[di] );
 
     objects.clear();
@@ -598,7 +589,6 @@ struct HOGCacheTester
         float gradWeight;
     };
 
-    HOGCacheTester();
     HOGCacheTester(const HOGDescriptorTester* descriptor,
         const Mat& img, Size paddingTL, Size paddingBR,
         bool useCache, Size cacheStride);
@@ -628,14 +618,10 @@ struct HOGCacheTester
 
     Mat grad, qangle;
     const HOGDescriptorTester* descriptor;
-};
 
-HOGCacheTester::HOGCacheTester()
-{
-    useCache = false;
-    blockHistogramSize = count1 = count2 = count4 = 0;
-    descriptor = 0;
-}
+private:
+    HOGCacheTester();  //= delete
+};
 
 HOGCacheTester::HOGCacheTester(const HOGDescriptorTester* _descriptor,
     const Mat& _img, Size _paddingTL, Size _paddingBR,
@@ -852,8 +838,8 @@ const float* HOGCacheTester::getBlock(Point pt, float* buf)
     }
 
     int k, C1 = count1, C2 = count2, C4 = count4;
-    const float* gradPtr = (const float*)(grad.data + grad.step*pt.y) + pt.x*2;
-    const uchar* qanglePtr = qangle.data + qangle.step*pt.y + pt.x*2;
+    const float* gradPtr = grad.ptr<float>(pt.y) + pt.x*2;
+    const uchar* qanglePtr = qangle.ptr(pt.y) + pt.x*2;
 
     CV_Assert( blockHist != 0 );
     for( k = 0; k < blockHistogramSize; k++ )
@@ -1086,8 +1072,8 @@ void HOGDescriptorTester::detect(const Mat& img,
         return;
     }
 
-    const double eps = 0.0;
-    double diff_norm = cvtest::norm(actual_weights, weights, NORM_L2);
+    const double eps = FLT_EPSILON * 100;
+    double diff_norm = cvtest::norm(actual_weights, weights, NORM_L2 + NORM_RELATIVE);
     if (diff_norm > eps)
     {
         ts->printf(cvtest::TS::SUMMARY, "Weights for found locations aren't equal.\n"
@@ -1096,7 +1082,6 @@ void HOGDescriptorTester::detect(const Mat& img,
         failed = true;
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         ts->set_gtest_status();
-        return;
     }
 }
 
@@ -1168,8 +1153,8 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
     std::vector<float> actual_descriptors;
     actual_hog->compute(img, actual_descriptors, winStride, padding, locations);
 
-    double diff_norm = cvtest::norm(actual_descriptors, descriptors, NORM_L2);
-    const double eps = 0.0;
+    double diff_norm = cvtest::norm(actual_descriptors, descriptors, NORM_L2 + NORM_RELATIVE);
+    const double eps = 2.0e-3;
     if (diff_norm > eps)
     {
         ts->printf(cvtest::TS::SUMMARY, "Norm of the difference: %lf\n", diff_norm);
@@ -1178,7 +1163,6 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
         ts->printf(cvtest::TS::LOG, "Channels: %d\n", img.channels());
         ts->set_gtest_status();
         failed = true;
-        return;
     }
 }
 
@@ -1209,7 +1193,7 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
            _lut(0,i) = (float)i;
 
     AutoBuffer<int> mapbuf(gradsize.width + gradsize.height + 4);
-    int* xmap = (int*)mapbuf + 1;
+    int* xmap = mapbuf.data() + 1;
     int* ymap = xmap + gradsize.width + 2;
 
     const int borderType = (int)BORDER_REFLECT_101;
@@ -1224,7 +1208,7 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     // x- & y- derivatives for the whole row
     int width = gradsize.width;
     AutoBuffer<float> _dbuf(width*4);
-    float* dbuf = _dbuf;
+    float* dbuf = _dbuf.data();
     Mat Dx(1, width, CV_32F, dbuf);
     Mat Dy(1, width, CV_32F, dbuf + width);
     Mat Mag(1, width, CV_32F, dbuf + width*2);
@@ -1234,9 +1218,9 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     float angleScale = (float)(_nbins/CV_PI);
     for( y = 0; y < gradsize.height; y++ )
     {
-       const uchar* imgPtr  = img.data + img.step*ymap[y];
-       const uchar* prevPtr = img.data + img.step*ymap[y-1];
-       const uchar* nextPtr = img.data + img.step*ymap[y+1];
+       const uchar* imgPtr  = img.ptr(ymap[y]);
+       const uchar* prevPtr = img.ptr(ymap[y-1]);
+       const uchar* nextPtr = img.ptr(ymap[y+1]);
        float* gradPtr = (float*)grad.ptr(y);
        uchar* qanglePtr = (uchar*)qangle.ptr(y);
 
@@ -1315,10 +1299,10 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     const char* args[] = { "Gradient's", "Qangles's" };
     actual_hog->computeGradient(img, actual_mats[0], actual_mats[1], paddingTL, paddingBR);
 
-    const double eps = 0.0;
+    const double eps = 8.0e-3;
     for (i = 0; i < 2; ++i)
     {
-       double diff_norm = cvtest::norm(reference_mats[i], actual_mats[i], NORM_L2);
+       double diff_norm = cvtest::norm(actual_mats[i], reference_mats[i], NORM_L2 + NORM_RELATIVE);
        if (diff_norm > eps)
        {
            ts->printf(cvtest::TS::LOG, "%s matrices are not equal\n"
@@ -1327,7 +1311,6 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
            ts->set_gtest_status();
            failed = true;
-           return;
        }
     }
 }
@@ -1360,4 +1343,34 @@ TEST(Objdetect_HOGDetector_Strict, accuracy)
         std::vector<float> descriptors;
         reference_hog.compute(image, descriptors);
     }
- }
+}
+
+TEST(Objdetect_CascadeDetector, small_img)
+{
+    String root = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/";
+    String cascades[] =
+    {
+        root + "haarcascade_frontalface_alt.xml",
+        root + "lbpcascade_frontalface.xml",
+        String()
+    };
+
+    vector<Rect> objects;
+    RNG rng((uint64)-1);
+
+    for( int i = 0; !cascades[i].empty(); i++ )
+    {
+        printf("%d. %s\n", i, cascades[i].c_str());
+        CascadeClassifier cascade(cascades[i]);
+        for( int j = 0; j < 100; j++ )
+        {
+            int width = rng.uniform(1, 100);
+            int height = rng.uniform(1, 100);
+            Mat img(height, width, CV_8U);
+            randu(img, 0, 256);
+            cascade.detectMultiScale(img, objects);
+        }
+    }
+}
+
+}} // namespace

@@ -43,12 +43,15 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_WARP_WARP_HPP__
-#define __OPENCV_CUDEV_WARP_WARP_HPP__
+#ifndef OPENCV_CUDEV_WARP_WARP_HPP
+#define OPENCV_CUDEV_WARP_WARP_HPP
 
 #include "../common.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 enum
 {
@@ -61,7 +64,7 @@ struct Warp
     __device__ __forceinline__ static uint laneId()
     {
         uint ret;
-        asm("mov.u32 %0, %laneid;" : "=r"(ret));
+        asm("mov.u32 %0, %%laneid;" : "=r"(ret));
         return ret;
     }
 
@@ -116,6 +119,8 @@ __device__ __forceinline__ void warpYota(OutIt beg, OutIt end, T value)
     for(OutIt t = beg + lane; t < end; t += WARP_SIZE, value += WARP_SIZE)
         *t = value;
 }
+
+//! @}
 
 }}
 

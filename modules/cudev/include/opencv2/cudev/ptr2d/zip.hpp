@@ -43,14 +43,17 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_ZIP_HPP__
-#define __OPENCV_CUDEV_PTR2D_ZIP_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_ZIP_HPP
+#define OPENCV_CUDEV_PTR2D_ZIP_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"
 #include "traits.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class PtrTuple> struct ZipPtr;
 
@@ -167,6 +170,8 @@ zipPtr(const Ptr0& ptr0, const Ptr1& ptr1, const Ptr2& ptr2, const Ptr3& ptr3)
 template <class PtrTuple> struct PtrTraits< ZipPtrSz<PtrTuple> > : PtrTraitsBase<ZipPtrSz<PtrTuple>, ZipPtr<PtrTuple> >
 {
 };
+
+//! @}
 
 }}
 

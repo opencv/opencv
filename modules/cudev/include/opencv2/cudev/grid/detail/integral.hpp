@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_INTEGRAL_DETAIL_HPP__
-#define __OPENCV_CUDEV_GRID_INTEGRAL_DETAIL_HPP__
+#ifndef OPENCV_CUDEV_GRID_INTEGRAL_DETAIL_HPP
+#define OPENCV_CUDEV_GRID_INTEGRAL_DETAIL_HPP
 
 #include "../../common.hpp"
 #include "../../warp/shuffle.hpp"
@@ -63,7 +63,8 @@ namespace integral_detail
         __shared__ D smem[NUM_SCAN_THREADS * 2];
         __shared__ D carryElem;
 
-        carryElem = 0;
+        if (threadIdx.x == 0)
+            carryElem = 0;
 
         __syncthreads();
 
@@ -105,7 +106,8 @@ namespace integral_detail
         __shared__ D smem[NUM_SCAN_THREADS * 2];
         __shared__ D carryElem;
 
-        carryElem = 0;
+        if (threadIdx.x == 0)
+            carryElem = 0;
 
         __syncthreads();
 
@@ -215,7 +217,7 @@ namespace integral_detail
         #pragma unroll
         for (int i = 1; i < 32; i *= 2)
         {
-            const int n = shfl_up(sum, i, 32);
+            const int n = compatible_shfl_up(sum, i, 32);
 
             if (lane_id >= i)
             {
@@ -245,9 +247,9 @@ namespace integral_detail
             int warp_sum = sums[lane_id];
 
             #pragma unroll
-            for (int i = 1; i <= 32; i *= 2)
+            for (int i = 1; i < 32; i *= 2)
             {
-                const int n = shfl_up(warp_sum, i, 32);
+                const int n = compatible_shfl_up(warp_sum, i, 32);
 
                 if (lane_id >= i)
                     warp_sum += n;
@@ -453,7 +455,7 @@ namespace integral_detail
 
             for (int i = 1; i <= 8; i *= 2)
             {
-                T n = shfl_up(partial_sum, i, 32);
+                T n = compatible_shfl_up(partial_sum, i, 32);
 
                 if (lane_id >= i)
                     partial_sum += n;
@@ -598,7 +600,7 @@ namespace integral_detail
     __host__ static void integral(const GlobPtr<uchar>& src, const GlobPtr<uint>& dst, int rows, int cols, cudaStream_t stream)
     {
         if (deviceSupports(FEATURE_SET_COMPUTE_30)
-            && (cols % 16 == 0)
+            && (cols % 64 == 0)
             && reinterpret_cast<intptr_t>(src.data) % 32 == 0
             && reinterpret_cast<intptr_t>(dst.data) % 32 == 0)
         {

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_RING_BUFFER_HPP__
-#define __OPENCV_VIDEOSTAB_RING_BUFFER_HPP__
+#ifndef OPENCV_VIDEOSTAB_RING_BUFFER_HPP
+#define OPENCV_VIDEOSTAB_RING_BUFFER_HPP
 
 #include <vector>
 #include "opencv2/imgproc.hpp"
@@ -50,6 +50,9 @@ namespace cv
 {
 namespace videostab
 {
+
+//! @addtogroup videostab
+//! @{
 
 template <typename T> inline T& at(int idx, std::vector<T> &items)
 {
@@ -60,6 +63,8 @@ template <typename T> inline const T& at(int idx, const std::vector<T> &items)
 {
     return items[cv::borderInterpolate(idx, static_cast<int>(items.size()), cv::BORDER_WRAP)];
 }
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

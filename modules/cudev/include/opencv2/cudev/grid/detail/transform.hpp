@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_TRANSFORM_DETAIL_HPP__
-#define __OPENCV_CUDEV_GRID_TRANSFORM_DETAIL_HPP__
+#ifndef OPENCV_CUDEV_GRID_TRANSFORM_DETAIL_HPP
+#define OPENCV_CUDEV_GRID_TRANSFORM_DETAIL_HPP
 
 #include "../../common.hpp"
 #include "../../util/tuple.hpp"
@@ -199,11 +199,8 @@ namespace grid_transform_detail
             if (x_shifted + SHIFT - 1 < cols)
             {
                 const read_type src_n_el = ((const read_type*)src)[x];
-                write_type dst_n_el = ((const write_type*)dst)[x];
 
-                OpUnroller<SHIFT>::unroll(src_n_el, dst_n_el, op, mask, x_shifted, y);
-
-                ((write_type*)dst)[x] = dst_n_el;
+                OpUnroller<SHIFT>::unroll(src_n_el, ((write_type*)dst)[x], op, mask, x_shifted, y);
             }
             else
             {
@@ -237,11 +234,8 @@ namespace grid_transform_detail
             {
                 const read_type1 src1_n_el = ((const read_type1*)src1)[x];
                 const read_type2 src2_n_el = ((const read_type2*)src2)[x];
-                write_type dst_n_el = ((const write_type*)dst)[x];
 
-                OpUnroller<SHIFT>::unroll(src1_n_el, src2_n_el, dst_n_el, op, mask, x_shifted, y);
-
-                ((write_type*)dst)[x] = dst_n_el;
+                OpUnroller<SHIFT>::unroll(src1_n_el, src2_n_el, ((write_type*)dst)[x], op, mask, x_shifted, y);
             }
             else
             {

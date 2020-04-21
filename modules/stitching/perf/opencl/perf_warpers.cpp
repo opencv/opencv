@@ -45,7 +45,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////////////////// Stitching Warpers ///////////////////////////
@@ -54,7 +54,8 @@ enum
 {
     SphericalWarperType = 0,
     CylindricalWarperType = 1,
-    PlaneWarperType = 2
+    PlaneWarperType = 2,
+    AffineWarperType = 3,
 };
 
 class WarperBase
@@ -69,6 +70,8 @@ public:
             creator = makePtr<CylindricalWarper>();
         else if (type == PlaneWarperType)
             creator = makePtr<PlaneWarper>();
+        else if (type == AffineWarperType)
+            creator = makePtr<AffineWarper>();
         CV_Assert(!creator.empty());
 
         K = Mat::eye(3, 3, CV_32FC1);
@@ -98,7 +101,7 @@ private:
     Mat K, R;
 };
 
-CV_ENUM(WarperType, SphericalWarperType, CylindricalWarperType, PlaneWarperType)
+CV_ENUM(WarperType, SphericalWarperType, CylindricalWarperType, PlaneWarperType, AffineWarperType)
 
 typedef tuple<Size, WarperType> StitchingWarpersParams;
 typedef TestBaseWithParam<StitchingWarpersParams> StitchingWarpersFixture;
@@ -154,6 +157,6 @@ OCL_PERF_TEST_P(StitchingWarpersFixture, StitchingWarpers_Warp,
     SANITY_CHECK(dst, 1e-5);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

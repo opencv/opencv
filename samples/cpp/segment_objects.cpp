@@ -1,6 +1,6 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/videoio/videoio.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include <stdio.h>
 #include <string>
@@ -8,14 +8,14 @@
 using namespace std;
 using namespace cv;
 
-static void help()
+static void help(char** argv)
 {
     printf("\n"
             "This program demonstrated a simple method of connected components clean up of background subtraction\n"
             "When the program starts, it begins learning the background.\n"
             "You can toggle background learning on and off by hitting the space bar.\n"
             "Call\n"
-            "./segment_objects [video file, else it reads camera 0]\n\n");
+            "%s [video file, else it reads camera 0]\n\n", argv[0]);
 }
 
 static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
@@ -63,12 +63,17 @@ int main(int argc, char** argv)
     VideoCapture cap;
     bool update_bg_model = true;
 
-    help();
-
-    if( argc < 2 )
+    CommandLineParser parser(argc, argv, "{help h||}{@input||}");
+    if (parser.has("help"))
+    {
+        help(argv);
+        return 0;
+    }
+    string input = parser.get<std::string>("@input");
+    if (input.empty())
         cap.open(0);
     else
-        cap.open(std::string(argv[1]));
+        cap.open(samples::findFileOrKeep(input));
 
     if( !cap.isOpened() )
     {
@@ -79,7 +84,7 @@ int main(int argc, char** argv)
     Mat tmp_frame, bgmask, out_frame;
 
     cap >> tmp_frame;
-    if(!tmp_frame.data)
+    if(tmp_frame.empty())
     {
         printf("can not read data from the video source\n");
         return -1;
@@ -94,13 +99,13 @@ int main(int argc, char** argv)
     for(;;)
     {
         cap >> tmp_frame;
-        if( !tmp_frame.data )
+        if( tmp_frame.empty() )
             break;
         bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
         refineSegments(tmp_frame, bgmask, out_frame);
         imshow("video", tmp_frame);
         imshow("segmented", out_frame);
-        int keycode = waitKey(30);
+        char keycode = (char)waitKey(30);
         if( keycode == 27 )
             break;
         if( keycode == ' ' )

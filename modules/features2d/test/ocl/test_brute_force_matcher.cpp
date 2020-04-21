@@ -54,7 +54,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 PARAM_TEST_CASE(BruteForceMatcher, int, int)
 {
@@ -83,7 +83,7 @@ PARAM_TEST_CASE(BruteForceMatcher, int, int)
         rng.fill(queryBuf, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(3));
         queryBuf.convertTo(queryBuf, CV_32FC1);
 
-        // Generate train decriptors as follows:
+        // Generate train descriptors as follows:
         // copy each query descriptor to train set countFactor times
         // and perturb some one element of the copied descriptors in
         // in ascending order. General boundaries of the perturbation
@@ -111,7 +111,7 @@ PARAM_TEST_CASE(BruteForceMatcher, int, int)
     }
 };
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 OCL_TEST_P(BruteForceMatcher, DISABLED_Match_Single)
 #else
 OCL_TEST_P(BruteForceMatcher, Match_Single)
@@ -135,7 +135,7 @@ OCL_TEST_P(BruteForceMatcher, Match_Single)
     ASSERT_EQ(0, badCount);
 }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 OCL_TEST_P(BruteForceMatcher, DISABLED_KnnMatch_2_Single)
 #else
 OCL_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
@@ -171,7 +171,7 @@ OCL_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
     ASSERT_EQ(0, badCount);
 }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 OCL_TEST_P(BruteForceMatcher, DISABLED_RadiusMatch_Single)
 #else
 OCL_TEST_P(BruteForceMatcher, RadiusMatch_Single)

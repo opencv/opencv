@@ -165,27 +165,27 @@ __kernel void pyrUp_unrolled(__global const uchar * src, int src_step, int src_o
 
     // (x,y)
     sum =       co3 * s_srcPatch[1 + (ly >> 1)][1 + ((lx - 2) >> 1)];
-    sum = sum + co1 * s_srcPatch[1 + (ly >> 1)][1 + ((lx    ) >> 1)];
-    sum = sum + co3 * s_srcPatch[1 + (ly >> 1)][1 + ((lx + 2) >> 1)];
+    sum = mad(co1, s_srcPatch[1 + (ly >> 1)][1 + ((lx    ) >> 1)], sum);
+    sum = mad(co3, s_srcPatch[1 + (ly >> 1)][1 + ((lx + 2) >> 1)], sum);
 
     s_dstPatch[1 + get_local_id(1)][lx] = sum;
 
     // (x+1,y)
     sum =       co2 * s_srcPatch[1 + (ly >> 1)][1 + ((lx + 1 - 1) >> 1)];
-    sum = sum + co2 * s_srcPatch[1 + (ly >> 1)][1 + ((lx + 1 + 1) >> 1)];
+    sum = mad(co2, s_srcPatch[1 + (ly >> 1)][1 + ((lx + 1 + 1) >> 1)], sum);
     s_dstPatch[1 + get_local_id(1)][lx+1] = sum;
 
     if (ly < 1)
     {
         // (x,y)
         sum =       co3 * s_srcPatch[0][1 + ((lx - 2) >> 1)];
-        sum = sum + co1 * s_srcPatch[0][1 + ((lx    ) >> 1)];
-        sum = sum + co3 * s_srcPatch[0][1 + ((lx + 2) >> 1)];
+        sum = mad(co1, s_srcPatch[0][1 + ((lx    ) >> 1)], sum);
+        sum = mad(co3, s_srcPatch[0][1 + ((lx + 2) >> 1)], sum);
         s_dstPatch[0][lx] = sum;
 
         // (x+1,y)
         sum =       co2 * s_srcPatch[0][1 + ((lx + 1 - 1) >> 1)];
-        sum = sum + co2 * s_srcPatch[0][1 + ((lx + 1 + 1) >> 1)];
+        sum = mad(co2, s_srcPatch[0][1 + ((lx + 1 + 1) >> 1)], sum);
         s_dstPatch[0][lx+1] = sum;
     }
 
@@ -193,13 +193,13 @@ __kernel void pyrUp_unrolled(__global const uchar * src, int src_step, int src_o
     {
         // (x,y)
         sum =       co3 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx - 2) >> 1)];
-        sum = sum + co1 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx    ) >> 1)];
-        sum = sum + co3 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx + 2) >> 1)];
+        sum = mad(co1, s_srcPatch[LOCAL_SIZE+1][1 + ((lx    ) >> 1)], sum);
+        sum = mad(co3, s_srcPatch[LOCAL_SIZE+1][1 + ((lx + 2) >> 1)], sum);
         s_dstPatch[LOCAL_SIZE+1][lx] = sum;
 
         // (x+1,y)
         sum =       co2 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx + 1 - 1) >> 1)];
-        sum = sum + co2 * s_srcPatch[LOCAL_SIZE+1][1 + ((lx + 1 + 1) >> 1)];
+        sum = mad(co2, s_srcPatch[LOCAL_SIZE+1][1 + ((lx + 1 + 1) >> 1)], sum);
         s_dstPatch[LOCAL_SIZE+1][lx+1] = sum;
     }
 
@@ -211,24 +211,24 @@ __kernel void pyrUp_unrolled(__global const uchar * src, int src_step, int src_o
     {
         // (x,y)
         sum =       co3 * s_dstPatch[1 + get_local_id(1) - 1][lx];
-        sum = sum + co1 * s_dstPatch[1 + get_local_id(1)    ][lx];
-        sum = sum + co3 * s_dstPatch[1 + get_local_id(1) + 1][lx];
+        sum = mad(co1, s_dstPatch[1 + get_local_id(1)    ][lx], sum);
+        sum = mad(co3, s_dstPatch[1 + get_local_id(1) + 1][lx], sum);
         storepix(convertToT(sum), dstData + dst_y * dst_step + dst_x * PIXSIZE);
 
         // (x+1,y)
         sum =       co3 * s_dstPatch[1 + get_local_id(1) - 1][lx+1];
-        sum = sum + co1 * s_dstPatch[1 + get_local_id(1)    ][lx+1];
-        sum = sum + co3 * s_dstPatch[1 + get_local_id(1) + 1][lx+1];
+        sum = mad(co1, s_dstPatch[1 + get_local_id(1)    ][lx+1], sum);
+        sum = mad(co3, s_dstPatch[1 + get_local_id(1) + 1][lx+1], sum);
         storepix(convertToT(sum), dstData + dst_y * dst_step + (dst_x+1) * PIXSIZE);
 
         // (x,y+1)
         sum =       co2 * s_dstPatch[1 + get_local_id(1)    ][lx];
-        sum = sum + co2 * s_dstPatch[1 + get_local_id(1) + 1][lx];
+        sum = mad(co2, s_dstPatch[1 + get_local_id(1) + 1][lx], sum);
         storepix(convertToT(sum), dstData + (dst_y+1) * dst_step + dst_x * PIXSIZE);
 
         // (x+1,y+1)
         sum =       co2 * s_dstPatch[1 + get_local_id(1)    ][lx+1];
-        sum = sum + co2 * s_dstPatch[1 + get_local_id(1) + 1][lx+1];
+        sum = mad(co2, s_dstPatch[1 + get_local_id(1) + 1][lx+1], sum);
         storepix(convertToT(sum), dstData + (dst_y+1) * dst_step + (dst_x+1) * PIXSIZE);
     }
 }

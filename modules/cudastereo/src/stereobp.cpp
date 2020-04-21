@@ -61,7 +61,7 @@ namespace cv { namespace cuda { namespace device
         template<typename T, typename D>
         void comp_data_gpu(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream);
         template<typename T>
-        void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
+        void data_step_down_gpu(int dst_cols, int dst_rows, int src_cols, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
         template <typename T>
         void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
         template <typename T>
@@ -283,7 +283,7 @@ namespace
     {
         using namespace cv::cuda::device::stereobp;
 
-        typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
+        typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_cols, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
         static const data_step_down_t data_step_down_callers[2] =
         {
             data_step_down_gpu<short>, data_step_down_gpu<float>
@@ -318,7 +318,7 @@ namespace
 
             datas_[i].create(rows_all_[i] * ndisp_, cols_all_[i], msg_type_);
 
-            data_step_down_callers[funcIdx](cols_all_[i], rows_all_[i], rows_all_[i-1], datas_[i-1], datas_[i], stream);
+            data_step_down_callers[funcIdx](cols_all_[i], rows_all_[i], cols_all_[i-1], rows_all_[i-1], datas_[i-1], datas_[i], stream);
         }
 
         PtrStepSzb mus[] = {u_, u2_};

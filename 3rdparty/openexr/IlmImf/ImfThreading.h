@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -35,6 +35,9 @@
 #ifndef INCLUDED_IMF_THREADING_H
 #define INCLUDED_IMF_THREADING_H
 
+#include "ImfExport.h"
+#include "ImfNamespace.h"
+
 //-----------------------------------------------------------------------------
 //
 //	Threading support for the IlmImf library
@@ -50,7 +53,7 @@
 //	done concurrently through pinelining.  If there are two or more
 //	worker threads, then pipelining as well as concurrent compression
 //	of multiple blocks can be performed.
-//
+// 
 //	Threading in the Imf library is controllable at two granularities:
 //
 //	* The functions in this file query and control the total number
@@ -69,24 +72,24 @@
 //
 //-----------------------------------------------------------------------------
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
 //-----------------------------------------------------------------------------
 // Return the number of Imf-global worker threads used for parallel
 // compression and decompression of OpenEXR files.
 //-----------------------------------------------------------------------------
-
-int     globalThreadCount ();
+    
+IMF_EXPORT int     globalThreadCount ();
 
 
 //-----------------------------------------------------------------------------
 // Change the number of Imf-global worker threads
 //-----------------------------------------------------------------------------
 
-void    setGlobalThreadCount (int count);
+IMF_EXPORT void    setGlobalThreadCount (int count);
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

@@ -43,14 +43,17 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_LIMITS_HPP__
-#define __OPENCV_CUDEV_UTIL_LIMITS_HPP__
+#ifndef OPENCV_CUDEV_UTIL_LIMITS_HPP
+#define OPENCV_CUDEV_UTIL_LIMITS_HPP
 
 #include <limits.h>
 #include <float.h>
 #include "../common.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class T> struct numeric_limits;
 
@@ -118,6 +121,8 @@ template <> struct numeric_limits<double>
     __device__ __forceinline__ static double epsilon() { return DBL_EPSILON; }
     static const bool is_signed = true;
 };
+
+//! @}
 
 }}
 

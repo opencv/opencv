@@ -52,19 +52,19 @@
 #include <stdio.h>
 #include <setjmp.h>
 
-// the following defines are a hack to avoid multiple problems with frame ponter handling and setjmp
+// the following defines are a hack to avoid multiple problems with frame pointer handling and setjmp
 // see http://gcc.gnu.org/ml/gcc/2011-10/msg00324.html for some details
 #define mingw_getsp(...) 0
 #define __builtin_frame_address(...) 0
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #define XMD_H // prevent redefinition of INT32
 #undef FAR  // prevent FAR redefinition
 
 #endif
 
-#if defined WIN32 && defined __GNUC__
+#if defined _WIN32 && defined __GNUC__
 typedef unsigned char boolean;
 #endif
 
@@ -75,21 +75,25 @@ extern "C" {
 #include "jpeglib.h"
 }
 
+#ifndef CV_MANUAL_JPEG_STD_HUFF_TABLES
+  #if defined(LIBJPEG_TURBO_VERSION_NUMBER) && LIBJPEG_TURBO_VERSION_NUMBER >= 1003090
+    #define CV_MANUAL_JPEG_STD_HUFF_TABLES 0  // libjpeg-turbo handles standard huffman tables itself (jstdhuff.c)
+  #else
+    #define CV_MANUAL_JPEG_STD_HUFF_TABLES 1
+  #endif
+#endif
+#if CV_MANUAL_JPEG_STD_HUFF_TABLES == 0
+  #undef CV_MANUAL_JPEG_STD_HUFF_TABLES
+#endif
+
 namespace cv
 {
 
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable:4324) //structure was padded due to __declspec(align())
-#endif
 struct JpegErrorMgr
 {
     struct jpeg_error_mgr pub;
     jmp_buf setjmp_buffer;
 };
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
 
 struct JpegSource
 {
@@ -213,7 +217,7 @@ ImageDecoder JpegDecoder::newDecoder() const
 
 bool  JpegDecoder::readHeader()
 {
-    bool result = false;
+    volatile bool result = false;
     close();
 
     JpegState* state = new JpegState;
@@ -228,7 +232,7 @@ bool  JpegDecoder::readHeader()
         if( !m_buf.empty() )
         {
             jpeg_buffer_src(&state->cinfo, &state->source);
-            state->source.pub.next_input_byte = m_buf.data;
+            state->source.pub.next_input_byte = m_buf.ptr();
             state->source.pub.bytes_in_buffer = m_buf.cols*m_buf.rows*m_buf.elemSize();
         }
         else
@@ -242,8 +246,12 @@ bool  JpegDecoder::readHeader()
         {
             jpeg_read_header( &state->cinfo, TRUE );
 
-            m_width = state->cinfo.image_width;
-            m_height = state->cinfo.image_height;
+            state->cinfo.scale_num=1;
+            state->cinfo.scale_denom = m_scale_denom;
+            m_scale_denom=1; // trick! to know which decoder used scale_denom see imread_
+            jpeg_calc_output_dimensions(&state->cinfo);
+            m_width = state->cinfo.output_width;
+            m_height = state->cinfo.output_height;
             m_type = state->cinfo.num_components > 1 ? CV_8UC3 : CV_8UC1;
             result = true;
         }
@@ -255,6 +263,7 @@ bool  JpegDecoder::readHeader()
     return result;
 }
 
+#ifdef CV_MANUAL_JPEG_STD_HUFF_TABLES
 /***************************************************************************
  * following code is for supporting MJPEG image files
  * based on a message of Laurent Pinchart on the video4linux mailing list
@@ -337,7 +346,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
 
     JHUFF_TBL **hufftbl;
     unsigned char bits[17];
-    unsigned char huffval[256];
+    unsigned char huffval[256] = {0};
 
     while (length > 16)
     {
@@ -360,7 +369,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
 
        if (index & 0x10)
        {
-           index -= 0x10;
+           index &= ~0x10;
            hufftbl = &ac_tables[index];
        }
        else
@@ -388,11 +397,12 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
  * end of code for supportting MJPEG image files
  * based on a message of Laurent Pinchart on the video4linux mailing list
  ***************************************************************************/
+#endif  // CV_MANUAL_JPEG_STD_HUFF_TABLES
 
 bool  JpegDecoder::readData( Mat& img )
 {
-    bool result = false;
-    int step = (int)img.step;
+    volatile bool result = false;
+    size_t step = img.step;
     bool color = img.channels() > 1;
 
     if( m_state && m_width && m_height )
@@ -403,6 +413,7 @@ bool  JpegDecoder::readData( Mat& img )
 
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {
+#ifdef CV_MANUAL_JPEG_STD_HUFF_TABLES
             /* check if this is a mjpeg image format */
             if ( cinfo->ac_huff_tbl_ptrs[0] == NULL &&
                 cinfo->ac_huff_tbl_ptrs[1] == NULL &&
@@ -416,6 +427,7 @@ bool  JpegDecoder::readData( Mat& img )
                     cinfo->ac_huff_tbl_ptrs,
                     cinfo->dc_huff_tbl_ptrs );
             }
+#endif
 
             if( color )
             {
@@ -449,7 +461,7 @@ bool  JpegDecoder::readData( Mat& img )
             buffer = (*cinfo->mem->alloc_sarray)((j_common_ptr)cinfo,
                                               JPOOL_IMAGE, m_width*4, 1 );
 
-            uchar* data = img.data;
+            uchar* data = img.ptr();
             for( ; m_height--; data += step )
             {
                 jpeg_read_scanlines( cinfo, buffer, 1 );
@@ -468,6 +480,7 @@ bool  JpegDecoder::readData( Mat& img )
                         icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, cvSize(m_width,1) );
                 }
             }
+
             result = true;
             jpeg_finish_decompress( cinfo );
         }
@@ -553,7 +566,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         fileWrapper() : f(0) {}
         ~fileWrapper() { if(f) fclose(f); }
     };
-    bool result = false;
+    volatile bool result = false;
     fileWrapper fw;
     int width = img.cols, height = img.rows;
 
@@ -683,7 +696,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
         if( channels > 1 )
             _buffer.allocate(width*channels);
-        buffer = _buffer;
+        buffer = _buffer.data();
 
         for( int y = 0; y < height; y++ )
         {

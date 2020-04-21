@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CUDALEGACY_PRIVATE_HPP__
-#define __OPENCV_CORE_CUDALEGACY_PRIVATE_HPP__
+#ifndef OPENCV_CORE_CUDALEGACY_PRIVATE_HPP
+#define OPENCV_CORE_CUDALEGACY_PRIVATE_HPP
 
 #ifndef __OPENCV_BUILD
 #  error this is a private header which should not be used from outside of the OpenCV library
@@ -55,6 +55,8 @@
 #endif
 
 #include "opencv2/cudalegacy.hpp"
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda
 {
@@ -89,4 +91,6 @@ namespace cv { namespace cuda
 
 #define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, CV_Func)
 
-#endif // __OPENCV_CORE_CUDALEGACY_PRIVATE_HPP__
+//! @endcond
+
+#endif // OPENCV_CORE_CUDALEGACY_PRIVATE_HPP

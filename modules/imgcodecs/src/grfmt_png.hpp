@@ -51,18 +51,18 @@
 namespace cv
 {
 
-class PngDecoder : public BaseImageDecoder
+class PngDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
 
     PngDecoder();
     virtual ~PngDecoder();
 
-    bool  readData( Mat& img );
-    bool  readHeader();
+    bool  readData( Mat& img ) CV_OVERRIDE;
+    bool  readHeader() CV_OVERRIDE;
     void  close();
 
-    ImageDecoder newDecoder() const;
+    ImageDecoder newDecoder() const CV_OVERRIDE;
 
 protected:
 
@@ -78,16 +78,16 @@ protected:
 };
 
 
-class PngEncoder : public BaseImageEncoder
+class PngEncoder CV_FINAL : public BaseImageEncoder
 {
 public:
     PngEncoder();
     virtual ~PngEncoder();
 
-    bool  isFormatSupported( int depth ) const;
-    bool  write( const Mat& img, const std::vector<int>& params );
+    bool  isFormatSupported( int depth ) const CV_OVERRIDE;
+    bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
 
-    ImageEncoder newEncoder() const;
+    ImageEncoder newEncoder() const CV_OVERRIDE;
 
 protected:
     static void writeDataToBuf(void* png_ptr, uchar* src, size_t size);

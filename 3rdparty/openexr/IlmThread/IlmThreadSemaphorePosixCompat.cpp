@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2005-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -42,22 +42,22 @@
 
 #include "IlmBaseConfig.h"
 
-#if HAVE_PTHREAD && !HAVE_POSIX_SEMAPHORES
+#if (!HAVE_POSIX_SEMAPHORES) && !defined (_WIN32) && ! defined (_WIN64)
 
 #include "IlmThreadSemaphore.h"
 #include "Iex.h"
 #include <assert.h>
 
-namespace IlmThread {
+ILMTHREAD_INTERNAL_NAMESPACE_SOURCE_ENTER
 
-
+#if ILMBASE_FORCE_CXX03 && HAVE_PTHREAD
 Semaphore::Semaphore (unsigned int value)
 {
     if (int error = ::pthread_mutex_init (&_semaphore.mutex, 0))
-        Iex::throwErrnoExc ("Cannot initialize mutex (%T).", error);
+        IEX_NAMESPACE::throwErrnoExc ("Cannot initialize mutex (%T).", error);
 
     if (int error = ::pthread_cond_init (&_semaphore.nonZero, 0))
-        Iex::throwErrnoExc ("Cannot initialize condition variable (%T).",
+        IEX_NAMESPACE::throwErrnoExc ("Cannot initialize condition variable (%T).",
                             error);
 
     _semaphore.count = value;
@@ -85,12 +85,12 @@ Semaphore::wait ()
     {
         if (int error = ::pthread_cond_wait (&_semaphore.nonZero,
                                              &_semaphore.mutex))
-    {
+        {
             ::pthread_mutex_unlock (&_semaphore.mutex);
 
-            Iex::throwErrnoExc ("Cannot wait on condition variable (%T).",
-                                error);
-    }
+            IEX_NAMESPACE::throwErrnoExc ("Cannot wait on condition variable (%T).",
+                                          error);
+        }
     }
 
     _semaphore.numWaiting--;
@@ -104,7 +104,7 @@ bool
 Semaphore::tryWait ()
 {
     ::pthread_mutex_lock (&_semaphore.mutex);
-
+    
     if (_semaphore.count == 0)
     {
         ::pthread_mutex_unlock (&_semaphore.mutex);
@@ -126,13 +126,22 @@ Semaphore::post ()
 
     if (_semaphore.numWaiting > 0)
     {
-        if (int error = ::pthread_cond_signal (&_semaphore.nonZero))
-    {
+        int error;
+        if (_semaphore.numWaiting > 1 && _semaphore.count > 1)
+        {
+            error =  ::pthread_cond_broadcast (&_semaphore.nonZero);
+        }
+        else
+        {
+            error = ::pthread_cond_signal (&_semaphore.nonZero);
+        }
+        if (error)
+        {
             ::pthread_mutex_unlock (&_semaphore.mutex);
 
-            Iex::throwErrnoExc ("Cannot signal condition variable (%T).",
+            IEX_NAMESPACE::throwErrnoExc ("Cannot signal condition variable (%T).",
                                 error);
-    }
+        }
     }
 
     _semaphore.count++;
@@ -148,8 +157,71 @@ Semaphore::value () const
     ::pthread_mutex_unlock (&_semaphore.mutex);
     return value;
 }
+#else
+Semaphore::Semaphore (unsigned int value)
+{
+    _semaphore.count = value;
+    _semaphore.numWaiting = 0;
+}
 
 
-} // namespace IlmThread
+Semaphore::~Semaphore ()
+{
+}
+
+
+void
+Semaphore::wait ()
+{
+    std::unique_lock<std::mutex> lk(_semaphore.mutex);
+
+    _semaphore.numWaiting++;
+
+    while (_semaphore.count == 0)
+        _semaphore.nonZero.wait (lk);
+
+    _semaphore.numWaiting--;
+    _semaphore.count--;
+}
+
+
+bool
+Semaphore::tryWait ()
+{
+    std::lock_guard<std::mutex> lk(_semaphore.mutex);
+    
+    if (_semaphore.count == 0)
+        return false;
+
+    _semaphore.count--;
+    return true;
+}
+
+
+void
+Semaphore::post ()
+{
+    std::lock_guard<std::mutex> lk(_semaphore.mutex);
+
+    _semaphore.count++;
+    if (_semaphore.numWaiting > 0)
+    {
+        if (_semaphore.count > 1)
+            _semaphore.nonZero.notify_all();
+        else
+            _semaphore.nonZero.notify_one();
+    }
+}
+
+
+int
+Semaphore::value () const
+{
+    std::lock_guard<std::mutex> lk(_semaphore.mutex);
+    return _semaphore.count;
+}
+#endif
+
+ILMTHREAD_INTERNAL_NAMESPACE_SOURCE_EXIT
 
 #endif

@@ -1,25 +1,28 @@
 # -----------------------------------------------
 # File that provides "make uninstall" target
 #  We use the file 'install_manifest.txt'
+#
+# Details: https://gitlab.kitware.com/cmake/community/-/wikis/FAQ#can-i-do-make-uninstall-with-cmake
 # -----------------------------------------------
-IF(NOT EXISTS "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt")
-  MESSAGE(FATAL_ERROR "Cannot find install manifest: \"@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt\"")
-ENDIF(NOT EXISTS "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt")
 
-FILE(READ "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt" files)
-STRING(REGEX REPLACE "\n" ";" files "${files}")
-FOREACH(file ${files})
-  MESSAGE(STATUS "Uninstalling \"$ENV{DESTDIR}${file}\"")
-  IF(EXISTS "$ENV{DESTDIR}${file}")
-    EXEC_PROGRAM(
-      "@CMAKE_COMMAND@" ARGS "-E remove \"$ENV{DESTDIR}${file}\""
-      OUTPUT_VARIABLE rm_out
-      RETURN_VALUE rm_retval
-      )
-    IF(NOT "${rm_retval}" STREQUAL 0)
-      MESSAGE(FATAL_ERROR "Problem when removing \"$ENV{DESTDIR}${file}\"")
-    ENDIF(NOT "${rm_retval}" STREQUAL 0)
-  ELSE(EXISTS "$ENV{DESTDIR}${file}")
-    MESSAGE(STATUS "File \"$ENV{DESTDIR}${file}\" does not exist.")
-  ENDIF(EXISTS "$ENV{DESTDIR}${file}")
-ENDFOREACH(file)
+if(NOT EXISTS "@CMAKE_BINARY_DIR@/install_manifest.txt")
+  message(FATAL_ERROR "Cannot find install manifest: \"@CMAKE_BINARY_DIR@/install_manifest.txt\"")
+endif()
+
+file(READ "@CMAKE_BINARY_DIR@/install_manifest.txt" files)
+string(REGEX REPLACE "\n" ";" files "${files}")
+foreach(file ${files})
+  message(STATUS "Uninstalling $ENV{DESTDIR}${file}")
+  if(IS_SYMLINK "$ENV{DESTDIR}${file}" OR EXISTS "$ENV{DESTDIR}${file}")
+    exec_program(
+        "@CMAKE_COMMAND@" ARGS "-E remove \"$ENV{DESTDIR}${file}\""
+        OUTPUT_VARIABLE rm_out
+        RETURN_VALUE rm_retval
+    )
+    if(NOT "${rm_retval}" STREQUAL 0)
+      message(FATAL_ERROR "Problem when removing $ENV{DESTDIR}${file}")
+    endif()
+  else(IS_SYMLINK "$ENV{DESTDIR}${file}" OR EXISTS "$ENV{DESTDIR}${file}")
+    message(STATUS "File $ENV{DESTDIR}${file} does not exist.")
+  endif()
+endforeach()

@@ -365,6 +365,8 @@ getQuadrangleSubPix_8u32f_CnR( const uchar* src, size_t src_step, Size src_size,
 void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
                        OutputArray _patch, int patchType )
 {
+    CV_INSTRUMENT_REGION();
+
     Mat image = _image.getMat();
     int depth = image.depth(), cn = image.channels();
     int ddepth = patchType < 0 ? depth : CV_MAT_DEPTH(patchType);
@@ -374,40 +376,46 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     _patch.create(patchSize, CV_MAKETYPE(ddepth, cn));
     Mat patch = _patch.getMat();
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    typedef IppStatus (CV_STDCALL *ippiGetRectSubPixFunc)( const void* src, int src_step,
-                                                            IppiSize src_size, void* dst,
-                                                            int dst_step, IppiSize win_size,
-                                                            IppiPoint_32f center,
-                                                            IppiPoint* minpt, IppiPoint* maxpt );
-
-    IppiPoint minpt={0,0}, maxpt={0,0};
-    IppiPoint_32f icenter = {center.x, center.y};
-    IppiSize src_size={image.cols, image.rows}, win_size={patch.cols, patch.rows};
-    int srctype = image.type();
-    ippiGetRectSubPixFunc ippfunc =
-        srctype == CV_8UC1 && ddepth == CV_8U ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u_C1R :
-        srctype == CV_8UC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u32f_C1R :
-        srctype == CV_32FC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_32f_C1R : 0;
-
-    if( ippfunc)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
+    CV_IPP_CHECK()
     {
-        if (ippfunc(image.data, (int)image.step, src_size, patch.data,
-                    (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0 )
-            return;
-        setIppErrorStatus();
+        typedef IppStatus (CV_STDCALL *ippiGetRectSubPixFunc)( const void* src, int src_step,
+                                                                IppiSize src_size, void* dst,
+                                                                int dst_step, IppiSize win_size,
+                                                                IppiPoint_32f center,
+                                                                IppiPoint* minpt, IppiPoint* maxpt );
+
+        IppiPoint minpt={0,0}, maxpt={0,0};
+        IppiPoint_32f icenter = {center.x, center.y};
+        IppiSize src_size={image.cols, image.rows}, win_size={patch.cols, patch.rows};
+        int srctype = image.type();
+        ippiGetRectSubPixFunc ippiCopySubpixIntersect =
+            srctype == CV_8UC1 && ddepth == CV_8U ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u_C1R :
+            srctype == CV_8UC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u32f_C1R :
+            srctype == CV_32FC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_32f_C1R : 0;
+
+        if( ippiCopySubpixIntersect)
+        {
+            if (CV_INSTRUMENT_FUN_IPP(ippiCopySubpixIntersect, image.ptr(), (int)image.step, src_size, patch.ptr(),
+                        (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 
     if( depth == CV_8U && ddepth == CV_8U )
         getRectSubPix_Cn_<uchar, uchar, int, scale_fixpt, cast_8u>
-        (image.data, image.step, image.size(), patch.data, patch.step, patch.size(), center, cn);
+        (image.ptr(), image.step, image.size(), patch.ptr(), patch.step, patch.size(), center, cn);
     else if( depth == CV_8U && ddepth == CV_32F )
         getRectSubPix_8u32f
-        (image.data, image.step, image.size(), (float*)patch.data, patch.step, patch.size(), center, cn);
+        (image.ptr(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
     else if( depth == CV_32F && ddepth == CV_32F )
         getRectSubPix_Cn_<float, float, float, nop<float>, nop<float> >
-        ((const float*)image.data, image.step, image.size(), (float*)patch.data, patch.step, patch.size(), center, cn);
+        (image.ptr<float>(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
     else
         CV_Error( CV_StsUnsupportedFormat, "Unsupported combination of input and output formats");
 }
@@ -427,13 +435,13 @@ cvGetRectSubPix( const void* srcarr, void* dstarr, CvPoint2D32f center )
 CV_IMPL void
 cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
 {
-    cv::Mat src = cv::cvarrToMat(srcarr), m = cv::cvarrToMat(mat);
-    const cv::Mat dst = cv::cvarrToMat(dstarr);
+    const cv::Mat src = cv::cvarrToMat(srcarr), m = cv::cvarrToMat(mat);
+    cv::Mat dst = cv::cvarrToMat(dstarr);
 
     CV_Assert( src.channels() == dst.channels() );
 
     cv::Size win_size = dst.size();
-    double matrix[6];
+    double matrix[6] = {0};
     cv::Mat M(2, 3, CV_64F, matrix);
     m.convertTo(M, CV_64F);
     double dx = (win_size.width - 1)*0.5;
@@ -442,8 +450,8 @@ cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
     matrix[5] -= matrix[3]*dx + matrix[4]*dy;
 
     if( src.depth() == CV_8U && dst.depth() == CV_32F )
-        cv::getQuadrangleSubPix_8u32f_CnR( src.data, src.step, src.size(),
-                                           (float*)dst.data, dst.step, dst.size(),
+        cv::getQuadrangleSubPix_8u32f_CnR( src.ptr(), src.step, src.size(),
+                                           dst.ptr<float>(), dst.step, dst.size(),
                                            matrix, src.channels());
     else
     {

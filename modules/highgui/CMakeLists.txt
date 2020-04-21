@@ -1,5 +1,9 @@
-set(the_description "High-level GUI and Media I/O")
-ocv_add_module(highgui opencv_imgproc opencv_imgcodecs opencv_videoio OPTIONAL opencv_androidcamera)
+set(the_description "High-level GUI")
+if(ANDROID)
+  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
+else()
+  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python java)
+endif()
 
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
@@ -7,7 +11,7 @@ ocv_add_module(highgui opencv_imgproc opencv_imgcodecs opencv_videoio OPTIONAL o
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-if(HAVE_WINRT_CX)
+if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
@@ -16,12 +20,17 @@ if(APPLE)
   list(APPEND HIGHGUI_LIBRARIES ${ZLIB_LIBRARIES})
 endif()
 
+if(HAVE_WEBP)
+  add_definitions(-DHAVE_WEBP)
+endif()
+
 set(highgui_hdrs
     ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
     )
 
 set(highgui_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/roiSelector.cpp
     )
 
 file(GLOB highgui_ext_hdrs
@@ -29,14 +38,21 @@ file(GLOB highgui_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
 
+# Removing WinRT API headers by default
+list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
+
 if(HAVE_QT5)
-  set(CMAKE_AUTOMOC ON)
+  # "Automoc" doesn't work properly with opencv_world build, use QT5_WRAP_CPP() directly
+  #set(CMAKE_AUTOMOC ON)
+
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
   QT5_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
+  QT5_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
   list(APPEND highgui_srcs
        ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp
        ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h
+       ${_MOC_OUTFILES}
        ${_RCC_OUTFILES})
 
   foreach(dt5_dep Core Gui Widgets Test Concurrent)
@@ -62,12 +78,49 @@ elseif(HAVE_QT)
 
   list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES})
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES})
-  ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag)
+  ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag "")
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
+elseif(WINRT)
+  if(NOT WINRT_8_0)
+    # Dependencies used by the implementation referenced
+    # below are not available on WinRT 8.0.
+    # Enabling it for WiRT 8.1+ only.
+
+    # WinRT 8.1+ detected. Adding WinRT API header.
+    message(STATUS "  ${name}: WinRT detected. Adding WinRT API header")
+    list(APPEND highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
+
+
+    list(APPEND highgui_srcs
+      ${CMAKE_CURRENT_LIST_DIR}/src/window_winrt.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/window_winrt_bridge.cpp)
+    list(APPEND highgui_hdrs
+      ${CMAKE_CURRENT_LIST_DIR}/src/window_winrt_bridge.hpp)
+  endif()
+
+  # libraries below are neither available nor required
+  # on ARM devices and/or Windows Phone
+  if(WINRT_PHONE OR (OpenCV_ARCH STREQUAL "ARM"))
+    list(REMOVE_ITEM HIGHGUI_LIBRARIES "comctl32" "gdi32" "ole32" "setupapi")
+    if(WINRT_PHONE)
+      message(STATUS "  ${name}: Windows Phone detected")
+    elseif(OpenCV_ARCH STREQUAL "ARM")
+      message(STATUS "  ${name}: ARM detected")
+      if(WINRT_STORE)
+        list(REMOVE_ITEM HIGHGUI_LIBRARIES "ws2_32")
+        message(STATUS "  ${name}:   Removing 'ws2_32.lib'")
+      endif()
+    endif()
+    message(STATUS "  ${name}:   Removing 'comctl32.lib, gdi32.lib, ole32.lib, setupapi.lib'")
+    message(STATUS "  ${name}:   Leaving '${HIGHGUI_LIBRARIES}'")
+  endif()
 elseif(HAVE_WIN32UI)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_w32.cpp)
+  if(OpenCV_ARCH STREQUAL "ARM64")
+    list(APPEND HIGHGUI_LIBRARIES "comdlg32" "advapi32")
+  endif()
 elseif(HAVE_GTK OR HAVE_GTK3)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
 elseif(HAVE_CARBON)
@@ -78,8 +131,8 @@ elseif(HAVE_COCOA)
   list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
 endif()
 
-if(UNIX)
-  #these variables are set by CHECK_MODULE macro
+if(TRUE)
+  # these variables are set by 'ocv_append_build_options(HIGHGUI ...)'
   foreach(P ${HIGHGUI_INCLUDE_DIRS})
     ocv_include_directories(${P})
   endforeach()
@@ -98,34 +151,11 @@ ocv_create_module(${HIGHGUI_LIBRARIES})
 
 macro(ocv_highgui_configure_target)
 if(APPLE)
-  ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
-  if(HAVE_OBJC_EXCEPTIONS)
-    foreach(source ${OPENCV_MODULE_${the_module}_SOURCES})
-      if("${source}" MATCHES "\\.mm$")
-        get_source_file_property(flags "${source}" COMPILE_FLAGS)
-        if(flags)
-          set(flags "${_flags} -fobjc-exceptions")
-        else()
-          set(flags "-fobjc-exceptions")
-        endif()
-
-        set_source_files_properties("${source}" PROPERTIES COMPILE_FLAGS "${flags}")
-      endif()
-    endforeach()
-  endif()
-endif()
-
-if(BUILD_SHARED_LIBS)
-  add_definitions(-DHIGHGUI_EXPORTS)
+  add_apple_compiler_options(the_module)
 endif()
 
 if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
-endif()
-
-if(NOT BUILD_opencv_world)
-  #stop automatic dependencies propagation for this module
-  set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)

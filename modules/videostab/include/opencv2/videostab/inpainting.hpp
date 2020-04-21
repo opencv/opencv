@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_INPAINTINT_HPP__
-#define __OPENCV_VIDEOSTAB_INPAINTINT_HPP__
+#ifndef OPENCV_VIDEOSTAB_INPAINTINT_HPP
+#define OPENCV_VIDEOSTAB_INPAINTINT_HPP
 
 #include <vector>
 #include "opencv2/core.hpp"
@@ -54,6 +54,9 @@ namespace cv
 {
 namespace videostab
 {
+
+//! @addtogroup videostab
+//! @{
 
 class CV_EXPORTS InpainterBase
 {
@@ -99,7 +102,7 @@ protected:
 class CV_EXPORTS NullInpainter : public InpainterBase
 {
 public:
-    virtual void inpaint(int /*idx*/, Mat &/*frame*/, Mat &/*mask*/) {}
+    virtual void inpaint(int /*idx*/, Mat &/*frame*/, Mat &/*mask*/) CV_OVERRIDE {}
 };
 
 class CV_EXPORTS InpaintingPipeline : public InpainterBase
@@ -108,14 +111,14 @@ public:
     void pushBack(Ptr<InpainterBase> inpainter) { inpainters_.push_back(inpainter); }
     bool empty() const { return inpainters_.empty(); }
 
-    virtual void setRadius(int val);
-    virtual void setMotionModel(MotionModel val);
-    virtual void setFrames(const std::vector<Mat> &val);
-    virtual void setMotions(const std::vector<Mat> &val);
-    virtual void setStabilizedFrames(const std::vector<Mat> &val);
-    virtual void setStabilizationMotions(const std::vector<Mat> &val);
+    virtual void setRadius(int val) CV_OVERRIDE;
+    virtual void setMotionModel(MotionModel val) CV_OVERRIDE;
+    virtual void setFrames(const std::vector<Mat> &val) CV_OVERRIDE;
+    virtual void setMotions(const std::vector<Mat> &val) CV_OVERRIDE;
+    virtual void setStabilizedFrames(const std::vector<Mat> &val) CV_OVERRIDE;
+    virtual void setStabilizationMotions(const std::vector<Mat> &val) CV_OVERRIDE;
 
-    virtual void inpaint(int idx, Mat &frame, Mat &mask);
+    virtual void inpaint(int idx, Mat &frame, Mat &mask) CV_OVERRIDE;
 
 private:
     std::vector<Ptr<InpainterBase> > inpainters_;
@@ -129,7 +132,7 @@ public:
     void setStdevThresh(float val) { stdevThresh_ = val; }
     float stdevThresh() const { return stdevThresh_; }
 
-    virtual void inpaint(int idx, Mat &frame, Mat &mask);
+    virtual void inpaint(int idx, Mat &frame, Mat &mask) CV_OVERRIDE;
 
 private:
     float stdevThresh_;
@@ -152,7 +155,7 @@ public:
     void setBorderMode(int val) { borderMode_ = val; }
     int borderMode() const { return borderMode_; }
 
-    virtual void inpaint(int idx, Mat &frame, Mat &mask);
+    virtual void inpaint(int idx, Mat &frame, Mat &mask) CV_OVERRIDE;
 
 private:
     FastMarchingMethod fmm_;
@@ -171,7 +174,7 @@ private:
 class CV_EXPORTS ColorAverageInpainter : public InpainterBase
 {
 public:
-    virtual void inpaint(int idx, Mat &frame, Mat &mask);
+    virtual void inpaint(int idx, Mat &frame, Mat &mask) CV_OVERRIDE;
 
 private:
     FastMarchingMethod fmm_;
@@ -182,7 +185,7 @@ class CV_EXPORTS ColorInpainter : public InpainterBase
 public:
     ColorInpainter(int method = INPAINT_TELEA, double radius = 2.);
 
-    virtual void inpaint(int idx, Mat &frame, Mat &mask);
+    virtual void inpaint(int idx, Mat &frame, Mat &mask) CV_OVERRIDE;
 
 private:
     int method_;
@@ -200,6 +203,8 @@ CV_EXPORTS void calcFlowMask(
 CV_EXPORTS void completeFrameAccordingToFlow(
         const Mat &flowMask, const Mat &flowX, const Mat &flowY, const Mat &frame1, const Mat &mask1,
         float distThresh, Mat& frame0, Mat &mask0);
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

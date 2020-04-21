@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////
 // pyrDown
@@ -126,4 +126,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Warping, PyrUp, testing::Combine(
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     WHOLE_SUBMAT));
 
+
+}} // namespace
 #endif // HAVE_CUDA

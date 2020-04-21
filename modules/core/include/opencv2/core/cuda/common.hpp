@@ -40,13 +40,19 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_COMMON_HPP__
-#define __OPENCV_CUDA_COMMON_HPP__
+#ifndef OPENCV_CUDA_COMMON_HPP
+#define OPENCV_CUDA_COMMON_HPP
 
 #include <cuda_runtime.h>
 #include "opencv2/core/cuda_types.hpp"
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/base.hpp"
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 #ifndef CV_PI_F
     #ifndef CV_PI
@@ -98,6 +104,6 @@ namespace cv { namespace cuda
     }
 }}
 
+//! @endcond
 
-
-#endif // __OPENCV_CUDA_COMMON_HPP__
+#endif // OPENCV_CUDA_COMMON_HPP

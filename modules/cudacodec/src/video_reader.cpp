@@ -65,9 +65,9 @@ namespace
         explicit VideoReaderImpl(const Ptr<VideoSource>& source);
         ~VideoReaderImpl();
 
-        bool nextFrame(OutputArray frame);
+        bool nextFrame(OutputArray frame) CV_OVERRIDE;
 
-        FormatInfo format() const;
+        FormatInfo format() const CV_OVERRIDE;
 
     private:
         Ptr<VideoSource> videoSource_;
@@ -179,7 +179,7 @@ namespace
             GpuMat decodedFrame = videoDecoder_->mapFrame(frameInfo.first.picture_index, frameInfo.second);
 
             // perform post processing on the CUDA surface (performs colors space conversion and post processing)
-            // comment this out if we inclue the line of code seen above
+            // comment this out if we include the line of code seen above
             videoDecPostProcessFrame(decodedFrame, frame, videoDecoder_->targetWidth(), videoDecoder_->targetHeight());
 
             // unmap video frame

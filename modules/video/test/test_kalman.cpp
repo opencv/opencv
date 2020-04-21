@@ -42,7 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking_c.h"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_KalmanTest : public cvtest::BaseTest
 {
@@ -122,4 +122,5 @@ void CV_KalmanTest::run( int )
 
 TEST(Video_Kalman, accuracy) { CV_KalmanTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

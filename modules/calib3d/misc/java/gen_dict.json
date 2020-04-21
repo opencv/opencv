@@ -1,0 +1,31 @@
+{
+    "class_ignore_list": [
+        "CirclesGridFinderParameters",
+        "CirclesGridFinderParameters2"
+    ],
+    "namespaces_dict": {
+        "cv.fisheye": "fisheye"
+    },
+    "func_arg_fix" : {
+        "findFundamentalMat"  : { "points1" : {"ctype" : "vector_Point2f"},
+                                  "points2" : {"ctype" : "vector_Point2f"} },
+        "cornerSubPix" : { "corners" : {"ctype" : "vector_Point2f"} },
+        "findHomography" : { "srcPoints" : {"ctype" : "vector_Point2f"},
+                             "dstPoints" : {"ctype" : "vector_Point2f"} },
+        "solvePnP" : { "objectPoints" : {"ctype" : "vector_Point3f"},
+                       "imagePoints"  : {"ctype" : "vector_Point2f"},
+                       "distCoeffs"   : {"ctype" : "vector_double" } },
+        "solvePnPRansac" : { "objectPoints" : {"ctype" : "vector_Point3f"},
+                             "imagePoints"  : {"ctype" : "vector_Point2f"},
+                             "distCoeffs"   : {"ctype" : "vector_double" } },
+        "undistortPoints" : { "src" : {"ctype" : "vector_Point2f"},
+                              "dst" : {"ctype" : "vector_Point2f"} },
+        "projectPoints" : { "objectPoints" : {"ctype" : "vector_Point3f"},
+                            "imagePoints"  : {"ctype" : "vector_Point2f"},
+                            "distCoeffs"   : {"ctype" : "vector_double" } },
+        "initCameraMatrix2D" : { "objectPoints" : {"ctype" : "vector_vector_Point3f"},
+                                 "imagePoints"  : {"ctype" : "vector_vector_Point2f"} },
+        "findChessboardCorners" : { "corners" : {"ctype" : "vector_Point2f"} },
+        "drawChessboardCorners" : { "corners" : {"ctype" : "vector_Point2f"} }
+    }
+}

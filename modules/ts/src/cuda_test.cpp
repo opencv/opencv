@@ -51,7 +51,7 @@ using namespace testing::internal;
 
 namespace perf
 {
-    CV_EXPORTS void printCudaInfo();
+    void printCudaInfo();
 }
 
 namespace cvtest
@@ -190,6 +190,33 @@ namespace cvtest
         }
     }
 
+    void parseCudaDeviceOptions(int argc, char **argv)
+    {
+        cv::CommandLineParser cmd(argc, argv,
+            "{ cuda_device | -1    | CUDA device on which tests will be executed (-1 means all devices) }"
+            "{ h help      | false | Print help info                                                    }"
+        );
+
+        if (cmd.has("help"))
+        {
+            std::cout << "\nAvailable options besides google test option: \n";
+            cmd.printMessage();
+        }
+
+        int device = cmd.get<int>("cuda_device");
+        if (device < 0)
+        {
+            cvtest::DeviceManager::instance().loadAll();
+            std::cout << "Run tests on all supported CUDA devices \n" << std::endl;
+        }
+        else
+        {
+            cvtest::DeviceManager::instance().load(device);
+            cv::cuda::DeviceInfo info(device);
+            std::cout << "Run tests on CUDA device " << device << " [" << info.name() << "] \n" << std::endl;
+        }
+    }
+
     //////////////////////////////////////////////////////////////////////
     // Additional assertion
 
@@ -278,7 +305,7 @@ namespace cvtest
 
     Mat getMat(InputArray arr)
     {
-        if (arr.kind() == _InputArray::GPU_MAT)
+        if (arr.kind() == _InputArray::CUDA_GPU_MAT)
         {
             Mat m;
             arr.getGpuMat().download(m);
@@ -295,16 +322,20 @@ namespace cvtest
 
         if (m1.size() != m2.size())
         {
-            return AssertionFailure() << "Matrices \"" << expr1 << "\" and \"" << expr2 << "\" have different sizes : \""
-                                      << expr1 << "\" [" << PrintToString(m1.size()) << "] vs \""
-                                      << expr2 << "\" [" << PrintToString(m2.size()) << "]";
+            std::stringstream msg;
+            msg << "Matrices \"" << expr1 << "\" and \"" << expr2 << "\" have different sizes : \""
+                << expr1 << "\" [" << PrintToString(m1.size()) << "] vs \""
+                << expr2 << "\" [" << PrintToString(m2.size()) << "]";
+            return AssertionFailure() << msg.str();
         }
 
         if (m1.type() != m2.type())
         {
-            return AssertionFailure() << "Matrices \"" << expr1 << "\" and \"" << expr2 << "\" have different types : \""
-                                      << expr1 << "\" [" << PrintToString(MatType(m1.type())) << "] vs \""
-                                      << expr2 << "\" [" << PrintToString(MatType(m2.type())) << "]";
+            std::stringstream msg;
+            msg << "Matrices \"" << expr1 << "\" and \"" << expr2 << "\" have different types : \""
+                << expr1 << "\" [" << PrintToString(MatType(m1.type())) << "] vs \""
+                << expr2 << "\" [" << PrintToString(MatType(m2.type())) << "]";
+             return AssertionFailure() << msg.str();
         }
 
         Mat diff;
@@ -316,12 +347,14 @@ namespace cvtest
 
         if (maxVal > eps)
         {
-            return AssertionFailure() << "The max difference between matrices \"" << expr1 << "\" and \"" << expr2
-                                      << "\" is " << maxVal << " at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ")"
-                                      << ", which exceeds \"" << eps_expr << "\", where \""
-                                      << expr1 << "\" at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ") evaluates to " << printMatVal(m1, maxLoc) << ", \""
-                                      << expr2 << "\" at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ") evaluates to " << printMatVal(m2, maxLoc) << ", \""
-                                      << eps_expr << "\" evaluates to " << eps;
+            std::stringstream msg;
+            msg << "The max difference between matrices \"" << expr1 << "\" and \"" << expr2
+                << "\" is " << maxVal << " at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ")"
+                << ", which exceeds \"" << eps_expr << "\", where \""
+                << expr1 << "\" at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ") evaluates to " << printMatVal(m1, maxLoc) << ", \""
+                << expr2 << "\" at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ") evaluates to " << printMatVal(m2, maxLoc) << ", \""
+                << eps_expr << "\" evaluates to " << eps;
+            return AssertionFailure() << msg.str();
         }
 
         return AssertionSuccess();
@@ -429,7 +462,11 @@ namespace cvtest
             return false;
         }
 
+#ifdef CV_CXX11
+        struct KeyPointLess
+#else
         struct KeyPointLess : std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+#endif
         {
             bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
             {
@@ -442,9 +479,11 @@ namespace cvtest
     {
         if (gold.size() != actual.size())
         {
-            return testing::AssertionFailure() << "KeyPoints size mistmach\n"
-                                               << "\"" << gold_expr << "\" : " << gold.size() << "\n"
-                                               << "\"" << actual_expr << "\" : " << actual.size();
+            std::stringstream msg;
+            msg << "KeyPoints size mistmach\n"
+                << "\"" << gold_expr << "\" : " << gold.size() << "\n"
+                << "\"" << actual_expr << "\" : " << actual.size();
+            return AssertionFailure() << msg.str();
         }
 
         std::sort(actual.begin(), actual.end(), KeyPointLess());
@@ -457,14 +496,16 @@ namespace cvtest
 
             if (!keyPointsEquals(p1, p2))
             {
-                return testing::AssertionFailure() << "KeyPoints differ at " << i << "\n"
-                                                   << "\"" << gold_expr << "\" vs \"" << actual_expr << "\" : \n"
-                                                   << "pt : " << testing::PrintToString(p1.pt) << " vs " << testing::PrintToString(p2.pt) << "\n"
-                                                   << "size : " << p1.size << " vs " << p2.size << "\n"
-                                                   << "angle : " << p1.angle << " vs " << p2.angle << "\n"
-                                                   << "response : " << p1.response << " vs " << p2.response << "\n"
-                                                   << "octave : " << p1.octave << " vs " << p2.octave << "\n"
-                                                   << "class_id : " << p1.class_id << " vs " << p2.class_id;
+                std::stringstream msg;
+                msg << "KeyPoints differ at " << i << "\n"
+                    << "\"" << gold_expr << "\" vs \"" << actual_expr << "\" : \n"
+                    << "pt : " << testing::PrintToString(p1.pt) << " vs " << testing::PrintToString(p2.pt) << "\n"
+                    << "size : " << p1.size << " vs " << p2.size << "\n"
+                    << "angle : " << p1.angle << " vs " << p2.angle << "\n"
+                    << "response : " << p1.response << " vs " << p2.response << "\n"
+                    << "octave : " << p1.octave << " vs " << p2.octave << "\n"
+                    << "class_id : " << p1.class_id << " vs " << p2.class_id;
+                return AssertionFailure() << msg.str();
             }
         }
 
@@ -518,4 +559,6 @@ namespace cvtest
 void cv::cuda::PrintTo(const DeviceInfo& info, std::ostream* os)
 {
     (*os) << info.name();
+    if (info.deviceID())
+        (*os) << " [ID: " << info.deviceID() << "]";
 }

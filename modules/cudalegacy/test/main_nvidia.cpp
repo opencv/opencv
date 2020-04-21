@@ -271,7 +271,7 @@ void generateHaarLoaderTests(NCVAutoTestLister &testLister)
 void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Ncv8u> &src,
                                   Ncv32u maxWidth, Ncv32u maxHeight)
 {
-    (void)maxHeight;
+    CV_UNUSED(maxHeight);
     for (Ncv32u i=100; i<512; i+=41)
     {
         for (Ncv32u j=100; j<128; j+=25)
@@ -292,7 +292,7 @@ void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourcePr
 
 static void devNullOutput(const cv::String& msg)
 {
-    (void)msg;
+    CV_UNUSED(msg);
 }
 
 }

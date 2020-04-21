@@ -5,19 +5,21 @@
  * @author Pablo F. Alcantarilla
  */
 
-#ifndef __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
-#define __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
+#ifndef __OPENCV_FEATURES_2D_KAZE_CONFIG_H__
+#define __OPENCV_FEATURES_2D_KAZE_CONFIG_H__
 
 // OpenCV Includes
 #include "../precomp.hpp"
 #include <opencv2/features2d.hpp>
 
+namespace cv
+{
 //*************************************************************************************
 
 struct KAZEOptions {
 
     KAZEOptions()
-        : diffusivity(cv::DIFF_PM_G2)
+        : diffusivity(KAZE::DIFF_PM_G2)
 
         , soffset(1.60f)
         , omax(4)
@@ -48,5 +50,7 @@ struct KAZEOptions {
     bool upright;
     bool extended;
 };
+
+}
 
 #endif
