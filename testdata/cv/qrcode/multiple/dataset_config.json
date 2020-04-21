@@ -53,17 +53,16 @@
                 "Great Place to work", "I Love OpenCV" ] }, {
             "image_name": "8_close_qrcodes.png", "x": [ [ 843, 941, 1102,
                     1006 ], [ 97, 285, 281, 78 ], [ 244, 465, 446, 212 ],
-                [ 223, 181, 379, 429 ], [ 908, 715, 621, 806 ], [ 611,
-                    775, 823, 651 ], [ 481, 665, 695, 501 ], [ 336, 330,
-                    147, 162 ] ], "y": [ [ 749, 613, 718, 865 ], [ 536,
+                [ 223, 181, 379, 429 ], [ 336, 330, 147, 162 ], [ 611,
+                    775, 823, 651 ], [ 481, 665, 695, 501 ], [ 908, 715,
+                    621, 806 ] ], "y": [ [ 749, 613, 718, 865 ], [ 536,
                     534, 707, 709 ], [ 1221, 1232, 1480, 1468 ], [ 1164,
-                    961, 903, 1101 ], [ 1213, 1312, 1103, 1014 ], [ 436,
-                    408, 559, 592 ], [ 756, 734, 918, 941 ], [ 323, 476,
-                    478, 323 ] ], "info": [
+                    961, 903, 1101 ], [ 323, 476, 478, 323 ], [ 436, 408,
+                    559, 592 ], [ 756, 734, 918, 941 ], [ 1213, 1312,
+                    1103, 1014 ] ], "info": [
                 "https://github.com/opencv/opencv/tree/3.4",
                 "https://en.wikipedia.org/wiki/Computer_vision",
-                "Polina", "Great Place to work",
-                "https://en.wikipedia.org/wiki/Computer_vision",
+                "Polina", "Great Place to work", "Polina",
                 "https://github.com/rayonnant14", "Great Place to work",
-                "Polina" ] } ]
+                "https://en.wikipedia.org/wiki/Computer_vision" ] } ]
 }
