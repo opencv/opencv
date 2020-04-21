@@ -112,7 +112,7 @@ public:
     {
 #ifdef HAVE_DNN_NGRAPH
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2);
+        return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2) && preferableTarget != DNN_TARGET_MYRIAD;
 #endif
         return backendId == DNN_BACKEND_OPENCV;
     }
