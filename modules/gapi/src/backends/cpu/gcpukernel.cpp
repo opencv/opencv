@@ -11,14 +11,14 @@
 
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 
-const cv::gapi::own::Mat& cv::GCPUContext::inMat(int input)
+const cv::Mat& cv::GCPUContext::inMat(int input)
 {
-    return inArg<cv::gapi::own::Mat>(input);
+    return inArg<cv::Mat>(input);
 }
 
-cv::gapi::own::Mat&  cv::GCPUContext::outMatR(int output)
+cv::Mat&  cv::GCPUContext::outMatR(int output)
 {
-    return *util::get<cv::gapi::own::Mat*>(m_results.at(output));
+    return *util::get<cv::Mat*>(m_results.at(output));
 }
 
 const cv::Scalar& cv::GCPUContext::inVal(int input)

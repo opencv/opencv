@@ -17,7 +17,6 @@
 #include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/gcommon.hpp>
-#include <opencv2/gapi/own/convert.hpp>
 
 namespace cv
 {
@@ -111,10 +110,9 @@ namespace detail
     // and GMat behavior is correct for GMatP)
     template<typename T> struct GTypeOf;
 #if !defined(GAPI_STANDALONE)
-    template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::UMat>              { using type = cv::GMat;      };
 #endif // !defined(GAPI_STANDALONE)
-    template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
+    template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
     template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>;};

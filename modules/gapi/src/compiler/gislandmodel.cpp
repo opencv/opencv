@@ -348,7 +348,7 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
         switch (in_data_orig.index())
         {
         case cv::GRunArg::index_of<cv::Mat>():
-            in_data = cv::GRunArg{cv::to_own(cv::util::get<cv::Mat>(in_data_orig))};
+            in_data = cv::GRunArg{cv::util::get<cv::Mat>(in_data_orig)};
             break;
         case cv::GRunArg::index_of<cv::Scalar>():
             in_data = cv::GRunArg{(cv::util::get<cv::Scalar>(in_data_orig))};

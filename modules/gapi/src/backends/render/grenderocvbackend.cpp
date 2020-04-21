@@ -113,7 +113,7 @@ cv::GArg cv::gimpl::render::ocv::GRenderExecutable::packArg(const cv::GArg &arg)
     const cv::gimpl::RcDesc &ref = arg.get<cv::gimpl::RcDesc>();
     switch (ref.shape)
     {
-    case GShape::GMAT:   return GArg(m_res.slot<cv::gapi::own::Mat>()[ref.id]);
+    case GShape::GMAT:   return GArg(m_res.slot<cv::Mat>()[ref.id]);
     case GShape::GARRAY: return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
