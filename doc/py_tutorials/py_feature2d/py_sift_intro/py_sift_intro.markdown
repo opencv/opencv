@@ -119,7 +119,7 @@ import cv2 as cv
 img = cv.imread('home.jpg')
 gray= cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 
-sift = cv.xfeatures2d.SIFT_create()
+sift = cv.SIFT_create()
 kp = sift.detect(gray,None)
 
 img=cv.drawKeypoints(gray,kp,img)
@@ -151,7 +151,7 @@ Now to calculate the descriptor, OpenCV provides two methods.
 
 We will see the second method:
 @code{.py}
-sift = cv.xfeatures2d.SIFT_create()
+sift = cv.SIFT_create()
 kp, des = sift.detectAndCompute(gray,None)
 @endcode
 Here kp will be a list of keypoints and des is a numpy array of shape
