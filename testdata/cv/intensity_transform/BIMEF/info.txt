@@ -1,0 +1,5 @@
+https://sites.google.com/site/vonikakis/datasets/challenging-dataset-for-enhancement
+
+Images are resized using Gimp 2.10.8 at 25%.
+
+Matlab is used to generate the reference result images: https://github.com/baidut/OpenCE
