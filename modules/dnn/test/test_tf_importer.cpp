@@ -196,6 +196,7 @@ TEST_P(Test_TensorFlow_layers, pad_and_concat)
 TEST_P(Test_TensorFlow_layers, concat_axis_1)
 {
     runTensorFlowNet("concat_axis_1");
+    runTensorFlowNet("concat_3d");
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm_1)
