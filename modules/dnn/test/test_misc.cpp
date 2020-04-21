@@ -764,6 +764,48 @@ TEST_P(Test_Model_Optimizer, readFromBuffer)
     normAssert(ref, actual, "", 0, 0);
 }
 
+TEST_P(Test_Model_Optimizer, flexible_inputs)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    const std::string& model = findDataFile("dnn/layers/layer_convolution_fp16.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution_fp16.xml");
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    else
+        FAIL() << "Unknown backendId";
+
+    Net net0 = readNet(model, proto);
+    net0.setPreferableTarget(targetId);
+
+    Net net1 = readNet(model, proto);
+    net1.setPreferableTarget(targetId);
+
+    // Generate inputs.
+    int blobSize0[] = {2, 6, 75, 113};
+    Mat input0(4, &blobSize0[0], CV_32F);
+    randu(input0, 0, 255);
+
+    net0.setInput(input0);
+    Mat ref = net0.forward().clone();
+
+    int blobSize1[] = {1, 6, 10, 9};
+    Mat input1(4, &blobSize1[0], CV_32F);
+    randu(input1, 0, 255);
+
+    net1.setInput(input1);
+    Mat out = net1.forward();
+    EXPECT_NE(out.size, ref.size);
+
+    net1.setInput(input0);
+    out = net1.forward();
+    normAssert(ref, out, 0, 0);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,
     dnnBackendsAndTargetsIE()
 );

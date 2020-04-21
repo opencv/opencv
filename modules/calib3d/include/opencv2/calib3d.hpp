@@ -1994,7 +1994,7 @@ Optionally, it computes the essential matrix E:
 where \f$T_i\f$ are components of the translation vector \f$T\f$ : \f$T=[T_0, T_1, T_2]^T\f$ .
 And the function can also compute the fundamental matrix F:
 
-\f[F = cameraMatrix2^{-T} E cameraMatrix1^{-1}\f]
+\f[F = cameraMatrix2^{-T}\cdot E \cdot cameraMatrix1^{-1}\f]
 
 Besides the stereo-related information, the function can also perform a full calibration of each of
 the two cameras. However, due to the high dimensionality of the parameter space and noise in the
