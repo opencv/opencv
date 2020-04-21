@@ -100,7 +100,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
     case GShape::GMAT:
         {
             const auto desc = util::get<cv::GMatDesc>(d.meta);
-            auto& mat = m_res.slot<cv::gapi::own::Mat>()[d.rc];
+            auto& mat = m_res.slot<cv::Mat>()[d.rc];
             createMat(desc, mat);
         }
         break;
@@ -182,7 +182,7 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 
             auto check_own_mat = [&desc, &args, &index]()
             {
-                auto& out_mat = *get<cv::gapi::own::Mat*>(args.outObjs.at(index));
+                auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
                 GAPI_Assert(out_mat.data != nullptr &&
                         desc.canDescribe(out_mat));
             };

@@ -96,7 +96,7 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
             if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT)
             {
                 const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
-                auto& mat = m_res.slot<cv::gapi::own::Mat>()[desc.rc];
+                auto& mat = m_res.slot<cv::Mat>()[desc.rc];
                 createMat(mat_desc, mat);
             }
             break;
@@ -128,7 +128,7 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     const cv::gimpl::RcDesc &ref = arg.get<cv::gimpl::RcDesc>();
     switch (ref.shape)
     {
-    case GShape::GMAT:    return GArg(m_res.slot<cv::gapi::own::Mat>()   [ref.id]);
+    case GShape::GMAT:    return GArg(m_res.slot<cv::Mat>()   [ref.id]);
     case GShape::GSCALAR: return GArg(m_res.slot<cv::Scalar>()[ref.id]);
     // Note: .at() is intentional for GArray and GOpaque as objects MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)

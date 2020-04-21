@@ -137,23 +137,6 @@ TEST(GAPI_MetaDesc, OwnMatDescND)
     EXPECT_TRUE(desc.isND());
 }
 
-TEST(GAPI_MetaDesc, CanDescribeOwnMat)
-{
-    constexpr int w = 15;
-    constexpr int h = 7;
-    cv::gapi::own::Mat m0(h, w, CV_8UC3, nullptr);
-    cv::GMatDesc md0{CV_8U,3,{w,h},false};
-
-    cv::gapi::own::Mat m1(h*3, w, CV_8UC1, nullptr);
-    cv::GMatDesc md10{CV_8U,3,{w,h},true};
-    cv::GMatDesc md11{CV_8U,1,{w,h*3},false};
-
-    EXPECT_TRUE (md0 .canDescribe(m0));
-    EXPECT_FALSE(md0 .canDescribe(m1));
-    EXPECT_TRUE (md10.canDescribe(m1));
-    EXPECT_TRUE (md11.canDescribe(m1));
-}
-
 TEST(GAPI_MetaDesc, VecOwnMatDesc)
 {
     std::vector<cv::gapi::own::Mat> vec = {

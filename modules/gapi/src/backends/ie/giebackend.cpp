@@ -285,11 +285,11 @@ struct IECallContext
     const T& inArg(std::size_t input) { return args.at(input).get<T>(); }
 
     // Syntax sugar
-    const cv::gapi::own::Mat&   inMat(std::size_t input) {
-        return inArg<cv::gapi::own::Mat>(input);
+    const cv::Mat&   inMat(std::size_t input) {
+        return inArg<cv::Mat>(input);
     }
-    cv::gapi::own::Mat&         outMatR(std::size_t output) {
-        return *cv::util::get<cv::gapi::own::Mat*>(results.at(output));
+    cv::Mat&         outMatR(std::size_t output) {
+        return *cv::util::get<cv::Mat*>(results.at(output));
     }
 
     template<typename T> std::vector<T>& outVecR(std::size_t output) { // FIXME: the same issue
@@ -391,7 +391,7 @@ cv::GArg cv::gimpl::ie::GIEExecutable::packArg(const cv::GArg &arg) {
     const cv::gimpl::RcDesc &ref = arg.get<cv::gimpl::RcDesc>();
     switch (ref.shape)
     {
-    case GShape::GMAT:    return GArg(m_res.slot<cv::gapi::own::Mat>()[ref.id]);
+    case GShape::GMAT:    return GArg(m_res.slot<cv::Mat>()[ref.id]);
 
     // Note: .at() is intentional for GArray as object MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
@@ -528,7 +528,7 @@ struct Infer: public cv::detail::KernelTag {
             // Not a <very> big deal for classifiers and detectors,
             // but may be critical to segmentation.
 
-            cv::gapi::own::Mat& out_mat = ctx.outMatR(i);
+            cv::Mat& out_mat = ctx.outMatR(i);
             IE::Blob::Ptr this_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
             copyFromIE(this_blob, out_mat);
         }
