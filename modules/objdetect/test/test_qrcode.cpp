@@ -23,8 +23,7 @@ std::string qrcode_images_monitor[] = {
 };
 std::string qrcode_images_multiple[] = {
   "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
-  "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png",
-  "14_qrcodes.png"
+  "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
 };
 //#define UPDATE_QRCODE_TEST_DATA
 #ifdef  UPDATE_QRCODE_TEST_DATA
@@ -476,7 +475,6 @@ TEST_P(Objdetect_QRCode_Multi, regression)
     }
 }
 
-
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode, testing::ValuesIn(qrcode_images_name));
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Close, testing::ValuesIn(qrcode_images_close));
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Monitor, testing::ValuesIn(qrcode_images_monitor));
@@ -504,19 +502,18 @@ TEST(Objdetect_QRCode_decodeMulti, decode_regression_16491)
 
 TEST(Objdetect_QRCode_detectMulti, detect_regression_16961)
 {
-    const std::string name_current_image = "14_qrcodes.png";
+    const std::string name_current_image = "9_qrcodes.jpg";
     const std::string root = "qrcode/multiple/";
 
     std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+
     QRCodeDetector qrcode;
     std::vector<Point> corners;
-    size_t expect_corners_size = 56;
-
-    ASSERT_TRUE(qrcode.detectMulti(src, corners));
+    EXPECT_TRUE(qrcode.detectMulti(src, corners));
     ASSERT_FALSE(corners.empty());
-    std::cout << corners.size() << std::endl;
+    size_t expect_corners_size = 36;
     EXPECT_EQ(corners.size(), expect_corners_size);
 }
 
