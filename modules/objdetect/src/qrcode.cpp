@@ -1952,8 +1952,9 @@ bool QRDetectMulti::checkSets(vector<vector<Point2f> >& true_points_group, vecto
     vector<int> set_size(true_points_group.size());
     for (size_t i = 0; i < true_points_group.size(); i++)
     {
-        set_size[i] = int(0.5 * (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1));
+        set_size[i] = int( (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1) * true_points_group[i].size()) / 6;
     }
+
     vector< vector< Vec3i > > all_points(true_points_group.size());
     for (size_t i = 0; i < true_points_group.size(); i++)
         all_points[i].resize(set_size[i]);
@@ -1961,14 +1962,15 @@ bool QRDetectMulti::checkSets(vector<vector<Point2f> >& true_points_group, vecto
     for (size_t i = 0; i < true_points_group.size(); i++)
     {
         cur_cluster = 0;
-        for (size_t j = 1; j < true_points_group[i].size() - 1; j++)
-            for (size_t k = j + 1; k < true_points_group[i].size(); k++)
-            {
-                all_points[i][cur_cluster][0] = 0;
-                all_points[i][cur_cluster][1] = int(j);
-                all_points[i][cur_cluster][2] = int(k);
-                cur_cluster++;
-            }
+        for (size_t l = 0; l < true_points_group[i].size() - 2; l++)
+            for (size_t j = l + 1; j < true_points_group[i].size() - 1; j++)
+                for (size_t k = j + 1; k < true_points_group[i].size(); k++)
+                {
+                    all_points[i][cur_cluster][0] = int(l);
+                    all_points[i][cur_cluster][1] = int(j);
+                    all_points[i][cur_cluster][2] = int(k);
+                    cur_cluster++;
+                }
     }
 
     for (size_t i = 0; i < true_points_group.size(); i++)
