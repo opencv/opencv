@@ -355,7 +355,6 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
 
     k = 0;
 #if CV_AVX2
-    if( USE_AVX2 )
     {
         __m256 __nd360 = _mm256_set1_ps(n/360.f);
         __m256i __n = _mm256_set1_epi32(n);
@@ -402,7 +401,6 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
 
     i = 0;
 #if CV_AVX2
-    if( USE_AVX2 )
     {
         __m256 __d_1_16 = _mm256_set1_ps(1.f/16.f);
         __m256 __d_4_16 = _mm256_set1_ps(4.f/16.f);
@@ -784,7 +782,6 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
 
     k = 0;
 #if CV_AVX2
-    if( USE_AVX2 )
     {
         int CV_DECL_ALIGNED(32) idx_buf[8];
         float CV_DECL_ALIGNED(32) rco_buf[64];
@@ -928,7 +925,6 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
     len = d*d*n;
     k = 0;
 #if CV_AVX2
-    if( USE_AVX2 )
     {
         float CV_DECL_ALIGNED(32) nrm2_buf[8];
         __m256 __nrm2 = _mm256_setzero_ps();
@@ -956,7 +952,6 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
 #if 0 //CV_AVX2
     // This code cannot be enabled because it sums nrm2 in a different order,
     // thus producing slightly different results
-    if( USE_AVX2 )
     {
         float CV_DECL_ALIGNED(32) nrm2_buf[8];
         __m256 __dst;
@@ -989,7 +984,6 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
 #if 1
     k = 0;
 #if CV_AVX2
-    if( USE_AVX2 )
     {
         __m256 __dst;
         __m256 __min = _mm256_setzero_ps();

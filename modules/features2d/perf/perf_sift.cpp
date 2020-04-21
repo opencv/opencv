@@ -5,13 +5,15 @@
 
 namespace opencv_test { namespace {
 
-typedef perf::TestBaseWithParam<std::string> sift;
+typedef perf::TestBaseWithParam<std::string> SIFT_detect;
+typedef perf::TestBaseWithParam<std::string> SIFT_extract;
+typedef perf::TestBaseWithParam<std::string> SIFT_full;
 
 #define SIFT_IMAGES \
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
     "stitching/a3.png"
 
-PERF_TEST_P(sift, detect, testing::Values(SIFT_IMAGES))
+PERF_TEST_P_(SIFT_detect, SIFT)
 {
     string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -29,7 +31,7 @@ PERF_TEST_P(sift, detect, testing::Values(SIFT_IMAGES))
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(sift, extract, testing::Values(SIFT_IMAGES))
+PERF_TEST_P_(SIFT_extract, SIFT)
 {
     string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -50,7 +52,7 @@ PERF_TEST_P(sift, extract, testing::Values(SIFT_IMAGES))
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(sift, full, testing::Values(SIFT_IMAGES))
+PERF_TEST_P_(SIFT_full, SIFT)
 {
     string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -68,5 +70,16 @@ PERF_TEST_P(sift, full, testing::Values(SIFT_IMAGES))
 
     SANITY_CHECK_NOTHING();
 }
+
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, SIFT_detect,
+    testing::Values(SIFT_IMAGES)
+);
+INSTANTIATE_TEST_CASE_P(/*nothing*/, SIFT_extract,
+    testing::Values(SIFT_IMAGES)
+);
+INSTANTIATE_TEST_CASE_P(/*nothing*/, SIFT_full,
+    testing::Values(SIFT_IMAGES)
+);
 
 }} // namespace
