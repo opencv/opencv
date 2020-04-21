@@ -16,10 +16,10 @@ using namespace cv;
 static void help()
 {
     printf("\n"
-            "This program demonstrates a method for shape comparisson based on Shape Context\n"
-            "You should run the program providing a number between 1 and 20 for selecting an image in the folder shape_sample.\n"
+            "This program demonstrates a method for shape comparison based on Shape Context\n"
+            "You should run the program providing a number between 1 and 20 for selecting an image in the folder ../data/shape_sample.\n"
             "Call\n"
-            "./shape_example [number between 1 and 20]\n\n");
+            "./shape_example [number between 1 and 20, 1 default]\n\n");
 }
 
 static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
@@ -43,7 +43,7 @@ static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
     }
 
     // Uniformly sampling
-    random_shuffle(contoursQuery.begin(), contoursQuery.end());
+    cv::randShuffle(contoursQuery);
     vector<Point> cont;
     for (int i=0; i<n; i++)
     {
@@ -54,16 +54,24 @@ static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
 
 int main(int argc, char** argv)
 {
-    help();
-    string path = "./shape_sample/";
-    int indexQuery = 1;
-    if( argc < 2 )
+    string path = "../data/shape_sample/";
+    cv::CommandLineParser parser(argc, argv, "{help h||}{@input|1|}");
+    if (parser.has("help"))
     {
-        std::cout<<"Using first image as query."<<std::endl;
+        help();
+        return 0;
     }
-    else
+    int indexQuery = parser.get<int>("@input");
+    if (!parser.check())
     {
-        sscanf( argv[1], "%i", &indexQuery );
+        parser.printErrors();
+        help();
+        return 1;
+    }
+    if (indexQuery < 1 || indexQuery > 20)
+    {
+        help();
+        return 1;
     }
     cv::Ptr <cv::ShapeContextDistanceExtractor> mysc = cv::createShapeContextDistanceExtractor();
 
@@ -72,7 +80,7 @@ int main(int argc, char** argv)
     queryName<<path<<indexQuery<<".png";
     Mat query=imread(queryName.str(), IMREAD_GRAYSCALE);
     Mat queryToShow;
-    resize(query, queryToShow, sz2Sh);
+    resize(query, queryToShow, sz2Sh, 0, 0, INTER_LINEAR_EXACT);
     imshow("QUERY", queryToShow);
     moveWindow("TEST", 0,0);
     vector<Point> contQuery = simpleContour(query);
@@ -87,7 +95,7 @@ int main(int argc, char** argv)
         cout<<"name: "<<iiname.str()<<endl;
         Mat iiIm=imread(iiname.str(), 0);
         Mat iiToShow;
-        resize(iiIm, iiToShow, sz2Sh);
+        resize(iiIm, iiToShow, sz2Sh, 0, 0, INTER_LINEAR_EXACT);
         imshow("TEST", iiToShow);
         moveWindow("TEST", sz2Sh.width+50,0);
         vector<Point> contii = simpleContour(iiIm);
@@ -104,9 +112,10 @@ int main(int argc, char** argv)
     bestname<<path<<bestMatch<<".png";
     Mat iiIm=imread(bestname.str(), 0);
     Mat bestToShow;
-    resize(iiIm, bestToShow, sz2Sh);
+    resize(iiIm, bestToShow, sz2Sh, 0, 0, INTER_LINEAR_EXACT);
     imshow("BEST MATCH", bestToShow);
     moveWindow("BEST MATCH", sz2Sh.width+50,0);
+    waitKey();
 
     return 0;
 }

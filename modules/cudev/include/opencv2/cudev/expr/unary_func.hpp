@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_UNARY_FUNC_HPP__
-#define __OPENCV_CUDEV_EXPR_UNARY_FUNC_HPP__
+#ifndef OPENCV_CUDEV_EXPR_UNARY_FUNC_HPP
+#define OPENCV_CUDEV_EXPR_UNARY_FUNC_HPP
 
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"
@@ -53,6 +53,9 @@
 #include "expr.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 #define CV_CUDEV_EXPR_UNARY_FUNC(name) \
     template <class SrcPtr> \
@@ -92,6 +95,8 @@ pow_(const SrcPtr& src, float power)
 {
     return makeExpr(transformPtr(src, bind2nd(pow_func<typename PtrTraits<SrcPtr>::value_type>(), power)));
 }
+
+//! @}
 
 }}
 

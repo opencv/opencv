@@ -42,11 +42,8 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
-#include <string>
-#include <limits>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 template<class T> double thres() { return 1.0; }
 template<> double thres<float>() { return 1e-5; }
@@ -127,10 +124,10 @@ protected:
 
         Mat_<out3d_t> _3dImg(disp.size());
 
-        CvMat cvdisp = disp; CvMat cv_3dImg = _3dImg; CvMat cvQ = Q;
+        CvMat cvdisp = cvMat(disp); CvMat cv_3dImg = cvMat(_3dImg); CvMat cvQ = cvMat(Q);
         cvReprojectImageTo3D( &cvdisp, &cv_3dImg, &cvQ, handleMissingValues );
 
-        if (numeric_limits<OutT>::max() == numeric_limits<float>::max())
+        if (std::numeric_limits<OutT>::max() == std::numeric_limits<float>::max())
             reprojectImageTo3D(disp, _3dImg, Q, handleMissingValues);
 
         for(int y = 0; y < disp.rows; ++y)
@@ -138,11 +135,16 @@ protected:
             {
                 InT d = disp(y, x);
 
-                double from[4] = { x, y, d, 1 };
+                double from[4] = {
+                    static_cast<double>(x),
+                    static_cast<double>(y),
+                    static_cast<double>(d),
+                    1.0,
+                };
                 Mat_<double> res = Q * Mat_<double>(4, 1, from);
                 res /= res(3, 0);
 
-                out3d_t pixel_exp = *(Vec3d*)res.data;
+                out3d_t pixel_exp = *res.ptr<Vec3d>();
                 out3d_t pixel_out = _3dImg(y, x);
 
                 const int largeZValue = 10000; /* see documentation */
@@ -173,3 +175,5 @@ protected:
 };
 
 TEST(Calib3d_ReprojectImageTo3D, accuracy) { CV_ReprojectImageTo3DTest test; test.safe_run(); }
+
+}} // namespace

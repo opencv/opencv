@@ -43,13 +43,16 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_CONSTANT_HPP__
-#define __OPENCV_CUDEV_PTR2D_CONSTANT_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_CONSTANT_HPP
+#define OPENCV_CUDEV_PTR2D_CONSTANT_HPP
 
 #include "../common.hpp"
 #include "traits.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <typename T> struct ConstantPtr
 {
@@ -87,6 +90,8 @@ __host__ constantPtr(T value, int rows, int cols)
 template <typename T> struct PtrTraits< ConstantPtrSz<T> > : PtrTraitsBase< ConstantPtrSz<T>, ConstantPtr<T> >
 {
 };
+
+//! @}
 
 }}
 

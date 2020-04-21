@@ -1,31 +1,39 @@
-#include <opencv2/core/core.hpp>
+//! [includes]
+#include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui.hpp>
+
 #include <iostream>
 
 using namespace cv;
-using namespace std;
+//! [includes]
 
-int main( int argc, char** argv )
+int main()
 {
-    if( argc != 2)
+    //! [imread]
+    std::string image_path = samples::findFile("starry_night.jpg");
+    Mat img = imread(image_path, IMREAD_COLOR);
+    //! [imread]
+
+    //! [empty]
+    if(img.empty())
     {
-     cout <<" Usage: display_image ImageToLoadAndDisplay" << endl;
-     return -1;
+        std::cout << "Could not read the image: " << image_path << std::endl;
+        return 1;
     }
+    //! [empty]
 
-    Mat image;
-    image = imread(argv[1], IMREAD_COLOR); // Read the file
+    //! [imshow]
+    imshow("Display window", img);
+    int k = waitKey(0); // Wait for a keystroke in the window
+    //! [imshow]
 
-    if(! image.data )                      // Check for invalid input
+    //! [imsave]
+    if(k == 's')
     {
-        cout <<  "Could not open or find the image" << std::endl ;
-        return -1;
+        imwrite("starry_night.png", img);
     }
+    //! [imsave]
 
-    namedWindow( "Display window", WINDOW_AUTOSIZE ); // Create a window for display.
-    imshow( "Display window", image );                // Show our image inside it.
-
-    waitKey(0); // Wait for a keystroke in the window
     return 0;
 }

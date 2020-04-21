@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_DERIV_HPP__
-#define __OPENCV_CUDEV_EXPR_DERIV_HPP__
+#ifndef OPENCV_CUDEV_EXPR_DERIV_HPP
+#define OPENCV_CUDEV_EXPR_DERIV_HPP
 
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"
@@ -52,6 +52,9 @@
 #include "expr.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // derivX
 
@@ -115,6 +118,8 @@ laplacian_(const SrcPtr& src)
 {
     return makeExpr(laplacianPtr<ksize>(src));
 }
+
+//! @}
 
 }}
 

@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // CornerHarris
@@ -133,3 +131,5 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerMinEigenVal,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

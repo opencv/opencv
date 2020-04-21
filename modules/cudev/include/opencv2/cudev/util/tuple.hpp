@@ -43,13 +43,16 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_TUPLE_HPP__
-#define __OPENCV_CUDEV_UTIL_TUPLE_HPP__
+#ifndef OPENCV_CUDEV_UTIL_TUPLE_HPP
+#define OPENCV_CUDEV_UTIL_TUPLE_HPP
 
 #include "../common.hpp"
 #include "detail/tuple.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 using tuple_detail::tuple;
 using tuple_detail::tuple_size;
@@ -74,6 +77,8 @@ template <class Tuple, template <typename T> class CvtOp> struct ConvertTuple
 {
     typedef typename tuple_detail::ConvertTuple<Tuple, tuple_size<Tuple>::value, CvtOp>::type type;
 };
+
+//! @}
 
 }}
 

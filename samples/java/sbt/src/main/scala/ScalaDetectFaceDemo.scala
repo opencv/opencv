@@ -3,6 +3,7 @@ import org.opencv.core.MatOfRect
 import org.opencv.core.Point
 import org.opencv.core.Scalar
 import org.opencv.imgcodecs.Imgcodecs
+import org.opencv.imgproc.Imgproc
 import org.opencv.objdetect.CascadeClassifier
 import reflect._
 
@@ -27,7 +28,7 @@ object ScalaDetectFaceDemo {
 
     // Draw a bounding box around each face.
     for (rect <- faceDetections.toArray) {
-      Core.rectangle(
+      Imgproc.rectangle(
         image,
         new Point(rect.x, rect.y),
         new Point(rect.x + rect.width,

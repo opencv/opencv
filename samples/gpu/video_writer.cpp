@@ -2,7 +2,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_CUDACODEC) && defined(WIN32)
+#if defined(HAVE_OPENCV_CUDACODEC) && defined(_WIN32)
 
 #include <vector>
 #include <numeric>
@@ -10,8 +10,8 @@
 #include "opencv2/core.hpp"
 #include "opencv2/cudacodec.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/contrib.hpp"
 
+using namespace cv;
 int main(int argc, const char* argv[])
 {
     if (argc != 2)
@@ -40,7 +40,7 @@ int main(int argc, const char* argv[])
 
     std::vector<double> cpu_times;
     std::vector<double> gpu_times;
-    cv::TickMeter tm;
+    TickMeter tm;
 
     for (int i = 1;; ++i)
     {
@@ -68,7 +68,8 @@ int main(int argc, const char* argv[])
         {
             std::cout << "Open CUDA Writer" << std::endl;
 
-            d_writer = cv::cudacodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
+            const cv::String outputFilename = "output_gpu.avi";
+            d_writer = cv::cudacodec::createVideoWriter(outputFilename, frame.size(), FPS);
         }
 
         d_frame.upload(frame);

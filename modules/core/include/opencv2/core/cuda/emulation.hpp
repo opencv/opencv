@@ -46,6 +46,12 @@
 #include "common.hpp"
 #include "warp_reduce.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     struct Emulation
@@ -171,8 +177,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __longlong_as_double(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0;
             #endif
             }
@@ -193,8 +199,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __int_as_float(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0f;
             #endif
             }
@@ -210,8 +216,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __longlong_as_double(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0;
             #endif
             }
@@ -232,8 +238,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __int_as_float(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0f;
             #endif
             }
@@ -249,13 +255,15 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __longlong_as_double(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0;
             #endif
             }
         };
     }; //struct Emulation
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif /* OPENCV_CUDA_EMULATION_HPP_ */

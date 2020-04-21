@@ -43,14 +43,17 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_COMMON_HPP__
-#define __OPENCV_CUDEV_COMMON_HPP__
+#ifndef OPENCV_CUDEV_COMMON_HPP
+#define OPENCV_CUDEV_COMMON_HPP
 
 #include <cuda_runtime.h>
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/cuda_stream_accessor.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 using namespace cv::cuda;
 
@@ -83,6 +86,8 @@ __host__ __device__ __forceinline__ int divUp(int total, int grain)
 
 #define CV_PI_F   ((float)CV_PI)
 #define CV_LOG2_F ((float)CV_LOG2)
+
+//! @}
 
 }}
 

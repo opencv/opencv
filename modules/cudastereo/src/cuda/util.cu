@@ -98,6 +98,10 @@ namespace cv { namespace cuda { namespace device
     template void reprojectImageTo3D_gpu<uchar, float4>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
     template void reprojectImageTo3D_gpu<short, float3>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
     template void reprojectImageTo3D_gpu<short, float4>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+    template void reprojectImageTo3D_gpu<int, float3>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+    template void reprojectImageTo3D_gpu<int, float4>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+    template void reprojectImageTo3D_gpu<float, float3>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+    template void reprojectImageTo3D_gpu<float, float4>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
 
     /////////////////////////////////// drawColorDisp ///////////////////////////////////////////////
 
@@ -201,6 +205,29 @@ namespace cv { namespace cuda { namespace device
         }
     }
 
+    __global__ void drawColorDisp(int* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if(x < width && y < height)
+        {
+            uint *line = (uint*)(out_image + y * out_step);
+            line[x] = cvtPixel(disp[y*disp_step + x], ndisp);
+        }
+    }
+
+    __global__ void drawColorDisp(float* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if(x < width && y < height)
+        {
+            uint *line = (uint*)(out_image + y * out_step);
+            line[x] = cvtPixel(disp[y*disp_step + x], ndisp);
+        }
+    }
 
     void drawColorDisp_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream)
     {
@@ -224,6 +251,34 @@ namespace cv { namespace cuda { namespace device
         grid.y = divUp(src.rows, threads.y);
 
         drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step / sizeof(short), dst.data, dst.step, src.cols, src.rows, ndisp);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    void drawColorDisp_gpu(const PtrStepSz<int>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step / sizeof(int), dst.data, dst.step, src.cols, src.rows, ndisp);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    void drawColorDisp_gpu(const PtrStepSz<float>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step / sizeof(float), dst.data, dst.step, src.cols, src.rows, ndisp);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)

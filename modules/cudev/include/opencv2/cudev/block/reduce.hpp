@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_BLOCK_REDUCE_HPP__
-#define __OPENCV_CUDEV_BLOCK_REDUCE_HPP__
+#ifndef OPENCV_CUDEV_BLOCK_REDUCE_HPP
+#define OPENCV_CUDEV_BLOCK_REDUCE_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"
@@ -53,6 +53,9 @@
 #include "detail/reduce_key_val.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // blockReduce
 
@@ -122,6 +125,8 @@ __device__ __forceinline__ void blockReduceKeyVal(const tuple<KP0, KP1, KP2, KP3
             const tuple<Cmp0, Cmp1, Cmp2, Cmp3, Cmp4, Cmp5, Cmp6, Cmp7, Cmp8, Cmp9>&
             >(skeys, key, svals, val, tid, cmp);
 }
+
+//! @}
 
 }}
 

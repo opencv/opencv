@@ -16,7 +16,7 @@
 		To use an input video  -> give the path of the input video, like "/tmp/x.avi"
 		To use an image list   -> give the path to the XML or YAML file containing the list of the images, like "/tmp/circles_list.xml"
 		-->
-  <Input>"images/CameraCalibraation/VID5/VID5.xml"</Input>
+  <Input>"images/CameraCalibration/VID5/VID5.xml"</Input>
   <!--  If true (non-zero) we flip the input images around the horizontal axis.-->
   <Input_FlipAroundHorizontalAxis>0</Input_FlipAroundHorizontalAxis>
   
@@ -41,6 +41,17 @@
   <Write_extrinsicParameters>1</Write_extrinsicParameters>
   <!-- If true (non-zero) we show after calibration the undistorted images.-->
   <Show_UndistortedImage>1</Show_UndistortedImage>
- 
+  <!-- If true (non-zero) will be used fisheye camera model.-->
+  <Calibrate_UseFisheyeModel>0</Calibrate_UseFisheyeModel>
+  <!-- If true (non-zero) distortion coefficient k1 will be equals to zero.-->
+  <Fix_K1>0</Fix_K1>
+  <!-- If true (non-zero) distortion coefficient k2 will be equals to zero.-->
+  <Fix_K2>0</Fix_K2>
+  <!-- If true (non-zero) distortion coefficient k3 will be equals to zero.-->
+  <Fix_K3>0</Fix_K3>
+  <!-- If true (non-zero) distortion coefficient k4 will be equals to zero.-->
+  <Fix_K4>1</Fix_K4>
+  <!-- If true (non-zero) distortion coefficient k5 will be equals to zero.-->
+  <Fix_K5>1</Fix_K5>
 </Settings>
 </opencv_storage>

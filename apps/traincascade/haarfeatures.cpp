@@ -100,9 +100,14 @@ void CvHaarEvaluator::setImage(const Mat& img, uchar clsLabel, int idx)
     CV_DbgAssert( !sum.empty() && !tilted.empty() && !normfactor.empty() );
     CvFeatureEvaluator::setImage( img, clsLabel, idx);
     Mat innSum(winSize.height + 1, winSize.width + 1, sum.type(), sum.ptr<int>((int)idx));
-    Mat innTilted(winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>((int)idx));
     Mat innSqSum;
-    integral(img, innSum, innSqSum, innTilted);
+    if (((const CvHaarFeatureParams*)featureParams)->mode == CvHaarFeatureParams::ALL)
+    {
+        Mat innTilted(winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>((int)idx));
+        integral(img, innSum, innSqSum, innTilted);
+    }
+    else
+        integral(img, innSum, innSqSum);
     normfactor.ptr<float>(0)[idx] = calcNormFactor( innSum, innSqSum );
 }
 
@@ -148,14 +153,14 @@ void CvHaarEvaluator::generateFeatures()
                     {
                         features.push_back( Feature( offset, false,
                             x,    y, dx*3, dy, -1,
-                            x+dx, y, dx  , dy, +3 ) );
+                            x+dx, y, dx  , dy, +2 ) );
                     }
                     // haar_y3
                     if ( (x+dx <= winSize.width) && (y+dy*3 <= winSize.height) )
                     {
                         features.push_back( Feature( offset, false,
                             x, y,    dx, dy*3, -1,
-                            x, y+dy, dx, dy,   +3 ) );
+                            x, y+dy, dx, dy,   +2 ) );
                     }
                     if( mode != CvHaarFeatureParams::BASIC )
                     {

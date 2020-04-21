@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -46,42 +46,38 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfAttribute.h>
+#include "ImfAttribute.h"
 #include "ImathMatrix.h"
+#include "ImfExport.h"
 
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-typedef TypedAttribute<Imath::M33f> M33fAttribute;
-template <> const char *M33fAttribute::staticTypeName ();
-template <> void M33fAttribute::writeValueTo (OStream &, int) const;
-template <> void M33fAttribute::readValueFrom (IStream &, int, int);
+typedef TypedAttribute<IMATH_NAMESPACE::M33f> M33fAttribute;
+template <> IMF_EXPORT const char *M33fAttribute::staticTypeName ();
+template <> IMF_EXPORT void M33fAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &, int) const;
+template <> IMF_EXPORT void M33fAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &, int, int);
 
 
-typedef TypedAttribute<Imath::M33d> M33dAttribute;
-template <> const char *M33dAttribute::staticTypeName ();
-template <> void M33dAttribute::writeValueTo (OStream &, int) const;
-template <> void M33dAttribute::readValueFrom (IStream &, int, int);
+typedef TypedAttribute<IMATH_NAMESPACE::M33d> M33dAttribute;
+template <> IMF_EXPORT const char *M33dAttribute::staticTypeName ();
+template <> IMF_EXPORT void M33dAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &, int) const;
+template <> IMF_EXPORT void M33dAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &, int, int);
 
 
-typedef TypedAttribute<Imath::M44f> M44fAttribute;
-template <> const char *M44fAttribute::staticTypeName ();
-template <> void M44fAttribute::writeValueTo (OStream &, int) const;
-template <> void M44fAttribute::readValueFrom (IStream &, int, int);
+typedef TypedAttribute<IMATH_NAMESPACE::M44f> M44fAttribute;
+template <> IMF_EXPORT const char *M44fAttribute::staticTypeName ();
+template <> IMF_EXPORT void M44fAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &, int) const;
+template <> IMF_EXPORT void M44fAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &, int, int);
 
 
-typedef TypedAttribute<Imath::M44d> M44dAttribute;
-template <> const char *M44dAttribute::staticTypeName ();
-template <> void M44dAttribute::writeValueTo (OStream &, int) const;
-template <> void M44dAttribute::readValueFrom (IStream &, int, int);
+typedef TypedAttribute<IMATH_NAMESPACE::M44d> M44dAttribute;
+template <> IMF_EXPORT const char *M44dAttribute::staticTypeName ();
+template <> IMF_EXPORT void M44dAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &, int) const;
+template <> IMF_EXPORT void M44dAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &, int, int);
 
 
-} // namespace Imf
-
-// Metrowerks compiler wants the .cpp file inlined, too
-#ifdef __MWERKS__
-#include <ImfMatrixAttribute.cpp>
-#endif
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

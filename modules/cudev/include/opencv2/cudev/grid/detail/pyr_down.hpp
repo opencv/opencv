@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_PYR_DOWN_DETAIL_HPP__
-#define __OPENCV_CUDEV_GRID_PYR_DOWN_DETAIL_HPP__
+#ifndef OPENCV_CUDEV_GRID_PYR_DOWN_DETAIL_HPP
+#define OPENCV_CUDEV_GRID_PYR_DOWN_DETAIL_HPP
 
 #include "../../common.hpp"
 #include "../../util/vec_traits.hpp"

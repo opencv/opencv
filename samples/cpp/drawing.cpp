@@ -1,13 +1,15 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include <stdio.h>
+
 using namespace cv;
 
-static void help()
+static void help(char** argv)
 {
     printf("\nThis program demonstrates OpenCV drawing and text output functions.\n"
     "Usage:\n"
-    "   ./drawing\n");
+    "   %s\n", argv[0]);
 }
 static Scalar randomColor(RNG& rng)
 {
@@ -15,9 +17,9 @@ static Scalar randomColor(RNG& rng)
     return Scalar(icolor&255, (icolor>>8)&255, (icolor>>16)&255);
 }
 
-int main()
+int main(int /* argc */, char** argv)
 {
-    help();
+    help(argv);
     char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
     const int DELAY = 5;
@@ -30,7 +32,7 @@ int main()
     imshow(wndname, image);
     waitKey(DELAY);
 
-    for (i = 0; i < NUMBER; i++)
+    for (i = 0; i < NUMBER * 2; i++)
     {
         Point pt1, pt2;
         pt1.x = rng.uniform(x1, x2);
@@ -38,14 +40,19 @@ int main()
         pt2.x = rng.uniform(x1, x2);
         pt2.y = rng.uniform(y1, y2);
 
-        line( image, pt1, pt2, randomColor(rng), rng.uniform(1,10), lineType );
+        int arrowed = rng.uniform(0, 6);
+
+        if( arrowed < 3 )
+            line( image, pt1, pt2, randomColor(rng), rng.uniform(1,10), lineType );
+        else
+            arrowedLine(image, pt1, pt2, randomColor(rng), rng.uniform(1, 10), lineType);
 
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
             return 0;
     }
 
-    for (i = 0; i < NUMBER; i++)
+    for (i = 0; i < NUMBER * 2; i++)
     {
         Point pt1, pt2;
         pt1.x = rng.uniform(x1, x2);
@@ -53,8 +60,13 @@ int main()
         pt2.x = rng.uniform(x1, x2);
         pt2.y = rng.uniform(y1, y2);
         int thickness = rng.uniform(-3, 10);
+        int marker = rng.uniform(0, 10);
+        int marker_size = rng.uniform(30, 80);
 
-        rectangle( image, pt1, pt2, randomColor(rng), MAX(thickness, -1), lineType );
+        if (marker > 5)
+            rectangle(image, pt1, pt2, randomColor(rng), MAX(thickness, -1), lineType);
+        else
+            drawMarker(image, pt1, randomColor(rng), marker, marker_size );
 
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
@@ -175,7 +187,3 @@ int main()
     waitKey();
     return 0;
 }
-
-#ifdef _EiC
-main(1,"drawing.c");
-#endif

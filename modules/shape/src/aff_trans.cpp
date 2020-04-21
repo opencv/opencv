@@ -53,12 +53,14 @@ public:
     {
         fullAffine = true;
         name_ = "ShapeTransformer.AFF";
+        transformCost = 0;
     }
 
     AffineTransformerImpl(bool _fullAffine)
     {
         fullAffine = _fullAffine;
         name_ = "ShapeTransformer.AFF";
+        transformCost = 0;
     }
 
     /* Destructor */
@@ -66,26 +68,25 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
-    virtual void estimateTransformation(InputArray transformingShape, InputArray targetShape, std::vector<DMatch> &matches);
-    virtual float applyTransformation(InputArray input, OutputArray output=noArray());
+    virtual void estimateTransformation(InputArray transformingShape, InputArray targetShape, std::vector<DMatch> &matches) CV_OVERRIDE;
+    virtual float applyTransformation(InputArray input, OutputArray output=noArray()) CV_OVERRIDE;
     virtual void warpImage(InputArray transformingImage, OutputArray output,
-                           int flags, int borderMode, const Scalar& borderValue) const;
+                           int flags, int borderMode, const Scalar& borderValue) const CV_OVERRIDE;
 
     //! Setters/Getters
-    virtual void setFullAffine(bool _fullAffine) {fullAffine=_fullAffine;}
-    virtual bool getFullAffine() const {return fullAffine;}
+    virtual void setFullAffine(bool _fullAffine) CV_OVERRIDE {fullAffine=_fullAffine;}
+    virtual bool getFullAffine() const CV_OVERRIDE {return fullAffine;}
 
     //! write/read
-    virtual void write(FileStorage& fs) const
+    virtual void write(FileStorage& fs) const CV_OVERRIDE
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "affine_type" << int(fullAffine);
     }
 
-    virtual void read(const FileNode& fn)
+    virtual void read(const FileNode& fn) CV_OVERRIDE
     {
         CV_Assert( (String)fn["name"] == name_ );
         fullAffine = int(fn["affine_type"])?true:false;
@@ -103,6 +104,8 @@ protected:
 void AffineTransformerImpl::warpImage(InputArray transformingImage, OutputArray output,
                                       int flags, int borderMode, const Scalar& borderValue) const
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(!affineMat.empty());
     warpAffine(transformingImage, output, affineMat, transformingImage.getMat().size(), flags, borderMode, borderValue);
 }
@@ -162,8 +165,8 @@ static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::v
             }
             else
             {
-                therow.at<float>(0,0)=-shape1[contPt].y;
-                therow.at<float>(0,1)=shape1[contPt].x;
+                therow.at<float>(0,0)=shape1[contPt].y;
+                therow.at<float>(0,1)=-shape1[contPt].x;
                 therow.at<float>(0,3)=1;
                 therow.row(0).copyTo(matM.row(ii));
                 matP.at<float>(ii,0) = shape2[contPt].y;
@@ -184,6 +187,8 @@ static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::v
 
 void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray _pts2, std::vector<DMatch>& _matches)
 {
+    CV_INSTRUMENT_REGION();
+
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
     CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
@@ -229,6 +234,8 @@ void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray 
 
 float AffineTransformerImpl::applyTransformation(InputArray inPts, OutputArray outPts)
 {
+    CV_INSTRUMENT_REGION();
+
     Mat pts1 = inPts.getMat();
     CV_Assert((pts1.channels()==2) && (pts1.cols>0));
 

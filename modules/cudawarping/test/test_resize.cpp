@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////////
 // Gold implementation
@@ -206,4 +206,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Warping, ResizeSameAsHost, testing::Combine(
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_AREA)),
     WHOLE_SUBMAT));
 
+
+}} // namespace
 #endif // HAVE_CUDA

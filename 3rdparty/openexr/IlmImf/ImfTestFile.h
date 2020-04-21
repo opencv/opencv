@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -44,20 +44,54 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "ImfForward.h"
+#include "ImfExport.h"
+#include "ImfNamespace.h"
 
-namespace Imf {
-
-class IStream;
-
-
-bool isOpenExrFile (const char fileName[], bool &isTiled);
-bool isOpenExrFile (const char fileName[]);
-bool isTiledOpenExrFile (const char fileName[]);
-bool isOpenExrFile (IStream &is, bool &isTiled);
-bool isOpenExrFile (IStream &is);
-bool isTiledOpenExrFile (IStream &is);
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-} // namespace Imf
+IMF_EXPORT bool isOpenExrFile (const char fileName[]);
+
+IMF_EXPORT bool isOpenExrFile (const char fileName[],
+                               bool &isTiled);
+
+IMF_EXPORT bool isOpenExrFile (const char fileName[],
+                               bool &isTiled,
+                               bool &isDeep);
+
+IMF_EXPORT bool isOpenExrFile (const char fileName[],
+                               bool &isTiled,
+                               bool &isDeep,
+                               bool &isMultiPart);
+
+IMF_EXPORT bool isTiledOpenExrFile (const char fileName[]);
+
+IMF_EXPORT bool isDeepOpenExrFile (const char fileName[]);
+
+IMF_EXPORT bool isMultiPartOpenExrFile (const char fileName[]);
+
+IMF_EXPORT bool isOpenExrFile (IStream &is);
+
+IMF_EXPORT bool isOpenExrFile (IStream &is,
+                               bool &isTiled);
+
+IMF_EXPORT bool isOpenExrFile (IStream &is,
+                               bool &isTiled,
+                               bool &isDeep);
+
+IMF_EXPORT bool isOpenExrFile (IStream &is,
+                               bool &isTiled,
+                               bool &isDeep,
+                               bool &isMultiPart);
+
+IMF_EXPORT bool isTiledOpenExrFile (IStream &is);
+
+IMF_EXPORT bool isDeepOpenExrFile (IStream &is);
+
+IMF_EXPORT bool isMultiPartOpenExrFile (IStream &is);
+
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

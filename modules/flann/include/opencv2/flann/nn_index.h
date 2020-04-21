@@ -36,6 +36,8 @@
 #include "result_set.h"
 #include "params.h"
 
+//! @cond IGNORED
+
 namespace cvflann
 {
 
@@ -173,5 +175,7 @@ public:
 };
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_NNINDEX_H

@@ -42,6 +42,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
+namespace opencv_test { namespace {
+
 class CV_UndistortPointsBadArgTest : public cvtest::BadArgTest
 {
 public:
@@ -104,7 +106,10 @@ void CV_UndistortPointsBadArgTest::run(int)
     img_size.height = 600;
     double cam[9] = {150.f, 0.f, img_size.width/2.f, 0, 300.f, img_size.height/2.f, 0.f, 0.f, 1.f};
     double dist[4] = {0.01,0.02,0.001,0.0005};
-    double s_points[N_POINTS2] = {img_size.width/4,img_size.height/4};
+    double s_points[N_POINTS2] = {
+        static_cast<double>(img_size.width) / 4.0,
+        static_cast<double>(img_size.height) / 4.0,
+    };
     double d_points[N_POINTS2];
     double p[9] = {155.f, 0.f, img_size.width/2.f+img_size.width/50.f, 0, 310.f, img_size.height/2.f+img_size.height/50.f, 0.f, 0.f, 1.f};
     double r[9] = {1,0,0,0,1,0,0,0,1};
@@ -265,7 +270,7 @@ void CV_UndistortPointsBadArgTest::run(int)
     cvReleaseMat(&temp);
 
     src_points = cv::Mat();
-    errcount += run_test_case( CV_StsAssert, "Input data matrix is not continuous" );
+    errcount += run_test_case( CV_StsBadArg, "Input data matrix is not continuous" );
     src_points = cv::cvarrToMat(&_src_points_orig);
     cvReleaseMat(&temp);
 
@@ -522,4 +527,5 @@ TEST(Calib3d_UndistortPoints, badarg) { CV_UndistortPointsBadArgTest test; test.
 TEST(Calib3d_InitUndistortRectifyMap, badarg) { CV_InitUndistortRectifyMapBadArgTest test; test.safe_run(); }
 TEST(Calib3d_Undistort, badarg) { CV_UndistortBadArgTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

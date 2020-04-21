@@ -52,6 +52,8 @@
 #include "opencv2/cudev.hpp"
 #include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 namespace
@@ -95,15 +97,16 @@ namespace
 
 double cv::cuda::threshold(InputArray _src, OutputArray _dst, double thresh, double maxVal, int type, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     const int depth = src.depth();
 
-    CV_DbgAssert( src.channels() == 1 && depth <= CV_64F );
-    CV_DbgAssert( type <= 4 /*THRESH_TOZERO_INV*/ );
+    CV_Assert( depth <= CV_64F );
+    CV_Assert( type <= 4 /*THRESH_TOZERO_INV*/ );
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
+    src = src.reshape(1);
+    dst = dst.reshape(1);
 
     if (depth == CV_32F && type == 2 /*THRESH_TRUNC*/)
     {
@@ -141,6 +144,8 @@ double cv::cuda::threshold(InputArray _src, OutputArray _dst, double thresh, dou
 
         funcs[depth](src, dst, thresh, maxVal, type, stream);
     }
+
+    syncOutput(dst, _dst, stream);
 
     return thresh;
 }

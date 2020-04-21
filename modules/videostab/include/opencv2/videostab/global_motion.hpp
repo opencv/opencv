@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP__
-#define __OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP__
+#ifndef OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP
+#define OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP
 
 #include <vector>
 #include <fstream>
@@ -61,23 +61,62 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab_motion
+//! @{
+
+/** @brief Estimates best global motion between two 2D point clouds in the least-squares sense.
+
+@note Works in-place and changes input point arrays.
+
+@param points0 Source set of 2D points (32F).
+@param points1 Destination set of 2D points (32F).
+@param model Motion model (up to MM_AFFINE).
+@param rmse Final root-mean-square error.
+@return 3x3 2D transformation matrix (32F).
+ */
 CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
         InputOutputArray points0, InputOutputArray points1, int model = MM_AFFINE,
         float *rmse = 0);
 
+/** @brief Estimates best global motion between two 2D point clouds robustly (using RANSAC method).
+
+@param points0 Source set of 2D points (32F).
+@param points1 Destination set of 2D points (32F).
+@param model Motion model. See cv::videostab::MotionModel.
+@param params RANSAC method parameters. See videostab::RansacParams.
+@param rmse Final root-mean-square error.
+@param ninliers Final number of inliers.
+ */
 CV_EXPORTS Mat estimateGlobalMotionRansac(
         InputArray points0, InputArray points1, int model = MM_AFFINE,
         const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE),
         float *rmse = 0, int *ninliers = 0);
 
+/** @brief Base class for all global motion estimation methods.
+ */
 class CV_EXPORTS MotionEstimatorBase
 {
 public:
     virtual ~MotionEstimatorBase() {}
 
+    /** @brief Sets motion model.
+
+    @param val Motion model. See cv::videostab::MotionModel.
+     */
     virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
+
+    /**
+    @return Motion model. See cv::videostab::MotionModel.
+    */
     virtual MotionModel motionModel() const { return motionModel_; }
 
+    /** @brief Estimates global motion between two 2D point clouds.
+
+    @param points0 Source set of 2D points (32F).
+    @param points1 Destination set of 2D points (32F).
+    @param ok Indicates whether motion was estimated successfully.
+    @return 3x3 2D transformation matrix (32F).
+     */
     virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0) = 0;
 
 protected:
@@ -87,6 +126,8 @@ private:
     MotionModel motionModel_;
 };
 
+/** @brief Describes a robust RANSAC-based global 2D motion estimation method which minimizes L2 error.
+ */
 class CV_EXPORTS MotionEstimatorRansacL2 : public MotionEstimatorBase
 {
 public:
@@ -98,19 +139,23 @@ public:
     void setMinInlierRatio(float val) { minInlierRatio_ = val; }
     float minInlierRatio() const { return minInlierRatio_; }
 
-    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0);
+    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0) CV_OVERRIDE;
 
 private:
     RansacParams ransacParams_;
     float minInlierRatio_;
 };
 
+/** @brief Describes a global 2D motion estimation method which minimizes L1 error.
+
+@note To be able to use this method you must build OpenCV with CLP library support. :
+ */
 class CV_EXPORTS MotionEstimatorL1 : public MotionEstimatorBase
 {
 public:
     MotionEstimatorL1(MotionModel model = MM_AFFINE);
 
-    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0);
+    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0) CV_OVERRIDE;
 
 private:
     std::vector<double> obj_, collb_, colub_;
@@ -125,6 +170,8 @@ private:
     }
 };
 
+/** @brief Base class for global 2D motion estimation methods which take frames as input.
+ */
 class CV_EXPORTS ImageMotionEstimatorBase
 {
 public:
@@ -147,7 +194,7 @@ class CV_EXPORTS FromFileMotionReader : public ImageMotionEstimatorBase
 public:
     FromFileMotionReader(const String &path);
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) CV_OVERRIDE;
 
 private:
     std::ifstream file_;
@@ -158,23 +205,26 @@ class CV_EXPORTS ToFileMotionWriter : public ImageMotionEstimatorBase
 public:
     ToFileMotionWriter(const String &path, Ptr<ImageMotionEstimatorBase> estimator);
 
-    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
-    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
+    virtual void setMotionModel(MotionModel val) CV_OVERRIDE { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const CV_OVERRIDE { return motionEstimator_->motionModel(); }
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) CV_OVERRIDE;
 
 private:
     std::ofstream file_;
     Ptr<ImageMotionEstimatorBase> motionEstimator_;
 };
 
+/** @brief Describes a global 2D motion estimation method which uses keypoints detection and optical flow for
+matching.
+ */
 class CV_EXPORTS KeypointBasedMotionEstimator : public ImageMotionEstimatorBase
 {
 public:
     KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator);
 
-    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
-    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
+    virtual void setMotionModel(MotionModel val) CV_OVERRIDE { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const CV_OVERRIDE { return motionEstimator_->motionModel(); }
 
     void setDetector(Ptr<FeatureDetector> val) { detector_ = val; }
     Ptr<FeatureDetector> detector() const { return detector_; }
@@ -185,7 +235,8 @@ public:
     void setOutlierRejector(Ptr<IOutlierRejector> val) { outlierRejector_ = val; }
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) CV_OVERRIDE;
+    Mat estimate(InputArray frame0, InputArray frame1, bool *ok = 0);
 
 private:
     Ptr<MotionEstimatorBase> motionEstimator_;
@@ -199,20 +250,20 @@ private:
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
 };
 
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
 class CV_EXPORTS KeypointBasedMotionEstimatorGpu : public ImageMotionEstimatorBase
 {
 public:
     KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator);
 
-    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
-    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
+    virtual void setMotionModel(MotionModel val) CV_OVERRIDE { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const CV_OVERRIDE { return motionEstimator_->motionModel(); }
 
     void setOutlierRejector(Ptr<IOutlierRejector> val) { outlierRejector_ = val; }
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) CV_OVERRIDE;
     Mat estimate(const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, bool *ok = 0);
 
 private:
@@ -230,9 +281,18 @@ private:
     std::vector<uchar> rejectionStatus_;
 };
 
-#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
+/** @brief Computes motion between two frames assuming that all the intermediate motions are known.
+
+@param from Source frame index.
+@param to Destination frame index.
+@param motions Pair-wise motions. motions[i] denotes motion from the frame i to the frame i+1
+@return Motion from the Source frame to the Destination frame.
+ */
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

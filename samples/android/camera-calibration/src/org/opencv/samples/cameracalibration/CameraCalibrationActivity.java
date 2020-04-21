@@ -1,8 +1,8 @@
 // This sample is based on "Camera calibration With OpenCV" tutorial:
-// http://docs.opencv.org/doc/tutorials/calib3d/camera_calibration/camera_calibration.html
+// https://docs.opencv.org/3.4/d4/d94/tutorial_camera_calibration.html
 //
 // It uses standard OpenCV asymmetric circles grid pattern 11x4:
-// https://github.com/Itseez/opencv/blob/2.4/doc/acircles_pattern.png.
+// https://github.com/opencv/opencv/blob/3.4/doc/acircles_pattern.png
 // The results are the camera matrix and 5 distortion coefficients.
 //
 // Tap on highlighted pattern to capture pattern corners for calibration.
@@ -94,7 +94,7 @@ public class CameraCalibrationActivity extends Activity implements CvCameraViewL
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
         } else {
             Log.d(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);

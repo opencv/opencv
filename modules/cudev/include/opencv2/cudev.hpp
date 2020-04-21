@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_HPP__
-#define __OPENCV_CUDEV_HPP__
+#ifndef OPENCV_CUDEV_HPP
+#define OPENCV_CUDEV_HPP
 
 #include "cudev/common.hpp"
 
@@ -108,5 +108,12 @@
 #include "cudev/expr/unary_func.hpp"
 #include "cudev/expr/unary_op.hpp"
 #include "cudev/expr/warping.hpp"
+
+/**
+  @addtogroup cuda
+  @{
+    @defgroup cudev Device layer
+  @}
+*/
 
 #endif

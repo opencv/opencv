@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <iostream>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/core/utility.hpp>
 
 using namespace cv; // all the new API is put into "cv" namespace. Export its content
@@ -17,38 +17,44 @@ static void help()
     "./image [image-name Default: lena.jpg]\n" << endl;
 }
 
-// enable/disable use of mixed API in the code below.
-#define DEMO_MIXED_API_USE 1
+//#define USE_LEGACY_C_API 1  // not working with modern OpenCV
 
-#ifdef DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
 #  include <opencv2/highgui/highgui_c.h>
 #  include <opencv2/imgcodecs/imgcodecs_c.h>
 #endif
 
 int main( int argc, char** argv )
 {
-    help();
-    const char* imagename = argc > 1 ? argv[1] : "lena.jpg";
-#if DEMO_MIXED_API_USE
-    Ptr<IplImage> iplimg(cvLoadImage(imagename)); // Ptr<T> is safe ref-counting pointer class
+    cv::CommandLineParser parser(argc, argv, "{help h | |}{@image|lena.jpg|}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string imagename = parser.get<string>("@image");
+#ifdef USE_LEGACY_C_API
+    //! [iplimage]
+    Ptr<IplImage> iplimg(cvLoadImage(imagename.c_str())); // Ptr<T> is safe ref-counting pointer class
     if(!iplimg)
     {
-        fprintf(stderr, "Can not load image %s\n", imagename);
+        fprintf(stderr, "Can not load image %s\n", imagename.c_str());
         return -1;
     }
     Mat img = cv::cvarrToMat(iplimg); // cv::Mat replaces the CvMat and IplImage, but it's easy to convert
     // between the old and the new data structures (by default, only the header
     // is converted, while the data is shared)
+    //! [iplimage]
 #else
-    Mat img = imread(imagename); // the newer cvLoadImage alternative, MATLAB-style function
+    Mat img = imread(samples::findFile(imagename)); // the newer cvLoadImage alternative, MATLAB-style function
     if(img.empty())
     {
-        fprintf(stderr, "Can not load image %s\n", imagename);
+        fprintf(stderr, "Can not load image %s\n", imagename.c_str());
         return -1;
     }
 #endif
 
-    if( !img.data ) // check if the image has been loaded properly
+    if( img.empty() ) // check if the image has been loaded properly
         return -1;
 
     Mat img_yuv;
@@ -87,7 +93,7 @@ int main( int argc, char** argv )
 
     const double brightness_gain = 0;
     const double contrast_gain = 1.7;
-#if DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
     // it's easy to pass the new matrices to the functions that only work with IplImage or CvMat:
     // step 1) - convert the headers, data will not be copied
     IplImage cv_planes_0 = planes[0], cv_noise = noise;
@@ -114,7 +120,7 @@ int main( int argc, char** argv )
 
     // this is counterpart for cvNamedWindow
     namedWindow("image with grain", WINDOW_AUTOSIZE);
-#if DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
     // this is to demonstrate that img and iplimg really share the data - the result of the above
     // processing is stored in img and thus in iplimg too.
     cvShowImage("image with grain", iplimg);

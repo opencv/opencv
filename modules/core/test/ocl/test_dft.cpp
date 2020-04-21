@@ -56,13 +56,13 @@ enum OCL_FFT_TYPE
     C2C = 3
 };
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ////////////////////////////////////////////////////////////////////////////
 // Dft
 
-PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool, bool, bool)
+PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, MatDepth, bool, bool, bool, bool)
 {
     cv::Size dft_size;
     int	dft_flags, depth, cn, dft_type;
@@ -76,7 +76,7 @@ PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool, bool, bool)
     {
         dft_size = GET_PARAM(0);
         dft_type = GET_PARAM(1);
-        depth = CV_32F;
+        depth = GET_PARAM(2);
 
         dft_flags = 0;
         switch (dft_type)
@@ -87,13 +87,13 @@ PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, bool, bool, bool, bool)
         case C2C: dft_flags |= cv::DFT_COMPLEX_OUTPUT; cn = 2; break;
         }
 
-        if (GET_PARAM(2))
-            dft_flags |= cv::DFT_INVERSE;
         if (GET_PARAM(3))
-            dft_flags |= cv::DFT_ROWS;
+            dft_flags |= cv::DFT_INVERSE;
         if (GET_PARAM(4))
+            dft_flags |= cv::DFT_ROWS;
+        if (GET_PARAM(5))
             dft_flags |= cv::DFT_SCALE;
-        hint = GET_PARAM(5);
+        hint = GET_PARAM(6);
         is1d = (dft_flags & DFT_ROWS) != 0 || dft_size.height == 1;
     }
 
@@ -112,7 +112,7 @@ OCL_TEST_P(Dft, Mat)
     OCL_OFF(cv::dft(src, dst, dft_flags, nonzero_rows));
     OCL_ON(cv::dft(usrc, udst, dft_flags, nonzero_rows));
 
-    // In case forward R2C 1d tranform dst contains only half of output
+    // In case forward R2C 1d transform dst contains only half of output
     // without complex conjugate
     if (dft_type == R2C && is1d && (dft_flags & cv::DFT_INVERSE) == 0)
     {
@@ -177,6 +177,7 @@ OCL_INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MulSpectrums, testing::Combine(Bool(), 
 
 OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(45, 72), cv::Size(36, 36), cv::Size(512, 1), cv::Size(1280, 768)),
                                                Values((OCL_FFT_TYPE) R2C, (OCL_FFT_TYPE) C2C, (OCL_FFT_TYPE) R2R, (OCL_FFT_TYPE) C2R),
+                                               Values(CV_32F, CV_64F),
                                                Bool(), // DFT_INVERSE
                                                Bool(), // DFT_ROWS
                                                Bool(), // DFT_SCALE
@@ -184,6 +185,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(45, 72), cv::Size
                                                )
                             );
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

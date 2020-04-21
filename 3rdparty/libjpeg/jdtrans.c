@@ -56,20 +56,20 @@ jpeg_read_coefficients (j_decompress_ptr cinfo)
       int retcode;
       /* Call progress monitor hook if present */
       if (cinfo->progress != NULL)
-        (*cinfo->progress->progress_monitor) ((j_common_ptr) cinfo);
+	(*cinfo->progress->progress_monitor) ((j_common_ptr) cinfo);
       /* Absorb some more input */
       retcode = (*cinfo->inputctl->consume_input) (cinfo);
       if (retcode == JPEG_SUSPENDED)
-        return NULL;
+	return NULL;
       if (retcode == JPEG_REACHED_EOI)
-        break;
+	break;
       /* Advance progress counter if appropriate */
       if (cinfo->progress != NULL &&
-          (retcode == JPEG_ROW_COMPLETED || retcode == JPEG_REACHED_SOS)) {
-        if (++cinfo->progress->pass_counter >= cinfo->progress->pass_limit) {
-          /* startup underestimated number of scans; ratchet up one scan */
-          cinfo->progress->pass_limit += (long) cinfo->total_iMCU_rows;
-        }
+	  (retcode == JPEG_ROW_COMPLETED || retcode == JPEG_REACHED_SOS)) {
+	if (++cinfo->progress->pass_counter >= cinfo->progress->pass_limit) {
+	  /* startup underestimated number of scans; ratchet up one scan */
+	  cinfo->progress->pass_limit += (long) cinfo->total_iMCU_rows;
+	}
       }
     }
     /* Set state so that jpeg_finish_decompress does the right thing */

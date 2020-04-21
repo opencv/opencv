@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_INTERPOLATION_HPP__
-#define __OPENCV_CUDEV_PTR2D_INTERPOLATION_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_INTERPOLATION_HPP
+#define OPENCV_CUDEV_PTR2D_INTERPOLATION_HPP
 
 #include "../common.hpp"
 #include "../util/vec_traits.hpp"
@@ -54,6 +54,9 @@
 #include "traits.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // Nearest
 
@@ -379,6 +382,8 @@ __host__ CommonAreaInterPtrSz<typename PtrTraits<SrcPtr>::ptr_type> interArea(co
 template <class SrcPtr> struct PtrTraits< CommonAreaInterPtrSz<SrcPtr> > : PtrTraitsBase<CommonAreaInterPtrSz<SrcPtr>, CommonAreaInterPtr<SrcPtr> >
 {
 };
+
+//! @}
 
 }}
 

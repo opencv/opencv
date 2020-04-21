@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // MeanShiftFiltering
@@ -150,3 +148,5 @@ PERF_TEST_P(Image, MeanShiftSegmentation,
         FAIL_NO_CPU();
     }
 }
+
+}} // namespace

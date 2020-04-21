@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_SPLIT_MERGE_HPP__
-#define __OPENCV_CUDEV_GRID_SPLIT_MERGE_HPP__
+#ifndef OPENCV_CUDEV_GRID_SPLIT_MERGE_HPP
+#define OPENCV_CUDEV_GRID_SPLIT_MERGE_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"
@@ -56,6 +56,9 @@
 #include "detail/split_merge.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class Policy, class SrcPtrTuple, typename DstType, class MaskPtr>
 __host__ void gridMerge_(const SrcPtrTuple& src, GpuMat_<DstType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
@@ -578,6 +581,8 @@ __host__ void gridSplit(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[COUNT], Str
 {
     gridSplit_<DefaultSplitMergePolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

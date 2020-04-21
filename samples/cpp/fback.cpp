@@ -1,21 +1,21 @@
 #include "opencv2/video/tracking.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/videoio/videoio.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help(char** argv)
 {
     cout <<
             "\nThis program demonstrates dense optical flow algorithm by Gunnar Farneback\n"
             "Mainly the function: calcOpticalFlowFarneback()\n"
             "Call:\n"
-            "./fback\n"
-            "This reads from video camera 0\n" << endl;
+        <<  argv[0]
+        <<  "This reads from video camera 0\n" << endl;
 }
 static void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
                     double, const Scalar& color)
@@ -30,10 +30,16 @@ static void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
         }
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
+    cv::CommandLineParser parser(argc, argv, "{help h||}");
+    if (parser.has("help"))
+    {
+        help(argv);
+        return 0;
+    }
     VideoCapture cap(0);
-    help();
+    help(argv);
     if( !cap.isOpened() )
         return -1;
 

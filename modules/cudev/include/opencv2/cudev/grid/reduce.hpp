@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_REDUCE_HPP__
-#define __OPENCV_CUDEV_GRID_REDUCE_HPP__
+#ifndef OPENCV_CUDEV_GRID_REDUCE_HPP
+#define OPENCV_CUDEV_GRID_REDUCE_HPP
 
 #include <limits>
 #include "../common.hpp"
@@ -56,6 +56,9 @@
 #include "detail/minmaxloc.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
 __host__ void gridCalcSum_(const SrcPtr& src, GpuMat_<ResType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
@@ -369,6 +372,8 @@ __host__ void gridCountNonZero(const SrcPtr& src, GpuMat_<ResType>& dst, Stream&
 {
     gridCountNonZero_<DefaultGlobReducePolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

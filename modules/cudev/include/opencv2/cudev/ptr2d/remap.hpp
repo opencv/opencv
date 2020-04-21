@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_REMAP_HPP__
-#define __OPENCV_CUDEV_PTR2D_REMAP_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_REMAP_HPP
+#define OPENCV_CUDEV_PTR2D_REMAP_HPP
 
 #include "opencv2/core/base.hpp"
 #include "../common.hpp"
@@ -53,6 +53,9 @@
 #include "gpumat.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class SrcPtr, class MapPtr> struct RemapPtr1
 {
@@ -148,6 +151,8 @@ template <class SrcPtr, class MapPtr> struct PtrTraits< RemapPtr1Sz<SrcPtr, MapP
 template <class SrcPtr, class MapXPtr, class MapYPtr> struct PtrTraits< RemapPtr2Sz<SrcPtr, MapXPtr, MapYPtr> > : PtrTraitsBase<RemapPtr2Sz<SrcPtr, MapXPtr, MapYPtr>, RemapPtr2<SrcPtr, MapXPtr, MapYPtr> >
 {
 };
+
+//! @}
 
 }}
 

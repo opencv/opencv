@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_COPY_HPP__
-#define __OPENCV_CUDEV_GRID_COPY_HPP__
+#ifndef OPENCV_CUDEV_GRID_COPY_HPP
+#define OPENCV_CUDEV_GRID_COPY_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"
@@ -56,6 +56,9 @@
 #include "detail/copy.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class Policy, class SrcPtr, typename DstType, class MaskPtr>
 __host__ void gridCopy_(const SrcPtr& src, GpuMat_<DstType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
@@ -446,6 +449,8 @@ __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, Glob
 {
     gridCopy_<DefaultCopyPolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

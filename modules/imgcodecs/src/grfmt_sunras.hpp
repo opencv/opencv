@@ -45,6 +45,8 @@
 
 #include "grfmt_base.hpp"
 
+#ifdef HAVE_IMGCODEC_SUNRASTER
+
 namespace cv
 {
 
@@ -64,18 +66,18 @@ enum SunRasMapType
 
 
 // Sun Raster Reader
-class SunRasterDecoder : public BaseImageDecoder
+class SunRasterDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
 
     SunRasterDecoder();
-    virtual ~SunRasterDecoder();
+    virtual ~SunRasterDecoder() CV_OVERRIDE;
 
-    bool  readData( Mat& img );
-    bool  readHeader();
+    bool  readData( Mat& img ) CV_OVERRIDE;
+    bool  readHeader() CV_OVERRIDE;
     void  close();
 
-    ImageDecoder newDecoder() const;
+    ImageDecoder newDecoder() const CV_OVERRIDE;
 
 protected:
 
@@ -89,17 +91,19 @@ protected:
 };
 
 
-class SunRasterEncoder : public BaseImageEncoder
+class SunRasterEncoder CV_FINAL : public BaseImageEncoder
 {
 public:
     SunRasterEncoder();
-    virtual ~SunRasterEncoder();
+    virtual ~SunRasterEncoder() CV_OVERRIDE;
 
-    bool write( const Mat& img, const std::vector<int>& params );
+    bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
 
-    ImageEncoder newEncoder() const;
+    ImageEncoder newEncoder() const CV_OVERRIDE;
 };
 
 }
+
+#endif // HAVE_IMGCODEC_SUNRASTER
 
 #endif/*_GRFMT_SUNRAS_H_*/

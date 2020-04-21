@@ -43,12 +43,15 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_VEC_TRAITS_HPP__
-#define __OPENCV_CUDEV_UTIL_VEC_TRAITS_HPP__
+#ifndef OPENCV_CUDEV_UTIL_VEC_TRAITS_HPP
+#define OPENCV_CUDEV_UTIL_VEC_TRAITS_HPP
 
 #include "../common.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // MakeVec
 
@@ -176,6 +179,8 @@ template<> struct VecTraits<char4>
     __host__ __device__ __forceinline__ static char4 make(schar x, schar y, schar z, schar w) {return make_char4(x, y, z, w);}
     __host__ __device__ __forceinline__ static char4 make(const schar* v) {return make_char4(v[0], v[1], v[2], v[3]);}
 };
+
+//! @}
 
 }}
 

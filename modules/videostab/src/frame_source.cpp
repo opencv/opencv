@@ -62,7 +62,7 @@ public:
     VideoFileSourceImpl(const String &path, bool volatileFrame)
         : path_(path), volatileFrame_(volatileFrame) { reset(); }
 
-    virtual void reset()
+    virtual void reset() CV_OVERRIDE
     {
 #ifdef HAVE_OPENCV_VIDEOIO
         vc.release();
@@ -70,11 +70,11 @@ public:
         if (!vc.isOpened())
             CV_Error(0, "can't open file: " + path_);
 #else
-        CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without video I/O support");
+        CV_Error(Error::StsNotImplemented, "OpenCV has been compiled without video I/O support");
 #endif
     }
 
-    virtual Mat nextFrame()
+    virtual Mat nextFrame() CV_OVERRIDE
     {
         Mat frame;
 #ifdef HAVE_OPENCV_VIDEOIO

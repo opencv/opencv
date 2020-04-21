@@ -120,6 +120,100 @@ namespace ml
         return termCrit;
     }
 
+    struct TreeParams
+    {
+        TreeParams();
+        TreeParams( int maxDepth, int minSampleCount,
+                    double regressionAccuracy, bool useSurrogates,
+                    int maxCategories, int CVFolds,
+                    bool use1SERule, bool truncatePrunedTree,
+                    const Mat& priors );
+
+        inline void setMaxCategories(int val)
+        {
+            if( val < 2 )
+                CV_Error( CV_StsOutOfRange, "max_categories should be >= 2" );
+            maxCategories = std::min(val, 15 );
+        }
+        inline void setMaxDepth(int val)
+        {
+            if( val < 0 )
+                CV_Error( CV_StsOutOfRange, "max_depth should be >= 0" );
+            maxDepth = std::min( val, 25 );
+        }
+        inline void setMinSampleCount(int val)
+        {
+            minSampleCount = std::max(val, 1);
+        }
+        inline void setCVFolds(int val)
+        {
+            if( val < 0 )
+                CV_Error( CV_StsOutOfRange,
+                          "params.CVFolds should be =0 (the tree is not pruned) "
+                          "or n>0 (tree is pruned using n-fold cross-validation)" );
+            if(val > 1)
+                CV_Error( CV_StsNotImplemented,
+                          "tree pruning using cross-validation is not implemented."
+                          "Set CVFolds to 1");
+
+            if( val == 1 )
+                val = 0;
+            CVFolds = val;
+        }
+        inline void setRegressionAccuracy(float val)
+        {
+            if( val < 0 )
+                CV_Error( CV_StsOutOfRange, "params.regression_accuracy should be >= 0" );
+            regressionAccuracy = val;
+        }
+
+        inline int getMaxCategories() const { return maxCategories; }
+        inline int getMaxDepth() const { return maxDepth; }
+        inline int getMinSampleCount() const { return minSampleCount; }
+        inline int getCVFolds() const { return CVFolds; }
+        inline float getRegressionAccuracy() const { return regressionAccuracy; }
+
+        inline bool getUseSurrogates() const { return useSurrogates; }
+        inline void setUseSurrogates(bool val) { useSurrogates = val; }
+        inline bool getUse1SERule() const { return use1SERule; }
+        inline void setUse1SERule(bool val) { use1SERule = val; }
+        inline bool getTruncatePrunedTree() const { return truncatePrunedTree; }
+        inline void setTruncatePrunedTree(bool val) { truncatePrunedTree = val; }
+        inline cv::Mat getPriors() const { return priors; }
+        inline void setPriors(const cv::Mat& val) { priors = val; }
+
+        public:
+        bool  useSurrogates;
+        bool  use1SERule;
+        bool  truncatePrunedTree;
+        Mat priors;
+
+    protected:
+        int   maxCategories;
+        int   maxDepth;
+        int   minSampleCount;
+        int   CVFolds;
+        float regressionAccuracy;
+    };
+
+    struct RTreeParams
+    {
+        RTreeParams();
+        RTreeParams(bool calcVarImportance, int nactiveVars, TermCriteria termCrit );
+        bool calcVarImportance;
+        int nactiveVars;
+        TermCriteria termCrit;
+    };
+
+    struct BoostTreeParams
+    {
+        BoostTreeParams();
+        BoostTreeParams(int boostType, int weakCount, double weightTrimRate);
+        int boostType;
+        int weakCount;
+        double weightTrimRate;
+    };
+
     class DTreesImpl : public DTrees
     {
     public:
@@ -191,23 +285,41 @@ namespace ml
             int maxSubsetSize;
         };
 
-        DTreesImpl();
-        virtual ~DTreesImpl();
-        virtual void clear();
+        inline int getMaxCategories() const CV_OVERRIDE { return params.getMaxCategories(); }
+        inline void setMaxCategories(int val) CV_OVERRIDE { params.setMaxCategories(val); }
+        inline int getMaxDepth() const CV_OVERRIDE { return params.getMaxDepth(); }
+        inline void setMaxDepth(int val) CV_OVERRIDE { params.setMaxDepth(val); }
+        inline int getMinSampleCount() const CV_OVERRIDE { return params.getMinSampleCount(); }
+        inline void setMinSampleCount(int val) CV_OVERRIDE { params.setMinSampleCount(val); }
+        inline int getCVFolds() const CV_OVERRIDE { return params.getCVFolds(); }
+        inline void setCVFolds(int val) CV_OVERRIDE { params.setCVFolds(val); }
+        inline bool getUseSurrogates() const CV_OVERRIDE { return params.getUseSurrogates(); }
+        inline void setUseSurrogates(bool val) CV_OVERRIDE { params.setUseSurrogates(val); }
+        inline bool getUse1SERule() const CV_OVERRIDE { return params.getUse1SERule(); }
+        inline void setUse1SERule(bool val) CV_OVERRIDE { params.setUse1SERule(val); }
+        inline bool getTruncatePrunedTree() const CV_OVERRIDE { return params.getTruncatePrunedTree(); }
+        inline void setTruncatePrunedTree(bool val) CV_OVERRIDE { params.setTruncatePrunedTree(val); }
+        inline float getRegressionAccuracy() const CV_OVERRIDE { return params.getRegressionAccuracy(); }
+        inline void setRegressionAccuracy(float val) CV_OVERRIDE { params.setRegressionAccuracy(val); }
+        inline cv::Mat getPriors() const CV_OVERRIDE { return params.getPriors(); }
+        inline void setPriors(const cv::Mat& val) CV_OVERRIDE { params.setPriors(val); }
 
-        String getDefaultModelName() const { return "opencv_ml_dtree"; }
-        bool isTrained() const { return !roots.empty(); }
-        bool isClassifier() const { return _isClassifier; }
-        int getVarCount() const { return varType.empty() ? 0 : (int)(varType.size() - 1); }
+        DTreesImpl();
+        virtual ~DTreesImpl() CV_OVERRIDE;
+        virtual void clear() CV_OVERRIDE;
+
+        String getDefaultName() const CV_OVERRIDE { return "opencv_ml_dtree"; }
+        bool isTrained() const CV_OVERRIDE { return !roots.empty(); }
+        bool isClassifier() const CV_OVERRIDE { return _isClassifier; }
+        int getVarCount() const CV_OVERRIDE { return varType.empty() ? 0 : (int)(varType.size() - 1); }
         int getCatCount(int vi) const { return catOfs[vi][1] - catOfs[vi][0]; }
         int getSubsetSize(int vi) const { return (getCatCount(vi) + 31)/32; }
 
-        virtual void setDParams(const Params& _params);
-        virtual Params getDParams() const;
+        virtual void setDParams(const TreeParams& _params);
         virtual void startTraining( const Ptr<TrainData>& trainData, int flags );
         virtual void endTraining();
         virtual void initCompVarIdx();
-        virtual bool train( const Ptr<TrainData>& trainData, int flags );
+        virtual bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE;
 
         virtual int addTree( const vector<int>& sidx );
         virtual int addNodeAndTrySplit( int parent, const vector<int>& sidx );
@@ -230,27 +342,27 @@ namespace ml
         virtual double updateTreeRNC( int root, double T, int fold );
         virtual bool cutTree( int root, double T, int fold, double min_alpha );
         virtual float predictTrees( const Range& range, const Mat& sample, int flags ) const;
-        virtual float predict( InputArray inputs, OutputArray outputs, int flags ) const;
+        virtual float predict( InputArray inputs, OutputArray outputs, int flags ) const CV_OVERRIDE;
 
         virtual void writeTrainingParams( FileStorage& fs ) const;
         virtual void writeParams( FileStorage& fs ) const;
         virtual void writeSplit( FileStorage& fs, int splitidx ) const;
         virtual void writeNode( FileStorage& fs, int nidx, int depth ) const;
         virtual void writeTree( FileStorage& fs, int root ) const;
-        virtual void write( FileStorage& fs ) const;
+        virtual void write( FileStorage& fs ) const CV_OVERRIDE;
 
         virtual void readParams( const FileNode& fn );
         virtual int readSplit( const FileNode& fn );
         virtual int readNode( const FileNode& fn );
         virtual int readTree( const FileNode& fn );
-        virtual void read( const FileNode& fn );
+        virtual void read( const FileNode& fn ) CV_OVERRIDE;
 
-        virtual const std::vector<int>& getRoots() const { return roots; }
-        virtual const std::vector<Node>& getNodes() const { return nodes; }
-        virtual const std::vector<Split>& getSplits() const { return splits; }
-        virtual const std::vector<int>& getSubsets() const { return subsets; }
+        virtual const std::vector<int>& getRoots() const CV_OVERRIDE { return roots; }
+        virtual const std::vector<Node>& getNodes() const CV_OVERRIDE { return nodes; }
+        virtual const std::vector<Split>& getSplits() const CV_OVERRIDE { return splits; }
+        virtual const std::vector<int>& getSubsets() const CV_OVERRIDE { return subsets; }
 
-        Params params0, params;
+        TreeParams params;
 
         vector<int> varIdx;
         vector<int> compVarIdx;
@@ -263,10 +375,26 @@ namespace ml
         vector<int> subsets;
         vector<int> classLabels;
         vector<float> missingSubst;
+        vector<int> varMapping;
         bool _isClassifier;
 
         Ptr<WorkData> w;
     };
+
+    template <typename T>
+    static inline void readVectorOrMat(const FileNode & node, std::vector<T> & v)
+    {
+        if (node.type() == FileNode::MAP)
+        {
+            Mat m;
+            node >> m;
+            m.copyTo(v);
+        }
+        else if (node.type() == FileNode::SEQ)
+        {
+            node >> v;
+        }
+    }
 
 }}
 

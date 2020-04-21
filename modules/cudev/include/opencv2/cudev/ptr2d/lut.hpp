@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_LUT_HPP__
-#define __OPENCV_CUDEV_PTR2D_LUT_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_LUT_HPP
+#define OPENCV_CUDEV_PTR2D_LUT_HPP
 
 #include "../common.hpp"
 #include "../util/vec_traits.hpp"
@@ -53,6 +53,9 @@
 #include "gpumat.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class SrcPtr, class TablePtr> struct LutPtr
 {
@@ -94,6 +97,8 @@ __host__ LutPtrSz<typename PtrTraits<SrcPtr>::ptr_type, typename PtrTraits<Table
 template <class SrcPtr, class TablePtr> struct PtrTraits< LutPtrSz<SrcPtr, TablePtr> > : PtrTraitsBase<LutPtrSz<SrcPtr, TablePtr>, LutPtr<SrcPtr, TablePtr> >
 {
 };
+
+//! @}
 
 }}
 

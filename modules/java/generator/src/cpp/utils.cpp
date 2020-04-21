@@ -1,11 +1,15 @@
-#define LOG_TAG "org.opencv.android.Utils"
-#include "common.h"
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
 #ifdef __ANDROID__
 #include <android/bitmap.h>
+
+#define LOG_TAG "org.opencv.android.Utils"
+#include "common.h"
 
 using namespace cv;
 
@@ -50,14 +54,14 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat2
             return;
         } catch(const cv::Exception& e) {
             AndroidBitmap_unlockPixels(env, bitmap);
-            LOGE("nBitmapToMat catched cv::Exception: %s", e.what());
+            LOGE("nBitmapToMat caught cv::Exception: %s", e.what());
             jclass je = env->FindClass("org/opencv/core/CvException");
             if(!je) je = env->FindClass("java/lang/Exception");
             env->ThrowNew(je, e.what());
             return;
         } catch (...) {
             AndroidBitmap_unlockPixels(env, bitmap);
-            LOGE("nBitmapToMat catched unknown exception (...)");
+            LOGE("nBitmapToMat caught unknown exception (...)");
             jclass je = env->FindClass("java/lang/Exception");
             env->ThrowNew(je, "Unknown exception in JNI code {nBitmapToMat}");
             return;
@@ -132,14 +136,14 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap2
             return;
         } catch(const cv::Exception& e) {
             AndroidBitmap_unlockPixels(env, bitmap);
-            LOGE("nMatToBitmap catched cv::Exception: %s", e.what());
+            LOGE("nMatToBitmap caught cv::Exception: %s", e.what());
             jclass je = env->FindClass("org/opencv/core/CvException");
             if(!je) je = env->FindClass("java/lang/Exception");
             env->ThrowNew(je, e.what());
             return;
         } catch (...) {
             AndroidBitmap_unlockPixels(env, bitmap);
-            LOGE("nMatToBitmap catched unknown exception (...)");
+            LOGE("nMatToBitmap caught unknown exception (...)");
             jclass je = env->FindClass("java/lang/Exception");
             env->ThrowNew(je, "Unknown exception in JNI code {nMatToBitmap}");
             return;

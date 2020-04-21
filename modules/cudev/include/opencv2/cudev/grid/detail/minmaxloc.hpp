@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_MINMAXLOC_DETAIL_HPP__
-#define __OPENCV_CUDEV_GRID_MINMAXLOC_DETAIL_HPP__
+#ifndef OPENCV_CUDEV_GRID_MINMAXLOC_DETAIL_HPP
+#define OPENCV_CUDEV_GRID_MINMAXLOC_DETAIL_HPP
 
 #include "../../common.hpp"
 #include "../../util/vec_traits.hpp"
@@ -156,7 +156,7 @@ namespace grid_minmaxloc_detail
     __host__ void minMaxLoc(const SrcPtr& src, ResType* minVal, ResType* maxVal, int* minLoc, int* maxLoc, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         dim3 block, grid;
-        getLaunchCfg<Policy>(cols, rows, block, grid);
+        getLaunchCfg<Policy>(rows, cols, block, grid);
 
         const int patch_x = divUp(divUp(cols, grid.x), block.x);
         const int patch_y = divUp(divUp(rows, grid.y), block.y);

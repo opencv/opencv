@@ -1,5 +1,5 @@
-#ifndef __OPENCV_OLD_CXMISC_H__
-#define __OPENCV_OLD_CXMISC_H__
+#ifndef OPENCV_OLD_CXMISC_H
+#define OPENCV_OLD_CXMISC_H
 
 #ifdef __cplusplus
 #  include "opencv2/core/utility.hpp"

@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
 // MeanShift
@@ -171,4 +171,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, MeanShiftSegmentation, testing::Combine(
     ALL_DEVICES,
     testing::Values(MinSize(0), MinSize(4), MinSize(20), MinSize(84), MinSize(340), MinSize(1364))));
 
+
+}} // namespace
 #endif // HAVE_CUDA

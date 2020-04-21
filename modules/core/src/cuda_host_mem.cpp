@@ -42,9 +42,125 @@
 //M*/
 
 #include "precomp.hpp"
+#include <map>
 
 using namespace cv;
 using namespace cv::cuda;
+
+#ifdef HAVE_CUDA
+
+namespace {
+
+class HostMemAllocator : public MatAllocator
+{
+public:
+    explicit HostMemAllocator(unsigned int flags) : flags_(flags)
+    {
+    }
+
+    UMatData* allocate(int dims, const int* sizes, int type,
+                       void* data0, size_t* step,
+                       int /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+    {
+        size_t total = CV_ELEM_SIZE(type);
+        for (int i = dims-1; i >= 0; i--)
+        {
+            if (step)
+            {
+                if (data0 && step[i] != CV_AUTOSTEP)
+                {
+                    CV_Assert(total <= step[i]);
+                    total = step[i];
+                }
+                else
+                {
+                    step[i] = total;
+                }
+            }
+
+            total *= sizes[i];
+        }
+
+        UMatData* u = new UMatData(this);
+        u->size = total;
+
+        if (data0)
+        {
+            u->data = u->origdata = static_cast<uchar*>(data0);
+            u->flags |= UMatData::USER_ALLOCATED;
+        }
+        else
+        {
+            void* ptr = 0;
+            cudaSafeCall( cudaHostAlloc(&ptr, total, flags_) );
+
+            u->data = u->origdata = static_cast<uchar*>(ptr);
+        }
+
+        return u;
+    }
+
+    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+    {
+        return (u != NULL);
+    }
+
+    void deallocate(UMatData* u) const CV_OVERRIDE
+    {
+        if (!u)
+            return;
+
+        CV_Assert(u->urefcount >= 0);
+        CV_Assert(u->refcount >= 0);
+
+        if (u->refcount == 0)
+        {
+            if ( !(u->flags & UMatData::USER_ALLOCATED) )
+            {
+                cudaFreeHost(u->origdata);
+                u->origdata = 0;
+            }
+
+            delete u;
+        }
+    }
+
+private:
+    unsigned int flags_;
+};
+
+} // namespace
+
+#endif
+
+MatAllocator* cv::cuda::HostMem::getAllocator(AllocType alloc_type)
+{
+#ifndef HAVE_CUDA
+    CV_UNUSED(alloc_type);
+    throw_no_cuda();
+#else
+    static std::map<unsigned int, Ptr<MatAllocator> > allocators;
+
+    unsigned int flag = cudaHostAllocDefault;
+
+    switch (alloc_type)
+    {
+    case PAGE_LOCKED:    flag = cudaHostAllocDefault; break;
+    case SHARED:         flag = cudaHostAllocMapped;  break;
+    case WRITE_COMBINED: flag = cudaHostAllocWriteCombined; break;
+    default:             CV_Error(cv::Error::StsBadFlag, "Invalid alloc type");
+    }
+
+    Ptr<MatAllocator>& a = allocators[flag];
+
+    if (a.empty())
+    {
+        a = makePtr<HostMemAllocator>(flag);
+    }
+
+    return a.get();
+#endif
+}
 
 #ifdef HAVE_CUDA
 namespace
@@ -59,12 +175,12 @@ namespace
 }
 #endif
 
-void cv::cuda::CudaMem::create(int rows_, int cols_, int type_)
+void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
 {
 #ifndef HAVE_CUDA
-    (void) rows_;
-    (void) cols_;
-    (void) type_;
+    CV_UNUSED(rows_);
+    CV_UNUSED(cols_);
+    CV_UNUSED(type_);
     throw_no_cuda();
 #else
     if (alloc_type == SHARED)
@@ -85,10 +201,13 @@ void cv::cuda::CudaMem::create(int rows_, int cols_, int type_)
 
     if (rows_ > 0 && cols_ > 0)
     {
-        flags = Mat::MAGIC_VAL + Mat::CONTINUOUS_FLAG + type_;
+        flags = Mat::MAGIC_VAL + type_;
         rows = rows_;
         cols = cols_;
         step = elemSize() * cols;
+        int sz[] = { rows, cols };
+        size_t steps[] = { step, (size_t)CV_ELEM_SIZE(type_) };
+        flags = updateContinuityFlag(flags, 2, sz, steps);
 
         if (alloc_type == SHARED)
         {
@@ -123,9 +242,9 @@ void cv::cuda::CudaMem::create(int rows_, int cols_, int type_)
 #endif
 }
 
-CudaMem cv::cuda::CudaMem::reshape(int new_cn, int new_rows) const
+HostMem cv::cuda::HostMem::reshape(int new_cn, int new_rows) const
 {
-    CudaMem hdr = *this;
+    HostMem hdr = *this;
 
     int cn = channels();
     if (new_cn == 0)
@@ -166,7 +285,7 @@ CudaMem cv::cuda::CudaMem::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-void cv::cuda::CudaMem::release()
+void cv::cuda::HostMem::release()
 {
 #ifdef HAVE_CUDA
     if (refcount && CV_XADD(refcount, -1) == 1)
@@ -175,17 +294,16 @@ void cv::cuda::CudaMem::release()
         fastFree(refcount);
     }
 
-    data = datastart = dataend = 0;
+    dataend = data = datastart = 0;
     step = rows = cols = 0;
     refcount = 0;
 #endif
 }
 
-GpuMat cv::cuda::CudaMem::createGpuMatHeader() const
+GpuMat cv::cuda::HostMem::createGpuMatHeader() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
-    return GpuMat();
 #else
     CV_Assert( alloc_type == SHARED );
 
@@ -199,7 +317,7 @@ GpuMat cv::cuda::CudaMem::createGpuMatHeader() const
 void cv::cuda::registerPageLocked(Mat& m)
 {
 #ifndef HAVE_CUDA
-    (void) m;
+    CV_UNUSED(m);
     throw_no_cuda();
 #else
     CV_Assert( m.isContinuous() );
@@ -210,7 +328,7 @@ void cv::cuda::registerPageLocked(Mat& m)
 void cv::cuda::unregisterPageLocked(Mat& m)
 {
 #ifndef HAVE_CUDA
-    (void) m;
+    CV_UNUSED(m);
 #else
     cudaSafeCall( cudaHostUnregister(m.data) );
 #endif

@@ -43,13 +43,16 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_FUNCTIONAL_TUPLE_ADAPTER_HPP__
-#define __OPENCV_CUDEV_FUNCTIONAL_TUPLE_ADAPTER_HPP__
+#ifndef OPENCV_CUDEV_FUNCTIONAL_TUPLE_ADAPTER_HPP
+#define OPENCV_CUDEV_FUNCTIONAL_TUPLE_ADAPTER_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class Op, int n> struct UnaryTupleAdapter
 {
@@ -92,6 +95,8 @@ __host__ __device__ BinaryTupleAdapter<Op, n0, n1> binaryTupleAdapter(const Op& 
     a.op = op;
     return a;
 }
+
+//! @}
 
 }}
 

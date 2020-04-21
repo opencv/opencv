@@ -1,0 +1,63 @@
+{
+    "type_dict": {
+        "MatShape": {
+            "j_type": "MatOfInt",
+            "jn_type": "long",
+            "jni_type": "jlong",
+            "jni_var": "MatShape %(n)s",
+            "suffix": "J",
+            "v_type": "Mat",
+            "j_import": "org.opencv.core.MatOfInt"
+        },
+        "vector_MatShape": {
+            "j_type": "List<MatOfInt>",
+            "jn_type": "List<MatOfInt>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector< MatShape > %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "vector_MatShape",
+            "j_import": "org.opencv.core.MatOfInt"
+        },
+        "vector_size_t": {
+            "j_type": "MatOfDouble",
+            "jn_type": "long",
+            "jni_type": "jlong",
+            "jni_var": "std::vector<size_t> %(n)s",
+            "suffix": "J",
+            "v_type": "Mat",
+            "j_import": "org.opencv.core.MatOfDouble"
+        },
+        "vector_Ptr_Layer": {
+            "j_type": "List<Layer>",
+            "jn_type": "List<Layer>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector< Ptr<cv::dnn::Layer> > %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "vector_Layer",
+            "j_import": "org.opencv.dnn.Layer"
+        },
+        "vector_Target": {
+            "j_type": "List<Integer>",
+            "jn_type": "List<Integer>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector< cv::dnn::Target > %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "vector_Target"
+        },
+        "LayerId": {
+            "j_type": "DictValue",
+            "jn_type": "long",
+            "jn_args": [
+                [
+                    "__int64",
+                    ".getNativeObjAddr()"
+                ]
+
+            ],
+            "jni_name": "(*(cv::dnn::DictValue*)%(n)s_nativeObj)",
+            "jni_type": "jlong",
+            "suffix": "J",
+            "j_import": "org.opencv.dnn.DictValue"
+        }
+    }
+}

@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#ifdef WIN32
+#ifdef _WIN32
 
 /****************** Capturing video from camera via CMU lib *******************/
 
@@ -68,10 +68,10 @@ public:
 
     virtual bool open(int cameraId);
     virtual void close();
-    virtual double getProperty(int);
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
 
 protected:
     C1394Camera* camera();
@@ -362,7 +362,7 @@ bool CvCaptureCAM_CMU::open( int _index )
         CMU_numActiveCameras++;
         CMU_useCameraFlags[_index] = true;
     }
-    catch ( int )
+    catch (const int &)
     {
         return false;
     }
@@ -422,7 +422,7 @@ IplImage* CvCaptureCAM_CMU::retrieveFrame(int)
 }
 
 
-double CvCaptureCAM_CMU::getProperty( int property_id )
+double CvCaptureCAM_CMU::getProperty( int property_id ) const
 {
     C1394Camera* cmucam = camera();
     if( !cmucam )
@@ -548,4 +548,4 @@ CvCapture * cvCreateCameraCapture_CMU (int index)
 }
 
 #endif // CMU
-#endif // WIN32
+#endif // _WIN32

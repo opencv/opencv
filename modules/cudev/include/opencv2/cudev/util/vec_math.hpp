@@ -43,13 +43,16 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_VEC_MATH_HPP__
-#define __OPENCV_CUDEV_UTIL_VEC_MATH_HPP__
+#ifndef OPENCV_CUDEV_UTIL_VEC_MATH_HPP
+#define OPENCV_CUDEV_UTIL_VEC_MATH_HPP
 
 #include "vec_traits.hpp"
 #include "saturate_cast.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // saturate_cast
 
@@ -930,6 +933,8 @@ CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC(atan2, ::atan2, float, double, double)
 CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC(atan2, ::atan2, double, double, double)
 
 #undef CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC
+
+//! @}
 
 }}
 

@@ -1,10 +1,7 @@
 #include "precomp.hpp"
 #include <float.h>
 #include <limits.h>
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "tegra.hpp"
-#endif
+#include "opencv2/imgproc/types_c.h"
 
 using namespace cv;
 
@@ -190,7 +187,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
     if(!b.empty())
         buf[1].create(1, maxsize, CV_64FC(cn));
     buf[2].create(1, maxsize, CV_64FC(cn));
-    scalarToRawData(gamma, buf[2].data, CV_64FC(cn), (int)(maxsize*cn));
+    scalarToRawData(gamma, buf[2].ptr(), CV_64FC(cn), (int)(maxsize*cn));
 
     for( i = 0; i < nplanes; i++, ++it)
     {
@@ -203,8 +200,8 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
 
             apart0.convertTo(apart, apart.type(), alpha);
             size_t k, n = (j2 - j)*cn;
-            double* aptr = (double*)apart.data;
-            const double* gptr = (const double*)buf[2].data;
+            double* aptr = apart.ptr<double>();
+            const double* gptr = buf[2].ptr<double>();
 
             if( b.empty() )
             {
@@ -216,7 +213,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
                 Mat bpart0 = planes[1].colRange((int)j, (int)j2);
                 Mat bpart = buf[1].colRange(0, (int)(j2 - j));
                 bpart0.convertTo(bpart, bpart.type(), beta);
-                const double* bptr = (const double*)bpart.data;
+                const double* bptr = bpart.ptr<double>();
 
                 for( k = 0; k < n; k++ )
                     aptr[k] += bptr[k] + gptr[k];
@@ -303,8 +300,8 @@ void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, doub
 
     for( i = 0; i < nplanes; i++, ++it)
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( src.depth() )
         {
@@ -347,31 +344,43 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
         size_t planeSize = planes[0].total()*src.elemSize();
 
         for( i = 0; i < nplanes; i++, ++it )
-            memcpy(planes[1].data, planes[0].data, planeSize);
+            memcpy(planes[1].ptr(), planes[0].ptr(), planeSize);
 
         return;
     }
 
-    CV_Assert( src.size == mask.size && mask.type() == CV_8U );
+    int mcn = mask.channels();
+    CV_Assert( src.size == mask.size && mask.depth() == CV_8U
+               && (mcn == 1 || mcn == src.channels()) );
 
     const Mat *arrays[]={&src, &dst, &mask, 0};
     Mat planes[3];
 
     NAryMatIterator it(arrays, planes);
-    size_t j, k, elemSize = src.elemSize(), total = planes[0].total();
+    size_t j, k, elemSize = src.elemSize(), maskElemSize = mask.elemSize(), total = planes[0].total();
     size_t i, nplanes = it.nplanes;
+    size_t elemSize1 = src.elemSize1();
 
     for( i = 0; i < nplanes; i++, ++it)
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
-        const uchar* mptr = planes[2].data;
-
-        for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize )
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
+        const uchar* mptr = planes[2].ptr();
+        for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize, mptr += maskElemSize )
         {
-            if( (mptr[j] != 0) ^ invertMask )
-                for( k = 0; k < elemSize; k++ )
-                    dptr[k] = sptr[k];
+            if( mcn == 1)
+            {
+                if( (mptr[0] != 0) ^ invertMask )
+                    for( k = 0; k < elemSize; k++ )
+                        dptr[k] = sptr[k];
+            }
+            else
+            {
+                for( int c = 0; c < mcn; c++ )
+                    if( (mptr[c] != 0) ^ invertMask )
+                        for( k = 0; k < elemSize1; k++ )
+                            dptr[k + c * elemSize1] = sptr[k + c * elemSize1];
+            }
         }
     }
 }
@@ -398,7 +407,7 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
 
         for( i = 0; i < nplanes; i++, ++it )
         {
-            uchar* dptr = plane.data;
+            uchar* dptr = plane.ptr();
             if( uniform )
                 memset( dptr, gptr[0], planeSize );
             else if( i == 0 )
@@ -408,30 +417,42 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
                         dptr[k] = gptr[k];
             }
             else
-                memcpy(dptr, dst.data, planeSize);
+                memcpy(dptr, dst.ptr(), planeSize);
         }
         return;
     }
 
-    CV_Assert( dst.size == mask.size && mask.type() == CV_8U );
+    int cn = dst.channels(), mcn = mask.channels();
+    CV_Assert( dst.size == mask.size && (mcn == 1 || mcn == cn) );
 
     const Mat *arrays[]={&dst, &mask, 0};
     Mat planes[2];
 
     NAryMatIterator it(arrays, planes);
-    size_t j, k, elemSize = dst.elemSize(), total = planes[0].total();
+    size_t j, k, elemSize = dst.elemSize(), maskElemSize = mask.elemSize(), total = planes[0].total();
     size_t i, nplanes = it.nplanes;
+    size_t elemSize1 = dst.elemSize1();
 
     for( i = 0; i < nplanes; i++, ++it)
     {
-        uchar* dptr = planes[0].data;
-        const uchar* mptr = planes[1].data;
+        uchar* dptr = planes[0].ptr();
+        const uchar* mptr = planes[1].ptr();
 
-        for( j = 0; j < total; j++, dptr += elemSize )
+        for( j = 0; j < total; j++, dptr += elemSize, mptr += maskElemSize )
         {
-            if( mptr[j] )
-                for( k = 0; k < elemSize; k++ )
-                    dptr[k] = gptr[k];
+            if( mcn == 1)
+            {
+                if( mptr[0] )
+                    for( k = 0; k < elemSize; k++ )
+                        dptr[k] = gptr[k];
+            }
+            else
+            {
+                for( int c = 0; c < mcn; c++ )
+                    if( mptr[c] )
+                        for( k = 0; k < elemSize1; k++ )
+                            dptr[k + c * elemSize1] = gptr[k + c * elemSize1];
+            }
         }
     }
 }
@@ -450,8 +471,8 @@ void insert(const Mat& src, Mat& dst, int coi)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data + coi*size0;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr() + coi*size0;
 
         for( j = 0; j < total; j++, sptr += size0, dptr += size1 )
         {
@@ -475,8 +496,8 @@ void extract(const Mat& src, Mat& dst, int coi)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data + coi*size1;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr() + coi*size1;
+        uchar* dptr = planes[1].ptr();
 
         for( j = 0; j < total; j++, sptr += size0, dptr += size1 )
         {
@@ -489,6 +510,7 @@ void extract(const Mat& src, Mat& dst, int coi)
 
 void transpose(const Mat& src, Mat& dst)
 {
+    CV_Assert(src.data != dst.data && "Inplace is not support in cvtest::transpose");
     CV_Assert(src.dims == 2);
     dst.create(src.cols, src.rows, src.type());
     int i, j, k, esz = (int)src.elemSize();
@@ -980,12 +1002,12 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
         for( size_t i = 0; i < total; i++ )
         {
             _Tp val = src[i];
-            if( minval > val )
+            if( minval > val || !minpos )
             {
                 minval = val;
                 minpos = startidx + i;
             }
-            if( maxval < val )
+            if( maxval < val || !maxpos )
             {
                 maxval = val;
                 maxpos = startidx + i;
@@ -997,12 +1019,12 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
         for( size_t i = 0; i < total; i++ )
         {
             _Tp val = src[i];
-            if( minval > val && mask[i] )
+            if( (minval > val || !minpos) && mask[i] )
             {
                 minval = val;
                 minpos = startidx + i;
             }
-            if( maxval < val && mask[i] )
+            if( (maxval < val || !maxpos) && mask[i] )
             {
                 maxval = val;
                 maxpos = startidx + i;
@@ -1049,14 +1071,14 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
     size_t startidx = 1, total = planes[0].total();
     size_t i, nplanes = it.nplanes;
     int depth = src.depth();
-    double maxval = depth < CV_32F ? INT_MIN : depth == CV_32F ? -FLT_MAX : -DBL_MAX;
-    double minval = depth < CV_32F ? INT_MAX : depth == CV_32F ? FLT_MAX : DBL_MAX;
+    double minval = 0;
+    double maxval = 0;
     size_t maxidx = 0, minidx = 0;
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
-        const uchar* sptr = planes[0].data;
-        const uchar* mptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        const uchar* mptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -1092,9 +1114,6 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
             CV_Assert(0);
         }
     }
-
-    if( minidx == 0 )
-        minval = maxval = 0;
 
     if( _maxval )
         *_maxval = maxval;
@@ -1262,7 +1281,7 @@ double norm(InputArray _src, int normType, InputArray _mask)
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
 
         for( i = 0; i < nplanes; i++, ++it )
-            result += normHamming(planes[0].data, total, cellSize);
+            result += normHamming(planes[0].ptr(), total, cellSize);
         return result;
     }
     int normType0 = normType;
@@ -1282,8 +1301,8 @@ double norm(InputArray _src, int normType, InputArray _mask)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        const uchar* mptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        const uchar* mptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -1343,13 +1362,14 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
 
         for( i = 0; i < nplanes; i++, ++it )
-            result += normHamming(planes[0].data, total, cellSize);
+            result += normHamming(planes[0].ptr(), total, cellSize);
         return result;
     }
     int normType0 = normType;
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
 
-    CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
+    CV_CheckTypeEQ(src1.type(), src2.type(), "");
+    CV_Assert(src1.size == src2.size);
     CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};
@@ -1363,9 +1383,9 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        const uchar* mptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        const uchar* mptr = planes[2].ptr();
 
         switch( depth )
         {
@@ -1429,8 +1449,8 @@ double crossCorr(const Mat& src1, const Mat& src2)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
 
         switch( depth )
         {
@@ -1526,9 +1546,9 @@ void logicOp( const Mat& src1, const Mat& src2, Mat& dst, char op )
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        uchar* dptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        uchar* dptr = planes[2].ptr();
 
         logicOp_(sptr1, sptr2, dptr, total, op);
     }
@@ -1550,8 +1570,8 @@ void logicOp(const Mat& src, const Scalar& s, Mat& dst, char op)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         logicOpS_(sptr, (uchar*)&buf[0], dptr, total, op);
     }
@@ -1644,9 +1664,9 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        uchar* dptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        uchar* dptr = planes[2].ptr();
 
         switch( depth )
         {
@@ -1692,8 +1712,8 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -1774,7 +1794,8 @@ cmpUlpsFlt_(const int* src1, const int* src2, size_t total, int imaxdiff, size_t
     for( i = 0; i < total; i++ )
     {
         int a = src1[i], b = src2[i];
-        if( a < 0 ) a ^= C; if( b < 0 ) b ^= C;
+        if( a < 0 ) a ^= C;
+        if( b < 0 ) b ^= C;
         int diff = std::abs(a - b);
         if( realmaxdiff < diff )
         {
@@ -1796,7 +1817,8 @@ cmpUlpsFlt_(const int64* src1, const int64* src2, size_t total, int imaxdiff, si
     for( i = 0; i < total; i++ )
     {
         int64 a = src1[i], b = src2[i];
-        if( a < 0 ) a ^= C; if( b < 0 ) b ^= C;
+        if( a < 0 ) a ^= C;
+        if( b < 0 ) b ^= C;
         double diff = fabs((double)a - (double)b);
         if( realmaxdiff < diff )
         {
@@ -1823,8 +1845,8 @@ bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdif
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
         double realmaxdiff = 0;
 
         switch( depth )
@@ -1914,7 +1936,7 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
-        const uchar* aptr = plane.data;
+        const uchar* aptr = plane.ptr();
 
         switch( depth )
         {
@@ -1990,8 +2012,8 @@ int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
 
         switch( depth )
         {
@@ -2104,7 +2126,7 @@ int cmpEps2( TS* ts, const Mat& a, const Mat& b, double success_err_level,
     switch( code )
     {
     case CMP_EPS_BIG_DIFF:
-        sprintf( msg, "%s: Too big difference (=%g)", desc, diff );
+        sprintf( msg, "%s: Too big difference (=%g > %g)", desc, diff, success_err_level );
         code = TS::FAIL_BAD_ACCURACY;
         break;
     case CMP_EPS_INVALID_TEST_DATA:
@@ -2332,8 +2354,8 @@ void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -2388,9 +2410,9 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        uchar* dptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        uchar* dptr = planes[2].ptr();
 
         switch( depth )
         {
@@ -2457,8 +2479,8 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr1 = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -2528,9 +2550,9 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr1 = planes[0].data;
-        const uchar* sptr2 = planes[1].data;
-        uchar* dptr = planes[2].data;
+        const uchar* sptr1 = planes[0].ptr();
+        const uchar* sptr2 = planes[1].ptr();
+        uchar* dptr = planes[2].ptr();
 
         switch( depth )
         {
@@ -2614,8 +2636,8 @@ Scalar mean(const Mat& src, const Mat& mask)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        const uchar* mptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        const uchar* mptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -2682,7 +2704,7 @@ static void calcSobelKernel1D( int order, int _aperture_size, int size, vector<i
 
     if( _aperture_size < 0 )
     {
-        static const int scharr[] = { 3, 10, 3, -1, 0, 1 };
+        static const int scharr[8] = { 3, 10, 3, -1, 0, 1, 0, 0 };  // extra elements to eliminate "-Warray-bounds" bogus warning
         assert( size == 3 );
         for( i = 0; i < size; i++ )
             kernel[i] = scharr[order*3 + i];
@@ -2947,92 +2969,268 @@ MatComparator::operator()(const char* expr1, const char* expr2,
     return ::testing::AssertionFailure()
     << "too big relative difference (" << realmaxdiff << " > "
     << maxdiff << ") between "
-    << MatInfo(m1) << " '" << expr1 << "' and '" << expr2 << "' at " << Mat(loc0) << ".\n\n"
-    << "'" << expr1 << "': " << MatPart(m1part, border > 0 ? &loc : 0) << ".\n\n"
-    << "'" << expr2 << "': " << MatPart(m2part, border > 0 ? &loc : 0) << ".\n";
+    << MatInfo(m1) << " '" << expr1 << "' and '" << expr2 << "' at " << Mat(loc0).t() << ".\n"
+    << "- " << expr1 << ":\n" << MatPart(m1part, border > 0 ? &loc : 0) << ".\n"
+    << "- " << expr2 << ":\n" << MatPart(m2part, border > 0 ? &loc : 0) << ".\n";
 }
 
-void printVersionInfo(bool useStdOut)
+void threshold( const Mat& _src, Mat& _dst,
+                            double thresh, double maxval, int thresh_type )
 {
-    ::testing::Test::RecordProperty("cv_version", CV_VERSION);
-    if(useStdOut) std::cout << "OpenCV version: " << CV_VERSION << std::endl;
+    int i, j;
+    int depth = _src.depth(), cn = _src.channels();
+    int width_n = _src.cols*cn, height = _src.rows;
+    int ithresh = cvFloor(thresh);
+    int imaxval, ithresh2;
 
-    std::string buildInfo( cv::getBuildInformation() );
-
-    size_t pos1 = buildInfo.find("Version control");
-    size_t pos2 = buildInfo.find('\n', pos1);
-    if(pos1 != std::string::npos && pos2 != std::string::npos)
+    if( depth == CV_8U )
     {
-        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
-        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
-        ::testing::Test::RecordProperty("cv_vcs_version", ver);
-        if (useStdOut) std::cout << "OpenCV VCS version: " << ver << std::endl;
+        ithresh2 = saturate_cast<uchar>(ithresh);
+        imaxval = saturate_cast<uchar>(maxval);
     }
-
-    pos1 = buildInfo.find("inner version");
-    pos2 = buildInfo.find('\n', pos1);
-    if(pos1 != std::string::npos && pos2 != std::string::npos)
+    else if( depth == CV_16S )
     {
-        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
-        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
-        ::testing::Test::RecordProperty("cv_inner_vcs_version", ver);
-        if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
+        ithresh2 = saturate_cast<short>(ithresh);
+        imaxval = saturate_cast<short>(maxval);
+    }
+    else
+    {
+        ithresh2 = cvRound(ithresh);
+        imaxval = cvRound(maxval);
     }
 
-    const char * build_type =
-#ifdef _DEBUG
-        "debug";
-#else
-        "release";
-#endif
+    assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
 
-    ::testing::Test::RecordProperty("cv_build_type", build_type);
-    if (useStdOut) std::cout << "Build type: " << build_type << std::endl;
+    switch( thresh_type )
+    {
+    case CV_THRESH_BINARY:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (uchar)(src[j] > ithresh ? imaxval : 0);
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (short)(src[j] > ithresh ? imaxval : 0);
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (float)((double)src[j] > thresh ? maxval : 0.f);
+            }
+        }
+        break;
+    case CV_THRESH_BINARY_INV:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (uchar)(src[j] > ithresh ? 0 : imaxval);
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (short)(src[j] > ithresh ? 0 : imaxval);
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (float)((double)src[j] > thresh ? 0.f : maxval);
+            }
+        }
+        break;
+    case CV_THRESH_TRUNC:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (uchar)(s > ithresh ? ithresh2 : s);
+                }
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (short)(s > ithresh ? ithresh2 : s);
+                }
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    double s = src[j];
+                    dst[j] = (float)(s > thresh ? thresh : s);
+                }
+            }
+        }
+        break;
+    case CV_THRESH_TOZERO:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (uchar)(s > ithresh ? s : 0);
+                }
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (short)(s > ithresh ? s : 0);
+                }
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    float s = src[j];
+                    dst[j] = s > thresh ? s : 0.f;
+                }
+            }
+        }
+        break;
+    case CV_THRESH_TOZERO_INV:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (uchar)(s > ithresh ? 0 : s);
+                }
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (short)(s > ithresh ? 0 : s);
+                }
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    float s = src[j];
+                    dst[j] = s > thresh ? 0.f : s;
+                }
+            }
+        }
+        break;
+    default:
+        assert(0);
+    }
+}
 
-    const char* parallel_framework = currentParallelFramework();
 
-    if (parallel_framework) {
-        ::testing::Test::RecordProperty("cv_parallel_framework", parallel_framework);
-        if (useStdOut) std::cout << "Parallel framework: " << parallel_framework << std::endl;
+static void
+_minMaxIdx( const float* src, const uchar* mask, double* _minVal, double* _maxVal,
+            size_t* _minIdx, size_t* _maxIdx, int len, size_t startIdx )
+{
+    double minVal = FLT_MAX, maxVal = -FLT_MAX;
+    size_t minIdx = 0, maxIdx = 0;
+
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++ )
+        {
+            float val = src[i];
+            if( val < minVal )
+            {
+                minVal = val;
+                minIdx = startIdx + i;
+            }
+            if( val > maxVal )
+            {
+                maxVal = val;
+                maxIdx = startIdx + i;
+            }
+        }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++ )
+        {
+            float val = src[i];
+            if( mask[i] && val < minVal )
+            {
+                minVal = val;
+                minIdx = startIdx + i;
+            }
+            if( mask[i] && val > maxVal )
+            {
+                maxVal = val;
+                maxIdx = startIdx + i;
+            }
+        }
     }
 
-    std::string cpu_features;
+    if (_minIdx)
+        *_minIdx = minIdx;
+    if (_maxIdx)
+        *_maxIdx = maxIdx;
+    if (_minVal)
+        *_minVal = minVal;
+    if (_maxVal)
+        *_maxVal = maxVal;
+}
 
-#if CV_SSE
-    if (checkHardwareSupport(CV_CPU_SSE)) cpu_features += " sse";
-#endif
-#if CV_SSE2
-    if (checkHardwareSupport(CV_CPU_SSE2)) cpu_features += " sse2";
-#endif
-#if CV_SSE3
-    if (checkHardwareSupport(CV_CPU_SSE3)) cpu_features += " sse3";
-#endif
-#if CV_SSSE3
-    if (checkHardwareSupport(CV_CPU_SSSE3)) cpu_features += " ssse3";
-#endif
-#if CV_SSE4_1
-    if (checkHardwareSupport(CV_CPU_SSE4_1)) cpu_features += " sse4.1";
-#endif
-#if CV_SSE4_2
-    if (checkHardwareSupport(CV_CPU_SSE4_2)) cpu_features += " sse4.2";
-#endif
-#if CV_AVX
-    if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
-#endif
-#if CV_NEON
-    cpu_features += " neon"; // NEON is currently not checked at runtime
-#endif
 
-    cpu_features.erase(0, 1); // erase initial space
+void minMaxIdx( InputArray _img, double* minVal, double* maxVal,
+                    Point* minLoc, Point* maxLoc, InputArray _mask )
+{
+    Mat img = _img.getMat();
+    Mat mask = _mask.getMat();
+    CV_Assert(img.dims <= 2);
 
-    ::testing::Test::RecordProperty("cv_cpu_features", cpu_features);
-    if (useStdOut) std::cout << "CPU features: " << cpu_features << std::endl;
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    const char * tegra_optimization = tegra::isDeviceSupported() ? "enabled" : "disabled";
-    ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
-    if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
-#endif
+    _minMaxIdx((const float*)img.data, mask.data, minVal, maxVal, (size_t*)minLoc, (size_t*)maxLoc, (int)img.total(),1);
+    if( minLoc )
+        std::swap(minLoc->x, minLoc->y);
+    if( maxLoc )
+        std::swap(maxLoc->x, maxLoc->y);
 }
 
 }

@@ -955,7 +955,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
             //compute derivatives
             dim3 dBlocks(iDivUp(kLevelWidth, 32), iDivUp(kLevelHeight, 6));
-            dim3 dThreads(32, 6);
+            //dim3 dThreads(32, 6);
 
             const int kPitchTex = kLevelStride * sizeof(float);
 
@@ -1121,7 +1121,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                 Ncv32u ns = alignUp(nw, kStrideAlignmentFloat);
 
                 dim3 p_blocks(iDivUp(nw, 32), iDivUp(nh, 8));
-                dim3 p_threads(32, 8);
+                //dim3 p_threads(32, 8);
 
                 NcvSize32u inner_srcSize (kLevelWidth, kLevelHeight);
                 NcvSize32u dstSize (nw, nh);

@@ -7,7 +7,6 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/contrib.hpp"
 
 using namespace std;
 using namespace cv;
@@ -26,15 +25,15 @@ static Mat loadImage(const string& name)
 int main(int argc, const char* argv[])
 {
     CommandLineParser cmd(argc, argv,
-        "{ image i        | pic1.png  | input image }"
+        "{ image i        | ../data/pic1.png  | input image }"
         "{ template t     | templ.png | template image }"
         "{ full           |           | estimate scale and rotation }"
         "{ gpu            |           | use gpu version }"
         "{ minDist        | 100       | minimum distance between the centers of the detected objects }"
         "{ levels         | 360       | R-Table levels }"
         "{ votesThreshold | 30        | the accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected }"
-        "{ angleThresh    | 10000     | angle votes treshold }"
-        "{ scaleThresh    | 1000      | scale votes treshold }"
+        "{ angleThresh    | 10000     | angle votes threshold }"
+        "{ scaleThresh    | 1000      | scale votes threshold }"
         "{ posThresh      | 100       | position votes threshold }"
         "{ dp             | 2         | inverse ratio of the accumulator resolution to the image resolution }"
         "{ minScale       | 0.5       | minimal scale to detect }"
@@ -47,7 +46,7 @@ int main(int argc, const char* argv[])
         "{ help h ?       |           | print help message }"
     );
 
-    cmd.about("This program demonstrates arbitary object finding with the Generalized Hough transform.");
+    cmd.about("This program demonstrates arbitrary object finding with the Generalized Hough transform.");
 
     if (cmd.has("help"))
     {

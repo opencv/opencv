@@ -13,24 +13,17 @@ if(OCV_DEPENDENCIES_FOUND)
   source_group("Include" FILES ${test_hdrs})
   set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})
 
-  foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
-    # we remove /EHa as it generates warnings under windows
-    string(REPLACE "/EHa" "" ${var} "${${var}}")
-
-    # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
-    string(REPLACE "-ggdb3" "" ${var} "${${var}}")
-
-    # we remove -Wsign-promo as it generates warnings under linux
-    string(REPLACE "-Wsign-promo" "" ${var} "${${var}}")
-
-    # we remove -fvisibility-inlines-hidden because it's used for C++ compiler
-    # but NVCC uses C compiler by default
-    string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
-  endforeach()
+  ocv_cuda_filter_options()
 
   CUDA_ADD_EXECUTABLE(${the_target} ${OPENCV_TEST_${the_module}_SOURCES})
-  ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES})
+  ocv_target_link_libraries(${the_target} PRIVATE
+      ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES}
+  )
   add_dependencies(opencv_tests ${the_target})
+
+  set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL}")
+  set_source_files_properties(${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch}
+    PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};AccuracyTest")
 
   # Additional target properties
   set_target_properties(${the_target} PROPERTIES
@@ -42,7 +35,9 @@ if(OCV_DEPENDENCIES_FOUND)
     set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
   endif()
 
-  enable_testing()
-  get_target_property(LOC ${the_target} LOCATION)
-  add_test(${the_target} "${LOC}")
+  ocv_add_test_from_target("${the_target}" "Accuracy" "${the_target}")
+
+  if(INSTALL_TESTS)
+    install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+  endif()
 endif()

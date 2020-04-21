@@ -15,7 +15,7 @@
 * 6- Texture Flattening
 
 * The program takes as input a source and a destination image (for 1-3 methods)
-* and ouputs the cloned image.
+* and outputs the cloned image.
 
 * Step 1:
 * -> In the source image, select the region of interest by left click mouse button. A Polygon ROI will be created by left clicking mouse button.
@@ -38,7 +38,12 @@
 #include <iostream>
 #include <stdlib.h>
 
-using namespace std;
+// we're NOT "using namespace std;" here, to avoid collisions between the beta variable and std::beta in c++17
+using std::cin;
+using std::cout;
+using std::endl;
+using std::string;
+
 using namespace cv;
 
 Mat img0, img1, img2, res, res1, final, final1, blend;
@@ -64,7 +69,7 @@ float alpha,beta;
 
 float red, green, blue;
 
-double low_t, high_t;
+float low_t, high_t;
 
 void source(int, int, int, int, void*);
 void destination(int, int, int, int, void*);
@@ -318,12 +323,12 @@ int main()
 
         img2 = imread(dest);
 
-        if(!img0.data)
+        if(img0.empty())
         {
             cout << "Source Image does not exist" << endl;
             exit(0);
         }
-        if(!img2.data)
+        if(img2.empty())
         {
             cout << "Destination Image does not exist" << endl;
             exit(0);
@@ -366,7 +371,7 @@ int main()
 
         img0 = imread(src);
 
-        if(!img0.data)
+        if(img0.empty())
         {
             cout << "Source Image does not exist" << endl;
             exit(0);
@@ -396,7 +401,7 @@ int main()
 
         img0 = imread(src);
 
-        if(!img0.data)
+        if(img0.empty())
         {
             cout << "Source Image does not exist" << endl;
             exit(0);
@@ -429,7 +434,7 @@ int main()
 
         img0 = imread(src);
 
-        if(!img0.data)
+        if(img0.empty())
         {
             cout << "Source Image does not exist" << endl;
             exit(0);
@@ -446,13 +451,13 @@ int main()
     }
     else
     {
-        cout << "Wrong Option Choosen" << endl;
+        cout << "Wrong Option Chosen" << endl;
         exit(0);
     }
 
     for(;;)
     {
-        char key = (char) waitKey(0);
+        char key = (char)waitKey(0);
 
         if(key == 'd' && flag3 == 0)
         {
@@ -542,5 +547,4 @@ int main()
         else if(key == 'q')
             exit(0);
     }
-    waitKey(0);
 }

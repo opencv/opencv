@@ -28,7 +28,7 @@
 using namespace cv;
 using namespace std;
 
-static void help(void);
+static void help(const char** argv);
 static int readWarp(string iFilename, Mat& warp, int motionType);
 static int saveWarp(string fileName, const Mat& warp, int motionType);
 static void draw_warped_roi(Mat& image, const int width, const int height, Mat& W);
@@ -51,23 +51,28 @@ const std::string keys =
     "{e epsilon      | 0.0001        | ECC's convergence epsilon }"
     "{o outputWarp   | outWarp.ecc   | output warp (matrix) filename }"
     "{m motionType   | affine        | type of motion (translation, euclidean, affine, homography) }"
-    "{v verbose      | 0             | display initial and final images }"
+    "{v verbose      | 1             | display initial and final images }"
     "{w warpedImfile | warpedECC.png | warped input image }"
+    "{h help | | print help message }"
 ;
 
 
-static void help(void)
+static void help(const char** argv)
 {
 
-    cout << "\nThis file demostrates the use of the ECC image alignment algorithm. When one image"
+    cout << "\nThis file demonstrates the use of the ECC image alignment algorithm. When one image"
         " is given, the template image is artificially formed by a random warp. When both images"
         " are given, the initialization of the warp by command line parsing is possible. "
         "If inputWarp is missing, the identity transformation initializes the algorithm. \n" << endl;
 
-    cout << "\nUsage example (one image): \n./ecc fruits.jpg -o=outWarp.ecc "
-        "-m=euclidean -e=1e-6 -N=70 -v=1 \n" << endl;
+    cout << "\nUsage example (one image): \n"
+         << argv[0]
+         << " fruits.jpg -o=outWarp.ecc "
+            "-m=euclidean -e=1e-6 -N=70 -v=1 \n" << endl;
 
-    cout << "\nUsage example (two images with initialization): \n./ecc yourInput.png yourTemplate.png "
+    cout << "\nUsage example (two images with initialization): \n"
+         << argv[0]
+         << " yourInput.png yourTemplate.png "
         "yourInitialWarp.ecc -o=outWarp.ecc -m=homography -e=1e-6 -N=70 -v=1 -w=yourFinalImage.png \n" << endl;
 
 }
@@ -164,10 +169,10 @@ static void draw_warped_roi(Mat& image, const int width, const int height, Mat& 
     GET_HOMO_VALUES(U, bottom_right.x, bottom_right.y);
 
     // draw the warped perimeter
-    line(image, top_left, top_right, Scalar(255,0,255));
-    line(image, top_right, bottom_right, Scalar(255,0,255));
-    line(image, bottom_right, bottom_left, Scalar(255,0,255));
-    line(image, bottom_left, top_left, Scalar(255,0,255));
+    line(image, top_left, top_right, Scalar(255));
+    line(image, top_right, bottom_right, Scalar(255));
+    line(image, bottom_right, bottom_left, Scalar(255));
+    line(image, bottom_left, top_left, Scalar(255));
 }
 
 int main (const int argc, const char * argv[])
@@ -176,11 +181,8 @@ int main (const int argc, const char * argv[])
     CommandLineParser parser(argc, argv, keys);
     parser.about("ECC demo");
 
-    if (argc<2) {
-        parser.printMessage();
-        help();
-        return 1;
-    }
+    parser.printMessage();
+    help(argv);
 
     string imgFile = parser.get<string>(0);
     string tempImgFile = parser.get<string>(1);
@@ -192,7 +194,11 @@ int main (const int argc, const char * argv[])
     int verbose = parser.get<int>("v");
     string finalWarp = parser.get<string>("o");
     string warpedImFile = parser.get<string>("w");
-
+    if (!parser.check())
+    {
+        parser.printErrors();
+        return -1;
+    }
     if (!(warpType == "translation" || warpType == "euclidean"
         || warpType == "affine" || warpType == "homography"))
     {
@@ -210,7 +216,7 @@ int main (const int argc, const char * argv[])
     else
         mode_temp = MOTION_HOMOGRAPHY;
 
-    Mat inputImage = imread(imgFile,0);
+    Mat inputImage = imread(samples::findFile(imgFile), IMREAD_GRAYSCALE);
     if (inputImage.empty())
     {
         cerr << "Unable to load the inputImage" <<  endl;
@@ -222,17 +228,17 @@ int main (const int argc, const char * argv[])
 
     if (tempImgFile!="") {
         inputImage.copyTo(target_image);
-        template_image = imread(tempImgFile,0);
+        template_image = imread(samples::findFile(tempImgFile), IMREAD_GRAYSCALE);
         if (template_image.empty()){
             cerr << "Unable to load the template image" << endl;
             return -1;
         }
 
     }
-    else{ //apply random waro to input image
-        resize(inputImage, target_image, Size(216, 216));
+    else{ //apply random warp to input image
+        resize(inputImage, target_image, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
         Mat warpGround;
-        cv::RNG rng;
+        RNG rng(getTickCount());
         double angle;
         switch (mode_temp) {
         case MOTION_TRANSLATION:
@@ -289,7 +295,7 @@ int main (const int argc, const char * argv[])
     }
     else {
 
-        printf("\n ->Perfomarnce Warning: Identity warp ideally assumes images of "
+        printf("\n ->Performance Warning: Identity warp ideally assumes images of "
             "similar size. If the deformation is strong, the identity warp may not "
             "be a good initialization. \n");
 
@@ -353,7 +359,8 @@ int main (const int argc, const char * argv[])
         namedWindow ("warped image",   WINDOW_AUTOSIZE);
         namedWindow ("error (black: no error)", WINDOW_AUTOSIZE);
 
-        moveWindow  ("template", 350, 350);
+        moveWindow  ("image", 20, 300);
+        moveWindow  ("template", 300, 300);
         moveWindow  ("warped image",   600, 300);
         moveWindow  ("error (black: no error)", 900, 300);
 

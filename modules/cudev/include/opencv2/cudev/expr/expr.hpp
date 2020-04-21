@@ -43,13 +43,16 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_EXPR_HPP__
-#define __OPENCV_CUDEV_EXPR_EXPR_HPP__
+#ifndef OPENCV_CUDEV_EXPR_EXPR_HPP
+#define OPENCV_CUDEV_EXPR_EXPR_HPP
 
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class Body> struct Expr
 {
@@ -86,6 +89,8 @@ template <class Body> struct PtrTraits< Expr<Body> >
         return PtrTraits<Body>::getCols(expr.body);
     }
 };
+
+//! @}
 
 }}
 

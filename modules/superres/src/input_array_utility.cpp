@@ -49,7 +49,7 @@ Mat cv::superres::arrGetMat(InputArray arr, Mat& buf)
 {
     switch (arr.kind())
     {
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         arr.getGpuMat().download(buf);
         return buf;
 
@@ -66,7 +66,7 @@ UMat cv::superres::arrGetUMat(InputArray arr, UMat& buf)
 {
     switch (arr.kind())
     {
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         arr.getGpuMat().download(buf);
         return buf;
 
@@ -83,7 +83,7 @@ GpuMat cv::superres::arrGetGpuMat(InputArray arr, GpuMat& buf)
 {
     switch (arr.kind())
     {
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         return arr.getGpuMat();
 
     case _InputArray::OPENGL_BUFFER:
@@ -184,7 +184,7 @@ namespace
 
         switch (src.kind())
         {
-        case _InputArray::GPU_MAT:
+        case _InputArray::CUDA_GPU_MAT:
             #ifdef HAVE_OPENCV_CUDAIMGPROC
                 cuda::cvtColor(src.getGpuMat(), dst.getGpuMatRef(), code, cn);
             #else
@@ -200,25 +200,26 @@ namespace
 
     void convertToDepth(InputArray src, OutputArray dst, int depth)
     {
-        CV_Assert( src.depth() <= CV_64F );
+        const int sdepth = src.depth();
+        CV_Assert( sdepth <= CV_64F );
         CV_Assert( depth == CV_8U || depth == CV_32F );
 
-        static const double maxVals[] =
+        static const double maxVals[CV_64F + 1] =
         {
-            std::numeric_limits<uchar>::max(),
-            std::numeric_limits<schar>::max(),
-            std::numeric_limits<ushort>::max(),
-            std::numeric_limits<short>::max(),
-            std::numeric_limits<int>::max(),
+            (double)std::numeric_limits<uchar>::max(),
+            (double)std::numeric_limits<schar>::max(),
+            (double)std::numeric_limits<ushort>::max(),
+            (double)std::numeric_limits<short>::max(),
+            (double)std::numeric_limits<int>::max(),
             1.0,
             1.0,
         };
 
-        const double scale = maxVals[depth] / maxVals[src.depth()];
+        const double scale = maxVals[depth] / maxVals[sdepth];
 
         switch (src.kind())
         {
-        case _InputArray::GPU_MAT:
+        case _InputArray::CUDA_GPU_MAT:
             src.getGpuMat().convertTo(dst.getGpuMatRef(), depth, scale);
             break;
 
@@ -235,6 +236,8 @@ namespace
 
 Mat cv::superres::convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1)
 {
+    CV_INSTRUMENT_REGION();
+
     if (src.type() == type)
         return src;
 
@@ -260,6 +263,8 @@ Mat cv::superres::convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1)
 
 UMat cv::superres::convertToType(const UMat& src, int type, UMat& buf0, UMat& buf1)
 {
+    CV_INSTRUMENT_REGION();
+
     if (src.type() == type)
         return src;
 

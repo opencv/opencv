@@ -48,33 +48,23 @@
 
 #else
 
+#include "../lut.hpp"
+
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
-namespace
-{
+namespace cv { namespace cuda {
+
     texture<uchar, cudaTextureType1D, cudaReadModeElementType> texLutTable;
-
-    class LookUpTableImpl : public LookUpTable
-    {
-    public:
-        LookUpTableImpl(InputArray lut);
-        ~LookUpTableImpl();
-
-        void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
-
-    private:
-        GpuMat d_lut;
-        cudaTextureObject_t texLutTableObj;
-        bool cc30;
-    };
 
     LookUpTableImpl::LookUpTableImpl(InputArray _lut)
     {
-        if (_lut.kind() == _InputArray::GPU_MAT)
+        if (_lut.kind() == _InputArray::CUDA_GPU_MAT)
         {
             d_lut = _lut.getGpuMat();
         }
@@ -165,7 +155,7 @@ namespace
 
     void LookUpTableImpl::transform(InputArray _src, OutputArray _dst, Stream& stream)
     {
-        GpuMat src = _src.getGpuMat();
+        GpuMat src = getInputMat(_src, stream);
 
         const int cn = src.channels();
         const int lut_cn = d_lut.channels();
@@ -173,8 +163,7 @@ namespace
         CV_Assert( src.type() == CV_8UC1 || src.type() == CV_8UC3 );
         CV_Assert( lut_cn == 1 || lut_cn == cn );
 
-        _dst.create(src.size(), src.type());
-        GpuMat dst = _dst.getGpuMat();
+        GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
         if (lut_cn == 1)
         {
@@ -196,12 +185,10 @@ namespace
 
             dst3.assign(lut_(src3, tbl), stream);
         }
-    }
-}
 
-Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray lut)
-{
-    return makePtr<LookUpTableImpl>(lut);
-}
+        syncOutput(dst, _dst, stream);
+    }
+
+} }
 
 #endif

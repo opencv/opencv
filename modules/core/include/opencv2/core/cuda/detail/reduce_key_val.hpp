@@ -40,12 +40,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP__
-#define __OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP__
+#ifndef OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP
+#define OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP
 
 #include <thrust/tuple.h>
 #include "../warp.hpp"
 #include "../warp_shuffle.hpp"
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -400,9 +402,9 @@ namespace cv { namespace cuda { namespace device
             static __device__ void reduce(KP skeys, KR key, VP svals, VR val, unsigned int tid, Cmp cmp)
             {
             #if 0 // __CUDA_ARCH__ >= 300
-                (void) skeys;
-                (void) svals;
-                (void) tid;
+                CV_UNUSED(skeys);
+                CV_UNUSED(svals);
+                CV_UNUSED(tid);
 
                 Unroll<N / 2, KP, KR, VP, VR, Cmp>::loopShfl(key, val, cmp, N);
             #else
@@ -495,4 +497,6 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // __OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP__
+//! @endcond
+
+#endif // OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP

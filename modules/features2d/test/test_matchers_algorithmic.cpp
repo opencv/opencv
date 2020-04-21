@@ -40,10 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
@@ -66,7 +64,9 @@ protected:
     virtual void run( int );
     void generateData( Mat& query, Mat& train );
 
-    void emptyDataTest();
+#if 0
+    void emptyDataTest(); // FIXIT not used
+#endif
     void matchTest( const Mat& query, const Mat& train );
     void knnMatchTest( const Mat& query, const Mat& train );
     void radiusMatchTest( const Mat& query, const Mat& train );
@@ -78,6 +78,7 @@ private:
     CV_DescriptorMatcherTest& operator=(const CV_DescriptorMatcherTest&) { return *this; }
 };
 
+#if 0
 void CV_DescriptorMatcherTest::emptyDataTest()
 {
     assert( !dmatcher.empty() );
@@ -157,6 +158,7 @@ void CV_DescriptorMatcherTest::emptyDataTest()
     }
 
 }
+#endif
 
 void CV_DescriptorMatcherTest::generateData( Mat& query, Mat& train )
 {
@@ -168,7 +170,7 @@ void CV_DescriptorMatcherTest::generateData( Mat& query, Mat& train )
     rng.fill( buf, RNG::UNIFORM, Scalar::all(0), Scalar(3) );
     buf.convertTo( query, CV_32FC1 );
 
-    // Generate train decriptors as follows:
+    // Generate train descriptors as follows:
     // copy each query descriptor to train set countFactor times
     // and perturb some one element of the copied descriptors in
     // in ascending order. General boundaries of the perturbation
@@ -532,12 +534,47 @@ void CV_DescriptorMatcherTest::run( int )
 
 TEST( Features2d_DescriptorMatcher_BruteForce, regression )
 {
-    CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force", Algorithm::create<DescriptorMatcher>("DescriptorMatcher.BFMatcher"), 0.01f );
+    CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force",
+                                  DescriptorMatcher::create("BruteForce"), 0.01f );
     test.safe_run();
 }
 
+#ifdef HAVE_OPENCV_FLANN
 TEST( Features2d_DescriptorMatcher_FlannBased, regression )
 {
-    CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based", Algorithm::create<DescriptorMatcher>("DescriptorMatcher.FlannBasedMatcher"), 0.04f );
+    CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based",
+                                  DescriptorMatcher::create("FlannBased"), 0.04f );
     test.safe_run();
 }
+#endif
+
+TEST( Features2d_DMatch, read_write )
+{
+    FileStorage fs(".xml", FileStorage::WRITE + FileStorage::MEMORY);
+    vector<DMatch> matches;
+    matches.push_back(DMatch(1,2,3,4.5f));
+    fs << "Match" << matches;
+    String str = fs.releaseAndGetString();
+    ASSERT_NE( strstr(str.c_str(), "4.5"), (char*)0 );
+}
+
+
+TEST(Features2d_DMatch, issue_11855)
+{
+    Mat sources = (Mat_<uchar>(2, 3) << 1, 1, 0,
+                                        1, 1, 1);
+    Mat targets = (Mat_<uchar>(2, 3) << 1, 1, 1,
+                                        0, 0, 0);
+
+    Ptr<BFMatcher> bf = BFMatcher::create(NORM_HAMMING, true);
+    vector<vector<DMatch> > match;
+    bf->knnMatch(sources, targets, match, 1, noArray(), true);
+
+    ASSERT_EQ((size_t)1, match.size());
+    ASSERT_EQ((size_t)1, match[0].size());
+    EXPECT_EQ(1, match[0][0].queryIdx);
+    EXPECT_EQ(0, match[0][0].trainIdx);
+    EXPECT_EQ(0.0f, match[0][0].distance);
+}
+
+}} // namespace

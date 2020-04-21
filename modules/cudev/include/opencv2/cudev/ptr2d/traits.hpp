@@ -43,12 +43,15 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_TRAITS_HPP__
-#define __OPENCV_CUDEV_PTR2D_TRAITS_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_TRAITS_HPP
+#define OPENCV_CUDEV_PTR2D_TRAITS_HPP
 
 #include "../common.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class Ptr2DSz, class Ptr2D> struct PtrTraitsBase
 {
@@ -95,6 +98,8 @@ __host__ int getCols(const Ptr2DSz& ptr)
 {
     return PtrTraits<Ptr2DSz>::getCols(ptr);
 }
+
+//! @}
 
 }}
 

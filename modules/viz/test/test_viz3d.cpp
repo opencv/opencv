@@ -41,7 +41,7 @@
  //M*/
 #include "test_precomp.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 TEST(Viz_viz3d, DISABLED_develop)
 {
@@ -61,3 +61,5 @@ TEST(Viz_viz3d, DISABLED_develop)
 
     viz.spin();
 }
+
+}} // namespace

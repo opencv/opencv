@@ -42,14 +42,14 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 #define ARITHM_MAT_DEPTH Values(CV_8U, CV_16U, CV_32F, CV_64F)
 
 //////////////////////////////////////////////////////////////////////
 // AddMat
+
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
 
 PERF_TEST_P(Sz_Depth, AddMat,
             Combine(CUDA_TYPICAL_MAT_SIZES,
@@ -776,6 +776,8 @@ PERF_TEST_P(Sz_Depth, BitwiseAndMat,
 //////////////////////////////////////////////////////////////////////
 // BitwiseAndScalar
 
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
+
 PERF_TEST_P(Sz_Depth_Cn, BitwiseAndScalar,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S),
@@ -1344,6 +1346,7 @@ PERF_TEST_P(Sz, MagnitudeSqr,
 // Phase
 
 DEF_PARAM_TEST(Sz_AngleInDegrees, cv::Size, bool);
+DEF_PARAM_TEST(Sz_Type_AngleInDegrees, cv::Size, MatType, bool);
 
 PERF_TEST_P(Sz_AngleInDegrees, Phase,
             Combine(CUDA_TYPICAL_MAT_SIZES,
@@ -1421,17 +1424,19 @@ PERF_TEST_P(Sz_AngleInDegrees, CartToPolar,
 //////////////////////////////////////////////////////////////////////
 // PolarToCart
 
-PERF_TEST_P(Sz_AngleInDegrees, PolarToCart,
+PERF_TEST_P(Sz_Type_AngleInDegrees, PolarToCart,
             Combine(CUDA_TYPICAL_MAT_SIZES,
+                    testing::Values(CV_32FC1, CV_64FC1),
                     Bool()))
 {
     const cv::Size size = GET_PARAM(0);
-    const bool angleInDegrees = GET_PARAM(1);
+    const int type = GET_PARAM(1);
+    const bool angleInDegrees = GET_PARAM(2);
 
-    cv::Mat magnitude(size, CV_32FC1);
+    cv::Mat magnitude(size, type);
     declare.in(magnitude, WARMUP_RNG);
 
-    cv::Mat angle(size, CV_32FC1);
+    cv::Mat angle(size, type);
     declare.in(angle, WARMUP_RNG);
 
     if (PERF_RUN_CUDA())
@@ -1495,3 +1500,5 @@ PERF_TEST_P(Sz_Depth_Op, Threshold,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

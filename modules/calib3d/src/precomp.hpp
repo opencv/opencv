@@ -42,12 +42,14 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include "opencv2/calib3d.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/features2d.hpp"
 #include "opencv2/core/utility.hpp"
 
 #include "opencv2/core/private.hpp"
+
+#include "opencv2/calib3d.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/features2d.hpp"
+
 
 #include "opencv2/core/ocl.hpp"
 
@@ -61,6 +63,21 @@
 namespace cv
 {
 
+/**
+ * Compute the number of iterations given the confidence, outlier ratio, number
+ * of model points and the maximum iteration number.
+ *
+ * @param p confidence value
+ * @param ep outlier ratio
+ * @param modelPoints number of model points required for estimation
+ * @param maxIters maximum number of iterations
+ * @return
+ * \f[
+ * \frac{\ln(1-p)}{\ln\left(1-(1-ep)^\mathrm{modelPoints}\right)}
+ * \f]
+ *
+ * If the computed number of iterations is larger than maxIters, then maxIters is returned.
+ */
 int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters );
 
 class CV_EXPORTS LMSolver : public Algorithm
@@ -78,6 +95,7 @@ public:
 };
 
 CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters);
+CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps);
 
 class CV_EXPORTS PointSetRegistrator : public Algorithm
 {
@@ -102,6 +120,45 @@ CV_EXPORTS Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<Po
 CV_EXPORTS Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& cb,
                                                                    int modelPoints, double confidence=0.99, int maxIters=1000 );
 
+template<typename T> inline int compressElems( T* ptr, const uchar* mask, int mstep, int count )
+{
+    int i, j;
+    for( i = j = 0; i < count; i++ )
+        if( mask[i*mstep] )
+        {
+            if( i > j )
+                ptr[j] = ptr[i];
+            j++;
+        }
+    return j;
 }
+
+static inline bool haveCollinearPoints( const Mat& m, int count )
+{
+    int j, k, i = count-1;
+    const Point2f* ptr = m.ptr<Point2f>();
+
+    // check that the i-th selected point does not belong
+    // to a line connecting some previously selected points
+    // also checks that points are not too close to each other
+    for( j = 0; j < i; j++ )
+    {
+        double dx1 = ptr[j].x - ptr[i].x;
+        double dy1 = ptr[j].y - ptr[i].y;
+        for( k = 0; k < j; k++ )
+        {
+            double dx2 = ptr[k].x - ptr[i].x;
+            double dy2 = ptr[k].y - ptr[i].y;
+            if( fabs(dx2*dy1 - dy2*dx1) <= FLT_EPSILON*(fabs(dx1) + fabs(dy1) + fabs(dx2) + fabs(dy2)))
+                return true;
+        }
+    }
+    return false;
+}
+
+} // namespace cv
+
+int checkChessboard(const cv::Mat & img, const cv::Size & size);
+int checkChessboardBinary(const cv::Mat & img, const cv::Size & size);
 
 #endif

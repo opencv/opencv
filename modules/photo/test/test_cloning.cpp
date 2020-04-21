@@ -39,14 +39,21 @@
 //
 //M*/
 
-
 #include "test_precomp.hpp"
-#include "opencv2/photo.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
+#define OUTPUT_SAVING 0
+#if OUTPUT_SAVING
+#define SAVE(x) std::vector<int> params;\
+                params.push_back(16);\
+                params.push_back(0);\
+                imwrite(folder + "output.png", x ,params);
+#else
+#define SAVE(x)
+#endif
+
+static const double numerical_precision = 0.05; // 95% of pixels should have exact values
 
 TEST(Photo_SeamlessClone_normal, regression)
 {
@@ -54,6 +61,7 @@ TEST(Photo_SeamlessClone_normal, regression)
     string original_path1 = folder + "source1.png";
     string original_path2 = folder + "destination1.png";
     string original_path3 = folder + "mask.png";
+    string reference_path = folder + "reference.png";
 
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat destination = imread(original_path2, IMREAD_COLOR);
@@ -69,8 +77,24 @@ TEST(Photo_SeamlessClone_normal, regression)
     p.y = destination.size().height/2;
     seamlessClone(source, destination, mask, p, result, 1);
 
-    imwrite(folder + "cloned.png", result);
+    Mat reference = imread(reference_path);
+    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
 
+    SAVE(result);
+
+    double errorINF = cvtest::norm(reference, result, NORM_INF);
+    EXPECT_LE(errorINF, 1);
+    double errorL1 = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
+
+    mask = Scalar(0, 0, 0);
+    seamlessClone(source, destination, mask, p, result, 1);
+
+    reference = destination;
+    errorINF = cvtest::norm(reference, result, NORM_INF);
+    EXPECT_LE(errorINF, 1);
+    errorL1 = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
 }
 
 TEST(Photo_SeamlessClone_mixed, regression)
@@ -79,6 +103,7 @@ TEST(Photo_SeamlessClone_mixed, regression)
     string original_path1 = folder + "source1.png";
     string original_path2 = folder + "destination1.png";
     string original_path3 = folder + "mask.png";
+    string reference_path = folder + "reference.png";
 
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat destination = imread(original_path2, IMREAD_COLOR);
@@ -94,8 +119,15 @@ TEST(Photo_SeamlessClone_mixed, regression)
     p.y = destination.size().height/2;
     seamlessClone(source, destination, mask, p, result, 2);
 
-    imwrite(folder + "cloned.png", result);
+    SAVE(result);
 
+    Mat reference = imread(reference_path);
+    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+
+    double errorINF = cvtest::norm(reference, result, NORM_INF);
+    EXPECT_LE(errorINF, 1);
+    double errorL1 = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
 }
 
 TEST(Photo_SeamlessClone_featureExchange, regression)
@@ -104,6 +136,7 @@ TEST(Photo_SeamlessClone_featureExchange, regression)
     string original_path1 = folder + "source1.png";
     string original_path2 = folder + "destination1.png";
     string original_path3 = folder + "mask.png";
+    string reference_path = folder + "reference.png";
 
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat destination = imread(original_path2, IMREAD_COLOR);
@@ -119,8 +152,15 @@ TEST(Photo_SeamlessClone_featureExchange, regression)
     p.y = destination.size().height/2;
     seamlessClone(source, destination, mask, p, result, 3);
 
-    imwrite(folder + "cloned.png", result);
+    SAVE(result);
 
+    Mat reference = imread(reference_path);
+    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+
+    double errorINF = cvtest::norm(reference, result, NORM_INF);
+    EXPECT_LE(errorINF, 1);
+    double errorL1 = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
 }
 
 TEST(Photo_SeamlessClone_colorChange, regression)
@@ -128,6 +168,7 @@ TEST(Photo_SeamlessClone_colorChange, regression)
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/color_change/";
     string original_path1 = folder + "source1.png";
     string original_path2 = folder + "mask.png";
+    string reference_path = folder + "reference.png";
 
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat mask = imread(original_path2, IMREAD_COLOR);
@@ -138,8 +179,15 @@ TEST(Photo_SeamlessClone_colorChange, regression)
     Mat result;
     colorChange(source, mask, result, 1.5, .5, .5);
 
-    imwrite(folder + "cloned.png", result);
+    SAVE(result);
 
+    Mat reference = imread(reference_path);
+    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+
+    double errorINF = cvtest::norm(reference, result, NORM_INF);
+    EXPECT_LE(errorINF, 1);
+    double errorL1 = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
 }
 
 TEST(Photo_SeamlessClone_illuminationChange, regression)
@@ -147,6 +195,7 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/Illumination_Change/";
     string original_path1 = folder + "source1.png";
     string original_path2 = folder + "mask.png";
+    string reference_path = folder + "reference.png";
 
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat mask = imread(original_path2, IMREAD_COLOR);
@@ -157,8 +206,15 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
     Mat result;
     illuminationChange(source, mask, result, 0.2f, 0.4f);
 
-    imwrite(folder + "cloned.png", result);
+    SAVE(result);
 
+    Mat reference = imread(reference_path);
+    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+
+    double errorINF = cvtest::norm(reference, result, NORM_INF);
+    EXPECT_LE(errorINF, 1);
+    double errorL1 = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
 }
 
 TEST(Photo_SeamlessClone_textureFlattening, regression)
@@ -166,6 +222,7 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/Texture_Flattening/";
     string original_path1 = folder + "source1.png";
     string original_path2 = folder + "mask.png";
+    string reference_path = folder + "reference.png";
 
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat mask = imread(original_path2, IMREAD_COLOR);
@@ -176,6 +233,15 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     Mat result;
     textureFlattening(source, mask, result, 30, 45, 3);
 
-    imwrite(folder + "cloned.png", result);
+    SAVE(result);
 
+    Mat reference = imread(reference_path);
+    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+
+    double errorINF = cvtest::norm(reference, result, NORM_INF);
+    EXPECT_LE(errorINF, 1);
+    double errorL1 = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
 }
+
+}} // namespace

@@ -1,11 +1,11 @@
 #include <iostream>
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/videoio.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
@@ -14,7 +14,7 @@ Ptr<CLAHE> pFilter;
 int tilesize;
 int cliplimit;
 
-static void TSize_Callback(int pos)
+static void TSize_Callback(int pos, void* /*data*/)
 {
     if(pos==0)
         pFilter->setTilesGridSize(Size(1,1));
@@ -22,7 +22,7 @@ static void TSize_Callback(int pos)
         pFilter->setTilesGridSize(Size(tilesize,tilesize));
 }
 
-static void Clip_Callback(int)
+static void Clip_Callback(int, void* /*data*/)
 {
     pFilter->setClipLimit(cliplimit);
 }
@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         "{ i input    |                    | specify input image }"
         "{ c camera   |  0                 | specify camera id   }"
         "{ o output   | clahe_output.jpg   | specify output save path}"
-        "{ h help     | false              | print help message }";
+        "{ h help     |                    | print help message }";
 
     cv::CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help"))
@@ -63,8 +63,9 @@ int main(int argc, char** argv)
     setTrackbarPos("Tile Size", "CLAHE", cur_tilesize.width);
     setTrackbarPos("Clip Limit", "CLAHE", cur_clip);
 
-    if(infile != "")
+    if(!infile.empty())
     {
+        infile = samples::findFile(infile);
         imread(infile).copyTo(frame);
         if(frame.empty())
         {
@@ -87,7 +88,10 @@ int main(int argc, char** argv)
         else
             imread(infile).copyTo(frame);
         if(frame.empty())
-            continue;
+        {
+            waitKey();
+            break;
+        }
 
         cvtColor(frame, frame, COLOR_BGR2GRAY);
         pFilter->apply(frame, outframe);

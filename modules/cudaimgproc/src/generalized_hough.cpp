@@ -201,8 +201,8 @@ namespace
     void GeneralizedHoughBase::setTemplateImpl(InputArray templ, Point templCenter)
     {
 #ifndef HAVE_OPENCV_CUDAFILTERS
-        (void) templ;
-        (void) templCenter;
+        CV_UNUSED(templ);
+        CV_UNUSED(templCenter);
         throw_no_cuda();
 #else
         calcEdges(templ, templEdges_, templDx_, templDy_);
@@ -239,8 +239,9 @@ namespace
     void GeneralizedHoughBase::detectImpl(InputArray image, OutputArray positions, OutputArray votes)
     {
 #ifndef HAVE_OPENCV_CUDAFILTERS
-        (void) templ;
-        (void) templCenter;
+        CV_UNUSED(image);
+        CV_UNUSED(positions);
+        CV_UNUSED(votes);
         throw_no_cuda();
 #else
         calcEdges(image, imageEdges_, imageDx_, imageDy_);
@@ -682,28 +683,6 @@ namespace
         GpuMat hist_;
         std::vector<int> h_buf_;
     };
-
-    double toRad(double a)
-    {
-        return a * CV_PI / 180.0;
-    }
-
-    double clampAngle(double a)
-    {
-        double res = a;
-
-        while (res > 360.0)
-            res -= 360.0;
-        while (res < 0)
-            res += 360.0;
-
-        return res;
-    }
-
-    bool angleEq(double a, double b, double eps = 1.0)
-    {
-        return (fabs(clampAngle(a - b)) <= eps);
-    }
 
     GeneralizedHoughGuilImpl::GeneralizedHoughGuilImpl()
     {

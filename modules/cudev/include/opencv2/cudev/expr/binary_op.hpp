@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_BINARY_OP_HPP__
-#define __OPENCV_CUDEV_EXPR_BINARY_OP_HPP__
+#ifndef OPENCV_CUDEV_EXPR_BINARY_OP_HPP
+#define OPENCV_CUDEV_EXPR_BINARY_OP_HPP
 
 #include "../common.hpp"
 #include "../util/type_traits.hpp"
@@ -57,6 +57,9 @@
 #include "expr.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // Binary Operations
 
@@ -229,6 +232,8 @@ CV_CUDEV_EXPR_BINOP_INST(<<, bit_lshift)
 CV_CUDEV_EXPR_BINOP_INST(>>, bit_rshift)
 
 #undef CV_CUDEV_EXPR_BINOP_INST
+
+//! @}
 
 }}
 

@@ -1,10 +1,8 @@
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
 
 #define TYPICAL_MAT_SIZES_ABS  TYPICAL_MAT_SIZES
 #define TYPICAL_MAT_TYPES_ABS  CV_8SC1, CV_8SC4, CV_32SC1, CV_32FC1
@@ -24,3 +22,5 @@ PERF_TEST_P(Size_MatType, abs, TYPICAL_MATS_ABS)
 
     SANITY_CHECK(c);
 }
+
+} // namespace

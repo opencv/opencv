@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_PYRAMIDS_HPP__
-#define __OPENCV_CUDEV_GRID_PYRAMIDS_HPP__
+#ifndef OPENCV_CUDEV_GRID_PYRAMIDS_HPP
+#define OPENCV_CUDEV_GRID_PYRAMIDS_HPP
 
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"
@@ -54,6 +54,9 @@
 #include "detail/pyr_up.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 template <class Brd, class SrcPtr, typename DstType>
 __host__ void gridPyrDown_(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
@@ -82,6 +85,8 @@ __host__ void gridPyrUp(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream
 
     pyramids_detail::pyrUp(shrinkPtr(src), shrinkPtr(dst), rows, cols, dst.rows, dst.cols, StreamAccessor::getStream(stream));
 }
+
+//! @}
 
 }}
 

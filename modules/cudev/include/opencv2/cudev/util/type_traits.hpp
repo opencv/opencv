@@ -43,14 +43,17 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_TYPE_TRAITS_HPP__
-#define __OPENCV_CUDEV_UTIL_TYPE_TRAITS_HPP__
+#ifndef OPENCV_CUDEV_UTIL_TYPE_TRAITS_HPP
+#define OPENCV_CUDEV_UTIL_TYPE_TRAITS_HPP
 
 #include "../common.hpp"
 #include "vec_traits.hpp"
 #include "detail/type_traits.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // NullType
 
@@ -163,6 +166,8 @@ template <typename A, typename B> struct LargerType
         >::type
     >::type type;
 };
+
+//! @}
 
 }}
 

@@ -44,7 +44,7 @@
 #include <stdio.h>
 
 /*
-   This is translation to C++ of the Matlab's LMSolve package by Miroslav Balda.
+   This is a translation to C++ from the Matlab's LMSolve package by Miroslav Balda.
    Here is the original copyright:
    ============================================================================
 
@@ -77,19 +77,16 @@
 namespace cv
 {
 
-class LMSolverImpl : public LMSolver
+class LMSolverImpl CV_FINAL : public LMSolver
 {
 public:
-    LMSolverImpl() : maxIters(100) { init(); }
-    LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters) : cb(_cb), maxIters(_maxIters) { init(); }
-
-    void init()
+    LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters, double _eps = FLT_EPSILON)
+        : cb(_cb), epsx(_eps), epsf(_eps), maxIters(_maxIters)
     {
-        epsx = epsf = FLT_EPSILON;
         printInterval = 0;
     }
 
-    int run(InputOutputArray _param0) const
+    int run(InputOutputArray _param0) const CV_OVERRIDE
     {
         Mat param0 = _param0.getMat(), x, xd, r, rd, J, A, Ap, v, temp_d, d;
         int ptype = param0.type();
@@ -198,9 +195,7 @@ public:
         return iter;
     }
 
-    void setCallback(const Ptr<LMSolver::Callback>& _cb) { cb = _cb; }
-
-    AlgorithmInfo* info() const;
+    void setCallback(const Ptr<LMSolver::Callback>& _cb) CV_OVERRIDE { cb = _cb; }
 
     Ptr<LMSolver::Callback> cb;
 
@@ -211,16 +206,14 @@ public:
 };
 
 
-CV_INIT_ALGORITHM(LMSolverImpl, "LMSolver",
-                  obj.info()->addParam(obj, "epsx", obj.epsx);
-                  obj.info()->addParam(obj, "epsf", obj.epsf);
-                  obj.info()->addParam(obj, "maxIters", obj.maxIters);
-                  obj.info()->addParam(obj, "printInterval", obj.printInterval))
-
 Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
-    CV_Assert( !LMSolverImpl_info_auto.name().empty() );
     return makePtr<LMSolverImpl>(cb, maxIters);
+}
+
+Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps)
+{
+    return makePtr<LMSolverImpl>(cb, maxIters, eps);
 }
 
 }

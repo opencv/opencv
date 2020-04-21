@@ -107,7 +107,7 @@ namespace
         return ARGBpixel;
     }
 
-    // CUDA kernel for outputing the final ARGB output from NV12
+    // CUDA kernel for outputting the final ARGB output from NV12
 
     #define COLOR_COMPONENT_BIT_SIZE 10
     #define COLOR_COMPONENT_MASK     0x3FF

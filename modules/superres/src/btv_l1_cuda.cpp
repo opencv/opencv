@@ -55,7 +55,6 @@ using namespace cv::superres::detail;
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_CUDA()
 {
     CV_Error(Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<SuperResolution>();
 }
 
 #else // HAVE_CUDA
@@ -207,7 +206,7 @@ namespace
         funcs[src.channels()](src, dst, ksize);
     }
 
-    class BTVL1_CUDA_Base
+    class BTVL1_CUDA_Base : public cv::superres::SuperResolution
     {
     public:
         BTVL1_CUDA_Base();
@@ -218,6 +217,27 @@ namespace
 
         void collectGarbage();
 
+        inline int getScale() const CV_OVERRIDE { return scale_; }
+        inline void setScale(int val) CV_OVERRIDE { scale_ = val; }
+        inline int getIterations() const CV_OVERRIDE { return iterations_; }
+        inline void setIterations(int val) CV_OVERRIDE { iterations_ = val; }
+        inline double getTau() const CV_OVERRIDE { return tau_; }
+        inline void setTau(double val) CV_OVERRIDE { tau_ = val; }
+        inline double getLabmda() const CV_OVERRIDE { return lambda_; }
+        inline void setLabmda(double val) CV_OVERRIDE { lambda_ = val; }
+        inline double getAlpha() const CV_OVERRIDE { return alpha_; }
+        inline void setAlpha(double val) CV_OVERRIDE { alpha_ = val; }
+        inline int getKernelSize() const CV_OVERRIDE { return btvKernelSize_; }
+        inline void setKernelSize(int val) CV_OVERRIDE { btvKernelSize_ = val; }
+        inline int getBlurKernelSize() const CV_OVERRIDE { return blurKernelSize_; }
+        inline void setBlurKernelSize(int val) CV_OVERRIDE { blurKernelSize_ = val; }
+        inline double getBlurSigma() const CV_OVERRIDE { return blurSigma_; }
+        inline void setBlurSigma(double val) CV_OVERRIDE { blurSigma_ = val; }
+        inline int getTemporalAreaRadius() const CV_OVERRIDE { return temporalAreaRadius_; }
+        inline void setTemporalAreaRadius(int val) CV_OVERRIDE { temporalAreaRadius_ = val; }
+        inline Ptr<cv::superres::DenseOpticalFlowExt> getOpticalFlow() const CV_OVERRIDE { return opticalFlow_; }
+        inline void setOpticalFlow(const Ptr<cv::superres::DenseOpticalFlowExt>& val) CV_OVERRIDE { opticalFlow_ = val; }
+
     protected:
         int scale_;
         int iterations_;
@@ -227,7 +247,8 @@ namespace
         int btvKernelSize_;
         int blurKernelSize_;
         double blurSigma_;
-        Ptr<DenseOpticalFlowExt> opticalFlow_;
+        int temporalAreaRadius_;
+        Ptr<cv::superres::DenseOpticalFlowExt> opticalFlow_;
 
     private:
         std::vector<Ptr<cuda::Filter> > filters_;
@@ -272,6 +293,7 @@ namespace
 #else
         opticalFlow_ = createOptFlow_Farneback();
 #endif
+        temporalAreaRadius_ = 0;
 
         curBlurKernelSize_ = -1;
         curBlurSigma_ = -1.0;
@@ -401,11 +423,9 @@ namespace
 
 ////////////////////////////////////////////////////////////
 
-    class BTVL1_CUDA : public SuperResolution, private BTVL1_CUDA_Base
+    class BTVL1_CUDA : public BTVL1_CUDA_Base
     {
     public:
-        AlgorithmInfo* info() const;
-
         BTVL1_CUDA();
 
         void collectGarbage();
@@ -415,8 +435,6 @@ namespace
         void processImpl(Ptr<FrameSource>& frameSource, OutputArray output);
 
     private:
-        int temporalAreaRadius_;
-
         void readNextFrame(Ptr<FrameSource>& frameSource);
         void processFrame(int idx);
 
@@ -437,18 +455,6 @@ namespace
         std::vector<std::pair<GpuMat, GpuMat> > srcBackwardMotions_;
         GpuMat finalOutput_;
     };
-
-    CV_INIT_ALGORITHM(BTVL1_CUDA, "SuperResolution.BTVL1_CUDA",
-                      obj.info()->addParam(obj, "scale", obj.scale_, false, 0, 0, "Scale factor.");
-                      obj.info()->addParam(obj, "iterations", obj.iterations_, false, 0, 0, "Iteration count.");
-                      obj.info()->addParam(obj, "tau", obj.tau_, false, 0, 0, "Asymptotic value of steepest descent method.");
-                      obj.info()->addParam(obj, "lambda", obj.lambda_, false, 0, 0, "Weight parameter to balance data term and smoothness term.");
-                      obj.info()->addParam(obj, "alpha", obj.alpha_, false, 0, 0, "Parameter of spacial distribution in Bilateral-TV.");
-                      obj.info()->addParam(obj, "btvKernelSize", obj.btvKernelSize_, false, 0, 0, "Kernel size of Bilateral-TV filter.");
-                      obj.info()->addParam(obj, "blurKernelSize", obj.blurKernelSize_, false, 0, 0, "Gaussian blur kernel size.");
-                      obj.info()->addParam(obj, "blurSigma", obj.blurSigma_, false, 0, 0, "Gaussian blur sigma.");
-                      obj.info()->addParam(obj, "temporalAreaRadius", obj.temporalAreaRadius_, false, 0, 0, "Radius of the temporal search area.");
-                      obj.info()->addParam<DenseOpticalFlowExt>(obj, "opticalFlow", obj.opticalFlow_, false, 0, 0, "Dense optical flow algorithm."));
 
     BTVL1_CUDA::BTVL1_CUDA()
     {
@@ -514,7 +520,7 @@ namespace
         ++outPos_;
         const GpuMat& curOutput = at(outPos_, outputs_);
 
-        if (_output.kind() == _InputArray::GPU_MAT)
+        if (_output.kind() == _InputArray::CUDA_GPU_MAT)
             curOutput.convertTo(_output.getGpuMatRef(), CV_8U);
         else
         {

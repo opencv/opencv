@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2013, NVIDIA Corporation, all rights reserved.
+// Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -53,16 +54,7 @@ namespace clahe
         const int tilesX, const int tilesY, const cv::Size tileSize,
         const int clipLimit, const float lutScale)
     {
-        cv::ocl::Kernel _k("calcLut", cv::ocl::imgproc::clahe_oclsrc);
-
-        bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
-        cv::String opts;
-        if(is_cpu)
-            opts = "-D CPU ";
-        else
-            opts = cv::format("-D WAVE_SIZE=%d", _k.preferedWorkGroupSizeMultiple());
-
-        cv::ocl::Kernel k("calcLut", cv::ocl::imgproc::clahe_oclsrc, opts);
+        cv::ocl::Kernel k("calcLut", cv::ocl::imgproc::clahe_oclsrc);
         if(k.empty())
             return false;
 
@@ -106,7 +98,7 @@ namespace clahe
         cv::UMat lut = _lut.getUMat();
 
         size_t localThreads[3]  = { 32, 8, 1 };
-        size_t globalThreads[3] = { src.cols, src.rows, 1 };
+        size_t globalThreads[3] = { (size_t)src.cols, (size_t)src.rows, 1 };
 
         int idx = 0;
         idx = k.set(idx, cv::ocl::KernelArg::ReadOnlyNoSize(src));
@@ -135,7 +127,7 @@ namespace
         {
         }
 
-        void operator ()(const cv::Range& range) const;
+        void operator ()(const cv::Range& range) const CV_OVERRIDE;
 
     private:
         cv::Mat src_;
@@ -211,8 +203,12 @@ namespace
                 for (int i = 0; i < histSize; ++i)
                     tileHist[i] += redistBatch;
 
-                for (int i = 0; i < residual; ++i)
-                    tileHist[i]++;
+                if (residual != 0)
+                {
+                    int residualStep = MAX(histSize / residual, 1);
+                    for (int i = 0; i < histSize && residual > 0; i += residualStep, residual--)
+                        tileHist[i]++;
+                }
             }
 
             // calc Lut
@@ -226,16 +222,41 @@ namespace
         }
     }
 
-    template <class T>
+    template <class T, int shift>
     class CLAHE_Interpolation_Body : public cv::ParallelLoopBody
     {
     public:
         CLAHE_Interpolation_Body(const cv::Mat& src, const cv::Mat& dst, const cv::Mat& lut, const cv::Size& tileSize, const int& tilesX, const int& tilesY) :
             src_(src), dst_(dst), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), tilesY_(tilesY)
         {
+            buf.allocate(src.cols << 2);
+            ind1_p = buf.data();
+            ind2_p = ind1_p + src.cols;
+            xa_p = (float *)(ind2_p + src.cols);
+            xa1_p = xa_p + src.cols;
+
+            int lut_step = static_cast<int>(lut_.step / sizeof(T));
+            float inv_tw = 1.0f / tileSize_.width;
+
+            for (int x = 0; x < src.cols; ++x)
+            {
+                float txf = x * inv_tw - 0.5f;
+
+                int tx1 = cvFloor(txf);
+                int tx2 = tx1 + 1;
+
+                xa_p[x] = txf - tx1;
+                xa1_p[x] = 1.0f - xa_p[x];
+
+                tx1 = std::max(tx1, 0);
+                tx2 = std::min(tx2, tilesX_ - 1);
+
+                ind1_p[x] = tx1 * lut_step;
+                ind2_p[x] = tx2 * lut_step;
+            }
         }
 
-        void operator ()(const cv::Range& range) const;
+        void operator ()(const cv::Range& range) const CV_OVERRIDE;
 
     private:
         cv::Mat src_;
@@ -245,24 +266,28 @@ namespace
         cv::Size tileSize_;
         int tilesX_;
         int tilesY_;
+
+        cv::AutoBuffer<int> buf;
+        int * ind1_p, * ind2_p;
+        float * xa_p, * xa1_p;
     };
 
-    template <class T>
-    void CLAHE_Interpolation_Body<T>::operator ()(const cv::Range& range) const
+    template <class T, int shift>
+    void CLAHE_Interpolation_Body<T, shift>::operator ()(const cv::Range& range) const
     {
-        const size_t lut_step = lut_.step / sizeof(T);
+        float inv_th = 1.0f / tileSize_.height;
 
         for (int y = range.start; y < range.end; ++y)
         {
             const T* srcRow = src_.ptr<T>(y);
             T* dstRow = dst_.ptr<T>(y);
 
-            const float tyf = (static_cast<float>(y) / tileSize_.height) - 0.5f;
+            float tyf = y * inv_th - 0.5f;
 
             int ty1 = cvFloor(tyf);
             int ty2 = ty1 + 1;
 
-            const float ya = tyf - ty1;
+            float ya = tyf - ty1, ya1 = 1.0f - ya;
 
             ty1 = std::max(ty1, 0);
             ty2 = std::min(ty2, tilesY_ - 1);
@@ -272,49 +297,33 @@ namespace
 
             for (int x = 0; x < src_.cols; ++x)
             {
-                const float txf = (static_cast<float>(x) / tileSize_.width) - 0.5f;
+                int srcVal = srcRow[x] >> shift;
 
-                int tx1 = cvFloor(txf);
-                int tx2 = tx1 + 1;
+                int ind1 = ind1_p[x] + srcVal;
+                int ind2 = ind2_p[x] + srcVal;
 
-                const float xa = txf - tx1;
+                float res = (lutPlane1[ind1] * xa1_p[x] + lutPlane1[ind2] * xa_p[x]) * ya1 +
+                            (lutPlane2[ind1] * xa1_p[x] + lutPlane2[ind2] * xa_p[x]) * ya;
 
-                tx1 = std::max(tx1, 0);
-                tx2 = std::min(tx2, tilesX_ - 1);
-
-                const int srcVal = srcRow[x];
-
-                const size_t ind1 = tx1 * lut_step + srcVal;
-                const size_t ind2 = tx2 * lut_step + srcVal;
-
-                float res = 0;
-
-                res += lutPlane1[ind1] * ((1.0f - xa) * (1.0f - ya));
-                res += lutPlane1[ind2] * ((xa) * (1.0f - ya));
-                res += lutPlane2[ind1] * ((1.0f - xa) * (ya));
-                res += lutPlane2[ind2] * ((xa) * (ya));
-
-                dstRow[x] = cv::saturate_cast<T>(res);
+                dstRow[x] = cv::saturate_cast<T>(res) << shift;
             }
         }
     }
 
-    class CLAHE_Impl : public cv::CLAHE
+    class CLAHE_Impl CV_FINAL : public cv::CLAHE
     {
     public:
         CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
 
-        cv::AlgorithmInfo* info() const;
+        void apply(cv::InputArray src, cv::OutputArray dst) CV_OVERRIDE;
 
-        void apply(cv::InputArray src, cv::OutputArray dst);
+        void setClipLimit(double clipLimit) CV_OVERRIDE;
+        double getClipLimit() const CV_OVERRIDE;
 
-        void setClipLimit(double clipLimit);
-        double getClipLimit() const;
+        void setTilesGridSize(cv::Size tileGridSize) CV_OVERRIDE;
+        cv::Size getTilesGridSize() const CV_OVERRIDE;
 
-        void setTilesGridSize(cv::Size tileGridSize);
-        cv::Size getTilesGridSize() const;
-
-        void collectGarbage();
+        void collectGarbage() CV_OVERRIDE;
 
     private:
         double clipLimit_;
@@ -335,20 +344,17 @@ namespace
     {
     }
 
-    CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE",
-        obj.info()->addParam(obj, "clipLimit", obj.clipLimit_);
-        obj.info()->addParam(obj, "tilesX", obj.tilesX_);
-        obj.info()->addParam(obj, "tilesY", obj.tilesY_))
-
     void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
     {
+        CV_INSTRUMENT_REGION();
+
         CV_Assert( _src.type() == CV_8UC1 || _src.type() == CV_16UC1 );
 
 #ifdef HAVE_OPENCL
-        bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.dims()<=2 && _src.type() == CV_8UC1;
+        bool useOpenCL = cv::ocl::isOpenCLActivated() && _src.isUMat() && _src.dims()<=2 && _src.type() == CV_8UC1;
 #endif
 
-        int histSize = _src.type() == CV_8UC1 ? 256 : 4096;
+        int histSize = _src.type() == CV_8UC1 ? 256 : 65536;
 
         cv::Size tileSize;
         cv::_InputArray _srcForLut;
@@ -389,7 +395,10 @@ namespace
 #ifdef HAVE_OPENCL
         if (useOpenCL && clahe::calcLut(_srcForLut, ulut_, tilesX_, tilesY_, tileSize, clipLimit, lutScale) )
             if( clahe::transform(_src, _dst, ulut_, tilesX_, tilesY_, tileSize) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
 #endif
 
         cv::Mat src = _src.getMat();
@@ -402,16 +411,18 @@ namespace
         if (_src.type() == CV_8UC1)
             calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 256, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else if (_src.type() == CV_16UC1)
-            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 4096, 4> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
-        CV_Assert(!calcLutBody.empty());
+            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 65536, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+        else
+            CV_Error( CV_StsBadArg, "Unsupported type" );
+
         cv::parallel_for_(cv::Range(0, tilesX_ * tilesY_), *calcLutBody);
 
         cv::Ptr<cv::ParallelLoopBody> interpolationBody;
         if (_src.type() == CV_8UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
         else if (_src.type() == CV_16UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
-        CV_Assert(!interpolationBody.empty());
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+
         cv::parallel_for_(cv::Range(0, src.rows), *interpolationBody);
     }
 

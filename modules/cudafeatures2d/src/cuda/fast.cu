@@ -49,8 +49,6 @@ namespace cv { namespace cuda { namespace device
 {
     namespace fast
     {
-        __device__ unsigned int g_counter = 0;
-
         ///////////////////////////////////////////////////////////////////////////
         // calcKeypoints
 
@@ -218,7 +216,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template <bool calcScore, class Mask>
-        __global__ void calcKeypoints(const PtrStepSzb img, const Mask mask, short2* kpLoc, const unsigned int maxKeypoints, PtrStepi score, const int threshold)
+        __global__ void calcKeypoints(const PtrStepSzb img, const Mask mask, short2* kpLoc, const unsigned int maxKeypoints, PtrStepi score, const int threshold, unsigned int* d_counter)
         {
             #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 
@@ -269,7 +267,7 @@ namespace cv { namespace cuda { namespace device
                 {
                     if (calcScore) score(i, j) = cornerScore(C, v, threshold);
 
-                    const unsigned int ind = atomicInc(&g_counter, (unsigned int)(-1));
+                    const unsigned int ind = atomicInc(d_counter, (unsigned int)(-1));
 
                     if (ind < maxKeypoints)
                         kpLoc[ind] = make_short2(j, i);
@@ -279,40 +277,37 @@ namespace cv { namespace cuda { namespace device
             #endif
         }
 
-        int calcKeypoints_gpu(PtrStepSzb img, PtrStepSzb mask, short2* kpLoc, int maxKeypoints, PtrStepSzi score, int threshold)
+        int calcKeypoints_gpu(PtrStepSzb img, PtrStepSzb mask, short2* kpLoc, int maxKeypoints, PtrStepSzi score, int threshold, unsigned int* d_counter, cudaStream_t stream)
         {
-            void* counter_ptr;
-            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
-
             dim3 block(32, 8);
 
             dim3 grid;
             grid.x = divUp(img.cols - 6, block.x);
             grid.y = divUp(img.rows - 6, block.y);
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
+            cudaSafeCall( cudaMemsetAsync(d_counter, 0, sizeof(unsigned int), stream) );
 
             if (score.data)
             {
                 if (mask.data)
-                    calcKeypoints<true><<<grid, block>>>(img, SingleMask(mask), kpLoc, maxKeypoints, score, threshold);
+                    calcKeypoints<true><<<grid, block, 0, stream>>>(img, SingleMask(mask), kpLoc, maxKeypoints, score, threshold, d_counter);
                 else
-                    calcKeypoints<true><<<grid, block>>>(img, WithOutMask(), kpLoc, maxKeypoints, score, threshold);
+                    calcKeypoints<true><<<grid, block, 0, stream>>>(img, WithOutMask(), kpLoc, maxKeypoints, score, threshold, d_counter);
             }
             else
             {
                 if (mask.data)
-                    calcKeypoints<false><<<grid, block>>>(img, SingleMask(mask), kpLoc, maxKeypoints, score, threshold);
+                    calcKeypoints<false><<<grid, block, 0, stream>>>(img, SingleMask(mask), kpLoc, maxKeypoints, score, threshold, d_counter);
                 else
-                    calcKeypoints<false><<<grid, block>>>(img, WithOutMask(), kpLoc, maxKeypoints, score, threshold);
+                    calcKeypoints<false><<<grid, block, 0, stream>>>(img, WithOutMask(), kpLoc, maxKeypoints, score, threshold, d_counter);
             }
 
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
-
             unsigned int count;
-            cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpyAsync(&count, d_counter, sizeof(unsigned int), cudaMemcpyDeviceToHost, stream) );
+
+            cudaSafeCall( cudaStreamSynchronize(stream) );
 
             return count;
         }
@@ -320,7 +315,7 @@ namespace cv { namespace cuda { namespace device
         ///////////////////////////////////////////////////////////////////////////
         // nonmaxSuppression
 
-        __global__ void nonmaxSuppression(const short2* kpLoc, int count, const PtrStepSzi scoreMat, short2* locFinal, float* responseFinal)
+        __global__ void nonmaxSuppression(const short2* kpLoc, int count, const PtrStepSzi scoreMat, short2* locFinal, float* responseFinal, unsigned int* d_counter)
         {
             #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 
@@ -346,7 +341,7 @@ namespace cv { namespace cuda { namespace device
 
                 if (ismax)
                 {
-                    const unsigned int ind = atomicInc(&g_counter, (unsigned int)(-1));
+                    const unsigned int ind = atomicInc(d_counter, (unsigned int)(-1));
 
                     locFinal[ind] = loc;
                     responseFinal[ind] = static_cast<float>(score);
@@ -356,25 +351,22 @@ namespace cv { namespace cuda { namespace device
             #endif
         }
 
-        int nonmaxSuppression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response)
+        int nonmaxSuppression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response, unsigned int* d_counter, cudaStream_t stream)
         {
-            void* counter_ptr;
-            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
-
             dim3 block(256);
 
             dim3 grid;
             grid.x = divUp(count, block.x);
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
+            cudaSafeCall( cudaMemsetAsync(d_counter, 0, sizeof(unsigned int), stream) );
 
-            nonmaxSuppression<<<grid, block>>>(kpLoc, count, score, loc, response);
+            nonmaxSuppression<<<grid, block, 0, stream>>>(kpLoc, count, score, loc, response, d_counter);
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
-
             unsigned int new_count;
-            cudaSafeCall( cudaMemcpy(&new_count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpyAsync(&new_count, d_counter, sizeof(unsigned int), cudaMemcpyDeviceToHost, stream) );
+
+            cudaSafeCall( cudaStreamSynchronize(stream) );
 
             return new_count;
         }

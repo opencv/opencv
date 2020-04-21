@@ -1,0 +1,28 @@
+{
+  "name": "opencv_js_tests",
+  "description": "Tests for opencv js bindings",
+  "version": "1.0.1",
+  "dependencies": {
+    "ansi-colors": "^4.1.1",
+    "minimist": "^1.2.0",
+    "node-qunit": "latest"
+  },
+  "devDependencies": {
+    "eslint": "latest",
+    "eslint-config-google": "latest"
+  },
+  "scripts": {
+    "test": "node tests.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/opencv/opencv.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/opencv/opencv/issues"
+  },
+  "homepage": "https://github.com/opencv/opencv"
+}

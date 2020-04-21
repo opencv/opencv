@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////
 // Canny
@@ -92,10 +92,69 @@ CUDA_TEST_P(Canny, Accuracy)
     EXPECT_MAT_SIMILAR(edges_gold, edges, 2e-2);
 }
 
+class CannyAsyncParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    CannyAsyncParallelLoopBody(const cv::cuda::GpuMat& d_img_, cv::cuda::GpuMat* edges_, double low_thresh_, double high_thresh_, int apperture_size_, bool useL2gradient_)
+        : d_img(d_img_), edges(edges_), low_thresh(low_thresh_), high_thresh(high_thresh_), apperture_size(apperture_size_), useL2gradient(useL2gradient_) {}
+    ~CannyAsyncParallelLoopBody() {};
+    void operator()(const cv::Range& r) const
+    {
+        for (int i = r.start; i < r.end; i++) {
+            cv::cuda::Stream stream;
+            cv::Ptr<cv::cuda::CannyEdgeDetector> canny = cv::cuda::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, useL2gradient);
+            canny->detect(d_img, edges[i], stream);
+            stream.waitForCompletion();
+        }
+    }
+protected:
+    const cv::cuda::GpuMat& d_img;
+    cv::cuda::GpuMat* edges;
+    double low_thresh;
+    double high_thresh;
+    int apperture_size;
+    bool useL2gradient;
+};
+
+#define NUM_STREAMS 64
+
+CUDA_TEST_P(Canny, Async)
+{
+    if (!supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_30))
+    {
+        throw SkipTestException("CUDA device doesn't support texture objects");
+    }
+    else
+    {
+        const cv::Mat img = readImage("stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(img.empty());
+
+        const cv::cuda::GpuMat d_img_roi = loadMat(img, useRoi);
+
+        double low_thresh = 50.0;
+        double high_thresh = 100.0;
+
+        // Synchronous call
+        cv::Ptr<cv::cuda::CannyEdgeDetector> canny = cv::cuda::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, useL2gradient);
+        cv::cuda::GpuMat edges_gold;
+        canny->detect(d_img_roi, edges_gold);
+
+        // Asynchronous call
+        cv::cuda::GpuMat edges[NUM_STREAMS];
+        cv::parallel_for_(cv::Range(0, NUM_STREAMS), CannyAsyncParallelLoopBody(d_img_roi, edges, low_thresh, high_thresh, apperture_size, useL2gradient));
+
+        // Compare the results of synchronous call and asynchronous call
+        for (int i = 0; i < NUM_STREAMS; i++)
+            EXPECT_MAT_NEAR(edges_gold, edges[i], 0.0);
+    }
+ }
+
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, Canny, testing::Combine(
     ALL_DEVICES,
-    testing::Values(AppertureSize(3), AppertureSize(5)),
+    testing::Values(AppertureSize(3), AppertureSize(5), AppertureSize(7)),
     testing::Values(L2gradient(false), L2gradient(true)),
     WHOLE_SUBMAT));
 
+
+}} // namespace
 #endif // HAVE_CUDA

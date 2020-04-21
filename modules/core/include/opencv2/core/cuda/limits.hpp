@@ -40,16 +40,21 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_LIMITS_HPP__
-#define __OPENCV_CUDA_LIMITS_HPP__
+#ifndef OPENCV_CUDA_LIMITS_HPP
+#define OPENCV_CUDA_LIMITS_HPP
 
 #include <limits.h>
 #include <float.h>
 #include "common.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
-
 template <class T> struct numeric_limits;
 
 template <> struct numeric_limits<bool>
@@ -116,7 +121,8 @@ template <> struct numeric_limits<double>
     __device__ __forceinline__ static double epsilon() { return DBL_EPSILON; }
     static const bool is_signed = true;
 };
-
 }}} // namespace cv { namespace cuda { namespace cudev {
 
-#endif // __OPENCV_CUDA_LIMITS_HPP__
+//! @endcond
+
+#endif // OPENCV_CUDA_LIMITS_HPP

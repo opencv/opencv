@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_WARP_REDUCE_HPP__
-#define __OPENCV_CUDEV_WARP_REDUCE_HPP__
+#ifndef OPENCV_CUDEV_WARP_REDUCE_HPP
+#define OPENCV_CUDEV_WARP_REDUCE_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"
@@ -52,6 +52,9 @@
 #include "detail/reduce_key_val.hpp"
 
 namespace cv { namespace cudev {
+
+//! @addtogroup cudev
+//! @{
 
 // warpReduce
 
@@ -200,6 +203,8 @@ smem_tuple(T0* t0, T1* t1, T2* t2, T3* t3, T4* t4, T5* t5, T6* t6, T7* t7, T8* t
 {
     return make_tuple((volatile T0*) t0, (volatile T1*) t1, (volatile T2*) t2, (volatile T3*) t3, (volatile T4*) t4, (volatile T5*) t5, (volatile T6*) t6, (volatile T7*) t7, (volatile T8*) t8, (volatile T9*) t9);
 }
+
+//! @}
 
 }}
 

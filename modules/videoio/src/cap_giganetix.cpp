@@ -48,7 +48,7 @@
 #include <GigEVisionSDK.h>
 #include <GigEVisionSDK.cpp>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <io.h>
 #else
 #include <stdio.h>
@@ -150,7 +150,7 @@ wrprGetGigEVisionAPI()
   \brief Wrapper to GigEVisionAPI function
   \param api
   \param eventHandler
-  \return true - succsess, else - false
+  \return true - success, else - false
   See \a wrprInitGigEVisionAPI, \a gige::IGigEVisionAPI
 
 */
@@ -294,11 +294,11 @@ class CvCaptureCAM_Giganetix : public CvCapture
 
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int);
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual int getCaptureDomain()
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE
     {
         return CV_CAP_GIGANETIX;
     }
@@ -393,7 +393,8 @@ CvCaptureCAM_Giganetix::open( int index )
 
     for (int i = 0; i < (int) DevicesList.size() && !b_ret; i++)
     {
-      if((b_ret = i == index))
+      b_ret = (i == index);
+      if(b_ret)
       {
         m_device = DevicesList[i];
         b_ret = m_device->Connect ();
@@ -599,7 +600,7 @@ CvCaptureCAM_Giganetix::retrieveFrame(int)
 
 /*----------------------------------------------------------------------------*/
 double
-CvCaptureCAM_Giganetix::getProperty( int property_id )
+CvCaptureCAM_Giganetix::getProperty( int property_id ) const
 {
   double d_ret = -1.0;
   INT64 i;

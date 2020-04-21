@@ -2,7 +2,7 @@
  * jdatadst.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2009-2012 by Guido Vollbeding.
+ * Modified 2009-2017 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -68,7 +68,7 @@ init_destination (j_compress_ptr cinfo)
   /* Allocate the output buffer --- it will be released when done with image */
   dest->buffer = (JOCTET *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                                  OUTPUT_BUF_SIZE * SIZEOF(JOCTET));
+				  OUTPUT_BUF_SIZE * SIZEOF(JOCTET));
 
   dest->pub.next_output_byte = dest->buffer;
   dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
@@ -170,9 +170,9 @@ term_destination (j_compress_ptr cinfo)
     if (JFWRITE(dest->outfile, dest->buffer, datacount) != datacount)
       ERREXIT(cinfo, JERR_FILE_WRITE);
   }
-  fflush(dest->outfile);
+  JFFLUSH(dest->outfile);
   /* Make sure we wrote the output file OK */
-  if (ferror(dest->outfile))
+  if (JFERROR(dest->outfile))
     ERREXIT(cinfo, JERR_FILE_WRITE);
 }
 
@@ -206,7 +206,7 @@ jpeg_stdio_dest (j_compress_ptr cinfo, FILE * outfile)
   if (cinfo->dest == NULL) {	/* first time for this JPEG object? */
     cinfo->dest = (struct jpeg_destination_mgr *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-                                  SIZEOF(my_destination_mgr));
+				  SIZEOF(my_destination_mgr));
   }
 
   dest = (my_dest_ptr) cinfo->dest;
@@ -233,7 +233,7 @@ jpeg_stdio_dest (j_compress_ptr cinfo, FILE * outfile)
 
 GLOBAL(void)
 jpeg_mem_dest (j_compress_ptr cinfo,
-               unsigned char ** outbuffer, unsigned long * outsize)
+	       unsigned char ** outbuffer, unsigned long * outsize)
 {
   my_mem_dest_ptr dest;
 
@@ -246,7 +246,7 @@ jpeg_mem_dest (j_compress_ptr cinfo,
   if (cinfo->dest == NULL) {	/* first time for this JPEG object? */
     cinfo->dest = (struct jpeg_destination_mgr *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-                                  SIZEOF(my_mem_destination_mgr));
+				  SIZEOF(my_mem_destination_mgr));
   }
 
   dest = (my_mem_dest_ptr) cinfo->dest;

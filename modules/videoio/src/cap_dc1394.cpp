@@ -97,7 +97,7 @@ Tested with 2.6.12 with libdc1394-1.0.0, libraw1394-0.10.1 using a Point Grey Fl
 
 #include "precomp.hpp"
 
-#if !defined WIN32 && defined HAVE_DC1394
+#if !defined _WIN32 && defined HAVE_DC1394
 
 #include <unistd.h>
 #include <stdint.h>
@@ -907,10 +907,10 @@ b = b > 255 ? 255 : b
 uyv2bgr(const unsigned char *src, unsigned char *dest,
         unsigned long long int NumPixels)
 {
-    register int i = NumPixels + (NumPixels << 1) - 1;
-    register int j = NumPixels + (NumPixels << 1) - 1;
-    register int y, u, v;
-    register int r, g, b;
+    int i = NumPixels + (NumPixels << 1) - 1;
+    int j = NumPixels + (NumPixels << 1) - 1;
+    int y, u, v;
+    int r, g, b;
 
     while (i > 0) {
         v = src[i--] - 128;
@@ -927,10 +927,10 @@ uyv2bgr(const unsigned char *src, unsigned char *dest,
 uyvy2bgr(const unsigned char *src, unsigned char *dest,
         unsigned long long int NumPixels)
 {
-    register int i = (NumPixels << 1) - 1;
-    register int j = NumPixels + (NumPixels << 1) - 1;
-    register int y0, y1, u, v;
-    register int r, g, b;
+    int i = (NumPixels << 1) - 1;
+    int j = NumPixels + (NumPixels << 1) - 1;
+    int y0, y1, u, v;
+    int r, g, b;
 
     while (i > 0) {
         y1 = src[i--];
@@ -953,10 +953,10 @@ uyvy2bgr(const unsigned char *src, unsigned char *dest,
 uyyvyy2bgr(const unsigned char *src, unsigned char *dest,
         unsigned long long int NumPixels)
 {
-    register int i = NumPixels + (NumPixels >> 1) - 1;
-    register int j = NumPixels + (NumPixels << 1) - 1;
-    register int y0, y1, y2, y3, u, v;
-    register int r, g, b;
+    int i = NumPixels + (NumPixels >> 1) - 1;
+    int j = NumPixels + (NumPixels << 1) - 1;
+    int y0, y1, y2, y3, u, v;
+    int r, g, b;
 
     while (i > 0) {
         y3 = src[i--];
@@ -988,9 +988,9 @@ uyyvyy2bgr(const unsigned char *src, unsigned char *dest,
 y2bgr(const unsigned char *src, unsigned char *dest,
         unsigned long long int NumPixels)
 {
-    register int i = NumPixels - 1;
-    register int j = NumPixels + (NumPixels << 1) - 1;
-    register int y;
+    int i = NumPixels - 1;
+    int j = NumPixels + (NumPixels << 1) - 1;
+    int y;
 
     while (i > 0) {
         y = src[i--];
@@ -1004,9 +1004,9 @@ y2bgr(const unsigned char *src, unsigned char *dest,
 y162bgr(const unsigned char *src, unsigned char *dest,
         unsigned long long int NumPixels, int bits)
 {
-    register int i = (NumPixels << 1) - 1;
-    register int j = NumPixels + (NumPixels << 1) - 1;
-    register int y;
+    int i = (NumPixels << 1) - 1;
+    int j = NumPixels + (NumPixels << 1) - 1;
+    int y;
 
     while (i > 0) {
         y = src[i--];
@@ -1022,9 +1022,9 @@ y162bgr(const unsigned char *src, unsigned char *dest,
 rgb482bgr(const unsigned char *src, unsigned char *dest,
         unsigned long long int NumPixels, int bits)
 {
-    register int i = (NumPixels << 1) - 1;
-    register int j = NumPixels + (NumPixels << 1) - 1;
-    register int y;
+    int i = (NumPixels << 1) - 1;
+    int j = NumPixels + (NumPixels << 1) - 1;
+    int y;
 
     while (i > 0) {
         y = src[i--];
@@ -1049,11 +1049,11 @@ public:
     virtual bool open( int index );
     virtual void close();
 
-    virtual double getProperty(int);
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual int getCaptureDomain() { return CV_CAP_DC1394; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_DC1394; }
 protected:
 
     CvCaptureCAM_DC1394* captureDC1394;
@@ -1085,9 +1085,13 @@ IplImage* CvCaptureCAM_DC1394_CPP::retrieveFrame(int)
     return captureDC1394 ? (IplImage*)icvRetrieveFrameCAM_DC1394( captureDC1394, 0 ) : 0;
 }
 
-double CvCaptureCAM_DC1394_CPP::getProperty( int propId )
+double CvCaptureCAM_DC1394_CPP::getProperty( int propId ) const
 {
-    return captureDC1394 ? icvGetPropertyCAM_DC1394( captureDC1394, propId ) : 0;
+    // Simulate mutable (C++11-like) member variable
+    // (some members are used to cache property settings).
+    CvCaptureCAM_DC1394* cap = const_cast<CvCaptureCAM_DC1394*>(captureDC1394);
+
+    return cap ? icvGetPropertyCAM_DC1394( cap, propId ) : 0;
 }
 
 bool CvCaptureCAM_DC1394_CPP::setProperty( int propId, double value )

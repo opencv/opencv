@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////
 // BilateralFilter
@@ -94,4 +94,5 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, BilateralFilter, testing::Combine(
     ));
 
 
+}} // namespace
 #endif // HAVE_CUDA

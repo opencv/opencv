@@ -129,8 +129,6 @@ static bool areOnTheSameSideOfLine(const cv::Point2f &p1, const cv::Point2f &p2,
 
 static double areaOfTriangle(const cv::Point2f &a, const cv::Point2f &b, const cv::Point2f &c);
 
-static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle, cv::OutputArray triangle);
-
 static void createConvexHull(cv::InputArray points, std::vector<cv::Point2f> &polygon);
 
 static double distanceBtwPoints(const cv::Point2f &a, const cv::Point2f &b);
@@ -324,7 +322,7 @@ static void findMinEnclosingTriangle(cv::InputArray points,
 
     createConvexHull(points, polygon);
     findMinEnclosingTriangle(polygon, resultingTriangle, area);
-    copyResultingTriangle(resultingTriangle, triangle);
+    cv::Mat(resultingTriangle).copyTo(triangle);
 }
 
 //! Create the convex hull of the given set of points
@@ -362,16 +360,6 @@ static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
     } else {
         returnMinimumAreaEnclosingTriangle(polygon, triangle, area);
     }
-}
-
-//! Copy resultingTriangle to the OutputArray triangle
-/*!
-* @param resultingTriangle  Minimum area triangle enclosing the given polygon found by the algorithm
-* @param triangle           Minimum area triangle enclosing the given polygon returned to the user
-*/
-static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle,
-                                  cv::OutputArray triangle) {
-    cv::Mat(resultingTriangle).copyTo(triangle);
 }
 
 //! Initialisation function
@@ -413,7 +401,6 @@ static void findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &pol
 
     a = 1;
     b = 2;
-    c = 0;
 
     // Main algorithm steps
 
@@ -727,7 +714,7 @@ static bool isValidMinimalTriangle(const cv::Point2f &vertexA, const cv::Point2f
                           ? (areEqualPoints(midpointSideB, polygon[b]))
                           : (isPointOnLineSegment(midpointSideB, sideBStartVertex, sideBEndVertex));
 
-    bool sideCValid = isPointOnLineSegment(midpointSideC, sideCStartVertex, sideCEndVertex);
+    bool sideCValid = (validationFlag == VALIDATION_SIDES_FLUSH) || isPointOnLineSegment(midpointSideC, sideCStartVertex, sideCEndVertex);
 
     return (sideAValid && sideBValid && sideCValid);
 }
@@ -1000,14 +987,15 @@ static bool findGammaIntersectionPoints(const std::vector<cv::Point2f> &polygon,
     double sideCExtraParam = 2 * polygonPointHeight * distFormulaDenom;
 
     // Get intersection points if they exist or if lines are identical
-    if (!areIntersectingLines(side1Params, side2Params, sideCExtraParam, intersectionPoint1, intersectionPoint2)) {
-        return false;
+    if (areIntersectingLines(side1Params, side2Params, sideCExtraParam, intersectionPoint1, intersectionPoint2)) {
+        return true;
     } else if (areIdenticalLines(side1Params, side2Params, sideCExtraParam)) {
         intersectionPoint1 = side1StartVertex;
         intersectionPoint2 = side1EndVertex;
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 //! Check if the given lines are identical or not
@@ -1124,9 +1112,9 @@ static void advance(unsigned int &index, unsigned int nrOfPoints) {
     index = successor(index, nrOfPoints);
 }
 
-//! Return the succesor of the provided point index
+//! Return the successor of the provided point index
 /*!
-* The succesor of the last polygon point is the first polygon point
+* The successor of the last polygon point is the first polygon point
 * (circular referencing)
 *
 * @param index          Index of the point

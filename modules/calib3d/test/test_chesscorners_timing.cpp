@@ -43,6 +43,8 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/calib3d/calib3d_c.h"
 
+namespace opencv_test { namespace {
+
 class CV_ChessboardDetectorTimingTest : public cvtest::BaseTest
 {
 public:
@@ -83,7 +85,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     if( !fs || !board_list || !CV_NODE_IS_SEQ(board_list->tag) ||
         board_list->data.seq->total % 4 != 0 )
     {
-        ts->printf( cvtest::TS::LOG, "chessboard_timing_list.dat can not be readed or is not valid" );
+        ts->printf( cvtest::TS::LOG, "chessboard_timing_list.dat can not be read or is not valid" );
         code = cvtest::TS::FAIL_MISSING_TEST_DATA;
         goto _exit_;
     }
@@ -94,7 +96,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     {
         int count0 = -1;
         int count = 0;
-        CvSize pattern_size;
+        Size pattern_size;
         int result, result1 = 0;
 
         const char* imgname = cvReadString((CvFileNode*)cvGetSeqElem(board_list->data.seq,idx*4), "dummy.txt");
@@ -108,16 +110,12 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         filename = cv::format("%s%s", filepath.c_str(), imgname );
 
         cv::Mat img2 = cv::imread( filename );
-        img = img2;
+        img = cvIplImage(img2);
 
         if( img2.empty() )
         {
             ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename.c_str() );
-            if( max_idx == 1 )
-            {
-                code = cvtest::TS::FAIL_MISSING_TEST_DATA;
-                goto _exit_;
-            }
+            code = cvtest::TS::FAIL_MISSING_TEST_DATA;
             continue;
         }
 
@@ -137,11 +135,11 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         v = (CvPoint2D32f*)_v->data.fl;
 
         int64 _time0 = cvGetTickCount();
-        result = cvCheckChessboard(gray, pattern_size);
+        result = cvCheckChessboard(gray, cvSize(pattern_size));
         int64 _time01 = cvGetTickCount();
 
         OPENCV_CALL( result1 = cvFindChessboardCorners(
-                 gray, pattern_size, v, &count, 15 ));
+                 gray, cvSize(pattern_size), v, &count, 15 ));
         int64 _time1 = cvGetTickCount();
 
         if( result != is_chessboard )
@@ -186,4 +184,5 @@ _exit_:
 
 TEST(Calib3d_ChessboardDetector, timing) { CV_ChessboardDetectorTimingTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

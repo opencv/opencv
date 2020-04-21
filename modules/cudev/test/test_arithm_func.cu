@@ -69,7 +69,7 @@ public:
         Mat dst_gold;
         cv::sqrt(src, dst_gold);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 1e-4);
     }
 
     void test_expr()
@@ -88,7 +88,7 @@ public:
         cv::multiply(src1, src2, dst_gold);
         cv::sqrt(dst_gold, dst_gold);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 1e-4);
     }
 };
 

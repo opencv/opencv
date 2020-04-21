@@ -47,8 +47,33 @@
 #include "opencv2/opencv_modules.hpp"
 #include "clp.hpp"
 
-#ifdef HAVE_OPENCV_CUDA
-#  include "opencv2/cuda.hpp"
+#include "opencv2/core/private.cuda.hpp"
+
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+        namespace cv { namespace cuda {
+            static void compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_no_cuda(); }
+        }}
+    #else
+        namespace cv { namespace cuda { namespace device { namespace globmotion {
+            int compactPoints(int N, float *points0, float *points1, const uchar *mask);
+        }}}}
+        namespace cv { namespace cuda {
+            static void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask)
+            {
+                CV_Assert(points0.rows == 1 && points1.rows == 1 && mask.rows == 1);
+                CV_Assert(points0.type() == CV_32FC2 && points1.type() == CV_32FC2 && mask.type() == CV_8U);
+                CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
+
+                int npoints = points0.cols;
+                int remaining = cv::cuda::device::globmotion::compactPoints(
+                        npoints, (float*)points0.data, (float*)points1.data, mask.data);
+
+                points0 = points0.colRange(0, remaining);
+                points1 = points1.colRange(0, remaining);
+            }
+        }}
+    #endif
 #endif
 
 namespace cv
@@ -88,7 +113,7 @@ static Mat normalizePoints(int npoints, Point2f *points)
     T(0,0) = T(1,1) = s;
     T(0,2) = -cx*s;
     T(1,2) = -cy*s;
-    return T;
+    return CV_CXX_MOVE(T);
 }
 
 
@@ -113,7 +138,7 @@ static Mat estimateGlobMotionLeastSquaresTranslation(
         *rmse = std::sqrt(*rmse / npoints);
     }
 
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
@@ -194,7 +219,7 @@ static Mat estimateGlobMotionLeastSquaresRotation(
         *rmse = std::sqrt(*rmse / npoints);
     }
 
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 static Mat  estimateGlobMotionLeastSquaresRigid(
@@ -248,7 +273,7 @@ static Mat  estimateGlobMotionLeastSquaresRigid(
         *rmse = std::sqrt(*rmse / npoints);
     }
 
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
@@ -331,6 +356,8 @@ static Mat estimateGlobMotionLeastSquaresAffine(
 Mat estimateGlobalMotionLeastSquares(
         InputOutputArray points0, InputOutputArray points1, int model, float *rmse)
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(model <= MM_AFFINE);
     CV_Assert(points0.type() == points1.type());
     const int npoints = points0.getMat().checkVector(2);
@@ -355,6 +382,8 @@ Mat estimateGlobalMotionRansac(
         InputArray points0, InputArray points1, int model, const RansacParams &params,
         float *rmse, int *ninliers)
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(model <= MM_AFFINE);
     CV_Assert(points0.type() == points1.type());
     const int npoints = points0.getMat().checkVector(2);
@@ -373,8 +402,8 @@ Mat estimateGlobalMotionRansac(
     std::vector<Point2f> subset1(params.size);
 
     // best hypothesis
-    std::vector<Point2f> subset0best(params.size);
-    std::vector<Point2f> subset1best(params.size);
+    std::vector<int> bestIndices(params.size);
+
     Mat_<float> bestM;
     int ninliersMax = -1;
 
@@ -418,14 +447,20 @@ Mat estimateGlobalMotionRansac(
         {
             bestM = M;
             ninliersMax = numinliers;
-            subset0best.swap(subset0);
-            subset1best.swap(subset1);
+            bestIndices.swap(indices);
         }
     }
 
     if (ninliersMax < params.size)
+    {
         // compute RMSE
-        bestM = estimateGlobalMotionLeastSquares(subset0best, subset1best, model, rmse);
+        for (int i = 0; i < params.size; ++i)
+        {
+            subset0[i] = points0_[bestIndices[i]];
+            subset1[i] = points1_[bestIndices[i]];
+        }
+        bestM = estimateGlobalMotionLeastSquares(subset0, subset1, model, rmse);
+    }
     else
     {
         subset0.resize(ninliersMax);
@@ -449,7 +484,7 @@ Mat estimateGlobalMotionRansac(
     if (ninliers)
         *ninliers = ninliersMax;
 
-    return bestM;
+    return CV_CXX_MOVE(bestM);
 }
 
 
@@ -492,7 +527,7 @@ Mat MotionEstimatorRansacL2::estimate(InputArray points0, InputArray points1, bo
         if (ok) *ok = false;
     }
 
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
@@ -511,13 +546,15 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
 
 #ifndef HAVE_CLP
 
+    CV_UNUSED(ok);
     CV_Error(Error::StsError, "The library is built without Clp support");
-    if (ok) *ok = false;
-    return Mat::eye(3, 3, CV_32F);
 
 #else
 
     CV_Assert(motionModel() <= MM_AFFINE && motionModel() != MM_RIGID);
+
+    if(npoints <= 0)
+        return Mat::eye(3, 3, CV_32F);
 
     // prepare LP problem
 
@@ -644,7 +681,7 @@ Mat FromFileMotionReader::estimate(const Mat &/*frame0*/, const Mat &/*frame1*/,
           >> M(1,0) >> M(1,1) >> M(1,2)
           >> M(2,0) >> M(2,1) >> M(2,2) >> ok_;
     if (ok) *ok = ok_;
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
@@ -664,20 +701,28 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
           << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
           << M(2,0) << " " << M(2,1) << " " << M(2,2) << " " << ok_ << std::endl;
     if (ok) *ok = ok_;
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
 KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
-    setDetector(makePtr<GoodFeaturesToTrackDetector>());
+    setDetector(GFTTDetector::create());
     setOpticalFlowEstimator(makePtr<SparsePyrLkOptFlowEstimator>());
     setOutlierRejector(makePtr<NullOutlierRejector>());
 }
 
 
 Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
+{
+    InputArray image0 = frame0;
+    InputArray image1 = frame1;
+
+    return estimate(image0, image1, ok);
+}
+
+Mat KeypointBasedMotionEstimator::estimate(InputArray frame0, InputArray frame1, bool *ok)
 {
     // find keypoints
     detector_->detect(frame0, keypointsPrev_);
@@ -736,8 +781,7 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
     return motionEstimator_->estimate(pointsPrevGood_, pointsGood_, ok);
 }
 
-
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
 KeypointBasedMotionEstimatorGpu::KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
@@ -812,11 +856,13 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const cuda::GpuMat &frame0, const 
     return motionEstimator_->estimate(hostPointsPrev_, hostPoints_, ok);
 }
 
-#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
 
 Mat getMotion(int from, int to, const std::vector<Mat> &motions)
 {
+    CV_INSTRUMENT_REGION();
+
     Mat M = Mat::eye(3, 3, CV_32F);
     if (to > from)
     {

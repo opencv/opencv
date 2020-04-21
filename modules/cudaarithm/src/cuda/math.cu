@@ -50,7 +50,10 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 namespace
@@ -92,16 +95,15 @@ void cv::cuda::abs(InputArray _src, OutputArray _dst, Stream& stream)
         absMat<double>
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
-    const int depth = src.depth();
+    CV_Assert( src.depth() <= CV_64F );
 
-    CV_DbgAssert( depth <= CV_64F );
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    funcs[src.depth()](src.reshape(1), dst.reshape(1), stream);
 
-    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+    syncOutput(dst, _dst, stream);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -113,7 +115,7 @@ namespace
     {
         __device__ __forceinline__ T operator ()(T x) const
         {
-            return saturate_cast<T>(x * x);
+            return cudev::saturate_cast<T>(x * x);
         }
     };
 
@@ -138,16 +140,15 @@ void cv::cuda::sqr(InputArray _src, OutputArray _dst, Stream& stream)
         sqrMat<double>
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
-    const int depth = src.depth();
+    CV_Assert( src.depth() <= CV_64F );
 
-    CV_DbgAssert( depth <= CV_64F );
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    funcs[src.depth()](src.reshape(1), dst.reshape(1), stream);
 
-    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+    syncOutput(dst, _dst, stream);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -176,16 +177,15 @@ void cv::cuda::sqrt(InputArray _src, OutputArray _dst, Stream& stream)
         sqrtMat<double>
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
-    const int depth = src.depth();
+    CV_Assert( src.depth() <= CV_64F );
 
-    CV_DbgAssert( depth <= CV_64F );
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    funcs[src.depth()](src.reshape(1), dst.reshape(1), stream);
 
-    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+    syncOutput(dst, _dst, stream);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -198,7 +198,7 @@ namespace
         __device__ __forceinline__ T operator ()(T x) const
         {
             exp_func<T> f;
-            return saturate_cast<T>(f(x));
+            return cudev::saturate_cast<T>(f(x));
         }
     };
 
@@ -223,16 +223,15 @@ void cv::cuda::exp(InputArray _src, OutputArray _dst, Stream& stream)
         expMat<double>
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
-    const int depth = src.depth();
+    CV_Assert( src.depth() <= CV_64F );
 
-    CV_DbgAssert( depth <= CV_64F );
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    funcs[src.depth()](src.reshape(1), dst.reshape(1), stream);
 
-    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+    syncOutput(dst, _dst, stream);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -261,16 +260,15 @@ void cv::cuda::log(InputArray _src, OutputArray _dst, Stream& stream)
         logMat<double>
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
-    const int depth = src.depth();
+    CV_Assert( src.depth() <= CV_64F );
 
-    CV_DbgAssert( depth <= CV_64F );
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    funcs[src.depth()](src.reshape(1), dst.reshape(1), stream);
 
-    funcs[depth](src.reshape(1), dst.reshape(1), stream);
+    syncOutput(dst, _dst, stream);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -280,20 +278,12 @@ namespace
 {
     template<typename T, bool Signed = numeric_limits<T>::is_signed> struct PowOp : unary_function<T, T>
     {
-        float power;
+        typedef typename LargerType<T, float>::type LargerType;
+        LargerType power;
 
         __device__ __forceinline__ T operator()(T e) const
         {
-            return saturate_cast<T>(__powf((float)e, power));
-        }
-    };
-    template<typename T> struct PowOp<T, true> : unary_function<T, T>
-    {
-        float power;
-
-        __device__ __forceinline__ T operator()(T e) const
-        {
-            T res = saturate_cast<T>(__powf((float)e, power));
+            T res = cudev::saturate_cast<T>(__powf(e < 0 ? -e : e, power));
 
             if ((e < 0) && (1 & static_cast<int>(power)))
                 res *= -1;
@@ -301,22 +291,15 @@ namespace
             return res;
         }
     };
-    template<> struct PowOp<float> : unary_function<float, float>
-    {
-        float power;
 
-        __device__ __forceinline__ float operator()(float e) const
-        {
-            return __powf(::fabs(e), power);
-        }
-    };
-    template<> struct PowOp<double> : unary_function<double, double>
+    template<typename T> struct PowOp<T, false> : unary_function<T, T>
     {
-        double power;
+        typedef typename LargerType<T, float>::type LargerType;
+        LargerType power;
 
-        __device__ __forceinline__ double operator()(double e) const
+        __device__ __forceinline__ T operator()(T e) const
         {
-            return ::pow(::fabs(e), power);
+            return cudev::saturate_cast<T>(__powf(e, power));
         }
     };
 
@@ -344,16 +327,15 @@ void cv::cuda::pow(InputArray _src, double power, OutputArray _dst, Stream& stre
         powMat<double>
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
-    const int depth = src.depth();
+    CV_Assert( src.depth() <= CV_64F );
 
-    CV_DbgAssert(depth <= CV_64F);
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    funcs[src.depth()](src.reshape(1), power, dst.reshape(1), stream);
 
-    funcs[depth](src.reshape(1), power, dst.reshape(1), stream);
+    syncOutput(dst, _dst, stream);
 }
 
 #endif

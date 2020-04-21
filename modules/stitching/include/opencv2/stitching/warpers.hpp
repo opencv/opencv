@@ -40,13 +40,18 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_WARPER_CREATORS_HPP__
-#define __OPENCV_STITCHING_WARPER_CREATORS_HPP__
+#ifndef OPENCV_STITCHING_WARPER_CREATORS_HPP
+#define OPENCV_STITCHING_WARPER_CREATORS_HPP
 
 #include "opencv2/stitching/detail/warpers.hpp"
 
 namespace cv {
 
+//! @addtogroup stitching_warp
+//! @{
+
+/** @brief Image warper factories base class.
+ */
 class WarperCreator
 {
 public:
@@ -54,37 +59,50 @@ public:
     virtual Ptr<detail::RotationWarper> create(float scale) const = 0;
 };
 
-
+/** @brief Plane warper factory class.
+  @sa detail::PlaneWarper
+ */
 class PlaneWarper : public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PlaneWarper>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::PlaneWarper>(scale); }
 };
 
+/** @brief Affine warper factory class.
+  @sa detail::AffineWarper
+ */
+class AffineWarper : public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::AffineWarper>(scale); }
+};
 
+/** @brief Cylindrical warper factory class.
+@sa detail::CylindricalWarper
+*/
 class CylindricalWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CylindricalWarper>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::CylindricalWarper>(scale); }
 };
 
-
+/** @brief Spherical warper factory class */
 class SphericalWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::SphericalWarper>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::SphericalWarper>(scale); }
 };
 
 class FisheyeWarper : public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::FisheyeWarper>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::FisheyeWarper>(scale); }
 };
 
 class StereographicWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::StereographicWarper>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::StereographicWarper>(scale); }
 };
 
 class CompressedRectilinearWarper: public WarperCreator
@@ -95,7 +113,7 @@ public:
     {
         a = A; b = B;
     }
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CompressedRectilinearWarper>(scale, a, b); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::CompressedRectilinearWarper>(scale, a, b); }
 };
 
 class CompressedRectilinearPortraitWarper: public WarperCreator
@@ -106,7 +124,7 @@ public:
     {
         a = A; b = B;
     }
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CompressedRectilinearPortraitWarper>(scale, a, b); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::CompressedRectilinearPortraitWarper>(scale, a, b); }
 };
 
 class PaniniWarper: public WarperCreator
@@ -117,7 +135,7 @@ public:
     {
         a = A; b = B;
     }
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PaniniWarper>(scale, a, b); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::PaniniWarper>(scale, a, b); }
 };
 
 class PaniniPortraitWarper: public WarperCreator
@@ -128,19 +146,19 @@ public:
     {
         a = A; b = B;
     }
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PaniniPortraitWarper>(scale, a, b); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::PaniniPortraitWarper>(scale, a, b); }
 };
 
 class MercatorWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::MercatorWarper>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::MercatorWarper>(scale); }
 };
 
 class TransverseMercatorWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::TransverseMercatorWarper>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::TransverseMercatorWarper>(scale); }
 };
 
 
@@ -149,24 +167,26 @@ public:
 class PlaneWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PlaneWarperGpu>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::PlaneWarperGpu>(scale); }
 };
 
 
 class CylindricalWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CylindricalWarperGpu>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::CylindricalWarperGpu>(scale); }
 };
 
 
 class SphericalWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::SphericalWarperGpu>(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::SphericalWarperGpu>(scale); }
 };
 #endif
 
+//! @} stitching_warp
+
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_WARPER_CREATORS_HPP__
+#endif // OPENCV_STITCHING_WARPER_CREATORS_HPP

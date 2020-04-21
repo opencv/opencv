@@ -1,3 +1,30 @@
+Version 2.x.x
+	* Bumped version to track OpenEXR
+	  (Piotr Stanczyk)
+
+Version 2.0.1
+	* Bumped version to track OpenEXR
+	  (Piotr Stanczyk)
+
+Version 2.0.0
+	* Bumped version to track OpenEXR
+	  (Piotr Stanczyk)
+	* Numerous minor fixes, missing includes etc
+
+Version 1.1.0.beta.1
+	* Added new module PyIlmBase : python bindings for IlmBase
+	  (Nick Rasmussen)
+	* Added git specific files 
+	  (Piotr Stanczyk)
+	* Minor fixes for newer gcc versions and OS X.
+	  (misc)
+	* Preparation for OpenEXR v2 release { remove message for final release }
+	  (Piotr Stanczyk)
+        * Updated the so verison to 10
+	  (Piotr Stanczyk)
+	* Initial use of the CMake build system 
+	  (Nicholas Yue)
+
 Version 1.0.3
         * Added support for enabling/disabling large stack optimisations, used in
           halfFunction.h.

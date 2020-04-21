@@ -74,7 +74,7 @@ namespace
     public:
         HoughCirclesDetectorImpl(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles);
 
-        void detect(InputArray src, OutputArray circles);
+        void detect(InputArray src, OutputArray circles, Stream& stream);
 
         void setDp(float dp) { dp_ = dp; }
         float getDp() const { return dp_; }
@@ -99,6 +99,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
+            writeFormat(fs);
             fs << "name" << "HoughCirclesDetector_CUDA"
             << "dp" << dp_
             << "minDist" << minDist_
@@ -154,8 +155,11 @@ namespace
         filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
     }
 
-    void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles)
+    void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles, Stream& stream)
     {
+        // TODO : implement async version
+        CV_UNUSED(stream);
+
         using namespace cv::cuda::device::hough;
         using namespace cv::cuda::device::hough_circles;
 
@@ -211,8 +215,8 @@ namespace
             AutoBuffer<ushort2> newBuf_(centersCount);
             int newCount = 0;
 
-            ushort2* oldBuf = oldBuf_;
-            ushort2* newBuf = newBuf_;
+            ushort2* oldBuf = oldBuf_.data();
+            ushort2* newBuf = newBuf_.data();
 
             cudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
 

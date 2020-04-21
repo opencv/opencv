@@ -29,6 +29,8 @@
 #ifndef OPENCV_FLANN_SAVING_H_
 #define OPENCV_FLANN_SAVING_H_
 
+//! @cond IGNORED
+
 #include <cstring>
 #include <vector>
 
@@ -183,5 +185,7 @@ void load_value(FILE* stream, std::vector<T>& value)
 }
 
 }
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_SAVING_H_ */

@@ -199,7 +199,7 @@ TEST(Resize, Downscale)
 
 // warpAffine & warpPerspective
 
-Mat createAffineTransfomMatrix(Size srcSize, float angle, bool perspective)
+Mat createAffineTransformMatrix(Size srcSize, float angle, bool perspective)
 {
     cv::Mat M(perspective ? 3 : 2, 3, CV_32FC1);
 
@@ -220,7 +220,7 @@ TEST(WarpAffine, Rotation)
     const Size size = randomSize(100, 400);
 
     Mat src = randomMat(size, CV_32FC1, 0, 1);
-    Mat M = createAffineTransfomMatrix(size, static_cast<float>(CV_PI / 4), false);
+    Mat M = createAffineTransformMatrix(size, static_cast<float>(CV_PI / 4), false);
 
     GpuMat_<float> d_src(src);
     GpuMat_<float> d_M;
@@ -240,7 +240,7 @@ TEST(WarpPerspective, Rotation)
     const Size size = randomSize(100, 400);
 
     Mat src = randomMat(size, CV_32FC1, 0, 1);
-    Mat M = createAffineTransfomMatrix(size, static_cast<float>(CV_PI / 4), true);
+    Mat M = createAffineTransformMatrix(size, static_cast<float>(CV_PI / 4), true);
 
     GpuMat_<float> d_src(src);
     GpuMat_<float> d_M;

@@ -30,6 +30,8 @@
 #ifndef OPENCV_FLANN_HDF5_H_
 #define OPENCV_FLANN_HDF5_H_
 
+//! @cond IGNORED
+
 #include <hdf5.h>
 
 #include "matrix.h"
@@ -227,5 +229,7 @@ void load_from_file(cvflann::Matrix<T>& dataset, const String& filename, const S
 }
 #endif // HAVE_MPI
 } // namespace cvflann::mpi
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_HDF5_H_ */

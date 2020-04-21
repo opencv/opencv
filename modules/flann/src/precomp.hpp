@@ -1,5 +1,5 @@
-#ifndef _OPENCV_FLANN_PRECOMP_HPP_
-#define _OPENCV_FLANN_PRECOMP_HPP_
+#ifndef OPENCV_FLANN_PRECOMP_HPP
+#define OPENCV_FLANN_PRECOMP_HPP
 
 #include <cstdio>
 #include <cstdarg>
@@ -14,7 +14,6 @@
 #include "opencv2/flann/params.h"
 #include "opencv2/flann/saving.h"
 #include "opencv2/flann/general.h"
-#include "opencv2/flann/dummy.h"
 
 // index types
 #include "opencv2/flann/all_indices.h"

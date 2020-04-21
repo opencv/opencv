@@ -87,6 +87,18 @@ Point2f PlaneWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R, In
     return uv;
 }
 
+Point2f PlaneWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R)
+{
+    float tz[] = {0.f, 0.f, 0.f};
+    Mat_<float> T(3, 1, tz);
+    return warpPoint(pt, K, R, T);
+}
+
+Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
+{
+    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32FC1), xmap, ymap);
+}
+
 Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray _xmap, OutputArray _ymap)
 {
     projector_.setCameraParams(K, R, T);
@@ -98,7 +110,8 @@ Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArra
     _xmap.create(dsize, CV_32FC1);
     _ymap.create(dsize, CV_32FC1);
 
-    if (ocl::useOpenCL())
+#ifdef HAVE_OPENCL
+    if (ocl::isOpenCLActivated())
     {
         ocl::Kernel k("buildWarpPlaneMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
@@ -110,13 +123,17 @@ Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArra
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
                    ocl::KernelArg::PtrReadOnly(uk_rinv), ocl::KernelArg::PtrReadOnly(ut),
-                   dst_tl.x, dst_tl.y, projector_.scale, rowsPerWI);
+                   dst_tl.x, dst_tl.y, 1/projector_.scale, rowsPerWI);
 
-            size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
+            size_t globalsize[2] = { (size_t)dsize.width, ((size_t)dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
+#endif
 
     Mat xmap = _xmap.getMat(), ymap = _ymap.getMat();
 
@@ -147,6 +164,13 @@ Point PlaneWarper::warp(InputArray src, InputArray K, InputArray R, InputArray T
     return dst_roi.tl();
 }
 
+Point PlaneWarper::warp(InputArray src, InputArray K, InputArray R,
+                        int interp_mode, int border_mode, OutputArray dst)
+{
+    float tz[] = {0.f, 0.f, 0.f};
+    Mat_<float> T(3, 1, tz);
+    return warp(src, K, R, T, interp_mode, border_mode, dst);
+}
 
 Rect PlaneWarper::warpRoi(Size src_size, InputArray K, InputArray R, InputArray T)
 {
@@ -156,6 +180,13 @@ Rect PlaneWarper::warpRoi(Size src_size, InputArray K, InputArray R, InputArray 
     detectResultRoi(src_size, dst_tl, dst_br);
 
     return Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1));
+}
+
+Rect PlaneWarper::warpRoi(Size src_size, InputArray K, InputArray R)
+{
+    float tz[] = {0.f, 0.f, 0.f};
+    Mat_<float> T(3, 1, tz);
+    return warpRoi(src_size, K, R, T);
 }
 
 
@@ -188,6 +219,58 @@ void PlaneWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
     dst_tl.y = static_cast<int>(tl_vf);
     dst_br.x = static_cast<int>(br_uf);
     dst_br.y = static_cast<int>(br_vf);
+}
+
+
+Point2f AffineWarper::warpPoint(const Point2f &pt, InputArray K, InputArray H)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::warpPoint(pt, K, R, T);
+}
+
+
+Rect AffineWarper::buildMaps(Size src_size, InputArray K, InputArray H, OutputArray xmap, OutputArray ymap)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::buildMaps(src_size, K, R, T, xmap, ymap);
+}
+
+
+Point AffineWarper::warp(InputArray src, InputArray K, InputArray H,
+                         int interp_mode, int border_mode, OutputArray dst)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::warp(src, K, R, T, interp_mode, border_mode, dst);
+}
+
+
+Rect AffineWarper::warpRoi(Size src_size, InputArray K, InputArray H)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::warpRoi(src_size, K, R, T);
+}
+
+
+void AffineWarper::getRTfromHomogeneous(InputArray H_, Mat &R, Mat &T)
+{
+    Mat H = H_.getMat();
+    CV_Assert(H.size() == Size(3, 3) && H.type() == CV_32F);
+
+    T = Mat::zeros(3, 1, CV_32F);
+    R = H.clone();
+
+    T.at<float>(0,0) = R.at<float>(0,2);
+    T.at<float>(1,0) = R.at<float>(1,2);
+    R.at<float>(0,2) = 0.f;
+    R.at<float>(1,2) = 0.f;
+
+    // we want to compensate transform to fit into plane warper
+    R = R.t();
+    T = (R * T) * -1;
 }
 
 
@@ -233,91 +316,6 @@ void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_b
     dst_br.x = static_cast<int>(br_uf);
     dst_br.y = static_cast<int>(br_vf);
 }
-
-
-#ifdef HAVE_OPENCV_CUDAWARPING
-Rect PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
-{
-    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);
-}
-
-Rect PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
-{
-    projector_.setCameraParams(K, R, T);
-
-    Point dst_tl, dst_br;
-    detectResultRoi(src_size, dst_tl, dst_br);
-
-    cuda::buildWarpPlaneMaps(src_size, Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1)),
-                            K, R, T, projector_.scale, xmap, ymap);
-
-    return Rect(dst_tl, dst_br);
-}
-
-Point PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
-                           cuda::GpuMat & dst)
-{
-    return warp(src, K, R, Mat::zeros(3, 1, CV_32F), interp_mode, border_mode, dst);
-}
-
-
-Point PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode,
-                           cuda::GpuMat & dst)
-{
-    Rect dst_roi = buildMaps(src.size(), K, R, T, d_xmap_, d_ymap_);
-    dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
-    cuda::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
-    return dst_roi.tl();
-}
-
-
-Rect SphericalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
-{
-    projector_.setCameraParams(K, R);
-
-    Point dst_tl, dst_br;
-    detectResultRoi(src_size, dst_tl, dst_br);
-
-    cuda::buildWarpSphericalMaps(src_size, Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1)),
-                                K, R, projector_.scale, xmap, ymap);
-
-    return Rect(dst_tl, dst_br);
-}
-
-
-Point SphericalWarperGpu::warp(const cuda::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
-                               cuda::GpuMat & dst)
-{
-    Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
-    dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
-    cuda::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
-    return dst_roi.tl();
-}
-
-
-Rect CylindricalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
-{
-    projector_.setCameraParams(K, R);
-
-    Point dst_tl, dst_br;
-    detectResultRoi(src_size, dst_tl, dst_br);
-
-    cuda::buildWarpCylindricalMaps(src_size, Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1)),
-                                  K, R, projector_.scale, xmap, ymap);
-
-    return Rect(dst_tl, dst_br);
-}
-
-
-Point CylindricalWarperGpu::warp(const cuda::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
-                                 cuda::GpuMat & dst)
-{
-    Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
-    dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
-    cuda::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
-    return dst_roi.tl();
-}
-#endif
 
 void SphericalPortraitWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 {
@@ -366,7 +364,8 @@ void SphericalPortraitWarper::detectResultRoi(Size src_size, Point &dst_tl, Poin
 
 Rect SphericalWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 {
-    if (ocl::useOpenCL())
+#ifdef HAVE_OPENCL
+    if (ocl::isOpenCLActivated())
     {
         ocl::Kernel k("buildWarpSphericalMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
@@ -385,14 +384,17 @@ Rect SphericalWarper::buildMaps(Size src_size, InputArray K, InputArray R, Outpu
             UMat uxmap = xmap.getUMat(), uymap = ymap.getUMat(), uk_rinv = k_rinv.getUMat(ACCESS_READ);
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
-                   ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, projector_.scale, rowsPerWI);
+                   ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, 1/projector_.scale, rowsPerWI);
 
-            size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
+            size_t globalsize[2] = { (size_t)dsize.width, ((size_t)dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
-
+#endif
     return RotationWarperBase<SphericalProjector>::buildMaps(src_size, K, R, xmap, ymap);
 }
 
@@ -411,7 +413,8 @@ Point SphericalWarper::warp(InputArray src, InputArray K, InputArray R, int inte
 
 Rect CylindricalWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 {
-    if (ocl::useOpenCL())
+#ifdef HAVE_OPENCL
+    if (ocl::isOpenCLActivated())
     {
         ocl::Kernel k("buildWarpCylindricalMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
@@ -430,15 +433,18 @@ Rect CylindricalWarper::buildMaps(Size src_size, InputArray K, InputArray R, Out
             UMat uxmap = xmap.getUMat(), uymap = ymap.getUMat(), uk_rinv = k_rinv.getUMat(ACCESS_READ);
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
-                   ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, projector_.scale,
+                   ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, 1/projector_.scale,
                    rowsPerWI);
 
-            size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
+            size_t globalsize[2] = { (size_t)dsize.width, ((size_t)dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
-
+#endif
     return RotationWarperBase<CylindricalProjector>::buildMaps(src_size, K, R, xmap, ymap);
 }
 
