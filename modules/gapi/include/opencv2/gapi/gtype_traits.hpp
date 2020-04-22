@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/own/convert.hpp>
 
 namespace cv
 {
