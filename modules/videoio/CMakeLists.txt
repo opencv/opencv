@@ -31,6 +31,10 @@ file(GLOB videoio_ext_hdrs
   "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/legacy/*.h")
 
+if(OPENCV_DEBUG_POSTFIX)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/backend_plugin.cpp" "DEBUG_POSTFIX=${OPENCV_DEBUG_POSTFIX}")
+endif()
+
 # Removing WinRT API headers by default
 list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
 
