@@ -273,9 +273,18 @@ TEST_P(DNNTestOpenVINO, models)
 
     const Backend backendId = get<0>(get<0>(GetParam()));
     const Target targetId = get<1>(get<0>(GetParam()));
+    std::string modelName = get<1>(GetParam());
 
-    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        throw SkipTestException("No support for async forward");
+    ASSERT_FALSE(backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) <<
+        "Inference Engine backend is required";
+
+#if INF_ENGINE_VER_MAJOR_GE(2020020000)
+    if (targetId == DNN_TARGET_MYRIAD && backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (modelName == "person-detection-retail-0013")  // IRv10
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    }
+#endif
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
@@ -284,7 +293,6 @@ TEST_P(DNNTestOpenVINO, models)
     else
         FAIL() << "Unknown backendId";
 
-    std::string modelName = get<1>(GetParam());
     bool isFP16 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD);
 
     const std::map<std::string, OpenVINOModelTestCaseInfo>& models = getOpenVINOTestModels();
