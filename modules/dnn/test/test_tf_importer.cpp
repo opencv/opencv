@@ -196,6 +196,8 @@ TEST_P(Test_TensorFlow_layers, pad_and_concat)
 TEST_P(Test_TensorFlow_layers, concat_axis_1)
 {
     runTensorFlowNet("concat_axis_1");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     runTensorFlowNet("concat_3d");
 }
 
