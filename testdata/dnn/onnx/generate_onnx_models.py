@@ -3,6 +3,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn.init as init
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import os.path
 import onnx
@@ -784,3 +785,30 @@ class L2Norm(nn.Module):
 model = L2Norm(2, 20)
 x = Variable(torch.randn(1, 2, 3, 4))
 save_data_and_model("reduceL2_subgraph_2", x, model)
+
+from torchvision.ops.misc import *
+n = 3
+model = FrozenBatchNorm2d(n)
+model.eval()
+input = Variable(torch.rand( 1, 3, 2, 4 ))
+save_data_and_model("frozenBatchNorm2d", input, model)
+
+class UpsampleUnfusedTwoInput(nn.Module):
+
+    def __init__(self):
+        super(UpsampleUnfusedTwoInput, self).__init__()
+        self.conv1 = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+        self.conv2 = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x, y):
+        x = self.conv1(x)
+        x = x.shape[-2:]
+        y = self.conv2(y)
+        y = F.interpolate(y, size=x, mode="nearest")
+        return y
+
+input_0 = Variable(torch.randn(1, 3, 4, 6))
+input_1 = Variable(torch.randn(1, 3, 2, 2))
+model = UpsampleUnfusedTwoInput()
+save_data_and_model_multy_inputs("upsample_unfused_two_inputs_opset9_torch1.4", UpsampleUnfusedTwoInput(), input_0, input_1, version=9)
+save_data_and_model_multy_inputs("upsample_unfused_two_inputs_opset11_torch1.4", UpsampleUnfusedTwoInput(), input_0, input_1, version=11)
