@@ -23,12 +23,19 @@ add_library(OpenCVTest STATIC dummy/dummy.mm)
 enable_language(Swift)
 
 # XCTest for Framework
-xctest_add_bundle(OpenCVTestTests OpenCVTest ${test_sources} test/resources ${BUILD_ROOT}/OpenCV.framework)
-set_target_properties(OpenCVTestTests PROPERTIES XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "${BUILD_ROOT}")
+xctest_add_bundle(OpenCVTestTests OpenCVTest ${test_sources} test/resources ${FRAMEWORK_DIR}/OpenCV.framework)
+set_target_properties(OpenCVTestTests PROPERTIES XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "${FRAMEWORK_DIR}")
+
+# link necessary Frameworks
 target_link_libraries(OpenCVTestTests PRIVATE "-framework Accelerate")
 target_link_libraries(OpenCVTestTests PRIVATE "-framework AVFoundation")
 target_link_libraries(OpenCVTestTests PRIVATE "-framework CoreMedia")
-target_link_libraries(OpenCVTestTests PRIVATE "-framework OpenCL")
+if (NOT DEFINED IOS_ARCH)
+  target_link_libraries(OpenCVTestTests PRIVATE "-framework OpenCL")
+endif()
+
+# its OK to ignore stuff we don't know about since there will be no tests relying on it
+set_target_properties(OpenCVTestTests PROPERTIES LINK_FLAGS -Wl,-undefined,dynamic_lookup)
 
 set_source_files_properties(test/resources PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 
