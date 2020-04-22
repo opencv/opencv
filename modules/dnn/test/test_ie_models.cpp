@@ -134,6 +134,8 @@ static inline void genData(const InferenceEngine::TensorDesc& desc, Mat& m, Blob
 void runIE(Target target, const std::string& xmlPath, const std::string& binPath,
            std::map<std::string, cv::Mat>& inputsMap, std::map<std::string, cv::Mat>& outputsMap)
 {
+    SCOPED_TRACE("runIE");
+
     CNNNetReader reader;
     reader.ReadNetwork(xmlPath);
     reader.ReadWeights(binPath);
@@ -247,6 +249,8 @@ void runCV(Backend backendId, Target targetId, const std::string& xmlPath, const
            const std::map<std::string, cv::Mat>& inputsMap,
            std::map<std::string, cv::Mat>& outputsMap)
 {
+    SCOPED_TRACE("runOCV");
+
     Net net = readNet(xmlPath, binPath);
     for (auto& it : inputsMap)
         net.setInput(it.second, it.first);
@@ -301,8 +305,8 @@ TEST_P(DNNTestOpenVINO, models)
     // Single Myriad device cannot be shared across multiple processes.
     if (targetId == DNN_TARGET_MYRIAD)
         resetMyriadDevice();
-    runIE(targetId, xmlPath, binPath, inputsMap, ieOutputsMap);
-    runCV(backendId, targetId, xmlPath, binPath, inputsMap, cvOutputsMap);
+    EXPECT_NO_THROW(runIE(targetId, xmlPath, binPath, inputsMap, ieOutputsMap)) << "runIE";
+    EXPECT_NO_THROW(runCV(backendId, targetId, xmlPath, binPath, inputsMap, cvOutputsMap)) << "runCV";
 
     double eps = 0;
 #if INF_ENGINE_VER_MAJOR_GE(2020010000)
