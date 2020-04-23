@@ -18,6 +18,37 @@ namespace opencv_test
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(BuildOptFlowPyramidPerfTest, TestPerformance)
+{
+    std::vector<Mat> outPyrOCV,          outPyrGAPI;
+    int              outMaxLevelOCV = 0, outMaxLevelGAPI = 0;
+    Scalar           outMaxLevelSc;
+
+    BuildOpticalFlowPyramidTestParams params;
+    std::tie(params.fileName, params.winSize,
+             params.maxLevel, params.withDerivatives,
+             params.pyrBorder, params.derivBorder,
+             params.tryReuseInputImage, params.compileArgs) = GetParam();
+
+    BuildOpticalFlowPyramidTestOutput outOCV  { outPyrOCV,  outMaxLevelOCV };
+    BuildOpticalFlowPyramidTestOutput outGAPI { outPyrGAPI, outMaxLevelGAPI };
+
+    GComputation c = runOCVnGAPIBuildOptFlowPyramid(*this, params, outOCV, outGAPI);
+
+    declare.in(in_mat1).out(outPyrGAPI);
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(outPyrGAPI, outMaxLevelSc));
+    }
+    outMaxLevelGAPI = static_cast<int>(outMaxLevelSc[0]);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    compareOutputPyramids(outOCV, outGAPI);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P_(OptFlowLKPerfTest, TestPerformance)
 {
     std::vector<cv::Point2f> outPtsOCV,    outPtsGAPI,    inPts;
@@ -74,6 +105,44 @@ PERF_TEST_P_(OptFlowLKForPyrPerfTest, TestPerformance)
     TEST_CYCLE()
     {
         c.apply(cv::gin(inPyr1, inPyr2, inPts, std::vector<cv::Point2f>{ }),
+                cv::gout(outPtsGAPI, outStatusGAPI, outErrGAPI));
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    compareOutputsOptFlow(outOCV, outGAPI);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BuildPyr_CalcOptFlow_PipelinePerfTest, TestPerformance)
+{
+    std::vector<Point2f> outPtsOCV,    outPtsGAPI,    inPts;
+    std::vector<uchar>   outStatusOCV, outStatusGAPI;
+    std::vector<float>   outErrOCV,    outErrGAPI;
+
+    BuildOpticalFlowPyramidTestParams params;
+    params.pyrBorder          = BORDER_DEFAULT;
+    params.derivBorder        = BORDER_DEFAULT;
+    params.tryReuseInputImage = true;
+    std::tie(params.fileName, params.winSize,
+             params.maxLevel, params.withDerivatives,
+             params.compileArgs) = GetParam();
+
+    auto customKernel  = gapi::kernels<GCPUMinScalar>();
+    auto kernels       = gapi::combine(customKernel,
+                                       params.compileArgs[0].get<gapi::GKernelPackage>());
+    params.compileArgs = compile_args(kernels);
+
+    OptFlowLKTestOutput outOCV  { outPtsOCV,  outStatusOCV,  outErrOCV };
+    OptFlowLKTestOutput outGAPI { outPtsGAPI, outStatusGAPI, outErrGAPI };
+
+    cv::GComputation c = runOCVnGAPIOptFlowPipeline(*this, params, outOCV, outGAPI, inPts);
+
+    declare.in(in_mat1, in_mat2, inPts).out(outPtsGAPI, outStatusGAPI, outErrGAPI);
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1, in_mat2, inPts, std::vector<cv::Point2f>{ }),
                 cv::gout(outPtsGAPI, outStatusGAPI, outErrGAPI));
     }
 
