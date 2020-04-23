@@ -153,7 +153,7 @@ INSTANTIATE_TEST_CASE_P(SobelTestGPU32F, SobelTest,
                                 Values(1, 2)));
 
 INSTANTIATE_TEST_CASE_P(LaplacianTestGPU, LaplacianTest,
-                        Combine(Values(CV_32FC1),
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(-1),
@@ -164,7 +164,7 @@ INSTANTIATE_TEST_CASE_P(LaplacianTestGPU, LaplacianTest,
                                 Values(BORDER_DEFAULT)));
 
 INSTANTIATE_TEST_CASE_P(BilateralFilterTestGPU, BilateralFilterTest,
-                        Combine(Values(CV_32FC1),
+                        Combine(Values(CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(-1),
