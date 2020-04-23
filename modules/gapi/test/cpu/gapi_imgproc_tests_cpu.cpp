@@ -183,8 +183,8 @@ INSTANTIATE_TEST_CASE_P(LaplacianTestCPU, LaplacianTest,
                                 Values(-1),
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_obj()),
-                                Values(1, 3, 5),
-                                Values(1.0, 0.2, 3.0),
+                                Values(1, 3),
+                                Values(1.0, 0.2),
                                 Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
 
 INSTANTIATE_TEST_CASE_P(BilateralFilterTestCPU, BilateralFilterTest,
@@ -194,9 +194,9 @@ INSTANTIATE_TEST_CASE_P(BilateralFilterTestCPU, BilateralFilterTest,
                                 Values(-1),
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_obj()),
-                                Values(3, 5, 9),
-                                Values(20, 100),
-                                Values(10, 40),
+                                Values(3, 5),
+                                Values(20),
+                                Values(10),
                                 Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
 
 INSTANTIATE_TEST_CASE_P(EqHistTestCPU, EqHistTest,
