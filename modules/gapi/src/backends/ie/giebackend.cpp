@@ -514,7 +514,7 @@ struct Infer: public cv::detail::KernelTag {
             // and redirect our data producers to this memory
             // (A memory dialog comes to the picture again)
 
-            const cv::Mat this_mat = (ctx.inMat(i));
+            const cv::Mat this_mat = ctx.inMat(i);
             // FIXME: By default here we trait our inputs as images.
             // May be we need to make some more intelligence here about it
             IE::Blob::Ptr this_blob = wrapIE(this_mat, cv::gapi::ie::TraitAs::IMAGE);
@@ -586,7 +586,7 @@ struct InferList: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.num_in == 1); // roi list is not counted in net's inputs
 
         const auto& in_roi_vec = ctx.inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
-        const cv::Mat this_mat = (ctx.inMat(1u));
+        const cv::Mat this_mat = ctx.inMat(1u);
         // Since we do a ROI list inference, always assume our input buffer is image
         IE::Blob::Ptr this_blob = wrapIE(this_mat, cv::gapi::ie::TraitAs::IMAGE);
 
