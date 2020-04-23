@@ -184,7 +184,7 @@ INSTANTIATE_TEST_CASE_P(LaplacianTestCPU, LaplacianTest,
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_obj()),
                                 Values(1, 3),
-                                Values(1.0, 0.2),
+                                Values(0.2, 1.0),
                                 Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
 
 INSTANTIATE_TEST_CASE_P(BilateralFilterTestCPU, BilateralFilterTest,
