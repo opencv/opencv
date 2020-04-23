@@ -12,13 +12,24 @@
 namespace cv { namespace gapi {
 using namespace video;
 
+GBuildPyrOutput buildOpticalFlowPyramid(const GMat    &img,
+                                        const Size    &winSize,
+                                        const GScalar &maxLevel,
+                                              bool     withDerivatives,
+                                              int      pyrBorder,
+                                              int      derivBorder,
+                                              bool     tryReuseInputImage)
+{
+    return GBuildOptFlowPyramid::on(img, winSize, maxLevel, withDerivatives, pyrBorder,
+                                    derivBorder, tryReuseInputImage);
+}
 
 GOptFlowLKOutput calcOpticalFlowPyrLK(const GMat                    &prevImg,
                                       const GMat                    &nextImg,
                                       const cv::GArray<cv::Point2f> &prevPts,
                                       const cv::GArray<cv::Point2f> &predPts,
                                       const Size                    &winSize,
-                                            int                      maxLevel,
+                                      const GScalar                 &maxLevel,
                                       const TermCriteria            &criteria,
                                             int                      flags,
                                             double                   minEigThresh)
@@ -32,7 +43,7 @@ GOptFlowLKOutput calcOpticalFlowPyrLK(const cv::GArray<cv::GMat>    &prevPyr,
                                       const cv::GArray<cv::Point2f> &prevPts,
                                       const cv::GArray<cv::Point2f> &predPts,
                                       const Size                    &winSize,
-                                            int                      maxLevel,
+                                      const GScalar                 &maxLevel,
                                       const TermCriteria            &criteria,
                                             int                      flags,
                                             double                   minEigThresh)

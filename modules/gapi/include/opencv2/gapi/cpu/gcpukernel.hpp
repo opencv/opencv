@@ -255,6 +255,12 @@ template<typename U> struct get_out<cv::GArray<U>>
         return ctx.outVecR<U>(idx);
     }
 };
+
+//FIXME(dm): GArray<Mat>/GArray<GMat> conversion should be done more gracefully in the system
+template<> struct get_out<cv::GArray<cv::GMat> >: public get_out<cv::GArray<cv::Mat> >
+{
+};
+
 template<typename U> struct get_out<cv::GOpaque<U>>
 {
     static U& get(GCPUContext &ctx, int idx)
