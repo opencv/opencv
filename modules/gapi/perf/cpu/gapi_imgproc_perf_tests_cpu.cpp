@@ -124,6 +124,24 @@ INSTANTIATE_TEST_CASE_P(SobelPerfTestCPU32F, SobelPerfTest,
         Values(1, 2),
         Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(LaplacianPerfTestCPU, LaplacianPerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(CV_8UC1, CV_8UC3),
+                                Values(3),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(-1),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(BilateralFilterPerfTestCPU, BilateralFilterPerfTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(CV_32FC1, CV_32FC3),
+                                Values(-1),
+                                Values(szVGA, sz720p, sz1080p),
+                                Values(3),
+                                Values(20),
+                                Values(10),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
 INSTANTIATE_TEST_CASE_P(CannyPerfTestCPU, CannyPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
         Values(CV_8UC1, CV_8UC3),
