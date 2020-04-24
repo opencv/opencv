@@ -431,10 +431,11 @@ int main(int argc, char* argv[])
     {
         finder = xfeatures2d::SURF::create();
     }
-    else if (features_type == "sift") {
-        finder = xfeatures2d::SIFT::create();
-    }
 #endif
+    else if (features_type == "sift")
+    {
+        finder = SIFT::create();
+    }
     else
     {
         cout << "Unknown 2D features type: '" << features_type << "'.\n";

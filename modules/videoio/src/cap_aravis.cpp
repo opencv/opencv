@@ -59,7 +59,7 @@
 // Please obvserve, that jumbo frames are required when high fps & 16bit data is selected.
 // (camera, switches/routers and the computer this software is running on)
 //
-// Basic usage: VideoCapture cap(CAP_ARAVIS + <camera id>);
+// Basic usage: VideoCapture cap(<camera id>, CAP_ARAVIS);
 //
 // Supported properties:
 //  read/write
