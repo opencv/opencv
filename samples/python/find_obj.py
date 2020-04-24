@@ -29,7 +29,7 @@ FLANN_INDEX_LSH    = 6
 def init_feature(name):
     chunks = name.split('-')
     if chunks[0] == 'sift':
-        detector = cv.xfeatures2d.SIFT_create()
+        detector = cv.SIFT_create()
         norm = cv.NORM_L2
     elif chunks[0] == 'surf':
         detector = cv.xfeatures2d.SURF_create(800)
