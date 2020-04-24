@@ -416,6 +416,8 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
                     break;
             }
 
+            theta = min(theta, CV_PI/2.);
+                
             scale = std::tan(theta) / theta_d;
         }
 
