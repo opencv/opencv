@@ -98,7 +98,14 @@ TEST_P(Test_ONNX_layers, InstanceNorm)
 
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020020000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testONNXModels("maxpooling", npy, 0, 0, false, false);
+}
+TEST_P(Test_ONNX_layers, MaxPooling_2)
+{
     testONNXModels("two_maxpooling", npy, 0, 0, false, false);
 }
 
@@ -314,6 +321,15 @@ TEST_P(Test_ONNX_layers, BatchNormalization3D)
     testONNXModels("batch_norm_3d");
 }
 
+TEST_P(Test_ONNX_layers, BatchNormalizationUnfused)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("frozenBatchNorm2d");
+}
+
 TEST_P(Test_ONNX_layers, Transpose)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -394,6 +410,16 @@ TEST_P(Test_ONNX_layers, ResizeUnfused)
     testONNXModels("resize_nearest_unfused_opset11_torch1.4");
     testONNXModels("resize_nearest_unfused_opset11_torch1.3");
     testONNXModels("resize_bilinear_unfused_opset11_torch1.4");
+}
+
+TEST_P(Test_ONNX_layers, ResizeUnfusedTwoInputs)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("upsample_unfused_two_inputs_opset9_torch1.4", npy, 0, 0, false, true, 2);
+    testONNXModels("upsample_unfused_two_inputs_opset11_torch1.4", npy, 0, 0, false, true, 2);
 }
 
 TEST_P(Test_ONNX_layers, MultyInputs)
