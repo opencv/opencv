@@ -75,6 +75,7 @@ struct v_uint8x16
     typedef __m128i vector_type;
     enum { nlanes = 16 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_uint8x16() {}
     explicit v_uint8x16(__m128i v) : val(v) {}
     v_uint8x16(uchar v0, uchar v1, uchar v2, uchar v3, uchar v4, uchar v5, uchar v6, uchar v7,
@@ -100,6 +101,7 @@ struct v_int8x16
     typedef __m128i vector_type;
     enum { nlanes = 16 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_int8x16() {}
     explicit v_int8x16(__m128i v) : val(v) {}
     v_int8x16(schar v0, schar v1, schar v2, schar v3, schar v4, schar v5, schar v6, schar v7,
@@ -125,6 +127,7 @@ struct v_uint16x8
     typedef __m128i vector_type;
     enum { nlanes = 8 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_uint16x8() {}
     explicit v_uint16x8(__m128i v) : val(v) {}
     v_uint16x8(ushort v0, ushort v1, ushort v2, ushort v3, ushort v4, ushort v5, ushort v6, ushort v7)
@@ -147,6 +150,7 @@ struct v_int16x8
     typedef __m128i vector_type;
     enum { nlanes = 8 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_int16x8() {}
     explicit v_int16x8(__m128i v) : val(v) {}
     v_int16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
@@ -169,6 +173,7 @@ struct v_uint32x4
     typedef __m128i vector_type;
     enum { nlanes = 4 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_uint32x4() {}
     explicit v_uint32x4(__m128i v) : val(v) {}
     v_uint32x4(unsigned v0, unsigned v1, unsigned v2, unsigned v3)
@@ -190,6 +195,7 @@ struct v_int32x4
     typedef __m128i vector_type;
     enum { nlanes = 4 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_int32x4() {}
     explicit v_int32x4(__m128i v) : val(v) {}
     v_int32x4(int v0, int v1, int v2, int v3)
@@ -211,6 +217,7 @@ struct v_float32x4
     typedef __m128 vector_type;
     enum { nlanes = 4 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_float32x4() {}
     explicit v_float32x4(__m128 v) : val(v) {}
     v_float32x4(float v0, float v1, float v2, float v3)
@@ -232,6 +239,7 @@ struct v_uint64x2
     typedef __m128i vector_type;
     enum { nlanes = 2 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_uint64x2() {}
     explicit v_uint64x2(__m128i v) : val(v) {}
     v_uint64x2(uint64 v0, uint64 v1)
@@ -259,6 +267,7 @@ struct v_int64x2
     typedef __m128i vector_type;
     enum { nlanes = 2 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_int64x2() {}
     explicit v_int64x2(__m128i v) : val(v) {}
     v_int64x2(int64 v0, int64 v1)
@@ -286,6 +295,7 @@ struct v_float64x2
     typedef __m128d vector_type;
     enum { nlanes = 2 };
 
+    /* coverity[uninit_ctor]: suppress warning */
     v_float64x2() {}
     explicit v_float64x2(__m128d v) : val(v) {}
     v_float64x2(double v0, double v1)
