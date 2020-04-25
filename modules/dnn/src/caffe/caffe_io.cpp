@@ -1120,11 +1120,12 @@ bool ReadProtoFromTextFile(const char* filename, Message* proto) {
     std::ifstream fs(filename, std::ifstream::in);
     CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
     IstreamInputStream input(&fs);
+    google::protobuf::TextFormat::Parser parser;
 #ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
-    return google::protobuf::TextFormat::Parser(true).Parse(&input, proto);
-#else
-    return google::protobuf::TextFormat::Parser().Parse(&input, proto);
+    parser.AllowUnknownField(true);
+    parser.SetRecursionLimit(1000);
 #endif
+    return parser.Parse(&input, proto);
 }
 
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
@@ -1137,12 +1138,12 @@ bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
 
 bool ReadProtoFromTextBuffer(const char* data, size_t len, Message* proto) {
     ArrayInputStream input(data, len);
+    google::protobuf::TextFormat::Parser parser;
 #ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
-    return google::protobuf::TextFormat::Parser(true).Parse(&input, proto);
-#else
-    return google::protobuf::TextFormat::Parser().Parse(&input, proto);
+    parser.AllowUnknownField(true);
+    parser.SetRecursionLimit(1000);
 #endif
-
+    return parser.Parse(&input, proto);
 }
 
 
