@@ -7,99 +7,74 @@
 
 namespace opencv_test { namespace {
 
+uchar synthethic_gradient[] = {10, 20,  30,  40,  50,  60,  70,  80,  90,
+                               20, 30,  40,  50,  60,  70,  80,  90,  100,
+                               30, 40,  50,  60,  70,  80,  90,  100, 110,
+                               40, 50,  60,  70,  80,  90,  100, 110, 120,
+                               50, 60,  70,  80,  90,  100, 110, 120, 130,
+                               60, 70,  80,  90,  100, 110, 120, 130, 140,
+                               70, 80,  90,  100, 110, 120, 130, 140, 150,
+                               80, 90,  100, 110, 120, 130, 140, 150, 160,
+                               90, 100, 110, 120, 130, 140, 150, 160, 170};
+
 TEST(Imgproc_Resize, accuracy_INTER_NEAREST_PIL_QUADRATIC)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "gradient.png";
-
-    Mat img;
-    ASSERT_NO_THROW(img = imread(filename, IMREAD_GRAYSCALE));
-    ASSERT_FALSE(img.empty());
+    Mat img = Mat(9, 9, CV_8UC1, synthethic_gradient);
 
     Mat target_img;
     resize(img, target_img, Size(3, 3), 0, 0, INTER_NEAREST_PIL);
 
-    uchar data[] = {41, 125, 209, 43, 127, 211, 45, 129, 213};
+    uchar data[] = {30, 60, 90, 60, 90, 120, 90, 120, 150};
     Mat expected_img = Mat(3, 3, CV_8UC1, data);
     ASSERT_EQ( cvtest::norm(target_img, expected_img, NORM_INF), 0.);
 }
 
 TEST(Imgproc_Resize, accuracy_INTER_NEAREST_PIL_NONQUADRATIC)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "gradient.png";
-
-    Mat img;
-    ASSERT_NO_THROW(img = imread(filename, IMREAD_GRAYSCALE));
-    ASSERT_FALSE(img.empty());
+    Mat img = Mat(9, 9, CV_8UC1, synthethic_gradient);
 
     Mat target_img;
-    resize(img, target_img, Size(7, 11), 0, 0, INTER_NEAREST_PIL);
+    resize(img, target_img, Size(5, 7), 0, 0, INTER_NEAREST_PIL);
 
-    uchar data[] = {16,  52,  88, 125, 160, 196, 232,
-                    17,  52,  89, 125, 160, 196, 233,
-                    17,  53,  89, 126, 161, 197, 233,
-                    17,  54,  89, 126, 162, 197, 234,
-                    18,  54,  90, 126, 162, 198, 234,
-                    18,  54,  91, 127, 162, 198, 235,
-                    19,  55,  91, 127, 162, 199, 235,
-                    19,  55,  91, 127, 163, 199, 235,
-                    20,  56,  92, 128, 164, 200, 236,
-                    20,  56,  92, 129, 164, 200, 236,
-                    20,  56,  93, 129, 165, 201, 237};
-    Mat expected_img = Mat(11, 7, CV_8UC1, data);
+    uchar data[] = {10, 30, 50, 70, 90,
+                    20, 40, 60, 80, 100,
+                    40, 60, 80, 100, 120,
+                    50, 70, 90, 110, 130,
+                    60, 80, 100,120, 140,
+                    80, 100,120,140, 160,
+                    90, 110,130,150, 170};
+    Mat expected_img = Mat(7, 5, CV_8UC1, data);
     ASSERT_EQ( cvtest::norm(target_img, expected_img, NORM_INF), 0.);
 }
 
-TEST(Imgproc_Resize, accuracy_INTER_NEAREST_PIL_DOWN_UP_7_11)
+TEST(Imgproc_Resize, accuracy_INTER_NEAREST_PIL_DOWN_UP_7_5)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "gradient.png";
-
-    Mat img;
-    ASSERT_NO_THROW(img = imread(filename, IMREAD_GRAYSCALE));
-    ASSERT_FALSE(img.empty());
+    Mat img = Mat(9, 9, CV_8UC1, synthethic_gradient);
 
     Mat target_img;
     resize(img, target_img, Size(3, 3), 0, 0, INTER_NEAREST_PIL);
-    resize(target_img, target_img, Size(7, 11), 0, 0, INTER_NEAREST_PIL);
+    resize(target_img, target_img, Size(7, 5), 0, 0, INTER_NEAREST_PIL);
 
-    uchar data[] = {41,  41, 125, 125, 125, 209, 209,
-                  41,  41, 125, 125, 125, 209, 209,
-                  41,  41, 125, 125, 125, 209, 209,
-                  41,  41, 125, 125, 125, 209, 209,
-                  43,  43, 127, 127, 127, 211, 211,
-                  43,  43, 127, 127, 127, 211, 211,
-                  43,  43, 127, 127, 127, 211, 211,
-                  45,  45, 129, 129, 129, 213, 213,
-                  45,  45, 129, 129, 129, 213, 213,
-                  45,  45, 129, 129, 129, 213, 213,
-                  45,  45, 129, 129, 129, 213, 213};
-    Mat expected_img = Mat(11, 7, CV_8UC1, data);
+    uchar data[] = {30, 30, 60, 60, 60, 90, 90,
+                    30, 30, 60, 60, 60, 90, 90,
+                    60, 60, 90, 90, 90, 120, 120,
+                    90, 90, 120,120,120,150, 150,
+                    90, 90, 120,120,120,150, 150};
+    Mat expected_img = Mat(5, 7, CV_8UC1, data);
     ASSERT_EQ( cvtest::norm(target_img, expected_img, NORM_INF), 0.);
 }
 
-TEST(Imgproc_Resize, accuracy_INTER_NEAREST_PIL_DOWN_UP_11_7)
+TEST(Imgproc_Resize, accuracy_INTER_NEAREST_PIL_DOWN_UP_4_2)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "gradient.png";
-
-    Mat img;
-    ASSERT_NO_THROW(img = imread(filename, IMREAD_GRAYSCALE));
-    ASSERT_FALSE(img.empty());
+    Mat img = Mat(9, 9, CV_8UC1, synthethic_gradient);
 
     Mat target_img;
     resize(img, target_img, Size(3, 3), 0, 0, INTER_NEAREST_PIL);
-    resize(target_img, target_img, Size(11, 7), 0, 0, INTER_NEAREST_PIL);
+    resize(target_img, target_img, Size(4, 2), 0, 0, INTER_NEAREST_PIL);
 
-    uchar data[] = {41,  41,  41,  41, 125, 125, 125, 209, 209, 209, 209,
-                  41,  41,  41,  41, 125, 125, 125, 209, 209, 209, 209,
-                  43,  43,  43,  43, 127, 127, 127, 211, 211, 211, 211,
-                  43,  43,  43,  43, 127, 127, 127, 211, 211, 211, 211,
-                  43,  43,  43,  43, 127, 127, 127, 211, 211, 211, 211,
-                  45,  45,  45,  45, 129, 129, 129, 213, 213, 213, 213,
-                  45,  45,  45,  45, 129, 129, 129, 213, 213, 213, 213};
-    Mat expected_img = Mat(7, 11, CV_8UC1, data);
+    uchar data[] = {30, 60, 60, 90,
+                    90, 120, 120, 150};
+    Mat expected_img = Mat(2, 4, CV_8UC1, data);
     ASSERT_EQ( cvtest::norm(target_img, expected_img, NORM_INF), 0.);
 }
 
