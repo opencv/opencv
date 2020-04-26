@@ -171,7 +171,7 @@ namespace cv
             Camera(double fx, double fy, double cx, double cy, const Size &window_size);
 
             /** @overload
-            @param fov Field of view (horizontal, vertical)
+            @param fov Field of view (horizontal, vertical) in radians
             @param window_size Size of the window. Principal point is at the center of the window
             by default.
             */
