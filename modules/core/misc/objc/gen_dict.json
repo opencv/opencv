@@ -67,6 +67,7 @@
         "meanStdDev" : { "mean"   : {"ctype" : "vector_double"},
                          "stddev" : {"ctype" : "vector_double"} },
         "mixChannels" : { "dst" : {"attrib" : []} },
+        "rotate" : { "rotateCode" : {"ctype" : "RotateFlags"} },
         "norm" : { "normType" : {"ctype" : "NormTypes"} },
         "batchDistance" : { "normType" : {"ctype" : "NormTypes"} },
         "normalize" : { "norm_type" : {"ctype" : "NormTypes"} },

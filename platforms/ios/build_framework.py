@@ -62,6 +62,7 @@ class Builder:
         self.dynamic = dynamic
         self.bitcodedisabled = bitcodedisabled
         self.exclude = exclude
+        self.build_objc_wrapper = not "objc" in self.exclude
         self.disable = disable
         self.enablenonfree = enablenonfree
         self.targets = targets
@@ -116,6 +117,10 @@ class Builder:
             if self.dynamic == False:
                 self.mergeLibs(mainBD)
         self.makeFramework(outdir, dirs)
+        if self.build_objc_wrapper:
+            print("To run tests call:")
+            print(sys.argv[0].replace("build_framework", "run_tests") + " --framework_dir=" +  outdir + " " + dirs[0] +  "/modules/objc/test")
+            self.copy_samples(outdir)
 
     def build(self, outdir):
         try:
@@ -229,18 +234,19 @@ class Builder:
         buildcmd = self.getBuildCommand(arch, target)
         execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir)
         execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-P", "cmake_install.cmake"], cwd = builddir)
-        cmakecmd = self.makeCMakeCmd(arch, target, builddir + "/modules/objc/gen", cmakeargs)
-        cmakecmd.append("-DBUILD_ROOT=%s" % builddir)
-        cmakecmd.append("-DCMAKE_INSTALL_NAME_TOOL=install_name_tool")
-        execute(cmakecmd, cwd = builddir + "/modules/objc/framework_build")
+        if self.build_objc_wrapper:
+            cmakecmd = self.makeCMakeCmd(arch, target, builddir + "/modules/objc/gen", cmakeargs)
+            cmakecmd.append("-DBUILD_ROOT=%s" % builddir)
+            cmakecmd.append("-DCMAKE_INSTALL_NAME_TOOL=install_name_tool")
+            execute(cmakecmd, cwd = builddir + "/modules/objc/framework_build")
 
-        execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir + "/modules/objc/framework_build")
-        execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-DCMAKE_INSTALL_PREFIX=%s" % (builddir + "/install"), "-P", "cmake_install.cmake"], cwd = builddir + "/modules/objc/framework_build")
+            execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir + "/modules/objc/framework_build")
+            execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-DCMAKE_INSTALL_PREFIX=%s" % (builddir + "/install"), "-P", "cmake_install.cmake"], cwd = builddir + "/modules/objc/framework_build")
 
     def mergeLibs(self, builddir):
         res = os.path.join(builddir, "lib", self.getConfiguration(), "libopencv_merged.a")
         libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
-        module = [os.path.join(builddir, "install", "lib", self.framework_name + ".framework", self.framework_name)]
+        module = [os.path.join(builddir, "install", "lib", self.framework_name + ".framework", self.framework_name)] if self.build_objc_wrapper else []
 
         libs3 = glob.glob(os.path.join(builddir, "install", "lib", "3rdparty", "*.a"))
         print("Merging libraries:\n\t%s" % "\n\t".join(libs + libs3 + module), file=sys.stderr)
@@ -274,24 +280,24 @@ class Builder:
                     body = body.replace("include <opencv2/", "include <" + name + "/")
                     with open(filepath, "w") as file:
                         file.write(body)
-        copy_tree(os.path.join(builddirs[0], "install", "lib", name + ".framework", "Headers"), os.path.join(dstdir, "Headers"))
-
-        platform_name_map = {
-                "arm": "armv7-apple-ios",
-                "arm64": "arm64-apple-ios",
-                "i386": "i386-apple-ios-simulator",
-                "x86_64": "x86_64-apple-ios-simulator",
-            } if builddirs[0].find("iphone") != -1 else {
-                "x86_64": "x86_64-apple-macos",
-            }
-        for d in builddirs:
-            copy_tree(os.path.join(d, "install", "lib", name + ".framework", "Modules"), os.path.join(dstdir, "Modules"))
-        for dirname, dirs, files in os.walk(os.path.join(dstdir, "Modules")):
-            for filename in files:
-                filestem = os.path.splitext(filename)[0]
-                fileext = os.path.splitext(filename)[1]
-                if filestem in platform_name_map:
-                    os.rename(os.path.join(dirname, filename), os.path.join(dirname, platform_name_map[filestem] + fileext))
+        if self.build_objc_wrapper:
+            copy_tree(os.path.join(builddirs[0], "install", "lib", name + ".framework", "Headers"), os.path.join(dstdir, "Headers"))
+            platform_name_map = {
+                    "arm": "armv7-apple-ios",
+                    "arm64": "arm64-apple-ios",
+                    "i386": "i386-apple-ios-simulator",
+                    "x86_64": "x86_64-apple-ios-simulator",
+                } if builddirs[0].find("iphone") != -1 else {
+                    "x86_64": "x86_64-apple-macos",
+                }
+            for d in builddirs:
+                copy_tree(os.path.join(d, "install", "lib", name + ".framework", "Modules"), os.path.join(dstdir, "Modules"))
+            for dirname, dirs, files in os.walk(os.path.join(dstdir, "Modules")):
+                for filename in files:
+                    filestem = os.path.splitext(filename)[0]
+                    fileext = os.path.splitext(filename)[1]
+                    if filestem in platform_name_map:
+                        os.rename(os.path.join(dirname, filename), os.path.join(dirname, platform_name_map[filestem] + fileext))
 
         # make universal static lib
         libs = [os.path.join(d, "lib", self.getConfiguration(), libname) for d in builddirs]
@@ -324,6 +330,9 @@ class Builder:
                 d = os.path.join(framework_dir, *l[1])
                 os.symlink(s, d)
 
+    def copy_samples(self, outdir):
+        return
+
 class iOSBuilder(Builder):
 
     def getToolchain(self, arch, target):
@@ -339,6 +348,9 @@ class iOSBuilder(Builder):
         ]
         return args
 
+    def copy_samples(self, outdir):
+        print('Copying samples to: ' + outdir)
+        shutil.copytree(os.path.join(self.opencv, "samples", "swift", "ios"), os.path.join(outdir, "samples"))
 
 if __name__ == "__main__":
     folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
@@ -356,7 +368,8 @@ if __name__ == "__main__":
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--debug', default=False, dest='debug', action='store_true', help='Build "Debug" binaries (disabled by default)')
     parser.add_argument('--debug_info', default=False, dest='debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
-    parser.add_argument('--framework_name', default='OpenCV', dest='framework_name', action='store_true', help='Name of OpenCV framework (default: OpenCV, set to opencv2 for compatibility with old version)')
+    parser.add_argument('--framework_name', default='OpenCV', dest='framework_name', action='store_true', help='Name of OpenCV framework (default: OpenCV, set to opencv2 for compatibility with old framework version)')
+    parser.add_argument('--legacy_build', default=False, dest='legacy_build', action='store_true', help='Build legacy opencv2 framework (default: False, equivalent to "--framework_name=opencv2 --without=objc")')
     args = parser.parse_args()
 
     os.environ['IPHONEOS_DEPLOYMENT_TARGET'] = args.iphoneos_deployment_target
@@ -365,6 +378,10 @@ if __name__ == "__main__":
     print('Using iPhoneOS ARCHS=' + str(iphoneos_archs))
     iphonesimulator_archs = args.iphonesimulator_archs.split(',')
     print('Using iPhoneSimulator ARCHS=' + str(iphonesimulator_archs))
+    if args.legacy_build:
+        args.framework_name = "opencv2"
+        if not "objc" in args.without:
+            args.without.append("objc")
 
     b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without, args.disable, args.enablenonfree,
         [
