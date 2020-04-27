@@ -191,7 +191,7 @@ enum VideoWriterProperties {
   VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
   VIDEOWRITER_PROP_NSTRIPES = 3,   //!< Number of stripes for parallel encoding. -1 for auto detection.
   VIDEOWRITER_PROP_IS_COLOR = 4    //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
-                                   //!< will work with grayscale frames (the flag is ignored on MSMF and Intel MFX backends)
+                                   //!< will work with grayscale frames.
 };
 
 //! @} videoio_flags_base
@@ -878,7 +878,7 @@ public:
     @param fps Framerate of the created video stream.
     @param frameSize Size of the video frames.
     @param isColor If it is not zero, the encoder will expect and encode color frames, otherwise it
-    will work with grayscale frames (the flag is ignored on MSMF and Intel MFX backends).
+    will work with grayscale frames.
 
     @b Tips:
     - With some backends `fourcc=-1` pops up the codec selection dialog from the system.
