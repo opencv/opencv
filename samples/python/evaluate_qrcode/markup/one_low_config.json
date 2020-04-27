@@ -1,0 +1,148 @@
+{
+    "test_images": [
+        {
+            "image_name": "IMG_2710.JPG",
+            "points": [
+                [
+                    "2043.00",
+                    "1657.00",
+                    "1659.00",
+                    "1660.00",
+                    "1659.00",
+                    "1273.00",
+                    "2044.00",
+                    "1274.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2711.JPG",
+            "points": [
+                [
+                    "2574.00",
+                    "1741.00",
+                    "2241.00",
+                    "1745.00",
+                    "2239.00",
+                    "1332.00",
+                    "2574.00",
+                    "1337.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2712.JPG",
+            "points": [
+                [
+                    "2533.00",
+                    "1848.00",
+                    "2816.00",
+                    "1880.00",
+                    "2817.00",
+                    "1343.00",
+                    "2534.00",
+                    "1333.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2713.JPG",
+            "points": [
+                [
+                    "1389.70",
+                    "857.97",
+                    "3056.78",
+                    "1075.16",
+                    "2841.00",
+                    "2726.00",
+                    "1091.63",
+                    "2474.12"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2714.JPG",
+            "points": [
+                [
+                    "1465.00",
+                    "802.00",
+                    "2797.00",
+                    "1214.00",
+                    "2222.00",
+                    "2455.00",
+                    "823.00",
+                    "1962.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2715.JPG",
+            "points": [
+                [
+                    "1034.00",
+                    "770.00",
+                    "2862.00",
+                    "1047.00",
+                    "2169.00",
+                    "2145.00",
+                    "74.00",
+                    "1724.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2716.JPG",
+            "points": [
+                [
+                    "614.64",
+                    "1260.01",
+                    "1472.00",
+                    "930.00",
+                    "1946.00",
+                    "1449.00",
+                    "1023.00",
+                    "1836.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2717.JPG",
+            "points": [
+                [
+                    "2266.27",
+                    "1380.75",
+                    "3257.00",
+                    "1581.00",
+                    "3061.12",
+                    "2565.66",
+                    "2042.00",
+                    "2349.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        }
+    ]
+}

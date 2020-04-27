@@ -1,0 +1,274 @@
+{
+    "test_images": [
+        {
+            "image_name": "20110817_066.jpg",
+            "points": [
+                [
+                    "251.00",
+                    "471.00",
+                    "864.00",
+                    "80.00",
+                    "1494.00",
+                    "458.00",
+                    "967.00",
+                    "1030.00"
+                ]
+            ],
+            "infos": [
+                "Your friend is the man who knows all about you and still likes you. (Elbert Hubbard) "
+            ]
+        },
+        {
+            "image_name": "IMG_20120226_145048.jpg",
+            "points": [
+                [
+                    "395.00",
+                    "678.00",
+                    "499.00",
+                    "679.00",
+                    "500.00",
+                    "779.00",
+                    "396.00",
+                    "778.00"
+                ],
+                [
+                    "1729.00",
+                    "759.00",
+                    "1633.00",
+                    "847.00",
+                    "1550.88",
+                    "757.11",
+                    "1647.00",
+                    "669.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)",
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_20120226_151917.jpg",
+            "points": [
+                [
+                    "512.10",
+                    "286.40",
+                    "859.00",
+                    "345.00",
+                    "873.00",
+                    "793.00",
+                    "566.00",
+                    "679.00"
+                ],
+                [
+                    "47.00",
+                    "1379.00",
+                    "297.75",
+                    "1216.09",
+                    "341.65",
+                    "1409.89",
+                    "114.75",
+                    "1573.89"
+                ]
+            ],
+            "infos": [
+                "http://jdi.na.vutbr.cz/uvod ",
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_20120226_151933.jpg",
+            "points": [
+                [
+                    "89.00",
+                    "283.00",
+                    "738.97",
+                    "184.82",
+                    "755.17",
+                    "929.72",
+                    "47.00",
+                    "977.00"
+                ]
+            ],
+            "infos": [
+                "http://jdi.na.vutbr.cz/uvod "
+            ]
+        },
+        {
+            "image_name": "IMG_20120226_153733.jpg",
+            "points": [
+                [
+                    "1395.00",
+                    "142.00",
+                    "1666.50",
+                    "332.20",
+                    "1431.00",
+                    "653.00",
+                    "1153.40",
+                    "500.20"
+                ],
+                [
+                    "981.00",
+                    "686.00",
+                    "1064.00",
+                    "655.00",
+                    "1080.00",
+                    "733.00",
+                    "996.00",
+                    "758.00"
+                ],
+                [
+                    "416.67",
+                    "621.74",
+                    "727.24",
+                    "859.59",
+                    "495.80",
+                    "1080.00",
+                    "399.56",
+                    "1079.86",
+                    "132.96",
+                    "918.28"
+                ]
+            ],
+            "infos": [
+                "http://jdi.na.vutbr.cz/uvod ",
+                "True friends stab you in the front. (Oscar Wilde)",
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_20120226_155947.jpg",
+            "points": [
+                [
+                    "354.00",
+                    "1220.00",
+                    "500.00",
+                    "1211.00",
+                    "510.00",
+                    "1359.00",
+                    "362.00",
+                    "1368.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_20120226_161648.jpg",
+            "points": [
+                [
+                    "772.00",
+                    "546.00",
+                    "1118.59",
+                    "474.06",
+                    "1122.00",
+                    "888.00",
+                    "784.00",
+                    "1033.00"
+                ],
+                [
+                    "478.00",
+                    "89.00",
+                    "485.12",
+                    "410.27",
+                    "161.00",
+                    "434.00",
+                    "144.00",
+                    "68.00"
+                ]
+            ],
+            "infos": [
+                "Your friend is the man who knows all about you and still likes you. (Elbert Hubbard) ",
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_3003.JPG",
+            "points": [
+                [
+                    "1219.00",
+                    "269.00",
+                    "1372.00",
+                    "268.00",
+                    "1377.00",
+                    "421.00",
+                    "1223.00",
+                    "422.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_3070.JPG",
+            "points": [
+                [
+                    "1440.00",
+                    "573.00",
+                    "1754.00",
+                    "577.00",
+                    "1750.00",
+                    "891.00",
+                    "1434.00",
+                    "883.00"
+                ],
+                [
+                    "336.22",
+                    "211.64",
+                    "692.92",
+                    "216.24",
+                    "689.32",
+                    "571.34",
+                    "330.02",
+                    "566.64"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)",
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_3083.JPG",
+            "points": [
+                [
+                    "82.00",
+                    "674.00",
+                    "290.00",
+                    "522.00",
+                    "442.75",
+                    "724.55",
+                    "236.15",
+                    "879.55"
+                ],
+                [
+                    "1409.00",
+                    "143.00",
+                    "1569.00",
+                    "107.00",
+                    "1575.90",
+                    "400.40",
+                    "1410.00",
+                    "429.00"
+                ],
+                [
+                    "892.00",
+                    "765.00",
+                    "1119.00",
+                    "768.00",
+                    "1118.00",
+                    "997.00",
+                    "889.00",
+                    "994.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)",
+                "Love is friendship, set on fire. (Jeremy Taylor) ",
+                "http://jdi.na.vutbr.cz/uvod "
+            ]
+        }
+    ]
+}

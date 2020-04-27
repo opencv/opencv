@@ -1,0 +1,76 @@
+{
+    "test_images": [
+        {
+            "image_name": "IMG_2723.JPG",
+            "points": [
+                [
+                    "1223.00",
+                    "1994.00",
+                    "1532.00",
+                    "2001.00",
+                    "1542.00",
+                    "2321.00",
+                    "1234.00",
+                    "2312.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2730.JPG",
+            "points": [
+                [
+                    "2825.00",
+                    "1881.00",
+                    "3003.00",
+                    "1996.00",
+                    "2887.00",
+                    "2174.00",
+                    "2709.00",
+                    "2057.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2731.JPG",
+            "points": [
+                [
+                    "2401.95",
+                    "1214.43",
+                    "2821.00",
+                    "1504.00",
+                    "2567.17",
+                    "2082.39",
+                    "2169.96",
+                    "1762.35"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2738.JPG",
+            "points": [
+                [
+                    "2743.00",
+                    "2208.00",
+                    "1985.17",
+                    "1858.27",
+                    "2302.41",
+                    "1089.60",
+                    "3079.00",
+                    "1425.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        }
+    ]
+}

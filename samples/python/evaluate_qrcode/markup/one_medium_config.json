@@ -1,0 +1,238 @@
+{
+    "test_images": [
+        {
+            "image_name": "IMG_2718.JPG",
+            "points": [
+                [
+                    "1076.00",
+                    "1551.00",
+                    "1482.00",
+                    "1654.00",
+                    "1524.00",
+                    "2034.00",
+                    "1122.00",
+                    "1923.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2719.JPG",
+            "points": [
+                [
+                    "1424.28",
+                    "915.04",
+                    "2002.75",
+                    "966.81",
+                    "2049.00",
+                    "1464.00",
+                    "1498.00",
+                    "1406.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2720.JPG",
+            "points": [
+                [
+                    "1472.00",
+                    "2159.00",
+                    "1448.00",
+                    "1798.00",
+                    "1814.00",
+                    "1769.00",
+                    "1840.00",
+                    "2131.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2722.JPG",
+            "points": [
+                [
+                    "1740.00",
+                    "2620.00",
+                    "1307.15",
+                    "2374.32",
+                    "1680.00",
+                    "2106.00",
+                    "2108.21",
+                    "2333.86"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2724.JPG",
+            "points": [
+                [
+                    "2851.00",
+                    "1637.00",
+                    "3349.00",
+                    "1692.00",
+                    "3334.00",
+                    "2432.00",
+                    "2840.00",
+                    "2333.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "IMG_2725.JPG",
+            "points": [
+                [
+                    "1970.86",
+                    "2292.89",
+                    "2553.51",
+                    "372.68",
+                    "4522.00",
+                    "918.00",
+                    "3985.42",
+                    "2869.55"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2726.JPG",
+            "points": [
+                [
+                    "1894.00",
+                    "2064.00",
+                    "2763.00",
+                    "972.00",
+                    "4493.00",
+                    "1498.00",
+                    "3783.00",
+                    "2696.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2727.JPG",
+            "points": [
+                [
+                    "2352.00",
+                    "666.00",
+                    "3169.00",
+                    "1386.00",
+                    "2408.42",
+                    "2192.59",
+                    "1593.00",
+                    "1437.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2728.JPG",
+            "points": [
+                [
+                    "2702.56",
+                    "1623.98",
+                    "2857.03",
+                    "2754.05",
+                    "1318.83",
+                    "2828.31",
+                    "1333.47",
+                    "1678.18"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2729.JPG",
+            "points": [
+                [
+                    "2886.00",
+                    "1066.00",
+                    "1941.59",
+                    "1693.90",
+                    "1286.31",
+                    "910.71",
+                    "2195.25",
+                    "378.46"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2736.JPG",
+            "points": [
+                [
+                    "2283.00",
+                    "1109.00",
+                    "3668.00",
+                    "1098.00",
+                    "3749.00",
+                    "2468.00",
+                    "2244.00",
+                    "2473.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2737.JPG",
+            "points": [
+                [
+                    "2536.00",
+                    "1415.00",
+                    "3590.00",
+                    "1898.00",
+                    "3012.00",
+                    "2872.00",
+                    "1889.00",
+                    "2285.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        },
+        {
+            "image_name": "IMG_2740.JPG",
+            "points": [
+                [
+                    "2021.59",
+                    "520.92",
+                    "2533.00",
+                    "624.00",
+                    "2421.00",
+                    "1145.00",
+                    "1910.00",
+                    "1039.00"
+                ]
+            ],
+            "infos": [
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        }
+    ]
+}

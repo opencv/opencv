@@ -1,0 +1,420 @@
+{
+    "test_images": [
+        {
+            "image_name": "20110817_013.jpg",
+            "points": [
+                [
+                    "810.43",
+                    "265.91",
+                    "1718.73",
+                    "262.21",
+                    "1734.73",
+                    "1167.31",
+                    "822.33",
+                    "1187.71"
+                ]
+            ],
+            "infos": [
+                "Love is composed of a single soul inhabiting two bodies. (Aristotle) "
+            ]
+        },
+        {
+            "image_name": "20110817_030.jpg",
+            "points": [
+                [
+                    "826.65",
+                    "428.53",
+                    "1690.85",
+                    "440.13",
+                    "1885.00",
+                    "1111.00",
+                    "713.35",
+                    "1110.63"
+                ]
+            ],
+            "infos": [
+                "Love is like a virus. It can happen to anybody at any time. (Maya Angelou) "
+            ]
+        },
+        {
+            "image_name": "20110817_040.jpg",
+            "points": [
+                [
+                    "705.00",
+                    "359.00",
+                    "1663.00",
+                    "391.00",
+                    "1797.00",
+                    "1231.00",
+                    "505.23",
+                    "1201.95"
+                ]
+            ],
+            "infos": [
+                "Love is like a virus. It can happen to anybody at any time. (Maya Angelou) "
+            ]
+        },
+        {
+            "image_name": "20110817_043.jpg",
+            "points": [
+                [
+                    "786.10",
+                    "790.70",
+                    "1254.20",
+                    "263.20",
+                    "1782.10",
+                    "721.80",
+                    "1332.70",
+                    "1263.00"
+                ]
+            ],
+            "infos": [
+                "Intellectual growth should commence at birth and cease only at death. (Albert Einstein) "
+            ]
+        },
+        {
+            "image_name": "20110817_048.jpg",
+            "points": [
+                [
+                    "698.24",
+                    "949.88",
+                    "1055.00",
+                    "228.00",
+                    "1770.54",
+                    "575.98",
+                    "1428.75",
+                    "1297.98"
+                ]
+            ],
+            "infos": [
+                "Love is composed of a single soul inhabiting two bodies. (Aristotle) "
+            ]
+        },
+        {
+            "image_name": "20110817_089.jpg",
+            "points": [
+                [
+                    "961.70",
+                    "459.00",
+                    "1399.00",
+                    "482.00",
+                    "1394.00",
+                    "916.00",
+                    "947.90",
+                    "905.30"
+                ]
+            ],
+            "infos": [
+                "You are not angry with people when you laugh at them. Humor teaches tolerance. (W. Somerset Maugham) "
+            ]
+        },
+        {
+            "image_name": "20110817_096.jpg",
+            "points": [
+                [
+                    "1068.01",
+                    "479.12",
+                    "1481.81",
+                    "493.72",
+                    "1474.81",
+                    "911.02",
+                    "1055.11",
+                    "901.12"
+                ]
+            ],
+            "infos": [
+                "I think the next best thing to solving a problem is finding some humor in it. (F.H. Clark) "
+            ]
+        },
+        {
+            "image_name": "20110817_106.jpg",
+            "points": [
+                [
+                    "1016.90",
+                    "738.30",
+                    "1457.00",
+                    "497.00",
+                    "1706.30",
+                    "938.50",
+                    "1261.00",
+                    "1187.00"
+                ]
+            ],
+            "infos": [
+                "I think the next best thing to solving a problem is finding some humor in it. (F.H. Clark) "
+            ]
+        },
+        {
+            "image_name": "20110817_143.jpg",
+            "points": [
+                [
+                    "732.52",
+                    "641.21",
+                    "1263.86",
+                    "213.72",
+                    "1671.00",
+                    "804.00",
+                    "1278.38",
+                    "1322.60"
+                ]
+            ],
+            "infos": [
+                "There are in fact two things, science and opinion: the former begets knowledge, the latter ignorance. (Hippocrates) "
+            ]
+        },
+        {
+            "image_name": "20110817_175.jpg",
+            "points": [
+                [
+                    "652.60",
+                    "316.80",
+                    "1465.60",
+                    "271.10",
+                    "1489.50",
+                    "1051.50",
+                    "641.40",
+                    "1117.20"
+                ]
+            ],
+            "infos": [
+                "Life is tough, and if you have the ability to laugh at it you have the ability to enjoy it. (Salma Hayek) "
+            ]
+        },
+        {
+            "image_name": "20110817_177.jpg",
+            "points": [
+                [
+                    "614.00",
+                    "753.00",
+                    "1305.00",
+                    "242.00",
+                    "2010.00",
+                    "788.00",
+                    "1366.00",
+                    "1440.00",
+                    "1322.00",
+                    "1440.00"
+                ]
+            ],
+            "infos": [
+                "Science is simply common sense at its best. That is, rigidly accurate in observation, and merciless to fallacy in logic. (Thomas Huxley) "
+            ]
+        },
+        {
+            "image_name": "20110817_201.jpg",
+            "points": [
+                [
+                    "963.09",
+                    "459.95",
+                    "1717.69",
+                    "463.45",
+                    "1827.00",
+                    "1000.00",
+                    "824.00",
+                    "974.00"
+                ]
+            ],
+            "infos": [
+                "You can make more friends in two months by becoming interested in other people than you can in two years by trying to get other people interested in you. (Dale Carnegie) "
+            ]
+        },
+        {
+            "image_name": "20110817_206.jpg",
+            "points": [
+                [
+                    "1330.39",
+                    "137.13",
+                    "2103.00",
+                    "617.00",
+                    "1580.00",
+                    "1386.00",
+                    "902.85",
+                    "871.26"
+                ]
+            ],
+            "infos": [
+                "Science is simply common sense at its best. That is, rigidly accurate in observation, and merciless to fallacy in logic. (Thomas Huxley) "
+            ]
+        },
+        {
+            "image_name": "20110817_207.jpg",
+            "points": [
+                [
+                    "655.00",
+                    "750.00",
+                    "1144.32",
+                    "68.79",
+                    "1835.15",
+                    "574.54",
+                    "1292.34",
+                    "1286.01"
+                ]
+            ],
+            "infos": [
+                "Education is like a double-edged sword. It may be turned to dangerous uses if it is not properly handled. (Wu Ting-Fang) "
+            ]
+        },
+        {
+            "image_name": "20110817_211.jpg",
+            "points": [
+                [
+                    "1052.00",
+                    "562.00",
+                    "1445.00",
+                    "571.00",
+                    "1443.50",
+                    "958.90",
+                    "1032.60",
+                    "953.10"
+                ]
+            ],
+            "infos": [
+                "Courage is being scared to death but saddling up anyway. (John Wayne) "
+            ]
+        },
+        {
+            "image_name": "20110817_299.jpg",
+            "points": [
+                [
+                    "555.00",
+                    "1196.00",
+                    "585.00",
+                    "68.00",
+                    "1719.00",
+                    "68.00",
+                    "1704.00",
+                    "1213.00"
+                ]
+            ],
+            "infos": [
+                "Success is never final. Failure is never fatal. It is courage that counts. (John Wooden) "
+            ]
+        },
+        {
+            "image_name": "20110817_317.jpg",
+            "points": [
+                [
+                    "704.01",
+                    "226.78",
+                    "1725.71",
+                    "247.98",
+                    "1843.31",
+                    "1242.48",
+                    "606.91",
+                    "1257.08"
+                ]
+            ],
+            "infos": [
+                "Success is never final. Failure is never fatal. It is courage that counts. (John Wooden) "
+            ]
+        },
+        {
+            "image_name": "20110817_326.jpg",
+            "points": [
+                [
+                    "1056.34",
+                    "1091.02",
+                    "1132.73",
+                    "641.51",
+                    "1572.61",
+                    "712.26",
+                    "1511.04",
+                    "1161.61"
+                ]
+            ],
+            "infos": [
+                "Love does not make the world go round, love is what makes the ride worthwhile. (Elizabeth Browning    ) "
+            ]
+        },
+        {
+            "image_name": "20110817_355.jpg",
+            "points": [
+                [
+                    "691.10",
+                    "532.10",
+                    "1406.10",
+                    "87.50",
+                    "1861.00",
+                    "831.00",
+                    "1090.00",
+                    "1272.00"
+                ]
+            ],
+            "infos": [
+                "Never be afraid to laugh at yourself. After all, you could be missing out on the joke of the century. (Dame Edna Everage) "
+            ]
+        },
+        {
+            "image_name": "20110817_376.jpg",
+            "points": [
+                [
+                    "743.00",
+                    "871.00",
+                    "747.00",
+                    "501.00",
+                    "1122.00",
+                    "507.00",
+                    "1128.00",
+                    "865.00"
+                ]
+            ],
+            "infos": [
+                "Women marry men hoping they will change. Men marry women hoping they will not. So each is inevitably disappointed. (Albert Einstein) "
+            ]
+        },
+        {
+            "image_name": "20110817_394.jpg",
+            "points": [
+                [
+                    "1087.00",
+                    "668.00",
+                    "1382.00",
+                    "656.00",
+                    "1400.00",
+                    "951.00",
+                    "1100.00",
+                    "968.00"
+                ]
+            ],
+            "infos": [
+                "Never be afraid to laugh at yourself. After all, you could be missing out on the joke of the century. (Dame Edna Everage) "
+            ]
+        },
+        {
+            "image_name": "20110817_401.jpg",
+            "points": [
+                [
+                    "1319.00",
+                    "539.00",
+                    "1325.89",
+                    "929.42",
+                    "916.00",
+                    "933.00",
+                    "920.51",
+                    "535.02"
+                ]
+            ],
+            "infos": [
+                "Courage is what it takes to stand up and speak. Courage is also what it takes to sit down and listen. (W. Churchill) "
+            ]
+        },
+        {
+            "image_name": "20110817_402.jpg",
+            "points": [
+                [
+                    "1018.00",
+                    "479.00",
+                    "1437.00",
+                    "495.00",
+                    "1423.00",
+                    "915.00",
+                    "993.93",
+                    "896.50"
+                ]
+            ],
+            "infos": [
+                "Love at first sight is easy to understand, it is when two people have been looking at each other for a lifetime that it becomes a miracle. (Amy Bloom) "
+            ]
+        }
+    ]
+}

@@ -1,0 +1,73 @@
+{
+    "test_images": [
+        {
+            "image_name": "img1.jpg",
+            "points": [
+                [
+                    "1812.20",
+                    "706.30",
+                    "1970.00",
+                    "682.00",
+                    "1982.80",
+                    "811.60",
+                    "1828.20",
+                    "830.80"
+                ],
+                [
+                    "350.00",
+                    "797.00",
+                    "492.00",
+                    "784.00",
+                    "514.00",
+                    "916.00",
+                    "374.00",
+                    "930.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) ",
+                "True friends stab you in the front. (Oscar Wilde)"
+            ]
+        },
+        {
+            "image_name": "img2.jpg",
+            "points": [
+                [
+                    "820.00",
+                    "972.00",
+                    "886.30",
+                    "964.80",
+                    "894.00",
+                    "1029.50",
+                    "828.00",
+                    "1037.00"
+                ],
+                [
+                    "1498.00",
+                    "908.00",
+                    "1567.00",
+                    "894.00",
+                    "1582.20",
+                    "955.00",
+                    "1511.60",
+                    "969.00"
+                ],
+                [
+                    "2007.00",
+                    "1191.00",
+                    "2250.00",
+                    "1163.00",
+                    "2412.00",
+                    "1311.00",
+                    "2146.00",
+                    "1345.00"
+                ]
+            ],
+            "infos": [
+                "Love is friendship, set on fire. (Jeremy Taylor) ",
+                "True friends stab you in the front. (Oscar Wilde)",
+                "Love is friendship, set on fire. (Jeremy Taylor) "
+            ]
+        }
+    ]
+}
