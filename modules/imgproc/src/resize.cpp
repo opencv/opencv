@@ -4021,7 +4021,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         interpolation = INTER_LINEAR; // If depth isn't supported fallback to generic resize
 
     if (interpolation == INTER_NEAREST_PIL && _src.depth() != CV_8UC1)
-        interpolation = INTER_NEAREST; // INTER_NEAREST_PIL is supported only for grayscale images
+        CV_Error(Error::StsNotImplemented, "INTER_NEAREST_PIL supports only CV_8UC1");
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))

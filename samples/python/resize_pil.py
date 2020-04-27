@@ -16,13 +16,13 @@ import cv2 as cv
 import sys
 
 from PIL import Image
+import argparse
 
 def main():
-
-    try:
-        fn = sys.argv[1]
-    except:
-        fn = 'lena.jpg'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("fname", nargs='?', help="picture filename to test resize", default='lena.jpg')
+    args = parser.parse_args()
+    fn = args.fname
 
     img_cv_lena = cv.imread(cv.samples.findFile(fn), cv.IMREAD_GRAYSCALE)
 
@@ -30,7 +30,7 @@ def main():
         print('Failed to load image file:', fn)
         sys.exit(1)
 
-    img_pil_lena = Image.fromarray(np.array(img_cv_lena))
+    img_pil_lena = Image.fromarray(img_cv_lena)
 
     img_cv_lena_resized = cv.resize(img_cv_lena, (231,322), interpolation=cv.INTER_NEAREST)
     img_pil_lena_resized = img_pil_lena.resize((231,322), Image.NEAREST)
