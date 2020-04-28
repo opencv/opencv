@@ -55,19 +55,19 @@
 
 namespace
 {
-static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
+static void calcScharrDeriv(const cv::Mat& src, cv::Mat& dst)
 {
     using namespace cv;
     using cv::detail::deriv_type;
     int rows = src.rows, cols = src.cols, cn = src.channels(), depth = src.depth();
     CV_Assert(depth == CV_8U);
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
-    parallel_for_(Range(0, rows), cv::detail::SharrDerivInvoker(src, dst), cv::getNumThreads());
+    parallel_for_(Range(0, rows), cv::detail::ScharrDerivInvoker(src, dst), cv::getNumThreads());
 }
 
 }//namespace
 
-void cv::detail::SharrDerivInvoker::operator()(const Range& range) const
+void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
 {
     using cv::detail::deriv_type;
     int rows = src.rows, cols = src.cols, cn = src.channels(), colsn = cols*cn;
@@ -801,7 +801,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
                 deriv.create(sz.height + winSize.height*2, sz.width + winSize.width*2, derivType);
 
             Mat derivI = deriv(Rect(winSize.width, winSize.height, sz.width, sz.height));
-            calcSharrDeriv(thisLevel, derivI);
+            calcScharrDeriv(thisLevel, derivI);
 
             if(derivBorder != BORDER_TRANSPARENT)
                 copyMakeBorder(derivI, deriv, winSize.height, winSize.height, winSize.width, winSize.width, derivBorder|BORDER_ISOLATED);
@@ -1382,7 +1382,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
             Mat _derivI( imgSize.height + winSize.height*2,
                 imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.ptr() );
             derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
-            calcSharrDeriv(prevPyr[level * lvlStep1], derivI);
+            calcScharrDeriv(prevPyr[level * lvlStep1], derivI);
             copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT|BORDER_ISOLATED);
         }
         else
