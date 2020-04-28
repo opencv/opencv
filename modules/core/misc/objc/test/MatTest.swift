@@ -26,14 +26,14 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(originalroi.type(), adjusted.type())
         XCTAssertTrue(adjusted.isSubmatrix())
         XCTAssertFalse(adjusted.isContinuous())
-        
+
         let offset = Point()
         let size = Size()
         adjusted.locateROI(wholeSize: size, offset: offset)
         assertPointEquals(Point(x: 5, y: 1), offset);
         assertSizeEquals(gray0.size(), size);
     }
-    
+
     func testAssignToMat() throws {
         gray0.assign(to: dst)
         try assertMatEqual(gray0, dst)
@@ -45,7 +45,7 @@ class MatTests: OpenCVTestCase {
         gray255.assign(to: dst, type: CvType.CV_32F)
         try assertMatEqual(gray255_32f, dst, OpenCVTestCase.EPS)
     }
-    
+
     func testChannels() {
         XCTAssertEqual(1, gray0.channels())
         XCTAssertEqual(3, rgbLena.channels())
@@ -76,7 +76,7 @@ class MatTests: OpenCVTestCase {
         XCTAssert(0 > Mat(rows: 2, cols: 1, type: CvType.CV_8UC(10)).checkVector(elemChannels: 10, depth: CvType.CV_8S));
         XCTAssert(0 > Mat(rows: 1, cols: 10, type: CvType.CV_8UC2).checkVector(elemChannels: 10, depth: CvType.CV_8S));
     }
-    
+
     func testCheckVectorIntIntBoolean() {
         let mm = Mat(rows: 5, cols: 1, type: CvType.CV_8UC(10))
         let roi = Mat(rows: 5, cols: 3, type: CvType.CV_8UC(10)).submat(rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 3);
@@ -104,7 +104,7 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(gray0.cols() / 2, cols.cols())
         XCTAssertEqual(gray0.rows(), cols.rows())
     }
-    
+
     func testColRangeRange() throws {
         let range = Range(start: 0, end: 5)
         dst = gray0.colRange(range)
@@ -130,7 +130,7 @@ class MatTests: OpenCVTestCase {
         truth = Mat(rows: OpenCVTestCase.matSize, cols: OpenCVTestCase.matSize, type: CvType.CV_16U, scalar: Scalar(4))
         try assertMatEqual(truth!, dst)
     }
-    
+
     func testConvertToMatIntDoubleDouble() throws {
         gray0_32f.convert(to: dst, rtype: CvType.CV_8U, alpha: 2.0, beta: 4.0)
 
@@ -173,7 +173,7 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(5, dst.cols())
         XCTAssertEqual(CvType.CV_16U, dst.type())
     }
-    
+
     func testCreateIntArrayInt() {
         dst.create(sizes:[5, 6, 7], type:CvType.CV_16U)
 
@@ -534,7 +534,7 @@ class MatTests: OpenCVTestCase {
         XCTAssertFalse(dst.empty())
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
-    
+
     func testMatMatRangeArray() throws {
         dst = Mat(mat: gray255_32f_3d, ranges: [Range(start: 0, end: 5), Range(start: 0, end: 5), Range(start: 0, end: 5)])
 
@@ -599,7 +599,7 @@ class MatTests: OpenCVTestCase {
         truth = Mat(rows: 2, cols: 2, type: CvType.CV_32F, scalar: Scalar(6))
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
-    
+
     func testMulMat3d() throws {
         let m1 = Mat(sizes: [2, 2, 2], type: CvType.CV_32F, scalar: Scalar(2))
         let m2 = Mat(sizes: [2, 2, 2], type: CvType.CV_32F, scalar: Scalar(3))
@@ -849,7 +849,7 @@ class MatTests: OpenCVTestCase {
         XCTAssert(buff == [10, 20, 30])
         XCTAssert([40, 50, 60] == m.get(indices: [0, 2, 4]))
     }
-    
+
     func testReshapeInt() throws {
         let src = Mat(rows: 4, cols: 4, type: CvType.CV_8U, scalar: Scalar(0))
         dst = src.reshape(channels: 4)
@@ -916,7 +916,7 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(1, row.rows())
         XCTAssertEqual(gray0.cols(), row.cols())
     }
-    
+
     func testRowRangeIntInt() {
         let rows = gray0.rowRange(start:0, end: gray0.rows() / 2)
         XCTAssertEqual(gray0.rows() / 2, rows.rows())
@@ -1145,5 +1145,4 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(5, bufferOut[63*80 + 63])
     }
 
-    
 }

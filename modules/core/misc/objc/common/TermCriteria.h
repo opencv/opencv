@@ -2,7 +2,6 @@
 //  TermCriteria.h
 //
 //  Created by Giles Payne on 2019/10/08.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #pragma once

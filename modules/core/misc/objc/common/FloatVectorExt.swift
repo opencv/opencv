@@ -17,7 +17,7 @@ public extension FloatVector {
             self.get(index)
         }
     }
-    
+
     var array: [Float] {
         get {
             var ret = Array<Float>(repeating: 0, count: data.count/MemoryLayout<Float>.stride)
@@ -42,7 +42,7 @@ public struct FloatVectorIterator: IteratorProtocol {
     init(_ floatVector: FloatVector) {
         self.floatVector = floatVector
     }
-    
+
     mutating public func next() -> Float? {
         guard pos >= 0 && pos < floatVector.length
             else { return nil }

@@ -65,7 +65,7 @@ struct DetectorAgregator
 - (void)start {
     agregator->tracker->run();
 }
-    
+
 - (void)stop {
     agregator->tracker->stop();
 }

@@ -8,7 +8,7 @@ import XCTest
 import OpenCV
 
 class ImgcodecsTest: OpenCVTestCase {
-    
+
     let LENA_PATH = Bundle(for: ImgcodecsTest.self).path(forResource:"lena", ofType:"png", inDirectory:"resources")!
 
     func testImencodeStringMatListOfByte() {

@@ -4,4 +4,3 @@ if(OPENCV_INITIAL_PASS AND APPLE_FRAMEWORK AND NOT (BUILD_opencv_objc STREQUAL "
 endif()
 
 #include(${CMAKE_CURRENT_SOURCE_DIR}/common.cmake)
-

@@ -19,7 +19,7 @@ public extension IntVector {
             self.get(index)
         }
     }
-    
+
     var array: [Int32] {
         get {
             var ret = Array<Int32>(repeating: 0, count: data.count/MemoryLayout<Int32>.stride)
@@ -44,7 +44,7 @@ public struct IntVectorIterator: IteratorProtocol {
     init(_ intVector: IntVector) {
         self.intVector = intVector
     }
-    
+
     mutating public func next() -> Int32? {
         guard pos >= 0 && pos < intVector.length
             else { return nil }

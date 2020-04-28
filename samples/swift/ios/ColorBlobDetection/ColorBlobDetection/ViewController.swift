@@ -8,7 +8,7 @@ import UIKit
 import OpenCV
 
 class ViewController: UIViewController, CvVideoCameraDelegate2 {
-    
+
     var isColorSelected = false
     var rgba: Mat? = nil
     let detector = ColorBlobDetector()
@@ -35,7 +35,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
             spectrum.copy(to: spectrumLabel)
         }
     }
-    
+
     var camera: CvVideoCamera2? = nil
 
     @IBOutlet weak var cameraHolder: UIView!
@@ -46,7 +46,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
         camera?.delegate = self
         camera?.start()
     }
-    
+
     override func viewDidLayoutSubviews() {
         if UIDevice.current.orientation.isLandscape {
             cameraHolderWidth = cameraHolder.bounds.height
@@ -62,7 +62,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
             let touch = touches.first!
             let cols = CGFloat(aRgba.cols())
             let rows = CGFloat(aRgba.rows())
-            
+
             let orientation = UIDevice.current.orientation
             var x = touch.location(in: cameraHolder).x
             var y = touch.location(in: cameraHolder).y
@@ -78,7 +78,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
 
             x = x * (cols / cameraHolderWidth)
             y = y * (rows / cameraHolderHeight)
-            
+
             if ((x < 0) || (y < 0) || (x > cols) || (y > rows)) {
                 return
             }
@@ -122,4 +122,3 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
     }
 
 }
-

@@ -72,7 +72,7 @@ class RectTest: OpenCVTestCase {
     func testRectDoubleArray() {
         let vals:[Double] = [1, 3, 5, 2]
         let r = Rect(vals: vals as [NSNumber])
-        
+
         XCTAssertEqual(1, r.x)
         XCTAssertEqual(3, r.y)
         XCTAssertEqual(5, r.width)

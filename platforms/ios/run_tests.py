@@ -41,7 +41,7 @@ class TestRunner:
             print("="*60, file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             sys.exit(1)
-    
+
     def getToolchain(self):
         return None
 

@@ -14,7 +14,7 @@ extension Rect {
         self.y = tmpX
         swapDims()
     }
-    
+
     func rotateCounterclockwise(parentWidth:Int32) {
         let tmpY = self.y
         self.y = parentWidth - (self.x + self.width)
@@ -30,7 +30,7 @@ extension Rect {
 }
 
 class ViewController: UIViewController, CvVideoCameraDelegate2 {
-        
+
     let swiftDetector = CascadeClassifier(filename: Bundle(for: ViewController.self).path(forResource:"lbpcascade_frontalface", ofType:"xml")!)
     let nativeDetector = DetectionBasedTracker(cascadeName: Bundle(for: ViewController.self).path(forResource:"lbpcascade_frontalface", ofType:"xml")!, minFaceSize: 0)
     var rgba: Mat? = nil
@@ -63,7 +63,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
         }
 
         let faces = NSMutableArray()
-        
+
         swiftDetector.detectMultiScale(image: gray, objects: faces, scaleFactor: 1.1, minNeighbors: Int32(2), flags: Int32(2), minSize: Size(width: absoluteFaceSize, height: absoluteFaceSize), maxSize: Size())
         //nativeDetector!.detect(gray, faces: faces)
 
@@ -76,7 +76,7 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
             Imgproc.rectangle(img: image, pt1: face.tl(), pt2: face.br(), color: FACE_RECT_COLOR, thickness: FACE_RECT_THICKNESS)
         }
     }
-    
+
     var camera: CvVideoCamera2? = nil
 
     @IBOutlet weak var cameraHolder: UIView!
@@ -88,4 +88,3 @@ class ViewController: UIViewController, CvVideoCameraDelegate2 {
         camera?.start()
     }
 }
-

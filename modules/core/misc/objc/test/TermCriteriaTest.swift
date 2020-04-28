@@ -10,7 +10,7 @@ import OpenCV
 class TermCriteriaTest: OpenCVTestCase {
 
     let tc2 = TermCriteria(type: 2, maxCount: 4, epsilon: EPS)
-    
+
     func testClone() {
         let tc1 = tc2.clone()
         XCTAssertEqual(tc2, tc1)
@@ -31,7 +31,7 @@ class TermCriteriaTest: OpenCVTestCase {
     func testSet() {
         let tc1 = TermCriteria()
         let vals1:[Double] = []
-        
+
         tc1.set(vals: vals1 as [NSNumber])
 
         XCTAssertEqual(0, tc1.type)

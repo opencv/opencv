@@ -684,7 +684,7 @@ class ImgprocTest: OpenCVTestCase {
         linePoints.put(row: 0, col: 0, data: [0.53198653, 0.84675282, 2.5, 3.75])
 
         Imgproc.fitLine(points: points, line: dst, distType: .DIST_L12, param: 0, reps: 0.01, aeps: 0.01)
-        
+
         try assertMatEqual(linePoints, dst, OpenCVTestCase.EPS)
     }
 
@@ -739,7 +739,7 @@ class ImgprocTest: OpenCVTestCase {
         let transform = Imgproc.getAffineTransform(src: src, dst: dst)
 
         let truth = Mat(rows: 2, cols: 3, type: CvType.CV_64FC1)
-        
+
         truth.put(row: 0, col: 0, data: [-8, -6, 37])
         truth.put(row: 1, col: 0, data: [-7, -4, 29])
         try assertMatEqual(truth, transform, OpenCVTestCase.EPS)

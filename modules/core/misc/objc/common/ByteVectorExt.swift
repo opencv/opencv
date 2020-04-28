@@ -17,7 +17,7 @@ public extension ByteVector {
             self.get(index)
         }
     }
-    
+
     var array: [Int8] {
         get {
             var ret = Array<Int8>(repeating: 0, count: data.count/MemoryLayout<Int8>.stride)
@@ -42,7 +42,7 @@ public struct ByteVectorIterator: IteratorProtocol {
     init(_ byteVector: ByteVector) {
         self.byteVector = byteVector
     }
-    
+
     mutating public func next() -> Int8? {
         guard pos >= 0 && pos < byteVector.length
             else { return nil }

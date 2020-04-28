@@ -56,7 +56,7 @@
     }
     return self;
 }
- 
+
 + (instancetype)fromNative:(cv::Size2f&)size {
     return [[Size2f alloc] initWithWidth:size.width height:size.height];
 }

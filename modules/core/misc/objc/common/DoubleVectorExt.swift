@@ -19,7 +19,7 @@ public extension DoubleVector {
             self.get(index)
         }
     }
-    
+
     var array: [Double] {
         get {
             var ret = Array<Double>(repeating: 0, count: data.count/MemoryLayout<Double>.stride)
@@ -44,7 +44,7 @@ public struct DoubleVectorIterator: IteratorProtocol {
     init(_ doubleVector: DoubleVector) {
         self.doubleVector = doubleVector
     }
-    
+
     mutating public func next() -> Double? {
         guard pos >= 0 && pos < doubleVector.length
             else { return nil }

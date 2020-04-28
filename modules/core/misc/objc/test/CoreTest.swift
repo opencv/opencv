@@ -8,7 +8,7 @@ import XCTest
 import OpenCV
 
 class CoreTest: OpenCVTestCase {
-    
+
     override func setUp() {
         super.setUp()
     }
@@ -106,7 +106,7 @@ class CoreTest: OpenCVTestCase {
         try assertMatEqual(gray0_64f, covar, OpenCVTestCase.EPS)
         try assertMatEqual(gray0_64f_1d, mean, OpenCVTestCase.EPS)
     }
-    
+
     func testCalcCovarMatrixMatMatMatIntInt() throws {
         let covar = Mat(rows: OpenCVTestCase.matSize, cols: OpenCVTestCase.matSize, type: CvType.CV_32F)
         let mean = Mat(rows: 1, cols: OpenCVTestCase.matSize, type: CvType.CV_32F)
@@ -433,7 +433,7 @@ class CoreTest: OpenCVTestCase {
               0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
               0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
               0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        
+
         let truthMat = Mat(size: gray0.size(), type: CvType.CV_8U)
         truthMat.put(row:0, col:0, data:truth as [NSNumber])
 
@@ -559,7 +559,7 @@ class CoreTest: OpenCVTestCase {
         XCTAssert(0 < freq1)
         XCTAssertEqual(freq1, freq2)
     }
-    
+
     func testHconcat() throws {
         let mats = [Mat.eye(rows: 3, cols: 3, type: CvType.CV_8U), Mat.zeros(3, cols: 2, type: CvType.CV_8U)]
 
@@ -716,7 +716,7 @@ class CoreTest: OpenCVTestCase {
         try assertMatEqual(expected_labels, labels)
         try assertMatEqual(expected_centers, centers, OpenCVTestCase.EPS)
     }
-    
+
     func testLineMatPointPointScalar() {
         let nPoints = min(gray0.cols(), gray0.rows())
         let point1 = Point(x: 0, y: 0)
@@ -796,7 +796,7 @@ class CoreTest: OpenCVTestCase {
 
         try assertMatEqual(gray255_32f, dst, OpenCVTestCase.EPS)
     }
-    
+
     func testMahalanobis() {
         let src = Mat(rows: OpenCVTestCase.matSize, cols: OpenCVTestCase.matSize, type: CvType.CV_32F)
         Core.randu(dst: src, low: -128, high: 128)
@@ -1432,7 +1432,7 @@ class CoreTest: OpenCVTestCase {
         truth!.diag().setTo(scalar: Scalar(5))
         try assertMatEqual(truth!, m, OpenCVTestCase.EPS)
     }
-    
+
     func testSolveCubic() throws {
         let coeffs = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
         coeffs.put(row: 0, col: 0, data: [1, 6, 11, 6])
