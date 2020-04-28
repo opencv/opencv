@@ -134,9 +134,7 @@ __kernel void compute_hists_lut_kernel(
         barrier(CLK_LOCAL_MEM_FENCE);
         if (cell_thread_x < 3)
             hist_[0] += hist_[3];
-#ifdef CPU
         barrier(CLK_LOCAL_MEM_FENCE);
-#endif
         if (cell_thread_x == 0)
             final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] =
                 hist_[0] + hist_[1] + hist_[2];
@@ -218,7 +216,6 @@ inline float reduce_smem(volatile __local float* smem, int size)
         barrier(CLK_LOCAL_MEM_FENCE); }
     if (size >= 128) { if (tid < 64) smem[tid] = sum = sum + smem[tid + 64];
         barrier(CLK_LOCAL_MEM_FENCE); }
-#ifdef CPU
     if (size >= 64) { if (tid < 32) smem[tid] = sum = sum + smem[tid + 32];
         barrier(CLK_LOCAL_MEM_FENCE); }
     if (size >= 32) { if (tid < 16) smem[tid] = sum = sum + smem[tid + 16];
@@ -231,21 +228,6 @@ inline float reduce_smem(volatile __local float* smem, int size)
         barrier(CLK_LOCAL_MEM_FENCE); }
     if (size >= 2) { if (tid < 1) smem[tid] = sum = sum + smem[tid + 1];
         barrier(CLK_LOCAL_MEM_FENCE); }
-#else
-    if (tid < 32)
-    {
-        if (size >= 64) smem[tid] = sum = sum + smem[tid + 32];
-#if WAVE_SIZE < 32
-    } barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16) {
-#endif
-        if (size >= 32) smem[tid] = sum = sum + smem[tid + 16];
-        if (size >= 16) smem[tid] = sum = sum + smem[tid + 8];
-        if (size >= 8) smem[tid] = sum = sum + smem[tid + 4];
-        if (size >= 4) smem[tid] = sum = sum + smem[tid + 2];
-        if (size >= 2) smem[tid] = sum = sum + smem[tid + 1];
-    }
-#endif
 
     return sum;
 }
@@ -284,6 +266,10 @@ __kernel void normalize_hists_kernel(
         hist[0] = elem * scale;
 }
 
+#define reduce_with_sync(target, sharedMemory, localMemory, tid, offset) \
+    if (tid < target) sharedMemory[tid] = localMemory = localMemory + sharedMemory[tid + offset]; \
+    barrier(CLK_LOCAL_MEM_FENCE);
+
 //---------------------------------------------------------------------
 //  Linear SVM based classification
 //  48x96 window, 9 bins and default parameters
@@ -316,43 +302,16 @@ __kernel void classify_hists_180_kernel(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (tid < 90) products[tid] = product = product + products[tid + 90];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (tid < 45) products[tid] = product = product + products[tid + 45];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    volatile __local float* smem = products;
-#ifdef CPU
-    if (tid < 13) smem[tid] = product = product + smem[tid + 32];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16) smem[tid] = product = product + smem[tid + 16];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<8) smem[tid] = product = product + smem[tid + 8];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<4) smem[tid] = product = product + smem[tid + 4];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<2) smem[tid] = product = product + smem[tid + 2];
-    barrier(CLK_LOCAL_MEM_FENCE);
-#else
-    if (tid < 13)
-    {
-        smem[tid] = product = product + smem[tid + 32];
-    }
-#if WAVE_SIZE < 32
-    barrier(CLK_LOCAL_MEM_FENCE);
-#endif
-    if (tid < 16)
-    {
-        smem[tid] = product = product + smem[tid + 16];
-        smem[tid] = product = product + smem[tid + 8];
-        smem[tid] = product = product + smem[tid + 4];
-        smem[tid] = product = product + smem[tid + 2];
-    }
-#endif
+    reduce_with_sync(90, products, product, tid, 90);
+    reduce_with_sync(45, products, product, tid, 45);
+    reduce_with_sync(13, products, product, tid, 32); // 13 is not typo
+    reduce_with_sync(16, products, product, tid, 16);
+    reduce_with_sync(8, products, product, tid, 8);
+    reduce_with_sync(4, products, product, tid, 4);
+    reduce_with_sync(2, products, product, tid, 2);
 
     if (tid == 0){
-        product = product + smem[tid + 1];
+        product = product + products[tid + 1];
         labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
     }
 }
@@ -389,40 +348,16 @@ __kernel void classify_hists_252_kernel(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (tid < 128) products[tid] = product = product + products[tid + 128];
-    barrier(CLK_LOCAL_MEM_FENCE);
+    reduce_with_sync(128, products, product, tid, 128);
+    reduce_with_sync(64, products, product, tid, 64);
+    reduce_with_sync(32, products, product, tid, 32);
+    reduce_with_sync(16, products, product, tid, 16);
+    reduce_with_sync(8, products, product, tid, 8);
+    reduce_with_sync(4, products, product, tid, 4);
+    reduce_with_sync(2, products, product, tid, 2);
 
-    if (tid < 64) products[tid] = product = product + products[tid + 64];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    volatile __local float* smem = products;
-#ifdef CPU
-    if(tid<32) smem[tid] = product = product + smem[tid + 32];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<16) smem[tid] = product = product + smem[tid + 16];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<8) smem[tid] = product = product + smem[tid + 8];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<4) smem[tid] = product = product + smem[tid + 4];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<2) smem[tid] = product = product + smem[tid + 2];
-    barrier(CLK_LOCAL_MEM_FENCE);
-#else
-    if (tid < 32)
-    {
-        smem[tid] = product = product + smem[tid + 32];
-#if WAVE_SIZE < 32
-    } barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16) {
-#endif
-        smem[tid] = product = product + smem[tid + 16];
-        smem[tid] = product = product + smem[tid + 8];
-        smem[tid] = product = product + smem[tid + 4];
-        smem[tid] = product = product + smem[tid + 2];
-    }
-#endif
     if (tid == 0){
-        product = product + smem[tid + 1];
+        product = product + products[tid + 1];
         labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
     }
 }
@@ -459,40 +394,16 @@ __kernel void classify_hists_kernel(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (tid < 128) products[tid] = product = product + products[tid + 128];
-    barrier(CLK_LOCAL_MEM_FENCE);
+    reduce_with_sync(128, products, product, tid, 128);
+    reduce_with_sync(64, products, product, tid, 64);
+    reduce_with_sync(32, products, product, tid, 32);
+    reduce_with_sync(16, products, product, tid, 16);
+    reduce_with_sync(8, products, product, tid, 8);
+    reduce_with_sync(4, products, product, tid, 4);
+    reduce_with_sync(2, products, product, tid, 2);
 
-    if (tid < 64) products[tid] = product = product + products[tid + 64];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    volatile __local float* smem = products;
-#ifdef CPU
-    if(tid<32) smem[tid] = product = product + smem[tid + 32];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<16) smem[tid] = product = product + smem[tid + 16];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<8) smem[tid] = product = product + smem[tid + 8];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<4) smem[tid] = product = product + smem[tid + 4];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(tid<2) smem[tid] = product = product + smem[tid + 2];
-    barrier(CLK_LOCAL_MEM_FENCE);
-#else
-    if (tid < 32)
-    {
-        smem[tid] = product = product + smem[tid + 32];
-#if WAVE_SIZE < 32
-    } barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16) {
-#endif
-        smem[tid] = product = product + smem[tid + 16];
-        smem[tid] = product = product + smem[tid + 8];
-        smem[tid] = product = product + smem[tid + 4];
-        smem[tid] = product = product + smem[tid + 2];
-    }
-#endif
     if (tid == 0){
-        smem[tid] = product = product + smem[tid + 1];
+        products[tid] = product = product + products[tid + 1];
         labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
     }
 }
