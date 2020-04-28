@@ -1035,9 +1035,23 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear)
     runTensorFlowNet("resize_bilinear_factor");
 }
 
-TEST_P(Test_TensorFlow_layers, tf2_keras)
+TEST_P(Test_TensorFlow_layers, tf2_dense)
 {
     runTensorFlowNet("tf2_dense");
+}
+
+TEST_P(Test_TensorFlow_layers, tf2_prelu)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    runTensorFlowNet("tf2_prelu");
+}
+
+TEST_P(Test_TensorFlow_layers, tf2_permute_nhwc_ncwh)
+{
+    runTensorFlowNet("tf2_permute_nhwc_ncwh");
 }
 
 TEST_P(Test_TensorFlow_layers, squeeze)
