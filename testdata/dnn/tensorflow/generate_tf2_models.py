@@ -65,3 +65,22 @@ model = tf.keras.models.Sequential([
   tf.keras.layers.Dense(3, activation='relu'),
 ])
 save(model, 'tf2_dense', flatten_input=tf.TensorSpec(shape=[None, 1, 2, 3], dtype=tf.float32))
+################################################################################
+model = tf.keras.models.Sequential([
+  tf.keras.layers.PReLU(input_shape=(1, 2, 3)),
+])
+save(model, 'tf2_prelu', p_re_lu_input=tf.TensorSpec(shape=[None, 1, 2, 3], dtype=tf.float32))
+################################################################################
+model = tf.keras.models.Sequential([
+  tf.keras.layers.AveragePooling2D(input_shape=(4, 6, 3), pool_size=(2, 2)),
+  tf.keras.layers.Permute((3, 2, 1)),  # NHWC->NCWH
+  tf.keras.layers.Flatten()
+])
+save(model, 'tf2_permute_nhwc_ncwh', average_pooling2d_input=tf.TensorSpec(shape=[None, 4, 6, 3], dtype=tf.float32))
+################################################################################
+
+# Uncomment to print the final graph.
+# with tf.io.gfile.GFile('tf2_prelu_net.pb', 'rb') as f:
+#     graph_def = tf.compat.v1.GraphDef()
+#     graph_def.ParseFromString(f.read())
+#     print(graph_def)
