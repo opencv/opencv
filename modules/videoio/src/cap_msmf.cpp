@@ -1656,11 +1656,13 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
 }
 
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,
-                                                        double fps, const cv::Size &frameSize, bool isColor )
+                                                        double fps, const cv::Size& frameSize,
+                                                        const VideoWriterParameters& params)
 {
     cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
     if (writer)
     {
+        const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
         writer->open(filename, fourcc, fps, frameSize, isColor);
         if (writer->isOpened())
             return writer;
