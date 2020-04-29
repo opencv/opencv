@@ -534,7 +534,7 @@ public:
 
 TEST_P(Test_ONNX_nets, Alexnet)
 {
-#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+#if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 #else
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
@@ -598,7 +598,7 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
 TEST_P(Test_ONNX_nets, CaffeNet)
 {
-#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+#if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 #else
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
@@ -614,7 +614,7 @@ TEST_P(Test_ONNX_nets, CaffeNet)
 
 TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
 {
-#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
+#if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 #else
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
