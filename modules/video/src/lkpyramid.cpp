@@ -803,7 +803,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
                 deriv.create(sz.height + winSize.height*2, sz.width + winSize.width*2, derivType);
 
             Mat derivI = deriv(Rect(winSize.width, winSize.height, sz.width, sz.height));
-            calccScharrDeriv(thisLevel, derivI);
+            calcScharrDeriv(thisLevel, derivI);
 
             if(derivBorder != BORDER_TRANSPARENT)
                 copyMakeBorder(derivI, deriv, winSize.height, winSize.height, winSize.width, winSize.width, derivBorder|BORDER_ISOLATED);
