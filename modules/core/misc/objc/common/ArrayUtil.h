@@ -6,4 +6,6 @@
 
 #pragma once
 
+#import <Foundation/Foundation.h>
+
 NSMutableArray* createArrayWithSize(int size, NSObject* val);
