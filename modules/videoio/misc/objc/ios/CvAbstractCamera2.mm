@@ -232,20 +232,9 @@
 {
     self.captureVideoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
 
-    if ([self.captureVideoPreviewLayer respondsToSelector:@selector(connection)])
+    if ([self.captureVideoPreviewLayer.connection isVideoOrientationSupported])
     {
-        if ([self.captureVideoPreviewLayer.connection isVideoOrientationSupported])
-        {
-            [self.captureVideoPreviewLayer.connection setVideoOrientation:self.defaultAVCaptureVideoOrientation];
-        }
-    }
-    else
-    {
-        // Deprecated in 6.0; here for backward compatibility
-        if ([self.captureVideoPreviewLayer isOrientationSupported])
-        {
-            [self.captureVideoPreviewLayer setOrientation:self.defaultAVCaptureVideoOrientation];
-        }
+        [self.captureVideoPreviewLayer.connection setVideoOrientation:self.defaultAVCaptureVideoOrientation];
     }
 
     if (self.parentView != nil) {
