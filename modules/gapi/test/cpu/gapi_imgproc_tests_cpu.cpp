@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -12,7 +12,7 @@
 
 namespace
 {
-#define IMGPROC_CPU [] () { return cv::compile_args(cv::gapi::imgproc::cpu::kernels()); }
+#define IMGPROC_CPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::imgproc::cpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -176,6 +176,29 @@ INSTANTIATE_TEST_CASE_P(SobelXYTestCPU32F, SobelXYTest,
                                 Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT),
                                 Values(0, 1, 255)));
 
+INSTANTIATE_TEST_CASE_P(LaplacianTestCPU, LaplacianTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(1, 3),
+                                Values(0.2, 1.0),
+                                Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
+
+INSTANTIATE_TEST_CASE_P(BilateralFilterTestCPU, BilateralFilterTest,
+                        Combine(Values(CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(3, 5),
+                                Values(20),
+                                Values(10),
+                                Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
+
 INSTANTIATE_TEST_CASE_P(EqHistTestCPU, EqHistTest,
                         Combine(Values(CV_8UC1),
                                 Values(cv::Size(1280, 720),
@@ -195,6 +218,29 @@ INSTANTIATE_TEST_CASE_P(CannyTestCPU, CannyTest,
                                 Values(125.0, 240.0),
                                 Values(3, 5),
                                 testing::Bool()));
+
+INSTANTIATE_TEST_CASE_P(GoodFeaturesTestCPU, GoodFeaturesTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(AbsExactVector<cv::Point2f>().to_compare_obj()),
+                                Values("cv/shared/fruits.png"),
+                                Values(CV_32FC1, CV_8UC1),
+                                Values(50, 100),
+                                Values(0.01),
+                                Values(10.0),
+                                Values(3),
+                                testing::Bool()));
+
+INSTANTIATE_TEST_CASE_P(GoodFeaturesInternalTestCPU, GoodFeaturesTest,
+                        Combine(Values(IMGPROC_CPU),
+                                Values(AbsExactVector<cv::Point2f>().to_compare_obj()),
+                                Values("cv/cascadeandhog/images/audrybt1.png"),
+                                Values(CV_32FC1, CV_8UC1),
+                                Values(100),
+                                Values(0.0000001),
+                                Values(5.0),
+                                Values(3),
+                                Values(true)));
+
 
 INSTANTIATE_TEST_CASE_P(RGB2GrayTestCPU, RGB2GrayTest,
                         Combine(Values(CV_8UC3),
@@ -244,11 +290,19 @@ INSTANTIATE_TEST_CASE_P(NV12toBGRTestCPU, NV12toBGRTest,
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_obj())));
 
+INSTANTIATE_TEST_CASE_P(NV12toGrayTestCPU, NV12toGrayTest,
+                        Combine(Values(CV_8UC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj())));
+
 INSTANTIATE_TEST_CASE_P(NV12toRGBpTestCPU, NV12toRGBpTest,
                         Combine(Values(CV_8UC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(CV_8UC3),
+                                Values(CV_8UC1),
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_obj())));
 

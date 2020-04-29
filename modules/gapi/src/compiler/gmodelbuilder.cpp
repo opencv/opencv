@@ -303,5 +303,14 @@ ade::NodeHandle cv::gimpl::GModelBuilder::put_DataNode(const GOrigin &origin)
         m_graph_data[origin] = nh;
         return nh;
     }
-    else return it->second;
+    else
+    {
+        // FIXME: One of the ugliest workarounds ever
+        if (it->first.ctor.index() == it->first.ctor.index_of<cv::util::monostate>()
+            && origin.ctor.index() !=    origin.ctor.index_of<cv::util::monostate>()) {
+            // meanwhile update existing object
+            m_gm.metadata(it->second).get<Data>().ctor = origin.ctor;
+        }
+        return it->second;
+    }
 }

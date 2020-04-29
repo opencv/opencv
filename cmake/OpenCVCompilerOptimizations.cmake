@@ -288,7 +288,7 @@ if(X86 OR X86_64)
     ocv_update(CPU_AVX2_FLAGS_ON "/arch:AVX2")
     ocv_update(CPU_AVX_FLAGS_ON "/arch:AVX")
     ocv_update(CPU_FP16_FLAGS_ON "/arch:AVX")
-    if(NOT MSVC64)
+    if(NOT X86_64)
       # 64-bit MSVC compiler uses SSE/SSE2 by default
       ocv_update(CPU_SSE_FLAGS_ON "/arch:SSE")
       ocv_update(CPU_SSE_SUPPORTED ON)
@@ -346,7 +346,7 @@ elseif(MIPS)
   ocv_update(CPU_MSA_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_msa.cpp")
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "MSA")
   ocv_update(CPU_MSA_FLAGS_ON "-mmsa")
-  set(CPU_BASELINE "MSA" CACHE STRING "${HELP_CPU_BASELINE}")
+  set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
 elseif(PPC64LE)
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "VSX;VSX3")
   ocv_update(CPU_VSX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx.cpp")
@@ -714,7 +714,10 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
   foreach(OPT ${CPU_DISPATCH_FINAL})
     if(__result_${OPT})
 #message("${OPT}: ${__result_${OPT}}")
-      if(CMAKE_GENERATOR MATCHES "^Visual")
+      if(CMAKE_GENERATOR MATCHES "^Visual"
+          OR OPENCV_CMAKE_CPU_OPTIMIZATIONS_FORCE_TARGETS
+      )
+        # MSVS generator is not able to properly order compilation flags:
         # extra flags are added before common flags, so switching between optimizations doesn't work correctly
         # Also CMAKE_CXX_FLAGS doesn't work (it is directory-based, so add_subdirectory is required)
         add_library(${TARGET_BASE_NAME}_${OPT} OBJECT ${__result_${OPT}})

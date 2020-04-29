@@ -75,7 +75,7 @@ using namespace cv;
 static const char* trackbar_text =
 "                                                                                             ";
 
-#if defined _M_X64 || defined __x86_64
+#if defined _M_X64 || defined __x86_64 || defined _M_ARM64
 
 #define icvGetWindowLongPtr GetWindowLongPtr
 #define icvSetWindowLongPtr( hwnd, id, ptr ) SetWindowLongPtr( hwnd, id, (LONG_PTR)(ptr) )

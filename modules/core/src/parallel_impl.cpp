@@ -16,6 +16,8 @@
 //#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/trace.private.hpp>
+
 //#define CV_PROFILE_THREADS 64
 //#define getTickCount getCPUTickCount  // use this if getTickCount() calls are expensive (and getCPUTickCount() is accurate)
 
@@ -38,7 +40,7 @@ DECLARE_CV_PAUSE
 #endif
 #ifndef CV_PAUSE
 # if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
-#   if !defined(__SSE__)
+#   if !defined(__SSE2__)
       static inline void cv_non_sse_mm_pause() { __asm__ __volatile__ ("rep; nop"); }
 #     define _mm_pause cv_non_sse_mm_pause
 #   endif
@@ -51,6 +53,12 @@ DECLARE_CV_PAUSE
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("pause" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __PPC64__
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("or 27,27,27" ::: "memory"); } } while (0)
+# elif defined __GNUC__ && defined __riscv
+// PAUSE HINT is not part of RISC-V ISA yet, but is under discussion now. For details see:
+// https://github.com/riscv/riscv-isa-manual/pull/398
+// https://github.com/riscv/riscv-isa-manual/issues/43
+// #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("pause"); } } while (0)
+#   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("nop"); } } while (0)
 # else
 #   warning "Can't detect 'pause' (CPU-yield) instruction on the target platform. Specify CV_PAUSE() definition via compiler flags."
 #   define CV_PAUSE(...) do { /* no-op: works, but not effective */ } while (0)
@@ -264,6 +272,9 @@ public:
     void thread_body();
     static void* thread_loop_wrapper(void* thread_object)
     {
+#ifdef OPENCV_WITH_ITT
+        __itt_thread_set_name(cv::format("OpenCVThread-%03d", cv::utils::getThreadID()).c_str());
+#endif
         ((WorkerThread*)thread_object)->thread_body();
         return 0;
     }

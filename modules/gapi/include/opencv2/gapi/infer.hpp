@@ -23,23 +23,6 @@
 
 namespace cv {
 
-namespace detail {
-    // This tiny class eliminates the semantic difference between
-    // GKernelType and GKernelTypeM.
-    // FIXME: Something similar can be reused for regular kernels
-    template<typename, typename>
-    struct KernelTypeMedium;
-
-    template<class K, typename... R, typename... Args>
-    struct KernelTypeMedium<K, std::function<std::tuple<R...>(Args...)> >:
-        public GKernelTypeM<K, std::function<std::tuple<R...>(Args...)> > {};
-
-    template<class K, typename R, typename... Args>
-    struct KernelTypeMedium<K, std::function<R(Args...)> >:
-        public GKernelType<K, std::function<R(Args...)> > {};
-
-} // namespace detail
-
 template<typename, typename> class GNetworkType;
 
 // TODO: maybe tuple_wrap_helper from util.hpp may help with this.
@@ -192,6 +175,9 @@ struct GAPI_EXPORTS GNetParam {
     util::any params;    // Backend-interpreted parameter structure
 };
 
+/** \addtogroup gapi_compile_args
+ * @{
+ */
 /**
  * @brief A container class for network configurations. Similar to
  * GKernelPackage.Use cv::gapi::networks() to construct this object.
@@ -204,6 +190,7 @@ struct GAPI_EXPORTS GNetPackage {
     std::vector<GBackend> backends() const;
     std::vector<GNetParam> networks;
 };
+/** @} gapi_compile_args */
 } // namespace gapi
 
 namespace detail {

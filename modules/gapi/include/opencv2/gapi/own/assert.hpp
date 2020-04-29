@@ -20,7 +20,7 @@
 
 namespace detail
 {
-    inline void assert_abort(const char* str, int line, const char* file, const char* func)
+    [[noreturn]] inline void assert_abort(const char* str, int line, const char* file, const char* func)
     {
         std::stringstream ss;
         ss << file << ":" << line << ": Assertion " << str << " in function " << func << " failed\n";

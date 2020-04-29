@@ -60,7 +60,7 @@ namespace opencv_test { namespace {
 // 6 - partial intersection, rectangle on top of different size
 // 7 - full intersection, rectangle fully enclosed in the other
 // 8 - partial intersection, rectangle corner just touching. point contact
-// 9 - partial intersetion. rectangle side by side, line contact
+// 9 - partial intersection. rectangle side by side, line contact
 
 static void compare(const std::vector<Point2f>& test, const std::vector<Point2f>& target)
 {

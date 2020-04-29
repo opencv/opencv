@@ -52,8 +52,8 @@
  */
 
 /* NOTE: Both GCC and Clang define __GNUC__ */
-#if defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-#if !defined __thumb__ || defined __thumb2__
+#if defined(__GNUC__) && (defined(__arm__) || defined(__aarch64__))
+#if !defined(__thumb__) || defined(__thumb2__)
 #define USE_CLZ_INTRINSIC
 #endif
 #endif

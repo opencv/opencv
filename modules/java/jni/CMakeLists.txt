@@ -50,16 +50,16 @@ if(BUILD_FAT_JAVA_LIB)
   endif()
   if(APPLE)
     foreach(_dep ${__deps})
-      ocv_target_link_libraries(${the_module} LINK_PRIVATE -Wl,-force_load "${_dep}")
+      ocv_target_link_libraries(${the_module} PRIVATE -Wl,-force_load "${_dep}")
     endforeach()
   elseif(((CV_GCC OR CV_CLANG OR UNIX) OR (OPENCV_FORCE_FAT_JAVA_LIB_LD_RULES)) AND (NOT OPENCV_SKIP_FAT_JAVA_LIB_LD_RULES))
-    ocv_target_link_libraries(${the_module} LINK_PRIVATE -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
+    ocv_target_link_libraries(${the_module} PRIVATE -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
   else()
-    ocv_target_link_libraries(${the_module} LINK_PRIVATE ${__deps})
+    ocv_target_link_libraries(${the_module} PRIVATE ${__deps})
   endif()
-  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${__extradeps} ${OPENCV_LINKER_LIBS})
+  ocv_target_link_libraries(${the_module} PRIVATE ${__extradeps} ${OPENCV_LINKER_LIBS})
 else()
-  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${__deps} ${OPENCV_LINKER_LIBS})
+  ocv_target_link_libraries(${the_module} PRIVATE ${__deps} ${OPENCV_LINKER_LIBS})
 endif()
 
 # Additional target properties
@@ -72,8 +72,12 @@ set_target_properties(${the_module} PROPERTIES
     )
 
 if(ANDROID)
-  ocv_target_link_libraries(${the_module} LINK_PUBLIC jnigraphics) # for Mat <=> Bitmap converters
-  ocv_target_link_libraries(${the_module} LINK_PUBLIC log dl z)
+  ocv_target_link_libraries(${the_module} PUBLIC    jnigraphics  # for Mat <=> Bitmap converters
+                                          INTERFACE jnigraphics
+  )
+  ocv_target_link_libraries(${the_module} PUBLIC    log dl z
+                                          INTERFACE log dl z
+  )
 
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install

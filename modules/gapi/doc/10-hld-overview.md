@@ -1,11 +1,12 @@
 # High-level design overview {#gapi_hld}
 
-# G-API High-level design overview
-
 [TOC]
 
-G-API is a heterogeneous framework and provides single API to program
-image processing pipelines with a number of supported backends.
+# G-API High-level design overview
+
+G-API is a heterogeneous framework and provides an unified API to
+program image processing pipelines with a number of supported
+backends.
 
 The key design idea is to keep pipeline code itself platform-neutral
 while specifying which kernels to use and which devices to utilize
@@ -54,7 +55,7 @@ their own kernels easily using a special macro G_TYPED_KERNEL().
 API layer is also responsible for marshalling and storing operation
 parameters on pipeline creation. In addition to the aforementioned
 G-API dynamic objects, operations may also accept arbitrary
-parameters (more on this [below](@ref gapi_detail_params)), so API
+parameters (more on this [here](@ref gapi_detail_params)), so API
 layer captures its values and stores internally upon the moment of
 execution.
 
@@ -143,7 +144,7 @@ Both methods are polimorphic and take a variadic number of arguments,
 with validity checks performed in runtime. If a number, shapes, and
 formats of passed data objects differ from expected, a run-time
 exception is thrown. G-API also provides _typed_ wrappers to move
-these checks to the compile time -- see cv::GComputationT<>.
+these checks to the compile time -- see `cv::GComputationT<>`.
 
 G-API graph execution is declared stateless -- it means that a
 compiled functor (cv::GCompiled) acts like a pure C++ function and
@@ -154,6 +155,6 @@ number of inputs, and \f$M\f$ is a number of outputs on which a
 cv::GComputation is defined. Note that while G-API types (cv::GMat,
 etc) are used in definition, the execution methods accept OpenCV's
 traditional data types (like cv::Mat) which hold actual data -- see
-table in [parameter marshalling](@#gapi_detail_params).
+table in [parameter marshalling](@ref gapi_detail_params).
 
 @sa @ref gapi_impl, @ref gapi_kernel_api

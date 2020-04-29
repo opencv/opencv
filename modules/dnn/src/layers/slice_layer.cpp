@@ -41,12 +41,20 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/slice.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -111,12 +119,17 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
-#ifdef HAVE_INF_ENGINE
-                INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+            return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
+                sliceRanges.size() == 1 && sliceRanges[0].size() == 4;
 #endif
-                sliceRanges.size() == 1 && sliceRanges[0].size() == 4);
+#ifdef HAVE_DNN_NGRAPH
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return sliceRanges.size() == 1;
+#endif
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -260,7 +273,8 @@ public:
         }
     }
 
-#ifdef HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
@@ -316,6 +330,60 @@ public:
     }
 #endif
 #endif
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert_N(nodes.size() <= 2);
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        CV_Assert(sliceRanges[0].size() == ieInpNode->get_shape().size());
+
+        std::vector<int64_t> offsets, dims;
+        for (int i = 0; i < sliceRanges[0].size(); ++i)
+        {
+            offsets.push_back(sliceRanges[0][i].start);
+            dims.push_back(sliceRanges[0][i].end);
+        }
+
+        auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                                             ngraph::Shape{offsets.size()}, offsets.data());
+        auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                                             ngraph::Shape{dims.size()}, dims.data());
+        auto strides = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                                        ngraph::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
+
+        auto slice = std::make_shared<ngraph::op::v1::StridedSlice>(ieInpNode,
+                                      lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
+
+        return Ptr<BackendNode>(new InfEngineNgraphNode(slice));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        std::vector<std::vector<std::size_t>> offsets;
+        for (const auto& ranges : sliceRanges)
+        {
+            std::vector<std::size_t> offsets_i;
+            for (const auto& range : ranges)
+                offsets_i.push_back(range.start);
+            offsets.push_back(std::move(offsets_i));
+        }
+
+        return make_cuda_node<cuda4dnn::SliceOp>(preferableTarget, std::move(context->stream), std::move(offsets));
+    }
+#endif
+
 };
 
 class CropLayerImpl CV_FINAL : public SliceLayerImpl

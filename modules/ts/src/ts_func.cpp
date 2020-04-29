@@ -87,7 +87,9 @@ double getMinVal(int depth)
     depth = CV_MAT_DEPTH(depth);
     double val = depth == CV_8U ? 0 : depth == CV_8S ? SCHAR_MIN : depth == CV_16U ? 0 :
     depth == CV_16S ? SHRT_MIN : depth == CV_32S ? INT_MIN :
-    depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX : -1;
+    depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX :
+            depth == CV_16F ? -65504
+            : -1;
     CV_Assert(val != -1);
     return val;
 }
@@ -97,7 +99,9 @@ double getMaxVal(int depth)
     depth = CV_MAT_DEPTH(depth);
     double val = depth == CV_8U ? UCHAR_MAX : depth == CV_8S ? SCHAR_MAX : depth == CV_16U ? USHRT_MAX :
     depth == CV_16S ? SHRT_MAX : depth == CV_32S ? INT_MAX :
-    depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX : -1;
+    depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX :
+            depth == CV_16F ? 65504
+            : -1;
     CV_Assert(val != -1);
     return val;
 }
@@ -1383,7 +1387,8 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
     int normType0 = normType;
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
 
-    CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
+    CV_CheckTypeEQ(src1.type(), src2.type(), "");
+    CV_Assert(src1.size == src2.size);
     CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};

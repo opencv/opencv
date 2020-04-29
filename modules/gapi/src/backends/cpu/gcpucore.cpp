@@ -505,7 +505,7 @@ GAPI_OCV_KERNEL(GCPUCopy, cv::gapi::core::GCopy)
 {
     static void run(const cv::Mat& in, cv::Mat& out)
     {
-        cv::Mat(in).copyTo(out);
+        in.copyTo(out);
     }
 };
 
@@ -557,6 +557,25 @@ GAPI_OCV_KERNEL(GCPUNormalize, cv::gapi::core::GNormalize)
         cv::normalize(src, out, a, b, norm_type, ddepth);
     }
 };
+
+GAPI_OCV_KERNEL(GCPUWarpPerspective, cv::gapi::core::GWarpPerspective)
+{
+    static void run(const cv::Mat& src, const cv::Mat& M,  const cv::Size& dsize,
+                    int flags, int borderMode, const cv::Scalar& borderValue, cv::Mat& out)
+    {
+        cv::warpPerspective(src, out, M, dsize, flags, borderMode, borderValue);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUWarpAffine, cv::gapi::core::GWarpAffine)
+{
+    static void run(const cv::Mat& src, const cv::Mat& M,  const cv::Size& dsize,
+                    int flags, int borderMode, const cv::Scalar& borderValue, cv::Mat& out)
+    {
+        cv::warpAffine(src, out, M, dsize, flags, borderMode, borderValue);
+    }
+};
+
 
 cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
 {
@@ -626,6 +645,8 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUConvertTo
          , GCPUSqrt
          , GCPUNormalize
+         , GCPUWarpPerspective
+         , GCPUWarpAffine
          >();
     return pkg;
 }

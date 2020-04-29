@@ -125,6 +125,20 @@ bool required_opencv_test_namespace = false;  // compilation check for non-refac
 namespace cvtest
 {
 
+details::SkipTestExceptionBase::SkipTestExceptionBase(bool handlingTags)
+{
+    if (!handlingTags)
+    {
+        testTagIncreaseSkipCount("skip_other", true, true);
+    }
+}
+details::SkipTestExceptionBase::SkipTestExceptionBase(const cv::String& message, bool handlingTags)
+{
+    if (!handlingTags)
+        testTagIncreaseSkipCount("skip_other", true, true);
+    this->msg = message;
+}
+
 uint64 param_seed = 0x12345678; // real value is passed via parseCustomOptions function
 
 static std::string path_join(const std::string& prefix, const std::string& subpath)
@@ -350,7 +364,13 @@ void BaseTest::run( int start_from )
             return;
 
         if( validate_test_results( test_case_idx ) < 0 || ts->get_err_code() < 0 )
+        {
+            std::stringstream ss;
+            dump_test_case(test_case_idx, &ss);
+            std::string s = ss.str();
+            ts->printf( TS::LOG, "%s", s.c_str());
             return;
+        }
     }
 }
 
@@ -401,6 +421,12 @@ int BaseTest::update_progress( int progress, int test_case_idx, int count, doubl
 }
 
 
+void BaseTest::dump_test_case(int test_case_idx, std::ostream* out)
+{
+    *out << "test_case_idx = " << test_case_idx << std::endl;
+}
+
+
 BadArgTest::BadArgTest()
 {
     test_case_idx   = -1;
@@ -426,7 +452,7 @@ int BadArgTest::run_test_case( int expected_code, const string& _descr )
     {
         thrown = true;
         if (e.code != expected_code &&
-            e.code != cv::Error::StsError && e.code != cv::Error::StsAssert  // Exact error codes support will be dropped. Checks should provide proper text messages intead.
+            e.code != cv::Error::StsError && e.code != cv::Error::StsAssert  // Exact error codes support will be dropped. Checks should provide proper text messages instead.
         )
         {
             ts->printf(TS::LOG, "%s (test case #%d): the error code %d is different from the expected %d\n",
@@ -838,6 +864,17 @@ void testTearDown()
     }
 }
 
+bool checkBigDataTests()
+{
+    if (!runBigDataTests)
+    {
+        testTagIncreaseSkipCount("skip_bigdata", true, true);
+        printf("[     SKIP ] BigData tests are disabled\n");
+        return false;
+    }
+    return true;
+}
+
 void parseCustomOptions(int argc, char **argv)
 {
     const string command_line_keys = string(
@@ -971,10 +1008,10 @@ static std::string findData(const std::string& relative_path, bool required, boo
                 CHECK_FILE_WITH_PREFIX(prefix, result_);
                 if (!required && !result_.empty())
                 {
-                    std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << std::endl;
                     static bool checkOptionalFlag = cv::utils::getConfigurationParameterBool("OPENCV_TEST_CHECK_OPTIONAL_DATA", false);
                     if (checkOptionalFlag)
                     {
+                        std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << std::endl;
                         CV_Assert(required || result_.empty());
                     }
                 }
@@ -1062,14 +1099,6 @@ inline static void recordPropertyVerbose(const std::string & property,
     }
 }
 
-inline static void recordPropertyVerbose(const std::string& property, const std::string& msg,
-                                         const char* value, const char* build_value = NULL)
-{
-    return recordPropertyVerbose(property, msg,
-        value ? std::string(value) : std::string(),
-        build_value ? std::string(build_value) : std::string());
-}
-
 #ifdef _DEBUG
 #define CV_TEST_BUILD_CONFIG "Debug"
 #else
@@ -1083,7 +1112,14 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
     recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
-    recordPropertyVerbose("cv_parallel_framework", "Parallel framework", cv::currentParallelFramework());
+    const char* parallelFramework = cv::currentParallelFramework();
+    if (parallelFramework)
+    {
+        ::testing::Test::RecordProperty("cv_parallel_framework", parallelFramework);
+        int threads = testThreads > 0 ? testThreads : cv::getNumThreads();
+        ::testing::Test::RecordProperty("cv_parallel_threads", threads);
+        std::cout << "Parallel framework: " << parallelFramework << " (nthreads=" << threads << ")" << std::endl;
+    }
     recordPropertyVerbose("cv_cpu_features", "CPU features", cv::getCPUFeaturesLine());
 #ifdef HAVE_IPP
     recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() :  "disabled");

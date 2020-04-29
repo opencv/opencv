@@ -12,11 +12,6 @@ file(TO_CMAKE_PATH "${EXAMPLE_FILE}" EXAMPLE_FILE)
 message(STATUS "Project: ${EXAMPLE_NAME}")
 message(STATUS "File   : ${EXAMPLE_FILE}")
 
-# Enable C++11
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-
-
 # Define project name
 project(${EXAMPLE_NAME})
 
@@ -39,4 +34,4 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 add_executable(${EXAMPLE_NAME} "${EXAMPLE_FILE}")
 
 # Link your application with OpenCV libraries
-target_link_libraries(${EXAMPLE_NAME} LINK_PRIVATE ${OpenCV_LIBS})
+target_link_libraries(${EXAMPLE_NAME} PRIVATE ${OpenCV_LIBS})

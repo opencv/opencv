@@ -56,6 +56,7 @@ void cv::GCompiled::Priv::checkArgs(const cv::gimpl::GRuntimeArgs &args) const
                                            "for different metadata!"));
         // FIXME: Add details on what is actually wrong
     }
+    validate_input_args(args.inObjs);
 }
 
 bool cv::GCompiled::Priv::canReshape() const

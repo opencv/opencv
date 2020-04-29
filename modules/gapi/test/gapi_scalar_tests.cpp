@@ -27,7 +27,7 @@ TEST(GAPI_Scalar, Argument)
     mulS.apply(in_mat, cv::Scalar(2), out_mat);
 
     cv::Mat reference = in_mat*2;
-    EXPECT_EQ(0, cv::countNonZero(cv::abs(out_mat - reference)));
+    EXPECT_EQ(0, cvtest::norm(out_mat, reference, NORM_INF));
 }
 
 TEST(GAPI_Scalar, ReturnValue)
@@ -60,7 +60,7 @@ TEST(GAPI_Scalar, TmpScalar)
     mul_by_sum.apply(in_mat, out_mat);
 
     cv::Mat reference = cv::Mat(sz, CV_8U, cv::Scalar(4));
-    EXPECT_EQ(0, cv::countNonZero(cv::abs(out_mat - reference)));
+    EXPECT_EQ(0, cvtest::norm(out_mat, reference, NORM_INF));
 }
 
 TEST(GAPI_ScalarWithValue, Simple_Arithmetic_Pipeline)
@@ -75,7 +75,7 @@ TEST(GAPI_ScalarWithValue, Simple_Arithmetic_Pipeline)
     ref_mat = (in_mat + 1) * 2;
     comp.apply(in_mat, out_mat);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GAPI_ScalarWithValue, GScalar_Initilization)
@@ -90,7 +90,7 @@ TEST(GAPI_ScalarWithValue, GScalar_Initilization)
     cv::multiply(in_mat, sc, ref_mat, 1, CV_8UC1);
     comp.apply(cv::gin(in_mat), cv::gout(out_mat));
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GAPI_ScalarWithValue, Constant_GScalar_In_Middle_Graph)
@@ -111,7 +111,7 @@ TEST(GAPI_ScalarWithValue, Constant_GScalar_In_Middle_Graph)
     cv::multiply(add_mat, sc, ref_mat, 1, CV_8UC1);
     comp.apply(cv::gin(in_mat, in_scalar), cv::gout(out_mat));
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 } // namespace opencv_test

@@ -18,13 +18,13 @@ import org.opencv.imgproc.Imgproc;
 import android.util.Log;
 
 public class CameraCalibrator {
-    private static final String TAG = "OCVSample::CameraCalibrator";
+    private static final String TAG = "OCV::CameraCalibrator";
 
     private final Size mPatternSize = new Size(4, 11);
     private final int mCornersSize = (int)(mPatternSize.width * mPatternSize.height);
     private boolean mPatternWasFound = false;
     private MatOfPoint2f mCorners = new MatOfPoint2f();
-    private List<Mat> mCornersBuffer = new ArrayList<Mat>();
+    private List<Mat> mCornersBuffer = new ArrayList<>();
     private boolean mIsCalibrated = false;
 
     private Mat mCameraMatrix = new Mat();
@@ -53,10 +53,10 @@ public class CameraCalibrator {
     }
 
     public void calibrate() {
-        ArrayList<Mat> rvecs = new ArrayList<Mat>();
-        ArrayList<Mat> tvecs = new ArrayList<Mat>();
+        ArrayList<Mat> rvecs = new ArrayList<>();
+        ArrayList<Mat> tvecs = new ArrayList<>();
         Mat reprojectionErrors = new Mat();
-        ArrayList<Mat> objectPoints = new ArrayList<Mat>();
+        ArrayList<Mat> objectPoints = new ArrayList<>();
         objectPoints.add(Mat.zeros(mCornersSize, 1, CvType.CV_32FC3));
         calcBoardCornerPositions(objectPoints.get(0));
         for (int i = 1; i < mCornersBuffer.size(); i++) {
@@ -81,7 +81,7 @@ public class CameraCalibrator {
 
     private void calcBoardCornerPositions(Mat corners) {
         final int cn = 3;
-        float positions[] = new float[mCornersSize * cn];
+        float[] positions = new float[mCornersSize * cn];
 
         for (int i = 0; i < mPatternSize.height; i++) {
             for (int j = 0; j < mPatternSize.width * cn; j += cn) {
@@ -101,7 +101,7 @@ public class CameraCalibrator {
         MatOfPoint2f cornersProjected = new MatOfPoint2f();
         double totalError = 0;
         double error;
-        float viewErrors[] = new float[objectPoints.size()];
+        float[] viewErrors = new float[objectPoints.size()];
 
         MatOfDouble distortionCoefficients = new MatOfDouble(mDistortionCoefficients);
         int totalPoints = 0;

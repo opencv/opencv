@@ -27,6 +27,7 @@ struct FluidUnit
     GFluidKernel k;
     gapi::fluid::BorderOpt border;
     int border_size;
+    int window;
     std::vector<int> line_consumption;
     double ratio;
 };
@@ -124,11 +125,10 @@ class GFluidExecutable final: public GIslandExecutable
     GModel::ConstGraph m_gm;
 
     std::vector<std::unique_ptr<FluidAgent>> m_agents;
-    std::vector<cv::gapi::fluid::Buffer> m_buffers;
 
     std::vector<FluidAgent*> m_script;
 
-    using Magazine = detail::magazine<cv::gapi::own::Scalar, cv::detail::VectorRef>;
+    using Magazine = detail::magazine<cv::Scalar, cv::detail::VectorRef, cv::detail::OpaqueRef>;
     Magazine m_res;
 
     std::size_t m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)
@@ -137,12 +137,14 @@ class GFluidExecutable final: public GIslandExecutable
     std::unordered_map<int, std::size_t> m_id_map; // GMat id -> buffer idx map
     std::map<std::size_t, ade::NodeHandle> m_all_gmat_ids;
 
+    std::vector<cv::gapi::fluid::Buffer> m_buffers;
+
     void bindInArg (const RcDesc &rc, const GRunArg &arg);
     void bindOutArg(const RcDesc &rc, const GRunArgP &arg);
     void packArg   (GArg &in_arg, const GArg &op_arg);
 
-    void initBufferRois(std::vector<int>& readStarts, std::vector<cv::gapi::own::Rect>& rois, const std::vector<gapi::own::Rect> &out_rois);
-    void makeReshape(const std::vector<cv::gapi::own::Rect>& out_rois);
+    void initBufferRois(std::vector<int>& readStarts, std::vector<cv::Rect>& rois, const std::vector<cv::Rect> &out_rois);
+    void makeReshape(const std::vector<cv::Rect>& out_rois);
     std::size_t total_buffers_size() const;
 
 public:
@@ -152,13 +154,15 @@ public:
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
 
+    using GIslandExecutable::run; // (IInput&, IOutput&) version
+
     void run(std::vector<InObj>  &input_objs,
              std::vector<OutObj> &output_objs);
 
 
      GFluidExecutable(const ade::Graph                          &g,
                       const FluidGraphInputData                 &graph_data,
-                      const std::vector<cv::gapi::own::Rect>    &outputRois);
+                      const std::vector<cv::Rect>               &outputRois);
 };
 
 

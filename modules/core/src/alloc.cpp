@@ -112,6 +112,13 @@ bool isAlignedAllocationEnabled()
     }
     return useMemalign;
 }
+// do not use variable directly, details: https://github.com/opencv/opencv/issues/15691
+static const bool g_force_initialization_memalign_flag
+#if defined __GNUC__
+    __attribute__((unused))
+#endif
+    = isAlignedAllocationEnabled();
+
 #endif
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS

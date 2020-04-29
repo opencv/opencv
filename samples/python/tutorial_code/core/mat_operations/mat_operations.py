@@ -25,13 +25,13 @@ def access_pixel():
     y = 0
     x = 0
     ## [Pixel access 1]
-    intensity = img[y,x]
+    _intensity = img[y,x]
     ## [Pixel access 1]
 
     ## [Pixel access 3]
-    blue = img[y,x,0]
-    green = img[y,x,1]
-    red = img[y,x,2]
+    _blue = img[y,x,0]
+    _green = img[y,x,1]
+    _red = img[y,x,2]
     ## [Pixel access 3]
 
     ## [Pixel access 5]
@@ -42,12 +42,12 @@ def reference_counting():
     # Memory management and reference counting
     ## [Reference counting 2]
     img = cv.imread('image.jpg')
-    img1 = np.copy(img)
+    _img1 = np.copy(img)
     ## [Reference counting 2]
 
     ## [Reference counting 3]
     img = cv.imread('image.jpg')
-    sobelx = cv.Sobel(img, cv.CV_32F, 1, 0);
+    _sobelx = cv.Sobel(img, cv.CV_32F, 1, 0)
     ## [Reference counting 3]
 
 def primitive_operations():
@@ -57,17 +57,17 @@ def primitive_operations():
     ## [Set image to black]
 
     ## [Select ROI]
-    smallImg = img[10:110,10:110]
+    _smallImg = img[10:110,10:110]
     ## [Select ROI]
 
     ## [BGR to Gray]
     img = cv.imread('image.jpg')
-    grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    _grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     ## [BGR to Gray]
 
     src = np.ones((4,4), np.uint8)
     ## [Convert to CV_32F]
-    dst = src.astype(np.float32)
+    _dst = src.astype(np.float32)
     ## [Convert to CV_32F]
 
 def visualize_images():

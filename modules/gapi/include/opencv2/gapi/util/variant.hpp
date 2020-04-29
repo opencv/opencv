@@ -36,11 +36,14 @@ namespace util
             static const constexpr std::size_t value = I;
         };
 
+        template< bool B, class T = void >
+        using enable_if_t = typename std::enable_if<B,T>::type;
 
-        template<class T, class U, class V> using are_different =
-            std::enable_if<!std::is_same<typename std::decay<T>::type,
-                                         typename std::decay<U>::type>::value,
-                           V>;
+        template<class T, class U, class V = void>
+        using are_different_t = enable_if_t<
+                !std::is_same<typename std::decay<T>::type,
+                              typename std::decay<U>::type>::value,
+                 V>;
     }
 
     template<typename Target, typename... Types>
@@ -147,6 +150,9 @@ namespace util
     protected:
         template<typename T, typename... Us> friend T& get(variant<Us...> &v);
         template<typename T, typename... Us> friend const T& get(const variant<Us...> &v);
+        template<typename T, typename... Us> friend T* get_if(variant<Us...> *v) noexcept;
+        template<typename T, typename... Us> friend const T* get_if(const variant<Us...> *v) noexcept;
+
         template<typename... Us> friend bool operator==(const variant<Us...> &lhs,
                                                         const variant<Us...> &rhs);
         Memory memory;
@@ -157,10 +163,17 @@ namespace util
         variant(const variant& other);
         variant(variant&& other) noexcept;
         template<typename T> explicit variant(const T& t);
-        // are_different is a SFINAE trick to avoid variant(T &&t) with T=variant
+        // are_different_t is a SFINAE trick to avoid variant(T &&t) with T=variant
         // for some reason, this version is called instead of variant(variant&& o) when
-        // variant is used in STL containers (examples: vector assignment)
-        template<typename T> explicit variant(T&& t, typename detail::are_different<variant, T, int>::type = 0);
+        // variant is used in STL containers (examples: vector assignment).
+        // detail::enable_if_t<! std::is_lvalue_reference<T>::value> is a SFINAE
+        // trick to limit this constructor only to rvalue reference argument
+        template<
+            typename T,
+            typename = detail::are_different_t<variant, T>,
+            typename = detail::enable_if_t<! std::is_lvalue_reference<T>::value>
+        >
+        explicit variant(T&& t);
         // template<class T, class... Args> explicit variant(Args&&... args);
         // FIXME: other constructors
 
@@ -172,9 +185,11 @@ namespace util
         variant& operator=(variant &&rhs) noexcept;
 
         // SFINAE trick to avoid operator=(T&&) with T=variant<>, see comment above
-        template<class T>
-        typename detail::are_different<variant, T, variant&>
-        ::type operator=(T&& t) noexcept;
+        template<
+            typename T,
+            typename = detail::are_different_t<variant, T>
+        >
+        variant& operator=(T&& t) noexcept;
 
         // Observers
         std::size_t index() const noexcept;
@@ -189,6 +204,11 @@ namespace util
     };
 
     // FIMXE: visit
+    template<typename T, typename... Types>
+    T* get_if(util::variant<Types...>* v) noexcept;
+
+    template<typename T, typename... Types>
+    const T* get_if(const util::variant<Types...>* v) noexcept;
 
     template<typename T, typename... Types>
     T& get(util::variant<Types...> &v);
@@ -232,8 +252,8 @@ namespace util
     }
 
     template<typename... Ts>
-    template<class T>
-    variant<Ts...>::variant(T&& t, typename detail::are_different<variant, T, int>::type)
+    template<class T, typename , typename>
+    variant<Ts...>::variant(T&& t)
         : m_index(util::type_list_index<typename std::remove_reference<T>::type, Ts...>::value)
     {
         (mctrs()[m_index])(memory, &t);
@@ -278,19 +298,20 @@ namespace util
     }
 
     template<typename... Ts>
-    template<class T> typename detail::are_different<variant<Ts...>, T, variant<Ts...>&>
-    ::type variant<Ts...>::operator=(T&& t) noexcept
+    template<typename T, typename>
+    variant<Ts...>& variant<Ts...>::operator=(T&& t) noexcept
     {
+        using decayed_t = typename std::decay<T>::type;
         // FIXME: No version with implicit type conversion available!
         static const constexpr std::size_t t_index =
-            util::type_list_index<T, Ts...>::value;
+            util::type_list_index<decayed_t, Ts...>::value;
 
         if (t_index == m_index)
         {
-            util::get<T>(*this) = std::move(t);
+            util::get<decayed_t>(*this) = std::forward<T>(t);
             return *this;
         }
-        else return (*this = variant(std::move(t)));
+        else return (*this = variant(std::forward<T>(t)));
     }
 
     template<typename... Ts>
@@ -322,14 +343,34 @@ namespace util
     }
 
     template<typename T, typename... Types>
-    T& get(util::variant<Types...> &v)
+    T* get_if(util::variant<Types...>* v) noexcept
     {
         const constexpr std::size_t t_index =
             util::type_list_index<T, Types...>::value;
 
-        if (v.index() == t_index)
-            return *(T*)(&v.memory);  // workaround for ICC 2019
+        if (v && v->index() == t_index)
+            return (T*)(&v->memory);  // workaround for ICC 2019
             // original code: return reinterpret_cast<T&>(v.memory);
+        return nullptr;
+    }
+
+    template<typename T, typename... Types>
+    const T* get_if(const util::variant<Types...>* v) noexcept
+    {
+        const constexpr std::size_t t_index =
+            util::type_list_index<T, Types...>::value;
+
+        if (v && v->index() == t_index)
+            return (const T*)(&v->memory);  // workaround for ICC 2019
+            // original code: return reinterpret_cast<const T&>(v.memory);
+        return nullptr;
+    }
+
+    template<typename T, typename... Types>
+    T& get(util::variant<Types...> &v)
+    {
+        if (auto* p = get_if<T>(&v))
+            return *p;
         else
             throw_error(bad_variant_access());
     }
@@ -337,12 +378,8 @@ namespace util
     template<typename T, typename... Types>
     const T& get(const util::variant<Types...> &v)
     {
-        const constexpr std::size_t t_index =
-            util::type_list_index<T, Types...>::value;
-
-        if (v.index() == t_index)
-            return *(const T*)(&v.memory);  // workaround for ICC 2019
-            // original code: return reinterpret_cast<const T&>(v.memory);
+        if (auto* p = get_if<T>(&v))
+            return *p;
         else
             throw_error(bad_variant_access());
     }

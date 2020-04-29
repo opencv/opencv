@@ -11,7 +11,7 @@
 
 namespace
 {
-#define IMGPROC_GPU [] () { return cv::compile_args(cv::gapi::imgproc::gpu::kernels()); }
+#define IMGPROC_GPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::imgproc::gpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -31,7 +31,7 @@ INSTANTIATE_TEST_CASE_P(Filter2DTestGPU, Filter2DTest,
                                        cv::Size(7, 7)),
                                 Values(cv::BORDER_DEFAULT)));
 
-INSTANTIATE_TEST_CASE_P(BoxFilterTestCPU, BoxFilterTest,
+INSTANTIATE_TEST_CASE_P(BoxFilterTestGPU, BoxFilterTest,
                         Combine(Values(/*CV_8UC1,*/ CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
@@ -151,6 +151,29 @@ INSTANTIATE_TEST_CASE_P(SobelTestGPU32F, SobelTest,
                                 Values(3, 5),
                                 Values(0, 1),
                                 Values(1, 2)));
+
+INSTANTIATE_TEST_CASE_P(LaplacianTestGPU, LaplacianTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(IMGPROC_GPU),
+                                Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
+                                Values(5),
+                                Values(3.0),
+                                Values(BORDER_DEFAULT)));
+
+INSTANTIATE_TEST_CASE_P(BilateralFilterTestGPU, BilateralFilterTest,
+                        Combine(Values(CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(IMGPROC_GPU),
+                                Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
+                                Values(9),
+                                Values(100),
+                                Values(40),
+                                Values(BORDER_DEFAULT)));
 
 INSTANTIATE_TEST_CASE_P(EqHistTestGPU, EqHistTest,
                         Combine(Values(CV_8UC1),

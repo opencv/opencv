@@ -9,6 +9,44 @@
 #include <opencv2/gapi/fluid/core.hpp>
 #include <opencv2/gapi/fluid/imgproc.hpp>
 
+static void typed_example()
+{
+    const cv::Size sz(32, 32);
+    cv::Mat
+        in_mat1        (sz, CV_8UC1),
+        in_mat2        (sz, CV_8UC1),
+        out_mat_untyped(sz, CV_8UC1),
+        out_mat_typed1 (sz, CV_8UC1),
+        out_mat_typed2 (sz, CV_8UC1);
+    cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    //! [Untyped_Example]
+    // Untyped G-API ///////////////////////////////////////////////////////////
+    cv::GComputation cvtU([]()
+    {
+        cv::GMat in1, in2;
+        cv::GMat out = cv::gapi::add(in1, in2);
+        return cv::GComputation({in1, in2}, {out});
+    });
+    std::vector<cv::Mat> u_ins  = {in_mat1, in_mat2};
+    std::vector<cv::Mat> u_outs = {out_mat_untyped};
+    cvtU.apply(u_ins, u_outs);
+    //! [Untyped_Example]
+
+    //! [Typed_Example]
+    // Typed G-API /////////////////////////////////////////////////////////////
+    cv::GComputationT<cv::GMat (cv::GMat, cv::GMat)> cvtT([](cv::GMat m1, cv::GMat m2)
+    {
+        return m1+m2;
+    });
+    cvtT.apply(in_mat1, in_mat2, out_mat_typed1);
+
+    auto cvtTC =  cvtT.compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2));
+    cvtTC(in_mat1, in_mat2, out_mat_typed2);
+    //! [Typed_Example]
+}
+
 G_TYPED_KERNEL(IAdd, <cv::GMat(cv::GMat)>, "test.custom.add") {
     static cv::GMatDesc outMeta(const cv::GMatDesc &in) { return in; }
 };
@@ -77,5 +115,8 @@ int main(int argc, char *argv[])
         , CustomRGB2YUV
         >();
     //! [kernels_snippet]
+
+    // Just call typed example with no input/output
+    typed_example();
     return 0;
 }

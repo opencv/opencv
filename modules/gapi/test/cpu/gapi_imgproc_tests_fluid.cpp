@@ -10,7 +10,7 @@
 
 namespace
 {
-#define IMGPROC_FLUID [] () { return cv::compile_args(cv::gapi::imgproc::fluid::kernels()); }
+#define IMGPROC_FLUID [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::imgproc::fluid::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -106,7 +106,7 @@ INSTANTIATE_TEST_CASE_P(gaussBlurTestFluid, GaussianBlurTest,
                                 Values(-1),
                                 Values(IMGPROC_FLUID),
                                 Values(ToleranceFilter(1e-3f, 0.01).to_compare_obj()),
-                                Values(3))); // add kernel size=5 when implementation is ready
+                                Values(3, 5)));
 
 INSTANTIATE_TEST_CASE_P(medianBlurTestFluid, MedianBlurTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),

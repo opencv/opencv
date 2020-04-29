@@ -11,29 +11,34 @@
 
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 
-const cv::gapi::own::Mat& cv::GCPUContext::inMat(int input)
+const cv::Mat& cv::GCPUContext::inMat(int input)
 {
-    return inArg<cv::gapi::own::Mat>(input);
+    return inArg<cv::Mat>(input);
 }
 
-cv::gapi::own::Mat&  cv::GCPUContext::outMatR(int output)
+cv::Mat&  cv::GCPUContext::outMatR(int output)
 {
-    return *util::get<cv::gapi::own::Mat*>(m_results.at(output));
+    return *util::get<cv::Mat*>(m_results.at(output));
 }
 
-const cv::gapi::own::Scalar& cv::GCPUContext::inVal(int input)
+const cv::Scalar& cv::GCPUContext::inVal(int input)
 {
-    return inArg<cv::gapi::own::Scalar>(input);
+    return inArg<cv::Scalar>(input);
 }
 
-cv::gapi::own::Scalar& cv::GCPUContext::outValR(int output)
+cv::Scalar& cv::GCPUContext::outValR(int output)
 {
-    return *util::get<cv::gapi::own::Scalar*>(m_results.at(output));
+    return *util::get<cv::Scalar*>(m_results.at(output));
 }
 
 cv::detail::VectorRef& cv::GCPUContext::outVecRef(int output)
 {
     return util::get<cv::detail::VectorRef>(m_results.at(output));
+}
+
+cv::detail::OpaqueRef& cv::GCPUContext::outOpaqueRef(int output)
+{
+    return util::get<cv::detail::OpaqueRef>(m_results.at(output));
 }
 
 cv::GCPUKernel::GCPUKernel()

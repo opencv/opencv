@@ -11,7 +11,7 @@
 
 namespace
 {
-#define CORE_CPU [] () { return cv::compile_args(cv::gapi::core::cpu::kernels()); }
+#define CORE_CPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::cpu::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -167,7 +167,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestCPU, BitwiseTest,
                                 Values(AND, OR, XOR)));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestCPU, NotTest,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
@@ -435,6 +435,32 @@ INSTANTIATE_TEST_CASE_P(ConcatHorVecTestCPU, ConcatHorVecTest,
                                 Values(-1),
                                 Values(CORE_CPU)));
 
+INSTANTIATE_TEST_CASE_P(WarpPerspectiveTestCPU, WarpPerspectiveTest,
+                        Combine(Values(CV_8UC1, CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(-50.0, 90.0),
+                                Values(0.6),
+                                Values(cv::INTER_LINEAR),
+                                Values(cv::BORDER_CONSTANT),
+                                Values(cv::Scalar())));
+
+INSTANTIATE_TEST_CASE_P(WarpAffineTestCPU, WarpAffineTest,
+                        Combine(Values(CV_8UC1, CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(-50.0, 90.0),
+                                Values(0.6),
+                                Values(cv::INTER_LINEAR),
+                                Values(cv::BORDER_CONSTANT),
+                                Values(cv::Scalar())));
+
 INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
@@ -446,6 +472,8 @@ INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
                                 Values(1.0, 120.0, 255.0),
                                 Values(NORM_MINMAX, NORM_INF, NORM_L1, NORM_L2),
                                 Values(-1, CV_8U, CV_16U, CV_16S, CV_32F)));
+
+// PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestCPU, BackendOutputAllocationTest,
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
@@ -467,4 +495,5 @@ INSTANTIATE_TEST_CASE_P(ReInitOutTestCPU, ReInitOutTest,
                                 Values(CORE_CPU),
                                 Values(cv::Size(640, 400),
                                        cv::Size(10, 480))));
+
 }

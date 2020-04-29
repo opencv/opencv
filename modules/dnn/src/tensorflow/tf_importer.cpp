@@ -458,6 +458,7 @@ private:
     tensorflow::GraphDef netTxt;
 
     std::vector<String> netInputsNames;
+    std::vector<MatShape> netInputShapes;
 };
 
 TFImporter::TFImporter(const char *model, const char *config)
@@ -714,6 +715,10 @@ void TFImporter::populateNet(Net dstNet)
     {
         simplifySubgraphs(netBin);
         sortByExecutionOrder(netBin);
+    }
+    else
+    {
+        sortByExecutionOrder(netTxt);
     }
 
     std::set<String> layers_to_ignore;
@@ -996,7 +1001,7 @@ void TFImporter::populateNet(Net dstNet)
             if (getDataLayout(name, data_layouts) == DATA_LAYOUT_UNKNOWN)
                 data_layouts[name] = DATA_LAYOUT_NHWC;
         }
-        else if (type == "BiasAdd" || type == "Add" || type == "Sub" || type=="AddN")
+        else if (type == "BiasAdd" || type == "Add" || type == "AddV2" || type == "Sub" || type=="AddN")
         {
             bool haveConst = false;
             for(int ii = 0; !haveConst && ii < layer.input_size(); ++ii)
@@ -1226,6 +1231,7 @@ void TFImporter::populateNet(Net dstNet)
                 // Only NHWC <-> NCHW permutations are allowed. OpenCV is always
                 // keep NCHW layout this way.
                 int inpLayout = getDataLayout(layer.input(0), data_layouts);
+                std::string type = "Identity";
                 if (inpLayout == DATA_LAYOUT_NHWC)
                 {
                     if (permData[0] == 0 && permData[1] == 3 && permData[2] == 1 && permData[3] == 2)
@@ -1239,6 +1245,15 @@ void TFImporter::populateNet(Net dstNet)
                         // in TensorFlow: NHWC->NHWC
                         // in OpenCV: NCHW->NCHW
                         data_layouts[name] = DATA_LAYOUT_NHWC;
+                    }
+                    else if (permData[0] == 0 && permData[1] == 3 && permData[2] == 2 && permData[3] == 1)
+                    {
+                        // in TensorFlow: NHWC->NCWH
+                        // in OpenCV: NCHW->NCWH
+                        int permData[] = {0, 1, 3, 2};
+                        layerParams.set("order", DictValue::arrayInt<int*>(permData, perm.total()));
+                        data_layouts[name] = DATA_LAYOUT_NCHW;  // we keep track NCHW because channels position only matters
+                        type = "Permute";
                     }
                     else
                         CV_Error(Error::StsParseError, "Only NHWC <-> NCHW permutations are allowed.");
@@ -1260,7 +1275,7 @@ void TFImporter::populateNet(Net dstNet)
                     else
                         CV_Error(Error::StsParseError, "Only NHWC <-> NCHW permutations are allowed.");
                 }
-                int id = dstNet.addLayer(name, "Identity", layerParams);
+                int id = dstNet.addLayer(name, type, layerParams);
                 layer_id[name] = id;
                 connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
             }
@@ -1350,6 +1365,8 @@ void TFImporter::populateNet(Net dstNet)
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
+            // Test_TensorFlow_nets.EAST_text_detection/1, NGRAPH/CPU
+            layerParams.set("ceil_mode", false);
 
             int id = dstNet.addLayer(name, "Pooling", layerParams);
             layer_id[name] = id;
@@ -1394,6 +1411,35 @@ void TFImporter::populateNet(Net dstNet)
             {
                 netInputsNames.push_back(name);
                 layer_id[name] = 0;
+            }
+            tensorflow::TensorShapeProto shape;
+            if (hasLayerAttr(layer, "shape"))
+                shape = getLayerAttr(layer, "shape").shape();
+            else if (hasLayerAttr(layer, "_output_shapes"))
+            {
+                tensorflow::AttrValue_ListValue list = getLayerAttr(layer, "_output_shapes").list();
+                if (list.shape_size())
+                    shape = list.shape()[0];
+            }
+            if (shape.dim_size())
+            {
+                MatShape dims(shape.dim_size());
+                for (int i = 0; i < dims.size(); ++i)
+                    dims[i] = shape.dim(i).size();
+                if (dims.size() == 4 && predictedLayout == DATA_LAYOUT_NHWC)
+                {
+                    std::swap(dims[1], dims[3]);  // NHWC->NCWH
+                    std::swap(dims[2], dims[3]);  // NCWH->NCHW
+                    if (dims[0] == -1)  // It's OK to have undetermined batch size
+                        dims[0] = 1;
+                }
+                bool hasNeg = false;
+                for (int i = 0; i < dims.size() && !hasNeg; ++i)
+                {
+                    hasNeg = dims[i] < 0;
+                }
+                if (!hasNeg)
+                    netInputShapes.push_back(dims);
             }
         }
         else if (type == "Split") {
@@ -1462,6 +1508,8 @@ void TFImporter::populateNet(Net dstNet)
             int end_mask = getLayerAttr(layer, "end_mask").i();
             for (int i = 0; i < num; ++i)
             {
+                if (ends.at<int>(i) < 0)
+                    ends.at<int>(i) -= 1;
                 if (end_mask & (1 << i))
                     ends.at<int>(i) = -1;
                 if (strides.at<int>(i) != 1)
@@ -1572,8 +1620,41 @@ void TFImporter::populateNet(Net dstNet)
             }
             else
             {
-                layerParams.set("operation", "prod");
-                int id = dstNet.addLayer(name, "Eltwise", layerParams);
+                // Check if all the inputs have the same shape.
+                bool equalInpShapes = true;
+                MatShape outShape0;
+                for (int ii = 0; ii < layer.input_size() && !netInputShapes.empty(); ii++)
+                {
+                    Pin pin = parsePin(layer.input(ii));
+                    int inpId = layer_id.find(pin.name)->second;
+
+                    // Get input shape
+                    MatShape outShape;
+                    std::vector<MatShape> inpShapes, outShapes;
+                    dstNet.getLayerShapes(netInputShapes, inpId, inpShapes, outShapes);
+                    CV_CheckGT(static_cast<int>(outShapes.size()), pin.blobIndex, "");
+                    outShape = outShapes[pin.blobIndex];
+
+                    if (ii == 0)
+                    {
+                        outShape0 = outShape;
+                    }
+                    else if (outShape != outShape0)
+                    {
+                        equalInpShapes = false;
+                        break;
+                    }
+                }
+
+                int id;
+                if (equalInpShapes || netInputShapes.empty())
+                {
+                    layerParams.set("operation", "prod");
+                    id = dstNet.addLayer(name, "Eltwise", layerParams);
+                }
+                else
+                    id = dstNet.addLayer(name, "Scale", layerParams);
+
                 layer_id[name] = id;
 
                 for (int ii = 0; ii < layer.input_size(); ii++)
@@ -1585,7 +1666,7 @@ void TFImporter::populateNet(Net dstNet)
                 }
             }
         }
-        else if (type == "FusedBatchNorm")
+        else if (type == "FusedBatchNorm" || type == "FusedBatchNormV3")
         {
             // op: "FusedBatchNorm"
             // input: "input"
@@ -1805,8 +1886,31 @@ void TFImporter::populateNet(Net dstNet)
             connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
             data_layouts[name] = DATA_LAYOUT_UNKNOWN;
         }
-        else if (type == "ResizeNearestNeighbor" || type == "ResizeBilinear")
+        else if (type == "ResizeNearestNeighbor" || type == "ResizeBilinear" || type == "FusedResizeAndPadConv2D")
         {
+            std::string convWeights = "";
+            if (type == "FusedResizeAndPadConv2D")
+            {
+                // input: "mul_1"
+                // input: "decoder/ResizeBilinear/size"
+                // input: "decoder/decoder_conv0/Conv2D_dummy_paddings"
+                // input: "decoder/decoder_conv0/weights"
+                CV_CheckEQ(layer.input_size(), 4, "Number of input for FusedResizeAndPadConv2D");
+
+                Mat paddings = getTensorContent(getConstBlob(layer, value_id, 2));
+                CV_CheckEQ(countNonZero(paddings), 0, "Unsupported mode");
+
+                convWeights = layer.input(3);
+                layer.mutable_input()->DeleteSubrange(2, 2);
+                name = name + "/resize";
+
+                if (hasLayerAttr(layer, "resize_align_corners"))
+                {
+                    layer.mutable_attr()->insert(
+                        ::google::protobuf::MapPair<std::string, tensorflow::AttrValue>("align_corners",
+                                                                                        getLayerAttr(layer, "resize_align_corners")));
+                }
+            }
             if (layer.input_size() == 2)
             {
                 Mat outSize = getTensorContent(getConstBlob(layer, value_id, 1));
@@ -1838,6 +1942,17 @@ void TFImporter::populateNet(Net dstNet)
             layer_id[name] = id;
 
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
+            // Step back to add convolution
+            if (type == "FusedResizeAndPadConv2D")
+            {
+                tensorflow::NodeDef* conv = net.mutable_node(li);
+                conv->clear_input();
+                conv->add_input(name);
+                conv->add_input(convWeights);
+                conv->set_op("Conv2D");
+                li -= 1;
+            }
         }
         else if (type == "L2Normalize")
         {
@@ -1930,19 +2045,21 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Mean")
         {
+            // Computes the mean of elements across dimensions of a tensor.
+            // If keepdims is false (default) reduces input_tensor along the dimensions given in axis,
+            // else the reduced dimensions are retained with length 1.
+            // if indices = [1, 2] in NHWC layout we use global pooling: NxCxHxW --Pooling--> NxCx1x1
+            // if keepdims is false we use Flatten after Pooling: out_shape = NxC
+            // if indices = [0] we use a global pooling by indices.
+            // To return correct shape, we use Reshape after Pooling. To determine input shape use Slice for input,
+            // if keepdims is false we use Flatten after Slice.
+            // Example: input_shape = NxCxHxW
+            // determine out shape: NxCxHxW --Slice--> 1xCxHxW
+            //                      out_shape = 1xCxHxW if keepDims else (1xCxHxW --Flatten--> CxHxW)
+            // global pool: NxCxHxW --Flatten--> Nx(C*H*W) --Reshape--> 1x1xNx(C*H*W) --Pooling--> 1x1x1x(C*H*W) --Reshape--> out_shape
+
             Mat indices = getTensorContent(getConstBlob(layer, value_id, 1));
             CV_Assert(indices.type() == CV_32SC1);
-
-            if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
-                CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
-
-            layerParams.set("pool", "ave");
-            layerParams.set("global_pooling", true);
-
-            int id = dstNet.addLayer(name, "Pooling", layerParams);
-            layer_id[name] = id;
-
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
 
             // There are two attributes, "keepdims" and a deprecated "keep_dims".
             bool keepDims = false;
@@ -1951,15 +2068,127 @@ void TFImporter::populateNet(Net dstNet)
             else if (hasLayerAttr(layer, "keep_dims"))
                 keepDims = getLayerAttr(layer, "keep_dims").b();
 
-            if (!keepDims)
+            if (indices.total() == 1 && indices.at<int>(0) == 0)
             {
                 LayerParams flattenLp;
                 std::string flattenName = name + "/flatten";
                 CV_Assert(layer_id.find(flattenName) == layer_id.end());
                 int flattenId = dstNet.addLayer(flattenName, "Flatten", flattenLp);
                 layer_id[flattenName] = flattenId;
-                connect(layer_id, dstNet, Pin(name), flattenId, 0);
+                connect(layer_id, dstNet, parsePin(layer.input(0)), flattenId, 0);
+
+                LayerParams reshapeLp;
+                std::string reshapeName = name + "/reshape";
+                CV_Assert(layer_id.find(reshapeName) == layer_id.end());
+                reshapeLp.set("axis", 0);
+                reshapeLp.set("num_axes", 1);
+                int newShape[] = {1, 1, -1};
+                reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], 3));
+
+                int reshapeId = dstNet.addLayer(reshapeName, "Reshape", reshapeLp);
+                layer_id[reshapeName] = reshapeId;
+                connect(layer_id, dstNet, Pin(flattenName), reshapeId, 0);
+
+                LayerParams avgLp;
+                std::string avgName = name + "/avg";
+                CV_Assert(layer_id.find(avgName) == layer_id.end());
+                avgLp.set("pool", "ave");
+                // pooling kernel H x 1
+                avgLp.set("global_pooling_h", true);
+                avgLp.set("kernel_w", 1);
+                int avgId = dstNet.addLayer(avgName, "Pooling", avgLp);
+                layer_id[avgName] = avgId;
+                connect(layer_id, dstNet, Pin(reshapeName), avgId, 0);
+
+                LayerParams sliceLp;
+                std::string layerShapeName = name + "/slice";
+                CV_Assert(layer_id.find(layerShapeName) == layer_id.end());
+                sliceLp.set("axis", 0);
+                int begin[] = {0};
+                int size[] = {1};
+                sliceLp.set("begin", DictValue::arrayInt(&begin[0], 1));
+                sliceLp.set("size", DictValue::arrayInt(&size[0], 1));
+                int sliceId = dstNet.addLayer(layerShapeName, "Slice", sliceLp);
+                layer_id[layerShapeName] = sliceId;
+                connect(layer_id, dstNet, Pin(layer.input(0)), sliceId, 0);
+
+                if (!keepDims)
+                {
+                    LayerParams squeezeLp;
+                    std::string squeezeName = name + "/squeeze";
+                    CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                    squeezeLp.set("axis", 0);
+                    squeezeLp.set("end_axis", 1);
+                    int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
+                    layer_id[squeezeName] = squeezeId;
+                    connect(layer_id, dstNet, Pin(layerShapeName), squeezeId, 0);
+                    layerShapeName = squeezeName;
+                }
+
+                int id = dstNet.addLayer(name, "Reshape", layerParams);
+                layer_id[name] = id;
+                connect(layer_id, dstNet, Pin(avgName), id, 0);
+                connect(layer_id, dstNet, Pin(layerShapeName), id, 1);
+            } else {
+                if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
+                    CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
+
+                layerParams.set("pool", "ave");
+                layerParams.set("global_pooling", true);
+                int id = dstNet.addLayer(name, "Pooling", layerParams);
+                layer_id[name] = id;
+                connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
+                if (!keepDims)
+                {
+                    LayerParams flattenLp;
+                    std::string flattenName = name + "/flatten";
+                    CV_Assert(layer_id.find(flattenName) == layer_id.end());
+                    int flattenId = dstNet.addLayer(flattenName, "Flatten", flattenLp);
+                    layer_id[flattenName] = flattenId;
+                    connect(layer_id, dstNet, Pin(name), flattenId, 0);
+                }
             }
+        }
+        else if (type == "Pack")
+        {
+            // op: tf.stack(list of tensors, axis=0)
+            // Join a list of inputs along a new axis.
+            // The "axis" specifies the index of the new axis in the dimensions of the output.
+            // Example: given a list with "N" tensors of shape (C, H, W):
+            // if axis == 0 then the output tensor will have the shape (N, C, H, W),
+            // if axis == 1 then the output tensor will have the shape (C, N, H, W).
+            CV_Assert(hasLayerAttr(layer, "axis"));
+            int dim = (int)getLayerAttr(layer, "axis").i();
+            if (dim != 0)
+                CV_Error(Error::StsNotImplemented, "Unsupported mode of pack operation.");
+
+            CV_Assert(hasLayerAttr(layer, "N"));
+            int num = (int)getLayerAttr(layer, "N").i();
+            CV_Assert(layer.input_size() == num);
+            std::string base_name = name + "/reshape_";
+            std::vector<int> reshape_ids;
+            for (int i = 0; i < num; i++) {
+                std::ostringstream ss;
+                ss << i;
+                std::string reshape_name = base_name + ss.str();
+                LayerParams reshapeLP;
+                reshapeLP.set("axis", dim);
+                reshapeLP.set("num_axes", 1);
+                int outShape[] = {1, -1};
+                reshapeLP.set("dim", DictValue::arrayInt(&outShape[0], 2));
+                int id = dstNet.addLayer(reshape_name, "Reshape", reshapeLP);
+                layer_id[reshape_name] = id;
+                reshape_ids.push_back(id);
+                connect(layer_id, dstNet, parsePin(layer.input(i)), id, 0);
+            }
+
+            layerParams.set("axis", dim);
+            int id = dstNet.addLayer(name, "Concat", layerParams);
+            layer_id[name] = id;
+
+            for (int li = 0; li < num; li++)
+                dstNet.connect(reshape_ids[li], 0, id, li);
         }
         else if (type == "ClipByValue")
         {

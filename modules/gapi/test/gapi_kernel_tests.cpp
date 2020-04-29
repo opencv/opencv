@@ -6,7 +6,6 @@
 
 
 #include "test_precomp.hpp"
-#include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include "gapi_mock_kernels.hpp"
 
 #include <opencv2/gapi/cpu/gcpukernel.hpp>     // cpu::backend
@@ -101,7 +100,7 @@ namespace
         GAPI_FLUID_KERNEL(GClone, I::GClone, false)
         {
             static const int Window = 1;
-            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer)
+            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer&)
             {
                 HeteroGraph::registerCallKernel(KernelTags::FLUID_CUSTOM_CLONE);
             }
@@ -323,6 +322,21 @@ TEST(KernelPackage, Can_Use_Custom_Kernel)
 
     EXPECT_NO_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
                         compile({in_meta, in_meta}, cv::compile_args(pkg)));
+}
+
+TEST(KernelPackage, CombineMultiple)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+    auto a = cv::gapi::kernels<J::Foo>();
+    auto b = cv::gapi::kernels<J::Bar>();
+    auto c = cv::gapi::kernels<S::Qux>();
+    auto pkg = cv::gapi::combine(a, b, c);
+
+    EXPECT_EQ(3u, pkg.size());
+    EXPECT_TRUE(pkg.includes<J::Foo>());
+    EXPECT_TRUE(pkg.includes<J::Bar>());
+    EXPECT_TRUE(pkg.includes<S::Qux>());
 }
 
 TEST_F(HeteroGraph, Call_Custom_Kernel_Default_Backend)

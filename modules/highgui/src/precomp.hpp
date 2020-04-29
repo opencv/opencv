@@ -152,7 +152,7 @@ inline void convertToShow(const cv::Mat &src, cv::Mat &dst, bool toRGB = true)
         break;
     case CV_32F:
     case CV_64F: // assuming image has values in range [0, 1)
-        cv::convertScaleAbs(src, tmp, 256.);
+        src.convertTo(tmp, CV_8U, 255., 0.);
         break;
     }
     cv::cvtColor(tmp, dst, toRGB ? cv::COLOR_BGR2RGB : cv::COLOR_BGRA2BGR, dst.channels());

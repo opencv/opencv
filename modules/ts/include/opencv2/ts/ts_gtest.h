@@ -9235,6 +9235,10 @@ class NativeArray {
     try { \
       GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
     } \
+    catch (const std::exception& e) { \
+      std::cerr << "Exception message: " << e.what() << std::endl; \
+      goto GTEST_CONCAT_TOKEN_(gtest_label_testnothrow_, __LINE__); \
+    } \
     catch (...) { \
       goto GTEST_CONCAT_TOKEN_(gtest_label_testnothrow_, __LINE__); \
     } \
@@ -11367,7 +11371,7 @@ void UniversalTersePrint(const T& value, ::std::ostream* os) {
 // NUL-terminated string.
 template <typename T>
 void UniversalPrint(const T& value, ::std::ostream* os) {
-  // A workarond for the bug in VC++ 7.1 that prevents us from instantiating
+  // A workaround for the bug in VC++ 7.1 that prevents us from instantiating
   // UniversalPrinter with T directly.
   typedef T T1;
   UniversalPrinter<T1>::Print(value, os);

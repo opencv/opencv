@@ -1,5 +1,7 @@
 package org.opencv.test.calib3d;
 
+import java.util.ArrayList;
+
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -650,6 +652,47 @@ public class Calib3dTest extends OpenCVTestCase {
         assertEquals((1 << 22), Calib3d.CALIB_USE_EXTRINSIC_GUESS);
     }
 
+    public void testSolvePnPGeneric_regression_16040() {
+        Mat intrinsics = Mat.eye(3, 3, CvType.CV_64F);
+        intrinsics.put(0, 0, 400);
+        intrinsics.put(1, 1, 400);
+        intrinsics.put(0, 2, 640 / 2);
+        intrinsics.put(1, 2, 480 / 2);
+
+        final int minPnpPointsNum = 4;
+
+        MatOfPoint3f points3d = new MatOfPoint3f();
+        points3d.alloc(minPnpPointsNum);
+        MatOfPoint2f points2d = new MatOfPoint2f();
+        points2d.alloc(minPnpPointsNum);
+
+        for (int i = 0; i < minPnpPointsNum; i++) {
+            double x = Math.random() * 100 - 50;
+            double y = Math.random() * 100 - 50;
+            points2d.put(i, 0, x, y); //add(new Point(x, y));
+            points3d.put(i, 0, 0, y, x); // add(new Point3(0, y, x));
+        }
+
+        ArrayList<Mat> rvecs = new ArrayList<Mat>();
+        ArrayList<Mat> tvecs = new ArrayList<Mat>();
+
+        Mat rvec = new Mat();
+        Mat tvec = new Mat();
+
+        Mat reprojectionError = new Mat(2, 1, CvType.CV_64FC1);
+
+        Calib3d.solvePnPGeneric(points3d, points2d, intrinsics, new MatOfDouble(), rvecs, tvecs, false, Calib3d.SOLVEPNP_IPPE, rvec, tvec, reprojectionError);
+
+        Mat truth_rvec = new Mat(3, 1, CvType.CV_64F);
+        truth_rvec.put(0, 0, 0, Math.PI / 2, 0);
+
+        Mat truth_tvec = new Mat(3, 1, CvType.CV_64F);
+        truth_tvec.put(0, 0, -320, -240, 400);
+
+        assertMatEqual(truth_rvec, rvecs.get(0), 10 * EPS);
+        assertMatEqual(truth_tvec, tvecs.get(0), 1000 * EPS);
+    }
+
     public void testGetDefaultNewCameraMatrixMat() {
         Mat mtx = Calib3d.getDefaultNewCameraMatrix(gray0);
 
@@ -775,5 +818,4 @@ public class Calib3dTest extends OpenCVTestCase {
             assertTrue(src.toList().get(i).equals(dst.toList().get(i)));
         }
     }
-
 }

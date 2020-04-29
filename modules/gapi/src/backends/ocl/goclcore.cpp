@@ -486,7 +486,7 @@ GAPI_OCL_KERNEL(GOCLCopy, cv::gapi::core::GCopy)
 {
     static void run(const cv::UMat& in, cv::UMat& out)
     {
-        cv::UMat(in).copyTo(out);
+        in.copyTo(out);
     }
 };
 

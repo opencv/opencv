@@ -42,7 +42,7 @@ if(HAVE_CUDA)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
-if(CV_TRACE AND HAVE_ITT AND BUILD_ITT)
+if(CV_TRACE AND HAVE_ITT)
   add_definitions(-DOPENCV_WITH_ITT=1)
 endif()
 
@@ -81,9 +81,26 @@ if(HAVE_MEMALIGN)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_MEMALIGN=1")
 endif()
 
+option(OPENCV_ENABLE_ALLOCATOR_STATS "Enable Allocator metrics" ON)
+
+if(NOT OPENCV_ENABLE_ALLOCATOR_STATS)
+  add_definitions(-DOPENCV_DISABLE_ALLOCATOR_STATS=1)
+else()
+  if(NOT DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
+    if(HAVE_ATOMIC_LONG_LONG AND OPENCV_ENABLE_ATOMIC_LONG_LONG)
+      set(OPENCV_ALLOCATOR_STATS_COUNTER_TYPE "long long")
+    else()
+      set(OPENCV_ALLOCATOR_STATS_COUNTER_TYPE "int")
+    endif()
+  endif()
+  message(STATUS "Allocator metrics storage type: '${OPENCV_ALLOCATOR_STATS_COUNTER_TYPE}'")
+  add_definitions("-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=${OPENCV_ALLOCATOR_STATS_COUNTER_TYPE}")
+endif()
+
+
 ocv_create_module(${extra_libs})
 
-ocv_target_link_libraries(${the_module} LINK_PRIVATE
+ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"

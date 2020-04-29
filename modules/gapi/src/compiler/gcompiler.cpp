@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -28,16 +28,20 @@
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gcompiler.hpp"
 #include "compiler/gcompiled_priv.hpp"
+#include "compiler/gstreaming_priv.hpp"
 #include "compiler/passes/passes.hpp"
 #include "compiler/passes/pattern_matching.hpp"
 
 #include "executor/gexecutor.hpp"
+#include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
-#include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core
-#include <opencv2/gapi/cpu/imgproc.hpp> // ...and Imgproc kernel implementations
+#include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core,
+#include <opencv2/gapi/cpu/imgproc.hpp> // ...Imgproc
+#include <opencv2/gapi/cpu/video.hpp>   // ...and Video kernel implementations
+#include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
@@ -64,10 +68,13 @@ namespace
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
             combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels());
+                    cv::gapi::imgproc::cpu::kernels(),
+                    cv::gapi::video::cpu::kernels(),
+                    cv::gapi::render::ocv::kernels());
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
+
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
         auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
         return combine(ocv_pkg, user_pkg_with_aux);
@@ -202,8 +209,9 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     };
     take(kernels_to_use.backends());
     take(networks_to_use.backends());
-    m_all_kernels        = cv::gapi::combine(kernels_to_use,
-                                             auxKernelsFrom(all_backends));
+
+    m_all_kernels = cv::gapi::combine(kernels_to_use,
+                                      auxKernelsFrom(all_backends));
     // NB: The expectation in the line above is that
     // NN backends (present here via network package) always add their
     // inference kernels via auxiliary...()
@@ -252,13 +260,16 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                                       // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
+    //Input metas may be empty when a graph is compiled for streaming
     m_e.addPassStage("meta");
-    m_e.addPass("meta", "initialize",   std::bind(passes::initMeta, _1, std::ref(m_metas)));
-    m_e.addPass("meta", "propagate",    std::bind(passes::inferMeta, _1, false));
-    m_e.addPass("meta", "finalize",     passes::storeResultingMeta);
-    // moved to another stage, FIXME: two dumps?
-    //    m_e.addPass("meta", "dump_dot",     passes::dumpDotStdout);
-
+    if (!m_metas.empty())
+    {
+        m_e.addPass("meta", "initialize",   std::bind(passes::initMeta, _1, std::ref(m_metas)));
+        m_e.addPass("meta", "propagate",    std::bind(passes::inferMeta, _1, false));
+        m_e.addPass("meta", "finalize",     passes::storeResultingMeta);
+        // moved to another stage, FIXME: two dumps?
+        //    m_e.addPass("meta", "dump_dot",     passes::dumpDotStdout);
+    }
     // Special stage for backend-specific transformations
     // FIXME: document passes hierarchy and order for backend developers
     m_e.addPassStage("transform");
@@ -266,6 +277,16 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     m_e.addPassStage("exec");
     m_e.addPass("exec", "fuse_islands",     passes::fuseIslands);
     m_e.addPass("exec", "sync_islands",     passes::syncIslandTags);
+
+    // FIXME: Since a set of passes is shared between
+    // GCompiled/GStreamingCompiled, this pass is added here unconditionally
+    // (even if it is not actually required to produce a GCompiled).
+    // FIXME: add a better way to do that!
+    m_e.addPass("exec", "add_streaming",    passes::addStreaming);
+
+    // Note: Must be called after addStreaming as addStreaming pass
+    // can possibly add new nodes to the IslandModel
+    m_e.addPass("exec", "sort_islands",     passes::topoSortIslands);
 
     if (dump_path.has_value())
     {
@@ -281,6 +302,10 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     for (auto &b : backends)
     {
         b.priv().addBackendPasses(ectx);
+        if (!m_metas.empty())
+        {
+            b.priv().addMetaSensitiveBackendPasses(ectx);
+        }
     }
 }
 
@@ -300,6 +325,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
         // FIXME: Auto-generate methods like this from traits:
         case GProtoArg::index_of<cv::GMat>():
         case GProtoArg::index_of<cv::GMatP>():
+        case GProtoArg::index_of<cv::GFrame>():
             return util::holds_alternative<cv::GMatDesc>(meta);
 
         case GProtoArg::index_of<cv::GScalar>():
@@ -307,6 +333,9 @@ void cv::gimpl::GCompiler::validateInputMeta()
 
         case GProtoArg::index_of<cv::detail::GArrayU>():
             return util::holds_alternative<cv::GArrayDesc>(meta);
+
+        case GProtoArg::index_of<cv::detail::GOpaqueU>():
+            return util::holds_alternative<cv::GOpaqueDesc>(meta);
 
         default:
             GAPI_Assert(false);
@@ -348,9 +377,18 @@ void cv::gimpl::GCompiler::validateOutProtoArgs()
 
 cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
 {
-    validateInputMeta();
+    if (!m_metas.empty())
+    {
+        // Metadata may be empty if we're compiling our graph for streaming
+        validateInputMeta();
+    }
     validateOutProtoArgs();
-    return makeGraph(m_c.priv().m_ins, m_c.priv().m_outs);
+    auto g = makeGraph(m_c.priv().m_ins, m_c.priv().m_outs);
+    if (!m_metas.empty())
+    {
+        GModel::Graph(*g).metadata().set(OriginalInputMeta{m_metas});
+    }
+    return g;
 }
 
 void cv::gimpl::GCompiler::runPasses(ade::Graph &g)
@@ -361,16 +399,16 @@ void cv::gimpl::GCompiler::runPasses(ade::Graph &g)
 
 void cv::gimpl::GCompiler::compileIslands(ade::Graph &g)
 {
+    compileIslands(g, m_args);
+}
+
+void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, const cv::GCompileArgs &args)
+{
     GModel::Graph gm(g);
     std::shared_ptr<ade::Graph> gptr(gm.metadata().get<IslandModel>().model);
     GIslandModel::Graph gim(*gptr);
 
-    // Run topological sort on GIslandModel first
-    auto pass_ctx = ade::passes::PassContext{*gptr};
-    ade::passes::TopologicalSort{}(pass_ctx);
-
-    // Now compile islands
-    GIslandModel::compileIslands(gim, g, m_args);
+    GIslandModel::compileIslands(gim, g, args);
 }
 
 cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
@@ -402,10 +440,74 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     return compiled;
 }
 
+cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
+{
+    GStreamingCompiled compiled;
+    GMetaArgs outMetas;
+
+    // FIXME: the whole below construct is ugly, need to revise
+    // how G*Compiled learns about its meta.
+    if (!m_metas.empty())
+    {
+        outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
+    }
+
+    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg)));
+    if (!m_metas.empty() && !outMetas.empty())
+    {
+        compiled.priv().setup(m_metas, outMetas, std::move(pE));
+    }
+    else if (m_metas.empty() && outMetas.empty())
+    {
+        // Otherwise, set it up with executor object only
+        compiled.priv().setup(std::move(pE));
+    }
+    else GAPI_Assert(false && "Impossible happened -- please report a bug");
+    return compiled;
+}
+
 cv::GCompiled cv::gimpl::GCompiler::compile()
 {
     std::unique_ptr<ade::Graph> pG = generateGraph();
     runPasses(*pG);
     compileIslands(*pG);
     return produceCompiled(std::move(pG));
+}
+
+cv::GStreamingCompiled cv::gimpl::GCompiler::compileStreaming()
+{
+    // FIXME: self-note to DM: now keep these compile()/compileStreaming() in sync!
+    std::unique_ptr<ade::Graph> pG = generateGraph();
+    GModel::Graph(*pG).metadata().set(Streaming{});
+    runPasses(*pG);
+    if (!m_metas.empty())
+    {
+        // If the metadata has been passed, compile our islands!
+        compileIslands(*pG);
+    }
+    return produceStreamingCompiled(std::move(pG));
+}
+
+void cv::gimpl::GCompiler::runMetaPasses(ade::Graph &g, const cv::GMetaArgs &metas)
+{
+    auto pass_ctx = ade::passes::PassContext{g};
+    cv::gimpl::passes::initMeta(pass_ctx, metas);
+    cv::gimpl::passes::inferMeta(pass_ctx, true);
+    cv::gimpl::passes::storeResultingMeta(pass_ctx);
+
+    // Also run meta-sensitive backend-specific passes, if there's any.
+    // FIXME: This may be hazardous if our backend are not very robust
+    // in their passes -- how can we guarantee correct functioning in the
+    // future?
+    ade::ExecutionEngine engine;
+    engine.addPassStage("exec"); // FIXME: Need a better decision on how we replicate
+                                 // our main compiler stages here.
+    ade::ExecutionEngineSetupContext ectx(engine);
+
+    // NB: &&b or &b doesn't work here since "backends" is a set. Nevermind
+    for (auto b : GModel::Graph(g).metadata().get<ActiveBackends>().backends)
+    {
+        b.priv().addMetaSensitiveBackendPasses(ectx);
+    }
+    engine.runPasses(g);
 }

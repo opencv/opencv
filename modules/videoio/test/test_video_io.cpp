@@ -119,6 +119,8 @@ public:
             for (int k = 0; k < n_frames; ++k)
             {
                 checkFrameRead(k, cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
             }
         }
         bool canSeek = false;
@@ -138,6 +140,8 @@ public:
             for (int k = 0; k < n_frames; k += 20)
             {
                 checkFrameSeek(k, cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
             }
         }
 
@@ -150,6 +154,8 @@ public:
             for (int k = 0; k < 10; ++k)
             {
                 checkFrameSeek(cvtest::TS::ptr()->get_rng().uniform(0, n_frames), cap);
+                if (::testing::Test::HasFailure() && k % 10 == 0)
+                    break;
             }
         }
     }
@@ -217,6 +223,8 @@ public:
             EXPECT_EQ(bunny_param.getWidth(), frame.cols);
             EXPECT_EQ(bunny_param.getHeight(), frame.rows);
             count_actual += 1;
+            if (::testing::Test::HasFailure() && count_actual % 10 == 0)
+                break;
         }
         if (count_prop > 0)
         {
@@ -272,6 +280,8 @@ public:
         {
             generateFrame(i, frame_count, img);
             EXPECT_NO_THROW(writer << img);
+            if (::testing::Test::HasFailure() && i % 10 == 0)
+                break;
         }
         EXPECT_NO_THROW(writer.release());
     }
@@ -313,7 +323,7 @@ static const VideoCaptureAPIs backend_params[] = {
    CAP_AVFOUNDATION,
 #endif
 
-#ifdef HAVE_MSMF
+#ifdef _WIN32
     CAP_MSMF,
 #endif
 
@@ -356,7 +366,7 @@ inline static std::ostream &operator<<(std::ostream &out, const Ext_Fourcc_PSNR 
 
 static Ext_Fourcc_PSNR synthetic_params[] = {
 
-#ifdef HAVE_MSMF
+#ifdef _WIN32
 #if !defined(_M_ARM)
     {"wmv", "WMV1", 30.f, CAP_MSMF},
     {"wmv", "WMV2", 30.f, CAP_MSMF},

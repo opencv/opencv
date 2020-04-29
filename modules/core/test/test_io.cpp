@@ -753,7 +753,7 @@ TEST(Core_InputOutput, filestorage_base64_basic_read_YAML)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".yml", false);
 }
-TEST(Core_InputOutput, DISABLED_filestorage_base64_basic_read_JSON)
+TEST(Core_InputOutput, filestorage_base64_basic_read_JSON)
 {
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".json", false);
 }
@@ -1638,6 +1638,138 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     {
     }
     ASSERT_EQ(0, std::remove(fileName.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
+{
+    const std::string filename = "FileStorage_YAML_parse_multiple_documents.yml";
+    FileStorage fs;
+
+    fs.open(filename, FileStorage::WRITE);
+    fs << "a" << 42;
+    fs.release();
+
+    fs.open(filename, FileStorage::APPEND);
+    fs << "b" << 1988;
+    fs.release();
+
+    fs.open(filename, FileStorage::READ);
+
+    EXPECT_EQ(42, (int)fs["a"]);
+    EXPECT_EQ(1988, (int)fs["b"]);
+
+    EXPECT_EQ(42, (int)fs.root(0)["a"]);
+    EXPECT_TRUE(fs.root(0)["b"].empty());
+
+    EXPECT_TRUE(fs.root(1)["a"].empty());
+    EXPECT_EQ(1988, (int)fs.root(1)["b"]);
+
+    fs.release();
+
+    ASSERT_EQ(0, std::remove(filename.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_JSON_VeryLongLines)
+{
+    for( int iter = 0; iter < 2; iter++ )
+    {
+        std::string temp_path = cv::tempfile("temp.json");
+        {
+        std::ofstream ofs(temp_path);
+        ofs << "{     ";
+        int prev_len = 0, start = 0;
+        for (int i = 0; i < 52500; i++)
+        {
+            std::string str = cv::format("\"KEY%d\"", i);
+            ofs << str;
+            if(iter == 1 && i - start > prev_len)
+            {
+                // build a stairway with increasing text row width
+                ofs << "\n";
+                prev_len = i - start;
+                start = i;
+            }
+            str = cv::format(": \"VALUE%d\", ", i);
+            ofs << str;
+        }
+        ofs << "}";
+        }
+
+        {
+        cv::FileStorage fs(temp_path, cv::FileStorage::READ);
+        char key[16], val0[16];
+        std::string val;
+        for(int i = 0; i < 52500; i += 100)
+        {
+            sprintf(key, "KEY%d", i);
+            sprintf(val0, "VALUE%d", i);
+            fs[key] >> val;
+            ASSERT_EQ(val, val0);
+        }
+        }
+        remove(temp_path.c_str());
+    }
+}
+
+TEST(Core_InputOutput, FileStorage_empty_16823)
+{
+    std::string fname = tempfile("test_fs_empty.yml");
+    {
+        // create empty file
+        std::ofstream f(fname.c_str(), std::ios::out);
+    }
+
+    try
+    {
+        FileStorage fs(fname, FileStorage::READ);
+        ADD_FAILURE() << "Exception must be thrown for empty file.";
+    }
+    catch (const cv::Exception&)
+    {
+        // expected way
+        // closed files can be checked manually through 'strace'
+    }
+    catch (const std::exception& e)
+    {
+        ADD_FAILURE() << "Unexpected exception: " << e.what();
+    }
+    catch (...)
+    {
+        ADD_FAILURE() << "Unexpected unknown C++ exception";
+    }
+
+    EXPECT_EQ(0, remove(fname.c_str()));
+}
+
+TEST(Core_InputOutput, FileStorage_open_empty_16823)
+{
+    std::string fname = tempfile("test_fs_open_empty.yml");
+    {
+        // create empty file
+        std::ofstream f(fname.c_str(), std::ios::out);
+    }
+
+    FileStorage fs;
+    try
+    {
+        fs.open(fname, FileStorage::READ);
+        ADD_FAILURE() << "Exception must be thrown for empty file.";
+    }
+    catch (const cv::Exception&)
+    {
+        // expected way
+        // closed files can be checked manually through 'strace'
+    }
+    catch (const std::exception& e)
+    {
+        ADD_FAILURE() << "Unexpected exception: " << e.what();
+    }
+    catch (...)
+    {
+        ADD_FAILURE() << "Unexpected unknown C++ exception";
+    }
+
+    EXPECT_EQ(0, remove(fname.c_str()));
 }
 
 }} // namespace

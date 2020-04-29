@@ -210,12 +210,12 @@ Explanation
     @code{.cpp}
     image2 = image - Scalar::all(i)
     @endcode
-    So, **image2** is the substraction of **image** and **Scalar::all(i)**. In fact, what happens
-    here is that every pixel of **image2** will be the result of substracting every pixel of
+    So, **image2** is the subtraction of **image** and **Scalar::all(i)**. In fact, what happens
+    here is that every pixel of **image2** will be the result of subtracting every pixel of
     **image** minus the value of **i** (remember that for each pixel we are considering three values
     such as R, G and B, so each of them will be affected)
 
-    Also remember that the substraction operation *always* performs internally a **saturate**
+    Also remember that the subtraction operation *always* performs internally a **saturate**
     operation, which means that the result obtained will always be inside the allowed range (no
     negative and between 0 and 255 for our example).
 

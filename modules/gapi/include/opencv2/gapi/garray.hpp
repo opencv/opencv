@@ -29,7 +29,6 @@ namespace cv
 // (user-inaccessible) classes.
 class GNode;
 struct GOrigin;
-
 template<typename T> class GArray;
 
 /**
@@ -114,9 +113,12 @@ namespace detail
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
         virtual ~BasicVectorRef() {}
+
+        virtual void mov(BasicVectorRef &ref) = 0;
+        virtual const void* ptr() const = 0;
     };
 
-    template<typename T> class VectorRefT: public BasicVectorRef
+    template<typename T> class VectorRefT final: public BasicVectorRef
     {
         using empty_t  = util::monostate;
         using ro_ext_t = const std::vector<T> *;
@@ -200,6 +202,14 @@ namespace detail
             if (isRWOwn()) return  util::get<rw_own_t>(m_ref);
             util::throw_error(std::logic_error("Impossible happened"));
         }
+
+        virtual void mov(BasicVectorRef &v) override {
+            VectorRefT<T> *tv = dynamic_cast<VectorRefT<T>*>(&v);
+            GAPI_Assert(tv != nullptr);
+            wref() = std::move(tv->wref());
+        }
+
+        virtual const void* ptr() const override { return &rref(); }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -245,10 +255,18 @@ namespace detail
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
         }
 
+        void mov(VectorRef &v)
+        {
+            m_ref->mov(*v.m_ref);
+        }
+
         cv::GArrayDesc descr_of() const
         {
             return m_ref->m_desc;
         }
+
+        // May be used to uniquely identify this object internally
+        const void *ptr() const { return m_ref->ptr(); }
     };
 
     // Helper (FIXME: work-around?)

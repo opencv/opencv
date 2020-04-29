@@ -22,18 +22,44 @@ namespace cv {
 namespace gapi {
 namespace wip  {
     class GAsyncContext;
-    //These functions asynchronously (i.e. probably on a separate thread of execution) call apply member function of their first argument with copies of rest of arguments (except callback) passed in.
-    //The difference between the function is the way to get the completion notification (via callback or a waiting on std::future object)
-    //If exception is occurred during execution of apply it is transferred to the callback (via function parameter) or passed to future (and will be thrown on call to std::future::get)
+    /** In contrast to async() functions, these do call GComputation::apply() member function of the GComputation passed in.
 
-    //N.B. :
-    //Input arguments are copied on call to async function (actually on call to cv::gin) and thus do not have to outlive the actual completion of asynchronous activity.
-    //While Output arguments are "captured" by reference(pointer) and therefore _must_ outlive the asynchronous activity
-    //(i.e. live at least until callback is called or future is unblocked)
+    @param gcomp        Computation (graph) to run asynchronously
+    @param callback     Callback to be called when execution of gcomp is done
+    @param ins          Input parameters for gcomp
+    @param outs         Output parameters for gcomp
+    @param args         Compile arguments to pass to GComputation::apply()
+    @see                async
+    */
     GAPI_EXPORTS void                async_apply(GComputation& gcomp, std::function<void(std::exception_ptr)>&& callback, GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});
+    /** @overload
+    @param gcomp        Computation (graph) to run asynchronously
+    @param callback     Callback to be called when execution of gcomp is done
+    @param ins          Input parameters for gcomp
+    @param outs         Output parameters for gcomp
+    @param args         Compile arguments to pass to GComputation::apply()
+    @param ctx          Context this request belongs to
+    @see                async_apply async GAsyncContext
+    */
     GAPI_EXPORTS void                async_apply(GComputation& gcomp, std::function<void(std::exception_ptr)>&& callback, GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args, GAsyncContext& ctx);
-
+    /** @overload
+    @param gcomp        Computation (graph) to run asynchronously
+    @param ins          Input parameters for gcomp
+    @param outs         Output parameters for gcomp
+    @param args         Compile arguments to pass to GComputation::apply()
+    @return             std::future<void> object to wait for completion of async operation
+    @see                async_apply async
+    */
     GAPI_EXPORTS std::future<void>   async_apply(GComputation& gcomp, GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});
+    /** @overload
+    @param gcomp        Computation (graph) to run asynchronously
+    @param ins          Input parameters for gcomp
+    @param outs         Output parameters for gcomp
+    @param args         Compile arguments to pass to GComputation::apply()
+    @param ctx          Context this request belongs to
+    @return             std::future<void> object to wait for completion of async operation
+    @see                async_apply async GAsyncContext
+    */
     GAPI_EXPORTS std::future<void>   async_apply(GComputation& gcomp, GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args,  GAsyncContext& ctx);
 } // namespace wip
 } // namespace gapi

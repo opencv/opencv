@@ -141,13 +141,18 @@ TEST_P(Test_Caffe_layers, Convolution)
 
 TEST_P(Test_Caffe_layers, DeConvolution)
 {
+    if(target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     testLayerUsingCaffeModels("layer_deconvolution", true, false);
 }
 
 TEST_P(Test_Caffe_layers, InnerProduct)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     testLayerUsingCaffeModels("layer_inner_product", true);
@@ -165,6 +170,9 @@ TEST_P(Test_Caffe_layers, Pooling_ave)
 
 TEST_P(Test_Caffe_layers, MVN)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* MVN is unsupported */
+
     testLayerUsingCaffeModels("layer_mvn");
 }
 
@@ -235,12 +243,20 @@ TEST_P(Test_Caffe_layers, Concat)
 {
 #if defined(INF_ENGINE_RELEASE)
 #if INF_ENGINE_VER_MAJOR_GE(2019010000) && INF_ENGINE_VER_MAJOR_LT(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 &&
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+                     CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+                     CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+
 #endif
     testLayerUsingCaffeModels("layer_concat");
     testLayerUsingCaffeModels("layer_concat_optim", true, false);
@@ -249,8 +265,9 @@ TEST_P(Test_Caffe_layers, Concat)
 
 TEST_P(Test_Caffe_layers, Fused_Concat)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+                     CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 
     checkBackend();
 
@@ -294,14 +311,15 @@ TEST_P(Test_Caffe_layers, Fused_Concat)
 
 TEST_P(Test_Caffe_layers, Eltwise)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
     testLayerUsingCaffeModels("layer_eltwise");
 }
 
 TEST_P(Test_Caffe_layers, PReLU)
 {
-    testLayerUsingCaffeModels("layer_prelu", true);
+    double lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.021 : 0.0;
+    testLayerUsingCaffeModels("layer_prelu", true, true, 0.0, lInf);
 }
 
 // TODO: fix an unstable test case
@@ -317,8 +335,10 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
 
 TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
@@ -339,8 +359,8 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 TEST_P(Test_Caffe_layers, Conv_Elu)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE <= 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
     Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
@@ -354,7 +374,13 @@ TEST_P(Test_Caffe_layers, Conv_Elu)
     net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    normAssert(ref, out, "", default_l1, default_lInf);
+    double l1 = default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.0002;
+        lInf = 0.0005;
+    }
+    normAssert(ref, out, "", l1, lInf);
 }
 
 class Layer_LSTM_Test : public ::testing::Test
@@ -553,29 +579,45 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
 }
 
-TEST(Layer_Test_ROIPooling, Accuracy)
+TEST_P(Test_Caffe_layers, ROIPooling_Accuracy)
 {
     Net net = readNetFromCaffe(_tf("net_roi_pooling.prototxt"));
+    ASSERT_FALSE(net.empty());
 
     Mat inp = blobFromNPY(_tf("net_roi_pooling.input.npy"));
     Mat rois = blobFromNPY(_tf("net_roi_pooling.rois.npy"));
     Mat ref = blobFromNPY(_tf("net_roi_pooling.npy"));
 
+    checkBackend(&inp, &ref);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
     net.setInput(inp, "input");
     net.setInput(rois, "rois");
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat out = net.forward();
 
-    normAssert(out, ref);
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-5;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 2e-4;
+        lInf = 9e-4;
+    }
+    normAssert(out, ref, "", l1, lInf);
 }
 
 TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* Proposal layer is unsupported */
 
     Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
 
@@ -807,16 +849,28 @@ TEST_P(Test_Caffe_layers, PriorBox_repeated)
     randu(shape, -1.0f, 1.0f);
     net.setInput(inp, "data");
     net.setInput(shape, "shape");
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     Mat out = net.forward();
     Mat ref = blobFromNPY(_tf("priorbox_output.npy"));
-    normAssert(out, ref, "");
+
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-5;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 7e-5;
+        lInf = 0.0005;
+    }
+    normAssert(out, ref, "", l1, lInf);
 }
 
 // Test PriorBoxLayer in case of no aspect ratios (just squared proposals).
 TEST_P(Test_Caffe_layers, PriorBox_squares)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     LayerParams lp;
     lp.name = "testPriorBox";
     lp.type = "PriorBox";
@@ -842,7 +896,9 @@ TEST_P(Test_Caffe_layers, PriorBox_squares)
                                        0.25, 0.0, 1.0, 1.0,
                                        0.1f, 0.1f, 0.2f, 0.2f,
                                        0.1f, 0.1f, 0.2f, 0.2f);
-    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2e-5 : 1e-5;
+    double l1 = 1e-5;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+        l1 = 2e-5;
     normAssert(out.reshape(1, 4), ref, "", l1);
 }
 
@@ -970,10 +1026,21 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_DWconv_Prelu, Combine(Values(3, 6), Val
 // Using Intel's Model Optimizer generate .xml and .bin files:
 // ./ModelOptimizer -w /path/to/caffemodel -d /path/to/prototxt \
 //                  -p FP32 -i -b ${batch_size} -o /path/to/output/folder
-typedef testing::TestWithParam<Target> Layer_Test_Convolution_DLDT;
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Convolution_DLDT;
 TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
 {
-    Target targetId = GetParam();
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        throw SkipTestException("No support for async forward");
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    else
+        FAIL() << "Unknown backendId";
 
     std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
@@ -986,6 +1053,7 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     Mat outDefault = netDefault.forward();
 
     net.setInput(inp);
+    net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
 
     Mat out = net.forward();
@@ -1001,10 +1069,22 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
 
 TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
 {
-    Target targetId = GetParam();
-    Mat inp = blobFromNPY(_tf("blob.npy"));
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
 
-    Mat inputs[] = {Mat(inp.dims, inp.size, CV_8U), Mat()};
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        throw SkipTestException("No support for async forward");
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    else
+        FAIL() << "Unknown backendId";
+
+    int blobSize[] = {2, 6, 75, 113};
+    Mat inputs[] = {Mat(4, &blobSize[0], CV_8U), Mat()};
+
     randu(inputs[0], 0, 255);
     inputs[0].convertTo(inputs[1], CV_32F);
 
@@ -1014,6 +1094,7 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     for (int i = 0; i < 2; ++i)
     {
         Net net = readNet(_tf("layer_convolution" + suffix + ".xml"), _tf("layer_convolution" + suffix + ".bin"));
+        net.setPreferableBackend(backendId);
         net.setPreferableTarget(targetId);
         net.setInput(inputs[i]);
         outs[i] = net.forward();
@@ -1025,7 +1106,19 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
 
 TEST_P(Layer_Test_Convolution_DLDT, multithreading)
 {
-    Target targetId = GetParam();
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        throw SkipTestException("No support for async forward");
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+    else
+        FAIL() << "Unknown backendId";
+
     std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     std::string xmlPath = _tf("layer_convolution" + suffix + ".xml");
     std::string binPath = _tf("layer_convolution" + suffix + ".bin");
@@ -1035,7 +1128,9 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
 
     firstNet.setInput(inp);
     secondNet.setInput(inp);
+    firstNet.setPreferableBackend(backendId);
     firstNet.setPreferableTarget(targetId);
+    secondNet.setPreferableBackend(backendId);
     secondNet.setPreferableTarget(targetId);
 
     Mat out1, out2;
@@ -1053,7 +1148,8 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Convolution_DLDT,
-    testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)));
+    dnnBackendsAndTargetsIE()
+);
 
 // 1. Create a .prototxt file with the following network:
 // layer {
@@ -1112,17 +1208,18 @@ std::vector< std::vector<int> > list_sizes{ {1, 2, 3}, {3, 2, 1}, {5, 5, 5}, {13
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs_3dim, Combine(
   Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
-  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
+  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)),
   testing::ValuesIn(list_sizes)
 ));
 
-typedef testing::TestWithParam<tuple<int, int, Target> > Test_DLDT_two_inputs;
+typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_DLDT_two_inputs;
 TEST_P(Test_DLDT_two_inputs, as_backend)
 {
     static const float kScale = 0.5f;
     static const float kScaleInv = 1.0f / kScale;
 
-    Target targetId = get<2>(GetParam());
+    Backend backendId = get<0>(get<2>(GetParam()));
+    Target targetId = get<1>(get<2>(GetParam()));
 
     Net net;
     LayerParams lp;
@@ -1141,7 +1238,7 @@ TEST_P(Test_DLDT_two_inputs, as_backend)
     net.setInputsNames({"data", "second_input"});
     net.setInput(firstInp, "data", kScale);
     net.setInput(secondInp, "second_input", kScaleInv);
-    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
     Mat out = net.forward();
 
@@ -1150,12 +1247,17 @@ TEST_P(Test_DLDT_two_inputs, as_backend)
     // Output values are in range [0, 637.5].
     double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.06 : 1e-6;
     double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.3 : 1e-5;
+    if (targetId == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.06;
+        lInf = 0.3;
+    }
     normAssert(out, ref, "", l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs, Combine(
   Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
-  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
+  dnnBackendsAndTargets()
 ));
 
 class UnsupportedLayer : public Layer
@@ -1176,10 +1278,11 @@ public:
     virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE {}
 };
 
-TEST(Test_DLDT, fused_output)
+typedef DNNTestLayer Test_DLDT_layers;
+
+static void test_dldt_fused_output(Backend backend, Target target)
 {
     static const int kNumChannels = 3;
-    CV_DNN_REGISTER_LAYER_CLASS(Unsupported, UnsupportedLayer);
     Net net;
     {
         LayerParams lp;
@@ -1203,13 +1306,31 @@ TEST(Test_DLDT, fused_output)
         LayerParams lp;
         net.addLayerToPrev("unsupported_layer", "Unsupported", lp);
     }
-    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
-    net.setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
-    ASSERT_NO_THROW(net.forward());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    net.setInput(Mat({1, 1, 2, 3}, CV_32FC1, Scalar(1)));
+    net.forward();
+}
+
+TEST_P(Test_DLDT_layers, fused_output)
+{
+    CV_DNN_REGISTER_LAYER_CLASS(Unsupported, UnsupportedLayer);
+    try
+    {
+        test_dldt_fused_output(backend, target);
+    }
+    catch (const std::exception& e)
+    {
+        ADD_FAILURE() << "Exception: " << e.what();
+    }
+    catch(...)
+    {
+        ADD_FAILURE() << "Unknown exception";
+    }
     LayerFactory::unregisterLayer("Unsupported");
 }
 
-TEST(Test_DLDT, multiple_networks)
+TEST_P(Test_DLDT_layers, multiple_networks)
 {
     Net nets[2];
     for (int i = 0; i < 2; ++i)
@@ -1224,8 +1345,9 @@ TEST(Test_DLDT, multiple_networks)
         lp.name = format("testConv_%d", i);
         lp.blobs.push_back(Mat({1, 1, 1, 1}, CV_32F, Scalar(1 + i)));
         nets[i].addLayerToPrev(lp.name, lp.type, lp);
-        nets[i].setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
-        nets[i].setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
+        nets[i].setPreferableBackend(backend);
+        nets[i].setPreferableTarget(target);
+        nets[i].setInput(Mat({1, 1, 2, 3}, CV_32FC1, Scalar(1)));
     }
     Mat out_1 = nets[0].forward();
     Mat out_2 = nets[1].forward();
@@ -1233,6 +1355,9 @@ TEST(Test_DLDT, multiple_networks)
     out_1 = nets[0].forward();
     normAssert(2 * out_1, out_2);
 }
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_layers, dnnBackendsAndTargets());
+
 #endif  // HAVE_INF_ENGINE
 
 // Test a custom layer.
@@ -1348,7 +1473,7 @@ TEST_P(Test_Caffe_layers, Interp)
 TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (available in OpenCV source tree only)
 #endif
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 
     // Test a custom layer.
@@ -1439,8 +1564,17 @@ TEST_P(Layer_Test_ShuffleChannel, Accuracy)
     net.setPreferableTarget(targetId);
     Mat out = net.forward();
 
-    double l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 5e-2 : 1e-5;
-    double lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 7e-2 : 1e-4;
+    double l1 = 1e-5, lInf = 1e-4;
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 5e-2;
+        lInf = 7e-2;
+    }
+    else if (targetId == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.06;
+        lInf = 0.07;
+    }
     for (int n = 0; n < inpShapeVec[0]; ++n)
     {
         for (int c = 0; c < inpShapeVec[1]; ++c)
@@ -1487,5 +1621,174 @@ TEST(Layer_Test_Convolution, relu_fusion)
     Mat output = net.forward("testConv");
     normAssert(input, output);
 }
+
+typedef testing::TestWithParam<tuple<bool, tuple<Backend, Target> > > Layer_Test_Eltwise_unequal;
+TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
+{
+    bool weighted = get<0>(GetParam());
+    int backendId = get<0>(get<1>(GetParam()));
+    int targetId = get<1>(get<1>(GetParam()));
+
+    if (backendId == DNN_BACKEND_CUDA && weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "testLayer";
+    lp.set<std::string>("output_channels_mode", "input_0_truncate");
+
+    const int inpShapes[][4] = {{1, 4, 2, 2}, {1, 5, 2, 2}, {1, 3, 2, 2}};
+    const int out_channels = inpShapes[0][1];
+    std::vector<String> inpNames(3);
+    std::vector<Mat> inputs(3);
+
+    std::vector<float> weights(3, 1);
+    if (weighted)
+    {
+        for (int i = 0; i < inputs.size(); ++i)
+            weights[i] = -0.125f + i * 0.25f;
+        lp.set("coeff", DictValue::arrayReal<float*>(&weights[0], weights.size()));
+    }
+
+    int eltwiseId = net.addLayer(lp.name, lp.type, lp);
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        inputs[i].create(4, inpShapes[i], CV_32F);
+        size_t total = inputs[i].total();
+        for (size_t j = 0; j < total; j++)
+            inputs[i].ptr<float>()[j] = j + i * 100;
+        inpNames[i] = format("input_%d", i);
+        net.connect(0, i, eltwiseId, i);
+    }
+    Mat ref(4, inpShapes[0], CV_32F, Scalar(0));
+
+    net.setInputsNames(inpNames);
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        //std::cout << ref.reshape(1,1) << endl;
+        net.setInput(inputs[i], inpNames[i]);
+        for (size_t batchId = 0; batchId < ref.size[0]; batchId++)
+        {
+            int input_channels = inputs[i].size[1];
+            Range ranges[4] = { Range(batchId, batchId + 1), Range(0, std::min(out_channels, input_channels)), Range::all(), Range::all() };
+            Mat ref_slice = ref(ranges);
+            Mat input_slice = inputs[i](ranges);
+            ref_slice += weights[i] * input_slice;
+        }
+    }
+
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+    normAssert(out, ref);
+    if (testing::Test::HasFailure())
+    {
+        std::cout << out.reshape(1,1) << endl;
+        std::cout << ref.reshape(1,1) << endl;
+    }
+}
+
+TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0)
+{
+    bool weighted = get<0>(GetParam());
+    int backendId = get<0>(get<1>(GetParam()));
+    int targetId = get<1>(get<1>(GetParam()));
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "testLayer";
+    lp.set<std::string>("output_channels_mode", "input_0");
+
+    if (backendId == DNN_BACKEND_CUDA && weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+
+    const int inpShapes[][4] = {{1, 4, 2, 2}, {1, 2, 2, 2}, {1, 3, 2, 2}};
+    const int out_channels = inpShapes[0][1];
+    std::vector<String> inpNames(3);
+    std::vector<Mat> inputs(3);
+
+    std::vector<float> weights(3, 1);
+    if (weighted)
+    {
+        for (int i = 0; i < inputs.size(); ++i)
+            weights[i] = -0.125f + i * 0.25f;
+        lp.set("coeff", DictValue::arrayReal<float*>(&weights[0], weights.size()));
+    }
+
+    int eltwiseId = net.addLayer(lp.name, lp.type, lp);
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        inputs[i].create(4, inpShapes[i], CV_32F);
+        size_t total = inputs[i].total();
+        for (size_t j = 0; j < total; j++)
+            inputs[i].ptr<float>()[j] = j + i * 100;
+        inpNames[i] = format("input_%d", i);
+        net.connect(0, i, eltwiseId, i);
+    }
+    Mat ref(4, inpShapes[0], CV_32F, Scalar(0));
+
+    net.setInputsNames(inpNames);
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        //std::cout << ref.reshape(1,1) << endl;
+        net.setInput(inputs[i], inpNames[i]);
+        for (size_t batchId = 0; batchId < ref.size[0]; batchId++)
+        {
+            int input_channels = inputs[i].size[1];
+            Range ranges[4] = { Range(batchId, batchId + 1), Range(0, std::min(out_channels, input_channels)), Range::all(), Range::all() };
+            Mat ref_slice = ref(ranges);
+            Mat input_slice = inputs[i](ranges);
+            ref_slice += weights[i] * input_slice;
+        }
+    }
+
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+    normAssert(out, ref);
+    if (testing::Test::HasFailure())
+    {
+        std::cout << out.reshape(1,1) << endl;
+        std::cout << ref.reshape(1,1) << endl;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Eltwise_unequal, Combine(
+    testing::Bool(),
+    dnnBackendsAndTargets()
+));
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Resize;
+TEST_P(Layer_Test_Resize, change_input)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Resize";
+    lp.name = "testLayer";
+    lp.set("zoom_factor", 2);
+    lp.set("interpolation", "nearest");
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat inp(4 + i, 5 + i, CV_8UC3), ref;
+        randu(inp, 0, 255);
+        resize(inp, ref, Size(0, 0), 2, 2, INTER_NEAREST);
+        ref = blobFromImage(ref);
+
+        net.setInput(blobFromImage(inp));
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+        normAssert(out, ref);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
 }} // namespace

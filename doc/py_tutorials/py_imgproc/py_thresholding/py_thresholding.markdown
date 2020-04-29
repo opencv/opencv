@@ -4,13 +4,13 @@ Image Thresholding {#tutorial_py_thresholding}
 Goal
 ----
 
--   In this tutorial, you will learn Simple thresholding, Adaptive thresholding and Otsu's thresholding.
+-   In this tutorial, you will learn simple thresholding, adaptive thresholding and Otsu's thresholding.
 -   You will learn the functions **cv.threshold** and **cv.adaptiveThreshold**.
 
 Simple Thresholding
 -------------------
 
-Here, the matter is straight forward. For every pixel, the same threshold value is applied.
+Here, the matter is straight-forward. For every pixel, the same threshold value is applied.
 If the pixel value is smaller than the threshold, it is set to 0, otherwise it is set to a maximum value.
 The function **cv.threshold** is used to apply the thresholding.
 The first argument is the source image, which **should be a grayscale image**.
@@ -65,11 +65,11 @@ Adaptive Thresholding
 
 In the previous section, we used one global value as a threshold.
 But this might not be good in all cases, e.g. if an image has different lighting conditions in different areas.
-In that case, adaptive thresholding thresholding can help.
+In that case, adaptive thresholding can help.
 Here, the algorithm determines the threshold for a pixel based on a small region around it.
 So we get different thresholds for different regions of the same image which gives better results for images with varying illumination.
 
-Additionally to the parameters described above, the method cv.adaptiveThreshold three input parameters:
+In addition to the parameters described above, the method cv.adaptiveThreshold takes three input parameters:
 
 The **adaptiveMethod** decides how the threshold value is calculated:
     -   cv.ADAPTIVE_THRESH_MEAN_C: The threshold value is the mean of the neighbourhood area minus the constant **C**.
@@ -168,8 +168,8 @@ Result:
 
 ### How does Otsu's Binarization work?
 
-This section demonstrates a Python implementation of Otsu's binarization to show how it works
-actually. If you are not interested, you can skip this.
+This section demonstrates a Python implementation of Otsu's binarization to show how it actually
+works. If you are not interested, you can skip this.
 
 Since we are working with bimodal images, Otsu's algorithm tries to find a threshold value (t) which
 minimizes the **weighted within-class variance** given by the relation:
@@ -188,7 +188,7 @@ blur = cv.GaussianBlur(img,(5,5),0)
 
 # find normalized_histogram, and its cumulative distribution function
 hist = cv.calcHist([blur],[0],None,[256],[0,256])
-hist_norm = hist.ravel()/hist.max()
+hist_norm = hist.ravel()/hist.sum()
 Q = hist_norm.cumsum()
 
 bins = np.arange(256)
@@ -199,6 +199,8 @@ thresh = -1
 for i in xrange(1,256):
     p1,p2 = np.hsplit(hist_norm,[i]) # probabilities
     q1,q2 = Q[i],Q[255]-Q[i] # cum sum of classes
+    if q1 < 1.e-6 or q2 < 1.e-6:
+        continue
     b1,b2 = np.hsplit(bins,[i]) # weights
 
     # finding means and variances

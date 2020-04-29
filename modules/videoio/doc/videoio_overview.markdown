@@ -39,10 +39,10 @@ For example to grab from default camera using Direct Show as backend
 
 ```cpp
 //declare a capture object
-cv::VideoCapture cap(0 + cv::CAP_DSHOW);
+cv::VideoCapture cap(0, cv::CAP_DSHOW);
 
 //or specify the apiPreference with open
-cap.open(0 + cv::CAP_DSHOW);
+cap.open(0, cv::CAP_DSHOW);
 ```
 
 If you want to grab from a file using the Direct Show as backend:
