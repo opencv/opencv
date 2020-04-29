@@ -654,6 +654,9 @@ struct SwishFunctor : public BaseFunctor
 struct MishFunctor : public BaseFunctor
 {
     typedef MishLayer Layer;
+    float MISH_THRESHOLD;
+
+    MishFunctor() : MISH_THRESHOLD(20.0f) {}
 
     bool supportBackend(int backendId, int)
     {
@@ -668,7 +671,14 @@ struct MishFunctor : public BaseFunctor
             for( int i = 0; i < len; i++ )
             {
                 float x = srcptr[i];
-                dstptr[i] = x * tanh(log(1.0f + exp(x)));
+                float softplus;
+                if (x > MISH_THRESHOLD)
+                    softplus = x;
+                else if (x < -MISH_THRESHOLD)
+                    softplus = exp(x);
+                else
+                    softplus = log(1.0f + exp(x));
+                dstptr[i] = x * tanh(softplus);
             }
         }
     }
@@ -719,12 +729,19 @@ struct MishFunctor : public BaseFunctor
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
     {
-        float one = 1.0f;
-        auto constant = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &one);
+        auto neg_thresh_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{-MISH_THRESHOLD});
+        auto mask_LT = std::make_shared<ngraph::op::v1::Less>(node, neg_thresh_node);
         auto exp_node = std::make_shared<ngraph::op::v0::Exp>(node);
+
+        auto constant = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{1});
         auto sum = std::make_shared<ngraph::op::v1::Add>(constant, exp_node, ngraph::op::AutoBroadcastType::NUMPY);
         auto log_node = std::make_shared<ngraph::op::v0::Log>(sum);
-        auto tanh_node = std::make_shared<ngraph::op::Tanh>(log_node);
+        auto select = std::make_shared<ngraph::op::v1::Select>(mask_LT, exp_node, log_node);
+
+        auto thresh_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &MISH_THRESHOLD);
+        auto mask_GT = std::make_shared<ngraph::op::v1::Greater>(node, thresh_node);
+        auto softplus = std::make_shared<ngraph::op::v1::Select>(mask_GT, node, select);
+        auto tanh_node = std::make_shared<ngraph::op::Tanh>(softplus);
         return std::make_shared<ngraph::op::v1::Multiply>(node, tanh_node);
     }
 #endif  // HAVE_DNN_NGRAPH

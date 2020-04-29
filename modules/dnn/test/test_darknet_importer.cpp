@@ -523,6 +523,11 @@ TEST_P(Test_Darknet_layers, upsample)
     testDarknetLayer("upsample");
 }
 
+TEST_P(Test_Darknet_layers, mish)
+{
+    testDarknetLayer("mish", true);
+}
+
 TEST_P(Test_Darknet_layers, avgpool_softmax)
 {
     testDarknetLayer("avgpool_softmax");

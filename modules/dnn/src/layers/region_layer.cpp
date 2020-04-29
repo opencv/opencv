@@ -63,7 +63,7 @@ class RegionLayerImpl CV_FINAL : public RegionLayer
 {
 public:
     int coords, classes, anchors, classfix;
-    float thresh, nmsThreshold;
+    float thresh, nmsThreshold, scale_x_y;
     bool useSoftmax, useLogistic;
 #ifdef HAVE_OPENCL
     UMat blob_umat;
@@ -82,6 +82,7 @@ public:
         useSoftmax = params.get<bool>("softmax", false);
         useLogistic = params.get<bool>("logistic", false);
         nmsThreshold = params.get<float>("nms_threshold", 0.4);
+        scale_x_y = params.get<float>("scale_x_y", 1.0); // Yolov4
 
         CV_Assert(nmsThreshold >= 0.);
         CV_Assert(coords == 4);
@@ -292,8 +293,10 @@ public:
                             if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
                             int box_index = index_sample_offset + index * cell_size;
 
-                            dstData[box_index + 0] = (x + logistic_activate(srcData[box_index + 0])) / cols;
-                            dstData[box_index + 1] = (y + logistic_activate(srcData[box_index + 1])) / rows;
+                            float x_tmp = logistic_activate(srcData[box_index + 0]) * scale_x_y - (scale_x_y - 1) / 2;
+                            float y_tmp = logistic_activate(srcData[box_index + 1]) * scale_x_y - (scale_x_y - 1) / 2;
+                            dstData[box_index + 0] = (x + x_tmp) / cols;
+                            dstData[box_index + 1] = (y + y_tmp) / rows;
                             dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / wNorm;
                             dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / hNorm;
 
@@ -406,6 +409,12 @@ public:
         auto shape_3d = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{boxes_shape.size()}, boxes_shape.data());
 
         ngraph::Shape box_broad_shape{1, (size_t)anchors, (size_t)h, (size_t)w};
+        auto scale_x_y_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &scale_x_y);
+        auto one_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{1});
+        auto two_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{2});
+        std::shared_ptr<ngraph::Node> center_scale_x_y_node = std::make_shared<ngraph::op::v1::Subtract>(
+                                                              scale_x_y_node, one_node, ngraph::op::AutoBroadcastType::NUMPY);
+        center_scale_x_y_node = std::make_shared<ngraph::op::v1::Divide>(center_scale_x_y_node, two_node, ngraph::op::AutoBroadcastType::NUMPY);
 
         std::shared_ptr<ngraph::Node> box_x;
         {
@@ -413,6 +422,8 @@ public:
             auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{1, cols});
             box_x = std::make_shared<ngraph::op::v1::StridedSlice>(input2d, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
             box_x = std::make_shared<ngraph::op::Sigmoid>(box_x);
+            box_x = std::make_shared<ngraph::op::v1::Multiply>(box_x, scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
+            box_x = std::make_shared<ngraph::op::v1::Subtract>(box_x, center_scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_x = std::make_shared<ngraph::op::v1::Reshape>(box_x, shape_3d, true);
 
             std::vector<float> x_indices(w * h * anchors);
@@ -439,6 +450,8 @@ public:
             auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{2, cols});
             box_y = std::make_shared<ngraph::op::v1::StridedSlice>(input2d, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
             box_y = std::make_shared<ngraph::op::Sigmoid>(box_y);
+            box_y = std::make_shared<ngraph::op::v1::Multiply>(box_y, scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
+            box_y = std::make_shared<ngraph::op::v1::Subtract>(box_y, center_scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_y = std::make_shared<ngraph::op::v1::Reshape>(box_y, shape_3d, true);
 
             std::vector<float> y_indices(h * anchors);
