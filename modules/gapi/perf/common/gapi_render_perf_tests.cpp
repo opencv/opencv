@@ -325,7 +325,7 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -385,8 +385,8 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -431,7 +431,7 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -490,8 +490,8 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -538,7 +538,7 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -599,8 +599,8 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -648,7 +648,7 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -710,8 +710,8 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -755,11 +755,12 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
 }
+
 
 PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
 {
@@ -813,8 +814,8 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -864,7 +865,7 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -929,8 +930,8 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -976,7 +977,7 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -1037,8 +1038,8 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -1125,7 +1126,7 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat));
+        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -1227,8 +1228,8 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceNV12OCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat));
-        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat));
+        EXPECT_EQ(0, cv::norm(y_out_gapi_mat, y_ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(uv_out_gapi_mat, uv_ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
