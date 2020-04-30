@@ -101,7 +101,7 @@ TEST_F(fisheyeTest, projectPoints)
     EXPECT_MAT_NEAR(distorted0, distorted2, 1e-10);
 }
 
-TEST_F(fisheyeTest, DISABLED_undistortImage)
+TEST_F(fisheyeTest, undistortImage)
 {
     cv::Matx33d theK = this->K;
     cv::Mat theD = cv::Mat(this->D);
