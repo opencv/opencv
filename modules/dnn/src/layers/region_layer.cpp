@@ -293,8 +293,8 @@ public:
                             if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
                             int box_index = index_sample_offset + index * cell_size;
 
-                            float x_tmp = logistic_activate(srcData[box_index + 0]) * scale_x_y - (scale_x_y - 1) / 2;
-                            float y_tmp = logistic_activate(srcData[box_index + 1]) * scale_x_y - (scale_x_y - 1) / 2;
+                            float x_tmp = (logistic_activate(srcData[box_index + 0]) - 0.5f) * scale_x_y + 0.5f;
+                            float y_tmp = (logistic_activate(srcData[box_index + 1]) - 0.5f) * scale_x_y + 0.5f;
                             dstData[box_index + 0] = (x + x_tmp) / cols;
                             dstData[box_index + 1] = (y + y_tmp) / rows;
                             dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / wNorm;
@@ -410,11 +410,7 @@ public:
 
         ngraph::Shape box_broad_shape{1, (size_t)anchors, (size_t)h, (size_t)w};
         auto scale_x_y_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &scale_x_y);
-        auto one_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{1});
-        auto two_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{2});
-        std::shared_ptr<ngraph::Node> center_scale_x_y_node = std::make_shared<ngraph::op::v1::Subtract>(
-                                                              scale_x_y_node, one_node, ngraph::op::AutoBroadcastType::NUMPY);
-        center_scale_x_y_node = std::make_shared<ngraph::op::v1::Divide>(center_scale_x_y_node, two_node, ngraph::op::AutoBroadcastType::NUMPY);
+        auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{0.5});
 
         std::shared_ptr<ngraph::Node> box_x;
         {
@@ -422,8 +418,9 @@ public:
             auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{1, cols});
             box_x = std::make_shared<ngraph::op::v1::StridedSlice>(input2d, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
             box_x = std::make_shared<ngraph::op::Sigmoid>(box_x);
+            box_x = std::make_shared<ngraph::op::v1::Subtract>(box_x, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_x = std::make_shared<ngraph::op::v1::Multiply>(box_x, scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
-            box_x = std::make_shared<ngraph::op::v1::Subtract>(box_x, center_scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
+            box_x = std::make_shared<ngraph::op::v1::Add>(box_x, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_x = std::make_shared<ngraph::op::v1::Reshape>(box_x, shape_3d, true);
 
             std::vector<float> x_indices(w * h * anchors);
@@ -450,8 +447,9 @@ public:
             auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{2, cols});
             box_y = std::make_shared<ngraph::op::v1::StridedSlice>(input2d, lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
             box_y = std::make_shared<ngraph::op::Sigmoid>(box_y);
+            box_y = std::make_shared<ngraph::op::v1::Subtract>(box_y, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_y = std::make_shared<ngraph::op::v1::Multiply>(box_y, scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
-            box_y = std::make_shared<ngraph::op::v1::Subtract>(box_y, center_scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
+            box_y = std::make_shared<ngraph::op::v1::Add>(box_y, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
             box_y = std::make_shared<ngraph::op::v1::Reshape>(box_y, shape_3d, true);
 
             std::vector<float> y_indices(h * anchors);
