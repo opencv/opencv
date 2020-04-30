@@ -24,28 +24,28 @@ def main():
     args = parser.parse_args()
     fn = args.fname
 
-    img_cv_lena = cv.imread(cv.samples.findFile(fn), cv.IMREAD_GRAYSCALE)
+    img_cv = cv.imread(cv.samples.findFile(fn), cv.IMREAD_GRAYSCALE)
 
-    if img_cv_lena is None:
+    if img_cv is None:
         print('Failed to load image file:', fn)
         sys.exit(1)
 
-    img_pil_lena = Image.fromarray(img_cv_lena)
+    img_pil = Image.fromarray(img_cv)
 
-    img_cv_lena_resized = cv.resize(img_cv_lena, (231,322), interpolation=cv.INTER_NEAREST)
-    img_pil_lena_resized = img_pil_lena.resize((231,322), Image.NEAREST)
-    assert (np.array(img_cv_lena_resized) != np.array(img_pil_lena_resized)).any()
+    img_cv_resized = cv.resize(img_cv, (231,322), interpolation=cv.INTER_NEAREST)
+    img_pil_resized = img_pil.resize((231,322), Image.NEAREST)
+    assert (np.array(img_cv_resized) != np.array(img_pil_resized)).any()
     print('cv.INTER_NEAREST is not equal to Image.NEAREST')
 
-    resized_images = np.hstack((img_cv_lena_resized, img_pil_lena_resized))
+    resized_images = np.hstack((img_cv_resized, img_pil_resized))
     cv.imshow('LEft is OpenCV INTER_NEAREST, right is PIL Image.NEAREST', resized_images)
     cv.waitKey()
 
-    img_cv_lena_resized = cv.resize(img_cv_lena, (231,322), interpolation=cv.INTER_NEAREST_PIL)
-    img_pil_lena_resized = img_pil_lena.resize((231,322), Image.NEAREST)
-    assert (np.array(img_cv_lena_resized) == np.array(img_pil_lena_resized)).all()
+    img_cv_resized = cv.resize(img_cv, (231,322), interpolation=cv.INTER_NEAREST_PIL)
+    img_pil_resized = img_pil.resize((231,322), Image.NEAREST)
+    assert (np.array(img_cv_resized) == np.array(img_pil_resized)).all()
     print('cv.INTER_NEAREST_PIL is equal to Image.NEAREST')
-    resized_images = np.hstack((img_cv_lena_resized, img_pil_lena_resized))
+    resized_images = np.hstack((img_cv_resized, img_pil_resized))
     cv.imshow('LEft is OpenCV INTER_NEAREST_PIL, right is PIL Image.NEAREST', resized_images)
 
     cv.waitKey()
