@@ -25,6 +25,7 @@ inline void dev_assert(bool val, const char* str, int line, const char* file)
         abort();
     }
 }
+//TODO: use GAPI/OCV one
 #define ASSERT(arg) dev_assert(static_cast<bool>(arg), #arg, __LINE__, __FILE__)
 
 #ifdef OPENCV_WITH_ITT
@@ -177,16 +178,20 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
              //TODO: seems that this can be relaxed
              auto result = --(async_tasks_p->count);
 
-             ASSERT(result >= 0);
+             auto is_not_wrapped_around = [](decltype(result) r ){
+                 using counter_limits_t =  std::numeric_limits<decltype(result)>;
+                 return r < counter_limits_t::max() && !counter_limits_t::is_signed;
+             };
+             ASSERT(is_not_wrapped_around(result));
              //TODO: checks performance gains of minimizing number of call to notify (i.e. only if this is the last one async node or there are new tbb task to execute)
              if ((result == 0) || (wake_master == wake_tbb_master::yes) )//was the last or there is the new TBB tasks to execute
              {
                  ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
-                //Wile decrement of tbb_executor->async_tasks is atomic it might be done after waiting thread checked it value but _before_ it actually start waiting on the condition variable.
-                //So lock acquire of is needed guarantee that current condition check (if any) in waiting thread (possibly ran in parallel to tbb_executor->async_tasks decrement above) is completed before
-                //signal is issued. Therefore then notify_one is called waiting thread is either sleeping on the condition variable or running a new check which is guaranteed to pick new value and return
+                //Wile decrement of async_tasks_t::count is atomic it might be done after waiting thread checked it value but _before_ it actually start waiting on the condition variable.
+                //So, lock acquire is needed to guarantee that current condition check (if any) in waiting thread (possibly ran in parallel to async_tasks_t::count decrement above) is completed _before_
+                //signal is issued. Therefore when notify_one is called, waiting thread is either sleeping on the condition variable or running a new check which is guaranteed to pick the new value and return
                 //from wait().
-                //There is no need to _hold_ the lock while signaling only to acquire it.
+                //There is no need to _hold_ the lock while signaling, only to acquire it.
                 std::unique_lock<std::mutex> {async_tasks_p->mtx};   //Acquire and release the lock.
                 (async_tasks_p->cv).notify_one();
              }
@@ -223,7 +228,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
             std::function<parallel::use_tbb_scheduler_bypass()> body = [&](){
                 while(!q.empty()){
 
-                    auto push_ready_dependees = [](tile_node* node, decltype(q) & q) -> std::size_t
+                    auto push_ready_dependees = [&q](tile_node* node) -> std::size_t
                     {
                         ITT_AUTO_TRACE_GUARD(ittTbbAddReadyBlocksToQueue);
                         std::size_t ready_items = 0;
@@ -251,7 +256,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
                     {
                         node->task_body();
 
-                        std::size_t ready_items = push_ready_dependees(node, q);
+                        std::size_t ready_items = push_ready_dependees(node);
 
                         if (ready_items > 0){
                             //spawn one less tasks and say TBB to reuse(recycle) current task
@@ -265,10 +270,10 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
                         //move through copy this lock into the callback to block master until async tasks completes
                         master_thread_sleep_lock_t block_master{&async_tasks};
 
-                        auto callback = [push_ready_dependees, node, &q, &arena, &root, block_master, body] () mutable /*due to block_master.unlock()*/
+                        auto callback = [push_ready_dependees, node, &arena, &root, block_master, body] () mutable /*due to block_master.unlock()*/
                         {
 //                            std::cout<<"async task callback is called "<<std::endl;
-                            std::size_t ready_items = push_ready_dependees(node, q);
+                            std::size_t ready_items = push_ready_dependees(node);
                             if (ready_items > 0)
                             {
                                 //force master thread (one that do wait_for_all()) to (actively) wait for enqueued tasks
