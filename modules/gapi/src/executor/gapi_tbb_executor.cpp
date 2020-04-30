@@ -342,7 +342,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
 //        }
 //    );
 
-//    std::cout<<"executed " <<executed<<" tasks"<<std::endl;
+    std::cout<<"executed " <<executed<<" tasks"<<std::endl;
 //            return executed;
 }
 #endif //USE_GAPI_TBB_EXECUTOR

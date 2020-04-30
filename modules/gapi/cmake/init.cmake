@@ -2,7 +2,7 @@ OCV_OPTION(WITH_ADE "Enable ADE framework (required for Graph API module)" ON)
 
 OCV_OPTION(WITH_FREETYPE "Enable FreeType framework" OFF)
 OCV_OPTION(WITH_PLAIDML  "Include PlaidML2 support"  OFF)
-OCV_OPTION(WITH_GAPI_TBB_EXECUTOR  "Use TBB based executor"  OFF VISIBLE_IF HAVE_TBB)
+OCV_OPTION(WITH_GAPI_TBB_EXECUTOR  "Use TBB based executor"  ON VISIBLE_IF HAVE_TBB)
 
 if(NOT WITH_ADE)
   return()
