@@ -30,25 +30,34 @@ struct tanh_functor {
 template <class T>
 struct swish_functor {
     __device__ T operator()(T value) {
-        using csl::device::sigmoid;
-        return value * sigmoid(value);
+        // f(x) = x * sigmoid(x)
+        using csl::device::fast_divide;
+        using csl::device::fast_exp;
+        return fast_divide(value, static_cast<T>(1) + fast_exp(-value));
     }
 };
 
 template <class T>
 struct mish_functor {
     __device__ T operator()(T value) {
-        using csl::device::tanh;
-        using csl::device::log1pexp;
-        return value * tanh(log1pexp(value));
+        // f(x) = x * tanh(log1pexp(x));
+        using csl::device::fast_divide;
+        using csl::device::fast_exp;
+
+        auto e = fast_exp(value);
+        if (value <= static_cast<T>(-8))
+            return value * e;
+
+        auto p = static_cast<T>(1) + e;
+        return value - static_cast<T>(2) * fast_divide(value, p * p + static_cast<T>(1));
     }
 };
 
 template <class T>
 struct sigmoid_functor {
     __device__ T operator()(T value) {
-        using csl::device::sigmoid;
-        return sigmoid(value);
+        using csl::device::fast_sigmoid;
+        return fast_sigmoid(value);
     }
 };
 
