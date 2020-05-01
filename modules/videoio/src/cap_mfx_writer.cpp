@@ -78,7 +78,10 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     memset(&params, 0, sizeof(params));
     params.mfx.CodecId = codecId;
     params.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-    params.mfx.TargetKbps = (mfxU16)cvRound(frameSize.area() * fps / 500); // TODO: set in options
+    // bitrate = frame_area * framerate * 24 / (500 * 1024)
+    // pixel = 24 bits
+    // kb = 1024 b
+    params.mfx.TargetKbps = (mfxU16)cvRound((frameSize.area() * fps * 24) / (500 * 1024)); // TODO: set in options
     params.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
     params.mfx.FrameInfo.FrameRateExtN = cvRound(fps * 1000);
     params.mfx.FrameInfo.FrameRateExtD = 1000;
