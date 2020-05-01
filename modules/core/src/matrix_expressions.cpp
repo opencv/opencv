@@ -1329,7 +1329,7 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
     }
     else if( e.s.isReal() && (dst.data != m.data || fabs(e.alpha) != 1))
     {
-        if (e.a.channels() > 1)
+        if (e.a.channels() > 1 && e.s[0] != 0.0)
             CV_LOG_ONCE_WARNING(NULL, "OpenCV/MatExpr: processing of multi-channel arrays might be changed in the future: "
                                       "https://github.com/opencv/opencv/issues/16739");
         e.a.convertTo(m, _type, e.alpha, e.s[0]);
