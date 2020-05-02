@@ -40,16 +40,28 @@ struct swish_functor {
 template <class T>
 struct mish_functor {
     __device__ T operator()(T value) {
+        using csl::device::tanh;
+        using csl::device::log1pexp;
+        return value * tanh(log1pexp(value));
+    }
+};
+
+template <>
+struct mish_functor<float> {
+    __device__ float operator()(float value) {
         // f(x) = x * tanh(log1pexp(x));
         using csl::device::fast_divide;
         using csl::device::fast_exp;
 
         auto e = fast_exp(value);
-        if (value <= static_cast<T>(-8))
+        if (value <= -18.0f)
             return value * e;
 
-        auto p = static_cast<T>(1) + e;
-        return value - static_cast<T>(2) * fast_divide(value, p * p + static_cast<T>(1));
+        auto n = e * e + 2 * e;
+        if (value <= -5.0f)
+            return value * fast_divide(n, n + 2);
+
+        return value - 2 * fast_divide(value, n + 2);
     }
 };
 
