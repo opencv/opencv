@@ -224,8 +224,11 @@ class ClassInfo(GeneralInfo):
     def getImports(self, module):
         return ["#import \"%s.h\"" % c for c in sorted(filter(lambda m: m != self.name, map(lambda m: type_dict[m]["import_module"] if m in type_dict and "import_module" in type_dict[m] else m, self.imports)))]
 
+    def isEnum(self, c):
+        return c in type_dict and type_dict[c].get("is_enum", False)
+
     def getForwardDeclarations(self, module):
-        return ["typedef NS_ENUM(int, %s);" % c if c in type_dict and "is_enum" in type_dict[c] and type_dict[c]["is_enum"] else "@class %s;" % c for c in sorted(self.imports)]
+        return [(None if type_dict[c]["import_module"] == module else "typedef NS_ENUM(int, %s);" % c) if self.isEnum(c) else "@class %s;" % c for c in sorted(self.imports)]
 
     def addImports(self, ctype, is_out_type):
         if ctype == self.cname:
@@ -298,12 +301,12 @@ class ClassInfo(GeneralInfo):
         self.method_declarations.close()
         self.method_implementations.close()
 
-    def generateObjcHeaderCode(self, m, M):
+    def generateObjcHeaderCode(self, m, M, objcM):
         return Template(self.objc_header_template + "\n\n").substitute(
                             module = M,
                             additionalImports = self.additionalImports.getvalue(),
                             importBaseClass = '#import "' + self.base + '.h"' if not self.is_base_class else "",
-                            forwardDeclarations = "\n".join(self.getForwardDeclarations(M)),
+                            forwardDeclarations = "\n".join(filter(None, self.getForwardDeclarations(objcM))),
                             enumDeclarations = self.enum_declarations.getvalue(),
                             nativePointerHandling = Template(
 """
@@ -570,6 +573,8 @@ class ObjectiveCWrapperGenerator(object):
             ctype = normalize_class_name(enumType)
             constinfo = ConstInfo(decl[3][0], namespaces=self.namespaces, enumType=enumType)
             objc_type = enumType.rsplit(".", 1)[-1]
+            if enum_fix.has_key(constinfo.classname):
+                objc_type = enum_fix[constinfo.classname].get(objc_type, objc_type)
             import_module = constinfo.classname if constinfo.classname and constinfo.classname != objc_type else self.Module
             type_dict[ctype] = { "cast_from" : "int",
                                  "cast_to" : get_cname(enumType),
@@ -658,7 +663,7 @@ class ObjectiveCWrapperGenerator(object):
                 continue
             ci.initCodeStreams(self.Module)
             self.gen_class(ci)
-            classObjcHeaderCode = ci.generateObjcHeaderCode(self.module, self.Module)
+            classObjcHeaderCode = ci.generateObjcHeaderCode(self.module, self.Module, ci.objc_name)
             header_file = "%s/%s/%s.h" % (output_objc_path, module, ci.objc_name)
             self.save(header_file, classObjcHeaderCode)
             self.header_files.append(header_file)
