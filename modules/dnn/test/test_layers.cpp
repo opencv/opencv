@@ -1746,4 +1746,38 @@ TEST_P(Layer_Test_Resize, change_input)
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Slice;
+TEST_P(Layer_Test_Slice, variable_input_shape)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+
+    int begin[] = {0, 0, 0, 0};
+    int end[] = {-1, -1, -1, -1};
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Slice";
+    lp.name = "testLayer";
+    lp.set("begin", DictValue::arrayInt<int*>(&begin[0], 4));
+    lp.set("end", DictValue::arrayInt<int*>(&end[0], 4));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat inp(4 + i, 5 + i, CV_8UC1);
+        randu(inp, 0, 255);
+        inp = blobFromImage(inp);
+
+        net.setInput(inp);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+
+        normAssert(out, inp);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Slice, dnnBackendsAndTargets());
+
 }} // namespace
