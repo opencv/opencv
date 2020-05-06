@@ -379,7 +379,7 @@ public:
         if (params.useNormPrefilter())
         {
             for (size_t i = 0; i < 2; ++i)
-                area.allocate(prefilter[0], width + params.preFilterSize + 2);
+                area.allocate(prefilter[i], width + params.preFilterSize + 2);
         }
         area.commit();
 
