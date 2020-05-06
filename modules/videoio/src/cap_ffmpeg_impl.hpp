@@ -77,7 +77,8 @@ extern "C" {
 
 #include <libavutil/mathematics.h>
 
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57,37,100)
+  #define ENABLE_FFMPEG_HW_SELECTION 1
   #include <libavutil/hwcontext.h>
   #include <libavutil/pixfmt.h>
 #endif
@@ -93,7 +94,6 @@ extern "C" {
 
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
-
 
 #ifdef __cplusplus
 }
@@ -520,9 +520,16 @@ struct CvCapture_FFMPEG
     SwsContext      * img_convert_ctx;
     int64_t frame_number, first_frame_number;
 
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
-    int init_hw(AVCodecContext *ctx, const char *hwaccel_device);
+#if ENABLE_FFMPEG_HW_SELECTION
+    static AVPixelFormat find_fmt_by_hw_type(const AVHWDeviceType type);
+
+    int init_hw(AVCodecContext *ctx, const char *hwaccel, const char *hwaccel_device);
+    int decode_frame();
+
+    AVPixelFormat     hw_pix_fmt;
     AVBufferRef     * hw_device_ctx;
+    AVFrame         * hw_picture;
+    AVFrame         * sw_picture;
 #endif
 
     double eps_zero;
@@ -582,8 +589,10 @@ void CvCapture_FFMPEG::init()
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
-    hw_device_ctx = NULL;
+#if ENABLE_FFMPEG_HW_SELECTION
+    hw_device_ctx = nullptr;
+    hw_picture = nullptr;
+    sw_picture = nullptr;
 #endif
 }
 
@@ -601,6 +610,7 @@ void CvCapture_FFMPEG::close()
 #if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
     ? CALC_FFMPEG_VERSION(55, 45, 101) : CALC_FFMPEG_VERSION(55, 28, 1))
         av_frame_free(&picture);
+
 #elif LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
     ? CALC_FFMPEG_VERSION(54, 59, 100) : CALC_FFMPEG_VERSION(54, 28, 0))
         avcodec_free_frame(&picture);
@@ -667,9 +677,15 @@ void CvCapture_FFMPEG::close()
         av_bitstream_filter_close(bsfc);
 #endif
     }
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
+#if ENABLE_FFMPEG_HW_SELECTION
     if (hw_device_ctx)
-       av_buffer_unref(&hw_device_ctx);
+    {
+        av_buffer_unref(&hw_device_ctx);
+        if (hw_picture)
+            av_frame_free(&hw_picture);
+    }
+    else if (sw_picture)
+            av_frame_free(&sw_picture);
 #endif
     init();
 }
@@ -903,19 +919,108 @@ public:
     }
 };
 
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
-int CvCapture_FFMPEG::init_hw(AVCodecContext *ctx, const char *hwaccel_device)
+#if ENABLE_FFMPEG_HW_SELECTION
+static AVPixelFormat get_hw_format(AVCodecContext *ctx,
+                                        const AVPixelFormat *pix_fmts)
 {
-    int err = 0;
+    const CvCapture_FFMPEG *cap = reinterpret_cast<CvCapture_FFMPEG*>(ctx->opaque);
+    const AVPixelFormat *p;
 
-    if ((err = av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_CUDA, hwaccel_device,
+    for (p = pix_fmts; *p != -1; p++) {
+        if (*p == cap->hw_pix_fmt)
+            return *p;
+    }
+
+    av_log(ctx, AV_LOG_ERROR, "Failed to get HW surface format.\n");
+    return AV_PIX_FMT_NONE;
+}
+
+AVPixelFormat CvCapture_FFMPEG::find_fmt_by_hw_type(const AVHWDeviceType type)
+{
+    AVPixelFormat fmt;
+    switch (type) {
+    case AV_HWDEVICE_TYPE_VAAPI:
+        fmt = AV_PIX_FMT_VAAPI;
+        break;
+    case AV_HWDEVICE_TYPE_DXVA2:
+        fmt = AV_PIX_FMT_DXVA2_VLD;
+        break;
+    case AV_HWDEVICE_TYPE_D3D11VA:
+        fmt = AV_PIX_FMT_D3D11;
+        break;
+    case AV_HWDEVICE_TYPE_VIDEOTOOLBOX:
+        fmt = AV_PIX_FMT_VIDEOTOOLBOX;
+        break;
+    case AV_HWDEVICE_TYPE_CUDA:
+        fmt = AV_PIX_FMT_CUDA;
+        break;
+    case AV_HWDEVICE_TYPE_QSV:
+        fmt = AV_PIX_FMT_QSV;
+        break;
+    default:
+        fmt = AV_PIX_FMT_NONE;
+        break;
+    }
+    return fmt;
+}
+
+int CvCapture_FFMPEG::init_hw(AVCodecContext *ctx, const char *hwaccel, const char *hwaccel_device)
+{
+    const AVHWDeviceType hw_accel_type = av_hwdevice_find_type_by_name(hwaccel);
+
+    if (hw_accel_type == AV_HWDEVICE_TYPE_VDPAU)
+    {
+        av_log(ctx, AV_LOG_ERROR, "VDPAU HW not supported by OpenCV\n");
+        return -1;
+    }
+
+    int err = 0;
+    if ((err = av_hwdevice_ctx_create(&hw_device_ctx, hw_accel_type, hwaccel_device,
                                                     NULL, 0)) < 0)
         av_log(ctx, AV_LOG_ERROR, "Failed to create specified HW device: %s\n",
             hwaccel_device);
     else
+    {
+        hw_pix_fmt = find_fmt_by_hw_type(hw_accel_type);
+
         ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+        ctx->get_format = get_hw_format;
+        ctx->opaque = this;
+    }
 
     return err;
+}
+
+int CvCapture_FFMPEG::decode_frame()
+{
+    int rc = avcodec_send_packet(video_st->codec, &packet);
+
+    if (rc < 0)
+        return rc;
+
+    rc = avcodec_receive_frame(video_st->codec, hw_picture);
+
+    if (rc == AVERROR(EAGAIN) || rc == AVERROR_EOF)
+        return 0;
+    else if (rc < 0)
+    {
+        av_log(video_st->codec, AV_LOG_ERROR, "error while decoding\n");
+        return rc;
+    }
+
+    if (hw_picture->format == hw_pix_fmt)
+    {
+        rc = av_hwframe_transfer_data(sw_picture, hw_picture, 0);
+        if (rc < 0)
+        {
+            av_log(video_st->codec, AV_LOG_ERROR, "error transferring frame from GPU to CPU\n");
+            return rc;
+        }
+        picture = sw_picture;
+    } else
+        picture = hw_picture;
+
+    return (rc == 0);
 }
 #endif
 
@@ -1038,17 +1143,20 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             } else {
                 codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
             }
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
-            if (av_dict_get(dict, "hwaccel_device", NULL, 0) != NULL)
-            {
-                const char *hwaccel_device =
-                    av_dict_get(dict, "hwaccel_device", NULL, 0)->value;
+#if ENABLE_FFMPEG_HW_SELECTION
+            const AVDictionaryEntry *hwaccel_entry = av_dict_get(dict, "hwaccel", NULL, 0);
+            const AVDictionaryEntry *hwaccel_device_entry = av_dict_get(dict, "hwaccel_device", NULL, 0);
 
-                if (init_hw(enc, hwaccel_device) < 0)
-                {
-                    av_buffer_unref(&hw_device_ctx);
+            if (hwaccel_entry != NULL) // && hwaccel_device_entry != NULL)
+            {
+                const char *hwaccel = hwaccel_entry->value;
+                const char *hwaccel_device = NULL;
+
+                if (hwaccel_device_entry != NULL)
+                    hwaccel_device = hwaccel_device_entry->value;
+
+                if (init_hw(enc, hwaccel, hwaccel_device) < 0)
                     goto exit_func;
-                }
             }
 #endif
             if (!codec ||
@@ -1068,7 +1176,17 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             video_st = ic->streams[i];
 #if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
     ? CALC_FFMPEG_VERSION(55, 45, 101) : CALC_FFMPEG_VERSION(55, 28, 1))
+#ifndef ENABLE_FFMPEG_HW_SELECTION
             picture = av_frame_alloc();
+#else
+            // no need to allocate picture memory here
+            // we need hw and sw frames allocated instead
+            if (!(hw_picture = av_frame_alloc()) || !(sw_picture = av_frame_alloc()))
+            {
+                av_log(enc, AV_LOG_ERROR, "failed to allocate frame.\n");
+                goto exit_func;
+            }
+#endif
 #else
             picture = avcodec_alloc_frame();
 #endif
@@ -1273,21 +1391,24 @@ bool CvCapture_FFMPEG::grabFrame()
         }
 
         // Decode video frame
-        #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
-        #if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56,14,100)
-            if (video_st->codec->pix_fmt == AV_PIX_FMT_CUDA)
-                video_st->codec->pix_fmt = AV_PIX_FMT_NV12;
-        #endif
-            avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
-        #elif LIBAVFORMAT_BUILD > 4628
-                avcodec_decode_video(video_st->codec,
-                                     picture, &got_picture,
-                                     packet.data, packet.size);
-        #else
-                avcodec_decode_video(&video_st->codec,
-                                     picture, &got_picture,
-                                     packet.data, packet.size);
-        #endif
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
+#if ENABLE_FFMPEG_HW_SELECTION
+        got_picture = decode_frame();
+
+        if (got_picture < 0)
+            break;
+#else
+        avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
+#endif
+#elif LIBAVFORMAT_BUILD > 4628
+        avcodec_decode_video(video_st->codec,
+                                picture, &got_picture,
+                                packet.data, packet.size);
+#else
+        avcodec_decode_video(&video_st->codec,
+                                picture, &got_picture,
+                                packet.data, packet.size);
+#endif
 
         // Did we get a video frame?
         if(got_picture)
