@@ -218,7 +218,9 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
         unlock_root_wait_t(tbb::task* root):guard{root} {}
         unlock_root_wait_t(unlock_root_wait_t&&) = default;
         //C++11 does not allow explicit lambda capture initialization we need a copy constructor on this to capture it into lambda
-        unlock_root_wait_t(unlock_root_wait_t& src) : unlock_root_wait_t(std::move(src)) {}
+        //TBB 4.4 does not have a move constructor for function_task, which is used inside arena.enqueue, thus copy ctor has to
+        //accept const ref
+        unlock_root_wait_t(unlock_root_wait_t const& src) : unlock_root_wait_t(std::move(const_cast<unlock_root_wait_t&>(src))) {}
     };
 
 //    arena.execute(
