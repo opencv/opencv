@@ -77,8 +77,8 @@ extern "C" {
 
 #include <libavutil/mathematics.h>
 
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57,37,100)
-  #define ENABLE_FFMPEG_HW_SELECTION 1
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57,100,100)
+  #define ENABLE_FFMPEG_HW_SELECTION
   #include <libavutil/hwcontext.h>
   #include <libavutil/pixfmt.h>
 #endif
@@ -520,7 +520,7 @@ struct CvCapture_FFMPEG
     SwsContext      * img_convert_ctx;
     int64_t frame_number, first_frame_number;
 
-#if ENABLE_FFMPEG_HW_SELECTION
+#ifdef ENABLE_FFMPEG_HW_SELECTION
     static AVPixelFormat find_fmt_by_hw_type(const AVHWDeviceType type);
 
     int init_hw(AVCodecContext *ctx, const char *hwaccel, const char *hwaccel_device);
@@ -589,7 +589,7 @@ void CvCapture_FFMPEG::init()
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
-#if ENABLE_FFMPEG_HW_SELECTION
+#ifdef ENABLE_FFMPEG_HW_SELECTION
     hw_device_ctx = nullptr;
     hw_picture = nullptr;
     sw_picture = nullptr;
@@ -677,7 +677,7 @@ void CvCapture_FFMPEG::close()
         av_bitstream_filter_close(bsfc);
 #endif
     }
-#if ENABLE_FFMPEG_HW_SELECTION
+#ifdef ENABLE_FFMPEG_HW_SELECTION
     if (hw_device_ctx)
     {
         av_buffer_unref(&hw_device_ctx);
@@ -919,7 +919,7 @@ public:
     }
 };
 
-#if ENABLE_FFMPEG_HW_SELECTION
+#ifdef ENABLE_FFMPEG_HW_SELECTION
 static AVPixelFormat get_hw_format(AVCodecContext *ctx,
                                         const AVPixelFormat *pix_fmts)
 {
@@ -1143,7 +1143,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             } else {
                 codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
             }
-#if ENABLE_FFMPEG_HW_SELECTION
+#ifdef ENABLE_FFMPEG_HW_SELECTION
             const AVDictionaryEntry *hwaccel_entry = av_dict_get(dict, "hwaccel", NULL, 0);
             const AVDictionaryEntry *hwaccel_device_entry = av_dict_get(dict, "hwaccel_device", NULL, 0);
 
@@ -1392,7 +1392,7 @@ bool CvCapture_FFMPEG::grabFrame()
 
         // Decode video frame
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
-#if ENABLE_FFMPEG_HW_SELECTION
+#ifdef ENABLE_FFMPEG_HW_SELECTION
         got_picture = decode_frame();
 
         if (got_picture < 0)
