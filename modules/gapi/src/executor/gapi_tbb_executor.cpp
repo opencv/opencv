@@ -30,8 +30,8 @@ namespace cv{ namespace gimpl { namespace parallel {
 inline void assert_graph_is_running(tbb::task* root)
 {
    //tbb::task::wait_for_all block calling thread until task ref_count is dropped to 1
-   //So if the root task refc_count is greater than 1 graph still has a job to do and
-   //according wait_for_all has not yet returned
+   //So if the root task ref_count is greater than 1 graph still has a job to do and
+   //according wait_for_all() has not yet returned
    ASSERT(root->ref_count() > 1);
 }
 
@@ -120,6 +120,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
     root.reset(new (tbb::task::allocate_root(m_context)) tbb::empty_task);
     root->set_ref_count(1); //required by wait_for_all, as it waits until counter drops to 1
 
+#if 0
     unsigned int reserved_for_master_threads = 1;
              int max_concurrency             = tbb::task_arena::automatic; // make equal to 1 for single thread debugging;
 
@@ -136,14 +137,16 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
         reserved_for_master_threads = 2;
     }
     tbb::task_arena arena{max_concurrency, reserved_for_master_threads};
-
+#endif
+    //get the reference to current task_arena (i.e. one we are running in)
+    tbb::task_arena arena{tbb::task_arena::attach{}};
 
     std::atomic<size_t>         executed {0};
 
     struct async_tasks_t {
-        std::atomic<size_t>         count {0};//count {0};
-        std::condition_variable     cv;     //cv;
-        std::mutex                  mtx; //mtx;
+        std::atomic<size_t>         count {0};
+        std::condition_variable     cv;
+        std::mutex                  mtx;
     };
 
     async_tasks_t async_tasks;
@@ -169,15 +172,15 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
           if (async_tasks_p)
           {
              //TODO: seems that this can be relaxed
-             auto result = --(async_tasks_p->count);
+             auto active_async_tasks = --(async_tasks_p->count);
 
-             auto is_not_wrapped_around = [](decltype(result) r ){
-                 using counter_limits_t =  std::numeric_limits<decltype(result)>;
+             auto is_not_wrapped_around = [](decltype(active_async_tasks) r ){
+                 using counter_limits_t =  std::numeric_limits<decltype(active_async_tasks)>;
                  return r < counter_limits_t::max() && !counter_limits_t::is_signed;
              };
-             ASSERT(is_not_wrapped_around(result));
+             ASSERT(is_not_wrapped_around(active_async_tasks));
              //TODO: checks performance gains of minimizing number of call to notify (i.e. only if this is the last one async node or there are new tbb task to execute)
-             if ((result == 0) || (wake_master == wake_tbb_master::yes) )//was the last or there is the new TBB tasks to execute
+             if ((active_async_tasks == 0) || (wake_master == wake_tbb_master::yes) )//was the last or there is the new TBB tasks to execute
              {
                  ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
                 //Wile decrement of async_tasks_t::count is atomic it might be done after waiting thread checked it value but _before_ it actually start waiting on the condition variable.
@@ -262,7 +265,7 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
                     else
                     {
                         LOG_DEBUG(NULL, "Async task ");
-                        //move through copy this lock into the callback to block master until async tasks completes
+                        //move this lock (through copy) into the callback to block master until async tasks complete
                         master_thread_sleep_lock_t block_master{&async_tasks};
 
                         auto callback = [push_ready_dependees, node, &arena, &root, block_master, body] () mutable /*due to block_master.unlock()*/
@@ -326,13 +329,14 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
 //               //First participate in execution of TBB graph till there are no more ready tasks.
                root->wait_for_all();
 
-               //TODO: add optimization to bypass waiting on cv if there are no async work in the graph
-               auto start = timer.now();
-               std::unique_lock<std::mutex> lk(async_tasks.mtx);
-               //then wait (probably by sleeping) until all async tasks completed or new TBB tasks created.
-               async_tasks.cv.wait(lk, [&]{return async_work_done() || !tbb_work_done() ;});
+               if (!async_work_done()) { //Bypass waiting on cv if there are no async work
+                   auto start = timer.now();
+                   std::unique_lock<std::mutex> lk(async_tasks.mtx);
+                   //then wait (probably by sleeping) until all async tasks completed or new TBB tasks created.
+                   async_tasks.cv.wait(lk, [&]{return async_work_done() || !tbb_work_done() ;});
 
-               LOG_INFO(NULL, "Slept for "<< std::chrono::duration_cast<std::chrono::milliseconds>(timer.now() - start).count() <<" ms \n");
+                   LOG_INFO(NULL, "Slept for "<< std::chrono::duration_cast<std::chrono::milliseconds>(timer.now() - start).count() <<" ms \n");
+               }
             }
             while(!tbb_work_done() || !async_work_done());
 

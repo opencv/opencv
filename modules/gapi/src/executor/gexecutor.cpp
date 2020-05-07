@@ -88,6 +88,7 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
         const auto op_index = m_ops.size() - 1;
         op_indexes[nh] = op_index;
 
+        //TODO: use async tasks for non CPU islands
         std::function<void()> body = [this, op_index](){
             GExecutor::run_op(m_ops[op_index], m_res);
         };
