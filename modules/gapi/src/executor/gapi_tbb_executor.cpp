@@ -2,6 +2,9 @@
 #include "gapi_tbb_executor.hpp"
 #include "gapi_itt.hpp"
 
+#include <opencv2/gapi/own/assert.hpp>
+#include "logger.hpp" // GAPI_LOG
+
 #include <tbb/task.h>
 #include <tbb/task_arena.h>
 #include <memory> //unique_ptr
@@ -11,22 +14,12 @@
 
 #include <chrono>
 
-//#include <cassert>
+#define ASSERT(expr)          GAPI_Assert(expr)
 
-#include <cstdio>
-#include <cstdlib> // abort()
+#define LOG_INFO(tag, ...)    GAPI_LOG_INFO(tag, __VA_ARGS__)
+#define LOG_WARNING(tag, ...) GAPI_LOG_WARNING(tag, __VA_ARGS__)
+#define LOG_DEBUG(tag, ...)   GAPI_LOG_DEBUG(tag, __VA_ARGS__)
 
-inline void dev_assert(bool val, const char* str, int line, const char* file)
-{
-    if (!val)
-    {
-        fprintf(stderr, "%s:%d: Assertion \"%s\" failed\n", file, line, str);
-        fflush(stderr);
-        abort();
-    }
-}
-//TODO: use GAPI/OCV one
-#define ASSERT(arg) dev_assert(static_cast<bool>(arg), #arg, __LINE__, __FILE__)
 
 #ifdef OPENCV_WITH_ITT
 const __itt_domain* cv::gimpl::parallel::gapi_itt_domain = __itt_domain_create("GAPI Context");
@@ -268,13 +261,13 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
                     }
                     else
                     {
-//                        std::cout<<"async task "<<std::endl;
+                        LOG_DEBUG(NULL, "Async task ");
                         //move through copy this lock into the callback to block master until async tasks completes
                         master_thread_sleep_lock_t block_master{&async_tasks};
 
                         auto callback = [push_ready_dependees, node, &arena, &root, block_master, body] () mutable /*due to block_master.unlock()*/
                         {
-//                            std::cout<<"async task callback is called "<<std::endl;
+                            LOG_DEBUG(NULL, "Async task callback is called ");
                             std::size_t ready_items = push_ready_dependees(node);
                             if (ready_items > 0)
                             {
@@ -283,18 +276,18 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
                                 auto new_root_ref_count = root->add_ref_count(1);
                                 unlock_root_wait_t unlock_root_wait_guard{root.get()};
 
-//                                std::chrono::high_resolution_clock timer;
+                                std::chrono::high_resolution_clock timer;
                                 {
                                     ITT_AUTO_TRACE_GUARD(ittTbbEnqueueSpawnReadyBlocks);
-//                                    auto start = timer.now();
+                                    auto start = timer.now();
                                     arena.enqueue([ready_items, &root, body, unlock_root_wait_guard](){
                                         parallel::batch_spawn(ready_items, root.get(), body);
                                         //TODO: why we need this? Either write a descriptive comment or remove it
                                         volatile auto p = unlock_root_wait_guard.guard.get();
                                         util::suppress_unused_warning(p);
                                     });
-//                                    auto end = timer.now();
-//                                    std::cout<<"enqued in "<< std::chrono::duration_cast<std::chrono::microseconds>(end -start).count() <<" mks \n";
+                                    util::suppress_unused_warning(start);
+                                    LOG_DEBUG(NULL, "Enqued in "<< std::chrono::duration_cast<std::chrono::microseconds>(timer.now() - start).count() <<" mks \n");
                                 }
                                 //unlock master thread waiting on conditional variable (if any) to pick up enqueued tasks
                                 //wake master only if there is new work and there were no work before (i.e. root->ref_count() was 1 and master was
@@ -325,31 +318,28 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
             parallel::batch_spawn(num_start_tasks - 1,root.get(), body, /* assert_graph_is_running*/false);
             root->spawn_and_wait_for_all(*parallel::allocate_task(root.get(), body));
 
-            //so wait for all tasks to complete
-//            root->wait_for_all();
+            std::chrono::high_resolution_clock timer;
 
-//            std::chrono::high_resolution_clock timer;
             auto tbb_work_done   = [&root]       (){ return root->ref_count() == 1; };
             auto async_work_done = [&async_tasks](){ return 0 == async_tasks.count; };
             do {
 //               //First participate in execution of TBB graph till there are no more ready tasks.
                root->wait_for_all();
+
                //TODO: add optimization to bypass waiting on cv if there are no async work in the graph
-//
-//               auto start = timer.now();
+               auto start = timer.now();
                std::unique_lock<std::mutex> lk(async_tasks.mtx);
                //then wait (probably by sleeping) until all async tasks completed or new TBB tasks created.
                async_tasks.cv.wait(lk, [&]{return async_work_done() || !tbb_work_done() ;});
-//               auto end = timer.now();
-//               std::cout<<"slept for "<< std::chrono::duration_cast<std::chrono::milliseconds>(end -start).count() <<" ms \n";
+
+               LOG_INFO(NULL, "Slept for "<< std::chrono::duration_cast<std::chrono::milliseconds>(timer.now() - start).count() <<" ms \n");
             }
             while(!tbb_work_done() || !async_work_done());
-//
+
             ASSERT(tbb_work_done() && async_work_done() && "Graph is still running?");
 //        }
 //    );
 
-    std::cout<<"executed " <<executed<<" tasks"<<std::endl;
-//            return executed;
+    LOG_INFO(NULL, "Done. Executed " <<executed<<" tasks");
 }
 #endif //USE_GAPI_TBB_EXECUTOR

@@ -16,6 +16,8 @@
 #include "executor/gexecutor.hpp"
 #include "compiler/passes/passes.hpp"
 
+#include "logger.hpp" // GAPI_LOG
+
 cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     : m_orig_graph(std::move(g_model))
     , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
@@ -138,18 +140,10 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     );
     start_tasks.assign(start_task_r.begin(), start_task_r.end());
 
-//    std::cout << "tasks count : " <<tasks.size() <<std::endl
-//              << "start tasks count :" << start_tasks.size() << std::endl
-//              << "start_task[0] dependees count:" << start_tasks[0]->dependees.size() << std::endl
-//    ;
-//
-//    for (auto&& task : tasks) {
-//        std::cout<< &task <<"\t" << "deps :" << task.dependencies <<"\t" <<"dependees: ";
-//        for (auto* dependee : task.dependees) {
-//            std::cout<<dependee << " ";
-//        }
-//        std::cout<<std::endl;
-//    }
+    GAPI_LOG_INFO(NULL,
+                 "Total tasks in graph :" <<tasks.size() <<"; "
+              << "Start tasks count :" << start_tasks.size() << ";"
+    );
 #endif //USE_GAPI_TBB_EXECUTOR
 
 }
