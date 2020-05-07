@@ -10,7 +10,7 @@ set(the_description "Deep neural network module. It allows to load models from d
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX)
 
-ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java js)
+ocv_add_module(dnn opencv_core opencv_imgproc opencv_gapi WRAP python java js)
 
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
 if(HAVE_TENGINE)

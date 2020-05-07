@@ -521,12 +521,26 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void forward(OutputArrayOfArrays outputBlobs, const String& outputName = String());
 
+        /** @brief Runs forward pass using GAPI to compute outputs of layers listed in @p outBlobNames.
+         *  @param outputBlobs contains blobs for first outputs of specified layers.
+         *  @param outBlobNames names for layers which outputs are needed to get
+         */
+        CV_WRAP void forwardGraph(OutputArrayOfArrays outputBlobs,
+                                  const std::vector<String>& outBlobNames);
+
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains blobs for first outputs of specified layers.
          *  @param outBlobNames names for layers which outputs are needed to get
          */
         CV_WRAP void forward(OutputArrayOfArrays outputBlobs,
                              const std::vector<String>& outBlobNames);
+
+        /** @brief Runs forward pass using GAPI to compute outputs of layers listed in @p outBlobNames.
+         *  @param outputBlobs contains all output blobs for each layer specified in @p outBlobNames.
+         *  @param outBlobNames names for layers which outputs are needed to get
+         */
+        CV_WRAP_AS(forwardAndRetrieve) void forwardGraph(CV_OUT std::vector<std::vector<Mat> >& outputBlobs,
+                                                         const std::vector<String>& outBlobNames);
 
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains all output blobs for each layer specified in @p outBlobNames.

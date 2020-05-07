@@ -432,6 +432,40 @@ TEST(Net, forwardAndRetrieve)
     normAssert(outBlobs[0][1], inp.rowRange(2, 4), "second part");
 }
 
+TEST(Net, forwardAndGAPI)
+{
+    std::string prototxt =
+        "input: \"data\"\n"
+        "layer {\n"
+        "  name: \"testLayer\"\n"
+        "  type: \"Slice\"\n"
+        "  bottom: \"data\"\n"
+        "  top: \"firstCopy\"\n"
+        "  top: \"secondCopy\"\n"
+        "  slice_param {\n"
+        "    axis: 0\n"
+        "    slice_point: 2\n"
+        "  }\n"
+        "}";
+    Net net = readNetFromCaffe(&prototxt[0], prototxt.size());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    Mat inp(4, 5, CV_32F);
+    randu(inp, -1, 1);
+    net.setInput(inp);
+
+    std::vector<String> outNames;
+    outNames.push_back("testLayer");
+    std::vector<std::vector<Mat> > outBlobs;
+
+    net.forwardGraph(outBlobs, outNames);
+
+    EXPECT_EQ(outBlobs.size(), 1);
+    EXPECT_EQ(outBlobs[0].size(), 2);
+    normAssert(outBlobs[0][0], inp.rowRange(0, 2), "first part");
+    normAssert(outBlobs[0][1], inp.rowRange(2, 4), "second part");
+}
+
 #ifdef HAVE_INF_ENGINE
 static const std::chrono::milliseconds async_timeout(10000);
 

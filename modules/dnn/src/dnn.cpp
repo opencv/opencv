@@ -64,6 +64,9 @@
 
 #include <opencv2/core/cuda.hpp>
 
+#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -1140,6 +1143,14 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 }
 
 static int g_networkId = 0;
+
+G_TYPED_KERNEL(GLayer, <GMat(GMat, cv::Ptr<LayerData>)>, "org.opencv.dnn.layer")
+{
+    static GMatDesc outMeta(GMatDesc in, cv::Ptr<LayerData> )
+    {
+        return in;
+    }
+};
 
 struct Net::Impl
 {
@@ -3164,6 +3175,57 @@ struct Net::Impl
         ld.flag = 1;
     }
 
+    void forwardToLayerGraph(LayerData &lastld, bool clearFlags = true)
+    {
+        CV_TRACE_FUNCTION();
+
+        if (clearFlags)
+        {
+            MapIdToLayerData::iterator it;
+            for (it = layers.begin(); it != layers.end(); it++)
+                it->second.flag = 0;
+        }
+
+        //already was forwarded
+        if (lastld.flag)
+            return;
+
+        // G-API code
+        std::vector<cv::GMat> outs(layers.size() + 1);
+        MapIdToLayerData::iterator it = layers.begin();
+        int i = 0;
+        while (1)
+        {
+            LayerData &ld = it->second;
+            outs[i + 1] = GLayer::on(outs[i], makePtr<LayerData>(ld));
+            it++;
+            if (it == layers.end() || (it->second.id > lastld.id))
+                break;
+            i++;
+        }
+        cv::GComputation comp(outs[0], outs[i + 1]);
+
+        // a trivial Mat is used here because empty Mat is not accepted by GAPI;
+        // empty Mat will trigger exception when creating internal mat.
+        cv::Mat in = Mat({1, 1, 1, 1}, CV_32F);
+        cv::Mat out;
+        auto impl = cv::gapi::cpu::ocv_kernel<GLayer>(
+                    [=](const cv::Mat& in,
+                            cv::Ptr<LayerData> ld,
+                            cv::Mat& out)
+                    {
+                        if (!ld->flag)
+                            this->forwardLayer(*ld);
+                    });
+        auto pkg = cv::gapi::kernels(impl);
+        comp.apply(in, out, cv::compile_args(pkg));
+
+#ifdef HAVE_CUDA
+        if (preferableBackend == DNN_BACKEND_CUDA)
+            cudaInfo->context.stream.synchronize();
+#endif
+    }
+
     void forwardToLayer(LayerData &ld, bool clearFlags = true)
     {
         CV_TRACE_FUNCTION();
@@ -3836,6 +3898,33 @@ void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
     }
 }
 
+void Net::forwardGraph(OutputArrayOfArrays outputBlobs,
+                       const std::vector<String>& outBlobNames)
+{
+    CV_TRACE_FUNCTION();
+
+    std::vector<LayerPin> pins;
+    for (int i = 0; i < outBlobNames.size(); i++)
+    {
+        pins.push_back(impl->getPinByAlias(outBlobNames[i]));
+    }
+
+    impl->setUpNet(pins);
+
+    LayerPin out = impl->getLatestLayerPin(pins);
+
+    impl->forwardToLayerGraph(impl->getLayerData(out.lid));
+
+    std::vector<Mat> matvec;
+    for (int i = 0; i < pins.size(); i++)
+    {
+        matvec.push_back(impl->getBlob(pins[i]));
+    }
+
+    std::vector<Mat> & outputvec = *(std::vector<Mat> *)outputBlobs.getObj();
+    outputvec = matvec;
+}
+
 void Net::forward(OutputArrayOfArrays outputBlobs,
                   const std::vector<String>& outBlobNames)
 {
@@ -3861,6 +3950,35 @@ void Net::forward(OutputArrayOfArrays outputBlobs,
 
     std::vector<Mat> & outputvec = *(std::vector<Mat> *)outputBlobs.getObj();
     outputvec = matvec;
+}
+
+void Net::forwardGraph(std::vector<std::vector<Mat> >& outputBlobs,
+                       const std::vector<String>& outBlobNames)
+{
+    CV_TRACE_FUNCTION();
+
+    std::vector<LayerPin> pins;
+    for (int i = 0; i < outBlobNames.size(); i++)
+    {
+        pins.push_back(impl->getPinByAlias(outBlobNames[i]));
+    }
+
+    impl->setUpNet(pins);
+
+    LayerPin out = impl->getLatestLayerPin(pins);
+
+    impl->forwardToLayerGraph(impl->getLayerData(out.lid));
+
+    outputBlobs.resize(outBlobNames.size());
+    for (int i = 0; i < outBlobNames.size(); i++)
+    {
+        std::vector<LayerPin> lp = impl->getLayerOutPins(outBlobNames[i]);
+        outputBlobs[i].resize(lp.size());
+        for (int j = 0; j < lp.size(); j++)
+        {
+            outputBlobs[i][j] = impl->getBlob(lp[j]);
+        }
+    }
 }
 
 void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
