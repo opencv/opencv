@@ -333,7 +333,6 @@ void ONNXImporter::populateNet(Net dstNet)
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
 
     addConstantNodesForInitializers(graph_proto);
-    simplifySubgraphs(graph_proto);
 
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
     // List of internal blobs shapes.
@@ -377,6 +376,22 @@ void ONNXImporter::populateNet(Net dstNet)
         }
     }
     dstNet.setInputsNames(netInputs);
+
+    // remove constant network inputs (initializers have already been added as constant nodes to graph)
+    int idx = 0;
+    while (graph_proto.input_size() != netInputs.size())
+    {
+        std::string name = graph_proto.input(idx).name();
+        if (std::find(netInputs.begin(), netInputs.end(), name) == netInputs.end())
+        {
+            graph_proto.mutable_input()->DeleteSubrange(idx, 1);
+        }
+        else
+        {
+            ++idx;
+        }
+    }
+    simplifySubgraphs(graph_proto);
 
     int layersSize = graph_proto.node_size();
     LayerParams layerParams;
