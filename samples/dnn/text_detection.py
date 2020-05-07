@@ -178,7 +178,7 @@ def main():
             vertices = np.asarray(vertices)
 
             # get cropped image using perspective transform
-            if modelRecognition is not Node:
+            if modelRecognition is not None:
                 cropped = fourPointsTransform(frame, vertices)
                 cropped = cv.cvtColor(cropped, cv.COLOR_BGR2GRAY)
                 cropped = cropped.astype("float32")
