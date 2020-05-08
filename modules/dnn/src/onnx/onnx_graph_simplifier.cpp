@@ -392,7 +392,7 @@ public:
         mean   = addNodeToMatch("Constant");
         weight = addNodeToMatch("Constant");
         bias   = addNodeToMatch("Constant");
-        A = addNodeToMatch("Constant");
+        A      = addNodeToMatch("Constant");
         shape1 = addNodeToMatch("Constant");
         shape2 = addNodeToMatch("Constant");
     }

@@ -130,22 +130,6 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
     layer->forward(inputs, outputs, internals);
 }
 
-std::map<std::string, Mat> ONNXImporter::getGraphTensors(
-                                        const opencv_onnx::GraphProto& graph_proto)
-{
-  opencv_onnx::TensorProto tensor_proto;
-  std::map<std::string, Mat> layers_weights;
-
-  for (int i = 0; i < graph_proto.initializer_size(); i++)
-  {
-    tensor_proto = graph_proto.initializer(i);
-    Mat mat = getMatFromTensor(tensor_proto);
-    releaseONNXTensor(tensor_proto);
-    layers_weights.insert(std::make_pair(tensor_proto.name(), mat));
-  }
-  return layers_weights;
-}
-
 static DictValue parse(const ::google::protobuf::RepeatedField< ::google::protobuf::int64>& src) {
     std::vector<int32_t> dst(src.size());
     convertInt64ToInt32(src, dst, src.size());
@@ -309,22 +293,43 @@ static void addConstant(const std::string& name,
     outShapes.insert(std::make_pair(name, shape(blob)));
 }
 
-void addConstantNodesForInitializers(opencv_onnx::GraphProto& graph_proto)
+std::map<std::string, Mat> addConstantNodesForInitializers(opencv_onnx::GraphProto& graph_proto)
 {
     int num_initializers = graph_proto.initializer_size();
+    std::map<std::string, Mat> layers_weights;
     for (int id = 0; id < num_initializers; id++)
     {
         opencv_onnx::TensorProto initializer = graph_proto.initializer(id);
+        const std::string& name = initializer.name();
         opencv_onnx::NodeProto* constant_node = graph_proto.add_node();
         constant_node->set_op_type("Constant");
-        constant_node->set_name(initializer.name());
-        constant_node->add_output(initializer.name());
+        constant_node->set_name(name);
+        constant_node->add_output(name);
         opencv_onnx::AttributeProto* value = constant_node->add_attribute();
         opencv_onnx::TensorProto* tensor = initializer.New();
         tensor->CopyFrom(initializer);
+
+        Mat mat = getMatFromTensor(initializer);
+        layers_weights.insert(std::make_pair(name, mat));
         releaseONNXTensor(initializer);
         value->set_allocated_t(tensor);
     }
+
+    // remove constant network inputs (initializers have already been added as constant nodes to graph)
+    int input_size = graph_proto.input_size();
+    for (int i = 0, j = 0; i < input_size; ++i)
+    {
+        const std::string& name = graph_proto.input(j).name();
+        if (layers_weights.find(name) != layers_weights.end())
+        {
+            graph_proto.mutable_input()->DeleteSubrange(j, 1);
+        }
+        else
+        {
+            ++j;
+        }
+    }
+    return layers_weights;
 }
 
 void ONNXImporter::populateNet(Net dstNet)
@@ -332,15 +337,25 @@ void ONNXImporter::populateNet(Net dstNet)
     CV_Assert(model_proto.has_graph());
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
 
-    addConstantNodesForInitializers(graph_proto);
+    std::map<std::string, Mat> constBlobs = addConstantNodesForInitializers(graph_proto);
+    simplifySubgraphs(graph_proto);
 
-    std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
     // List of internal blobs shapes.
     std::map<std::string, MatShape> outShapes;
+    std::map<std::string, MatShape>::iterator shapeIt;
+    // create map with network inputs (without const blobs)
+    std::map<std::string, LayerInfo> layer_id;
+    std::map<std::string, LayerInfo>::iterator layerId;
+    // fill map: push layer name, layer id and output id
+    std::vector<String> netInputs;
     // Add all the inputs shapes. It includes as constant blobs as network's inputs shapes.
     for (int i = 0; i < graph_proto.input_size(); ++i)
     {
         opencv_onnx::ValueInfoProto valueInfoProto = graph_proto.input(i);
+        const std::string& name = valueInfoProto.name();
+        netInputs.push_back(name);
+        layer_id.insert(std::make_pair(name, LayerInfo(0, netInputs.size() - 1)));
+
         CV_Assert(valueInfoProto.has_type());
         opencv_onnx::TypeProto typeProto = valueInfoProto.type();
         CV_Assert(typeProto.has_tensor_type());
@@ -353,45 +368,14 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             inpShape[j] = tensorShape.dim(j).dim_value();
         }
-        outShapes[valueInfoProto.name()] = inpShape;
+        outShapes[name] = inpShape;
     }
+    dstNet.setInputsNames(netInputs);
 
     std::string framework_name;
     if (model_proto.has_producer_name()) {
         framework_name = model_proto.producer_name();
     }
-
-    // create map with network inputs (without const blobs)
-    std::map<std::string, LayerInfo> layer_id;
-    std::map<std::string, LayerInfo>::iterator layerId;
-    std::map<std::string, MatShape>::iterator shapeIt;
-    // fill map: push layer name, layer id and output id
-    std::vector<String> netInputs;
-    for (int j = 0; j < graph_proto.input_size(); j++)
-    {
-        const std::string& name = graph_proto.input(j).name();
-        if (constBlobs.find(name) == constBlobs.end()) {
-            netInputs.push_back(name);
-            layer_id.insert(std::make_pair(name, LayerInfo(0, netInputs.size() - 1)));
-        }
-    }
-    dstNet.setInputsNames(netInputs);
-
-    // remove constant network inputs (initializers have already been added as constant nodes to graph)
-    int idx = 0;
-    while (graph_proto.input_size() != netInputs.size())
-    {
-        std::string name = graph_proto.input(idx).name();
-        if (std::find(netInputs.begin(), netInputs.end(), name) == netInputs.end())
-        {
-            graph_proto.mutable_input()->DeleteSubrange(idx, 1);
-        }
-        else
-        {
-            ++idx;
-        }
-    }
-    simplifySubgraphs(graph_proto);
 
     int layersSize = graph_proto.node_size();
     LayerParams layerParams;
