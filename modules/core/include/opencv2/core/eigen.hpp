@@ -46,6 +46,7 @@
 #define OPENCV_CORE_EIGEN_HPP
 
 #include "opencv2/core.hpp"
+#include <unsupported/Eigen/CXX11/Tensor>
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4714 ) //__forceinline is not inlined
@@ -58,6 +59,21 @@ namespace cv
 
 //! @addtogroup core_eigen
 //! @{
+
+/**
+ * Convert a 3-dimensional Eigen::Tensor of size H x W x C to a cv::Mat with C channels
+ * where:
+ *   H = number of rows
+ *   W = number of columns
+ *   C = number of channels
+ */
+template <typename _Tp> static inline
+void eigen2cv( const Eigen::Tensor<_Tp, 3, Eigen::RowMajor> &src, OutputArray dst )
+{
+    Mat _src(src.dimension(0), src.dimension(1),
+            CV_MAKE_TYPE(DataType<_Tp>::type, src.dimension(2)), (void *)src.data());
+    _src.copyTo(dst);
+}
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, OutputArray dst )
@@ -89,6 +105,24 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
     {
         dst = Matx<_Tp, _rows, _cols>(static_cast<const _Tp*>(src.data()));
     }
+}
+
+/**
+ * Convert a cv::Mat containing C channels to a 3-dimensional Eigen::Tensor of size H x W x C
+ * where:
+ *   H = number of rows
+ *   W = number of columns
+ *   C = number of channels
+ */
+template <typename _Tp> static inline
+void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, Eigen::RowMajor> &dst )
+{
+    dst.resize(src.rows, src.cols, src.channels());
+    Mat _dst(src.rows, src.cols, CV_MAKE_TYPE(DataType<_Tp>::type, src.channels()), dst.data());
+    if (src.type() == _dst.type())
+        src.copyTo(_dst);
+    else
+        src.convertTo(_dst, _dst.type());
 }
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
