@@ -347,7 +347,8 @@ public:
         htext(nstripes, NULL),
         cbuf0(nstripes, NULL),
         sad_short(nstripes, NULL),
-        hsad_short(nstripes, NULL)
+        hsad_short(nstripes, NULL),
+        prefilter{ 0, 0 }
     {
         const int wsz = params.SADWindowSize;
         const int ndisp = params.numDisparities;
