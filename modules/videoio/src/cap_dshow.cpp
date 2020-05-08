@@ -108,6 +108,7 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
+#define NO_DSHOW_STRSAFE
 #include "DShow.h"
 #include "strmif.h"
 #include "Aviriff.h"
