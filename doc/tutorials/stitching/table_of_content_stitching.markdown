@@ -7,6 +7,8 @@ create a photo panorama or you want to stitch scans.
 
 -   @subpage tutorial_stitcher
 
+    *Languages:* C++
+
     *Compatibility:* \>= OpenCV 3.2
 
     *Author:* Jiri Horner
