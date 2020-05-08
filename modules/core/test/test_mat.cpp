@@ -2084,6 +2084,48 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
 }
 #endif // HAVE_EIGEN
 
+#ifdef HAVE_EIGEN
+TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
+{
+    Mat A(2, 3, CV_32FC3);
+    float value = 0;
+    for(int row=0; row<A.rows; row++)
+        for(int col=0; col<A.cols; col++)
+            for(int ch=0; ch<A.channels(); ch++)
+                A.at<Vec3f>(row,col)[ch] = value++;
+
+    Eigen::Tensor<float, 3, Eigen::RowMajor> eigen_A;
+    cv2eigen(A, eigen_A);
+
+    value = 0;
+    for(int row=0; row<A.rows; row++)
+        for(int col=0; col<A.cols; col++)
+            for(int ch=0; ch<A.channels(); ch++)
+                ASSERT_FLOAT_EQ(value++, eigen_A(row,col,ch));
+}
+#endif // HAVE_EIGEN
+
+#ifdef HAVE_EIGEN
+TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
+{
+    Eigen::Tensor<float, 3, Eigen::RowMajor> A_eigen(2,3,3);
+    float value = 0;
+    for(int row=0; row<A_eigen.dimension(0); row++)
+        for(int col=0; col<A_eigen.dimension(1); col++)
+            for(int ch=0; ch<A_eigen.dimension(2); ch++)
+                A_eigen(row,col,ch) = value++;
+
+    Mat A;
+    eigen2cv(A_eigen, A);
+
+    value = 0;
+    for(int row=0; row<A.rows; row++)
+        for(int col=0; col<A.cols; col++)
+            for(int ch=0; ch<A.channels(); ch++)
+                ASSERT_FLOAT_EQ(value++, A.at<Vec3f>(row,col)[ch]);
+}
+#endif // HAVE_EIGEN
+
 TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
 {
     applyTestTag(CV_TEST_TAG_MEMORY_6GB);
