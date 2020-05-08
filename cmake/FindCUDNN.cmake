@@ -70,7 +70,7 @@ if(CUDNN_INCLUDE_DIR)
   if(EXISTS "${CUDNN_INCLUDE_DIR}/cudnn_version.h")
     file(READ "${CUDNN_INCLUDE_DIR}/cudnn_version.h" CUDNN_VERSION_H_CONTENTS)
     string(APPEND CUDNN_H_CONTENTS "${CUDNN_VERSION_H_CONTENTS}")
-    unset(CUDNN_VERSION_H_CONTENTS)  
+    unset(CUDNN_VERSION_H_CONTENTS)
   endif()
 
   string(REGEX MATCH "define CUDNN_MAJOR ([0-9]+)" _ "${CUDNN_H_CONTENTS}")
