@@ -7,7 +7,6 @@
 
 #include "array.hpp"
 #include "types.hpp"
-#include "vector_traits.hpp"
 #include "grid_stride_range.hpp"
 #include "execution.hpp"
 #include "kernel_dispatcher.hpp"
@@ -50,82 +49,60 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             }
         }
 
-        template <class T, int TILE_SIZE, std::size_t N>
+        template <class T, int TILE_SIZE, int ROWS_PER_THREAD>
         __global__ void transpose(Span<T> output, View<T> input, size_type in_width, size_type out_width)
         {
-            using vector_type = get_vector_type_t<T, N>;
-
             __shared__ T tile[TILE_SIZE][TILE_SIZE + 1];
 
-            /* blockDim.y = TILE_SIZE, blockDim.x = TILE_SIZE/N */
-            const index_type in_x = blockIdx.x * TILE_SIZE + threadIdx.x * N;
-            const index_type in_y = blockIdx.y * TILE_SIZE + threadIdx.y;
+            /* blockDim.y = TILE_SIZE / ROWS_PER_THREAD, blockDim.x = TILE_SIZE */
+            const index_type in_x = blockIdx.x * TILE_SIZE + threadIdx.x;
+            const index_type in_y_begin = blockIdx.y * TILE_SIZE + threadIdx.y;
 
             /* Every valid input location has a corresponding output location and vice versa.
              * Hence, if we do not load values into the shared memory for a given location, we
              * also won't read them for storing in the output.
              */
-            if (in_x < in_width && in_y < out_width)
+            for (int j = 0; j < TILE_SIZE; j += TILE_SIZE / ROWS_PER_THREAD)
             {
-                vector_type vec;
-                auto input_vPtr = vector_type::get_pointer(input.data());
-                v_load(vec, input_vPtr[(in_y * in_width + in_x) / N]);
-
-                for (int i = 0; i < vector_type::size(); i++)
-                    tile[threadIdx.y][threadIdx.x * N + i] = vec.data[i];
+                const auto in_y_current = in_y_begin + j;
+                if (in_x < in_width && in_y_current < out_width)
+                    tile[threadIdx.y + j][threadIdx.x] = input[in_y_current * in_width + in_x];
             }
 
             __syncthreads();
 
-            /* Note that `blockDim.x * N` is equal to `blockDim.y`. Since there are an equal
-             * number of them, we can interchange `threadIdx.x` and `threadIdx.y` without changing
-             * result. The advantage of interchanging is that consecutive output indices map to
+            /* We interchange `threadIdx.x` and `threadIdx.y` so that consecutive output indices map to
              * consecutive threads. This would allow writes across threds in a warp to be coalesced.
              */
-            const index_type out_x = blockIdx.y * TILE_SIZE + threadIdx.x * N;
-            const index_type out_y = blockIdx.x * TILE_SIZE + threadIdx.y;
+            const index_type out_x = blockIdx.y * TILE_SIZE + threadIdx.x;
+            const index_type out_y_begin = blockIdx.x * TILE_SIZE + threadIdx.y;
 
-            if (out_x < out_width && out_y < in_width)
+            for (int j = 0; j < TILE_SIZE; j += TILE_SIZE / ROWS_PER_THREAD)
             {
-                vector_type vec;
-                for (int i = 0; i < vector_type::size(); i++)
-                    vec.data[i] = tile[threadIdx.x * N + i][threadIdx.y];
-
-                auto output_vPtr = vector_type::get_pointer(output.data());
-                v_store(output_vPtr[(out_y * out_width + out_x) / N], vec);
+                const auto out_y_current = out_y_begin + j;
+                if (out_x < out_width && out_y_current < in_width)
+                    output[out_y_current * out_width + out_x] = tile[threadIdx.x][threadIdx.y + j];
             }
         }
-    }
-
-    template <class T, std::size_t N> static
-    void launch_transpose_kernel(const Stream& stream, Span<T> output, View<T> input, size_type in_width, size_type out_width)
-    {
-        CV_Assert(is_fully_aligned<T>(output, N));
-        CV_Assert(is_fully_aligned<T>(input, N));
-        CV_Assert(in_width % N == 0);
-        CV_Assert(out_width % N == 0);
-
-        constexpr int TILE_SIZE = 32;
-        constexpr int TILE_SIZE_X = TILE_SIZE/N, TILE_SIZE_Y = TILE_SIZE;
-        auto kernel = raw::transpose<T, TILE_SIZE, N>;
-
-        dim3 grid_size((in_width/N + TILE_SIZE_X - 1)/TILE_SIZE_X, (out_width + TILE_SIZE_Y - 1)/TILE_SIZE_Y);
-        dim3 block_size(TILE_SIZE_X, TILE_SIZE_Y);
-        auto policy = execution_policy(grid_size, block_size, stream);
-
-        launch_kernel(kernel, policy, output, input, in_width, out_width);
     }
 
     template <class T>
     void transpose(const Stream& stream, Span<T> output, View<T> input, std::size_t in_width, std::size_t out_width)
     {
-        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4) && in_width % 4 == 0 && out_width % 4 == 0) {
-            launch_transpose_kernel<T, 4>(stream, output, input, in_width, out_width);
-        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2) && in_width % 2 == 0 && out_width % 2 == 0) {
-            launch_transpose_kernel<T, 2>(stream, output, input, in_width, out_width);
-        } else {
-            launch_transpose_kernel<T, 1>(stream, output, input, in_width, out_width);
-        }
+        /* Each block processes a TILE_SIZE x TILE_SIZE piece */
+        constexpr int TILE_SIZE = 32;
+
+        /* Each thread processes ROWS_PER_THREAD rows. We do this to decrease the number of threads required
+         * in a block so that the cost of the block-wide synchronization is minimized.
+         */
+        constexpr int ROWS_PER_THREAD = 4;
+
+        dim3 grid_size((in_width + TILE_SIZE - 1) / TILE_SIZE, (out_width + TILE_SIZE - 1) / TILE_SIZE);
+        dim3 block_size(TILE_SIZE, TILE_SIZE / ROWS_PER_THREAD);
+        auto policy = execution_policy(grid_size, block_size, stream);
+
+        auto kernel = raw::transpose<T, TILE_SIZE, ROWS_PER_THREAD>;
+        launch_kernel(kernel, policy, output, input, in_width, out_width);
     }
 
     template void transpose(const Stream&, Span<__half>, View<__half>, std::size_t, std::size_t);

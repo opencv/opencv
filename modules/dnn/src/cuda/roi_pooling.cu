@@ -10,6 +10,7 @@
 #include "types.hpp"
 #include "grid_stride_range.hpp"
 #include "execution.hpp"
+#include "memory.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/tensor.hpp"
@@ -118,7 +119,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                         const auto in_idx = in_offset + iy * in_width;
                         for (auto ix = x_start; ix < x_end; ix++)
                         {
-                            max_val = max(max_val, input[in_idx + ix]);
+                            max_val = max(max_val, load_ldg(input[in_idx + ix]));
                         }
                     }
 

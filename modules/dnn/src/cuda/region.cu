@@ -47,20 +47,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const auto y = (box_index % batch_inner_size) / row_inner_size;
                 const auto x = (box_index % row_inner_size) / col_inner_size;
 
-                using device::sigmoid;
-                output[box_offset + 0] = (T(x) + sigmoid(input[box_offset + 0])) / T(cols);
-                output[box_offset + 1] = (T(y) + sigmoid(input[box_offset + 1])) / T(rows);
+                using device::fast_sigmoid;
+                output[box_offset + 0] = (T(x) + fast_sigmoid(input[box_offset + 0])) / T(cols);
+                output[box_offset + 1] = (T(y) + fast_sigmoid(input[box_offset + 1])) / T(rows);
 
                 vector2_type bias_xy;
                 v_load(bias_xy, bias_vPtr[box_of_the_cell]);
 
-                using device::exp;
-                output[box_offset + 2] = exp(input[box_offset + 2]) * bias_xy.data[0] / T(width_norm);
-                output[box_offset + 3] = exp(input[box_offset + 3]) * bias_xy.data[1] / T(height_norm);
+                using device::fast_exp;
+                output[box_offset + 2] = fast_exp(input[box_offset + 2]) * bias_xy.data[0] / T(width_norm);
+                output[box_offset + 3] = fast_exp(input[box_offset + 3]) * bias_xy.data[1] / T(height_norm);
 
                 /* squash objectness score into a probability */
-                using device::sigmoid;
-                T objectness_prob = sigmoid(input[box_offset + 4]);
+                using device::fast_sigmoid;
+                T objectness_prob = fast_sigmoid(input[box_offset + 4]);
 
                 /* ignore prediction if the objectness probability is less than the cutoff */
                 if (objectness_prob < object_prob_cutoff)
@@ -91,7 +91,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                  * to obtain the actual class probability, we multiply the conditional probability
                  * with the object probability
                  */
-                auto actual_class_prob = objectness_prob * sigmoid(input[idx]);
+                using device::fast_sigmoid;
+                auto actual_class_prob = objectness_prob * fast_sigmoid(input[idx]);
                 if (actual_class_prob <= class_prob_cutoff)
                     actual_class_prob = T(0);
                 output[idx] = actual_class_prob;

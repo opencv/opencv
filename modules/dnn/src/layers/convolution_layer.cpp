@@ -167,6 +167,10 @@ public:
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
     {
+        Ptr<BlankLayer> blank_layer = top.dynamicCast<BlankLayer>();
+        if (blank_layer)
+            return true;
+
         Mat w, b;
         top->getScaleShift(w, b);
         if (!w.empty() || !b.empty())
