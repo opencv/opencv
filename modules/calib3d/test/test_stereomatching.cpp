@@ -811,7 +811,8 @@ protected:
 
 TEST(Calib3d_StereoBM, regression) { CV_StereoBMTest test; test.safe_run(); }
 
-typedef tuple < int, int, int > BufferBM_Params_t;
+/* < preFilter, < preFilterCap, SADWindowSize > >*/
+typedef tuple < int, tuple < int, int > > BufferBM_Params_t;
 
 typedef testing::TestWithParam< BufferBM_Params_t > Calib3d_StereoBM_BufferBM;
 
@@ -821,15 +822,18 @@ const int preFilters[] =
     StereoBM::PREFILTER_XSOBEL
 };
 
-const int preFilterCaps[] = { 30, 32 };
-
-const int SADWindowSizes[] = { 19, 23 };
+const tuple < int, int > useShortsConditions[] =
+{
+    make_tuple(30, 19),
+    make_tuple(32, 23)
+};
 
 TEST_P(Calib3d_StereoBM_BufferBM, memAllocsTest)
 {
-    const int preFilter = get<0>(GetParam());
-    const int preFilterCap = get<1>(GetParam());
-    const int SADWindowSize = get<2>(GetParam());
+    const int preFilter     = get<0>(GetParam());
+    const int preFilterCap  = get<0>(get<1>(GetParam()));
+    const int SADWindowSize = get<1>(get<1>(GetParam()));
+
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
     Mat leftImg = imread(path + "im2.png", 0);
     ASSERT_FALSE(leftImg.empty());
@@ -850,8 +854,7 @@ TEST_P(Calib3d_StereoBM_BufferBM, memAllocsTest)
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Calib3d_StereoBM_BufferBM,
         testing::Combine(
             testing::ValuesIn(preFilters),
-            testing::ValuesIn(preFilterCaps),
-            testing::ValuesIn(SADWindowSizes)
+            testing::ValuesIn(useShortsConditions)
             )
         );
 
