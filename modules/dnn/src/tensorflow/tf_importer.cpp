@@ -46,6 +46,14 @@ static int toNCHW(int idx)
     else return (4 + idx) % 3 + 1;
 }
 
+static int toNCDHW(int idx)
+{
+    CV_Assert(-5 <= idx && idx < 5);
+    if (idx == 0) return 0;
+    else if (idx > 0) return idx % 4 + 1;
+    else return (5 + idx) % 4 + 1;
+}
+
 // This values are used to indicate layer output's data layout where it's possible.
 enum DataLayout
 {
@@ -1323,6 +1331,8 @@ void TFImporter::populateNet(Net dstNet)
 
             if (getDataLayout(name, data_layouts) == DATA_LAYOUT_NHWC)
                 axis = toNCHW(axis);
+            else if (getDataLayout(name, data_layouts) == DATA_LAYOUT_NDHWC)
+                axis = toNCDHW(axis);
             layerParams.set("axis", axis);
 
             // input(0) or input(n-1) is concat_dim
