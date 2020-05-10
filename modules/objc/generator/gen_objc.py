@@ -74,6 +74,15 @@ func_arg_fix = {}
 # { class : { enum: fixed_enum } }
 enum_fix = {}
 
+# { (class, func) : objc_signature }
+method_dict = {
+    ("Mat", "convertTo") : "-convertTo:rtype:alpha:beta:",
+    ("Mat", "setTo") : "-setToScalar:mask:",
+    ("Mat", "zeros") : "+zeros:cols:type:",
+    ("Mat", "ones") : "+ones:cols:type:",
+    ("Mat", "dot") : "-dot:"
+}
+
 def read_contents(fname):
     with open(fname, 'r') as f:
         data = f.read()
@@ -100,8 +109,9 @@ class GeneralInfo():
 
         # parse doxygen comments
         self.params={}
+
         if type == "class":
-            docstring="// C++: class " + self.name + "\n"
+            docstring = "// C++: class " + self.name + "\n"
         else:
             docstring=""
 
@@ -109,6 +119,8 @@ class GeneralInfo():
             doc = decl[5]
 
             docstring += sanitize_documentation_string(doc, type)
+        elif type == "class":
+            docstring += "/**\n* The " + self.name + " module\n*/\n"
 
         self.docstring = docstring
 
@@ -228,7 +240,9 @@ class ClassInfo(GeneralInfo):
         return c in type_dict and type_dict[c].get("is_enum", False)
 
     def getForwardDeclarations(self, module):
-        return [(None if type_dict[c]["import_module"] == module else "typedef NS_ENUM(int, %s);" % c) if self.isEnum(c) else "@class %s;" % c for c in sorted(self.imports)]
+        enum_decl = filter(lambda x:self.isEnum(x) and type_dict[x]["import_module"] != module, self.imports)
+        class_decl = filter(lambda x: not self.isEnum(x), self.imports)
+        return ["#import \"%s.h\"" % type_dict[c]["import_module"] for c in enum_decl] + [""] + ["@class %s;" % c for c in sorted(class_decl)]
 
     def addImports(self, ctype, is_out_type):
         if ctype == self.cname:
@@ -479,6 +493,20 @@ def build_objc_args(args):
         objc_args.append((a.name if len(objc_args) > 0 else '') + ':(' + objc_type + ')' + a.name)
     return objc_args
 
+def build_objc_method_name(args):
+    objc_method_name = ""
+    for a in args[1:]:
+        if a.ctype not in type_dict:
+            if not a.defval and a.ctype.endswith("*"):
+                a.defval = 0
+            if a.defval:
+                a.ctype = ''
+                continue
+        if not a.ctype:  # hidden
+            continue
+        objc_method_name += a.name + ":"
+    return objc_method_name
+
 def build_swift_signature(args):
     swift_signature = ""
     for a in args:
@@ -492,6 +520,25 @@ def build_swift_signature(args):
             continue
         swift_signature += a.name + ":"
     return swift_signature
+
+def add_method_to_dict(class_name, fi):
+    static = fi.static if fi.classname else True
+    if not method_dict.has_key((class_name, fi.objc_name)):
+        objc_method_name = ("+" if static else "-") + fi.objc_name + ":" + build_objc_method_name(fi.args)
+        method_dict[(class_name, fi.objc_name)] = objc_method_name
+
+def see_lookup(objc_class, see):
+    semi_colon = see.find("::")
+    see_class = see[:semi_colon] if semi_colon > 0 else objc_class
+    see_method = see[(semi_colon + 2):] if semi_colon != -1 else see
+    if method_dict.has_key((see_class, see_method)):
+        method = method_dict[(see_class, see_method)]
+        if see_class == objc_class:
+            return method
+        else:
+            return ("-" if method[0] == "-" else "") + "[" + see_class + " " + method[1:] + "]"
+    else:
+        return see
 
 class ObjectiveCWrapperGenerator(object):
     def __init__(self):
@@ -598,6 +645,8 @@ class ObjectiveCWrapperGenerator(object):
             logging.info('ignored: %s', fi)
         elif classname in ManualFuncs and fi.objc_name in ManualFuncs[classname]:
             logging.info('manual: %s', fi)
+            if ManualFuncs[classname][fi.objc_name].has_key("objc_method_name"):
+                method_dict[(classname, fi.objc_name)] = ManualFuncs[classname][fi.objc_name]["objc_method_name"]
         elif not self.isWrapped(classname):
             logging.warning('not found: %s', fi)
         else:
@@ -606,6 +655,7 @@ class ObjectiveCWrapperGenerator(object):
             # calc args with def val
             cnt = len([a for a in fi.args if a.defval])
             self.def_args_hist[cnt] = self.def_args_hist.get(cnt, 0) + 1
+            add_method_to_dict(classname, fi)
 
     def save(self, path, buf):
         global total_files, updated_files
@@ -739,7 +789,7 @@ class ObjectiveCWrapperGenerator(object):
         args = fi.args[:] # copy
         objc_signatures=[]
         while True:
-             # method args
+            # method args
             cv_args = []
             prologue = []
             epilogue = []
@@ -799,16 +849,21 @@ class ObjectiveCWrapperGenerator(object):
                 for index, line in enumerate(lines):
                     p0 = line.find("@param")
                     if p0 != -1:
-                        p0 += 7
+                        p0 += 7 # len("@param" + 1)
                         p1 = line.find(' ', p0)
                         p1 = len(line) if p1 == -1 else p1
                         name = line[p0:p1]
                         for arg in args:
                             if arg.name == name:
-                                toWrite.append(line)
+                                toWrite.append(re.sub('\*\s*@param ', '* @param ', line))
                                 break
                     else:
-                        toWrite.append(line)
+                        s0 = line.find("@see")
+                        if s0 != -1:
+                            sees = line[(s0 + 5):].split(",")
+                            toWrite.append(line[:(s0 + 5)] + ", ".join(["`" + see_lookup(ci.objc_name, see.strip()) + "`" for see in sees]))
+                        else:
+                            toWrite.append(line)
 
                 for line in toWrite:
                     method_declarations.write(line + "\n")
@@ -855,9 +910,7 @@ class ObjectiveCWrapperGenerator(object):
             elif "from_cpp" in type_dict[ret_type]:
                 ret = "return " + (type_dict[ret_type]["from_cpp"] % { "n" : "retVal" }) + ";"
 
-            static = True
-            if fi.classname:
-                static = fi.static
+            static = fi.static if fi.classname else True
 
             objc_ret_type = type_dict[fi.ctype]["objc_type"] if type_dict[fi.ctype]["objc_type"] else "void" if not constructor else "instancetype"
             if "v_type" in type_dict[ret_type]:
@@ -916,6 +969,7 @@ class ObjectiveCWrapperGenerator(object):
             ci.additionalImports.write("\n".join(["#import %s" % h for h in AdditionalImports[ci.name]]))
 
         # constants
+        wrote_consts_pragma = False
         consts_map = {c.name: c for c in ci.private_consts}
         consts_map.update({c.name: c for c in ci.consts})
         def const_value(v):
@@ -940,6 +994,9 @@ typedef NS_ENUM(int, {2}) {{
     {0}\n}};\n\n""".format(",\n    ".join(["%s = %s" % (c.name, c.value) for c in consts]), typeName, typeName)
                     )
                 else:
+                    if not wrote_consts_pragma:
+                        ci.method_declarations.write("#pragma mark - Class Constants\n\n")
+                        wrote_consts_pragma = True
                     ci.method_declarations.write("""
 {0}\n\n""".format("\n".join(["@property (class, readonly) int %s NS_SWIFT_NAME(%s);" % (c.name, c.name) for c in consts]))
                     )
@@ -953,6 +1010,8 @@ typedef NS_ENUM(int, {2}) {{
                                 value = regex.sub(ci.cname + "." + declared_const, value)
                         ci.method_implementations.write("+ (int)%s {\n    return %s;\n}\n\n" % (c.name, value))
                         declared_consts.append(c.name)
+
+        ci.method_declarations.write("#pragma mark - Methods\n\n")
 
         # methods
         for fi in ci.getAllMethods():
@@ -1014,12 +1073,14 @@ typedef NS_ENUM(int, {2}) {{
 
     def finalize(self, output_objc_path):
         opencv_header_file = os.path.join(output_objc_path, framework_name + ".h")
-        self.save(opencv_header_file, '\n'.join(['#import "%s"' % os.path.basename(f) for f in self.header_files]))
+        self.save(opencv_header_file, '\n'.join(['#import "%s"' % os.path.basename(f) for f in self.header_files if os.path.basename(f) != "CVObjcUtil.h"]))
         cmakelist_template = read_contents(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'))
         cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name)
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
         mkdir_p("./framework_build")
         mkdir_p("./test_build")
+        mkdir_p("./doc_build")
+        copyfile(os.path.join(SCRIPT_DIR, '../doc/README.md'), "./doc_build/README.md")
 
 def copy_objc_files(objc_files_dir, objc_base_path, module_path, include = False):
     global total_files, updated_files
@@ -1043,8 +1104,77 @@ def copy_objc_files(objc_files_dir, objc_base_path, module_path, include = False
             copyfile(src, dest)
             updated_files += 1
 
+def unescape(str):
+    return str.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+
+def escape_underscore(str):
+    return str.replace('_', '\\_')
+
+def escape_texttt(str):
+    return re.sub(re.compile('texttt{(.*?)\}', re.DOTALL), lambda x: 'texttt{' + escape_underscore(x.group(1)) + '}', str)
+
+def get_macros(tex):
+    out = ""
+    if re.search("\\\\fork\s*{", tex):
+        out += "\\newcommand{\\fork}[4]{ \\left\\{ \\begin{array}{l l} #1 & \\text{#2}\\\\\\\\ #3 & \\text{#4}\\\\\\\\ \\end{array} \\right.} "
+    if re.search("\\\\vecthreethree\s*{", tex):
+        out += "\\newcommand{\\vecthreethree}[9]{ \\begin{bmatrix} #1 & #2 & #3\\\\\\\\ #4 & #5 & #6\\\\\\\\ #7 & #8 & #9 \\end{bmatrix} } "
+    return out
+
+def fix_tex(tex):
+    macros = get_macros(tex)
+    fix_escaping = escape_texttt(unescape(tex))
+    return macros + fix_escaping
+
 def sanitize_documentation_string(doc, type):
+    if type == "class":
+        doc = doc.replace("@param ", "")
+
+    doc = re.sub(re.compile('`\\$\\$(.*?)\\$\\$`', re.DOTALL), lambda x: '`$$' + fix_tex(x.group(1)) + '$$`', doc)
+    doc = re.sub(re.compile('\\\\f\\{align\\*\\}\\{?(.*?)\\\\f\\}', re.DOTALL), lambda x: '`$$\\begin{aligned} ' + fix_tex(x.group(1)) + ' \\end{aligned}$$`', doc)
+    doc = re.sub(re.compile('\\\\f\\{equation\\*\\}\\{(.*?)\\\\f\\}', re.DOTALL), lambda x: '`$$\\begin{aligned} ' + fix_tex(x.group(1)) + ' \\end{aligned}$$`', doc)
+    doc = re.sub(re.compile('\\\\f\\$(.*?)\\\\f\\$', re.DOTALL), lambda x: '`$$' + fix_tex(x.group(1)) + '$$`', doc)
+    doc = re.sub(re.compile('\\\\f\\[(.*?)\\\\f\\]', re.DOTALL), lambda x: '`$$' + fix_tex(x.group(1)) + '$$`', doc)
+    doc = re.sub(re.compile('\\\\f\\{(.*?)\\\\f\\}', re.DOTALL), lambda x: '`$$' + fix_tex(x.group(1)) + '$$`', doc)
+
+    doc = doc.replace("@anchor", "") \
+        .replace("@brief ", "").replace("\\brief ", "") \
+        .replace("@cite", "CITE:") \
+        .replace("@code{.cpp}", "<code>") \
+        .replace("@code{.txt}", "<code>") \
+        .replace("@code", "<code>") \
+        .replace("@copydoc", "") \
+        .replace("@copybrief", "") \
+        .replace("@date", "") \
+        .replace("@defgroup", "") \
+        .replace("@details ", "") \
+        .replace("@endcode", "</code>") \
+        .replace("@endinternal", "") \
+        .replace("@file", "") \
+        .replace("@include", "INCLUDE:") \
+        .replace("@ingroup", "") \
+        .replace("@internal", "") \
+        .replace("@overload", "") \
+        .replace("@param[in]", "@param") \
+        .replace("@param[out]", "@param") \
+        .replace("@ref", "REF:") \
+        .replace("@returns", "@return") \
+        .replace("@sa ", "@see ") \
+        .replace("@snippet", "SNIPPET:") \
+        .replace("@todo", "TODO:") \
+
     lines = doc.splitlines()
+
+    in_code = False
+    for i,line in enumerate(lines):
+        if line.find("</code>") != -1:
+            in_code = False
+            lines[i] = line.replace("</code>", "")
+        if in_code:
+            lines[i] = unescape(line)
+        if line.find("<code>") != -1:
+            in_code = True
+            lines[i] = line.replace("<code>", "")
 
     lines = list(map(lambda x: x[x.find('*'):].strip() if x.lstrip().startswith("*") else x, lines))
     lines = list(map(lambda x: "* " + x[1:].strip() if x.startswith("*") and x != "*" else x, lines))

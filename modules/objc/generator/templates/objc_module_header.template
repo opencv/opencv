@@ -16,6 +16,7 @@ $enumDeclarations
 
 NS_ASSUME_NONNULL_BEGIN
 
+$docs
 @interface $module : $base
 
 $methodDeclarations

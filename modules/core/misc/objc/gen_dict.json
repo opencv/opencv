@@ -46,7 +46,8 @@
                     "    return [self minMaxLoc:src mask:nil];",
                     "}",
                     "\n"
-                ]
+                ],
+                "objc_method_name" : "+minMaxLoc:mask:"
             },
             "checkHardwareSupport" : {"declaration" : [""], "implementation" : [""] },
             "setUseOptimized"      : {"declaration" : [""], "implementation" : [""] },

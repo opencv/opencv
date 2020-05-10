@@ -2,7 +2,6 @@
 //  KeyPoint.m
 //
 //  Created by Giles Payne on 2019/12/25.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #import "KeyPoint.h"

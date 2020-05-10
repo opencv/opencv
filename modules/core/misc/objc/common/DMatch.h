@@ -2,7 +2,6 @@
 //  DMatch.h
 //
 //  Created by Giles Payne on 2019/12/25.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #pragma once
@@ -15,11 +14,30 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/**
+* Structure for matching: query descriptor index, train descriptor index, train
+* image index and distance between descriptors.
+*/
 @interface DMatch : NSObject
 
+/**
+ * Query descriptor index.
+ */
 @property int queryIdx;
+
+/**
+* Train descriptor index.
+*/
 @property int trainIdx;
+
+/**
+* Train image index.
+*/
 @property int imgIdx;
+
+/**
+* Distance
+*/
 @property float distance;
 #ifdef __cplusplus
 @property(readonly) cv::DMatch& nativeRef;
@@ -32,11 +50,31 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)fromNative:(cv::DMatch&)dMatch;
 #endif
 
+/**
+* Distance comparison
+* @param it  DMatch object to compare
+*/
 - (BOOL)lessThan:(DMatch*)it;
 
+/**
+* Clone object
+*/
 - (DMatch*)clone;
+
+/**
+* Compare for equality
+* @param other Object to compare
+*/
 - (BOOL)isEqual:(nullable id)other;
+
+/**
+* Calculate hash for this object
+*/
 - (NSUInteger)hash;
+
+/**
+* Returns a string that describes the contents of the object
+*/
 - (NSString*)description;
 
 @end

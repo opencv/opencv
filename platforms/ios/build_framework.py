@@ -330,6 +330,10 @@ class Builder:
                 d = os.path.join(framework_dir, *l[1])
                 os.symlink(s, d)
 
+        doc_path = os.path.join(builddirs[0], "modules", "objc", "doc_build", "docs")
+        if os.path.exists(doc_path):
+            shutil.copytree(doc_path, os.path.join(outdir, "docs"))
+
     def copy_samples(self, outdir):
         return
 

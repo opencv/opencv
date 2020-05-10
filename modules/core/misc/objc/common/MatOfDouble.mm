@@ -2,7 +2,6 @@
 //  MatOfDouble.mm
 //
 //  Created by Giles Payne on 2019/12/26.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #import "MatOfDouble.h"

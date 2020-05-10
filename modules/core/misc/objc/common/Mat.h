@@ -2,7 +2,6 @@
 //  Mat.h
 //
 //  Created by Giles Payne on 2019/10/06.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #pragma once
@@ -20,12 +19,18 @@
 @class Point2i;
 
 NS_ASSUME_NONNULL_BEGIN
+
+/**
+* The class Mat represents an n-dimensional dense numerical single-channel or multi-channel array.
+*/
 @interface Mat : NSObject
 
 #ifdef __cplusplus
 @property(readonly) cv::Mat* nativePtr;
 @property(readonly) cv::Mat& nativeRef;
 #endif
+
+#pragma mark - Constructors
 
 - (instancetype)init;
 - (void)dealloc;
@@ -46,6 +51,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithMat:(Mat*)mat rowRange:(Range*)rowRange;
 - (instancetype)initWithMat:(Mat*)mat ranges:(NSArray<Range*>*)ranges;
 - (instancetype)initWithMat:(Mat*)mat rect:(Rect2i*)roi;
+
+#pragma mark - Mat operations
+
 - (Mat*)adjustRoiTop:(int)dtop bottom:(int)dbottom left:(int)dleft right:(int)dright NS_SWIFT_NAME(adjustRoi(top:bottom:left:right:));
 - (void)assignTo:(Mat*)mat type:(int)type;
 - (void)assignTo:(Mat*)mat;
@@ -118,6 +126,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (Mat*)zerosEx:(NSArray<NSNumber*>*)sizes type:(int)type NS_SWIFT_NAME(zeros(sizes:type:));
 - (NSString*)description;
 - (NSString*)dump;
+- (int)height;
+- (int)width;
+
+#pragma mark - Accessors
+
 - (int)put:(int)row col:(int)col data:(NSArray<NSNumber*>*)data NS_SWIFT_NAME(put(row:col:data:));
 - (int)put:(NSArray<NSNumber*>*)indices data:(NSArray<NSNumber*>*)data NS_SWIFT_NAME(put(indices:data:));
 - (int)get:(int)row col:(int)col data:(NSMutableArray<NSNumber*>*)data NS_SWIFT_NAME(get(row:col:data:));
@@ -126,8 +139,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSArray<NSNumber*>*)get:(int)row col:(int)col NS_SWIFT_NAME(get(row:col:));
 - (NSArray<NSNumber*>*)get:(NSArray<NSNumber*>*)indices NS_SWIFT_NAME(get(indices:));
 
-- (int)height;
-- (int)width;
 
 @end
 

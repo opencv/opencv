@@ -2,7 +2,6 @@
 //  RotatedRect.h
 //
 //  Created by Giles Payne on 2019/12/26.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #pragma once
@@ -19,7 +18,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/**
+* Represents a rotated rectangle on a plane
+*/
 @interface RotatedRect : NSObject
+
+#pragma mark - Properties
 
 @property Point2f* center;
 @property Size2f* size;
@@ -28,6 +32,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(readonly) cv::RotatedRect& nativeRef;
 #endif
 
+#pragma mark - Constructors
+
 - (instancetype)init;
 - (instancetype)initWithCenter:(Point2f*)center size:(Size2f*)size angle:(double)angle;
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
@@ -35,15 +41,46 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)fromNative:(cv::RotatedRect&)rotatedRect;
 #endif
 
-- (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
-
+#pragma mark - Methods
+/**
+* Returns the corner points of the rotated rectangle as an array
+*/
 - (NSArray<Point2f*>*)points;
+
+/**
+* Returns the bounding (non-rotated) rectangle of the rotated rectangle
+*/
 - (Rect2f*)boundingRect;
 
+/**
+* Set the rotated rectangle coordinates, dimensions and angle of rotation from the values of an array
+* @param vals The array of values from which to set the rotated rectangle coordinates, dimensions and angle of rotation
+*/
+- (void)set:(NSArray<NSNumber*>*)vals NS_SWIFT_NAME(set(vals:));
+
+#pragma mark - Common Methods
+
+/**
+* Clone object
+*/
 - (RotatedRect*)clone;
-- (BOOL)isEqual:(nullable id)other;
+
+/**
+* Compare for equality
+* @param other Object to compare
+*/
+- (BOOL)isEqual:(nullable id)object;
+
+/**
+* Calculate hash value for this object
+*/
 - (NSUInteger)hash;
-- (NSString *)description;
+
+/**
+* Returns a string that describes the contents of the object
+*/
+- (NSString*)description;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -2,7 +2,6 @@
 //  MatOfInt4.mm
 //
 //  Created by Giles Payne on 2019/12/27.
-//  Copyright © 2019 Xtravision. All rights reserved.
 //
 
 #import "MatOfInt4.h"

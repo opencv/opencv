@@ -119,7 +119,7 @@
 			attributes = {
 				LastSwiftUpdateCheck = 1130;
 				LastUpgradeCheck = 1130;
-				ORGANIZATIONNAME = Xtravision;
+				ORGANIZATIONNAME = OpenCV;
 				TargetAttributes = {
 					5BBDB485240D380F00BB10FE = {
 						CreatedOnToolsVersion = 11.3.1;

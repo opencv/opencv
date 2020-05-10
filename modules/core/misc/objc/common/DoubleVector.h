@@ -1,9 +1,7 @@
 //
 //  DoubleVector.h
-//  InteropTest
 //
 //  Created by Giles Payne on 2020/01/04.
-//  Copyright © 2020 Xtravision. All rights reserved.
 //
 
 #pragma once
@@ -13,36 +11,78 @@
 #import <vector>
 #endif
 
-#ifdef __cplusplus
-template <typename T> std::vector<T*> arrayToVector(NSArray<T*>* _Nonnull array) {
-    std::vector<T*> ret;
-    for (T* t in array) {
-        ret.push_back(t);
-    }
-    return ret;
-}
-#endif
-
 NS_ASSUME_NONNULL_BEGIN
+
+/**
+* Utility class to wrap a `std::vector<double>`
+*/
 @interface DoubleVector : NSObject
 
+#pragma mark - Constructors
+
+/**
+* Create DoubleVector and initialize with the  contents of an NSData object
+* @param data  NSData containing raw double array
+*/
 -(instancetype)initWithData:(NSData*)data;
+
+/**
+* Create DoubleVector and initialize with the  contents of another DoubleVector object
+* @param src  DoubleVector containing data to copy
+*/
 -(instancetype)initWithVector:(DoubleVector*)src;
 
-@property(readonly) size_t length;
 #ifdef __OBJC__
-@property(readonly) double* nativeArray;
+/**
+* Create DoubleVector from raw C array
+* @param array The raw C array
+* @elements elements The number of elements in the array
+*/
 -(instancetype)initWithNativeArray:(double*)array elements:(int)elements;
 #endif
 
 #ifdef __cplusplus
-@property(readonly) std::vector<double>& nativeRef;
+/**
+* Create DoubleVector from std::vector<double>
+* @param src The std::vector<double> object to wrap
+*/
 -(instancetype)initWithStdVector:(std::vector<double>&)src;
 +(instancetype)fromNative:(std::vector<double>&)src;
 #endif
 
--(double)get:(NSInteger)index;
+#pragma mark - Properties
+
+/**
+* Length of the vector
+*/
+@property(readonly) size_t length;
+
+#ifdef __OBJC__
+/**
+* Raw C array
+*/
+@property(readonly) double* nativeArray;
+#endif
+
+#ifdef __cplusplus
+/**
+* The wrapped std::vector<double> object
+*/
+@property(readonly) std::vector<double>& nativeRef;
+#endif
+
+/**
+* NSData object containing the raw double data
+*/
 @property(readonly) NSData* data;
+
+#pragma mark - Accessor method
+
+/**
+* Return array element
+* @param index Index of the array element to return
+*/
+-(double)get:(NSInteger)index;
 
 @end
 NS_ASSUME_NONNULL_END

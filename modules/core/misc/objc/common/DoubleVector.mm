@@ -1,9 +1,7 @@
 //
 //  DoubleVector.m
-//  InteropTest
 //
 //  Created by Giles Payne on 2020/01/04.
-//  Copyright © 2020 Xtravision. All rights reserved.
 //
 
 #import "DoubleVector.h"
