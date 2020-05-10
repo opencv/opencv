@@ -17,7 +17,7 @@ You'll find answers for the following questions:
 
 Source code
 -----------
-
+@add_toggle_cpp
 You can [download this from here
 ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
 `samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code
@@ -26,13 +26,25 @@ library.
 Here's a sample code of how to achieve all the stuff enumerated at the goal list.
 
 @include cpp/tutorial_code/core/file_input_output/file_input_output.cpp
+@end_toggle
+
+@add_toggle_python
+You can [download this from here
+](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/core/file_input_output/file_input_output.py) or find it in the
+`samples/python/tutorial_code/core/file_input_output/file_input_output.py` of the OpenCV source code
+library.
+
+Here's a sample code of how to achieve all the stuff enumerated at the goal list.
+
+@include python/tutorial_code/core/file_input_output/file_input_output.py
+@end_toggle
 
 Explanation
 -----------
 
 Here we talk only about XML and YAML file inputs. Your output (and its respective input) file may
 have only one of these extensions and the structure coming from this. They are two kinds of data
-structures you may serialize: *mappings* (like the STL map) and *element sequence* (like the STL
+structures you may serialize: *mappings* (like the STL map and the Python dictionary) and *element sequence* (like the STL
 vector). The difference between these is that in a map every element has a unique name through what
 you may access it. For sequences you need to go through them to query a specific item.
 
@@ -40,12 +52,12 @@ you may access it. For sequences you need to go through them to query a specific
     and at the end to close it. The XML/YAML data structure in OpenCV is @ref cv::FileStorage . To
     specify that this structure to which file binds on your hard drive you can use either its
     constructor or the *open()* function of this:
-    @code{.cpp}
-    string filename = "I.xml";
-    FileStorage fs(filename, FileStorage::WRITE);
-    //...
-    fs.open(filename, FileStorage::READ);
-    @endcode
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp open
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py open
+    @end_toggle
     Either one of this you use the second argument is a constant specifying the type of operations
     you'll be able to on them: WRITE, READ or APPEND. The extension specified in the file name also
     determinates the output format that will be used. The output may be even compressed if you
@@ -53,75 +65,83 @@ you may access it. For sequences you need to go through them to query a specific
 
     The file automatically closes when the @ref cv::FileStorage objects is destroyed. However, you
     may explicitly call for this by using the *release* function:
-    @code{.cpp}
-    fs.release();                                       // explicit close
-    @endcode
--#  **Input and Output of text and numbers.** The data structure uses the same \<\< output operator
-    that the STL library. For outputting any type of data structure we need first to specify its
-    name. We do this by just simply printing out the name of this. For basic types you may follow
-    this with the print of the value :
-    @code{.cpp}
-    fs << "iterationNr" << 100;
-    @endcode
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp close
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py close
+    @end_toggle
+-#  **Input and Output of text and numbers.** In C++, the data structure uses the \<\< output
+    operator in the STL library. In Python, @ref cv::FileStorage.write() is used instead. For
+    outputting any type of data structure we need first to specify its name. We do this by just
+    simply pushing the name of this to the stream in C++. In Python, the first parameter for the
+    write function is the name. For basic types you may follow this with the print of the value :
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp writeNum
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py writeNum
+    @end_toggle
     Reading in is a simple addressing (via the [] operator) and casting operation or a read via
-    the \>\> operator :
-    @code{.cpp}
-    int itNr;
-    fs["iterationNr"] >> itNr;
-    itNr = (int) fs["iterationNr"];
-    @endcode
+    the \>\> operator. In Python, we address with getNode() and use real() :
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp readNum
+    @end_toggle
+    @add_toggle_python
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp readNum
+    @end_toggle
 -#  **Input/Output of OpenCV Data structures.** Well these behave exactly just as the basic C++
-    types:
-    @code{.cpp}
-    Mat R = Mat_<uchar >::eye  (3, 3),
-        T = Mat_<double>::zeros(3, 1);
-
-    fs << "R" << R;                                      // Write cv::Mat
-    fs << "T" << T;
-
-    fs["R"] >> R;                                      // Read cv::Mat
-    fs["T"] >> T;
-    @endcode
+    and Python types:
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp iomati
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp iomatw
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp iomat
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py iomati
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py iomatw
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py iomat
+    @end_toggle
 -#  **Input/Output of vectors (arrays) and associative maps.** As I mentioned beforehand, we can
     output maps and sequences (array, vector) too. Again we first print the name of the variable and
     then we have to specify if our output is either a sequence or map.
 
     For sequence before the first element print the "[" character and after the last one the "]"
-    character:
-    @code{.cpp}
-    fs << "strings" << "[";                              // text - string sequence
-    fs << "image1.jpg" << "Awesomeness" << "baboon.jpg";
-    fs << "]";                                           // close sequence
-    @endcode
+    character. With Python, the "]" character could be written with the name of the sequence or
+    the last element of the sequence depending on the number of elements:
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp writeStr
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py writeStr
+    @end_toggle
     For maps the drill is the same however now we use the "{" and "}" delimiter characters:
-    @code{.cpp}
-    fs << "Mapping";                              // text - mapping
-    fs << "{" << "One" << 1;
-    fs <<        "Two" << 2 << "}";
-    @endcode
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp writeMap
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py writeMap
+    @end_toggle
     To read from these we use the @ref cv::FileNode and the @ref cv::FileNodeIterator data
-    structures. The [] operator of the @ref cv::FileStorage class returns a @ref cv::FileNode data
+    structures. The [] operator of the @ref cv::FileStorage class (or the getNode() function in Python) returns a @ref cv::FileNode data
     type. If the node is sequential we can use the @ref cv::FileNodeIterator to iterate through the
-    items:
-    @code{.cpp}
-    FileNode n = fs["strings"];                         // Read string sequence - Get node
-    if (n.type() != FileNode::SEQ)
-    {
-        cerr << "strings is not a sequence! FAIL" << endl;
-        return 1;
-    }
-
-    FileNodeIterator it = n.begin(), it_end = n.end(); // Go through the node
-    for (; it != it_end; ++it)
-        cout << (string)*it << endl;
-    @endcode
-    For maps you can use the [] operator again to access the given item (or the \>\> operator too):
-    @code{.cpp}
-    n = fs["Mapping"];                                // Read mappings from a sequence
-    cout << "Two  " << (int)(n["Two"]) << "; ";
-    cout << "One  " << (int)(n["One"]) << endl << endl;
-    @endcode
+    items. In Python, the at() function can be used to address elements of the sequence and the
+    size() function returns the length of the sequence:
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp readStr
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py readStr
+    @end_toggle
+    For maps you can use the [] operator (at() function in Python) again to access the given item (or the \>\> operator too):
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp readMap
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py readMap
+    @end_toggle
 -#  **Read and write your own data structures.** Suppose you have a data structure such as:
+    @add_toggle_cpp
     @code{.cpp}
     class MyData
     {
@@ -133,53 +153,52 @@ you may access it. For sequences you need to go through them to query a specific
        string id;
     };
     @endcode
-    It's possible to serialize this through the OpenCV I/O XML/YAML interface (just as in case of
-    the OpenCV data structures) by adding a read and a write function inside and outside of your
-    class. For the inside part:
-    @code{.cpp}
-    void write(FileStorage& fs) const                        //Write serialization for this class
-    {
-      fs << "{" << "A" << A << "X" << X << "id" << id << "}";
-    }
-
-    void read(const FileNode& node)                          //Read serialization for this class
-    {
-      A = (int)node["A"];
-      X = (double)node["X"];
-      id = (string)node["id"];
-    }
+    @end_toggle
+    @add_toggle_python
+    @code{.py}
+    class MyData:
+        def __init__(self):
+            self.A = self.X = 0
+            self.name = ''
     @endcode
-    Then you need to add the following functions definitions outside the class:
-    @code{.cpp}
-    void write(FileStorage& fs, const std::string&, const MyData& x)
-    {
-    x.write(fs);
-    }
-
-    void read(const FileNode& node, MyData& x, const MyData& default_value = MyData())
-    {
-    if(node.empty())
-        x = default_value;
-    else
-        x.read(node);
-    }
-    @endcode
+    @end_toggle
+    In C++, it's possible to serialize this through the OpenCV I/O XML/YAML interface (just as
+    in case of the OpenCV data structures) by adding a read and a write function inside and outside of your
+    class. In Python, you can get close to this by implementing a read and write function inside
+    the class. For the inside part:
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp inside
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py inside
+    @end_toggle
+    @add_toggle_cpp
+    In C++, you need to add the following functions definitions outside the class:
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp outside
+    @end_toggle
     Here you can observe that in the read section we defined what happens if the user tries to read
     a non-existing node. In this case we just return the default initialization value, however a
     more verbose solution would be to return for instance a minus one value for an object ID.
 
     Once you added these four functions use the \>\> operator for write and the \<\< operator for
-    read:
-    @code{.cpp}
-    MyData m(1);
-    fs << "MyData" << m;                                // your own data structures
-    fs["MyData"] >> m;                                 // Read your own structure_
-    @endcode
+    read (or the defined input/output functions for Python):
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp customIOi
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp customIOw
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp customIO
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py customIOi
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py customIOw
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py customIO
+    @end_toggle
     Or to try out reading a non-existing read:
-    @code{.cpp}
-    fs["NonExisting"] >> m;   // Do not add a fs << "NonExisting" << m command for this to work
-    cout << endl << "NonExisting = " << endl << m << endl;
-    @endcode
+    @add_toggle_cpp
+    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp nonexist
+    @end_toggle
+    @add_toggle_python
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py nonexist
+    @end_toggle
 
 Result
 ------

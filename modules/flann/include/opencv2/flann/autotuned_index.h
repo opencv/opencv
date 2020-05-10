@@ -30,6 +30,8 @@
 #ifndef OPENCV_FLANN_AUTOTUNED_INDEX_H_
 #define OPENCV_FLANN_AUTOTUNED_INDEX_H_
 
+//! @cond IGNORED
+
 #include <sstream>
 
 #include "general.h"
@@ -587,5 +589,7 @@ private:
 
 };
 }
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_AUTOTUNED_INDEX_H_ */

@@ -19,13 +19,13 @@ namespace opencv_test
           static cv::GMatDesc outMeta(cv::GMatDesc in, cv::Size sz, double fx, double fy, int) {
               if (sz.width != 0 && sz.height != 0)
               {
-                  return in.withSize(to_own(sz));
+                  return in.withSize(sz);
               }
               else
               {
                   GAPI_Assert(fx != 0. && fy != 0.);
                   return in.withSize
-                    (cv::gapi::own::Size(static_cast<int>(std::round(in.size.width  * fx)),
+                    (cv::Size(static_cast<int>(std::round(in.size.width  * fx)),
                                          static_cast<int>(std::round(in.size.height * fy))));
               }
           }
@@ -83,7 +83,7 @@ namespace opencv_test
                   const auto& ref_mat = std::get<0>(it);
                   const auto& out_mat = std::get<1>(it);
 
-                  EXPECT_EQ(0, cv::countNonZero(ref_mat != out_mat));
+                  EXPECT_EQ(0, cvtest::norm(ref_mat, out_mat, NORM_INF));
               }
           }
       };

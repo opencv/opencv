@@ -25,7 +25,13 @@ version of it ](https://github.com/opencv/opencv/tree/master/samples/data/Megami
 You may also find the source code and these video file in the
 `samples/data` folder of the OpenCV source library.
 
+@add_toggle_cpp
 @include cpp/tutorial_code/videoio/video-input-psnr-ssim/video-input-psnr-ssim.cpp
+@end_toggle
+
+@add_toggle_python
+@include samples/python/tutorial_code/videoio/video-input-psnr-ssim.py
+@end_toggle
 
 How to read a video stream (online-camera or offline-file)?
 -----------------------------------------------------------
@@ -139,28 +145,15 @@ an invalid divide by zero operation in the PSNR formula. In this case the PSNR i
 we'll need to handle this case separately. The transition to a logarithmic scale is made because the
 pixel values have a very wide dynamic range. All this translated to OpenCV and a C++ function looks
 like:
-@code{.cpp}
-double getPSNR(const Mat& I1, const Mat& I2)
-{
- Mat s1;
- absdiff(I1, I2, s1);       // |I1 - I2|
- s1.convertTo(s1, CV_32F);  // cannot make a square on 8 bits
- s1 = s1.mul(s1);           // |I1 - I2|^2
 
- Scalar s = sum(s1);        // sum elements per channel
+@add_toggle_cpp
+@include cpp/tutorial_code/videoio/video-input-psnr-ssim/video-input-psnr-ssim.cpp get-psnr
+@end_toggle
 
- double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
+@add_toggle_python
+@include samples/python/tutorial_code/videoio/video-input-psnr-ssim.py get-psnr
+@end_toggle
 
- if( sse <= 1e-10) // for small values return zero
-     return 0;
- else
- {
-     double  mse =sse /(double)(I1.channels() * I1.total());
-     double psnr = 10.0*log10((255*255)/mse);
-     return psnr;
- }
-}
-@endcode
 Typically result values are anywhere between 30 and 50 for video compression, where higher is
 better. If the images significantly differ you'll get much lower ones like 15 and so. This
 similarity check is easy and fast to calculate, however in practice it may turn out somewhat
@@ -171,65 +164,19 @@ Describing the methods goes well beyond the purpose of this tutorial. For that I
 the article introducing it. Nevertheless, you can get a good image of it by looking at the OpenCV
 implementation below.
 
-@sa
+@note
     SSIM is described more in-depth in the: "Z. Wang, A. C. Bovik, H. R. Sheikh and E. P.
     Simoncelli, "Image quality assessment: From error visibility to structural similarity," IEEE
     Transactions on Image Processing, vol. 13, no. 4, pp. 600-612, Apr. 2004." article.
 
-@code{.cpp}
-Scalar getMSSIM( const Mat& i1, const Mat& i2)
-{
- const double C1 = 6.5025, C2 = 58.5225;
- /***************************** INITS **********************************/
- int d     = CV_32F;
+@add_toggle_cpp
+@include cpp/tutorial_code/videoio/video-input-psnr-ssim/video-input-psnr-ssim.cpp get-mssim
+@end_toggle
 
- Mat I1, I2;
- i1.convertTo(I1, d);           // cannot calculate on one byte large values
- i2.convertTo(I2, d);
+@add_toggle_python
+@include samples/python/tutorial_code/videoio/video-input-psnr-ssim.py get-mssim
+@end_toggle
 
- Mat I2_2   = I2.mul(I2);        // I2^2
- Mat I1_2   = I1.mul(I1);        // I1^2
- Mat I1_I2  = I1.mul(I2);        // I1 * I2
-
- /***********************PRELIMINARY COMPUTING ******************************/
-
- Mat mu1, mu2;   //
- GaussianBlur(I1, mu1, Size(11, 11), 1.5);
- GaussianBlur(I2, mu2, Size(11, 11), 1.5);
-
- Mat mu1_2   =   mu1.mul(mu1);
- Mat mu2_2   =   mu2.mul(mu2);
- Mat mu1_mu2 =   mu1.mul(mu2);
-
- Mat sigma1_2, sigma2_2, sigma12;
-
- GaussianBlur(I1_2, sigma1_2, Size(11, 11), 1.5);
- sigma1_2 -= mu1_2;
-
- GaussianBlur(I2_2, sigma2_2, Size(11, 11), 1.5);
- sigma2_2 -= mu2_2;
-
- GaussianBlur(I1_I2, sigma12, Size(11, 11), 1.5);
- sigma12 -= mu1_mu2;
-
- ///////////////////////////////// FORMULA ////////////////////////////////
- Mat t1, t2, t3;
-
- t1 = 2 * mu1_mu2 + C1;
- t2 = 2 * sigma12 + C2;
- t3 = t1.mul(t2);              // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
-
- t1 = mu1_2 + mu2_2 + C1;
- t2 = sigma1_2 + sigma2_2 + C2;
- t1 = t1.mul(t2);               // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
-
- Mat ssim_map;
- divide(t3, t1, ssim_map);      // ssim_map =  t3./t1;
-
- Scalar mssim = mean( ssim_map ); // mssim = average of ssim map
- return mssim;
-}
-@endcode
 This will return a similarity index for each channel of the image. This value is between zero and
 one, where one corresponds to perfect fit. Unfortunately, the many Gaussian blurring is quite
 costly, so while the PSNR may work in a real time like environment (24 frame per second) this will

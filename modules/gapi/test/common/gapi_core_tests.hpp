@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_TESTS_HPP
@@ -62,8 +62,24 @@ inline std::ostream& operator<<(std::ostream& os, bitwiseOp op)
     return os;
 }
 
+// Create new value-parameterized test fixture:
+// MathOpTest - fixture name
+// initMatsRandU - function that is used to initialize input/output data
+// FIXTURE_API(mathOp,bool,double,bool) - test-specific parameters (types)
+// 4 - number of test-specific parameters
+// opType, testWithScalar, scale, doReverseOp - test-specific parameters (names)
+//
+// We get:
+// 1. Default parameters: int type, cv::Size sz, int dtype, getCompileArgs() function
+//      - available in test body
+// 2. Input/output matrices will be initialized by initMatsRandU (in this fixture)
+// 3. Specific parameters: opType, testWithScalar, scale, doReverseOp of corresponding types
+//      - created (and initialized) automatically
+//      - available in test body
+// Note: all parameter _values_ (e.g. type CV_8UC3) are set via INSTANTIATE_TEST_CASE_P macro
 GAPI_TEST_FIXTURE(MathOpTest, initMatsRandU, FIXTURE_API(mathOp,bool,double,bool), 4,
     opType, testWithScalar, scale, doReverseOp)
+// No specific parameters for MulDoubleTest, so "fixture API" is empty - <>
 GAPI_TEST_FIXTURE(MulDoubleTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(DivTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(DivCTest, initMatrixRandU, <>, 0)
@@ -84,7 +100,7 @@ GAPI_TEST_FIXTURE(AddWeightedTest, initMatsRandU, FIXTURE_API(CompareMats), 1, c
 GAPI_TEST_FIXTURE(NormTest, initMatrixRandU, FIXTURE_API(CompareScalars,NormTypes), 2,
     cmpF, opType)
 GAPI_TEST_FIXTURE(IntegralTest, initNothing, <>, 0)
-GAPI_TEST_FIXTURE(ThresholdTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
+GAPI_TEST_FIXTURE(ThresholdTest, initMatrixRandU, FIXTURE_API(int, cv::Scalar), 2, tt, maxval)
 GAPI_TEST_FIXTURE(ThresholdOTTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
 GAPI_TEST_FIXTURE(InRangeTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Split3Test, initMatrixRandU, <>, 0)
@@ -100,6 +116,7 @@ GAPI_TEST_FIXTURE(Merge4Test, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(RemapTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(FlipTest, initMatrixRandU, FIXTURE_API(int), 1, flipCode)
 GAPI_TEST_FIXTURE(CropTest, initMatrixRandU, FIXTURE_API(cv::Rect), 1, rect_to)
+GAPI_TEST_FIXTURE(CopyTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(ConcatHorTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatVertTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatVertVecTest, initNothing, <>, 0)
@@ -111,7 +128,7 @@ GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degre
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(CompareMats,double,double,int,MatType2), 5,
     cmpF, a, b, norm_type, ddepth)
-struct BackendOutputAllocationTest : TestWithParamBase<>
+struct BackendOutputAllocationTest : TestWithParams<>
 {
     BackendOutputAllocationTest()
     {
@@ -124,6 +141,14 @@ struct BackendOutputAllocationTest : TestWithParamBase<>
 // FIXME: move all tests from this fixture to the base class once all issues are resolved
 struct BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest : BackendOutputAllocationTest {};
 GAPI_TEST_FIXTURE(ReInitOutTest, initNothing, <cv::Size>, 1, out_sz)
+
+GAPI_TEST_FIXTURE(WarpPerspectiveTest, initMatrixRandU,
+        FIXTURE_API(CompareMats, double , double, int, int, cv::Scalar),
+        6, cmpF, angle, scale, flags, border_mode, border_value)
+
+GAPI_TEST_FIXTURE(WarpAffineTest, initMatrixRandU,
+        FIXTURE_API(CompareMats, double , double, int, int, cv::Scalar),
+        6, cmpF, angle, scale, flags, border_mode, border_value)
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

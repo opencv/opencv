@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_IMGPROC_HPP
@@ -17,7 +17,7 @@
 #include <opencv2/gapi/gscalar.hpp>
 
 
-/** \defgroup gapi_imgproc G-API image processing functionality
+/** \defgroup gapi_imgproc G-API Image processing functionality
 @{
     @defgroup gapi_filters Graph API: Image filters
     @defgroup gapi_colorconvert Graph API: Converting image from one color space to another
@@ -90,6 +90,20 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GLaplacian, <GMat(GMat,int, int, double, double, int)>,
+                   "org.opencv.imgproc.filters.laplacian") {
+        static GMatDesc outMeta(GMatDesc in, int ddepth, int, double, double, int) {
+            return in.withDepth(ddepth);
+        }
+    };
+
+    G_TYPED_KERNEL(GBilateralFilter, <GMat(GMat,int, double, double, int)>,
+                   "org.opencv.imgproc.filters.bilateralfilter") {
+        static GMatDesc outMeta(GMatDesc in, int, double, double, int) {
+            return in;
+        }
+    };
+
     G_TYPED_KERNEL(GEqHist, <GMat(GMat)>, "org.opencv.imgproc.equalizeHist"){
         static GMatDesc outMeta(GMatDesc in) {
             return in.withType(CV_8U, 1);
@@ -99,6 +113,14 @@ namespace imgproc {
     G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.canny"){
         static GMatDesc outMeta(GMatDesc in, double, double, int, bool) {
             return in.withType(CV_8U, 1);
+        }
+    };
+
+    G_TYPED_KERNEL(GGoodFeatures,
+                   <cv::GArray<cv::Point2f>(GMat,int,double,double,Mat,int,bool,double)>,
+                   "org.opencv.imgproc.goodFeaturesToTrack") {
+        static GArrayDesc outMeta(GMatDesc, int, double, double, const Mat&, int, bool, double) {
+            return empty_array_desc();
         }
     };
 
@@ -222,6 +244,21 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GNV12toGray, <GMat(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12togray") {
+        static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
+            GAPI_Assert(inY.depth   == CV_8U);
+            GAPI_Assert(inUV.depth  == CV_8U);
+            GAPI_Assert(inY.chan    == 1);
+            GAPI_Assert(inY.planar  == false);
+            GAPI_Assert(inUV.chan   == 2);
+            GAPI_Assert(inUV.planar == false);
+
+            GAPI_Assert(inY.size.width  == 2 * inUV.size.width);
+            GAPI_Assert(inY.size.height == 2 * inUV.size.height);
+            return inY.withType(CV_8U, 1);
+        }
+    };
+
     G_TYPED_KERNEL(GNV12toBGRp, <GMatP(GMat,GMat)>, "org.opencv.colorconvert.imgproc.nv12tobgrp") {
         static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
             GAPI_Assert(inY.depth == CV_8U);
@@ -236,8 +273,7 @@ namespace imgproc {
         }
     };
 
-}
-
+} //namespace imgproc
 
 //! @addtogroup gapi_filters
 //! @{
@@ -283,7 +319,7 @@ according to the specified border mode.
 
 The function does actually compute correlation, not the convolution:
 
-\f[\texttt{dst} (x,y) =  \sum _{ \stackrel{0\leq x' < \texttt{kernel.cols},}{0\leq y' < \texttt{kernel.rows}} }  \texttt{kernel} (x',y')* \texttt{src} (x+x'- \texttt{anchor.x} ,y+y'- \texttt{anchor.y} )\f]
+\f[\texttt{dst} (x,y) =  \sum _{ \substack{0\leq x' < \texttt{kernel.cols}\\{0\leq y' < \texttt{kernel.rows}}}}  \texttt{kernel} (x',y')* \texttt{src} (x+x'- \texttt{anchor.x} ,y+y'- \texttt{anchor.y} )\f]
 
 That is, the kernel is not mirrored around the anchor point. If you need a real convolution, flip
 the kernel using flip and set the new anchor to `(kernel.cols - anchor.x - 1, kernel.rows -
@@ -320,7 +356,7 @@ The function smooths an image using the kernel:
 
 where
 
-\f[\alpha = \fork{\frac{1}{\texttt{ksize.width*ksize.height}}}{when \texttt{normalize=true}}{1}{otherwise}\f]
+\f[\alpha = \begin{cases} \frac{1}{\texttt{ksize.width*ksize.height}} & \texttt{when } \texttt{normalize=true}  \\1 & \texttt{otherwise} \end{cases}\f]
 
 Unnormalized box filter is useful for computing various integral characteristics over each pixel
 neighborhood, such as covariance matrices of image derivatives (used in dense optical flow
@@ -621,6 +657,68 @@ GAPI_EXPORTS std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int ord
                         int borderType = BORDER_DEFAULT,
                         const Scalar& borderValue = Scalar(0));
 
+/** @brief Calculates the Laplacian of an image.
+
+The function calculates the Laplacian of the source image by adding up the second x and y
+derivatives calculated using the Sobel operator:
+
+\f[\texttt{dst} =  \Delta \texttt{src} =  \frac{\partial^2 \texttt{src}}{\partial x^2} +  \frac{\partial^2 \texttt{src}}{\partial y^2}\f]
+
+This is done when `ksize > 1`. When `ksize == 1`, the Laplacian is computed by filtering the image
+with the following \f$3 \times 3\f$ aperture:
+
+\f[\vecthreethree {0}{1}{0}{1}{-4}{1}{0}{1}{0}\f]
+
+@note Function textual ID is "org.opencv.imgproc.filters.laplacian"
+
+@param src Source image.
+@param ddepth Desired depth of the destination image.
+@param ksize Aperture size used to compute the second-derivative filters. See #getDerivKernels for
+details. The size must be positive and odd.
+@param scale Optional scale factor for the computed Laplacian values. By default, no scaling is
+applied. See #getDerivKernels for details.
+@param delta Optional delta value that is added to the results prior to storing them in dst .
+@param borderType Pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@return Destination image of the same size and the same number of channels as src.
+@sa  Sobel, Scharr
+ */
+GAPI_EXPORTS GMat Laplacian(const GMat& src, int ddepth, int ksize = 1,
+                            double scale = 1, double delta = 0, int borderType = BORDER_DEFAULT);
+
+/** @brief Applies the bilateral filter to an image.
+
+The function applies bilateral filtering to the input image, as described in
+http://www.dai.ed.ac.uk/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html
+bilateralFilter can reduce unwanted noise very well while keeping edges fairly sharp. However, it is
+very slow compared to most filters.
+
+_Sigma values_: For simplicity, you can set the 2 sigma values to be the same. If they are small (\<
+10), the filter will not have much effect, whereas if they are large (\> 150), they will have a very
+strong effect, making the image look "cartoonish".
+
+_Filter size_: Large filters (d \> 5) are very slow, so it is recommended to use d=5 for real-time
+applications, and perhaps d=9 for offline applications that need heavy noise filtering.
+
+This filter does not work inplace.
+
+@note Function textual ID is "org.opencv.imgproc.filters.bilateralfilter"
+
+@param src Source 8-bit or floating-point, 1-channel or 3-channel image.
+@param d Diameter of each pixel neighborhood that is used during filtering. If it is non-positive,
+it is computed from sigmaSpace.
+@param sigmaColor Filter sigma in the color space. A larger value of the parameter means that
+farther colors within the pixel neighborhood (see sigmaSpace) will be mixed together, resulting
+in larger areas of semi-equal color.
+@param sigmaSpace Filter sigma in the coordinate space. A larger value of the parameter means that
+farther pixels will influence each other as long as their colors are close enough (see sigmaColor
+). When d\>0, it specifies the neighborhood size regardless of sigmaSpace. Otherwise, d is
+proportional to sigmaSpace.
+@param borderType border mode used to extrapolate pixels outside of the image, see #BorderTypes
+@return Destination image of the same size and type as src.
+ */
+GAPI_EXPORTS GMat bilateralFilter(const GMat& src, int d, double sigmaColor, double sigmaSpace,
+                                  int borderType = BORDER_DEFAULT);
+
 /** @brief Finds edges in an image using the Canny algorithm.
 
 The function finds edges in the input image and marks them in the output map edges using the
@@ -641,6 +739,59 @@ L2gradient=false ).
  */
 GAPI_EXPORTS GMat Canny(const GMat& image, double threshold1, double threshold2,
                         int apertureSize = 3, bool L2gradient = false);
+
+/** @brief Determines strong corners on an image.
+
+The function finds the most prominent corners in the image or in the specified image region, as
+described in @cite Shi94
+
+-   Function calculates the corner quality measure at every source image pixel using the
+    #cornerMinEigenVal or #cornerHarris .
+-   Function performs a non-maximum suppression (the local maximums in *3 x 3* neighborhood are
+    retained).
+-   The corners with the minimal eigenvalue less than
+    \f$\texttt{qualityLevel} \cdot \max_{x,y} qualityMeasureMap(x,y)\f$ are rejected.
+-   The remaining corners are sorted by the quality measure in the descending order.
+-   Function throws away each corner for which there is a stronger corner at a distance less than
+    maxDistance.
+
+The function can be used to initialize a point-based tracker of an object.
+
+@note If the function is called with different values A and B of the parameter qualityLevel , and
+A \> B, the vector of returned corners with qualityLevel=A will be the prefix of the output vector
+with qualityLevel=B .
+
+@note Function textual ID is "org.opencv.imgproc.goodFeaturesToTrack"
+
+@param image Input 8-bit or floating-point 32-bit, single-channel image.
+@param maxCorners Maximum number of corners to return. If there are more corners than are found,
+the strongest of them is returned. `maxCorners <= 0` implies that no limit on the maximum is set
+and all detected corners are returned.
+@param qualityLevel Parameter characterizing the minimal accepted quality of image corners. The
+parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue
+(see #cornerMinEigenVal ) or the Harris function response (see #cornerHarris ). The corners with the
+quality measure less than the product are rejected. For example, if the best corner has the
+quality measure = 1500, and the qualityLevel=0.01 , then all the corners with the quality measure
+less than 15 are rejected.
+@param minDistance Minimum possible Euclidean distance between the returned corners.
+@param mask Optional region of interest. If the image is not empty (it needs to have the type
+CV_8UC1 and the same size as image ), it specifies the region in which the corners are detected.
+@param blockSize Size of an average block for computing a derivative covariation matrix over each
+pixel neighborhood. See cornerEigenValsAndVecs .
+@param useHarrisDetector Parameter indicating whether to use a Harris detector (see #cornerHarris)
+or #cornerMinEigenVal.
+@param k Free parameter of the Harris detector.
+
+@return vector of detected corners.
+ */
+GAPI_EXPORTS GArray<Point2f> goodFeaturesToTrack(const GMat  &image,
+                                                       int    maxCorners,
+                                                       double qualityLevel,
+                                                       double minDistance,
+                                                 const Mat   &mask = Mat(),
+                                                       int    blockSize = 3,
+                                                       bool   useHarrisDetector = false,
+                                                       double k = 0.04);
 
 /** @brief Equalizes the histogram of a grayscale image.
 
@@ -818,6 +969,21 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa YUV2RGB, NV12toBGR
 */
 GAPI_EXPORTS GMat NV12toRGB(const GMat& src_y, const GMat& src_uv);
+
+/** @brief Converts an image from NV12 (YUV420p) color space to gray-scaled.
+The function converts an input image from NV12 color space to gray-scaled.
+The conventional ranges for Y, U, and V channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 1-channel image @ref CV_8UC1.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.nv12togray"
+
+@param src_y input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@param src_uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2.
+
+@sa YUV2RGB, NV12toBGR
+*/
+GAPI_EXPORTS GMat NV12toGray(const GMat& src_y, const GMat& src_uv);
 
 /** @brief Converts an image from NV12 (YUV420p) color space to BGR.
 The function converts an input image from NV12 color space to RGB.

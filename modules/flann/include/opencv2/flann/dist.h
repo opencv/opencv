@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_DIST_H_
 #define OPENCV_FLANN_DIST_H_
 
+//! @cond IGNORED
+
 #include <cmath>
 #include <cstdlib>
 #include <string.h>
@@ -43,7 +45,7 @@ typedef unsigned __int64 uint64_t;
 
 #include "defines.h"
 
-#if defined _WIN32 && defined(_M_ARM)
+#if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64))
 # include <Intrin.h>
 #endif
 
@@ -900,5 +902,7 @@ typename Distance::ResultType ensureSimpleDistance( typename Distance::ResultTyp
 }
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_DIST_H_

@@ -57,6 +57,14 @@ low light, low light values are discarded using **cv.inRange()** function.
     @include samples/python/tutorial_code/video/meanshift/meanshift.py
 @end_toggle
 
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/meanshift/MeanshiftDemo.java)
+
+-   **Code at glance:**
+    @include  samples/java/tutorial_code/video/meanshift/MeanshiftDemo.java
+@end_toggle
+
 Three frames in a video I used is given below:
 
 ![image](images/meanshift_result.jpg)
@@ -96,6 +104,14 @@ parameters (used to be passed as search window in next iteration). See the code 
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/video/meanshift/camshift.py
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/meanshift/CamshiftDemo.java)
+
+-   **Code at glance:**
+    @include  samples/java/tutorial_code/video/meanshift/CamshiftDemo.java
 @end_toggle
 
 Three frames of the result is shown below:

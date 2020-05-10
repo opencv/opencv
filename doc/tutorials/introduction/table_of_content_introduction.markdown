@@ -110,11 +110,19 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     Modify Android camera preview with OpenCL
 
+-   @subpage tutorial_macos_install
+
+    _Compatibility:_ \> OpenCV 3.4.x
+
+    _Author:_ [\@sajarindider](https://github.com/sajarindider)
+
+    We will learn how to setup OpenCV in MacOS.
+
 -   @subpage tutorial_ios_install
 
     _Compatibility:_ \> OpenCV 2.4.2
 
-    _Author:_ Artem Myagkov, Eduard Feicho
+    _Author:_ Artem Myagkov, Eduard Feicho, Steve Nicholson
 
     We will learn how to setup OpenCV for using it in iOS!
 
@@ -136,19 +144,13 @@ Additionally you can find very basic sample source code to introduce you to the 
 
 -   @subpage tutorial_display_image
 
-    _Compatibility:_ \> OpenCV 2.0
+    _Languages:_ C++, Python
+
+    _Compatibility:_ \> OpenCV 3.4.4
 
     _Author:_ Ana Huamán
 
-    We will learn how to display an image using OpenCV
-
--   @subpage tutorial_load_save_image
-
-    _Compatibility:_ \> OpenCV 2.0
-
-    _Author:_ Ana Huamán
-
-    We will learn how to save an Image in OpenCV...plus a small conversion to grayscale
+    We will learn how to read an image, display it in a window and write it to a file using OpenCV
 
 -   @subpage tutorial_documentation
 

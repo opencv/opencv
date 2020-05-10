@@ -158,6 +158,19 @@ inline __m128i _v128_packs_epu32(const __m128i& a, const __m128i& b)
 #endif
 }
 
+template<int i>
+inline int64 _v128_extract_epi64(const __m128i& a)
+{
+#if defined(CV__SIMD_HAVE_mm_extract_epi64) || (CV_SSE4_1 && (defined(__x86_64__)/*GCC*/ || defined(_M_X64)/*MSVC*/))
+#define CV__SIMD_NATIVE_mm_extract_epi64 1
+    return _mm_extract_epi64(a, i);
+#else
+    CV_DECL_ALIGNED(16) int64 tmp[2];
+    _mm_store_si128((__m128i*)tmp, a);
+    return tmp[i];
+#endif
+}
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond

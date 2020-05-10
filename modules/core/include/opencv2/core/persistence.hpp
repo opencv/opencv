@@ -124,7 +124,7 @@ streams.
 
 Here is an example:
 @code
-    #include "opencv2/opencv.hpp"
+    #include "opencv2/core.hpp"
     #include <time.h>
 
     using namespace cv;
@@ -510,6 +510,8 @@ public:
      */
     FileNode(const FileNode& node);
 
+    FileNode& operator=(const FileNode& node);
+
     /** @brief Returns element of a mapping node or a sequence node.
      @param nodename Name of an element in the mapping node.
      @returns Returns the element with the given identifier.
@@ -639,6 +641,8 @@ public:
      @param it Iterator to be used as initialization for the created iterator.
      */
     FileNodeIterator(const FileNodeIterator& it);
+
+    FileNodeIterator& operator=(const FileNodeIterator& it);
 
     //! returns the currently observed element
     FileNode operator *() const;

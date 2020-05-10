@@ -2949,6 +2949,34 @@ TEST(Core_KMeans, compactness)
     }
 }
 
+TEST(Core_KMeans, bad_input)
+{
+    const int N = 100;
+    const int attempts = 4;
+    const TermCriteria crit = TermCriteria(TermCriteria::COUNT, 5, 0); // low number of iterations
+    const int K = 3;
+    Mat data(N, 1, CV_32FC2);
+    cv::randu(data, Scalar(-200, -200), Scalar(200, 200));
+    {
+        SCOPED_TRACE("Huge value");
+        data.at<Vec2f>(10, 0) = Vec2f(1e20f, 0);
+        Mat labels, centers;
+        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+    }
+    {
+        SCOPED_TRACE("Negative value");
+        data.at<Vec2f>(10, 0) = Vec2f(0, -1e20f);
+        Mat labels, centers;
+        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+    }
+    {
+        SCOPED_TRACE("NaN");
+        data.at<Vec2f>(10, 0) = Vec2f(0, std::numeric_limits<float>::quiet_NaN());
+        Mat labels, centers;
+        EXPECT_ANY_THROW(kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers));
+    }
+}
+
 TEST(CovariationMatrixVectorOfMat, accuracy)
 {
     unsigned int col_problem_size = 8, row_problem_size = 8, vector_size = 16;

@@ -2065,13 +2065,17 @@ static int_fast64_t f64_to_i64(float64_t a, uint_fast8_t roundingMode, bool exac
     if (exp) sig |= UINT64_C(0x0010000000000000);
     shiftDist = 0x433 - exp;
     if (shiftDist <= 0) {
-        uint_fast64_t z = sig << -shiftDist;
-        if ((shiftDist < -11) || (z & UINT64_C(0x8000000000000000)))
+        bool isValid = shiftDist >= -11;
+        if (isValid)
         {
-            raiseFlags(flag_invalid);
-            return sign ? i64_fromNegOverflow : i64_fromPosOverflow;
+            uint_fast64_t z = sig << -shiftDist;
+            if (0 == (z & UINT64_C(0x8000000000000000)))
+            {
+                return sign ? -(int_fast64_t)z : (int_fast64_t)z;
+            }
         }
-        return sign ? -(int_fast64_t)z : (int_fast64_t)z;
+        raiseFlags(flag_invalid);
+        return sign ? i64_fromNegOverflow : i64_fromPosOverflow;
     }
     else {
         if (shiftDist < 64)

@@ -65,6 +65,16 @@ template<typename U> struct get_compound_in<cv::GArray<U>>
     }
 };
 
+template<typename U> struct get_compound_in<cv::GOpaque<U>>
+{
+    static cv::GOpaque<U> get(GCompoundContext &ctx, int idx)
+    {
+        auto opaq = cv::GOpaque<U>();
+        ctx.m_args[idx] = GArg(opaq);
+        return opaq;
+    }
+};
+
 template<typename, typename, typename>
 struct GCompoundCallHelper;
 
@@ -101,7 +111,18 @@ public:
 };
 
 } // namespace detail
-#define GAPI_COMPOUND_KERNEL(Name, API) struct Name: public cv::detail::GCompoundKernelImpl<Name, API>
+
+
+/**
+ * Declares a new compound kernel. See this
+ * [documentation chapter](@ref gapi_kernel_compound)
+ * on compound kernels for more details.
+ *
+ * @param Name type name for new kernel
+ * @param API the interface this kernel implements
+ */
+#define GAPI_COMPOUND_KERNEL(Name, API) \
+    struct Name: public cv::detail::GCompoundKernelImpl<Name, API>
 
 } // namespace cv
 

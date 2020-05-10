@@ -20,7 +20,7 @@ static void help(char** argv)
     cout << "\nThis is a demo program shows how perspective transformation applied on an image, \n"
          "Using OpenCV version " << CV_VERSION << endl;
 
-    cout << "\nUsage:\n" << argv[0] << " [image_name -- Default data/right.jpg]\n" << endl;
+    cout << "\nUsage:\n" << argv[0] << " [image_name -- Default right.jpg]\n" << endl;
 
     cout << "\nHot keys: \n"
          "\tESC, q - quit the program\n"
@@ -45,7 +45,7 @@ bool validation_needed = true;
 int main(int argc, char** argv)
 {
     help(argv);
-    CommandLineParser parser(argc, argv, "{@input| data/right.jpg |}");
+    CommandLineParser parser(argc, argv, "{@input| right.jpg |}");
 
     string filename = samples::findFile(parser.get<string>("@input"));
     Mat original_image = imread( filename );
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
                 {
                     line(image, roi_corners[i-1], roi_corners[(i)], Scalar(0, 0, 255), 2);
                     circle(image, roi_corners[i], 5, Scalar(0, 255, 0), 3);
-                    putText(image, labels[i].c_str(), roi_corners[i], QT_FONT_NORMAL, 0.8, Scalar(255, 0, 0), 2);
+                    putText(image, labels[i].c_str(), roi_corners[i], FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 0, 0), 2);
                 }
             }
             imshow( windowTitle, image );
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
             {
                 line(image, roi_corners[i], roi_corners[(i + 1) % 4], Scalar(0, 0, 255), 2);
                 circle(image, roi_corners[i], 5, Scalar(0, 255, 0), 3);
-                putText(image, labels[i].c_str(), roi_corners[i], QT_FONT_NORMAL, 0.8, Scalar(255, 0, 0), 2);
+                putText(image, labels[i].c_str(), roi_corners[i], FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 0, 0), 2);
             }
 
             imshow( windowTitle, image );

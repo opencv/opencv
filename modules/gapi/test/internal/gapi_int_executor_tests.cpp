@@ -70,8 +70,8 @@ TEST(GExecutor, SmokeTest)
         cv::boxFilter(ocv_tmp3, out_ocv[1], -1, cv::Size(3,3));
     }
 
-    EXPECT_EQ(0, cv::countNonZero(out_gapi[0] != out_ocv[0]));
-    EXPECT_EQ(0, cv::countNonZero(out_gapi[1] != out_ocv[1]));
+    EXPECT_EQ(0, cvtest::norm(out_gapi[0], out_ocv[0], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_gapi[1], out_ocv[1], NORM_INF));
 
     // FIXME: check that GIslandModel has more than 1 island (e.g. fusion
     // with breakdown worked)

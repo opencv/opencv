@@ -219,11 +219,46 @@ public:
      */
     AffineWarper(float scale = 1.f) : PlaneWarper(scale) {}
 
-    Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R) CV_OVERRIDE;
-    Rect buildMaps(Size src_size, InputArray K, InputArray R, CV_OUT OutputArray xmap, CV_OUT  OutputArray ymap) CV_OVERRIDE;
-    Point warp(InputArray src, InputArray K, InputArray R,
-               int interp_mode, int border_mode, CV_OUT OutputArray dst) CV_OVERRIDE;
-    Rect warpRoi(Size src_size, InputArray K, InputArray R) CV_OVERRIDE;
+    /** @brief Projects the image point.
+
+    @param pt Source point
+    @param K Camera intrinsic parameters
+    @param H Camera extrinsic parameters
+    @return Projected point
+     */
+    Point2f warpPoint(const Point2f &pt, InputArray K, InputArray H) CV_OVERRIDE;
+
+    /** @brief Builds the projection maps according to the given camera data.
+
+    @param src_size Source image size
+    @param K Camera intrinsic parameters
+    @param H Camera extrinsic parameters
+    @param xmap Projection map for the x axis
+    @param ymap Projection map for the y axis
+    @return Projected image minimum bounding box
+     */
+    Rect buildMaps(Size src_size, InputArray K, InputArray H, OutputArray xmap, OutputArray ymap) CV_OVERRIDE;
+
+    /** @brief Projects the image.
+
+    @param src Source image
+    @param K Camera intrinsic parameters
+    @param H Camera extrinsic parameters
+    @param interp_mode Interpolation mode
+    @param border_mode Border extrapolation mode
+    @param dst Projected image
+    @return Project image top-left corner
+     */
+    Point warp(InputArray src, InputArray K, InputArray H,
+               int interp_mode, int border_mode, OutputArray dst) CV_OVERRIDE;
+
+    /**
+    @param src_size Source image bounding box
+    @param K Camera intrinsic parameters
+    @param H Camera extrinsic parameters
+    @return Projected image minimum bounding box
+     */
+    Rect warpRoi(Size src_size, InputArray K, InputArray H) CV_OVERRIDE;
 
 protected:
     /** @brief Extracts rotation and translation matrices from matrix H representing

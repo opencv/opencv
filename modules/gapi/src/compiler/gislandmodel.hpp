@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GISLANDMODEL_HPP
@@ -89,39 +89,97 @@ protected:
     util::optional<std::string> m_user_tag;
 };
 
-
-
 // GIslandExecutable - a backend-specific thing which executes
 // contents of an Island
 // * Is instantiated by the last step of the Islands fusion procedure;
 // * Is orchestrated by a GExecutor instance.
 //
-class GIslandExecutable
+// GAPI_EXPORTS is here since this class comes with the default
+// implementation to some methods and it needs to be exported to allow
+// it to use in the external (extra) backends.
+class GAPI_EXPORTS GIslandExecutable
 {
 public:
     using InObj  = std::pair<RcDesc, cv::GRunArg>;
     using OutObj = std::pair<RcDesc, cv::GRunArgP>;
 
+    class  IODesc;
+    struct IInput;
+    struct IOutput;
+
     // FIXME: now run() requires full input vector to be available.
     // actually, parts of subgraph may execute even if there's no all data
     // slots in place.
     // TODO: Add partial execution capabilities
+    // TODO: This method is now obsolette and is here for backwards
+    //       compatibility only.  Use (implement) the new run instead.
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) = 0;
+
+    // Let the island execute. I/O data is obtained from/submitted to
+    // in/out objects.
+    virtual void run(IInput &in, IOutput &out);
 
     virtual bool canReshape() const = 0;
     virtual void reshape(ade::Graph& g, const GCompileArgs& args) = 0;
 
+    // This method is called when the GStreamingCompiled gets a new
+    // input source to process. Normally this method is called once
+    // per stream execution.
+    //
+    // The idea of this method is to reset backend's stream-associated
+    // internal state, if there is any.
+    //
+    // The regular GCompiled invocation doesn't call this, there may
+    // be reset() introduced there but it is completely unnecessary at
+    // this moment.
+    //
+    // FIXME: The design on this and so-called "stateful" kernels is not
+    // closed yet.
+    // FIXME: This thing will likely break stuff once we introduce
+    // "multi-source streaming", a better design needs to be proposed
+    // at that stage.
+    virtual void handleNewStream() {}; // do nothing here by default
+
     virtual ~GIslandExecutable() = default;
 };
 
+class GIslandExecutable::IODesc {
+    std::vector<cv::gimpl::RcDesc> d;
+public:
+    void set(std::vector<cv::gimpl::RcDesc> &&newd)      { d = std::move(newd); }
+    void set(const std::vector<cv::gimpl::RcDesc> &newd) { d = newd; }
+    const std::vector<cv::gimpl::RcDesc> &desc() const   { return d; }
+};
+struct EndOfStream {};
+using StreamMsg = cv::util::variant<EndOfStream, cv::GRunArgs>;
+struct GIslandExecutable::IInput: public GIslandExecutable::IODesc {
+    virtual ~IInput() = default;
+    virtual StreamMsg get() = 0;     // Get a new input vector (blocking)
+    virtual StreamMsg try_get() = 0; // Get a new input vector (non-blocking)
+};
+struct GIslandExecutable::IOutput: public GIslandExecutable::IODesc {
+    virtual ~IOutput() = default;
+    virtual GRunArgP get(int idx) = 0;  // Allocate (wrap) a new data object for output idx
+    virtual void post(GRunArgP&&) = 0;  // Release the object back to the framework (mark available)
+    virtual void post(EndOfStream&&) = 0; // Post end-of-stream marker back to the framework
+};
 
+// GIslandEmitter - a backend-specific thing which feeds data into
+// the pipeline. This one is just an interface, implementations are executor-defined.
+class GIslandEmitter
+{
+public:
+    // Obtain next value from the emitter
+    virtual bool pull(GRunArg &) = 0;
+    virtual ~GIslandEmitter() = default;
+};
 
 // Couldn't reuse NodeType here - FIXME unify (move meta to a shared place)
 struct NodeKind
 {
     static const char *name() { return "NodeKind"; }
-    enum { ISLAND, SLOT} k;
+    enum { ISLAND, SLOT, EMIT, SINK} k;
 };
 
 // FIXME: Rename to Island (as soon as current GModel::Island is renamed
@@ -144,6 +202,25 @@ struct IslandExec
     std::shared_ptr<GIslandExecutable> object;
 };
 
+struct Emitter
+{
+    static const char *name() { return "Emitter"; }
+    std::size_t proto_index;
+    std::shared_ptr<GIslandEmitter> object;
+};
+
+struct Sink
+{
+    static const char *name() { return "Sink"; }
+    std::size_t proto_index;
+};
+
+// This flag is set in graph's own metadata if compileIsland was successful
+struct IslandsCompiled
+{
+    static const char *name() { return "IslandsCompiled"; }
+};
+
 namespace GIslandModel
 {
     using Graph = ade::TypedGraph
@@ -151,6 +228,9 @@ namespace GIslandModel
         , FusedIsland
         , DataSlot
         , IslandExec
+        , Emitter
+        , Sink
+        , IslandsCompiled
         , ade::passes::TopologicalSortData
         >;
 
@@ -160,6 +240,9 @@ namespace GIslandModel
         , FusedIsland
         , DataSlot
         , IslandExec
+        , Emitter
+        , Sink
+        , IslandsCompiled
         , ade::passes::TopologicalSortData
         >;
 
@@ -169,6 +252,8 @@ namespace GIslandModel
     ade::NodeHandle mkSlotNode(Graph &g, const ade::NodeHandle &data_nh);
     ade::NodeHandle mkIslandNode(Graph &g, const gapi::GBackend &bknd, const ade::NodeHandle &op_nh, const ade::Graph &orig_g);
     ade::NodeHandle mkIslandNode(Graph &g, std::shared_ptr<GIsland>&& isl);
+    ade::NodeHandle mkEmitNode(Graph &g, std::size_t in_idx); // streaming-related
+    ade::NodeHandle mkSinkNode(Graph &g, std::size_t out_idx); // streaming-related
 
     // GIslandModel API
     void syncIslandTags(Graph &g, ade::Graph &orig_g);

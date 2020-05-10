@@ -54,8 +54,7 @@ bool compareDataNodes(const ade::NodeHandle& first, const std::vector<std::size_
                                "shall be NodeType::DATA!");
     }
 
-    if (firstMeta.get<cv::gimpl::Data>().shape !=
-           secondMeta.get<cv::gimpl::Data>().shape) {
+    if (firstMeta.get<cv::gimpl::Data>().shape != secondMeta.get<cv::gimpl::Data>().shape) {
         return false;
     }
 
@@ -180,7 +179,7 @@ inline bool IS_ENDPOINT(const ade::NodeHandle& nh){
     // Try to rely on the nh Data::Storage::OUTPUT
     return nh->outEdges().empty();
 }
-}
+}  // anonymous namespace
 
 // Routine relies on the logic that 1 DATA node may have only 1 input edge.
 cv::gimpl::SubgraphMatch
@@ -509,7 +508,7 @@ cv::gimpl::findMatches(const cv::gimpl::GModel::Graph& patternGraph,
         // Create vector with the correctly ordered IN data nodes in the test subgraph
         std::vector<ade::NodeHandle> inputTestDataNodes;
         for (const auto& patternInNode : patternInputDataNodes) {
-            inputTestDataNodes.push_back(inputApiMatch[patternInNode]);
+            inputTestDataNodes.push_back(inputApiMatch.at(patternInNode));
         }
 
         // Traversing current result for ending OPs
@@ -560,7 +559,7 @@ cv::gimpl::findMatches(const cv::gimpl::GModel::Graph& patternGraph,
         // Create vector with the correctly ordered OUT data nodes in the test subgraph
         std::vector<ade::NodeHandle> outputTestDataNodes;
         for (const auto& patternOutNode : patternOutputDataNodes) {
-            outputTestDataNodes.push_back(outputApiMatch[patternOutNode]);
+            outputTestDataNodes.push_back(outputApiMatch.at(patternOutNode));
         }
 
         SubgraphMatch subgraph;

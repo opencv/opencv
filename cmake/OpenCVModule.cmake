@@ -63,7 +63,6 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   unset(OPENCV_MODULE_${mod}_PRIVATE_OPT_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_LINK_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_WRAPPERS CACHE)
-  unset(OPENCV_DEPENDANT_TARGETS_${mod} CACHE)
 endforeach()
 
 # clean modules info which needs to be recalculated
@@ -937,11 +936,15 @@ macro(_ocv_create_module)
   set_source_files_properties(${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES} ${${the_module}_pch}
     PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
 
-  ocv_target_link_libraries(${the_module} LINK_PUBLIC ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
-  ocv_target_link_libraries(${the_module} LINK_PUBLIC ${OPENCV_MODULE_${the_module}_DEPS_EXT})
-  ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_HAL_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+  ocv_target_link_libraries(${the_module} PUBLIC    ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK}
+                                          INTERFACE ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK}
+  )
+  ocv_target_link_libraries(${the_module} PUBLIC    ${OPENCV_MODULE_${the_module}_DEPS_EXT}
+                                          INTERFACE ${OPENCV_MODULE_${the_module}_DEPS_EXT}
+  )
+  ocv_target_link_libraries(${the_module} PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_HAL_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
   if (HAVE_CUDA)
-    ocv_target_link_libraries(${the_module} LINK_PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+    ocv_target_link_libraries(${the_module} PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
   endif()
 
   if(OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS)
@@ -1084,6 +1087,17 @@ macro(ocv_check_dependencies)
   endforeach()
 endmacro()
 
+################################################################################
+# OpenCV tests
+################################################################################
+
+if(DEFINED OPENCV_BUILD_TEST_MODULES_LIST)
+  string(REPLACE "," ";" OPENCV_BUILD_TEST_MODULES_LIST "${OPENCV_BUILD_TEST_MODULES_LIST}")  # support comma-separated list (,) too
+endif()
+if(DEFINED OPENCV_BUILD_PERF_TEST_MODULES_LIST)
+  string(REPLACE "," ";" OPENCV_BUILD_PERF_TEST_MODULES_LIST "${OPENCV_BUILD_PERF_TEST_MODULES_LIST}")  # support comma-separated list (,) too
+endif()
+
 # auxiliary macro to parse arguments of ocv_add_accuracy_tests and ocv_add_perf_tests commands
 macro(__ocv_parse_test_sources tests_type)
   set(OPENCV_${tests_type}_${the_module}_SOURCES "")
@@ -1112,6 +1126,8 @@ macro(__ocv_parse_test_sources tests_type)
   unset(__currentvar)
 endmacro()
 
+ocv_check_environment_variables(OPENCV_TEST_EXTRA_CXX_FLAGS_Release)
+
 # this is a command for adding OpenCV performance tests to the module
 # ocv_add_perf_tests(<extra_dependencies>)
 function(ocv_add_perf_tests)
@@ -1122,7 +1138,12 @@ function(ocv_add_perf_tests)
   endif()
 
   set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
-  if(BUILD_PERF_TESTS AND EXISTS "${perf_path}")
+  if(BUILD_PERF_TESTS AND EXISTS "${perf_path}"
+      AND (NOT DEFINED OPENCV_BUILD_PERF_TEST_MODULES_LIST
+          OR OPENCV_BUILD_PERF_TEST_MODULES_LIST STREQUAL "all"
+          OR ";${OPENCV_BUILD_PERF_TEST_MODULES_LIST};" MATCHES ";${name};"
+      )
+  )
     __ocv_parse_test_sources(PERF ${ARGN})
 
     # opencv_imgcodecs is required for imread/imwrite
@@ -1150,7 +1171,7 @@ function(ocv_add_perf_tests)
       source_group("Src" FILES "${${the_target}_pch}")
       ocv_add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES} ${${the_target}_pch})
       ocv_target_include_modules(${the_target} ${perf_deps})
-      ocv_target_link_libraries(${the_target} LINK_PRIVATE ${perf_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_PERF_${the_module}_DEPS})
+      ocv_target_link_libraries(${the_target} PRIVATE ${perf_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_PERF_${the_module}_DEPS})
       add_dependencies(opencv_perf_tests ${the_target})
 
       if(TARGET opencv_videoio_plugins)
@@ -1207,7 +1228,12 @@ function(ocv_add_accuracy_tests)
   ocv_debug_message("ocv_add_accuracy_tests(" ${ARGN} ")")
 
   set(test_path "${CMAKE_CURRENT_LIST_DIR}/test")
-  if(BUILD_TESTS AND EXISTS "${test_path}")
+  if(BUILD_TESTS AND EXISTS "${test_path}"
+      AND (NOT DEFINED OPENCV_BUILD_TEST_MODULES_LIST
+          OR OPENCV_BUILD_TEST_MODULES_LIST STREQUAL "all"
+          OR ";${OPENCV_BUILD_TEST_MODULES_LIST};" MATCHES ";${name};"
+      )
+  )
     __ocv_parse_test_sources(TEST ${ARGN})
 
     # opencv_imgcodecs is required for imread/imwrite
@@ -1240,7 +1266,7 @@ function(ocv_add_accuracy_tests)
       if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/test")
         ocv_target_include_directories(${the_target} "${CMAKE_CURRENT_BINARY_DIR}/test")
       endif()
-      ocv_target_link_libraries(${the_target} LINK_PRIVATE ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_TEST_${the_module}_DEPS})
+      ocv_target_link_libraries(${the_target} PRIVATE ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_TEST_${the_module}_DEPS})
       add_dependencies(opencv_tests ${the_target})
 
       if(TARGET opencv_videoio_plugins)
@@ -1274,6 +1300,10 @@ function(ocv_add_accuracy_tests)
 
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
+      endif()
+
+      if(OPENCV_TEST_EXTRA_CXX_FLAGS_Release)
+        target_compile_options(${the_target} PRIVATE "$<$<CONFIG:Release>:${OPENCV_TEST_EXTRA_CXX_FLAGS_Release}>")
       endif()
 
       ocv_add_test_from_target("${the_target}" "Accuracy" "${the_target}")
@@ -1310,7 +1340,7 @@ function(ocv_add_samples)
 
         ocv_add_executable(${the_target} "${source}")
         ocv_target_include_modules(${the_target} ${samples_deps})
-        ocv_target_link_libraries(${the_target} LINK_PRIVATE ${samples_deps})
+        ocv_target_link_libraries(${the_target} PRIVATE ${samples_deps})
 
         set_target_properties(${the_target} PROPERTIES
           PROJECT_LABEL "(sample) ${name}"

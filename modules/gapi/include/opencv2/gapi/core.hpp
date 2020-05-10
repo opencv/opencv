@@ -18,12 +18,12 @@
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
 
-/** \defgroup gapi_core G-API core (basic) functionality
+/** \defgroup gapi_core G-API Core functionality
 @{
     @defgroup gapi_math Graph API: Math operations
     @defgroup gapi_pixelwise Graph API: Pixelwise operations
     @defgroup gapi_matrixop Graph API: Operations on matrices
-    @defgroup gapi_transform Graph API: Geometric, depth and LUT-like image transformations
+    @defgroup gapi_transform Graph API: Image and channel composition functions
 @}
  */
 namespace cv { namespace gapi {
@@ -392,10 +392,10 @@ namespace core {
             }
             else
             {
-                GAPI_Assert(fx != 0. && fy != 0.);
-                return in.withSize
-                    (Size(static_cast<int>(round(in.size.width  * fx)),
-                          static_cast<int>(round(in.size.height * fy))));
+                int outSz_w = static_cast<int>(round(in.size.width  * fx));
+                int outSz_h = static_cast<int>(round(in.size.height * fy));
+                GAPI_Assert(outSz_w > 0 && outSz_h > 0);
+                return in.withSize(Size(outSz_w, outSz_h));
             }
         }
     };
@@ -436,9 +436,16 @@ namespace core {
         }
     };
 
+    // TODO: eliminate the need in this kernel (streaming)
     G_TYPED_KERNEL(GCrop, <GMat(GMat, Rect)>, "org.opencv.core.transform.crop") {
         static GMatDesc outMeta(GMatDesc in, Rect rc) {
             return in.withSize(Size(rc.width, rc.height));
+        }
+    };
+
+    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.transform.copy") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in;
         }
     };
 
@@ -476,6 +483,22 @@ namespace core {
         static GMatDesc outMeta(GMatDesc in, double, double, int, int ddepth) {
             // unlike opencv doesn't have a mask as a parameter
             return (ddepth < 0 ? in : in.withDepth(ddepth));
+        }
+    };
+
+    G_TYPED_KERNEL(GWarpPerspective, <GMat(GMat, const Mat&, Size, int, int, const cv::Scalar&)>, "org.opencv.core.warpPerspective") {
+        static GMatDesc outMeta(GMatDesc in, const Mat&, Size dsize, int, int borderMode, const cv::Scalar&) {
+            GAPI_Assert((borderMode == cv::BORDER_CONSTANT || borderMode == cv::BORDER_REPLICATE) &&
+                        "cv::gapi::warpPerspective supports only cv::BORDER_CONSTANT and cv::BORDER_REPLICATE border modes");
+            return in.withType(in.depth, in.chan).withSize(dsize);
+        }
+    };
+
+    G_TYPED_KERNEL(GWarpAffine, <GMat(GMat, const Mat&, Size, int, int, const cv::Scalar&)>, "org.opencv.core.warpAffine") {
+        static GMatDesc outMeta(GMatDesc in, const Mat&, Size dsize, int, int border_mode, const cv::Scalar&) {
+            GAPI_Assert(border_mode != cv::BORDER_TRANSPARENT &&
+                        "cv::BORDER_TRANSPARENT mode is not supported in cv::gapi::warpAffine");
+            return in.withType(in.depth, in.chan).withSize(dsize);
         }
     };
 }
@@ -1269,8 +1292,8 @@ GAPI_EXPORTS std::tuple<GMat, GMat> integral(const GMat& src, int sdepth = -1, i
 The function applies fixed-level thresholding to a single- or multiple-channel matrix.
 The function is typically used to get a bi-level (binary) image out of a grayscale image ( cmp functions could be also used for
 this purpose) or for removing a noise, that is, filtering out pixels with too small or too large
-values. There are several depths of thresholding supported by the function. They are determined by
-depth parameter.
+values. There are several types of thresholding supported by the function. They are determined by
+type parameter.
 
 Also, the special values cv::THRESH_OTSU or cv::THRESH_TRIANGLE may be combined with one of the
 above values. In these cases, the function determines the optimal threshold value using the Otsu's
@@ -1286,17 +1309,17 @@ Output matrix must be of the same size and depth as src.
 @param src input matrix (@ref CV_8UC1, @ref CV_8UC3, or @ref CV_32FC1).
 @param thresh threshold value.
 @param maxval maximum value to use with the cv::THRESH_BINARY and cv::THRESH_BINARY_INV thresholding
-depths.
-@param depth thresholding depth (see the cv::ThresholdTypes).
+types.
+@param type thresholding type (see the cv::ThresholdTypes).
 
 @sa min, max, cmpGT, cmpLE, cmpGE, cmpLS
  */
-GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int depth);
+GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int type);
 /** @overload
-This function applicable for all threshold depths except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
+This function applicable for all threshold types except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
 @note Function textual ID is "org.opencv.core.matrixop.thresholdOT"
 */
-GAPI_EXPORTS std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int depth);
+GAPI_EXPORTS std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int type);
 
 /** @brief Applies a range-level threshold to each matrix element.
 
@@ -1499,6 +1522,19 @@ Output matrix must be of the same depth as input one, size is specified by given
 */
 GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
 
+/** @brief Copies a matrix.
+
+Copies an input array. Works as a regular Mat::clone but happens in-graph.
+Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
+in the streaming mode). Will be deprecated and removed in the future.
+
+@note Function textual ID is "org.opencv.core.transform.copy"
+
+@param src input matrix.
+@sa crop
+*/
+GAPI_EXPORTS GMat copy(const GMat& src);
+
 /** @brief Applies horizontal concatenation to given matrices.
 
 The function horizontally concatenates two GMat matrices (with the same number of rows).
@@ -1633,6 +1669,55 @@ number of channels as src and the depth =ddepth.
 */
 GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
                             int norm_type, int ddepth = -1);
+
+/** @brief Applies a perspective transformation to an image.
+
+The function warpPerspective transforms the source image using the specified matrix:
+
+\f[\texttt{dst} (x,y) =  \texttt{src} \left ( \frac{M_{11} x + M_{12} y + M_{13}}{M_{31} x + M_{32} y + M_{33}} ,
+     \frac{M_{21} x + M_{22} y + M_{23}}{M_{31} x + M_{32} y + M_{33}} \right )\f]
+
+when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted with invert
+and then put in the formula above instead of M. The function cannot operate in-place.
+
+@param src input image.
+@param M \f$3\times 3\f$ transformation matrix.
+@param dsize size of the output image.
+@param flags combination of interpolation methods (#INTER_LINEAR or #INTER_NEAREST) and the
+optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
+\f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
+@param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
+@param borderValue value used in case of a constant border; by default, it equals 0.
+
+@sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
+ */
+GAPI_EXPORTS GMat warpPerspective(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
+                                  int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
+
+/** @brief Applies an affine transformation to an image.
+
+The function warpAffine transforms the source image using the specified matrix:
+
+\f[\texttt{dst} (x,y) =  \texttt{src} ( \texttt{M} _{11} x +  \texttt{M} _{12} y +  \texttt{M} _{13}, \texttt{M} _{21} x +  \texttt{M} _{22} y +  \texttt{M} _{23})\f]
+
+when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted
+with #invertAffineTransform and then put in the formula above instead of M. The function cannot
+operate in-place.
+
+@param src input image.
+@param M \f$2\times 3\f$ transformation matrix.
+@param dsize size of the output image.
+@param flags combination of interpolation methods (see #InterpolationFlags) and the optional
+flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
+\f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
+@param borderMode pixel extrapolation method (see #BorderTypes);
+borderMode=#BORDER_TRANSPARENT isn't supported
+@param borderValue value used in case of a constant border; by default, it is 0.
+
+@sa  warpPerspective, resize, remap, getRectSubPix, transform
+ */
+GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
+                             int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
 } //namespace gapi

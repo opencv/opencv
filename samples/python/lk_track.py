@@ -26,7 +26,6 @@ import cv2 as cv
 
 import video
 from common import anorm2, draw_str
-from time import clock
 
 lk_params = dict( winSize  = (15, 15),
                   maxLevel = 2,

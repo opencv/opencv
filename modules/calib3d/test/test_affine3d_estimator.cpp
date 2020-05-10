@@ -187,4 +187,18 @@ void CV_Affine3D_EstTest::run( int /* start_from */)
 
 TEST(Calib3d_EstimateAffine3D, accuracy) { CV_Affine3D_EstTest test; test.safe_run(); }
 
+TEST(Calib3d_EstimateAffine3D, regression_16007)
+{
+    std::vector<cv::Point3f> m1, m2;
+    m1.push_back(Point3f(1.0f, 0.0f, 0.0f)); m2.push_back(Point3f(1.0f, 1.0f, 0.0f));
+    m1.push_back(Point3f(1.0f, 0.0f, 1.0f)); m2.push_back(Point3f(1.0f, 1.0f, 1.0f));
+    m1.push_back(Point3f(0.5f, 0.0f, 0.5f)); m2.push_back(Point3f(0.5f, 1.0f, 0.5f));
+    m1.push_back(Point3f(2.5f, 0.0f, 2.5f)); m2.push_back(Point3f(2.5f, 1.0f, 2.5f));
+    m1.push_back(Point3f(2.0f, 0.0f, 1.0f)); m2.push_back(Point3f(2.0f, 1.0f, 1.0f));
+
+    cv::Mat m3D, inl;
+    int res = cv::estimateAffine3D(m1, m2, m3D, inl);
+    EXPECT_EQ(1, res);
+}
+
 }} // namespace

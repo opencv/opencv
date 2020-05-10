@@ -407,14 +407,13 @@ public:
                 else if ( fmt == FileStorage::FORMAT_JSON )
                     puts( "}\n" );
             }
-
-            closeFile();
             if( mem_mode && out )
             {
                 *out = cv::String(outbuf.begin(), outbuf.end());
             }
-            init();
         }
+        closeFile();
+        init();
     }
 
     void analyze_file_name( const std::string& file_name, std::vector<std::string>& params )
@@ -606,12 +605,11 @@ public:
                     int last_occurrence = -1;
                     xml_buf_size = MIN(xml_buf_size, int(file_size));
                     fseek( file, -xml_buf_size, SEEK_END );
-                    std::vector<char> xml_buf_(xml_buf_size+2);
                     // find the last occurrence of </opencv_storage>
                     for(;;)
                     {
                         int line_offset = (int)ftell( file );
-                        const char* ptr0 = this->gets(&xml_buf_[0], xml_buf_size );
+                        const char* ptr0 = this->gets(xml_buf_size);
                         const char* ptr = NULL;
                         if( !ptr0 )
                             break;
@@ -693,8 +691,8 @@ public:
         }
         else
         {
-            const size_t buf_size0 = 1 << 20;
-            size_t buf_size = buf_size0;
+            const size_t buf_size0 = 40;
+            buffer.resize(buf_size0);
             if( mem_mode )
             {
                 strbuf = (char*)filename_or_buf;
@@ -704,8 +702,8 @@ public:
             const char* yaml_signature = "%YAML";
             const char* json_signature = "{";
             const char* xml_signature  = "<?xml";
-            char buf[16];
-            this->gets( buf, sizeof(buf)-2 );
+            char* buf = this->gets(16);
+            CV_Assert(buf);
             char* bufPtr = cv_skip_BOM(buf);
             size_t bufOffset = bufPtr - buf;
 
@@ -720,23 +718,8 @@ public:
             else
                 CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 
-            if( !isGZ )
-            {
-                if( !mem_mode )
-                {
-                    fseek( file, 0, SEEK_END );
-                    buf_size = ftell( file );
-                }
-                else
-                    buf_size = strbufsize;
-                buf_size = MIN( buf_size, buf_size0 );
-                buf_size = MAX( buf_size, (size_t)(CV_FS_MAX_LEN*6 + 1024) );
-            }
             rewind();
             strbufpos = bufOffset;
-
-            buffer.reserve(buf_size + 256);
-            buffer.resize(buf_size);
             bufofs = 0;
 
             try
@@ -809,56 +792,70 @@ public:
             CV_Error( CV_StsError, "The storage is not opened" );
     }
 
-    char* gets( char* str, int maxCount )
+    char* getsFromFile( char* buf, int count )
+    {
+        if( file )
+            return fgets( buf, count, file );
+    #if USE_ZLIB
+        if( gzfile )
+            return gzgets( gzfile, buf, count );
+    #endif
+        CV_Error(CV_StsError, "The storage is not opened");
+    }
+
+    char* gets( size_t maxCount )
     {
         if( strbuf )
         {
             size_t i = strbufpos, len = strbufsize;
-            int j = 0;
             const char* instr = strbuf;
-            while( i < len && j < maxCount-1 )
+            for( ; i < len; i++ )
             {
-                char c = instr[i++];
-                if( c == '\0' )
+                char c = instr[i];
+                if( c == '\0' || c == '\n' )
+                {
+                    if( c == '\n' )
+                        i++;
                     break;
-                str[j++] = c;
-                if( c == '\n' )
-                    break;
+                }
             }
-            str[j++] = '\0';
+            size_t count = i - strbufpos;
+            if( maxCount == 0 || maxCount > count )
+                maxCount = count;
+            buffer.resize(std::max(buffer.size(), maxCount + 8));
+            memcpy(&buffer[0], instr + strbufpos, maxCount);
+            buffer[maxCount] = '\0';
             strbufpos = i;
-            if (maxCount > 256 && !(flags & cv::FileStorage::BASE64))
-                CV_Assert(j < maxCount - 1 && "OpenCV persistence doesn't support very long lines");
-            return j > 1 ? str : 0;
+            return maxCount > 0 ? &buffer[0] : 0;
         }
-        if( file )
+
+        const size_t MAX_BLOCK_SIZE = INT_MAX/2; // hopefully, that will be enough
+        if( maxCount == 0 )
+            maxCount = MAX_BLOCK_SIZE;
+        else
+            CV_Assert(maxCount < MAX_BLOCK_SIZE);
+        size_t ofs = 0;
+
+        for(;;)
         {
-            char* ptr = fgets( str, maxCount, file );
-            if (ptr && maxCount > 256 && !(flags & cv::FileStorage::BASE64))
-            {
-                size_t sz = strnlen(ptr, maxCount);
-                CV_Assert(sz < (size_t)(maxCount - 1) && "OpenCV persistence doesn't support very long lines");
-            }
-            return ptr;
+            int count = (int)std::min(buffer.size() - ofs - 16, maxCount);
+            char* ptr = getsFromFile( &buffer[ofs], count+1 );
+            if( !ptr )
+                break;
+            int delta = (int)strlen(ptr);
+            ofs += delta;
+            maxCount -= delta;
+            if( ptr[delta-1] == '\n' || maxCount == 0 )
+                break;
+            if( delta == count )
+                buffer.resize((size_t)(buffer.size()*1.5));
         }
-#if USE_ZLIB
-        if( gzfile )
-        {
-            char* ptr = gzgets( gzfile, str, maxCount );
-            if (ptr && maxCount > 256 && !(flags & cv::FileStorage::BASE64))
-            {
-                size_t sz = strnlen(ptr, maxCount);
-                CV_Assert(sz < (size_t)(maxCount - 1) && "OpenCV persistence doesn't support very long lines");
-            }
-            return ptr;
-        }
-#endif
-        CV_Error(CV_StsError, "The storage is not opened");
+        return ofs > 0 ? &buffer[0] : 0;
     }
 
     char* gets()
     {
-        char* ptr = this->gets(bufferStart(), (int)(bufferEnd() - bufferStart()));
+        char* ptr = this->gets(0);
         if( !ptr )
         {
             ptr = bufferStart();  // FIXIT Why do we need this hack? What is about other parsers JSON/YAML?
@@ -868,10 +865,12 @@ public:
         }
         else
         {
-            FileStorage_API* fs = this;
-            int l = (int)strlen(ptr);
+            size_t l = strlen(ptr);
             if( l > 0 && ptr[l-1] != '\n' && ptr[l-1] != '\r' && !eof() )
-                CV_PARSE_ERROR_CPP("Too long string or a last string w/o newline");
+            {
+                ptr[l] = '\n';
+                ptr[l+1] = '\0';
+            }
         }
         lineno++;
         return ptr;
@@ -1307,6 +1306,9 @@ public:
     // In the case (b) the existing tag and the name are copied automatically.
     uchar* reserveNodeSpace(FileNode& node, size_t sz)
     {
+        bool shrinkBlock = false;
+        size_t shrinkBlockIdx = 0, shrinkSize = 0;
+
         uchar *ptr = 0, *blockEnd = 0;
 
         if( !fs_data_ptrs.empty() )
@@ -1315,19 +1317,32 @@ public:
             size_t ofs = node.ofs;
             CV_Assert( blockIdx == fs_data_ptrs.size()-1 );
             CV_Assert( ofs <= fs_data_blksz[blockIdx] );
+            CV_Assert( freeSpaceOfs <= fs_data_blksz[blockIdx] );
             //CV_Assert( freeSpaceOfs <= ofs + sz );
 
             ptr = fs_data_ptrs[blockIdx] + ofs;
             blockEnd = fs_data_ptrs[blockIdx] + fs_data_blksz[blockIdx];
 
+            CV_Assert(ptr >= fs_data_ptrs[blockIdx] && ptr <= blockEnd);
             if( ptr + sz <= blockEnd )
             {
                 freeSpaceOfs = ofs + sz;
                 return ptr;
             }
 
-            fs_data[blockIdx]->resize(ofs);
-            fs_data_blksz[blockIdx] = ofs;
+            if (ofs == 0)  // FileNode is a first component of this block. Resize current block instead of allocation of new one.
+            {
+                fs_data[blockIdx]->resize(sz);
+                ptr = &fs_data[blockIdx]->at(0);
+                fs_data_ptrs[blockIdx] = ptr;
+                fs_data_blksz[blockIdx] = sz;
+                freeSpaceOfs = sz;
+                return ptr;
+            }
+
+            shrinkBlock = true;
+            shrinkBlockIdx = blockIdx;
+            shrinkSize = ofs;
         }
 
         size_t blockSize = std::max((size_t)CV_FS_MAX_LEN*4 - 256, sz) + 256;
@@ -1350,6 +1365,12 @@ public:
                 new_ptr[3] = ptr[3];
                 new_ptr[4] = ptr[4];
             }
+        }
+
+        if (shrinkBlock)
+        {
+            fs_data[shrinkBlockIdx]->resize(shrinkSize);
+            fs_data_blksz[shrinkBlockIdx] = shrinkSize;
         }
 
         return new_ptr;
@@ -1803,10 +1824,18 @@ FileStorage::~FileStorage()
 
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
 {
-    bool ok = p->open(filename.c_str(), flags, encoding.c_str());
-    if(ok)
-        state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
-    return ok;
+    try
+    {
+        bool ok = p->open(filename.c_str(), flags, encoding.c_str());
+        if(ok)
+            state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+        return ok;
+    }
+    catch (...)
+    {
+        release();
+        throw;  // re-throw
+    }
 }
 
 bool FileStorage::isOpened() const { return p->is_opened; }
@@ -1878,18 +1907,19 @@ int FileStorage::getFormat() const
 
 FileNode FileStorage::operator [](const char* key) const
 {
-    if( p->roots.empty() )
-        return FileNode();
-
-    return p->roots[0][key];
+    return this->operator[](std::string(key));
 }
 
 FileNode FileStorage::operator [](const std::string& key) const
 {
-    if( p->roots.empty() )
-        return FileNode();
-
-    return p->roots[0][key];
+    FileNode res;
+    for (size_t i = 0; i < p->roots.size(); i++)
+    {
+        res = p->roots[i][key];
+        if (!res.empty())
+            break;
+    }
+    return res;
 }
 
 String FileStorage::releaseAndGetString()
@@ -2036,6 +2066,14 @@ FileNode::FileNode(const FileNode& node)
     fs = node.fs;
     blockIdx = node.blockIdx;
     ofs = node.ofs;
+}
+
+FileNode& FileNode::operator=(const FileNode& node)
+{
+    fs = node.fs;
+    blockIdx = node.blockIdx;
+    ofs = node.ofs;
+    return *this;
 }
 
 FileNode FileNode::operator[](const std::string& nodename) const
@@ -2378,6 +2416,17 @@ FileNodeIterator::FileNodeIterator(const FileNodeIterator& it)
     blockSize = it.blockSize;
     nodeNElems = it.nodeNElems;
     idx = it.idx;
+}
+
+FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
+{
+    fs = it.fs;
+    blockIdx = it.blockIdx;
+    ofs = it.ofs;
+    blockSize = it.blockSize;
+    nodeNElems = it.nodeNElems;
+    idx = it.idx;
+    return *this;
 }
 
 FileNode FileNodeIterator::operator *() const

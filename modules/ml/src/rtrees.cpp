@@ -90,12 +90,12 @@ public:
         CV_TRACE_FUNCTION();
         DTreesImpl::clear();
         oobError = 0.;
-        rng = RNG((uint64)-1);
     }
 
     const vector<int>& getActiveVars() CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
+        RNG &rng = theRNG();
         int i, nvars = (int)allVars.size(), m = (int)activeVars.size();
         for( i = 0; i < nvars; i++ )
         {
@@ -111,6 +111,7 @@ public:
     void startTraining( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
+        CV_Assert(!trainData.empty());
         DTreesImpl::startTraining(trainData, flags);
         int nvars = w->data->getNVars();
         int i, m = rparams.nactiveVars > 0 ? rparams.nactiveVars : cvRound(std::sqrt((double)nvars));
@@ -133,6 +134,8 @@ public:
     bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
+        RNG &rng = theRNG();
+        CV_Assert(!trainData.empty());
         startTraining(trainData, flags);
         int treeidx, ntrees = (rparams.termCrit.type & TermCriteria::COUNT) != 0 ?
             rparams.termCrit.maxCount : 10000;
@@ -422,7 +425,6 @@ public:
     double oobError;
     vector<float> varImportance;
     vector<int> allVars, activeVars;
-    RNG rng;
 };
 
 
@@ -464,6 +466,7 @@ public:
     bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
+        CV_Assert(!trainData.empty());
         if (impl.getCVFolds() != 0)
             CV_Error(Error::StsBadArg, "Cross validation for RTrees is not implemented");
         return impl.train(trainData, flags);

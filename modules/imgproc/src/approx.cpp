@@ -630,7 +630,7 @@ approxPolyDP_( const Point_<T>* src_contour, int count0, Point_<T>* dst_contour,
         WRITE_PT( src_contour[count-1] );
 
     // last stage: do final clean-up of the approximated contour -
-    // remove extra points on the [almost] stright lines.
+    // remove extra points on the [almost] straight lines.
     is_closed = is_closed0;
     count = new_count;
     pos = is_closed ? count - 1 : 0;
@@ -676,6 +676,13 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
                       double epsilon, bool closed )
 {
     CV_INSTRUMENT_REGION();
+
+    //Prevent unreasonable error values (Douglas-Peucker algorithm)
+    //from being used.
+    if (epsilon < 0.0 || !(epsilon < 1e30))
+    {
+        CV_Error(CV_StsOutOfRange, "Epsilon not valid.");
+    }
 
     Mat curve = _curve.getMat();
     int npoints = curve.checkVector(2), depth = curve.depth();

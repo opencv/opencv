@@ -267,6 +267,9 @@ static const String getBuildExtraOptions()
     return param_buildExtraOptions;
 }
 
+static const bool CV_OPENCL_ENABLE_MEM_USE_HOST_PTR = utils::getConfigurationParameterBool("OPENCV_OPENCL_ENABLE_MEM_USE_HOST_PTR", true);
+static const size_t CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR", 4);
+
 #endif // HAVE_OPENCL
 
 struct UMat2D
@@ -906,19 +909,19 @@ bool haveOpenCL()
 
 bool useOpenCL()
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    if( data->useOpenCL < 0 )
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useOpenCL < 0)
     {
         try
         {
-            data->useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
+            data.useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
         }
         catch (...)
         {
-            data->useOpenCL = 0;
+            data.useOpenCL = 0;
         }
     }
-    return data->useOpenCL > 0;
+    return data.useOpenCL > 0;
 }
 
 #ifdef HAVE_OPENCL
@@ -934,14 +937,14 @@ void setUseOpenCL(bool flag)
 {
     CV_TRACE_FUNCTION();
 
-    CoreTLSData* data = getCoreTlsData().get();
+    CoreTLSData& data = getCoreTlsData();
     if (!flag)
     {
-        data->useOpenCL = 0;
+        data.useOpenCL = 0;
     }
     else if( haveOpenCL() )
     {
-        data->useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
+        data.useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
     }
 }
 
@@ -1652,7 +1655,7 @@ size_t Device::profilingTimerResolution() const
 const Device& Device::getDefault()
 {
     const Context& ctx = Context::getDefault();
-    int idx = getCoreTlsData().get()->device;
+    int idx = getCoreTlsData().device;
     const Device& device = ctx.device(idx);
     return device;
 }
@@ -2029,16 +2032,25 @@ struct Context::Impl
             0
         };
 
-        cl_uint i, nd0 = 0, nd = 0;
+        cl_uint nd0 = 0;
         int dtype = dtype0 & 15;
-        CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, 0, 0, &nd0));
+        cl_int status = clGetDeviceIDs(pl, dtype, 0, NULL, &nd0);
+        if (status != CL_DEVICE_NOT_FOUND) // Not an error if platform has no devices
+        {
+            CV_OCL_DBG_CHECK_RESULT(status,
+                cv::format("clGetDeviceIDs(platform=%p, device_type=%d, num_entries=0, devices=NULL, numDevices=%p)", pl, dtype, &nd0).c_str());
+        }
+
+        if (nd0 == 0)
+            return;
 
         AutoBuffer<void*> dlistbuf(nd0*2+1);
         cl_device_id* dlist = (cl_device_id*)dlistbuf.data();
         cl_device_id* dlist_new = dlist + nd0;
         CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, nd0, dlist, &nd0));
-        String name0;
 
+        cl_uint i, nd = 0;
+        String name0;
         for(i = 0; i < nd0; i++)
         {
             Device d(dlist[i]);
@@ -2554,9 +2566,10 @@ void attachContext(const String& platformName, void* platformID, void* context, 
     CV_OCL_CHECK(clRetainContext((cl_context)context));
 
     // clear command queue, if any
-    getCoreTlsData().get()->oclQueue.finish();
+    CoreTLSData& data = getCoreTlsData();
+    data.oclQueue.finish();
     Queue q;
-    getCoreTlsData().get()->oclQueue = q;
+    data.oclQueue = q;
 
     return;
 } // attachContext()
@@ -2744,7 +2757,7 @@ void* Queue::ptr() const
 
 Queue& Queue::getDefault()
 {
-    Queue& q = getCoreTlsData().get()->oclQueue;
+    Queue& q = getCoreTlsData().oclQueue;
     if( !q.p && haveOpenCL() )
         q.create(Context::getDefault());
     return q;
@@ -4589,6 +4602,17 @@ public:
         return u;
     }
 
+    static bool isOpenCLMapForced()  // force clEnqueueMapBuffer / clEnqueueUnmapMemObject OpenCL API
+    {
+        static bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_BUFFER_FORCE_MAPPING", false);
+        return value;
+    }
+    static bool isOpenCLCopyingForced()  // force clEnqueueReadBuffer[Rect] / clEnqueueWriteBuffer[Rect] OpenCL API
+    {
+        static bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_BUFFER_FORCE_COPYING", false);
+        return value;
+    }
+
     void getBestFlags(const Context& ctx, AccessFlag /*flags*/, UMatUsageFlags usageFlags, int& createFlags, UMatData::MemoryFlag& flags0) const
     {
         const Device& dev = ctx.device(0);
@@ -4596,7 +4620,15 @@ public:
         if ((usageFlags & USAGE_ALLOCATE_HOST_MEMORY) != 0)
             createFlags |= CL_MEM_ALLOC_HOST_PTR;
 
-        if( dev.hostUnifiedMemory() )
+        if (!isOpenCLCopyingForced() &&
+            (isOpenCLMapForced() ||
+                (dev.hostUnifiedMemory()
+#ifndef __APPLE__
+                || dev.isIntel()
+#endif
+                )
+            )
+        )
             flags0 = static_cast<UMatData::MemoryFlag>(0);
         else
             flags0 = UMatData::COPY_ON_MAP;
@@ -4671,6 +4703,9 @@ public:
 
     bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
+#ifndef HAVE_OPENCL
+        return false;
+#else
         if(!u)
             return false;
 
@@ -4685,6 +4720,8 @@ public:
             int createFlags = 0;
             UMatData::MemoryFlag flags0 = static_cast<UMatData::MemoryFlag>(0);
             getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
+
+            bool copyOnMap = (flags0 & UMatData::COPY_ON_MAP) != 0;
 
             cl_context ctx_handle = (cl_context)ctx.ptr();
             int allocatorFlags = 0;
@@ -4745,9 +4782,20 @@ public:
             else
 #endif
             {
+                if( copyOnMap )
+                    accessFlags &= ~ACCESS_FAST;
+
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                if (u->origdata == cv::alignPtr(u->origdata, 4)  // There are OpenCL runtime issues for less aligned data
-                    && !(u->originalUMatData && u->originalUMatData->handle)  // Avoid sharing of host memory between OpenCL buffers
+                if (
+                #ifdef __APPLE__
+                    !copyOnMap &&
+                #endif
+                    CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
+                    // There are OpenCL runtime issues for less aligned data
+                    && (CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR != 0
+                        && u->origdata == cv::alignPtr(u->origdata, (int)CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR))
+                    // Avoid sharing of host memory between OpenCL buffers
+                    && !(u->originalUMatData && u->originalUMatData->handle)
                 )
                 {
                     handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
@@ -4770,13 +4818,14 @@ public:
             u->handle = handle;
             u->prevAllocator = u->currAllocator;
             u->currAllocator = this;
-            u->flags |= tempUMatFlags;
+            u->flags |= tempUMatFlags | flags0;
             u->allocatorFlags_ = allocatorFlags;
         }
         if (!!(accessFlags & ACCESS_WRITE))
             u->markHostCopyObsolete(true);
         opencl_allocator_stats.onAllocate(u->size);
         return true;
+#endif  // HAVE_OPENCL
     }
 
     /*void sync(UMatData* u) const
@@ -4905,7 +4954,7 @@ public:
                                 (CL_MAP_READ | CL_MAP_WRITE),
                                 0, u->size, 0, 0, 0, &retval);
                             CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(handle=%p, sz=%lld) => %p", (void*)u->handle, (long long int)u->size, data).c_str());
-                            CV_Assert(u->origdata == data);
+                            CV_Assert(u->origdata == data && "Details: https://github.com/opencv/opencv/issues/6293");
                             if (u->originalUMatData)
                             {
                                 CV_Assert(u->originalUMatData->data == data);
@@ -5929,7 +5978,12 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
 static void getDevices(std::vector<cl_device_id>& devices, cl_platform_id platform)
 {
     cl_uint numDevices = 0;
-    CV_OCL_DBG_CHECK(clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, 0, NULL, &numDevices));
+    cl_int status = clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, 0, NULL, &numDevices);
+    if (status != CL_DEVICE_NOT_FOUND) // Not an error if platform has no devices
+    {
+        CV_OCL_DBG_CHECK_RESULT(status,
+            cv::format("clGetDeviceIDs(platform, Device::TYPE_ALL, num_entries=0, devices=NULL, numDevices=%p)", &numDevices).c_str());
+    }
 
     if (numDevices == 0)
     {
@@ -6416,16 +6470,19 @@ struct Image2D::Impl
                                                 CL_MEM_OBJECT_IMAGE2D, numFormats,
                                                 NULL, &numFormats);
         CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, NULL)");
-        AutoBuffer<cl_image_format> formats(numFormats);
-        err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
-                                         CL_MEM_OBJECT_IMAGE2D, numFormats,
-                                         formats.data(), NULL);
-        CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
-        for (cl_uint i = 0; i < numFormats; ++i)
+        if (numFormats > 0)
         {
-            if (!memcmp(&formats[i], &format, sizeof(format)))
+            AutoBuffer<cl_image_format> formats(numFormats);
+            err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
+                                             CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                             formats.data(), NULL);
+            CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
+            for (cl_uint i = 0; i < numFormats; ++i)
             {
-                return true;
+                if (!memcmp(&formats[i], &format, sizeof(format)))
+                {
+                    return true;
+                }
             }
         }
         return false;

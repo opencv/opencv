@@ -10,7 +10,7 @@
 
 namespace
 {
-#define CORE_FLUID [] () { return cv::compile_args(cv::gapi::core::fluid::kernels()); }
+#define CORE_FLUID [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::fluid::kernels()}); }
 }  // anonymous namespace
 
 namespace opencv_test

@@ -4,16 +4,24 @@
 ::   - > _winpack_build_sample.cmd cpp\opencv_version.cpp
 :: Requires:
 :: - CMake
-:: - MSVS 2015/2017
+:: - MSVS 2015/2017/2019
 :: (tools are searched on default paths or environment should be pre-configured)
 @echo off
 setlocal
 
-set SCRIPTDIR=%~dp0
-if NOT exist "%SCRIPTDIR%\..\..\build" (
+SET SCRIPT_DIR=%~dp0
+SET "OPENCV_SETUPVARS_SCRIPT=setup_vars_opencv4.cmd"
+SET "PACKAGE_BUILD_DIR=%SCRIPT_DIR%\..\..\build"
+IF NOT EXIST "%PACKAGE_BUILD_DIR%\%OPENCV_SETUPVARS_SCRIPT%" (
+  :: Winpack DLDT
+  SET "PACKAGE_BUILD_DIR=%SCRIPT_DIR%\..\..\..\build"
+)
+IF NOT EXIST "%PACKAGE_BUILD_DIR%\%OPENCV_SETUPVARS_SCRIPT%" (
   set "MSG=OpenCV Winpack installation is required"
   goto die
 )
+:: normalize path
+for %%i in ("%PACKAGE_BUILD_DIR%") do SET "PACKAGE_BUILD_DIR=%%~fi"
 
 if [%1]==[] (
   set "MSG=Sample path is required"
@@ -35,8 +43,8 @@ set "SRC_NAME=%~n1"
 echo SRC_NAME=%SRC_NAME%
 echo ================================================================================
 
-:: Path to FFMPEG binary files
-set "PATH=%PATH%;%SCRIPTDIR%\..\..\build\bin\"
+:: Path to root 'bin' dir
+set "PATH=%PACKAGE_BUILD_DIR%\bin;%PATH%"
 
 :: Detect compiler
 cl /? >NUL 2>NUL <NUL
@@ -102,12 +110,21 @@ if NOT DEFINED VisualStudioVersion (
 if "%VisualStudioVersion%" == "14.0" (
   set "CMAKE_GENERATOR=-G^"Visual Studio 14 Win64^""
   set "BUILD_DIR_SUFFIX=.vc14"
-  set "PATH=%PATH%;%SCRIPTDIR%\..\..\build\x64\vc14\bin\"
+  if EXIST "%PACKAGE_BUILD_DIR%\x64\vc14\bin" (
+    set "PATH=%PACKAGE_BUILD_DIR%\x64\vc14\bin;%PATH%"
+  )
 ) else (
   if "%VisualStudioVersion%" == "15.0" (
     set "CMAKE_GENERATOR=-G^"Visual Studio 15 Win64^""
     set "BUILD_DIR_SUFFIX=.vc15"
     set "PATH=%PATH%;%SCRIPTDIR%\..\..\build\x64\vc15\bin\"
+    if EXIST "%PACKAGE_BUILD_DIR%\x64\vc15\bin" (
+      set "PATH=%PACKAGE_BUILD_DIR%\x64\vc15\bin;%PATH%"
+    ) else (
+      if EXIST "%PACKAGE_BUILD_DIR%\x64\vc14\bin" (
+        set "PATH=%PACKAGE_BUILD_DIR%\x64\vc14\bin;%PATH%"
+      )
+    )
   ) else (
     if "%VisualStudioVersion%" == "16.0" (
       echo.==========================================
@@ -115,7 +132,17 @@ if "%VisualStudioVersion%" == "14.0" (
       echo.==========================================
       set "CMAKE_GENERATOR=-G^"Visual Studio 16 2019^" -A x64"
       set "BUILD_DIR_SUFFIX=.vc16"
-      set "PATH=%PATH%;%SCRIPTDIR%\..\..\build\x64\vc15\bin\"
+      if EXIST "%PACKAGE_BUILD_DIR%\x64\vc16\bin" (
+        set "PATH=%PACKAGE_BUILD_DIR%\x64\vc16\bin;%PATH%"
+      ) else (
+        if EXIST "%PACKAGE_BUILD_DIR%\x64\vc15\bin" (
+          set "PATH=%PACKAGE_BUILD_DIR%\x64\vc15\bin;%PATH%"
+        ) else (
+          if EXIST "%PACKAGE_BUILD_DIR%\x64\vc14\bin" (
+            set "PATH=%PACKAGE_BUILD_DIR%\x64\vc14\bin;%PATH%"
+          )
+        )
+      )
     ) else (
       set "MSG=Unsupported MSVS version. VisualStudioVersion=%VisualStudioVersion%"
       goto die
@@ -128,10 +155,10 @@ call :set_title Create build directory
 if NOT exist "%BUILD_DIR%" ( call :execute md "%BUILD_DIR%" )
 PUSHD "%BUILD_DIR%"
 if NOT exist "%BUILD_DIR%/sample" ( call :execute md "%BUILD_DIR%/sample" )
-call :execute copy /Y "%SCRIPTDIR%/CMakeLists.example.in" "%BUILD_DIR%/sample/CMakeLists.txt"
+call :execute copy /Y "%SCRIPT_DIR%/CMakeLists.example.in" "%BUILD_DIR%/sample/CMakeLists.txt"
 
 call :set_title Configuring via CMake
-call :execute cmake %CMAKE_GENERATOR% "%BUILD_DIR%\sample" -DEXAMPLE_NAME=%SRC_NAME% "-DEXAMPLE_FILE=%SRC_FILENAME%" "-DOpenCV_DIR=%SCRIPTDIR%\..\..\build"
+call :execute cmake %CMAKE_GENERATOR% "%BUILD_DIR%\sample" -DEXAMPLE_NAME=%SRC_NAME% "-DEXAMPLE_FILE=%SRC_FILENAME%"
 if %ERRORLEVEL% NEQ 0 (
   set "MSG=CMake configuration step failed: %BUILD_DIR%"
   goto die

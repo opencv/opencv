@@ -34,10 +34,11 @@ public:
             return fn_createCaptureFile_(filename);
         return Ptr<IVideoCapture>();
     }
-    Ptr<IVideoWriter> createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const CV_OVERRIDE
+    Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps,
+                                   const cv::Size& sz, const VideoWriterParameters& params) const CV_OVERRIDE
     {
         if (fn_createWriter_)
-            return fn_createWriter_(filename, fourcc, fps, sz, isColor);
+            return fn_createWriter_(filename, fourcc, fps, sz, params);
         return Ptr<IVideoWriter>();
     }
 }; // StaticBackend

@@ -58,7 +58,7 @@ INSTANTIATE_TEST_CASE_P(BlurPerfTestFluid, BlurPerfTest,
 INSTANTIATE_TEST_CASE_P(GaussianBlurPerfTestFluid, GaussianBlurPerfTest,
     Combine(Values(ToleranceFilter(1e-3f, 0.01).to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-            Values(3),                                     // TODO: add size=5, when kernel is ready
+            Values(3, 5),
             Values(szVGA, sz720p, sz1080p),
             Values(cv::compile_args(IMGPROC_FLUID))));
 

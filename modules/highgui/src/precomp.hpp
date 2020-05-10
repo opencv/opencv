@@ -109,6 +109,12 @@ double cvGetOpenGlProp_GTK(const char* name);
 
 double cvGetPropVisible_W32(const char* name);
 
+double cvGetPropTopmost_W32(const char* name);
+double cvGetPropTopmost_COCOA(const char* name);
+
+void cvSetPropTopmost_W32(const char* name, const bool topmost);
+void cvSetPropTopmost_COCOA(const char* name, const bool topmost);
+
 //for QT
 #if defined (HAVE_QT)
 CvRect cvGetWindowRect_QT(const char* name);
@@ -146,7 +152,7 @@ inline void convertToShow(const cv::Mat &src, cv::Mat &dst, bool toRGB = true)
         break;
     case CV_32F:
     case CV_64F: // assuming image has values in range [0, 1)
-        cv::convertScaleAbs(src, tmp, 256.);
+        src.convertTo(tmp, CV_8U, 255., 0.);
         break;
     }
     cv::cvtColor(tmp, dst, toRGB ? cv::COLOR_BGR2RGB : cv::COLOR_BGRA2BGR, dst.channels());

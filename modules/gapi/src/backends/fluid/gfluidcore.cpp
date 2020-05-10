@@ -2030,17 +2030,23 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::core::GResize, true)
     }
 
     static void initScratch(const cv::GMatDesc& in,
-                            cv::Size outSz, double /*fx*/, double /*fy*/, int /*interp*/,
+                            cv::Size outSz, double fx, double fy, int /*interp*/,
                             cv::gapi::fluid::Buffer &scratch)
     {
-        CV_Assert(in.depth == CV_8U && in.chan == 3);
+        GAPI_Assert(in.depth == CV_8U && in.chan == 3);
+
+        if (outSz.area() == 0)
+        {
+            outSz.width  = static_cast<int>(round(in.size.width  * fx));
+            outSz.height = static_cast<int>(round(in.size.height * fy));
+        }
 
         cv::Size scratch_size{static_cast<int>(outSz.width * sizeof(ResizeUnit)), 1};
 
         cv::GMatDesc desc;
         desc.chan  = 1;
         desc.depth = CV_8UC1;
-        desc.size  = to_own(scratch_size);
+        desc.size  = scratch_size;
 
         cv::gapi::fluid::Buffer buffer(desc);
         scratch = std::move(buffer);
@@ -2118,6 +2124,40 @@ GAPI_FLUID_KERNEL(GFluidSqrt, cv::gapi::core::GSqrt, false)
     }
 };
 
+GAPI_FLUID_KERNEL(GFluidCopy, cv::gapi::core::GCopy, false)
+{
+    static const int Window = 1;
+
+    static void run(const View &src, Buffer &dst)
+    {
+        const auto *in  = src.InLine<uchar>(0);
+              auto *out = dst.OutLine<uchar>();
+
+        GAPI_DbgAssert(dst.length() == src.length());
+        GAPI_DbgAssert(dst.meta().chan == src.meta().chan);
+        GAPI_DbgAssert(dst.meta().depth == src.meta().depth);
+
+        int width = src.length();
+        int elem_size = CV_ELEM_SIZE(CV_MAKETYPE(src.meta().depth, src.meta().chan));
+
+        int w = 0; // cycle counter
+
+    #if CV_SIMD128
+        for (; w <= width*elem_size-16; w+=16)
+        {
+            v_uint8x16 a;
+            a = v_load(&in[w]);
+            v_store(&out[w], a);
+        }
+    #endif
+
+        for (; w < width*elem_size; w++)
+        {
+            out[w] = in[w];
+        }
+    }
+};
+
 } // namespace fliud
 } // namespace gapi
 } // namespace cv
@@ -2173,6 +2213,7 @@ cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
             ,GFluidInRange
             ,GFluidResize
             ,GFluidSqrt
+            ,GFluidCopy
         #if 0
             ,GFluidMean        -- not fluid
             ,GFluidSum         -- not fluid

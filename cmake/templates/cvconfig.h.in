@@ -81,6 +81,7 @@
 #cmakedefine HAVE_IPP_IW_LL
 
 /* JPEG-2000 codec */
+#cmakedefine HAVE_OPENJPEG
 #cmakedefine HAVE_JASPER
 
 /* IJG JPEG codec */

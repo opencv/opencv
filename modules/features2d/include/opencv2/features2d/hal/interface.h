@@ -2,7 +2,7 @@
 #define OPENCV_FEATURE2D_HAL_INTERFACE_H
 
 #include "opencv2/core/cvdef.h"
-//! @addtogroup featrure2d_hal_interface
+//! @addtogroup features2d_hal_interface
 //! @{
 
 //! @name Fast feature detector types

@@ -51,8 +51,8 @@ static Mat checkMask(InputArray _mask, Size size)
 {
     Mat mask = _mask.getMat();
     Mat gray;
-    if (mask.channels() == 3)
-        cvtColor(mask, gray, COLOR_BGR2GRAY);
+    if (mask.channels() > 1)
+        cvtColor(mask, gray, COLOR_BGRA2GRAY);
     else
     {
         if (mask.empty())
@@ -78,6 +78,7 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     copyMakeBorder(mask_inner, mask, 1, 1, 1, 1, BORDER_ISOLATED | BORDER_CONSTANT, Scalar(0));
 
     Rect roi_s = boundingRect(mask);
+    if (roi_s.empty()) return;
     Rect roi_d(p.x - roi_s.width / 2, p.y - roi_s.height / 2, roi_s.width, roi_s.height);
 
     Mat destinationROI = dest(roi_d).clone();

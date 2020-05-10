@@ -36,7 +36,7 @@ software optimization due to diffent costs of memory access on modern
 computer architectures -- the more data is reused in the first level
 cache, the more efficient pipeline is.
 
-Definitely the aforementioned techinques can be applied manually --
+Definitely the aforementioned techniques can be applied manually --
 but it requires extra skills and knowledge of the target platform and
 the algorithm implementation changes irrevocably -- becoming more
 specific, less flexible, and harder to extend and maintain.

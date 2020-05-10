@@ -80,6 +80,15 @@ type_dict = {
         'suffix': 'Ljava_lang_String_2',
         'j_import': 'java.lang.String'
     },
+    'vector_string': {  # std::vector<std::string>, see "vector_String" in modules/core/misc/java/gen_dict.json
+        'j_type': 'List<String>',
+        'jn_type': 'List<String>',
+        'jni_type': 'jobject',
+        'jni_var': 'std::vector< std::string > %(n)s',
+        'suffix': 'Ljava_util_List',
+        'v_type': 'string',
+        'j_import': 'java.lang.String'
+    },
 }
 
 # Defines a rule to add extra prefixes for names from specific namespaces.
@@ -925,7 +934,10 @@ class JavaWrapperGenerator(object):
                     c_epilogue.append("Mat* _retval_ = new Mat();")
                     c_epilogue.append(fi.ctype+"_to_Mat(_ret_val_vector_, *_retval_);")
                 else:
-                    c_epilogue.append("return " + fi.ctype + "_to_List(env, _ret_val_vector_);")
+                    if ret:
+                        c_epilogue.append("jobject _retval_ = " + fi.ctype + "_to_List(env, _ret_val_vector_);")
+                    else:
+                        c_epilogue.append("return " + fi.ctype + "_to_List(env, _ret_val_vector_);")
             if fi.classname:
                 if not fi.ctype: # c-tor
                     retval = fi.fullClass(isCPP=True) + "* _retval_ = "

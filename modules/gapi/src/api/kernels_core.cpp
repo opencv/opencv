@@ -323,6 +323,11 @@ GMat crop(const GMat& src, const Rect& rect)
     return core::GCrop::on(src, rect);
 }
 
+GMat copy(const GMat& src)
+{
+    return core::GCopy::on(src);
+}
+
 GMat concatHor(const GMat& src1, const GMat& src2)
 {
     return core::GConcatHor::on(src1, src2);
@@ -364,6 +369,18 @@ GMat normalize(const GMat& _src, double a, double b,
                int norm_type, int ddepth)
 {
     return core::GNormalize::on(_src, a, b, norm_type, ddepth);
+}
+
+GMat warpPerspective(const GMat& src, const Mat& M, const Size& dsize, int flags,
+                     int borderMode, const Scalar& borderValue)
+{
+    return core::GWarpPerspective::on(src, M, dsize, flags, borderMode, borderValue);
+}
+
+GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags,
+                int borderMode, const Scalar& borderValue)
+{
+    return core::GWarpAffine::on(src, M, dsize, flags, borderMode, borderValue);
 }
 
 } //namespace gapi

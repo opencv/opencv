@@ -43,6 +43,8 @@
 #include "opencl_kernels_core.hpp"
 #include "umatrix.hpp"
 
+#include <opencv2/core/utils/tls.hpp>
+
 ///////////////////////////////// UMat implementation ///////////////////////////////
 
 namespace cv {

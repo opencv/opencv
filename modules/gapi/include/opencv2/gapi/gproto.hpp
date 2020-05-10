@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gmetaarg.hpp>
 
@@ -35,8 +36,10 @@ namespace cv {
 using GProtoArg = util::variant
     < GMat
     , GMatP
+    , GFrame
     , GScalar
-    , detail::GArrayU // instead of GArray<T>
+    , detail::GArrayU  // instead of GArray<T>
+    , detail::GOpaqueU // instead of GOpaque<T>
     >;
 
 using GProtoArgs = std::vector<GProtoArg>;
@@ -123,6 +126,10 @@ bool GAPI_EXPORTS can_describe(const GMetaArgs& metas, const GRunArgs& args);
 // Used to check if the metadata generated at compile time
 // coincides with output arguments passed to computation in cpu and ocl backends
 bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArgP& argp);
+
+// Validates input arguments
+void GAPI_EXPORTS validate_input_arg(const GRunArg& arg);
+void GAPI_EXPORTS validate_input_args(const GRunArgs& args);
 
 } // namespace cv
 

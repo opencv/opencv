@@ -12,10 +12,13 @@
 #include <unordered_map>
 
 #include <ade/util/checked_cast.hpp>
+#include <ade/util/zip_range.hpp> // zip_range, indexed
 
 #include "api/gbackend_priv.hpp" // GBackend::Priv().compile()
 #include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
+#include "compiler/gmodel.hpp"
+
 #include "logger.hpp"    // GAPI_LOG
 
 namespace cv { namespace gimpl {
@@ -115,8 +118,7 @@ ade::NodeHandle GIsland::producer(const ade::Graph &g,
     }
     // Consistency: A GIsland requested for producer() of slot_nh should
     // always had the appropriate GModel node handle in its m_out_ops vector.
-    GAPI_Assert(false);
-    return ade::NodeHandle();
+    GAPI_Assert(false && "Broken GIslandModel ?.");
 }
 
 std::string GIsland::name() const
@@ -215,6 +217,22 @@ ade::NodeHandle GIslandModel::mkIslandNode(Graph &g, std::shared_ptr<GIsland>&& 
     return nh;
 }
 
+ade::NodeHandle GIslandModel::mkEmitNode(Graph &g, std::size_t in_idx)
+{
+    ade::NodeHandle nh = g.createNode();
+    g.metadata(nh).set(cv::gimpl::NodeKind{cv::gimpl::NodeKind::EMIT});
+    g.metadata(nh).set(cv::gimpl::Emitter{in_idx, {}});
+    return nh;
+}
+
+ade::NodeHandle GIslandModel::mkSinkNode(Graph &g, std::size_t out_idx)
+{
+    ade::NodeHandle nh = g.createNode();
+    g.metadata(nh).set(cv::gimpl::NodeKind{cv::gimpl::NodeKind::SINK});
+    g.metadata(nh).set(cv::gimpl::Sink{out_idx});
+    return nh;
+}
+
 void GIslandModel::syncIslandTags(Graph &g, ade::Graph &orig_g)
 {
     GModel::Graph gm(orig_g);
@@ -241,6 +259,20 @@ void GIslandModel::compileIslands(Graph &g, const ade::Graph &orig_g, const GCom
     {
         if (NodeKind::ISLAND == g.metadata(nh).get<NodeKind>().k)
         {
+            auto nodes_to_data = [&](const ade::NodeHandle& dnh)
+            {
+                GAPI_Assert(g.metadata(dnh).get<NodeKind>().k == NodeKind::SLOT);
+                const auto& orig_data_nh = g.metadata(dnh).get<DataSlot>().original_data_node;
+                const auto& data = gm.metadata(orig_data_nh).get<Data>();
+                return data;
+            };
+
+            std::vector<cv::gimpl::Data> ins_data;
+            ade::util::transform(nh->inNodes(), std::back_inserter(ins_data), nodes_to_data);
+
+            std::vector<cv::gimpl::Data> outs_data;
+            ade::util::transform(nh->outNodes(), std::back_inserter(outs_data), nodes_to_data);
+
             auto island_obj = g.metadata(nh).get<FusedIsland>().object;
             auto island_ops = island_obj->contents();
 
@@ -252,11 +284,13 @@ void GIslandModel::compileIslands(Graph &g, const ade::Graph &orig_g, const GCom
                                });
 
             auto island_exe = island_obj->backend().priv()
-                .compile(orig_g, args, topo_sorted_list);
+                .compile(orig_g, args, topo_sorted_list, ins_data, outs_data);
             GAPI_Assert(nullptr != island_exe);
+
             g.metadata(nh).set(IslandExec{std::move(island_exe)});
         }
     }
+    g.metadata().set(IslandsCompiled{});
 }
 
 ade::NodeHandle GIslandModel::producerOf(const ConstGraph &g, ade::NodeHandle &data_nh)
@@ -283,6 +317,61 @@ ade::NodeHandle GIslandModel::producerOf(const ConstGraph &g, ade::NodeHandle &d
     // No appropriate data slot found - probably, the object has been
     // optimized out during fusion
     return ade::NodeHandle();
+}
+
+void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IOutput &out)
+{
+    // Default implementation: just reuse the existing old-fashioned run
+    // Build a single synchronous execution frame for it.
+    std::vector<InObj>  in_objs;
+    std::vector<OutObj> out_objs;
+    const auto &in_desc  = in.desc();
+    const auto &out_desc = out.desc();
+    const auto  in_msg   = in.get();
+    if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
+    {
+        out.post(cv::gimpl::EndOfStream{});
+        return;
+    }
+    GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
+    const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
+    in_objs.reserve(in_desc.size());
+    out_objs.reserve(out_desc.size());
+    for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
+                                   ade::util::toRange(in_vector)))
+    {
+        // FIXME: Not every Island expects a cv::Mat instead of own::Mat on input
+        // This kludge should go as a result of de-ownification
+        const cv::GRunArg& in_data_orig = std::get<1>(it);
+        cv::GRunArg in_data;
+#if !defined(GAPI_STANDALONE)
+        switch (in_data_orig.index())
+        {
+        case cv::GRunArg::index_of<cv::Mat>():
+            in_data = cv::GRunArg{cv::util::get<cv::Mat>(in_data_orig)};
+            break;
+        case cv::GRunArg::index_of<cv::Scalar>():
+            in_data = cv::GRunArg{(cv::util::get<cv::Scalar>(in_data_orig))};
+            break;
+        default:
+            in_data = in_data_orig;
+            break;
+        }
+#else
+        in_data = in_data_orig;
+#endif // GAPI_STANDALONE
+        in_objs.emplace_back(std::get<0>(it), std::move(in_data));
+    }
+    for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))
+    {
+        out_objs.emplace_back(ade::util::value(it),
+                              out.get(ade::util::checked_cast<int>(ade::util::index(it))));
+    }
+    run(std::move(in_objs), std::move(out_objs));
+    for (auto &&it: out_objs)
+    {
+        out.post(std::move(it.second)); // report output objects as "ready" to the executor
+    }
 }
 
 } // namespace cv

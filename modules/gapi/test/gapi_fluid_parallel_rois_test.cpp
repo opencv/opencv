@@ -22,7 +22,7 @@ namespace {
     cv::GFluidParallelOutputRois asGFluidParallelOutputRois(const std::vector<cv::Rect>& rois){
         cv::GFluidParallelOutputRois parallel_rois;
         for (auto const& roi : rois) {
-            parallel_rois.parallel_rois.emplace_back(GFluidOutputRois{{to_own(roi)}});
+            parallel_rois.parallel_rois.emplace_back(GFluidOutputRois{{roi}});
         }
         return parallel_rois;
     }
@@ -156,7 +156,7 @@ TEST_P(TiledComputation, Test)
     cp->run_with_gapi(in_mat, comp_args, out_mat_gapi);
     cp->run_with_ocv (in_mat, rois,      out_mat_ocv);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv))
+    EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF))
             << "in_mat : \n"      << in_mat << std::endl
             << "diff matrix :\n " << (out_mat_gapi != out_mat_ocv) << std::endl
             << "out_mat_gapi: \n" << out_mat_gapi << std::endl

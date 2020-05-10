@@ -63,7 +63,31 @@ int normHamming(const uchar* a, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-#if CV_ENABLE_UNROLLED
+#if CV_SIMD
+    v_uint64 t = vx_setzero_u64();
+    if ( cellSize == 2)
+    {
+        v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x55));
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        {
+            v_uint16 a0 = v_reinterpret_as_u16(vx_load(a + i));
+            t += v_popcount(v_reinterpret_as_u64((a0 | (a0 >> 1)) & mask));
+        }
+    }
+    else    // cellSize == 4
+    {
+        v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x11));
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        {
+            v_uint16 a0 = v_reinterpret_as_u16(vx_load(a + i));
+            v_uint16 a1 = a0 | (a0 >> 2);
+            t += v_popcount(v_reinterpret_as_u64((a1 | (a1 >> 1)) & mask));
+
+        }
+    }
+    result += (int)v_reduce_sum(t);
+    vx_cleanup();
+#elif CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i]] + tab[a[i+1]] + tab[a[i+2]] + tab[a[i+3]];
 #endif
@@ -85,7 +109,30 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-#if CV_ENABLE_UNROLLED
+#if CV_SIMD
+    v_uint64 t = vx_setzero_u64();
+    if ( cellSize == 2)
+    {
+        v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x55));
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        {
+            v_uint16 ab0 = v_reinterpret_as_u16(vx_load(a + i) ^ vx_load(b + i));
+            t += v_popcount(v_reinterpret_as_u64((ab0 | (ab0 >> 1)) & mask));
+        }
+    }
+    else    // cellSize == 4
+    {
+        v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x11));
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        {
+            v_uint16 ab0 = v_reinterpret_as_u16(vx_load(a + i) ^ vx_load(b + i));
+            v_uint16 ab1 = ab0 | (ab0 >> 2);
+            t += v_popcount(v_reinterpret_as_u64((ab1 | (ab1 >> 1)) & mask));
+        }
+    }
+    result += (int)v_reduce_sum(t);
+    vx_cleanup();
+#elif CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
                 tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
@@ -99,13 +146,20 @@ float normL2Sqr_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
 #if CV_SIMD
-    v_float32 v_d = vx_setzero_f32();
-    for (; j <= n - v_float32::nlanes; j += v_float32::nlanes)
+    v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
+    v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
+    for (; j <= n - 4 * v_float32::nlanes; j += 4 * v_float32::nlanes)
     {
-        v_float32 t = vx_load(a + j) - vx_load(b + j);
-        v_d = v_muladd(t, t, v_d);
+        v_float32 t0 = vx_load(a + j) - vx_load(b + j);
+        v_float32 t1 = vx_load(a + j + v_float32::nlanes) - vx_load(b + j + v_float32::nlanes);
+        v_float32 t2 = vx_load(a + j + 2 * v_float32::nlanes) - vx_load(b + j + 2 * v_float32::nlanes);
+        v_float32 t3 = vx_load(a + j + 3 * v_float32::nlanes) - vx_load(b + j + 3 * v_float32::nlanes);
+        v_d0 = v_muladd(t0, t0, v_d0);
+        v_d1 = v_muladd(t1, t1, v_d1);
+        v_d2 = v_muladd(t2, t2, v_d2);
+        v_d3 = v_muladd(t3, t3, v_d3);
     }
-    d = v_reduce_sum(v_d);
+    d = v_reduce_sum(v_d0 + v_d1 + v_d2 + v_d3);
 #endif
     for( ; j < n; j++ )
     {
@@ -120,10 +174,16 @@ float normL1_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
 #if CV_SIMD
-    v_float32 v_d = vx_setzero_f32();
-    for (; j <= n - v_float32::nlanes; j += v_float32::nlanes)
-        v_d += v_absdiff(vx_load(a + j), vx_load(b + j));
-    d = v_reduce_sum(v_d);
+    v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
+    v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
+    for (; j <= n - 4 * v_float32::nlanes; j += 4 * v_float32::nlanes)
+    {
+        v_d0 += v_absdiff(vx_load(a + j), vx_load(b + j));
+        v_d1 += v_absdiff(vx_load(a + j + v_float32::nlanes), vx_load(b + j + v_float32::nlanes));
+        v_d2 += v_absdiff(vx_load(a + j + 2 * v_float32::nlanes), vx_load(b + j + 2 * v_float32::nlanes));
+        v_d3 += v_absdiff(vx_load(a + j + 3 * v_float32::nlanes), vx_load(b + j + 3 * v_float32::nlanes));
+    }
+    d = v_reduce_sum(v_d0 + v_d1 + v_d2 + v_d3);
 #endif
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
@@ -134,8 +194,11 @@ int normL1_(const uchar* a, const uchar* b, int n)
 {
     int j = 0, d = 0;
 #if CV_SIMD
-    for (; j <= n - v_uint8::nlanes; j += v_uint8::nlanes)
-        d += v_reduce_sad(vx_load(a + j), vx_load(b + j));
+    for (; j <= n - 4 * v_uint8::nlanes; j += 4 * v_uint8::nlanes)
+        d += v_reduce_sad(vx_load(a + j), vx_load(b + j)) +
+             v_reduce_sad(vx_load(a + j + v_uint8::nlanes), vx_load(b + j + v_uint8::nlanes)) +
+             v_reduce_sad(vx_load(a + j + 2 * v_uint8::nlanes), vx_load(b + j + 2 * v_uint8::nlanes)) +
+             v_reduce_sad(vx_load(a + j + 3 * v_uint8::nlanes), vx_load(b + j + 3 * v_uint8::nlanes));
 #endif
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
@@ -369,6 +432,9 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     int type = _src.type(), depth = CV_MAT_DEPTH(type);
     bool doubleSupport = d.doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
+
+    if (depth >= CV_16F)
+        return false;  // TODO: support FP16
 
     if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
          (!doubleSupport && depth == CV_64F))
@@ -647,67 +713,78 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     result;
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
-    int j, total = (int)it.size, blockSize = total;
-    bool blockSum = depth == CV_16F || (normType == NORM_L1 && depth <= CV_16S) ||
-            ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S);
-    int isum = 0;
-    int *ibuf = &result.i;
-    AutoBuffer<float> fltbuf_;
-    float* fltbuf = 0;
-    size_t esz = 0;
+    CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
 
-    if( blockSum )
+    if ((normType == NORM_L1 && depth <= CV_16S) ||
+        ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S))
     {
-        esz = src.elemSize();
+        // special case to handle "integer" overflow in accumulator
+        const size_t esz = src.elemSize();
+        const int total = (int)it.size;
+        const int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
+        const int blockSize = std::min(total, intSumBlockSize);
+        int isum = 0;
+        int count = 0;
 
-        if( depth == CV_16F )
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            blockSize = std::min(blockSize, 1024);
-            fltbuf_.allocate(blockSize);
-            fltbuf = fltbuf_.data();
-        }
-        else
-        {
-            int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
-            blockSize = std::min(blockSize, intSumBlockSize);
-            ibuf = &isum;
+            for (int j = 0; j < total; j += blockSize)
+            {
+                int bsz = std::min(total - j, blockSize);
+                func(ptrs[0], ptrs[1], (uchar*)&isum, bsz, cn);
+                count += bsz;
+                if (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total))
+                {
+                    result.d += isum;
+                    isum = 0;
+                    count = 0;
+                }
+                ptrs[0] += bsz*esz;
+                if (ptrs[1])
+                    ptrs[1] += bsz;
+            }
         }
     }
-
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    else if (depth == CV_16F)
     {
-        for( j = 0; j < total; j += blockSize )
+        const size_t esz = src.elemSize();
+        const int total = (int)it.size;
+        const int blockSize = std::min(total, divUp(1024, cn));
+        AutoBuffer<float, 1026/*divUp(1024,3)*3*/> fltbuf(blockSize * cn);
+        float* data0 = fltbuf.data();
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            int bsz = std::min(total - j, blockSize);
-            const uchar* data = ptrs[0];
-            if( depth == CV_16F )
+            for (int j = 0; j < total; j += blockSize)
             {
-                hal::cvt16f32f((const float16_t*)ptrs[0], fltbuf, bsz);
-                data = (const uchar*)fltbuf;
+                int bsz = std::min(total - j, blockSize);
+                hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
+                func((uchar*)data0, ptrs[1], (uchar*)&result.d, bsz, cn);
+                ptrs[0] += bsz*esz;
+                if (ptrs[1])
+                    ptrs[1] += bsz;
             }
-            func( data, ptrs[1], (uchar*)ibuf, bsz, cn );
-            if( blockSum && depth != CV_16F )
-            {
-                result.d += isum;
-                isum = 0;
-            }
-            ptrs[0] += bsz*esz;
-            if( ptrs[1] )
-                ptrs[1] += bsz;
+        }
+    }
+    else
+    {
+        // generic implementation
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            func(ptrs[0], ptrs[1], (uchar*)&result, (int)it.size, cn);
         }
     }
 
     if( normType == NORM_INF )
     {
-        if( depth == CV_64F )
-            ;
-        else if( depth == CV_32F )
-            result.d = result.f;
+        if(depth == CV_64F || depth == CV_16F)
+            return result.d;
+        else if (depth == CV_32F)
+            return result.f;
         else
-            result.d = result.i;
+            return result.i;
     }
     else if( normType == NORM_L2 )
-        result.d = std::sqrt(result.d);
+        return std::sqrt(result.d);
 
     return result.d;
 }
@@ -1015,7 +1092,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
+    CV_CheckTypeEQ(_src1.type(), _src2.type(), "Input type mismatch");
+    CV_Assert(_src1.sameSize(_src2));
 
 #if defined HAVE_OPENCL || defined HAVE_IPP
     double _result = 0;
@@ -1122,70 +1200,82 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     result;
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
-    int j, total = (int)it.size, blockSize = total;
-    bool blockSum = depth == CV_16F || (normType == NORM_L1 && depth <= CV_16S) ||
-            ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S);
-    unsigned isum = 0;
-    unsigned *ibuf = &result.u;
-    AutoBuffer<float> fltbuf_;
-    float* fltbuf = 0;
-    size_t esz = 0;
+    CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
 
-    if( blockSum )
+    if ((normType == NORM_L1 && depth <= CV_16S) ||
+        ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S))
     {
-        esz = src1.elemSize();
+        // special case to handle "integer" overflow in accumulator
+        const size_t esz = src1.elemSize();
+        const int total = (int)it.size;
+        const int intSumBlockSize = normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15);
+        const int blockSize = std::min(total, intSumBlockSize);
+        int isum = 0;
+        int count = 0;
 
-        if( depth == CV_16F )
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            blockSize = std::min(blockSize, 1024);
-            fltbuf_.allocate(blockSize*2);
-            fltbuf = fltbuf_.data();
-        }
-        else
-        {
-            int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
-            blockSize = std::min(blockSize, intSumBlockSize);
-            ibuf = &isum;
+            for (int j = 0; j < total; j += blockSize)
+            {
+                int bsz = std::min(total - j, blockSize);
+                func(ptrs[0], ptrs[1], ptrs[2], (uchar*)&isum, bsz, cn);
+                count += bsz;
+                if (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total))
+                {
+                    result.d += isum;
+                    isum = 0;
+                    count = 0;
+                }
+                ptrs[0] += bsz*esz;
+                ptrs[1] += bsz*esz;
+                if (ptrs[2])
+                    ptrs[2] += bsz;
+            }
         }
     }
-
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    else if (depth == CV_16F)
     {
-        for( j = 0; j < total; j += blockSize )
+        const size_t esz = src1.elemSize();
+        const int total = (int)it.size;
+        const int blockSize = std::min(total, divUp(512, cn));
+        AutoBuffer<float, 1026/*divUp(512,3)*3*2*/> fltbuf(blockSize * cn * 2);
+        float* data0 = fltbuf.data();
+        float* data1 = fltbuf.data() + blockSize * cn;
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
-            int bsz = std::min(total - j, blockSize);
-            const uchar *data0 = ptrs[0], *data1 = ptrs[1];
-            if( depth == CV_16F )
+            for (int j = 0; j < total; j += blockSize)
             {
-                hal::cvt16f32f((const float16_t*)ptrs[0], fltbuf, bsz);
-                hal::cvt16f32f((const float16_t*)ptrs[1], fltbuf + bsz, bsz);
-                data0 = (const uchar*)fltbuf;
-                data1 = (const uchar*)(fltbuf + bsz);
+                int bsz = std::min(total - j, blockSize);
+                hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
+                hal::cvt16f32f((const float16_t*)ptrs[1], data1, bsz * cn);
+                func((uchar*)data0, (uchar*)data1, ptrs[2], (uchar*)&result.d, bsz, cn);
+                ptrs[0] += bsz*esz;
+                ptrs[1] += bsz*esz;
+                if (ptrs[2])
+                    ptrs[2] += bsz;
             }
-            func( data0, data1, ptrs[2], (uchar*)ibuf, bsz, cn );
-            if( blockSum && depth != CV_16F )
-            {
-                result.d += isum;
-                isum = 0;
-            }
-            ptrs[0] += bsz*esz;
-            ptrs[1] += bsz*esz;
-            if( ptrs[2] )
-                ptrs[2] += bsz;
+        }
+    }
+    else
+    {
+        // generic implementation
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            func(ptrs[0], ptrs[1], ptrs[2], (uchar*)&result, (int)it.size, cn);
         }
     }
 
     if( normType == NORM_INF )
     {
-        if( depth == CV_64F )
-            ;
-        else if( depth == CV_32F )
-            result.d = result.f;
+        if (depth == CV_64F || depth == CV_16F)
+            return result.d;
+        else if (depth == CV_32F)
+            return result.f;
         else
-            result.d = result.u;
+            return result.u;
     }
     else if( normType == NORM_L2 )
-        result.d = std::sqrt(result.d);
+        return std::sqrt(result.d);
 
     return result.d;
 }

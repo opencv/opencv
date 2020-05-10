@@ -45,10 +45,14 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
+#include "opencv2/core/utils/tls.hpp"
+
 namespace cv
 {
 
 ////////////////// Helper functions //////////////////////
+
+#define CV_CLAMP_INT(v, vmin, vmax) (v < vmin ? vmin : (vmax < v ? vmax : v))
 
 static const size_t OUT_OF_RANGE = (size_t)1 << (sizeof(size_t)*8 - 2);
 
@@ -71,15 +75,18 @@ calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
             int sz = !issparse ? hist.size[i] : shist.size(i);
             size_t step = !issparse ? hist.step[i] : 1;
 
+            double v_lo = ranges ? ranges[i][0] : 0;
+            double v_hi = ranges ? ranges[i][1] : 256;
+
             for( j = low; j < high; j++ )
             {
                 int idx = cvFloor(j*a + b);
-                size_t written_idx;
-                if( (unsigned)idx < (unsigned)sz )
+                size_t written_idx = OUT_OF_RANGE;
+                if (j >= v_lo && j < v_hi)
+                {
+                    idx = CV_CLAMP_INT(idx, 0, sz - 1);
                     written_idx = idx*step;
-                else
-                    written_idx = OUT_OF_RANGE;
-
+                }
                 tab[i*(high - low) + j - low] = written_idx;
             }
         }
@@ -176,7 +183,7 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
         imsize.height = 1;
     }
 
-    if( !ranges )
+    if( !ranges ) // implicit uniform ranges for 8U
     {
         CV_Assert( depth == CV_8U );
 
@@ -197,6 +204,10 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
             double t = histSize[i]/(high - low);
             uniranges[i*2] = t;
             uniranges[i*2+1] = -t*low;
+#if 0  // This should be true by math, but it is not accurate numerically
+            CV_Assert(cvFloor(low * uniranges[i*2] + uniranges[i*2+1]) == 0);
+            CV_Assert((high * uniranges[i*2] + uniranges[i*2+1]) < histSize[i]);
+#endif
         }
     }
     else
@@ -243,22 +254,33 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             int sz = size[0], d0 = deltas[0], step0 = deltas[1];
             const T* p0 = (const T*)ptrs[0];
 
+            double v0_lo = _ranges[0][0];
+            double v0_hi = _ranges[0][1];
+
             for( ; imsize.height--; p0 += step0, mask += mstep )
             {
                 if( !mask )
                     for( x = 0; x < imsize.width; x++, p0 += d0 )
                     {
-                        int idx = cvFloor(*p0*a + b);
-                        if( (unsigned)idx < (unsigned)sz )
-                            ((int*)H)[idx]++;
+                        double v0 = (double)*p0;
+                        int idx = cvFloor(v0*a + b);
+                        if (v0 < v0_lo || v0 >= v0_hi)
+                            continue;
+                        idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                        CV_DbgAssert((unsigned)idx < (unsigned)sz);
+                        ((int*)H)[idx]++;
                     }
                 else
                     for( x = 0; x < imsize.width; x++, p0 += d0 )
                         if( mask[x] )
                         {
-                            int idx = cvFloor(*p0*a + b);
-                            if( (unsigned)idx < (unsigned)sz )
-                                ((int*)H)[idx]++;
+                            double v0 = (double)*p0;
+                            int idx = cvFloor(v0*a + b);
+                            if (v0 < v0_lo || v0 >= v0_hi)
+                                continue;
+                            idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                            CV_DbgAssert((unsigned)idx < (unsigned)sz);
+                            ((int*)H)[idx]++;
                         }
             }
             return;
@@ -273,24 +295,45 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             const T* p0 = (const T*)ptrs[0];
             const T* p1 = (const T*)ptrs[1];
 
+            double v0_lo = _ranges[0][0];
+            double v0_hi = _ranges[0][1];
+            double v1_lo = _ranges[1][0];
+            double v1_hi = _ranges[1][1];
+
             for( ; imsize.height--; p0 += step0, p1 += step1, mask += mstep )
             {
                 if( !mask )
                     for( x = 0; x < imsize.width; x++, p0 += d0, p1 += d1 )
                     {
-                        int idx0 = cvFloor(*p0*a0 + b0);
-                        int idx1 = cvFloor(*p1*a1 + b1);
-                        if( (unsigned)idx0 < (unsigned)sz0 && (unsigned)idx1 < (unsigned)sz1 )
-                            ((int*)(H + hstep0*idx0))[idx1]++;
+                        double v0 = (double)*p0;
+                        double v1 = (double)*p1;
+                        int idx0 = cvFloor(v0*a0 + b0);
+                        int idx1 = cvFloor(v1*a1 + b1);
+                        if (v0 < v0_lo || v0 >= v0_hi)
+                            continue;
+                        if (v1 < v1_lo || v1 >= v1_hi)
+                            continue;
+                        idx0 = CV_CLAMP_INT(idx0, 0, sz0 - 1);
+                        idx1 = CV_CLAMP_INT(idx1, 0, sz1 - 1);
+                        CV_DbgAssert((unsigned)idx0 < (unsigned)sz0 && (unsigned)idx1 < (unsigned)sz1);
+                        ((int*)(H + hstep0*idx0))[idx1]++;
                     }
                 else
                     for( x = 0; x < imsize.width; x++, p0 += d0, p1 += d1 )
                         if( mask[x] )
                         {
-                            int idx0 = cvFloor(*p0*a0 + b0);
-                            int idx1 = cvFloor(*p1*a1 + b1);
-                            if( (unsigned)idx0 < (unsigned)sz0 && (unsigned)idx1 < (unsigned)sz1 )
-                                ((int*)(H + hstep0*idx0))[idx1]++;
+                            double v0 = (double)*p0;
+                            double v1 = (double)*p1;
+                            int idx0 = cvFloor(v0*a0 + b0);
+                            int idx1 = cvFloor(v1*a1 + b1);
+                            if (v0 < v0_lo || v0 >= v0_hi)
+                                continue;
+                            if (v1 < v1_lo || v1 >= v1_hi)
+                                continue;
+                            idx0 = CV_CLAMP_INT(idx0, 0, sz0 - 1);
+                            idx1 = CV_CLAMP_INT(idx1, 0, sz1 - 1);
+                            CV_DbgAssert((unsigned)idx0 < (unsigned)sz0 && (unsigned)idx1 < (unsigned)sz1);
+                            ((int*)(H + hstep0*idx0))[idx1]++;
                         }
             }
             return;
@@ -309,30 +352,63 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             const T* p1 = (const T*)ptrs[1];
             const T* p2 = (const T*)ptrs[2];
 
+            double v0_lo = _ranges[0][0];
+            double v0_hi = _ranges[0][1];
+            double v1_lo = _ranges[1][0];
+            double v1_hi = _ranges[1][1];
+            double v2_lo = _ranges[2][0];
+            double v2_hi = _ranges[2][1];
+
             for( ; imsize.height--; p0 += step0, p1 += step1, p2 += step2, mask += mstep )
             {
                 if( !mask )
                     for( x = 0; x < imsize.width; x++, p0 += d0, p1 += d1, p2 += d2 )
                     {
-                        int idx0 = cvFloor(*p0*a0 + b0);
-                        int idx1 = cvFloor(*p1*a1 + b1);
-                        int idx2 = cvFloor(*p2*a2 + b2);
-                        if( (unsigned)idx0 < (unsigned)sz0 &&
+                        double v0 = (double)*p0;
+                        double v1 = (double)*p1;
+                        double v2 = (double)*p2;
+                        int idx0 = cvFloor(v0*a0 + b0);
+                        int idx1 = cvFloor(v1*a1 + b1);
+                        int idx2 = cvFloor(v2*a2 + b2);
+                        if (v0 < v0_lo || v0 >= v0_hi)
+                            continue;
+                        if (v1 < v1_lo || v1 >= v1_hi)
+                            continue;
+                        if (v2 < v2_lo || v2 >= v2_hi)
+                            continue;
+                        idx0 = CV_CLAMP_INT(idx0, 0, sz0 - 1);
+                        idx1 = CV_CLAMP_INT(idx1, 0, sz1 - 1);
+                        idx2 = CV_CLAMP_INT(idx2, 0, sz2 - 1);
+                        CV_DbgAssert(
+                            (unsigned)idx0 < (unsigned)sz0 &&
                             (unsigned)idx1 < (unsigned)sz1 &&
-                            (unsigned)idx2 < (unsigned)sz2 )
-                            ((int*)(H + hstep0*idx0 + hstep1*idx1))[idx2]++;
+                            (unsigned)idx2 < (unsigned)sz2);
+                        ((int*)(H + hstep0*idx0 + hstep1*idx1))[idx2]++;
                     }
                 else
                     for( x = 0; x < imsize.width; x++, p0 += d0, p1 += d1, p2 += d2 )
                         if( mask[x] )
                         {
-                            int idx0 = cvFloor(*p0*a0 + b0);
-                            int idx1 = cvFloor(*p1*a1 + b1);
-                            int idx2 = cvFloor(*p2*a2 + b2);
-                            if( (unsigned)idx0 < (unsigned)sz0 &&
-                               (unsigned)idx1 < (unsigned)sz1 &&
-                               (unsigned)idx2 < (unsigned)sz2 )
-                                ((int*)(H + hstep0*idx0 + hstep1*idx1))[idx2]++;
+                            double v0 = (double)*p0;
+                            double v1 = (double)*p1;
+                            double v2 = (double)*p2;
+                            int idx0 = cvFloor(v0*a0 + b0);
+                            int idx1 = cvFloor(v1*a1 + b1);
+                            int idx2 = cvFloor(v2*a2 + b2);
+                            if (v0 < v0_lo || v0 >= v0_hi)
+                                continue;
+                            if (v1 < v1_lo || v1 >= v1_hi)
+                                continue;
+                            if (v2 < v2_lo || v2 >= v2_hi)
+                                continue;
+                            idx0 = CV_CLAMP_INT(idx0, 0, sz0 - 1);
+                            idx1 = CV_CLAMP_INT(idx1, 0, sz1 - 1);
+                            idx2 = CV_CLAMP_INT(idx2, 0, sz2 - 1);
+                            CV_DbgAssert(
+                                (unsigned)idx0 < (unsigned)sz0 &&
+                                (unsigned)idx1 < (unsigned)sz1 &&
+                                (unsigned)idx2 < (unsigned)sz2);
+                            ((int*)(H + hstep0*idx0 + hstep1*idx1))[idx2]++;
                         }
             }
         }
@@ -346,9 +422,14 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         uchar* Hptr = H;
                         for( i = 0; i < dims; i++ )
                         {
-                            int idx = cvFloor(*ptrs[i]*uniranges[i*2] + uniranges[i*2+1]);
-                            if( (unsigned)idx >= (unsigned)size[i] )
+                            double v_lo = _ranges[i][0];
+                            double v_hi = _ranges[i][1];
+                            double v = *ptrs[i];
+                            if (v < v_lo || v >= v_hi)
                                 break;
+                            int idx = cvFloor(v*uniranges[i*2] + uniranges[i*2+1]);
+                            idx = CV_CLAMP_INT(idx, 0, size[i] - 1);
+                            CV_DbgAssert((unsigned)idx < (unsigned)size[i]);
                             ptrs[i] += deltas[i*2];
                             Hptr += idx*hstep[i];
                         }
@@ -367,9 +448,14 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         if( mask[x] )
                             for( ; i < dims; i++ )
                             {
-                                int idx = cvFloor(*ptrs[i]*uniranges[i*2] + uniranges[i*2+1]);
-                                if( (unsigned)idx >= (unsigned)size[i] )
+                                double v_lo = _ranges[i][0];
+                                double v_hi = _ranges[i][1];
+                                double v = *ptrs[i];
+                                if (v < v_lo || v >= v_hi)
                                     break;
+                                int idx = cvFloor(v*uniranges[i*2] + uniranges[i*2+1]);
+                                idx = CV_CLAMP_INT(idx, 0, size[i] - 1);
+                                CV_DbgAssert((unsigned)idx < (unsigned)size[i]);
                                 ptrs[i] += deltas[i*2];
                                 Hptr += idx*hstep[i];
                             }
@@ -865,6 +951,8 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(images && nimages > 0);
+
     CV_OVX_RUN(
         images && histSize &&
         nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && _mask.getMat().empty() &&
@@ -1174,6 +1262,8 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
                const float** ranges, bool uniform, bool accumulate )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(images && nimages > 0);
 
     Mat mask = _mask.getMat();
     calcHist( images, nimages, channels, mask, hist, dims, histSize,
@@ -1522,6 +1612,8 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(images && nimages > 0);
+
     Mat hist = _hist.getMat();
     std::vector<uchar*> ptrs;
     std::vector<int> deltas;
@@ -1690,6 +1782,8 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           const float** ranges, double scale, bool uniform )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(images && nimages > 0);
 
     std::vector<uchar*> ptrs;
     std::vector<int> deltas;

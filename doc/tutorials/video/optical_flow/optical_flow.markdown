@@ -109,6 +109,15 @@ below:
     @include samples/python/tutorial_code/video/optical_flow/optical_flow.py
 @end_toggle
 
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java
+@end_toggle
+
 (This code doesn't check how correct are the next keypoints. So even if any feature point disappears
 in image, there is a chance that optical flow finds the next point which may look close to it. So
 actually for a robust tracking, corner points should be detected in particular intervals. OpenCV
@@ -148,6 +157,15 @@ corresponds to Value plane. See the code below:
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py
+@end_toggle
+
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java
 @end_toggle
 
 

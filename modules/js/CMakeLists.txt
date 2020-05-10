@@ -82,7 +82,17 @@ add_definitions("-std=c++11")
 
 link_libraries(${OPENCV_MODULE_${the_module}_DEPS})
 
-ocv_add_executable(${the_module} ${bindings_cpp})
+OCV_OPTION(BUILD_WASM_INTRIN_TESTS "Build WASM intrin tests" OFF )
+if(BUILD_WASM_INTRIN_TESTS)
+  add_definitions(-DTEST_WASM_INTRIN)
+  ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../ts/include")
+  ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../imgcodecs/include")
+  ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../videoio/include")
+  ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../highgui/include")
+  ocv_add_executable(${the_module} ${bindings_cpp} "${CMAKE_CURRENT_SOURCE_DIR}/../ts/src/ts_gtest.cpp")
+else()
+  ocv_add_executable(${the_module} ${bindings_cpp})
+endif()
 
 set(COMPILE_FLAGS "")
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -91,7 +101,7 @@ endif()
 if(COMPILE_FLAGS)
     set_target_properties(${the_module} PROPERTIES COMPILE_FLAGS ${COMPILE_FLAGS})
 endif()
-set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} --memory-init-file 0 -s TOTAL_MEMORY=134217728 -s ALLOW_MEMORY_GROWTH=1")
+set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} --memory-init-file 0 -s TOTAL_MEMORY=128MB -s WASM_MEM_MAX=1GB -s ALLOW_MEMORY_GROWTH=1")
 set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s MODULARIZE=1 -s SINGLE_FILE=1")
 set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s EXPORT_NAME=\"'cv'\" -s DEMANGLE_SUPPORT=1")
 set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s FORCE_FILESYSTEM=1 --use-preload-plugins --bind --post-js ${JS_HELPER} ${COMPILE_FLAGS}")
@@ -147,3 +157,26 @@ list(APPEND opencv_test_js_file_deps "${test_data_path}" "${opencv_test_js_bin_d
 
 add_custom_target(${PROJECT_NAME}_test ALL
                   DEPENDS ${OCV_JS_PATH} ${opencv_test_js_file_deps})
+
+# perf
+set(opencv_perf_js_bin_dir "${EXECUTABLE_OUTPUT_PATH}/perf")
+set(perf_dir ${CMAKE_CURRENT_SOURCE_DIR}/perf)
+
+set(opencv_perf_js_file_deps "")
+
+# make sure the build directory exists
+file(MAKE_DIRECTORY "${opencv_perf_js_bin_dir}")
+
+# gather and copy specific files for js perf
+file(GLOB_RECURSE perf_files RELATIVE "${perf_dir}" "${perf_dir}/*")
+foreach(f ${perf_files})
+  add_custom_command(OUTPUT "${opencv_perf_js_bin_dir}/${f}"
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${perf_dir}/${f}" "${opencv_perf_js_bin_dir}/${f}"
+                     DEPENDS "${perf_dir}/${f}"
+                     COMMENT "Copying ${f}"
+                    )
+  list(APPEND opencv_perf_js_file_deps "${perf_dir}/${f}" "${opencv_perf_js_bin_dir}/${f}")
+endforeach()
+
+add_custom_target(${PROJECT_NAME}_perf ALL
+                  DEPENDS ${OCV_JS_PATH} ${opencv_perf_js_file_deps})

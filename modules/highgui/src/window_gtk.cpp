@@ -634,10 +634,13 @@ CV_IMPL int cvStartWindowThread(){
     cvInitSystem(0,NULL);
     if (!thread_started)
     {
-       if (!g_thread_supported ()) {
+#if !GLIB_CHECK_VERSION(2, 32, 0)  // https://github.com/GNOME/glib/blame/b4d58a7105bb9d75907233968bb534b38f9a6e43/glib/deprecated/gthread.h#L274
+       if (!g_thread_supported ())
+       {
            /* the GThread system wasn't inited, so init it */
            g_thread_init(NULL);
        }
+#endif
 
        (void)getWindowMutex();  // force mutex initialization
 

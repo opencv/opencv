@@ -671,7 +671,8 @@ TEST(Core_Check, testMatType_fail_2)
         EXPECT_STREQ(e.err.c_str(),
 "> Unsupported src:\n"
 ">     'src_type == CV_32FC1 || src_type == CV_32FC3'\n"
-"> where\n>     'src_type' is 0 (CV_8UC1)\n"
+"> where\n"
+">     'src_type' is 0 (CV_8UC1)\n"
 );
     }
     catch (const std::exception& e)
@@ -737,7 +738,39 @@ TEST(Core_Check, testMatDepth_fail_2)
         EXPECT_STREQ(e.err.c_str(),
 "> Unsupported src:\n"
 ">     'src_depth == CV_32F || src_depth == CV_64F'\n"
-"> where\n>     'src_depth' is 0 (CV_8U)\n"
+"> where\n"
+">     'src_depth' is 0 (CV_8U)\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+
+
+void test_check_Size_1(const Size& srcSz)
+{
+    CV_Check(srcSz, srcSz == Size(4, 3), "Unsupported src size");
+}
+TEST(Core_Check, testSize_1)
+{
+    try
+    {
+        test_check_Size_1(Size(2, 1));
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Unsupported src size:\n"
+">     'srcSz == Size(4, 3)'\n"
+"> where\n"
+">     'srcSz' is [2 x 1]\n"
 );
     }
     catch (const std::exception& e)

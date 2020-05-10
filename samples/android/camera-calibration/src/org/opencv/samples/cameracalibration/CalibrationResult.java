@@ -8,7 +8,7 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 public abstract class CalibrationResult {
-    private static final String TAG = "OCVSample::CalibrationResult";
+    private static final String TAG = "OCV::CalibrationResult";
 
     private static final int CAMERA_MATRIX_ROWS = 3;
     private static final int CAMERA_MATRIX_COLS = 3;
@@ -22,19 +22,19 @@ public abstract class CalibrationResult {
         cameraMatrix.get(0,  0, cameraMatrixArray);
         for (int i = 0; i < CAMERA_MATRIX_ROWS; i++) {
             for (int j = 0; j < CAMERA_MATRIX_COLS; j++) {
-                Integer id = i * CAMERA_MATRIX_ROWS + j;
-                editor.putFloat(id.toString(), (float)cameraMatrixArray[id]);
+                int id = i * CAMERA_MATRIX_ROWS + j;
+                editor.putFloat(Integer.toString(id), (float)cameraMatrixArray[id]);
             }
         }
 
         double[] distortionCoefficientsArray = new double[DISTORTION_COEFFICIENTS_SIZE];
         distortionCoefficients.get(0, 0, distortionCoefficientsArray);
         int shift = CAMERA_MATRIX_ROWS * CAMERA_MATRIX_COLS;
-        for (Integer i = shift; i < DISTORTION_COEFFICIENTS_SIZE + shift; i++) {
-            editor.putFloat(i.toString(), (float)distortionCoefficientsArray[i-shift]);
+        for (int i = shift; i < DISTORTION_COEFFICIENTS_SIZE + shift; i++) {
+            editor.putFloat(Integer.toString(i), (float)distortionCoefficientsArray[i-shift]);
         }
 
-        editor.commit();
+        editor.apply();
         Log.i(TAG, "Saved camera matrix: " + cameraMatrix.dump());
         Log.i(TAG, "Saved distortion coefficients: " + distortionCoefficients.dump());
     }
@@ -49,8 +49,8 @@ public abstract class CalibrationResult {
         double[] cameraMatrixArray = new double[CAMERA_MATRIX_ROWS * CAMERA_MATRIX_COLS];
         for (int i = 0; i < CAMERA_MATRIX_ROWS; i++) {
             for (int j = 0; j < CAMERA_MATRIX_COLS; j++) {
-                Integer id = i * CAMERA_MATRIX_ROWS + j;
-                cameraMatrixArray[id] = sharedPref.getFloat(id.toString(), -1);
+                int id = i * CAMERA_MATRIX_ROWS + j;
+                cameraMatrixArray[id] = sharedPref.getFloat(Integer.toString(id), -1);
             }
         }
         cameraMatrix.put(0, 0, cameraMatrixArray);
@@ -58,8 +58,8 @@ public abstract class CalibrationResult {
 
         double[] distortionCoefficientsArray = new double[DISTORTION_COEFFICIENTS_SIZE];
         int shift = CAMERA_MATRIX_ROWS * CAMERA_MATRIX_COLS;
-        for (Integer i = shift; i < DISTORTION_COEFFICIENTS_SIZE + shift; i++) {
-            distortionCoefficientsArray[i - shift] = sharedPref.getFloat(i.toString(), -1);
+        for (int i = shift; i < DISTORTION_COEFFICIENTS_SIZE + shift; i++) {
+            distortionCoefficientsArray[i - shift] = sharedPref.getFloat(Integer.toString(i), -1);
         }
         distortionCoefficients.put(0, 0, distortionCoefficientsArray);
         Log.i(TAG, "Loaded distortion coefficients: " + distortionCoefficients.dump());

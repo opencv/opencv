@@ -170,7 +170,7 @@ public:
         STD_VECTOR        = 3 << KIND_SHIFT,
         STD_VECTOR_VECTOR = 4 << KIND_SHIFT,
         STD_VECTOR_MAT    = 5 << KIND_SHIFT,
-        EXPR              = 6 << KIND_SHIFT,
+        EXPR              = 6 << KIND_SHIFT,  //!< removed
         OPENGL_BUFFER     = 7 << KIND_SHIFT,
         CUDA_HOST_MEM     = 8 << KIND_SHIFT,
         CUDA_GPU_MAT      = 9 << KIND_SHIFT,
@@ -3541,6 +3541,8 @@ public:
 
     Mat cross(const Mat& m) const;
     double dot(const Mat& m) const;
+
+    void swap(MatExpr& b);
 
     const MatOp* op;
     int flags;

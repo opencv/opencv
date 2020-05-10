@@ -230,6 +230,9 @@ class Builder:
         if self.debug_info:  # Release with debug info
             cmake_vars['BUILD_WITH_DEBUG_INFO'] = "ON"
 
+        if self.config.modules_list is not None:
+            cmd.append("-DBUILD_LIST='%s'" % self.config.modules_list)
+
         if self.config.extra_modules_path is not None:
             cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.config.extra_modules_path)
 
@@ -319,6 +322,7 @@ if __name__ == "__main__":
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
     parser.add_argument('--use_android_buildtools', action="store_true", help='Use cmake/ninja build tools from Android SDK')
+    parser.add_argument("--modules_list", help="List of  modules to include for build")
     parser.add_argument("--extra_modules_path", help="Path to extra modules to use for build")
     parser.add_argument('--sign_with', help="Certificate to sign the Manager apk")
     parser.add_argument('--build_doc', action="store_true", help="Build javadoc")

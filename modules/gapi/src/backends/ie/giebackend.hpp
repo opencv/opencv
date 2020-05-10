@@ -7,6 +7,9 @@
 #ifndef OPENCV_GAPI_GIEBACKEND_HPP
 #define OPENCV_GAPI_GIEBACKEND_HPP
 
+// Include anyway - cv::gapi::ie::backend() still needs to be defined
+#include "opencv2/gapi/infer/ie.hpp"
+
 #ifdef HAVE_INF_ENGINE
 
 #include <ade/util/algorithm.hpp> // type_list_index
@@ -35,7 +38,6 @@
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gproto.hpp>
-#include <opencv2/gapi/infer/ie.hpp>
 
 #include "api/gorigin.hpp"
 #include "backends/common/gbackend.hpp"

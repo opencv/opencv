@@ -123,10 +123,9 @@ endif()
 set(STD_OPENCV_LIBS opencv-data)
 set(STD_OPENCV_DEV libopencv-dev)
 
-foreach(module calib3d core cudaarithm cudabgsegm cudacodec cudafeatures2d cudafilters
-               cudaimgproc cudalegacy cudaobjdetect cudaoptflow cudastereo cudawarping
-               cudev features2d flann hal highgui imgcodecs imgproc ml objdetect ocl
-               photo shape stitching superres ts video videoio videostab viz)
+foreach(module calib3d core dnn features2d flann gapi highgui
+               imgcodecs imgproc ml objdetect
+               photo stitching ts video videoio)
   if(HAVE_opencv_${module})
     list(APPEND STD_OPENCV_LIBS "libopencv-${module}4.0")
     list(APPEND STD_OPENCV_DEV "libopencv-${module}-dev")

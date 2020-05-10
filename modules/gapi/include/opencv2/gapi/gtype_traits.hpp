@@ -14,8 +14,9 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
+#include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/gcommon.hpp>
-#include <opencv2/gapi/own/convert.hpp>
 
 namespace cv
 {
@@ -34,8 +35,10 @@ namespace detail
         GOBJREF,      // <internal> reference to object
         GMAT,         // a cv::GMat
         GMATP,        // a cv::GMatP
+        GFRAME,       // a cv::GFrame
         GSCALAR,      // a cv::GScalar
-        GARRAY,       // a cv::GArrayU (note - exactly GArrayU, not GArray<T>!)
+        GARRAY,       // a cv::GArrayU  (note - exactly GArrayU,  not GArray<T>!)
+        GOPAQUE,      // a cv::GOpaqueU (note - exactly GOpaqueU, not GOpaque<T>!)
     };
 
     // Describe G-API types (G-types) with traits.  Mostly used by
@@ -57,6 +60,11 @@ namespace detail
         static constexpr const ArgKind kind = ArgKind::GMATP;
         static constexpr const GShape shape = GShape::GMAT;
     };
+    template<>           struct GTypeTraits<cv::GFrame>
+    {
+        static constexpr const ArgKind kind = ArgKind::GFRAME;
+        static constexpr const GShape shape = GShape::GMAT;
+    };
     template<>           struct GTypeTraits<cv::GScalar>
     {
         static constexpr const ArgKind kind = ArgKind::GSCALAR;
@@ -71,6 +79,16 @@ namespace detail
         static cv::detail::GArrayU   wrap_value(const cv::GArray<T>  &t) { return t.strip();}
         static cv::detail::VectorRef wrap_in   (const std::vector<T> &t) { return detail::VectorRef(t); }
         static cv::detail::VectorRef wrap_out  (      std::vector<T> &t) { return detail::VectorRef(t); }
+    };
+    template<class T> struct GTypeTraits<cv::GOpaque<T> >
+    {
+        static constexpr const ArgKind kind = ArgKind::GOPAQUE;
+        static constexpr const GShape shape = GShape::GOPAQUE;
+        using host_type  = T;
+        using strip_type = cv::detail::OpaqueRef;
+        static cv::detail::GOpaqueU  wrap_value(const cv::GOpaque<T>  &t) { return t.strip();}
+        static cv::detail::OpaqueRef wrap_in   (const T &t) { return detail::OpaqueRef(t); }
+        static cv::detail::OpaqueRef wrap_out  (      T &t) { return detail::OpaqueRef(t); }
     };
 
     // Tests if Trait for type T requires extra marshalling ("custom wrap") or not.
@@ -92,13 +110,15 @@ namespace detail
     // and GMat behavior is correct for GMatP)
     template<typename T> struct GTypeOf;
 #if !defined(GAPI_STANDALONE)
-    template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::UMat>              { using type = cv::GMat;      };
-    template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
 #endif // !defined(GAPI_STANDALONE)
-    template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
-    template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };
+    template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
+    template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
+    template<typename U> struct GTypeOf                        { using type = cv::GOpaque<U>;};
+    // FIXME: This is not quite correct since IStreamSource may produce not only Mat but also Scalar
+    // and vector data. TODO: Extend the type dispatching on these types too.
+    template<>           struct GTypeOf<cv::gapi::wip::IStreamSource::Ptr> { using type = cv::GMat;};
     template<class T> using g_type_of_t = typename GTypeOf<T>::type;
 
     // Marshalling helper for G-types and its Host types. Helps G-API
@@ -160,7 +180,6 @@ namespace detail
 
     template<typename T> using wrap_gapi_helper = WrapValue<typename std::decay<T>::type>;
     template<typename T> using wrap_host_helper = WrapValue<typename std::decay<g_type_of_t<T> >::type>;
-
 } // namespace detail
 } // namespace cv
 

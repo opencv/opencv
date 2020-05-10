@@ -35,6 +35,8 @@
 #ifndef OPENCV_FLANN_LSH_INDEX_H_
 #define OPENCV_FLANN_LSH_INDEX_H_
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -388,5 +390,7 @@ private:
     Distance distance_;
 };
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_LSH_INDEX_H_

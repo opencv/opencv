@@ -76,6 +76,18 @@ cv::GCompiled cv::GComputation::compile(GMetaArgs &&metas, GCompileArgs &&args)
     return comp.compile();
 }
 
+cv::GStreamingCompiled cv::GComputation::compileStreaming(GMetaArgs &&metas, GCompileArgs &&args)
+{
+    cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args));
+    return comp.compileStreaming();
+}
+
+cv::GStreamingCompiled cv::GComputation::compileStreaming(GCompileArgs &&args)
+{
+    cv::gimpl::GCompiler comp(*this, {}, std::move(args));
+    return comp.compileStreaming();
+}
+
 // FIXME: Introduce similar query/test method for GMetaArgs as a building block
 // for functions like this?
 static bool formats_are_same(const cv::GMetaArgs& metas1, const cv::GMetaArgs& metas2)
@@ -120,16 +132,16 @@ void cv::GComputation::apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&ar
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));
 }
 
-void cv::GComputation::apply(const std::vector<cv::gapi::own::Mat> &ins,
-                             const std::vector<cv::gapi::own::Mat> &outs,
+void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
+                             const std::vector<cv::Mat> &outs,
                              GCompileArgs &&args)
 {
     GRunArgs call_ins;
     GRunArgsP call_outs;
 
     auto tmp = outs;
-    for (const cv::gapi::own::Mat &m : ins) { call_ins.emplace_back(m);   }
-    for (      cv::gapi::own::Mat &m : tmp) { call_outs.emplace_back(&m); }
+    for (const cv::Mat &m : ins) { call_ins.emplace_back(m);   }
+    for (      cv::Mat &m : tmp) { call_outs.emplace_back(&m); }
 
     apply(std::move(call_ins), std::move(call_outs), std::move(args));
 }

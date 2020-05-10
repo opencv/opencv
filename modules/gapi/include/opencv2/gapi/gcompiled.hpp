@@ -60,6 +60,8 @@ namespace cv {
  * At the same time, two different GCompiled objects produced from the
  * single cv::GComputation are completely independent and can be used
  * concurrently.
+ *
+ * @sa GStreamingCompiled
  */
 class GAPI_EXPORTS GCompiled
 {
@@ -146,7 +148,7 @@ public:
      * @param outs vector of output cv::Mat objects to produce by the
      * computation.
      *
-     * Numbers of elements in ins/outs vectos must match numbers of
+     * Numbers of elements in ins/outs vectors must match numbers of
      * inputs/outputs which were used to define the source GComputation.
      */
     void operator() (const std::vector<cv::Mat> &ins,            // Compatibility overload

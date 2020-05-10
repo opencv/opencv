@@ -224,7 +224,10 @@ struct OclHelper
         int scn = src.channels();
         int depth = src.depth();
 
-        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
+
         switch (sizePolicy)
         {
         case TO_YUV:

@@ -153,6 +153,10 @@ if(CV_GCC OR CV_CLANG)
     if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
       add_extra_compiler_option(-Wno-missing-field-initializers)  # GCC 4.x emits warnings about {}, fixed in GCC 5+
     endif()
+    if(CV_CLANG AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
+      add_extra_compiler_option(-Wno-deprecated-enum-enum-conversion)
+      add_extra_compiler_option(-Wno-deprecated-anon-enum-enum-conversion)
+    endif()
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 
@@ -318,6 +322,21 @@ if(PPC64LE)
   endif()
 endif()
 
+# Apply "-Wl,--as-needed" linker flags: https://github.com/opencv/opencv/issues/7001
+if(NOT OPENCV_SKIP_LINK_AS_NEEDED)
+  if(UNIX AND (NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2"))
+    set(_option "-Wl,--as-needed")
+    set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")  # requires CMake 3.2+ and CMP0056
+    ocv_check_compiler_flag(CXX "" HAVE_LINK_AS_NEEDED)
+    set(CMAKE_EXE_LINKER_FLAGS "${_saved_CMAKE_EXE_LINKER_FLAGS}")
+    if(HAVE_LINK_AS_NEEDED)
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} ${_option}")
+      set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} ${_option}")
+    endif()
+  endif()
+endif()
+
 # combine all "extra" options
 if(NOT OPENCV_SKIP_EXTRA_COMPILER_FLAGS)
   set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
@@ -385,6 +404,19 @@ if(MSVC)
   add_definitions(-D_VARIADIC_MAX=10)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  get_directory_property(__DIRECTORY_COMPILE_DEFINITIONS COMPILE_DEFINITIONS)
+  if((NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${OPENCV_EXTRA_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS_RELEASE} ${__DIRECTORY_COMPILE_DEFINITIONS}" MATCHES "_WIN32_WINNT"
+      AND NOT OPENCV_CMAKE_SKIP_MACRO_WIN32_WINNT)
+      OR OPENCV_CMAKE_FORCE_MACRO_WIN32_WINNT
+  )
+    # https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt
+    # Target Windows 7 API
+    set(OPENCV_CMAKE_MACRO_WIN32_WINNT "0x0601" CACHE STRING "Value of _WIN32_WINNT macro")
+    add_definitions(-D_WIN32_WINNT=${OPENCV_CMAKE_MACRO_WIN32_WINNT})
+  endif()
+endif()
+
 # Enable compiler options for OpenCV modules/apps/samples only (ignore 3rdparty)
 macro(ocv_add_modules_compiler_options)
   if(MSVC AND NOT OPENCV_SKIP_MSVC_W4_OPTION)
@@ -414,5 +446,40 @@ if(OPENCV_EXTRA_RPATH_LINK_PATH)
   list(APPEND CMAKE_PLATFORM_RUNTIME_PATH ${OPENCV_EXTRA_RPATH_LINK_PATH_})
   if(NOT CMAKE_EXECUTABLE_RPATH_LINK_CXX_FLAG)
     message(WARNING "OPENCV_EXTRA_RPATH_LINK_PATH may not work properly because CMAKE_EXECUTABLE_RPATH_LINK_CXX_FLAG is not defined (not supported)")
+  endif()
+endif()
+
+# Control MSVC /MP flag
+# Input variables: OPENCV_MSVC_PARALLEL (ON,1,2,3,...) + OPENCV_SKIP_MSVC_PARALLEL
+# Details:
+# - https://docs.microsoft.com/en-us/cpp/build/reference/mp-build-with-multiple-processes
+# - https://docs.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
+# - https://gitlab.kitware.com/cmake/cmake/merge_requests/1718/diffs
+if(CMAKE_GENERATOR MATCHES "Visual Studio" AND CMAKE_CXX_COMPILER_ID MATCHES "MSVC|Intel")
+  ocv_check_environment_variables(OPENCV_SKIP_MSVC_PARALLEL)
+  if(OPENCV_SKIP_MSVC_PARALLEL)
+    # nothing
+  elseif(" ${CMAKE_CXX_FLAGS}" MATCHES "/MP")
+    # nothing, already defined in compiler flags
+  elseif(DEFINED ENV{CL} AND " $ENV{CL}" MATCHES "/MP")
+    # nothing, compiler will use CL environment variable
+  elseif(DEFINED ENV{_CL_} AND " $ENV{_CL_}" MATCHES "/MP")
+    # nothing, compiler will use _CL_ environment variable
+  else()
+    ocv_check_environment_variables(OPENCV_MSVC_PARALLEL)
+    set(_mp_value "ON")
+    if(DEFINED OPENCV_MSVC_PARALLEL)
+      set(_mp_value "${OPENCV_MSVC_PARALLEL}")
+    endif()
+    set(OPENCV_MSVC_PARALLEL "${_mp_value}" CACHE STRING "Control MSVC /MP flag")
+    if(_mp_value)
+      if(_mp_value GREATER 0)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP${_mp_value}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP${_mp_value}")
+      else()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+      endif()
+    endif()
   endif()
 endif()

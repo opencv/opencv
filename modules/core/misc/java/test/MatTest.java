@@ -1246,4 +1246,22 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(1, bbuf.get(4095));
     }
 
+    public void testMatFromByteBufferWithStep() {
+        ByteBuffer bbuf = ByteBuffer.allocateDirect(80*64);
+        bbuf.putInt(0x01010101);
+        bbuf.putInt(64, 0x02020202);
+        bbuf.putInt(80, 0x03030303);
+        Mat m = new Mat(64, 64, CvType.CV_8UC1, bbuf, 80);
+        assertEquals(8, Core.countNonZero(m));
+        Core.add(m, new Scalar(5), m);
+        assertEquals(4096, Core.countNonZero(m));
+        m.release();
+        assertEquals(6, bbuf.get(0));
+        assertEquals(5, bbuf.get(63));
+        assertEquals(2, bbuf.get(64));
+        assertEquals(0, bbuf.get(79));
+        assertEquals(8, bbuf.get(80));
+        assertEquals(5, bbuf.get(63*80 + 63));
+    }
+
 }

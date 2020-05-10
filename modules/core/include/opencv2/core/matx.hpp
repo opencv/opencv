@@ -147,7 +147,16 @@ public:
     static Matx ones();
     static Matx eye();
     static Matx diag(const diag_type& d);
+    /** @brief Generates uniformly distributed random numbers
+    @param a Range boundary.
+    @param b The other range boundary (boundaries don't have to be ordered, the lower boundary is inclusive,
+    the upper one is exclusive).
+     */
     static Matx randu(_Tp a, _Tp b);
+    /** @brief Generates normally distributed random numbers
+    @param a Mean value.
+    @param b Standard deviation.
+     */
     static Matx randn(_Tp a, _Tp b);
 
     //! dot product computed with the default precision
@@ -1267,6 +1276,34 @@ template<typename _Tp, int m, int n> static inline
 Matx<_Tp, m, n> operator * (double alpha, const Matx<_Tp, m, n>& a)
 {
     return Matx<_Tp, m, n>(a, alpha, Matx_ScaleOp());
+}
+
+template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n>& operator /= (Matx<_Tp, m, n>& a, float alpha)
+{
+    for( int i = 0; i < m*n; i++ )
+        a.val[i] = a.val[i] / alpha;
+    return a;
+}
+
+template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n>& operator /= (Matx<_Tp, m, n>& a, double alpha)
+{
+    for( int i = 0; i < m*n; i++ )
+        a.val[i] = a.val[i] / alpha;
+    return a;
+}
+
+template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, float alpha)
+{
+    return Matx<_Tp, m, n>(a, 1.f/alpha, Matx_ScaleOp());
+}
+
+template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, double alpha)
+{
+    return Matx<_Tp, m, n>(a, 1./alpha, Matx_ScaleOp());
 }
 
 template<typename _Tp, int m, int n> static inline

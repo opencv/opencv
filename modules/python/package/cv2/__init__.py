@@ -68,6 +68,13 @@ def bootstrap():
         sys.path.insert(1, p)
 
     if os.name == 'nt':
+        if sys.version_info[:2] >= (3, 8):  # https://github.com/python/cpython/pull/12302
+            for p in l_vars['BINARIES_PATHS']:
+                try:
+                    os.add_dll_directory(p)
+                except Exception as e:
+                    if DEBUG: print('Failed os.add_dll_directory(): '+ str(e))
+                    pass
         os.environ['PATH'] = ';'.join(l_vars['BINARIES_PATHS']) + ';' + os.environ.get('PATH', '')
         if DEBUG: print('OpenCV loader: PATH={}'.format(str(os.environ['PATH'])))
     else:

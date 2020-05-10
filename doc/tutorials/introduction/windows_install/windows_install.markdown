@@ -48,10 +48,8 @@ CMAKE_CONFIG_GENERATOR="Visual Studio 14 2015 Win64"
 if [  ! -d "$myRepo/opencv"  ]; then
     echo "cloning opencv"
     git clone https://github.com/opencv/opencv.git
-    mkdir Build
-    mkdir Build/opencv
-    mkdir Install
-    mkdir Install/opencv
+    mkdir -p Build/opencv
+    mkdir -p Install/opencv
 else
     cd opencv
     git pull --rebase
@@ -60,8 +58,7 @@ fi
 if [  ! -d "$myRepo/opencv_contrib"  ]; then
     echo "cloning opencv_contrib"
     git clone https://github.com/opencv/opencv_contrib.git
-    mkdir Build
-    mkdir Build/opencv_contrib
+    mkdir -p Build/opencv_contrib
 else
     cd opencv_contrib
     git pull --rebase
@@ -154,7 +151,7 @@ of them, you need to download and install them on your system.
     image file format.
 -   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures, and body
     motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
--   [Doxygen](http://www.stack.nl/~dimitri/doxygen/) is a documentation generator and is the tool that will actually create the
+-   [Doxygen](http://www.doxygen.nl) is a documentation generator and is the tool that will actually create the
     *OpenCV documentation*.
 
 Now we will describe the steps to follow for a full build (using all the above frameworks, tools and
