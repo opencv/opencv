@@ -333,7 +333,7 @@ namespace
             GpuMat& nextPts = _nextPts.getGpuMatRef();
             GpuMat& status = _status.getGpuMatRef();
             GpuMat* err = _err.needed() ? &(_err.getGpuMatRef()) : NULL;
-            if (_prevImg.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && _prevImg.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+            if (_prevImg.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && _nextImg.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
             {
                 std::vector<GpuMat> prevPyr, nextPyr;
                 _prevImg.getGpuMatVector(prevPyr);

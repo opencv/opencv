@@ -22,6 +22,8 @@
 
 <skip_headers>
     opencv2/core/hal/intrin*
+    opencv2/core/hal/*macros.*
+    opencv2/core/hal/*.impl.*
     opencv2/core/cuda*
     opencv2/core/opencl*
     opencv2/core/private*

@@ -328,6 +328,15 @@ FileNodeIterator::FileNodeIterator(const FileNodeIterator& it)
     remaining = it.remaining;
 }
 
+FileNodeIterator& FileNodeIterator::operator=(const FileNodeIterator& it)
+{
+    fs = it.fs;
+    container = it.container;
+    reader = it.reader;
+    remaining = it.remaining;
+    return *this;
+}
+
 FileNodeIterator& FileNodeIterator::operator ++()
 {
     if( remaining > 0 )

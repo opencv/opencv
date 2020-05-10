@@ -408,8 +408,14 @@ static void fitLine2D( const Point2f * points, int count, int dist,
             }
             /* calculate distances */
             err = calcDist2D( points, count, _line, r );
-            if( err < EPS )
-                break;
+
+            if (err < min_err)
+            {
+                min_err = err;
+                memcpy(line, _line, 4 * sizeof(line[0]));
+                if (err < EPS)
+                    break;
+            }
 
             /* calculate weights */
             if( calc_weights )
@@ -550,8 +556,13 @@ static void fitLine3D( Point3f * points, int count, int dist,
             }
             /* calculate distances */
             err = calcDist3D( points, count, _line, r );
-            //if( err < FLT_EPSILON*count )
-            //    break;
+            if (err < min_err)
+            {
+                min_err = err;
+                memcpy(line, _line, 6 * sizeof(line[0]));
+                if (err < EPS)
+                    break;
+            }
 
             /* calculate weights */
             if( calc_weights )

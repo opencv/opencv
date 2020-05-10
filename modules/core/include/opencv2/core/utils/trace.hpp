@@ -7,14 +7,12 @@
 
 #include <opencv2/core/cvdef.h>
 
-//! @addtogroup core_logging
-// This section describes OpenCV tracing utilities.
-//
-//! @{
-
 namespace cv {
 namespace utils {
 namespace trace {
+
+//! @addtogroup core_logging
+//! @{
 
 //! Macro to trace function
 #define CV_TRACE_FUNCTION()
@@ -247,8 +245,8 @@ CV_EXPORTS void traceArg(const TraceArg& arg, double value);
 
 //! @endcond
 
-}}} // namespace
-
 //! @}
+
+}}} // namespace
 
 #endif // OPENCV_TRACE_HPP

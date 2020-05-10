@@ -154,7 +154,8 @@ enum ImageOrientation
  * Usage example for getting the orientation of the image:
  *
  *      @code
- *      ExifReader reader(fileName);
+ *      std::ifstream stream(filename,std::ios_base::in | std::ios_base::binary);
+ *      ExifReader reader(stream);
  *      if( reader.parse() )
  *      {
  *          int orientation = reader.getTag(Orientation).field_u16;

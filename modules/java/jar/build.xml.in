@@ -42,7 +42,7 @@
       bottom="Generated on ${timestamp} / OpenCV @OPENCV_VCSVERSION@"
       failonerror="true"
       encoding="UTF-8" charset="UTF-8" docencoding="UTF-8"
-      link="https://docs.oracle.com/javase/6/docs/api/"
+      @CMAKE_CONFIG_OPENCV_JAVADOC_LINK@
       additionalparam="--allow-script-in-comments"
       >
       <Header>

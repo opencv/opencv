@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_DATASET_H_
 #define OPENCV_FLANN_DATASET_H_
 
+//! @cond IGNORED
+
 #include <stdio.h>
 
 #include "general.h"
@@ -112,5 +114,7 @@ public:
 
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_DATASET_H_

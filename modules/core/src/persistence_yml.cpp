@@ -201,20 +201,20 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
         if ( d == '<') //support of full type heading from YAML 1.2
         {
             const char* yamlTypeHeading = "<tag:yaml.org,2002:";
-            const size_t headingLenght = strlen(yamlTypeHeading);
+            const size_t headingLength = strlen(yamlTypeHeading);
 
             char* typeEndPtr = ++ptr;
 
             do d = *++typeEndPtr;
             while( cv_isprint(d) && d != ' ' && d != '>' );
 
-            if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLenght )
+            if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLength )
             {
-                if ( memcmp(ptr, yamlTypeHeading, headingLenght) == 0 )
+                if ( memcmp(ptr, yamlTypeHeading, headingLength) == 0 )
                 {
                     value_type |= CV_NODE_USER;
                     *typeEndPtr = ' ';
-                    ptr += headingLenght - 1;
+                    ptr += headingLength - 1;
                 }
             }
         }

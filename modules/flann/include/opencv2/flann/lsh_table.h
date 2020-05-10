@@ -35,6 +35,8 @@
 #ifndef OPENCV_FLANN_LSH_TABLE_H_
 #define OPENCV_FLANN_LSH_TABLE_H_
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
@@ -509,5 +511,7 @@ inline LshStats LshTable<unsigned char>::getStats() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_LSH_TABLE_H_ */

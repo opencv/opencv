@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_
 #define OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_
 
+//! @cond IGNORED
+
 #include <algorithm>
 #include <map>
 #include <cassert>
@@ -631,5 +633,7 @@ private:
 };   // class KDTree
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_KDTREE_SINGLE_INDEX_H_

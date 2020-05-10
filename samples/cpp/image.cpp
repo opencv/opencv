@@ -17,10 +17,9 @@ static void help()
     "./image [image-name Default: lena.jpg]\n" << endl;
 }
 
-// enable/disable use of mixed API in the code below.
-#define DEMO_MIXED_API_USE 1
+//#define USE_LEGACY_C_API 1  // not working with modern OpenCV
 
-#ifdef DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
 #  include <opencv2/highgui/highgui_c.h>
 #  include <opencv2/imgcodecs/imgcodecs_c.h>
 #endif
@@ -34,7 +33,7 @@ int main( int argc, char** argv )
         return 0;
     }
     string imagename = parser.get<string>("@image");
-#if DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
     //! [iplimage]
     Ptr<IplImage> iplimg(cvLoadImage(imagename.c_str())); // Ptr<T> is safe ref-counting pointer class
     if(!iplimg)
@@ -94,7 +93,7 @@ int main( int argc, char** argv )
 
     const double brightness_gain = 0;
     const double contrast_gain = 1.7;
-#if DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
     // it's easy to pass the new matrices to the functions that only work with IplImage or CvMat:
     // step 1) - convert the headers, data will not be copied
     IplImage cv_planes_0 = planes[0], cv_noise = noise;
@@ -121,7 +120,7 @@ int main( int argc, char** argv )
 
     // this is counterpart for cvNamedWindow
     namedWindow("image with grain", WINDOW_AUTOSIZE);
-#if DEMO_MIXED_API_USE
+#ifdef USE_LEGACY_C_API
     // this is to demonstrate that img and iplimg really share the data - the result of the above
     // processing is stored in img and thus in iplimg too.
     cvShowImage("image with grain", iplimg);

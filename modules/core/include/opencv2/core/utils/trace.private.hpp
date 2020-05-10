@@ -9,6 +9,8 @@
 
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/tls.hpp>
+
 #include "trace.hpp"
 
 //! @cond IGNORED
@@ -332,7 +334,7 @@ public:
     Mutex mutexCreate;
     Mutex mutexCount;
 
-    TLSData<TraceManagerThreadLocal> tls;
+    TLSDataAccumulator<TraceManagerThreadLocal> tls;
 
     cv::Ptr<TraceStorage> trace_storage;
 private:

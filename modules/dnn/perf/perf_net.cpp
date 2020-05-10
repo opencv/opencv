@@ -100,7 +100,7 @@ PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 
 PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE) throw SkipTestException("");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) throw SkipTestException("");
     processNet("dnn/tensorflow_inception_graph.pb", "",
             "inception_5h.yml",
             Mat(cv::Size(224, 224), CV_32FC3), "softmax2");
@@ -108,7 +108,7 @@ PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 
 PERF_TEST_P_(DNNTestNetwork, ENet)
 {
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE) ||
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     processNet("dnn/Enet-model-best.net", "", "enet.yml",
@@ -126,7 +126,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenFace)
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
 #endif
     processNet("dnn/openface_nn4.small2.v1.t7", "", "",
@@ -168,7 +168,7 @@ PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
@@ -219,15 +219,15 @@ PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019010000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         throw SkipTestException("Test is disabled in OpenVINO 2019R1");
 #endif
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         throw SkipTestException("Test is disabled in OpenVINO 2019R2");
 #endif
     if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     processNet("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb",

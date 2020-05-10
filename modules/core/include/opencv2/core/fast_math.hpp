@@ -102,7 +102,7 @@
     #define CV_INLINE_ROUND_DBL(value) \
         int out; \
         double temp; \
-        __asm__( "fctiw %[temp],%[in]\n\tmffprwz %[out],%[temp]\n\t" : [out] "=r" (out), [temp] "=d" (temp) : [in] "d" ((double)(value)) : ); \
+        __asm__( "fctiw %[temp],%[in]\n\tmfvsrwz %[out],%[temp]\n\t" : [out] "=r" (out), [temp] "=d" (temp) : [in] "d" ((double)(value)) : ); \
         return out;
 
     // FP32 also works with FP64 routine above
@@ -289,7 +289,7 @@ CV_INLINE int cvIsInf( double value )
 {
 #if defined CV_INLINE_ISINF_DBL
     CV_INLINE_ISINF_DBL(value);
-#elif defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(__PPC64__)
+#elif defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || defined(__PPC64__)
     Cv64suf ieee754;
     ieee754.f = value;
     return (ieee754.u & 0x7fffffff00000000) ==

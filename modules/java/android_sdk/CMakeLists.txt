@@ -40,7 +40,7 @@ foreach(file ${seed_project_files_rel})
 endforeach()
 
 list(APPEND depends gen_opencv_java_source "${OPENCV_DEPHELPER}/gen_opencv_java_source")
-ocv_copyfiles_add_target(${the_module}_android_source_copy JAVA_SRC_COPY "Copy Java(Andoid SDK) source files" ${depends})
+ocv_copyfiles_add_target(${the_module}_android_source_copy JAVA_SRC_COPY "Copy Java(Android SDK) source files" ${depends})
 file(REMOVE "${OPENCV_DEPHELPER}/${the_module}_android_source_copy")  # force rebuild after CMake run
 
 set(depends ${the_module}_android_source_copy "${OPENCV_DEPHELPER}/${the_module}_android_source_copy")

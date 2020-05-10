@@ -137,7 +137,7 @@ public class OpenCVEngineService extends Service {
 
             @Override
             public int getEngineVersion() throws RemoteException {
-                int version = 3470;
+                int version = 3490;
                 try {
                     version = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
                 } catch (NameNotFoundException e) {

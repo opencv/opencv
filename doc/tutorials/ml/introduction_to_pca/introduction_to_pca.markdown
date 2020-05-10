@@ -205,4 +205,4 @@ The code opens an image, finds the orientation of the detected objects of intere
 
 ![](images/pca_test1.jpg)
 
-![](images/output.png)
+![](images/pca_output.png)

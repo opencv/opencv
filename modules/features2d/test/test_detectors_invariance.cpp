@@ -220,6 +220,9 @@ TEST_P(DetectorScaleInvariance, scale)
  * Detector's rotation invariance check
  */
 
+INSTANTIATE_TEST_CASE_P(SIFT, DetectorRotationInvariance,
+                        Value(IMAGE_TSUKUBA, SIFT::create(), 0.45f, 0.70f));
+
 INSTANTIATE_TEST_CASE_P(BRISK, DetectorRotationInvariance,
                         Value(IMAGE_TSUKUBA, BRISK::create(), 0.45f, 0.76f));
 
@@ -235,6 +238,10 @@ INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DetectorRotationInvariance,
 /*
  * Detector's scale invariance check
  */
+
+// TODO: Expected: (keyPointMatchesRatio) >= (minKeyPointMatchesRatio), actual: 0.596752 vs 0.69
+INSTANTIATE_TEST_CASE_P(DISABLED_SIFT, DetectorScaleInvariance,
+                        Value(IMAGE_BIKES, SIFT::create(), 0.69f, 0.98f));
 
 INSTANTIATE_TEST_CASE_P(BRISK, DetectorScaleInvariance,
                         Value(IMAGE_BIKES, BRISK::create(), 0.08f, 0.49f));

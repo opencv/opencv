@@ -101,13 +101,13 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
 
 #define CV_PY_TO_CLASS(TYPE)                                                                          \
 template<>                                                                                            \
-bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
+bool pyopencv_to(PyObject* dst, TYPE& src, const ArgInfo& info)                                       \
 {                                                                                                     \
     if (!dst || dst == Py_None)                                                                       \
         return true;                                                                                  \
     Ptr<TYPE> ptr;                                                                                    \
                                                                                                       \
-    if (!pyopencv_to(dst, ptr, name)) return false;                                                   \
+    if (!pyopencv_to(dst, ptr, info)) return false;                                                   \
     src = *ptr;                                                                                       \
     return true;                                                                                      \
 }
@@ -124,13 +124,13 @@ PyObject* pyopencv_from(const TYPE& src)                                        
 
 #define CV_PY_TO_CLASS_PTR(TYPE)                                                                      \
 template<>                                                                                            \
-bool pyopencv_to(PyObject* dst, TYPE*& src, const char* name)                                         \
+bool pyopencv_to(PyObject* dst, TYPE*& src, const ArgInfo& info)                                      \
 {                                                                                                     \
     if (!dst || dst == Py_None)                                                                       \
         return true;                                                                                  \
     Ptr<TYPE> ptr;                                                                                    \
                                                                                                       \
-    if (!pyopencv_to(dst, ptr, name)) return false;                                                   \
+    if (!pyopencv_to(dst, ptr, info)) return false;                                                   \
     src = ptr;                                                                                        \
     return true;                                                                                      \
 }
@@ -143,13 +143,13 @@ static PyObject* pyopencv_from(TYPE*& src)                                      
 
 #define CV_PY_TO_ENUM(TYPE)                                                                           \
 template<>                                                                                            \
-bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
+bool pyopencv_to(PyObject* dst, TYPE& src, const ArgInfo& info)                                       \
 {                                                                                                     \
     if (!dst || dst == Py_None)                                                                       \
         return true;                                                                                  \
     int underlying = 0;                                                  \
                                                                                                       \
-    if (!pyopencv_to(dst, underlying, name)) return false;                                            \
+    if (!pyopencv_to(dst, underlying, info)) return false;                                            \
     src = static_cast<TYPE>(underlying);                                                              \
     return true;                                                                                      \
 }

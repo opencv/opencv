@@ -46,7 +46,7 @@ class App():
         cam = video.create_capture(fn, fallback='synth:bg=baboon.jpg:class=chess:noise=0.05')
 
         while True:
-            flag, frame = cam.read()
+            _flag, frame = cam.read()
             cv.imshow('camera', frame)
 
             small = cv.pyrDown(frame)

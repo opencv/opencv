@@ -26,16 +26,16 @@ int main ( int argc, char** argv )
     const char* window_name = "filter2D Demo";
 
     //![load]
-    const char* imageName = argc >=2 ? argv[1] : "../data/lena.jpg";
+    const char* imageName = argc >=2 ? argv[1] : "lena.jpg";
 
     // Loads an image
-    src = imread( imageName, IMREAD_COLOR ); // Load an image
+    src = imread( samples::findFile( imageName ), IMREAD_COLOR ); // Load an image
 
     if( src.empty() )
     {
         printf(" Error opening image\n");
-        printf(" Program Arguments: [image_name -- default ../data/lena.jpg] \n");
-        return -1;
+        printf(" Program Arguments: [image_name -- default lena.jpg] \n");
+        return EXIT_FAILURE;
     }
     //![load]
 
@@ -70,5 +70,5 @@ int main ( int argc, char** argv )
         ind++;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

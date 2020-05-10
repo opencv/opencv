@@ -9,12 +9,19 @@
 #include "../op_inf_engine.hpp"
 #include <opencv2/imgproc.hpp>
 
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
+#include <ngraph/op/experimental/layers/interpolate.hpp>
+#endif
+
 namespace cv { namespace dnn {
 
 class ResizeLayerImpl : public ResizeLayer
 {
 public:
-    ResizeLayerImpl(const LayerParams& params) : zoomFactorWidth(0), zoomFactorHeight(0), scaleWidth(0), scaleHeight(0)
+    ResizeLayerImpl(const LayerParams& params) : zoomFactorWidth(params.get<int>("zoom_factor_x", params.get<int>("zoom_factor", 0))),
+                                                 zoomFactorHeight(params.get<int>("zoom_factor_y", params.get<int>("zoom_factor", 0))),
+                                                 scaleWidth(0), scaleHeight(0)
     {
         setParamsFrom(params);
         outWidth = params.get<float>("width", 0);
@@ -22,16 +29,13 @@ public:
         if (params.has("zoom_factor"))
         {
             CV_Assert(!params.has("zoom_factor_x") && !params.has("zoom_factor_y"));
-            zoomFactorWidth = zoomFactorHeight = params.get<int>("zoom_factor");
         }
         else if (params.has("zoom_factor_x") || params.has("zoom_factor_y"))
         {
             CV_Assert(params.has("zoom_factor_x") && params.has("zoom_factor_y"));
-            zoomFactorWidth = params.get<int>("zoom_factor_x");
-            zoomFactorHeight = params.get<int>("zoom_factor_y");
         }
         interpolation = params.get<String>("interpolation");
-        CV_Assert(interpolation == "nearest" || interpolation == "bilinear");
+        CV_Assert(interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear");
 
         alignCorners = params.get<bool>("align_corners", false);
     }
@@ -43,8 +47,8 @@ public:
     {
         CV_Assert_N(inputs.size() == 1, inputs[0].size() == 4);
         outputs.resize(1, inputs[0]);
-        outputs[0][2] = outHeight > 0 ? outHeight : (outputs[0][2] * zoomFactorHeight);
-        outputs[0][3] = outWidth > 0 ? outWidth : (outputs[0][3] * zoomFactorWidth);
+        outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
+        outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
     }
@@ -52,7 +56,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             return (interpolation == "nearest" && scaleWidth == scaleHeight) ||
                    (interpolation == "bilinear");
@@ -67,11 +71,8 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        if (!outWidth && !outHeight)
-        {
-            outHeight = outputs[0].size[2];
-            outWidth = outputs[0].size[3];
-        }
+        outHeight = outputs[0].size[2];
+        outWidth = outputs[0].size[3];
         if (alignCorners && outHeight > 1)
             scaleHeight = static_cast<float>(inputs[0].size[2] - 1) / (outHeight - 1);
         else
@@ -104,14 +105,15 @@ public:
 
         Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        if (interpolation == "nearest")
+        if (interpolation == "nearest" || interpolation == "opencv_linear")
         {
+            InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
             {
                 for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
                 {
                     resize(getPlane(inp, n, ch), getPlane(out, n, ch),
-                           Size(outWidth, outHeight), 0, 0, INTER_NEAREST);
+                           Size(outWidth, outHeight), 0, 0, mode);
                 }
             }
         }
@@ -159,9 +161,9 @@ public:
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
     }
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
         if (interpolation == "nearest")
@@ -178,7 +180,7 @@ public:
             ieLayer.setType("Interp");
             ieLayer.getParameters()["pad_beg"] = 0;
             ieLayer.getParameters()["pad_end"] = 0;
-            ieLayer.getParameters()["align_corners"] = false;
+            ieLayer.getParameters()["align_corners"] = alignCorners;
         }
         else
             CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
@@ -187,12 +189,41 @@ public:
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        ngraph::op::InterpolateAttrs attrs;
+        attrs.pads_begin.push_back(0);
+        attrs.pads_end.push_back(0);
+        attrs.axes = ngraph::AxisSet{2, 3};
+        attrs.align_corners = alignCorners;
+
+        if (interpolation == "nearest") {
+            attrs.mode = "nearest";
+            attrs.antialias = false;
+        } else if (interpolation == "bilinear") {
+            attrs.mode = "linear";
+        } else {
+            CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
+        }
+
+        std::vector<int64_t> shape = {outHeight, outWidth};
+        auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());
+        auto interp = std::make_shared<ngraph::op::Interpolate>(ieInpNode, out_shape, attrs);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(interp));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 protected:
-    int outWidth, outHeight, zoomFactorWidth, zoomFactorHeight;
+    int outWidth, outHeight;
+    const int zoomFactorWidth, zoomFactorHeight;
     String interpolation;
     float scaleWidth, scaleHeight;
     bool alignCorners;
@@ -216,56 +247,18 @@ public:
     {
         CV_Assert_N(inputs.size() == 1, inputs[0].size() == 4);
         outputs.resize(1, inputs[0]);
-        outputs[0][2] = outHeight > 0 ? outHeight : (1 + zoomFactorHeight * (outputs[0][2] - 1));
-        outputs[0][3] = outWidth > 0 ? outWidth : (1 + zoomFactorWidth * (outputs[0][3] - 1));
+        outputs[0][2] = zoomFactorHeight > 0 ? (1 + zoomFactorHeight * (outputs[0][2] - 1)) : outHeight;
+        outputs[0][3] = zoomFactorWidth > 0 ? (1 + zoomFactorWidth * (outputs[0][3] - 1)) : outWidth;
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
     }
-
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
-    }
-
-    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
-    {
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        if (!outWidth && !outHeight)
-        {
-            outHeight = outputs[0].size[2];
-            outWidth = outputs[0].size[3];
-        }
-        int inpHeight = inputs[0].size[2];
-        int inpWidth = inputs[0].size[3];
-        scaleHeight = (outHeight > 1) ? (static_cast<float>(inpHeight - 1) / (outHeight - 1)) : 0.f;
-        scaleWidth = (outWidth > 1) ? (static_cast<float>(inpWidth - 1) / (outWidth - 1)) : 0.f;
-    }
-
-#ifdef HAVE_INF_ENGINE
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::Layer ieLayer(name);
-        ieLayer.setName(name);
-        ieLayer.setType("Interp");
-        ieLayer.getParameters()["pad_beg"] = 0;
-        ieLayer.getParameters()["pad_end"] = 0;
-        ieLayer.getParameters()["width"] = outWidth;
-        ieLayer.getParameters()["height"] = outHeight;
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
-        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_INF_ENGINE
-
 };
 
 Ptr<Layer> InterpLayer::create(const LayerParams& params)
 {
     LayerParams lp(params);
     lp.set("interpolation", "bilinear");
+    lp.set("align_corners", true);
     return Ptr<Layer>(new InterpLayerImpl(lp));
 }
 

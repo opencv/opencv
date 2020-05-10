@@ -58,7 +58,7 @@
 // Please obvserve, that jumbo frames are required when high fps & 16bit data is selected.
 // (camera, switches/routers and the computer this software is running on)
 //
-// Basic usage: VideoCapture cap(CAP_ARAVIS + <camera id>);
+// Basic usage: VideoCapture cap(<camera id>, CAP_ARAVIS);
 //
 // Supported properties:
 //  read/write
@@ -299,7 +299,7 @@ bool CvCaptureCAM_Aravis::grabFrame()
             size_t buffer_size;
             framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 
-            // retrieve image size properites
+            // retrieve image size properties
             arv_buffer_get_image_region (arv_buffer, &xoffset, &yoffset, &width, &height);
 
             // retrieve image ID set by camera

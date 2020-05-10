@@ -1345,108 +1345,6 @@ void CV_ProjectPointsTest_CPP::project( const Mat& objectPoints, const Mat& rvec
 
 ///////////////////////////////// Stereo Calibration /////////////////////////////////////
 
-class CV_StereoCalibrationCornerTest : public cvtest::BaseTest
-{
-public:
-    CV_StereoCalibrationCornerTest();
-    ~CV_StereoCalibrationCornerTest();
-    void clear();
-protected:
-    void run(int);
-};
-
-CV_StereoCalibrationCornerTest::CV_StereoCalibrationCornerTest()
-{
-}
-
-
-CV_StereoCalibrationCornerTest::~CV_StereoCalibrationCornerTest()
-{
-    clear();
-}
-
-void CV_StereoCalibrationCornerTest::clear()
-{
-    cvtest::BaseTest::clear();
-}
-
-static bool resizeCameraMatrix(const Mat &in_cm, Mat &dst_cm, double scale)
-{
-    if (in_cm.empty() || in_cm.cols != 3 || in_cm.rows != 3 || in_cm.type() != CV_64FC1)
-        return false;
-    dst_cm = in_cm * scale;
-    dst_cm.at<double>(2, 2) = 1.0;
-    return true;
-}
-
-// see https://github.com/opencv/opencv/pull/6836 for details
-void CV_StereoCalibrationCornerTest::run(int)
-{
-    const Matx33d M1(906.7857732303256, 0.0, 1026.456125870669,
-                            0.0, 906.7857732303256, 540.0531577669913,
-                            0.0, 0.0, 1.0);
-    const Matx33d M2(906.782205162265, 0.0, 1014.619997352785,
-                            0.0, 906.782205162265, 561.9990018887295,
-                            0.0, 0.0, 1.0);
-    const Matx<double, 5, 1> D1(0.0064836857220181504, 0.033880363848984636, 0.0, 0.0, -0.042996356352306114);
-    const Matx<double, 5, 1> D2(0.023754068600491646, -0.02364619610835259, 0.0, 0.0, 0.0015014971456262652);
-
-    const Size imageSize(2048, 1088);
-    const double scale = 0.25;
-
-    const Matx33d Rot(0.999788461750194, -0.015696495349844446, -0.013291041528534329,
-                             0.015233019205877604, 0.999296086451901, -0.034282455101525826,
-                             0.01381980018141639, 0.03407274036010432, 0.9993238021218641);
-    const Matx31d T(-1.552005597952028, 0.0019508251875105093, -0.023335501616116062);
-
-    // generate camera matrices for resized image rectification.
-    Mat srcM1(M1), srcM2(M2);
-    Mat rszM1, rszM2;
-    resizeCameraMatrix(srcM1, rszM1, scale);
-    resizeCameraMatrix(srcM2, rszM2, scale);
-    Size rszImageSize(cvRound(scale * imageSize.width), cvRound(scale * imageSize.height));
-    Size srcImageSize = imageSize;
-    // apply stereoRectify
-    Mat srcR[2], srcP[2], srcQ;
-    Mat rszR[2], rszP[2], rszQ;
-    stereoRectify(srcM1, D1, srcM2, D2, srcImageSize, Rot, T,
-                  srcR[0], srcR[1], srcP[0], srcP[1], srcQ,
-                  CALIB_ZERO_DISPARITY, 0);
-    stereoRectify(rszM1, D1, rszM2, D2, rszImageSize, Rot, T,
-                  rszR[0], rszR[1], rszP[0], rszP[1], rszQ,
-                  CALIB_ZERO_DISPARITY, 0);
-    // generate remap maps
-    Mat srcRmap[2], rszRmap[2];
-    initUndistortRectifyMap(srcM1, D1, srcR[0], srcP[0], srcImageSize, CV_32FC2, srcRmap[0], srcRmap[1]);
-    initUndistortRectifyMap(rszM1, D1, rszR[0], rszP[0], rszImageSize, CV_32FC2, rszRmap[0], rszRmap[1]);
-
-    // generate source image
-    // it's an artificial pattern with white rect in the center
-    Mat image(imageSize, CV_8UC3);
-    image.setTo(0);
-    image(cv::Rect(imageSize.width / 3, imageSize.height / 3, imageSize.width / 3, imageSize.height / 3)).setTo(255);
-
-    // perform remap-resize
-    Mat src_result;
-    remap(image, src_result, srcRmap[0], srcRmap[1], INTER_LINEAR);
-    resize(src_result, src_result, Size(), scale, scale, INTER_LINEAR_EXACT);
-    // perform resize-remap
-    Mat rsz_result;
-    resize(image, rsz_result, Size(), scale, scale, INTER_LINEAR_EXACT);
-    remap(rsz_result, rsz_result, rszRmap[0], rszRmap[1], INTER_LINEAR);
-
-    // modifying the camera matrix with resizeCameraMatrix must yield the same
-    // result as calibrating the downscaled images
-    int cnz = countNonZero((cv::Mat(src_result - rsz_result) != 0)(
-                               cv::Rect(src_result.cols / 3, src_result.rows / 3,
-                                        (int)(src_result.cols / 3.1), int(src_result.rows / 3.1))));
-    if (cnz)
-    {
-        ts->printf( cvtest::TS::LOG, "The camera matrix is wrong for downscaled image\n");
-        ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-    }
-}
-
 class CV_StereoCalibrationTest : public cvtest::BaseTest
 {
 public:
@@ -2250,7 +2148,7 @@ TEST(Calib3d_ProjectPoints_CPP, outputShape)
 
 TEST(Calib3d_StereoCalibrate_C, regression) { CV_StereoCalibrationTest_C test; test.safe_run(); }
 TEST(Calib3d_StereoCalibrate_CPP, regression) { CV_StereoCalibrationTest_CPP test; test.safe_run(); }
-TEST(Calib3d_StereoCalibrateCorner, regression) { CV_StereoCalibrationCornerTest test; test.safe_run(); }
+
 
 TEST(Calib3d_StereoCalibrate_CPP, extended)
 {
@@ -2436,6 +2334,104 @@ TEST(Calib3d_Triangulate, accuracy)
     cout << "\tres: " << res << endl;
 
     ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 2);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+TEST(CV_RecoverPoseTest, regression_15341)
+{
+    // initialize test data
+    const int invalid_point_count = 2;
+    const float _points1_[] = {
+        1537.7f, 166.8f,
+        1599.1f, 179.6f,
+        1288.0f, 207.5f,
+        1507.1f, 193.2f,
+        1742.7f, 210.0f,
+        1041.6f, 271.7f,
+        1591.8f, 247.2f,
+        1524.0f, 261.3f,
+        1330.3f, 285.0f,
+        1403.1f, 284.0f,
+        1506.6f, 342.9f,
+        1502.8f, 347.3f,
+        1344.9f, 364.9f,
+        0.0f, 0.0f  // last point is initial invalid
+    };
+
+    const float _points2_[] = {
+        1533.4f, 532.9f,
+        1596.6f, 552.4f,
+        1277.0f, 556.4f,
+        1502.1f, 557.6f,
+        1744.4f, 601.3f,
+        1023.0f, 612.6f,
+        1589.2f, 621.6f,
+        1519.4f, 629.0f,
+        1320.3f, 637.3f,
+        1395.2f, 642.2f,
+        1501.5f, 710.3f,
+        1497.6f, 714.2f,
+        1335.1f, 719.61f,
+        1000.0f, 1000.0f  // last point is initial invalid
+    };
+
+    vector<Point2f> _points1; Mat(14, 1, CV_32FC2, (void*)_points1_).copyTo(_points1);
+    vector<Point2f> _points2; Mat(14, 1, CV_32FC2, (void*)_points2_).copyTo(_points2);
+
+    const int point_count = (int) _points1.size();
+    CV_Assert(point_count == (int) _points2.size());
+
+    // camera matrix with both focal lengths = 1, and principal point = (0, 0)
+    const Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+
+    int Inliers = 0;
+
+    const int ntests = 3;
+    for (int testcase = 1; testcase <= ntests; ++testcase)
+    {
+        if (testcase == 1) // testcase with vector input data
+        {
+            // init temporary test data
+            vector<unsigned char> mask(point_count);
+            vector<Point2f> points1(_points1);
+            vector<Point2f> points2(_points2);
+
+            // Estimation of fundamental matrix using the RANSAC algorithm
+            Mat E, R, t;
+            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+            EXPECT_EQ(0, (int)mask[13]) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
+            points2[12] = Point2f(0.0f, 0.0f); // provoke another outlier detection for recover Pose
+            Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+            EXPECT_EQ(0, (int)mask[12]) << "Detecting outliers in function failed, testcase " << testcase;
+        }
+        else // testcase with mat input data
+        {
+            Mat points1(_points1, true);
+            Mat points2(_points2, true);
+            Mat mask;
+
+            if (testcase == 2)
+            {
+                // init temporary testdata
+                mask = Mat::zeros(point_count, 1, CV_8UC1);
+            }
+            else // testcase == 3 - with transposed mask
+            {
+                mask = Mat::zeros(1, point_count, CV_8UC1);
+            }
+
+            // Estimation of fundamental matrix using the RANSAC algorithm
+            Mat E, R, t;
+            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+            EXPECT_EQ(0, (int)mask.at<unsigned char>(13)) << "Detecting outliers in function findEssentialMat failed, testcase " << testcase;
+            points2.at<Point2f>(12) = Point2f(0.0f, 0.0f); // provoke an outlier detection
+            Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+            EXPECT_EQ(0, (int)mask.at<unsigned char>(12)) << "Detecting outliers in function failed, testcase " << testcase;
+        }
+        EXPECT_EQ(Inliers, point_count - invalid_point_count) <<
+            "Number of inliers differs from expected number of inliers, testcase " << testcase;
     }
 }
 

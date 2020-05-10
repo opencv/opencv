@@ -742,9 +742,14 @@ LogLuvEncodeTile(TIFF* tif, uint8* bp, tmsize_t cc, uint16 s)
 #undef exp2  /* Conflict with C'99 function */
 #define exp2(x)		exp(M_LN2*(x))
 
-#define itrunc(x,m)	((m)==SGILOGENCODE_NODITHER ? \
-				(int)(x) : \
-				(int)((x) + rand()*(1./RAND_MAX) - .5))
+static int itrunc(double x, int m)
+{
+    if( m == SGILOGENCODE_NODITHER )
+        return (int)x;
+    /* Silence CoverityScan warning about bad crypto function */
+    /* coverity[dont_call] */
+    return (int)(x + rand()*(1./RAND_MAX) - .5);
+}
 
 #if !LOGLUV_PUBLIC
 static

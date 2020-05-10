@@ -824,6 +824,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     for (size_t page = 0; page < img_vec.size(); page++)
     {
         const Mat& img = img_vec[page];
+        CV_Assert(!img.empty());
         int channels = img.channels();
         int width = img.cols, height = img.rows;
         int type = img.type();
@@ -883,6 +884,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
         const int bitsPerByte = 8;
         size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
+        CV_Assert(fileStep > 0);
 
         int rowsPerStrip = (int)((1 << 13) / fileStep);
         readParam(params, TIFFTAG_ROWSPERSTRIP, rowsPerStrip);

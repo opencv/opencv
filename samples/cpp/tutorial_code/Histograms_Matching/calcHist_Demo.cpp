@@ -18,11 +18,11 @@ using namespace cv;
 int main(int argc, char** argv)
 {
     //! [Load image]
-    CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+    CommandLineParser parser( argc, argv, "{@input | lena.jpg | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ), IMREAD_COLOR );
     if( src.empty() )
     {
-        return -1;
+        return EXIT_FAILURE;
     }
     //! [Load image]
 
@@ -85,5 +85,5 @@ int main(int argc, char** argv)
     waitKey();
     //! [Display]
 
-    return 0;
+    return EXIT_SUCCESS;
 }

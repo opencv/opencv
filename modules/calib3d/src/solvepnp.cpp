@@ -41,7 +41,7 @@
  //M*/
 
 #include "precomp.hpp"
-#include "upnp.h"
+//#include "upnp.h"
 #include "dls.h"
 #include "epnp.h"
 #include "p3p.h"
@@ -753,10 +753,8 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     CV_Assert( ( (npoints >= 4) || (npoints == 3 && flags == SOLVEPNP_ITERATIVE && useExtrinsicGuess) )
                && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
 
-    if (opoints.cols == 3)
-        opoints = opoints.reshape(3);
-    if (ipoints.cols == 2)
-        ipoints = ipoints.reshape(2);
+    opoints = opoints.reshape(3, npoints);
+    ipoints = ipoints.reshape(2, npoints);
 
     if( flags != SOLVEPNP_ITERATIVE )
         useExtrinsicGuess = false;
@@ -796,7 +794,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     else if (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P)
     {
         vector<Mat> rvecs, tvecs;
-        solveP3P(_opoints, _ipoints, _cameraMatrix, _distCoeffs, rvecs, tvecs, flags);
+        solveP3P(opoints, ipoints, _cameraMatrix, _distCoeffs, rvecs, tvecs, flags);
         vec_rvecs.insert(vec_rvecs.end(), rvecs.begin(), rvecs.end());
         vec_tvecs.insert(vec_tvecs.end(), tvecs.begin(), tvecs.end());
     }
@@ -1011,43 +1009,46 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
 
     if (reprojectionError.needed())
     {
-        int type = reprojectionError.type();
+        int type = (reprojectionError.fixedType() || !reprojectionError.empty())
+                ? reprojectionError.type()
+                : (max(_ipoints.depth(), _opoints.depth()) == CV_64F ? CV_64F : CV_32F);
+
         reprojectionError.create(solutions, 1, type);
         CV_CheckType(reprojectionError.type(), type == CV_32FC1 || type == CV_64FC1,
                      "Type of reprojectionError must be CV_32FC1 or CV_64FC1!");
 
         Mat objectPoints, imagePoints;
-        if (_opoints.depth() == CV_32F)
+        if (opoints.depth() == CV_32F)
         {
-            _opoints.getMat().convertTo(objectPoints, CV_64F);
+            opoints.convertTo(objectPoints, CV_64F);
         }
         else
         {
-            objectPoints = _opoints.getMat();
+            objectPoints = opoints;
         }
-        if (_ipoints.depth() == CV_32F)
+        if (ipoints.depth() == CV_32F)
         {
-            _ipoints.getMat().convertTo(imagePoints, CV_64F);
+            ipoints.convertTo(imagePoints, CV_64F);
         }
         else
         {
-            imagePoints = _ipoints.getMat();
+            imagePoints = ipoints;
         }
 
         for (size_t i = 0; i < vec_rvecs.size(); i++)
         {
             vector<Point2d> projectedPoints;
             projectPoints(objectPoints, vec_rvecs[i], vec_tvecs[i], cameraMatrix, distCoeffs, projectedPoints);
-            double rmse = norm(projectedPoints, imagePoints, NORM_L2) / sqrt(2*projectedPoints.size());
+            double rmse = norm(Mat(projectedPoints, false), imagePoints, NORM_L2) / sqrt(2*projectedPoints.size());
 
             Mat err = reprojectionError.getMat();
             if (type == CV_32F)
             {
-                err.at<float>(0,static_cast<int>(i)) = static_cast<float>(rmse);
+                err.at<float>(static_cast<int>(i)) = static_cast<float>(rmse);
             }
             else
             {
-                err.at<double>(0,static_cast<int>(i)) = rmse;
+                err.at<double>(static_cast<int>(i)) = rmse;
             }
         }
     }

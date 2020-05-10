@@ -10,7 +10,7 @@ int main( int argc, char** argv )
 {
     if( argc != 2)
     {
-     cout <<" Usage: display_image ImageToLoadAndDisplay" << endl;
+     cout <<" Usage: " << argv[0] << " ImageToLoadAndDisplay" << endl;
      return -1;
     }
 

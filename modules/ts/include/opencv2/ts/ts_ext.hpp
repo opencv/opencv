@@ -16,6 +16,9 @@ extern int testThreads;
 
 void testSetUp();
 void testTearDown();
+
+bool checkBigDataTests();
+
 }
 
 // check for required "opencv_test" namespace
@@ -37,7 +40,7 @@ void testTearDown();
           Body(); \
           CV__TEST_CLEANUP \
        } \
-       catch (const cvtest::SkipTestException& e) \
+       catch (const cvtest::details::SkipTestExceptionBase& e) \
        { \
           printf("[     SKIP ] %s\n", e.what()); \
        } \
@@ -74,9 +77,8 @@ void testTearDown();
 
 #define CV__TEST_BIGDATA_BODY_IMPL(name) \
     { \
-       if (!cvtest::runBigDataTests) \
+       if (!cvtest::checkBigDataTests()) \
        { \
-           printf("[     SKIP ] BigData tests are disabled\n"); \
            return; \
        } \
        CV__TRACE_APP_FUNCTION_NAME(name); \
@@ -85,14 +87,14 @@ void testTearDown();
           Body(); \
           CV__TEST_CLEANUP \
        } \
-       catch (const cvtest::SkipTestException& e) \
+       catch (const cvtest::details::SkipTestExceptionBase& e) \
        { \
           printf("[     SKIP ] %s\n", e.what()); \
        } \
     } \
 
 // Special type of tests which require / use or validate processing of huge amount of data (>= 2Gb)
-#if defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__)
+#if defined(_M_X64) || defined(_M_ARM64) || defined(__x86_64__) || defined(__aarch64__)
 #define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, test_name, ::testing::Test, Body, CV__TEST_BIGDATA_BODY_IMPL)
 #else
 #define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, DISABLED_ ## test_name, ::testing::Test, Body, CV__TEST_BIGDATA_BODY_IMPL)
@@ -158,5 +160,36 @@ void testTearDown();
 
 #undef TEST_P
 #define TEST_P(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, Body, CV__TEST_BODY_IMPL)
+
+
+#define CV_TEST_EXPECT_EXCEPTION_MESSAGE(statement, msg) \
+  GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
+  if (::testing::internal::AlwaysTrue()) { \
+    const char* msg_ = msg; \
+    bool hasException = false; \
+    try { \
+      GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
+    } \
+    catch (const cv::Exception& e) { \
+      if (NULL == strstr(e.what(), msg_)) \
+        ADD_FAILURE() << "Unexpected cv::Exception is raised: " << #statement << "\n  Expected message substring: '" << msg_ << "'. Actual message:\n" << e.what(); \
+      hasException = true; \
+    } \
+    catch (const std::exception& e) { \
+      ADD_FAILURE() << "Unexpected std::exception is raised: " << #statement << "\n" << e.what(); \
+      hasException = true; \
+    } \
+    catch (...) { \
+      ADD_FAILURE() << "Unexpected C++ exception is raised: " << #statement; \
+      hasException = true; \
+    } \
+    if (!hasException) { \
+      goto GTEST_CONCAT_TOKEN_(gtest_label_test_, __LINE__); \
+    } \
+  } else \
+    GTEST_CONCAT_TOKEN_(gtest_label_test_, __LINE__): \
+      ADD_FAILURE() << "Failed: Expected: " #statement " throws an '" << msg << "' exception.\n" \
+           "  Actual: it doesn't."
+
 
 #endif  // OPENCV_TS_EXT_HPP

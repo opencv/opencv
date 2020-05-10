@@ -39,4 +39,4 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 add_executable(${EXAMPLE_NAME} "${EXAMPLE_FILE}")
 
 # Link your application with OpenCV libraries
-target_link_libraries(${EXAMPLE_NAME} LINK_PRIVATE ${OpenCV_LIBS})
+target_link_libraries(${EXAMPLE_NAME} PRIVATE ${OpenCV_LIBS})

@@ -53,6 +53,10 @@
 
 #include <opencv2/core/utils/trace.hpp>
 
+#ifdef ENABLE_INSTRUMENTATION
+#include "opencv2/core/utils/instrumentation.hpp"
+#endif
+
 #ifdef HAVE_EIGEN
 #  if defined __GNUC__ && defined __APPLE__
 #    pragma GCC diagnostic ignored "-Wshadow"

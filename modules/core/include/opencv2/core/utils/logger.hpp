@@ -11,14 +11,12 @@
 
 #include "logger.defines.hpp"
 
-//! @addtogroup core_logging
-// This section describes OpenCV logging utilities.
-//
-//! @{
-
 namespace cv {
 namespace utils {
 namespace logging {
+
+//! @addtogroup core_logging
+//! @{
 
 //! Supported logging levels and their semantic
 enum LogLevel {
@@ -59,29 +57,103 @@ CV_EXPORTS void writeLogMessage(LogLevel logLevel, const char* message);
 # endif
 #endif
 
+#define CV_LOG_WITH_TAG(tag, msgLevel, extra_check0, extra_check1, msg_prefix, ...) \
+    for(;;) { \
+        extra_check0; \
+        if (cv::utils::logging::getLogLevel() < msgLevel) break; \
+        extra_check1; \
+        std::stringstream ss; ss msg_prefix <<  __VA_ARGS__; \
+        cv::utils::logging::internal::writeLogMessage(msgLevel, ss.str().c_str()); \
+        break; \
+    }
 
-#define CV_LOG_FATAL(tag, ...)   for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_FATAL) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_FATAL, ss.str().c_str()); break; }
-#define CV_LOG_ERROR(tag, ...)   for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_ERROR) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_ERROR, ss.str().c_str()); break; }
-#define CV_LOG_WARNING(tag, ...) for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_WARNING) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_WARNING, ss.str().c_str()); break; }
+#define CV_LOG_FATAL(tag, ...)   CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_FATAL, , , , __VA_ARGS__)
+#define CV_LOG_ERROR(tag, ...)   CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_ERROR, , , , __VA_ARGS__)
+#define CV_LOG_WARNING(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_WARNING, , , , __VA_ARGS__)
+#define CV_LOG_INFO(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_INFO, , , , __VA_ARGS__)
+#define CV_LOG_DEBUG(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_DEBUG, , , , __VA_ARGS__)
+#define CV_LOG_VERBOSE(tag, v, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_VERBOSE, , , << "[VERB" << v << ":" << cv::utils::getThreadID() << "] ", __VA_ARGS__)
+
 #if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_INFO
+#undef CV_LOG_INFO
 #define CV_LOG_INFO(tag, ...)
-#else
-#define CV_LOG_INFO(tag, ...)    for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_INFO) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_INFO, ss.str().c_str()); break; }
 #endif
+
 #if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_DEBUG
+#undef CV_LOG_DEBUG
 #define CV_LOG_DEBUG(tag, ...)
-#else
-#define CV_LOG_DEBUG(tag, ...)   for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_DEBUG) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_DEBUG, ss.str().c_str()); break; }
 #endif
+
 #if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_VERBOSE
+#undef CV_LOG_VERBOSE
 #define CV_LOG_VERBOSE(tag, v, ...)
-#else
-#define CV_LOG_VERBOSE(tag, v, ...) for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_VERBOSE) break; std::stringstream ss; ss << "[VERB" << v << ":" << cv::utils::getThreadID() << "] " << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_VERBOSE, ss.str().c_str()); break; }
+#endif
+
+//! @cond IGNORED
+#define CV__LOG_ONCE_CHECK_PRE \
+    static bool _cv_log_once_ ## __LINE__ = false; \
+    if (_cv_log_once_ ## __LINE__) break;
+
+#define CV__LOG_ONCE_CHECK_POST \
+    _cv_log_once_ ## __LINE__ = true;
+
+#define CV__LOG_IF_CHECK(logging_cond) \
+    if (!(logging_cond)) break;
+
+//! @endcond
+
+
+// CV_LOG_ONCE_XXX macros
+
+#define CV_LOG_ONCE_ERROR(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_ERROR, CV__LOG_ONCE_CHECK_PRE, CV__LOG_ONCE_CHECK_POST, , __VA_ARGS__)
+#define CV_LOG_ONCE_WARNING(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_WARNING, CV__LOG_ONCE_CHECK_PRE, CV__LOG_ONCE_CHECK_POST, , __VA_ARGS__)
+#define CV_LOG_ONCE_INFO(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_INFO, CV__LOG_ONCE_CHECK_PRE, CV__LOG_ONCE_CHECK_POST, , __VA_ARGS__)
+#define CV_LOG_ONCE_DEBUG(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_DEBUG, CV__LOG_ONCE_CHECK_PRE, CV__LOG_ONCE_CHECK_POST, , __VA_ARGS__)
+#define CV_LOG_ONCE_VERBOSE(tag, v, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_VERBOSE, CV__LOG_ONCE_CHECK_PRE, CV__LOG_ONCE_CHECK_POST, << "[VERB" << v << ":" << cv::utils::getThreadID() << "] ", __VA_ARGS__)
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_INFO
+#undef CV_LOG_ONCE_INFO
+#define CV_LOG_ONCE_INFO(tag, ...)
+#endif
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_DEBUG
+#undef CV_LOG_ONCE_DEBUG
+#define CV_LOG_ONCE_DEBUG(tag, ...)
+#endif
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_VERBOSE
+#undef CV_LOG_ONCE_VERBOSE
+#define CV_LOG_ONCE_VERBOSE(tag, v, ...)
 #endif
 
 
-}}} // namespace
+// CV_LOG_IF_XXX macros
+
+#define CV_LOG_IF_FATAL(tag, logging_cond, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_FATAL, , CV__LOG_IF_CHECK(logging_cond), , __VA_ARGS__)
+#define CV_LOG_IF_ERROR(tag, logging_cond, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_ERROR, , CV__LOG_IF_CHECK(logging_cond), , __VA_ARGS__)
+#define CV_LOG_IF_WARNING(tag, logging_cond, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_WARNING, , CV__LOG_IF_CHECK(logging_cond), , __VA_ARGS__)
+#define CV_LOG_IF_INFO(tag, logging_cond, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_INFO, , CV__LOG_IF_CHECK(logging_cond), , __VA_ARGS__)
+#define CV_LOG_IF_DEBUG(tag, logging_cond, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_DEBUG, , CV__LOG_IF_CHECK(logging_cond), , __VA_ARGS__)
+#define CV_LOG_IF_VERBOSE(tag, v, logging_cond, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_VERBOSE, , CV__LOG_IF_CHECK(logging_cond), << "[VERB" << v << ":" << cv::utils::getThreadID() << "] ", __VA_ARGS__)
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_INFO
+#undef CV_LOG_IF_INFO
+#define CV_LOG_IF_INFO(tag, logging_cond, ...)
+#endif
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_DEBUG
+#undef CV_LOG_IF_DEBUG
+#define CV_LOG_IF_DEBUG(tag, logging_cond, ...)
+#endif
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_VERBOSE
+#undef CV_LOG_IF_VERBOSE
+#define CV_LOG_IF_VERBOSE(tag, v, logging_cond, ...)
+#endif
+
 
 //! @}
+
+}}} // namespace
 
 #endif // OPENCV_LOGGER_HPP

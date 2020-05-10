@@ -7,7 +7,7 @@
 
 #define CV_VERSION_MAJOR    3
 #define CV_VERSION_MINOR    4
-#define CV_VERSION_REVISION 7
+#define CV_VERSION_REVISION 10
 #define CV_VERSION_STATUS   "-dev"
 
 #define CVAUX_STR_EXP(__A)  #__A

@@ -47,7 +47,7 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.cuda.hpp"
 
-#if CUDA_VERSION >= 9000
+#if CUDA_VERSION >= 9000 && CUDA_VERSION < 10000
     #include <dynlink_nvcuvid.h>
 #else
     #include <nvcuvid.h>

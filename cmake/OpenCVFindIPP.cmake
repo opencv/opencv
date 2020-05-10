@@ -40,11 +40,8 @@ if (X86 AND UNIX AND NOT APPLE AND NOT ANDROID AND BUILD_SHARED_LIBS)
 endif()
 
 set(IPP_X64 0)
-if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
-    set(IPP_X64 1)
-endif()
-if(CMAKE_CL_64)
-    set(IPP_X64 1)
+if(X86_64)
+  set(IPP_X64 1)
 endif()
 
 # This function detects Intel IPP version by analyzing .h file
@@ -151,7 +148,7 @@ macro(ipp_detect_version)
           IMPORTED_LOCATION ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
         )
         list(APPEND IPP_LIBRARIES ipp${name})
-        if (NOT BUILD_SHARED_LIBS)
+        if (NOT BUILD_SHARED_LIBS AND (HAVE_IPP_ICV OR ";${OPENCV_INSTALL_EXTERNAL_DEPENDENCIES};" MATCHES ";ipp;"))
           # CMake doesn't support "install(TARGETS ${IPP_PREFIX}${name} " command with imported targets
           install(FILES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
                   DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
@@ -239,6 +236,10 @@ if(DEFINED ENV{OPENCV_IPP_PATH} AND NOT DEFINED IPPROOT)
 endif()
 
 if(NOT DEFINED IPPROOT)
+  if(APPLE AND NOT IPP_X64)
+    message(STATUS "IPPICV: 32-bit binaries are not supported on Apple platform (MacOSX)")
+    return()
+  endif()
   include("${OpenCV_SOURCE_DIR}/3rdparty/ippicv/ippicv.cmake")
   download_ippicv(ICV_PACKAGE_ROOT)
   if(NOT ICV_PACKAGE_ROOT)

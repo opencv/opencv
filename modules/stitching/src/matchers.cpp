@@ -51,7 +51,6 @@ using namespace cv::cuda;
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
 using xfeatures2d::SURF;
-using xfeatures2d::SIFT;
 #else
 #  if defined(_MSC_VER)
 #    pragma warning(disable:4702)  // unreachable code
@@ -487,14 +486,8 @@ void SurfFeaturesFinder::find(InputArray image, ImageFeatures &features)
 
 SiftFeaturesFinder::SiftFeaturesFinder()
 {
-#ifdef HAVE_OPENCV_XFEATURES2D
     Ptr<SIFT> sift_ = SIFT::create();
-    if( !sift_ )
-        CV_Error( Error::StsNotImplemented, "OpenCV was built without SIFT support" );
     sift = sift_;
-#else
-    CV_Error( Error::StsNotImplemented, "OpenCV was built without SIFT support" );
-#endif
 }
 
 void SiftFeaturesFinder::find(InputArray image, ImageFeatures &features)

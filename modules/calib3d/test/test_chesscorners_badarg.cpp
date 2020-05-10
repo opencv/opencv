@@ -115,7 +115,7 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
 
     img = cb.clone();
     pattern_size = Size(2,2);
-    errors += run_test_case( CV_StsOutOfRange, "Invlid pattern size" );
+    errors += run_test_case( CV_StsOutOfRange, "Invalid pattern size" );
 
     pattern_size = cbg.cornersSize();
     cb.convertTo(img, CV_32F);

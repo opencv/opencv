@@ -113,7 +113,7 @@ static Mat normalizePoints(int npoints, Point2f *points)
     T(0,0) = T(1,1) = s;
     T(0,2) = -cx*s;
     T(1,2) = -cy*s;
-    return T;
+    return CV_CXX_MOVE(T);
 }
 
 
@@ -138,7 +138,7 @@ static Mat estimateGlobMotionLeastSquaresTranslation(
         *rmse = std::sqrt(*rmse / npoints);
     }
 
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
@@ -219,7 +219,7 @@ static Mat estimateGlobMotionLeastSquaresRotation(
         *rmse = std::sqrt(*rmse / npoints);
     }
 
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 static Mat  estimateGlobMotionLeastSquaresRigid(
@@ -273,7 +273,7 @@ static Mat  estimateGlobMotionLeastSquaresRigid(
         *rmse = std::sqrt(*rmse / npoints);
     }
 
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
@@ -484,7 +484,7 @@ Mat estimateGlobalMotionRansac(
     if (ninliers)
         *ninliers = ninliersMax;
 
-    return bestM;
+    return CV_CXX_MOVE(bestM);
 }
 
 
@@ -527,7 +527,7 @@ Mat MotionEstimatorRansacL2::estimate(InputArray points0, InputArray points1, bo
         if (ok) *ok = false;
     }
 
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
@@ -681,7 +681,7 @@ Mat FromFileMotionReader::estimate(const Mat &/*frame0*/, const Mat &/*frame1*/,
           >> M(1,0) >> M(1,1) >> M(1,2)
           >> M(2,0) >> M(2,1) >> M(2,2) >> ok_;
     if (ok) *ok = ok_;
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 
@@ -701,7 +701,7 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
           << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
           << M(2,0) << " " << M(2,1) << " " << M(2,2) << " " << ok_ << std::endl;
     if (ok) *ok = ok_;
-    return M;
+    return CV_CXX_MOVE(M);
 }
 
 

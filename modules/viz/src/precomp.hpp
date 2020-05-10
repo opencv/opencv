@@ -53,6 +53,7 @@
 #include <iomanip>
 #include <limits>
 
+#include <vtkVersionMacros.h>
 #include <vtkAppendPolyData.h>
 #include <vtkAssemblyPath.h>
 #include <vtkCellData.h>

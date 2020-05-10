@@ -48,6 +48,10 @@
 //! @addtogroup core_utils
 //! @{
 
+#ifdef OPENCV_INCLUDE_PORT_FILE  // User-provided header file with custom platform configuration
+#include OPENCV_INCLUDE_PORT_FILE
+#endif
+
 #if !defined CV_DOXYGEN && !defined CV_IGNORE_DEBUG_BUILD_GUARD
 #if (defined(_MSC_VER) && (defined(DEBUG) || defined(_DEBUG))) || \
     (defined(_GLIBCXX_DEBUG) || defined(_GLIBCXX_DEBUG_PEDANTIC))
@@ -118,9 +122,11 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
 #    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
 #  else
+namespace cv {
      template <bool x> struct CV_StaticAssert_failed;
      template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
      template<int x> struct CV_StaticAssert_test {};
+}
 #    define CV_StaticAssert(condition, reason)\
        typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
 #  endif
@@ -175,7 +181,12 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #undef abs
 #undef Complex
 
+#if defined __cplusplus
+#include <limits>
+#else
 #include <limits.h>
+#endif
+
 #include "opencv2/core/hal/interface.h"
 
 #if defined __ICL
@@ -258,6 +269,8 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 #define CV_CPU_NEON             100
 
+#define CV_CPU_MSA              150
+
 #define CV_CPU_VSX              200
 #define CV_CPU_VSX3             201
 
@@ -267,7 +280,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_AVX512_KNL       258
 #define CV_CPU_AVX512_KNM       259
 #define CV_CPU_AVX512_CNL       260
-#define CV_CPU_AVX512_CEL       261
+#define CV_CPU_AVX512_CLX       261
 #define CV_CPU_AVX512_ICL       262
 
 // when adding to this list remember to update the following enum
@@ -308,6 +321,8 @@ enum CpuFeatures {
 
     CPU_NEON            = 100,
 
+    CPU_MSA             = 150,
+
     CPU_VSX             = 200,
     CPU_VSX3            = 201,
 
@@ -316,7 +331,7 @@ enum CpuFeatures {
     CPU_AVX512_KNL      = 258, //!< Knights Landing with AVX-512F/CD/ER/PF
     CPU_AVX512_KNM      = 259, //!< Knights Mill with AVX-512F/CD/ER/PF/4FMAPS/4VNNIW/VPOPCNTDQ
     CPU_AVX512_CNL      = 260, //!< Cannon Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI
-    CPU_AVX512_CEL      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI
+    CPU_AVX512_CLX      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/VNNI
     CPU_AVX512_ICL      = 262, //!< Ice Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI/VBMI2/BITALG/VPOPCNTDQ
 
     CPU_MAX_FEATURE     = 512  // see CV_HARDWARE_MAX_FEATURE
@@ -325,6 +340,13 @@ enum CpuFeatures {
 
 #include "cv_cpu_dispatch.h"
 
+#if !defined(CV_STRONG_ALIGNMENT) && defined(__arm__) && !(defined(__aarch64__) || defined(_M_ARM64))
+// int*, int64* should be propertly aligned pointers on ARMv7
+#define CV_STRONG_ALIGNMENT 1
+#endif
+#if !defined(CV_STRONG_ALIGNMENT)
+#define CV_STRONG_ALIGNMENT 0
+#endif
 
 /* fundamental constants */
 #define CV_PI   3.1415926535897932384626433832795
@@ -515,7 +537,11 @@ Cv64suf;
 #  include <intrin.h>
 #  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
 #else
-   CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
+  #ifdef OPENCV_FORCE_UNSAFE_XADD
+    CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
+  #else
+    #error "OpenCV: can't define safe CV_XADD macro for current platform (unsupported). Define CV_XADD macro through custom port header (see OPENCV_INCLUDE_PORT_FILE)"
+  #endif
 #endif
 
 
@@ -583,6 +609,13 @@ Cv64suf;
 #    undef CV_CXX_MOVE_SEMANTICS
 #  endif
 #endif
+
+#ifdef CV_CXX_MOVE_SEMANTICS
+#define CV_CXX_MOVE(x) std::move(x)
+#else
+#define CV_CXX_MOVE(x) (x)
+#endif
+
 
 /****************************************************************************************\
 *                                    C++11 std::array                                    *
