@@ -405,6 +405,8 @@ public:
         config.height_norm = height_norm;
         config.width_norm = width_norm;
 
+        config.scale_x_y = scale_x_y;
+
         config.object_prob_cutoff = (classfix == -1) ? 0.5 : 0.0;
         config.class_prob_cutoff = thresh;
 
