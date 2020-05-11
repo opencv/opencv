@@ -373,7 +373,7 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         std::vector<std::vector<std::size_t>> offsets;
-        for (const auto& ranges : sliceRanges)
+        for (const auto& ranges : finalSliceRanges)
         {
             std::vector<std::size_t> offsets_i;
             for (const auto& range : ranges)
