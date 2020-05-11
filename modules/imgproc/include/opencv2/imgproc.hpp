@@ -4377,7 +4377,7 @@ enum ColormapTypes
     COLORMAP_TWILIGHT = 18, //!< ![twilight](pics/colormaps/colorscale_twilight.jpg)
     COLORMAP_TWILIGHT_SHIFTED = 19, //!< ![twilight shifted](pics/colormaps/colorscale_twilight_shifted.jpg)
     COLORMAP_TURBO = 20, //!< ![turbo](pics/colormaps/colorscale_turbo.jpg)
-    COLORMAP_DEEPGREEN = 21
+    COLORMAP_DEEPGREEN = 21//!< ![deepgreen](pics/colormaps/colorscale_deepgreen.jpg)
 };
 
 /** @example samples/cpp/falsecolor.cpp
