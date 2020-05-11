@@ -764,6 +764,7 @@ namespace colormap
             colormap == COLORMAP_BONE ? (colormap::ColorMap*)(new colormap::Bone) :
             colormap == COLORMAP_CIVIDIS ? (colormap::ColorMap*)(new colormap::Cividis) :
             colormap == COLORMAP_COOL ? (colormap::ColorMap*)(new colormap::Cool) :
+            colormap == COLORMAP_DEEPGREEN ? (colormap::ColorMap*)(new colormap::DeepGreen) :
             colormap == COLORMAP_HOT ? (colormap::ColorMap*)(new colormap::Hot) :
             colormap == COLORMAP_HSV ? (colormap::ColorMap*)(new colormap::HSV) :
             colormap == COLORMAP_INFERNO ? (colormap::ColorMap*)(new colormap::Inferno) :
@@ -780,7 +781,6 @@ namespace colormap
             colormap == COLORMAP_TWILIGHT ? (colormap::ColorMap*)(new colormap::Twilight) :
             colormap == COLORMAP_TWILIGHT_SHIFTED ? (colormap::ColorMap*)(new colormap::TwilightShifted) :
             colormap == COLORMAP_VIRIDIS ? (colormap::ColorMap*)(new colormap::Viridis) :
-            colormap == COLORMAP_DEEPGREEN ? (colormap::ColorMap*)(new colormap::DeepGreen) :
             colormap == COLORMAP_WINTER ? (colormap::ColorMap*)(new colormap::Winter) : 0;
 
         if( !cm )
