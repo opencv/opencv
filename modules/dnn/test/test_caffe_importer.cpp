@@ -361,8 +361,8 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
         double l1 = 1e-5, lInf = 1e-4;
         if (targetId == DNN_TARGET_CUDA_FP16)
         {
-            l1 = 3e-4;
-            lInf = 0.002;
+            l1 = 4e-4;
+            lInf = 0.004;
         }
         normAssert(pred.colRange(1, 7), out.colRange(1, 7), "", l1, lInf);
     }
