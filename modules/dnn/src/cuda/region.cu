@@ -29,7 +29,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         __global__ void region_box(
             Span<T> output, View<T> input, View<T> bias,
             size_type boxes_per_cell, size_type box_size,
-            size_type rows, size_type cols,
+            size_type rows, size_type cols, T scale_x_y,
             size_type height_norm, size_type width_norm,
             T object_prob_cutoff)
         {
@@ -48,8 +48,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const auto x = (box_index % row_inner_size) / col_inner_size;
 
                 using device::fast_sigmoid;
-                output[box_offset + 0] = (T(x) + fast_sigmoid(input[box_offset + 0])) / T(cols);
-                output[box_offset + 1] = (T(y) + fast_sigmoid(input[box_offset + 1])) / T(rows);
+                const auto tmp_x = (fast_sigmoid(input[box_offset + 0]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
+                const auto tmp_y = (fast_sigmoid(input[box_offset + 1]) - static_cast<T>(0.5)) * scale_x_y + static_cast<T>(0.5);
+                output[box_offset + 0] = (T(x) + tmp_x) / T(cols);
+                output[box_offset + 1] = (T(y) + tmp_y) / T(rows);
 
                 vector2_type bias_xy;
                 v_load(bias_xy, bias_vPtr[box_of_the_cell]);
@@ -143,7 +145,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void region(const Stream& stream, Span<T> output, View<T> input, View<T> bias,
         T object_prob_cutoff, T class_prob_cutoff,
         std::size_t boxes_per_cell, std::size_t box_size,
-        std::size_t rows, std::size_t cols,
+        std::size_t rows, std::size_t cols, T scale_x_y,
         std::size_t height_norm, std::size_t width_norm,
         bool if_true_sigmoid_else_softmax /* true = sigmoid, false = softmax */)
     {
@@ -155,7 +157,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         auto box_policy = make_policy(box_kernel, output.size() / box_size, 0, stream);
         launch_kernel(box_kernel, box_policy,
             output, input, bias, boxes_per_cell, box_size,
-            rows, cols, height_norm, width_norm,
+            rows, cols, scale_x_y, height_norm, width_norm,
             object_prob_cutoff);
 
         if (if_true_sigmoid_else_softmax) {
@@ -171,10 +173,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void region(const Stream&, Span<__half>, View<__half>, View<__half>,
-        __half, __half, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool);
+        __half, __half, std::size_t, std::size_t, std::size_t, std::size_t, __half, std::size_t, std::size_t, bool);
 #endif
 
     template void region(const Stream&, Span<float>, View<float>, View<float>,
-        float, float, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool);
+        float, float, std::size_t, std::size_t, std::size_t, std::size_t, float, std::size_t, std::size_t, bool);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
