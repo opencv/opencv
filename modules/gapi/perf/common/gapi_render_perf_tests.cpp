@@ -4,13 +4,11 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
+
 #include "../perf_precomp.hpp"
-
-#include <iostream>
-
-#include "./gapi_render_perf_tests.hpp"
-
 #include "../../src/api/render_priv.hpp"
+#include "../../test/common/gapi_tests_common.hpp"
+#include <opencv2/gapi/imgproc.hpp>
 
 #ifdef HAVE_FREETYPE
 #include <codecvt>
@@ -19,6 +17,38 @@
 namespace opencv_test
 {
   using namespace perf;
+
+  #ifdef HAVE_FREETYPE
+  class RenderTestFTexts : public TestPerfParams<tuple<std::wstring, cv::Size, cv::Point,
+                                                       int, cv::Scalar, MatType>> {};
+  #endif // HAVE_FREETYPE
+
+  class RenderTestTexts : public TestPerfParams<tuple<std::string, cv::Size, cv::Point,
+                                                      int, double, cv::Scalar, int, int,
+                                                      bool, MatType>> {};
+
+  class RenderTestRects : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar,
+                                                      int, int, int, MatType,
+                                                      compare_f>> {};
+
+  class RenderTestCircles : public TestPerfParams<tuple<cv::Size, cv::Point, int,
+                                                        cv::Scalar, int, int, int,
+                                                        MatType>> {};
+
+  class RenderTestLines : public TestPerfParams<tuple<cv::Size, cv::Point, cv::Point,
+                                                      cv::Scalar, int, int, int, MatType>> {};
+
+  class RenderTestMosaics : public TestPerfParams<tuple<cv::Size, cv::Rect, int, int,
+                                                        MatType>> {};
+
+  class RenderTestImages : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar, double,
+                                                       MatType>> {};
+
+  class RenderTestPolylines : public TestPerfParams<tuple<cv::Size, std::vector<cv::Point>,
+                                                          cv::Scalar, int, int, int, MatType>> {};
+
+  class RenderTestPolyItems : public TestPerfParams<tuple<cv::Size, int, int, int>> {};
+
 
 namespace {
 void create_rand_mats(const cv::Size &size, MatType type, cv::Mat &ref_mat, cv::Mat &gapi_mat)
@@ -115,6 +145,7 @@ void blendImageRef(cv::Mat &mat, const cv::Point &org, const cv::Mat &img, const
 }
 
 #ifdef HAVE_FREETYPE
+// FIXME: remove this code duplication with gapi/test/render/gapi_render_tests_ocv.cpp
 static std::wstring to_wstring(const char* bytes)
 {
     std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
@@ -218,8 +249,8 @@ PERF_TEST_P_(RenderTestFTexts, RenderFTextsPerformanceBGROCVTest)
 
     std::tie(text ,sz ,org ,fh ,color, type) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -255,8 +286,8 @@ PERF_TEST_P_(RenderTestFTexts, RenderFTextsPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -297,8 +328,8 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
     cv::Size sz;
     std::tie(text, sz, org, ff, fs, color, thick, lt, blo, type) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -345,8 +376,8 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -403,8 +434,8 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
     compare_f cmpF;
     std::tie(sz, rect, color, thick, lt, shift, type, cmpF) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -450,8 +481,8 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -510,8 +541,8 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceBGROCVTest)
     cv::Size sz;
     std::tie(sz, center, radius, color, thick, lt, shift, type) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -559,8 +590,8 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -620,8 +651,8 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
     cv::Size sz;
     std::tie(sz, pt1, pt2, color, thick, lt, shift, type) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -670,8 +701,8 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -727,8 +758,8 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
     cv::Size sz;
     std::tie(sz, mos, cellsz, decim, type) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -774,8 +805,8 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -831,8 +862,8 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
     cv::Size sz;
     std::tie(sz, rect, color, transparency, type) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
 
     cv::Mat img(rect.size(), CV_8UC3, color);
     cv::Mat alpha(rect.size(), CV_32FC1, transparency);
@@ -883,8 +914,8 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -948,8 +979,8 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceBGROCVTest)
     MatType type;
     std::tie(sz, points, color, thick, lt, shift, type) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -997,8 +1028,8 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -1045,7 +1076,7 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
+PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceBGROCVTest)
 {
     int thick = 2;
     int lt = LINE_8;
@@ -1056,8 +1087,10 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
     int rects_num, text_num, image_num;
     std::tie(sz, rects_num, text_num, image_num) = GetParam();
 
-    cv::Mat gapi_mat = cv::Mat(sz, type);
-    cv::Mat ref_mat(gapi_mat);
+    cv::Mat gapi_mat, ref_mat;
+    create_rand_mats(sz, type, ref_mat, gapi_mat);
+    cv::Mat gapi_out_mat(sz, type);
+    gapi_mat.copyTo(gapi_out_mat);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -1066,16 +1099,20 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
     cv::Rect rect(200, 200, 200, 200);
     int shift = 0;
 
-    for (int i = 0; i < rects_num; ++i)
+    for (int i = 0; i < rects_num; ++i) {
+        cv::Rect render_rect(rect.x + i, rect.y + i,
+                             rect.width, rect.height);
         prims.emplace_back(cv::gapi::wip::draw::Rect(rect, color, thick, lt, shift));
+    }
 
     // Mosaic
     cv::Rect mos(200, 200, 200, 200);
     int cellsz = 25;
     int decim = 0;
 
-    for (int i = 0; i < rects_num; ++i)
+    for (int i = 0; i < rects_num; ++i) {
         prims.emplace_back(cv::gapi::wip::draw::Mosaic(mos, cellsz, decim));
+    }
 
     // Text
     std::string text = "Some text";
@@ -1084,8 +1121,9 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
     double fs = 2.0;
     bool blo = false;
 
-    for (int i = 0; i < text_num; ++i)
+    for (int i = 0; i < text_num; ++i) {
         prims.emplace_back(cv::gapi::wip::draw::Text(text, org, ff, fs, color, thick, lt, blo));
+    }
 
     // Image
     cv::Rect rect_img(100, 100, 100, 100);
@@ -1096,8 +1134,9 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
     auto tl = rect_img.tl();
     cv::Point org_img = {tl.x, tl.y + rect_img.size().height};
 
-    for (int i = 0; i < image_num; ++i)
+    for (int i = 0; i < image_num; ++i) {
         prims.emplace_back(cv::gapi::wip::draw::Image(org_img, img, alpha));
+    }
 
     cv::GMat in;
     cv::GArray<cv::gapi::wip::draw::Prim> arr;
@@ -1106,11 +1145,11 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
                           cv::GOut(cv::gapi::wip::draw::render3ch(in, arr)));
 
     // Warm-up graph engine:
-    comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
+    comp.apply(gin(gapi_mat, prims), gout(gapi_out_mat));
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_out_mat));
     }
 
     // OpenCV code //////////////////////////////////////////////////////////////
@@ -1126,7 +1165,7 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolylinesPerformanceBGROCVTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::norm(gapi_mat, ref_mat, NORM_INF));
+        EXPECT_EQ(0, cv::norm(gapi_out_mat, ref_mat, NORM_INF));
     }
 
     SANITY_CHECK_NOTHING();
@@ -1144,8 +1183,8 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceNV12OCVTest)
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
-    cv::Mat y_in_gapi_mat(sz, CV_8UC1), uv_in_gapi_mat(sz / 2, CV_8UC2),
-        y_out_gapi_mat(sz, CV_8UC1), uv_out_gapi_mat(sz / 2, CV_8UC2);
+    cv::Mat y_in_gapi_mat, uv_in_gapi_mat,
+            y_out_gapi_mat, uv_out_gapi_mat;
 
     create_rand_mats(sz, CV_8UC1, y_ref_mat, y_in_gapi_mat);
     create_rand_mats(sz / 2, CV_8UC2, uv_ref_mat, uv_in_gapi_mat);
@@ -1157,16 +1196,18 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceNV12OCVTest)
     cv::Rect rect(200, 200, 200, 200);
     int shift = 0;
 
-    for (int i = 0; i < rects_num; ++i)
+    for (int i = 0; i < rects_num; ++i) {
         prims.emplace_back(cv::gapi::wip::draw::Rect(rect, color, thick, lt, shift));
+    }
 
     // Mosaic
     cv::Rect mos(200, 200, 200, 200);
     int cellsz = 25;
     int decim = 0;
 
-    for (int i = 0; i < rects_num; ++i)
+    for (int i = 0; i < rects_num; ++i) {
         prims.emplace_back(cv::gapi::wip::draw::Mosaic(mos, cellsz, decim));
+    }
 
     // Text
     std::string text = "Some text";
@@ -1175,8 +1216,9 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceNV12OCVTest)
     double fs = 2.0;
     bool blo = false;
 
-    for (int i = 0; i < text_num; ++i)
+    for (int i = 0; i < text_num; ++i) {
         prims.emplace_back(cv::gapi::wip::draw::Text(text, org, ff, fs, color, thick, lt, blo));
+    }
 
     // Image
     cv::Rect rect_img(0, 0, 50, 50);
@@ -1187,8 +1229,9 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceNV12OCVTest)
     auto tl = rect_img.tl();
     cv::Point org_img = {tl.x, tl.y + rect_img.size().height};
 
-    for (int i = 0; i < image_num; ++i)
+    for (int i = 0; i < image_num; ++i) {
         prims.emplace_back(cv::gapi::wip::draw::Image({org_img, img, alpha}));
+    }
 
     cv::GMat y_in, uv_in, y_out, uv_out;
     cv::GArray<cv::gapi::wip::draw::Prim> arr;
