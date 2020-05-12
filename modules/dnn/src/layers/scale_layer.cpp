@@ -248,7 +248,7 @@ public:
             auto weight = blobs.empty() ? ieInpNode1 :
                           std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
 
-            node = std::make_shared<ngraph::op::v1::Multiply>(node, weight, ngraph::op::AutoBroadcastType::NUMPY);
+            node = std::make_shared<ngraph::op::v0::Multiply>(node, weight, ngraph::op::AutoBroadcastType::NUMPY);
         }
         if (hasBias || !hasWeights)
         {
