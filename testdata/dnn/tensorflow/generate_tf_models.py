@@ -288,6 +288,11 @@ inp = tf.placeholder(tf.float32, [2, 4, 5], 'input')
 flatten = tf.contrib.layers.flatten(inp)
 save(inp, flatten, 'flatten')
 ################################################################################
+inp = tf.placeholder(tf.float32, [2, 2, 2, 2, 3], 'input')
+conv = tf.layers.conv3d(inp, filters=2, kernel_size=[1, 1, 1], padding='SAME')
+concat = tf.concat([inp, conv], axis=-1)
+save(inp, concat, 'concat_3d')
+################################################################################
 # Generate test data for MobileNet-SSD object detection model from TensorFlow
 # model zoo, http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz
 # 1. Download and extract an archive
