@@ -309,30 +309,11 @@ static void addConstant(const std::string& name,
     outShapes.insert(std::make_pair(name, shape(blob)));
 }
 
-void addConstantNodesForInitializers(opencv_onnx::GraphProto& graph_proto)
-{
-    int num_initializers = graph_proto.initializer_size();
-    for (int id = 0; id < num_initializers; id++)
-    {
-        opencv_onnx::TensorProto initializer = graph_proto.initializer(id);
-        opencv_onnx::NodeProto* constant_node = graph_proto.add_node();
-        constant_node->set_op_type("Constant");
-        constant_node->set_name(initializer.name());
-        constant_node->add_output(initializer.name());
-        opencv_onnx::AttributeProto* value = constant_node->add_attribute();
-        opencv_onnx::TensorProto* tensor = initializer.New();
-        tensor->CopyFrom(initializer);
-        releaseONNXTensor(initializer);
-        value->set_allocated_t(tensor);
-    }
-}
-
 void ONNXImporter::populateNet(Net dstNet)
 {
     CV_Assert(model_proto.has_graph());
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
 
-    addConstantNodesForInitializers(graph_proto);
     simplifySubgraphs(graph_proto);
 
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
