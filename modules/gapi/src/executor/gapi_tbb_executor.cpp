@@ -139,7 +139,13 @@ void cv::gimpl::parallel::execute(tbb::concurrent_priority_queue<tile_node* , ti
     tbb::task_arena arena{max_concurrency, reserved_for_master_threads};
 #endif
     //get the reference to current task_arena (i.e. one we are running in)
-    tbb::task_arena arena{tbb::task_arena::attach{}};
+#if TBB_INTERFACE_VERSION > 9002
+    using attach_t = tbb::task_arena::attach;
+#else
+    using attach_t = tbb::internal::attach;
+#endif
+
+    tbb::task_arena arena{attach_t{}};
 
     std::atomic<size_t>         executed {0};
 
