@@ -3,9 +3,11 @@
 ### Resources
 
 * Homepage: <https://opencv.org>
+  * Courses: <https://opencv.org/courses>
 * Docs: <https://docs.opencv.org/master/>
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <https://github.com/opencv/opencv/issues>
+
 
 ### Contributing
 
