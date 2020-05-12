@@ -15,6 +15,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_random_generator_and_text
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -333,7 +335,7 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_anisotropic_image_segmentation_by_a_gst
 
-    *Languages:* C++
+    *Languages:* C++, Python
 
     *Compatibility:* \> OpenCV 2.0
 

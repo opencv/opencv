@@ -284,107 +284,98 @@ CV_EXPORTS_W double getTickFrequency();
 
 The class computes passing time by counting the number of ticks per second. That is, the following code computes the
 execution time in seconds:
-@code
-TickMeter tm;
-tm.start();
-// do something ...
-tm.stop();
-std::cout << tm.getTimeSec();
-@endcode
+@snippet snippets/core_various.cpp TickMeter_total
 
 It is also possible to compute the average time over multiple runs:
-@code
-TickMeter tm;
-for (int i = 0; i < 100; i++)
-{
-    tm.start();
-    // do something ...
-    tm.stop();
-}
-double average_time = tm.getTimeSec() / tm.getCounter();
-std::cout << "Average time in second per iteration is: " << average_time << std::endl;
-@endcode
+@snippet snippets/core_various.cpp TickMeter_average
+
 @sa getTickCount, getTickFrequency
 */
-
 class CV_EXPORTS_W TickMeter
 {
 public:
     //! the default constructor
     CV_WRAP TickMeter()
     {
-    reset();
+        reset();
     }
 
-    /**
-    starts counting ticks.
-    */
+    //! starts counting ticks.
     CV_WRAP void start()
     {
-    startTime = cv::getTickCount();
+        startTime = cv::getTickCount();
     }
 
-    /**
-    stops counting ticks.
-    */
+    //! stops counting ticks.
     CV_WRAP void stop()
     {
-    int64 time = cv::getTickCount();
-    if (startTime == 0)
-    return;
-    ++counter;
-    sumTime += (time - startTime);
-    startTime = 0;
+        int64 time = cv::getTickCount();
+        if (startTime == 0)
+            return;
+        ++counter;
+        sumTime += (time - startTime);
+        startTime = 0;
     }
 
-    /**
-    returns counted ticks.
-    */
+    //! returns counted ticks.
     CV_WRAP int64 getTimeTicks() const
     {
-    return sumTime;
+        return sumTime;
     }
 
-    /**
-    returns passed time in microseconds.
-    */
+    //! returns passed time in microseconds.
     CV_WRAP double getTimeMicro() const
     {
-    return getTimeMilli()*1e3;
+        return getTimeMilli()*1e3;
     }
 
-    /**
-    returns passed time in milliseconds.
-    */
+    //! returns passed time in milliseconds.
     CV_WRAP double getTimeMilli() const
     {
-    return getTimeSec()*1e3;
+        return getTimeSec()*1e3;
     }
 
-    /**
-    returns passed time in seconds.
-    */
+    //! returns passed time in seconds.
     CV_WRAP double getTimeSec()   const
     {
-    return (double)getTimeTicks() / getTickFrequency();
+        return (double)getTimeTicks() / getTickFrequency();
     }
 
-    /**
-    returns internal counter value.
-    */
+    //! returns internal counter value.
     CV_WRAP int64 getCounter() const
     {
-    return counter;
+        return counter;
     }
 
-    /**
-    resets internal values.
-    */
+    //! returns average FPS (frames per second) value.
+    CV_WRAP double getFPS() const
+    {
+        const double sec = getTimeSec();
+        if (sec < DBL_EPSILON)
+            return 0.;
+        return counter / sec;
+    }
+
+    //! returns average time in seconds
+    CV_WRAP double getAvgTimeSec() const
+    {
+        if (counter <= 0)
+            return 0.;
+        return getTimeSec() / counter;
+    }
+
+    //! returns average time in milliseconds
+    CV_WRAP double getAvgTimeMilli() const
+    {
+        return getAvgTimeSec() * 1e3;
+    }
+
+    //! resets internal values.
     CV_WRAP void reset()
     {
-    startTime = 0;
-    sumTime = 0;
-    counter = 0;
+        startTime = 0;
+        sumTime = 0;
+        counter = 0;
     }
 
 private:

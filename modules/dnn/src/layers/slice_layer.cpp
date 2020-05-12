@@ -172,18 +172,19 @@ public:
         CV_Assert(inputs.size() == 1);
         const MatSize& inpShape = inputs[0].size;
 
+        finalSliceRanges = sliceRanges;
         if (sliceRanges.empty())
         {
             // Divide input blob on equal parts by axis.
             int outAxisSize = inpShape[axis] / outputs.size();
-            sliceRanges.resize(outputs.size(),
-                               std::vector<Range>(axis + 1, Range::all()));
+            finalSliceRanges.resize(outputs.size(),
+                                    std::vector<Range>(axis + 1, Range::all()));
             int prevSlice = 0;
             for (int i = 0; i < outputs.size(); ++i)
             {
-                sliceRanges[i][axis].start = prevSlice;
-                sliceRanges[i][axis].end = sliceRanges[i][axis].start + outAxisSize;
-                prevSlice = sliceRanges[i][axis].end;
+                finalSliceRanges[i][axis].start = prevSlice;
+                finalSliceRanges[i][axis].end = finalSliceRanges[i][axis].start + outAxisSize;
+                prevSlice = finalSliceRanges[i][axis].end;
             }
         }
         else
@@ -191,16 +192,16 @@ public:
 
         for (int i = 0; i < outputs.size(); ++i)
         {
-            CV_Assert(sliceRanges[i].size() <= inpShape.dims());
+            CV_Assert(finalSliceRanges[i].size() <= inpShape.dims());
             // Fill the rest of ranges.
-            for (int j = sliceRanges[i].size(); j < inpShape.dims(); ++j)
+            for (int j = finalSliceRanges[i].size(); j < inpShape.dims(); ++j)
             {
-                sliceRanges[i].push_back(Range::all());
+                finalSliceRanges[i].push_back(Range::all());
             }
             // Clamp.
-            for (int j = 0; j < sliceRanges[i].size(); ++j)
+            for (int j = 0; j < finalSliceRanges[i].size(); ++j)
             {
-                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
+                finalSliceRanges[i][j] = clamp(finalSliceRanges[i][j], inpShape[j]);
             }
         }
     }
@@ -241,8 +242,8 @@ public:
             kernel.set(idx++, (int)(rows * cols));
             kernel.set(idx++, (int)inpMat.size[3]);
             kernel.set(idx++, (int)cols);
-            kernel.set(idx++, (int)sliceRanges[i][2].start);
-            kernel.set(idx++, (int)sliceRanges[i][3].start);
+            kernel.set(idx++, (int)finalSliceRanges[i][2].start);
+            kernel.set(idx++, (int)finalSliceRanges[i][3].start);
             kernel.set(idx++, ocl::KernelArg::PtrWriteOnly(outputs[i]));
             bool ret = kernel.run(1, global, local, false);
             if (!ret)
@@ -266,10 +267,10 @@ public:
         outputs_arr.getMatVector(outputs);
 
         const Mat& inpMat = inputs[0];
-        CV_Assert(outputs.size() == sliceRanges.size());
+        CV_Assert(outputs.size() == finalSliceRanges.size());
         for (size_t i = 0; i < outputs.size(); i++)
         {
-            inpMat(sliceRanges[i]).copyTo(outputs[i]);
+            inpMat(finalSliceRanges[i]).copyTo(outputs[i]);
         }
     }
 
@@ -278,11 +279,11 @@ public:
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-        CV_Assert_N(sliceRanges.size() == 1, inputs.size() <= 2);
+        CV_Assert_N(finalSliceRanges.size() == 1, inputs.size() <= 2);
 
         std::vector<size_t> axes, offsets, dims;
         int from, to, step;
-        int numDims = sliceRanges[0].size();
+        int numDims = finalSliceRanges[0].size();
         if (preferableTarget == DNN_TARGET_MYRIAD)
         {
             from = axis;
@@ -298,8 +299,8 @@ public:
         for (int i = from; i != to; i += step)
         {
             axes.push_back(i);
-            offsets.push_back(sliceRanges[0][i].start);
-            dims.push_back(sliceRanges[0][i].size());
+            offsets.push_back(finalSliceRanges[0][i].start);
+            dims.push_back(finalSliceRanges[0][i].size());
         }
 
         InferenceEngine::Builder::Layer ieLayer(name);
@@ -315,7 +316,7 @@ public:
         {
             std::vector<size_t> outShape(numDims);
             for (int i = 0; i < numDims; ++i)
-                outShape[i] = sliceRanges[0][i].size();
+                outShape[i] = finalSliceRanges[0][i].size();
 
             ieLayer.getInputPorts()[1].setParameter("type", "weights");
 
@@ -338,13 +339,13 @@ public:
     {
         CV_Assert_N(nodes.size() <= 2);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        CV_Assert(sliceRanges[0].size() == ieInpNode->get_shape().size());
+        CV_Assert(finalSliceRanges[0].size() == ieInpNode->get_shape().size());
 
         std::vector<int64_t> offsets, dims;
-        for (int i = 0; i < sliceRanges[0].size(); ++i)
+        for (int i = 0; i < finalSliceRanges[0].size(); ++i)
         {
-            offsets.push_back(sliceRanges[0][i].start);
-            dims.push_back(sliceRanges[0][i].end);
+            offsets.push_back(finalSliceRanges[0][i].start);
+            dims.push_back(finalSliceRanges[0][i].end);
         }
 
         auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
@@ -372,7 +373,7 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         std::vector<std::vector<std::size_t>> offsets;
-        for (const auto& ranges : sliceRanges)
+        for (const auto& ranges : finalSliceRanges)
         {
             std::vector<std::size_t> offsets_i;
             for (const auto& range : ranges)
@@ -384,6 +385,10 @@ public:
     }
 #endif
 
+
+protected:
+    // The actual non-negative values determined from @p sliceRanges depends on input size.
+    std::vector<std::vector<Range> > finalSliceRanges;
 };
 
 class CropLayerImpl CV_FINAL : public SliceLayerImpl
@@ -447,18 +452,18 @@ public:
                 offset_final[i] = offset[i - start_axis];
         }
 
-        sliceRanges.resize(1);
-        sliceRanges[0].resize(dims);
+        finalSliceRanges.resize(1);
+        finalSliceRanges[0].resize(dims);
         for (int i = 0; i < start_axis; i++)
         {
-            sliceRanges[0][i] = Range(0, inpBlob.size[i]);
+            finalSliceRanges[0][i] = Range(0, inpBlob.size[i]);
         }
         for (int i = start_axis; i < dims; i++)
         {
             if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
                 CV_Error(Error::StsBadArg, "invalid crop parameters or blob sizes");
 
-            sliceRanges[0][i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
+            finalSliceRanges[0][i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
         }
     }
 

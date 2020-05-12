@@ -26,6 +26,28 @@ namespace
 
 namespace opencv_test
 {
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildOptFlowPyramidTestCPU), BuildOptFlowPyramidTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values("cv/optflow/rock_1.bmp",
+                                             "cv/optflow/frames/1080p_01.png"),
+                                      Values(7, 11),
+                                      Values(1000),
+                                      testing::Bool(),
+                                      Values(BORDER_DEFAULT, BORDER_TRANSPARENT),
+                                      Values(BORDER_DEFAULT, BORDER_TRANSPARENT),
+                                      testing::Bool()));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildOptFlowPyramidInternalTestCPU),
+                              BuildOptFlowPyramidTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values("cv/optflow/rock_1.bmp"),
+                                      Values(15),
+                                      Values(3),
+                                      Values(true),
+                                      Values(BORDER_REFLECT_101),
+                                      Values(BORDER_CONSTANT),
+                                      Values(true)));
+
 INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(OptFlowLKTestCPU), OptFlowLKTest,
                               Combine(Values(VIDEO_CPU),
                                       Values("cv/optflow/rock_%01d.bmp",
@@ -58,5 +80,21 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(OptFlowLKInternalTestCPU), OptFlowLKTes
                                       Values(cv::TermCriteria(cv::TermCriteria::COUNT |
                                                               cv::TermCriteria::EPS,
                                                               21, 0.05)),
+                                      Values(true)));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelineTestCPU),
+                              BuildPyr_CalcOptFlow_PipelineTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values("cv/optflow/frames/1080p_%02d.png"),
+                                      Values(7, 11),
+                                      Values(1000),
+                                      testing::Bool()));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelineInternalTestCPU),
+                              BuildPyr_CalcOptFlow_PipelineTest,
+                              Combine(Values(VIDEO_CPU),
+                                      Values("cv/optflow/rock_%01d.bmp"),
+                                      Values(15),
+                                      Values(3),
                                       Values(true)));
 } // opencv_test

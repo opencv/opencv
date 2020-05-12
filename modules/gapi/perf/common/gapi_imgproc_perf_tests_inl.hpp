@@ -579,6 +579,89 @@ PERF_TEST_P_(SobelXYPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(LaplacianPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    MatType type = 0;
+    int kernSize = 0, dtype = 0;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, kernSize, sz, dtype, compile_args) = GetParam();
+
+    initMatrixRandN(type, sz, dtype, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::Laplacian(in_mat1, out_mat_ocv, dtype, kernSize);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::Laplacian(in, dtype, kernSize);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(BilateralFilterPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    MatType type = 0;
+    int dtype = 0, d = 0, borderType = BORDER_DEFAULT;
+    double sigmaColor = 0, sigmaSpace = 0;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, dtype, sz, d, sigmaColor, sigmaSpace,
+             compile_args) = GetParam();
+
+    initMatrixRandN(type, sz, dtype, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::bilateralFilter(in_mat1, out_mat_ocv, d, sigmaColor, sigmaSpace, borderType);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::bilateralFilter(in, d, sigmaColor, sigmaSpace, borderType);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+
 PERF_TEST_P_(CannyPerfTest, TestPerformance)
 {
     compare_f cmpF;

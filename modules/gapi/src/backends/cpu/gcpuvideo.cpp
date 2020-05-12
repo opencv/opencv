@@ -17,6 +17,25 @@
 
 #ifdef HAVE_OPENCV_VIDEO
 
+GAPI_OCV_KERNEL(GCPUBuildOptFlowPyramid, cv::gapi::video::GBuildOptFlowPyramid)
+{
+    static void run(const cv::Mat              &img,
+                    const cv::Size             &winSize,
+                    const cv::Scalar           &maxLevel,
+                          bool                  withDerivatives,
+                          int                   pyrBorder,
+                          int                   derivBorder,
+                          bool                  tryReuseInputImage,
+                          std::vector<cv::Mat> &outPyr,
+                          cv::Scalar           &outMaxLevel)
+    {
+        outMaxLevel = cv::buildOpticalFlowPyramid(img, outPyr, winSize,
+                                                  static_cast<int>(maxLevel[0]),
+                                                  withDerivatives, pyrBorder,
+                                                  derivBorder, tryReuseInputImage);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUCalcOptFlowLK, cv::gapi::video::GCalcOptFlowLK)
 {
     static void run(const cv::Mat                  &prevImg,
@@ -24,7 +43,7 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLK, cv::gapi::video::GCalcOptFlowLK)
                     const std::vector<cv::Point2f> &prevPts,
                     const std::vector<cv::Point2f> &predPts,
                     const cv::Size                 &winSize,
-                          int                       maxLevel,
+                    const cv::Scalar               &maxLevel,
                     const cv::TermCriteria         &criteria,
                           int                       flags,
                           double                    minEigThresh,
@@ -34,8 +53,8 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLK, cv::gapi::video::GCalcOptFlowLK)
     {
         if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
             outPts = predPts;
-        cv::calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, outPts, status, err, winSize, maxLevel,
-                                 criteria, flags, minEigThresh);
+        cv::calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, outPts, status, err, winSize,
+                                 static_cast<int>(maxLevel[0]), criteria, flags, minEigThresh);
     }
 };
 
@@ -46,7 +65,7 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLKForPyr, cv::gapi::video::GCalcOptFlowLKForPyr)
                     const std::vector<cv::Point2f> &prevPts,
                     const std::vector<cv::Point2f> &predPts,
                     const cv::Size                 &winSize,
-                          int                       maxLevel,
+                    const cv::Scalar               &maxLevel,
                     const cv::TermCriteria         &criteria,
                           int                       flags,
                           double                    minEigThresh,
@@ -56,15 +75,16 @@ GAPI_OCV_KERNEL(GCPUCalcOptFlowLKForPyr, cv::gapi::video::GCalcOptFlowLKForPyr)
     {
         if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
             outPts = predPts;
-        cv::calcOpticalFlowPyrLK(prevPyr, nextPyr, prevPts, outPts, status, err, winSize, maxLevel,
-                                 criteria, flags, minEigThresh);
+        cv::calcOpticalFlowPyrLK(prevPyr, nextPyr, prevPts, outPts, status, err, winSize,
+                                 static_cast<int>(maxLevel[0]), criteria, flags, minEigThresh);
     }
 };
 
 cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
-        < GCPUCalcOptFlowLK
+        < GCPUBuildOptFlowPyramid
+        , GCPUCalcOptFlowLK
         , GCPUCalcOptFlowLKForPyr
         >();
     return pkg;

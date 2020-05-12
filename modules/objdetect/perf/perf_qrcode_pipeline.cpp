@@ -114,7 +114,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode,
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode_Multi,
     ::testing::Values(
       "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
-       "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
+      "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
     )
 );
 

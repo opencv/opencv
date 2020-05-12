@@ -18,42 +18,83 @@
 namespace cv { namespace gapi {
 namespace  video
 {
-    using GOptFlowLKOutput = std::tuple<cv::GArray<cv::Point2f>,
-                                        cv::GArray<uchar>,
-                                        cv::GArray<float>>;
+using GBuildPyrOutput  = std::tuple<GArray<GMat>, GScalar>;
 
-    G_TYPED_KERNEL(GCalcOptFlowLK,
-                   <GOptFlowLKOutput(GMat,GMat,cv::GArray<cv::Point2f>,cv::GArray<cv::Point2f>,Size,
-                                     int,TermCriteria,int,double)>,
-                   "org.opencv.video.calcOpticalFlowPyrLK")
+using GOptFlowLKOutput = std::tuple<cv::GArray<cv::Point2f>,
+                                    cv::GArray<uchar>,
+                                    cv::GArray<float>>;
+
+G_TYPED_KERNEL(GBuildOptFlowPyramid, <GBuildPyrOutput(GMat,Size,GScalar,bool,int,int,bool)>,
+               "org.opencv.video.buildOpticalFlowPyramid")
+{
+    static std::tuple<GArrayDesc,GScalarDesc>
+            outMeta(GMatDesc,const Size&,GScalarDesc,bool,int,int,bool)
     {
-        static std::tuple<GArrayDesc,GArrayDesc,GArrayDesc> outMeta(GMatDesc,GMatDesc,GArrayDesc,
-                                                                    GArrayDesc,const Size&,int,
-                                                                    const TermCriteria&,int,double)
-        {
-            return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
-        }
+        return std::make_tuple(empty_array_desc(), empty_scalar_desc());
+    }
+};
 
-    };
-
-    G_TYPED_KERNEL(GCalcOptFlowLKForPyr,
-                   <GOptFlowLKOutput(cv::GArray<cv::GMat>,cv::GArray<cv::GMat>,
-                                     cv::GArray<cv::Point2f>,cv::GArray<cv::Point2f>,Size,int,
-                                     TermCriteria,int,double)>,
-                   "org.opencv.video.calcOpticalFlowPyrLKForPyr")
+G_TYPED_KERNEL(GCalcOptFlowLK,
+               <GOptFlowLKOutput(GMat,GMat,cv::GArray<cv::Point2f>,cv::GArray<cv::Point2f>,Size,
+                                 GScalar,TermCriteria,int,double)>,
+               "org.opencv.video.calcOpticalFlowPyrLK")
+{
+    static std::tuple<GArrayDesc,GArrayDesc,GArrayDesc> outMeta(GMatDesc,GMatDesc,GArrayDesc,
+                                                                GArrayDesc,const Size&,GScalarDesc,
+                                                                const TermCriteria&,int,double)
     {
-        static std::tuple<GArrayDesc,GArrayDesc,GArrayDesc> outMeta(GArrayDesc,GArrayDesc,
-                                                                    GArrayDesc,GArrayDesc,
-                                                                    const Size&,int,
-                                                                    const TermCriteria&,int,double)
-        {
-            return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
-        }
-    };
+        return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
+    }
+
+};
+
+G_TYPED_KERNEL(GCalcOptFlowLKForPyr,
+               <GOptFlowLKOutput(cv::GArray<cv::GMat>,cv::GArray<cv::GMat>,
+                                 cv::GArray<cv::Point2f>,cv::GArray<cv::Point2f>,Size,GScalar,
+                                 TermCriteria,int,double)>,
+               "org.opencv.video.calcOpticalFlowPyrLKForPyr")
+{
+    static std::tuple<GArrayDesc,GArrayDesc,GArrayDesc> outMeta(GArrayDesc,GArrayDesc,
+                                                                GArrayDesc,GArrayDesc,
+                                                                const Size&,GScalarDesc,
+                                                                const TermCriteria&,int,double)
+    {
+        return std::make_tuple(empty_array_desc(), empty_array_desc(), empty_array_desc());
+    }
+};
 } //namespace video
 
 //! @addtogroup gapi_video
 //! @{
+/** @brief Constructs the image pyramid which can be passed to calcOpticalFlowPyrLK.
+
+@note Function textual ID is "org.opencv.video.buildOpticalFlowPyramid"
+
+@param img                8-bit input image.
+@param winSize            window size of optical flow algorithm. Must be not less than winSize
+                          argument of calcOpticalFlowPyrLK. It is needed to calculate required
+                          padding for pyramid levels.
+@param maxLevel           0-based maximal pyramid level number.
+@param withDerivatives    set to precompute gradients for the every pyramid level. If pyramid is
+                          constructed without the gradients then calcOpticalFlowPyrLK will calculate
+                          them internally.
+@param pyrBorder          the border mode for pyramid layers.
+@param derivBorder        the border mode for gradients.
+@param tryReuseInputImage put ROI of input image into the pyramid if possible. You can pass false
+                          to force data copying.
+
+@return output pyramid.
+@return number of levels in constructed pyramid. Can be less than maxLevel.
+ */
+GAPI_EXPORTS std::tuple<GArray<GMat>, GScalar>
+buildOpticalFlowPyramid(const GMat     &img,
+                        const Size     &winSize,
+                        const GScalar  &maxLevel,
+                              bool      withDerivatives    = true,
+                              int       pyrBorder          = BORDER_REFLECT_101,
+                              int       derivBorder        = BORDER_CONSTANT,
+                              bool      tryReuseInputImage = true);
+
 /** @brief Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade
 method with pyramids.
 
@@ -104,7 +145,7 @@ calcOpticalFlowPyrLK(const GMat            &prevImg,
                      const GArray<Point2f> &prevPts,
                      const GArray<Point2f> &predPts,
                      const Size            &winSize      = Size(21, 21),
-                           int              maxLevel     = 3,
+                     const GScalar         &maxLevel     = 3,
                      const TermCriteria    &criteria     = TermCriteria(TermCriteria::COUNT |
                                                                         TermCriteria::EPS,
                                                                         30, 0.01),
@@ -121,7 +162,7 @@ calcOpticalFlowPyrLK(const GArray<GMat>    &prevPyr,
                      const GArray<Point2f> &prevPts,
                      const GArray<Point2f> &predPts,
                      const Size            &winSize      = Size(21, 21),
-                           int              maxLevel     = 3,
+                     const GScalar         &maxLevel     = 3,
                      const TermCriteria    &criteria     = TermCriteria(TermCriteria::COUNT |
                                                                         TermCriteria::EPS,
                                                                         30, 0.01),

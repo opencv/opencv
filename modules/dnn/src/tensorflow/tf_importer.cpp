@@ -46,6 +46,14 @@ static int toNCHW(int idx)
     else return (4 + idx) % 3 + 1;
 }
 
+static int toNCDHW(int idx)
+{
+    CV_Assert(-5 <= idx && idx < 5);
+    if (idx == 0) return 0;
+    else if (idx > 0) return idx % 4 + 1;
+    else return (5 + idx) % 4 + 1;
+}
+
 // This values are used to indicate layer output's data layout where it's possible.
 enum DataLayout
 {
@@ -1231,6 +1239,7 @@ void TFImporter::populateNet(Net dstNet)
                 // Only NHWC <-> NCHW permutations are allowed. OpenCV is always
                 // keep NCHW layout this way.
                 int inpLayout = getDataLayout(layer.input(0), data_layouts);
+                std::string type = "Identity";
                 if (inpLayout == DATA_LAYOUT_NHWC)
                 {
                     if (permData[0] == 0 && permData[1] == 3 && permData[2] == 1 && permData[3] == 2)
@@ -1244,6 +1253,15 @@ void TFImporter::populateNet(Net dstNet)
                         // in TensorFlow: NHWC->NHWC
                         // in OpenCV: NCHW->NCHW
                         data_layouts[name] = DATA_LAYOUT_NHWC;
+                    }
+                    else if (permData[0] == 0 && permData[1] == 3 && permData[2] == 2 && permData[3] == 1)
+                    {
+                        // in TensorFlow: NHWC->NCWH
+                        // in OpenCV: NCHW->NCWH
+                        int permData[] = {0, 1, 3, 2};
+                        layerParams.set("order", DictValue::arrayInt<int*>(permData, perm.total()));
+                        data_layouts[name] = DATA_LAYOUT_NCHW;  // we keep track NCHW because channels position only matters
+                        type = "Permute";
                     }
                     else
                         CV_Error(Error::StsParseError, "Only NHWC <-> NCHW permutations are allowed.");
@@ -1265,7 +1283,7 @@ void TFImporter::populateNet(Net dstNet)
                     else
                         CV_Error(Error::StsParseError, "Only NHWC <-> NCHW permutations are allowed.");
                 }
-                int id = dstNet.addLayer(name, "Identity", layerParams);
+                int id = dstNet.addLayer(name, type, layerParams);
                 layer_id[name] = id;
                 connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
             }
@@ -1313,6 +1331,8 @@ void TFImporter::populateNet(Net dstNet)
 
             if (getDataLayout(name, data_layouts) == DATA_LAYOUT_NHWC)
                 axis = toNCHW(axis);
+            else if (getDataLayout(name, data_layouts) == DATA_LAYOUT_NDHWC)
+                axis = toNCDHW(axis);
             layerParams.set("axis", axis);
 
             // input(0) or input(n-1) is concat_dim

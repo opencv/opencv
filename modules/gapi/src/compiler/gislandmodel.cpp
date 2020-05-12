@@ -348,15 +348,21 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
         const cv::GRunArg& in_data_orig = std::get<1>(it);
         cv::GRunArg in_data;
 #if !defined(GAPI_STANDALONE)
-        if (cv::util::holds_alternative<cv::Mat>(in_data_orig))
+        switch (in_data_orig.index())
         {
-            in_data = cv::GRunArg{cv::to_own(cv::util::get<cv::Mat>(in_data_orig))};
-        }
-        else
-#endif // GAPI_STANDALONE
-        {
+        case cv::GRunArg::index_of<cv::Mat>():
+            in_data = cv::GRunArg{cv::util::get<cv::Mat>(in_data_orig)};
+            break;
+        case cv::GRunArg::index_of<cv::Scalar>():
+            in_data = cv::GRunArg{(cv::util::get<cv::Scalar>(in_data_orig))};
+            break;
+        default:
             in_data = in_data_orig;
+            break;
         }
+#else
+        in_data = in_data_orig;
+#endif // GAPI_STANDALONE
         in_objs.emplace_back(std::get<0>(it), std::move(in_data));
     }
     for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))

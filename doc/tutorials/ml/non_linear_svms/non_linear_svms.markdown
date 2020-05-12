@@ -43,7 +43,7 @@ There are multiple ways in which this model can be modified so it takes into acc
 misclassification errors. For example, one could think of minimizing the same quantity plus a
 constant times the number of misclassification errors in the training data, i.e.:
 
-\f[\min ||\beta||^{2} + C \text{(\# misclassication errors)}\f]
+\f[\min ||\beta||^{2} + C \text{(misclassification errors)}\f]
 
 However, this one is not a very good solution since, among some other reasons, we do not distinguish
 between samples that are misclassified with a small distance to their appropriate decision region or

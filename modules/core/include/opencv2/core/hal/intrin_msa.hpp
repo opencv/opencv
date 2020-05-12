@@ -25,7 +25,7 @@ struct v_uint8x16
     typedef uchar lane_type;
     enum { nlanes = 16 };
 
-    v_uint8x16() : val(msa_dupq_n_u8(0)) {}
+    v_uint8x16() {}
     explicit v_uint8x16(v16u8 v) : val(v) {}
     v_uint8x16(uchar v0, uchar v1, uchar v2, uchar v3, uchar v4, uchar v5, uchar v6, uchar v7,
                uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
@@ -33,6 +33,7 @@ struct v_uint8x16
         uchar v[] = {v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15};
         val = msa_ld1q_u8(v);
     }
+
     uchar get0() const
     {
         return msa_getq_lane_u8(val, 0);
@@ -46,7 +47,7 @@ struct v_int8x16
     typedef schar lane_type;
     enum { nlanes = 16 };
 
-    v_int8x16() : val(msa_dupq_n_s8(0)) {}
+    v_int8x16() {}
     explicit v_int8x16(v16i8 v) : val(v) {}
     v_int8x16(schar v0, schar v1, schar v2, schar v3, schar v4, schar v5, schar v6, schar v7,
                schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
@@ -54,6 +55,7 @@ struct v_int8x16
         schar v[] = {v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15};
         val = msa_ld1q_s8(v);
     }
+
     schar get0() const
     {
         return msa_getq_lane_s8(val, 0);
@@ -67,13 +69,14 @@ struct v_uint16x8
     typedef ushort lane_type;
     enum { nlanes = 8 };
 
-    v_uint16x8() : val(msa_dupq_n_u16(0)) {}
+    v_uint16x8() {}
     explicit v_uint16x8(v8u16 v) : val(v) {}
     v_uint16x8(ushort v0, ushort v1, ushort v2, ushort v3, ushort v4, ushort v5, ushort v6, ushort v7)
     {
         ushort v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
         val = msa_ld1q_u16(v);
     }
+
     ushort get0() const
     {
         return msa_getq_lane_u16(val, 0);
@@ -87,13 +90,14 @@ struct v_int16x8
     typedef short lane_type;
     enum { nlanes = 8 };
 
-    v_int16x8() : val(msa_dupq_n_s16(0)) {}
+    v_int16x8() {}
     explicit v_int16x8(v8i16 v) : val(v) {}
     v_int16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
     {
         short v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
         val = msa_ld1q_s16(v);
     }
+
     short get0() const
     {
         return msa_getq_lane_s16(val, 0);
@@ -107,13 +111,14 @@ struct v_uint32x4
     typedef unsigned int lane_type;
     enum { nlanes = 4 };
 
-    v_uint32x4() : val(msa_dupq_n_u32(0)) {}
+    v_uint32x4() {}
     explicit v_uint32x4(v4u32 v) : val(v) {}
     v_uint32x4(unsigned int v0, unsigned int v1, unsigned int v2, unsigned int v3)
     {
         unsigned int v[] = {v0, v1, v2, v3};
         val = msa_ld1q_u32(v);
     }
+
     unsigned int get0() const
     {
         return msa_getq_lane_u32(val, 0);
@@ -127,17 +132,19 @@ struct v_int32x4
     typedef int lane_type;
     enum { nlanes = 4 };
 
-    v_int32x4() : val(msa_dupq_n_s32(0)) {}
+    v_int32x4() {}
     explicit v_int32x4(v4i32 v) : val(v) {}
     v_int32x4(int v0, int v1, int v2, int v3)
     {
         int v[] = {v0, v1, v2, v3};
         val = msa_ld1q_s32(v);
     }
+
     int get0() const
     {
         return msa_getq_lane_s32(val, 0);
     }
+
     v4i32 val;
 };
 
@@ -146,17 +153,19 @@ struct v_float32x4
     typedef float lane_type;
     enum { nlanes = 4 };
 
-    v_float32x4() : val(msa_dupq_n_f32(0.0f)) {}
+    v_float32x4() {}
     explicit v_float32x4(v4f32 v) : val(v) {}
     v_float32x4(float v0, float v1, float v2, float v3)
     {
         float v[] = {v0, v1, v2, v3};
         val = msa_ld1q_f32(v);
     }
+
     float get0() const
     {
         return msa_getq_lane_f32(val, 0);
     }
+
     v4f32 val;
 };
 
@@ -165,17 +174,19 @@ struct v_uint64x2
     typedef uint64 lane_type;
     enum { nlanes = 2 };
 
-    v_uint64x2() : val(msa_dupq_n_u64(0)) {}
+    v_uint64x2() {}
     explicit v_uint64x2(v2u64 v) : val(v) {}
     v_uint64x2(uint64 v0, uint64 v1)
     {
         uint64 v[] = {v0, v1};
         val = msa_ld1q_u64(v);
     }
+
     uint64 get0() const
     {
         return msa_getq_lane_u64(val, 0);
     }
+
     v2u64 val;
 };
 
@@ -184,17 +195,19 @@ struct v_int64x2
     typedef int64 lane_type;
     enum { nlanes = 2 };
 
-    v_int64x2() : val(msa_dupq_n_s64(0)) {}
+    v_int64x2() {}
     explicit v_int64x2(v2i64 v) : val(v) {}
     v_int64x2(int64 v0, int64 v1)
     {
         int64 v[] = {v0, v1};
         val = msa_ld1q_s64(v);
     }
+
     int64 get0() const
     {
         return msa_getq_lane_s64(val, 0);
     }
+
     v2i64 val;
 };
 
@@ -203,17 +216,19 @@ struct v_float64x2
     typedef double lane_type;
     enum { nlanes = 2 };
 
-    v_float64x2() : val(msa_dupq_n_f64(0.0f)) {}
+    v_float64x2() {}
     explicit v_float64x2(v2f64 v) : val(v) {}
     v_float64x2(double v0, double v1)
     {
         double v[] = {v0, v1};
         val = msa_ld1q_f64(v);
     }
+
     double get0() const
     {
         return msa_getq_lane_f64(val, 0);
     }
+
     v2f64 val;
 };
 

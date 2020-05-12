@@ -144,7 +144,10 @@ struct v_uint8x64
                              v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
                              v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
     }
-    v_uint8x64() : val(_mm512_setzero_si512()) {}
+    v_uint8x64() {}
+
+    static inline v_uint8x64 zero() { return v_uint8x64(_mm512_setzero_si512()); }
+
     uchar get0() const { return (uchar)_v_cvtsi512_si32(val); }
 };
 
@@ -177,7 +180,10 @@ struct v_int8x64
                              v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
                              v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
     }
-    v_int8x64() : val(_mm512_setzero_si512()) {}
+    v_int8x64() {}
+
+    static inline v_int8x64 zero() { return v_int8x64(_mm512_setzero_si512()); }
+
     schar get0() const { return (schar)_v_cvtsi512_si32(val); }
 };
 
@@ -200,7 +206,10 @@ struct v_uint16x32
         val = _v512_set_epu16(v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
                               v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
     }
-    v_uint16x32() : val(_mm512_setzero_si512()) {}
+    v_uint16x32() {}
+
+    static inline v_uint16x32 zero() { return v_uint16x32(_mm512_setzero_si512()); }
+
     ushort get0() const { return (ushort)_v_cvtsi512_si32(val); }
 };
 
@@ -221,7 +230,10 @@ struct v_int16x32
                               (ushort)v15, (ushort)v14, (ushort)v13, (ushort)v12, (ushort)v11, (ushort)v10, (ushort)v9 , (ushort)v8,
                               (ushort)v7 , (ushort)v6 , (ushort)v5 , (ushort)v4 , (ushort)v3 , (ushort)v2 , (ushort)v1 , (ushort)v0);
     }
-    v_int16x32() : val(_mm512_setzero_si512()) {}
+    v_int16x32() {}
+
+    static inline v_int16x32 zero() { return v_int16x32(_mm512_setzero_si512()); }
+
     short get0() const { return (short)_v_cvtsi512_si32(val); }
 };
 
@@ -240,7 +252,10 @@ struct v_uint32x16
         val = _mm512_setr_epi32((int)v0,  (int)v1,  (int)v2,  (int)v3, (int)v4,  (int)v5,  (int)v6,  (int)v7,
                                 (int)v8,  (int)v9,  (int)v10, (int)v11, (int)v12, (int)v13, (int)v14, (int)v15);
     }
-    v_uint32x16() : val(_mm512_setzero_si512()) {}
+    v_uint32x16() {}
+
+    static inline v_uint32x16 zero() { return v_uint32x16(_mm512_setzero_si512()); }
+
     unsigned get0() const { return (unsigned)_v_cvtsi512_si32(val); }
 };
 
@@ -256,7 +271,10 @@ struct v_int32x16
     {
         val = _mm512_setr_epi32(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
     }
-    v_int32x16() : val(_mm512_setzero_si512()) {}
+    v_int32x16() {}
+
+    static inline v_int32x16 zero() { return v_int32x16(_mm512_setzero_si512()); }
+
     int get0() const { return _v_cvtsi512_si32(val); }
 };
 
@@ -272,7 +290,10 @@ struct v_float32x16
     {
         val = _mm512_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
     }
-    v_float32x16() : val(_mm512_setzero_ps()) {}
+    v_float32x16() {}
+
+    static inline v_float32x16 zero() { return v_float32x16(_mm512_setzero_ps()); }
+
     float get0() const { return _mm_cvtss_f32(_mm512_castps512_ps128(val)); }
 };
 
@@ -285,7 +306,10 @@ struct v_uint64x8
     explicit v_uint64x8(__m512i v) : val(v) {}
     v_uint64x8(uint64 v0, uint64 v1, uint64 v2, uint64 v3, uint64 v4, uint64 v5, uint64 v6, uint64 v7)
     { val = _mm512_setr_epi64((int64)v0, (int64)v1, (int64)v2, (int64)v3, (int64)v4, (int64)v5, (int64)v6, (int64)v7); }
-    v_uint64x8() : val(_mm512_setzero_si512()) {}
+    v_uint64x8() {}
+
+    static inline v_uint64x8 zero() { return v_uint64x8(_mm512_setzero_si512()); }
+
     uint64 get0() const
     {
     #if defined __x86_64__ || defined _M_X64
@@ -307,7 +331,9 @@ struct v_int64x8
     explicit v_int64x8(__m512i v) : val(v) {}
     v_int64x8(int64 v0, int64 v1, int64 v2, int64 v3, int64 v4, int64 v5, int64 v6, int64 v7)
     { val = _mm512_setr_epi64(v0, v1, v2, v3, v4, v5, v6, v7); }
-    v_int64x8() : val(_mm512_setzero_si512()) {}
+    v_int64x8() {}
+
+    static inline v_int64x8 zero() { return v_int64x8(_mm512_setzero_si512()); }
 
     int64 get0() const
     {
@@ -330,7 +356,10 @@ struct v_float64x8
     explicit v_float64x8(__m512d v) : val(v) {}
     v_float64x8(double v0, double v1, double v2, double v3, double v4, double v5, double v6, double v7)
     { val = _mm512_setr_pd(v0, v1, v2, v3, v4, v5, v6, v7); }
-    v_float64x8() : val(_mm512_setzero_pd()) {}
+    v_float64x8() {}
+
+    static inline v_float64x8 zero() { return v_float64x8(_mm512_setzero_pd()); }
+
     double get0() const { return _mm_cvtsd_f64(_mm512_castpd512_pd128(val)); }
 };
 
@@ -1030,7 +1059,7 @@ inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                   
     enum { MASK = ((1 << _Tpvec::nlanes) - 1) };                                                                                           \
     if (imm == 0) return a;                                                                                                                \
     if (imm == _Tpvec::nlanes) return b;                                                                                                   \
-    if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                          \
+    if (imm >= 2*_Tpvec::nlanes) return _Tpvec::zero();                                                                                    \
     return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix((MASK << SHIFT2)&MASK, b.val), (MASK << (imm))&MASK, a.val)); \
 }                                                                                                                                          \
 template<int imm>                                                                                                                          \
@@ -1040,21 +1069,21 @@ inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                  
     enum { MASK = ((1 << _Tpvec::nlanes) - 1) };                                                                                           \
     if (imm == 0) return a;                                                                                                                \
     if (imm == _Tpvec::nlanes) return b;                                                                                                   \
-    if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                          \
+    if (imm >= 2*_Tpvec::nlanes) return _Tpvec::zero();                                                                                    \
     return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix((MASK << (imm))&MASK, a.val), (MASK << SHIFT2)&MASK, b.val)); \
 }                                                                                                                                          \
 template<int imm>                                                                                                                          \
 inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                                               \
 {                                                                                                                                          \
     if (imm == 0) return a;                                                                                                                \
-    if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                            \
+    if (imm >= _Tpvec::nlanes) return _Tpvec::zero();                                                                                      \
     return _Tpvec(_mm512_maskz_expand_##suffix((1 << _Tpvec::nlanes) - (1 << (imm)), a.val));                                              \
 }                                                                                                                                          \
 template<int imm>                                                                                                                          \
 inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                                              \
 {                                                                                                                                          \
     if (imm == 0) return a;                                                                                                                \
-    if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                            \
+    if (imm >= _Tpvec::nlanes) return _Tpvec::zero();                                                                                      \
     return _Tpvec(_mm512_maskz_compress_##suffix((1 << _Tpvec::nlanes) - (1 << (imm)), a.val));                                            \
 }
 

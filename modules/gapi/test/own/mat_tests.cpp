@@ -7,6 +7,7 @@
 
 #include "../test_precomp.hpp"
 #include <opencv2/gapi/own/mat.hpp>
+#include <opencv2/gapi/own/convert.hpp>
 #include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 
 namespace opencv_test

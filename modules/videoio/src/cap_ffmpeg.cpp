@@ -170,9 +170,12 @@ protected:
 
 } // namespace
 
-cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc,
+                                                           double fps, const cv::Size& frameSize,
+                                                           const VideoWriterParameters& params)
 {
-    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor != 0);
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor);
     if (writer && writer->isOpened())
         return writer;
     return cv::Ptr<cv::IVideoWriter>();

@@ -13,6 +13,10 @@ if(NOT TARGET ade)
   return()
 endif()
 
+if(INF_ENGINE_TARGET)
+  ocv_option(OPENCV_GAPI_INF_ENGINE "Build GraphAPI module with Inference Engine support" ON)
+endif()
+
 set(the_description "OpenCV G-API Core Module")
 
 ocv_add_module(gapi
@@ -140,12 +144,19 @@ ocv_module_include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
 
 ocv_create_module()
 
-ocv_target_link_libraries(${the_module} PRIVATE ade ${INF_ENGINE_TARGET})
+ocv_target_link_libraries(${the_module} PRIVATE ade)
+if(OPENCV_GAPI_INF_ENGINE)
+  ocv_target_link_libraries(${the_module} PRIVATE ${INF_ENGINE_TARGET})
+endif()
 if(HAVE_TBB)
   ocv_target_link_libraries(${the_module} PRIVATE tbb)
 endif()
 
-ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
+set(__test_extra_deps "")
+if(OPENCV_GAPI_INF_ENGINE)
+  list(APPEND __test_extra_deps ${INF_ENGINE_TARGET})
+endif()
+ocv_add_accuracy_tests(${__test_extra_deps})
 # FIXME: test binary is linked with ADE directly since ADE symbols
 # are not exported from libopencv_gapi.so in any form - thus
 # there're two copies of ADE code in memory when tests run (!)

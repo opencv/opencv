@@ -176,6 +176,29 @@ INSTANTIATE_TEST_CASE_P(SobelXYTestCPU32F, SobelXYTest,
                                 Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT),
                                 Values(0, 1, 255)));
 
+INSTANTIATE_TEST_CASE_P(LaplacianTestCPU, LaplacianTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(1, 3),
+                                Values(0.2, 1.0),
+                                Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
+
+INSTANTIATE_TEST_CASE_P(BilateralFilterTestCPU, BilateralFilterTest,
+                        Combine(Values(CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(-1),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values(3, 5),
+                                Values(20),
+                                Values(10),
+                                Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT)));
+
 INSTANTIATE_TEST_CASE_P(EqHistTestCPU, EqHistTest,
                         Combine(Values(CV_8UC1),
                                 Values(cv::Size(1280, 720),

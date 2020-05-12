@@ -159,7 +159,9 @@ struct v_uint8x32
             (char)v22, (char)v23, (char)v24, (char)v25, (char)v26, (char)v27,
             (char)v28, (char)v29, (char)v30, (char)v31);
     }
-    v_uint8x32() : val(_mm256_setzero_si256()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_uint8x32() {}
+
     uchar get0() const { return (uchar)_v_cvtsi256_si32(val); }
 };
 
@@ -183,7 +185,9 @@ struct v_int8x32
             v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20,
             v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31);
     }
-    v_int8x32() : val(_mm256_setzero_si256()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_int8x32() {}
+
     schar get0() const { return (schar)_v_cvtsi256_si32(val); }
 };
 
@@ -203,7 +207,9 @@ struct v_uint16x16
             (short)v4,  (short)v5,  (short)v6,  (short)v7,  (short)v8,  (short)v9,
             (short)v10, (short)v11, (short)v12, (short)v13, (short)v14, (short)v15);
     }
-    v_uint16x16() : val(_mm256_setzero_si256()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_uint16x16() {}
+
     ushort get0() const { return (ushort)_v_cvtsi256_si32(val); }
 };
 
@@ -222,7 +228,9 @@ struct v_int16x16
         val = _mm256_setr_epi16(v0, v1, v2, v3, v4, v5, v6, v7,
             v8, v9, v10, v11, v12, v13, v14, v15);
     }
-    v_int16x16() : val(_mm256_setzero_si256()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_int16x16() {}
+
     short get0() const { return (short)_v_cvtsi256_si32(val); }
 };
 
@@ -239,7 +247,9 @@ struct v_uint32x8
         val = _mm256_setr_epi32((unsigned)v0, (unsigned)v1, (unsigned)v2,
             (unsigned)v3, (unsigned)v4, (unsigned)v5, (unsigned)v6, (unsigned)v7);
     }
-    v_uint32x8() : val(_mm256_setzero_si256()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_uint32x8() {}
+
     unsigned get0() const { return (unsigned)_v_cvtsi256_si32(val); }
 };
 
@@ -255,7 +265,9 @@ struct v_int32x8
     {
         val = _mm256_setr_epi32(v0, v1, v2, v3, v4, v5, v6, v7);
     }
-    v_int32x8() : val(_mm256_setzero_si256()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_int32x8() {}
+
     int get0() const { return _v_cvtsi256_si32(val); }
 };
 
@@ -271,7 +283,9 @@ struct v_float32x8
     {
         val = _mm256_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7);
     }
-    v_float32x8() : val(_mm256_setzero_ps()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_float32x8() {}
+
     float get0() const { return _mm_cvtss_f32(_mm256_castps256_ps128(val)); }
 };
 
@@ -284,7 +298,9 @@ struct v_uint64x4
     explicit v_uint64x4(__m256i v) : val(v) {}
     v_uint64x4(uint64 v0, uint64 v1, uint64 v2, uint64 v3)
     { val = _mm256_setr_epi64x((int64)v0, (int64)v1, (int64)v2, (int64)v3); }
-    v_uint64x4() : val(_mm256_setzero_si256()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_uint64x4() {}
+
     uint64 get0() const
     {
     #if defined __x86_64__ || defined _M_X64
@@ -306,7 +322,8 @@ struct v_int64x4
     explicit v_int64x4(__m256i v) : val(v) {}
     v_int64x4(int64 v0, int64 v1, int64 v2, int64 v3)
     { val = _mm256_setr_epi64x(v0, v1, v2, v3); }
-    v_int64x4() : val(_mm256_setzero_si256()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_int64x4() {}
 
     int64 get0() const
     {
@@ -329,7 +346,9 @@ struct v_float64x4
     explicit v_float64x4(__m256d v) : val(v) {}
     v_float64x4(double v0, double v1, double v2, double v3)
     { val = _mm256_setr_pd(v0, v1, v2, v3); }
-    v_float64x4() : val(_mm256_setzero_pd()) {}
+    /* coverity[uninit_ctor]: suppress warning */
+    v_float64x4() {}
+
     double get0() const { return _mm_cvtsd_f64(_mm256_castpd256_pd128(val)); }
 };
 

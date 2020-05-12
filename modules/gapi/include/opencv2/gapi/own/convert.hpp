@@ -25,23 +25,27 @@ namespace cv
         return result;
     }
 
-           cv::gapi::own::Mat to_own(Mat&&) = delete;
+    cv::gapi::own::Mat to_own(Mat&&) = delete;
 
     inline cv::gapi::own::Mat to_own(Mat const& m) {
         return (m.dims == 2)
             ?  cv::gapi::own::Mat{m.rows, m.cols, m.type(), m.data, m.step}
             :  cv::gapi::own::Mat{to_own<int>(m.size), m.type(), m.data};
     };
+
 namespace gapi
 {
 namespace own
 {
+
     inline cv::Mat to_ocv(Mat const& m) {
         return m.dims.empty()
             ? cv::Mat{m.rows, m.cols, m.type(), m.data, m.step}
             : cv::Mat{m.dims, m.type(), m.data};
     }
-           cv::Mat to_ocv(Mat&&)    = delete;
+
+    cv::Mat to_ocv(Mat&&) = delete;
+
 } // namespace own
 } // namespace gapi
 } // namespace cv

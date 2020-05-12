@@ -98,8 +98,6 @@ std::vector<cv::gimpl::stream::Q*> input_queues(      ade::Graph &g,
 
 void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
 {
-    namespace own = cv::gapi::own;
-
     for (auto && it : ade::util::zip(ade::util::toRange(outputs),
                                      ade::util::toRange(results)))
     {
@@ -110,13 +108,8 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         using T = cv::GRunArgP;
         switch (out_obj.index())
         {
-#if !defined(GAPI_STANDALONE)
         case T::index_of<cv::Mat*>():
             *cv::util::get<cv::Mat*>(out_obj) = std::move(cv::util::get<cv::Mat>(res_obj));
-            break;
-#endif // !GAPI_STANDALONE
-        case T::index_of<own::Mat*>():
-            *cv::util::get<own::Mat*>(out_obj) = std::move(cv::util::get<own::Mat>(res_obj));
             break;
         case T::index_of<cv::Scalar*>():
             *cv::util::get<cv::Scalar*>(out_obj) = std::move(cv::util::get<cv::Scalar>(res_obj));
@@ -150,15 +143,9 @@ void sync_data(cv::GRunArgs &results, cv::GOptRunArgsP &outputs)
         using T = cv::GOptRunArgP;
         switch (out_obj.index())
         {
-#if !defined(GAPI_STANDALONE)
         case T::index_of<O<cv::Mat>*>():
             *cv::util::get<O<cv::Mat>*>(out_obj)
                 = cv::util::make_optional(std::move(cv::util::get<cv::Mat>(res_obj)));
-            break;
-#endif // !GAPI_STANDALONE
-        case T::index_of<O<own::Mat>*>():
-            *cv::util::get<O<own::Mat>*>(out_obj)
-                = cv::util::make_optional(std::move(cv::util::get<own::Mat>(res_obj)));
             break;
         case T::index_of<O<cv::Scalar>*>():
             *cv::util::get<O<cv::Scalar>*>(out_obj)
@@ -459,12 +446,8 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     // Prepare this object for posting
     virtual cv::GRunArgP get(int idx) override
     {
-        using SclType = cv::Scalar;
-#if !defined(GAPI_STANDALONE)
         using MatType = cv::Mat;
-#else
-        using MatType = cv::gapi::own::Mat;
-#endif // GAPI_STANDALONE
+        using SclType = cv::Scalar;
 
         // Allocate a new posting first, then bind this GRunArgP to this item
         auto iter    = m_postings[idx].insert(m_postings[idx].end(), Posting{});

@@ -457,7 +457,7 @@ class LIBPROTOBUF_EXPORT TextFormat {
   // For more control over parsing, use this class.
   class LIBPROTOBUF_EXPORT Parser {
    public:
-    Parser(bool allow_unknown_field = false);
+    Parser();
     ~Parser();
 
     // Like TextFormat::Parse().
@@ -508,9 +508,23 @@ class LIBPROTOBUF_EXPORT TextFormat {
                                    Message* output);
 
 
+    // backported from 3.8.0
+    // When an unknown field is met, parsing will fail if this option is set
+    // to false(the default). If true, unknown fields will be ignored and
+    // a warning message will be generated.
+    // Please aware that set this option true may hide some errors (e.g.
+    // spelling error on field name). Avoid to use this option if possible.
+    void AllowUnknownField(bool allow) { allow_unknown_field_ = allow; }
+
+
     void AllowFieldNumber(bool allow) {
       allow_field_number_ = allow;
     }
+
+    // backported from 3.8.0
+    // Sets maximum recursion depth which parser can use. This is effectively
+    // the maximum allowed nesting of proto messages.
+    void SetRecursionLimit(int limit) { recursion_limit_ = limit; }
 
    private:
     // Forward declaration of an internal class used to parse text
@@ -533,6 +547,7 @@ class LIBPROTOBUF_EXPORT TextFormat {
     bool allow_field_number_;
     bool allow_relaxed_whitespace_;
     bool allow_singular_overwrites_;
+    int recursion_limit_;  // backported from 3.8.0
   };
 
 

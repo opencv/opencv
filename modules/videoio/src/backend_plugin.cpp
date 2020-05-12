@@ -124,6 +124,9 @@ std::string librarySuffix()
     #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
         "_64"
     #endif
+    #if defined(_DEBUG) && defined(DEBUG_POSTFIX)
+        CVAUX_STR(DEBUG_POSTFIX)
+    #endif
         ".dll";
     return suffix;
 #else
@@ -240,7 +243,8 @@ public:
 
     Ptr<IVideoCapture> createCapture(int camera) const CV_OVERRIDE;
     Ptr<IVideoCapture> createCapture(const std::string &filename) const CV_OVERRIDE;
-    Ptr<IVideoWriter>  createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const CV_OVERRIDE;
+    Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps,
+                                   const cv::Size& sz, const VideoWriterParameters& params) const CV_OVERRIDE;
 };
 
 class PluginBackendFactory : public IBackendFactory
@@ -338,6 +342,19 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
         results.push_back(path + L"\\" + moduleName);
     }
     results.push_back(moduleName);
+#if defined(_DEBUG) && defined(DEBUG_POSTFIX)
+    if (baseName_u == "FFMPEG")  // backward compatibility
+    {
+        const FileSystemPath_t templ = toFileSystemPath(CVAUX_STR(DEBUG_POSTFIX) ".dll");
+        FileSystemPath_t nonDebugName(moduleName);
+        size_t suf = nonDebugName.rfind(templ);
+        if (suf != FileSystemPath_t::npos)
+        {
+            nonDebugName.replace(suf, suf + templ.size(), L".dll");
+            results.push_back(nonDebugName);
+        }
+    }
+#endif // _DEBUG && DEBUG_POSTFIX
 #else
     CV_LOG_INFO(NULL, "VideoIO pluigin (" << baseName << "): glob is '" << plugin_expr << "', " << paths.size() << " location(s)");
     for (const string & path : paths)
@@ -486,7 +503,8 @@ class PluginWriter : public cv::IVideoWriter
 public:
     static
     Ptr<PluginWriter> create(const OpenCV_VideoIO_Plugin_API_preview* plugin_api,
-            const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor)
+            const std::string& filename, int fourcc, double fps, const cv::Size& sz,
+            const VideoWriterParameters& params)
     {
         CV_Assert(plugin_api);
         CvPluginWriter writer = NULL;
@@ -494,6 +512,7 @@ public:
         {
             CV_Assert(plugin_api->Writer_release);
             CV_Assert(!filename.empty());
+            const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
             if (CV_ERROR_OK == plugin_api->Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
             {
                 CV_Assert(writer);
@@ -581,12 +600,13 @@ Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename) con
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoWriter> PluginBackend::createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const
+Ptr<IVideoWriter> PluginBackend::createWriter(const std::string& filename, int fourcc, double fps,
+                                              const cv::Size& sz, const VideoWriterParameters& params) const
 {
     try
     {
         if (plugin_api_)
-            return PluginWriter::create(plugin_api_, filename, fourcc, fps, sz, isColor); //.staticCast<IVideoWriter>();
+            return PluginWriter::create(plugin_api_, filename, fourcc, fps, sz, params); //.staticCast<IVideoWriter>();
     }
     catch (...)
     {

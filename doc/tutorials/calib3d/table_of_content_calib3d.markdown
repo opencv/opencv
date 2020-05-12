@@ -5,6 +5,8 @@ Although we get most of our images in a 2D format they do come from a 3D world. 
 
 -   @subpage tutorial_camera_calibration_pattern
 
+    *Languages:* Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Laurent Berger
@@ -13,6 +15,8 @@ Although we get most of our images in a 2D format they do come from a 3D world. 
 
 -   @subpage tutorial_camera_calibration_square_chess
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Victor Eruhimov
@@ -20,6 +24,8 @@ Although we get most of our images in a 2D format they do come from a 3D world. 
     You will use some chessboard images to calibrate your camera.
 
 -   @subpage tutorial_camera_calibration
+
+    *Languages:* C++
 
     *Compatibility:* \> OpenCV 4.0
 
@@ -30,6 +36,8 @@ Although we get most of our images in a 2D format they do come from a 3D world. 
     collection.
 
 -   @subpage tutorial_real_time_pose
+
+    *Languages:* C++
 
     *Compatibility:* \> OpenCV 2.0
 
