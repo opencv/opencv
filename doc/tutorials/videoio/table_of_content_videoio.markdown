@@ -5,6 +5,8 @@ This section contains tutorials about how to read/save your video files.
 
 -   @subpage tutorial_video_input_psnr_ssim
 
+    *Languages:* C++, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor
@@ -14,10 +16,16 @@ This section contains tutorials about how to read/save your video files.
 
 -   @subpage tutorial_video_write
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor
 
 -   @subpage tutorial_kinect_openni
 
+    *Languages:* C++
+
 -   @subpage tutorial_intelperc
+
+    *Languages:* C++

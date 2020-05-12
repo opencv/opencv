@@ -89,6 +89,8 @@ OpenCV.
 
 -   @subpage tutorial_detection_of_planar_objects
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Victor Eruhimov
@@ -108,6 +110,8 @@ OpenCV.
 
 -   @subpage tutorial_akaze_tracking
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 3.0
 
     *Author:* Fedor Morozov
@@ -115,6 +119,8 @@ OpenCV.
     Using *AKAZE* and *ORB* for planar object tracking.
 
 -   @subpage tutorial_homography
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 3.0
 

@@ -5,6 +5,8 @@ This section contains tutorials about how to read/save your image files.
 
 -   @subpage tutorial_raster_io_gdal
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Marvin Smith
