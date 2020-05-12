@@ -70,63 +70,13 @@
 \**********************************************************************************************/
 
 #include "precomp.hpp"
-#include <iostream>
-#include <stdarg.h>
+
 #include <opencv2/core/hal/hal.hpp>
+#include "opencv2/core/hal/intrin.hpp"
 
-#include <opencv2/core/utils/tls.hpp>
+namespace cv {
 
-namespace cv
-{
-
-/*!
- SIFT implementation.
-
- The class implements SIFT algorithm by D. Lowe.
- */
-class SIFT_Impl : public SIFT
-{
-public:
-    explicit SIFT_Impl( int nfeatures = 0, int nOctaveLayers = 3,
-                          double contrastThreshold = 0.04, double edgeThreshold = 10,
-                          double sigma = 1.6);
-
-    //! returns the descriptor size in floats (128)
-    int descriptorSize() const CV_OVERRIDE;
-
-    //! returns the descriptor type
-    int descriptorType() const CV_OVERRIDE;
-
-    //! returns the default norm type
-    int defaultNorm() const CV_OVERRIDE;
-
-    //! finds the keypoints and computes descriptors for them using SIFT algorithm.
-    //! Optionally it can compute descriptors for the user-provided keypoints
-    void detectAndCompute(InputArray img, InputArray mask,
-                    std::vector<KeyPoint>& keypoints,
-                    OutputArray descriptors,
-                    bool useProvidedKeypoints = false) CV_OVERRIDE;
-
-    void buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, int nOctaves ) const;
-    void buildDoGPyramid( const std::vector<Mat>& pyr, std::vector<Mat>& dogpyr ) const;
-    void findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
-                               std::vector<KeyPoint>& keypoints ) const;
-
-protected:
-    CV_PROP_RW int nfeatures;
-    CV_PROP_RW int nOctaveLayers;
-    CV_PROP_RW double contrastThreshold;
-    CV_PROP_RW double edgeThreshold;
-    CV_PROP_RW double sigma;
-};
-
-Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
-                     double _contrastThreshold, double _edgeThreshold, double _sigma )
-{
-    CV_TRACE_FUNCTION();
-    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma);
-}
-
+#if !defined(CV_CPU_DISPATCH_MODE) || !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY)
 /******************************* Defs and macros *****************************/
 
 // default width of descriptor histogram array
@@ -151,7 +101,7 @@ static const int SIFT_ORI_HIST_BINS = 36;
 static const float SIFT_ORI_SIG_FCTR = 1.5f;
 
 // determines the radius of the region used in orientation assignment
-static const float SIFT_ORI_RADIUS = 3 * SIFT_ORI_SIG_FCTR;
+static const float SIFT_ORI_RADIUS = 4.5f; // 3 * SIFT_ORI_SIG_FCTR;
 
 // orientation magnitude relative to max that results in new feature
 static const float SIFT_ORI_PEAK_RATIO = 0.8f;
@@ -176,144 +126,41 @@ typedef float sift_wt;
 static const int SIFT_FIXPT_SCALE = 1;
 #endif
 
-static inline void
-unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
-{
-    octave = kpt.octave & 255;
-    layer = (kpt.octave >> 8) & 255;
-    octave = octave < 128 ? octave : (-128 | octave);
-    scale = octave >= 0 ? 1.f/(1 << octave) : (float)(1 << -octave);
-}
-
-static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma )
-{
-    CV_TRACE_FUNCTION();
-
-    Mat gray, gray_fpt;
-    if( img.channels() == 3 || img.channels() == 4 )
-    {
-        cvtColor(img, gray, COLOR_BGR2GRAY);
-        gray.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT_FIXPT_SCALE, 0);
-    }
-    else
-        img.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT_FIXPT_SCALE, 0);
-
-    float sig_diff;
-
-    if( doubleImageSize )
-    {
-        sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4, 0.01f) );
-        Mat dbl;
-#if DoG_TYPE_SHORT
-        resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR_EXACT);
-#else
-        resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR);
-#endif
-        Mat result;
-        GaussianBlur(dbl, result, Size(), sig_diff, sig_diff);
-        return result;
-    }
-    else
-    {
-        sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA, 0.01f) );
-        Mat result;
-        GaussianBlur(gray_fpt, result, Size(), sig_diff, sig_diff);
-        return result;
-    }
-}
+#endif  // definitions and macros
 
 
-void SIFT_Impl::buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, int nOctaves ) const
-{
-    CV_TRACE_FUNCTION();
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-    std::vector<double> sig(nOctaveLayers + 3);
-    pyr.resize(nOctaves*(nOctaveLayers + 3));
+void findScaleSpaceExtrema(
+    int octave,
+    int layer,
+    int threshold,
+    int idx,
+    int step,
+    int cols,
+    int nOctaveLayers,
+    double contrastThreshold,
+    double edgeThreshold,
+    double sigma,
+    const std::vector<Mat>& gauss_pyr,
+    const std::vector<Mat>& dog_pyr,
+    std::vector<KeyPoint>& kpts,
+    const cv::Range& range);
 
-    // precompute Gaussian sigmas using the following formula:
-    //  \sigma_{total}^2 = \sigma_{i}^2 + \sigma_{i-1}^2
-    sig[0] = sigma;
-    double k = std::pow( 2., 1. / nOctaveLayers );
-    for( int i = 1; i < nOctaveLayers + 3; i++ )
-    {
-        double sig_prev = std::pow(k, (double)(i-1))*sigma;
-        double sig_total = sig_prev*k;
-        sig[i] = std::sqrt(sig_total*sig_total - sig_prev*sig_prev);
-    }
-
-    for( int o = 0; o < nOctaves; o++ )
-    {
-        for( int i = 0; i < nOctaveLayers + 3; i++ )
-        {
-            Mat& dst = pyr[o*(nOctaveLayers + 3) + i];
-            if( o == 0  &&  i == 0 )
-                dst = base;
-            // base of new octave is halved image from end of previous octave
-            else if( i == 0 )
-            {
-                const Mat& src = pyr[(o-1)*(nOctaveLayers + 3) + nOctaveLayers];
-                resize(src, dst, Size(src.cols/2, src.rows/2),
-                       0, 0, INTER_NEAREST);
-            }
-            else
-            {
-                const Mat& src = pyr[o*(nOctaveLayers + 3) + i-1];
-                GaussianBlur(src, dst, Size(), sig[i], sig[i]);
-            }
-        }
-    }
-}
+void calcSIFTDescriptor(
+        const Mat& img, Point2f ptf, float ori, float scl,
+        int d, int n, float* dst
+);
 
 
-class buildDoGPyramidComputer : public ParallelLoopBody
-{
-public:
-    buildDoGPyramidComputer(
-        int _nOctaveLayers,
-        const std::vector<Mat>& _gpyr,
-        std::vector<Mat>& _dogpyr)
-        : nOctaveLayers(_nOctaveLayers),
-          gpyr(_gpyr),
-          dogpyr(_dogpyr) { }
-
-    void operator()( const cv::Range& range ) const CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-
-        const int begin = range.start;
-        const int end = range.end;
-
-        for( int a = begin; a < end; a++ )
-        {
-            const int o = a / (nOctaveLayers + 2);
-            const int i = a % (nOctaveLayers + 2);
-
-            const Mat& src1 = gpyr[o*(nOctaveLayers + 3) + i];
-            const Mat& src2 = gpyr[o*(nOctaveLayers + 3) + i + 1];
-            Mat& dst = dogpyr[o*(nOctaveLayers + 2) + i];
-            subtract(src2, src1, dst, noArray(), DataType<sift_wt>::type);
-        }
-    }
-
-private:
-    int nOctaveLayers;
-    const std::vector<Mat>& gpyr;
-    std::vector<Mat>& dogpyr;
-};
-
-void SIFT_Impl::buildDoGPyramid( const std::vector<Mat>& gpyr, std::vector<Mat>& dogpyr ) const
-{
-    CV_TRACE_FUNCTION();
-
-    int nOctaves = (int)gpyr.size()/(nOctaveLayers + 3);
-    dogpyr.resize( nOctaves*(nOctaveLayers + 2) );
-
-    parallel_for_(Range(0, nOctaves * (nOctaveLayers + 2)), buildDoGPyramidComputer(nOctaveLayers, gpyr, dogpyr));
-}
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 // Computes a gradient orientation histogram at a specified pixel
-static float calcOrientationHist( const Mat& img, Point pt, int radius,
-                                  float sigma, float* hist, int n )
+static
+float calcOrientationHist(
+        const Mat& img, Point pt, int radius,
+        float sigma, float* hist, int n
+)
 {
     CV_TRACE_FUNCTION();
 
@@ -449,9 +296,12 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
 // Interpolates a scale-space extremum's location and scale to subpixel
 // accuracy to form an image feature. Rejects features with low contrast.
 // Based on Section 4 of Lowe's paper.
-static bool adjustLocalExtrema( const std::vector<Mat>& dog_pyr, KeyPoint& kpt, int octv,
-                                int& layer, int& r, int& c, int nOctaveLayers,
-                                float contrastThreshold, float edgeThreshold, float sigma )
+static
+bool adjustLocalExtrema(
+        const std::vector<Mat>& dog_pyr, KeyPoint& kpt, int octv,
+        int& layer, int& r, int& c, int nOctaveLayers,
+        float contrastThreshold, float edgeThreshold, float sigma
+)
 {
     CV_TRACE_FUNCTION();
 
@@ -553,11 +403,12 @@ static bool adjustLocalExtrema( const std::vector<Mat>& dog_pyr, KeyPoint& kpt, 
     return true;
 }
 
+namespace {
 
-class findScaleSpaceExtremaComputer : public ParallelLoopBody
+class findScaleSpaceExtremaT
 {
 public:
-    findScaleSpaceExtremaComputer(
+    findScaleSpaceExtremaT(
         int _o,
         int _i,
         int _threshold,
@@ -570,7 +421,7 @@ public:
         double _sigma,
         const std::vector<Mat>& _gauss_pyr,
         const std::vector<Mat>& _dog_pyr,
-        TLSData<std::vector<KeyPoint> > &_tls_kpts_struct)
+        std::vector<KeyPoint>& kpts)
 
         : o(_o),
           i(_i),
@@ -584,8 +435,11 @@ public:
           sigma(_sigma),
           gauss_pyr(_gauss_pyr),
           dog_pyr(_dog_pyr),
-          tls_kpts_struct(_tls_kpts_struct) { }
-    void operator()( const cv::Range& range ) const CV_OVERRIDE
+          kpts_(kpts)
+    {
+        // nothing
+    }
+    void process(const cv::Range& range)
     {
         CV_TRACE_FUNCTION();
 
@@ -593,15 +447,12 @@ public:
         const int end = range.end;
 
         static const int n = SIFT_ORI_HIST_BINS;
-        float hist[n];
+        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) hist[n];
 
         const Mat& img = dog_pyr[idx];
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
 
-        std::vector<KeyPoint> *tls_kpts = tls_kpts_struct.get();
-
-        KeyPoint kpt;
         for( int r = begin; r < end; r++)
         {
             const sift_wt* currptr = img.ptr<sift_wt>(r);
@@ -635,6 +486,7 @@ public:
                 {
                     CV_TRACE_REGION("pixel_candidate");
 
+                    KeyPoint kpt;
                     int r1 = r, c1 = c, layer = i;
                     if( !adjustLocalExtrema(dog_pyr, kpt, o, layer, r1, c1,
                                             nOctaveLayers, (float)contrastThreshold,
@@ -659,9 +511,8 @@ public:
                             kpt.angle = 360.f - (float)((360.f/n) * bin);
                             if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
                                 kpt.angle = 0.f;
-                            {
-                                tls_kpts->push_back(kpt);
-                            }
+
+                            kpts_.push_back(kpt);
                         }
                     }
                 }
@@ -678,51 +529,42 @@ private:
     double sigma;
     const std::vector<Mat>& gauss_pyr;
     const std::vector<Mat>& dog_pyr;
-    TLSData<std::vector<KeyPoint> > &tls_kpts_struct;
+    std::vector<KeyPoint>& kpts_;
 };
 
-//
-// Detects features at extrema in DoG scale space.  Bad features are discarded
-// based on contrast and ratio of principal curvatures.
-void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
-                                  std::vector<KeyPoint>& keypoints ) const
+}  // namespace
+
+
+void findScaleSpaceExtrema(
+    int octave,
+    int layer,
+    int threshold,
+    int idx,
+    int step,
+    int cols,
+    int nOctaveLayers,
+    double contrastThreshold,
+    double edgeThreshold,
+    double sigma,
+    const std::vector<Mat>& gauss_pyr,
+    const std::vector<Mat>& dog_pyr,
+    std::vector<KeyPoint>& kpts,
+    const cv::Range& range)
 {
     CV_TRACE_FUNCTION();
 
-    const int nOctaves = (int)gauss_pyr.size()/(nOctaveLayers + 3);
-    const int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
-
-    keypoints.clear();
-    TLSDataAccumulator<std::vector<KeyPoint> > tls_kpts_struct;
-
-    for( int o = 0; o < nOctaves; o++ )
-        for( int i = 1; i <= nOctaveLayers; i++ )
-        {
-            const int idx = o*(nOctaveLayers+2)+i;
-            const Mat& img = dog_pyr[idx];
-            const int step = (int)img.step1();
-            const int rows = img.rows, cols = img.cols;
-
-            parallel_for_(Range(SIFT_IMG_BORDER, rows-SIFT_IMG_BORDER),
-                findScaleSpaceExtremaComputer(
-                    o, i, threshold, idx, step, cols,
-                    nOctaveLayers,
-                    contrastThreshold,
-                    edgeThreshold,
-                    sigma,
-                    gauss_pyr, dog_pyr, tls_kpts_struct));
-        }
-
-    std::vector<std::vector<KeyPoint>*> kpt_vecs;
-    tls_kpts_struct.gather(kpt_vecs);
-    for (size_t i = 0; i < kpt_vecs.size(); ++i) {
-        keypoints.insert(keypoints.end(), kpt_vecs[i]->begin(), kpt_vecs[i]->end());
-    }
+    findScaleSpaceExtremaT(octave, layer, threshold, idx,
+            step, cols,
+            nOctaveLayers, contrastThreshold, edgeThreshold, sigma,
+            gauss_pyr, dog_pyr,
+            kpts)
+        .process(range);
 }
 
-
-static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float scl,
-                               int d, int n, float* dst )
+void calcSIFTDescriptor(
+        const Mat& img, Point2f ptf, float ori, float scl,
+        int d, int n, float* dst
+)
 {
     CV_TRACE_FUNCTION();
 
@@ -734,7 +576,7 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
     float hist_width = SIFT_DESCR_SCL_FCTR * scl;
     int radius = cvRound(hist_width * 1.4142135623730951f * (d + 1) * 0.5f);
     // Clip the radius to the diagonal of the image to avoid autobuffer too large exception
-    radius = std::min(radius, (int) sqrt(((double) img.cols)*img.cols + ((double) img.rows)*img.rows));
+    radius = std::min(radius, (int)std::sqrt(((double) img.cols)*img.cols + ((double) img.rows)*img.rows));
     cos_t /= hist_width;
     sin_t /= hist_width;
 
@@ -1016,175 +858,6 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
 #endif
 }
 
-class calcDescriptorsComputer : public ParallelLoopBody
-{
-public:
-    calcDescriptorsComputer(const std::vector<Mat>& _gpyr,
-                            const std::vector<KeyPoint>& _keypoints,
-                            Mat& _descriptors,
-                            int _nOctaveLayers,
-                            int _firstOctave)
-        : gpyr(_gpyr),
-          keypoints(_keypoints),
-          descriptors(_descriptors),
-          nOctaveLayers(_nOctaveLayers),
-          firstOctave(_firstOctave) { }
-
-    void operator()( const cv::Range& range ) const CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-
-        const int begin = range.start;
-        const int end = range.end;
-
-        static const int d = SIFT_DESCR_WIDTH, n = SIFT_DESCR_HIST_BINS;
-
-        for ( int i = begin; i<end; i++ )
-        {
-            KeyPoint kpt = keypoints[i];
-            int octave, layer;
-            float scale;
-            unpackOctave(kpt, octave, layer, scale);
-            CV_Assert(octave >= firstOctave && layer <= nOctaveLayers+2);
-            float size=kpt.size*scale;
-            Point2f ptf(kpt.pt.x*scale, kpt.pt.y*scale);
-            const Mat& img = gpyr[(octave - firstOctave)*(nOctaveLayers + 3) + layer];
-
-            float angle = 360.f - kpt.angle;
-            if(std::abs(angle - 360.f) < FLT_EPSILON)
-                angle = 0.f;
-            calcSIFTDescriptor(img, ptf, angle, size*0.5f, d, n, descriptors.ptr<float>((int)i));
-        }
-    }
-private:
-    const std::vector<Mat>& gpyr;
-    const std::vector<KeyPoint>& keypoints;
-    Mat& descriptors;
-    int nOctaveLayers;
-    int firstOctave;
-};
-
-static void calcDescriptors(const std::vector<Mat>& gpyr, const std::vector<KeyPoint>& keypoints,
-                            Mat& descriptors, int nOctaveLayers, int firstOctave )
-{
-    CV_TRACE_FUNCTION();
-    parallel_for_(Range(0, static_cast<int>(keypoints.size())), calcDescriptorsComputer(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave));
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
-SIFT_Impl::SIFT_Impl( int _nfeatures, int _nOctaveLayers,
-           double _contrastThreshold, double _edgeThreshold, double _sigma )
-    : nfeatures(_nfeatures), nOctaveLayers(_nOctaveLayers),
-    contrastThreshold(_contrastThreshold), edgeThreshold(_edgeThreshold), sigma(_sigma)
-{
-}
-
-int SIFT_Impl::descriptorSize() const
-{
-    return SIFT_DESCR_WIDTH*SIFT_DESCR_WIDTH*SIFT_DESCR_HIST_BINS;
-}
-
-int SIFT_Impl::descriptorType() const
-{
-    return CV_32F;
-}
-
-int SIFT_Impl::defaultNorm() const
-{
-    return NORM_L2;
-}
-
-
-void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
-                      std::vector<KeyPoint>& keypoints,
-                      OutputArray _descriptors,
-                      bool useProvidedKeypoints)
-{
-    CV_TRACE_FUNCTION();
-
-    int firstOctave = -1, actualNOctaves = 0, actualNLayers = 0;
-    Mat image = _image.getMat(), mask = _mask.getMat();
-
-    if( image.empty() || image.depth() != CV_8U )
-        CV_Error( Error::StsBadArg, "image is empty or has incorrect depth (!=CV_8U)" );
-
-    if( !mask.empty() && mask.type() != CV_8UC1 )
-        CV_Error( Error::StsBadArg, "mask has incorrect type (!=CV_8UC1)" );
-
-    if( useProvidedKeypoints )
-    {
-        firstOctave = 0;
-        int maxOctave = INT_MIN;
-        for( size_t i = 0; i < keypoints.size(); i++ )
-        {
-            int octave, layer;
-            float scale;
-            unpackOctave(keypoints[i], octave, layer, scale);
-            firstOctave = std::min(firstOctave, octave);
-            maxOctave = std::max(maxOctave, octave);
-            actualNLayers = std::max(actualNLayers, layer-2);
-        }
-
-        firstOctave = std::min(firstOctave, 0);
-        CV_Assert( firstOctave >= -1 && actualNLayers <= nOctaveLayers );
-        actualNOctaves = maxOctave - firstOctave + 1;
-    }
-
-    Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
-    std::vector<Mat> gpyr;
-    int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
-
-    //double t, tf = getTickFrequency();
-    //t = (double)getTickCount();
-    buildGaussianPyramid(base, gpyr, nOctaves);
-
-    //t = (double)getTickCount() - t;
-    //printf("pyramid construction time: %g\n", t*1000./tf);
-
-    if( !useProvidedKeypoints )
-    {
-        std::vector<Mat> dogpyr;
-        buildDoGPyramid(gpyr, dogpyr);
-        //t = (double)getTickCount();
-        findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
-        KeyPointsFilter::removeDuplicatedSorted( keypoints );
-
-        if( nfeatures > 0 )
-            KeyPointsFilter::retainBest(keypoints, nfeatures);
-        //t = (double)getTickCount() - t;
-        //printf("keypoint detection time: %g\n", t*1000./tf);
-
-        if( firstOctave < 0 )
-            for( size_t i = 0; i < keypoints.size(); i++ )
-            {
-                KeyPoint& kpt = keypoints[i];
-                float scale = 1.f/(float)(1 << -firstOctave);
-                kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
-                kpt.pt *= scale;
-                kpt.size *= scale;
-            }
-
-        if( !mask.empty() )
-            KeyPointsFilter::runByPixelsMask( keypoints, mask );
-    }
-    else
-    {
-        // filter keypoints by mask
-        //KeyPointsFilter::runByPixelsMask( keypoints, mask );
-    }
-
-    if( _descriptors.needed() )
-    {
-        //t = (double)getTickCount();
-        int dsize = descriptorSize();
-        _descriptors.create((int)keypoints.size(), dsize, CV_32F);
-        Mat descriptors = _descriptors.getMat();
-
-        calcDescriptors(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave);
-        //t = (double)getTickCount() - t;
-        //printf("descriptor extraction time: %g\n", t*1000./tf);
-    }
-}
-
-}
+#endif
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+} // namespace

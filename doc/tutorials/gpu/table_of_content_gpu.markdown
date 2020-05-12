@@ -7,6 +7,8 @@ run the OpenCV algorithms.
 
 -   @subpage tutorial_gpu_basics_similarity
 
+    *Languages:* C++
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor
@@ -16,6 +18,8 @@ run the OpenCV algorithms.
     tutorial @ref tutorial_video_input_psnr_ssim to the GPU.
 
 -   @subpage tutorial_gpu_thrust_interop
+
+    *Languages:* C++
 
     *Compatibility:* \>= OpenCV 3.0
 

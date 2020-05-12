@@ -690,6 +690,6 @@ References {#tutorial_documentation_refs}
 [Documenting basics]: http://www.doxygen.nl/manual/docblocks.html
 [Markdown support]: http://www.doxygen.nl/manual/markdown.html
 [Formulas support]: http://www.doxygen.nl/manual/formulas.html
-[Supported formula commands]: http://docs.mathjax.org/en/latest/tex.html#supported-latex-commands
+[Supported formula commands]: http://docs.mathjax.org/en/latest/input/tex/macros/index.html
 [Command reference]: http://www.doxygen.nl/manual/commands.html
 [Google Scholar]: http://scholar.google.ru/
