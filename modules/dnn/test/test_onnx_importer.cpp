@@ -330,6 +330,13 @@ TEST_P(Test_ONNX_layers, BatchNormalizationUnfused)
     testONNXModels("frozenBatchNorm2d");
 }
 
+TEST_P(Test_ONNX_layers, BatchNormalizationSubgraph)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("batch_norm_subgraph");
+}
+
 TEST_P(Test_ONNX_layers, Transpose)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)

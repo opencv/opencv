@@ -222,6 +222,21 @@ TEST_P(Test_TensorFlow_layers, concat_axis_1)
     runTensorFlowNet("concat_axis_1");
 }
 
+TEST_P(Test_TensorFlow_layers, concat_3d)
+{
+    if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
+    {
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL);
+    }
+
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+         backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
+    runTensorFlowNet("concat_3d");
+}
+
 TEST_P(Test_TensorFlow_layers, batch_norm_1)
 {
     runTensorFlowNet("batch_norm");
