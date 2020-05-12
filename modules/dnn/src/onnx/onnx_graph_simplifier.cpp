@@ -61,27 +61,28 @@ public:
     ONNXGraphWrapper(opencv_onnx::GraphProto& _net) : net(_net)
     {
         numInputs = net.input_size();
+        numInitializers = net.initializer_size();
     }
 
     virtual Ptr<ImportNodeWrapper> getNode(int idx) const CV_OVERRIDE
     {
         opencv_onnx::NodeProto* node = 0;
-        if (idx >= numInputs)
-            node = net.mutable_node(idx - numInputs);
+        if (idx >= numInputs + numInitializers)
+            node = net.mutable_node(idx - numInputs - numInitializers);
         return makePtr<ONNXNodeWrapper>(node);
     }
 
     virtual int getNumNodes() const CV_OVERRIDE
     {
-        return numInputs + net.node_size();
+        return numInputs + numInitializers + net.node_size();
     }
 
     virtual int getNumOutputs(int nodeId) const CV_OVERRIDE
     {
-        if (nodeId < numInputs)
+        if (nodeId < numInputs + numInitializers)
             return 1;
         else
-            return net.node(nodeId - numInputs).output_size();
+            return net.node(nodeId - numInputs - numInitializers).output_size();
     }
 
     virtual std::string getOutputName(int nodeId, int outId) const CV_OVERRIDE
@@ -89,18 +90,20 @@ public:
         CV_Assert(outId < getNumOutputs(nodeId));
         if (nodeId < numInputs)
             return net.input(nodeId).name();
+        else if (nodeId < numInputs + numInitializers)
+            return net.initializer(nodeId - numInputs).name();
         else
-            return net.node(nodeId - numInputs).output(outId);
+            return net.node(nodeId - numInputs - numInitializers).output(outId);
     }
 
     virtual void removeNode(int idx) CV_OVERRIDE
     {
-        CV_Assert(idx >= numInputs);
-        net.mutable_node()->DeleteSubrange(idx - numInputs, 1);
+        CV_Assert(idx >= numInputs + numInitializers);
+        net.mutable_node()->DeleteSubrange(idx - numInputs - numInitializers, 1);
     }
 
 private:
-    int numInputs;
+    int numInputs, numInitializers;
     opencv_onnx::GraphProto& net;
 };
 
@@ -388,13 +391,13 @@ public:
     BatchNormalizationSubgraphBase()
     {
         input  = addNodeToMatch("");
-        var    = addNodeToMatch("Constant");
-        mean   = addNodeToMatch("Constant");
-        weight = addNodeToMatch("Constant");
-        bias   = addNodeToMatch("Constant");
-        A      = addNodeToMatch("Constant");
-        shape1 = addNodeToMatch("Constant");
-        shape2 = addNodeToMatch("Constant");
+        var    = addNodeToMatch("");
+        mean   = addNodeToMatch("");
+        weight = addNodeToMatch("");
+        bias   = addNodeToMatch("");
+        A      = addNodeToMatch("");
+        shape1 = addNodeToMatch("");
+        shape2 = addNodeToMatch("");
     }
 protected:
     int input, var, mean, weight, bias, A, shape1, shape2;
