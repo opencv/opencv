@@ -430,7 +430,7 @@ bool  TiffDecoder::readData( Mat& img )
         int is_tiled = TIFFIsTiled(tif) != 0;
         bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
         uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
-        CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
+        TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp);
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
         uint16 img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
