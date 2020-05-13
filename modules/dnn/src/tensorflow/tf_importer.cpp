@@ -1932,10 +1932,10 @@ void TFImporter::populateNet(Net dstNet)
             {
                 Mat factorHeight = getTensorContent(getConstBlob(layer, value_id, 1));
                 Mat factorWidth = getTensorContent(getConstBlob(layer, value_id, 2));
-                CV_CheckTypeEQ(factorHeight.type(), CV_32SC1, ""); CV_CheckEQ(factorHeight.total(), (size_t)1, "");
-                CV_CheckTypeEQ(factorWidth.type(), CV_32SC1, ""); CV_CheckEQ(factorWidth.total(), (size_t)1, "");
-                layerParams.set("zoom_factor_x", factorWidth.at<int>(0));
-                layerParams.set("zoom_factor_y", factorHeight.at<int>(0));
+                factorHeight.convertTo(factorHeight, CV_32F);
+                factorWidth.convertTo(factorWidth, CV_32F);
+                layerParams.set("zoom_factor_x", factorWidth.at<float>(0));
+                layerParams.set("zoom_factor_y", factorHeight.at<float>(0));
             }
             else
                 CV_Assert(layer.input_size() == 2 || layer.input_size() == 3);
