@@ -1780,4 +1780,61 @@ TEST_P(Layer_Test_Slice, variable_input_shape)
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Slice, dnnBackendsAndTargets());
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_BatchNorm;
+TEST_P(Layer_Test_BatchNorm, fusion)
+{
+    // This tests reinitializes network by forwarding different batch size input.
+    // We check BatchNorm layer weights restoring after fusion.
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    const int ch = 4;
+
+    Mat mean(1, ch, CV_32F), var(1, ch, CV_32F), weights(1, ch, CV_32F);
+    randu(mean, 0, 1);
+    randu(var, 0, 1);
+    randu(weights, 0, 1);
+
+    Net net;
+    {
+        LayerParams lp;
+        lp.type = "BatchNorm";
+        lp.name = "bn";
+        lp.set("has_weight", false);
+        lp.set("has_bias", false);
+        lp.blobs.push_back(mean);
+        lp.blobs.push_back(var);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        lp.type = "Scale";
+        lp.name = "scale";
+        lp.set("has_bias", false);
+        lp.blobs.push_back(weights);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    Mat inp(4, 5, CV_32FC(ch));
+    randu(inp, 0, 1);
+
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    net.setInput(blobFromImage(inp));
+    Mat ref = net.forward();
+
+    net.setInput(blobFromImages(std::vector<Mat>(2, inp)));
+    Mat out = net.forward();
+
+    for (int i = 0; i < 2; ++i)
+    {
+        std::vector<Range> ranges(4, Range::all());
+        ranges[0].start = i;
+        ranges[0].end = i + 1;
+        normAssert(out(ranges), ref);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_BatchNorm, dnnBackendsAndTargets());
+
 }} // namespace
