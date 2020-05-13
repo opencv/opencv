@@ -234,6 +234,12 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
     # Connect input node to the first layer
     assert(graph_def.node[0].op == 'Placeholder')
+    try:
+        input_shape = graph_def.node[0].attr['shape']['shape'][0]['dim']
+        input_shape[1]['size'] = image_height
+        input_shape[2]['size'] = image_width
+    except:
+        print("Input shapes are undefined")
     # assert(graph_def.node[1].op == 'Conv2D')
     weights = graph_def.node[1].input[-1]
     for i in range(len(graph_def.node[1].input)):
