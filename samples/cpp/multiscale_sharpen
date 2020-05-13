@@ -1,18 +1,25 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include <stdio.h>
+
 using namespace cv;
 using namespace std;
+
 int sharpenRadius = 1;
 Mat image, sharpen;
 const char* window_name1 = "multiScaleSharpen";
+
 Mat multiScaleSharpen(Mat Src, int Radius)
 {
     int rows = Src.rows;
     int cols = Src.cols;
-    int cha = Src.channels();
+    int channels = Src.channels();
     Mat B1, B2, B3;
     GaussianBlur(Src, B1, Size(Radius, Radius), 1.0, 1.0);
     GaussianBlur(Src, B2, Size(Radius * 2 - 1, Radius * 2 - 1), 2.0, 2.0);
@@ -30,7 +37,7 @@ Mat multiScaleSharpen(Mat Src, int Radius)
         uchar* B3_ptr = B3.ptr<uchar>(i);
         for (size_t j = 0; j < cols; j++)
         {
-            for (size_t c = 0; c < cha; c++)
+            for (size_t c = 0; c < channels; c++)
             {
                 int  D1 = src_ptr[3 * j + c] - B1_ptr[3 * j + c];
                 int  D2 = B1_ptr[3 * j + c] - B2_ptr[3 * j + c];
