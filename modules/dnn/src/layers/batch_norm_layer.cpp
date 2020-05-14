@@ -94,6 +94,15 @@ public:
             dstWeightsData[i] = w;
             dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
         }
+        // We will use blobs to store origin weights and bias to restore them in case of reinitialization.
+        weights_.copyTo(blobs[0].reshape(1, 1));
+        bias_.copyTo(blobs[1].reshape(1, 1));
+    }
+
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        blobs[0].reshape(1, 1).copyTo(weights_);
+        blobs[1].reshape(1, 1).copyTo(bias_);
     }
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
