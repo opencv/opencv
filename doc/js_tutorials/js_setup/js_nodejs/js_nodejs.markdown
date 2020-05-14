@@ -146,7 +146,7 @@ npm install canvas jsdom
 @code{.js}
 const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
 const { JSDOM } = require('jsdom');
-const { writeFileSync } = require('fs');
+const { writeFileSync, existsSync, mkdirSync } = require("fs");
 
 // This is our program. This time we use JavaScript async / await and promises to handle asynchronicity.
 (async () => {
