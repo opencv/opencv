@@ -369,7 +369,6 @@ void crossCorr( const Mat& src, const Mat& templ, Mat& dst,
                Point anchor=Point(0,0), double delta=0,
                int borderType=BORDER_REFLECT_101 );
 
-
 }
 
 #ifdef HAVE_IPP_IW
