@@ -48,9 +48,9 @@ namespace{
     }
 }
 
+#if !defined(GAPI_STANDALONE)
 cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
-#if !defined(GAPI_STANDALONE)
     const auto mat_dims = mat.size.dims();
 
     if (mat_dims == 2)
@@ -62,12 +62,8 @@ cv::GMatDesc cv::descr_of(const cv::Mat &mat)
         dims[i] = mat.size[i];
     }
     return GMatDesc{mat.depth(), std::move(dims)};
-#else
-    return (mat.dims.empty())
-        ? GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}}
-        : GMatDesc{mat.depth(), mat.dims};
-#endif
 }
+#endif
 
 cv::GMatDesc cv::gapi::own::descr_of(const Mat &mat)
 {

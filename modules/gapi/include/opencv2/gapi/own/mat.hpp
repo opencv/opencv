@@ -17,6 +17,7 @@
 #include <memory>                   //std::shared_ptr
 #include <cstring>                  //std::memcpy
 #include <numeric>                  //std::accumulate
+#include <vector>
 #include <opencv2/gapi/util/throw.hpp>
 
 namespace cv { namespace gapi { namespace own {

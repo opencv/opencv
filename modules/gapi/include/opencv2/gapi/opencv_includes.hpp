@@ -16,6 +16,17 @@
 #  include <opencv2/core/base.hpp>
 #else   // Without OpenCV
 #  include <opencv2/gapi/own/cvdefs.hpp>
+#  include <opencv2/gapi/own/types.hpp>  // cv::gapi::own::Rect/Size/Point
+#  include <opencv2/gapi/own/scalar.hpp> // cv::gapi::own::Scalar
+#  include <opencv2/gapi/own/mat.hpp>
+// replacement of cv's structures:
+namespace cv {
+    using Rect   = gapi::own::Rect;
+    using Size   = gapi::own::Size;
+    using Point  = gapi::own::Point;
+    using Scalar = gapi::own::Scalar;
+    using Mat    = gapi::own::Mat;
+}  // namespace cv
 #endif // !defined(GAPI_STANDALONE)
 
 #endif // OPENCV_GAPI_OPENCV_INCLUDES_HPP
