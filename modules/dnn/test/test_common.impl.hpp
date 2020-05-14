@@ -106,6 +106,7 @@ void normAssertDetections(
         int testClassId = testClassIds[i];
         const cv::Rect2d& testBox = testBoxes[i];
         bool matched = false;
+        double topIoU = 0;
         for (int j = 0; j < refBoxes.size() && !matched; ++j)
         {
             if (!matchedRefBoxes[j] && testClassId == refClassIds[j] &&
@@ -113,7 +114,8 @@ void normAssertDetections(
             {
                 double interArea = (testBox & refBoxes[j]).area();
                 double iou = interArea / (testBox.area() + refBoxes[j].area() - interArea);
-                if (std::abs(iou - 1.0) < boxes_iou_diff)
+                topIoU = std::max(topIoU, iou);
+                if (1.0 - iou < boxes_iou_diff)
                 {
                     matched = true;
                     matchedRefBoxes[j] = true;
@@ -121,8 +123,11 @@ void normAssertDetections(
             }
         }
         if (!matched)
+        {
             std::cout << cv::format("Unmatched prediction: class %d score %f box ",
                                     testClassId, testScore) << testBox << std::endl;
+            std::cout << "Highest IoU: " << topIoU << std::endl;
+        }
         EXPECT_TRUE(matched) << comment;
     }
 

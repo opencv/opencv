@@ -464,7 +464,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
                                     1, 2,  0.997412f, 0.647584f, 0.459939f, 0.821038f, 0.663947f); // a car
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.042 : 3e-4;
 
     std::string config_file = "yolov3.cfg";
     std::string weights_file = "yolov3.weights";
@@ -487,15 +487,10 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
-        if (INF_ENGINE_VER_MAJOR_LE(2018050000) && target == DNN_TARGET_OPENCL)
+        if (target == DNN_TARGET_OPENCL)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-        else if (INF_ENGINE_VER_MAJOR_EQ(2019020000))
-        {
-            if (target == DNN_TARGET_OPENCL)
-                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-            if (target == DNN_TARGET_OPENCL_FP16)
-                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-        }
+        else if (target == DNN_TARGET_OPENCL_FP16 && INF_ENGINE_VER_MAJOR_LE(202010000))
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
         else if (target == DNN_TARGET_MYRIAD &&
                  getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
