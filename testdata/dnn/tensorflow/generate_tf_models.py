@@ -860,6 +860,16 @@ resized = tf.image.resize_bilinear(inp, size=[3, 5], name='resize_bilinear', ali
 conv = tf.layers.conv2d(resized, filters=4, kernel_size=[1, 1])
 save(inp, conv, 'fused_resize_conv')
 ################################################################################
+# Uncomment to save model with dynamic shapes
+# inp = tf.placeholder(tf.float32, [1, None, None, 2], 'input')
+inp = tf.placeholder(tf.float32, [1, 9, 6, 2], 'input')
+conv = tf.layers.conv2d(inp, filters=2, kernel_size=[1, 1])
+shape_input = tf.shape(inp)
+hi = shape_input[1] / 3
+wi = shape_input[2] / 2
+input_down = tf.image.resize(conv, size=[hi,wi], method=0, name='resize_down')
+save(inp, input_down, 'resize_bilinear_down')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb', 'rb') as f:
