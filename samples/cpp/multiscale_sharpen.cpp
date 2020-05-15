@@ -11,40 +11,8 @@ int sharpenRadius = 1;
 Mat image, sharpen;
 const char* window_name1 = "multiScaleSharpen";
 
-Mat multiScaleSharpen(Mat Src, int Radius)
-{
-    int rows = Src.rows;
-    int cols = Src.cols;
-    int channels = Src.channels();
-    Mat B1, B2, B3;
-    GaussianBlur(Src, B1, Size(Radius, Radius), 1.0, 1.0);
-    GaussianBlur(Src, B2, Size(Radius * 2 - 1, Radius * 2 - 1), 2.0, 2.0);
-    GaussianBlur(Src, B3, Size(Radius * 4 - 1, Radius * 4 - 1), 4.0, 4.0);
-    double w1 = 0.5;
-    double w2 = 0.5;
-    double w3 = 0.25;
-    cv::Mat dest = cv::Mat::zeros(Src.size(), Src.type());
-    for (size_t i = 0; i < rows; i++)
-    {
-        uchar* src_ptr = Src.ptr<uchar>(i);
-        uchar* dest_ptr = dest.ptr<uchar>(i);
-        uchar* B1_ptr = B1.ptr<uchar>(i);
-        uchar* B2_ptr = B2.ptr<uchar>(i);
-        uchar* B3_ptr = B3.ptr<uchar>(i);
-        for (size_t j = 0; j < cols; j++)
-        {
-            for (size_t c = 0; c < channels; c++)
-            {
-                int  D1 = src_ptr[3 * j + c] - B1_ptr[3 * j + c];
-                int  D2 = B1_ptr[3 * j + c] - B2_ptr[3 * j + c];
-                int  D3 = B2_ptr[3 * j + c] - B3_ptr[3 * j + c];
-                int  sign = (D1 > 0) ? 1 : -1;
-                dest_ptr[3 * j + c] = saturate_cast<uchar>((1 - w1 * sign)*D1 - w2 * D2 + w3 * D3 + src_ptr[3 * j + c]);
-            }
-        }
-    }
-    return dest;
-}
+//multi-scale detail boosting
+Mat multiScaleSharpen(Mat, int);
 // define a trackbar callback
 static void onTrackbar(int, void*)
 {
@@ -82,4 +50,38 @@ int main( int argc, const char** argv )
     // Wait for a key stroke; the same function arranges events processing
     waitKey(0);
     return 0;
+}
+Mat multiScaleSharpen(Mat Src, int Radius)
+{
+    size_t rows = Src.rows;
+    size_t cols = Src.cols;
+    size_t channels = Src.channels();
+    Mat B1, B2, B3;
+    GaussianBlur(Src, B1, Size(Radius, Radius), 1.0, 1.0);
+    GaussianBlur(Src, B2, Size(Radius * 2 - 1, Radius * 2 - 1), 2.0, 2.0);
+    GaussianBlur(Src, B3, Size(Radius * 4 - 1, Radius * 4 - 1), 4.0, 4.0);
+    double w1 = 0.5;
+    double w2 = 0.5;
+    double w3 = 0.25;
+    cv::Mat dest = cv::Mat::zeros(Src.size(), Src.type());
+    for (size_t i = 0; i < rows; i++)
+    {
+        uchar* src_ptr = Src.ptr<uchar>(i);
+        uchar* dest_ptr = dest.ptr<uchar>(i);
+        uchar* B1_ptr = B1.ptr<uchar>(i);
+        uchar* B2_ptr = B2.ptr<uchar>(i);
+        uchar* B3_ptr = B3.ptr<uchar>(i);
+        for (size_t j = 0; j < cols; j++)
+        {
+            for (size_t c = 0; c < channels; c++)
+            {
+                int  D1 = src_ptr[3 * j + c] - B1_ptr[3 * j + c];
+                int  D2 = B1_ptr[3 * j + c] - B2_ptr[3 * j + c];
+                int  D3 = B2_ptr[3 * j + c] - B3_ptr[3 * j + c];
+                int  sign = (D1 > 0) ? 1 : -1;
+                dest_ptr[3 * j + c] = saturate_cast<uchar>((1 - w1 * sign)*D1 - w2 * D2 + w3 * D3 + src_ptr[3 * j + c]);
+            }
+        }
+    }
+    return dest;
 }
