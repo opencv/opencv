@@ -51,13 +51,8 @@ public:
             outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
             outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
         } else {
-            float factor_h = static_cast<float>(inputs[1][2]) / inputs[0][2];
-            float factor_w = static_cast<float>(inputs[1][3]) / inputs[0][3];
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
-            if ((interpolation == "linear" && (factor_w != 1.0 || factor_h != 1.0)) ||
-                (interpolation == "nearest" && (factor_w < 1.0 || factor_h < 1.0)))
-                    CV_Error(Error::StsNotImplemented, "Unsupported Resize mode");
         }
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
