@@ -28,8 +28,7 @@ namespace opencv_test
                                                       bool, MatType, cv::GCompileArgs>> {};
 
   class RenderTestRects : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar,
-                                                      int, int, int, MatType,
-                                                      compare_f, cv::GCompileArgs>> {};
+                                                      int, int, int, MatType, cv::GCompileArgs>> {};
 
   class RenderTestCircles : public TestPerfParams<tuple<cv::Size, cv::Point, int,
                                                         cv::Scalar, int, int, int,
@@ -188,7 +187,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestRects, RenderTestRects,
                                 Values(LINE_8),
                                 Values(0),
                                 Values(CV_8UC3),
-                                Values(AbsExact().to_compare_f()),
                                 Values(cv::GCompileArgs())));
 
 INSTANTIATE_TEST_CASE_P(RenderTestCircles, RenderTestCircles,
@@ -442,9 +440,8 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
     MatType type;
 
     cv::Size sz;
-    compare_f cmpF;
     cv::GCompileArgs comp_args;
-    std::tie(sz, rect, color, thick, lt, shift, type, cmpF, comp_args) = GetParam();
+    std::tie(sz, rect, color, thick, lt, shift, type, comp_args) = GetParam();
 
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
@@ -487,9 +484,8 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
     MatType type;
 
     cv::Size sz;
-    compare_f cmpF;
     cv::GCompileArgs comp_args;
-    std::tie(sz, rect, color, thick, lt, shift, type, cmpF, comp_args) = GetParam();
+    std::tie(sz, rect, color, thick, lt, shift, type, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
