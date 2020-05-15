@@ -53,9 +53,9 @@ int main( int argc, const char** argv )
 }
 Mat multiScaleSharpen(Mat Src, int Radius)
 {
-    size_t rows = Src.rows;
-    size_t cols = Src.cols;
-    size_t channels = Src.channels();
+    int rows = Src.rows;
+    int cols = Src.cols;
+    int channels = Src.channels();
     Mat B1, B2, B3;
     GaussianBlur(Src, B1, Size(Radius, Radius), 1.0, 1.0);
     GaussianBlur(Src, B2, Size(Radius * 2 - 1, Radius * 2 - 1), 2.0, 2.0);
@@ -64,16 +64,16 @@ Mat multiScaleSharpen(Mat Src, int Radius)
     double w2 = 0.5;
     double w3 = 0.25;
     cv::Mat dest = cv::Mat::zeros(Src.size(), Src.type());
-    for (size_t i = 0; i < rows; i++)
+    for (int i = 0; i < rows; i++)
     {
         uchar* src_ptr = Src.ptr<uchar>(i);
         uchar* dest_ptr = dest.ptr<uchar>(i);
         uchar* B1_ptr = B1.ptr<uchar>(i);
         uchar* B2_ptr = B2.ptr<uchar>(i);
         uchar* B3_ptr = B3.ptr<uchar>(i);
-        for (size_t j = 0; j < cols; j++)
+        for (int j = 0; j < cols; j++)
         {
-            for (size_t c = 0; c < channels; c++)
+            for (int c = 0; c < channels; c++)
             {
                 int  D1 = src_ptr[3 * j + c] - B1_ptr[3 * j + c];
                 int  D2 = B1_ptr[3 * j + c] - B2_ptr[3 * j + c];
