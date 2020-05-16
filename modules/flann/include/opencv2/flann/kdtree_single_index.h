@@ -548,11 +548,19 @@ private:
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == NULL)&&(node->child2 == NULL)) {
             DistanceType worst_dist = result_set.worstDist();
-            for (int i=node->left; i<node->right; ++i) {
-                int index = reorder_ ? i : vind_[i];
-                DistanceType dist = distance_(vec, data_[index], dim_, worst_dist);
-                if (dist<worst_dist) {
-                    result_set.addPoint(dist,vind_[i]);
+            if (reorder_) {
+                for (int i=node->left; i<node->right; ++i) {
+                    DistanceType dist = distance_(vec, data_[i], dim_, worst_dist);
+                    if (dist<worst_dist) {
+                        result_set.addPoint(dist,vind_[i]);
+                    }
+                }
+            } else {
+                for (int i=node->left; i<node->right; ++i) {
+                    DistanceType dist = distance_(vec, data_[vind_[i]], dim_, worst_dist);
+                    if (dist<worst_dist) {
+                        result_set.addPoint(dist,vind_[i]);
+                    }
                 }
             }
             return;
