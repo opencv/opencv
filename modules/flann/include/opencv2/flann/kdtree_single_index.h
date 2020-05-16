@@ -461,7 +461,7 @@ private:
             DistanceType span = bbox[i].high-bbox[i].low;
             if (span>(DistanceType)((1-EPS)*max_span)) {
                 ElementType min_elem, max_elem;
-                computeMinMax(ind, count, cutfeat, min_elem, max_elem);
+                computeMinMax(ind, count, (int)i, min_elem, max_elem);
                 DistanceType spread = (DistanceType)(max_elem-min_elem);
                 if (spread>max_spread) {
                     cutfeat = (int)i;
