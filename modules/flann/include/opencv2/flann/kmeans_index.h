@@ -650,7 +650,8 @@ private:
      *
      * Params:
      *     node = the node to use
-     *     indices = the indices of the points belonging to the node
+     *     indices = array of indices of the points belonging to the node
+     *     indices_length = number of indices in the array
      */
     void computeNodeStatistics(KMeansNodePtr node, int* indices, int indices_length)
     {
@@ -662,7 +663,7 @@ private:
 
         memset(mean,0,veclen_*sizeof(DistanceType));
 
-        for (size_t i=0; i<size_; ++i) {
+        for (size_t i=0; i<(size_t)indices_length; ++i) {
             ElementType* vec = dataset_[indices[i]];
             for (size_t j=0; j<veclen_; ++j) {
                 mean[j] += vec[j];
