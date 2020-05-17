@@ -226,7 +226,7 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.calcHist(images: images, channels: channels, mask: Mat(), hist: hist, histSize: histSize, ranges: ranges)
 
         truth = Mat(rows: 10, cols: 1, type: CvType.CV_32F, scalar: Scalar.all(0))
-        truth!.put(row: 5, col: 0, data: [100])
+        try truth!.put(row: 5, col: 0, data: [100] as [Float])
         try assertMatEqual(truth!, hist, OpenCVTestCase.EPS)
     }
 
@@ -240,7 +240,7 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.calcHist(images: images, channels: channels, mask: Mat(), hist: hist, histSize: histSize, ranges: ranges)
 
         truth = Mat(rows: 10, cols: 10, type: CvType.CV_32F, scalar: Scalar.all(0))
-        truth!.put(row: 9, col: 5, data: [100])
+        try truth!.put(row: 9, col: 5, data: [100] as [Float])
         try assertMatEqual(truth!, hist, OpenCVTestCase.EPS)
     }
 
@@ -265,7 +265,7 @@ class ImgprocTest: OpenCVTestCase {
         XCTAssertEqual(10, hist3D.checkVector(elemChannels: 3))
 
         let truth = Mat(rows: 10, cols: 1, type: CvType.CV_32FC3)
-        truth.put(row: 0, col: 0,
+        try truth.put(row: 0, col: 0,
                   data: [0, 24870, 0,
                  1863, 31926, 1,
                  56682, 37677, 2260,
@@ -275,7 +275,7 @@ class ImgprocTest: OpenCVTestCase {
                  21101, 15993, 32042,
                  8343, 18585, 47786,
                  300, 6567, 80988,
-                 0, 25, 29447])
+                 0, 25, 29447] as [Float])
 
         try assertMatEqual(truth, hist3D, OpenCVTestCase.EPS)
     }
@@ -290,7 +290,7 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.calcHist(images: images, channels: channels, mask: Mat(), hist: hist, histSize: histSize, ranges: ranges, accumulate: true)
 
         truth = Mat(rows: 10, cols: 10, type: CvType.CV_32F, scalar: Scalar.all(0))
-        truth!.put(row: 9, col: 5, data: [100])
+        try truth!.put(row: 9, col: 5, data: [100] as [Float])
         try assertMatEqual(truth!, hist, OpenCVTestCase.EPS)
     }
 
@@ -304,29 +304,29 @@ class ImgprocTest: OpenCVTestCase {
         try assertMatEqual(gray0, dst)
     }
 
-    func testCompareHist() {
+    func testCompareHist() throws {
         let H1 = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
         let H2 = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        H1.put(row: 0, col: 0, data: [1, 2, 3])
-        H2.put(row: 0, col: 0, data: [4, 5, 6])
+        try H1.put(row: 0, col: 0, data: [1, 2, 3] as [Float])
+        try H2.put(row: 0, col: 0, data: [4, 5, 6] as [Float])
 
         let distance = Imgproc.compareHist(H1: H1, H2: H2, method: .HISTCMP_CORREL)
 
         XCTAssertEqual(1.0, distance, accuracy: OpenCVTestCase.EPS)
     }
 
-    func testContourAreaMat() {
+    func testContourAreaMat() throws {
         let contour = Mat(rows: 1, cols: 4, type: CvType.CV_32FC2)
-        contour.put(row: 0, col: 0, data: [0, 0, 10, 0, 10, 10, 5, 4])
+        try contour.put(row: 0, col: 0, data: [0, 0, 10, 0, 10, 10, 5, 4] as [Float])
 
         let area = Imgproc.contourArea(contour: contour)
 
         XCTAssertEqual(45.0, area, accuracy: OpenCVTestCase.EPS)
     }
 
-    func testContourAreaMatBoolean() {
+    func testContourAreaMatBoolean() throws {
         let contour = Mat(rows: 1, cols: 4, type: CvType.CV_32FC2)
-        contour.put(row: 0, col: 0, data: [0, 0, 10, 0, 10, 10, 5, 4])
+        try contour.put(row: 0, col: 0, data: [0, 0, 10, 0, 10, 10, 5, 4] as [Float])
 
         let area = Imgproc.contourArea(contour: contour, oriented: true)
 
@@ -342,7 +342,7 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.convertMaps(map1: map1, map2: map2, dstmap1: dstmap1, dstmap2: dstmap2, dstmap1type: CvType.CV_16SC2)
 
         let truthMap1 = Mat(rows: 1, cols: 4, type: CvType.CV_16SC2)
-        truthMap1.put(row: 0, col: 0, data: [1, 2, 1, 2, 1, 2, 1, 2])
+        try truthMap1.put(row: 0, col: 0, data: [1, 2, 1, 2, 1, 2, 1, 2] as [Int16])
         try assertMatEqual(truthMap1, dstmap1)
         let truthMap2 = Mat(rows: 1, cols: 4, type: CvType.CV_16UC1, scalar: Scalar(0))
         try assertMatEqual(truthMap2, dstmap2)
@@ -358,7 +358,7 @@ class ImgprocTest: OpenCVTestCase {
         // TODO_: write better test (last param == true)
 
         let truthMap1 = Mat(rows: 1, cols: 3, type: CvType.CV_16SC2)
-        truthMap1.put(row: 0, col: 0, data: [2, 4, 2, 4, 2, 4])
+        try truthMap1.put(row: 0, col: 0, data: [2, 4, 2, 4, 2, 4] as [Int16])
         try assertMatEqual(truthMap1, dstmap1)
         let truthMap2 = Mat(rows: 1, cols: 3, type: CvType.CV_16UC1, scalar: Scalar(0))
         try assertMatEqual(truthMap2, dstmap2)
@@ -415,8 +415,8 @@ class ImgprocTest: OpenCVTestCase {
 
     func testCornerEigenValsAndVecsMatMatIntInt() throws {
         let src = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32FC1)
-        src.put(row: 0, col: 0, data: [1, 2])
-        src.put(row: 1, col: 0, data: [4, 2])
+        try src.put(row: 0, col: 0, data: [1, 2] as [Float])
+        try src.put(row: 1, col: 0, data: [4, 2] as [Float])
 
         let blockSize:Int32 = 3
         let ksize:Int32 = 5
@@ -459,8 +459,8 @@ class ImgprocTest: OpenCVTestCase {
 
     func testCornerMinEigenValMatMatInt() throws {
         let src = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32FC1)
-        src.put(row: 0, col: 0, data: [1, 2])
-        src.put(row: 1, col: 0, data: [2, 1])
+        try src.put(row: 0, col: 0, data: [1, 2] as [Float])
+        try src.put(row: 1, col: 0, data: [2, 1] as [Float])
         let blockSize:Int32 = 5
 
         Imgproc.cornerMinEigenVal(src: src, dst: dst, blockSize: blockSize)
@@ -482,9 +482,9 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.cornerMinEigenVal(src: src, dst: dst, blockSize: blockSize, ksize: ksize)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32FC1)
-        truth!.put(row: 0, col: 0, data: [1.0 / 18, 1.0 / 36, 1.0 / 18] as [NSNumber])
-        truth!.put(row: 1, col: 0, data: [1.0 / 36, 1.0 / 18, 1.0 / 36] as [NSNumber])
-        truth!.put(row: 2, col: 0, data: [1.0 / 18, 1.0 / 36, 1.0 / 18] as [NSNumber])
+        try truth!.put(row: 0, col: 0, data: [1.0 / 18, 1.0 / 36, 1.0 / 18] as [Float])
+        try truth!.put(row: 1, col: 0, data: [1.0 / 36, 1.0 / 18, 1.0 / 36] as [Float])
+        try truth!.put(row: 2, col: 0, data: [1.0 / 18, 1.0 / 36, 1.0 / 18] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -496,9 +496,9 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.cornerMinEigenVal(src: src, dst: dst, blockSize: blockSize, ksize: ksize, borderType: .BORDER_REFLECT)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32FC1)
-        truth!.put(row: 0, col: 0, data: [0.68055558, 0.92708349, 0.5868057])
-        truth!.put(row: 1, col: 0, data: [0.92708343, 0.92708343, 0.92708343])
-        truth!.put(row: 2, col: 0, data: [0.58680564, 0.92708343, 0.68055564])
+        try truth!.put(row: 0, col: 0, data: [0.68055558, 0.92708349, 0.5868057])
+        try truth!.put(row: 1, col: 0, data: [0.92708343, 0.92708343, 0.92708343])
+        try truth!.put(row: 2, col: 0, data: [0.58680564, 0.92708343, 0.68055564])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -581,9 +581,9 @@ class ImgprocTest: OpenCVTestCase {
 
     func testErodeMatMatMatPointInt() throws {
         let src = Mat(rows: 3, cols: 3, type: CvType.CV_8U)
-        src.put(row: 0, col: 0, data: [15, 9, 10])
-        src.put(row: 1, col: 0, data: [10, 8, 12])
-        src.put(row: 2, col: 0, data: [12, 20, 25])
+        try src.put(row: 0, col: 0, data: [15, 9, 10] as [Int8])
+        try src.put(row: 1, col: 0, data: [10, 8, 12] as [Int8])
+        try src.put(row: 2, col: 0, data: [12, 20, 25] as [Int8])
         let kernel = Mat()
 
         Imgproc.erode(src: src, dst: dst, kernel: kernel, anchor: anchorPoint, iterations: 10)
@@ -594,9 +594,9 @@ class ImgprocTest: OpenCVTestCase {
 
     func testErodeMatMatMatPointIntIntScalar() throws {
         let src = Mat(rows: 3, cols: 3, type: CvType.CV_8U)
-        src.put(row: 0, col: 0, data: [15, 9, 10])
-        src.put(row: 1, col: 0, data: [10, 8, 12])
-        src.put(row: 2, col: 0, data: [12, 20, 25])
+        try src.put(row: 0, col: 0, data: [15, 9, 10] as [Int8])
+        try src.put(row: 1, col: 0, data: [10, 8, 12] as [Int8])
+        try src.put(row: 2, col: 0, data: [12, 20, 25] as [Int8])
         let kernel = Mat()
         let sc = Scalar(3, 3)
 
@@ -613,10 +613,10 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.filter2D(src: src, dst: dst, ddepth: -1, kernel: kernel)
 
         truth = Mat(rows: 4, cols: 4, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [2, 2, 1, 0])
-        truth!.put(row: 1, col: 0, data: [2, 2, 1, 0])
-        truth!.put(row: 2, col: 0, data: [1, 1, 2, 1])
-        truth!.put(row: 3, col: 0, data: [0, 0, 1, 2])
+        try truth!.put(row: 0, col: 0, data: [2, 2, 1, 0] as [Float])
+        try truth!.put(row: 1, col: 0, data: [2, 2, 1, 0] as [Float])
+        try truth!.put(row: 2, col: 0, data: [1, 1, 2, 1] as [Float])
+        try truth!.put(row: 3, col: 0, data: [0, 0, 1, 2] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -678,10 +678,10 @@ class ImgprocTest: OpenCVTestCase {
 
     func testFitLine() throws {
         let points = Mat(rows: 1, cols: 4, type: CvType.CV_32FC2)
-        points.put(row: 0, col: 0, data: [0, 0, 2, 3, 3, 4, 5, 8])
+        try points.put(row: 0, col: 0, data: [0, 0, 2, 3, 3, 4, 5, 8] as [Float])
 
         let linePoints = Mat(rows: 4, cols: 1, type: CvType.CV_32FC1)
-        linePoints.put(row: 0, col: 0, data: [0.53198653, 0.84675282, 2.5, 3.75])
+        try linePoints.put(row: 0, col: 0, data: [0.53198653, 0.84675282, 2.5, 3.75] as [Float])
 
         Imgproc.fitLine(points: points, line: dst, distType: .DIST_L12, param: 0, reps: 0.01, aeps: 0.01)
 
@@ -740,8 +740,8 @@ class ImgprocTest: OpenCVTestCase {
 
         let truth = Mat(rows: 2, cols: 3, type: CvType.CV_64FC1)
 
-        truth.put(row: 0, col: 0, data: [-8, -6, 37])
-        truth.put(row: 1, col: 0, data: [-7, -4, 29])
+        try truth.put(row: 0, col: 0, data: [-8.0, -6.0, 37.0])
+        try truth.put(row: 1, col: 0, data: [-7.0, -4.0, 29.0])
         try assertMatEqual(truth, transform, OpenCVTestCase.EPS)
     }
 
@@ -750,12 +750,12 @@ class ImgprocTest: OpenCVTestCase {
         let ky = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32F)
         let expKx = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
         let expKy = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        kx.put(row: 0, col: 0, data: [1, 1])
-        kx.put(row: 1, col: 0, data: [1, 1])
-        ky.put(row: 0, col: 0, data: [2, 2])
-        ky.put(row: 1, col: 0, data: [2, 2])
-        expKx.put(row: 0, col: 0, data: [1, -2, 1])
-        expKy.put(row: 0, col: 0, data: [1, -2, 1])
+        try kx.put(row: 0, col: 0, data: [1, 1] as [Float])
+        try kx.put(row: 1, col: 0, data: [1, 1] as [Float])
+        try ky.put(row: 0, col: 0, data: [2, 2] as [Float])
+        try ky.put(row: 1, col: 0, data: [2, 2] as [Float])
+        try expKx.put(row: 0, col: 0, data: [1, -2, 1] as [Float])
+        try expKy.put(row: 0, col: 0, data: [1, -2, 1] as [Float])
 
         Imgproc.getDerivKernels(kx: kx, ky: ky, dx: 2, dy: 2, ksize: 3)
 
@@ -768,12 +768,12 @@ class ImgprocTest: OpenCVTestCase {
         let ky = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32F)
         let expKx = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
         let expKy = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        kx.put(row: 0, col: 0, data: [1, 1])
-        kx.put(row: 1, col: 0, data: [1, 1])
-        ky.put(row: 0, col: 0, data: [2, 2])
-        ky.put(row: 1, col: 0, data: [2, 2])
-        expKx.put(row: 0, col: 0, data: [1, -2, 1])
-        expKy.put(row: 0, col: 0, data: [1, -2, 1])
+        try kx.put(row: 0, col: 0, data: [1, 1] as [Float])
+        try kx.put(row: 1, col: 0, data: [1, 1] as [Float])
+        try ky.put(row: 0, col: 0, data: [2, 2] as [Float])
+        try ky.put(row: 1, col: 0, data: [2, 2] as [Float])
+        try expKx.put(row: 0, col: 0, data: [1, -2, 1] as [Float])
+        try expKy.put(row: 0, col: 0, data: [1, -2, 1] as [Float])
 
         Imgproc.getDerivKernels(kx: kx, ky: ky, dx: 2, dy: 2, ksize: 3, normalize: true, ktype: CvType.CV_32F)
 
@@ -793,7 +793,7 @@ class ImgprocTest: OpenCVTestCase {
         dst = Imgproc.getGaussianKernel(ksize: 3, sigma: 0.8, ktype: CvType.CV_32F)
 
         truth = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [0.23899426, 0.52201146, 0.23899426])
+        try truth!.put(row: 0, col: 0, data: [0.23899426, 0.52201146, 0.23899426] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -824,8 +824,8 @@ class ImgprocTest: OpenCVTestCase {
         dst = Imgproc.getRotationMatrix2D(center: center, angle: 0, scale: 1)
 
         truth = Mat(rows: 2, cols: 3, type: CvType.CV_64F)
-        truth!.put(row: 0, col: 0, data: [1, 0, 0])
-        truth!.put(row: 1, col: 0, data: [0, 1, 0])
+        try truth!.put(row: 0, col: 0, data: [1.0, 0.0, 0.0])
+        try truth!.put(row: 1, col: 0, data: [0.0, 1.0, 0.0])
 
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
@@ -841,9 +841,9 @@ class ImgprocTest: OpenCVTestCase {
         dst = Imgproc.getStructuringElement(shape: .MORPH_CROSS, ksize: size, anchor: anchorPoint)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_8UC1)
-        truth!.put(row: 0, col: 0, data: [0, 0, 1])
-        truth!.put(row: 1, col: 0, data: [0, 0, 1])
-        truth!.put(row: 2, col: 0, data: [1, 1, 1])
+        try truth!.put(row: 0, col: 0, data: [0, 0, 1] as [Int8])
+        try truth!.put(row: 1, col: 0, data: [0, 0, 1] as [Int8])
+        try truth!.put(row: 2, col: 0, data: [1, 1, 1] as [Int8])
         try assertMatEqual(truth!, dst)
     }
 
@@ -927,15 +927,15 @@ class ImgprocTest: OpenCVTestCase {
         let sum = Mat()
         let sqsum = Mat()
 
-        expSum.put(row: 0, col: 0, data: [0, 0, 0, 0])
-        expSum.put(row: 1, col: 0, data: [0, 3, 6, 9])
-        expSum.put(row: 2, col: 0, data: [0, 6, 12, 18])
-        expSum.put(row: 3, col: 0, data: [0, 9, 18, 27])
+        try expSum.put(row: 0, col: 0, data: [0.0, 0.0, 0.0, 0.0])
+        try expSum.put(row: 1, col: 0, data: [0.0, 3.0, 6.0, 9.0])
+        try expSum.put(row: 2, col: 0, data: [0.0, 6.0, 12.0, 18.0])
+        try expSum.put(row: 3, col: 0, data: [0.0, 9.0, 18.0, 27.0])
 
-        expSqsum.put(row: 0, col: 0, data: [0, 0, 0, 0])
-        expSqsum.put(row: 1, col: 0, data: [0, 9, 18, 27])
-        expSqsum.put(row: 2, col: 0, data: [0, 18, 36, 54])
-        expSqsum.put(row: 3, col: 0, data: [0, 27, 54, 81])
+        try expSqsum.put(row: 0, col: 0, data: [0.0, 0.0, 0.0, 0.0])
+        try expSqsum.put(row: 1, col: 0, data: [0.0, 9.0, 18.0, 27.0])
+        try expSqsum.put(row: 2, col: 0, data: [0.0, 18.0, 36.0, 54.0])
+        try expSqsum.put(row: 3, col: 0, data: [0.0, 27.0, 54.0, 81.0])
 
         Imgproc.integral(src: src, sum: sum, sqsum: sqsum)
 
@@ -950,15 +950,15 @@ class ImgprocTest: OpenCVTestCase {
         let sum = Mat()
         let sqsum = Mat()
 
-        expSum.put(row: 0, col: 0, data: [0, 0, 0, 0])
-        expSum.put(row: 1, col: 0, data: [0, 3, 6, 9])
-        expSum.put(row: 2, col: 0, data: [0, 6, 12, 18])
-        expSum.put(row: 3, col: 0, data: [0, 9, 18, 27])
+        try expSum.put(row: 0, col: 0, data: [0.0, 0.0, 0.0, 0.0])
+        try expSum.put(row: 1, col: 0, data: [0.0, 3.0, 6.0, 9.0])
+        try expSum.put(row: 2, col: 0, data: [0.0, 6.0, 12.0, 18.0])
+        try expSum.put(row: 3, col: 0, data: [0.0, 9.0, 18.0, 27.0])
 
-        expSqsum.put(row: 0, col: 0, data: [0, 0, 0, 0])
-        expSqsum.put(row: 1, col: 0, data: [0, 9, 18, 27])
-        expSqsum.put(row: 2, col: 0, data: [0, 18, 36, 54])
-        expSqsum.put(row: 3, col: 0, data: [0, 27, 54, 81])
+        try expSqsum.put(row: 0, col: 0, data: [0.0, 0.0, 0.0, 0.0])
+        try expSqsum.put(row: 1, col: 0, data: [0.0, 9.0, 18.0, 27.0])
+        try expSqsum.put(row: 2, col: 0, data: [0.0, 18.0, 36.0, 54.0])
+        try expSqsum.put(row: 3, col: 0, data: [0.0, 27.0, 54.0, 81.0])
 
         Imgproc.integral(src: src, sum: sum, sqsum: sqsum, sdepth: CvType.CV_64F, sqdepth: CvType.CV_64F)
 
@@ -975,14 +975,14 @@ class ImgprocTest: OpenCVTestCase {
         let sqsum = Mat()
         let tilted = Mat()
 
-        expSum.put(row: 0, col: 0, data: [0, 0])
-        expSum.put(row: 1, col: 0, data: [0, 1])
+        try expSum.put(row: 0, col: 0, data: [0.0, 0.0])
+        try expSum.put(row: 1, col: 0, data: [0.0, 1.0])
 
-        expSqsum.put(row: 0, col: 0, data: [0, 0])
-        expSqsum.put(row: 1, col: 0, data: [0, 1])
+        try expSqsum.put(row: 0, col: 0, data: [0.0, 0.0])
+        try expSqsum.put(row: 1, col: 0, data: [0.0, 1.0])
 
-        expTilted.put(row: 0, col: 0, data: [0, 0])
-        expTilted.put(row: 1, col: 0, data: [0, 1])
+        try expTilted.put(row: 0, col: 0, data: [0.0, 0.0])
+        try expTilted.put(row: 1, col: 0, data: [0.0, 1.0])
 
         Imgproc.integral(src: src, sum: sum, sqsum: sqsum, tilted: tilted)
 
@@ -1000,14 +1000,14 @@ class ImgprocTest: OpenCVTestCase {
         let sqsum = Mat()
         let tilted = Mat()
 
-        expSum.put(row: 0, col: 0, data: [0, 0])
-        expSum.put(row: 1, col: 0, data: [0, 1])
+        try expSum.put(row: 0, col: 0, data: [0.0, 0.0])
+        try expSum.put(row: 1, col: 0, data: [0.0, 1.0])
 
-        expSqsum.put(row: 0, col: 0, data: [0, 0])
-        expSqsum.put(row: 1, col: 0, data: [0, 1])
+        try expSqsum.put(row: 0, col: 0, data: [0.0, 0.0])
+        try expSqsum.put(row: 1, col: 0, data: [0.0, 1.0])
 
-        expTilted.put(row: 0, col: 0, data: [0, 0])
-        expTilted.put(row: 1, col: 0, data: [0, 1])
+        try expTilted.put(row: 0, col: 0, data: [0.0, 0.0])
+        try expTilted.put(row: 1, col: 0, data: [0.0, 1.0])
 
         Imgproc.integral(src: src, sum: sum, sqsum: sqsum, tilted: tilted, sdepth: CvType.CV_64F, sqdepth: CvType.CV_64F)
 
@@ -1022,9 +1022,9 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.integral(src: src, sum: dst)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_64F)
-        truth!.put(row: 0, col: 0, data: [0, 0, 0])
-        truth!.put(row: 1, col: 0, data: [0, 2, 4])
-        truth!.put(row: 2, col: 0, data: [0, 4, 8])
+        try truth!.put(row: 0, col: 0, data: [0.0, 0.0, 0.0])
+        try truth!.put(row: 1, col: 0, data: [0.0, 2.0, 4.0])
+        try truth!.put(row: 2, col: 0, data: [0.0, 4.0, 8.0])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -1034,9 +1034,9 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.integral(src: src, sum: dst, sdepth: CvType.CV_64F)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_64F)
-        truth!.put(row: 0, col: 0, data: [0, 0, 0])
-        truth!.put(row: 1, col: 0, data: [0, 2, 4])
-        truth!.put(row: 2, col: 0, data: [0, 4, 8])
+        try truth!.put(row: 0, col: 0, data: [0.0, 0.0, 0.0])
+        try truth!.put(row: 1, col: 0, data: [0.0, 2.0, 4.0])
+        try truth!.put(row: 2, col: 0, data: [0.0, 4.0, 8.0])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -1071,8 +1071,8 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.Laplacian(src: src, dst: dst, ddepth: CvType.CV_32F, ksize: 1, scale: 2, delta: OpenCVTestCase.EPS)
 
         truth = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [-7.9990001, 8.0009995])
-        truth!.put(row: 1, col: 0, data: [8.0009995, -7.9990001])
+        try truth!.put(row: 0, col: 0, data: [-7.9990001, 8.0009995])
+        try truth!.put(row: 1, col: 0, data: [8.0009995, -7.9990001])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -1085,11 +1085,11 @@ class ImgprocTest: OpenCVTestCase {
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
-    func testMatchShapes() {
+    func testMatchShapes() throws {
         let contour1 = Mat(rows: 1, cols: 4, type: CvType.CV_32FC2)
         let contour2 = Mat(rows: 1, cols: 4, type: CvType.CV_32FC2)
-        contour1.put(row: 0, col: 0, data: [1, 1, 5, 1, 4, 3, 6, 2])
-        contour2.put(row: 0, col: 0, data: [1, 1, 6, 1, 4, 1, 2, 5])
+        try contour1.put(row: 0, col: 0, data: [1, 1, 5, 1, 4, 3, 6, 2] as [Float])
+        try contour2.put(row: 0, col: 0, data: [1, 1, 6, 1, 4, 1, 2, 5] as [Float])
 
         let distance = Imgproc.matchShapes(contour1: contour1, contour2: contour2, method: .CONTOURS_MATCH_I1, parameter: 1)
 
@@ -1099,8 +1099,8 @@ class ImgprocTest: OpenCVTestCase {
     func testMatchTemplate() throws {
         let image = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U)
         let templ = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U)
-        image.put(row: 0, col: 0, data: [1, 2, 3, 4])
-        templ.put(row: 0, col: 0, data: [5, 6, 7, 8])
+        try image.put(row: 0, col: 0, data: [1, 2, 3, 4] as [Int8])
+        try templ.put(row: 0, col: 0, data: [5, 6, 7, 8] as [Int8])
 
         Imgproc.matchTemplate(image: image, templ: templ, result: dst, method: .TM_CCORR)
 
@@ -1164,8 +1164,8 @@ class ImgprocTest: OpenCVTestCase {
 
     func testMorphologyExMatMatIntMatPointIntIntScalar() throws {
         let src = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U)
-        src.put(row: 0, col: 0, data: [2, 1])
-        src.put(row: 1, col: 0, data: [2, 1])
+        try src.put(row: 0, col: 0, data: [2, 1] as [Int8])
+        try src.put(row: 1, col: 0, data: [2, 1] as [Int8])
 
         let kernel = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U, scalar: Scalar(1))
         let point = Point(x: 1, y: 1)
@@ -1173,8 +1173,8 @@ class ImgprocTest: OpenCVTestCase {
 
         Imgproc.morphologyEx(src: src, dst: dst, op: MorphTypes.MORPH_TOPHAT, kernel: kernel, anchor: point, iterations: 10, borderType: .BORDER_REFLECT, borderValue: sc)
         truth = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_8U)
-        truth!.put(row: 0, col: 0, data: [1, 0])
-        truth!.put(row: 1, col: 0, data: [1, 0])
+        try truth!.put(row: 0, col: 0, data: [1, 0] as [Int8])
+        try truth!.put(row: 1, col: 0, data: [1, 0] as [Int8])
         try assertMatEqual(truth!, dst)
     }
 
@@ -1209,32 +1209,32 @@ class ImgprocTest: OpenCVTestCase {
 
     func testPyrDownMatMat() throws {
         let src = Mat(rows: 4, cols: 4, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [2, 1, 4, 2])
-        src.put(row: 1, col: 0, data: [3, 2, 6, 8])
-        src.put(row: 2, col: 0, data: [4, 6, 8, 10])
-        src.put(row: 3, col: 0, data: [12, 32, 6, 18])
+        try src.put(row: 0, col: 0, data: [2, 1, 4, 2] as [Float])
+        try src.put(row: 1, col: 0, data: [3, 2, 6, 8] as [Float])
+        try src.put(row: 2, col: 0, data: [4, 6, 8, 10] as [Float])
+        try src.put(row: 3, col: 0, data: [12, 32, 6, 18] as [Float])
 
         Imgproc.pyrDown(src: src, dst: dst)
 
         truth = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [2.78125, 4.609375])
-        truth!.put(row: 1, col: 0, data: [8.546875, 8.8515625])
+        try truth!.put(row: 0, col: 0, data: [2.78125, 4.609375])
+        try truth!.put(row: 1, col: 0, data: [8.546875, 8.8515625])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
     func testPyrDownMatMatSize() throws {
         let src = Mat(rows: 4, cols: 4, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [2, 1, 4, 2])
-        src.put(row: 1, col: 0, data: [3, 2, 6, 8])
-        src.put(row: 2, col: 0, data: [4, 6, 8, 10])
-        src.put(row: 3, col: 0, data: [12, 32, 6, 18])
+        try src.put(row: 0, col: 0, data: [2, 1, 4, 2] as [Float])
+        try src.put(row: 1, col: 0, data: [3, 2, 6, 8] as [Float])
+        try src.put(row: 2, col: 0, data: [4, 6, 8, 10] as [Float])
+        try src.put(row: 3, col: 0, data: [12, 32, 6, 18] as [Float])
         let dstSize = Size(width: 2, height: 2)
 
         Imgproc.pyrDown(src: src, dst: dst, dstsize: dstSize)
 
         truth = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [2.78125, 4.609375])
-        truth!.put(row: 1, col: 0, data: [8.546875, 8.8515625])
+        try truth!.put(row: 0, col: 0, data: [2.78125, 4.609375])
+        try truth!.put(row: 1, col: 0, data: [8.546875, 8.8515625])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -1248,16 +1248,16 @@ class ImgprocTest: OpenCVTestCase {
 
     func testPyrUpMatMat() throws {
         let src = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [2, 1])
-        src.put(row: 1, col: 0, data: [3, 2])
+        try src.put(row: 0, col: 0, data: [2, 1] as [Float])
+        try src.put(row: 1, col: 0, data: [3, 2] as [Float])
 
         Imgproc.pyrUp(src: src, dst: dst)
 
         truth = Mat(rows: 4, cols: 4, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [2,     1.75,  1.375, 1.25])
-        truth!.put(row: 1, col: 0, data: [2.25,  2,     1.625, 1.5])
-        truth!.put(row: 2, col: 0, data: [2.625, 2.375, 2,     1.875])
-        truth!.put(row: 3, col: 0, data: [2.75,  2.5,   2.125, 2])
+        try truth!.put(row: 0, col: 0, data: [2,     1.75,  1.375, 1.25])
+        try truth!.put(row: 1, col: 0, data: [2.25,  2,     1.625, 1.5])
+        try truth!.put(row: 2, col: 0, data: [2.625, 2.375, 2,     1.875])
+        try truth!.put(row: 3, col: 0, data: [2.75,  2.5,   2.125, 2])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -1267,8 +1267,8 @@ class ImgprocTest: OpenCVTestCase {
         let map1 = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
         let map2 = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
 
-        map1.put(row: 0, col: 0, data: [3, 6, 5])
-        map2.put(row: 0, col: 0, data: [4, 8, 12])
+        try map1.put(row: 0, col: 0, data: [3, 6, 5] as [Float])
+        try map2.put(row: 0, col: 0, data: [4, 8, 12] as [Float])
 
         Imgproc.remap(src: src, dst: dst, map1: map1, map2: map2, interpolation: InterpolationFlags.INTER_LINEAR.rawValue)
 
@@ -1284,8 +1284,8 @@ class ImgprocTest: OpenCVTestCase {
 
         let sc = Scalar(0)
 
-        map1.put(row: 0, col: 0, data: [3, 6, 5, 0])
-        map2.put(row: 0, col: 0, data: [4, 8, 12])
+        try map1.put(row: 0, col: 0, data: [3, 6, 5, 0] as [Float])
+        try map2.put(row: 0, col: 0, data: [4, 8, 12] as [Float])
 
         truth = Mat(rows: 1, cols: 3, type: CvType.CV_32F, scalar: Scalar(2))
 
@@ -1334,9 +1334,9 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.Scharr(src: src, dst: dst, ddepth: CvType.CV_32F, dx: 1, dy: 0, scale: 1.5, delta: 0, borderType: .BORDER_REFLECT)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [-15, -19.5, -4.5])
-        truth!.put(row: 1, col: 0, data: [10.5, 0, -10.5])
-        truth!.put(row: 2, col: 0, data: [4.5, 19.5, 15])
+        try truth!.put(row: 0, col: 0, data: [-15, -19.5, -4.5])
+        try truth!.put(row: 1, col: 0, data: [10.5, 0, -10.5])
+        try truth!.put(row: 2, col: 0, data: [4.5, 19.5, 15])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -1344,8 +1344,8 @@ class ImgprocTest: OpenCVTestCase {
         let src = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32F, scalar: Scalar(2))
         let kernelX = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
         let kernelY = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
-        kernelX.put(row: 0, col: 0, data: [4, 3, 7])
-        kernelY.put(row: 0, col: 0, data: [9, 4, 2])
+        try kernelX.put(row: 0, col: 0, data: [4, 3, 7] as [Float])
+        try kernelY.put(row: 0, col: 0, data: [9, 4, 2] as [Float])
 
         Imgproc.sepFilter2D(src: src, dst: dst, ddepth: CvType.CV_32F, kernelX: kernelX, kernelY: kernelY)
 
@@ -1356,9 +1356,9 @@ class ImgprocTest: OpenCVTestCase {
     func testSepFilter2DMatMatIntMatMatPointDouble() throws {
         let src = Mat(rows: imgprocSz, cols: imgprocSz, type: CvType.CV_32FC1, scalar: Scalar(2))
         let kernelX = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
-        kernelX.put(row: 0, col: 0, data: [2, 2, 2])
+        try kernelX.put(row: 0, col: 0, data: [2, 2, 2] as [Float])
         let kernelY = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
-        kernelY.put(row: 0, col: 0, data: [1, 1, 1])
+        try kernelY.put(row: 0, col: 0, data: [1, 1, 1] as [Float])
 
         Imgproc.sepFilter2D(src: src, dst: dst, ddepth: CvType.CV_32F, kernelX: kernelX, kernelY: kernelY, anchor: anchorPoint, delta: OpenCVTestCase.weakEPS)
 
@@ -1368,10 +1368,10 @@ class ImgprocTest: OpenCVTestCase {
 
     func testSepFilter2DMatMatIntMatMatPointDoubleInt() throws {
         let kernelX = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
-        kernelX.put(row: 0, col: 0, data: [2, 2, 2])
+        try kernelX.put(row: 0, col: 0, data: [2, 2, 2] as [Float])
 
         let kernelY = Mat(rows: 1, cols: 3, type: CvType.CV_32FC1)
-        kernelY.put(row: 0, col: 0, data: [1, 1, 1])
+        try kernelY.put(row: 0, col: 0, data: [1, 1, 1] as [Float])
 
         Imgproc.sepFilter2D(src: gray0, dst: dst, ddepth: CvType.CV_32F, kernelX: kernelX, kernelY: kernelY, anchor: anchorPoint, delta: OpenCVTestCase.weakEPS, borderType: .BORDER_REFLECT)
 
@@ -1392,16 +1392,16 @@ class ImgprocTest: OpenCVTestCase {
 
     func testSobelMatMatIntIntIntIntDoubleDoubleInt() throws {
         let src = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [2, 0, 1])
-        src.put(row: 1, col: 0, data: [6, 4, 3])
-        src.put(row: 2, col: 0, data: [1, 0, 2])
+        try src.put(row: 0, col: 0, data: [2, 0, 1] as [Float])
+        try src.put(row: 1, col: 0, data: [6, 4, 3] as [Float])
+        try src.put(row: 2, col: 0, data: [1, 0, 2] as [Float])
 
         Imgproc.Sobel(src: src, dst: dst, ddepth: CvType.CV_32F, dx: 1, dy: 0, ksize: 3, scale: 2, delta: 0, borderType: .BORDER_REPLICATE)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [-16, -12, 4])
-        truth!.put(row: 1, col: 0, data: [-14, -12, 2])
-        truth!.put(row: 2, col: 0, data: [-10, 0, 10])
+        try truth!.put(row: 0, col: 0, data: [-16, -12, 4] as [Float])
+        try truth!.put(row: 1, col: 0, data: [-14, -12, 2] as [Float])
+        try truth!.put(row: 2, col: 0, data: [-10, 0, 10] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -1418,55 +1418,55 @@ class ImgprocTest: OpenCVTestCase {
 
     func testWarpAffineMatMatMatSize() throws {
         let src = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [2, 0, 1])
-        src.put(row: 1, col: 0, data: [6, 4, 3])
-        src.put(row: 2, col: 0, data: [1, 0, 2])
+        try src.put(row: 0, col: 0, data: [2, 0, 1] as [Float])
+        try src.put(row: 1, col: 0, data: [6, 4, 3] as [Float])
+        try src.put(row: 2, col: 0, data: [1, 0, 2] as [Float])
         let M = Mat(rows: 2, cols: 3, type: CvType.CV_32F)
-        M.put(row: 0, col: 0, data: [1, 0, 1])
-        M.put(row: 1, col: 0, data: [0, 1, 1])
+        try M.put(row: 0, col: 0, data: [1, 0, 1] as [Float])
+        try M.put(row: 1, col: 0, data: [0, 1, 1] as [Float])
 
         Imgproc.warpAffine(src: src, dst: dst, M: M, dsize: Size(width: 3, height: 3))
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [0, 0, 0])
-        truth!.put(row: 1, col: 0, data: [0, 2, 0])
-        truth!.put(row: 2, col: 0, data: [0, 6, 4])
+        try truth!.put(row: 0, col: 0, data: [0, 0, 0] as [Float])
+        try truth!.put(row: 1, col: 0, data: [0, 2, 0] as [Float])
+        try truth!.put(row: 2, col: 0, data: [0, 6, 4] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
     func testWarpAffineMatMatMatSizeInt() throws {
         let src = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [2, 4, 1])
-        src.put(row: 1, col: 0, data: [6, 4, 3])
-        src.put(row: 2, col: 0, data: [0, 2, 2])
+        try src.put(row: 0, col: 0, data: [2, 4, 1] as [Float])
+        try src.put(row: 1, col: 0, data: [6, 4, 3] as [Float])
+        try src.put(row: 2, col: 0, data: [0, 2, 2] as [Float])
         let M = Mat(rows: 2, cols: 3, type: CvType.CV_32F)
-        M.put(row: 0, col: 0, data: [1, 0, 0])
-        M.put(row: 1, col: 0, data: [0, 0, 1])
+        try M.put(row: 0, col: 0, data: [1, 0, 0] as [Float])
+        try M.put(row: 1, col: 0, data: [0, 0, 1] as [Float])
 
         Imgproc.warpAffine(src: src, dst: dst, M: M, dsize: Size(width: 2, height: 2), flags: InterpolationFlags.WARP_INVERSE_MAP.rawValue)
 
         truth = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [6, 4])
-        truth!.put(row: 1, col: 0, data: [6, 4])
+        try truth!.put(row: 0, col: 0, data: [6, 4] as [Float])
+        try truth!.put(row: 1, col: 0, data: [6, 4] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
     func testWarpPerspectiveMatMatMatSize() throws {
         let src = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [2, 4, 1])
-        src.put(row: 1, col: 0, data: [0, 4, 5])
-        src.put(row: 2, col: 0, data: [1, 2, 2])
+        try src.put(row: 0, col: 0, data: [2, 4, 1] as [Float])
+        try src.put(row: 1, col: 0, data: [0, 4, 5] as [Float])
+        try src.put(row: 2, col: 0, data: [1, 2, 2] as [Float])
         let M = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        M.put(row: 0, col: 0, data: [1, 0, 1])
-        M.put(row: 1, col: 0, data: [0, 1, 1])
-        M.put(row: 2, col: 0, data: [0, 0, 1])
+        try M.put(row: 0, col: 0, data: [1, 0, 1] as [Float])
+        try M.put(row: 1, col: 0, data: [0, 1, 1] as [Float])
+        try M.put(row: 2, col: 0, data: [0, 0, 1] as [Float])
 
         Imgproc.warpPerspective(src: src, dst: dst, M: M, dsize: Size(width: 3, height: 3))
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [0, 0, 0])
-        truth!.put(row: 1, col: 0, data: [0, 2, 4])
-        truth!.put(row: 2, col: 0, data: [0, 0, 4])
+        try truth!.put(row: 0, col: 0, data: [0, 0, 0] as [Float])
+        try truth!.put(row: 1, col: 0, data: [0, 2, 4] as [Float])
+        try truth!.put(row: 2, col: 0, data: [0, 0, 4] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
@@ -1477,10 +1477,10 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.watershed(image: image, markers: markers)
 
         truth = Mat(rows: 4, cols: 4, type: CvType.CV_32SC1)
-        truth!.put(row: 0, col: 0, data: [-1, -1, -1, -1])
-        truth!.put(row: 1, col: 0, data: [-1, 0, 0, -1])
-        truth!.put(row: 2, col: 0, data: [-1, 0, 0, -1])
-        truth!.put(row: 3, col: 0, data: [-1, -1, -1, -1])
+        try truth!.put(row: 0, col: 0, data: [-1, -1, -1, -1] as [Int32])
+        try truth!.put(row: 1, col: 0, data: [-1, 0, 0, -1] as [Int32])
+        try truth!.put(row: 2, col: 0, data: [-1, 0, 0, -1] as [Int32])
+        try truth!.put(row: 3, col: 0, data: [-1, -1, -1, -1] as [Int32])
         try assertMatEqual(truth!, markers)
     }
 
@@ -1623,7 +1623,7 @@ class ImgprocTest: OpenCVTestCase {
         Imgproc.ellipse(img: gray0, box: box, color: Scalar(1))
 
         let truth = Mat(rows: matSize, cols: matSize, type: CvType.CV_8U)
-        truth.put(row: 0, col: 0, data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        try truth.put(row: 0, col: 0, data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                          0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
@@ -1632,7 +1632,7 @@ class ImgprocTest: OpenCVTestCase {
                                          0, 0, 0, 1, 0, 1, 1, 0, 0, 0,
                                          0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0] as [Int8])
 
         try assertMatEqual(truth, gray0)
     }

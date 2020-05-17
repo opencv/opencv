@@ -83,9 +83,12 @@ open class OpenCVTestCase: XCTestCase {
         //Core.setErrorVerbosity(false)
         Core.randu(dst: grayRnd, low: 0, high: 255)
         Core.randu(dst: grayRnd_32f, low:0, high: 255)
-        v1.put(row: 0,col: 0, data: [1.0, 3.0, 2.0])
-        v2.put(row: 0,col: 0, data: [2.0, 1.0, 3.0])
-
+        do {
+            try v1.put(row: 0,col: 0, data: [1.0, 3.0, 2.0])
+            try v2.put(row: 0,col: 0, data: [2.0, 1.0, 3.0])
+        } catch {
+            print("Fatal error in start-up")
+        }
     }
 
     override open func tearDown() {

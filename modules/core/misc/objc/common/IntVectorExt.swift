@@ -1,5 +1,5 @@
 //
-//  DoubleVectorExt.swift
+//  IntVectorExt.swift
 //
 //  Created by Giles Payne on 2020/01/04.
 //
@@ -8,7 +8,7 @@ import Foundation
 
 public extension IntVector {
     convenience init(_ array:[Int32]) {
-        let data = Data(buffer: UnsafeBufferPointer(start: array, count: array.count))
+        let data = array.withUnsafeBufferPointer { Data(buffer: $0) }
         self.init(data:data);
     }
 

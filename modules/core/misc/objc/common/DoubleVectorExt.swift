@@ -8,7 +8,7 @@ import Foundation
 
 public extension DoubleVector {
     convenience init(_ array:[Double]) {
-        let data = Data(buffer: UnsafeBufferPointer(start: array, count: array.count))
+        let data = array.withUnsafeBufferPointer { Data(buffer: $0) }
         self.init(data:data);
     }
 

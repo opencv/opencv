@@ -119,57 +119,57 @@ class CoreTest: OpenCVTestCase {
 
     func testCartToPolarMatMatMatMat() throws {
         let x = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        x.put(row: 0, col: 0, data: [3.0, 6.0, 5, 0])
+        try x.put(row: 0, col: 0, data: [3.0, 6.0, 5, 0] as [Float])
         let y = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        y.put(row: 0, col: 0, data: [4.0, 8.0, 12.0])
+        try y.put(row: 0, col: 0, data: [4.0, 8.0, 12.0] as [Float])
         let dst_angle = Mat()
 
         Core.cartToPolar(x: x, y: y, magnitude: dst, angle: dst_angle)
 
         let expected_magnitude = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        expected_magnitude.put(row: 0, col: 0, data: [5.0, 10.0, 13.0])
+        try expected_magnitude.put(row: 0, col: 0, data: [5.0, 10.0, 13.0] as [Float])
 
         let expected_angle = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        expected_angle.put(row: 0, col: 0, data: [atan2rad(4,3), atan2rad(8,6), atan2rad(12,5)] as [NSNumber])
+        try expected_angle.put(row: 0, col: 0, data: [atan2rad(4,3), atan2rad(8,6), atan2rad(12,5)])
         try assertMatEqual(expected_magnitude, dst, OpenCVTestCase.EPS)
         try assertMatEqual(expected_angle, dst_angle, OpenCVTestCase.EPS)
     }
 
     func testCartToPolarMatMatMatMatBoolean() throws {
         let x = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        x.put(row: 0, col: 0, data: [3.0, 6.0, 5, 0])
+        try x.put(row: 0, col: 0, data: [3.0, 6.0, 5, 0] as [Float])
         let y = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        y.put(row: 0, col: 0, data: [4.0, 8.0, 12.0])
+        try y.put(row: 0, col: 0, data: [4.0, 8.0, 12.0] as [Float])
         let dst_angle = Mat()
 
         Core.cartToPolar(x: x, y: y, magnitude: dst, angle: dst_angle, angleInDegrees: true)
 
         let expected_magnitude = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        expected_magnitude.put(row: 0, col: 0, data: [5.0, 10.0, 13.0])
+        try expected_magnitude.put(row: 0, col: 0, data: [5.0, 10.0, 13.0] as [Float])
         let expected_angle = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        expected_angle.put(row: 0, col: 0, data:[atan2deg(4,3), atan2deg(8,6), atan2deg(12,5)] as [NSNumber])
+        try expected_angle.put(row: 0, col: 0, data:[atan2deg(4,3), atan2deg(8,6), atan2deg(12,5)])
         try assertMatEqual(expected_magnitude, dst, OpenCVTestCase.EPS)
         try assertMatEqual(expected_angle, dst_angle, OpenCVTestCase.EPS * 180/Double.pi)
     }
 
 
-    func testCheckRangeMat() {
+    func testCheckRangeMat() throws {
         let outOfRange = Mat(rows: 2, cols: 2, type: CvType.CV_64F)
-        outOfRange.put(row: 0, col: 0, data: [Double.nan, -Double.infinity, Double.infinity, 0] as [NSNumber])
+        try outOfRange.put(row: 0, col: 0, data: [Double.nan, -Double.infinity, Double.infinity, 0])
 
         XCTAssert(Core.checkRange(a: grayRnd_32f))
         XCTAssert(Core.checkRange(a: Mat()))
         XCTAssertFalse(Core.checkRange(a: outOfRange))
     }
 
-    func testCheckRangeMatBooleanPointDoubleDouble() {
+    func testCheckRangeMatBooleanPointDoubleDouble() throws {
         let inRange = Mat(rows: 2, cols: 3, type: CvType.CV_64F)
-        inRange.put(row: 0, col: 0, data: [14, 48, 76, 33, 5, 99])
+        try inRange.put(row: 0, col: 0, data: [14, 48, 76, 33, 5, 99] as [Double])
 
         XCTAssert(Core.checkRange(a: inRange, quiet: true, minVal: 5, maxVal: 100))
 
         let outOfRange = Mat(rows: 2, cols: 3, type: CvType.CV_64F)
-        inRange.put(row: 0, col: 0, data: [-4, 0, 6, 33, 4, 109])
+        try inRange.put(row: 0, col: 0, data: [-4, 0, 6, 33, 4, 109] as [Double])
 
         XCTAssertFalse(Core.checkRange(a: outOfRange, quiet: true, minVal: 5, maxVal: 100))
     }
@@ -183,7 +183,7 @@ class CoreTest: OpenCVTestCase {
 
         try assertMatEqual(dst, gray0)
 
-        grayRnd.put(row: 0, col: 0, data: [0, 0])
+        try grayRnd.put(row: 0, col: 0, data: [0, 0] as [Int8])
 
         Core.compare(src1: gray0, src2: grayRnd, dst: dst, cmpop: .CMP_GE)
 
@@ -223,12 +223,12 @@ class CoreTest: OpenCVTestCase {
         try assertMatEqual(gray1, dst)
     }
 
-    func testCountNonZero() {
+    func testCountNonZero() throws {
         XCTAssertEqual(0, Core.countNonZero(src: gray0))
         let gray0copy = gray0.clone()
 
-        gray0copy.put(row: 0, col: 0, data: [255])
-        gray0copy.put(row: gray0copy.rows() - 1, col: gray0copy.cols() - 1, data: [255])
+        try gray0copy.put(row: 0, col: 0, data: [-1] as [Int8])
+        try gray0copy.put(row: gray0copy.rows() - 1, col: gray0copy.cols() - 1, data: [-1] as [Int8])
 
         XCTAssertEqual(2, Core.countNonZero(src: gray0copy))
     }
@@ -241,7 +241,7 @@ class CoreTest: OpenCVTestCase {
 
     func testDctMatMat() throws {
         let m = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        m.put(row: 0, col: 0, data: [135.22211, 50.811096, 102.27016, 207.6682])
+        try m.put(row: 0, col: 0, data: [135.22211, 50.811096, 102.27016, 207.6682] as [Float])
         let dst1 = Mat()
         let dst2 = Mat()
 
@@ -249,14 +249,14 @@ class CoreTest: OpenCVTestCase {
         Core.dct(src: m, dst: dst2)
 
         truth = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [247.98576, -61.252407, 94.904533, 14.013477])
+        try truth!.put(row: 0, col: 0, data: [247.98576, -61.252407, 94.904533, 14.013477] as [Float])
         try assertMatEqual(gray0_32f_1d, dst1, OpenCVTestCase.EPS)
         try assertMatEqual(truth!, dst2, OpenCVTestCase.EPS)
     }
 
     func testDctMatMatInt() throws {
         let m = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        m.put(row: 0, col: 0, data: [247.98576, -61.252407, 94.904533, 14.013477])
+        try m.put(row: 0, col: 0, data: [247.98576, -61.252407, 94.904533, 14.013477] as [Float])
         let dst1 = Mat()
         let dst2 = Mat()
 
@@ -264,17 +264,17 @@ class CoreTest: OpenCVTestCase {
         Core.dct(src: m, dst: dst2, flags:DftFlags.DCT_INVERSE.rawValue)
 
         truth = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [135.22211, 50.811096, 102.27016, 207.6682])
+        try truth!.put(row: 0, col: 0, data: [135.22211, 50.811096, 102.27016, 207.6682] as [Float])
         try assertMatEqual(gray0_32f_1d, dst1, OpenCVTestCase.EPS)
         try assertMatEqual(truth!, dst2, OpenCVTestCase.EPS)
     }
 
-    func testDeterminant() {
+    func testDeterminant() throws {
         let mat = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
-        mat.put(row: 0, col: 0, data: [4.0])
-        mat.put(row: 0, col: 1, data: [2.0])
-        mat.put(row: 1, col: 0, data: [4.0])
-        mat.put(row: 1, col: 1, data: [4.0])
+        try mat.put(row: 0, col: 0, data: [4.0] as [Float])
+        try mat.put(row: 0, col: 1, data: [2.0] as [Float])
+        try mat.put(row: 1, col: 0, data: [4.0] as [Float])
+        try mat.put(row: 1, col: 1, data: [4.0] as [Float])
 
         let det = Core.determinant(mtx: mat)
 
@@ -289,11 +289,11 @@ class CoreTest: OpenCVTestCase {
 
     func testDftMatMatIntInt() throws {
         let src1 = Mat(rows: 2, cols: 4, type: CvType.CV_32F)
-        src1.put(row: 0, col: 0, data: [1, 2, 3, 4])
-        src1.put(row: 1, col: 0, data: [1, 1, 1, 1])
+        try src1.put(row: 0, col: 0, data: [1, 2, 3, 4] as [Float])
+        try src1.put(row: 1, col: 0, data: [1, 1, 1, 1] as [Float])
         let src2 = Mat(rows: 2, cols: 4, type: CvType.CV_32F)
-        src2.put(row: 0, col: 0, data: [1, 2, 3, 4])
-        src2.put(row: 1, col: 0, data: [0, 0, 0, 0])
+        try src2.put(row: 0, col: 0, data: [1, 2, 3, 4] as [Float])
+        try src2.put(row: 1, col: 0, data: [0, 0, 0, 0] as [Float])
         let dst1 = Mat()
         let dst2 = Mat()
 
@@ -339,16 +339,16 @@ class CoreTest: OpenCVTestCase {
 
     func testEigen() throws {
         let src = Mat(rows: 3, cols: 3, type: CvType.CV_32FC1)
-        src.put(row: 0, col: 0, data: [2, 0, 0])
-        src.put(row: 1, col: 0, data: [0, 6, 0])
-        src.put(row: 2, col: 0, data: [0, 0, 4])
+        try src.put(row: 0, col: 0, data: [2, 0, 0] as [Float])
+        try src.put(row: 1, col: 0, data: [0, 6, 0] as [Float])
+        try src.put(row: 2, col: 0, data: [0, 0, 4] as [Float])
         let eigenVals = Mat()
         let eigenVecs = Mat()
 
         Core.eigen(src: src, eigenvalues: eigenVals, eigenvectors: eigenVecs)
 
         let expectedEigenVals = Mat(rows: 3, cols: 1, type: CvType.CV_32FC1)
-        expectedEigenVals.put(row: 0, col: 0, data: [6, 4, 2])
+        try expectedEigenVals.put(row: 0, col: 0, data: [6, 4, 2] as [Float])
         try assertMatEqual(eigenVals, expectedEigenVals, OpenCVTestCase.EPS)
 
         // check by definition
@@ -422,7 +422,7 @@ class CoreTest: OpenCVTestCase {
 
         Imgproc.fillPoly(img: gray0, pts: polylines, color: Scalar(1))
 
-        let truth =
+        let truth:[Int8] =
             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
               0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
               0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
@@ -435,7 +435,7 @@ class CoreTest: OpenCVTestCase {
               0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         let truthMat = Mat(size: gray0.size(), type: CvType.CV_8U)
-        truthMat.put(row:0, col:0, data:truth as [NSNumber])
+        try truthMat.put(row:0, col:0, data:truth)
 
         try assertMatEqual(truthMat, gray0)
     }
@@ -458,10 +458,10 @@ class CoreTest: OpenCVTestCase {
 
     func testFlip() throws {
         let src = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [1.0])
-        src.put(row: 0, col: 1, data: [2.0])
-        src.put(row: 1, col: 0, data: [3.0])
-        src.put(row: 1, col: 1, data: [4.0])
+        try src.put(row: 0, col: 0, data: [1.0] as [Float])
+        try src.put(row: 0, col: 1, data: [2.0] as [Float])
+        try src.put(row: 1, col: 0, data: [3.0] as [Float])
+        try src.put(row: 1, col: 1, data: [4.0] as [Float])
         let dst1 = Mat()
         let dst2 = Mat()
 
@@ -469,54 +469,54 @@ class CoreTest: OpenCVTestCase {
         Core.flip(src: src, dst: dst2, flipCode: 1)
 
         let dst_f1 = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
-        dst_f1.put(row: 0, col: 0, data: [3.0])
-        dst_f1.put(row: 0, col: 1, data: [4.0])
-        dst_f1.put(row: 1, col: 0, data: [1.0])
-        dst_f1.put(row: 1, col: 1, data: [2.0])
+        try dst_f1.put(row: 0, col: 0, data: [3.0] as [Float])
+        try dst_f1.put(row: 0, col: 1, data: [4.0] as [Float])
+        try dst_f1.put(row: 1, col: 0, data: [1.0] as [Float])
+        try dst_f1.put(row: 1, col: 1, data: [2.0] as [Float])
         let dst_f2 = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
-        dst_f2.put(row: 0, col: 0, data: [2.0])
-        dst_f2.put(row: 0, col: 1, data: [1.0])
-        dst_f2.put(row: 1, col: 0, data: [4.0])
-        dst_f2.put(row: 1, col: 1, data: [3.0])
+        try dst_f2.put(row: 0, col: 0, data: [2.0] as [Float])
+        try dst_f2.put(row: 0, col: 1, data: [1.0] as [Float])
+        try dst_f2.put(row: 1, col: 0, data: [4.0] as [Float])
+        try dst_f2.put(row: 1, col: 1, data: [3.0] as [Float])
         try assertMatEqual(dst_f1, dst1, OpenCVTestCase.EPS)
         try assertMatEqual(dst_f2, dst2, OpenCVTestCase.EPS)
     }
 
     func testGemmMatMatDoubleMatDoubleMat() throws {
         let m1 = Mat(rows: 2, cols: 2, type: CvType.CV_32FC1)
-        m1.put(row: 0, col: 0, data: [1.0, 0.0])
-        m1.put(row: 1, col: 0, data: [1.0, 0.0])
+        try m1.put(row: 0, col: 0, data: [1.0, 0.0] as [Float])
+        try m1.put(row: 1, col: 0, data: [1.0, 0.0] as [Float])
         let m2 = Mat(rows: 2, cols: 2, type: CvType.CV_32FC1)
-        m2.put(row: 0, col: 0, data: [1.0, 0.0])
-        m2.put(row: 1, col: 0, data: [1.0, 0.0])
+        try m2.put(row: 0, col: 0, data: [1.0, 0.0] as [Float])
+        try m2.put(row: 1, col: 0, data: [1.0, 0.0] as [Float])
         let dmatrix = Mat(rows: 2, cols: 2, type: CvType.CV_32FC1);
-        dmatrix.put(row: 0, col: 0, data: [0.001, 0.001])
-        dmatrix.put(row: 1, col: 0, data: [0.001, 0.001])
+        try dmatrix.put(row: 0, col: 0, data: [0.001, 0.001] as [Float])
+        try dmatrix.put(row: 1, col: 0, data: [0.001, 0.001] as [Float])
 
         Core.gemm(src1: m1, src2: m2, alpha: 1.0, src3: dmatrix, beta: 1.0, dst: dst)
 
         let expected = Mat(rows: 2, cols: 2, type: CvType.CV_32FC1)
-        expected.put(row: 0, col: 0, data: [1.001, 0.001])
-        expected.put(row: 1, col: 0, data: [1.001, 0.001])
+        try expected.put(row: 0, col: 0, data: [1.001, 0.001] as [Float])
+        try expected.put(row: 1, col: 0, data: [1.001, 0.001] as [Float])
         try assertMatEqual(expected, dst, OpenCVTestCase.EPS)
     }
 
     func testGemmMatMatDoubleMatDoubleMatInt() throws {
         let m1 = Mat(rows: 2, cols: 2, type: CvType.CV_32FC1)
-        m1.put(row: 0, col: 0, data: [1.0, 0.0])
-        m1.put(row: 1, col: 0, data: [1.0, 0.0])
+        try m1.put(row: 0, col: 0, data: [1.0, 0.0])
+        try m1.put(row: 1, col: 0, data: [1.0, 0.0])
         let m2 = Mat(rows: 2, cols: 2, type: CvType.CV_32FC1)
-        m2.put(row: 0, col: 0, data: [1.0, 0.0])
-        m2.put(row: 1, col: 0, data: [1.0, 0.0])
+        try m2.put(row: 0, col: 0, data: [1.0, 0.0])
+        try m2.put(row: 1, col: 0, data: [1.0, 0.0])
         let dmatrix = Mat(rows: 2, cols: 2, type: CvType.CV_32FC1)
-        dmatrix.put(row: 0, col: 0, data: [0.001, 0.001])
-        dmatrix.put(row: 1, col: 0, data: [0.001, 0.001])
+        try dmatrix.put(row: 0, col: 0, data: [0.001, 0.001])
+        try dmatrix.put(row: 1, col: 0, data: [0.001, 0.001])
 
         Core.gemm(src1: m1, src2: m2, alpha: 1.0, src3: dmatrix, beta: 1.0, dst: dst, flags: GemmFlags.GEMM_1_T.rawValue)
 
         let expected = Mat(rows: 2, cols: 2, type: CvType.CV_32FC1)
-        expected.put(row: 0, col: 0, data: [2.001, 0.001])
-        expected.put(row: 1, col: 0, data: [0.001, 0.001])
+        try expected.put(row: 0, col: 0, data: [2.001, 0.001])
+        try expected.put(row: 1, col: 0, data: [0.001, 0.001])
         try assertMatEqual(expected, dst, OpenCVTestCase.EPS)
     }
 
@@ -570,67 +570,67 @@ class CoreTest: OpenCVTestCase {
 
     func testIdctMatMat() throws {
         let mat = Mat(rows: 1, cols: 8, type: CvType.CV_32F)
-        mat.put(row: 0, col: 0, data: [1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0])
+        try mat.put(row: 0, col: 0, data: [1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0])
 
         Core.idct(src: mat, dst: dst)
 
         truth = Mat(rows: 1, cols: 8, type: CvType.CV_32F)
 
-        truth!.put(row: 0, col: 0, data: [3.3769724, -1.6215782, 2.3608727, 0.20730907, -0.86502546, 0.028082132, -0.7673766, 0.10917115])
+        try truth!.put(row: 0, col: 0, data: [3.3769724, -1.6215782, 2.3608727, 0.20730907, -0.86502546, 0.028082132, -0.7673766, 0.10917115])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
     func testIdctMatMatInt() throws {
         let mat = Mat(rows: 2, cols: 8, type: CvType.CV_32F)
-        mat.put(row: 0, col: 0, data: [1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0])
-        mat.put(row: 1, col: 0, data: [1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0])
+        try mat.put(row: 0, col: 0, data: [1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0])
+        try mat.put(row: 1, col: 0, data: [1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0])
 
         Core.idct(src: mat, dst: dst, flags: DftFlags.DCT_ROWS.rawValue)
 
         truth = Mat(rows: 2, cols: 8, type: CvType.CV_32F)
 
-        truth!.put(row: 0, col: 0, data: [3.3769724, -1.6215782, 2.3608727, 0.20730907, -0.86502546, 0.028082132, -0.7673766, 0.10917115])
-        truth!.put(row: 1, col: 0, data: [3.3769724, -1.6215782, 2.3608727, 0.20730907, -0.86502546, 0.028082132, -0.7673766, 0.10917115])
+        try truth!.put(row: 0, col: 0, data: [3.3769724, -1.6215782, 2.3608727, 0.20730907, -0.86502546, 0.028082132, -0.7673766, 0.10917115])
+        try truth!.put(row: 1, col: 0, data: [3.3769724, -1.6215782, 2.3608727, 0.20730907, -0.86502546, 0.028082132, -0.7673766, 0.10917115])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
     func testIdftMatMat() throws {
         let mat = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        mat.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
+        try mat.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
 
         Core.idft(src: mat, dst: dst)
 
         truth = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [9, -9, 1, 3])
+        try truth!.put(row: 0, col: 0, data: [9, -9, 1, 3] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
     func testIdftMatMatIntInt() throws {
         let mat = Mat(rows: 2, cols: 4, type: CvType.CV_32F)
-        mat.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
-        mat.put(row: 1, col: 0, data: [1.0, 2.0, 3.0, 4.0])
+        try mat.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0] as [Float])
+        try mat.put(row: 1, col: 0, data: [1.0, 2.0, 3.0, 4.0] as [Float])
         let dst = Mat()
 
         Core.idft(src: mat, dst: dst, flags: DftFlags.DFT_REAL_OUTPUT.rawValue, nonzeroRows: 1)
 
         truth = Mat(rows: 2, cols: 4, type: CvType.CV_32F)
-        truth!.put(row: 0, col: 0, data: [18, -18, 2, 6])
-        truth!.put(row: 1, col: 0, data: [0, 0, 0, 0])
+        try truth!.put(row: 0, col: 0, data: [18, -18, 2, 6] as [Float])
+        try truth!.put(row: 1, col: 0, data: [0, 0, 0, 0] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
-    func testInRange() {
+    func testInRange() throws {
         let gray0copy = gray0.clone()
-        gray0copy.put(row: 1, col: 1, data: [100, 150, 200])
+        try gray0copy.put(row: 1, col: 1, data: [100, -105, -55] as [Int8])
 
         Core.inRange(src: gray0copy, lowerb: Scalar(120), upperb: Scalar(160), dst: dst)
 
-        let vals = NSMutableArray(array: [0, 0, 0])
-        dst.get(row: 1, col: 1, data: vals)
+        var vals = [Int8](repeating: 0, count: 3)
+        try dst.get(row: 1, col: 1, data: &vals)
 
-        XCTAssertEqual(0, vals[0] as! UInt8)
-        XCTAssertEqual(255, vals[1] as! UInt8)
-        XCTAssertEqual(0, vals[2] as! UInt8)
+        XCTAssertEqual(0, vals[0])
+        XCTAssertEqual(-1, vals[1])
+        XCTAssertEqual(0, vals[2])
         XCTAssertEqual(1, Core.countNonZero(src: dst))
     }
 
@@ -646,73 +646,73 @@ class CoreTest: OpenCVTestCase {
 
     func testInvertMatMat() throws {
         let src = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [1.0])
-        src.put(row: 0, col: 1, data: [2.0])
-        src.put(row: 1, col: 0, data: [1.5])
-        src.put(row: 1, col: 1, data: [4.0])
+        try src.put(row: 0, col: 0, data: [1.0] as [Float])
+        try src.put(row: 0, col: 1, data: [2.0] as [Float])
+        try src.put(row: 1, col: 0, data: [1.5] as [Float])
+        try src.put(row: 1, col: 1, data: [4.0] as [Float])
 
         Core.invert(src: src, dst: dst)
 
         truth = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
 
-        truth!.put(row: 0, col: 0, data: [4.0])
-        truth!.put(row: 0, col: 1, data: [-2.0])
-        truth!.put(row: 1, col: 0, data: [-1.5])
-        truth!.put(row: 1, col: 1, data: [1.0])
+        try truth!.put(row: 0, col: 0, data: [4.0] as [Float])
+        try truth!.put(row: 0, col: 1, data: [-2.0] as [Float])
+        try truth!.put(row: 1, col: 0, data: [-1.5] as [Float])
+        try truth!.put(row: 1, col: 1, data: [1.0] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
     func testInvertMatMatInt() throws {
         let src = Mat.eye(rows: 3, cols: 3, type: CvType.CV_32FC1)
-        src.put(row: 0, col: 2, data: [1])
+        try src.put(row: 0, col: 2, data: [1] as [Float])
 
         let cond = Core.invert(src: src, dst: dst, flags: DecompTypes.DECOMP_SVD.rawValue)
 
         truth = Mat.eye(rows: 3, cols: 3, type: CvType.CV_32FC1)
-        truth!.put(row: 0, col: 2, data: [-1])
+        try truth!.put(row: 0, col: 2, data: [-1] as [Float])
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
         XCTAssertEqual(0.3819660544395447, cond, accuracy:OpenCVTestCase.EPS)
     }
 
     func testKmeansMatIntMatTermCriteriaIntInt() throws {
         let data = Mat(rows: 4, cols: 5, type: CvType.CV_32FC1)
-        data.put(row: 0, col: 0, data: [1, 2, 3, 4, 5])
-        data.put(row: 1, col: 0, data: [2, 3, 4, 5, 6])
-        data.put(row: 2, col: 0, data: [5, 4, 3, 2, 1])
-        data.put(row: 3, col: 0, data: [6, 5, 4, 3, 2])
+        try data.put(row: 0, col: 0, data: [1, 2, 3, 4, 5] as [Float])
+        try data.put(row: 1, col: 0, data: [2, 3, 4, 5, 6] as [Float])
+        try data.put(row: 2, col: 0, data: [5, 4, 3, 2, 1] as [Float])
+        try data.put(row: 3, col: 0, data: [6, 5, 4, 3, 2] as [Float])
         let criteria = TermCriteria(type: TermCriteria.eps, maxCount: 0, epsilon: OpenCVTestCase.EPS)
         let labels = Mat()
 
         Core.kmeans(data: data, K: 2, bestLabels: labels, criteria: criteria, attempts: 1, flags: KmeansFlags.KMEANS_PP_CENTERS.rawValue)
 
-        let first_center = NSMutableArray(array: [0])
-        labels.get(row: 0, col: 0, data: first_center)
-        let c1 = first_center[0] as! Int32
+        var first_center = [Int32](repeating: 0, count: 1)
+        try labels.get(row: 0, col: 0, data: &first_center)
+        let c1 = first_center[0]
         let expected_labels = Mat(rows: 4, cols: 1, type: CvType.CV_32S)
-        expected_labels.put(row: 0, col: 0, data: [c1, c1, 1 - c1, 1 - c1] as [NSNumber])
+        try expected_labels.put(row: 0, col: 0, data: [c1, c1, 1 - c1, 1 - c1])
         try assertMatEqual(expected_labels, labels)
     }
 
     func testKmeansMatIntMatTermCriteriaIntIntMat() throws {
         let data = Mat(rows: 4, cols: 5, type: CvType.CV_32FC1)
-        data.put(row: 0, col: 0, data: [1, 2, 3, 4, 5])
-        data.put(row: 1, col: 0, data: [2, 3, 4, 5, 6])
-        data.put(row: 2, col: 0, data: [5, 4, 3, 2, 1])
-        data.put(row: 3, col: 0, data: [6, 5, 4, 3, 2])
+        try data.put(row: 0, col: 0, data: [1, 2, 3, 4, 5] as [Float])
+        try data.put(row: 1, col: 0, data: [2, 3, 4, 5, 6] as [Float])
+        try data.put(row: 2, col: 0, data: [5, 4, 3, 2, 1] as [Float])
+        try data.put(row: 3, col: 0, data: [6, 5, 4, 3, 2] as [Float])
         let criteria = TermCriteria(type:TermCriteria.eps, maxCount: 0, epsilon: OpenCVTestCase.EPS)
         let labels = Mat()
         let centers = Mat()
 
         Core.kmeans(data: data, K: 2, bestLabels: labels, criteria: criteria, attempts: 6, flags: KmeansFlags.KMEANS_RANDOM_CENTERS.rawValue, centers: centers)
 
-        let first_center = NSMutableArray(array: [0])
-        labels.get(row: 0, col: 0, data: first_center)
-        let c1 = first_center[0] as! Int32
+        var first_center = [Int32](repeating: 0, count: 1)
+        try labels.get(row: 0, col: 0, data: &first_center)
+        let c1 = first_center[0]
         let expected_labels = Mat(rows: 4, cols: 1, type: CvType.CV_32S)
-        expected_labels.put(row: 0, col: 0, data: [c1, c1, 1 - c1, 1 - c1] as [NSNumber])
+        try expected_labels.put(row: 0, col: 0, data: [c1, c1, 1 - c1, 1 - c1])
         let expected_centers = Mat(rows: 2, cols: 5, type: CvType.CV_32FC1)
-        expected_centers.put(row: c1, col: 0, data: [1.5, 2.5, 3.5, 4.5, 5.5])
-        expected_centers.put(row: 1 - c1, col: 0, data: [5.5, 4.5, 3.5, 2.5, 1.5])
+        try expected_centers.put(row: c1, col: 0, data: [1.5, 2.5, 3.5, 4.5, 5.5] as [Float])
+        try expected_centers.put(row: 1 - c1, col: 0, data: [5.5, 4.5, 3.5, 2.5, 1.5] as [Float])
         try assertMatEqual(expected_labels, labels)
         try assertMatEqual(expected_centers, centers, OpenCVTestCase.EPS)
     }
@@ -756,12 +756,12 @@ class CoreTest: OpenCVTestCase {
 
     func testLog() throws {
         let mat = Mat(rows: 1, cols: 4, type: CvType.CV_32FC1)
-        mat.put(row: 0, col: 0, data: [1.0, 10.0, 100.0, 1000.0])
+        try mat.put(row: 0, col: 0, data: [1.0, 10.0, 100.0, 1000.0])
 
         Core.log(src: mat, dst: dst)
 
         let expected = Mat(rows: 1, cols: 4, type: CvType.CV_32FC1)
-        expected.put(row: 0, col: 0, data: [0, 2.3025851, 4.6051702, 6.9077554])
+        try expected.put(row: 0, col: 0, data: [0, 2.3025851, 4.6051702, 6.9077554])
         try assertMatEqual(expected, dst, OpenCVTestCase.EPS)
     }
 
@@ -783,13 +783,13 @@ class CoreTest: OpenCVTestCase {
     func testMagnitude() throws {
         let x = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
         let y = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        x.put(row: 0, col: 0, data: [3.0, 5.0, 9.0, 6.0])
-        y.put(row: 0, col: 0, data: [4.0, 12.0, 40.0, 8.0])
+        try x.put(row: 0, col: 0, data: [3.0, 5.0, 9.0, 6.0])
+        try y.put(row: 0, col: 0, data: [4.0, 12.0, 40.0, 8.0])
 
         Core.magnitude(x: x, y: y, magnitude: dst)
 
         let out = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        out.put(row: 0, col: 0, data: [5.0, 13.0, 41.0, 10.0])
+        try out.put(row: 0, col: 0, data: [5.0, 13.0, 41.0, 10.0])
         try assertMatEqual(out, dst, OpenCVTestCase.EPS)
 
         Core.magnitude(x: gray0_32f, y: gray255_32f, magnitude: dst)
@@ -825,13 +825,13 @@ class CoreTest: OpenCVTestCase {
 
         let x = Mat(rows: 1, cols: 1, type: CvType.CV_32F)
         let y = Mat(rows: 1, cols: 1, type: CvType.CV_32F)
-        x.put(row: 0, col: 0, data: [23.0])
-        y.put(row: 0, col: 0, data: [4.0])
+        try x.put(row: 0, col: 0, data: [23.0])
+        try y.put(row: 0, col: 0, data: [4.0])
 
         Core.max(src1: x, src2: y, dst: dst)
 
         let truth = Mat(rows: 1, cols: 1, type: CvType.CV_32F)
-        truth.put(row: 0, col: 0, data: [23.0])
+        try truth.put(row: 0, col: 0, data: [23.0])
         try assertMatEqual(truth, dst, OpenCVTestCase.EPS)
     }
 
@@ -900,14 +900,14 @@ class CoreTest: OpenCVTestCase {
         try assertMatEqual(gray0, dst)
     }
 
-    func testMinMaxLocMat() {
+    func testMinMaxLocMat() throws {
         let minVal:Double = 1
         let maxVal:Double = 10
         let minLoc = Point(x: gray3.cols() / 4, y: gray3.rows() / 2)
         let maxLoc = Point(x: gray3.cols() / 2, y: gray3.rows() / 4)
         let gray3copy = gray3.clone()
-        gray3copy.put(row: minLoc.y, col: minLoc.x, data: [minVal] as [NSNumber])
-        gray3copy.put(row: maxLoc.y, col: maxLoc.x, data: [maxVal] as [NSNumber])
+        try gray3copy.put(row: minLoc.y, col: minLoc.x, data: [minVal])
+        try gray3copy.put(row: maxLoc.y, col: maxLoc.x, data: [maxVal])
 
         let mmres = Core.minMaxLoc(gray3copy)
 
@@ -917,12 +917,12 @@ class CoreTest: OpenCVTestCase {
         assertPointEquals(maxLoc, mmres.maxLoc)
     }
 
-    func testMinMaxLocMatMat() {
+    func testMinMaxLocMatMat() throws {
         let src = Mat(rows: 4, cols: 4, type: CvType.CV_8U)
-        src.put(row: 0, col: 0, data: [2, 4, 27, 3])
-        src.put(row: 1, col: 0, data: [0, 8, 7, 130])
-        src.put(row: 2, col: 0, data: [13, 4, 13, 4])
-        src.put(row: 3, col: 0, data: [6, 4, 2, 13])
+        try src.put(row: 0, col: 0, data: [2, 4, 27, 3] as [Int8])
+        try src.put(row: 1, col: 0, data: [0, 8, 7, -126] as [Int8])
+        try src.put(row: 2, col: 0, data: [13, 4, 13, 4] as [Int8])
+        try src.put(row: 3, col: 0, data: [6, 4, 2, 13] as [Int8])
         let mask = Mat(rows: 4, cols: 4, type: CvType.CV_8U, scalar: Scalar(0))
         mask.submat(rowStart: 1, rowEnd: 3, colStart: 1, colEnd: 4).setTo(scalar: Scalar(1))
 
@@ -959,29 +959,29 @@ class CoreTest: OpenCVTestCase {
 
     func testMulSpectrumsMatMatMatInt() throws {
         let src1 = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        src1.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
+        try src1.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
 
         let src2 = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        src2.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
+        try src2.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
 
         Core.mulSpectrums(a: src1, b: src2, c: dst, flags: DftFlags.DFT_ROWS.rawValue)
 
         let expected = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        expected.put(row: 0, col: 0, data: [1, -5, 12, 16])
+        try expected.put(row: 0, col: 0, data: [1, -5, 12, 16] as [Float])
 
         try assertMatEqual(expected, dst, OpenCVTestCase.EPS)
     }
 
     func testMulSpectrumsMatMatMatIntBoolean() throws {
         let src1 = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        src1.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
+        try src1.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
         let src2 = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        src2.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
+        try src2.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
 
         Core.mulSpectrums(a: src1, b: src2, c: dst, flags: DftFlags.DFT_ROWS.rawValue, conjB: true)
 
         let expected = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        expected.put(row: 0, col: 0, data: [1, 13, 0, 16])
+        try expected.put(row: 0, col: 0, data: [1, 13, 0, 16] as [Float])
         try assertMatEqual(expected, dst, OpenCVTestCase.EPS)
     }
 
@@ -1037,37 +1037,37 @@ class CoreTest: OpenCVTestCase {
 
     func testNormalizeMatMatDoubleDoubleInt() throws {
         let src = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
+        try src.put(row: 0, col: 0, data: [1.0, 2.0, 3.0, 4.0])
 
         Core.normalize(src: src, dst: dst, alpha: 1.0, beta: 2.0, norm_type: .NORM_INF)
 
         let expected = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        expected.put(row: 0, col: 0, data: [0.25, 0.5, 0.75, 1])
+        try expected.put(row: 0, col: 0, data: [0.25, 0.5, 0.75, 1])
         try assertMatEqual(expected, dst, OpenCVTestCase.EPS)
     }
 
     func testNormalizeMatMatDoubleDoubleIntInt() throws {
         let src = Mat(rows: 1, cols: 5, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [0, 1, 2, 3, 4])
+        try src.put(row: 0, col: 0, data: [0, 1, 2, 3, 4] as [Float])
 
         Core.normalize(src: src, dst: dst, alpha: 1, beta: 2, norm_type: .NORM_MINMAX, dtype: CvType.CV_64F)
 
         let expected = Mat(rows: 1, cols: 5, type: CvType.CV_64F)
-        expected.put(row: 0, col: 0, data: [1, 1.25, 1.5, 1.75, 2])
+        try expected.put(row: 0, col: 0, data: [1, 1.25, 1.5, 1.75, 2])
         try assertMatEqual(expected, dst, OpenCVTestCase.EPS)
     }
 
     func testNormalizeMatMatDoubleDoubleIntIntMat() throws {
         let src = Mat(rows: 1, cols: 5, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [0, 1, 2, 3, 4])
+        try src.put(row: 0, col: 0, data: [0, 1, 2, 3, 4] as [Float])
         let mask = Mat(rows: 1, cols: 5, type: CvType.CV_8U)
-        mask.put(row: 0, col: 0, data: [1, 0, 0, 0, 1])
+        try mask.put(row: 0, col: 0, data: [1, 0, 0, 0, 1] as [Int8])
         dst = src.clone()
 
         Core.normalize(src: src, dst: dst, alpha: 1, beta: 2, norm_type: .NORM_MINMAX, dtype: CvType.CV_32F, mask: mask)
 
         let expected = Mat(rows: 1, cols: 5, type: CvType.CV_32F)
-        expected.put(row: 0, col: 0, data: [1, 1, 2, 3, 2])
+        try expected.put(row: 0, col: 0, data: [1, 1, 2, 3, 2] as [Float])
         try assertMatEqual(expected, dst, OpenCVTestCase.EPS)
     }
 
@@ -1109,35 +1109,35 @@ class CoreTest: OpenCVTestCase {
 
     func testPCABackProject() throws {
         let mean = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        mean.put(row: 0, col: 0, data: [2, 4, 4, 8])
+        try mean.put(row: 0, col: 0, data: [2, 4, 4, 8] as [Float])
         let vectors = Mat(rows: 1, cols: 4, type: CvType.CV_32F, scalar: Scalar(0))
-        vectors.put(row: 0, col: 0, data: [0.2, 0.4, 0.4, 0.8])
+        try vectors.put(row: 0, col: 0, data: [0.2, 0.4, 0.4, 0.8])
         let data = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        data.put(row: 0, col: 0, data: [-5, 0, -10])
+        try data.put(row: 0, col: 0, data: [-5, 0, -10] as [Float])
         let result = Mat()
 
         Core.PCABackProject(data: data, mean: mean, eigenvectors: vectors, result: result)
 
         let truth = Mat(rows: 3, cols: 4, type: CvType.CV_32F)
-        truth.put(row: 0, col: 0, data: [1, 2, 2, 4])
-        truth.put(row: 1, col: 0, data: [2, 4, 4, 8])
-        truth.put(row: 2, col: 0, data: [0, 0, 0, 0])
+        try truth.put(row: 0, col: 0, data: [1, 2, 2, 4] as [Float])
+        try truth.put(row: 1, col: 0, data: [2, 4, 4, 8] as [Float])
+        try truth.put(row: 2, col: 0, data: [0, 0, 0, 0] as [Float])
         try assertMatEqual(truth, result, OpenCVTestCase.EPS)
     }
 
     func testPCAComputeMatMatMat() throws {
         let data = Mat(rows: 3, cols: 4, type: CvType.CV_32F)
-        data.put(row: 0, col: 0, data: [1, 2, 2, 4])
-        data.put(row: 1, col: 0, data: [2, 4, 4, 8])
-        data.put(row: 2, col: 0, data: [3, 6, 6, 12])
+        try data.put(row: 0, col: 0, data: [1, 2, 2, 4] as [Float])
+        try data.put(row: 1, col: 0, data: [2, 4, 4, 8] as [Float])
+        try data.put(row: 2, col: 0, data: [3, 6, 6, 12] as [Float])
         let mean = Mat()
         let vectors = Mat()
 
         Core.PCACompute(data: data, mean: mean, eigenvectors: vectors)
         let mean_truth = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        mean_truth.put(row: 0, col: 0, data: [2, 4, 4, 8])
+        try mean_truth.put(row: 0, col: 0, data: [2, 4, 4, 8] as [Float])
         let vectors_truth = Mat(rows: 3, cols: 4, type: CvType.CV_32F, scalar: Scalar(0))
-        vectors_truth.put(row: 0, col: 0, data: [0.2, 0.4, 0.4, 0.8])
+        try vectors_truth.put(row: 0, col: 0, data: [0.2, 0.4, 0.4, 0.8] as [Float])
         try assertMatEqual(mean_truth, mean, OpenCVTestCase.EPS)
 
         // eigenvectors are normalized (length = 1),
@@ -1157,18 +1157,18 @@ class CoreTest: OpenCVTestCase {
 
     func testPCAComputeMatMatMatInt() throws {
         let data = Mat(rows: 3, cols: 4, type: CvType.CV_32F)
-        data.put(row: 0, col: 0, data: [1, 2, 2, 4])
-        data.put(row: 1, col: 0, data: [2, 4, 4, 8])
-        data.put(row: 2, col: 0, data: [3, 6, 6, 12])
+        try data.put(row: 0, col: 0, data: [1, 2, 2, 4] as [Float])
+        try data.put(row: 1, col: 0, data: [2, 4, 4, 8] as [Float])
+        try data.put(row: 2, col: 0, data: [3, 6, 6, 12] as [Float])
         let mean = Mat()
         let vectors = Mat()
 
         Core.PCACompute(data:data, mean:mean, eigenvectors:vectors, maxComponents:1)
 
         let mean_truth = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        mean_truth.put(row: 0, col: 0, data: [2, 4, 4, 8])
+        try mean_truth.put(row: 0, col: 0, data: [2, 4, 4, 8] as [Float])
         let vectors_truth = Mat(rows: 1, cols: 4, type: CvType.CV_32F, scalar: Scalar(0))
-        vectors_truth.put(row: 0, col: 0, data: [0.2, 0.4, 0.4, 0.8])
+        try vectors_truth.put(row: 0, col: 0, data: [0.2, 0.4, 0.4, 0.8] as [Float])
         try assertMatEqual(mean_truth, mean, OpenCVTestCase.EPS)
         // eigenvectors are normalized (length = 1),
         // but direction is unknown (v and -v are both eigen vectors)
@@ -1187,19 +1187,19 @@ class CoreTest: OpenCVTestCase {
 
     func testPCAProject() throws {
         let mean = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        mean.put(row: 0, col: 0, data: [2, 4, 4, 8])
+        try mean.put(row: 0, col: 0, data: [2, 4, 4, 8] as [Float])
         let vectors = Mat(rows: 1, cols: 4, type: CvType.CV_32F, scalar: Scalar(0))
-        vectors.put(row: 0, col: 0, data: [0.2, 0.4, 0.4, 0.8])
+        try vectors.put(row: 0, col: 0, data: [0.2, 0.4, 0.4, 0.8] as [Float])
         let data = Mat(rows: 3, cols: 4, type: CvType.CV_32F)
-        data.put(row: 0, col: 0, data: [1, 2, 2, 4])
-        data.put(row: 1, col: 0, data: [2, 4, 4, 8])
-        data.put(row: 2, col: 0, data: [0, 0, 0, 0])
+        try data.put(row: 0, col: 0, data: [1, 2, 2, 4] as [Float])
+        try data.put(row: 1, col: 0, data: [2, 4, 4, 8] as [Float])
+        try data.put(row: 2, col: 0, data: [0, 0, 0, 0] as [Float])
         let result = Mat()
 
         Core.PCAProject(data: data, mean: mean, eigenvectors: vectors, result: result)
 
         let truth = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        truth.put(row: 0, col: 0, data: [-5, 0, -10])
+        try truth.put(row: 0, col: 0, data: [-5, 0, -10] as [Float])
         try assertMatEqual(truth, result, OpenCVTestCase.EPS)
     }
 
@@ -1224,11 +1224,11 @@ class CoreTest: OpenCVTestCase {
 
     func testPhaseMatMatMat() throws {
         let x = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        x.put(row: 0, col: 0, data: [10.0, 10.0, 20.0, 5.0])
+        try x.put(row: 0, col: 0, data: [10.0, 10.0, 20.0, 5.0] as [Float])
         let y = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        y.put(row: 0, col: 0, data: [20.0, 15.0, 20.0, 20.0])
+        try y.put(row: 0, col: 0, data: [20.0, 15.0, 20.0, 20.0] as [Float])
         let gold = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        gold.put(row: 0, col: 0, data: [atan2rad(20, 10), atan2rad(15, 10), atan2rad(20, 20), atan2rad(20, 5)] as [NSNumber])
+        try gold.put(row: 0, col: 0, data: [atan2rad(20, 10), atan2rad(15, 10), atan2rad(20, 20), atan2rad(20, 5)])
 
         Core.phase(x: x, y: y, angle: dst)
 
@@ -1237,11 +1237,11 @@ class CoreTest: OpenCVTestCase {
 
     func testPhaseMatMatMatBoolean() throws {
         let x = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        x.put(row: 0, col: 0, data: [10.0, 10.0, 20.0, 5.0])
+        try x.put(row: 0, col: 0, data: [10.0, 10.0, 20.0, 5.0] as [Float])
         let y = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        y.put(row: 0, col: 0, data: [20.0, 15.0, 20.0, 20.0])
+        try y.put(row: 0, col: 0, data: [20.0, 15.0, 20.0, 20.0] as [Float])
         let gold = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        gold.put(row: 0, col: 0, data: [atan2deg(20, 10), atan2deg(15, 10), atan2deg(20, 20), atan2deg(20, 5)] as [NSNumber])
+        try gold.put(row: 0, col: 0, data: [atan2deg(20, 10), atan2deg(15, 10), atan2deg(20, 20), atan2deg(20, 5)])
 
         Core.phase(x: x, y: y, angle: dst, angleInDegrees: true)
 
@@ -1250,36 +1250,36 @@ class CoreTest: OpenCVTestCase {
 
     func testPolarToCartMatMatMatMat() throws {
         let magnitude = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        magnitude.put(row: 0, col: 0, data: [5.0, 10.0, 13.0])
+        try magnitude.put(row: 0, col: 0, data: [5.0, 10.0, 13.0])
         let angle = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        angle.put(row: 0, col: 0, data: [0.92729962, 0.92729962, 1.1759995])
+        try angle.put(row: 0, col: 0, data: [0.92729962, 0.92729962, 1.1759995])
         let xCoordinate = Mat()
         let yCoordinate = Mat()
 
         Core.polarToCart(magnitude: magnitude, angle: angle, x: xCoordinate, y: yCoordinate)
 
         let x = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        x.put(row: 0, col: 0, data: [3.0, 6.0, 5, 0])
+        try x.put(row: 0, col: 0, data: [3.0, 6.0, 5, 0])
         let y = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        y.put(row: 0, col: 0, data: [4.0, 8.0, 12.0])
+        try y.put(row: 0, col: 0, data: [4.0, 8.0, 12.0])
         try assertMatEqual(x, xCoordinate, OpenCVTestCase.EPS)
         try assertMatEqual(y, yCoordinate, OpenCVTestCase.EPS)
     }
 
     func testPolarToCartMatMatMatMatBoolean() throws {
         let magnitude = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        magnitude.put(row: 0, col: 0, data: [5.0, 10.0, 13.0])
+        try magnitude.put(row: 0, col: 0, data: [5.0, 10.0, 13.0])
         let angle = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        angle.put(row: 0, col: 0, data: [0.92729962, 0.92729962, 1.1759995])
+        try angle.put(row: 0, col: 0, data: [0.92729962, 0.92729962, 1.1759995])
         let xCoordinate = Mat()
         let yCoordinate = Mat()
 
         Core.polarToCart(magnitude: magnitude, angle: angle, x: xCoordinate, y: yCoordinate, angleInDegrees: true)
 
         let x = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        x.put(row: 0, col: 0, data: [4.9993458, 9.9986916, 12.997262])
+        try x.put(row: 0, col: 0, data: [4.9993458, 9.9986916, 12.997262])
         let y = Mat(rows: 1, cols: 3, type: CvType.CV_32F)
-        y.put(row: 0, col: 0, data: [0.080918625, 0.16183725, 0.26680708])
+        try y.put(row: 0, col: 0, data: [0.080918625, 0.16183725, 0.26680708])
         try assertMatEqual(x, xCoordinate, OpenCVTestCase.EPS)
         try assertMatEqual(y, yCoordinate, OpenCVTestCase.EPS)
     }
@@ -1298,7 +1298,7 @@ class CoreTest: OpenCVTestCase {
 
     func testRandShuffleMat() throws {
         let original = Mat(rows: 1, cols: 10, type: CvType.CV_32F)
-        original.put(row: 0, col: 0, data: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        try original.put(row: 0, col: 0, data: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as [Float])
         let shuffled = original.clone()
 
         Core.randShuffle(dst: shuffled)
@@ -1313,7 +1313,7 @@ class CoreTest: OpenCVTestCase {
 
     func testRandShuffleMatDouble() throws {
         let original = Mat(rows: 1, cols: 10, type: CvType.CV_32F)
-        original.put(row: 0, col: 0, data: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        try original.put(row: 0, col: 0, data: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as [Float])
         let shuffled = original.clone()
 
         Core.randShuffle(dst: shuffled, iterFactor: 10)
@@ -1381,25 +1381,25 @@ class CoreTest: OpenCVTestCase {
     func testReduceMatMatIntInt() throws {
         let src = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
 
-        src.put(row: 0, col: 0, data: [1, 0])
-        src.put(row: 1, col: 0, data: [3, 0])
+        try src.put(row: 0, col: 0, data: [1, 0] as [Float])
+        try src.put(row: 1, col: 0, data: [3, 0] as [Float])
 
         Core.reduce(src: src, dst: dst, dim: 0, rtype: Int32(Core.REDUCE_AVG))
 
         let out = Mat(rows: 1, cols: 2, type: CvType.CV_32F)
-        out.put(row: 0, col: 0, data: [2, 0])
+        try out.put(row: 0, col: 0, data: [2, 0] as [Float])
         try assertMatEqual(out, dst, OpenCVTestCase.EPS)
     }
 
     func testReduceMatMatIntIntInt() throws {
         let src = Mat(rows: 2, cols: 2, type: CvType.CV_32F)
-        src.put(row: 0, col: 0, data: [1, 0])
-        src.put(row: 1, col: 0, data: [2, 3])
+        try src.put(row: 0, col: 0, data: [1, 0] as [Float])
+        try src.put(row: 1, col: 0, data: [2, 3] as [Float])
 
         Core.reduce(src: src, dst: dst, dim: 1, rtype: Int32(Core.REDUCE_SUM), dtype: CvType.CV_64F)
 
         let out = Mat(rows: 2, cols: 1, type: CvType.CV_64F)
-        out.put(row: 0, col: 0, data: [1, 5])
+        try out.put(row: 0, col: 0, data: [1, 5] as [Double])
         try assertMatEqual(out, dst, OpenCVTestCase.EPS)
     }
 
@@ -1435,66 +1435,66 @@ class CoreTest: OpenCVTestCase {
 
     func testSolveCubic() throws {
         let coeffs = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
-        coeffs.put(row: 0, col: 0, data: [1, 6, 11, 6])
+        try coeffs.put(row: 0, col: 0, data: [1, 6, 11, 6] as [Float])
 
         XCTAssertEqual(3, Core.solveCubic(coeffs: coeffs, roots: dst))
 
         let roots = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        roots.put(row: 0, col: 0, data: [-3, -1, -2])
+        try roots.put(row: 0, col: 0, data: [-3, -1, -2] as [Float])
         try assertMatEqual(roots, dst, OpenCVTestCase.EPS)
     }
 
     func testSolveMatMatMat() throws {
         let a = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        a.put(row: 0, col: 0, data: [1, 1, 1])
-        a.put(row: 1, col: 0, data: [1, -2, 2])
-        a.put(row: 2, col: 0, data: [1, 2, 1])
+        try a.put(row: 0, col: 0, data: [1, 1, 1] as [Float])
+        try a.put(row: 1, col: 0, data: [1, -2, 2] as [Float])
+        try a.put(row: 2, col: 0, data: [1, 2, 1] as [Float])
         let b = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        b.put(row: 0, col: 0, data: [0, 4, 2])
+        try b.put(row: 0, col: 0, data: [0, 4, 2] as [Float])
 
         XCTAssert(Core.solve(src1: a, src2: b, dst: dst))
 
         let res = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        res.put(row: 0, col: 0, data: [-12, 2, 10])
+        try res.put(row: 0, col: 0, data: [-12, 2, 10] as [Float])
         try assertMatEqual(res, dst, OpenCVTestCase.EPS)
     }
 
     func testSolveMatMatMatInt() throws {
         let a = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
-        a.put(row: 0, col: 0, data: [1, 1, 1])
-        a.put(row: 1, col: 0, data: [1, -2, 2])
-        a.put(row: 2, col: 0, data: [1, 2, 1])
+        try a.put(row: 0, col: 0, data: [1, 1, 1] as [Float])
+        try a.put(row: 1, col: 0, data: [1, -2, 2] as [Float])
+        try a.put(row: 2, col: 0, data: [1, 2, 1] as [Float])
         let b = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        b.put(row: 0, col: 0, data: [0, 4, 2])
+        try b.put(row: 0, col: 0, data: [0, 4, 2] as [Float])
 
         XCTAssert(Core.solve(src1: a, src2: b, dst: dst, flags: DecompTypes.DECOMP_QR.rawValue | DecompTypes.DECOMP_NORMAL.rawValue))
 
         let res = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
-        res.put(row: 0, col: 0, data: [-12, 2, 10])
+        try res.put(row: 0, col: 0, data: [-12, 2, 10] as [Float])
         try assertMatEqual(res, dst, OpenCVTestCase.EPS)
     }
 
     func testSolvePolyMatMat() throws {
         let coeffs = Mat(rows: 4, cols: 1, type: CvType.CV_32F)
-        coeffs.put(row: 0, col: 0, data: [-6, 11, -6, 1])
+        try coeffs.put(row: 0, col: 0, data: [-6, 11, -6, 1] as [Float])
         let roots = Mat()
 
         XCTAssertGreaterThanOrEqual(1e-6, abs(Core.solvePoly(coeffs: coeffs, roots: roots)))
 
         truth = Mat(rows: 3, cols: 1, type: CvType.CV_32FC2)
-        truth!.put(row: 0, col: 0, data: [1, 0, 2, 0, 3, 0])
+        try truth!.put(row: 0, col: 0, data: [1, 0, 2, 0, 3, 0] as [Float])
         try assertMatEqual(truth!, roots, OpenCVTestCase.EPS)
     }
 
     func testSolvePolyMatMatInt() throws {
         let coeffs = Mat(rows: 4, cols: 1, type: CvType.CV_32F)
-        coeffs.put(row: 0, col: 0, data: [-6, 11, -6, 1])
+        try coeffs.put(row: 0, col: 0, data: [-6, 11, -6, 1] as [Float])
         let roots = Mat()
 
         XCTAssertEqual(10.198039027185569, Core.solvePoly(coeffs: coeffs, roots: roots, maxIters: 1))
 
         truth = Mat(rows: 3, cols: 1, type: CvType.CV_32FC2)
-        truth!.put(row: 0, col: 0, data: [1, 0, -1, 2, -2, 12])
+        try truth!.put(row: 0, col: 0, data: [1, 0, -1, 2, -2, 12] as [Float])
         try assertMatEqual(truth!, roots, OpenCVTestCase.EPS)
     }
 
@@ -1521,9 +1521,9 @@ class CoreTest: OpenCVTestCase {
         Core.sortIdx(src: a, dst: b, flags: SortFlags.SORT_EVERY_ROW.rawValue | SortFlags.SORT_ASCENDING.rawValue)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32SC1)
-        truth!.put(row: 0, col: 0, data: [1, 2, 0])
-        truth!.put(row: 1, col: 0, data: [0, 2, 1])
-        truth!.put(row: 2, col: 0, data: [0, 1, 2])
+        try truth!.put(row: 0, col: 0, data: [1, 2, 0] as [Int32])
+        try truth!.put(row: 1, col: 0, data: [0, 2, 1] as [Int32])
+        try truth!.put(row: 2, col: 0, data: [0, 1, 2] as [Int32])
         try assertMatEqual(truth!, b)
     }
 
@@ -1594,7 +1594,7 @@ class CoreTest: OpenCVTestCase {
 
     func testSVDecompMatMatMatMat() throws {
         let src = Mat(rows: 1, cols: 4, type: CvType.CV_32FC1)
-        src.put(row: 0, col: 0, data: [1, 4, 8, 6])
+        try src.put(row: 0, col: 0, data: [1, 4, 8, 6] as [Float])
         let w = Mat()
         let u = Mat()
         let vt = Mat()
@@ -1604,7 +1604,7 @@ class CoreTest: OpenCVTestCase {
         let truthW = Mat(rows: 1, cols: 1, type: CvType.CV_32FC1, scalar: Scalar(10.816654))
         let truthU = Mat(rows: 1, cols: 1, type: CvType.CV_32FC1, scalar: Scalar(1))
         let truthVT = Mat(rows: 1, cols: 4, type: CvType.CV_32FC1)
-        truthVT.put(row: 0, col: 0, data: [0.09245003, 0.36980012, 0.73960024, 0.5547002])
+        try truthVT.put(row: 0, col: 0, data: [0.09245003, 0.36980012, 0.73960024, 0.5547002])
         try assertMatEqual(truthW, w, OpenCVTestCase.EPS)
         try assertMatEqual(truthU, u, OpenCVTestCase.EPS)
         try assertMatEqual(truthVT, vt, OpenCVTestCase.EPS)
@@ -1612,7 +1612,7 @@ class CoreTest: OpenCVTestCase {
 
     func testSVDecompMatMatMatMatInt() throws {
         let src = Mat(rows: 1, cols: 4, type: CvType.CV_32FC1)
-        src.put(row: 0, col: 0, data: [1, 4, 8, 6])
+        try src.put(row: 0, col: 0, data: [1, 4, 8, 6] as [Float])
         let w = Mat()
         let u = Mat()
         let vt = Mat()

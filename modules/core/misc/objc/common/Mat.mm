@@ -13,14 +13,25 @@
 #import "CvType.h"
 #import "CVObjcUtil.h"
 
-// returns true if final index was reached
-static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
-    for (int index = mat->dims-1; index>=0; index--) {
-        if (inc == 0) return false;
-        indices[index] = (indices[index] + 1) % mat->size[index];
-        inc--;
+// return true if we have reached the final index
+static bool incIdx(cv::Mat* mat, std::vector<int>& indices) {
+    for (int dim = mat->dims-1; dim>=0; dim--) {
+        indices[dim] = (indices[dim] + 1) % mat->size[dim];
+        if (indices[dim] != 0) {
+            return false;
+        }
     }
     return true;
+}
+
+// returns true if final index was reached
+static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
+    for (int index = 0; index < inc; index++) {
+        if (incIdx(mat, indices)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 @implementation Mat {
@@ -529,34 +540,36 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return ret;
 }
 
-template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)(int)) {
+template<typename T> void putData(uchar* dataDest, int count, T (^readData)(int)) {
     T* tDataDest = (T*)dataDest;
-    for (int index = 0; index < dataLength; index++) {
+    for (int index = 0; index < count; index++) {
         tDataDest[index] = readData(index);
     }
 }
 
-- (void)put:(uchar*)dest data:(NSArray<NSNumber*>*)data dataOffset:(int)dataOffset dataLength:(int)dataLength {
+- (void)put:(uchar*)dest data:(NSArray<NSNumber*>*)data offset:(int)offset count:(int)count {
     int depth = _nativePtr->depth();
     if (depth == CV_8U) {
-        putData(dest, dataLength, ^uchar (int index) { return cv::saturate_cast<uchar>(data[dataOffset + index].doubleValue);} );
+        putData(dest, count, ^uchar (int index) { return cv::saturate_cast<uchar>(data[offset + index].doubleValue);} );
     } else if (depth == CV_8S) {
-        putData(dest, dataLength, ^char (int index) { return cv::saturate_cast<char>(data[dataOffset + index].doubleValue);} );
+        putData(dest, count, ^char (int index) { return cv::saturate_cast<char>(data[offset + index].doubleValue);} );
     } else if (depth == CV_16U) {
-        putData(dest, dataLength, ^ushort (int index) { return cv::saturate_cast<ushort>(data[dataOffset + index].doubleValue);} );
-    } else if (depth == CV_16S || depth == CV_16F) {
-        putData(dest, dataLength, ^short (int index) { return cv::saturate_cast<short>(data[dataOffset + index].doubleValue);} );
+        putData(dest, count, ^ushort (int index) { return cv::saturate_cast<ushort>(data[offset + index].doubleValue);} );
+    } else if (depth == CV_16S) {
+        putData(dest, count, ^short (int index) { return cv::saturate_cast<short>(data[offset + index].doubleValue);} );
     } else if (depth == CV_32S) {
-        putData(dest, dataLength, ^int32_t (int index) { return cv::saturate_cast<int32_t>(data[dataOffset + index].doubleValue);} );
+        putData(dest, count, ^int32_t (int index) { return cv::saturate_cast<int32_t>(data[offset + index].doubleValue);} );
     } else if (depth == CV_32F) {
-        putData(dest, dataLength, ^float (int index) { return cv::saturate_cast<float>(data[dataOffset + index].doubleValue);} );
+        putData(dest, count, ^float (int index) { return cv::saturate_cast<float>(data[offset + index].doubleValue);} );
     } else if (depth == CV_64F) {
-        putData(dest, dataLength, ^double (int index) { return data[dataOffset + index].doubleValue;} );
+        putData(dest, count, ^double (int index) { return data[offset + index].doubleValue;} );
     }
 }
 
 - (int)put:(NSArray<NSNumber*>*)indices data:(NSArray<NSNumber*>*)data {
-    int type = _nativePtr->type();
+    cv::Mat* mat = _nativePtr;
+    int type = mat->type();
+    int rawValueSize = (int)(mat->elemSize() / mat->channels());
     if (data == nil || data.count % [CvType channels:type] != 0) {
         NSException* exception = [NSException
                 exceptionWithName:@"UnsupportedOperationException"
@@ -568,36 +581,27 @@ template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)
     for (NSNumber* index in indices) {
         tempIndices.push_back(index.intValue);
     }
-    for (int index = 0; index < _nativePtr->dims; index++) {
-        if (_nativePtr->size[index]<=tempIndices[index]) {
+    for (int index = 0; index < mat->dims; index++) {
+        if (mat->size[index]<=tempIndices[index]) {
             return 0; // indexes out of range
         }
     }
 
-    int available = (int)data.count;
+    int arrayAvailable = (int)data.count;
+    int matAvailable = getMatAvailable(mat, tempIndices);
+    int available = MIN(arrayAvailable, matAvailable);
     int copyOffset = 0;
-    int copyCount = _nativePtr->channels();
-    for (int index = 0; index < _nativePtr->dims; index++) {
-        copyCount *= (_nativePtr->size[index] - tempIndices[index]);
-    }
-    if (available < copyCount) {
-        copyCount = available;
-    }
-    int result = 0;
-    uchar* dest = _nativePtr->ptr(tempIndices.data());
+    int copyCount = MIN((mat->size[mat->dims - 1] - tempIndices[mat->dims - 1]) * mat->channels(), available);
+    int result = (int)(available * rawValueSize);
+
     while (available > 0) {
-        [self put:dest data:data dataOffset:(int)copyOffset dataLength:copyCount];
-        result += copyCount * (int)(_nativePtr->elemSize()/_nativePtr->channels());
-        if (!updateIdx(_nativePtr, tempIndices, copyCount / (int)_nativePtr->elemSize())) {
+        [self put:mat->ptr(tempIndices.data()) data:data offset:(int)copyOffset count:copyCount];
+        if (updateIdx(mat, tempIndices, copyCount / mat->channels())) {
             break;
         }
         available -= copyCount;
         copyOffset += copyCount;
-        copyCount = _nativePtr->size[_nativePtr->dims-1] * (int)_nativePtr->elemSize();
-        if (available < copyCount) {
-            copyCount = available;
-        }
-        dest = _nativePtr->ptr(tempIndices.data());
+        copyCount = MIN(mat->size[mat->dims-1] * mat->channels(), available);
     }
     return result;
 }
@@ -607,34 +611,35 @@ template<typename T> void putData(uchar* dataDest, int dataLength, T (^readData)
     return [self put:indices data:data];
 }
 
-template<typename T> void getData(uchar* dataSource, int dataLength, void (^writeData)(int,T)) {
+template<typename T> void getData(uchar* dataSource, int count, void (^writeData)(int,T)) {
     T* tDataSource = (T*)dataSource;
-    for (int index = 0; index < dataLength; index++) {
+    for (int index = 0; index < count; index++) {
         writeData(index, tDataSource[index]);
     }
 }
 
-- (void)get:(uchar*)source data:(NSMutableArray<NSNumber*>*)data dataOffset:(int)dataOffset dataLength:(int)dataLength {
+- (void)get:(uchar*)source data:(NSMutableArray<NSNumber*>*)data offset:(int)offset count:(int)count {
     int depth = _nativePtr->depth();
     if (depth == CV_8U) {
-        getData(source, dataLength, ^void (int index, uchar value) { data[dataOffset + index] = [[NSNumber alloc] initWithUnsignedChar:value]; } );
+        getData(source, count, ^void (int index, uchar value) { data[offset + index] = [[NSNumber alloc] initWithUnsignedChar:value]; } );
     } else if (depth == CV_8S) {
-        getData(source, dataLength, ^void (int index, char value) { data[dataOffset + index] = [[NSNumber alloc] initWithChar:value]; } );
+        getData(source, count, ^void (int index, char value) { data[offset + index] = [[NSNumber alloc] initWithChar:value]; } );
     } else if (depth == CV_16U) {
-        getData(source, dataLength, ^void (int index, ushort value) { data[dataOffset + index] = [[NSNumber alloc] initWithUnsignedShort:value]; } );
-    } else if (depth == CV_16S || depth == CV_16F) {
-        getData(source, dataLength, ^void (int index, short value) { data[dataOffset + index] = [[NSNumber alloc] initWithShort:value]; } );
+        getData(source, count, ^void (int index, ushort value) { data[offset + index] = [[NSNumber alloc] initWithUnsignedShort:value]; } );
+    } else if (depth == CV_16S) {
+        getData(source, count, ^void (int index, short value) { data[offset + index] = [[NSNumber alloc] initWithShort:value]; } );
     } else if (depth == CV_32S) {
-        getData(source, dataLength, ^void (int index, int32_t value) { data[dataOffset + index] = [[NSNumber alloc] initWithInt:value]; } );
+        getData(source, count, ^void (int index, int32_t value) { data[offset + index] = [[NSNumber alloc] initWithInt:value]; } );
     } else if (depth == CV_32F) {
-        getData(source, dataLength, ^void (int index, float value) { data[dataOffset + index] = [[NSNumber alloc] initWithFloat:value]; } );
+        getData(source, count, ^void (int index, float value) { data[offset + index] = [[NSNumber alloc] initWithFloat:value]; } );
     } else if (depth == CV_64F) {
-        getData(source, dataLength, ^void (int index, double value) { data[dataOffset + index] = [[NSNumber alloc] initWithDouble:value]; } );
+        getData(source, count, ^void (int index, double value) { data[offset + index] = [[NSNumber alloc] initWithDouble:value]; } );
     }
 }
 
 - (int)get:(NSArray<NSNumber*>*)indices data:(NSMutableArray<NSNumber*>*)data {
-    int type = _nativePtr->type();
+    cv::Mat* mat = _nativePtr;
+    int type = mat->type();
     if (data == nil || data.count % [CvType channels:type] != 0) {
         NSException* exception = [NSException
                 exceptionWithName:@"UnsupportedOperationException"
@@ -646,36 +651,27 @@ template<typename T> void getData(uchar* dataSource, int dataLength, void (^writ
     for (NSNumber* index in indices) {
         tempIndices.push_back(index.intValue);
     }
-    for (int index = 0; index < _nativePtr->dims; index++) {
-        if (_nativePtr->size[index]<=tempIndices[index]) {
+    for (int index = 0; index < mat->dims; index++) {
+        if (mat->size[index]<=tempIndices[index]) {
             return 0; // indexes out of range
         }
     }
 
-    int available = (int)data.count;
+    int arrayAvailable = (int)data.count;
     int copyOffset = 0;
-    int copyCount = _nativePtr->channels();
-    for (int index = 0; index < _nativePtr->dims; index++) {
-        copyCount *= (_nativePtr->size[index] - tempIndices[index]);
-    }
-    if (available < copyCount) {
-        copyCount = available;
-    }
-    int result = 0;
-    uchar* source = _nativePtr->ptr(tempIndices.data());
+    int matAvailable = getMatAvailable(mat, tempIndices);
+    int available = MIN(arrayAvailable, matAvailable);
+    int copyCount = MIN((mat->size[mat->dims - 1] - tempIndices[mat->dims - 1]) * mat->channels(), available);
+    int result = (int)(available * mat->elemSize() / mat->channels());
+
     while (available > 0) {
-        [self get:source data:data dataOffset:(int)copyOffset dataLength:copyCount];
-        result += copyCount * (int)(_nativePtr->elemSize()/_nativePtr->channels());
-        if (!updateIdx(_nativePtr, tempIndices, copyCount / (int)_nativePtr->elemSize())) {
+        [self get:mat->ptr(tempIndices.data()) data:data offset:(int)copyOffset count:copyCount];
+        if (updateIdx(mat, tempIndices, copyCount / mat->channels())) {
             break;
         }
         available -= copyCount;
         copyOffset += copyCount;
-        copyCount = _nativePtr->size[_nativePtr->dims-1] * (int)_nativePtr->elemSize();
-        if (available < copyCount) {
-            copyCount = available;
-        }
-        source = _nativePtr->ptr(tempIndices.data());
+        copyCount = MIN(mat->size[mat->dims-1] * mat->channels(), available);
     }
     return result;
 }
@@ -701,6 +697,209 @@ template<typename T> void getData(uchar* dataSource, int dataLength, void (^writ
     }
     [self get:indices data:result];
     return result;
+}
+
+template<typename T> void getData(uchar* source, void (^writeData)(int,T), int dataOffset, int dataLength) {
+    T* tSource = (T*)source;
+    for (int index = 0; index < dataLength; index++) {
+        writeData(dataOffset+index, tSource[index]);
+    }
+}
+
+int getMatAvailable(cv::Mat* mat, std::vector<int>& indices) {
+    int blockSize = 1;
+    int unavailableCount = 0;
+    for (int index = mat->dims - 1; index >= 0; index--) {
+        unavailableCount += blockSize * indices[index];
+        blockSize *= mat->size[index];
+    }
+    return (int)(mat->channels() * (mat->total() - unavailableCount));
+}
+
+template<typename T> int getData(NSArray<NSNumber*>* indices, cv::Mat* mat, int count, T* tBuffer) {
+    std::vector<int> tempIndices;
+    for (NSNumber* index in indices) {
+        tempIndices.push_back(index.intValue);
+    }
+    for (int index = 0; index < mat->dims; index++) {
+        if (mat->size[index]<=tempIndices[index]) {
+            return 0; // indexes out of range
+        }
+    }
+
+    int arrayAvailable = count;
+    int matAvailable = getMatAvailable(mat, tempIndices);
+    int available = MIN(arrayAvailable, matAvailable);
+    int result = (int)(available * mat->elemSize() / mat->channels());
+    if (mat->isContinuous()) {
+        memcpy(tBuffer, mat->ptr(tempIndices.data()), available * sizeof(T));
+    } else {
+        int copyOffset = 0;
+        int copyCount = MIN((mat->size[mat->dims - 1] - tempIndices[mat->dims - 1]) * mat->channels(), available);
+        while (available > 0) {
+            memcpy(tBuffer + copyOffset, mat->ptr(tempIndices.data()), copyCount * sizeof(T));
+            if (updateIdx(mat, tempIndices, copyCount / mat->channels())) {
+                break;
+            }
+            available -= copyCount;
+            copyOffset += copyCount * sizeof(T);
+            copyCount = MIN(mat->size[mat->dims-1] * mat->channels(), available);
+        }
+    }
+    return result;
+}
+
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count byteBuffer:(char*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_8U && depth != CV_8S) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depths for this call are CV_8U or CV_8S.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return getData(indices, _nativePtr, count, buffer);
+}
+
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count doubleBuffer:(double*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_64F) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depth for this call is CV_64F.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return getData(indices, _nativePtr, count, buffer);
+}
+
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count floatBuffer:(float*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_32F) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depth for this call is CV_32F.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return getData(indices, _nativePtr, count, buffer);
+}
+
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count intBuffer:(int*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_32S) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depth for this call is CV_32S.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return getData(indices, _nativePtr, count, buffer);
+}
+
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count shortBuffer:(short*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_16S && depth != CV_16U) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depths for this call are CV_16S and CV_16U.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return getData(indices, _nativePtr, count, buffer);
+}
+
+template<typename T> int putData(NSArray<NSNumber*>* indices, cv::Mat* mat, int count, const T* tBuffer)  {
+    std::vector<int> tempIndices;
+    for (NSNumber* index in indices) {
+        tempIndices.push_back(index.intValue);
+    }
+    for (int index = 0; index < mat->dims; index++) {
+        if (mat->size[index]<=tempIndices[index]) {
+            return 0; // indexes out of range
+        }
+    }
+
+    int arrayAvailable = count;
+    int matAvailable = getMatAvailable(mat, tempIndices);
+    int available = MIN(arrayAvailable, matAvailable);
+    int result = (int)(available * mat->elemSize() / mat->channels());
+    if (mat->isContinuous()) {
+        memcpy(mat->ptr(tempIndices.data()), tBuffer, available * sizeof(T));
+    } else {
+        int copyOffset = 0;
+        int copyCount = MIN((mat->size[mat->dims - 1] - tempIndices[mat->dims - 1]) * mat->channels(), available);
+        while (available > 0) {
+            memcpy(mat->ptr(tempIndices.data()), tBuffer + copyOffset, copyCount * sizeof(T));
+            if (updateIdx(mat, tempIndices, copyCount / mat->channels())) {
+                break;
+            }
+            available -= copyCount;
+            copyOffset += copyCount * sizeof(T);
+            copyCount = MIN(mat->size[mat->dims-1] * (int)mat->channels(), available);
+        }
+    }
+    return result;
+}
+
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count byteBuffer:(const char*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_8U && depth != CV_8S) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depths for this call are CV_8U or CV_8S.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return putData(indices, _nativePtr, count, buffer);
+}
+
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count doubleBuffer:(const double*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_64F) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depth for this call is CV_64F.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return putData(indices, _nativePtr, count, buffer);
+}
+
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count floatBuffer:(const float*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_32F) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depth for this call is CV_32F.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return putData(indices, _nativePtr, count, buffer);
+}
+
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count intBuffer:(const int*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_32S) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depth for this call is CV_32S.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return putData(indices, _nativePtr, count, buffer);
+}
+
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count shortBuffer:(const short*)buffer {
+    int depth = _nativePtr->depth();
+    if (depth != CV_16S && depth != CV_16U) {
+        NSException* exception = [NSException
+                exceptionWithName:@"UnsupportedOperationException"
+                                  reason:[NSString stringWithFormat:@"Invalid depth (%@). Valid depths for this call are CV_16S and CV_16U.", [CvType typeToString:depth]]
+                userInfo:nil];
+        @throw exception;
+    }
+    return putData(indices, _nativePtr, count, buffer);
 }
 
 - (int)height {

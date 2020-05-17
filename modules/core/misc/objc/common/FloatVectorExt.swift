@@ -8,7 +8,7 @@ import Foundation
 
 public extension FloatVector {
     convenience init(_ array:[Float]) {
-        let data = Data(buffer: UnsafeBufferPointer(start: array, count: array.count))
+        let data = array.withUnsafeBufferPointer { Data(buffer: $0) }
         self.init(data:data);
     }
 

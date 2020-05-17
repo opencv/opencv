@@ -131,13 +131,25 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Accessors
 
-- (int)put:(int)row col:(int)col data:(NSArray<NSNumber*>*)data NS_SWIFT_NAME(put(row:col:data:));
-- (int)put:(NSArray<NSNumber*>*)indices data:(NSArray<NSNumber*>*)data NS_SWIFT_NAME(put(indices:data:));
-- (int)get:(int)row col:(int)col data:(NSMutableArray<NSNumber*>*)data NS_SWIFT_NAME(get(row:col:data:));
-- (int)get:(NSArray<NSNumber*>*)indices data:(NSMutableArray<NSNumber*>*)data NS_SWIFT_NAME(get(indices:data:));
+- (int)put:(int)row col:(int)col data:(NSArray<NSNumber*>*)data NS_REFINED_FOR_SWIFT;
+- (int)put:(NSArray<NSNumber*>*)indices data:(NSArray<NSNumber*>*)data NS_REFINED_FOR_SWIFT;
+- (int)get:(int)row col:(int)col data:(NSMutableArray<NSNumber*>*)data NS_REFINED_FOR_SWIFT;
+- (int)get:(NSArray<NSNumber*>*)indices data:(NSMutableArray<NSNumber*>*)data NS_REFINED_FOR_SWIFT;
 
-- (NSArray<NSNumber*>*)get:(int)row col:(int)col NS_SWIFT_NAME(get(row:col:));
-- (NSArray<NSNumber*>*)get:(NSArray<NSNumber*>*)indices NS_SWIFT_NAME(get(indices:));
+- (NSArray<NSNumber*>*)get:(int)row col:(int)col NS_REFINED_FOR_SWIFT;
+- (NSArray<NSNumber*>*)get:(NSArray<NSNumber*>*)indices NS_REFINED_FOR_SWIFT;
+
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count byteBuffer:(char*)buffer NS_REFINED_FOR_SWIFT;
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count doubleBuffer:(double*)buffer NS_REFINED_FOR_SWIFT;
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count floatBuffer:(float*)buffer NS_REFINED_FOR_SWIFT;
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count intBuffer:(int*)buffer NS_REFINED_FOR_SWIFT;
+- (int)get:(NSArray<NSNumber*>*)indices count:(int)count shortBuffer:(short*)buffer NS_REFINED_FOR_SWIFT;
+
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count byteBuffer:(const char*)buffer NS_REFINED_FOR_SWIFT;
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count doubleBuffer:(const double*)buffer NS_REFINED_FOR_SWIFT;
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count floatBuffer:(const float*)buffer NS_REFINED_FOR_SWIFT;
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count intBuffer:(const int*)buffer NS_REFINED_FOR_SWIFT;
+- (int)put:(NSArray<NSNumber*>*)indices count:(int)count shortBuffer:(const short*)buffer NS_REFINED_FOR_SWIFT;
 
 
 @end
