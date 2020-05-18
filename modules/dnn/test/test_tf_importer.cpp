@@ -1048,6 +1048,7 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear)
 {
     runTensorFlowNet("resize_bilinear");
     runTensorFlowNet("resize_bilinear_factor");
+    runTensorFlowNet("resize_bilinear_down");
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_dense)
