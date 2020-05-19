@@ -2094,35 +2094,54 @@ TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
             for(int ch=0; ch<A.channels(); ch++)
                 A.at<Vec3f>(row,col)[ch] = value++;
 
-    Eigen::Tensor<float, 3, Eigen::RowMajor> eigen_A;
-    cv2eigen(A, eigen_A);
+    Eigen::Tensor<float, 3, Eigen::RowMajor> row_tensor;
+    cv2eigen(A, row_tensor);
 
+    float* mat_ptr = (float*)A.data;
+    float* tensor_ptr = row_tensor.data();
+    for (int i=0; i< row_tensor.size(); i++)
+        ASSERT_FLOAT_EQ(mat_ptr[i], tensor_ptr[i]);
+
+    Eigen::Tensor<float, 3, Eigen::ColMajor> col_tensor;
+    cv2eigen(A, col_tensor);
     value = 0;
     for(int row=0; row<A.rows; row++)
         for(int col=0; col<A.cols; col++)
             for(int ch=0; ch<A.channels(); ch++)
-                ASSERT_FLOAT_EQ(value++, eigen_A(row,col,ch));
+                ASSERT_FLOAT_EQ(value++, col_tensor(row,col,ch));
 }
 #endif // HAVE_EIGEN
 
 #ifdef HAVE_EIGEN
 TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
 {
-    Eigen::Tensor<float, 3, Eigen::RowMajor> A_eigen(2,3,3);
+    Eigen::Tensor<float, 3, Eigen::RowMajor> row_tensor(2,3,3);
+    Eigen::Tensor<float, 3, Eigen::ColMajor> col_tensor(2,3,3);
     float value = 0;
-    for(int row=0; row<A_eigen.dimension(0); row++)
-        for(int col=0; col<A_eigen.dimension(1); col++)
-            for(int ch=0; ch<A_eigen.dimension(2); ch++)
-                A_eigen(row,col,ch) = value++;
+    for(int row=0; row<row_tensor.dimension(0); row++)
+        for(int col=0; col<row_tensor.dimension(1); col++)
+            for(int ch=0; ch<row_tensor.dimension(2); ch++) {
+                row_tensor(row,col,ch) = value;
+                col_tensor(row,col,ch) = value;
+                value++;
+            }
 
     Mat A;
-    eigen2cv(A_eigen, A);
+    eigen2cv(row_tensor, A);
+
+    float* tensor_ptr = row_tensor.data();
+    float* mat_ptr = (float*)A.data;
+    for (int i=0; i< row_tensor.size(); i++)
+        ASSERT_FLOAT_EQ(tensor_ptr[i], mat_ptr[i]);
+
+    Mat B;
+    eigen2cv(col_tensor, B);
 
     value = 0;
-    for(int row=0; row<A.rows; row++)
-        for(int col=0; col<A.cols; col++)
-            for(int ch=0; ch<A.channels(); ch++)
-                ASSERT_FLOAT_EQ(value++, A.at<Vec3f>(row,col)[ch]);
+    for(int row=0; row<B.rows; row++)
+        for(int col=0; col<B.cols; col++)
+            for(int ch=0; ch<B.channels(); ch++)
+                ASSERT_FLOAT_EQ(value++, B.at<Vec3f>(row,col)[ch]);
 }
 #endif // HAVE_EIGEN
 
