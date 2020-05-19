@@ -56,7 +56,7 @@
 #pragma warning( disable: 4127 ) //conditional expression is constant
 #pragma warning( disable: 4244 ) //conversion from '__int64' to 'int', possible loss of data
 #endif
- 
+
 namespace cv
 {
 
@@ -66,7 +66,7 @@ namespace cv
 
 #if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 /** @brief Converts an Eigen::Tensor to a cv::Mat.
- 
+
  The method converts an Eigen::Tensor with shape (H x W x C) to a cv::Mat where:
   H = number of rows
   W = number of columns
@@ -137,7 +137,7 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
   H = number of rows
   W = number of columns
   C = number of channels
- 
+
  Usage:
  \code
  cv::Mat a_mat(...);

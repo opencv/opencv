@@ -2083,7 +2083,7 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
     //EXPECT_EQ(CV_64FC1, d_mat.type());
 }
 #endif // HAVE_EIGEN
- 
+
 #ifdef HAVE_EIGEN
 #if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
