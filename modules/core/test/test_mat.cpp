@@ -2084,7 +2084,8 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
 }
 #endif // HAVE_EIGEN
  
-#if EIGEN_VERSION_AT_LEAST(3, 3, 0)
+#ifdef HAVE_EIGEN
+#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
 {
     Mat A(2, 3, CV_32FC3);
@@ -2110,9 +2111,11 @@ TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
             for(int ch=0; ch<A.channels(); ch++)
                 ASSERT_FLOAT_EQ(value++, col_tensor(row,col,ch));
 }
-#endif // EIGEN_VERSION_AT_LEAST(3, 3, 0)
+#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#endif // HAVE_EIGEN
 
-#if EIGEN_VERSION_AT_LEAST(3, 3, 0)
+#ifdef HAVE_EIGEN
+#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
 {
     Eigen::Tensor<float, 3, Eigen::RowMajor> row_tensor(2,3,3);
@@ -2144,7 +2147,8 @@ TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
             for(int ch=0; ch<B.channels(); ch++)
                 ASSERT_FLOAT_EQ(value++, B.at<Vec3f>(row,col)[ch]);
 }
-#endif // EIGEN_VERSION_AT_LEAST(3, 3, 0)
+#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#endif // HAVE_EIGEN
 
 TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
 {

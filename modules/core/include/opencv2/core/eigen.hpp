@@ -47,9 +47,9 @@
 
 #include "opencv2/core.hpp"
 
-#if EIGEN_VERSION_AT_LEAST(3,3,0)
+#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 #include <unsupported/Eigen/CXX11/Tensor>
-#endif // EIGEN_VERSION_AT_LEAST(3,3,0)
+#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4714 ) //__forceinline is not inlined
@@ -64,7 +64,7 @@ namespace cv
 //! @{
 
 
-#if EIGEN_VERSION_AT_LEAST(3, 3, 0)
+#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 /** @brief Converts an Eigen::Tensor to a cv::Mat.
  
  The method converts an Eigen::Tensor with shape (H x W x C) to a cv::Mat where:
@@ -96,7 +96,7 @@ void eigen2cv( const Eigen::Tensor<_Tp, 3, _layout> &src, OutputArray dst )
         _src.copyTo(dst);
     }
 }
-#endif // EIGEN_VERSION_AT_LEAST(3,3,0)
+#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, OutputArray dst )
@@ -130,7 +130,7 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
     }
 }
 
-#if EIGEN_VERSION_AT_LEAST(3, 3, 0)
+#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 /** @brief Converts a cv::Mat to an Eigen::Tensor.
 
  The method converts a cv::Mat to an Eigen Tensor with shape (H x W x C) where:
@@ -169,7 +169,7 @@ void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, _layout> &dst )
         dst = row_major_tensor.swap_layout().shuffle(shuffle);
     }
 }
-#endif // EIGEN_VERSION_AT_LEAST(3,3,0)
+#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
 void cv2eigen( const Mat& src,
