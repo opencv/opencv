@@ -29,8 +29,8 @@
 #define INF_ENGINE_RELEASE_2020_4 2020040000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2020.3 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2020_3
+#warning("IE version have not been provided via command-line. Using 2020.4 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2020_4
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
