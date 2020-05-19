@@ -79,7 +79,6 @@ public:
 
         outHeight = outputs[0].size[2];
         outWidth = outputs[0].size[3];
-
         if (alignCorners && outHeight > 1)
             scaleHeight = static_cast<float>(inputs[0].size[2] - 1) / (outHeight - 1);
         else
