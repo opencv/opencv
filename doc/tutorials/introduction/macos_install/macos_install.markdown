@@ -1,6 +1,10 @@
 Installation in MacOS {#tutorial_macos_install}
 =====================
 
+@prev_tutorial{tutorial_android_ocl_intro}
+@next_tutorial{tutorial_ios_install}
+
+
 The following steps have been tested for MacOSX (Mavericks) but should work with other versions as well.
 
 Required Packages
