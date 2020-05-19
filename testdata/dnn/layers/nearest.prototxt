@@ -1,0 +1,21 @@
+name: "Resample"
+input: "input"
+
+input_shape {
+  dim: 1
+  dim: 1
+  dim: 2
+  dim: 3
+}
+
+layer {
+  name: "Resample1"
+  type: "Resample"
+  bottom: "input"
+  top: "out"
+  resample_param {
+    type: NEAREST
+    antialias: false
+    factor: 2.0
+  }
+}

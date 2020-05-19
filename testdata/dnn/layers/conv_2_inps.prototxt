@@ -1,0 +1,45 @@
+name: "Convolution"
+input: "input_0"
+input: "input_1"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 4
+  dim: 5
+}
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 4
+  dim: 5
+}
+layer {
+  name: "Convolution1"
+  type: "Convolution"
+  bottom: "input_0"
+  bottom: "input_1"
+  top: "out_0"
+  top: "out_1"
+  convolution_param {
+    num_output: 2
+    pad: 1
+    kernel_size: 2
+    stride: 2
+    weight_filler {
+      type: "msra"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  type: "Eltwise"
+  name: "eltwise_sum"
+  bottom: "out_0"
+  bottom: "out_1"
+  top: "out"
+  eltwise_param {
+    operation: SUM
+  }
+}

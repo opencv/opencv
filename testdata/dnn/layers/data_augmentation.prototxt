@@ -1,0 +1,19 @@
+name: "DataAugmentation"
+input: "input"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 4
+  dim: 3
+}
+layer {
+  name: "DataAugmentation1"
+  type: "DataAugmentation"
+  bottom: "input"
+  top: "out"
+  augmentation_param {
+    augment_during_test: true
+    recompute_mean: 1
+    mean_per_pixel: false
+  }
+}

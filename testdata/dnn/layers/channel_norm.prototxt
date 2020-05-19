@@ -1,0 +1,74 @@
+name: "ChannelNorm"
+input: "input"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 4
+  dim: 3
+}
+layer {
+  name: "Sqr1"
+  type: "Power"
+  bottom: "input"
+  top: "blob45"
+  power_param {
+    power: 2
+  }
+}
+layer{
+    type: "Reshape"
+    name: "dummy_reshape"
+    bottom: "blob45"
+    reshape_param{
+        shape{
+            dim: 1
+            dim: 1
+            dim: 3
+            dim: -1
+        }
+        axis: 0
+        num_axes: -1
+    }
+    top: "dummy_reshape"
+}
+layer {
+  type: "Pooling"
+  pooling_param{
+    pool: AVE
+    pad_h: 0
+    pad_w: 0
+    kernel_w: 1
+    kernel_h: 3
+    stride_h: 1
+    stride_w: 1
+  }
+  name: "AvePool"
+  bottom: "dummy_reshape"
+  top: "ave_pool"
+}
+layer {
+  name: "Mul1"
+  type: "Power"
+  bottom: "ave_pool"
+  top: "mul"
+  power_param {
+    scale: 3
+    power: 0.5
+  }
+}
+layer{
+    type: "Reshape"
+    name: "reshape_back"
+    bottom: "mul"
+    reshape_param{
+        shape{
+            dim: 1
+            dim: 1
+            dim: 4
+            dim: -1
+        }
+        axis: 0
+        num_axes: -1
+    }
+    top: "out"
+}

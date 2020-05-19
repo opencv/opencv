@@ -1,0 +1,25 @@
+name: "Accum"
+input: "input_0"
+input: "input_1"
+input_shape {
+  dim: 1
+  dim: 2
+  dim: 2
+  dim: 3
+}
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 8
+  dim: 12
+}
+layer {
+  name: "Accum1"
+  type: "Accum"
+  bottom: "input_0"
+  bottom: "input_1"
+  top: "out"
+  accum_param {
+    have_reference: false
+  }
+}
