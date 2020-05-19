@@ -1,6 +1,9 @@
 Shi-Tomasi corner detector {#tutorial_good_features_to_track}
 ==========================
 
+@prev_tutorial{tutorial_harris_detector}
+@next_tutorial{tutorial_generic_corner_detector}
+
 Goal
 ----
 

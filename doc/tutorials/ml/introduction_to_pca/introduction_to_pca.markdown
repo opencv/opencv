@@ -1,6 +1,8 @@
 Introduction to Principal Component Analysis (PCA) {#tutorial_introduction_to_pca}
 =======================================
 
+@prev_tutorial{tutorial_non_linear_svms}
+
 Goal
 ----
 

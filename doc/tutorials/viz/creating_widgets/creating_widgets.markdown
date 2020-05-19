@@ -1,6 +1,9 @@
 Creating Widgets {#tutorial_creating_widgets}
 ================
 
+@prev_tutorial{tutorial_transformations}
+@next_tutorial{tutorial_histo3D}
+
 Goal
 ----
 

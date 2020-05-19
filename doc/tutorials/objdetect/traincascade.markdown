@@ -1,6 +1,8 @@
 Cascade Classifier Training {#tutorial_traincascade}
 ===========================
 
+@prev_tutorial{tutorial_cascade_classifier}
+
 Introduction
 ------------
 

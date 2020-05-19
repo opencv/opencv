@@ -1,6 +1,8 @@
 How to Use Background Subtraction Methods {#tutorial_background_subtraction}
 =========================================
 
+@next_tutorial{tutorial_meanshift}
+
 -   Background subtraction (BS) is a common and widely used technique for generating a foreground
     mask (namely, a binary image containing the pixels belonging to moving objects in the scene) by
     using static cameras.
