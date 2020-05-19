@@ -2083,8 +2083,8 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
     //EXPECT_EQ(CV_64FC1, d_mat.type());
 }
 #endif // HAVE_EIGEN
-
-#ifdef HAVE_EIGEN
+ 
+#if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
 {
     Mat A(2, 3, CV_32FC3);
@@ -2110,9 +2110,9 @@ TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
             for(int ch=0; ch<A.channels(); ch++)
                 ASSERT_FLOAT_EQ(value++, col_tensor(row,col,ch));
 }
-#endif // HAVE_EIGEN
+#endif // EIGEN_VERSION_AT_LEAST(3, 3, 0)
 
-#ifdef HAVE_EIGEN
+#if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
 {
     Eigen::Tensor<float, 3, Eigen::RowMajor> row_tensor(2,3,3);
@@ -2120,7 +2120,8 @@ TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
     float value = 0;
     for(int row=0; row<row_tensor.dimension(0); row++)
         for(int col=0; col<row_tensor.dimension(1); col++)
-            for(int ch=0; ch<row_tensor.dimension(2); ch++) {
+            for(int ch=0; ch<row_tensor.dimension(2); ch++)
+            {
                 row_tensor(row,col,ch) = value;
                 col_tensor(row,col,ch) = value;
                 value++;
@@ -2143,7 +2144,7 @@ TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
             for(int ch=0; ch<B.channels(); ch++)
                 ASSERT_FLOAT_EQ(value++, B.at<Vec3f>(row,col)[ch]);
 }
-#endif // HAVE_EIGEN
+#endif // EIGEN_VERSION_AT_LEAST(3, 3, 0)
 
 TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
 {

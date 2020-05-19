@@ -46,40 +46,57 @@
 #define OPENCV_CORE_EIGEN_HPP
 
 #include "opencv2/core.hpp"
+
+#if EIGEN_VERSION_AT_LEAST(3,3,0)
 #include <unsupported/Eigen/CXX11/Tensor>
+#endif // EIGEN_VERSION_AT_LEAST(3,3,0)
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4714 ) //__forceinline is not inlined
 #pragma warning( disable: 4127 ) //conditional expression is constant
 #pragma warning( disable: 4244 ) //conversion from '__int64' to 'int', possible loss of data
 #endif
-
+ 
 namespace cv
 {
 
 //! @addtogroup core_eigen
 //! @{
 
-/**
- * Convert a 3-dimensional Eigen::Tensor of size H x W x C to a cv::Mat with C channels
- * where:
- *   H = number of rows
- *   W = number of columns
- *   C = number of channels
- */
+
+#if EIGEN_VERSION_AT_LEAST(3, 3, 0)
+/** @brief Converts an Eigen::Tensor to a cv::Mat.
+ 
+ The method converts an Eigen::Tensor with shape (H x W x C) to a cv::Mat where:
+  H = number of rows
+  W = number of columns
+  C = number of channels
+
+ Usage:
+ \code
+ Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
+ // populate tensor with values
+ cv::Mat a_mat;
+ eigen2cv(a_tensor, a_mat);
+ \endcode
+*/
 template <typename _Tp, int _layout> static inline
 void eigen2cv( const Eigen::Tensor<_Tp, 3, _layout> &src, OutputArray dst )
 {
-    if (_layout & Eigen::RowMajorBit) {
+    if (_layout & Eigen::RowMajorBit)
+    {
         Mat _src(src.dimension(0), src.dimension(1), CV_MAKETYPE(DataType<_Tp>::type, src.dimension(2)), (void *)src.data());
         _src.copyTo(dst);
-    } else {
+    }
+    else
+    {
         const std::array<int, 3> shuffle{2, 1, 0};
         Eigen::Tensor<_Tp, 3, !_layout> row_major_tensor = src.swap_layout().shuffle(shuffle);
         Mat _src(src.dimension(0), src.dimension(1), CV_MAKETYPE(DataType<_Tp>::type, src.dimension(2)), row_major_tensor.data());
         _src.copyTo(dst);
     }
 }
+#endif // EIGEN_VERSION_AT_LEAST(3,3,0)
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, OutputArray dst )
@@ -113,24 +130,35 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
     }
 }
 
-/**
- * Convert a cv::Mat containing C channels to a 3-dimensional Eigen::Tensor of size H x W x C
- * where:
- *   H = number of rows
- *   W = number of columns
- *   C = number of channels
- */
+#if EIGEN_VERSION_AT_LEAST(3, 3, 0)
+/** @brief Converts a cv::Mat to an Eigen::Tensor.
+
+ The method converts a cv::Mat to an Eigen Tensor with shape (H x W x C) where:
+  H = number of rows
+  W = number of columns
+  C = number of channels
+ 
+ Usage:
+ \code
+ cv::Mat a_mat(...);
+ // populate Mat with values
+ Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
+ cv2eigen(a_mat, a_tensor);
+*/
 template <typename _Tp, int _layout> static inline
 void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, _layout> &dst )
 {
-    if (_layout & Eigen::RowMajorBit) {
+    if (_layout & Eigen::RowMajorBit)
+    {
         dst.resize(src.rows, src.cols, src.channels());
         Mat _dst(src.rows, src.cols, CV_MAKETYPE(DataType<_Tp>::type, src.channels()), dst.data());
         if (src.type() == _dst.type())
             src.copyTo(_dst);
         else
             src.convertTo(_dst, _dst.type());
-    } else {
+    }
+    else
+    {
         Eigen::Tensor<_Tp, 3, !_layout> row_major_tensor(src.rows, src.cols, src.channels());
         Mat _dst(src.rows, src.cols, CV_MAKETYPE(DataType<_Tp>::type, src.channels()), row_major_tensor.data());
         if (src.type() == _dst.type())
@@ -141,6 +169,7 @@ void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, _layout> &dst )
         dst = row_major_tensor.swap_layout().shuffle(shuffle);
     }
 }
+#endif // EIGEN_VERSION_AT_LEAST(3,3,0)
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
 void cv2eigen( const Mat& src,
