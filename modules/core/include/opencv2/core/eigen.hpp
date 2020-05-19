@@ -67,12 +67,18 @@ namespace cv
  *   W = number of columns
  *   C = number of channels
  */
-template <typename _Tp> static inline
-void eigen2cv( const Eigen::Tensor<_Tp, 3, Eigen::RowMajor> &src, OutputArray dst )
+template <typename _Tp, int _layout> static inline
+void eigen2cv( const Eigen::Tensor<_Tp, 3, _layout> &src, OutputArray dst )
 {
-    Mat _src(src.dimension(0), src.dimension(1),
-            CV_MAKE_TYPE(DataType<_Tp>::type, src.dimension(2)), (void *)src.data());
-    _src.copyTo(dst);
+    if (_layout & Eigen::RowMajorBit) {
+        Mat _src(src.dimension(0), src.dimension(1), CV_MAKETYPE(DataType<_Tp>::type, src.dimension(2)), (void *)src.data());
+        _src.copyTo(dst);
+    } else {
+        const std::array<int, 3> shuffle{2, 1, 0};
+        Eigen::Tensor<_Tp, 3, !_layout> row_major_tensor = src.swap_layout().shuffle(shuffle);
+        Mat _src(src.dimension(0), src.dimension(1), CV_MAKETYPE(DataType<_Tp>::type, src.dimension(2)), row_major_tensor.data());
+        _src.copyTo(dst);
+    }
 }
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
@@ -114,15 +120,26 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
  *   W = number of columns
  *   C = number of channels
  */
-template <typename _Tp> static inline
-void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, Eigen::RowMajor> &dst )
+template <typename _Tp, int _layout> static inline
+void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, _layout> &dst )
 {
-    dst.resize(src.rows, src.cols, src.channels());
-    Mat _dst(src.rows, src.cols, CV_MAKE_TYPE(DataType<_Tp>::type, src.channels()), dst.data());
-    if (src.type() == _dst.type())
-        src.copyTo(_dst);
-    else
-        src.convertTo(_dst, _dst.type());
+    if (_layout & Eigen::RowMajorBit) {
+        dst.resize(src.rows, src.cols, src.channels());
+        Mat _dst(src.rows, src.cols, CV_MAKETYPE(DataType<_Tp>::type, src.channels()), dst.data());
+        if (src.type() == _dst.type())
+            src.copyTo(_dst);
+        else
+            src.convertTo(_dst, _dst.type());
+    } else {
+        Eigen::Tensor<_Tp, 3, !_layout> row_major_tensor(src.rows, src.cols, src.channels());
+        Mat _dst(src.rows, src.cols, CV_MAKETYPE(DataType<_Tp>::type, src.channels()), row_major_tensor.data());
+        if (src.type() == _dst.type())
+            src.copyTo(_dst);
+        else
+            src.convertTo(_dst, _dst.type());
+        const std::array<int, 3> shuffle{2, 1, 0};
+        dst = row_major_tensor.swap_layout().shuffle(shuffle);
+    }
 }
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
