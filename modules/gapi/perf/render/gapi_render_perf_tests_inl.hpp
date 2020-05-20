@@ -5,51 +5,13 @@
 // Copyright (C) 2020 Intel Corporation
 
 
-#include "../perf_precomp.hpp"
-#include "../../src/api/render_priv.hpp"
-#include "../../test/common/gapi_tests_common.hpp"
-#include <opencv2/gapi/imgproc.hpp>
+#include <iostream>
 
-#ifdef HAVE_FREETYPE
-#include <codecvt>
-#endif // HAVE_FREETYPE
+#include "gapi_render_perf_tests.hpp"
+#include "../../src/api/render_priv.hpp"
 
 namespace opencv_test
 {
-  using namespace perf;
-
-  #ifdef HAVE_FREETYPE
-  class RenderTestFTexts : public TestPerfParams<tuple<std::wstring, cv::Size, cv::Point,
-                                                       int, cv::Scalar, MatType, cv::GCompileArgs>> {};
-  #endif // HAVE_FREETYPE
-
-  class RenderTestTexts : public TestPerfParams<tuple<std::string, cv::Size, cv::Point,
-                                                      int, cv::Scalar, int, int,
-                                                      bool, MatType, cv::GCompileArgs>> {};
-
-  class RenderTestRects : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar,
-                                                      int, int, int, MatType, cv::GCompileArgs>> {};
-
-  class RenderTestCircles : public TestPerfParams<tuple<cv::Size, cv::Point, int,
-                                                        cv::Scalar, int, int, int,
-                                                        MatType, cv::GCompileArgs>> {};
-
-  class RenderTestLines : public TestPerfParams<tuple<cv::Size, cv::Point, cv::Point,
-                                                      cv::Scalar, int, int, int, MatType,
-                                                      cv::GCompileArgs>> {};
-
-  class RenderTestMosaics : public TestPerfParams<tuple<cv::Size, cv::Rect, int, int,
-                                                        MatType, cv::GCompileArgs>> {};
-
-  class RenderTestImages : public TestPerfParams<tuple<cv::Size, cv::Rect, cv::Scalar, double,
-                                                       MatType, cv::GCompileArgs>> {};
-
-  class RenderTestPolylines : public TestPerfParams<tuple<cv::Size, std::vector<cv::Point>,
-                                                          cv::Scalar, int, int, int, MatType,
-                                                          cv::GCompileArgs>> {};
-
-  class RenderTestPolyItems : public TestPerfParams<tuple<cv::Size, int, int, int, cv::GCompileArgs>> {};
-
 
 namespace {
 void create_rand_mats(const cv::Size &size, MatType type, cv::Mat &ref_mat, cv::Mat &gapi_mat)
@@ -244,8 +206,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestPolyItems, RenderTestPolyItems,
                                 Values(50),
                                 Values(cv::GCompileArgs())));
 
-
-#ifdef HAVE_FREETYPE
 PERF_TEST_P_(RenderTestFTexts, RenderFTextsPerformanceBGROCVTest)
 {
     std::wstring text;
@@ -322,7 +282,6 @@ PERF_TEST_P_(RenderTestFTexts, RenderFTextsPerformanceNV12OCVTest)
 
     SANITY_CHECK_NOTHING();
 }
-#endif // HAVE_FREETYPE
 
 PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
 {
