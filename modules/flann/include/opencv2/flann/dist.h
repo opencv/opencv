@@ -731,7 +731,7 @@ struct KL_Divergence
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
         ResultType result = ResultType();
-        if( *b != 0 ) {
+        if( b != 0 ) {
             ResultType ratio = (ResultType)(a / b);
             if (ratio>0) {
                 result = a * log(ratio);
