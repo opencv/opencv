@@ -44,15 +44,20 @@ int main( void )
   /// Start creating a window
   char window_name[] = "Drawing_2 Tutorial";
 
+  //![create_RNG]
   /// Also create a random object (RNG)
   RNG rng( 0xFFFFFFFF );
+  //![create_RNG]
 
+  //![create_zeros]
   /// Initialize a matrix filled with zeros
   Mat image = Mat::zeros( window_height, window_width, CV_8UC3 );
   /// Show it in a window during DELAY ms
   imshow( window_name, image );
+  //![create_zeros]
   waitKey( DELAY );
 
+  //![main_drawing]
   /// Now, let's draw some lines
   c = Drawing_Random_Lines(image, window_name, rng);
   if( c != 0 ) return 0;
@@ -83,6 +88,7 @@ int main( void )
 
   /// Displaying the big end!
   c = Displaying_Big_End( image, window_name, rng );
+  //![main_drawing]
   if( c != 0 ) return 0;
 
   waitKey(0);
@@ -91,6 +97,7 @@ int main( void )
 
 /// Function definitions
 
+//![random_color]
 /**
  * @function randomColor
  * @brief Produces a random color given a random object
@@ -100,8 +107,9 @@ static Scalar randomColor( RNG& rng )
   int icolor = (unsigned) rng;
   return Scalar( icolor&255, (icolor>>8)&255, (icolor>>16)&255 );
 }
+//![random_color]
 
-
+//![random_lines]
 /**
  * @function Drawing_Random_Lines
  */
@@ -111,8 +119,10 @@ int Drawing_Random_Lines( Mat image, char* window_name, RNG rng )
 
   for( int i = 0; i < NUMBER; i++ )
   {
+    //![line_points]
     pt1.x = rng.uniform( x_1, x_2 );
     pt1.y = rng.uniform( y_1, y_2 );
+    //![line_points]
     pt2.x = rng.uniform( x_1, x_2 );
     pt2.y = rng.uniform( y_1, y_2 );
 
@@ -124,6 +134,7 @@ int Drawing_Random_Lines( Mat image, char* window_name, RNG rng )
 
   return 0;
 }
+//![random_lines]
 
 /**
  * @function Drawing_Rectangles
@@ -276,6 +287,7 @@ int Drawing_Random_Circles( Mat image, char* window_name, RNG rng )
   return 0;
 }
 
+//![random_text]
 /**
  * @function Displaying_Random_Text
  */
@@ -288,10 +300,10 @@ int Displaying_Random_Text( Mat image, char* window_name, RNG rng )
     Point org;
     org.x = rng.uniform(x_1, x_2);
     org.y = rng.uniform(y_1, y_2);
-
+    //![put_text]
     putText( image, "Testing text rendering", org, rng.uniform(0,8),
              rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
-
+    //![put_text]
     imshow( window_name, image );
     if( waitKey(DELAY) >= 0 )
       { return -1; }
@@ -299,7 +311,9 @@ int Displaying_Random_Text( Mat image, char* window_name, RNG rng )
 
   return 0;
 }
+//![random_text]
 
+//![big_end]
 /**
  * @function Displaying_Big_End
  */
@@ -313,7 +327,9 @@ int Displaying_Big_End( Mat image, char* window_name, RNG )
 
   for( int i = 0; i < 255; i += 2 )
   {
+    //![subtract]
     image2 = image - Scalar::all(i);
+    //![subtract]
     putText( image2, "OpenCV forever!", org, FONT_HERSHEY_COMPLEX, 3,
              Scalar(i, i, 255), 5, lineType );
 
@@ -324,3 +340,4 @@ int Displaying_Big_End( Mat image, char* window_name, RNG )
 
   return 0;
 }
+//![big_end]

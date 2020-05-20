@@ -15,7 +15,7 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_random_generator_and_text
 
-    *Languages:* C++
+    *Languages:* C++, Python
 
     *Compatibility:* \> OpenCV 2.0
 

@@ -12,16 +12,21 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 
+## [random_lines]
 # Drawing Lines
 def lines():
-    for i in range(NUMBER*2):
+    for i in range(NUMBER):
         pt1, pt2 = [], []
+        ## [line_points]
         pt1.append(np.random.randint(x1, x2))
         pt1.append(np.random.randint(y1, y2))
+        ## [line_points]
         pt2.append(np.random.randint(x1, x2))
         pt2.append(np.random.randint(y1, y2))
+        ## [random_color]
         color = "%06x" % np.random.randint(0, 0xFFFFFF)
         color = tuple(int(color[i:i+2], 16) for i in (0, 2 ,4))
+        ## [random_color]
         arrowed =  np.random.randint(0, 6)
         if (arrowed<3):
             cv.line(image, tuple(pt1), tuple(pt2), color, np.random.randint(1, 10), lineType)
@@ -30,10 +35,11 @@ def lines():
         cv.imshow(wndname, image)
         if cv.waitKey(DELAY)>=0:
             return
+## [random_lines]
 
 # Drawing Rectangle
 def rectangle():
-    for i in range(NUMBER*2):
+    for i in range(NUMBER):
         pt1, pt2 = [], []
         pt1.append(np.random.randint(x1, x2))
         pt1.append(np.random.randint(y1, y2))
@@ -55,7 +61,7 @@ def rectangle():
 
 # Drawing ellipse
 def ellipse():
-    for i in range(NUMBER*2):
+    for i in range(NUMBER):
         center = []
         center.append(np.random.randint(x1, x2))
         center.append(np.random.randint(x1, x2))
@@ -144,6 +150,7 @@ def circles():
         if cv.waitKey(DELAY) >= 0:
             return
 
+## [random_text]
 # Draws a text string
 def string():
     for i in range(NUMBER):
@@ -152,21 +159,27 @@ def string():
         org.append(np.random.randint(x1, x2))
         color = "%06x" % np.random.randint(0, 0xFFFFFF)
         color = tuple(int(color[i:i+2], 16) for i in (0, 2 ,4))
+        ## [put_text]
         cv.putText(image, "Testing text rendering", tuple(org), np.random.randint(0, 8), np.random.randint(0, 100)*0.05+0.1, color, np.random.randint(1, 10), lineType)
+        ## [put_text]
         cv.imshow(wndname, image)
         if cv.waitKey(DELAY) >= 0:
             return
+## [random_text]
 
-
+## [big_end]
 def string1():
     textsize = cv.getTextSize("OpenCV forever!", cv.FONT_HERSHEY_COMPLEX, 3, 5)
     org = (int((width - textsize[0][0])/2), int((height - textsize[0][1])/2))
     for i in range(0, 255, 2):
+        ## [subtract]
         image2 = np.array(image) - i
+        ## [subtract]
         cv.putText(image2, "OpenCV forever!", org, cv.FONT_HERSHEY_COMPLEX, 3, (i, i, 255), 5, lineType)
         cv.imshow(wndname, image2)
         if cv.waitKey(DELAY) >= 0:
             return
+## [big_end]
 
 if __name__ == '__main__':
     print(__doc__)
@@ -176,9 +189,12 @@ if __name__ == '__main__':
     width, height = 1000, 700
     lineType = cv.LINE_AA  # change it to LINE_8 to see non-antialiased graphics
     x1, x2, y1, y2 = -width/2, width*3/2, -height/2, height*3/2
+    ## [create_zeros]
     image = np.zeros((height, width, 3), dtype = np.uint8)
     cv.imshow(wndname, image)
+    ## [create_zeros]
     cv.waitKey(DELAY)
+    ## [main_drawing]
     lines()
     rectangle()
     ellipse()
@@ -187,5 +203,6 @@ if __name__ == '__main__':
     circles()
     string()
     string1()
+    ## [main_drawing]
     cv.waitKey(0)
     cv.destroyAllWindows()
