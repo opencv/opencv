@@ -2150,6 +2150,26 @@ TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
 #endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 #endif // HAVE_EIGEN
 
+#ifdef HAVE_EIGEN
+#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+TEST(Core_Eigen, cv2eigen_tensormap_check_tensormap_access)
+{
+    float arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    Mat a_mat(2, 2, CV_32FC3, arr);
+    Eigen::TensorMap<Eigen::Tensor<float, 3, Eigen::RowMajor>> a_tensor = cv2eigen_tensormap<float>(a_mat);
+
+    for(int i=0; i<a_mat.rows; i++) {
+        for (int j=0; j<a_mat.cols; j++) {
+            for (int ch=0; ch<a_mat.channels(); ch++) {
+                ASSERT_FLOAT_EQ(a_mat.at<Vec3f>(row,col)[ch], a_tensor(i,j,ch));
+                ASSERT_EQ(&a_mat.at<Vec3f>(row,col)[ch], &a_tensor(i,j,ch))
+            }
+        }
+    }
+}
+#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#endif // HAVE_EIGEN
+
 TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
 {
     applyTestTag(CV_TEST_TAG_MEMORY_6GB);

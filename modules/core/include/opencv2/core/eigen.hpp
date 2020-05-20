@@ -66,18 +66,18 @@ namespace cv
 #if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 /** @brief Converts an Eigen::Tensor to a cv::Mat.
 
- The method converts an Eigen::Tensor with shape (H x W x C) to a cv::Mat where:
-  H = number of rows
-  W = number of columns
-  C = number of channels
+The method converts an Eigen::Tensor with shape (H x W x C) to a cv::Mat where:
+ H = number of rows
+ W = number of columns
+ C = number of channels
 
- Usage:
- \code
- Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
- // populate tensor with values
- cv::Mat a_mat;
- eigen2cv(a_tensor, a_mat);
- \endcode
+Usage:
+\code
+Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
+// populate tensor with values
+cv::Mat a_mat;
+eigen2cv(a_tensor, a_mat);
+\endcode
 */
 template <typename _Tp, int _layout> static inline
 void eigen2cv( const Eigen::Tensor<_Tp, 3, _layout> &src, OutputArray dst )
@@ -98,17 +98,18 @@ void eigen2cv( const Eigen::Tensor<_Tp, 3, _layout> &src, OutputArray dst )
 
 /** @brief Converts a cv::Mat to an Eigen::Tensor.
 
- The method converts a cv::Mat to an Eigen Tensor with shape (H x W x C) where:
-  H = number of rows
-  W = number of columns
-  C = number of channels
+The method converts a cv::Mat to an Eigen Tensor with shape (H x W x C) where:
+ H = number of rows
+ W = number of columns
+ C = number of channels
 
- Usage:
- \code
- cv::Mat a_mat(...);
- // populate Mat with values
- Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
- cv2eigen(a_mat, a_tensor);
+Usage:
+\code
+cv::Mat a_mat(...);
+// populate Mat with values
+Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
+cv2eigen(a_mat, a_tensor);
+\endcode
 */
 template <typename _Tp, int _layout> static inline
 void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, _layout> &dst )
@@ -133,6 +134,29 @@ void cv2eigen( const Mat &src, Eigen::Tensor<_Tp, 3, _layout> &dst )
         else
             src.convertTo(_dst, _dst.type());
     }
+}
+
+/** @brief Maps cv::Mat data to an Eigen::TensorMap.
+
+The method wraps an existing Mat data array with an Eigen TensorMap of shape (H x W x C) where:
+ H = number of rows
+ W = number of columns
+ C = number of channels
+
+Explicit instantiation of the return type is required.
+
+The example below initializes a cv::Mat and produces an Eigen::TensorMap:
+\code
+float arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+cv::Mat a_mat(2, 2, CV_32FC3, arr);
+Eigen::TensorMap<Eigen::Tensor<float, 3, Eigen::RowMajor>> color_tensor = cv2eigen_tensormap<float>(a_mat);
+\endcode
+*/
+template <typename _Tp> static inline
+Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>> cv2eigen_tensormap(const cv::InputArray &src)
+{
+  cv::Mat mat = src.getMat();
+  return Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>>((_Tp *)mat.data, mat.rows, mat.cols, mat.channels());
 }
 #endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 
