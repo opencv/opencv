@@ -1,6 +1,10 @@
 Writing documentation for OpenCV {#tutorial_documentation}
 ================================
 
+@prev_tutorial{tutorial_display_image}
+@next_tutorial{tutorial_transition_guide}
+
+
 @tableofcontents
 
 Doxygen overview {#tutorial_documentation_overview}

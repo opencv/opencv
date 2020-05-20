@@ -1,6 +1,10 @@
 Using Kinect and other OpenNI compatible depth sensors {#tutorial_kinect_openni}
 ======================================================
 
+@prev_tutorial{tutorial_video_write}
+@next_tutorial{tutorial_intelperc}
+
+
 Depth sensors compatible with OpenNI (Kinect, XtionPRO, ...) are supported through VideoCapture
 class. Depth map, BGR image and some other formats of output can be retrieved by using familiar
 interface of VideoCapture.

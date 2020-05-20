@@ -1,6 +1,9 @@
 Creating a video with OpenCV {#tutorial_video_write}
 ============================
 
+@prev_tutorial{tutorial_video_input_psnr_ssim}
+@next_tutorial{tutorial_kinect_openni}
+
 Goal
 ----
 

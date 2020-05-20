@@ -1,6 +1,8 @@
 Launching Viz {#tutorial_launching_viz}
 =============
 
+@next_tutorial{tutorial_widget_pose}
+
 Goal
 ----
 
