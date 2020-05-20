@@ -1,6 +1,10 @@
 Building OpenCV for Tegra with CUDA {#tutorial_building_tegra_cuda}
 ===================================
 
+@prev_tutorial{tutorial_arm_crosscompile_with_cmake}
+@next_tutorial{tutorial_display_image}
+
+
 @tableofcontents
 
 OpenCV with CUDA for Tegra

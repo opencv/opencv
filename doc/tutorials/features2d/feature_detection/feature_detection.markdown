@@ -1,6 +1,9 @@
 Feature Detection {#tutorial_feature_detection}
 =================
 
+@prev_tutorial{tutorial_corner_subpixels}
+@next_tutorial{tutorial_feature_description}
+
 Goal
 ----
 
