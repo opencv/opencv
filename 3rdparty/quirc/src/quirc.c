@@ -27,10 +27,7 @@ struct quirc *quirc_new(void)
 {
 	struct quirc *q = malloc(sizeof(*q));
 
-	if (!q)
-		return NULL;
-
-	memset(q, 0, sizeof(*q));
+    memset(q, 0, sizeof(*q));
 	return q;
 }
 
@@ -123,8 +120,10 @@ static const char *const error_table[] = {
 
 const char *quirc_strerror(quirc_decode_error_t err)
 {
-	if ((int)err >= 0 && (int)err < sizeof(error_table) / sizeof(error_table[0]))
-		return error_table[err];
+    if ((int) err >= 0) {
+        if ((unsigned long) err < (unsigned long) (sizeof(error_table) / sizeof(error_table[0])))
+            return error_table[err];
+    }
 
-	return "Unknown error";
+    return "Unknown error";
 }
