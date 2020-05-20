@@ -196,7 +196,7 @@ public:
 #endif
             {
                 // Check for duplicate indices
-                for (int j = i - 1; dists[j] == dist && j--;) {
+                for (int j = i; dists[j] == dist && j--;) {
                     if (indices[j] == index) {
                         return;
                     }
