@@ -71,9 +71,9 @@ struct LshIndexParams : public IndexParams
 };
 
 /**
- * Randomized kd-tree index
+ * Locality-sensitive hashing  index
  *
- * Contains the k-d trees and other information for indexing a set of points
+ * Contains the tables and other information for indexing a set of points
  * for nearest-neighbor matching.
  */
 template<typename Distance>
