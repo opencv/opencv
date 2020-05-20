@@ -2161,8 +2161,8 @@ TEST(Core_Eigen, cv2eigen_tensormap_check_tensormap_access)
     for(int i=0; i<a_mat.rows; i++) {
         for (int j=0; j<a_mat.cols; j++) {
             for (int ch=0; ch<a_mat.channels(); ch++) {
-                ASSERT_FLOAT_EQ(a_mat.at<Vec3f>(row,col)[ch], a_tensor(i,j,ch));
-                ASSERT_EQ(&a_mat.at<Vec3f>(row,col)[ch], &a_tensor(i,j,ch))
+                ASSERT_FLOAT_EQ(a_mat.at<Vec3f>(i,j)[ch], a_tensor(i,j,ch));
+                ASSERT_EQ(&a_mat.at<Vec3f>(i,j)[ch], &a_tensor(i,j,ch));
             }
         }
     }

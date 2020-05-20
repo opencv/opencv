@@ -75,7 +75,7 @@ Usage:
 \code
 Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
 // populate tensor with values
-cv::Mat a_mat;
+Mat a_mat;
 eigen2cv(a_tensor, a_mat);
 \endcode
 */
@@ -105,7 +105,7 @@ The method converts a cv::Mat to an Eigen Tensor with shape (H x W x C) where:
 
 Usage:
 \code
-cv::Mat a_mat(...);
+Mat a_mat(...);
 // populate Mat with values
 Eigen::Tensor<float, 3, Eigen::RowMajor> a_tensor(...);
 cv2eigen(a_mat, a_tensor);
@@ -148,14 +148,14 @@ Explicit instantiation of the return type is required.
 The example below initializes a cv::Mat and produces an Eigen::TensorMap:
 \code
 float arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-cv::Mat a_mat(2, 2, CV_32FC3, arr);
-Eigen::TensorMap<Eigen::Tensor<float, 3, Eigen::RowMajor>> color_tensor = cv2eigen_tensormap<float>(a_mat);
+Mat a_mat(2, 2, CV_32FC3, arr);
+Eigen::TensorMap<Eigen::Tensor<float, 3, Eigen::RowMajor>> a_tensormap = cv2eigen_tensormap<float>(a_mat);
 \endcode
 */
 template <typename _Tp> static inline
 Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>> cv2eigen_tensormap(const cv::InputArray &src)
 {
-  cv::Mat mat = src.getMat();
+  Mat mat = src.getMat();
   return Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>>((_Tp *)mat.data, mat.rows, mat.cols, mat.channels());
 }
 #endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
