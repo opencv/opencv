@@ -161,7 +161,7 @@ def postprocess(frame, outs):
         exit()
 
     indices = []
-    if lastLayer.type == 'Region' and len(outNames) > 1:
+    if len(outNames) > 1:
         classIds = np.array(classIds)
         boxes = np.array(boxes)
         confidences = np.array(confidences)

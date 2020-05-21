@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sstream>
+#include <numeric>
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -397,7 +398,37 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: " + outLayerType);
 
     std::vector<int> indices;
-    NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
+    if (outLayers.size() > 1)
+    {
+        std::map<int, std::vector<int>> class2indices;
+        for (int i = 0; i < classIds.size(); i++)
+        {
+            class2indices[classIds[i]].push_back(i);
+        }
+        for (std::map<int, std::vector<int>>::iterator it = class2indices.begin(); it != class2indices.end(); ++it)
+        {
+            std::vector<Rect> local_boxes;
+            std::vector<float> local_confidences;
+            std::vector<int> nms_indices;
+            std::vector<int> class_indices = it->second;
+            for (size_t i = 0; i < class_indices.size(); i++)
+            {
+                local_boxes.push_back(boxes[class_indices[i]]);
+                local_confidences.push_back(confidences[class_indices[i]]);
+            }
+            NMSBoxes(local_boxes, local_confidences, confThreshold, nmsThreshold, nms_indices);
+            for (int j = 0; j < nms_indices.size(); j++)
+            {
+                indices.push_back(class_indices[nms_indices[j]]);
+            }
+        }
+    }
+    else
+    {
+        indices.resize(classIds.size());
+        std::iota(indices.begin(), indices.end(), 0);
+    }
+
     for (size_t i = 0; i < indices.size(); ++i)
     {
         int idx = indices[i];
