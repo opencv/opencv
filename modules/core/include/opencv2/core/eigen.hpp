@@ -47,10 +47,10 @@
 
 #include "opencv2/core.hpp"
 
-#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MINOR_VERSION >= 3
+#if EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3
 #include <unsupported/Eigen/CXX11/Tensor>
 #define OPENCV_EIGEN_TENSOR_SUPPORT
-#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MINOR_VERSION >= 3
+#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4714 ) //__forceinline is not inlined
