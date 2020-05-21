@@ -21,7 +21,7 @@ static void onTrackbar(int, void*)
 }
 static void help(const char** argv)
 {
-    printf("\nThis sample demonstrates multiScaleSharpen detection\n"
+    printf("\nThis sample demonstrates multiScaleSharpen image processing\n"
            "Call:\n"
            "    %s [image_name -- Default is lena.jpg]\n\n", argv[0]);
 }
@@ -44,7 +44,7 @@ int main( int argc, const char** argv )
     // Create a window
     namedWindow(window_name1, 1);
     // create a toolbar
-    createTrackbar("Canny threshold default", window_name1, &sharpenRadius, 7, onTrackbar);
+    createTrackbar("multiScaleSharpen default", window_name1, &sharpenRadius, 7, onTrackbar);
     // Show the image
     onTrackbar(0, 0);
     // Wait for a key stroke; the same function arranges events processing
