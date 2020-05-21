@@ -333,7 +333,7 @@ TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989_default)
     EXPECT_EQ(CV_8UC3, img.type()) << cv::typeToString(img.type());
 }
 
-TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989)
+TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr17275)
 {
     const string filename = cvtest::findDataFile("readwrite/bitsperpixel1_min.tiff");
     cv::Mat img;
@@ -347,7 +347,7 @@ TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989)
     EXPECT_EQ(3829, countNonZero(img == 255));
 }
 
-TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989_default)
+TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr17275_default)
 {
     const string filename = cvtest::findDataFile("readwrite/bitsperpixel1_min.tiff");
     cv::Mat img;
