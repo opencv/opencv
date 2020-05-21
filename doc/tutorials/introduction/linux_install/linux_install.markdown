@@ -120,6 +120,8 @@ Building OpenCV from Source Using CMake
 -#  To install libraries, execute the following command from build directory
     @code{.bash}
     sudo make install
+    sudo sh -c 'echo "/usr/local/lib" > /etc/ld.so.conf.d/opencv4.conf' 
+    sudo ldconfig
     @endcode
 -#  [optional] Running tests
 
