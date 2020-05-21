@@ -51,6 +51,9 @@ Generate documentation {#tutorial_documentation_generate}
     @code{.sh}
     make check_pylint
     @endcode
+@note [Pylint](https://www.pylint.org/#install) must be installed before running cmake to be
+able to test Python code. You can install using your system's package manager, or with pip:
+@code{.sh} pip install pylint @endcode
 
 Quick start {#tutorial_documentation_quick_start}
 ===========
