@@ -2084,8 +2084,7 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
 }
 #endif // HAVE_EIGEN
 
-#ifdef HAVE_EIGEN
-#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
 TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
 {
     Mat A(2, 3, CV_32FC3);
@@ -2111,11 +2110,9 @@ TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
             for(int ch=0; ch<A.channels(); ch++)
                 ASSERT_FLOAT_EQ(value++, col_tensor(row,col,ch));
 }
-#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
-#endif // HAVE_EIGEN
+#endif // OPENCV_EIGEN_TENSOR_SUPPORT
 
-#ifdef HAVE_EIGEN
-#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
 TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
 {
     Eigen::Tensor<float, 3, Eigen::RowMajor> row_tensor(2,3,3);
@@ -2147,11 +2144,9 @@ TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
             for(int ch=0; ch<B.channels(); ch++)
                 ASSERT_FLOAT_EQ(value++, B.at<Vec3f>(row,col)[ch]);
 }
-#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
-#endif // HAVE_EIGEN
+#endif // OPENCV_EIGEN_TENSOR_SUPPORT
 
-#ifdef HAVE_EIGEN
-#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
 TEST(Core_Eigen, cv2eigen_tensormap_check_tensormap_access)
 {
     float arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
@@ -2167,8 +2162,7 @@ TEST(Core_Eigen, cv2eigen_tensormap_check_tensormap_access)
         }
     }
 }
-#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
-#endif // HAVE_EIGEN
+#endif // OPENCV_EIGEN_TENSOR_SUPPORT
 
 TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
 {

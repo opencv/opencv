@@ -47,9 +47,10 @@
 
 #include "opencv2/core.hpp"
 
-#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MINOR_VERSION >= 3
 #include <unsupported/Eigen/CXX11/Tensor>
-#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#define OPENCV_EIGEN_TENSOR_SUPPORT
+#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MINOR_VERSION >= 3
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4714 ) //__forceinline is not inlined
@@ -63,7 +64,7 @@ namespace cv
 //! @addtogroup core_eigen
 //! @{
 
-#if EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
 /** @brief Converts an Eigen::Tensor to a cv::Mat.
 
 The method converts an Eigen::Tensor with shape (H x W x C) to a cv::Mat where:
@@ -158,7 +159,7 @@ Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>> cv2eigen_tensormap(cons
   Mat mat = src.getMat();
   return Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>>((_Tp *)mat.data, mat.rows, mat.cols, mat.channels());
 }
-#endif // EIGEN_WORLD_VERSION >= 3 && EIGEN_MAJOR_VERSION >= 3
+#endif // OPENCV_EIGEN_TENSOR_SUPPORT
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols> static inline
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, OutputArray dst )
