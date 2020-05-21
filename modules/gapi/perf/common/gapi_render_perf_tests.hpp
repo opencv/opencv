@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 20120 Intel Corporation
+// Copyright (C) 2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_RENDER_PERF_TESTS_HPP
@@ -12,10 +12,19 @@
 #include <codecvt>
 
 #include "../../test/common/gapi_tests_common.hpp"
-#include <opencv2/gapi/imgproc.hpp>
+#include <opencv2/gapi/render/render.hpp>
+#include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 
 namespace opencv_test
 {
+
+// FIXME: remove this code duplication with gapi/test/render/gapi_render_tests_ocv.cpp
+static inline std::wstring to_wstring(const char* bytes)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    return converter.from_bytes(bytes);
+}
+
   using namespace perf;
 
   class RenderTestFTexts : public TestPerfParams<tuple<std::wstring, cv::Size, cv::Point,
