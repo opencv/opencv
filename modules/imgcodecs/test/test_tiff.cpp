@@ -333,6 +333,17 @@ TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989_default)
     EXPECT_EQ(CV_8UC3, img.type()) << cv::typeToString(img.type());
 }
 
+TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989_default)
+{
+    const string filename = cvtest::findDataFile("readwrite/bitsperpixel1_min.tiff");
+    cv::Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filename));  // by default image type is CV_8UC3
+    ASSERT_FALSE(img.empty());
+    EXPECT_EQ(64, img.cols);
+    EXPECT_EQ(64, img.rows);
+    EXPECT_EQ(CV_8UC3, img.type()) << cv::typeToString(img.type());
+}
+
 #endif
 
 }} // namespace
