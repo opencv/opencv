@@ -59,7 +59,9 @@ TEST(Variant, ConvertingCTorMove)
     util::variant<std::string, int> vsi3(std::move(rvs));
     EXPECT_EQ(0u,     vsi3.index());
     EXPECT_EQ("2017", util::get<std::string>(vsi3));
-    EXPECT_EQ("", rvs) <<"Rvalue source argument was not moved from while should?";
+    //C++ standard state that std::string instance that was moved from stays in valid, but unspecified state.
+    //So the best assumption we can made here is that s is not the same as it was before move.
+    EXPECT_NE("2017", rvs) <<"Rvalue source argument was not moved from while should?";
 
     util::variant<std::string, int> vsi2(42);
     EXPECT_EQ(1u,     vsi2.index());
@@ -174,7 +176,25 @@ TEST(Variant, Assign_RValueRef_DiffType)
     vis = std::move(s);
     EXPECT_EQ(1u, vis.index());
     EXPECT_EQ("42", util::get<std::string>(vis));
-    EXPECT_EQ("", s) << "right hand side argument of assignment operation was not moved from while should?";;
+    //C++ standard state that std::string instance that was moved from stays in valid, but unspecified state.
+    //So the best assumption we can made here is that s is not the same as it was before move.
+    EXPECT_NE("42", s) << "right hand side argument of assignment operation was not moved from while should?";
+}
+
+TEST(Variant, Assign_RValueRef_SameType)
+{
+    TestVar vis(std::string("43"));
+
+    EXPECT_EQ(1u, vis.index());
+    EXPECT_EQ("43", util::get<std::string>(vis));
+
+    std::string s("42");
+    vis = std::move(s);
+    EXPECT_EQ(1u, vis.index());
+    EXPECT_EQ("42", util::get<std::string>(vis));
+    //C++ standard state that std::string instance that was moved from stays in valid, but unspecified state.
+    //So the best assumption we can made here is that s is not the same as it was before move.
+    EXPECT_NE("42", s) << "right hand side argument of assignment operation was not moved from while should?";
 }
 
 TEST(Variant, Assign_LValueRef_DiffType)
@@ -191,7 +211,7 @@ TEST(Variant, Assign_LValueRef_DiffType)
     EXPECT_EQ("42", s) << "right hand side argument of assignment operation was moved from while should not ?";
 }
 
-TEST(Variant, Assign_ValueUpdate_Const)
+TEST(Variant, Assign_ValueUpdate_Const_Variant)
 {
     TestVar va(42);
     const TestVar vb(43);
@@ -208,7 +228,7 @@ TEST(Variant, Assign_ValueUpdate_Const)
     EXPECT_EQ(43, util::get<int>(va));
 }
 
-TEST(Variant, Assign_ValueUpdate_Const_DiffType)
+TEST(Variant, Assign_ValueUpdate_Const_DiffType_Variant)
 {
     TestVar va(42);
     const TestVar vb(std::string("42"));
@@ -229,6 +249,7 @@ TEST(Variant, Assign_Move_Variant)
 {
     TestVar va(42);
     TestVar vb(std::string("42"));
+    TestVar vd(std::string("43"));
     TestVar vc(43);
 
     EXPECT_EQ(0u, va.index());
@@ -240,9 +261,23 @@ TEST(Variant, Assign_Move_Variant)
     EXPECT_EQ(0u, vc.index());
     EXPECT_EQ(43, util::get<int>(vc));
 
+    EXPECT_EQ(1u, vd.index());
+    EXPECT_EQ("43", util::get<std::string>(vd));
+
     va = std::move(vb);
     EXPECT_EQ(1u, va.index());
     EXPECT_EQ("42", util::get<std::string>(va));
+
+    EXPECT_EQ(1u, vb.index());
+    EXPECT_EQ("", util::get<std::string>(vb));
+
+
+    vb = std::move(vd);
+    EXPECT_EQ(1u, vb.index());
+    EXPECT_EQ("43", util::get<std::string>(vb));
+
+    EXPECT_EQ(1u, vd.index());
+    EXPECT_EQ("", util::get<std::string>(vd));
 
     va = std::move(vc);
     EXPECT_EQ(0u, va.index());

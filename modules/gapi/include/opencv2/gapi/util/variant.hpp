@@ -13,6 +13,7 @@
 
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/util/util.hpp> // max_of_t
+#include <opencv2/gapi/util/type_traits.hpp>
 
 // A poor man's `variant` implementation, incompletely modeled against C++17 spec.
 namespace cv
@@ -35,15 +36,6 @@ namespace util
             static_assert(std::is_same<Target, First>::value, "Type not found");
             static const constexpr std::size_t value = I;
         };
-
-        template< bool B, class T = void >
-        using enable_if_t = typename std::enable_if<B,T>::type;
-
-        template<class T, class U, class V = void>
-        using are_different_t = enable_if_t<
-                !std::is_same<typename std::decay<T>::type,
-                              typename std::decay<U>::type>::value,
-                 V>;
     }
 
     template<typename Target, typename... Types>
@@ -82,15 +74,17 @@ namespace util
             }
         };
 
-        template<typename T> struct vctr_h {
-            static void help(Memory memory, const void* pval) {
-                new (memory) T(*reinterpret_cast<const T*>(pval));
-            }
-        };
-
         template<typename T> struct mctr_h {
             static void help(Memory memory, void *pval) {
                 new (memory) T(std::move(*reinterpret_cast<T*>(pval)));
+            }
+        };
+
+        //FIXME: unify with cctr_h and mctr_h
+        template<typename T> struct cnvrt_ctor_h {
+            static void help(Memory memory, void* from) {
+                using util::decay_t;
+                new (memory) decay_t<T>(std::forward<T>(*reinterpret_cast<decay_t<T>*>(from)));
             }
         };
 
@@ -101,8 +95,16 @@ namespace util
         };
 
         template<typename T> struct move_h {
-            static void help(Memory to, const Memory from) {
-                *reinterpret_cast<T*>(to) = std::move(*reinterpret_cast<const T*>(from));
+            static void help(Memory to, Memory from) {
+                *reinterpret_cast<T*>(to) = std::move(*reinterpret_cast<T*>(from));
+            }
+        };
+
+        //FIXME: unify with copy_h and move_h
+        template<typename T> struct cnvrt_assign_h {
+            static void help(Memory to, void* from) {
+                using util::decay_t;
+                *reinterpret_cast<decay_t<T>*>(to) = std::forward<T>(*reinterpret_cast<decay_t<T>*>(from));
             }
         };
 
@@ -128,22 +130,41 @@ namespace util
         };
 
         typedef void (*CCtr) (Memory, const Memory);  // Copy c-tor (variant)
-        typedef void (*VCtr) (Memory, const void*);   // Copy c-tor (value)
         typedef void (*MCtr) (Memory, void*);         // Generic move c-tor
         typedef void (*Copy) (Memory, const Memory);  // Copy assignment
-        typedef void (*Move) (Memory, const Memory);  // Move assignment
+        typedef void (*Move) (Memory, Memory);        // Move assignment
+
         typedef void (*Swap) (Memory, Memory);        // Swap
         typedef void (*Dtor) (Memory);                // Destructor
+
+        using  cnvrt_assgn_t   = void (*) (Memory, void*);  // Converting assignment (via std::forward)
+        using  cnvrt_ctor_t    = void (*) (Memory, void*);  // Converting constructor (via std::forward)
 
         typedef bool (*Equal)(const Memory, const Memory); // Equality test (external)
 
         static constexpr std::array<CCtr, sizeof...(Ts)> cctrs(){ return {{(&cctr_h<Ts>::help)...}};}
-        static constexpr std::array<VCtr, sizeof...(Ts)> vctrs(){ return {{(&vctr_h<Ts>::help)...}};}
         static constexpr std::array<MCtr, sizeof...(Ts)> mctrs(){ return {{(&mctr_h<Ts>::help)...}};}
         static constexpr std::array<Copy, sizeof...(Ts)> cpyrs(){ return {{(&copy_h<Ts>::help)...}};}
         static constexpr std::array<Move, sizeof...(Ts)> mvers(){ return {{(&move_h<Ts>::help)...}};}
         static constexpr std::array<Swap, sizeof...(Ts)> swprs(){ return {{(&swap_h<Ts>::help)...}};}
         static constexpr std::array<Dtor, sizeof...(Ts)> dtors(){ return {{(&dtor_h<Ts>::help)...}};}
+
+        template<bool cond, typename T>
+        struct conditional_ref : std::conditional<cond, typename std::remove_reference<T>::type&, typename std::remove_reference<T>::type > {};
+
+        template<bool cond, typename T>
+        using conditional_ref_t = typename conditional_ref<cond, T>::type;
+
+
+        template<bool is_lvalue_arg>
+        static constexpr std::array<cnvrt_assgn_t, sizeof...(Ts)> cnvrt_assgnrs(){
+            return {{(&cnvrt_assign_h<conditional_ref_t<is_lvalue_arg,Ts>>::help)...}};
+        }
+
+        template<bool is_lvalue_arg>
+        static constexpr std::array<cnvrt_ctor_t, sizeof...(Ts)> cnvrt_ctors(){
+            return {{(&cnvrt_ctor_h<conditional_ref_t<is_lvalue_arg,Ts>>::help)...}};
+        }
 
         std::size_t m_index = 0;
 
@@ -162,16 +183,12 @@ namespace util
         variant() noexcept;
         variant(const variant& other);
         variant(variant&& other) noexcept;
-        template<typename T> explicit variant(const T& t);
         // are_different_t is a SFINAE trick to avoid variant(T &&t) with T=variant
         // for some reason, this version is called instead of variant(variant&& o) when
         // variant is used in STL containers (examples: vector assignment).
-        // detail::enable_if_t<! std::is_lvalue_reference<T>::value> is a SFINAE
-        // trick to limit this constructor only to rvalue reference argument
         template<
             typename T,
-            typename = detail::are_different_t<variant, T>,
-            typename = detail::enable_if_t<! std::is_lvalue_reference<T>::value>
+            typename = util::are_different_t<variant, T>
         >
         explicit variant(T&& t);
         // template<class T, class... Args> explicit variant(Args&&... args);
@@ -187,7 +204,7 @@ namespace util
         // SFINAE trick to avoid operator=(T&&) with T=variant<>, see comment above
         template<
             typename T,
-            typename = detail::are_different_t<variant, T>
+            typename = util::are_different_t<variant, T>
         >
         variant& operator=(T&& t) noexcept;
 
@@ -244,19 +261,12 @@ namespace util
     }
 
     template<typename... Ts>
-    template<class T>
-    variant<Ts...>::variant(const T& t)
-        : m_index(util::type_list_index<T, Ts...>::value)
-    {
-        (vctrs()[m_index])(memory, &t);
-    }
-
-    template<typename... Ts>
-    template<class T, typename , typename>
+    template<class T, typename>
     variant<Ts...>::variant(T&& t)
-        : m_index(util::type_list_index<typename std::remove_reference<T>::type, Ts...>::value)
+        : m_index(util::type_list_index<util::decay_t<T>, Ts...>::value)
     {
-        (mctrs()[m_index])(memory, &t);
+        const constexpr bool is_lvalue_arg =  std::is_lvalue_reference<T>::value;
+        (cnvrt_ctors<is_lvalue_arg>()[m_index])(memory, const_cast<util::decay_t<T> *>(&t));
     }
 
     template<typename... Ts>
@@ -301,17 +311,25 @@ namespace util
     template<typename T, typename>
     variant<Ts...>& variant<Ts...>::operator=(T&& t) noexcept
     {
-        using decayed_t = typename std::decay<T>::type;
+        using decayed_t = util::decay_t<T>;
         // FIXME: No version with implicit type conversion available!
-        static const constexpr std::size_t t_index =
+        const constexpr std::size_t t_index =
             util::type_list_index<decayed_t, Ts...>::value;
 
-        if (t_index == m_index)
+        const constexpr bool is_lvalue_arg =  std::is_lvalue_reference<T>::value;
+
+        if (t_index != m_index)
         {
-            util::get<decayed_t>(*this) = std::forward<T>(t);
-            return *this;
+            (dtors()[m_index])(memory);
+            (cnvrt_ctors<is_lvalue_arg>()[t_index])(memory, &t);
+            m_index = t_index;
         }
-        else return (*this = variant(std::forward<T>(t)));
+        else
+        {
+            (cnvrt_assgnrs<is_lvalue_arg>()[m_index])(memory, &t);
+        }
+        return *this;
+
     }
 
     template<typename... Ts>
