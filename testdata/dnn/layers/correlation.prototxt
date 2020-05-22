@@ -1,0 +1,30 @@
+name: "Correlation"
+input: "input_0"
+input: "input_1"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 2
+  dim: 2
+}
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 2
+  dim: 2
+}
+layer {
+  name: "corr"
+  type: "Correlation"
+  bottom: "input_0"
+  bottom: "input_1"
+  top: "out"
+  correlation_param {
+    pad: 1
+    kernel_size: 1
+    max_displacement: 1
+    stride_1: 1
+    stride_2: 1
+  }
+}
+
