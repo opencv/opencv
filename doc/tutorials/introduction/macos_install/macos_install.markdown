@@ -39,6 +39,8 @@ Installing CMake
     cmake --version
     @endcode
 
+@note You can use [Homebrew](https://brew.sh/) to install CMake with @code{.bash} brew install cmake @endcode
+
 Getting OpenCV Source Code
 --------------------------
 
