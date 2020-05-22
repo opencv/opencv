@@ -3,6 +3,8 @@ Similarity check (PNSR and SSIM) on the GPU {#tutorial_gpu_basics_similarity}
 ===========================================
 @todo update this tutorial
 
+@next_tutorial{tutorial_gpu_thrust_interop}
+
 Goal
 ----
 

@@ -97,29 +97,68 @@ class Test_Caffe_layers : public DNNTestLayer
 {
 public:
     void testLayerUsingCaffeModels(const String& basename, bool useCaffeModel = false,
-                                   bool useCommonInputBlob = true, double l1 = 0.0,
-                                   double lInf = 0.0)
+                                   bool useCommonInputBlob = true, double l1 = 0.0, double lInf = 0.0,
+                                   int numInps = 1, int numOuts = 1)
     {
+        CV_Assert_N(numInps >= 1, numInps <= 10, numOuts >= 1, numOuts <= 10);
         String prototxt = _tf(basename + ".prototxt");
         String caffemodel = _tf(basename + ".caffemodel");
 
-        String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
-        String outfile = _tf(basename + ".npy");
+        std::vector<Mat> inps, refs, outs;
 
-        Mat inp = blobFromNPY(inpfile);
-        Mat ref = blobFromNPY(outfile);
-        checkBackend(&inp, &ref);
+        if (numInps > 1)
+        {
+            for (int i = 0; i < numInps; i++)
+            {
+                String inpfile = _tf(basename + cv::format(".input_%d.npy", i));
+                inps.push_back(blobFromNPY(inpfile));
+            }
+        }
+        else
+        {
+            String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
+            inps.push_back(blobFromNPY(inpfile));
+        }
+
+        if (numOuts > 1)
+        {
+            for (int i = 0; i < numOuts; i++)
+            {
+                String outfile = _tf(basename + cv::format("_%d.npy", i));
+                refs.push_back(blobFromNPY(outfile));
+            }
+        }
+        else
+        {
+            String outfile = _tf(basename + ".npy");
+            refs.push_back(blobFromNPY(outfile));
+        }
 
         Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
         ASSERT_FALSE(net.empty());
+        checkBackend(&inps[0], &refs[0]);
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
 
-        net.setInput(inp, "input");
-        Mat out = net.forward("output");
+        String inp_name = "input";
+        if (numInps > 1)
+        {
+            for (int i = 0; i < numInps; i++)
+            {
+                net.setInput(inps[i], inp_name + cv::format("_%d", i));
+            }
+        }
+        else
+        {
+            net.setInput(inps.back(), inp_name);
+        }
 
-        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        net.forward(outs);
+        for (int i = 0; i < refs.size(); i++)
+        {
+            normAssert(refs[i], outs[i], "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        }
     }
 };
 
@@ -577,6 +616,58 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(outputs.size(), 2u);
     EXPECT_EQ(shape(outputs[0]), shape(nT, nS, nO));
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
+}
+
+TEST_P(Test_Caffe_layers, Accum)
+{
+    if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    testLayerUsingCaffeModels("accum", false, false, 0.0, 0.0, 2);
+    testLayerUsingCaffeModels("accum_ref", false, false, 0.0, 0.0, 2);
+}
+
+TEST_P(Test_Caffe_layers, FlowWarp)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    testLayerUsingCaffeModels("flow_warp", false, false, 0.0, 0.0, 2);
+}
+
+TEST_P(Test_Caffe_layers, ChannelNorm)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testLayerUsingCaffeModels("channel_norm", false, false);
+}
+
+TEST_P(Test_Caffe_layers, DataAugmentation)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testLayerUsingCaffeModels("data_augmentation", true, false);
+}
+
+TEST_P(Test_Caffe_layers, Resample)
+{
+    if (backend != DNN_BACKEND_OPENCV)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testLayerUsingCaffeModels("nearest_2inps", false, false, 0.0, 0.0, 2);
+    testLayerUsingCaffeModels("nearest", false, false);
+}
+
+TEST_P(Test_Caffe_layers, Correlation)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
+                     CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testLayerUsingCaffeModels("correlation", false, false, 0.0, 0.0, 2);
+}
+
+TEST_P(Test_Caffe_layers, Convolution2Inputs)
+{
+    testLayerUsingCaffeModels("conv_2_inps", true, false, 0.0, 0.0, 2);
 }
 
 TEST_P(Test_Caffe_layers, ROIPooling_Accuracy)

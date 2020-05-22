@@ -51,10 +51,15 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert_N(inputs.size() == 1, inputs[0].size() == 4);
+        CV_Assert_N(inputs.size() == 1 || inputs.size() == 2, inputs[0].size() == 4);
         outputs.resize(1, inputs[0]);
-        outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
-        outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
+        if (inputs.size() == 1) {
+            outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
+            outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
+        } else {
+            outputs[0][2] = inputs[1][2];
+            outputs[0][3] = inputs[1][3];
+        }
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
     }
