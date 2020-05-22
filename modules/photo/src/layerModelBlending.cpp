@@ -85,9 +85,9 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                     break;
                 case BLEND_MODEL_OVERLAY:
                     if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1 -
-                        (1 - 2 * (target.at<Vec3f>(index_row, index_col)[index_c] - 0.5)) *
-                        (1 - blend.at<Vec3f>(index_row, index_col)[index_c]);
+                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
+                        (1.0f - 2 * (target.at<Vec3f>(index_row, index_col)[index_c] - 0.5f)) *
+                        (1.0f - blend.at<Vec3f>(index_row, index_col)[index_c]);
                     else
                         dst.at<Vec3f>(index_row, index_col)[index_c] = 2 *
                         target.at<Vec3f>(index_row, index_col)[index_c] *
