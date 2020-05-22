@@ -1,6 +1,5 @@
 #include <fstream>
 #include <sstream>
-#include <numeric>
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -397,43 +396,48 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
     else
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: " + outLayerType);
 
-    std::vector<int> indices;
     if (outLayers.size() > 1)
     {
-        std::map<int, std::vector<int>> class2indices;
-        for (int i = 0; i < classIds.size(); i++)
+        std::map<int, std::vector<size_t> > class2indices;
+        for (size_t i = 0; i < classIds.size(); i++)
         {
-            class2indices[classIds[i]].push_back(i);
+            if (confidences[i] >= confThreshold)
+            {
+                class2indices[classIds[i]].push_back(i);
+            }
         }
-        for (std::map<int, std::vector<int>>::iterator it = class2indices.begin(); it != class2indices.end(); ++it)
+        std::vector<Rect> nmsBoxes;
+        std::vector<float> nmsConfidences;
+        std::vector<int> nmsClassIds;
+        for (std::map<int, std::vector<size_t> >::iterator it = class2indices.begin(); it != class2indices.end(); ++it)
         {
             std::vector<Rect> local_boxes;
             std::vector<float> local_confidences;
-            std::vector<int> nms_indices;
-            std::vector<int> class_indices = it->second;
+            std::vector<size_t> class_indices = it->second;
             for (size_t i = 0; i < class_indices.size(); i++)
             {
                 local_boxes.push_back(boxes[class_indices[i]]);
                 local_confidences.push_back(confidences[class_indices[i]]);
             }
+            std::vector<int> nms_indices;
             NMSBoxes(local_boxes, local_confidences, confThreshold, nmsThreshold, nms_indices);
-            for (int j = 0; j < nms_indices.size(); j++)
+            for (size_t i = 0; i < nms_indices.size(); i++)
             {
-                indices.push_back(class_indices[nms_indices[j]]);
+                size_t idx = nms_indices[i];
+                nmsBoxes.push_back(local_boxes[idx]);
+                nmsConfidences.push_back(local_confidences[idx]);
+                nmsClassIds.push_back(it->first);
             }
         }
-    }
-    else
-    {
-        indices.resize(classIds.size());
-        std::iota(indices.begin(), indices.end(), 0);
+        boxes = nmsBoxes;
+        classIds = nmsClassIds;
+        confidences = nmsConfidences;
     }
 
-    for (size_t i = 0; i < indices.size(); ++i)
+    for (size_t i = 0; i < boxes.size(); ++i)
     {
-        int idx = indices[i];
-        Rect box = boxes[idx];
-        drawPred(classIds[idx], confidences[idx], box.x, box.y,
+        Rect box = boxes[i];
+        drawPred(classIds[i], confidences[i], box.x, box.y,
                  box.x + box.width, box.y + box.height, frame);
     }
 }
