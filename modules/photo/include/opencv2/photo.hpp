@@ -877,8 +877,8 @@ enum
 
 };
 
-/** @17 Photoshop blending modes Inspired by GIMP and
-http://www.deepskycolors.com/archivo/2010/04/21/formulas-for-Photoshop-blending-modes.html.
+/** @brief This function can achieve 17 types including DARKEN、MULTIPY、COLOR_BURN、etc layer model blending effects
+check the notes to learn more.
 
 @param target and blend Input SAME_SIZE 8-bit 3-channel image.
 @param dst Output 8-bit 3-channel image.
