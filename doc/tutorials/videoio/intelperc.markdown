@@ -1,6 +1,8 @@
 Using Creative Senz3D and other Intel Perceptual Computing SDK compatible depth sensors {#tutorial_intelperc}
 =======================================================================================
 
+@prev_tutorial{tutorial_kinect_openni}
+
 **Note**: this tutorial is partially obsolete since PerC SDK has been replaced with RealSense SDK
 
 Depth sensors compatible with Intel Perceptual Computing SDK are supported through VideoCapture

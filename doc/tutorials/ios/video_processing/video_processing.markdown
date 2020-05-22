@@ -1,6 +1,9 @@
 OpenCV iOS - Video Processing {#tutorial_video_processing}
 =============================
 
+@prev_tutorial{tutorial_image_manipulation}
+
+
 This tutorial explains how to process video frames using the iPhone's camera and OpenCV.
 
 Prerequisites:

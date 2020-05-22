@@ -1,6 +1,10 @@
 Creating your own corner detector {#tutorial_generic_corner_detector}
 =================================
 
+@prev_tutorial{tutorial_good_features_to_track}
+@next_tutorial{tutorial_corner_subpixels}
+
+
 Goal
 ----
 

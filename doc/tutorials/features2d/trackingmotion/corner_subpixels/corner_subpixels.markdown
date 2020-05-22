@@ -1,6 +1,9 @@
 Detecting corners location in subpixels {#tutorial_corner_subpixels}
 =======================================
 
+@prev_tutorial{tutorial_generic_corner_detector}
+@next_tutorial{tutorial_feature_detection}
+
 Goal
 ----
 
