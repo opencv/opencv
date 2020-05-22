@@ -851,6 +851,45 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 
 //! @} photo_render
 
+//! @addtogroup layerModelBlending
+//! @{
+
+//! layerModelBlending algorithm flags
+enum
+{
+    DARKEN = 1,                //min(Target,Blend)
+    MULTIPY = 2,               //Target * Blend      
+    COLOR_BURN = 3,            //1 - (1-Target) / Blend         
+    LINEAR_BRUN = 4,            //Target + Blend - 1         
+    LIGHTEN = 5,               //max(Target,Blend)       
+    SCREEN = 6,                //1 - (1-Target) * (1-Blend)         
+    COLOR_DODGE = 7,           //Target / (1-Blend)         
+    LINEAR_DODGE = 8,          //Target + Blend         
+    OVERLAY = 9,               //(Target > 0.5) * (1 - (1-2*(Target-0.5)) * (1-Blend)) +(Target <= 0.5) * ((2*Target) * Blend)
+    SOFT_LIGHT = 10,           //(Blend > 0.5) * (1 - (1-Target) * (1-(Blend-0.5))) +(Blend <= 0.5) * (Target * (Blend+0.5))
+    HARD_LIGHT = 11,           //(Blend > 0.5) * (1 - (1-Target) * (1-2*(Blend-0.5))) +(Blend <= 0.5) * (Target * (2*Blend))
+    VIVID_LIGHT = 12,          //(Blend > 0.5) * (1 - (1-Target) / (2*(Blend-0.5))) +(Blend <= 0.5) * (Target / (1-2*Blend))
+    LINEAR_LIGHT = 13,         //(Blend > 0.5) * (Target + 2*(Blend-0.5)) +(Blend <= 0.5) * (Target + 2*Blend - 1)
+    PIN_LIGHT = 14,            //(Blend > 0.5) * (max(Target,2*(Blend-0.5))) +(Blend <= 0.5) * (min(Target,2*Blend)))
+    DIFFERENCE = 15,           //| Target - Blend |         
+    EXCLUSION = 16,            //0.5 - 2*(Target-0.5)*(Blend-0.5)
+    DIVIDE = 17                //Target/Blend
+
+};
+
+/** @17 Photoshop blending modes Inspired by GIMP and
+http://www.deepskycolors.com/archivo/2010/04/21/formulas-for-Photoshop-blending-modes.html.
+
+@param target and blend Input SAME_SIZE 8-bit 3-channel image.
+@param dst Output 8-bit 3-channel image.
+@param flags layerModelBlending algorithm : CV::DARKEN、CV::MULTIPY、CV::COLOR_BURN 、CV::LINEAR_BRUN
+、CV::LIGHTEN 、CV::SCREEN 、CV::COLOR_DODGE 、CV::LINEAR_DODGE 、CV::OVERLAY、CV::SOFT_LIGHT、CV::HARD_LIGHT、
+CV::VIVID_LIGHT、CV::LINEAR_LIGHT、CV::PIN_LIGHT、CV::DIFFERENCE、CV::EXCLUSION 、CV::DIVIDE 
+*/
+CV_EXPORTS_W void layerModelBlending(InputArray target, InputArray blend, OutputArray dst, int flag=1);
+
+//! @} addtogroup layerModelBlending
+    
 //! @} photo
 
 } // cv
