@@ -857,23 +857,23 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 //! layerModelBlending algorithm flags
 enum
 {
-    DARKEN = 1,                //min(Target,Blend)
-    MULTIPY = 2,               //Target * Blend      
-    COLOR_BURN = 3,            //1 - (1-Target) / Blend         
-    LINEAR_BRUN = 4,            //Target + Blend - 1         
-    LIGHTEN = 5,               //max(Target,Blend)       
-    SCREEN = 6,                //1 - (1-Target) * (1-Blend)         
-    COLOR_DODGE = 7,           //Target / (1-Blend)         
-    LINEAR_DODGE = 8,          //Target + Blend         
-    OVERLAY = 9,               //(Target > 0.5) * (1 - (1-2*(Target-0.5)) * (1-Blend)) +(Target <= 0.5) * ((2*Target) * Blend)
-    SOFT_LIGHT = 10,           //(Blend > 0.5) * (1 - (1-Target) * (1-(Blend-0.5))) +(Blend <= 0.5) * (Target * (Blend+0.5))
-    HARD_LIGHT = 11,           //(Blend > 0.5) * (1 - (1-Target) * (1-2*(Blend-0.5))) +(Blend <= 0.5) * (Target * (2*Blend))
-    VIVID_LIGHT = 12,          //(Blend > 0.5) * (1 - (1-Target) / (2*(Blend-0.5))) +(Blend <= 0.5) * (Target / (1-2*Blend))
-    LINEAR_LIGHT = 13,         //(Blend > 0.5) * (Target + 2*(Blend-0.5)) +(Blend <= 0.5) * (Target + 2*Blend - 1)
-    PIN_LIGHT = 14,            //(Blend > 0.5) * (max(Target,2*(Blend-0.5))) +(Blend <= 0.5) * (min(Target,2*Blend)))
-    DIFFERENCE = 15,           //| Target - Blend |         
-    EXCLUSION = 16,            //0.5 - 2*(Target-0.5)*(Blend-0.5)
-    DIVIDE = 17                //Target/Blend
+    BLEND_MODEL_DARKEN = 1,                //min(Target,Blend)
+    BLEND_MODEL_MULTIPY = 2,               //Target * Blend      
+    BLEND_MODEL_COLOR_BURN = 3,            //1 - (1-Target) / Blend         
+    BLEND_MODEL_LINEAR_BRUN = 4,            //Target + Blend - 1         
+    BLEND_MODEL_LIGHTEN = 5,               //max(Target,Blend)       
+    BLEND_MODEL_SCREEN = 6,                //1 - (1-Target) * (1-Blend)         
+    BLEND_MODEL_COLOR_DODGE = 7,           //Target / (1-Blend)         
+    BLEND_MODEL_LINEAR_DODGE = 8,          //Target + Blend         
+    BLEND_MODEL_OVERLAY = 9,               //(Target > 0.5) * (1 - (1-2*(Target-0.5)) * (1-Blend)) +(Target <= 0.5) * ((2*Target) * Blend)
+    BLEND_MODEL_SOFT_LIGHT = 10,           //(Blend > 0.5) * (1 - (1-Target) * (1-(Blend-0.5))) +(Blend <= 0.5) * (Target * (Blend+0.5))
+    BLEND_MODEL_HARD_LIGHT = 11,           //(Blend > 0.5) * (1 - (1-Target) * (1-2*(Blend-0.5))) +(Blend <= 0.5) * (Target * (2*Blend))
+    BLEND_MODEL_VIVID_LIGHT = 12,          //(Blend > 0.5) * (1 - (1-Target) / (2*(Blend-0.5))) +(Blend <= 0.5) * (Target / (1-2*Blend))
+    BLEND_MODEL_LINEAR_LIGHT = 13,         //(Blend > 0.5) * (Target + 2*(Blend-0.5)) +(Blend <= 0.5) * (Target + 2*Blend - 1)
+    BLEND_MODEL_PIN_LIGHT = 14,            //(Blend > 0.5) * (max(Target,2*(Blend-0.5))) +(Blend <= 0.5) * (min(Target,2*Blend)))
+    BLEND_MODEL_DIFFERENCE = 15,           //| Target - Blend |         
+    BLEND_MODEL_EXCLUSION = 16,            //0.5 - 2*(Target-0.5)*(Blend-0.5)
+    BLEND_MODEL_DIVIDE = 17                //Target/Blend
 
 };
 
