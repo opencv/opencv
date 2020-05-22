@@ -1,6 +1,9 @@
 Cross referencing OpenCV from other Doxygen projects {#tutorial_cross_referencing}
 ====================================================
 
+@prev_tutorial{tutorial_transition_guide}
+
+
 Cross referencing OpenCV
 ------------------------
 

@@ -1,5 +1,7 @@
 # Custom deep learning layers support {#tutorial_dnn_custom_layers}
 
+@prev_tutorial{tutorial_dnn_javascript}
+
 ## Introduction
 Deep learning is a fast growing area. The new approaches to build neural networks
 usually introduce new types of layers. They could be modifications of existing

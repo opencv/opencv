@@ -1,6 +1,8 @@
 Cascade Classifier {#tutorial_cascade_classifier}
 ==================
 
+@next_tutorial{tutorial_traincascade}
+
 Goal
 ----
 

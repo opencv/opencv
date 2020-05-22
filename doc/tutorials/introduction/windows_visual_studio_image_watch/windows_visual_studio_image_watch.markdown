@@ -1,6 +1,10 @@
 Image Watch: viewing in-memory images in the Visual Studio debugger {#tutorial_windows_visual_studio_image_watch}
 ===================================================================
 
+@prev_tutorial{tutorial_windows_visual_studio_opencv}
+@next_tutorial{tutorial_java_dev_intro}
+
+
 Image Watch is a plug-in for Microsoft Visual Studio that lets you to visualize in-memory images
 (*cv::Mat* or *IplImage_* objects, for example) while debugging an application. This can be helpful
 for tracking down bugs, or for simply understanding what a given piece of code is doing.
