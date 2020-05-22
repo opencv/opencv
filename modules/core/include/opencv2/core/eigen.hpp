@@ -146,6 +146,9 @@ The method wraps an existing Mat data array with an Eigen TensorMap of shape (H 
 
 Explicit instantiation of the return type is required.
 
+@note Caller should be aware of the lifetime of the cv::Mat instance and take appropriate safety measures.
+The cv::Mat instance will retain ownership of the data and the Eigen::TensorMap will lose access when the cv::Mat data is deallocated.
+
 The example below initializes a cv::Mat and produces an Eigen::TensorMap:
 \code
 float arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
@@ -156,8 +159,9 @@ Eigen::TensorMap<Eigen::Tensor<float, 3, Eigen::RowMajor>> a_tensormap = cv2eige
 template <typename _Tp> static inline
 Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>> cv2eigen_tensormap(const cv::InputArray &src)
 {
-  Mat mat = src.getMat();
-  return Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>>((_Tp *)mat.data, mat.rows, mat.cols, mat.channels());
+    Mat mat = src.getMat();
+    CV_CheckTypeEQ(mat.type(), CV_MAKETYPE(traits::Type<_Tp>::value, mat.channels()), "");
+    return Eigen::TensorMap<Eigen::Tensor<_Tp, 3, Eigen::RowMajor>>((_Tp *)mat.data, mat.rows, mat.cols, mat.channels());
 }
 #endif // OPENCV_EIGEN_TENSOR_SUPPORT
 
