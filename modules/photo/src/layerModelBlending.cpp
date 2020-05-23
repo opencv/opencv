@@ -54,14 +54,14 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                         blend.at<Vec3f>(index_row, index_col)[index_c];
                     break;
                 case BLEND_MODEL_COLOR_BURN:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] = 1 -
-                        safe_div((1 - target.at<Vec3f>(index_row, index_col)[index_c]),
+                    dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
+                        safe_div((1.0f - target.at<Vec3f>(index_row, index_col)[index_c]),
                             blend.at<Vec3f>(index_row, index_col)[index_c]);
                     break;
                 case BLEND_MODEL_LINEAR_BRUN:
                     dst.at<Vec3f>(index_row, index_col)[index_c] =
                         target.at<Vec3f>(index_row, index_col)[index_c] +
-                        blend.at<Vec3f>(index_row, index_col)[index_c] - 1;
+                        blend.at<Vec3f>(index_row, index_col)[index_c] - 1.0f;
                     break;
                 case BLEND_MODEL_LIGHTEN:
                     dst.at<Vec3f>(index_row, index_col)[index_c] = max(
@@ -69,14 +69,14 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                         blend.at<Vec3f>(index_row, index_col)[index_c]);
                     break;
                 case BLEND_MODEL_SCREEN:
-                    dst.at<Vec3f>(index_row, index_col)[index_c] = 1 -
-                        (1 - target.at<Vec3f>(index_row, index_col)[index_c]) *
-                        (1 - blend.at<Vec3f>(index_row, index_col)[index_c]);
+                    dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
+                        (1.0f - target.at<Vec3f>(index_row, index_col)[index_c]) *
+                        (1.0f - blend.at<Vec3f>(index_row, index_col)[index_c]);
                     break;
                 case BLEND_MODEL_COLOR_DODGE:
                     dst.at<Vec3f>(index_row, index_col)[index_c] = safe_div
                     (target.at<Vec3f>(index_row, index_col)[index_c],
-                        1 - blend.at<Vec3f>(index_row, index_col)[index_c]);
+                        1.0f - blend.at<Vec3f>(index_row, index_col)[index_c]);
                     break;
                 case BLEND_MODEL_LINEAR_DODGE:
                     dst.at<Vec3f>(index_row, index_col)[index_c] =
@@ -86,28 +86,28 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                 case BLEND_MODEL_OVERLAY:
                     if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
                         dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
-                        (1.0f - 2 * (target.at<Vec3f>(index_row, index_col)[index_c] - 0.5f)) *
+                        (1.0f - 2.0f * (target.at<Vec3f>(index_row, index_col)[index_c] - 0.5f)) *
                         (1.0f - blend.at<Vec3f>(index_row, index_col)[index_c]);
                     else
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 2 *
+                        dst.at<Vec3f>(index_row, index_col)[index_c] = 2.0f *
                         target.at<Vec3f>(index_row, index_col)[index_c] *
                         blend.at<Vec3f>(index_row, index_col)[index_c];
                     break;
                 case BLEND_MODEL_SOFT_LIGHT:
                     if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1 -
-                        (1 - target.at<Vec3f>(index_row, index_col)[index_c]) *
-                        (1 - (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5));
+                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
+                        (1.0f - target.at<Vec3f>(index_row, index_col)[index_c]) *
+                        (1.0f - (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f));
                     else
                         dst.at<Vec3f>(index_row, index_col)[index_c] =
                         target.at<Vec3f>(index_row, index_col)[index_c] *
-                        (blend.at<Vec3f>(index_row, index_col)[index_c] + 0.5);
+                        (blend.at<Vec3f>(index_row, index_col)[index_c] + 0.5f);
                     break;
                 case BLEND_MODEL_HARD_LIGHT:
                     if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1 -
-                        (1 - target.at<Vec3f>(index_row, index_col)[index_c]) *
-                        (1 - 2 * blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5);
+                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
+                        (1.0f - target.at<Vec3f>(index_row, index_col)[index_c]) *
+                        (1 - 2 * blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f);
                     else
                         dst.at<Vec3f>(index_row, index_col)[index_c] =
                         target.at<Vec3f>(index_row, index_col)[index_c] *
@@ -115,33 +115,33 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                     break;
                 case BLEND_MODEL_VIVID_LIGHT:
                     if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
-                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1 -
-                        safe_div(1 - target.at<Vec3f>(index_row, index_col)[index_c],
-                        (2 * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5)));
+                        dst.at<Vec3f>(index_row, index_col)[index_c] = 1.0f -
+                        safe_div(1.0f - target.at<Vec3f>(index_row, index_col)[index_c],
+                        (2.0f * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f)));
                     else
                         dst.at<Vec3f>(index_row, index_col)[index_c] =
                         safe_div(target.at<Vec3f>(index_row, index_col)[index_c],
-                        (1 - 2 * blend.at<Vec3f>(index_row, index_col)[index_c]));
+                        (1.0f - 2.0f * blend.at<Vec3f>(index_row, index_col)[index_c]));
                     break;
                 case BLEND_MODEL_LINEAR_LIGHT:
                     if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
                         dst.at<Vec3f>(index_row, index_col)[index_c] =
                         target.at<Vec3f>(index_row, index_col)[index_c] +
-                        (2 * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5));
+                        (2.0f * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f));
                     else
                         dst.at<Vec3f>(index_row, index_col)[index_c] =
                         target.at<Vec3f>(index_row, index_col)[index_c] +
-                        2 * blend.at<Vec3f>(index_row, index_col)[index_c] - 1;
+                        2.0f * blend.at<Vec3f>(index_row, index_col)[index_c] - 1.0f;
                     break;
                 case BLEND_MODEL_PIN_LIGHT:
                     if (target.at<Vec3f>(index_row, index_col)[index_c] > 0.5f)
                         dst.at<Vec3f>(index_row, index_col)[index_c] =
                         max(target.at<Vec3f>(index_row, index_col)[index_c],
-                        (float)(2 * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5)));
+                        (float)(2.0f * (blend.at<Vec3f>(index_row, index_col)[index_c] - 0.5f)));
                     else
                         dst.at<Vec3f>(index_row, index_col)[index_c] =
                         min(target.at<Vec3f>(index_row, index_col)[index_c],
-                            2 * blend.at<Vec3f>(index_row, index_col)[index_c]);
+                            2.0f * blend.at<Vec3f>(index_row, index_col)[index_c]);
                     break;
                 case BLEND_MODEL_DIFFERENCE:
                     dst.at<Vec3f>(index_row, index_col)[index_c] =
@@ -152,7 +152,7 @@ CV_EXPORTS_W void layerModelBlending(InputArray _target, InputArray _blend, Outp
                     dst.at<Vec3f>(index_row, index_col)[index_c] =
                         target.at<Vec3f>(index_row, index_col)[index_c] +
                         blend.at<Vec3f>(index_row, index_col)[index_c] -
-                        2 * target.at<Vec3f>(index_row, index_col)[index_c] * blend.at<Vec3f>(index_row, index_col)[index_c];
+                        2.0f * target.at<Vec3f>(index_row, index_col)[index_c] * blend.at<Vec3f>(index_row, index_col)[index_c];
                     break;
                 case BLEND_MODEL_DIVIDE:
                     dst.at<Vec3f>(index_row, index_col)[index_c] =
