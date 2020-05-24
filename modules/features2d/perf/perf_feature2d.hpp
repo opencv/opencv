@@ -21,7 +21,8 @@ namespace opencv_test
     ORB_DEFAULT, ORB_1500_13_1,                                                         \
     AKAZE_DEFAULT, AKAZE_DESCRIPTOR_KAZE,                                               \
     BRISK_DEFAULT,                                                                      \
-    KAZE_DEFAULT
+    KAZE_DEFAULT,                                                                       \
+    SIFT_DEFAULT
 
 #define CV_ENUM_EXPAND(name, ...) CV_ENUM(name, __VA_ARGS__)
 
@@ -77,6 +78,8 @@ static inline Ptr<Feature2D> getFeature2D(Feature2DType type)
         return KAZE::create();
     case MSER_DEFAULT:
         return MSER::create();
+    case SIFT_DEFAULT:
+        return SIFT::create();
     default:
         return Ptr<Feature2D>();
     }
