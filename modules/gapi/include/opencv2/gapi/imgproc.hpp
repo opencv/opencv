@@ -388,8 +388,8 @@ The function smooths an image using the kernel:
 
 \f[\texttt{K} =  \frac{1}{\texttt{ksize.width*ksize.height}} \begin{bmatrix} 1 & 1 & 1 &  \cdots & 1 & 1  \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \hdotsfor{6} \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \end{bmatrix}\f]
 
-The call `blur(src, dst, ksize, anchor, borderType)` is equivalent to `boxFilter(src, ksize, dst, src.type(),
-anchor, true, borderType)`.
+The call `blur(src, ksize, anchor, borderType)` is equivalent to `boxFilter(src, src.type(), ksize, anchor,
+true, borderType)`.
 
 Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref CV_16SC1, @ref CV_32FC1.
 Output image must have the same type, size, and number of channels as the input image.
