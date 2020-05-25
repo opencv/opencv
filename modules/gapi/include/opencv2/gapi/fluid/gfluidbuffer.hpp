@@ -87,7 +87,7 @@ public:
 
 private:
     std::unique_ptr<Priv> m_priv;
-    const Cache* m_cache;
+    const Cache* m_cache = nullptr;
 };
 
 class GAPI_EXPORTS Buffer
