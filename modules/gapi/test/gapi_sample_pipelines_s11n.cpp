@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2020 Intel Corporation
 
 
 #include "test_precomp.hpp"
@@ -12,12 +12,12 @@
 #include "logger.hpp"
 
 #include <opencv2/gapi/core.hpp>
-#include "serialization/gsrlzkernels.hpp"
+#include "s11n/gs11nkernels.hpp"
 
 namespace opencv_test
 {
-cv::gapi::GKernelPackage srlz_kernels_fixture = opencv_test::serialization::kernels();
-TEST(GAPI_Pipeline, CropSerialization_Rect)
+cv::gapi::GKernelPackage s11n_kernels_fixture = opencv_test::s11n::kernels();
+TEST(S11N, Pipeline_Crop_Rect)
 {
     cv::Rect rect_to{ 4,10,37,50 };
     cv::Size sz_in = cv::Size(1920, 1080);
@@ -31,7 +31,7 @@ TEST(GAPI_Pipeline, CropSerialization_Rect)
     cv::GMat in;
     auto out = cv::gapi::crop(in, rect_to);
     cv::GComputation c(in, out);
-    c.apply(in_mat, out_mat_gapi, cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+    c.apply(in_mat, out_mat_gapi, cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -45,7 +45,7 @@ TEST(GAPI_Pipeline, CropSerialization_Rect)
 }
 
 
-TEST(GAPI_Pipeline, CannySerialization_Bool)
+TEST(S11N, Pipeline_Canny_Bool)
 {
     const cv::Size sz_in(1280, 720);
     cv::GMat in;
@@ -61,7 +61,7 @@ TEST(GAPI_Pipeline, CannySerialization_Bool)
     cv::Mat in_mat = cv::Mat::eye(1280, 720, CV_8UC1);
     cv::GComputation c(in, out);
 
-    c.apply(in_mat, out_mat_gapi, cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+    c.apply(in_mat, out_mat_gapi, cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -71,7 +71,7 @@ TEST(GAPI_Pipeline, CannySerialization_Bool)
     EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
 }
 
-TEST(GAPI_Pipeline, OverloadUnarySerialization_MatMat)
+TEST(S11N, Pipeline_OverloadUnary_MatMat)
 {
     cv::GMat in;
     cv::GComputation comp(in, cv::gapi::bitwise_not(in));
@@ -80,17 +80,17 @@ TEST(GAPI_Pipeline, OverloadUnarySerialization_MatMat)
     cv::Mat ref_mat = ~in_mat;
 
     cv::Mat out_mat;
-    comp.apply(in_mat, out_mat, cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+    comp.apply(in_mat, out_mat, cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 
     out_mat = cv::Mat();
     auto cc = comp.compile(cv::descr_of(in_mat),
-        cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+        cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     cc(in_mat, out_mat);
     EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
-TEST(GAPI_Pipeline, OverloadUnarySerialization_MatScalar)
+TEST(S11N, Pipeline_OverloadUnary_MatScalar)
 {
     cv::GMat in;
     cv::GComputation comp(in, cv::gapi::sum(in));
@@ -99,17 +99,17 @@ TEST(GAPI_Pipeline, OverloadUnarySerialization_MatScalar)
     cv::Scalar ref_scl = cv::sum(in_mat);
 
     cv::Scalar out_scl;
-    comp.apply(in_mat, out_scl, cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+    comp.apply(in_mat, out_scl, cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     EXPECT_EQ(out_scl, ref_scl);
 
     out_scl = cv::Scalar();
     auto cc = comp.compile(cv::descr_of(in_mat),
-        cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+        cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     cc(in_mat, out_scl);
     EXPECT_EQ(out_scl, ref_scl);
 }
 
-TEST(GAPI_Pipeline, OverloadBinarySerialization_Mat)
+TEST(S11N, Pipeline_OverloadBinary_Mat)
 {
     cv::GMat a, b;
     cv::GComputation comp(a, b, cv::gapi::add(a, b));
@@ -118,17 +118,17 @@ TEST(GAPI_Pipeline, OverloadBinarySerialization_Mat)
     cv::Mat ref_mat = (in_mat + in_mat);
 
     cv::Mat out_mat;
-    comp.apply(in_mat, in_mat, out_mat, cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+    comp.apply(in_mat, in_mat, out_mat, cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 
     out_mat = cv::Mat();
     auto cc = comp.compile(cv::descr_of(in_mat), cv::descr_of(in_mat),
-        cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+        cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     cc(in_mat, in_mat, out_mat);
     EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
-TEST(GAPI_Pipeline, OverloadBinarySerialization_Scalar)
+TEST(S11N, Pipeline_OverloadBinary_Scalar)
 {
     cv::GMat a, b;
     cv::GComputation comp(a, b, cv::gapi::sum(a + b));
@@ -136,17 +136,17 @@ TEST(GAPI_Pipeline, OverloadBinarySerialization_Scalar)
     cv::Mat in_mat = cv::Mat::eye(32, 32, CV_8UC1);
     cv::Scalar ref_scl = cv::sum(in_mat + in_mat);
     cv::Scalar out_scl;
-    comp.apply(in_mat, in_mat, out_scl, cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+    comp.apply(in_mat, in_mat, out_scl, cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     EXPECT_EQ(out_scl, ref_scl);
 
     out_scl = cv::Scalar();
     auto cc = comp.compile(cv::descr_of(in_mat), cv::descr_of(in_mat),
-        cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+        cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     cc(in_mat, in_mat, out_scl);
     EXPECT_EQ(out_scl, ref_scl);
 }
 
-TEST(GAPI_Pipeline, SharpenSerialization)
+TEST(S11N, Pipeline_Sharpen)
 {
     const cv::Size sz_in (1280, 720);
     const cv::Size sz_out( 640, 480);
@@ -176,7 +176,7 @@ TEST(GAPI_Pipeline, SharpenSerialization)
 
     cv::GComputation c(cv::GIn(in), cv::GOut(y_sharp, out));
     c.apply(cv::gin(in_mat), cv::gout(out_mat_y, out_mat),
-        cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+        cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -225,7 +225,7 @@ TEST(GAPI_Pipeline, SharpenSerialization)
     }
 }
 
-TEST(GAPI_Pipeline, CustomRGB2YUVSerialization)
+TEST(S11N, Pipeline_CustomRGB2YUV)
 {
     const cv::Size sz(1280, 720);
 
@@ -259,7 +259,7 @@ TEST(GAPI_Pipeline, CustomRGB2YUVSerialization)
         cv::GMat u = 0.492f*(b - y);
         cv::GMat v = 0.877f*(r - y);
         cv::GComputation customCvt({ r, g, b }, { y, u, v });
-        customCvt.apply(in_mats, out_mats_gapi, cv::compile_args(cv::gapi::use_only{ srlz_kernels_fixture }));
+        customCvt.apply(in_mats, out_mats_gapi, cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
     }
 
     // OpenCV code /////////////////////////////////////////////////////////////

@@ -16,7 +16,7 @@
 
 namespace cv {
 namespace gimpl {
-namespace serialization {
+namespace s11n {
 //namespace {
 
 // FIXME? make a method of GSerialized?
@@ -38,7 +38,7 @@ void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle n
 {
     const auto& op = cg.metadata(nh).get<gimpl::Op>();
 
-    serialization::Op sop{Kernel{op.k.name, op.k.tag}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
+    s11n::Op sop{Kernel{op.k.name, op.k.tag}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
     sop.outs.resize(op.outs.size());
 
     for(size_t i=0; i < op.args.size(); ++i)
@@ -506,7 +506,7 @@ GSerialized serialize(const gimpl::GModel::ConstGraph& cg, const std::vector<ade
     return s;
 }
 
-void deserialize(const serialization::GSerialized& s)
+void deserialize(const s11n::GSerialized& s)
 {
     printGSerialized(s);
 
@@ -1301,6 +1301,6 @@ void readGSerialized(GSerialized &s, DeSerializationStream &serialized_data)
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-} // namespace serialization
+} // namespace s11n
 } // namespace gimpl
 } // namespace cv

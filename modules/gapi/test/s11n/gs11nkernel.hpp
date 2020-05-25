@@ -2,11 +2,11 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2020 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_GSRLZKERNEL_HPP
-#define OPENCV_GAPI_GSRLZKERNEL_HPP
+#ifndef OPENCV_GAPI_GS11NKERNEL_HPP
+#define OPENCV_GAPI_GS11NKERNEL_HPP
 
 #include <functional>
 #include <unordered_map>
@@ -23,16 +23,16 @@
 // FIXME: namespace scheme for backends?
 namespace opencv_test {
 
-    namespace serialization
+    namespace s11n
     {
         namespace impl
         {
             // Forward-declare an internal class
-            class GSRLZExecutable;
+            class GS11NExecutable;
         } // namespace impl
     } // namespace serialization
 
-    namespace serialization
+    namespace s11n
     {
         namespace impl
         {
@@ -67,22 +67,22 @@ namespace opencv_test {
             GAPI_EXPORTS cv::gapi::GBackend backend();
             /** @} */
 
-            class GSRLZFunctor;
+            class GS11NFunctor;
 
             //! @cond IGNORED
             template<typename K, typename Callable>
-            GSRLZFunctor srlz_kernel(const Callable& c);
+            GS11NFunctor s11n_kernel(const Callable& c);
 
             template<typename K, typename Callable>
-            GSRLZFunctor srlz_kernel(Callable& c);
+            GS11NFunctor s11n_kernel(Callable& c);
             //! @endcond
 
         } // namespace impl
-    } // namespace serialization
+    } // namespace s11n
 
       // Represents arguments which are passed to a wrapped CPU function
       // FIXME: put into detail?
-    class GAPI_EXPORTS GSRLZContext
+    class GAPI_EXPORTS GS11NContext
     {
     public:
         // Generic accessor API
@@ -115,20 +115,20 @@ namespace opencv_test {
         //once on enter for input and output arguments, and once before return for output arguments only
         std::unordered_map<std::size_t, cv::GRunArgP> m_results;
 
-        //friend class gimpl::GSRLZExecutable;
-        friend class opencv_test::serialization::impl::GSRLZExecutable;
+        //friend class gimpl::GS11NExecutable;
+        friend class opencv_test::s11n::impl::GS11NExecutable;
     };
 
-    class GAPI_EXPORTS GSRLZKernel
+    class GAPI_EXPORTS GS11NKernel
     {
     public:
         // This function is kernel's execution entry point (does the processing work)
-        using F = std::function<void(GSRLZContext &)>;
+        using F = std::function<void(GS11NContext &)>;
 
-        GSRLZKernel();
-        explicit GSRLZKernel(const F& f);
+        GS11NKernel();
+        explicit GS11NKernel(const F& f);
 
-        void apply(GSRLZContext &ctx);
+        void apply(GS11NContext &ctx);
 
     protected:
         F m_f;
@@ -138,59 +138,59 @@ namespace opencv_test {
 
     namespace detail
     {
-        template<class T> struct srlz_get_in;
-        template<> struct srlz_get_in<cv::GMat>
+        template<class T> struct s11n_get_in;
+        template<> struct s11n_get_in<cv::GMat>
         {
-            static cv::Mat    get(GSRLZContext &ctx, int idx) { return ctx.inMat(idx); }
+            static cv::Mat    get(GS11NContext &ctx, int idx) { return ctx.inMat(idx); }
         };
-        template<> struct srlz_get_in<cv::GMatP>
+        template<> struct s11n_get_in<cv::GMatP>
         {
-            static cv::Mat    get(GSRLZContext &ctx, int idx) { return srlz_get_in<cv::GMat>::get(ctx, idx); }
+            static cv::Mat    get(GS11NContext &ctx, int idx) { return s11n_get_in<cv::GMat>::get(ctx, idx); }
         };
-        template<> struct srlz_get_in<cv::GFrame>
+        template<> struct s11n_get_in<cv::GFrame>
         {
-            static cv::Mat    get(GSRLZContext &ctx, int idx) { return srlz_get_in<cv::GMat>::get(ctx, idx); }
+            static cv::Mat    get(GS11NContext &ctx, int idx) { return s11n_get_in<cv::GMat>::get(ctx, idx); }
         };
-        template<> struct srlz_get_in<cv::GScalar>
+        template<> struct s11n_get_in<cv::GScalar>
         {
-            static cv::Scalar get(GSRLZContext &ctx, int idx) { return ctx.inVal(idx); }
+            static cv::Scalar get(GS11NContext &ctx, int idx) { return ctx.inVal(idx); }
         };
-        template<typename U> struct srlz_get_in<cv::GArray<U> >
+        template<typename U> struct s11n_get_in<cv::GArray<U> >
         {
-            static const std::vector<U>& get(GSRLZContext &ctx, int idx) { return ctx.inArg<cv::detail::VectorRef>(idx).rref<U>(); }
+            static const std::vector<U>& get(GS11NContext &ctx, int idx) { return ctx.inArg<cv::detail::VectorRef>(idx).rref<U>(); }
         };
-        template<typename U> struct srlz_get_in<cv::GOpaque<U> >
+        template<typename U> struct s11n_get_in<cv::GOpaque<U> >
         {
-            static const U& get(GSRLZContext &ctx, int idx) { return ctx.inArg<cv::detail::OpaqueRef>(idx).rref<U>(); }
+            static const U& get(GS11NContext &ctx, int idx) { return ctx.inArg<cv::detail::OpaqueRef>(idx).rref<U>(); }
         };
 
         //FIXME(dm): GArray<Mat>/GArray<GMat> conversion should be done more gracefully in the system
-        template<> struct srlz_get_in<cv::GArray<cv::GMat> > : public srlz_get_in<cv::GArray<cv::Mat> >
+        template<> struct s11n_get_in<cv::GArray<cv::GMat> > : public s11n_get_in<cv::GArray<cv::Mat> >
         {
         };
 
         //FIXME(dm): GArray<Scalar>/GArray<GScalar> conversion should be done more gracefully in the system
-        template<> struct srlz_get_in<cv::GArray<cv::GScalar> > : public srlz_get_in<cv::GArray<cv::Scalar> >
+        template<> struct s11n_get_in<cv::GArray<cv::GScalar> > : public s11n_get_in<cv::GArray<cv::Scalar> >
         {
         };
 
         //FIXME(dm): GOpaque<Mat>/GOpaque<GMat> conversion should be done more gracefully in the system
-        template<> struct srlz_get_in<cv::GOpaque<cv::GMat> > : public srlz_get_in<cv::GOpaque<cv::Mat> >
+        template<> struct s11n_get_in<cv::GOpaque<cv::GMat> > : public s11n_get_in<cv::GOpaque<cv::Mat> >
         {
         };
 
         //FIXME(dm): GOpaque<Scalar>/GOpaque<GScalar> conversion should be done more gracefully in the system
-        template<> struct srlz_get_in<cv::GOpaque<cv::GScalar> > : public srlz_get_in<cv::GOpaque<cv::Mat> >
+        template<> struct s11n_get_in<cv::GOpaque<cv::GScalar> > : public s11n_get_in<cv::GOpaque<cv::Mat> >
         {
         };
 
-        template<class T> struct srlz_get_in
+        template<class T> struct s11n_get_in
         {
-            static T get(GSRLZContext &ctx, int idx) { return ctx.inArg<T>(idx); }
+            static T get(GS11NContext &ctx, int idx) { return ctx.inArg<T>(idx); }
         };
 
-        struct tracked_srlz_mat {
-            tracked_srlz_mat(cv::Mat& m) : r{ m }, original_data{ m.data } {}
+        struct tracked_s11n_mat {
+            tracked_s11n_mat(cv::Mat& m) : r{ m }, original_data{ m.data } {}
             cv::Mat r;
             uchar* original_data;
 
@@ -207,11 +207,11 @@ namespace opencv_test {
         };
 
         template<typename... Outputs>
-        void postprocess_srlz(Outputs&... outs)
+        void postprocess_s11n(Outputs&... outs)
         {
             struct
             {
-                void operator()(tracked_srlz_mat* bm) { bm->validate(); }
+                void operator()(tracked_s11n_mat* bm) { bm->validate(); }
                 void operator()(...) {                  }
 
             } validate;
@@ -220,50 +220,50 @@ namespace opencv_test {
             cv::util::suppress_unused_warning(dummy);
         }
 
-        template<class T> struct srlz_get_out;
-        template<> struct srlz_get_out<cv::GMat>
+        template<class T> struct s11n_get_out;
+        template<> struct s11n_get_out<cv::GMat>
         {
-            static tracked_srlz_mat get(GSRLZContext &ctx, int idx)
+            static tracked_s11n_mat get(GS11NContext &ctx, int idx)
             {
                 auto& r = ctx.outMatR(idx);
                 return{ r };
             }
         };
-        template<> struct srlz_get_out<cv::GMatP>
+        template<> struct s11n_get_out<cv::GMatP>
         {
-            static tracked_srlz_mat get(GSRLZContext &ctx, int idx)
+            static tracked_s11n_mat get(GS11NContext &ctx, int idx)
             {
-                return srlz_get_out<cv::GMat>::get(ctx, idx);
+                return s11n_get_out<cv::GMat>::get(ctx, idx);
             }
         };
-        template<> struct srlz_get_out<cv::GScalar>
+        template<> struct s11n_get_out<cv::GScalar>
         {
-            static cv::Scalar& get(GSRLZContext &ctx, int idx)
+            static cv::Scalar& get(GS11NContext &ctx, int idx)
             {
                 return ctx.outValR(idx);
             }
         };
-        template<typename U> struct srlz_get_out<cv::GArray<U>>
+        template<typename U> struct s11n_get_out<cv::GArray<U>>
         {
-            static std::vector<U>& get(GSRLZContext &ctx, int idx)
+            static std::vector<U>& get(GS11NContext &ctx, int idx)
             {
                 return ctx.outVecR<U>(idx);
             }
         };
-        template<typename U> struct srlz_get_out<cv::GOpaque<U>>
+        template<typename U> struct s11n_get_out<cv::GOpaque<U>>
         {
-            static U& get(GSRLZContext &ctx, int idx)
+            static U& get(GS11NContext &ctx, int idx)
             {
                 return ctx.outOpaqueR<U>(idx);
             }
         };
 
         template<typename, typename, typename>
-        struct SRLZCallHelper;
+        struct S11NCallHelper;
 
         // FIXME: probably can be simplified with std::apply or analogue.
         template<typename Impl, typename... Ins, typename... Outs>
-        struct SRLZCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
+        struct S11NCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         {
             template<typename... Inputs>
             struct call_and_postprocess
@@ -274,7 +274,7 @@ namespace opencv_test {
                     //not using a std::forward on outs is deliberate in order to
                     //cause compilation error, by trying to bind rvalue references to lvalue references
                     Impl::run(std::forward<Inputs>(ins)..., outs...);
-                    postprocess_srlz(outs...);
+                    postprocess_s11n(outs...);
                 }
 
                 template<typename... Outputs>
@@ -285,7 +285,7 @@ namespace opencv_test {
             };
 
             template<int... IIs, int... OIs>
-            static void call_impl(GSRLZContext &ctx, cv::detail::Seq<IIs...>, cv::detail::Seq<OIs...>)
+            static void call_impl(GS11NContext &ctx, cv::detail::Seq<IIs...>, cv::detail::Seq<OIs...>)
             {
                 //Make sure that OpenCV kernels do not reallocate memory for output parameters
                 //by comparing it's state (data ptr) before and after the call.
@@ -293,20 +293,20 @@ namespace opencv_test {
                 //them to parameters of ad-hoc function
                 //Convert own::Scalar to cv::Scalar before call kernel and run kernel
                 //convert cv::Scalar to own::Scalar after call kernel and write back results
-                call_and_postprocess<decltype(srlz_get_in<Ins>::get(ctx, IIs))...>
-                    ::call(srlz_get_in<Ins>::get(ctx, IIs)...,
-                        srlz_get_out<Outs>::get(ctx, OIs)...);
+                call_and_postprocess<decltype(s11n_get_in<Ins>::get(ctx, IIs))...>
+                    ::call(s11n_get_in<Ins>::get(ctx, IIs)...,
+                        s11n_get_out<Outs>::get(ctx, OIs)...);
             }
 
             template<int... IIs, int... OIs>
-            static void call_impl(opencv_test::GSRLZContext &ctx, Impl& impl, cv::detail::Seq<IIs...>, cv::detail::Seq<OIs...>)
+            static void call_impl(opencv_test::GS11NContext &ctx, Impl& impl, cv::detail::Seq<IIs...>, cv::detail::Seq<OIs...>)
             {
-                call_and_postprocess<decltype(opencv_test::detail::srlz_get_in<Ins>::get(ctx, IIs))...>
-                    ::call(impl, opencv_test::detail::srlz_get_in<Ins>::get(ctx, IIs)...,
-                        opencv_test::detail::srlz_get_out<Outs>::get(ctx, OIs)...);
+                call_and_postprocess<decltype(opencv_test::detail::s11n_get_in<Ins>::get(ctx, IIs))...>
+                    ::call(impl, opencv_test::detail::s11n_get_in<Ins>::get(ctx, IIs)...,
+                        opencv_test::detail::s11n_get_out<Outs>::get(ctx, OIs)...);
             }
 
-            static void call(GSRLZContext &ctx)
+            static void call(GS11NContext &ctx)
             {
                 call_impl(ctx,
                     typename cv::detail::MkSeq<sizeof...(Ins)>::type(),
@@ -316,7 +316,7 @@ namespace opencv_test {
             // NB: Same as call but calling the object
             // This necessary for kernel implementations that have a state
             // and are represented as an object
-            static void callFunctor(opencv_test::GSRLZContext &ctx, Impl& impl)
+            static void callFunctor(opencv_test::GS11NContext &ctx, Impl& impl)
             {
                 call_impl(ctx, impl,
                     typename cv::detail::MkSeq<sizeof...(Ins)>::type(),
@@ -327,32 +327,32 @@ namespace opencv_test {
     } // namespace detail
 
     template<class Impl, class K>
-    class GSRLZKernelImpl : public opencv_test::detail::SRLZCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+    class GS11NKernelImpl : public opencv_test::detail::S11NCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
         public cv::detail::KernelTag
     {
-        using P = detail::SRLZCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
+        using P = detail::S11NCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 
     public:
         using API = K;
 
-        static cv::gapi::GBackend backend() { return opencv_test::serialization::impl::backend(); }
-        static opencv_test::GSRLZKernel     kernel() { return GSRLZKernel(&P::call); }
+        static cv::gapi::GBackend backend() { return opencv_test::s11n::impl::backend(); }
+        static opencv_test::GS11NKernel     kernel() { return GS11NKernel(&P::call); }
     };
 
-#define GAPI_SRLZ_KERNEL(Name, API) struct Name: public opencv_test::GSRLZKernelImpl<Name, API>
+#define GAPI_S11N_KERNEL(Name, API) struct Name: public opencv_test::GS11NKernelImpl<Name, API>
 
-    class serialization::impl::GSRLZFunctor : public cv::gapi::GFunctor
+    class s11n::impl::GS11NFunctor : public cv::gapi::GFunctor
     {
     public:
-        using Impl = std::function<void(GSRLZContext &)>;
+        using Impl = std::function<void(GS11NContext &)>;
 
-        GSRLZFunctor(const char* id, const Impl& impl)
-            : cv::gapi::GFunctor(id), impl_{ GSRLZKernel(impl) }
+        GS11NFunctor(const char* id, const Impl& impl)
+            : cv::gapi::GFunctor(id), impl_{ GS11NKernel(impl) }
         {
         }
 
         cv::GKernelImpl    impl()    const override { return impl_; }
-        cv::gapi::GBackend backend() const override { return serialization::impl::backend(); }
+        cv::gapi::GBackend backend() const override { return s11n::impl::backend(); }
 
     private:
         cv::GKernelImpl impl_;
@@ -360,20 +360,20 @@ namespace opencv_test {
 
     //! @cond IGNORED
     template<typename K, typename Callable>
-    serialization::impl::GSRLZFunctor serialization::impl::srlz_kernel(Callable& c)
+    s11n::impl::GS11NFunctor s11n::impl::s11n_kernel(Callable& c)
     {
-        using P = detail::SRLZCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-        return GSRLZFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c)));
+        using P = detail::S11NCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
+        return GS11NFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, std::ref(c)));
     }
 
     template<typename K, typename Callable>
-    serialization::impl::GSRLZFunctor serialization::impl::srlz_kernel(const Callable& c)
+    s11n::impl::GS11NFunctor s11n::impl::s11n_kernel(const Callable& c)
     {
-        using P = detail::SRLZCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
-        return GSRLZFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
+        using P = detail::S11NCallHelper<Callable, typename K::InArgs, typename K::OutArgs>;
+        return GS11NFunctor(K::id(), std::bind(&P::callFunctor, std::placeholders::_1, c));
     }
     //! @endcond
 
 } // namespace opencv_test
 
-#endif // OPENCV_GAPI_GSRLZKERNEL_HPP
+#endif // OPENCV_GAPI_GS11NKERNEL_HPP

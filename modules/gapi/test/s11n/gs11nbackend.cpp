@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -22,7 +22,7 @@
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
 
-#include "gsrlzbackend.hpp"
+#include "gs11nbackend.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
@@ -35,28 +35,28 @@ using namespace cv::gimpl;
 // Alternatively, is there a way to compose types graphs?
 //
 // If not, we need to introduce that!
-using GSRLZModel = ade::TypedGraph
-    < opencv_test::serialization::impl::Unit
+using GS11NModel = ade::TypedGraph
+    < opencv_test::s11n::impl::Unit
     , cv::gimpl::Protocol
     >;
 
 // FIXME: Same issue with Typed and ConstTyped
-using GConstGSRLZModel = ade::ConstTypedGraph
-    < opencv_test::serialization::impl::Unit
+using GConstGS11NModel = ade::ConstTypedGraph
+    < opencv_test::s11n::impl::Unit
     , cv::gimpl::Protocol
     >;
 
 namespace
 {
-    class GSRLZBackendImpl final: public cv::gapi::GBackend::Priv
+    class GS11NBackendImpl final: public cv::gapi::GBackend::Priv
     {
         virtual void unpackKernel(ade::Graph            &graph,
                                   const ade::NodeHandle &op_node,
                                   const cv::GKernelImpl &impl) override
         {
-            GSRLZModel gm(graph);
-            auto srlz_impl = cv::util::any_cast<opencv_test::GSRLZKernel>(impl.opaque);
-            gm.metadata(op_node).set(opencv_test::serialization::impl::Unit{srlz_impl});
+            GS11NModel gm(graph);
+            auto s11n_impl = cv::util::any_cast<opencv_test::GS11NKernel>(impl.opaque);
+            gm.metadata(op_node).set(opencv_test::s11n::impl::Unit{s11n_impl});
         }
 
         virtual EPtr compile(const ade::Graph &graph,
@@ -67,10 +67,10 @@ namespace
             cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_ERROR);
             //Graph serialization - dump - read - de-serialization path
             //Dump graph file.
-            auto serialized_graph = cv::gimpl::serialization::serialize(graph, nodes);
+            auto serialized_graph = cv::gimpl::s11n::serialize(graph, nodes);
             std::ofstream dump_file;
-            cv::gimpl::serialization::SerializationStream out_stream;
-            cv::gimpl::serialization::dumpGSerialized(serialized_graph, out_stream);
+            cv::gimpl::s11n::SerializationStream out_stream;
+            cv::gimpl::s11n::dumpGSerialized(serialized_graph, out_stream);
             CV_LOG_INFO(NULL, "out_stream.dump_storage size in bytes ..." << out_stream.getSize());
             dump_file.open("my_graph.bin", std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
             if (dump_file.is_open())
@@ -82,7 +82,7 @@ namespace
             ////////////////////////////////////////////////////////////
             //Restore graph from file.
             std::ifstream new_dump_file ("my_graph.bin", std::ifstream::in | std::ofstream::binary);
-            cv::gimpl::serialization::GSerialized new_serialized_graph;
+            cv::gimpl::s11n::GSerialized new_serialized_graph;
             if (new_dump_file.is_open())
             {
                 new_dump_file.seekg(0, new_dump_file.end);
@@ -91,10 +91,10 @@ namespace
                 new_dump_file.seekg(0, new_dump_file.beg);
                 char * buffer = new char[(int)length];
                 new_dump_file.read(buffer, length);
-                cv::gimpl::serialization::DeSerializationStream in_stream =
-                    cv::gimpl::serialization::DeSerializationStream(buffer, length);
+                cv::gimpl::s11n::DeSerializationStream in_stream =
+                    cv::gimpl::s11n::DeSerializationStream(buffer, length);
                 delete[] buffer;
-                cv::gimpl::serialization::readGSerialized(new_serialized_graph, in_stream);
+                cv::gimpl::s11n::readGSerialized(new_serialized_graph, in_stream);
             }
             new_dump_file.close();
 
@@ -104,43 +104,43 @@ namespace
 
             for (const auto& data : new_serialized_graph.m_datas)
             {
-                cv::gimpl::serialization::mkDataNode(g_s, data);
+                cv::gimpl::s11n::mkDataNode(g_s, data);
             }
 
             for (const auto& op : new_serialized_graph.m_ops)
             {
-                cv::gimpl::serialization::mkOpNode(g_s, op);
+                cv::gimpl::s11n::mkOpNode(g_s, op);
             }
 
-            nh = cv::gimpl::serialization::linkNodes(g_s);
+            nh = cv::gimpl::s11n::linkNodes(g_s);
             CV_LOG_INFO(NULL, "nh Size " << nh.size());
 
             //Use CPU serialization kernels package to test
-            cv::gapi::GKernelPackage srlz_kernels = opencv_test::serialization::kernels();
+            cv::gapi::GKernelPackage s11n_kernels = opencv_test::s11n::kernels();
             //Compiler pass one more time
             auto pass_ctx = ade::passes::PassContext{g_s};
-            cv::gimpl::passes::resolveKernels(pass_ctx, srlz_kernels);
+            cv::gimpl::passes::resolveKernels(pass_ctx, s11n_kernels);
 
-            return EPtr{new opencv_test::serialization::impl::GSRLZExecutable(g_s, nh, gp)};
+            return EPtr{new opencv_test::s11n::impl::GS11NExecutable(g_s, nh, gp)};
         }
    };
 }
 
-cv::gapi::GBackend opencv_test::serialization::impl::backend()
+cv::gapi::GBackend opencv_test::s11n::impl::backend()
 {
-    static cv::gapi::GBackend this_backend(std::make_shared<GSRLZBackendImpl>());
+    static cv::gapi::GBackend this_backend(std::make_shared<GS11NBackendImpl>());
     return this_backend;
 }
 
-// GSRLZExecutable implementation //////////////////////////////////////////////
-opencv_test::serialization::impl::GSRLZExecutable::GSRLZExecutable(const ade::Graph &g,
+// GS11NExecutable implementation //////////////////////////////////////////////
+opencv_test::s11n::impl::GS11NExecutable::GS11NExecutable(const ade::Graph &g,
                                           const std::vector<ade::NodeHandle> &nodes,
                                           std::shared_ptr<ade::Graph> gp)
     : m_g(g), m_gm(m_g), m_gp(gp)
 {
-    //const auto s = serialization::serialize(m_gm, nodes);
-    //serialization::deserialize(s);
-    //serialization::printGSerialized(s);
+    //const auto s = s11n::serialize(m_gm, nodes);
+    //s11n::deserialize(s);
+    //s11n::printGSerialized(s);
 
     // FIXME: reuse code from GModelBuilder/GModel!
     // ObjectCounter?? (But seems we need existing mapping by shape+id)
@@ -178,7 +178,7 @@ opencv_test::serialization::impl::GSRLZExecutable::GSRLZExecutable(const ade::Gr
 }
 
 // FIXME: Document what it does
-cv::GArg opencv_test::serialization::impl::GSRLZExecutable::packArg(const cv::GArg &arg)
+cv::GArg opencv_test::s11n::impl::GS11NExecutable::packArg(const cv::GArg &arg)
 {
     // No API placeholders allowed at this point
     // FIXME: this check has to be done somewhere in compilation stage.
@@ -212,7 +212,7 @@ cv::GArg opencv_test::serialization::impl::GSRLZExecutable::packArg(const cv::GA
     }
 }
 
-void opencv_test::serialization::impl::GSRLZExecutable::run(std::vector<InObj>  &&input_objs,
+void opencv_test::s11n::impl::GS11NExecutable::run(std::vector<InObj>  &&input_objs,
                                     std::vector<OutObj> &&output_objs)
 {
     // Update resources with run-time information - what this Island
@@ -241,24 +241,24 @@ void opencv_test::serialization::impl::GSRLZExecutable::run(std::vector<InObj>  
 
     // OpenCV backend execution is not a rocket science at all.
     // Simply invoke our kernels in the proper order.
-    GConstGSRLZModel gcm(m_g);
+    GConstGS11NModel gcm(m_g);
     for (auto &op_info : m_script)
     {
         const auto &op = m_gm.metadata(op_info.nh).get<Op>();
 
         // Obtain our real execution unit
         // TODO: Should kernels be copyable?
-        GSRLZKernel k = gcm.metadata(op_info.nh).get<Unit>().k;
+        GS11NKernel k = gcm.metadata(op_info.nh).get<Unit>().k;
 
         // Initialize kernel's execution context:
         // - Input parameters
-        GSRLZContext context;
+        GS11NContext context;
         context.m_args.reserve(op.args.size());
 
         using namespace std::placeholders;
         ade::util::transform(op.args,
                              std::back_inserter(context.m_args),
-                             std::bind(&GSRLZExecutable::packArg, this, _1)
+                             std::bind(&GS11NExecutable::packArg, this, _1)
         );
 
         // - Output parameters.

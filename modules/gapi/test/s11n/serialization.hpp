@@ -22,7 +22,7 @@ namespace cv
 namespace gimpl
 {
 // FIXME? Name is too long?
-namespace serialization {
+namespace s11n {
 
 // FIXME? Split RcDesc,Kernel,Op,Data etc
 // into serializable/non-serializable parts?
@@ -220,12 +220,12 @@ DeSerializationStream& operator >> (DeSerializationStream& is, uint &atom);
 
 void readGSerialized(GSerialized &s, DeSerializationStream &ifs_serialized);
 
-} // namespace serialization
+} // namespace s11n
 } // namespace gimpl
 
 namespace detail
 {
-    template<> struct GTypeTraits<cv::gimpl::serialization::RcDesc>
+    template<> struct GTypeTraits<cv::gimpl::s11n::RcDesc>
     {
         static constexpr const ArgKind kind = ArgKind::GOBJREF;
     };

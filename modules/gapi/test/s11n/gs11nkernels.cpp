@@ -2,21 +2,21 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2020 Intel Corporation
 
 
 #include "precomp.hpp"
 
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/imgproc.hpp>
-#include "gsrlzkernels.hpp"
-#include "gsrlzkernel.hpp"
+#include "gs11nkernels.hpp"
+#include "gs11nkernel.hpp"
 #include <opencv2/gapi/gcompoundkernel.hpp>
 
 #include "backends/fluid/gfluidimgproc_func.hpp"
 
 //core kernels
-GAPI_SRLZ_KERNEL(GSRLZAdd, cv::gapi::core::GAdd)
+GAPI_S11N_KERNEL(GS11NAdd, cv::gapi::core::GAdd)
 {
     static void run(const cv::Mat& a, const cv::Mat& b, int dtype, cv::Mat& out)
     {
@@ -24,7 +24,7 @@ GAPI_SRLZ_KERNEL(GSRLZAdd, cv::gapi::core::GAdd)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZSub, cv::gapi::core::GSub)
+GAPI_S11N_KERNEL(GS11NSub, cv::gapi::core::GSub)
 {
     static void run(const cv::Mat& a, const cv::Mat& b, int dtype, cv::Mat& out)
     {
@@ -32,7 +32,7 @@ GAPI_SRLZ_KERNEL(GSRLZSub, cv::gapi::core::GSub)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZMul, cv::gapi::core::GMul)
+GAPI_S11N_KERNEL(GS11NMul, cv::gapi::core::GMul)
 {
     static void run(const cv::Mat& a, const cv::Mat& b, double scale, int dtype, cv::Mat& out)
     {
@@ -40,7 +40,7 @@ GAPI_SRLZ_KERNEL(GSRLZMul, cv::gapi::core::GMul)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZMulCOld, cv::gapi::core::GMulCOld)
+GAPI_S11N_KERNEL(GS11NMulCOld, cv::gapi::core::GMulCOld)
 {
     static void run(const cv::Mat& a, double b, int dtype, cv::Mat& out)
     {
@@ -48,7 +48,7 @@ GAPI_SRLZ_KERNEL(GSRLZMulCOld, cv::gapi::core::GMulCOld)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZNot, cv::gapi::core::GNot)
+GAPI_S11N_KERNEL(GS11NNot, cv::gapi::core::GNot)
 {
     static void run(const cv::Mat& a, cv::Mat& out)
     {
@@ -56,7 +56,7 @@ GAPI_SRLZ_KERNEL(GSRLZNot, cv::gapi::core::GNot)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZSum, cv::gapi::core::GSum)
+GAPI_S11N_KERNEL(GS11NSum, cv::gapi::core::GSum)
 {
     static void run(const cv::Mat& in, cv::Scalar& out)
     {
@@ -64,7 +64,7 @@ GAPI_SRLZ_KERNEL(GSRLZSum, cv::gapi::core::GSum)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZSplit3, cv::gapi::core::GSplit3)
+GAPI_S11N_KERNEL(GS11NSplit3, cv::gapi::core::GSplit3)
 {
     static void run(const cv::Mat& in, cv::Mat &m1, cv::Mat &m2, cv::Mat &m3)
     {
@@ -78,7 +78,7 @@ GAPI_SRLZ_KERNEL(GSRLZSplit3, cv::gapi::core::GSplit3)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZMerge3, cv::gapi::core::GMerge3)
+GAPI_S11N_KERNEL(GS11NMerge3, cv::gapi::core::GMerge3)
 {
     static void run(const cv::Mat& in1, const cv::Mat& in2, const cv::Mat& in3, cv::Mat &out)
     {
@@ -87,7 +87,7 @@ GAPI_SRLZ_KERNEL(GSRLZMerge3, cv::gapi::core::GMerge3)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZResize, cv::gapi::core::GResize)
+GAPI_S11N_KERNEL(GS11NResize, cv::gapi::core::GResize)
 {
     static void run(const cv::Mat& in, cv::Size sz, double fx, double fy, int interp, cv::Mat &out)
     {
@@ -95,7 +95,7 @@ GAPI_SRLZ_KERNEL(GSRLZResize, cv::gapi::core::GResize)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZCrop, cv::gapi::core::GCrop)
+GAPI_S11N_KERNEL(GS11NCrop, cv::gapi::core::GCrop)
 {
     static void run(const cv::Mat& in, cv::Rect rect, cv::Mat& out)
     {
@@ -105,7 +105,7 @@ GAPI_SRLZ_KERNEL(GSRLZCrop, cv::gapi::core::GCrop)
 
 //imgproc kernels
 
-GAPI_SRLZ_KERNEL(GSRLZFilter2D, cv::gapi::imgproc::GFilter2D)
+GAPI_S11N_KERNEL(GS11NFilter2D, cv::gapi::imgproc::GFilter2D)
 {
     static void run(const cv::Mat& in, int ddepth, const cv::Mat& k, const cv::Point& anchor, const cv::Scalar& delta, int border,
         const cv::Scalar& bordVal, cv::Mat &out)
@@ -124,7 +124,7 @@ GAPI_SRLZ_KERNEL(GSRLZFilter2D, cv::gapi::imgproc::GFilter2D)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZCanny, cv::gapi::imgproc::GCanny)
+GAPI_S11N_KERNEL(GS11NCanny, cv::gapi::imgproc::GCanny)
 {
     static void run(const cv::Mat& in, double thr1, double thr2, int apSize, bool l2gradient, cv::Mat &out)
     {
@@ -132,7 +132,7 @@ GAPI_SRLZ_KERNEL(GSRLZCanny, cv::gapi::imgproc::GCanny)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZRGB2YUV, cv::gapi::imgproc::GRGB2YUV)
+GAPI_S11N_KERNEL(GS11NRGB2YUV, cv::gapi::imgproc::GRGB2YUV)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
     {
@@ -140,7 +140,7 @@ GAPI_SRLZ_KERNEL(GSRLZRGB2YUV, cv::gapi::imgproc::GRGB2YUV)
     }
 };
 
-GAPI_SRLZ_KERNEL(GSRLZYUV2RGB, cv::gapi::imgproc::GYUV2RGB)
+GAPI_S11N_KERNEL(GS11NYUV2RGB, cv::gapi::imgproc::GYUV2RGB)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
     {
@@ -148,26 +148,26 @@ GAPI_SRLZ_KERNEL(GSRLZYUV2RGB, cv::gapi::imgproc::GYUV2RGB)
     }
 };
 
-cv::gapi::GKernelPackage opencv_test::serialization::kernels()
+cv::gapi::GKernelPackage opencv_test::s11n::kernels()
 {
     static auto pkg = cv::gapi::kernels
         <
         //core
-        GSRLZAdd
-        , GSRLZSub
-        , GSRLZMul
-        , GSRLZMulCOld
-        , GSRLZNot
-        , GSRLZSum
-        , GSRLZSplit3
-        , GSRLZResize
-        , GSRLZMerge3
-        , GSRLZCrop
+        GS11NAdd
+        , GS11NSub
+        , GS11NMul
+        , GS11NMulCOld
+        , GS11NNot
+        , GS11NSum
+        , GS11NSplit3
+        , GS11NResize
+        , GS11NMerge3
+        , GS11NCrop
         //imgproc
-        , GSRLZFilter2D
-        , GSRLZCanny
-        , GSRLZRGB2YUV
-        , GSRLZYUV2RGB
+        , GS11NFilter2D
+        , GS11NCanny
+        , GS11NRGB2YUV
+        , GS11NYUV2RGB
         >();
     return pkg;
 }
