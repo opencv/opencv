@@ -411,21 +411,21 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
         std::vector<int> nmsClassIds;
         for (std::map<int, std::vector<size_t> >::iterator it = class2indices.begin(); it != class2indices.end(); ++it)
         {
-            std::vector<Rect> local_boxes;
-            std::vector<float> local_confidences;
-            std::vector<size_t> class_indices = it->second;
-            for (size_t i = 0; i < class_indices.size(); i++)
+            std::vector<Rect> localBoxes;
+            std::vector<float> localConfidences;
+            std::vector<size_t> classIndices = it->second;
+            for (size_t i = 0; i < classIndices.size(); i++)
             {
-                local_boxes.push_back(boxes[class_indices[i]]);
-                local_confidences.push_back(confidences[class_indices[i]]);
+                localBoxes.push_back(boxes[classIndices[i]]);
+                localConfidences.push_back(confidences[classIndices[i]]);
             }
-            std::vector<int> nms_indices;
-            NMSBoxes(local_boxes, local_confidences, confThreshold, nmsThreshold, nms_indices);
-            for (size_t i = 0; i < nms_indices.size(); i++)
+            std::vector<int> nmsIndices;
+            NMSBoxes(localBoxes, localConfidences, confThreshold, nmsThreshold, nmsIndices);
+            for (size_t i = 0; i < nmsIndices.size(); i++)
             {
-                size_t idx = nms_indices[i];
-                nmsBoxes.push_back(local_boxes[idx]);
-                nmsConfidences.push_back(local_confidences[idx]);
+                size_t idx = nmsIndices[i];
+                nmsBoxes.push_back(localBoxes[idx]);
+                nmsConfidences.push_back(localConfidences[idx]);
                 nmsClassIds.push_back(it->first);
             }
         }
@@ -434,10 +434,10 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
         confidences = nmsConfidences;
     }
 
-    for (size_t i = 0; i < boxes.size(); ++i)
+    for (size_t idx = 0; idx < boxes.size(); ++idx)
     {
-        Rect box = boxes[i];
-        drawPred(classIds[i], confidences[i], box.x, box.y,
+        Rect box = boxes[idx];
+        drawPred(classIds[idx], confidences[idx], box.x, box.y,
                  box.x + box.width, box.y + box.height, frame);
     }
 }
