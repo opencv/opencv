@@ -63,6 +63,18 @@
 #pragma warning( disable: 4244 ) //conversion from '__int64' to 'int', possible loss of data
 #endif
 
+/**
+  @addtogroup core_eigen
+
+  These functions are provided for OpenCV-Eigen interoperability. They convert `Mat`
+  objects to corresponding `Eigen::Matrix` objects and vice-versa. Consult the [Eigen
+  documentation](https://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html) for
+  information about the `Matrix` template type.
+
+  @note    Using these functions requires the `Eigen/Dense` or similar header to be
+  included before this header.
+ */
+
 namespace cv
 {
 
