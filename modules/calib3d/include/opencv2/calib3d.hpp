@@ -2224,7 +2224,10 @@ be floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
 @param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera matrix.
+same camera matrix. If this assumption does not hold for your use case, use
+`undistortPoints()` with `P = cv::NoArray()` for both cameras to transform image points
+to normalized image coordinates, which are valid for the identity camera matrix. When
+passing these coordinates, pass the identity matrix for this parameter.
 @param method Method for computing an essential matrix.
 -   **RANSAC** for the RANSAC algorithm.
 -   **LMEDS** for the LMedS algorithm.
