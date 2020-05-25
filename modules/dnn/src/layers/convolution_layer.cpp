@@ -1389,7 +1389,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-#if CV_TRY_SSE
+#if CV_SSE3
         uint32_t ftzMode = _MM_GET_FLUSH_ZERO_MODE();
         uint32_t dazMode = _MM_GET_DENORMALS_ZERO_MODE();
         _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -1478,7 +1478,7 @@ public:
             ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
                             kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
         }
-#if CV_TRY_SSE
+#if CV_SSE3
         _MM_SET_FLUSH_ZERO_MODE(ftzMode);
         _MM_SET_DENORMALS_ZERO_MODE(dazMode);
 #endif
