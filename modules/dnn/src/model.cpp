@@ -246,6 +246,20 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                             float confThreshold, float nmsThreshold)
 {
     std::vector<Mat> detections;
+    std::vector<String> layerNames = getLayerNames();
+    int lastLayerId = getLayerId(layerNames.back());
+    Ptr<Layer> lastLayer = getLayer(lastLayerId);
+
+    if (lastLayer->type == "Region")
+    {
+        for (String& name : impl->outNames)
+        {
+            int layerId = getLayerId(name);
+            Ptr<RegionLayer> layer = getLayer(layerId).dynamicCast<RegionLayer>();
+            CV_Assert(!layer.empty());
+            layer->nmsThreshold = 0;
+        }
+    }
     impl->predict(*this, frame.getMat(), detections);
 
     boxes.clear();
@@ -259,10 +273,6 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         frameWidth = impl->size.width;
         frameHeight = impl->size.height;
     }
-
-    std::vector<String> layerNames = getLayerNames();
-    int lastLayerId = getLayerId(layerNames.back());
-    Ptr<Layer> lastLayer = getLayer(lastLayerId);
 
     std::vector<int> predClassIds;
     std::vector<Rect> predBoxes;
@@ -347,20 +357,33 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     else
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
 
-    if (nmsThreshold)
+    if (nmsThreshold && lastLayer->type == "Region")
     {
-        std::vector<int> indices;
-        NMSBoxes(predBoxes, predConf, confThreshold, nmsThreshold, indices);
-
-        boxes.reserve(indices.size());
-        confidences.reserve(indices.size());
-        classIds.reserve(indices.size());
-
-        for (int idx : indices)
+        std::map<int, std::vector<size_t> > class2indices;
+        for (size_t i = 0; i < predClassIds.size(); i++)
         {
-            boxes.push_back(predBoxes[idx]);
-            confidences.push_back(predConf[idx]);
-            classIds.push_back(predClassIds[idx]);
+            if (predConf[i] >= confThreshold)
+            {
+                class2indices[predClassIds[i]].push_back(i);
+            }
+        }
+        for (auto it = class2indices.begin(); it != class2indices.end(); ++it)
+        {
+            std::vector<Rect> localBoxes;
+            std::vector<float> localConfidences;
+            for (size_t idx : it->second)
+            {
+                localBoxes.push_back(predBoxes[idx]);
+                localConfidences.push_back(predConf[idx]);
+            }
+            std::vector<int> indices;
+            NMSBoxes(localBoxes, localConfidences, confThreshold, nmsThreshold, indices);
+            for (int idx : indices)
+            {
+                boxes.push_back(localBoxes[idx]);
+                confidences.push_back(localConfidences[idx]);
+                classIds.push_back(it->first);
+            }
         }
     }
     else
