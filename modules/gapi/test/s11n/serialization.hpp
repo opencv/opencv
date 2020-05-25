@@ -79,146 +79,113 @@ struct GSerialized
 };
 
 GSerialized serialize(const gimpl::GModel::ConstGraph& m_gm, const std::vector<ade::NodeHandle>& nodes);
-void deserialize(const GSerialized& gs);
-void mkDataNode(ade::Graph& g, const Data& data);
-void mkOpNode(ade::Graph& g, const Op& op);
-std::vector<ade::NodeHandle> linkNodes(ade::Graph& g);
-void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh);
-void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh);
-void printOp(const Op& op);
-void printData(const Data& data);
-void printGSerialized(const GSerialized s);
-void cleanGSerializedOps(GSerialized &s);
-void cleanupGSerializedDatas(GSerialized &s);
 
-class SerializationStream
-{
-    std::vector<uint> m_dump_storage{};
-public:
-    SerializationStream() = default;
-    ~SerializationStream()
-    {
-        m_dump_storage.empty();
-    }
-    char* getData()
-    {
-        return (char*)m_dump_storage.data();
+// Stream interfaces, so far temporary
+namespace I {
+    struct OStream {
+        virtual void put(uint32_t) = 0;
+        virtual ~OStream() = default;
     };
-    size_t getSize()
-    {
-        return (size_t)(m_dump_storage.size()*sizeof(uint));
+
+    struct IStream {
+        virtual uint getUInt32() = 0;
+        virtual ~IStream() = default;
     };
-    void putAtom(uint& new_atom)
-    {
-        m_dump_storage.push_back(new_atom);
-    };
-};
+} // namespace I
+
 
 //Graph dump operators
-template<typename _Tp> static inline
-SerializationStream& operator << (SerializationStream& os, const _Tp &value);
-template<typename _Tp> static inline
-SerializationStream&  operator << (SerializationStream& os, const std::vector<_Tp> &values);
-SerializationStream& operator << (SerializationStream& os, const Kernel &k);
-SerializationStream& operator << (SerializationStream& os, const std::string &str);
-SerializationStream& operator << (SerializationStream& os, const std::vector<int> &ints);
-SerializationStream& operator << (SerializationStream& os, const std::vector<RcDesc> &descs);
-SerializationStream& operator << (SerializationStream& os, const RcDesc &desc);
-SerializationStream& operator << (SerializationStream& os, const std::vector<double> &doubles);
-SerializationStream& operator << (SerializationStream& os, const double &double_val);
-SerializationStream& operator << (SerializationStream& os, const std::vector<cv::Size> &cvsizes);
-SerializationStream& operator << (SerializationStream& os, const cv::Size &cvsize);
-SerializationStream& operator << (SerializationStream& os, const std::vector<bool> &bools);
-SerializationStream& operator << (SerializationStream& os, const bool &bool_val);
-SerializationStream& operator << (SerializationStream& os, const std::vector<cv::Scalar> &cvscalars);
-SerializationStream& operator << (SerializationStream& os, const cv::Scalar &cvscalar);
-SerializationStream& operator << (SerializationStream& os, const std::vector<cv::Point> &cvpoints);
-SerializationStream& operator << (SerializationStream& os, const cv::Point &cvpoint);
-SerializationStream& operator << (SerializationStream& os, const cv::GMatDesc &cvmatdesc);
-SerializationStream& operator << (SerializationStream& os, const std::vector<cv::Mat> &cvmats);
-SerializationStream& operator << (SerializationStream& os, const cv::Mat &cvmat);
-SerializationStream& operator << (SerializationStream& os, const std::vector<cv::Rect> &cvrects);
-SerializationStream& operator << (SerializationStream& os, const cv::Rect &cvrect);
-SerializationStream& operator << (SerializationStream& os, const std::vector<Data> &datas);
-SerializationStream& operator << (SerializationStream& os, const Data &data);
-SerializationStream& operator << (SerializationStream& os, const std::vector<Op> &ops);
-SerializationStream& operator << (SerializationStream& os, const Op &op);
-SerializationStream& operator << (SerializationStream& os, const int &atom);
-SerializationStream& operator << (SerializationStream& os, const uint &atom);
+I::OStream& operator<< (I::OStream& os, const Kernel &k);
+I::OStream& operator<< (I::OStream& os, const std::string &str);
+I::OStream& operator<< (I::OStream& os, const std::vector<int> &ints);
+I::OStream& operator<< (I::OStream& os, const std::vector<RcDesc> &descs);
+I::OStream& operator<< (I::OStream& os, const RcDesc &desc);
+I::OStream& operator<< (I::OStream& os, const std::vector<double> &doubles);
+I::OStream& operator<< (I::OStream& os, const double &double_val);
+I::OStream& operator<< (I::OStream& os, const std::vector<cv::Size> &cvsizes);
+I::OStream& operator<< (I::OStream& os, const cv::Size &cvsize);
+I::OStream& operator<< (I::OStream& os, const std::vector<bool> &bools);
+I::OStream& operator<< (I::OStream& os, const bool &bool_val);
+I::OStream& operator<< (I::OStream& os, const std::vector<cv::Scalar> &cvscalars);
+I::OStream& operator<< (I::OStream& os, const cv::Scalar &cvscalar);
+I::OStream& operator<< (I::OStream& os, const std::vector<cv::Point> &cvpoints);
+I::OStream& operator<< (I::OStream& os, const cv::Point &cvpoint);
+I::OStream& operator<< (I::OStream& os, const cv::GMatDesc &cvmatdesc);
+I::OStream& operator<< (I::OStream& os, const std::vector<cv::Mat> &cvmats);
+I::OStream& operator<< (I::OStream& os, const cv::Mat &cvmat);
+I::OStream& operator<< (I::OStream& os, const std::vector<cv::Rect> &cvrects);
+I::OStream& operator<< (I::OStream& os, const cv::Rect &cvrect);
+I::OStream& operator<< (I::OStream& os, const std::vector<Data> &datas);
+I::OStream& operator<< (I::OStream& os, const Data &data);
+I::OStream& operator<< (I::OStream& os, const std::vector<Op> &ops);
+I::OStream& operator<< (I::OStream& os, const Op &op);
+I::OStream& operator<< (I::OStream& os, const int &atom);
+I::OStream& operator<< (I::OStream& os, uint32_t atom);
 
-void dumpGSerialized(const GSerialized s, SerializationStream &ofs_serialized);
-
-class DeSerializationStream
-{
-    std::vector<uint> m_dump_storage{};
-    size_t m_storage_index = 0;
-public:
-    DeSerializationStream(char* data, size_t sz)
-    {
-        uint* uint_data = (uint*)data;
-        size_t uint_size = sz / sizeof(uint);
-        for (size_t i = 0; i < uint_size; i++)
-        {
-            m_dump_storage.push_back(uint_data[i]);
-        }
-    }
-    ~DeSerializationStream()
-    {
-        m_dump_storage.empty();
-        m_storage_index = 0;
-    }
-    char* getData()
-    {
-        return (char*)m_dump_storage.data();
-    };
-    size_t getSize()
-    {
-        return (size_t)(m_dump_storage.size() * sizeof(uint));
-    };
-    void putAtom(uint& new_atom)
-    {
-        m_dump_storage.push_back(new_atom);
-    };
-    uint getAtom()
-    {
-        uint next_atom = m_dump_storage.data()[m_storage_index++];
-        return next_atom;
-    };
-    //void init();
-    //std::ostream& operator << (std::ostream& os, uint atom);
-};
+void dumpGSerialized(const GSerialized s, I::OStream &ofs_serialized);
 
 //Graph restore operators
-template<typename _Tp> static inline
-DeSerializationStream& operator >> (DeSerializationStream& is, /*const*/ _Tp& value);
-DeSerializationStream& operator >> (DeSerializationStream& is, Kernel& k);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::string& str);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<int>& ints);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<RcDesc>& descs);
-DeSerializationStream& operator >> (DeSerializationStream& is, RcDesc& desc);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<double>& doubles);
-DeSerializationStream& operator >> (DeSerializationStream& is, double& double_val);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<cv::Size>& cvsizes);
-DeSerializationStream& operator >> (DeSerializationStream& is, cv::Size& cvsize);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<bool>& bools);
-DeSerializationStream& operator >> (DeSerializationStream& is, bool& bool_val);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<cv::Scalar>& cvscalars);
-DeSerializationStream& operator >> (DeSerializationStream& is, cv::Scalar& cvscalar);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<cv::Point>& cvpoints);
-DeSerializationStream& operator >> (DeSerializationStream& is, cv::Point& cvpoint);
-DeSerializationStream& operator >> (DeSerializationStream& is, cv::GMatDesc& cvmatdesc);
-DeSerializationStream& operator >> (DeSerializationStream& is, cv::Mat & cvmat);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<cv::Mat>& cvmats);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<cv::Rect>& cvrects);
-DeSerializationStream& operator >> (DeSerializationStream& is, cv::Rect& cvrect);
-DeSerializationStream& operator >> (DeSerializationStream& is, Data& data);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<Data>& datas);
-DeSerializationStream& operator >> (DeSerializationStream& is, Op& op);
-DeSerializationStream& operator >> (DeSerializationStream& is, std::vector<Op>& ops);
-DeSerializationStream& operator >> (DeSerializationStream& is, int &atom);
-DeSerializationStream& operator >> (DeSerializationStream& is, uint &atom);
+I::IStream& operator>> (I::IStream& is, Kernel& k);
+I::IStream& operator>> (I::IStream& is, std::string& str);
+I::IStream& operator>> (I::IStream& is, std::vector<int>& ints);
+I::IStream& operator>> (I::IStream& is, std::vector<RcDesc>& descs);
+I::IStream& operator>> (I::IStream& is, RcDesc& desc);
+I::IStream& operator>> (I::IStream& is, std::vector<double>& doubles);
+I::IStream& operator>> (I::IStream& is, double& double_val);
+I::IStream& operator>> (I::IStream& is, std::vector<cv::Size>& cvsizes);
+I::IStream& operator>> (I::IStream& is, cv::Size& cvsize);
+I::IStream& operator>> (I::IStream& is, std::vector<bool>& bools);
+I::IStream& operator>> (I::IStream& is, bool& bool_val);
+I::IStream& operator>> (I::IStream& is, std::vector<cv::Scalar>& cvscalars);
+I::IStream& operator>> (I::IStream& is, cv::Scalar& cvscalar);
+I::IStream& operator>> (I::IStream& is, std::vector<cv::Point>& cvpoints);
+I::IStream& operator>> (I::IStream& is, cv::Point& cvpoint);
+I::IStream& operator>> (I::IStream& is, cv::GMatDesc& cvmatdesc);
+I::IStream& operator>> (I::IStream& is, cv::Mat & cvmat);
+I::IStream& operator>> (I::IStream& is, std::vector<cv::Mat>& cvmats);
+I::IStream& operator>> (I::IStream& is, std::vector<cv::Rect>& cvrects);
+I::IStream& operator>> (I::IStream& is, cv::Rect& cvrect);
+I::IStream& operator>> (I::IStream& is, Data& data);
+I::IStream& operator>> (I::IStream& is, std::vector<Data>& datas);
+I::IStream& operator>> (I::IStream& is, Op& op);
+I::IStream& operator>> (I::IStream& is, std::vector<Op>& ops);
+I::IStream& operator>> (I::IStream& is, int &atom);
+I::IStream& operator>> (I::IStream& is, uint32_t &atom);
 
-void readGSerialized(GSerialized &s, DeSerializationStream &ifs_serialized);
+void readGSerialized(GSerialized &s, I::IStream &ifs_serialized);
+std::vector<ade::NodeHandle> reconstructGModel(ade::Graph &g, const GSerialized &s);
+
+// FIXME: Basic Stream implementaions //////////////////////////////////////////
+
+// Basic (dummy) stream implementations.
+class SerializationStream final: public I::OStream {
+    std::vector<uint> m_dump_storage{};
+
+public:
+    SerializationStream() = default;
+    char* getData();
+    size_t getSize();
+    void putAtom(uint new_atom);
+
+    // Implement OStream interface
+    virtual void put(uint32_t) override;
+};
+
+class DeSerializationStream final: public I::IStream {
+    std::vector<uint> m_dump_storage{};
+    size_t m_storage_index = 0;
+
+public:
+    DeSerializationStream(char* data, size_t sz);
+    char* getData();
+    size_t getSize();
+    void putAtom(uint& new_atom);
+    uint getAtom();
+
+    // Implement IStream interface
+    virtual uint32_t getUInt32() override;
+};
+
 
 } // namespace s11n
 } // namespace gimpl

@@ -99,21 +99,9 @@ namespace
             new_dump_file.close();
 
             auto gp = std::make_shared<ade::Graph>();
+            auto nh = cv::gimpl::s11n::reconstructGModel(*gp.get(), new_serialized_graph);
+
             auto& g_s = *gp.get();
-            std::vector<ade::NodeHandle> nh;
-
-            for (const auto& data : new_serialized_graph.m_datas)
-            {
-                cv::gimpl::s11n::mkDataNode(g_s, data);
-            }
-
-            for (const auto& op : new_serialized_graph.m_ops)
-            {
-                cv::gimpl::s11n::mkOpNode(g_s, op);
-            }
-
-            nh = cv::gimpl::s11n::linkNodes(g_s);
-            CV_LOG_INFO(NULL, "nh Size " << nh.size());
 
             //Use CPU serialization kernels package to test
             cv::gapi::GKernelPackage s11n_kernels = opencv_test::s11n::kernels();
