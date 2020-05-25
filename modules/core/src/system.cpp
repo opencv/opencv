@@ -1961,7 +1961,11 @@ inline size_t parseOption(const std::string &value)
     }
     cv::String valueStr = value.substr(0, pos);
     cv::String suffixStr = value.substr(pos, value.length() - pos);
-    int v = atoi(valueStr.c_str());
+#ifdef CV_CXX11
+    size_t v = (size_t)std::stoull(valueStr);
+#else
+    size_t v = (size_t)atol(valueStr.c_str());
+#endif
     if (suffixStr.length() == 0)
         return v;
     else if (suffixStr == "MB" || suffixStr == "Mb" || suffixStr == "mb")
