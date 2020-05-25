@@ -160,8 +160,10 @@ def postprocess(frame, outs):
         print('Unknown output layer type: ' + lastLayer.type)
         exit()
 
-    indices = []
-    if len(outNames) > 1:
+    # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
+    # or NMS is required if number of outputs > 1
+    if len(outNames) > 1 or lastLayer.type == 'Region' and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+        indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)
         confidences = np.array(confidences)

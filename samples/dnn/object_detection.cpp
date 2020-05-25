@@ -45,7 +45,7 @@ std::vector<std::string> classes;
 inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
                        const Scalar& mean, bool swapRB);
 
-void postprocess(Mat& frame, const std::vector<Mat>& out, Net& net);
+void postprocess(Mat& frame, const std::vector<Mat>& out, Net& net, int backend);
 
 void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
 
@@ -148,7 +148,8 @@ int main(int argc, char** argv)
 
     // Load a model.
     Net net = readNet(modelPath, configPath, parser.get<String>("framework"));
-    net.setPreferableBackend(parser.get<int>("backend"));
+    int backend = parser.get<int>("backend");
+    net.setPreferableBackend(backend);
     net.setPreferableTarget(parser.get<int>("target"));
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
 
@@ -245,7 +246,7 @@ int main(int argc, char** argv)
         std::vector<Mat> outs = predictionsQueue.get();
         Mat frame = processedFramesQueue.get();
 
-        postprocess(frame, outs, net);
+        postprocess(frame, outs, net, backend);
 
         if (predictionsQueue.counter > 1)
         {
@@ -285,7 +286,7 @@ int main(int argc, char** argv)
         std::vector<Mat> outs;
         net.forward(outs, outNames);
 
-        postprocess(frame, outs, net);
+        postprocess(frame, outs, net, backend);
 
         // Put efficiency information.
         std::vector<double> layersTimes;
@@ -319,7 +320,7 @@ inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
     }
 }
 
-void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
+void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend)
 {
     static std::vector<int> outLayers = net.getUnconnectedOutLayers();
     static std::string outLayerType = net.getLayer(outLayers[0])->type;
@@ -396,7 +397,9 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
     else
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: " + outLayerType);
 
-    if (outLayers.size() > 1)
+    // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
+    // or NMS is required if number of outputs > 1
+    if (outLayers.size() > 1 || (outLayerType == "Region" && backend != DNN_BACKEND_OPENCV))
     {
         std::map<int, std::vector<size_t> > class2indices;
         for (size_t i = 0; i < classIds.size(); i++)
