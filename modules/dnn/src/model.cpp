@@ -236,25 +236,26 @@ void SegmentationModel::segment(InputArray frame, OutputArray mask)
     }
 }
 
-DetectionModel::DetectionModel(const String& model, const String& config)
-    : Model(model, config) {
-      init();
-}
-
-DetectionModel::DetectionModel(const Net& network) : Model(network) {
-    init();
-}
-
-void DetectionModel::init() {
-    for (String& name : impl->outNames)
+void disableRegionNMS(Net& net)
+{
+    for (String& name : net.getUnconnectedOutLayersNames())
     {
-        int layerId = getLayerId(name);
-        Ptr<RegionLayer> layer = getLayer(layerId).dynamicCast<RegionLayer>();
+        int layerId = net.getLayerId(name);
+        Ptr<RegionLayer> layer = net.getLayer(layerId).dynamicCast<RegionLayer>();
         if (!layer.empty())
         {
             layer->nmsThreshold = 0;
         }
     }
+}
+
+DetectionModel::DetectionModel(const String& model, const String& config)
+    : Model(model, config) {
+      disableRegionNMS(*this);
+}
+
+DetectionModel::DetectionModel(const Net& network) : Model(network) {
+    disableRegionNMS(*this);
 }
 
 void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
@@ -370,22 +371,22 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                     class2indices[predClassIds[i]].push_back(i);
                 }
             }
-            for (auto it = class2indices.begin(); it != class2indices.end(); ++it)
+            for (const auto& it : class2indices)
             {
                 std::vector<Rect> localBoxes;
                 std::vector<float> localConfidences;
-                for (size_t idx : it->second)
+                for (size_t idx : it.second)
                 {
                     localBoxes.push_back(predBoxes[idx]);
                     localConfidences.push_back(predConf[idx]);
                 }
                 std::vector<int> indices;
                 NMSBoxes(localBoxes, localConfidences, confThreshold, nmsThreshold, indices);
+                classIds.resize(classIds.size() + indices.size(), it.first);
                 for (int idx : indices)
                 {
                     boxes.push_back(localBoxes[idx]);
                     confidences.push_back(localConfidences[idx]);
-                    classIds.push_back(it->first);
                 }
             }
         }
