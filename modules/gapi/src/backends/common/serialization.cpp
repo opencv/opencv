@@ -4,39 +4,38 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
-#include "serialization.hpp"
+#include <map> // map
+#include <ade/util/zip_range.hpp> // indexed
 
 #include <opencv2/gapi/gtype_traits.hpp>
 
-#include "compiler/passes/passes.hpp" // dump_dot
-
-#include <ade/util/zip_range.hpp>
+#include "backends/common/serialization.hpp"
 
 #ifdef _WIN32
-#include <winsock.h>
+#include <winsock.h>      // htonl, ntohl
 #else
-#include <netinet/in.h>
-//#include <arpa/inet.h>
+#include <netinet/in.h>   // htonl, ntohl
 #endif
-
 
 namespace cv {
 namespace gimpl {
 namespace s11n {
-//namespace {
+namespace {
 
-// Moved here from serialization.hpp
-void deserialize(const GSerialized& gs);
-void mkDataNode(ade::Graph& g, const Data& data);
-void mkOpNode(ade::Graph& g, const Op& op);
-std::vector<ade::NodeHandle> linkNodes(ade::Graph& g);
-void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh);
-void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh);
+struct GSerialized {
+    std::vector<cv::gimpl::Op> m_ops;
+    std::vector<cv::gimpl::Data> m_datas;
+};
+
+void mkDataNode(ade::Graph& g, const cv::gimpl::Data& data);
+void mkOpNode(ade::Graph& g, const cv::gimpl::Op& op);
+void linkNodes(ade::Graph& g);
+void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh);
+void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh);
 
 
 // FIXME? make a method of GSerialized?
-void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh)
-{
+void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
     const auto gdata = cg.metadata(nh).get<gimpl::Data>();
     const auto it = ade::util::find_if(s.m_datas, [&gdata](const cv::gimpl::Data &cd) {
             return cd.rc == gdata.rc && cd.shape == gdata.shape;
@@ -46,8 +45,7 @@ void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle
     }
 }
 
-void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle nh)
-{
+void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
     const auto& op = cg.metadata(nh).get<gimpl::Op>();
     for (const auto &in_nh  : nh->inNodes())  { putData(s, cg, in_nh);  }
     for (const auto &out_nh : nh->outNodes()) { putData(s, cg, out_nh); }
@@ -64,109 +62,47 @@ void mkDataNode(ade::Graph& g, const cv::gimpl::Data& data) {
 void mkOpNode(ade::Graph& g, const cv::gimpl::Op& op) {
     GModel::Graph gm(g);
     auto nh = gm.createNode();
-
     gm.metadata(nh).set(NodeType{NodeType::OP});
     gm.metadata(nh).set(op);
 }
 
-std::vector<ade::NodeHandle> linkNodes(ade::Graph& g)
-{
+void linkNodes(ade::Graph& g) {
+    std::map<cv::gimpl::RcDesc, ade::NodeHandle> dataNodes;
     GModel::Graph gm(g);
-    GModel::ConstGraph cgm(g);
 
-    using nodeMap = std::unordered_map<int, ade::NodeHandle>;
-    std::unordered_map<cv::GShape, nodeMap> dataNodes;
-    std::vector<ade::NodeHandle> nodes;
-
-    for (const auto& nh : g.nodes())
-    {
-        if (cgm.metadata(nh).get<NodeType>().t == NodeType::DATA)
-        {
-            auto d = cgm.metadata(nh).get<gimpl::Data>();
-            dataNodes[d.shape][d.rc] = nh;
+    for (const auto& nh : g.nodes()) {
+        if (gm.metadata(nh).get<NodeType>().t == NodeType::DATA) {
+            const auto &d = gm.metadata(nh).get<gimpl::Data>();
+            const auto rc = cv::gimpl::RcDesc{d.rc, d.shape};
+            dataNodes[rc] = nh;
         }
-        nodes.push_back(nh);
     }
 
-    for (const auto& nh : g.nodes())
-    {
-        if (cgm.metadata(nh).get<NodeType>().t == NodeType::OP)
-        {
-            const auto& op = cgm.metadata(nh).get<gimpl::Op>();
-
-            for (const auto& in : ade::util::indexed(op.args))
-            {
+    for (const auto& nh : g.nodes()) {
+        if (gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
+            const auto& op = gm.metadata(nh).get<gimpl::Op>();
+            for (const auto& in : ade::util::indexed(op.args)) {
                 const auto& arg = ade::util::value(in);
-                if (arg.kind == detail::ArgKind::GOBJREF)
-                {
+                if (arg.kind == detail::ArgKind::GOBJREF) {
                     const auto idx = ade::util::index(in);
-                    const auto rc = arg.get<gimpl::RcDesc>();
-
-                    const auto& inDataNode = dataNodes[rc.shape][rc.id];
-                    const auto& e = g.link(inDataNode, nh);
-                    gm.metadata(e).set(Input{idx});
+                    const auto rc  = arg.get<gimpl::RcDesc>();
+                    const auto& in_nh = dataNodes.at(rc);
+                    const auto& in_eh = g.link(in_nh, nh);
+                    gm.metadata(in_eh).set(Input{idx});
                 }
             }
 
-            for (const auto& out : ade::util::indexed(op.outs))
-            {
+            for (const auto& out : ade::util::indexed(op.outs)) {
                 const auto idx = ade::util::index(out);
-                const auto rc = ade::util::value(out);
-
-                const auto& outDataNode = dataNodes[rc.shape][rc.id];
-                const auto& e = g.link(nh, outDataNode);
-                gm.metadata(e).set(Output{idx});
+                const auto rc  = ade::util::value(out);
+                const auto& out_nh = dataNodes.at(rc);
+                const auto& out_eh = g.link(nh, out_nh);
+                gm.metadata(out_eh).set(Output{idx});
             }
         }
     }
-    return nodes;
 }
-//} // anonymous namespace
-
-GSerialized serialize(const gimpl::GModel::ConstGraph& cg, const std::vector<ade::NodeHandle>& nodes)
-{
-    GSerialized s;
-    for (auto &nh : nodes)
-    {
-        switch (cg.metadata(nh).get<NodeType>().t)
-        {
-        case NodeType::OP:   putOp  (s, cg, nh); break;
-        case NodeType::DATA: putData(s, cg, nh); break;
-        default: util::throw_error(std::logic_error("Unknown NodeType"));
-        }
-    }
-    return s;
-}
-
-void deserialize(const s11n::GSerialized& s)
-{
-    // FIXME: reuse code from GModelBuilder/GModel!
-    // ObjectCounter?? (But seems we need existing mapping by shape+id)
-
-    ade::Graph g;
-
-    for (const auto& data : s.m_datas)
-    {
-        mkDataNode(g, data);
-    }
-
-    for (const auto& op : s.m_ops)
-    {
-        mkOpNode(g, op);
-    }
-
-    linkNodes(g);
-
-//  FIXME:
-//  Handle IslandModel!
-//    std::shared_ptr<ade::Graph> ig;
-//    GModel::Graph gm(g);
-//    gm.metadata().set(gimpl::IslandModel{std::move(ig)});
-
-    auto pass_ctx = ade::passes::PassContext{g};
-    ade::passes::TopologicalSort{}(pass_ctx);
-    gimpl::passes::dumpDotToFile(pass_ctx, "graph.dot");
-}
+} // anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -505,36 +441,30 @@ I::IStream& operator>> (I::IStream& is, cv::gimpl::Data &d) {
     return is >> d.shape >> d.rc >> d.meta >> d.storage;
 }
 
-void dumpGSerialized(const GSerialized s, I::OStream &ofs_serialized)
-{
-    ofs_serialized << s.m_ops;
-    ofs_serialized << s.m_datas;
-}
-
-void readGSerialized(GSerialized &s, I::IStream &serialized_data)
-{
-    //cleanGSerializedOps(s);
-    serialized_data >> s.m_ops;
-    //cleanupGSerializedDatas(s);
-    serialized_data >> s.m_datas;
-}
-
-std::vector<ade::NodeHandle> reconstructGModel(ade::Graph &g, const GSerialized &s)
-{
-    for (const auto& data : s.m_datas)
-    {
-        cv::gimpl::s11n::mkDataNode(g, data);
+I::OStream& serialize ( I::OStream& os
+                      , const ade::Graph &g
+                      , const std::vector<ade::NodeHandle> &nodes) {
+    cv::gimpl::GModel::ConstGraph cg(g);
+    GSerialized s;
+    for (auto &nh : nodes) {
+        switch (cg.metadata(nh).get<NodeType>().t)
+        {
+        case NodeType::OP:   putOp  (s, cg, nh); break;
+        case NodeType::DATA: putData(s, cg, nh); break;
+        default: util::throw_error(std::logic_error("Unknown NodeType"));
+        }
     }
+    return os << s.m_ops << s.m_datas;
+}
+I::IStream& operator>> (I::IStream& is, ade::Graph &g) {
+    GSerialized s;
+    is >> s.m_ops >> s.m_datas;
 
-    for (const auto& op : s.m_ops)
-    {
-        cv::gimpl::s11n::mkOpNode(g, op);
-    }
+    for (const auto& d  : s.m_datas) cv::gimpl::s11n::mkDataNode(g, d);
+    for (const auto& op : s.m_ops)   cv::gimpl::s11n::mkOpNode(g, op);
+    cv::gimpl::s11n::linkNodes(g);
 
-    // FIXME: ???
-    std::vector<ade::NodeHandle> nh  = cv::gimpl::s11n::linkNodes(g);
-    CV_LOG_INFO(NULL, "nh Size " << nh.size());
-    return nh;
+    return is;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

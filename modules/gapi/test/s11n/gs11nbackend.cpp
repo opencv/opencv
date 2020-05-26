@@ -26,7 +26,9 @@
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
-#include "serialization.hpp"
+#include "backends/common/serialization.hpp"
+#include "logger.hpp"
+
 using namespace cv::gimpl;
 
 // FIXME: Is there a way to take a typed graph (our GModel),
@@ -67,11 +69,11 @@ namespace
             cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_ERROR);
             //Graph serialization - dump - read - de-serialization path
             //Dump graph file.
-            auto serialized_graph = cv::gimpl::s11n::serialize(graph, nodes);
-            std::ofstream dump_file;
             cv::gimpl::s11n::SerializationStream out_stream;
-            cv::gimpl::s11n::dumpGSerialized(serialized_graph, out_stream);
+            cv::gimpl::s11n::serialize(out_stream, graph, nodes);
             CV_LOG_INFO(NULL, "out_stream.dump_storage size in bytes ..." << out_stream.getSize());
+
+            std::ofstream dump_file;
             dump_file.open("my_graph.bin", std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
             if (dump_file.is_open())
             {
@@ -82,7 +84,7 @@ namespace
             ////////////////////////////////////////////////////////////
             //Restore graph from file.
             std::ifstream new_dump_file ("my_graph.bin", std::ifstream::in | std::ofstream::binary);
-            cv::gimpl::s11n::GSerialized new_serialized_graph;
+            auto gp = std::make_shared<ade::Graph>();
             if (new_dump_file.is_open())
             {
                 new_dump_file.seekg(0, new_dump_file.end);
@@ -94,12 +96,9 @@ namespace
                 cv::gimpl::s11n::DeSerializationStream in_stream =
                     cv::gimpl::s11n::DeSerializationStream(buffer, length);
                 delete[] buffer;
-                cv::gimpl::s11n::readGSerialized(new_serialized_graph, in_stream);
+                in_stream >> *gp;
             }
             new_dump_file.close();
-
-            auto gp = std::make_shared<ade::Graph>();
-            auto nh = cv::gimpl::s11n::reconstructGModel(*gp.get(), new_serialized_graph);
 
             auto& g_s = *gp.get();
 
@@ -109,7 +108,8 @@ namespace
             auto pass_ctx = ade::passes::PassContext{g_s};
             cv::gimpl::passes::resolveKernels(pass_ctx, s11n_kernels);
 
-            return EPtr{new opencv_test::s11n::impl::GS11NExecutable(g_s, nh, gp)};
+            std::vector<ade::NodeHandle> nh(gp->nodes().begin(), gp->nodes().end());
+            return EPtr{new opencv_test::s11n::impl::GS11NExecutable(g_s, std::move(nh), gp)};
         }
    };
 }

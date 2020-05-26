@@ -128,6 +128,9 @@ set(gapi_srcs
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
+
+    # Serialization routines
+    src/backends/common/serialization.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
@@ -164,9 +167,6 @@ ocv_add_accuracy_tests(${__test_extra_deps})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
-if(WIN32)
-  target_link_libraries(opencv_test_gapi PRIVATE wsock32 ws2_32)
-endif()
 endif()
 
 if(HAVE_FREETYPE)
@@ -185,6 +185,11 @@ if(HAVE_PLAIDML)
   endif()
   ocv_target_link_libraries(${the_module} PRIVATE ${PLAIDML_LIBRARIES})
   ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
+endif()
+
+if(WIN32)
+  # Required for htonl/ntohl on Windows
+  target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
 endif()
 
 ocv_add_perf_tests()

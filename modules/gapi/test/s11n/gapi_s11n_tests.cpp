@@ -1,6 +1,6 @@
 #include "../test_precomp.hpp"
 
-#include "serialization.hpp"
+#include "backends/common/serialization.hpp"
 
 namespace opencv_test {
 
