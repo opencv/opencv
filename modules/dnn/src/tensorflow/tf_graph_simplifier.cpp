@@ -731,9 +731,9 @@ public:
     ClipByValueSubgraph()
     {
         int input = addNodeToMatch("");
-        int maxValue = addNodeToMatch("");
+        int maxValue = addNodeToMatch("Const");
         int minimum = addNodeToMatch("Minimum", input, maxValue);
-        int minValue = addNodeToMatch("");
+        int minValue = addNodeToMatch("Const");
         addNodeToMatch("Maximum", minimum, minValue);
 
         setFusedNode("ClipByValue", input, minValue, maxValue);

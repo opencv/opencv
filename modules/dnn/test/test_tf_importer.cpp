@@ -977,12 +977,10 @@ TEST_P(Test_TensorFlow_layers, tf2_dense)
     runTensorFlowNet("tf2_dense");
 }
 
-
 TEST_P(Test_TensorFlow_layers, clip_by_value)
 {
     runTensorFlowNet("clip_by_value");
 }
-
 
 TEST_P(Test_TensorFlow_layers, tf2_prelu)
 {
