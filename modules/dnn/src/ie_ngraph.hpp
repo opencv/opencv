@@ -34,8 +34,8 @@ class InfEngineNgraphNode;
 class InfEngineNgraphNet
 {
 public:
-    InfEngineNgraphNet();
-    InfEngineNgraphNet(InferenceEngine::CNNNetwork& net);
+    InfEngineNgraphNet(detail::NetImplBase& netImpl);
+    InfEngineNgraphNet(detail::NetImplBase& netImpl, InferenceEngine::CNNNetwork& net);
 
     void addOutput(const std::string& name);
 
@@ -55,6 +55,8 @@ public:
 
     void reset();
 private:
+    detail::NetImplBase& netImpl_;
+
     void release();
     int getNumComponents();
     void dfs(std::shared_ptr<ngraph::Node>& node, std::vector<std::shared_ptr<ngraph::Node>>& comp,
