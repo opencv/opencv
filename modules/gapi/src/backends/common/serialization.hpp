@@ -1,3 +1,6 @@
+#ifndef OPENCV_GAPI_COMMON_SERIALIZATION_HPP
+#define OPENCV_GAPI_COMMON_SERIALIZATION_HPP
+
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
@@ -15,6 +18,13 @@
 namespace cv {
 namespace gimpl {
 namespace s11n {
+
+struct GSerialized {
+    std::vector<cv::gimpl::Op> m_ops;
+    std::vector<cv::gimpl::Data> m_datas;
+    cv::gimpl::DataObjectCounter m_counter;
+    cv::gimpl::Protocol m_proto;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // Stream interfaces, so far temporary
@@ -95,6 +105,12 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::detail::OpaqueKind &k);
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, cv::gimpl::Data::Storage  s);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, cv::gimpl::Data::Storage &s);
 
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::DataObjectCounter &c);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::DataObjectCounter &c);
+
+GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::Protocol &p);
+GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Protocol &p);
+
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::GArg &arg);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::GArg &arg);
 
@@ -122,10 +138,32 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Op &op);
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::gimpl::Data &op);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::gimpl::Data &op);
 
-GAPI_EXPORTS I::OStream& serialize( I::OStream& os
-                                  , const ade::Graph &g
-                                  , const std::vector<ade::NodeHandle> &nodes);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       ade::Graph &g);
+// The top-level serialization routine.
+// Note it is just a single function which takes a GModel and a list of nodes
+// and writes the data to the stream (recursively)
+GAPI_EXPORTS void serialize( I::OStream& os
+                           , const ade::Graph &g
+                           , const std::vector<ade::NodeHandle> &nodes);
+
+// The top-level deserialization routineS.
+// Unfortunately the deserialization is a two-step process:
+// 1. First we decode a stream into some intermediate representation
+//     (called "GSerialized");
+// 2. Then we produce an ade::Graph from this intermediate representation.
+//
+// An ade::Graph can't be produced from the stream immediately
+// since every GCompiled object has its own unique ade::Graph, so
+// we can't do it once and for all since every compilation process
+// is individual and _is_ altering the ade::Graph state (structure and metadata).
+// At the same time, we can't hold the reference to "is" within the GComputation
+// forever since this input stream may be associated with an external resource
+// and have side effects.
+//
+// Summarizing, the `deserialize()` happens *once per GComputation* immediately
+// during the cv::gapi::deserialize<GComputation>(), and `reconstruct()` happens
+// on every compilation process issued for this GComputation.
+GAPI_EXPORTS GSerialized deserialize(I::IStream& is);
+GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
 // Legacy //////////////////////////////////////////////////////////////////////
 
@@ -142,10 +180,37 @@ template<typename T>
 I::IStream& operator>> (I::IStream& is, std::vector<T> &ts) {
     std::size_t sz = 0u;
     is >> sz;
-    if (sz == 0u) { ts.clear();
+    if (sz == 0u) {
+        ts.clear();
     } else {
         ts.resize(sz);
         for (auto &&i : ade::util::iota(sz)) is >> ts[i];
+    }
+    return is;
+}
+
+// Generic: unordered_map serialization ////////////////////////////////////////
+template<typename K, typename V>
+I::OStream& operator<< (I::OStream& os, const std::unordered_map<K, V> &m) {
+    const std::size_t sz = m.size(); // explicitly specify type
+    os << sz;
+    for (auto &&it : m) os << it.first << it.second;
+    return os;
+}
+template<typename K, typename V>
+I::IStream& operator>> (I::IStream& is, std::unordered_map<K, V> &m) {
+    m.clear();
+    std::size_t sz = 0u;
+    is >> sz;
+    if (sz != 0u) {
+        for (auto &&i : ade::util::iota(sz)) {
+            (void) i;
+            K k{};
+            V v{};
+            is >> k >> v;
+            m.insert({k,v});
+        }
+        GAPI_Assert(sz == m.size());
     }
     return is;
 }
@@ -211,10 +276,7 @@ class GAPI_EXPORTS DeSerializationStream final: public I::IStream {
     size_t m_storage_index = 0;
 
 public:
-    DeSerializationStream(char* data, size_t sz);
-    char* getData();
-    size_t getSize();
-    void putAtom(uint& new_atom);
+    DeSerializationStream(const char* data, size_t sz);
     uint getAtom();
 
     // Implement IStream interface
@@ -225,3 +287,5 @@ public:
 } // namespace s11n
 } // namespace gimpl
 } // namespace cv
+
+#endif // OPENCV_GAPI_COMMON_SERIALIZATION_HPP

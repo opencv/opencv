@@ -93,10 +93,11 @@ namespace
                 new_dump_file.seekg(0, new_dump_file.beg);
                 char * buffer = new char[(int)length];
                 new_dump_file.read(buffer, length);
-                cv::gimpl::s11n::DeSerializationStream in_stream =
-                    cv::gimpl::s11n::DeSerializationStream(buffer, length);
+                cv::gimpl::s11n::DeSerializationStream in_stream(buffer, length);
                 delete[] buffer;
-                in_stream >> *gp;
+
+                auto dd = cv::gimpl::s11n::deserialize(in_stream);
+                cv::gimpl::s11n::reconstruct(dd, *gp);
             }
             new_dump_file.close();
 

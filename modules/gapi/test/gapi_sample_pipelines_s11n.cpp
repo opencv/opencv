@@ -9,7 +9,7 @@
 
 #include <ade/util/iota_range.hpp>
 
-#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/s11n.hpp>
 #include "s11n/gs11nkernels.hpp"
 
 namespace opencv_test
@@ -24,12 +24,12 @@ TEST(S11N, Pipeline_Crop_Rect)
     cv::Mat out_mat_ocv(sz_out, CV_8UC1);
     cv::Mat in_mat = cv::Mat::eye(sz_in, CV_8UC1);
 
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
     auto out = cv::gapi::crop(in, rect_to);
-    cv::GComputation c(in, out);
-    c.apply(in_mat, out_mat_gapi, cv::compile_args(cv::gapi::use_only{ s11n_kernels_fixture }));
+    auto p = cv::gapi::serialize(cv::GComputation(in, out));
+    auto c = cv::gapi::deserialize<cv::GComputation>(p);
+    c.apply(in_mat, out_mat_gapi);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -38,7 +38,6 @@ TEST(S11N, Pipeline_Crop_Rect)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
-        EXPECT_EQ(out_mat_gapi.size(), sz_out);
     }
 }
 

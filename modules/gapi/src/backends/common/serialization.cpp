@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2020 Intel Corporation
 
+#include <set> // set
 #include <map> // map
 #include <ade/util/zip_range.hpp> // indexed
 
@@ -21,18 +22,6 @@ namespace cv {
 namespace gimpl {
 namespace s11n {
 namespace {
-
-struct GSerialized {
-    std::vector<cv::gimpl::Op> m_ops;
-    std::vector<cv::gimpl::Data> m_datas;
-};
-
-void mkDataNode(ade::Graph& g, const cv::gimpl::Data& data);
-void mkOpNode(ade::Graph& g, const cv::gimpl::Op& op);
-void linkNodes(ade::Graph& g);
-void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh);
-void putOp(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh);
-
 
 // FIXME? make a method of GSerialized?
 void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
@@ -102,6 +91,44 @@ void linkNodes(ade::Graph& g) {
         }
     }
 }
+
+void relinkProto(ade::Graph& g) {
+    // identify which node handles map to the protocol
+    // input/output object in the reconstructed graph
+    using S = std::set<cv::gimpl::RcDesc>;                  // FIXME: use ...
+    using M = std::map<cv::gimpl::RcDesc, ade::NodeHandle>; // FIXME: unordered!
+
+    cv::gimpl::GModel::Graph gm(g);
+    auto &proto = gm.metadata().get<Protocol>();
+
+    const S set_in(proto.inputs.begin(), proto.inputs.end());
+    const S set_out(proto.outputs.begin(), proto.outputs.end());
+    M map_in, map_out;
+
+    // Associate the protocol node handles with their resource identifiers
+    for (auto &&nh : gm.nodes()) {
+        if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::DATA) {
+            const auto &d = gm.metadata(nh).get<cv::gimpl::Data>();
+            const auto rc = cv::gimpl::RcDesc{d.rc, d.shape};
+            if (set_in.count(rc) > 0) {
+                GAPI_DbgAssert(set_out.count(rc) == 0);
+                map_in[rc] = nh;
+            } else if (set_out.count(rc) > 0) {
+                GAPI_DbgAssert(set_in.count(rc) == 0);
+                map_out[rc] = nh;
+            }
+        }
+    }
+
+    // Reconstruct the protocol vectors, ordered
+    proto.in_nhs.reserve(proto.inputs.size());
+    proto.in_nhs.clear();
+    proto.out_nhs.reserve(proto.outputs.size());
+    proto.out_nhs.clear();
+    for (auto &rc : proto.inputs)  { proto.in_nhs .push_back(map_in .at(rc)); }
+    for (auto &rc : proto.outputs) { proto.out_nhs.push_back(map_out.at(rc)); }
+}
+
 } // anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -441,9 +468,28 @@ I::IStream& operator>> (I::IStream& is, cv::gimpl::Data &d) {
     return is >> d.shape >> d.rc >> d.meta >> d.storage;
 }
 
-I::OStream& serialize ( I::OStream& os
-                      , const ade::Graph &g
-                      , const std::vector<ade::NodeHandle> &nodes) {
+
+I::OStream& operator<< (I::OStream& os, const cv::gimpl::DataObjectCounter &c) {
+    return os << c.m_next_data_id;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gimpl::DataObjectCounter &c) {
+    return is >> c.m_next_data_id;
+}
+
+
+I::OStream& operator<< (I::OStream& os, const cv::gimpl::Protocol &p) {
+    // NB: in_nhs/out_nhs are not written!
+    return os << p.inputs << p.outputs;
+}
+I::IStream& operator>> (I::IStream& is,       cv::gimpl::Protocol &p) {
+    // NB: in_nhs/out_nhs are reconstructed at a later phase
+    return is >> p.inputs >> p.outputs;
+}
+
+
+void serialize( I::OStream& os
+              , const ade::Graph &g
+              , const std::vector<ade::NodeHandle> &nodes) {
     cv::gimpl::GModel::ConstGraph cg(g);
     GSerialized s;
     for (auto &nh : nodes) {
@@ -454,17 +500,28 @@ I::OStream& serialize ( I::OStream& os
         default: util::throw_error(std::logic_error("Unknown NodeType"));
         }
     }
-    return os << s.m_ops << s.m_datas;
+    s.m_counter = cg.metadata().get<cv::gimpl::DataObjectCounter>();
+    s.m_proto   = cg.metadata().get<cv::gimpl::Protocol>();
+    os << s.m_ops << s.m_datas << s.m_counter << s.m_proto;
 }
-I::IStream& operator>> (I::IStream& is, ade::Graph &g) {
-    GSerialized s;
-    is >> s.m_ops >> s.m_datas;
 
+GSerialized deserialize(I::IStream &is) {
+    GSerialized s;
+    is >> s.m_ops >> s.m_datas >> s.m_counter >> s.m_proto;
+    return s;
+}
+
+void reconstruct(const GSerialized &s, ade::Graph &g) {
+    GAPI_Assert(g.nodes().empty());
     for (const auto& d  : s.m_datas) cv::gimpl::s11n::mkDataNode(g, d);
     for (const auto& op : s.m_ops)   cv::gimpl::s11n::mkOpNode(g, op);
     cv::gimpl::s11n::linkNodes(g);
 
-    return is;
+    cv::gimpl::GModel::Graph gm(g);
+    gm.metadata().set(s.m_counter);
+    gm.metadata().set(s.m_proto);
+    cv::gimpl::s11n::relinkProto(g);
+    gm.metadata().set(cv::gimpl::Deserialized{});
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -485,24 +542,12 @@ void SerializationStream::put(uint32_t v) {
     putAtom(htonl(v));
 }
 
-DeSerializationStream::DeSerializationStream(char* data, size_t sz) {
-    uint* uint_data = (uint*)data;
-    size_t uint_size = sz / sizeof(uint);
-    for (size_t i = 0; i < uint_size; i++) {
+DeSerializationStream::DeSerializationStream(const char* data, size_t sz) {
+    const uint* uint_data = (const uint*)data;
+    const size_t uint_size = sz / sizeof(uint);
+    for (size_t i = 0u; i < uint_size; i++) {
         m_dump_storage.push_back(uint_data[i]);
     }
-}
-
-char* DeSerializationStream::getData() {
-    return (char*)m_dump_storage.data();
-}
-
-size_t DeSerializationStream::getSize() {
-    return (size_t)(m_dump_storage.size() * sizeof(uint));
-}
-
-void DeSerializationStream::putAtom(uint& new_atom) {
-    m_dump_storage.push_back(new_atom);
 }
 
 uint DeSerializationStream::getAtom() {

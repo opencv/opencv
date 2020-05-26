@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GKERNEL_HPP
@@ -45,6 +45,7 @@ struct GAPI_EXPORTS GKernel
 struct GAPI_EXPORTS GKernelImpl
 {
     util::any         opaque;    // backend-specific opaque info
+    GKernel::M        outMeta;   // for deserialized graphs, the outMeta is taken here
 };
 
 template<typename, typename> class GKernelTypeM;
@@ -461,7 +462,7 @@ namespace gapi {
         {
             auto backend     = KImpl::backend();
             auto kernel_id   = KImpl::API::id();
-            auto kernel_impl = GKernelImpl{KImpl::kernel()};
+            auto kernel_impl = GKernelImpl{KImpl::kernel(), &KImpl::API::getOutMeta};
             removeAPI(kernel_id);
 
             m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);

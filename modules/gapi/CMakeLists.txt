@@ -129,7 +129,8 @@ set(gapi_srcs
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
 
-    # Serialization routines
+    # Serialization API and routines
+    src/api/s11n.cpp
     src/backends/common/serialization.cpp
     )
 
