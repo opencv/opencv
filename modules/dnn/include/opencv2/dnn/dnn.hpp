@@ -1279,6 +1279,8 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                              CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
                              float confThreshold = 0.5f, float nmsThreshold = 0.0f);
+        private:
+            void init();
      };
 
 //! @}
