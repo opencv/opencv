@@ -108,6 +108,19 @@ static const std::map<std::string, OpenVINOModelTestCaseInfo>& getOpenVINOTestMo
             "intel/person-detection-retail-0013/FP16/person-detection-retail-0013"
         }},
 #endif
+#if INF_ENGINE_RELEASE >= 2020020000
+        // Downloaded using these parameters for Open Model Zoo downloader (2020.2):
+        // ./downloader.py -o ${OPENCV_DNN_TEST_DATA_PATH}/omz_intel_models --cache_dir ${OPENCV_DNN_TEST_DATA_PATH}/.omz_cache/ \
+        //     --name face-detection-0105,face-detection-0106
+        { "face-detection-0105", {  // IRv10
+            "intel/face-detection-0105/FP32/face-detection-0105",
+            "intel/face-detection-0105/FP16/face-detection-0105"
+        }},
+        { "face-detection-0106", {  // IRv10
+            "intel/face-detection-0106/FP32/face-detection-0106",
+            "intel/face-detection-0106/FP16/face-detection-0106"
+        }},
+#endif
     };
 
     return g_models;
