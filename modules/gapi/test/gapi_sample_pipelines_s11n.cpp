@@ -7,9 +7,7 @@
 
 #include "test_precomp.hpp"
 
-#include <stdexcept>
 #include <ade/util/iota_range.hpp>
-#include "logger.hpp"
 
 #include <opencv2/gapi/core.hpp>
 #include "s11n/gs11nkernels.hpp"

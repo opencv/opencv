@@ -4,17 +4,13 @@
 //
 // Copyright (C) 2019 Intel Corporation
 
-#include "compiler/gmodel.hpp"
-#ifdef _WIN32
-#include <winsock.h>
-#else
-#include <netinet/in.h>
-//#include <arpa/inet.h>
-#endif
 #include <iostream>
 #include <fstream>
 #include <string.h>
 
+#include <ade/util/iota_range.hpp>
+
+#include "compiler/gmodel.hpp"
 #include "logger.hpp"
 
 namespace cv
@@ -53,7 +49,7 @@ struct Op
     std::vector<int> opaque_ints;
     std::vector<double> opaque_doubles;
     std::vector<cv::Size> opaque_cvsizes;
-    std::vector<bool> opaque_bools;
+    std::vector<char> opaque_bools;
     std::vector<cv::Scalar> opaque_cvscalars;
     std::vector<cv::Point> opaque_cvpoints;
     std::vector<cv::Mat> opaque_cvmats;
@@ -94,66 +90,80 @@ namespace I {
 } // namespace I
 
 
-//Graph dump operators
+// S11N operators //////////////////////////////////////////////////////////////
+
+I::OStream& operator<< (I::OStream& os, char  atom);
+I::IStream& operator>> (I::IStream& is, char &atom);
+
+I::OStream& operator<< (I::OStream& os, uint32_t  atom);
+I::IStream& operator>> (I::IStream& is, uint32_t &atom);
+
+I::OStream& operator<< (I::OStream& os, int  atom);
+I::IStream& operator>> (I::IStream& is, int &atom);
+
+I::OStream& operator<< (I::OStream& os, float  atom);
+I::IStream& operator>> (I::IStream& is, float &atom);
+
+I::OStream& operator<< (I::OStream& os, double  atom);
+I::IStream& operator>> (I::IStream& is, double &atom);
+
+I::OStream& operator<< (I::OStream& os, std::size_t  atom);
+I::IStream& operator>> (I::IStream& is, std::size_t &atom);
+
 I::OStream& operator<< (I::OStream& os, const Kernel &k);
 I::OStream& operator<< (I::OStream& os, const std::string &str);
-I::OStream& operator<< (I::OStream& os, const std::vector<int> &ints);
-I::OStream& operator<< (I::OStream& os, const std::vector<RcDesc> &descs);
 I::OStream& operator<< (I::OStream& os, const RcDesc &desc);
-I::OStream& operator<< (I::OStream& os, const std::vector<double> &doubles);
-I::OStream& operator<< (I::OStream& os, const double &double_val);
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Size> &cvsizes);
 I::OStream& operator<< (I::OStream& os, const cv::Size &cvsize);
-I::OStream& operator<< (I::OStream& os, const std::vector<bool> &bools);
 I::OStream& operator<< (I::OStream& os, const bool &bool_val);
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Scalar> &cvscalars);
 I::OStream& operator<< (I::OStream& os, const cv::Scalar &cvscalar);
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Point> &cvpoints);
 I::OStream& operator<< (I::OStream& os, const cv::Point &cvpoint);
 I::OStream& operator<< (I::OStream& os, const cv::GMatDesc &cvmatdesc);
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Mat> &cvmats);
 I::OStream& operator<< (I::OStream& os, const cv::Mat &cvmat);
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Rect> &cvrects);
 I::OStream& operator<< (I::OStream& os, const cv::Rect &cvrect);
-I::OStream& operator<< (I::OStream& os, const std::vector<Data> &datas);
 I::OStream& operator<< (I::OStream& os, const Data &data);
-I::OStream& operator<< (I::OStream& os, const std::vector<Op> &ops);
 I::OStream& operator<< (I::OStream& os, const Op &op);
-I::OStream& operator<< (I::OStream& os, const int &atom);
-I::OStream& operator<< (I::OStream& os, uint32_t atom);
 
 void dumpGSerialized(const GSerialized s, I::OStream &ofs_serialized);
 
-//Graph restore operators
+
 I::IStream& operator>> (I::IStream& is, Kernel& k);
 I::IStream& operator>> (I::IStream& is, std::string& str);
-I::IStream& operator>> (I::IStream& is, std::vector<int>& ints);
-I::IStream& operator>> (I::IStream& is, std::vector<RcDesc>& descs);
 I::IStream& operator>> (I::IStream& is, RcDesc& desc);
-I::IStream& operator>> (I::IStream& is, std::vector<double>& doubles);
-I::IStream& operator>> (I::IStream& is, double& double_val);
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Size>& cvsizes);
 I::IStream& operator>> (I::IStream& is, cv::Size& cvsize);
-I::IStream& operator>> (I::IStream& is, std::vector<bool>& bools);
 I::IStream& operator>> (I::IStream& is, bool& bool_val);
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Scalar>& cvscalars);
 I::IStream& operator>> (I::IStream& is, cv::Scalar& cvscalar);
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Point>& cvpoints);
 I::IStream& operator>> (I::IStream& is, cv::Point& cvpoint);
 I::IStream& operator>> (I::IStream& is, cv::GMatDesc& cvmatdesc);
 I::IStream& operator>> (I::IStream& is, cv::Mat & cvmat);
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Mat>& cvmats);
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Rect>& cvrects);
 I::IStream& operator>> (I::IStream& is, cv::Rect& cvrect);
 I::IStream& operator>> (I::IStream& is, Data& data);
-I::IStream& operator>> (I::IStream& is, std::vector<Data>& datas);
 I::IStream& operator>> (I::IStream& is, Op& op);
-I::IStream& operator>> (I::IStream& is, std::vector<Op>& ops);
-I::IStream& operator>> (I::IStream& is, int &atom);
-I::IStream& operator>> (I::IStream& is, uint32_t &atom);
 
 void readGSerialized(GSerialized &s, I::IStream &ifs_serialized);
 std::vector<ade::NodeHandle> reconstructGModel(ade::Graph &g, const GSerialized &s);
+
+template<typename T>
+I::OStream& operator<< (I::OStream& os, const std::vector<T> &ts) {
+    const std::size_t sz = ts.size(); // explicitly specify type
+    os << sz;
+    for (auto &&v : ts) os << v;
+    return os;
+}
+template<typename T>
+I::IStream& operator>> (I::IStream& is, std::vector<T> &ts) {
+    std::size_t sz = 0u;
+
+    is >> sz;
+    if (sz == 0u) {
+        ts.clear();
+        return is;
+    }
+
+    ts.resize(sz);
+    for (auto &&i : ade::util::iota(sz)) is >> ts[i];
+    return is;
+}
+
 
 // FIXME: Basic Stream implementaions //////////////////////////////////////////
 

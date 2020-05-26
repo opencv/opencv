@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2020 Intel Corporation
 
 #include "serialization.hpp"
 
@@ -12,6 +12,12 @@
 
 #include <ade/util/zip_range.hpp>
 
+#ifdef _WIN32
+#include <winsock.h>
+#else
+#include <netinet/in.h>
+//#include <arpa/inet.h>
+#endif
 
 
 namespace cv {
@@ -555,10 +561,79 @@ void deserialize(const s11n::GSerialized& s)
 /////////////////////////////////////////////////////////////////////////////////////
 //Graph dump operators
 
-I::OStream& operator<< (I::OStream& os, uint32_t s) {
-    os.put(s);
+I::OStream& operator<< (I::OStream& os, char atom) {
+    os.put(atom);
     return os;
 }
+I::IStream& operator>> (I::IStream& is, char &atom) {
+    atom = is.getUInt32();
+    return is;
+}
+
+I::OStream& operator<< (I::OStream& os, uint32_t atom) {
+    os.put(atom);
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, uint32_t &atom) {
+    atom = is.getUInt32();
+    return is;
+}
+
+
+I::OStream& operator<< (I::OStream& os, int atom) {
+    os.put(atom);
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, int& atom) {
+    atom = is.getUInt32();
+    return is;
+}
+
+
+I::OStream& operator<< (I::OStream& os, std::size_t atom) {
+    os.put(atom);           // FIXME: type truncated??
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, std::size_t& atom) {
+    atom = is.getUInt32();  // FIXME: type truncated??
+    return is;
+}
+
+
+I::OStream& operator<< (I::OStream& os, float atom)
+{
+    uint32_t element_tmp = 0u;
+    memcpy(&element_tmp, &atom, sizeof(uint32_t));
+    os << element_tmp;
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, float& atom)
+{
+    uint32_t element_tmp = 0u;
+    is >> element_tmp;
+    memcpy(&atom, &element_tmp, sizeof(uint32_t));
+    return is;
+}
+
+
+I::OStream& operator<< (I::OStream& os, double atom)
+{
+    uint32_t element_tmp[2] = {0u};
+    memcpy(&element_tmp, &atom, 2 * sizeof(uint32_t));
+    os << element_tmp[0];
+    os << element_tmp[1];
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, double& atom)
+{
+    uint32_t element_tmp[2] = {0u};
+    is >> element_tmp[0];
+    is >> element_tmp[1];
+    memcpy(&atom, &element_tmp, 2 * sizeof(uint32_t));
+    return is;
+}
+
+
 
 
 I::OStream& operator<< (I::OStream& os, const Kernel &k)
@@ -586,26 +661,6 @@ I::OStream& operator<< (I::OStream& os, const std::string &str)
     return os;
 }
 
-I::OStream& operator<< (I::OStream& os, const std::vector<int> &ints)
-{
-    os << (uint)ints.size();
-    for (auto & element : ints)
-    {
-        os << element;
-    }
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const std::vector<RcDesc> &descs)
-{
-    os << (uint)descs.size();
-    for (auto & element : descs)
-    {
-        os << element;
-    }
-    return os;
-}
-
 I::OStream& operator<< (I::OStream& os, const RcDesc &desc)
 {
     os << desc.id;
@@ -613,54 +668,11 @@ I::OStream& operator<< (I::OStream& os, const RcDesc &desc)
     return os;
 }
 
-I::OStream& operator<< (I::OStream& os, const std::vector<double> &doubles)
-{
-    os << (uint)doubles.size();
-    for (auto & element : doubles)
-    {
-        os << element;
-    }
-    return os;
-}
-
-I::OStream&  operator<< (I::OStream& os, const double &double_val)
-{
-    uint element_tmp[2];
-    memcpy(&element_tmp, &double_val, 2 * sizeof(uint));
-    os << element_tmp[0];
-    os << element_tmp[1];
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Size> &cvsizes)
-{
-    os << (uint)cvsizes.size();
-    for (auto & element : cvsizes)
-    {
-        os << element;
-    }
-    return os;
-}
 
 I::OStream& operator<< (I::OStream& os, const cv::Size &cvsize)
 {
     os << cvsize.width;
     os << cvsize.height;
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const std::vector<bool> &bools)
-{
-    uint bools_size = (uint)bools.size();
-    os << bools_size;
-    //std::cout << "bool vector " << bools_size<< std::endl;
-    for (uint j = 0; j < bools_size; j++)
-    {
-        int bool_val_int;
-        bool_val_int = bools[j] ? 1 : 0;
-        os << bool_val_int;
-        //os << bools[j];
-    }
     return os;
 }
 
@@ -672,17 +684,6 @@ I::OStream&  operator<< (I::OStream& os, const bool &bool_val)
     return os;
 }
 
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Scalar> &cvscalars)
-{
-    os << (uint)cvscalars.size();
-    for (auto & element : cvscalars)
-    {
-       os << element;
-    }
-    //os << cvscalars;
-    return os;
-}
-
 I::OStream& operator<< (I::OStream& os, const cv::Scalar &cvscalar)
 {
     uint element_tmp[2];
@@ -691,16 +692,6 @@ I::OStream& operator<< (I::OStream& os, const cv::Scalar &cvscalar)
         memcpy(&element_tmp, &cvscalar.val[i], 2 * sizeof(uint));
         os << element_tmp[0];
         os << element_tmp[1];
-    }
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Point> &cvpoints)
-{
-    os << (uint)cvpoints.size();
-    for (auto & element : cvpoints)
-    {
-        os << element;
     }
     return os;
 }
@@ -718,16 +709,6 @@ I::OStream& operator<< (I::OStream& os, const cv::GMatDesc &cvmatdesc)
     os << cvmatdesc.chan;
     os << cvmatdesc.size.width;
     os << cvmatdesc.size.height;
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Mat> &cvmats)
-{
-    os << (uint)cvmats.size();
-    for (auto & element : cvmats)
-    {
-        os << element;
-    }
     return os;
 }
 
@@ -755,34 +736,12 @@ I::OStream& operator<< (I::OStream& os, const cv::Mat &cvmat)
     return os;
 }
 
-I::OStream& operator<< (I::OStream& os, const std::vector<cv::Rect> &cvrects)
-{
-
-    os << (uint)cvrects.size();
-    for (auto & element : cvrects)
-    {
-        os << element;
-    }
-    return os;
-}
-
 I::OStream& operator<< (I::OStream& os, const cv::Rect &cvrect)
 {
     os << cvrect.x;
     os << cvrect.y;
     os << cvrect.width;
     os << cvrect.height;
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const std::vector<Data> &datas)
-{
-    os << (uint)datas.size();
-    for (const auto& data : datas)
-    {
-        //Data
-        os << data;
-    }
     return os;
 }
 
@@ -880,25 +839,6 @@ I::OStream& operator<< (I::OStream& os, const Op &op)
     return os;
 }
 
-I::OStream& operator<< (I::OStream& os, const std::vector<Op> &ops)
-{
-    //dumpAtomS(os, (uint)ops.size());
-    os << (uint)ops.size();
-    for (const auto& op : ops)
-    {
-        //Op
-        os << op;
-    }
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const int &atom)
-{
-    // FIXME!!!
-    os << (uint32_t) atom;
-    return os;
-}
-
 void dumpGSerialized(const GSerialized s, I::OStream &ofs_serialized)
 {
     ofs_serialized << s.m_ops;
@@ -931,29 +871,6 @@ I::IStream& operator>> (I::IStream& is, std::string& str)
     return is;
 }
 
-I::IStream& operator>> (I::IStream& is, std::vector<int>& ints)
-{
-    uint ints_size;
-    is >> ints_size;
-    ints.resize(ints_size);
-    for (auto & element : ints)
-    {
-        is >> element;
-    }
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, std::vector<RcDesc>& descs)
-{
-    uint descs_size;
-    is >> descs_size;
-    descs.resize(descs_size);
-    for (auto & element : descs)
-    {
-        is >> element;
-    }
-    return is;
-}
 
 I::IStream& operator>> (I::IStream& is, RcDesc& desc)
 {
@@ -964,60 +881,10 @@ I::IStream& operator>> (I::IStream& is, RcDesc& desc)
     return is;
 }
 
-I::IStream& operator>> (I::IStream& is, std::vector<double>& doubles)
-{
-    uint doubles_size;
-    is >> doubles_size;
-    doubles.resize(doubles_size);
-    for (auto & element : doubles)
-    {
-        is >> element;
-    }
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, double& double_val)
-{
-
-    uint element_tmp[2];
-    is >> element_tmp[0];
-    is >> element_tmp[1];
-    memcpy(&double_val, &element_tmp, 2 * sizeof(uint));
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Size>& cvsizes)
-{
-    uint cvsizes_size;
-    is >> cvsizes_size;
-    cvsizes.resize(cvsizes_size);
-    for (auto & element : cvsizes)
-    {
-        is >> element;
-    }
-    return is;
-}
-
 I::IStream& operator>> (I::IStream& is, cv::Size& cvsize)
 {
     is >> cvsize.width;
     is >> cvsize.height;
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, std::vector<bool>& bools)
-{
-    uint bools_size;
-    is >> bools_size;
-    bools.resize(bools_size);
-
-    uint bool_val;
-    for (uint j = 0; j < bools_size; j++)
-    {
-        is >> bool_val;
-        bools[j] = bool_val == 1 ? true : false;
-        //is >> bools[j];
-    }
     return is;
 }
 
@@ -1026,18 +893,6 @@ I::IStream& operator>> (I::IStream& is, bool& bool_val)
     uint bool_val_uint;
     is >> bool_val_uint;
     bool_val = bool_val_uint == 1 ? true : false;
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Scalar>& cvscalars)
-{
-    uint cvscalars_size;
-    is >> cvscalars_size;
-    cvscalars.resize(cvscalars_size);
-    for (auto & element : cvscalars)
-    {
-        is >> element;
-    }
     return is;
 }
 
@@ -1050,18 +905,6 @@ I::IStream& operator>> (I::IStream& is, cv::Scalar& cvscalar)
         is >> element_tmp[0];
         is >> element_tmp[1];
         memcpy(&cvscalar.val[i], &element_tmp, sizeof(double));
-    }
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Point>& cvpoints)
-{
-    uint cvpoints_size;
-    is >> cvpoints_size;
-    cvpoints.resize(cvpoints_size);
-    for (auto & element : cvpoints)
-    {
-        is >> element;
     }
     return is;
 }
@@ -1112,49 +955,12 @@ I::IStream& operator>> (I::IStream& is, cv::Mat& cvmat)
     return is;
 }
 
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Mat>& cvmats)
-{
-    uint cvmats_size;
-    is >> cvmats_size;
-    cvmats.resize(cvmats_size);
-    for (auto & element : cvmats)
-    {
-        is >> element;
-    }
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, std::vector<cv::Rect>& cvrects)
-{
-    uint cvrects_size;
-    is >> cvrects_size;
-    cvrects.resize(cvrects_size);
-    for (auto & element : cvrects)
-    {
-        is >>element;
-    }
-    return is;
-}
-
 I::IStream& operator>> (I::IStream& is, cv::Rect& cvrect)
 {
     is >> cvrect.x;
     is >> cvrect.y;
     is >> cvrect.width;
     is >> cvrect.height;
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, std::vector<Data>& datas)
-{
-    uint datas_size;
-    is >> datas_size;
-    datas.resize(datas_size);
-    for (uint i = 0; i < datas_size; i++)
-    {
-        //Data
-        is >> datas[i];
-    }
     return is;
 }
 
@@ -1251,31 +1057,6 @@ I::IStream& operator>> (I::IStream& is, Op& op)
     //std::vector<cv::Rect> opaque_cvrects;
     is >> op.opaque_cvrects;
 
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, std::vector<Op>& ops)
-{
-    uint ops_size;// = restoreAtomS(is);
-    is >> ops_size;
-    ops.resize(ops_size);
-    for (uint i = 0; i < ops_size; i++)
-    {
-        //Op
-        is >> ops[i];
-    }
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, int& atom)
-{
-    atom = is.getUInt32();
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, uint& atom)
-{
-    atom = is.getUInt32();
     return is;
 }
 
