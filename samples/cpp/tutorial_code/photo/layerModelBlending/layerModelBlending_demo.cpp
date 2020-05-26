@@ -69,5 +69,7 @@ int main()
     int num = BLEND_MODEL_DARKEN;
     cin >> num;
     cout << endl;
+    Mat target = cv::imread("samples/cpp/lena.jpg");
+    
     waitKey(0);
 }
