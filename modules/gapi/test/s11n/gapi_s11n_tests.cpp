@@ -92,4 +92,39 @@ TEST_F(S11N_Basic, Test_vector_empty) {
     EXPECT_EQ(v, get<std::vector<char> >());
 }
 
+TEST_F(S11N_Basic, Test_variant) {
+    using S = std::string;
+    using V = cv::util::variant<int,S>;
+    V v1{42}, v2{S{"hey"}};
+
+    put(v1);
+    EXPECT_EQ(v1, get<V>());
+
+    put(v2);
+    EXPECT_EQ(v2, get<V>());
+}
+
+TEST_F(S11N_Basic, Test_GArg_int) {
+    const int x = 42;
+    cv::GArg gs(x);
+    put(gs);
+
+    cv::GArg gd = get<cv::GArg>();
+    EXPECT_EQ(cv::detail::ArgKind::OPAQUE_VAL, gd.kind);
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_INT, gd.opaque_kind);
+    EXPECT_EQ(x, gs.get<int>());
+}
+
+TEST_F(S11N_Basic, Test_GArg_Point) {
+    const cv::Point pt{1,2};
+    cv::GArg gs(pt);
+    put(gs);
+
+    cv::GArg gd = get<cv::GArg>();
+    EXPECT_EQ(cv::detail::ArgKind::OPAQUE_VAL, gd.kind);
+    EXPECT_EQ(cv::detail::OpaqueKind::CV_POINT, gd.opaque_kind);
+    EXPECT_EQ(pt, gs.get<cv::Point>());
+}
+
+
 } // namespace opencv_test

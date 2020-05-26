@@ -558,15 +558,27 @@ void deserialize(const s11n::GSerialized& s)
     gimpl::passes::dumpDotToFile(pass_ctx, "graph.dot");
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //Graph dump operators
+
+// Basic types /////////////////////////////////////////////////////////////////
+
+I::OStream& operator<< (I::OStream& os, bool atom) {
+    os.put(atom ? 1 : 0);
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, bool& atom) {
+    atom = is.getUInt32() == 0 ? false : true;
+    return is;
+}
 
 I::OStream& operator<< (I::OStream& os, char atom) {
     os.put(atom);
     return os;
 }
 I::IStream& operator>> (I::IStream& is, char &atom) {
-    atom = is.getUInt32();
+    atom = static_cast<char>(is.getUInt32());
     return is;
 }
 
@@ -579,7 +591,6 @@ I::IStream& operator>> (I::IStream& is, uint32_t &atom) {
     return is;
 }
 
-
 I::OStream& operator<< (I::OStream& os, int atom) {
     os.put(atom);
     return os;
@@ -589,43 +600,36 @@ I::IStream& operator>> (I::IStream& is, int& atom) {
     return is;
 }
 
-
 I::OStream& operator<< (I::OStream& os, std::size_t atom) {
-    os.put(atom);           // FIXME: type truncated??
+    os.put(static_cast<uint32_t>(atom));  // FIXME: type truncated??
     return os;
 }
 I::IStream& operator>> (I::IStream& is, std::size_t& atom) {
-    atom = is.getUInt32();  // FIXME: type truncated??
+    atom = is.getUInt32();                // FIXME: type truncated??
     return is;
 }
 
-
-I::OStream& operator<< (I::OStream& os, float atom)
-{
+I::OStream& operator<< (I::OStream& os, float atom) {
     uint32_t element_tmp = 0u;
     memcpy(&element_tmp, &atom, sizeof(uint32_t));
     os << element_tmp;
     return os;
 }
-I::IStream& operator>> (I::IStream& is, float& atom)
-{
+I::IStream& operator>> (I::IStream& is, float& atom) {
     uint32_t element_tmp = 0u;
     is >> element_tmp;
     memcpy(&atom, &element_tmp, sizeof(uint32_t));
     return is;
 }
 
-
-I::OStream& operator<< (I::OStream& os, double atom)
-{
+I::OStream& operator<< (I::OStream& os, double atom) {
     uint32_t element_tmp[2] = {0u};
     memcpy(&element_tmp, &atom, 2 * sizeof(uint32_t));
     os << element_tmp[0];
     os << element_tmp[1];
     return os;
 }
-I::IStream& operator>> (I::IStream& is, double& atom)
-{
+I::IStream& operator>> (I::IStream& is, double& atom) {
     uint32_t element_tmp[2] = {0u};
     is >> element_tmp[0];
     is >> element_tmp[1];
@@ -634,7 +638,265 @@ I::IStream& operator>> (I::IStream& is, double& atom)
 }
 
 
+I::OStream& operator<< (I::OStream& os, const std::string &str) {
+    os << static_cast<std::size_t>(str.size()); // N.B. Put type explicitly
+    for (auto c : str) os << c;
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, std::string& str) {
+    std::size_t sz = 0u;
+    is >> sz;
+    if (sz == 0u) {
+        str.clear();
+    } else {
+        str.resize(sz);
+        for (auto &&i : ade::util::iota(sz)) { is >> str[i]; }
+    }
+    return is;
+}
 
+// OpenCV types ////////////////////////////////////////////////////////////////
+
+I::OStream& operator<< (I::OStream& os, const cv::Point &pt) {
+    return os << pt.x << pt.y;
+}
+I::IStream& operator>> (I::IStream& is, cv::Point& pt) {
+    return is >> pt.x >> pt.y;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::Size &sz) {
+    return os << sz.width << sz.height;
+}
+I::IStream& operator>> (I::IStream& is, cv::Size& sz) {
+    return is >> sz.width >> sz.height;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::Rect &rc) {
+    return os << rc.x << rc.y << rc.width << rc.height;
+}
+I::IStream& operator>> (I::IStream& is, cv::Rect& rc) {
+    return is >> rc.x >> rc.y >> rc.width >> rc.height;
+}
+
+I::OStream& operator<< (I::OStream& os, const cv::Scalar &s) {
+    return os << s.val[0] << s.val[1] << s.val[2] << s.val[3];
+}
+I::IStream& operator>> (I::IStream& is, cv::Scalar& s) {
+    return is >> s.val[0] >> s.val[1] >> s.val[2] >> s.val[3];
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// FIXME: this needs to be reworked
+I::OStream& operator<< (I::OStream& os, const cv::Mat &m) {
+    size_t matSizeInBytes = m.rows * m.step[0];
+    int mat_type = m.type();
+    os << m.cols;
+    os << m.rows;
+    os << mat_type;
+    os << (uint)m.step[0];
+
+    if (matSizeInBytes != 0) {
+        size_t numAtoms = matSizeInBytes % sizeof(uint) ==
+            0 ? (matSizeInBytes / sizeof(uint)) : (matSizeInBytes / sizeof(uint)) + 1;
+        uint* hton_buff = (uint*)malloc(numAtoms * sizeof(uint));
+        memcpy(hton_buff, m.data, matSizeInBytes);
+        for (uint a = 0; a < numAtoms; a++) {
+            os << hton_buff[a];
+        }
+        free(hton_buff);
+    }
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, cv::Mat& m) {
+    int rows, cols, type, step;
+    size_t matSizeInBytes;
+    is >> cols;
+    is >> rows;
+    is >> type;
+    is >> step;
+    matSizeInBytes = rows*step;
+    if (matSizeInBytes != 0) {
+        void *mat_data = malloc(matSizeInBytes);
+
+        size_t numAtoms = matSizeInBytes % sizeof(uint) ==
+            0 ? (matSizeInBytes / sizeof(uint)) : (matSizeInBytes / sizeof(uint)) + 1;
+        uint* ntoh_buff = (uint*)malloc(numAtoms * sizeof(uint));
+        for (uint a = 0; a < numAtoms; a++) {
+            is >> ntoh_buff[a];
+        }
+        memcpy(mat_data, ntoh_buff, matSizeInBytes);
+        free(ntoh_buff);
+
+        cv::Mat tmp_mat = cv::Mat(rows, cols, type, mat_data, step);
+        tmp_mat.copyTo(m);
+        free(mat_data);
+    }
+    return is;
+}
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// G-API types /////////////////////////////////////////////////////////////////
+
+// Stubs (empty types)
+
+I::OStream& operator<< (I::OStream& os, cv::util::monostate  ) {return os;}
+I::IStream& operator>> (I::IStream& is, cv::util::monostate &) {return is;}
+
+I::OStream& operator<< (I::OStream& os, const cv::GScalarDesc &) {return os;}
+I::IStream& operator>> (I::IStream& is,       cv::GScalarDesc &) {return is;}
+
+I::OStream& operator<< (I::OStream& os, const cv::GOpaqueDesc &) {return os;}
+I::IStream& operator>> (I::IStream& is,       cv::GOpaqueDesc &) {return is;}
+
+I::OStream& operator<< (I::OStream& os, const cv::GArrayDesc &) {return os;}
+I::IStream& operator>> (I::IStream& is,       cv::GArrayDesc &) {return is;}
+
+// Enums and structures
+
+namespace {
+template<typename E> I::OStream& put_enum(I::OStream& os, E e) {
+    return os << static_cast<int>(e);
+}
+template<typename E> I::IStream& get_enum(I::IStream& is, E &e) {
+    int x{}; is >> x; e = static_cast<E>(x);
+    return is;
+}
+} // anonymous namespace
+
+I::OStream& operator<< (I::OStream& os, cv::GShape  sh) {
+    return put_enum(os, sh);
+}
+I::IStream& operator>> (I::IStream& is, cv::GShape &sh) {
+    return get_enum<cv::GShape>(is, sh);
+}
+I::OStream& operator<< (I::OStream& os, cv::detail::ArgKind  k) {
+    return put_enum(os, k);
+}
+I::IStream& operator>> (I::IStream& is, cv::detail::ArgKind &k) {
+    return get_enum<cv::detail::ArgKind>(is, k);
+}
+I::OStream& operator<< (I::OStream& os, cv::detail::OpaqueKind  k) {
+    return put_enum(os, k);
+}
+I::IStream& operator>> (I::IStream& is, cv::detail::OpaqueKind &k) {
+    return get_enum<cv::detail::OpaqueKind>(is, k);
+}
+I::OStream& operator<< (I::OStream& os, cv::gimpl::Data::Storage s) {
+    return put_enum(os, s);
+}
+I::IStream& operator>> (I::IStream& is, cv::gimpl::Data::Storage &s) {
+    return get_enum<cv::gimpl::Data::Storage>(is, s);
+}
+
+
+I::OStream& operator<< (I::OStream& os, const cv::GArg &arg) {
+    // Only GOBJREF and OPAQUE_VAL kinds can be serialized/deserialized
+    GAPI_Assert(   arg.kind == cv::detail::ArgKind::OPAQUE_VAL
+                || arg.kind == cv::detail::ArgKind::GOBJREF);
+    GAPI_Assert(arg.opaque_kind != cv::detail::OpaqueKind::CV_UNKNOWN);
+
+    os << arg.kind << arg.opaque_kind;
+    if (arg.kind == cv::detail::ArgKind::GOBJREF) {
+        os << arg.get<cv::gimpl::RcDesc>();
+    } else {
+        GAPI_Assert(arg.kind == cv::detail::ArgKind::OPAQUE_VAL);
+        switch (arg.opaque_kind) {
+        case cv::detail::OpaqueKind::CV_BOOL:   os << arg.get<bool>();       break;
+        case cv::detail::OpaqueKind::CV_INT:    os << arg.get<int>();        break;
+        case cv::detail::OpaqueKind::CV_DOUBLE: os << arg.get<double>();     break;
+        case cv::detail::OpaqueKind::CV_POINT:  os << arg.get<cv::Point>();  break;
+        case cv::detail::OpaqueKind::CV_SIZE:   os << arg.get<cv::Size>();   break;
+        case cv::detail::OpaqueKind::CV_RECT:   os << arg.get<cv::Rect>();   break;
+        case cv::detail::OpaqueKind::CV_SCALAR: os << arg.get<cv::Scalar>(); break;
+        case cv::detail::OpaqueKind::CV_MAT:    os << arg.get<cv::Mat>();    break;
+        default: GAPI_Assert(false && "GArg: Unsupported (unknown?) opaque value type");
+        }
+    }
+    return os;
+}
+I::IStream& operator>> (I::IStream& is, cv::GArg &arg) {
+    is >> arg.kind >> arg.opaque_kind;
+
+    // Only GOBJREF and OPAQUE_VAL kinds can be serialized/deserialized
+    GAPI_Assert(   arg.kind == cv::detail::ArgKind::OPAQUE_VAL
+                || arg.kind == cv::detail::ArgKind::GOBJREF);
+    GAPI_Assert(arg.opaque_kind != cv::detail::OpaqueKind::CV_UNKNOWN);
+
+    if (arg.kind == cv::detail::ArgKind::GOBJREF) {
+        cv::gimpl::RcDesc rc;
+        is >> rc;
+        arg = std::move(GArg(rc));
+    } else {
+        GAPI_Assert(arg.kind == cv::detail::ArgKind::OPAQUE_VAL);
+        switch (arg.opaque_kind) {
+#define HANDLE_CASE(E,T) case cv::detail::OpaqueKind::CV_##E:           \
+            { T t{}; is >> t; arg = std::move(cv::GArg(t)); } break
+            HANDLE_CASE(BOOL   , bool);
+            HANDLE_CASE(INT    , int);
+            HANDLE_CASE(DOUBLE , double);
+            HANDLE_CASE(POINT  , cv::Point);
+            HANDLE_CASE(SIZE   , cv::Size);
+            HANDLE_CASE(RECT   , cv::Rect);
+            HANDLE_CASE(SCALAR , cv::Scalar);
+            HANDLE_CASE(MAT    , cv::Mat);
+#undef HANDLE_CASE
+        default: GAPI_Assert(false && "GArg: Unsupported (unknown?) opaque value type");
+        }
+    }
+    return is;
+}
+
+
+I::OStream& operator<< (I::OStream& os, const cv::GKernel &k) {
+    return os << k.name << k.tag << k.outShapes;
+}
+I::IStream& operator>> (I::IStream& is, cv::GKernel &k) {
+    return is >> const_cast<std::string&>(k.name)
+              >> const_cast<std::string&>(k.tag)
+              >> const_cast<cv::GShapes&>(k.outShapes);
+}
+
+
+I::OStream& operator<< (I::OStream& os, const cv::GMatDesc &d) {
+    return os << d.depth << d.chan << d.size << d.planar << d.dims;
+}
+I::IStream& operator>> (I::IStream& is, cv::GMatDesc &d) {
+    return is >> d.depth >> d.chan >> d.size >> d.planar >> d.dims;
+}
+
+
+I::OStream& operator<< (I::OStream& os, const cv::gimpl::RcDesc &rc) {
+    // FIXME: HostCtor is not serialized!
+    return os << rc.id << rc.shape;
+}
+I::IStream& operator>> (I::IStream& is, cv::gimpl::RcDesc &rc) {
+    // FIXME: HostCtor is not deserialized!
+    return is >> rc.id >> rc.shape;
+}
+
+
+I::OStream& operator<< (I::OStream& os, const cv::gimpl::Op &op) {
+    return os << op.k << op.args << op.outs;
+}
+I::IStream& operator>> (I::IStream& is, cv::gimpl::Op &op) {
+    return is >> op.k >> op.args >> op.outs;
+}
+
+
+I::OStream& operator<< (I::OStream& os, const cv::gimpl::Data &d) {
+    // FIXME: HostCtor is not stored here!!
+    // FIXME: Storage may be incorrect for subgraph-to-graph process
+    return os << d.shape << d.rc << d.meta << d.storage;
+}
+I::IStream& operator>> (I::IStream& is, cv::gimpl::Data &d) {
+    // FIXME: HostCtor is not stored here!!
+    // FIXME: Storage may be incorrect for subgraph-to-graph process
+    return is >> d.shape >> d.rc >> d.meta >> d.storage;
+}
+
+
+// Legacy //////////////////////////////////////////////////////////////////////
 
 I::OStream& operator<< (I::OStream& os, const Kernel &k)
 {
@@ -645,21 +907,6 @@ I::OStream& operator<< (I::OStream& os, const Kernel &k)
     return os;
 }
 
-I::OStream& operator<< (I::OStream& os, const std::string &str)
-{
-    uint str_size = (uint)str.size();
-    os << str_size;
-    size_t numAtoms = str_size % sizeof(uint) ==
-        0 ? (str_size / sizeof(uint)) : (str_size / sizeof(uint)) + 1;
-    uint* hton_buff = (uint*)malloc(numAtoms * sizeof(uint));
-    memcpy(hton_buff, str.c_str(), str_size);
-    for (uint a = 0; a < numAtoms; a++)
-    {
-        os << hton_buff[a];
-    }
-    free(hton_buff);
-    return os;
-}
 
 I::OStream& operator<< (I::OStream& os, const RcDesc &desc)
 {
@@ -669,81 +916,7 @@ I::OStream& operator<< (I::OStream& os, const RcDesc &desc)
 }
 
 
-I::OStream& operator<< (I::OStream& os, const cv::Size &cvsize)
-{
-    os << cvsize.width;
-    os << cvsize.height;
-    return os;
-}
 
-I::OStream&  operator<< (I::OStream& os, const bool &bool_val)
-{
-    int bool_val_int;
-    bool_val_int = bool_val ? 1 : 0;
-    os << bool_val_int;
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const cv::Scalar &cvscalar)
-{
-    uint element_tmp[2];
-    for (uint i = 0; i < 4; i++)
-    {
-        memcpy(&element_tmp, &cvscalar.val[i], 2 * sizeof(uint));
-        os << element_tmp[0];
-        os << element_tmp[1];
-    }
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const cv::Point &cvpoint)
-{
-    os << cvpoint.x;
-    os << cvpoint.y;
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const cv::GMatDesc &cvmatdesc)
-{
-    os << cvmatdesc.depth;
-    os << cvmatdesc.chan;
-    os << cvmatdesc.size.width;
-    os << cvmatdesc.size.height;
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const cv::Mat &cvmat)
-{
-    size_t matSizeInBytes = cvmat.rows * cvmat.step[0];
-    int mat_type = cvmat.type();
-    os << cvmat.cols;
-    os << cvmat.rows;
-    os << mat_type;
-    os << (uint)cvmat.step[0];
-
-    if (matSizeInBytes != 0)
-    {
-        size_t numAtoms = matSizeInBytes % sizeof(uint) ==
-            0 ? (matSizeInBytes / sizeof(uint)) : (matSizeInBytes / sizeof(uint)) + 1;
-        uint* hton_buff = (uint*)malloc(numAtoms * sizeof(uint));
-        memcpy(hton_buff, cvmat.data, matSizeInBytes);
-        for (uint a = 0; a < numAtoms; a++)
-        {
-            os << hton_buff[a];
-        }
-        free(hton_buff);
-    }
-    return os;
-}
-
-I::OStream& operator<< (I::OStream& os, const cv::Rect &cvrect)
-{
-    os << cvrect.x;
-    os << cvrect.y;
-    os << cvrect.width;
-    os << cvrect.height;
-    return os;
-}
 
 I::OStream& operator<< (I::OStream& os, const Data &data)
 {
@@ -855,21 +1028,6 @@ I::IStream& operator>> (I::IStream& is, Kernel& k)
     return is;
 }
 
-I::IStream& operator>> (I::IStream& is, std::string& str)
-{
-    uint str_size;
-    is >> str_size;
-    str.resize(str_size);
-    size_t numAtoms = str_size % sizeof(uint) ==
-        0 ? (str_size / sizeof(uint)) : (str_size / sizeof(uint)) + 1;
-    uint* ntoh_buff = (uint*)malloc(numAtoms * sizeof(uint));
-    for (uint a = 0; a < numAtoms; a++)
-    {
-        is >> ntoh_buff[a];
-    }
-    memcpy((char*)str.c_str(), ntoh_buff, str_size);
-    return is;
-}
 
 
 I::IStream& operator>> (I::IStream& is, RcDesc& desc)
@@ -878,89 +1036,6 @@ I::IStream& operator>> (I::IStream& is, RcDesc& desc)
     uint atom;
     is >> desc.id;
     is >> atom; desc.shape = (cv::GShape)atom;
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, cv::Size& cvsize)
-{
-    is >> cvsize.width;
-    is >> cvsize.height;
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, bool& bool_val)
-{
-    uint bool_val_uint;
-    is >> bool_val_uint;
-    bool_val = bool_val_uint == 1 ? true : false;
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, cv::Scalar& cvscalar)
-{
-
-    uint element_tmp[2];
-    for (uint i = 0; i < 4; i++)
-    {
-        is >> element_tmp[0];
-        is >> element_tmp[1];
-        memcpy(&cvscalar.val[i], &element_tmp, sizeof(double));
-    }
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, cv::Point& cvpoint)
-{
-    is >> cvpoint.x;
-    is >> cvpoint.y;
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, cv::GMatDesc& cvmatdesc)
-{
-    is >> cvmatdesc.depth;
-    is >> cvmatdesc.chan;
-    is >> cvmatdesc.size.width;
-    is >> cvmatdesc.size.height;
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, cv::Mat& cvmat)
-{
-    int rows, cols, type, step;
-    size_t matSizeInBytes;
-    is >> cols;
-    is >> rows;
-    is >> type;
-    is >> step;
-    matSizeInBytes = rows*step;
-    if (matSizeInBytes != 0)
-    {
-        void *mat_data = malloc(matSizeInBytes);
-
-        size_t numAtoms = matSizeInBytes % sizeof(uint) ==
-            0 ? (matSizeInBytes / sizeof(uint)) : (matSizeInBytes / sizeof(uint)) + 1;
-        uint* ntoh_buff = (uint*)malloc(numAtoms * sizeof(uint));
-        for (uint a = 0; a < numAtoms; a++)
-        {
-            is >> ntoh_buff[a];
-        }
-        memcpy(mat_data, ntoh_buff, matSizeInBytes);
-        free(ntoh_buff);
-
-        cv::Mat tmp_mat = cv::Mat(rows, cols, type, mat_data, step);
-        tmp_mat.copyTo(cvmat);
-        free(mat_data);
-    }
-    return is;
-}
-
-I::IStream& operator>> (I::IStream& is, cv::Rect& cvrect)
-{
-    is >> cvrect.x;
-    is >> cvrect.y;
-    is >> cvrect.width;
-    is >> cvrect.height;
     return is;
 }
 

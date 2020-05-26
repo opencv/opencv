@@ -73,7 +73,7 @@ struct Data
     HostCtor ctor;  // T-specific helper to deal with unknown types in our code
     // FIXME: Why rc+shape+meta is not represented as RcDesc here?
 
-    enum class Storage
+    enum class Storage: int
     {
         INTERNAL,   // data object is not listed in GComputation protocol
         INPUT,      // data object is listed in GComputation protocol as Input
