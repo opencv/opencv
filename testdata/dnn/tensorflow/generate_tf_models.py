@@ -486,6 +486,10 @@ sess.as_default()
 save(sess.graph.get_tensor_by_name('keras_relu6_input:0'),
      sess.graph.get_tensor_by_name('keras_relu6/clip_by_value:0'), 'keras_relu6', optimize=False)
 ################################################################################
+inp = tf.placeholder(tf.float32, [2, 3], 'input')
+max_node = tf.clip_by_value(inp, clip_value_min=0, clip_value_max=1)
+save(inp, max_node, 'clip_by_value')
+################################################################################
 inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
 reduced = tf.reduce_mean(inp, axis=[1, 2], keepdims=True)
 save(inp, reduced, 'reduce_mean')
