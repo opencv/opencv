@@ -440,9 +440,16 @@ void InfEngineNgraphNet::init(Target targetId)
             ngraph_function->validate_nodes_and_infer_types();
         }
         cnn = InferenceEngine::CNNNetwork(ngraph_function);
-#ifdef _DEBUG  // TODO
-        //cnn.serialize("/tmp/cnn.xml", "/tmp/cnn.bin");
-#endif
+
+        std::string serialized = utils::getConfigurationParameterString("OPENCV_DNN_IE_SERIALIZE", "");
+        if (!serialized.empty())
+        {
+            const int l = serialized.size();
+            if (serialized.substr(l - 4) != ".xml")
+                CV_Error(Error::StsUnsupportedFormat, "Expected a path with .xml extension "
+                         "in OPENCV_DNN_IE_SERIALIZE environment variable. Got " + serialized);
+            cnn.serialize(serialized, serialized.substr(0, l - 4) + ".bin");
+        }
     }
 
     switch (targetId)
