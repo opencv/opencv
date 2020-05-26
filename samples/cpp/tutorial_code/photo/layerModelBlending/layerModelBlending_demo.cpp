@@ -70,6 +70,120 @@ int main()
     cin >> num;
     cout << endl;
     Mat target = cv::imread("samples/cpp/lena.jpg");
-    
+    Mat blend = cv::imread("samples/cpp/opencv-logo.png");
+    Mat temp(target.size(), CV_32FC3, Scalar::all(0));
+    Mat result(target.size(), CV_8UC3, Scalar::all(0));
+    if (target.empty()) {
+        std::cout << "Unable to load target!\n";
+    }
+    if (blend.empty()) {
+        std::cout << "Unable to load blend!\n";
+    }
+    resize(blend, blend, target.size());
+    target.convertTo(target, CV_32F, 1.0 / 255);
+    blend.convertTo(blend, CV_32F, 1.0 / 255);
+    if (num == BLEND_MODEL_DARKEN)
+    {
+        layerModelBlending(target, blend, temp, DARKEN);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/DARKEN_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_MULTIPY)
+    {
+        layerModelBlending(target, blend, temp, MULTIPY);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/MULTIPY_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_COLOR_BURN)
+    {
+        layerModelBlending(target, blend, temp, COLOR_BURN);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/COLOR_BURN.jpg", result);
+    }
+    else if (num == BLEND_MODEL_LINEAR_BRUN)
+    {
+        layerModelBlending(target, blend, temp, LINEAR_BRUN);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/LINEAR_BRUN.jpg", result);
+    }
+    else if (num == BLEND_MODEL_LIGHTEN)
+    {
+        layerModelBlending(target, blend, temp, LIGHTEN);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/LIGHTEN.jpg", result);
+    }
+    else if (num == BLEND_MODEL_SCREEN)
+    {
+        layerModelBlending(target, blend, temp, SCREEN);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/SCREEN_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_COLOR_DODGE)
+    {
+        layerModelBlending(target, blend, temp, COLOR_DODGE);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/COLOR_DODGE_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_LINEAR_DODGE)
+    {
+        layerModelBlending(target, blend, temp, LINEAR_DODGE);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/LINEAR_DODGE_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_OVERLAY)
+    {
+        layerModelBlending(target, blend, temp, OVERLAY);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/OVERLAY_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_SOFT_LIGHT)
+    {
+        layerModelBlending(target, blend, temp, SOFT_LIGHT);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/SOFT_LIGHT_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_HARD_LIGHT)
+    {
+        layerModelBlending(target, blend, temp, HARD_LIGHT);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/HARD_LIGHT_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_VIVID_LIGHT)
+    {
+        layerModelBlending(target, blend, temp, VIVID_LIGHT);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/VIVID_LIGHT_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_LINEAR_LIGHT)
+    {
+        layerModelBlending(target, blend, temp, LINEAR_LIGHT);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/LINEAR_LIGHT_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_PIN_LIGHT)
+    {
+        layerModelBlending(target, blend, temp, PIN_LIGHT);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/PIN_LIGHT_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_DIFFERENCE)
+    {
+        layerModelBlending(target, blend, temp, DIFFERENCE);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/DIFFERENCE_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_EXCLUSION)
+    {
+        layerModelBlending(target, blend, temp, EXCLUSION);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/EXCLUSION_RESULT.jpg", result);
+    }
+    else if (num == BLEND_MODEL_DIVIDE)
+    {
+        layerModelBlending(target, blend, temp, DIVIDE);
+        temp.convertTo(result, CV_8UC3, 255);
+        imwrite("samples/cpp/tutorial_code/photo/layerModelBlending/DIVIDE_RESULT.jpg", result);
+    }
+    imshow("Output", result);
     waitKey(0);
 }
