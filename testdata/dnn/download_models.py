@@ -781,6 +781,11 @@ models = [
         url='https://www.dropbox.com/s/065l4vr8bptzohb/resnet-34_kinetics.onnx?dl=1',
         sha='88897629e4abb0fddef939f0c2d668a4edeb0788',
         filename='resnet-34_kinetics.onnx'),
+    Model(
+        name='EfficientDet-D0', # https://github.com/google/automl
+        url='https://www.dropbox.com/s/9mqp99fd2tpuqn6/efficientdet-d0.pb?dl=1',
+        sha='f178cc17b44e3ed2f3956a0adc1800a7d2a3b3ae',
+        filename='efficientdet-d0.pb'),
 ]
 
 # Note: models will be downloaded to current working directory
