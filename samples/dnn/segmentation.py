@@ -76,7 +76,7 @@ net = cv.dnn.readNet(args.model, args.config, args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 
-winName = 'Deep learning image classification in OpenCV'
+winName = 'Deep learning semantic segmentation in OpenCV'
 cv.namedWindow(winName, cv.WINDOW_NORMAL)
 
 cap = cv.VideoCapture(args.input if args.input else 0)
