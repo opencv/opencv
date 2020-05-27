@@ -30,45 +30,41 @@ struct GSerialized {
 // Stream interfaces, so far temporary
 namespace I {
     struct GAPI_EXPORTS OStream {
-        virtual void put(uint32_t) = 0;
         virtual ~OStream() = default;
+
+        // Define the native support for basic C++ types at the API level:
+        virtual OStream& operator<< (bool) = 0;
+        virtual OStream& operator<< (char) = 0;
+        virtual OStream& operator<< (unsigned char) = 0;
+        virtual OStream& operator<< (short) = 0;
+        virtual OStream& operator<< (unsigned short) = 0;
+        virtual OStream& operator<< (int) = 0;
+        virtual OStream& operator<< (std::size_t) = 0;
+        virtual OStream& operator<< (float) = 0;
+        virtual OStream& operator<< (double) = 0;
+        virtual OStream& operator<< (const std::string&) = 0;
     };
 
     struct GAPI_EXPORTS IStream {
-        virtual uint getUInt32() = 0;
         virtual ~IStream() = default;
+
+        virtual IStream& operator>> (bool &) = 0;
+        virtual IStream& operator>> (char &) = 0;
+        virtual IStream& operator>> (unsigned char &) = 0;
+        virtual IStream& operator>> (short &) = 0;
+        virtual IStream& operator>> (unsigned short &) = 0;
+        virtual IStream& operator>> (int &) = 0;
+        virtual IStream& operator>> (float &) = 0;
+        virtual IStream& operator>> (double &) = 0;
+        virtual IStream& operator>> (std::size_t &) = 0;
+        virtual IStream& operator>> (std::string &) = 0;
     };
 } // namespace I
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 // S11N operators
-
-// Basic types /////////////////////////////////////////////////////////////////
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, bool  bool_val);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, bool &bool_val);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, char  atom);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, char &atom);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, uint32_t  atom);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, uint32_t &atom);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, int  atom);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, int &atom);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, float  atom);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, float &atom);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, double  atom);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, double &atom);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, std::size_t  atom);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is, std::size_t &atom);
-
-GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const std::string &str);
-GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       std::string &str);
+// Note: operators for basic types are defined in IStream/OStream
 
 // OpenCV types ////////////////////////////////////////////////////////////////
 
@@ -86,7 +82,6 @@ GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Scalar &s);
 
 GAPI_EXPORTS I::OStream& operator<< (I::OStream& os, const cv::Mat &m);
 GAPI_EXPORTS I::IStream& operator>> (I::IStream& is,       cv::Mat &m);
-
 
 // G-API types /////////////////////////////////////////////////////////////////
 
@@ -216,7 +211,7 @@ I::IStream& operator>> (I::IStream& is, std::unordered_map<K, V> &m) {
 }
 
 // Generic: variant serialization //////////////////////////////////////////////
-// namespace detail { // FIXME: breaks old code
+namespace detail { // FIXME: breaks old code
 template<typename V>
 I::OStream& put_v(I::OStream&, const V&, std::size_t) {
     GAPI_Assert(false && "variant>>: requested index is invalid");
@@ -240,47 +235,66 @@ I::IStream& get_v(I::IStream& is, V& v, std::size_t i, std::size_t gi) {
         return is;
     } else return get_v<V, Xs...>(is, v, i+1, gi);
 }
-// } // namespace detail FIXME: breaks old code
+} // namespace detail FIXME: breaks old code
 
 template<typename... Ts>
 I::OStream& operator<< (I::OStream& os, const cv::util::variant<Ts...> &v) {
     os << v.index();
-    return put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
+    return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
 }
 template<typename... Ts>
 I::IStream& operator>> (I::IStream& is, cv::util::variant<Ts...> &v) {
     int idx = -1;
     is >> idx;
     GAPI_Assert(idx >= 0 && idx < sizeof...(Ts));
-    return get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
+    return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
 }
 
 // FIXME: Basic Stream implementaions //////////////////////////////////////////
 
-// Basic (dummy) stream implementations.
-class GAPI_EXPORTS SerializationStream final: public I::OStream {
-    std::vector<uint> m_dump_storage;
+// Basic in-memory stream implementations.
+class GAPI_EXPORTS ByteMemoryOutStream final: public I::OStream {
+    std::vector<char> m_storage;
+
+    I::OStream& operator<< (uint32_t);
 
 public:
-    SerializationStream() = default;
-    char* getData();
-    size_t getSize();
-    void putAtom(uint new_atom);
+    const std::vector<char>& data() const;
 
-    // Implement OStream interface
-    virtual void put(uint32_t) override;
+    virtual I::OStream& operator<< (bool) override;
+    virtual I::OStream& operator<< (char) override;
+    virtual I::OStream& operator<< (unsigned char) override;
+    virtual I::OStream& operator<< (short) override;
+    virtual I::OStream& operator<< (unsigned short) override;
+    virtual I::OStream& operator<< (int) override;
+    virtual I::OStream& operator<< (std::size_t) override;
+    virtual I::OStream& operator<< (float) override;
+    virtual I::OStream& operator<< (double) override;
+    virtual I::OStream& operator<< (const std::string&) override;
 };
 
-class GAPI_EXPORTS DeSerializationStream final: public I::IStream {
-    std::vector<uint> m_dump_storage{};
-    size_t m_storage_index = 0;
+class GAPI_EXPORTS ByteMemoryInStream final: public I::IStream {
+    const std::vector<char>& m_storage;
+    size_t m_idx = 0u;
+
+    void check(std::size_t n) { (void) n; GAPI_DbgAssert(m_idx+n-1 < m_storage.size()); }
+    uint32_t getU32() { uint32_t v{}; *this >> v; return v; };
+
+    I::IStream& operator>> (uint32_t &);
 
 public:
-    DeSerializationStream(const char* data, size_t sz);
-    uint getAtom();
+    explicit ByteMemoryInStream(const std::vector<char> &data);
 
-    // Implement IStream interface
-    virtual uint32_t getUInt32() override;
+    virtual I::IStream& operator>> (bool &) override;
+    virtual I::IStream& operator>> (char &) override;
+    virtual I::IStream& operator>> (unsigned char &) override;
+    virtual I::IStream& operator>> (short &) override;
+    virtual I::IStream& operator>> (unsigned short &) override;
+    virtual I::IStream& operator>> (int &) override;
+    virtual I::IStream& operator>> (float &) override;
+    virtual I::IStream& operator>> (double &) override;
+    virtual I::IStream& operator>> (std::size_t &) override;
+    virtual I::IStream& operator>> (std::string &) override;
 };
 
 

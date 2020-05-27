@@ -37,8 +37,7 @@ void dumpDot(const ade::Graph &g, std::ostream& os);
 void dumpDot(ade::passes::PassContext &ctx, std::ostream& os);
 void dumpDotStdout(ade::passes::PassContext &ctx);
 void dumpGraph(ade::passes::PassContext     &ctx, const std::string& dump_path);
-//FIXME: exprt was added for serialization backend test implementation
-void GAPI_EXPORTS dumpDotToFile(ade::passes::PassContext &ctx, const std::string& dump_path);
+void dumpDotToFile(ade::passes::PassContext &ctx, const std::string& dump_path);
 
 void initIslands(ade::passes::PassContext &ctx);
 void checkIslands(ade::passes::PassContext &ctx);
@@ -54,8 +53,7 @@ void expandKernels(ade::passes::PassContext &ctx,
 void bindNetParams(ade::passes::PassContext   &ctx,
                    const gapi::GNetPackage    &networks);
 
-//FIXME: exprt was added for serialization backend test implementation
-void GAPI_EXPORTS resolveKernels(ade::passes::PassContext   &ctx,
+void resolveKernels(ade::passes::PassContext   &ctx,
                     const gapi::GKernelPackage &kernels);
 
 void fuseIslands(ade::passes::PassContext &ctx);

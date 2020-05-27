@@ -9,17 +9,12 @@
 #include "backends/common/serialization.hpp"
 
 std::vector<char> cv::gapi::serialize(const cv::GComputation &c) {
-    cv::gimpl::s11n::SerializationStream os;
+    cv::gimpl::s11n::ByteMemoryOutStream os;
     c.serialize(os);
-
-    // FIXME: This stream API needs a fix-up
-    std::vector<char> result;
-    result.resize(os.getSize());
-    std::copy_n(os.getData(), os.getSize(), result.begin());
-    return result;
+    return os.data();
 }
 
 cv::GComputation cv::gapi::detail::getGraph(const std::vector<char> &p) {
-    cv::gimpl::s11n::DeSerializationStream is(p.data(), p.size());
+    cv::gimpl::s11n::ByteMemoryInStream is(p);
     return cv::GComputation(is);
 }

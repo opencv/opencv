@@ -67,7 +67,7 @@ TEST(S11N, Pipeline_Canny_Bool)
     EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
 }
 
-TEST(S11N, Pipeline_OverloadUnary_MatMat)
+TEST(S11N, Pipeline_Not)
 {
     cv::GMat in;
     auto p = cv::gapi::serialize(cv::GComputation(in, cv::gapi::bitwise_not(in)));
@@ -86,7 +86,7 @@ TEST(S11N, Pipeline_OverloadUnary_MatMat)
     EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
-TEST(S11N, Pipeline_OverloadUnary_MatScalar)
+TEST(S11N, Pipeline_Sum_Scalar)
 {
     cv::GMat in;
     auto p = cv::gapi::serialize(cv::GComputation(in, cv::gapi::sum(in)));
@@ -105,7 +105,7 @@ TEST(S11N, Pipeline_OverloadUnary_MatScalar)
     EXPECT_EQ(out_scl, ref_scl);
 }
 
-TEST(S11N, Pipeline_OverloadBinary_Mat)
+TEST(S11N, Pipeline_BinaryOp)
 {
     cv::GMat a, b;
     auto p = cv::gapi::serialize(cv::GComputation(a, b, cv::gapi::add(a, b)));
@@ -124,7 +124,7 @@ TEST(S11N, Pipeline_OverloadBinary_Mat)
     EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
-TEST(S11N, Pipeline_OverloadBinary_Scalar)
+TEST(S11N, Pipeline_Binary_Sum_Scalar)
 {
     cv::GMat a, b;
     auto p = cv::gapi::serialize(cv::GComputation(a, b, cv::gapi::sum(a + b)));
@@ -223,13 +223,6 @@ TEST(S11N, Pipeline_Sharpen)
 TEST(S11N, Pipeline_CustomRGB2YUV)
 {
     const cv::Size sz(1280, 720);
-
-    // BEWARE:
-    //
-    //    std::vector<cv::Mat> out_mats_cv(3, cv::Mat(sz, CV_8U))
-    //
-    // creates a vector of 3 elements pointing to the same Mat!
-    // FIXME: Make a G-API check for that
     const int INS = 3;
     std::vector<cv::Mat> in_mats(INS);
     for (auto i : ade::util::iota(INS))

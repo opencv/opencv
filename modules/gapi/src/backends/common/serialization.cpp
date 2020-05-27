@@ -8,22 +8,21 @@
 #include <map> // map
 #include <ade/util/zip_range.hpp> // indexed
 
-#include <opencv2/gapi/gtype_traits.hpp>
-
-#include "backends/common/serialization.hpp"
-
 #ifdef _WIN32
 #include <winsock.h>      // htonl, ntohl
 #else
 #include <netinet/in.h>   // htonl, ntohl
 #endif
 
+#include <opencv2/gapi/gtype_traits.hpp>
+
+#include "backends/common/serialization.hpp"
+
 namespace cv {
 namespace gimpl {
 namespace s11n {
 namespace {
 
-// FIXME? make a method of GSerialized?
 void putData(GSerialized& s, const GModel::ConstGraph& cg, const ade::NodeHandle &nh) {
     const auto gdata = cg.metadata(nh).get<gimpl::Data>();
     const auto it = ade::util::find_if(s.m_datas, [&gdata](const cv::gimpl::Data &cd) {
@@ -72,7 +71,7 @@ void linkNodes(ade::Graph& g) {
             const auto& op = gm.metadata(nh).get<gimpl::Op>();
             for (const auto& in : ade::util::indexed(op.args)) {
                 const auto& arg = ade::util::value(in);
-                if (arg.kind == detail::ArgKind::GOBJREF) {
+                if (arg.kind == cv::detail::ArgKind::GOBJREF) {
                     const auto idx = ade::util::index(in);
                     const auto rc  = arg.get<gimpl::RcDesc>();
                     const auto& in_nh = dataNodes.at(rc);
@@ -133,100 +132,7 @@ void relinkProto(ade::Graph& g) {
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-//Graph dump operators
-
-// Basic types /////////////////////////////////////////////////////////////////
-
-I::OStream& operator<< (I::OStream& os, bool atom) {
-    os.put(atom ? 1 : 0);
-    return os;
-}
-I::IStream& operator>> (I::IStream& is, bool& atom) {
-    atom = is.getUInt32() == 0 ? false : true;
-    return is;
-}
-
-I::OStream& operator<< (I::OStream& os, char atom) {
-    os.put(atom);
-    return os;
-}
-I::IStream& operator>> (I::IStream& is, char &atom) {
-    atom = static_cast<char>(is.getUInt32());
-    return is;
-}
-
-I::OStream& operator<< (I::OStream& os, uint32_t atom) {
-    os.put(atom);
-    return os;
-}
-I::IStream& operator>> (I::IStream& is, uint32_t &atom) {
-    atom = is.getUInt32();
-    return is;
-}
-
-I::OStream& operator<< (I::OStream& os, int atom) {
-    os.put(atom);
-    return os;
-}
-I::IStream& operator>> (I::IStream& is, int& atom) {
-    atom = is.getUInt32();
-    return is;
-}
-
-I::OStream& operator<< (I::OStream& os, std::size_t atom) {
-    os.put(static_cast<uint32_t>(atom));  // FIXME: type truncated??
-    return os;
-}
-I::IStream& operator>> (I::IStream& is, std::size_t& atom) {
-    atom = is.getUInt32();                // FIXME: type truncated??
-    return is;
-}
-
-I::OStream& operator<< (I::OStream& os, float atom) {
-    uint32_t element_tmp = 0u;
-    memcpy(&element_tmp, &atom, sizeof(uint32_t));
-    os << element_tmp;
-    return os;
-}
-I::IStream& operator>> (I::IStream& is, float& atom) {
-    uint32_t element_tmp = 0u;
-    is >> element_tmp;
-    memcpy(&atom, &element_tmp, sizeof(uint32_t));
-    return is;
-}
-
-I::OStream& operator<< (I::OStream& os, double atom) {
-    uint32_t element_tmp[2] = {0u};
-    memcpy(&element_tmp, &atom, 2 * sizeof(uint32_t));
-    os << element_tmp[0];
-    os << element_tmp[1];
-    return os;
-}
-I::IStream& operator>> (I::IStream& is, double& atom) {
-    uint32_t element_tmp[2] = {0u};
-    is >> element_tmp[0];
-    is >> element_tmp[1];
-    memcpy(&atom, &element_tmp, 2 * sizeof(uint32_t));
-    return is;
-}
-
-
-I::OStream& operator<< (I::OStream& os, const std::string &str) {
-    os << static_cast<std::size_t>(str.size()); // N.B. Put type explicitly
-    for (auto c : str) os << c;
-    return os;
-}
-I::IStream& operator>> (I::IStream& is, std::string& str) {
-    std::size_t sz = 0u;
-    is >> sz;
-    if (sz == 0u) {
-        str.clear();
-    } else {
-        str.resize(sz);
-        for (auto &&i : ade::util::iota(sz)) { is >> str[i]; }
-    }
-    return is;
-}
+// Graph dump operators
 
 // OpenCV types ////////////////////////////////////////////////////////////////
 
@@ -258,56 +164,63 @@ I::IStream& operator>> (I::IStream& is, cv::Scalar& s) {
     return is >> s.val[0] >> s.val[1] >> s.val[2] >> s.val[3];
 }
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// FIXME: this needs to be reworked
-I::OStream& operator<< (I::OStream& os, const cv::Mat &m) {
-    size_t matSizeInBytes = m.rows * m.step[0];
-    int mat_type = m.type();
-    os << m.cols;
-    os << m.rows;
-    os << mat_type;
-    os << (uint)m.step[0];
+namespace
+{
+template<typename T>
+void write_plain(I::OStream &os, const T *arr, std::size_t sz) {
+    for (auto &&it : ade::util::iota(sz)) os << arr[it];
+}
+template<typename T>
+void read_plain(I::IStream &is, T *arr, std::size_t sz) {
+    for (auto &&it : ade::util::iota(sz)) is >> arr[it];
+}
+template<typename T>
+void write_mat_data(I::OStream &os, const cv::Mat &m) {
+    // Write every row individually (handles the case when Mat is a view)
+    for (auto &&r : ade::util::iota(m.rows)) {
+        write_plain(os, m.ptr<T>(r), m.cols*m.channels());
+    }
+}
+template<typename T>
+void read_mat_data(I::IStream &is, cv::Mat &m) {
+    // Write every row individually (handles the case when Mat is aligned)
+    for (auto &&r : ade::util::iota(m.rows)) {
+        read_plain(is, m.ptr<T>(r), m.cols*m.channels());
+    }
+}
+} // namespace
 
-    if (matSizeInBytes != 0) {
-        size_t numAtoms = matSizeInBytes % sizeof(uint) ==
-            0 ? (matSizeInBytes / sizeof(uint)) : (matSizeInBytes / sizeof(uint)) + 1;
-        uint* hton_buff = (uint*)malloc(numAtoms * sizeof(uint));
-        memcpy(hton_buff, m.data, matSizeInBytes);
-        for (uint a = 0; a < numAtoms; a++) {
-            os << hton_buff[a];
-        }
-        free(hton_buff);
+I::OStream& operator<< (I::OStream& os, const cv::Mat &m) {
+    GAPI_Assert(m.size.dims() == 2 && "Only 2D images are supported now");
+    os << m.rows << m.cols << m.type();
+    switch (m.depth()) {
+    case CV_8U:  write_mat_data< uint8_t>(os, m); break;
+    case CV_8S:  write_mat_data<    char>(os, m); break;
+    case CV_16U: write_mat_data<uint16_t>(os, m); break;
+    case CV_16S: write_mat_data< int16_t>(os, m); break;
+    case CV_32S: write_mat_data< int32_t>(os, m); break;
+    case CV_32F: write_mat_data<   float>(os, m); break;
+    case CV_64F: write_mat_data<  double>(os, m); break;
+    default: GAPI_Assert(false && "Unsupported Mat depth");
     }
     return os;
 }
 I::IStream& operator>> (I::IStream& is, cv::Mat& m) {
-    int rows, cols, type, step;
-    size_t matSizeInBytes;
-    is >> cols;
-    is >> rows;
-    is >> type;
-    is >> step;
-    matSizeInBytes = rows*step;
-    if (matSizeInBytes != 0) {
-        void *mat_data = malloc(matSizeInBytes);
-
-        size_t numAtoms = matSizeInBytes % sizeof(uint) ==
-            0 ? (matSizeInBytes / sizeof(uint)) : (matSizeInBytes / sizeof(uint)) + 1;
-        uint* ntoh_buff = (uint*)malloc(numAtoms * sizeof(uint));
-        for (uint a = 0; a < numAtoms; a++) {
-            is >> ntoh_buff[a];
-        }
-        memcpy(mat_data, ntoh_buff, matSizeInBytes);
-        free(ntoh_buff);
-
-        cv::Mat tmp_mat = cv::Mat(rows, cols, type, mat_data, step);
-        tmp_mat.copyTo(m);
-        free(mat_data);
+    int rows = -1, cols = -1, type = 0;
+    is >> rows >> cols >> type;
+    m.create(cv::Size(cols, rows), type);
+    switch (m.depth()) {
+    case CV_8U:  read_mat_data< uint8_t>(is, m); break;
+    case CV_8S:  read_mat_data<    char>(is, m); break;
+    case CV_16U: read_mat_data<uint16_t>(is, m); break;
+    case CV_16S: read_mat_data< int16_t>(is, m); break;
+    case CV_32S: read_mat_data< int32_t>(is, m); break;
+    case CV_32F: read_mat_data<   float>(is, m); break;
+    case CV_64F: read_mat_data<  double>(is, m); break;
+    default: GAPI_Assert(false && "Unsupported Mat depth");
     }
     return is;
 }
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 // G-API types /////////////////////////////////////////////////////////////////
 
@@ -524,39 +437,143 @@ void reconstruct(const GSerialized &s, ade::Graph &g) {
     gm.metadata().set(cv::gimpl::Deserialized{});
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// Streams /////////////////////////////////////////////////////////////////////
 
-char* SerializationStream::getData() {
-    return (char*)m_dump_storage.data();
+const std::vector<char>& ByteMemoryOutStream::data() const {
+    return m_storage;
+}
+I::OStream& ByteMemoryOutStream::operator<< (uint32_t atom) {
+    m_storage.push_back(0xFF & (atom));
+    m_storage.push_back(0xFF & (atom >> 8));
+    m_storage.push_back(0xFF & (atom >> 16));
+    m_storage.push_back(0xFF & (atom >> 24));
+    return *this;
+}
+I::OStream& ByteMemoryOutStream::operator<< (bool atom) {
+    m_storage.push_back(atom ? 1 : 0);
+    return *this;
+}
+I::OStream& ByteMemoryOutStream::operator<< (char atom) {
+    m_storage.push_back(atom);
+    return *this;
+}
+I::OStream& ByteMemoryOutStream::operator<< (unsigned char atom) {
+    return *this << static_cast<char>(atom);
+}
+I::OStream& ByteMemoryOutStream::operator<< (short atom) {
+    static_assert(sizeof(short) == 2, "Expecting sizeof(short) == 2");
+    m_storage.push_back(0xFF & (atom));
+    m_storage.push_back(0xFF & (atom >> 8));
+    return *this;
+}
+I::OStream& ByteMemoryOutStream::operator<< (unsigned short atom) {
+    return *this << static_cast<short>(atom);
+}
+I::OStream& ByteMemoryOutStream::operator<< (int atom) {
+    static_assert(sizeof(int) == 4, "Expecting sizeof(int) == 4");
+    return *this << static_cast<uint32_t>(atom);
+}
+I::OStream& ByteMemoryOutStream::operator<< (std::size_t atom) {
+    // NB: type truncated!
+    return *this << static_cast<uint32_t>(atom);
+}
+I::OStream& ByteMemoryOutStream::operator<< (float atom) {
+    static_assert(sizeof(float) == 4, "Expecting sizeof(float) == 4");
+    uint32_t tmp = 0u;
+    memcpy(&tmp, &atom, sizeof(float));
+    return *this << static_cast<uint32_t>(htonl(tmp));
+}
+I::OStream& ByteMemoryOutStream::operator<< (double atom) {
+    static_assert(sizeof(double) == 8, "Expecting sizeof(double) == 8");
+    uint32_t tmp[2] = {0u};
+    memcpy(tmp, &atom, sizeof(double));
+    *this << static_cast<uint32_t>(htonl(tmp[0]));
+    *this << static_cast<uint32_t>(htonl(tmp[1]));
+    return *this;
+}
+I::OStream& ByteMemoryOutStream::operator<< (const std::string &str) {
+    *this << static_cast<std::size_t>(str.size()); // N.B. Put type explicitly
+    for (auto c : str) *this << c;
+    return *this;
 }
 
-size_t SerializationStream::getSize() {
-    return (size_t)(m_dump_storage.size()*sizeof(uint));
-};
-
-void SerializationStream::putAtom(uint new_atom) {
-    m_dump_storage.push_back(new_atom);
-};
-
-void SerializationStream::put(uint32_t v) {
-    putAtom(htonl(v));
+ByteMemoryInStream::ByteMemoryInStream(const std::vector<char> &data)
+    : m_storage(data) {
 }
-
-DeSerializationStream::DeSerializationStream(const char* data, size_t sz) {
-    const uint* uint_data = (const uint*)data;
-    const size_t uint_size = sz / sizeof(uint);
-    for (size_t i = 0u; i < uint_size; i++) {
-        m_dump_storage.push_back(uint_data[i]);
+I::IStream& ByteMemoryInStream::operator>> (uint32_t &atom) {
+    check(sizeof(uint32_t));
+    uint8_t x[4];
+    x[0] = static_cast<uint8_t>(m_storage[m_idx++]);
+    x[1] = static_cast<uint8_t>(m_storage[m_idx++]);
+    x[2] = static_cast<uint8_t>(m_storage[m_idx++]);
+    x[3] = static_cast<uint8_t>(m_storage[m_idx++]);
+    atom = ((x[0]) | (x[1] << 8) | (x[2] << 16) | (x[3] << 24));
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (bool& atom) {
+    check(sizeof(char));
+    atom = (m_storage[m_idx++] == 0) ? false : true;
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (char &atom) {
+    check(sizeof(char));
+    atom = m_storage[m_idx++];
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (unsigned char &atom) {
+    char c{};
+    *this >> c;
+    atom = static_cast<unsigned char>(c);
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (short &atom) {
+    static_assert(sizeof(short) == 2, "Expecting sizeof(short) == 2");
+    check(sizeof(short));
+    uint8_t x[2];
+    x[0] = static_cast<uint8_t>(m_storage[m_idx++]);
+    x[1] = static_cast<uint8_t>(m_storage[m_idx++]);
+    atom = ((x[0]) | (x[1] << 8));
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (unsigned short &atom) {
+    short s{};
+    *this >> s;
+    atom = static_cast<unsigned short>(s);
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (int& atom) {
+    static_assert(sizeof(int) == 4, "Expecting sizeof(int) == 4");
+    atom = static_cast<int>(getU32());
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (std::size_t& atom) {
+    // NB. Type was truncated!
+    atom = static_cast<std::size_t>(getU32());
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (float& atom) {
+    static_assert(sizeof(float) == 4, "Expecting sizeof(float) == 4");
+    uint32_t tmp = ntohl(getU32());
+    memcpy(&atom, &tmp, sizeof(float));
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (double& atom) {
+    static_assert(sizeof(double) == 8, "Expecting sizeof(double) == 8");
+    uint32_t tmp[2] = {ntohl(getU32()), ntohl(getU32())};
+    memcpy(&atom, tmp, sizeof(double));
+    return *this;
+}
+I::IStream& ByteMemoryInStream::operator>> (std::string& str) {
+    std::size_t sz = 0u;
+    *this >> sz;
+    if (sz == 0u) {
+        str.clear();
+    } else {
+        str.resize(sz);
+        for (auto &&i : ade::util::iota(sz)) { *this >> str[i]; }
     }
-}
-
-uint DeSerializationStream::getAtom() {
-    uint next_atom = m_dump_storage.data()[m_storage_index++];
-    return next_atom;
-};
-
-uint32_t DeSerializationStream::getUInt32() {
-    return ntohl(getAtom());
+    return *this;
 }
 
 } // namespace s11n
