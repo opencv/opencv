@@ -1082,17 +1082,26 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 
 static int g_networkId = 0;
 
-struct Net::Impl
+detail::NetImplBase::NetImplBase()
+    : networkId(CV_XADD(&g_networkId, 1))
+    , networkDumpCounter(0)
+    , dumpLevel(DNN_NETWORK_DUMP)
+{
+    // nothing
+}
+
+std::string detail::NetImplBase::getDumpFileNameBase()
+{
+    std::string dumpFileNameBase = cv::format("ocv_dnn_net_%05d_%02d", networkId, networkDumpCounter++);
+    return dumpFileNameBase;
+}
+
+struct Net::Impl : public detail::NetImplBase
 {
     typedef std::map<int, LayerShapes> LayersShapesMap;
     typedef std::map<int, LayerData> MapIdToLayerData;
 
-    const int networkId; // network global identifier
-    int networkDumpCounter; // dump counter
-
     Impl()
-        : networkId(CV_XADD(&g_networkId, 1))
-        , networkDumpCounter(0)
     {
         //allocate fake net input layer
         netInputLayer = Ptr<DataLayer>(new DataLayer());
@@ -1256,7 +1265,7 @@ struct Net::Impl
     {
         CV_TRACE_FUNCTION();
 
-        if (DNN_NETWORK_DUMP > 0 && networkDumpCounter == 0)
+        if (dumpLevel && networkDumpCounter == 0)
         {
             dumpNetworkToFile();
         }
@@ -1339,7 +1348,7 @@ struct Net::Impl
 
             netWasAllocated = true;
 
-            if (DNN_NETWORK_DUMP > 0)
+            if (dumpLevel)
             {
                 dumpNetworkToFile();
             }
@@ -2043,7 +2052,7 @@ struct Net::Impl
                 }
 
                 if (net.empty()) {
-                    net = Ptr<InfEngineNgraphNet>(new InfEngineNgraphNet());
+                    net = Ptr<InfEngineNgraphNet>(new InfEngineNgraphNet(*this));
                 }
 
                 if (!fused) {
@@ -2087,7 +2096,7 @@ struct Net::Impl
                 }
             }
             else {
-                net = Ptr<InfEngineNgraphNet>(new InfEngineNgraphNet());
+                net = Ptr<InfEngineNgraphNet>(new InfEngineNgraphNet(*this));
             }
 
             if (!fused)
@@ -3126,7 +3135,8 @@ struct Net::Impl
     void dumpNetworkToFile()
     {
 #ifndef OPENCV_DNN_DISABLE_NETWORK_AUTO_DUMP
-        String dumpFileName = cv::format("ocv_dnn_net_%05d_%02d.dot", networkId, networkDumpCounter++);
+        string dumpFileNameBase = getDumpFileNameBase();
+        string dumpFileName = dumpFileNameBase + ".dot";
         try
         {
             string dumpStr = dump();
@@ -3185,7 +3195,7 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
     {
         auto fake_node = std::make_shared<ngraph::op::Parameter>(ngraph::element::f32, ngraph::Shape{});
         Ptr<InfEngineNgraphNode> backendNodeNGraph(new InfEngineNgraphNode(fake_node));
-        backendNodeNGraph->net = Ptr<InfEngineNgraphNet>(new InfEngineNgraphNet(ieNet));
+        backendNodeNGraph->net = Ptr<InfEngineNgraphNet>(new InfEngineNgraphNet(*(cvNet.impl), ieNet));
         backendNode = backendNodeNGraph;
     }
     else
