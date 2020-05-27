@@ -1277,6 +1277,13 @@ struct Net::Impl
         }
 
         Ptr<BackendWrapper> wrapper = wrapMat(preferableBackend, preferableTarget, host);
+#ifdef HAVE_CUDA
+        if (preferableBackend == DNN_BACKEND_CUDA)
+        {
+            auto cudaWrapper = wrapper.dynamicCast<CUDABackendWrapper>();
+            cudaWrapper->setStream(cudaInfo->context.stream);
+        }
+#endif
         backendWrappers[data] = wrapper;
         return wrapper;
     }
@@ -2414,16 +2421,7 @@ struct Net::Impl
             ninputs = netInputLayer->inputsData.size();
             ld.inputBlobsWrappers.resize(ninputs);
             for (size_t i = 0; i < ninputs; i++)
-            {
                 ld.inputBlobsWrappers[i] = wrap(netInputLayer->inputsData[i]);
-#ifdef HAVE_CUDA
-                if (IS_DNN_CUDA_TARGET(preferableTarget))
-                {
-                    auto wrapper = ld.inputBlobsWrappers[i].dynamicCast<CUDABackendWrapper>();
-                    wrapper->setStream(cudaInfo->context.stream);
-                }
-#endif
-            }
         }
         else
         {
@@ -2449,23 +2447,12 @@ struct Net::Impl
                                           preferableTarget == DNN_TARGET_OPENCL_FP16);
         ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
         for (int i = 0; i < ld.outputBlobs.size(); ++i)
-        {
             ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
-#ifdef HAVE_CUDA
-            if (IS_DNN_CUDA_TARGET(preferableTarget))
-            {
-                auto wrapper = ld.outputBlobsWrappers[i].dynamicCast<CUDABackendWrapper>();
-                wrapper->setStream(cudaInfo->context.stream);
-            }
-#endif
-        }
 
         /* CUDA backend has its own system for internal blobs; we don't need these */
         ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA) ? 0 : ld.internals.size());
         for (int i = 0; i < ld.internalBlobsWrappers.size(); ++i)
-        {
             ld.internalBlobsWrappers[i] = wrap(ld.internals[i]);
-        }
 
         Ptr<Layer> layerPtr = ld.getLayerInstance();
         {
