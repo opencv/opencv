@@ -27,10 +27,10 @@ PERF_TEST_P_(RenderTestFTexts, RenderFTextsPerformanceBGROCVTest)
     cv::Point org;
     int fh = 0;
     cv::Scalar color;
-    MatType type;
     cv::GCompileArgs comp_args;
-    std::tie(text ,sz ,org ,fh ,color, type, comp_args) = GetParam();
+    std::tie(text ,sz ,org ,fh ,color, comp_args) = GetParam();
 
+    MatType type =  CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
 
@@ -62,9 +62,8 @@ PERF_TEST_P_(RenderTestFTexts, RenderFTextsPerformanceNV12OCVTest)
     cv::Point org;
     int fh = 0;
     cv::Scalar color;
-    MatType type;
     cv::GCompileArgs comp_args;
-    std::tie(text ,sz ,org ,fh ,color, type, comp_args) = GetParam();
+    std::tie(text ,sz ,org ,fh ,color, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -106,12 +105,12 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
     double fs = 2.0;
     cv::Scalar color;
     bool blo = false;
-    MatType type;
     std::string text;
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(text, sz, org, ff, color, thick, lt, blo, type, comp_args) = GetParam();
+    std::tie(text, sz, org, ff, color, thick, lt, blo, comp_args) = GetParam();
 
+    MatType type =  CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
 
@@ -145,11 +144,10 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
     double fs = 2.0;
     cv::Scalar color;
     bool blo = false;
-    MatType type;
     std::string text;
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(text, sz, org, ff, color, thick, lt, blo, type, comp_args) = GetParam();
+    std::tie(text, sz, org, ff, color, thick, lt, blo, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -189,12 +187,11 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
     int thick = 0;
     int lt = 0;
     int shift = 0;
-    MatType type;
-
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, rect, color, thick, lt, shift, type, comp_args) = GetParam();
+    std::tie(sz, rect, color, thick, lt, shift, comp_args) = GetParam();
 
+    MatType type =  CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
 
@@ -226,11 +223,9 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
     int thick = 0;
     int lt = 0;
     int shift = 0;
-    MatType type;
-
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, rect, color, thick, lt, shift, type, comp_args) = GetParam();
+    std::tie(sz, rect, color, thick, lt, shift, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -271,12 +266,12 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceBGROCVTest)
     int thick = 0;
     int lt = 0;
     int shift = 0;
-    MatType type;
 
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, center, radius, color, thick, lt, shift, type, comp_args) = GetParam();
+    std::tie(sz, center, radius, color, thick, lt, shift, comp_args) = GetParam();
 
+    MatType type =  CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
 
@@ -309,11 +304,10 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
     int thick = 0;
     int lt = 0;
     int shift = 0;
-    MatType type;
 
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, center, radius, color, thick, lt, shift, type, comp_args) = GetParam();
+    std::tie(sz, center, radius, color, thick, lt, shift, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -354,13 +348,13 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
     int thick = 0;
     int lt = 0;
     int shift = 0;
-    MatType type;
 
     compare_f cmpF;
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, pt1, pt2, color, thick, lt, shift, type, comp_args) = GetParam();
+    std::tie(sz, pt1, pt2, color, thick, lt, shift, comp_args) = GetParam();
 
+    MatType type =  CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
 
@@ -393,12 +387,11 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
     int thick = 0;
     int lt = 0;
     int shift = 0;
-    MatType type;
 
     compare_f cmpF;
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, pt1, pt2, color, thick, lt, shift, type, comp_args) = GetParam();
+    std::tie(sz, pt1, pt2, color, thick, lt, shift, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -436,12 +429,12 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
     cv::Rect mos;
     int cellsz = 0;
     int decim = 0;
-    MatType type;
 
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, mos, cellsz, decim, type, comp_args) = GetParam();
+    std::tie(sz, mos, cellsz, decim, comp_args) = GetParam();
 
+    MatType type =  CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
 
@@ -472,11 +465,10 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
     cv::Rect mos;
     int cellsz = 0;
     int decim = 0;
-    MatType type;
 
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, mos, cellsz, decim, type, comp_args) = GetParam();
+    std::tie(sz, mos, cellsz, decim, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -514,12 +506,12 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
     cv::Rect rect;
     cv::Scalar color;
     double transparency = 0.0;
-    MatType type;
 
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, rect, color, transparency, type, comp_args) = GetParam();
+    std::tie(sz, rect, color, transparency, comp_args) = GetParam();
 
+    MatType type =  CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
 
@@ -555,11 +547,10 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
     cv::Rect rect;
     cv::Scalar color;
     double transparency = 0.0;
-    MatType type;
 
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, rect, color, transparency, type, comp_args) = GetParam();
+    std::tie(sz, rect, color, transparency, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -604,12 +595,12 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceBGROCVTest)
     int thick = 0;
     int lt = 0;
     int shift = 0;
-    MatType type;
 
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, points, color, thick, lt, shift, type, comp_args) = GetParam();
+    std::tie(sz, points, color, thick, lt, shift, comp_args) = GetParam();
 
+    MatType type =  CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
 
@@ -641,11 +632,10 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
     int thick = 0;
     int lt = 0;
     int shift = 0;
-    MatType type;
 
     cv::Size sz;
     cv::GCompileArgs comp_args;
-    std::tie(sz, points, color, thick, lt, shift, type, comp_args) = GetParam();
+    std::tie(sz, points, color, thick, lt, shift, comp_args) = GetParam();
 
     cv::Mat y_ref_mat, uv_ref_mat;
 
@@ -690,8 +680,8 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceBGROCVTest)
     int thick = 2;
     int lt = LINE_8;
     cv::Scalar color(100, 50, 150);
-    MatType type = CV_8UC3;
 
+    MatType type = CV_8UC3;
     cv::Mat gapi_mat, ref_mat;
     create_rand_mats(sz, type, ref_mat, gapi_mat);
     cv::Mat gapi_out_mat(sz, type);

@@ -20,7 +20,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestFTexts, RenderTestFTexts,
                                 Values(cv::Point(50, 50)),
                                 Values(60),
                                 Values(cv::Scalar(200, 100, 25)),
-                                Values(CV_8UC3),
                                 Values(cv::compile_args(RENDER_OCV))));
 #endif // HAVE_FREETYPE
 
@@ -33,7 +32,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestTexts, RenderTestTexts,
                                 Values(2),
                                 Values(LINE_8),
                                 Values(false),
-                                Values(CV_8UC3),
                                 Values(cv::compile_args(RENDER_OCV))));
 
 INSTANTIATE_TEST_CASE_P(RenderTestRects, RenderTestRects,
@@ -43,7 +41,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestRects, RenderTestRects,
                                 Values(2),
                                 Values(LINE_8),
                                 Values(0),
-                                Values(CV_8UC3),
                                 Values(cv::compile_args(RENDER_OCV))));
 
 INSTANTIATE_TEST_CASE_P(RenderTestCircles, RenderTestCircles,
@@ -54,7 +51,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestCircles, RenderTestCircles,
                                 Values(2),
                                 Values(LINE_8),
                                 Values(0),
-                                Values(CV_8UC3),
                                 Values(cv::compile_args(RENDER_OCV))));
 
 INSTANTIATE_TEST_CASE_P(RenderTestLines, RenderTestLines,
@@ -65,7 +61,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestLines, RenderTestLines,
                                 Values(2),
                                 Values(LINE_8),
                                 Values(0),
-                                Values(CV_8UC3),
                                 Values(cv::compile_args(RENDER_OCV))));
 
 INSTANTIATE_TEST_CASE_P(RenderTestMosaics, RenderTestMosaics,
@@ -73,7 +68,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestMosaics, RenderTestMosaics,
                                 Values(cv::Rect(100, 100, 200, 200)),
                                 Values(25),
                                 Values(0),
-                                Values(CV_8UC3),
                                 Values(cv::compile_args(RENDER_OCV))));
 
 INSTANTIATE_TEST_CASE_P(RenderTestImages, RenderTestImages,
@@ -81,7 +75,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestImages, RenderTestImages,
                                 Values(cv::Rect(50, 50, 100, 100)),
                                 Values(cv::Scalar(100, 150, 60)),
                                 Values(1.0),
-                                Values(CV_8UC3),
                                 Values(cv::compile_args(RENDER_OCV))));
 
 INSTANTIATE_TEST_CASE_P(RenderTestPolylines, RenderTestPolylines,
@@ -91,7 +84,6 @@ INSTANTIATE_TEST_CASE_P(RenderTestPolylines, RenderTestPolylines,
                                 Values(2),
                                 Values(LINE_8),
                                 Values(0),
-                                Values(CV_8UC3),
                                 Values(cv::compile_args(RENDER_OCV))));
 
 INSTANTIATE_TEST_CASE_P(RenderTestPolyItems, RenderTestPolyItems,
