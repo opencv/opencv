@@ -337,8 +337,9 @@ double cv::contourArea( InputArray _contour, bool oriented )
     return a00;
 }
 
-
-cv::RotatedRect cv::fitEllipse( InputArray _points )
+namespace cv
+{
+static RotatedRect fitEllipseNoDirect( InputArray _points )
 {
     CV_INSTRUMENT_REGION();
 
@@ -354,32 +355,41 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
 
     // New fitellipse algorithm, contributed by Dr. Daniel Weiss
     Point2f c(0,0);
-    double gfp[5] = {0}, rp[5] = {0}, t;
+    double gfp[5] = {0}, rp[5] = {0}, t, vd[25], wd[5];
     const double min_eps = 1e-8;
     bool is_float = depth == CV_32F;
     const Point* ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
-    AutoBuffer<double> _Ad(n*5), _bd(n);
-    double *Ad = _Ad.data(), *bd = _bd.data();
+    AutoBuffer<double> _Ad(n*12+n);
+    double *Ad = _Ad.data(), *ud = Ad + n*5, *bd = ud + n*5;
+    Point2f* ptsf1 = (Point2f*)(bd + n);
 
     // first fit for parameters A - E
     Mat A( n, 5, CV_64F, Ad );
     Mat b( n, 1, CV_64F, bd );
     Mat x( 5, 1, CV_64F, gfp );
+    Mat u( n, 1, CV_64F, ud );
+    Mat vt( 5, 5, CV_64F, vd );
+    Mat w( 5, 1, CV_64F, wd );
 
     for( i = 0; i < n; i++ )
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        ptsf1[i] = p;
         c += p;
     }
+    ptsf = ptsf1;
+    is_float = true;
     c.x /= n;
     c.y /= n;
 
+    double s = 0;
     for( i = 0; i < n; i++ )
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
         p -= c;
+        s += fabs(p.x) + fabs(p.y);
 
         bd[i] = 10000.0; // 1.0?
         Ad[i*5] = -(double)p.x * p.x; // A - C signs inverted as proposed by APP
@@ -389,7 +399,35 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
         Ad[i*5 + 4] = p.y;
     }
 
-    solve(A, b, x, DECOMP_SVD);
+    SVDecomp(A, w, u, vt);
+    if(wd[0]*FLT_EPSILON > wd[4]) {
+        float eps = (float)(s/(n*2)*1e-3);
+        c.x = c.y = 0.f;
+        for( i = 0; i < n; i++, eps *= -1 )
+        {
+            Point2f p = ptsf[i];
+            p.x += eps;
+            p.y += eps;
+            ((Point2f*)ptsf)[i] = p;
+            c.x += p.x;
+            c.y += p.y;
+        }
+        c /= n;
+        for( i = 0; i < n; i++ )
+        {
+            Point2f p = ptsf[i];
+            p -= c;
+
+            bd[i] = 10000.0; // 1.0?
+            Ad[i*5] = -(double)p.x * p.x; // A - C signs inverted as proposed by APP
+            Ad[i*5 + 1] = -(double)p.y * p.y;
+            Ad[i*5 + 2] = -(double)p.x * p.y;
+            Ad[i*5 + 3] = p.x;
+            Ad[i*5 + 4] = p.y;
+        }
+        SVDecomp(A, w, u, vt);
+    }
+    SVBackSubst(w, u, vt, b, x);
 
     // now use general-form parameters A - E to find the ellipse center:
     // differentiate general form wrt x/y to get two equations for cx and cy
@@ -447,6 +485,16 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
         box.angle -= 360;
 
     return box;
+}
+}
+
+cv::RotatedRect cv::fitEllipse( InputArray _points )
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat points = _points.getMat();
+    int n = points.checkVector(2);
+    return n == 5 ? fitEllipseDirect(points) : fitEllipseNoDirect(points);
 }
 
 cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
@@ -619,7 +667,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
             box = cv::fitEllipseDirect( points );
         }
     } else {
-        box = cv::fitEllipse( points );
+        box = cv::fitEllipseNoDirect( points );
     }
 
     return box;
@@ -630,6 +678,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
     int depth = points.depth();
+    float eps = 0;
     CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
 
     RotatedRect box;
@@ -649,6 +698,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     Matx<double, 3, 1> pVec;
 
     double x0, y0, a, b, theta, Ts;
+    double s = 0;
 
     for( i = 0; i < n; i++ )
     {
@@ -658,54 +708,72 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     c.x /= (float)n;
     c.y /= (float)n;
 
+    // [TODO] probably, such normalization should also be applied to fitEllipse and fitEllipseAMS
     for( i = 0; i < n; i++ )
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-        p -= c;
-
-        A.at<double>(i,0) = (double)(p.x)*(p.x);
-        A.at<double>(i,1) = (double)(p.x)*(p.y);
-        A.at<double>(i,2) = (double)(p.y)*(p.y);
-        A.at<double>(i,3) = (double)p.x;
-        A.at<double>(i,4) = (double)p.y;
-        A.at<double>(i,5) = 1.0;
+        s += fabs(p.x - c.x) + fabs(p.y - c.y);
     }
-    cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
-    DM *= (1.0/n);
+    double scale = 100/(s > FLT_EPSILON ? s : (double)FLT_EPSILON);
 
-    TM(0,0) = DM(0,5)*DM(3,5)*DM(4,4) - DM(0,5)*DM(3,4)*DM(4,5) - DM(0,4)*DM(3,5)*DM(5,4) + \
-              DM(0,3)*DM(4,5)*DM(5,4) + DM(0,4)*DM(3,4)*DM(5,5) - DM(0,3)*DM(4,4)*DM(5,5);
-    TM(0,1) = DM(1,5)*DM(3,5)*DM(4,4) - DM(1,5)*DM(3,4)*DM(4,5) - DM(1,4)*DM(3,5)*DM(5,4) + \
-              DM(1,3)*DM(4,5)*DM(5,4) + DM(1,4)*DM(3,4)*DM(5,5) - DM(1,3)*DM(4,4)*DM(5,5);
-    TM(0,2) = DM(2,5)*DM(3,5)*DM(4,4) - DM(2,5)*DM(3,4)*DM(4,5) - DM(2,4)*DM(3,5)*DM(5,4) + \
-              DM(2,3)*DM(4,5)*DM(5,4) + DM(2,4)*DM(3,4)*DM(5,5) - DM(2,3)*DM(4,4)*DM(5,5);
-    TM(1,0) = DM(0,5)*DM(3,3)*DM(4,5) - DM(0,5)*DM(3,5)*DM(4,3) + DM(0,4)*DM(3,5)*DM(5,3) - \
-              DM(0,3)*DM(4,5)*DM(5,3) - DM(0,4)*DM(3,3)*DM(5,5) + DM(0,3)*DM(4,3)*DM(5,5);
-    TM(1,1) = DM(1,5)*DM(3,3)*DM(4,5) - DM(1,5)*DM(3,5)*DM(4,3) + DM(1,4)*DM(3,5)*DM(5,3) - \
-              DM(1,3)*DM(4,5)*DM(5,3) - DM(1,4)*DM(3,3)*DM(5,5) + DM(1,3)*DM(4,3)*DM(5,5);
-    TM(1,2) = DM(2,5)*DM(3,3)*DM(4,5) - DM(2,5)*DM(3,5)*DM(4,3) + DM(2,4)*DM(3,5)*DM(5,3) - \
-              DM(2,3)*DM(4,5)*DM(5,3) - DM(2,4)*DM(3,3)*DM(5,5) + DM(2,3)*DM(4,3)*DM(5,5);
-    TM(2,0) = DM(0,5)*DM(3,4)*DM(4,3) - DM(0,5)*DM(3,3)*DM(4,4) - DM(0,4)*DM(3,4)*DM(5,3) + \
-              DM(0,3)*DM(4,4)*DM(5,3) + DM(0,4)*DM(3,3)*DM(5,4) - DM(0,3)*DM(4,3)*DM(5,4);
-    TM(2,1) = DM(1,5)*DM(3,4)*DM(4,3) - DM(1,5)*DM(3,3)*DM(4,4) - DM(1,4)*DM(3,4)*DM(5,3) + \
-              DM(1,3)*DM(4,4)*DM(5,3) + DM(1,4)*DM(3,3)*DM(5,4) - DM(1,3)*DM(4,3)*DM(5,4);
-    TM(2,2) = DM(2,5)*DM(3,4)*DM(4,3) - DM(2,5)*DM(3,3)*DM(4,4) - DM(2,4)*DM(3,4)*DM(5,3) + \
-              DM(2,3)*DM(4,4)*DM(5,3) + DM(2,4)*DM(3,3)*DM(5,4) - DM(2,3)*DM(4,3)*DM(5,4);
+    // first, try the original pointset.
+    // if it's singular, try to shift the points a bit
+    int iter = 0;
+    for( iter = 0; iter < 2; iter++ ) {
+        for( i = 0; i < n; i++, eps *= -1 )
+        {
+            Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+            p.x = (p.x + eps - c.x)*scale; p.y = (p.y + eps - c.y)*scale;
 
-    Ts=(-(DM(3,5)*DM(4,4)*DM(5,3)) + DM(3,4)*DM(4,5)*DM(5,3) + DM(3,5)*DM(4,3)*DM(5,4) - \
-          DM(3,3)*DM(4,5)*DM(5,4)  - DM(3,4)*DM(4,3)*DM(5,5) + DM(3,3)*DM(4,4)*DM(5,5));
+            A.at<double>(i,0) = (double)(p.x)*(p.x);
+            A.at<double>(i,1) = (double)(p.x)*(p.y);
+            A.at<double>(i,2) = (double)(p.y)*(p.y);
+            A.at<double>(i,3) = (double)p.x;
+            A.at<double>(i,4) = (double)p.y;
+            A.at<double>(i,5) = 1.0;
+        }
+        cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
+        DM *= (1.0/n);
 
-    M(0,0) = (DM(2,0) + (DM(2,3)*TM(0,0) + DM(2,4)*TM(1,0) + DM(2,5)*TM(2,0))/Ts)/2.;
-    M(0,1) = (DM(2,1) + (DM(2,3)*TM(0,1) + DM(2,4)*TM(1,1) + DM(2,5)*TM(2,1))/Ts)/2.;
-    M(0,2) = (DM(2,2) + (DM(2,3)*TM(0,2) + DM(2,4)*TM(1,2) + DM(2,5)*TM(2,2))/Ts)/2.;
-    M(1,0) = -DM(1,0) - (DM(1,3)*TM(0,0) + DM(1,4)*TM(1,0) + DM(1,5)*TM(2,0))/Ts;
-    M(1,1) = -DM(1,1) - (DM(1,3)*TM(0,1) + DM(1,4)*TM(1,1) + DM(1,5)*TM(2,1))/Ts;
-    M(1,2) = -DM(1,2) - (DM(1,3)*TM(0,2) + DM(1,4)*TM(1,2) + DM(1,5)*TM(2,2))/Ts;
-    M(2,0) = (DM(0,0) + (DM(0,3)*TM(0,0) + DM(0,4)*TM(1,0) + DM(0,5)*TM(2,0))/Ts)/2.;
-    M(2,1) = (DM(0,1) + (DM(0,3)*TM(0,1) + DM(0,4)*TM(1,1) + DM(0,5)*TM(2,1))/Ts)/2.;
-    M(2,2) = (DM(0,2) + (DM(0,3)*TM(0,2) + DM(0,4)*TM(1,2) + DM(0,5)*TM(2,2))/Ts)/2.;
+        TM(0,0) = DM(0,5)*DM(3,5)*DM(4,4) - DM(0,5)*DM(3,4)*DM(4,5) - DM(0,4)*DM(3,5)*DM(5,4) + \
+                  DM(0,3)*DM(4,5)*DM(5,4) + DM(0,4)*DM(3,4)*DM(5,5) - DM(0,3)*DM(4,4)*DM(5,5);
+        TM(0,1) = DM(1,5)*DM(3,5)*DM(4,4) - DM(1,5)*DM(3,4)*DM(4,5) - DM(1,4)*DM(3,5)*DM(5,4) + \
+                  DM(1,3)*DM(4,5)*DM(5,4) + DM(1,4)*DM(3,4)*DM(5,5) - DM(1,3)*DM(4,4)*DM(5,5);
+        TM(0,2) = DM(2,5)*DM(3,5)*DM(4,4) - DM(2,5)*DM(3,4)*DM(4,5) - DM(2,4)*DM(3,5)*DM(5,4) + \
+                  DM(2,3)*DM(4,5)*DM(5,4) + DM(2,4)*DM(3,4)*DM(5,5) - DM(2,3)*DM(4,4)*DM(5,5);
+        TM(1,0) = DM(0,5)*DM(3,3)*DM(4,5) - DM(0,5)*DM(3,5)*DM(4,3) + DM(0,4)*DM(3,5)*DM(5,3) - \
+                  DM(0,3)*DM(4,5)*DM(5,3) - DM(0,4)*DM(3,3)*DM(5,5) + DM(0,3)*DM(4,3)*DM(5,5);
+        TM(1,1) = DM(1,5)*DM(3,3)*DM(4,5) - DM(1,5)*DM(3,5)*DM(4,3) + DM(1,4)*DM(3,5)*DM(5,3) - \
+                  DM(1,3)*DM(4,5)*DM(5,3) - DM(1,4)*DM(3,3)*DM(5,5) + DM(1,3)*DM(4,3)*DM(5,5);
+        TM(1,2) = DM(2,5)*DM(3,3)*DM(4,5) - DM(2,5)*DM(3,5)*DM(4,3) + DM(2,4)*DM(3,5)*DM(5,3) - \
+                  DM(2,3)*DM(4,5)*DM(5,3) - DM(2,4)*DM(3,3)*DM(5,5) + DM(2,3)*DM(4,3)*DM(5,5);
+        TM(2,0) = DM(0,5)*DM(3,4)*DM(4,3) - DM(0,5)*DM(3,3)*DM(4,4) - DM(0,4)*DM(3,4)*DM(5,3) + \
+                  DM(0,3)*DM(4,4)*DM(5,3) + DM(0,4)*DM(3,3)*DM(5,4) - DM(0,3)*DM(4,3)*DM(5,4);
+        TM(2,1) = DM(1,5)*DM(3,4)*DM(4,3) - DM(1,5)*DM(3,3)*DM(4,4) - DM(1,4)*DM(3,4)*DM(5,3) + \
+                  DM(1,3)*DM(4,4)*DM(5,3) + DM(1,4)*DM(3,3)*DM(5,4) - DM(1,3)*DM(4,3)*DM(5,4);
+        TM(2,2) = DM(2,5)*DM(3,4)*DM(4,3) - DM(2,5)*DM(3,3)*DM(4,4) - DM(2,4)*DM(3,4)*DM(5,3) + \
+                  DM(2,3)*DM(4,4)*DM(5,3) + DM(2,4)*DM(3,3)*DM(5,4) - DM(2,3)*DM(4,3)*DM(5,4);
 
-    if (fabs(cv::determinant(M)) > 1.0e-10) {
+        Ts=(-(DM(3,5)*DM(4,4)*DM(5,3)) + DM(3,4)*DM(4,5)*DM(5,3) + DM(3,5)*DM(4,3)*DM(5,4) - \
+              DM(3,3)*DM(4,5)*DM(5,4)  - DM(3,4)*DM(4,3)*DM(5,5) + DM(3,3)*DM(4,4)*DM(5,5));
+
+        M(0,0) = (DM(2,0) + (DM(2,3)*TM(0,0) + DM(2,4)*TM(1,0) + DM(2,5)*TM(2,0))/Ts)/2.;
+        M(0,1) = (DM(2,1) + (DM(2,3)*TM(0,1) + DM(2,4)*TM(1,1) + DM(2,5)*TM(2,1))/Ts)/2.;
+        M(0,2) = (DM(2,2) + (DM(2,3)*TM(0,2) + DM(2,4)*TM(1,2) + DM(2,5)*TM(2,2))/Ts)/2.;
+        M(1,0) = -DM(1,0) - (DM(1,3)*TM(0,0) + DM(1,4)*TM(1,0) + DM(1,5)*TM(2,0))/Ts;
+        M(1,1) = -DM(1,1) - (DM(1,3)*TM(0,1) + DM(1,4)*TM(1,1) + DM(1,5)*TM(2,1))/Ts;
+        M(1,2) = -DM(1,2) - (DM(1,3)*TM(0,2) + DM(1,4)*TM(1,2) + DM(1,5)*TM(2,2))/Ts;
+        M(2,0) = (DM(0,0) + (DM(0,3)*TM(0,0) + DM(0,4)*TM(1,0) + DM(0,5)*TM(2,0))/Ts)/2.;
+        M(2,1) = (DM(0,1) + (DM(0,3)*TM(0,1) + DM(0,4)*TM(1,1) + DM(0,5)*TM(2,1))/Ts)/2.;
+        M(2,2) = (DM(0,2) + (DM(0,3)*TM(0,2) + DM(0,4)*TM(1,2) + DM(0,5)*TM(2,2))/Ts)/2.;
+
+        double det = fabs(cv::determinant(M));
+        if (fabs(det) > 1.0e-10)
+            break;
+        eps = (float)(s/(n*2)*1e-3);
+    }
+
+    if( iter < 2 ) {
         Mat eVal, eVec;
         eigenNonSymmetric(M, eVal, eVec);
 
@@ -740,8 +808,8 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         double p1 = 2*pVec(2)*Q(0,0) - pVec(1)*Q(0,1);
         double p2 = 2*pVec(0)*Q(0,1) - pVec(1)*Q(0,0);
 
-        x0 = p1/l3 + c.x;
-        y0 = p2/l3 + c.y;
+        x0 = (p1/l3/scale) + c.x;
+        y0 = (p2/l3/scale) + c.y;
         a = sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
         b = sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
         if (pVec(1)  == 0) {
@@ -756,8 +824,8 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
         box.center.x = (float)x0;
         box.center.y = (float)y0;
-        box.size.width = (float)(2.0*a);
-        box.size.height = (float)(2.0*b);
+        box.size.width = (float)(2.0*a/scale);
+        box.size.height = (float)(2.0*b/scale);
         if( box.size.width > box.size.height )
         {
             float tmp;
@@ -767,7 +835,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
             box.angle = (float)(fmod(theta*180/CV_PI,180.0));
         };
     } else {
-        box = cv::fitEllipse( points );
+        box = cv::fitEllipseNoDirect( points );
     }
     return box;
 }
