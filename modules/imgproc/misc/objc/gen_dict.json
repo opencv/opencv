@@ -1,5 +1,5 @@
 {
-    "module_imports": ["Size2i", "IntOut"],
+    "module_imports": ["Size2i"],
     "const_ignore_list": [
         "CV_TM_.+",
         "CV_COLORCVT_MAX",

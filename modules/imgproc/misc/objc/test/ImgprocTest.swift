@@ -1135,12 +1135,12 @@ class ImgprocTest: OpenCVTestCase {
     func testMinEnclosingCircle() {
         let points = [Point2f(x: 0, y: 0), Point2f(x: -100, y: 0), Point2f(x: 0, y: -100), Point2f(x: 100, y: 0), Point2f(x: 0, y: 100)]
         let actualCenter = Point2f()
-        let radius = FloatOut()
+        var radius:Float = 0
 
-        Imgproc.minEnclosingCircle(points: points, center: actualCenter, radius: radius)
+        Imgproc.minEnclosingCircle(points: points, center: actualCenter, radius: &radius)
 
         XCTAssertEqual(Point2f(x: 0, y: 0), actualCenter)
-        XCTAssertEqual(100.0, radius.val, accuracy: 1.0)
+        XCTAssertEqual(100.0, radius, accuracy: 1.0)
     }
 
     func testMorphologyExMatMatIntMat() throws {
@@ -1488,14 +1488,14 @@ class ImgprocTest: OpenCVTestCase {
         let text = "iOS all the way"
         let fontScale:Int32 = 2
         let thickness:Int32 = 3
-        let baseLine = IntOut()
+        var baseLine:Int32 = 0
 
-        Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: IntOut())
-        let res = Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: baseLine)
+        Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: &baseLine)
+        let res = Imgproc.getTextSize(text: text, fontFace: .FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale: Double(fontScale), thickness: thickness, baseLine: &baseLine)
 
         XCTAssertEqual(431, res.width)
         XCTAssertEqual(44, res.height)
-        XCTAssertEqual(20, baseLine.val)
+        XCTAssertEqual(20, baseLine)
     }
 
     func testCircleMatPointIntScalar() {

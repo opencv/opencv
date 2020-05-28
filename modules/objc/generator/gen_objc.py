@@ -49,10 +49,10 @@ type_dict = {
     "void"    : {"objc_type" : "void", "is_primitive" : True},
     "bool"    : {"objc_type" : "BOOL", "is_primitive" : True, "to_cpp": "(bool)%(n)s"},
     "char"    : {"objc_type" : "char", "is_primitive" : True},
-    "int"     : {"objc_type" : "int", "is_primitive" : True, "out_type" : "IntOut*", "out_type_ptr": "%(n)s.ptr", "out_type_ref": "*(int*)(%(n)s.ptr)"},
+    "int"     : {"objc_type" : "int", "is_primitive" : True, "out_type" : "int*", "out_type_ptr": "%(n)s", "out_type_ref": "*(int*)(%(n)s)"},
     "long"    : {"objc_type" : "long", "is_primitive" : True},
-    "float"   : {"objc_type" : "float", "is_primitive" : True, "out_type" : "FloatOut*", "out_type_ptr": "%(n)s.ptr", "out_type_ref": "*(float*)(%(n)s.ptr)"},
-    "double"  : {"objc_type" : "double", "is_primitive" : True, "out_type" : "DoubleOut*", "out_type_ptr": "%(n)s.ptr", "out_type_ref": "*(double*)(%(n)s.ptr)"},
+    "float"   : {"objc_type" : "float", "is_primitive" : True, "out_type" : "float*", "out_type_ptr": "%(n)s", "out_type_ref": "*(float*)(%(n)s)"},
+    "double"  : {"objc_type" : "double", "is_primitive" : True, "out_type" : "double*", "out_type_ptr": "%(n)s", "out_type_ref": "*(double*)(%(n)s)"},
     "size_t"  : {"objc_type" : "size_t", "is_primitive" : True},
     "int64"   : {"objc_type" : "long", "is_primitive" : True},
     "string"  : {"objc_type" : "NSString*", "is_primitive" : True, "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]", "cast_to": "std::string"}
@@ -253,11 +253,8 @@ class ClassInfo(GeneralInfo):
                 objc_import = type_dict[type_dict[ctype]["v_type"]]["objc_type"]
             elif "v_v_type" in type_dict[ctype]:
                 objc_import = type_dict[type_dict[ctype]["v_v_type"]]["objc_type"]
-            elif not type_dict[ctype].get("is_primitive", False) or (is_out_type and type_dict[ctype].get("out_type", "")):
-                if is_out_type and type_dict[ctype].get("out_type", ""):
-                    objc_import = type_dict[ctype]["out_type"]
-                else:
-                    objc_import = type_dict[ctype]["objc_type"]
+            elif not type_dict[ctype].get("is_primitive", False):
+                objc_import = type_dict[ctype]["objc_type"]
             if objc_import is not None and objc_import not in ["NSNumber*", "NSString*"] and not (objc_import in type_dict and type_dict[objc_import].get("is_primitive", False)):
                 objc_import = objc_import[:-1] if objc_import[-1] == "*" else objc_import   # remove trailing "*"
                 if objc_import != self.cname:
