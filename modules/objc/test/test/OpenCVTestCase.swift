@@ -71,7 +71,7 @@ open class OpenCVTestCase: XCTestCase {
     }()
 
     let grayChess: Mat = {
-        return Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"chessboard", ofType:"jpg", inDirectory:"resources")!)
+        return Imgcodecs.imread(filename: Bundle(for: OpenCVTestCase.self).path(forResource:"chessboard", ofType:"jpg", inDirectory:"resources")!, flags: ImreadModes.IMREAD_GRAYSCALE.rawValue)
     }()
 
     let gray255_32f_3d = Mat(sizes: [matSize, matSize, matSize] as [NSNumber], type: CvType.CV_32F, scalar: Scalar(255.0))

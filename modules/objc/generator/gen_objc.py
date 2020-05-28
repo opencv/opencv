@@ -540,6 +540,7 @@ def see_lookup(objc_class, see):
     else:
         return see
 
+
 class ObjectiveCWrapperGenerator(object):
     def __init__(self):
         self.header_files = []
@@ -547,7 +548,10 @@ class ObjectiveCWrapperGenerator(object):
 
     def clear(self):
         self.namespaces = set(["cv"])
-        self.classes = { "Mat" : ClassInfo([ 'class Mat', '', [], [] ], self.namespaces) }
+        mat_class_info = ClassInfo([ 'class Mat', '', [], [] ], self.namespaces)
+        mat_class_info.namespace = "cv"
+        self.classes = { "Mat" : mat_class_info }
+        self.classes["Mat"].namespace = "cv"
         self.module = ""
         self.Module = ""
         self.ported_func_list = []
@@ -567,9 +571,12 @@ class ObjectiveCWrapperGenerator(object):
         if name in type_dict and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
             return
-        type_dict.setdefault(name, {}).update(
-            { "objc_type" : classinfo.objc_name + "*"}
-        )
+        if name != self.Module:
+            type_dict.setdefault(name, {}).update(
+                { "objc_type" : classinfo.objc_name + "*",
+                  "from_cpp" : "[" + classinfo.objc_name + " fromNative:%(n)s]",
+                  "to_cpp" : "*(" + classinfo.namespace.replace(".", "::") + "::" + classinfo.objc_name +  "*)(%(n)s.nativePtr)" }
+            )
 
         # missing_consts { Module : { public : [[name, val],...], private : [[]...] } }
         if name in missing_consts:
@@ -584,11 +591,13 @@ class ObjectiveCWrapperGenerator(object):
             else:
                 logging.warning("Skipped property: [%s]" % name, p)
 
-        type_dict.setdefault("Ptr_"+name, {}).update(
-            { "objc_type" : classinfo.objc_name + "*",
-              "c_type" : name,
-              "from_cpp_ptr": "[" + name + " fromNativePtr:%(n)s]"}
-        )
+        if name != self.Module:
+            type_dict.setdefault("Ptr_"+name, {}).update(
+                { "objc_type" : classinfo.objc_name + "*",
+                  "c_type" : name,
+                  "to_cpp": "%(n)s.nativePtr",
+                  "from_cpp_ptr": "[" + name + " fromNativePtr:%(n)s]"}
+            )
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
     def add_const(self, decl, scope=None, enumType=None): # [ "const cname", val, [], [] ]
@@ -669,6 +678,10 @@ class ObjectiveCWrapperGenerator(object):
             f.write(buf)
         updated_files += 1
 
+    def get_namespace_prefix(self, cname):
+        namespace = self.classes[cname].namespace if self.classes.has_key(cname) else "cv"
+        return namespace.replace(".", "::") + "::"
+
     def gen(self, srcfiles, module, output_path, output_objc_path, common_headers):
         self.clear()
         self.module = module
@@ -738,9 +751,31 @@ class ObjectiveCWrapperGenerator(object):
 
     def fullTypeName(self, t):
         if not type_dict[t].get("is_primitive", False) or type_dict[t].has_key("cast_to"):
-            return type_dict[t].get("cast_to", "cv::" + t)
+            if type_dict[t].has_key("cast_to"):
+                return type_dict[t]["cast_to"]
+            else:
+                namespace_prefix = self.get_namespace_prefix(t)
+                return namespace_prefix + t
         else:
             return t
+
+    def build_objc2cv_prologue(self, prologue, vector_type, vector_full_type, objc_type, vector_name, array_name):
+        if not (type_dict.has_key(vector_type) and type_dict[vector_type].has_key("to_cpp") and type_dict[vector_type]["to_cpp"] != "%(n)s.nativeRef"):
+            prologue.append("OBJC2CV(" + vector_full_type + ", " + objc_type[:-1] + ", " + vector_name + ", " + array_name + ");")
+        else:
+            conv_macro = "CONV_" + array_name
+            prologue.append("#define " + conv_macro + "(e) " + type_dict[vector_type]["to_cpp"] % {"n": "e"})
+            prologue.append("OBJC2CV_CUSTOM(" + vector_full_type + ", " + objc_type[:-1] + ", " + vector_name + ", " + array_name + ", " + conv_macro + ");")
+            prologue.append("#undef " + conv_macro)
+
+    def build_cv2objc_epilogue(self, epilogue, vector_type, vector_full_type, objc_type, vector_name, array_name):
+        if not (type_dict.has_key(vector_type) and type_dict[vector_type].has_key("from_cpp") and type_dict[vector_type]["from_cpp"] != ("[" + objc_type[:-1] + " fromNative:%(n)s]")):
+            epilogue.append("CV2OBJC(" + vector_full_type + ", " + objc_type[:-1] + ", " + vector_name + ", " + array_name + ");")
+        else:
+            unconv_macro = "UNCONV_" + array_name
+            epilogue.append("#define " + unconv_macro + "(e) " + type_dict[vector_type]["from_cpp"] % {"n": "e"})
+            epilogue.append("CV2OBJC_CUSTOM(" + vector_full_type + ", " + objc_type[:-1] + ", " + vector_name + ", " + array_name + ", " + unconv_macro + ");")
+            epilogue.append("#undef " + unconv_macro)
 
     def gen_func(self, ci, fi):
         logging.info("%s", fi)
@@ -810,14 +845,15 @@ class ObjectiveCWrapperGenerator(object):
                 if "v_type" in type_dict[a.ctype]: # pass as vector
                     vector_cpp_type = type_dict[a.ctype]["v_type"]
                     objc_type = type_dict[a.ctype]["objc_type"]
+                    has_namespace = vector_cpp_type.find("::") != -1
                     ci.addImports(a.ctype, False)
-                    vector_full_cpp_type = self.fullTypeName(vector_cpp_type)
+                    vector_full_cpp_type = self.fullTypeName(vector_cpp_type) if not has_namespace else vector_cpp_type
                     vector_cpp_name = a.name + "Vector"
                     cv_args.append(vector_cpp_name)
-                    prologue.append("OBJC2CV(" + vector_full_cpp_type + ", " + objc_type[:-1] + ", " + vector_cpp_name + ", " + a.name +  ");")
+                    self.build_objc2cv_prologue(prologue, vector_cpp_type, vector_full_cpp_type, objc_type, vector_cpp_name, a.name)
                     if "O" in a.out:
-                        epilogue.append(
-                            "CV2OBJC(" + vector_full_cpp_type + ", " + objc_type[:-1] + ", " + vector_cpp_name + ", " + a.name + ");")
+                        self.build_cv2objc_epilogue(epilogue, vector_cpp_type, vector_full_cpp_type, objc_type, vector_cpp_name, a.name)
+
                 if "v_v_type" in type_dict[a.ctype]: # pass as vector of vector
                     vector_cpp_type = type_dict[a.ctype]["v_v_type"]
                     objc_type = type_dict[a.ctype]["objc_type"]
@@ -881,19 +917,23 @@ class ObjectiveCWrapperGenerator(object):
             constructor = False
             if "v_type" in type_dict[ret_type]:
                 objc_type = type_dict[ret_type]["objc_type"]
-                cv_type = type_dict[ret_type]["v_type"]
+                vector_type = type_dict[ret_type]["v_type"]
+                full_cpp_type = (self.get_namespace_prefix(vector_type) if (vector_type.find("::") == -1) else "") + vector_type
                 prologue.append("NSMutableArray<" + objc_type + ">* retVal = [NSMutableArray new];")
-                ret_val = "std::vector<cv::" + cv_type + "> retValVector = "
-                epilogue.append("CV2OBJC(cv::" + cv_type + ", " + objc_type[:-1] + ", retValVector, retVal);")
+                ret_val = "std::vector<" + full_cpp_type + "> retValVector = "
+                self.build_cv2objc_epilogue(epilogue, vector_type, full_cpp_type, objc_type, "retValVector", "retVal")
             elif "v_v_type" in type_dict[ret_type]:
                 objc_type = type_dict[ret_type]["objc_type"]
-                cv_type = type_dict[ret_type]["v_v_type"]
+                cpp_type = type_dict[ret_type]["v_v_type"]
+                if cpp_type.find("::") == -1:
+                    cpp_type = self.get_namespace_prefix(cpp_type) + cpp_type
                 prologue.append("NSMutableArray<NSMutableArray<" + objc_type + ">*>* retVal = [NSMutableArray new];")
-                ret_val = "std::vector<cv::" + cv_type + "> retValVector = "
-                epilogue.append("CV2OBJC2(cv::" + cv_type + ", " + objc_type[:-1] + ", retValVector, retVal);")
+                ret_val = "std::vector<" + cpp_type + "> retValVector = "
+                epilogue.append("CV2OBJC2(" + cpp_type + ", " + objc_type[:-1] + ", retValVector, retVal);")
             elif ret_type.startswith("Ptr_"):
-                cv_type = type_dict[ret_type]["c_type"]
-                ret_val = "cv::" + cv_type + "* retVal = "
+                cpp_type = type_dict[ret_type]["c_type"]
+                namespace_prefix = self.get_namespace_prefix(cpp_type)
+                ret_val = namespace_prefix + cpp_type + "* retVal = "
                 ret = "return [" + type_dict[ret_type]["objc_type"][:-1] + " fromNative:retVal];"
             elif ret_type == "void":
                 ret_val = ""
@@ -904,9 +944,12 @@ class ObjectiveCWrapperGenerator(object):
                 tail = "]"
                 ret = ""
             elif self.isWrapped(ret_type): # wrapped class
-                ret_val = "cv::" + ret_type + "* retVal = new cv::" + ret_type + "("
+                namespace_prefix = self.get_namespace_prefix(ret_type)
+                ret_val = namespace_prefix + ret_type + "* retVal = new " + namespace_prefix + ret_type + "("
                 tail = ")"
-                ret = "return " + (type_dict[ret_type]["from_cpp_ptr"] % { "n" : "retVal" }) + ";"
+                ret_type_dict = type_dict[ret_type]
+                from_cpp = ret_type_dict["from_cpp_ptr"] if ret_type_dict.has_key("from_cpp_ptr") else ret_type_dict["from_cpp"]
+                ret = "return " + (from_cpp % { "n" : "retVal" }) + ";"
             elif "from_cpp" in type_dict[ret_type]:
                 ret = "return " + (type_dict[ret_type]["from_cpp"] % { "n" : "retVal" }) + ";"
 
@@ -948,7 +991,7 @@ class ObjectiveCWrapperGenerator(object):
                     prologue = "\n    " + "\n    ".join(prologue) if prologue else "",
                     epilogue = "\n    " + "\n    ".join(epilogue) if epilogue else "",
                     static = "+" if static else "-",
-                    obj_deref =  ("(dynamic_cast<" + fi.fullClass(isCPP=True) + "*>(self.nativePtr))->" if not ci.is_base_class else "_nativePtr->") if not static and not constructor else "",
+                    obj_deref =  ("MAKE_PTR(" + fi.fullClass(isCPP=True) + ")->" if not ci.is_base_class else "_nativePtr->") if not static and not constructor else "",
                     cv_name = fi.cv_name if static else fi.fullClass(isCPP=True) if constructor else fi.name,
                     cv_args = ", ".join(cv_args),
                     tail = tail
@@ -1004,7 +1047,7 @@ typedef NS_ENUM(int, {2}) {{
                     match_alphabet = re.compile("[a-zA-Z]")
                     for c in consts:
                         value = str(c.value)
-                        if match_alphabet.match(value):
+                        if match_alphabet.search(value):
                             for declared_const in sorted(declared_consts, key=len, reverse=True):
                                 regex = re.compile("(?<!" + ci.cname + ".)" + declared_const)
                                 value = regex.sub(ci.cname + "." + declared_const, value)
@@ -1021,14 +1064,37 @@ typedef NS_ENUM(int, {2}) {{
             ci.method_declarations.write("\n    //\n    // C++: %s %s::%s\n    //\n\n" % (pi.ctype, ci.fullName(isCPP=True), pi.name))
             type_data = type_dict[pi.ctype] if pi.ctype != "uchar" else {"objc_type" : "unsigned char", "is_primitive" : True}
             objc_type = type_data.get("objc_type", pi.ctype)
+            ci.addImports(pi.ctype, False)
             ci.method_declarations.write("@property " + ("(readonly) " if not pi.rw else "") + objc_type + " " + pi.name + ";\n")
-            from_cpp = type_data.get("from_cpp", "%(n)s")
-            retVal = from_cpp % {"n": ("_nativePtr->" + pi.name)}
-            ci.method_implementations.write("-(" + objc_type + ")" + pi.name + "{\n\treturn " + retVal + ";\n}\n\n")
+            ptr_ref = "MAKE_PTR(" + ci.fullName(isCPP=True) + ")->" if not ci.is_base_class else "_nativePtr->"
+            if type_data.has_key("v_type"):
+                vector_type = type_data["v_type"]
+                full_cpp_type = (self.get_namespace_prefix(vector_type) if (vector_type.find("::") == -1) else "") + vector_type
+                ret_val = "std::vector<" + full_cpp_type + "> retValVector = "
+                ci.method_implementations.write("-(NSArray<" + objc_type + ">*)" + pi.name + "{\n")
+                ci.method_implementations.write("\tNSMutableArray<" + objc_type + ">* retVal = [NSMutableArray new];\n")
+                ci.method_implementations.write("\t" + ret_val + ptr_ref + pi.name + ";\n")
+                epilogue = []
+                self.build_cv2objc_epilogue(epilogue, vector_type, full_cpp_type, objc_type, "retValVector", "retVal")
+                ci.method_implementations.write("\t" + ("\n\t".join(epilogue)) + "\n")
+                ci.method_implementations.write("\treturn retVal;\n}\n\n")
+            else:
+                from_cpp = type_data.get("from_cpp", "%(n)s")
+                retVal = from_cpp % {"n": (ptr_ref + pi.name)}
+                ci.method_implementations.write("-(" + objc_type + ")" + pi.name + "{\n\treturn " + retVal + ";\n}\n\n")
             if pi.rw:
-                to_cpp = type_data.get("to_cpp", "%(n)s")
-                val = to_cpp % {"n": pi.name}
-                ci.method_implementations.write("-(void)set" + pi.name[0].upper() + pi.name[1:] + ":(" + objc_type + ")" + pi.name + " {\n\t_nativePtr->" + pi.name + " = " + val + ";\n}\n\n")
+                if type_data.has_key("v_type"):
+                    vector_type = type_data["v_type"]
+                    full_cpp_type = (self.get_namespace_prefix(vector_type) if (vector_type.find("::") == -1) else "") + vector_type
+                    ci.method_implementations.write("-(void)set" + pi.name[0].upper() + pi.name[1:] + ":(NSArray<" + objc_type + ">*)" + pi.name + "{\n")
+                    prologue = []
+                    self.build_objc2cv_prologue(prologue, vector_type, full_cpp_type, objc_type, "valVector", pi.name)
+                    ci.method_implementations.write("\t" + ("\n\t".join(prologue)) + "\n")
+                    ci.method_implementations.write("\t" + ptr_ref + pi.name + " = valVector;\n}\n\n")
+                else:
+                    to_cpp = type_data.get("to_cpp", "%(n)s")
+                    val = to_cpp % {"n": pi.name}
+                    ci.method_implementations.write("-(void)set" + pi.name[0].upper() + pi.name[1:] + ":(" + objc_type + ")" + pi.name + " {\n\t" + ptr_ref + pi.name + " = " + val + ";\n}\n\n")
 
         # manual ports
         if ci.name in ManualFuncs:

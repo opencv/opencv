@@ -191,6 +191,11 @@
             "to_cpp": "cv::String(%(n)s.UTF8String)",
             "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]"
         },
+        "std::string": {
+            "objc_type": "NSString*",
+            "to_cpp": "std::string(%(n)s.UTF8String)",
+            "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]"
+        },
         "TermCriteria": {
             "objc_type": "TermCriteria*",
             "to_cpp": "%(n)s.nativeRef",
@@ -212,10 +217,14 @@
             "from_cpp": "[Float6 fromNative:%(n)s]"
         },
         "Vec2d": {
-            "objc_type": "NSArray<NSNumber*>*"
+            "objc_type": "Double2*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Double2 fromNative:%(n)s]"
         },
         "Vec3d": {
-            "objc_type": "NSArray<NSNumber*>*"
+            "objc_type": "Double3*",
+            "to_cpp": "%(n)s.nativeRef",
+            "from_cpp": "[Double3 fromNative:%(n)s]"
         },
         "c_string": {
             "objc_type": "NSString*"
@@ -272,6 +281,10 @@
             "objc_type": "NSString*",
             "v_type": "String"
         },
+        "vector_string": {
+            "objc_type": "NSString*",
+            "v_type": "std::string"
+        },
         "vector_Vec4f": {
             "objc_type": "Float4*",
             "v_type": "Vec4f"
@@ -313,6 +326,10 @@
             "to_cpp": "(std::vector<uchar>&)%(n)s.nativeRef",
             "from_cpp": "[ByteVector fromNative:(std::vector<char>&)%(n)s]",
             "cast_to": "std::vector<uchar>"
+        },
+        "vector_vector_Mat": {
+            "objc_type": "Mat*",
+            "v_v_type": "Mat"
         },
         "vector_vector_DMatch": {
             "objc_type": "DMatch*",
