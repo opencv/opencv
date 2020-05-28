@@ -886,6 +886,10 @@ check the notes to learn more.
 @param flag layerModelBlending algorithm : CV::DARKEN、CV::MULTIPY、CV::COLOR_BURN 、CV::LINEAR_BRUN
 、CV::LIGHTEN 、CV::SCREEN 、CV::COLOR_DODGE 、CV::LINEAR_DODGE 、CV::OVERLAY、CV::SOFT_LIGHT、CV::HARD_LIGHT、
 CV::VIVID_LIGHT、CV::LINEAR_LIGHT、CV::PIN_LIGHT、CV::DIFFERENCE、CV::EXCLUSION 、CV::DIVIDE
+
+@note
+   -   An example using the layerModelBlending technique can be found at
+        opencv/samples/cpp/tutorial_code/photo/layerModelBlending/layerModelBlending_demo.cpp
 */
 CV_EXPORTS_W void layerModelBlending(InputArray target, InputArray blend, OutputArray dst, int flag);
 
