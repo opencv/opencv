@@ -723,13 +723,13 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         for( i = 0; i < n; i++, eps *= -1 )
         {
             Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-            p.x = (p.x + eps - c.x)*scale; p.y = (p.y + eps - c.y)*scale;
+            double px = (p.x + eps - c.x)*scale, py = (p.y + eps - c.y)*scale;
 
-            A.at<double>(i,0) = (double)(p.x)*(p.x);
-            A.at<double>(i,1) = (double)(p.x)*(p.y);
-            A.at<double>(i,2) = (double)(p.y)*(p.y);
-            A.at<double>(i,3) = (double)p.x;
-            A.at<double>(i,4) = (double)p.y;
+            A.at<double>(i,0) = px*px;
+            A.at<double>(i,1) = px*py;
+            A.at<double>(i,2) = py*py;
+            A.at<double>(i,3) = px;
+            A.at<double>(i,4) = py;
             A.at<double>(i,5) = 1.0;
         }
         cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
