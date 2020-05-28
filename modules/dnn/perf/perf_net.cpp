@@ -235,6 +235,17 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
                Mat(cv::Size(800, 600), CV_32FC3));
 }
 
+PERF_TEST_P_(DNNTestNetwork, EfficientDet)
+{
+    if (backend == DNN_BACKEND_HALIDE || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    resize(sample, sample, Size(512, 512));
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3, 1.0/255);
+    processNet("dnn/efficientdet-d0.pb", "dnn/efficientdet-d0.pbtxt", "", inp);
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());
 
 } // namespace

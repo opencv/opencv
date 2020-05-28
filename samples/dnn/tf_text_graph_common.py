@@ -269,7 +269,7 @@ def parseTextGraph(filePath):
 def removeIdentity(graph_def):
     identities = {}
     for node in graph_def.node:
-        if node.op == 'Identity':
+        if node.op == 'Identity' or node.op == 'IdentityN':
             identities[node.name] = node.input[0]
             graph_def.node.remove(node)
 

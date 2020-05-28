@@ -1542,22 +1542,32 @@ void TFImporter::populateNet(Net dstNet)
 
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
         }
-        else if (type == "Mul")
+        else if (type == "Mul" || type == "RealDiv")
         {
-            bool haveConst = false;
-            for(int ii = 0; !haveConst && ii < layer.input_size(); ++ii)
+            int constId = -1;
+            for(int ii = 0; ii < layer.input_size(); ++ii)
             {
                 Pin input = parsePin(layer.input(ii));
-                haveConst = value_id.find(input.name) != value_id.end();
+                if (value_id.find(input.name) != value_id.end())
+                {
+                    constId = ii;
+                    break;
+                }
             }
-            CV_Assert(!haveConst || layer.input_size() == 2);
+            CV_Assert((constId != -1) || (layer.input_size() == 2));
 
-            if (haveConst)
+            if (constId != -1)
             {
                 // Multiplication by constant.
                 CV_Assert(layer.input_size() == 2);
                 Mat scaleMat = getTensorContent(getConstBlob(layer, value_id));
                 CV_Assert(scaleMat.type() == CV_32FC1);
+                if (type == "RealDiv")
+                {
+                    if (constId == 0)
+                        CV_Error(Error::StsNotImplemented, "Division of constant over variable");
+                    scaleMat = 1.0f / scaleMat;
+                }
 
                 int id;
                 if (scaleMat.total() == 1)  // is a scalar.
@@ -1659,11 +1669,15 @@ void TFImporter::populateNet(Net dstNet)
                 int id;
                 if (equalInpShapes || netInputShapes.empty())
                 {
-                    layerParams.set("operation", "prod");
+                    layerParams.set("operation", type == "RealDiv" ? "div" : "prod");
                     id = dstNet.addLayer(name, "Eltwise", layerParams);
                 }
                 else
+                {
+                    if (type == "RealDiv")
+                        CV_Error(Error::StsNotImplemented, "Division of non equal tensors");
                     id = dstNet.addLayer(name, "Scale", layerParams);
+                }
 
                 layer_id[name] = id;
 
