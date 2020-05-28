@@ -49,7 +49,7 @@ PERF_TEST_P_(RenderTestFTexts, RenderFTextsPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -90,7 +90,7 @@ PERF_TEST_P_(RenderTestFTexts, RenderFTextsPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -129,7 +129,7 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -174,7 +174,7 @@ PERF_TEST_P_(RenderTestTexts, RenderTextsPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -210,7 +210,7 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -252,7 +252,7 @@ PERF_TEST_P_(RenderTestRects, RenderRectsPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -290,7 +290,7 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -334,7 +334,7 @@ PERF_TEST_P_(RenderTestCircles, RenderCirclesPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -373,7 +373,7 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -418,7 +418,7 @@ PERF_TEST_P_(RenderTestLines, RenderLinesPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -453,7 +453,7 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -495,7 +495,7 @@ PERF_TEST_P_(RenderTestMosaics, RenderMosaicsPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -536,7 +536,7 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -582,7 +582,7 @@ PERF_TEST_P_(RenderTestImages, RenderImagesPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -619,7 +619,7 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -662,7 +662,7 @@ PERF_TEST_P_(RenderTestPolylines, RenderPolylinesPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -738,7 +738,7 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceBGROCVTest)
 
     TEST_CYCLE()
     {
-        comp.apply(gin(gapi_mat, prims), gout(gapi_out_mat), std::move(comp_args));
+        comp.apply(gin(gapi_mat, prims), gout(gapi_out_mat));
     }
 
     SANITY_CHECK_NOTHING();
@@ -818,7 +818,7 @@ PERF_TEST_P_(RenderTestPolyItems, RenderPolyItemsPerformanceNV12OCVTest)
     TEST_CYCLE()
     {
         comp.apply(cv::gin(y_in_gapi_mat, uv_in_gapi_mat, prims),
-                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat), std::move(comp_args));
+                   cv::gout(y_out_gapi_mat, uv_out_gapi_mat));
     }
 
     SANITY_CHECK_NOTHING();
