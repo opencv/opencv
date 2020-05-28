@@ -69,7 +69,7 @@ class RegionLayerImpl CV_FINAL : public RegionLayer
 {
 public:
     int coords, classes, anchors, classfix;
-    float thresh, nmsThreshold, scale_x_y;
+    float thresh, scale_x_y;
     bool useSoftmax, useLogistic;
 #ifdef HAVE_OPENCL
     UMat blob_umat;
