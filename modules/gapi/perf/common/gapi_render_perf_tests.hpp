@@ -17,9 +17,10 @@
 namespace opencv_test
 {
 
-namespace {
+namespace
+{
 // FIXME: remove this code duplication with gapi/test/render/gapi_render_tests_ocv.cpp
-  inline std::wstring to_wstring(const char* bytes)
+  std::wstring to_wstring(const char* bytes)
   {
       std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
       return converter.from_bytes(bytes);
