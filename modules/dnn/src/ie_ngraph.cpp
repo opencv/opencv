@@ -6,6 +6,9 @@
 // Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
+
+#include <fstream>
+
 #include "ie_ngraph.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
@@ -21,6 +24,8 @@
 namespace cv { namespace dnn {
 
 #ifdef HAVE_DNN_NGRAPH
+
+static bool DNN_IE_SERIALIZE = utils::getConfigurationParameterBool("OPENCV_DNN_IE_SERIALIZE", false);
 
 // For networks with input layer which has an empty name, IE generates a name id[some_number].
 // OpenCV lets users use an empty input name and to prevent unexpected naming,
@@ -295,13 +300,16 @@ void InfEngineNgraphNode::setName(const std::string& name) {
     node->set_friendly_name(name);
 }
 
-InfEngineNgraphNet::InfEngineNgraphNet()
+InfEngineNgraphNet::InfEngineNgraphNet(detail::NetImplBase& netImpl)
+    : netImpl_(netImpl)
 {
     hasNetOwner = false;
     device_name = "CPU";
 }
 
-InfEngineNgraphNet::InfEngineNgraphNet(InferenceEngine::CNNNetwork& net) : cnn(net)
+InfEngineNgraphNet::InfEngineNgraphNet(detail::NetImplBase& netImpl, InferenceEngine::CNNNetwork& net)
+    : netImpl_(netImpl)
+    , cnn(net)
 {
     hasNetOwner = true;
     device_name = "CPU";
@@ -440,9 +448,27 @@ void InfEngineNgraphNet::init(Target targetId)
             ngraph_function->validate_nodes_and_infer_types();
         }
         cnn = InferenceEngine::CNNNetwork(ngraph_function);
-#ifdef _DEBUG  // TODO
-        //cnn.serialize("/tmp/cnn.xml", "/tmp/cnn.bin");
+
+        if (DNN_IE_SERIALIZE)
+        {
+#ifndef OPENCV_DNN_DISABLE_NETWORK_AUTO_DUMP
+            std::string dumpFileNameBase = netImpl_.getDumpFileNameBase();
+            try
+            {
+                cnn.serialize(dumpFileNameBase + "_ngraph.xml", dumpFileNameBase + "_ngraph.bin");
+            }
+            catch (const std::exception& e)
+            {
+                std::ofstream out((dumpFileNameBase + "_ngraph.error").c_str(), std::ios::out);
+                out << "Exception: " << e.what() << std::endl;
+            }
+            catch (...)
+            {
+                std::ofstream out((dumpFileNameBase + "_ngraph.error").c_str(), std::ios::out);
+                out << "Can't dump: unknown exception" << std::endl;
+            }
 #endif
+        }
     }
 
     switch (targetId)

@@ -197,9 +197,23 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cvtColor(sample, sample, COLOR_BGR2RGB);
     Mat inp;
-    sample.convertTo(inp, CV_32FC3);
-    processNet("dnn/yolov3.weights", "dnn/yolov3.cfg", "", inp / 255);
+    sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
+    processNet("dnn/yolov3.weights", "dnn/yolov3.cfg", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv4)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    if (target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cvtColor(sample, sample, COLOR_BGR2RGB);
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
+    processNet("dnn/yolov4.weights", "dnn/yolov4.cfg", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
@@ -233,6 +247,17 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
     processNet("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb",
                "dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt", "",
                Mat(cv::Size(800, 600), CV_32FC3));
+}
+
+PERF_TEST_P_(DNNTestNetwork, EfficientDet)
+{
+    if (backend == DNN_BACKEND_HALIDE || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    resize(sample, sample, Size(512, 512));
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3, 1.0/255);
+    processNet("dnn/efficientdet-d0.pb", "dnn/efficientdet-d0.pbtxt", "", inp);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());
