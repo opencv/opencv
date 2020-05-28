@@ -2074,6 +2074,86 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
 }
 #endif // HAVE_EIGEN
 
+#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
+TEST(Core_Eigen, cv2eigen_check_tensor_conversion)
+{
+    Mat A(2, 3, CV_32FC3);
+    float value = 0;
+    for(int row=0; row<A.rows; row++)
+        for(int col=0; col<A.cols; col++)
+            for(int ch=0; ch<A.channels(); ch++)
+                A.at<Vec3f>(row,col)[ch] = value++;
+
+    Eigen::Tensor<float, 3, Eigen::RowMajor> row_tensor;
+    cv2eigen(A, row_tensor);
+
+    float* mat_ptr = (float*)A.data;
+    float* tensor_ptr = row_tensor.data();
+    for (int i=0; i< row_tensor.size(); i++)
+        ASSERT_FLOAT_EQ(mat_ptr[i], tensor_ptr[i]);
+
+    Eigen::Tensor<float, 3, Eigen::ColMajor> col_tensor;
+    cv2eigen(A, col_tensor);
+    value = 0;
+    for(int row=0; row<A.rows; row++)
+        for(int col=0; col<A.cols; col++)
+            for(int ch=0; ch<A.channels(); ch++)
+                ASSERT_FLOAT_EQ(value++, col_tensor(row,col,ch));
+}
+#endif // OPENCV_EIGEN_TENSOR_SUPPORT
+
+#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
+TEST(Core_Eigen, eigen2cv_check_tensor_conversion)
+{
+    Eigen::Tensor<float, 3, Eigen::RowMajor> row_tensor(2,3,3);
+    Eigen::Tensor<float, 3, Eigen::ColMajor> col_tensor(2,3,3);
+    float value = 0;
+    for(int row=0; row<row_tensor.dimension(0); row++)
+        for(int col=0; col<row_tensor.dimension(1); col++)
+            for(int ch=0; ch<row_tensor.dimension(2); ch++)
+            {
+                row_tensor(row,col,ch) = value;
+                col_tensor(row,col,ch) = value;
+                value++;
+            }
+
+    Mat A;
+    eigen2cv(row_tensor, A);
+
+    float* tensor_ptr = row_tensor.data();
+    float* mat_ptr = (float*)A.data;
+    for (int i=0; i< row_tensor.size(); i++)
+        ASSERT_FLOAT_EQ(tensor_ptr[i], mat_ptr[i]);
+
+    Mat B;
+    eigen2cv(col_tensor, B);
+
+    value = 0;
+    for(int row=0; row<B.rows; row++)
+        for(int col=0; col<B.cols; col++)
+            for(int ch=0; ch<B.channels(); ch++)
+                ASSERT_FLOAT_EQ(value++, B.at<Vec3f>(row,col)[ch]);
+}
+#endif // OPENCV_EIGEN_TENSOR_SUPPORT
+
+#ifdef OPENCV_EIGEN_TENSOR_SUPPORT
+TEST(Core_Eigen, cv2eigen_tensormap_check_tensormap_access)
+{
+    float arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    Mat a_mat(2, 2, CV_32FC3, arr);
+    Eigen::TensorMap<Eigen::Tensor<float, 3, Eigen::RowMajor>> a_tensor = cv2eigen_tensormap<float>(a_mat);
+
+    for(int i=0; i<a_mat.rows; i++) {
+        for (int j=0; j<a_mat.cols; j++) {
+            for (int ch=0; ch<a_mat.channels(); ch++) {
+                ASSERT_FLOAT_EQ(a_mat.at<Vec3f>(i,j)[ch], a_tensor(i,j,ch));
+                ASSERT_EQ(&a_mat.at<Vec3f>(i,j)[ch], &a_tensor(i,j,ch));
+            }
+        }
+    }
+}
+#endif // OPENCV_EIGEN_TENSOR_SUPPORT
+
 TEST(Mat, regression_12943)  // memory usage: ~4.5 Gb
 {
     applyTestTag(CV_TEST_TAG_MEMORY_6GB);

@@ -641,4 +641,42 @@ TEST(Drawing, regression_16308)
     EXPECT_NE(0, (int)img.at<uchar>(99, 50));
 }
 
+TEST(Drawing, fillpoly_circle)
+{
+    Mat img_c(640, 480, CV_8UC3, Scalar::all(0));
+    Mat img_fp = img_c.clone(), img_fcp = img_c.clone(), img_fp3 = img_c.clone();
+
+    Point center1(img_c.cols/2, img_c.rows/2);
+    Point center2(img_c.cols/10, img_c.rows*3/4);
+    Point center3 = Point(img_c.cols, img_c.rows) - center2;
+    int radius = img_c.rows/4;
+    int radius_small = img_c.cols/15;
+    Scalar color(0, 0, 255);
+
+    circle(img_c, center1, radius, color, -1);
+
+    // check that circle, fillConvexPoly and fillPoly
+    // give almost the same result then asked to draw a single circle
+    vector<Point> vtx;
+    ellipse2Poly(center1, Size(radius, radius), 0, 0, 360, 1, vtx);
+    fillConvexPoly(img_fcp, vtx, color);
+    fillPoly(img_fp, vtx, color);
+    double diff_fp = cv::norm(img_c, img_fp, NORM_L1)/(255*radius*2*CV_PI);
+    double diff_fcp = cv::norm(img_c, img_fcp, NORM_L1)/(255*radius*2*CV_PI);
+    EXPECT_LT(diff_fp, 1.);
+    EXPECT_LT(diff_fcp, 1.);
+
+    // check that fillPoly can draw 3 disjoint circles at once
+    circle(img_c, center2, radius_small, color, -1);
+    circle(img_c, center3, radius_small, color, -1);
+
+    vector<vector<Point> > vtx3(3);
+    vtx3[0] = vtx;
+    ellipse2Poly(center2, Size(radius_small, radius_small), 0, 0, 360, 1, vtx3[1]);
+    ellipse2Poly(center3, Size(radius_small, radius_small), 0, 0, 360, 1, vtx3[2]);
+    fillPoly(img_fp3, vtx3, color);
+    double diff_fp3 = cv::norm(img_c, img_fp3, NORM_L1)/(255*(radius+radius_small*2)*2*CV_PI);
+    EXPECT_LT(diff_fp3, 1.);
+}
+
 }} // namespace

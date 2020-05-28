@@ -949,6 +949,7 @@ void ellipse2Poly( Point2d center, Size2d axes, int angle,
                    int delta, std::vector<Point2d>& pts )
 {
     CV_INSTRUMENT_REGION();
+    CV_Assert(0 < delta && delta <= 180);
 
     float alpha, beta;
     int i;
@@ -2378,7 +2379,9 @@ void cv::fillPoly(InputOutputArray img, InputArrayOfArrays pts,
 {
     CV_INSTRUMENT_REGION();
 
-    int i, ncontours = (int)pts.total();
+    bool manyContours = pts.kind() == _InputArray::STD_VECTOR_VECTOR ||
+                        pts.kind() == _InputArray::STD_VECTOR_MAT;
+    int i, ncontours = manyContours ? (int)pts.total() : 1;
     if( ncontours == 0 )
         return;
     AutoBuffer<Point*> _ptsptr(ncontours);
@@ -2388,7 +2391,7 @@ void cv::fillPoly(InputOutputArray img, InputArrayOfArrays pts,
 
     for( i = 0; i < ncontours; i++ )
     {
-        Mat p = pts.getMat(i);
+        Mat p = pts.getMat(manyContours ? i : -1);
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
         ptsptr[i] = p.ptr<Point>();
         npts[i] = p.rows*p.cols*p.channels()/2;

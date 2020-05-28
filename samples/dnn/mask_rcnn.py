@@ -43,7 +43,7 @@ def showLegend(classes):
         for i in range(len(classes)):
             block = legend[i * blockHeight:(i + 1) * blockHeight]
             block[:,:] = colors[i]
-            cv.putText(block, classes[i], (0, blockHeight/2), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
+            cv.putText(block, classes[i], (0, blockHeight//2), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
 
         cv.namedWindow('Legend', cv.WINDOW_NORMAL)
         cv.imshow('Legend', legend)
