@@ -4,6 +4,8 @@ from __future__ import print_function
 import hashlib
 import sys
 import tarfile
+import requests
+
 if sys.version_info[0] < 3:
     from urllib2 import urlopen
 else:
@@ -17,6 +19,7 @@ class Model:
     def __init__(self, **kwargs):
         self.name = kwargs.pop('name')
         self.url = kwargs.pop('url', None)
+        self.downloader = kwargs.pop('downloader', None)
         self.filename = kwargs.pop('filename')
         self.sha = kwargs.pop('sha', None)
         self.archive = kwargs.pop('archive', None)
@@ -61,11 +64,15 @@ class Model:
             print('  hash check failed - extracting')
             print('  get {}'.format(self.member))
             self.extract()
-        else:
-            assert(self.url)
+        elif self.url:
             print('  hash check failed - downloading')
             print('  get {}'.format(self.url))
             self.download()
+        else:
+            assert self.downloader
+            print('  hash check failed - downloading')
+            sz = self.downloader(self.filename)
+            print('  size = %.2f Mb' % (sz / (1024.0 * 1024)))
 
         print(' done')
         print(' file {}'.format(self.filename))
@@ -98,6 +105,46 @@ class Model:
                 f.write(buf)
                 print('>', end='')
                 sys.stdout.flush()
+
+
+def GDrive(gid):
+    def download_gdrive(dst):
+        session = requests.Session()  # re-use cookies
+
+        URL = "https://docs.google.com/uc?export=download"
+        response = session.get(URL, params = { 'id' : gid }, stream = True)
+
+        def get_confirm_token(response):  # in case of large files
+            for key, value in response.cookies.items():
+                if key.startswith('download_warning'):
+                    return value
+            return None
+        token = get_confirm_token(response)
+
+        if token:
+            params = { 'id' : gid, 'confirm' : token }
+            response = session.get(URL, params = params, stream = True)
+
+        BUFSIZE = 1024 * 1024
+        PROGRESS_SIZE = 10 * 1024 * 1024
+
+        sz = 0
+        progress_sz = PROGRESS_SIZE
+        with open(dst, "wb") as f:
+            for chunk in response.iter_content(BUFSIZE):
+                if not chunk:
+                    continue  # keep-alive
+
+                f.write(chunk)
+                sz += len(chunk)
+                if sz >= progress_sz:
+                    progress_sz += PROGRESS_SIZE
+                    print('>', end='')
+                    sys.stdout.flush()
+        print('')
+        return sz
+    return download_gdrive
+
 
 models = [
     Model(
@@ -791,14 +838,32 @@ models = [
         url='https://drive.google.com/uc?export=dowload&id=1--Ij_gIzCeNA488u5TA4FqWMMdxBqOji',
         sha='5960f7aef233d75f8f4020be1fd911b2d93fbffc',
         filename='onnx/models/lightweight_pose_estimation_201912.onnx'),
+    Model(
+        name='EfficientDet-D0', # https://github.com/google/automl
+        url='https://www.dropbox.com/s/9mqp99fd2tpuqn6/efficientdet-d0.pb?dl=1',
+        sha='f178cc17b44e3ed2f3956a0adc1800a7d2a3b3ae',
+        filename='efficientdet-d0.pb'),
+    Model(
+        name='YOLOv4',  # https://github.com/opencv/opencv/issues/17148
+        downloader=GDrive('1cewMfusmPjYWbrnuJRuKhPMwRe_b9PaT'),
+        sha='0143deb6c46fcc7f74dd35bf3c14edc3784e99ee',
+        filename='yolov4.weights'),
 ]
 
 # Note: models will be downloaded to current working directory
-#       expected working directory is opencv_extra/testdata/dnn
+#       expected working directory is <testdata>/dnn
 if __name__ == '__main__':
+
+    selected_model_name = None
+    if len(sys.argv) > 1:
+        selected_model_name = sys.argv[1]
+        print('Model: ' + selected_model_name)
+
     failedModels = []
     for m in models:
         print(m)
+        if selected_model_name is not None and not m.name.startswith(selected_model_name):
+            continue
         if not m.get():
             failedModels.append(m.filename)
 
