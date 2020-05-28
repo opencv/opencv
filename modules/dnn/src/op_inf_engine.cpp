@@ -891,6 +891,13 @@ bool InfEngineBackendNet::isInitialized()
 #endif
 }
 
+void InfEngineBackendNet::reset()
+{
+    allBlobs.clear();
+    infRequests.clear();
+    isInit = false;
+}
+
 void InfEngineBackendNet::addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs)
 {
     auto wrappers = infEngineWrappers(ptrs);

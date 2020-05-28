@@ -1,6 +1,8 @@
 Video Input with OpenCV and similarity measurement {#tutorial_video_input_psnr_ssim}
 ==================================================
 
+@next_tutorial{tutorial_video_write}
+
 Goal
 ----
 

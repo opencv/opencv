@@ -166,6 +166,24 @@ GAPI_OCV_KERNEL(GCPUSobelXY, cv::gapi::imgproc::GSobelXY)
     }
 };
 
+GAPI_OCV_KERNEL(GCPULaplacian, cv::gapi::imgproc::GLaplacian)
+{
+    static void run(const cv::Mat& in, int ddepth, int ksize, double scale,
+                    double delta, int borderType, cv::Mat &out)
+    {
+        cv::Laplacian(in, out, ddepth, ksize, scale, delta, borderType);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBilateralFilter, cv::gapi::imgproc::GBilateralFilter)
+{
+    static void run(const cv::Mat& in, int d, double sigmaColor,
+                    double sigmaSpace, int borderType, cv::Mat &out)
+    {
+        cv::bilateralFilter(in, out, d, sigmaColor, sigmaSpace, borderType);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUEqualizeHist, cv::gapi::imgproc::GEqHist)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
@@ -422,6 +440,8 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUDilate
         , GCPUSobel
         , GCPUSobelXY
+        , GCPULaplacian
+        , GCPUBilateralFilter
         , GCPUCanny
         , GCPUGoodFeatures
         , GCPUEqualizeHist

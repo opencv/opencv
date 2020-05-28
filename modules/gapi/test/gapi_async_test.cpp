@@ -386,11 +386,8 @@ namespace {
         for (auto&& arg : args){
             //FIXME: replace this switch with use of visit() on variant, when it will be available
             switch (arg.index()){
-    #if !defined(GAPI_STANDALONE)
-                case GRunArgP::index_of<cv::Mat*>()                 :   result.emplace_back(*util::get<cv::Mat*>(arg));     break;
                 case GRunArgP::index_of<cv::UMat*>()                :   result.emplace_back(*util::get<cv::UMat*>(arg));    break;
-    #endif // !defined(GAPI_STANDALONE)
-                case GRunArgP::index_of<cv::gapi::own::Mat*>()      :   result.emplace_back(*util::get<cv::gapi::own::Mat*>   (arg));   break;
+                case GRunArgP::index_of<cv::Mat*>()                 :   result.emplace_back(*util::get<cv::Mat*>(arg));     break;
                 case GRunArgP::index_of<cv::Scalar*>()              :   result.emplace_back(*util::get<cv::Scalar*>           (arg));   break;
                 case GRunArgP::index_of<cv::detail::VectorRef>()    :   result.emplace_back(util::get<cv::detail::VectorRef>  (arg));   break;
                 default : ;
@@ -403,11 +400,8 @@ namespace {
         GRunArgsP result; result.reserve(args.size());
         for (auto&& arg : args){
             switch (arg.index()){
-    #if !defined(GAPI_STANDALONE)
                 case GRunArg::index_of<cv::Mat>()                 :   result.emplace_back(&util::get<cv::Mat>(arg));     break;
                 case GRunArg::index_of<cv::UMat>()                :   result.emplace_back(&util::get<cv::UMat>(arg));    break;
-    #endif // !defined(GAPI_STANDALONE)
-                case GRunArg::index_of<cv::gapi::own::Mat>()      :   result.emplace_back(&util::get<cv::gapi::own::Mat>   (arg));   break;
                 case GRunArg::index_of<cv::Scalar>()              :   result.emplace_back(&util::get<cv::Scalar>           (arg));   break;
                 case GRunArg::index_of<cv::detail::VectorRef>()   :   result.emplace_back(util::get<cv::detail::VectorRef> (arg));   break;
                 default : ;

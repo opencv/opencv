@@ -9,9 +9,6 @@
 #define OPENCV_GAPI_CV_DEFS_HPP
 
 #if defined(GAPI_STANDALONE)
-#include <opencv2/gapi/own/types.hpp> // cv::gapi::own::Rect/Size/Point
-#include <opencv2/gapi/own/scalar.hpp> // cv::gapi::own::Scalar
-
 // Simulate OpenCV definitions taken from various
 // OpenCV interface headers if G-API is built in a
 // standalone mode.
@@ -139,11 +136,6 @@ enum InterpolationFlags{
     INTER_LINEAR_EXACT   = 5,
     INTER_MAX            = 7,
 };
-// replacement of cv's structures:
-using Rect   = gapi::own::Rect;
-using Size   = gapi::own::Size;
-using Point  = gapi::own::Point;
-using Scalar = gapi::own::Scalar;
 } // namespace cv
 
 static inline int cvFloor( double value )

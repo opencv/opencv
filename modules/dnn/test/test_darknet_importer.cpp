@@ -485,7 +485,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         scoreDiff = 0.006;
-        iouDiff = 0.018;
+        iouDiff = 0.042;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
@@ -513,15 +513,10 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
-        if (INF_ENGINE_VER_MAJOR_LE(2018050000) && target == DNN_TARGET_OPENCL)
+        if (target == DNN_TARGET_OPENCL)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-        else if (INF_ENGINE_VER_MAJOR_EQ(2019020000))
-        {
-            if (target == DNN_TARGET_OPENCL)
-                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-            if (target == DNN_TARGET_OPENCL_FP16)
-                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-        }
+        else if (target == DNN_TARGET_OPENCL_FP16 && INF_ENGINE_VER_MAJOR_LE(202010000))
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
         else if (target == DNN_TARGET_MYRIAD &&
                  getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
@@ -549,6 +544,11 @@ TEST_P(Test_Darknet_layers, upsample)
     testDarknetLayer("upsample");
 }
 
+TEST_P(Test_Darknet_layers, mish)
+{
+    testDarknetLayer("mish", true);
+}
+
 TEST_P(Test_Darknet_layers, avgpool_softmax)
 {
     testDarknetLayer("avgpool_softmax");
@@ -556,6 +556,10 @@ TEST_P(Test_Darknet_layers, avgpool_softmax)
 
 TEST_P(Test_Darknet_layers, region)
 {
+#if defined(INF_ENGINE_RELEASE)
+     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && INF_ENGINE_VER_MAJOR_GE(2020020000))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testDarknetLayer("region");
 }
 
@@ -566,6 +570,10 @@ TEST_P(Test_Darknet_layers, reorg)
 
 TEST_P(Test_Darknet_layers, maxpool)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020020000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testDarknetLayer("maxpool");
 }
 

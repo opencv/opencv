@@ -342,6 +342,45 @@ TEST_P(SobelXYTest, AccuracyTest)
     }
 }
 
+TEST_P(LaplacianTest, AccuracyTest)
+{
+    double delta = 10;
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::Laplacian(in, dtype, kernSize, scale, delta, borderType);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::Laplacian(in_mat1, out_mat_ocv, dtype, kernSize, scale, delta, borderType);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
+
+TEST_P(BilateralFilterTest, AccuracyTest)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::bilateralFilter(in, d, sigmaColor, sigmaSpace, borderType);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::bilateralFilter(in_mat1, out_mat_ocv, d, sigmaColor, sigmaSpace, borderType);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
+
 TEST_P(EqHistTest, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////

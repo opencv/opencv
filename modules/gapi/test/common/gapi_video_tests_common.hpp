@@ -20,6 +20,15 @@ namespace opencv_test
 {
 namespace
 {
+G_TYPED_KERNEL(GMinScalar, <GScalar(GScalar,GScalar)>, "custom.MinScalar") {
+    static GScalarDesc outMeta(GScalarDesc,GScalarDesc) { return empty_scalar_desc(); }
+};
+GAPI_OCV_KERNEL(GCPUMinScalar, GMinScalar) {
+    static void run(const Scalar &sc1, const Scalar &sc2, Scalar &scOut) {
+        scOut = Scalar(std::min(sc1[0], sc2[0]));
+    }
+};
+
 inline void initTrackingPointsArray(std::vector<cv::Point2f>& points, int width, int height,
                                     int nPointsX, int nPointsY)
 {
@@ -46,6 +55,14 @@ inline void initTrackingPointsArray(std::vector<cv::Point2f>& points, int width,
     }
 }
 
+struct BuildOpticalFlowPyramidTestOutput
+{
+    BuildOpticalFlowPyramidTestOutput(std::vector<Mat> &pyr, int maxLvl) :
+                                      pyramid(pyr), maxLevel(maxLvl) { }
+    std::vector<Mat> &pyramid;
+    int               maxLevel = 0;
+};
+
 template<typename Type>
 struct OptFlowLKTestInput
 {
@@ -59,6 +76,31 @@ struct OptFlowLKTestOutput
     std::vector<cv::Point2f> &nextPoints;
     std::vector<uchar>       &statuses;
     std::vector<float>       &errors;
+};
+
+struct BuildOpticalFlowPyramidTestParams
+{
+    BuildOpticalFlowPyramidTestParams(): fileName(""), winSize(-1), maxLevel(-1),
+                                         withDerivatives(false), pyrBorder(-1),
+                                         derivBorder(-1), tryReuseInputImage(false) { }
+
+    BuildOpticalFlowPyramidTestParams(const std::string& name, int winSz, int maxLvl,
+                                      bool withDeriv, int pBorder, int dBorder,
+                                      bool tryReuse, const GCompileArgs& compArgs):
+
+                                      fileName(name), winSize(winSz), maxLevel(maxLvl),
+                                      withDerivatives(withDeriv), pyrBorder(pBorder),
+                                      derivBorder(dBorder), tryReuseInputImage(tryReuse),
+                                      compileArgs(compArgs) { }
+
+    std::string fileName    = "";
+    int winSize             = -1;
+    int maxLevel            = -1;
+    bool withDerivatives    = false;
+    int pyrBorder           = -1;
+    int derivBorder         = -1;
+    bool tryReuseInputImage = false;
+    cv::GCompileArgs compileArgs;
 };
 
 struct OptFlowLKTestParams
@@ -89,6 +131,42 @@ struct OptFlowLKTestParams
 };
 
 #ifdef HAVE_OPENCV_VIDEO
+
+inline GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional& testInst,
+                                                   const BuildOpticalFlowPyramidTestParams& params,
+                                                   BuildOpticalFlowPyramidTestOutput& outOCV,
+                                                   BuildOpticalFlowPyramidTestOutput& outGAPI)
+{
+    testInst.initMatFromImage(CV_8UC1, params.fileName);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        outOCV.maxLevel = cv::buildOpticalFlowPyramid(testInst.in_mat1, outOCV.pyramid,
+                                                      Size(params.winSize, params.winSize),
+                                                      params.maxLevel, params.withDerivatives,
+                                                      params.pyrBorder, params.derivBorder,
+                                                      params.tryReuseInputImage);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    GMat         in;
+    GArray<GMat> out;
+    GScalar      outMaxLevel;
+    std::tie(out, outMaxLevel) =
+         cv::gapi::buildOpticalFlowPyramid(in, Size(params.winSize, params.winSize),
+                                           params.maxLevel, params.withDerivatives,
+                                           params.pyrBorder, params.derivBorder,
+                                           params.tryReuseInputImage);
+
+    GComputation c(GIn(in), GOut(out, outMaxLevel));
+
+    Scalar outMaxLevelSc;
+    c.apply(gin(testInst.in_mat1), gout(outGAPI.pyramid, outMaxLevelSc),
+            std::move(const_cast<GCompileArgs&>(params.compileArgs)));
+    outGAPI.maxLevel = static_cast<int>(outMaxLevelSc[0]);
+
+    return c;
+}
 
 template<typename GType, typename Type>
 cv::GComputation runOCVnGAPIOptFlowLK(OptFlowLKTestInput<Type>& in,
@@ -184,7 +262,76 @@ inline cv::GComputation runOCVnGAPIOptFlowLKForPyr(TestFunctional& testInst,
                                                       gapiOut);
 }
 
+inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional& testInst,
+                                               const BuildOpticalFlowPyramidTestParams& params,
+                                               OptFlowLKTestOutput& outOCV,
+                                               OptFlowLKTestOutput& outGAPI,
+                                               std::vector<Point2f>& prevPoints)
+{
+    testInst.initMatsFromImages(3, params.fileName, 1);
+
+    initTrackingPointsArray(prevPoints, testInst.in_mat1.cols, testInst.in_mat1.rows, 15, 15);
+
+    Size winSize = Size(params.winSize, params.winSize);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        std::vector<Mat> pyr1, pyr2;
+        int maxLevel1 = cv::buildOpticalFlowPyramid(testInst.in_mat1, pyr1, winSize,
+                                                    params.maxLevel, params.withDerivatives,
+                                                    params.pyrBorder, params.derivBorder,
+                                                    params.tryReuseInputImage);
+        int maxLevel2 = cv::buildOpticalFlowPyramid(testInst.in_mat2, pyr2, winSize,
+                                                    params.maxLevel, params.withDerivatives,
+                                                    params.pyrBorder, params.derivBorder,
+                                                    params.tryReuseInputImage);
+        cv::calcOpticalFlowPyrLK(pyr1, pyr2, prevPoints,
+                                 outOCV.nextPoints, outOCV.statuses, outOCV.errors,
+                                 winSize, std::min(maxLevel1, maxLevel2));
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    GMat                in1,        in2;
+    GArray<GMat>        gpyr1,      gpyr2;
+    GScalar             gmaxLevel1, gmaxLevel2;
+    GArray<cv::Point2f> gprevPts, gpredPts, gnextPts;
+    GArray<uchar>       gstatuses;
+    GArray<float>       gerrors;
+
+    std::tie(gpyr1, gmaxLevel1) = cv::gapi::buildOpticalFlowPyramid(
+                                      in1, winSize, params.maxLevel,
+                                      params.withDerivatives, params.pyrBorder,
+                                      params.derivBorder, params.tryReuseInputImage);
+
+    std::tie(gpyr2, gmaxLevel2) = cv::gapi::buildOpticalFlowPyramid(
+                                      in2, winSize, params.maxLevel,
+                                      params.withDerivatives, params.pyrBorder,
+                                      params.derivBorder, params.tryReuseInputImage);
+
+    GScalar gmaxLevel = GMinScalar::on(gmaxLevel1, gmaxLevel2);
+
+    std::tie(gnextPts, gstatuses, gerrors) = cv::gapi::calcOpticalFlowPyrLK(
+                                              gpyr1, gpyr2, gprevPts, gpredPts, winSize,
+                                              gmaxLevel);
+
+    cv::GComputation c(GIn(in1, in2, gprevPts, gpredPts), cv::GOut(gnextPts, gstatuses, gerrors));
+
+    c.apply(cv::gin(testInst.in_mat1, testInst.in_mat2, prevPoints, std::vector<cv::Point2f>{ }),
+            cv::gout(outGAPI.nextPoints, outGAPI.statuses, outGAPI.errors),
+            std::move(const_cast<cv::GCompileArgs&>(params.compileArgs)));
+
+    return c;
+}
+
 #else // !HAVE_OPENCV_VIDEO
+
+inline cv::GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional&,
+                                                       const BuildOpticalFlowPyramidTestParams&,
+                                                       BuildOpticalFlowPyramidTestOutput&,
+                                                       BuildOpticalFlowPyramidTestOutput&)
+{
+    GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
+}
 
 inline cv::GComputation runOCVnGAPIOptFlowLK(TestFunctional&,
                                              std::vector<cv::Point2f>&,
@@ -205,7 +352,28 @@ inline cv::GComputation runOCVnGAPIOptFlowLKForPyr(TestFunctional&,
     GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
 }
 
+inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional&,
+                                               const BuildOpticalFlowPyramidTestParams&,
+                                               OptFlowLKTestOutput&,
+                                               OptFlowLKTestOutput&,
+                                               std::vector<Point2f>&)
+{
+    GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
+}
+
 #endif // HAVE_OPENCV_VIDEO
+
+inline void compareOutputPyramids(const BuildOpticalFlowPyramidTestOutput& outOCV,
+                                  const BuildOpticalFlowPyramidTestOutput& outGAPI)
+{
+    GAPI_Assert(outGAPI.maxLevel == outOCV.maxLevel);
+    GAPI_Assert(outOCV.maxLevel >= 0);
+    size_t maxLevel = static_cast<size_t>(outOCV.maxLevel);
+    for (size_t i = 0; i <= maxLevel; i++)
+    {
+        EXPECT_TRUE(AbsExact().to_compare_f()(outOCV.pyramid[i], outGAPI.pyramid[i]));
+    }
+}
 
 template <typename Elem>
 inline bool compareVectorsAbsExactForOptFlow(std::vector<Elem> outOCV, std::vector<Elem> outGAPI)
@@ -221,7 +389,6 @@ inline void compareOutputsOptFlow(const OptFlowLKTestOutput& outOCV,
     EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.errors,     outOCV.errors));
 }
 
-
 inline std::ostream& operator<<(std::ostream& os, const cv::TermCriteria& criteria)
 {
     os << "{";
@@ -236,7 +403,7 @@ inline std::ostream& operator<<(std::ostream& os, const cv::TermCriteria& criter
         os << "COUNT | EPS; ";
         break;
     default:
-        os << "TypeUndifined; ";
+        os << "TypeUndefined; ";
         break;
     };
 

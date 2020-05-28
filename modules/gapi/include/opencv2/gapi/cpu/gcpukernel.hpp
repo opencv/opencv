@@ -17,7 +17,6 @@
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/garg.hpp>
-#include <opencv2/gapi/own/convert.hpp> //to_ocv
 #include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 #include <opencv2/gapi/util/util.hpp>
 
@@ -96,8 +95,8 @@ public:
     const T& inArg(int input) { return m_args.at(input).get<T>(); }
 
     // Syntax sugar
-    const cv::gapi::own::Mat&   inMat(int input);
-    cv::gapi::own::Mat&         outMatR(int output); // FIXME: Avoid cv::gapi::own::Mat m = ctx.outMatR()
+    const cv::Mat&   inMat(int input);
+    cv::Mat&         outMatR(int output); // FIXME: Avoid cv::Mat m = ctx.outMatR()
 
     const cv::Scalar& inVal(int input);
     cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = ctx.outValR()
@@ -147,7 +146,7 @@ namespace detail
 template<class T> struct get_in;
 template<> struct get_in<cv::GMat>
 {
-    static cv::Mat    get(GCPUContext &ctx, int idx) { return to_ocv(ctx.inMat(idx)); }
+    static cv::Mat    get(GCPUContext &ctx, int idx) { return ctx.inMat(idx); }
 };
 template<> struct get_in<cv::GMatP>
 {
@@ -196,7 +195,7 @@ template<class T> struct get_in
 };
 
 struct tracked_cv_mat{
-    tracked_cv_mat(cv::gapi::own::Mat& m) : r{to_ocv(m)}, original_data{m.data} {}
+    tracked_cv_mat(cv::Mat& m) : r{m}, original_data{m.data} {}
     cv::Mat r;
     uchar* original_data;
 
@@ -256,6 +255,12 @@ template<typename U> struct get_out<cv::GArray<U>>
         return ctx.outVecR<U>(idx);
     }
 };
+
+//FIXME(dm): GArray<Mat>/GArray<GMat> conversion should be done more gracefully in the system
+template<> struct get_out<cv::GArray<cv::GMat> >: public get_out<cv::GArray<cv::Mat> >
+{
+};
+
 template<typename U> struct get_out<cv::GOpaque<U>>
 {
     static U& get(GCPUContext &ctx, int idx)

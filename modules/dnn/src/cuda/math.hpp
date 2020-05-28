@@ -160,6 +160,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ __half2 ceil(__half2 value) { return h2ceil(value); }
 #endif
 
+    template <class T> __device__ T fast_divide(T x, T y) { return x / y; }
+    template <> inline __device__ float fast_divide(float x, float y) { return __fdividef(x, y); }
+
+    template <class T> __device__ T fast_exp(T value) { return exp(value); }
+    template <> inline __device__ float fast_exp(float value) { return __expf(value); }
+
+    template <class T> __device__ T fast_sigmoid(T value) { return sigmoid(value); }
+    template <> inline __device__ float fast_sigmoid(float value) { return __fdividef(1, 1 + __expf(-value)); }
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_MATH_HPP */

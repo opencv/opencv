@@ -77,7 +77,11 @@ public:
         return type_info;
     }
 
+#if INF_ENGINE_VER_MAJOR_GT(2020020000)
+    NgraphCustomOp(const ngraph::OutputVector& inputs,
+#else
     NgraphCustomOp(const ngraph::NodeVector& inputs,
+#endif
                    const std::map<std::string, InferenceEngine::Parameter>& params = {}):
         Op(inputs), params(params)
     {
@@ -103,7 +107,11 @@ public:
 
     std::shared_ptr<ngraph::Node> copy_with_new_args(const ngraph::NodeVector& new_args) const override
     {
+#if INF_ENGINE_VER_MAJOR_GT(2020020000)
+        return std::make_shared<NgraphCustomOp>(ngraph::as_output_vector(new_args), params);
+#else
         return std::make_shared<NgraphCustomOp>(new_args, params);
+#endif
     }
 
     bool visit_attributes(ngraph::AttributeVisitor& visitor) override
@@ -270,7 +278,11 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
         {"internals", shapesToStr(internals)}
     };
 
+#if INF_ENGINE_VER_MAJOR_GT(2020020000)
+    ngraph::OutputVector inp_nodes;
+#else
     ngraph::NodeVector inp_nodes;
+#endif
     for (const auto& node : nodes)
         inp_nodes.emplace_back(node.dynamicCast<InfEngineNgraphNode>()->node);
     node = std::make_shared<NgraphCustomOp>(inp_nodes, params);
@@ -766,6 +778,13 @@ void forwardNgraph(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
     Ptr<InfEngineNgraphNode> ieNode = node.dynamicCast<InfEngineNgraphNode>();
     CV_Assert(!ieNode.empty());
     ieNode->net->forward(outBlobsWrappers, isAsync);
+}
+
+void InfEngineNgraphNet::reset()
+{
+    allBlobs.clear();
+    infRequests.clear();
+    isInit = false;
 }
 
 void InfEngineNgraphNet::addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs)

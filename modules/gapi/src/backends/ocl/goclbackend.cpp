@@ -96,7 +96,7 @@ cv::gimpl::GOCLExecutable::GOCLExecutable(const ade::Graph &g,
             if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT)
             {
                 const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
-                auto& mat = m_res.slot<cv::gapi::own::Mat>()[desc.rc];
+                auto& mat = m_res.slot<cv::Mat>()[desc.rc];
                 createMat(mat_desc, mat);
             }
             break;

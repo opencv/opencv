@@ -71,10 +71,6 @@ public:
     using GMat::GMat;
 };
 
-namespace gapi { namespace own {
-    class Mat;
-}}//gapi::own
-
 /** @} */
 
 /**
@@ -121,7 +117,7 @@ struct GAPI_EXPORTS GMatDesc
     // (it handles the case when
     // 1-channel mat can be reinterpreted as is (1-channel mat)
     // and as a 3-channel planar mat with height divided by 3)
-    bool canDescribe(const cv::gapi::own::Mat& mat) const;
+    bool canDescribe(const cv::Mat& mat) const;
 
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
@@ -132,9 +128,6 @@ struct GAPI_EXPORTS GMatDesc
         desc.size += delta;
         return desc;
     }
-#if !defined(GAPI_STANDALONE)
-    bool canDescribe(const cv::Mat& mat) const;
-#endif // !defined(GAPI_STANDALONE)
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
     //
@@ -213,17 +206,22 @@ struct GAPI_EXPORTS GMatDesc
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 
 #if !defined(GAPI_STANDALONE)
-class Mat;
-GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
 GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 #endif // !defined(GAPI_STANDALONE)
 
-/** @} */
-
-// FIXME: WHY??? WHY it is under different namespace?
+//Fwd declarations
 namespace gapi { namespace own {
+    class Mat;
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own
+
+#if !defined(GAPI_STANDALONE)
+GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
+#else
+using gapi::own::descr_of;
+#endif
+
+/** @} */
 
 GAPI_EXPORTS std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc);
 

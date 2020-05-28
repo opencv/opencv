@@ -212,20 +212,12 @@ void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &
 
         switch (arg.index())
         {
-        case GRunArg::index_of<cv::gapi::own::Mat>():
-        {
-            auto& arg_mat = util::get<cv::gapi::own::Mat>(arg);
-            binder_->input(it->second).copy_from(arg_mat.data);
-        }
-        break;
-#if !defined(GAPI_STANDALONE)
         case GRunArg::index_of<cv::Mat>() :
         {
             auto& arg_mat = util::get<cv::Mat>(arg);
             binder_->input(it->second).copy_from(arg_mat.data);
         }
         break;
-#endif //  !defined(GAPI_STANDALONE)
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
     }
@@ -248,20 +240,12 @@ void cv::gimpl::GPlaidMLExecutable::bindOutArg(const RcDesc &rc, const GRunArgP 
 
         switch (arg.index())
         {
-        case GRunArgP::index_of<cv::gapi::own::Mat*>():
-        {
-            auto& arg_mat = *util::get<cv::gapi::own::Mat*>(arg);
-            binder_->output(it->second).copy_into(arg_mat.data);
-        }
-        break;
-#if !defined(GAPI_STANDALONE)
         case GRunArgP::index_of<cv::Mat*>() :
         {
             auto& arg_mat = *util::get<cv::Mat*>(arg);
             binder_->output(it->second).copy_into(arg_mat.data);
         }
         break;
-#endif //  !defined(GAPI_STANDALONE)
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
     }

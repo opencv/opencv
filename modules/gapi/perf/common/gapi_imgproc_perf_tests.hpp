@@ -20,33 +20,38 @@ namespace opencv_test
 
   //------------------------------------------------------------------------------
 
-class SepFilterPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, int, cv::GCompileArgs>> {};
-class Filter2DPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
-class BoxFilterPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
-class BlurPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, cv::GCompileArgs>> {};
-class GaussianBlurPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::GCompileArgs>> {};
-class MedianBlurPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size, cv::GCompileArgs>> {};
-class ErodePerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, cv::GCompileArgs>> {};
-class Erode3x3PerfTest : public TestPerfParams<tuple<compare_f, MatType, cv::Size, int, cv::GCompileArgs>> {};
-class DilatePerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, cv::GCompileArgs>> {};
-class Dilate3x3PerfTest : public TestPerfParams<tuple<compare_f, MatType,cv::Size,int, cv::GCompileArgs>> {};
-class SobelPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int,int, cv::GCompileArgs>> {};
-class SobelXYPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
-class CannyPerfTest : public TestPerfParams<tuple<compare_f, MatType,cv::Size,double,double,int,bool, cv::GCompileArgs>> {};
-class GoodFeaturesPerfTest : public TestPerfParams<tuple<compare_vector_f<cv::Point2f>, std::string,
-                                                         int,int,double,double,int,bool,
-                                                         cv::GCompileArgs>> {};
-class EqHistPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
-class RGB2GrayPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
-class BGR2GrayPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
-class RGB2YUVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
-class YUV2RGBPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
-class RGB2LabPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-class BGR2LUVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-class LUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-class BGR2YUVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-class YUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
-class RGB2HSVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class SepFilterPerfTest       : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, cv::GCompileArgs>> {};
+class Filter2DPerfTest        : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
+class BoxFilterPerfTest       : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
+class BlurPerfTest            : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, cv::GCompileArgs>> {};
+class GaussianBlurPerfTest    : public TestPerfParams<tuple<compare_f, MatType,int, cv::Size, cv::GCompileArgs>> {};
+class MedianBlurPerfTest      : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size, cv::GCompileArgs>> {};
+class ErodePerfTest           : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, cv::GCompileArgs>> {};
+class Erode3x3PerfTest        : public TestPerfParams<tuple<compare_f, MatType,cv::Size,int, cv::GCompileArgs>> {};
+class DilatePerfTest          : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, cv::GCompileArgs>> {};
+class Dilate3x3PerfTest       : public TestPerfParams<tuple<compare_f, MatType,cv::Size,int, cv::GCompileArgs>> {};
+class SobelPerfTest           : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int,int, cv::GCompileArgs>> {};
+class SobelXYPerfTest         : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
+class LaplacianPerfTest       : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,
+                                                            cv::GCompileArgs>> {};
+class BilateralFilterPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, double,double,
+                                                            cv::GCompileArgs>> {};
+class CannyPerfTest           : public TestPerfParams<tuple<compare_f, MatType,cv::Size,double,double,int,bool,
+                                                            cv::GCompileArgs>> {};
+class GoodFeaturesPerfTest    : public TestPerfParams<tuple<compare_vector_f<cv::Point2f>, std::string,
+                                                            int,int,double,double,int,bool,
+                                                            cv::GCompileArgs>> {};
+class EqHistPerfTest      : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class RGB2GrayPerfTest    : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class BGR2GrayPerfTest    : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class RGB2YUVPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class YUV2RGBPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class RGB2LabPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class BGR2LUVPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class LUV2BGRPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class BGR2YUVPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class YUV2BGRPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class RGB2HSVPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BayerGR2RGBPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class RGB2YUV422PerfTest  : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 } // opencv_test

@@ -1,6 +1,10 @@
 Installation in Windows {#tutorial_windows_install}
 =======================
 
+@prev_tutorial{tutorial_linux_eclipse}
+@next_tutorial{tutorial_windows_visual_studio_opencv}
+
+
 The description here was tested on Windows 7 SP1. Nevertheless, it should also work on any other
 relatively modern version of Windows OS. If you encounter errors after following the steps described
 below, feel free to contact us via our [OpenCV Q&A forum](http://answers.opencv.org). We'll do our

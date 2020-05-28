@@ -97,29 +97,68 @@ class Test_Caffe_layers : public DNNTestLayer
 {
 public:
     void testLayerUsingCaffeModels(const String& basename, bool useCaffeModel = false,
-                                   bool useCommonInputBlob = true, double l1 = 0.0,
-                                   double lInf = 0.0)
+                                   bool useCommonInputBlob = true, double l1 = 0.0, double lInf = 0.0,
+                                   int numInps = 1, int numOuts = 1)
     {
+        CV_Assert_N(numInps >= 1, numInps <= 10, numOuts >= 1, numOuts <= 10);
         String prototxt = _tf(basename + ".prototxt");
         String caffemodel = _tf(basename + ".caffemodel");
 
-        String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
-        String outfile = _tf(basename + ".npy");
+        std::vector<Mat> inps, refs, outs;
 
-        Mat inp = blobFromNPY(inpfile);
-        Mat ref = blobFromNPY(outfile);
-        checkBackend(&inp, &ref);
+        if (numInps > 1)
+        {
+            for (int i = 0; i < numInps; i++)
+            {
+                String inpfile = _tf(basename + cv::format(".input_%d.npy", i));
+                inps.push_back(blobFromNPY(inpfile));
+            }
+        }
+        else
+        {
+            String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
+            inps.push_back(blobFromNPY(inpfile));
+        }
+
+        if (numOuts > 1)
+        {
+            for (int i = 0; i < numOuts; i++)
+            {
+                String outfile = _tf(basename + cv::format("_%d.npy", i));
+                refs.push_back(blobFromNPY(outfile));
+            }
+        }
+        else
+        {
+            String outfile = _tf(basename + ".npy");
+            refs.push_back(blobFromNPY(outfile));
+        }
 
         Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
         ASSERT_FALSE(net.empty());
+        checkBackend(&inps[0], &refs[0]);
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
 
-        net.setInput(inp, "input");
-        Mat out = net.forward("output");
+        String inp_name = "input";
+        if (numInps > 1)
+        {
+            for (int i = 0; i < numInps; i++)
+            {
+                net.setInput(inps[i], inp_name + cv::format("_%d", i));
+            }
+        }
+        else
+        {
+            net.setInput(inps.back(), inp_name);
+        }
 
-        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        net.forward(outs);
+        for (int i = 0; i < refs.size(); i++)
+        {
+            normAssert(refs[i], outs[i], "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        }
     }
 };
 
@@ -577,6 +616,58 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(outputs.size(), 2u);
     EXPECT_EQ(shape(outputs[0]), shape(nT, nS, nO));
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
+}
+
+TEST_P(Test_Caffe_layers, Accum)
+{
+    if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    testLayerUsingCaffeModels("accum", false, false, 0.0, 0.0, 2);
+    testLayerUsingCaffeModels("accum_ref", false, false, 0.0, 0.0, 2);
+}
+
+TEST_P(Test_Caffe_layers, FlowWarp)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    testLayerUsingCaffeModels("flow_warp", false, false, 0.0, 0.0, 2);
+}
+
+TEST_P(Test_Caffe_layers, ChannelNorm)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testLayerUsingCaffeModels("channel_norm", false, false);
+}
+
+TEST_P(Test_Caffe_layers, DataAugmentation)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testLayerUsingCaffeModels("data_augmentation", true, false);
+}
+
+TEST_P(Test_Caffe_layers, Resample)
+{
+    if (backend != DNN_BACKEND_OPENCV)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testLayerUsingCaffeModels("nearest_2inps", false, false, 0.0, 0.0, 2);
+    testLayerUsingCaffeModels("nearest", false, false);
+}
+
+TEST_P(Test_Caffe_layers, Correlation)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
+                     CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testLayerUsingCaffeModels("correlation", false, false, 0.0, 0.0, 2);
+}
+
+TEST_P(Test_Caffe_layers, Convolution2Inputs)
+{
+    testLayerUsingCaffeModels("conv_2_inps", true, false, 0.0, 0.0, 2);
 }
 
 TEST_P(Test_Caffe_layers, ROIPooling_Accuracy)
@@ -1790,5 +1881,96 @@ TEST_P(Layer_Test_Resize, change_input)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Slice;
+TEST_P(Layer_Test_Slice, variable_input_shape)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+
+    int begin[] = {0, 0, 0, 0};
+    int end[] = {-1, -1, -1, -1};
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Slice";
+    lp.name = "testLayer";
+    lp.set("begin", DictValue::arrayInt<int*>(&begin[0], 4));
+    lp.set("end", DictValue::arrayInt<int*>(&end[0], 4));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat inp(4 + i, 5 + i, CV_8UC1);
+        randu(inp, 0, 255);
+        inp = blobFromImage(inp);
+
+        net.setInput(inp);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+
+        normAssert(out, inp);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Slice, dnnBackendsAndTargets());
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_BatchNorm;
+TEST_P(Layer_Test_BatchNorm, fusion)
+{
+    // This tests reinitializes network by forwarding different batch size input.
+    // We check BatchNorm layer weights restoring after fusion.
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    const int ch = 4;
+
+    Mat mean(1, ch, CV_32F), var(1, ch, CV_32F), weights(1, ch, CV_32F);
+    randu(mean, 0, 1);
+    randu(var, 0, 1);
+    randu(weights, 0, 1);
+
+    Net net;
+    {
+        LayerParams lp;
+        lp.type = "BatchNorm";
+        lp.name = "bn";
+        lp.set("has_weight", false);
+        lp.set("has_bias", false);
+        lp.blobs.push_back(mean);
+        lp.blobs.push_back(var);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        lp.type = "Scale";
+        lp.name = "scale";
+        lp.set("has_bias", false);
+        lp.blobs.push_back(weights);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    Mat inp(4, 5, CV_32FC(ch));
+    randu(inp, 0, 1);
+
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    net.setInput(blobFromImage(inp));
+    Mat ref = net.forward();
+
+    net.setInput(blobFromImages(std::vector<Mat>(2, inp)));
+    Mat out = net.forward();
+
+    for (int i = 0; i < 2; ++i)
+    {
+        std::vector<Range> ranges(4, Range::all());
+        ranges[0].start = i;
+        ranges[0].end = i + 1;
+        normAssert(out(ranges), ref);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_BatchNorm, dnnBackendsAndTargets());
 
 }} // namespace

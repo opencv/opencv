@@ -1,6 +1,10 @@
 Installation in MacOS {#tutorial_macos_install}
 =====================
 
+@prev_tutorial{tutorial_android_ocl_intro}
+@next_tutorial{tutorial_ios_install}
+
+
 The following steps have been tested for MacOSX (Mavericks) but should work with other versions as well.
 
 Required Packages
@@ -34,6 +38,8 @@ Installing CMake
     @code{.bash}
     cmake --version
     @endcode
+
+@note You can use [Homebrew](https://brew.sh/) to install CMake with @code{.bash} brew install cmake @endcode
 
 Getting OpenCV Source Code
 --------------------------

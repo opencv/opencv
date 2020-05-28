@@ -1,6 +1,9 @@
 Feature Matching with FLANN {#tutorial_feature_flann_matcher}
 ===========================
 
+@prev_tutorial{tutorial_feature_description}
+@next_tutorial{tutorial_feature_homography}
+
 Goal
 ----
 
@@ -27,7 +30,7 @@ Binary descriptors (ORB, BRISK, ...) are matched using the <a href="https://en.w
 This distance is equivalent to count the number of different elements for binary strings (population count after applying a XOR operation):
 \f[ d_{hamming} \left ( a,b \right ) = \sum_{i=0}^{n-1} \left ( a_i \oplus b_i \right ) \f]
 
-To filter the matches, Lowe proposed in @cite Lowe:2004:DIF:993451.996342 to use a distance ratio test to try to eliminate false matches.
+To filter the matches, Lowe proposed in @cite Lowe04 to use a distance ratio test to try to eliminate false matches.
 The distance ratio between the two nearest matches of a considered keypoint is computed and it is a good match when this value is below
 a threshold. Indeed, this ratio allows helping to discriminate between ambiguous matches (distance ratio between the two nearest neighbors
 is close to one) and well discriminated matches. The figure below from the SIFT paper illustrates the probability that a match is correct

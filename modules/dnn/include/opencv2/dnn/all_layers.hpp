@@ -556,6 +556,30 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS DataAugmentationLayer : public Layer
+    {
+    public:
+        static Ptr<DataAugmentationLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS CorrelationLayer : public Layer
+    {
+    public:
+        static Ptr<CorrelationLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS AccumLayer : public Layer
+    {
+    public:
+        static Ptr<AccumLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS FlowWarpLayer : public Layer
+    {
+    public:
+        static Ptr<FlowWarpLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS PriorBoxLayer : public Layer
     {
     public:

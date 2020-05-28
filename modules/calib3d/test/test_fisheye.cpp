@@ -101,7 +101,7 @@ TEST_F(fisheyeTest, projectPoints)
     EXPECT_MAT_NEAR(distorted0, distorted2, 1e-10);
 }
 
-TEST_F(fisheyeTest, DISABLED_undistortImage)
+TEST_F(fisheyeTest, undistortImage)
 {
     cv::Matx33d theK = this->K;
     cv::Mat theD = cv::Mat(this->D);
@@ -654,6 +654,51 @@ TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
 
     cv::fisheye::calibrate(objectPoints, imagePoints, cv::Size(100, 100), theK, theD,
         cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
+}
+
+TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
+{
+    cv::Size size(1920, 1080);
+
+    cv::Mat K_fullhd(3, 3, cv::DataType<double>::type);
+    K_fullhd.at<double>(0, 0) = 600.44477382;
+    K_fullhd.at<double>(0, 1) = 0.0;
+    K_fullhd.at<double>(0, 2) = 992.06425788;
+
+    K_fullhd.at<double>(1, 0) = 0.0;
+    K_fullhd.at<double>(1, 1) = 578.99298055;
+    K_fullhd.at<double>(1, 2) = 549.26826242;
+
+    K_fullhd.at<double>(2, 0) = 0.0;
+    K_fullhd.at<double>(2, 1) = 0.0;
+    K_fullhd.at<double>(2, 2) = 1.0;
+
+    cv::Mat K_new_truth(3, 3, cv::DataType<double>::type);
+
+    K_new_truth.at<double>(0, 0) = 387.4809086880343;
+    K_new_truth.at<double>(0, 1) = 0.0;
+    K_new_truth.at<double>(0, 2) = 1036.669802754649;
+
+    K_new_truth.at<double>(1, 0) = 0.0;
+    K_new_truth.at<double>(1, 1) = 373.6375700303157;
+    K_new_truth.at<double>(1, 2) = 538.8373261247601;
+
+    K_new_truth.at<double>(2, 0) = 0.0;
+    K_new_truth.at<double>(2, 1) = 0.0;
+    K_new_truth.at<double>(2, 2) = 1.0;
+
+    cv::Mat D_fullhd(4, 1, cv::DataType<double>::type);
+    D_fullhd.at<double>(0, 0) = -0.05090103223466704;
+    D_fullhd.at<double>(1, 0) = 0.030944413642173308;
+    D_fullhd.at<double>(2, 0) = -0.021509225493198905;
+    D_fullhd.at<double>(3, 0) = 0.0043378096628297145;
+    cv::Mat E = cv::Mat::eye(3, 3, cv::DataType<double>::type);
+
+    cv::Mat K_new(3, 3, cv::DataType<double>::type);
+
+    cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K_fullhd, D_fullhd, size, E, K_new, 0.0, size);
+
+    EXPECT_MAT_NEAR(K_new, K_new_truth, 1e-6);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

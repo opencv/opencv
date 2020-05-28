@@ -1,6 +1,9 @@
 Getting Started with Images {#tutorial_display_image}
 ===========================
 
+@prev_tutorial{tutorial_building_tegra_cuda}
+@next_tutorial{tutorial_documentation}
+
 Goal
 ----
 

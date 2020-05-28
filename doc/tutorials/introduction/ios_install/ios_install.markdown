@@ -1,6 +1,9 @@
 Installation in iOS {#tutorial_ios_install}
 ===================
 
+@prev_tutorial{tutorial_macos_install}
+@next_tutorial{tutorial_arm_crosscompile_with_cmake}
+
 Required Packages
 -----------------
 

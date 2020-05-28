@@ -8,7 +8,6 @@
 #include "precomp.hpp"
 
 #include <opencv2/gapi/gscalar.hpp>
-#include <opencv2/gapi/own/convert.hpp>
 #include "api/gorigin.hpp"
 
 // cv::GScalar public implementation ///////////////////////////////////////////
@@ -47,6 +46,8 @@ const cv::GOrigin& cv::GScalar::priv() const
     return *m_priv;
 }
 
+//N.B. if we ever need more complicated logic for desc_of(cv::(gapi::own::)Scalar)
+//dispatching should be done in the same way as for cv::(gapi::own)::Mat
 cv::GScalarDesc cv::descr_of(const cv::Scalar &)
 {
     return empty_scalar_desc();

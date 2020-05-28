@@ -53,7 +53,7 @@ template<>
 class BorderHandlerT<cv::BORDER_CONSTANT> : public BorderHandler
 {
     cv::Scalar m_border_value;
-    cv::gapi::own::Mat m_const_border;
+    cv::Mat m_const_border;
 
 public:
     BorderHandlerT(int border_size, cv::Scalar border_value);
@@ -65,7 +65,7 @@ public:
 class BufferStorage
 {
 protected:
-    cv::gapi::own::Mat m_data;
+    cv::Mat m_data;
 
 public:
     void updateInCache(View::Cache& cache, int start_log_idx, int nLines) const;
@@ -80,8 +80,8 @@ public:
 
     inline bool empty() const { return m_data.empty(); }
 
-    inline const cv::gapi::own::Mat& data() const { return m_data; }
-    inline       cv::gapi::own::Mat& data()       { return m_data; }
+    inline const cv::Mat& data() const { return m_data; }
+    inline       cv::Mat& data()       { return m_data; }
 
     inline int rows() const { return m_data.rows; }
     inline int cols() const { return m_data.cols; }
@@ -117,7 +117,7 @@ public:
         return m_data.ptr(physIdx(idx), 0);
     }
 
-    inline void attach(const cv::gapi::own::Mat& _data, cv::Rect _roi)
+    inline void attach(const cv::Mat& _data, cv::Rect _roi)
     {
         m_data = _data(_roi);
         m_roi = _roi;
@@ -245,7 +245,7 @@ class GAPI_EXPORTS Buffer::Priv
 
     // Coordinate starting from which this buffer is assumed
     // to be read (with border not being taken into account)
-    int m_readStart;
+    int m_readStart = 0;
     cv::Rect m_roi;
 
     friend void debugBufferPriv(const Buffer& p, std::ostream &os);
@@ -263,7 +263,7 @@ public:
               cv::Rect roi);
 
     void allocate(BorderOpt border, int border_size, int line_consumption, int skew);
-    void bindTo(const cv::gapi::own::Mat &data, bool is_input);
+    void bindTo(const cv::Mat &data, bool is_input);
 
     inline void addView(const View* view) { m_views.emplace_back(view); }
 

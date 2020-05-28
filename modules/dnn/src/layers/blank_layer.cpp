@@ -147,7 +147,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        ngraph::NodeVector inp{ieInpNode};
+        ngraph::OutputVector inp{ieInpNode};
         auto blank = std::make_shared<ngraph::op::Concat>(inp, 0);
         return Ptr<BackendNode>(new InfEngineNgraphNode(blank));
     }
