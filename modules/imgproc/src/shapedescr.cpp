@@ -339,6 +339,12 @@ double cv::contourArea( InputArray _contour, bool oriented )
 
 namespace cv
 {
+
+static inline Point2f getOfs(int i, float eps)
+{
+    return Point2f(((i & 1)*2 - 1)*eps, ((i & 2) - 1)*eps);
+}
+
 static RotatedRect fitEllipseNoDirect( InputArray _points )
 {
     CV_INSTRUMENT_REGION();
@@ -355,15 +361,13 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
 
     // New fitellipse algorithm, contributed by Dr. Daniel Weiss
     Point2f c(0,0);
-    double gfp[5] = {0}, rp[5] = {0}, t, vd[25], wd[5];
+    double gfp[5] = {0}, rp[5] = {0}, t, vd[25]={0}, wd[5]={0};
     const double min_eps = 1e-8;
     bool is_float = depth == CV_32F;
-    const Point* ptsi = points.ptr<Point>();
-    const Point2f* ptsf = points.ptr<Point2f>();
 
     AutoBuffer<double> _Ad(n*12+n);
     double *Ad = _Ad.data(), *ud = Ad + n*5, *bd = ud + n*5;
-    Point2f* ptsf1 = (Point2f*)(bd + n);
+    Point2f* ptsf_copy = (Point2f*)(bd + n);
 
     // first fit for parameters A - E
     Mat A( n, 5, CV_64F, Ad );
@@ -373,21 +377,23 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     Mat vt( 5, 5, CV_64F, vd );
     Mat w( 5, 1, CV_64F, wd );
 
+    {
+    const Point* ptsi = points.ptr<Point>();
+    const Point2f* ptsf = points.ptr<Point2f>();
     for( i = 0; i < n; i++ )
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-        ptsf1[i] = p;
+        ptsf_copy[i] = p;
         c += p;
     }
-    ptsf = ptsf1;
-    is_float = true;
+    }
     c.x /= n;
     c.y /= n;
 
     double s = 0;
     for( i = 0; i < n; i++ )
     {
-        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        Point2f p = ptsf_copy[i];
         p -= c;
         s += fabs(p.x) + fabs(p.y);
     }
@@ -395,7 +401,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
 
     for( i = 0; i < n; i++ )
     {
-        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        Point2f p = ptsf_copy[i];
         p -= c;
         double px = p.x*scale;
         double py = p.y*scale;
@@ -411,17 +417,15 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     SVDecomp(A, w, u, vt);
     if(wd[0]*FLT_EPSILON > wd[4]) {
         float eps = (float)(s/(n*2)*1e-3);
-        for( i = 0; i < n; i++, eps *= -1 )
+        for( i = 0; i < n; i++ )
         {
-            Point2f p = ptsf[i];
-            p.x += eps;
-            p.y += eps;
-            ((Point2f*)ptsf)[i] = p;
+            Point2f p = ptsf_copy[i] + getOfs(i, eps);
+            ptsf_copy[i] = p;
         }
 
         for( i = 0; i < n; i++ )
         {
-            Point2f p = ptsf[i];
+            Point2f p = ptsf_copy[i];
             p -= c;
             double px = p.x*scale;
             double py = p.y*scale;
@@ -454,7 +458,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     x = Mat( 3, 1, CV_64F, gfp );
     for( i = 0; i < n; i++ )
     {
-        Point2f p = ptsf[i];
+        Point2f p = ptsf_copy[i];
         p -= c;
         double px = p.x*scale;
         double py = p.y*scale;
@@ -703,7 +707,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     if( n < 5 )
         CV_Error( CV_StsBadSize, "There should be at least 5 points to fit the ellipse" );
 
-    Point2f c(0,0);
+    Point2d c(0., 0.);
 
     bool is_float = (depth == CV_32F);
     const Point*   ptsi = points.ptr<Point>();
@@ -720,10 +724,11 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     for( i = 0; i < n; i++ )
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-        c += p;
+        c.x += p.x;
+        c.y += p.y;
     }
-    c.x /= (float)n;
-    c.y /= (float)n;
+    c.x /= n;
+    c.y /= n;
 
     for( i = 0; i < n; i++ )
     {
@@ -736,10 +741,11 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     // if it's singular, try to shift the points a bit
     int iter = 0;
     for( iter = 0; iter < 2; iter++ ) {
-        for( i = 0; i < n; i++, eps *= -1 )
+        for( i = 0; i < n; i++ )
         {
             Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-            double px = (p.x + eps - c.x)*scale, py = (p.y + eps - c.y)*scale;
+            Point2f delta = getOfs(i, eps);
+            double px = (p.x + delta.x - c.x)*scale, py = (p.y + delta.y - c.y)*scale;
 
             A.at<double>(i,0) = px*px;
             A.at<double>(i,1) = px*py;
@@ -786,7 +792,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         double det = fabs(cv::determinant(M));
         if (fabs(det) > 1.0e-10)
             break;
-        eps = (float)(s/(n*2)*1e-3);
+        eps = (float)(s/(n*2)*1e-2);
     }
 
     if( iter < 2 ) {

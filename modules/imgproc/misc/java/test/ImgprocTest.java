@@ -797,7 +797,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         rrect = Imgproc.fitEllipse(points);
 
-        double FIT_ELLIPSE_EPS = 0.3;
+        double FIT_ELLIPSE_EPS = 0.4;
         assertPointEquals(new Point(0, 0), rrect.center, EPS);
         assertEquals(2.828, rrect.size.width, FIT_ELLIPSE_EPS);
         assertEquals(2.828, rrect.size.height, FIT_ELLIPSE_EPS);
