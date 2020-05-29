@@ -390,40 +390,47 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
         p -= c;
         s += fabs(p.x) + fabs(p.y);
+    }
+    double scale = 100./(s > FLT_EPSILON ? s : FLT_EPSILON);
+
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        p -= c;
+        double px = p.x*scale;
+        double py = p.y*scale;
 
         bd[i] = 10000.0; // 1.0?
-        Ad[i*5] = -(double)p.x * p.x; // A - C signs inverted as proposed by APP
-        Ad[i*5 + 1] = -(double)p.y * p.y;
-        Ad[i*5 + 2] = -(double)p.x * p.y;
-        Ad[i*5 + 3] = p.x;
-        Ad[i*5 + 4] = p.y;
+        Ad[i*5] = -px * px; // A - C signs inverted as proposed by APP
+        Ad[i*5 + 1] = -py * py;
+        Ad[i*5 + 2] = -px * py;
+        Ad[i*5 + 3] = px;
+        Ad[i*5 + 4] = py;
     }
 
     SVDecomp(A, w, u, vt);
     if(wd[0]*FLT_EPSILON > wd[4]) {
         float eps = (float)(s/(n*2)*1e-3);
-        c.x = c.y = 0.f;
         for( i = 0; i < n; i++, eps *= -1 )
         {
             Point2f p = ptsf[i];
             p.x += eps;
             p.y += eps;
             ((Point2f*)ptsf)[i] = p;
-            c.x += p.x;
-            c.y += p.y;
         }
-        c /= n;
+
         for( i = 0; i < n; i++ )
         {
             Point2f p = ptsf[i];
             p -= c;
-
+            double px = p.x*scale;
+            double py = p.y*scale;
             bd[i] = 10000.0; // 1.0?
-            Ad[i*5] = -(double)p.x * p.x; // A - C signs inverted as proposed by APP
-            Ad[i*5 + 1] = -(double)p.y * p.y;
-            Ad[i*5 + 2] = -(double)p.x * p.y;
-            Ad[i*5 + 3] = p.x;
-            Ad[i*5 + 4] = p.y;
+            Ad[i*5] = -px * px; // A - C signs inverted as proposed by APP
+            Ad[i*5 + 1] = -py * py;
+            Ad[i*5 + 2] = -px * py;
+            Ad[i*5 + 3] = px;
+            Ad[i*5 + 4] = py;
         }
         SVDecomp(A, w, u, vt);
     }
@@ -447,12 +454,14 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     x = Mat( 3, 1, CV_64F, gfp );
     for( i = 0; i < n; i++ )
     {
-        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        Point2f p = ptsf[i];
         p -= c;
+        double px = p.x*scale;
+        double py = p.y*scale;
         bd[i] = 1.0;
-        Ad[i * 3] = (p.x - rp[0]) * (p.x - rp[0]);
-        Ad[i * 3 + 1] = (p.y - rp[1]) * (p.y - rp[1]);
-        Ad[i * 3 + 2] = (p.x - rp[0]) * (p.y - rp[1]);
+        Ad[i * 3] = (px - rp[0]) * (px - rp[0]);
+        Ad[i * 3 + 1] = (py - rp[1]) * (py - rp[1]);
+        Ad[i * 3 + 2] = (px - rp[0]) * (py - rp[1]);
     }
     solve(A, b, x, DECOMP_SVD);
 
@@ -469,10 +478,10 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     if( rp[3] > min_eps )
         rp[3] = std::sqrt(2.0 / rp[3]);
 
-    box.center.x = (float)rp[0] + c.x;
-    box.center.y = (float)rp[1] + c.y;
-    box.size.width = (float)(rp[2]*2);
-    box.size.height = (float)(rp[3]*2);
+    box.center.x = (float)(rp[0]/scale) + c.x;
+    box.center.y = (float)(rp[1]/scale) + c.y;
+    box.size.width = (float)(rp[2]*2/scale);
+    box.size.height = (float)(rp[3]*2/scale);
     if( box.size.width > box.size.height )
     {
         float tmp;
@@ -531,16 +540,24 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     c.x /= (float)n;
     c.y /= (float)n;
 
+    double s = 0;
     for( i = 0; i < n; i++ )
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-        p -= c;
+        s += fabs(p.x - c.x) + fabs(p.y - c.y);
+    }
+    double scale = 100./(s > FLT_EPSILON ? s : (double)FLT_EPSILON);
 
-        A.at<double>(i,0) = (double)(p.x)*(p.x);
-        A.at<double>(i,1) = (double)(p.x)*(p.y);
-        A.at<double>(i,2) = (double)(p.y)*(p.y);
-        A.at<double>(i,3) = (double)p.x;
-        A.at<double>(i,4) = (double)p.y;
+    for( i = 0; i < n; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        double px = (p.x - c.x)*scale, py = (p.y - c.y)*scale;
+
+        A.at<double>(i,0) = px*px;
+        A.at<double>(i,1) = px*py;
+        A.at<double>(i,2) = py*py;
+        A.at<double>(i,3) = px;
+        A.at<double>(i,4) = py;
         A.at<double>(i,5) = 1.0;
     }
     cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
@@ -635,10 +652,10 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
             double p1 = 2.0*pVec(2) *pVec(3)  - pVec(1) *pVec(4) ;
             double p2 = 2.0*pVec(0) *pVec(4) -(pVec(1) *pVec(3) );
 
-            x0 = p1/l3 + c.x;
-            y0 = p2/l3 + c.y;
-            a = std::sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
-            b = std::sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+            x0 = p1/l3/scale + c.x;
+            y0 = p2/l3/scale + c.y;
+            a = std::sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3))/scale;
+            b = std::sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)))/scale;
             if (pVec(1)  == 0) {
                 if (pVec(0)  < pVec(2) ) {
                     theta = 0;
@@ -649,8 +666,8 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
                 theta = CV_PI/2. + 0.5*std::atan2(pVec(1) , (pVec(0)  - pVec(2) ));
             }
 
-            box.center.x = (float)x0; // +c.x;
-            box.center.y = (float)y0; // +c.y;
+            box.center.x = (float)x0;
+            box.center.y = (float)y0;
             box.size.width = (float)(2.0*a);
             box.size.height = (float)(2.0*b);
             if( box.size.width > box.size.height )
@@ -708,13 +725,12 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     c.x /= (float)n;
     c.y /= (float)n;
 
-    // [TODO] probably, such normalization should also be applied to fitEllipse and fitEllipseAMS
     for( i = 0; i < n; i++ )
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
         s += fabs(p.x - c.x) + fabs(p.y - c.y);
     }
-    double scale = 100/(s > FLT_EPSILON ? s : (double)FLT_EPSILON);
+    double scale = 100./(s > FLT_EPSILON ? s : (double)FLT_EPSILON);
 
     // first, try the original pointset.
     // if it's singular, try to shift the points a bit
@@ -810,8 +826,8 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
         x0 = (p1/l3/scale) + c.x;
         y0 = (p2/l3/scale) + c.y;
-        a = sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3));
-        b = sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)));
+        a = sqrt(2.)*sqrt((u1 - 4.0*u2)/((l1 - l2)*l3))/scale;
+        b = sqrt(2.)*sqrt(-1.0*((u1 - 4.0*u2)/((l1 + l2)*l3)))/scale;
         if (pVec(1)  == 0) {
             if (pVec(0)  < pVec(2) ) {
                 theta = 0;
@@ -824,8 +840,8 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 
         box.center.x = (float)x0;
         box.center.y = (float)y0;
-        box.size.width = (float)(2.0*a/scale);
-        box.size.height = (float)(2.0*b/scale);
+        box.size.width = (float)(2.0*a);
+        box.size.height = (float)(2.0*b);
         if( box.size.width > box.size.height )
         {
             float tmp;

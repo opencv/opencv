@@ -66,7 +66,7 @@ TEST(Imgproc_FitEllipse_Issue_6544, accuracy) {
     EXPECT_TRUE(fit_and_check_ellipse(pts));
 }
 
-TEST(Imgproc_FitEllipse_Issue_9923, accuracy) {
+TEST(Imgproc_FitEllipse_Issue_10270, accuracy) {
     vector<Point2f> pts;
     float scale = 1;
     Point2f shift(0, 0);
@@ -82,6 +82,24 @@ TEST(Imgproc_FitEllipse_Issue_9923, accuracy) {
     EXPECT_NEAR(e.center.x, 1, 1);
     EXPECT_NEAR(e.center.y, 3, 1);
     EXPECT_LT(e.size.width*3, e.size.height);
+}
+
+TEST(Imgproc_FitEllipse_JavaCase, accuracy) {
+    vector<Point2f> pts;
+    float scale = 1;
+    Point2f shift(0, 0);
+    pts.push_back(Point2f(0, 0)*scale+shift);
+    pts.push_back(Point2f(1, 1)*scale+shift);
+    pts.push_back(Point2f(-1, 1)*scale+shift);
+    pts.push_back(Point2f(-1, -1)*scale+shift);
+    pts.push_back(Point2f(1, -1)*scale+shift);
+
+    // check that we get almost vertical ellipse centered around (1, 3)
+    RotatedRect e = fitEllipse(pts);
+    EXPECT_NEAR(e.center.x, 0, 0.5);
+    EXPECT_NEAR(e.center.y, 0, 0.5);
+    EXPECT_NEAR(e.size.width, sqrt(2.)*2, 0.3);
+    EXPECT_NEAR(e.size.height, sqrt(2.)*2, 0.3);
 }
 
 }} // namespace
