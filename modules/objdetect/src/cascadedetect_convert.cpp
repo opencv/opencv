@@ -205,8 +205,8 @@ static bool convert(const String& oldcascade, const String& newcascade)
     newfs << "cascade" << "{:opencv-cascade-classifier"
     << "stageType" << "BOOST"
     << "featureType" << "HAAR"
-    << "height" << cascadesize.width
-    << "width" << cascadesize.height
+    << "width" << cascadesize.width
+    << "height" << cascadesize.height
     << "stageParams" << "{"
         << "maxWeakCount" << (int)maxWeakCount
     << "}"
